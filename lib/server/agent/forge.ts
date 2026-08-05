@@ -329,7 +329,10 @@ export interface Forge {
     number: number;
   }): Promise<PullRequestReviewComment[]>;
   /** Ancre résolue PAR le provider : tête de PR relue à chaud (GitHub) ou
-      diff_refs (GitLab). Ligne hors diff → erreur 422 (« lineNotInDiff »). */
+      diff_refs (GitLab). Ligne hors diff → erreur 422 (« lineNotInDiff »).
+      `startLine`/`startSide` décrivent une PLAGE (`line` en est la dernière
+      ligne) : GitHub seul les honore — côté GitLab une note s'ancre sur une
+      ligne, et l'UI n'offre donc la plage que sur GitHub (MIN-181). */
   createPullRequestReviewComment(opts: {
     token: string;
     repoFullName: string;
@@ -338,6 +341,8 @@ export interface Forge {
     path: string;
     line: number;
     side: "LEFT" | "RIGHT";
+    startLine?: number;
+    startSide?: "LEFT" | "RIGHT";
   }): Promise<PullRequestReviewComment>;
   replyToPullRequestReviewComment(opts: {
     token: string;
@@ -559,7 +564,12 @@ const gitlabForge: Forge = {
   // d'inventé — la MR se rend comme avant.
   listImageAssets: async () => new Map<string, string>(),
   listPullRequestReviewComments: gitlab.listMergeRequestDiffComments,
-  createPullRequestReviewComment: gitlab.createMergeRequestDiffComment,
+  // `startLine`/`startSide` sont laissés de côté, explicitement : une note
+  // GitLab s'ancre sur UNE ligne (`old_line`/`new_line`). Les passer en douce
+  // les perdrait en silence — l'UI ne propose donc pas la plage sur GitLab, et
+  // ce filtre est la seconde garde (MIN-181).
+  createPullRequestReviewComment: ({ startLine: _s, startSide: _ss, ...opts }) =>
+    gitlab.createMergeRequestDiffComment(opts),
   replyToPullRequestReviewComment: gitlab.replyToMergeRequestDiffComment,
   listReviewThreads: gitlab.listMergeRequestDiffThreads,
   setReviewThreadResolved: gitlab.setMergeRequestDiscussionResolved,

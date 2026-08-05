@@ -49,231 +49,52 @@
 
 
 
-/* ── Vue diff des Pull Requests (MIN-66) ──────────────────────────────────────
-   react-diff-view expose des variables --diff-* ; ses défauts sont des pastels
-   pensés pour un fond clair et peu lisibles (surtout en sombre). On les remplace
-   par des surcouches translucides vert/rouge qui gardent un bon contraste sur
-   les deux thèmes, et une police monospace plus nette. */
+/* ── Vue diff des Pull Requests (MIN-66, MIN-181) ─────────────────────────────
+   `@pierre/diffs` rend le diff dans un Shadow DOM. On n'y injecte rien : les
+   PROPRIÉTÉS PERSONNALISÉES traversent la frontière d'ombre par héritage, et
+   la lib lit ses ~50 variables `--diffs-*` dans son `:host`. Poser les nôtres
+   ici suffit donc à l'habiller — c'est aussi pourquoi elles vivent avec les
+   autres jetons du dépôt plutôt que dans un objet JavaScript.
+
+   Attention : seules les variables que la lib ne DÉCLARE pas elle-même dans son
+   `:host` sont héritables (une déclaration sur l'hôte l'emporte sur ce qui lui
+   vient de son parent). D'où le couple `--diffs-light-*` / `--diffs-dark-*`,
+   qui n'existe que pour être fourni de l'extérieur.
+
+   Les deux moitiés de chaque couple portent la MÊME valeur, et ce n'est pas une
+   étourderie : nos jetons sont déjà pris dans le bon thème (`.dark` les
+   redéfinit), et le composant force `color-scheme` d'après le thème résolu de
+   minddy. La branche que choisit `light-dark()` est donc déjà la bonne. */
 .pr-diff-view {
-  --diff-font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  /* Sans ça react-diff-view garde `color: initial` (noir) → illisible en sombre. */
-  --diff-text-color: var(--foreground);
-  --diff-code-insert-background-color: rgb(35 178 62 / 0.16);
-  --diff-code-delete-background-color: rgb(255 65 55 / 0.14);
-  --diff-gutter-insert-background-color: rgb(35 178 62 / 0.26);
-  --diff-gutter-delete-background-color: rgb(255 65 55 / 0.24);
-  --diff-code-insert-edit-background-color: rgb(35 178 62 / 0.36);
-  --diff-code-delete-edit-background-color: rgb(255 65 55 / 0.36);
-  --diff-selection-background-color: rgb(48 152 208 / 0.30);
-  /* Le trait qui marque, en côte-à-côte, une ligne absente de ce côté. Défaut de
-     la lib : un rouge vif (#cb2a1d) qui se lit comme une erreur alors qu'il ne
-     dit qu'« il n'y a rien ici ». Neutralisé au ton des bordures. */
-  --diff-omit-gutter-line-color: var(--border);
-}
-.dark .pr-diff-view {
-  --diff-code-insert-background-color: rgb(57 208 78 / 0.17);
-  --diff-code-delete-background-color: rgb(255 71 62 / 0.15);
-  --diff-gutter-insert-background-color: rgb(57 208 78 / 0.27);
-  --diff-gutter-delete-background-color: rgb(255 71 62 / 0.25);
-  --diff-code-insert-edit-background-color: rgb(57 208 78 / 0.38);
-  --diff-code-delete-edit-background-color: rgb(255 71 62 / 0.38);
-}
-/* Barre de dépliage du contexte masqué entre deux zones de diff : une bande
-   neutre qui se lit comme une couture, pas comme du code. Bordures posées sur la
-   cellule (un tbody ne les rend pas de façon fiable). */
-.pr-diff-view .pr-diff-expand > tr > td {
-  background-color: var(--muted);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-/* Ancre le « + » de commentaire : la gouttière ne fait que 7ch et aligne son
-   numéro à droite — le bouton est posé en absolu pour ne pas le pousser. */
-.pr-diff-view .diff-gutter {
-  position: relative;
-}
-/* Un widget (fil de commentaires) n'est pas du code : il ne doit hériter ni de la
-   police mono ni du `white-space` des lignes de diff. */
-.pr-diff-view .diff-widget-content {
-  font-family: var(--font-sans, inherit);
-  white-space: normal;
-}
+  --diffs-font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --diffs-font-size: 13px;
+  --diffs-line-height: 20px;
 
-/* ── Repli des lignes longues ─────────────────────────────────────────────────
-   react-diff-view livre `white-space: pre-wrap; word-break: break-all` : une
-   ligne longue se replie TOUJOURS, et la coupure tombe au caractère près — au
-   milieu d'un identifiant, d'une URL, d'un littéral. C'est la première chose qui
-   « ne collait pas » : du code coupé n'importe où ne se lit plus comme du code.
+  /* Fond et texte : ceux de la carte qui porte le diff, pas un blanc/noir à
+     part — le diff est DANS la carte du fichier. */
+  --diffs-light-bg: var(--card);
+  --diffs-dark-bg: var(--card);
+  --diffs-light: var(--foreground);
+  --diffs-dark: var(--foreground);
 
-   Deux régimes, désormais explicites. En UNIFIÉ, défilement par défaut comme les
-   forges (`pr-diff-scroll`) : `table-layout: auto` + `width: max-content`
-   laissent la table dépasser sa boîte au lieu d'être comprimée à 100 %. Sinon —
-   côte à côte, ou repli demandé — la table reste en `fixed` à 100 % pour que les
-   deux volets gardent la même largeur, et la coupure tombe alors aux frontières
-   de mots plutôt qu'au caractère.
+  /* Numéros de ligne et barres de dépliage : le gris des textes secondaires et
+     le fond neutre du reste de l'app, pour que la gouttière du diff se lise
+     comme les autres colonnes. Le reste (fond des lignes de contexte, aplats
+     vert/rouge, surlignage mot-à-mot) est DÉRIVÉ par la lib des trois couleurs
+     ci-dessous : on ne les fixe pas une à une. */
+  --diffs-fg-number-override: var(--muted-foreground);
+  --diffs-bg-separator-override: var(--muted);
 
-   C'est aussi pourquoi le bouton de repli ne s'affiche qu'en unifié : le
-   côte-à-côte n'a pas de second régime à offrir. */
-.pr-diff-view .diff-code {
-  padding-left: 1ch;
-  white-space: pre-wrap;
-  word-break: normal;
-  overflow-wrap: anywhere;
-}
-.pr-diff-view .pr-diff-scroll .diff {
-  table-layout: auto;
-  width: max-content;
-  min-width: 100%;
-}
-.pr-diff-view .pr-diff-scroll .diff-code {
-  white-space: pre;
-  overflow-wrap: normal;
-}
-
-/* Un commentaire de ligne n'est pas une ligne de code, et il ne doit pas en
-   prendre la largeur. En unifié sans repli, la table est en `width: max-content` :
-   elle vaut sa plus longue ligne, et la boîte défile. Le fil de commentaires vit
-   dans une cellule de CETTE table — il héritait donc de cette largeur-là. Un
-   commentaire de trois lignes s'étalait sur une seule, très au-delà du bord
-   droit, et il fallait faire défiler le diff pour le lire en entier.
-
-   La largeur retenue est celle de la BOÎTE, jamais celle de la table :
-   `--pr-diff-box` est mesurée par le composant (`pr-diff.tsx`, ResizeObserver),
-   et `100cqw` — la même valeur, dite par la requête de conteneur — sert de repli
-   au premier rendu. Deux chemins pour un seul résultat, parce que la mesure
-   arrive avec le composant là où `cqw` suppose un moteur à jour et une feuille
-   de style fraîche.
-
-   `sticky` par-dessus : le commentaire reste sous les yeux quand on fait défiler
-   le code à côté, au lieu de partir hors champ avec la table. */
-.pr-diff-view .pr-diff-scroll {
-  container-type: inline-size;
-}
-.pr-diff-view .diff-widget-content > * {
-  position: sticky;
-  left: 0;
-  box-sizing: border-box;
-  width: var(--pr-diff-box, 100cqw);
-  max-width: var(--pr-diff-box, 100cqw);
-}
-
-/* Une couture entre les numéros et le code : sans elle, sur une ligne colorée en
-   vert ou en rouge, les deux aplats se touchent et la gouttière se lit comme la
-   première colonne du code. */
-.pr-diff-view .diff-gutter {
-  border-right: 1px solid var(--border);
-  color: color-mix(in oklch, var(--foreground) 40%, transparent);
-}
-.pr-diff-view .diff-line {
-  line-height: 1.6;
-}
-
-/* Le signe + / − de GitHub, en `::before` : posé par le style, il ne fait pas
-   partie du texte de la ligne — un copier-coller du diff rend donc du code
-   compilable, pas du patch. */
-.pr-diff-view .diff-code-insert::before,
-.pr-diff-view .diff-code-delete::before {
-  display: inline-block;
-  width: 1ch;
-  margin-left: -1ch;
-  color: color-mix(in oklch, var(--foreground) 45%, transparent);
-  content: "+";
-}
-.pr-diff-view .diff-code-delete::before {
-  content: "−";
-}
-
-/* ── Coloration syntaxique (lib/diff-highlight.ts) ────────────────────────────
-   Palette maison, pas un thème highlight.js importé : ces couleurs se posent SUR
-   les aplats vert et rouge du diff, où un thème calibré pour un fond neutre perd
-   son contraste. Valeurs héritées de la famille Primer, la plus éprouvée sur
-   fond teinté, et déclarées en variables pour rester réglables d'un endroit.
-
-   Le surlignage mot-à-mot (`markEdits`) passe PAR-DESSUS via
-   --diff-code-*-edit-background-color : la couleur du texte, elle, reste celle
-   du token — c'est ce qui permet de lire à la fois « ce mot a changé » et « ce
-   mot est un mot-clé ». */
-.pr-diff-view {
-  --hl-comment: #6a737d;
-  --hl-keyword: #cf222e;
-  --hl-string: #0a3069;
-  --hl-number: #0550ae;
-  --hl-function: #8250df;
-  --hl-variable: #953800;
-  --hl-tag: #116329;
-  --hl-meta: #57606a;
-}
-.dark .pr-diff-view {
-  --hl-comment: #8b949e;
-  --hl-keyword: #ff7b72;
-  --hl-string: #a5d6ff;
-  --hl-number: #79c0ff;
-  --hl-function: #d2a8ff;
-  --hl-variable: #ffa657;
-  --hl-tag: #7ee787;
-  --hl-meta: #8b949e;
-}
-.pr-diff-view .hljs-comment,
-.pr-diff-view .hljs-quote {
-  color: var(--hl-comment);
-  font-style: italic;
-}
-.pr-diff-view .hljs-keyword,
-.pr-diff-view .hljs-selector-tag,
-.pr-diff-view .hljs-literal,
-.pr-diff-view .hljs-doctag,
-.pr-diff-view .hljs-formula {
-  color: var(--hl-keyword);
-}
-.pr-diff-view .hljs-string,
-.pr-diff-view .hljs-regexp,
-.pr-diff-view .hljs-char.escape_,
-.pr-diff-view .hljs-template-variable,
-.pr-diff-view .hljs-subst,
-.pr-diff-view .hljs-symbol,
-.pr-diff-view .hljs-bullet,
-.pr-diff-view .hljs-selector-attr,
-.pr-diff-view .hljs-selector-pseudo {
-  color: var(--hl-string);
-}
-.pr-diff-view .hljs-number,
-.pr-diff-view .hljs-attr,
-.pr-diff-view .hljs-attribute,
-.pr-diff-view .hljs-property,
-.pr-diff-view .hljs-variable.constant_,
-.pr-diff-view .hljs-selector-class,
-.pr-diff-view .hljs-selector-id {
-  color: var(--hl-number);
-}
-.pr-diff-view .hljs-title,
-.pr-diff-view .hljs-title.function_,
-.pr-diff-view .hljs-title.class_,
-.pr-diff-view .hljs-section,
-.pr-diff-view .hljs-built_in,
-.pr-diff-view .hljs-class .hljs-title {
-  color: var(--hl-function);
-}
-.pr-diff-view .hljs-variable,
-.pr-diff-view .hljs-variable.language_,
-.pr-diff-view .hljs-type,
-.pr-diff-view .hljs-params,
-.pr-diff-view .hljs-operator {
-  color: var(--hl-variable);
-}
-.pr-diff-view .hljs-tag,
-.pr-diff-view .hljs-name,
-.pr-diff-view .hljs-addition {
-  color: var(--hl-tag);
-}
-.pr-diff-view .hljs-meta,
-.pr-diff-view .hljs-meta .hljs-keyword,
-.pr-diff-view .hljs-comment .hljs-doctag {
-  color: var(--hl-meta);
-}
-.pr-diff-view .hljs-emphasis {
-  font-style: italic;
-}
-.pr-diff-view .hljs-strong {
-  font-weight: 600;
+  /* Vert ajouté, rouge supprimé, bleu de marque pour la sélection et le « + » de
+     commentaire. Les deux premiers sont les valeurs déjà éprouvées de la vue
+     d'avant : elles gardent leur contraste posées sur le fond des cartes, dans
+     les deux thèmes. */
+  --diffs-light-addition-color: rgb(35 178 62);
+  --diffs-dark-addition-color: rgb(57 208 78);
+  --diffs-light-deletion-color: rgb(255 65 55);
+  --diffs-dark-deletion-color: rgb(255 71 62);
+  --diffs-light-modified-color: var(--brand);
+  --diffs-dark-modified-color: var(--brand);
 }
 
 /* Damier des panneaux d'image du diff : une image transparente doit se voir

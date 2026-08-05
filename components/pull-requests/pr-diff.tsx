@@ -1,36 +1,22 @@
 "use client";
 
-import "react-diff-view/style/index.css";
-
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Badge, cn, SegmentedControl, Spinner, toast } from "mangue-ui";
-import { ChevronDown, ChevronRight, ChevronUp, UnfoldVertical, WrapText } from "lucide-react";
-import {
-  parseDiff,
-  Diff,
-  Hunk,
-  Decoration,
-  expandFromRawCode,
-  getChangeKey,
-  getCollapsedLinesCountBetween,
-  markEdits,
-  tokenize,
-  type ChangeData,
-  type DiffType,
-  type FileData,
-  type GutterOptions,
-  type HunkData,
-  type HunkTokens,
-} from "react-diff-view";
+import { Badge, cn, SegmentedControl, toast, useIsMobile, useTheme } from "mangue-ui";
+import { ChevronDown, ChevronRight, WrapText } from "lucide-react";
+import { applyPatch } from "diff";
+import { getLineAnnotationName, parsePatchFiles } from "@pierre/diffs";
+import { FileDiff } from "@pierre/diffs/react";
+import { PrDiffWorkers } from "@/components/pull-requests/pr-diff-workers";
+import type {
+  DiffLineAnnotation,
+  FileDiff as FileDiffInstance,
+  FileDiffContentsLoader,
+  FileDiffMetadata,
+  DiffLineEventBaseProps,
+  PostRenderPhase,
+  SelectedLineRange,
+} from "@pierre/diffs";
 import {
   fetchPrFileSourceApi,
   postPrReviewCommentApi,
@@ -39,20 +25,22 @@ import {
   type PullRequestFile,
   type PullRequestReviewComment,
 } from "@/lib/agent-api";
-import { countLines, diffLanguage, hljs, MAX_HIGHLIGHT_LINES } from "@/lib/diff-highlight";
 import { noPatchKind } from "@/lib/diff-binary";
+import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES, DIFF_UNSAFE_CSS } from "@/lib/diff-theme";
 import { PrImageDiff } from "@/components/pull-requests/pr-image-diff";
 import { groupReviewThreads, type ReviewThreadState } from "@/lib/pr-review-threads";
 import type { ReviewCommentReaction } from "@/lib/pr-review-reactions";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import {
-  commentableChangeKeys,
-  gutterAnchor,
-  resolveThreadChangeKey,
+  anchorKey,
+  commentAnchor,
+  lineKind,
+  threadAnchor,
+  toGithubSide,
+  type CommentAnchor,
   type PrReviewThread,
-} from "@/lib/pr-review-diff";
+} from "@/lib/pr-diff-anchors";
 import {
-  GutterCommentButton,
   LineComposer,
   LineWidget,
   ReviewThreadCard,
@@ -63,60 +51,40 @@ import {
 } from "@/components/pull-requests/pr-review-comments";
 
 /**
- * Vue diff moderne d'une PR (MIN-66) : liste de fichiers repliables avec compteurs
- * +/−, bascule unifié ↔ côte-à-côte (`viewType` de react-diff-view), et dépliage
- * du contexte masqué entre les hunks façon GitHub. Consommée par le panneau de
- * détail d'une PR (pr-detail).
+ * Vue diff d'une PR (MIN-66, passée à `@pierre/diffs` en MIN-181) : liste de
+ * fichiers repliables avec compteurs +/−, bascule unifié ↔ côte-à-côte, et
+ * dépliage du contexte masqué entre les hunks façon GitHub. Consommée par le
+ * panneau de détail d'une PR (pr-detail), les feuilles de diff d'un commit et
+ * d'un run d'agent.
  *
  * GitHub renvoie un `patch` par fichier (fragment de hunks) : on reconstruit un
- * diff unifié complet autour, puis `parseDiff`. Les fichiers binaires/trop gros
- * arrivent sans `patch` → repli « voir sur GitHub ».
+ * diff unifié complet autour, puis on le fait analyser par la lib. Les fichiers
+ * binaires/trop gros arrivent sans `patch` → repli « voir sur GitHub ».
+ *
+ * Ce que la lib prend en charge, et qui vivait ici avant : la coloration
+ * (Shiki, hors du rendu, donc plus de plafond de lignes), le marquage mot-à-mot
+ * des lignes retouchées, les barres de dépliage, la virtualisation, la
+ * sélection multi-lignes. Ce qui reste à nous : la carte du fichier, l'ancrage
+ * des fils de review, et les deux règles de la forge qui décident où un
+ * commentaire a le droit d'aller.
  */
 
 /** Nombre de lignes qu'une flèche déplie d'un coup (comme GitHub). */
-const EXPAND_STEP = 20;
+const EXPANSION_LINE_COUNT = 20;
 
 type ViewType = "unified" | "split";
 
 /**
- * Colore le fichier et marque, DANS une ligne modifiée, les caractères qui ont
- * réellement changé — les deux choses qui séparaient cette vue d'un diff de
- * forge. La seconde compte autant que la première : sans elle, une ligne
- * retouchée d'un caractère se présente comme entièrement réécrite, et l'oeil
- * doit refaire la comparaison lui-même.
- *
- * `null` (donc aucune coloration) dans trois cas : langage inconnu — colorer
- * avec le mauvais grammaire se lit plus mal que ne pas colorer —, fichier trop
- * long (les deux passes sont synchrones, cf. MAX_HIGHLIGHT_LINES), ou grammaire
- * qui lève. Le diff, lui, s'affiche dans tous les cas.
+ * Ce qu'une annotation transporte jusqu'à `renderAnnotation` : la clé d'ancre
+ * (qui indexe brouillons et composers) et les fils à empiler sous la ligne.
  */
-function useDiffTokens(hunks: HunkData[], filename: string): HunkTokens | null {
-  return useMemo(() => {
-    const language = diffLanguage(filename);
-    if (!language) return null;
-    if (countLines(hunks) > MAX_HIGHLIGHT_LINES) return null;
-    try {
-      return tokenize(hunks, {
-        highlight: true,
-        refractor: hljs,
-        language,
-        // `block` marque le bloc changé d'un bout à l'autre, là où `line`
-        // recoupe mot à mot : sur du code (indentation, ponctuation), le second
-        // produit un confetti de surlignages qui dessert la lecture.
-        enhancers: [markEdits(hunks, { type: "block" })],
-      });
-    } catch {
-      return null;
-    }
-  }, [hunks, filename]);
+interface AnnotationMeta {
+  key: string;
+  line: number;
+  threads: PrReviewThread[];
 }
 
-/**
- * Plage de lignes à déplier, en numéros de ligne ANCIENS (ceux de la version
- * base). `end` est EXCLU : c'est la sémantique de `expandFromRawCode`, qui
- * `slice`-e la source.
- */
-type Range = [start: number, end: number];
+type ThreadAnnotation = DiffLineAnnotation<AnnotationMeta>;
 
 /** Chemin qui adresse la version de base : l'ancien nom si le fichier a été renommé. */
 function basePathOf(f: PullRequestFile): string {
@@ -133,136 +101,7 @@ export function toUnifiedDiff(f: PullRequestFile): string {
 }
 
 /**
- * Découpe la source en lignes. Un fichier terminé par un saut de ligne donne une
- * dernière entrée vide avec `split` : on la retire, sinon le dépliage de fin
- * afficherait une ligne fantôme.
- */
-function splitLines(content: string): string[] {
-  const lines = content.split("\n");
-  if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
-  return lines;
-}
-
-/**
- * Ce que l'en-tête d'un widget annonce : la ligne visée et sa nature. Une ligne
- * de contexte porte deux numéros (ancien / nouveau) : on affiche le NOUVEAU,
- * cohérent avec l'ancre que produit `gutterAnchor` pour ce cas (side RIGHT).
- */
-function anchorOf(change: ChangeData): { line: number; kind: "added" | "removed" | "context" } {
-  if (change.type === "insert") return { line: change.lineNumber, kind: "added" };
-  if (change.type === "delete") return { line: change.lineNumber, kind: "removed" };
-  return { line: change.newLineNumber, kind: "context" };
-}
-
-/**
- * Barre entre deux zones de diff : annonce les lignes masquées et les déplie.
- * `Decoration` la rend au bon format en unifié comme en côte-à-côte. Un seul
- * enfant → la cellule occupe toute la largeur (gouttières comprises).
- */
-function ExpandBar({
-  count,
-  context,
-  loading,
-  failed,
-  onExpandAll,
-  onExpandUp,
-  onExpandDown,
-}: {
-  /** Lignes masquées, ou null quand la source n'est pas encore chargée. */
-  count: number | null;
-  /** Portée du hunk qui suit (« export function foo() { »), telle que git la
-      donne après le `@@ … @@` — ce qui situe la modification sans déplier. */
-  context?: string;
-  loading: boolean;
-  failed: boolean;
-  /** Petit écart : un seul clic déplie tout. */
-  onExpandAll?: () => void;
-  /** Les lignes juste au-dessus du hunk qui suit. */
-  onExpandUp?: () => void;
-  /** Les lignes juste en dessous du hunk qui précède. */
-  onExpandDown?: () => void;
-}) {
-  const t = useTranslations("PullRequests");
-  const label = count === null ? t("expandRest") : t("expandGap", { count });
-
-  const gutter = "flex w-[7ch] shrink-0 items-center justify-center gap-0.5 self-stretch";
-  const arrow =
-    "flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-brand/15 hover:text-brand";
-  const text = "shrink-0 text-[11px] text-muted-foreground";
-  // Un échec de chargement ne casse pas le diff : la barre reste (recliquable),
-  // l'erreur s'affiche discrètement à côté du décompte.
-  const error = failed ? (
-    <span className="shrink-0 text-[11px] text-muted-foreground/70">{t("expandFailed")}</span>
-  ) : null;
-  const scope = context ? (
-    <span className="min-w-0 flex-1 truncate pr-3 font-mono text-[11px] text-muted-foreground/70">
-      {context}
-    </span>
-  ) : null;
-
-  // Exactement UN enfant : `Decoration` étale alors la cellule sur toute la
-  // largeur (gouttières comprises) — avec deux, il les lit comme [gouttière, contenu].
-  return (
-    <Decoration className="pr-diff-expand">
-      {onExpandAll ? (
-        <button
-          type="button"
-          onClick={onExpandAll}
-          disabled={loading}
-          className="flex w-full items-center gap-2 py-1 text-left transition-colors hover:bg-brand/10"
-        >
-          <span className={gutter}>
-            {loading ? (
-              <Spinner className="size-3.5 text-muted-foreground" />
-            ) : (
-              <UnfoldVertical className="size-3.5 text-muted-foreground" />
-            )}
-          </span>
-          <span className={text}>{label}</span>
-          {error}
-          {scope}
-        </button>
-      ) : (
-        <div className="flex w-full items-center gap-2 py-1">
-          <span className={gutter}>
-            {loading ? (
-              <Spinner className="size-3.5 text-muted-foreground" />
-            ) : (
-              <>
-                {onExpandUp ? (
-                  <button
-                    type="button"
-                    onClick={onExpandUp}
-                    aria-label={t("expandUp")}
-                    className={arrow}
-                  >
-                    <ChevronUp className="size-3.5" />
-                  </button>
-                ) : null}
-                {onExpandDown ? (
-                  <button
-                    type="button"
-                    onClick={onExpandDown}
-                    aria-label={t("expandDown")}
-                    className={arrow}
-                  >
-                    <ChevronDown className="size-3.5" />
-                  </button>
-                ) : null}
-              </>
-            )}
-          </span>
-          <span className={text}>{label}</span>
-          {error}
-          {scope}
-        </div>
-      )}
-    </Decoration>
-  );
-}
-
-/**
- * Ce qui est arrivé au fichier, dit en couleur — même forme que les badges
+ * Ce qu'est arrivé au fichier, dit en couleur — même forme que les badges
  * d'état de PR (`pr-state-badge`) : teinte à 10 %, bord à 20 %, jamais un aplat.
  * Et mêmes couleurs que là-bas, pour que le vert veuille dire la même chose d'un
  * bout à l'autre de la page : vert ajouté, rouge supprimé, violet renommé, bleu
@@ -311,12 +150,6 @@ function FileStatusBadge({ status }: { status: FileStatus }) {
   );
 }
 
-/** Portée d'un hunk : ce que git écrit APRÈS le `@@ -a,b +c,d @@`, ou rien. */
-function hunkScope(hunk: HunkData): string | undefined {
-  const after = hunk.content.split("@@").pop()?.trim();
-  return after ? after : undefined;
-}
-
 /**
  * Le carré de cinq blocs de GitHub : la proportion d'ajouts et de retraits, lue
  * d'un coup d'oeil. Les compteurs chiffrés disent le volume, cette barre dit la
@@ -357,23 +190,61 @@ function DiffStatBar({ additions, deletions }: { additions: number; deletions: n
   );
 }
 
+/** Pose un attribut seulement s'il change — la passe tourne à chaque rendu. */
+function setLabel(node: Element, label: string) {
+  if (node.getAttribute("aria-label") !== label) node.setAttribute("aria-label", label);
+}
+
 /**
- * Un fichier de la PR : en-tête repliable + diff. Composant à part car l'état de
- * dépliage (source base, plages dépliées) est PAR fichier — impossible à tenir
- * dans le `files.map` du parent.
+ * Met en français (ou en anglais) les barres de dépliage, dont la lib écrit les
+ * libellés en dur (« 12 unmodified lines », « Expand all ») et dont les flèches
+ * n'ont aucun intitulé.
  *
- * On garde nous-mêmes les plages dépliées plutôt que d'utiliser
- * `useSourceExpansion` : ce hook remet les expansions à zéro dès que `hunks` ou
- * `oldSource` change (son `useEffect(clear, …)`). Or la source arrive APRÈS le
- * premier clic, et un refetch de la PR (après un merge, un commentaire…) recrée
- * les hunks — les deux effaceraient ce que l'utilisateur vient de déplier.
- * L'algorithme d'expansion, lui, reste celui de la lib (`expandFromRawCode`).
+ * Fait en DOM plutôt qu'en props parce que la lib n'offre pas de crochet : tout
+ * ça est rendu dans l'ombre, et la seule voie déclarative
+ * (`hunkSeparators: "custom"`) est déjà marquée `@deprecated`. La passe est
+ * idempotente et sans regret : elle ne réécrit que ce qu'elle reconnaît, donc le
+ * jour où la lib changera sa formulation, on retombera sur l'anglais plutôt que
+ * sur un contresens.
+ */
+function localizeDiffChrome(
+  root: ShadowRoot,
+  t: ReturnType<typeof useTranslations<"PullRequests">>,
+) {
+  for (const node of root.querySelectorAll("[data-unmodified-lines]")) {
+    const count = /^\s*(\d+)\b/.exec(node.textContent ?? "")?.[1];
+    const label = count ? t("expandGap", { count: Number(count) }) : t("expandRest");
+    if (node.textContent !== label) node.textContent = label;
+  }
+  for (const node of root.querySelectorAll("[data-expand-all-button]")) {
+    if (node.textContent !== t("expandAll")) node.textContent = t("expandAll");
+  }
+  for (const node of root.querySelectorAll("[data-expand-button]")) {
+    if (node.hasAttribute("data-expand-up")) setLabel(node, t("expandUp"));
+    else if (node.hasAttribute("data-expand-down")) setLabel(node, t("expandDown"));
+    else if (node.hasAttribute("data-expand-both")) setLabel(node, t("expandBoth"));
+  }
+}
+
+/**
+ * Retire le saut de ligne final. Un fichier qui en porte un (le cas normal)
+ * donnerait sinon une dernière ligne fantôme au dépliage de fin.
+ */
+function trimTrailingNewline(content: string): string {
+  return content.endsWith("\n") ? content.slice(0, -1) : content;
+}
+
+/**
+ * Un fichier de la PR : en-tête repliable + diff. Composant à part car tout
+ * l'état (composers ouverts, brouillons, ancres effectivement rendues) est PAR
+ * fichier — impossible à tenir dans le `files.map` du parent.
  */
 function PrDiffFile({
   file,
-  parsed,
+  fileDiff,
   viewType,
   wrap,
+  themeType,
   locale,
   endpoint,
   prUrl,
@@ -388,16 +259,19 @@ function PrDiffFile({
   onCommentPosted,
 }: {
   file: PullRequestFile;
-  parsed?: FileData;
+  /** Diff analysé du fichier, absent quand il n'y a pas de patch (binaire, image…). */
+  fileDiff?: FileDiffMetadata;
   viewType: ViewType;
   /** Replier les lignes trop longues plutôt que défiler horizontalement. */
   wrap: boolean;
+  /** Thème résolu de minddy — il force la branche des `light-dark()` de la lib. */
+  themeType: "light" | "dark";
   /** Locale active — le poids des images se formate avec (Ko/Mo, séparateurs). */
   locale: string;
   endpoint: PrEndpoint;
   prUrl?: string | null;
   provider?: RepoProviderId;
-  /** Lecture seule : ni bouton « + » de gouttière, ni « Répondre ». */
+  /** Lecture seule : ni « + » de gouttière, ni « Répondre ». */
   readOnly?: boolean;
   /** Résoudre un fil, séparément : c'est une écriture sur le dépôt (MIN-144). */
   canResolve?: boolean;
@@ -414,105 +288,75 @@ function PrDiffFile({
   onCommentPosted: () => unknown;
 }) {
   const t = useTranslations("PullRequests");
-  const [ranges, setRanges] = useState<Range[]>([]);
-  const [source, setSource] = useState<string[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [failed, setFailed] = useState(false);
 
-  // Brouillons indexés par clé de changement (ou par fil, pour les réponses) : un
-  // envoi qui échoue GARDE son texte, et ouvrir un second composer ne détruit pas
-  // le premier. Ils ne sont vidés qu'au succès ou à l'annulation explicite.
+  // Brouillons indexés par clé d'ancre : un envoi qui échoue GARDE son texte, et
+  // ouvrir un second composer ne détruit pas le premier. Ils ne sont vidés qu'au
+  // succès ou à l'annulation explicite.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [openAnchors, setOpenAnchors] = useState<
-    Record<string, { line: number; side: "LEFT" | "RIGHT" }>
-  >({});
+  const [openAnchors, setOpenAnchors] = useState<Record<string, CommentAnchor>>({});
   const [postingKey, setPostingKey] = useState<string | null>(null);
+
+  /**
+   * Ancres dont la lib a effectivement rendu la ligne. Relevé APRÈS chaque rendu
+   * (`onPostRender`), et pas déduit des hunks : c'est la seule mesure qui suit
+   * le dépliage, dont l'état vit dans la lib. Un fil qui n'y figure pas se replie
+   * dans les « périmés », et remonte à sa place dès que le contexte autour est
+   * déplié — la propriété qu'on garantissait avant à la main.
+   */
+  const [placedKeys, setPlacedKeys] = useState<ReadonlySet<string>>(EMPTY_KEYS);
+  const instanceRef = useRef<FileDiffInstance<AnnotationMeta> | null>(null);
+
   const replies = useReviewReplies(endpoint, onCommentPosted);
   const resolution = useThreadResolution(endpoint, onCommentPosted);
   const reactions = useCommentReactions(endpoint, onCommentPosted, reviewReactions, !readOnly);
-
-  // Un fichier ajouté n'a pas de version de base : son patch EST déjà le fichier
-  // entier, il n'y a rien à déplier.
-  const canExpand = !!parsed && file.status !== "added";
-
-  /**
-   * Déplie une plage. La version base n'est chargée qu'ici, au premier clic sur
-   * une barre de CE fichier : ouvrir une PR de 30 fichiers sans rien déplier ne
-   * déclenche aucun appel. Ensuite elle est en cache dans `source`.
-   */
-  const expand = useCallback(
-    (range: Range) => {
-      if (source) {
-        setRanges((prev) => [...prev, range]);
-        return;
-      }
-      if (loading) return;
-      setLoading(true);
-      setFailed(false);
-      fetchPrFileSourceApi(endpoint, basePathOf(file))
-        .then(({ content }) => {
-          setSource(splitLines(content));
-          setRanges((prev) => [...prev, range]);
-        })
-        .catch(() => setFailed(true))
-        .finally(() => setLoading(false));
-    },
-    [source, loading, endpoint, file],
-  );
-
-  const hunks = useMemo(() => {
-    const base = parsed?.hunks ?? [];
-    if (!source || ranges.length === 0) return base;
-    return ranges.reduce((hs, [start, end]) => expandFromRawCode(hs, source, start, end), base);
-  }, [parsed, source, ranges]);
-
-  // Recalculés à chaque dépliage : le contexte qu'on vient d'ajouter doit être
-  // coloré comme le reste, sans quoi la couture se verrait.
-  const tokens = useDiffTokens(hunks, file.filename);
-
-  /**
-   * Lignes où le « + » a le droit d'apparaître : celles des hunks D'ORIGINE.
-   * GitHub renvoie 422 sur une ligne hors diff, et le dépliage en affiche
-   * justement — proposer le bouton là offrirait un envoi voué à l'échec.
-   */
-  const commentableKeys = useMemo(() => commentableChangeKeys(parsed?.hunks ?? []), [parsed]);
-
-  /** Clé de changement → la ligne qu'elle désigne, pour l'en-tête des widgets. */
-  const changesByKey = useMemo(() => {
-    const map = new Map<string, ChangeData>();
-    for (const hunk of hunks) {
-      for (const change of hunk.changes) map.set(getChangeKey(change), change);
-    }
-    return map;
-  }, [hunks]);
 
   const threads = useMemo(
     () => groupReviewThreads(reviewComments, reviewThreads),
     [reviewComments, reviewThreads],
   );
 
-  // Répartit les fils : ancrés sous leur ligne, ou périmés (repliés en bas). Le
-  // départage se fait sur les hunks RENDUS — déplier du contexte peut ramener un
-  // fil à sa place.
-  const { threadsByKey, staleThreads } = useMemo(() => {
-    const byKey = new Map<string, PrReviewThread[]>();
-    const stale: PrReviewThread[] = [];
+  /**
+   * Une annotation par ligne visée : les fils de cette ligne, plus une entrée
+   * vide pour un composer ouvert là où il n'y a encore aucun fil. La lib place
+   * chacune sous sa ligne, ou pas du tout si la ligne n'est pas rendue.
+   */
+  const lineAnnotations = useMemo(() => {
+    const byKey = new Map<string, ThreadAnnotation>();
+    const ensure = (side: ThreadAnnotation["side"], line: number): ThreadAnnotation => {
+      const key = anchorKey({ side, line });
+      const existing = byKey.get(key);
+      if (existing) return existing;
+      const created: ThreadAnnotation = {
+        side,
+        lineNumber: line,
+        metadata: { key, line, threads: [] },
+      };
+      byKey.set(key, created);
+      return created;
+    };
     for (const thread of threads) {
-      const key = resolveThreadChangeKey(hunks, thread);
-      if (!key) {
-        stale.push(thread);
-        continue;
-      }
-      const list = byKey.get(key);
-      if (list) list.push(thread);
-      else byKey.set(key, [thread]);
+      const anchor = threadAnchor(thread);
+      if (!anchor) continue;
+      ensure(anchor.side, anchor.line).metadata.threads.push(thread);
     }
-    return { threadsByKey: byKey, staleThreads: stale };
-  }, [threads, hunks]);
+    for (const anchor of Object.values(openAnchors)) ensure(anchor.side, anchor.line);
+    return [...byKey.values()];
+  }, [threads, openAnchors]);
+
+  /** Fils qui ne s'ancrent nulle part dans le diff rendu — repliés en bas. */
+  const staleThreads = useMemo(() => {
+    return threads.filter((thread) => {
+      const anchor = threadAnchor(thread);
+      return !anchor || !placedKeys.has(anchorKey(anchor));
+    });
+  }, [threads, placedKeys]);
 
   const closeComposer = useCallback((key: string) => {
     setOpenAnchors(({ [key]: _closed, ...rest }) => rest);
     setDrafts(({ [key]: _cleared, ...rest }) => rest);
+    // La plage reste surlignée tant que le composer est ouvert ; elle s'éteint
+    // avec lui, comme sur GitHub.
+    instanceRef.current?.setSelectedLines(null);
   }, []);
 
   const submitComment = useCallback(
@@ -528,7 +372,13 @@ function PrDiffFile({
           // renommé (contrairement au dépliage, qui lit la version de base).
           path: file.filename,
           line: anchor.line,
-          side: anchor.side,
+          side: toGithubSide(anchor.side),
+          ...(anchor.startLine != null
+            ? {
+                startLine: anchor.startLine,
+                startSide: toGithubSide(anchor.startSide ?? anchor.side),
+              }
+            : {}),
         });
         // Fermé (et brouillon vidé) au SUCCÈS seulement : sur échec le composer
         // reste ouvert avec le texte.
@@ -536,9 +386,7 @@ function PrDiffFile({
         await onCommentPosted();
       } catch (err) {
         const apiErr = err as ApiError;
-        toast.error(
-          apiErr.code === "lineNotInDiff" ? t("lineNotInDiffError") : apiErr.message,
-        );
+        toast.error(apiErr.code === "lineNotInDiff" ? t("lineNotInDiffError") : apiErr.message);
       } finally {
         setPostingKey(null);
       }
@@ -547,20 +395,106 @@ function PrDiffFile({
   );
 
   /**
-   * Un widget par ligne commentée : `react-diff-view` le rend SOUS la ligne. Les
-   * fils d'une même ligne s'empilent dans un seul widget, suivis du composer.
+   * Charge les deux versions du fichier pour que la lib puisse déplier le
+   * contexte masqué. Appelée au PREMIER dépliage de ce fichier : ouvrir une PR
+   * de trente fichiers sans rien déplier ne déclenche aucun appel.
+   *
+   * Le serveur ne sert que la version BASE — c'est tout ce dont le dépliage a
+   * besoin côté gauche, et la version tête s'en déduit exactement en lui
+   * appliquant le patch. Une seconde route (et un second aller-retour) pour un
+   * texte qu'on peut reconstruire ne se justifiait pas.
    */
-  const widgets = useMemo(() => {
-    const map: Record<string, ReactNode> = {};
-    const keys = new Set([...threadsByKey.keys(), ...Object.keys(openAnchors)]);
-    for (const key of keys) {
-      const change = changesByKey.get(key);
-      // Un widget n'existe que sous une ligne rendue : sans son changement il n'y
-      // a pas d'en-tête à écrire — et `Diff` ne le rendra de toute façon pas.
-      if (!change) continue;
-      const list = threadsByKey.get(key) ?? [];
-      map[key] = (
-        <LineWidget anchor={anchorOf(change)}>
+  const loadDiffFiles = useCallback<FileDiffContentsLoader>(
+    async (meta) => {
+      try {
+        const { content } = await fetchPrFileSourceApi(endpoint, basePathOf(file));
+        const oldContents = trimTrailingNewline(content);
+        const patched = applyPatch(oldContents, toUnifiedDiff(file));
+        if (patched === false) {
+          // La base a bougé sous nous (tête repoussée entre l'ouverture de la vue
+          // et le clic) : sans les deux versions, la lib ne peut rien déplier.
+          throw new Error("Patch does not apply to the base revision");
+        }
+        return {
+          oldFile: { name: basePathOf(file), contents: oldContents },
+          newFile: { name: meta.name, contents: trimTrailingNewline(patched) },
+        };
+      } catch (err) {
+        // La lib avale l'échec (elle le journalise et laisse le diff en place) :
+        // sans ce mot, un clic sur la barre de dépliage ne ferait simplement
+        // rien, et rien ne dirait pourquoi. La barre reste recliquable.
+        toast.error(t("expandFailed"));
+        throw err;
+      }
+    },
+    [endpoint, file, t],
+  );
+
+  /**
+   * Un fichier ajouté n'a pas de version de base, un fichier supprimé pas de
+   * version de tête — et dans les deux cas le patch EST déjà le fichier entier :
+   * il n'y a rien à déplier. Sans chargeur, la lib n'offre pas l'affordance,
+   * plutôt que de proposer un dépliage qui finirait en 404.
+   */
+  const expandable = file.status !== "added" && file.status !== "removed";
+
+  /**
+   * Ouvre le composer sur la sélection de gouttière. `range` porte la plage
+   * complète du glissement : c'est elle qui offre le commentaire multi-lignes,
+   * que le serveur savait déjà envoyer.
+   */
+  const onGutterUtilityClick = useCallback(
+    (range: SelectedLineRange) => {
+      const hunks = fileDiff?.hunks ?? [];
+      const anchor = commentAnchor(hunks, range, {
+        // GitLab ancre une note sur UNE ligne (`old_line`/`new_line`) : lui
+        // envoyer une plage la réduirait en silence à son dernier point.
+        multiLine: provider !== "gitlab",
+      });
+      if (!anchor) {
+        instanceRef.current?.setSelectedLines(null);
+        return;
+      }
+      const key = anchorKey(anchor);
+      setOpenAnchors((prev) => (prev[key] ? prev : { ...prev, [key]: anchor }));
+    },
+    [fileDiff, provider],
+  );
+
+  /**
+   * Nomme le « + » de la gouttière au survol de la ligne.
+   *
+   * Pas dans la passe de traduction ci-dessus : ce bouton-là n'existe pas encore
+   * au moment des rendus. La lib le fabrique DÉTACHÉ et ne l'accroche à une
+   * ligne qu'au survol — c'est-à-dire juste avant cet appel. Sans intitulé, il
+   * n'a qu'une icône, donc aucun nom accessible.
+   */
+  const onLineEnter = useCallback(
+    ({ numberElement }: DiffLineEventBaseProps) => {
+      const button = numberElement.querySelector("[data-utility-button]");
+      if (button) setLabel(button, t("addLineComment"));
+    },
+    [t],
+  );
+
+  const renderAnnotation = useCallback(
+    (annotation: ThreadAnnotation): ReactNode => {
+      const { key, line, threads: list } = annotation.metadata;
+      // Pas encore placée : ces fils-là sont rendus dans le repli des périmés, et
+      // les monter ici en plus les dédoublerait (deux cartes, deux états de
+      // dépli, pour un même fil). Le premier rendu passe forcément par là — le
+      // relevé n'a pas encore eu lieu — puis `onPostRender` remet tout en place,
+      // avant peinture.
+      if (!placedKeys.has(key)) return null;
+      const anchor = openAnchors[key];
+      return (
+        <LineWidget
+          anchor={{
+            line,
+            startLine: anchor?.startLine,
+            kind: lineKind(fileDiff?.hunks ?? [], annotation.side, line) ?? "context",
+          }}
+        >
           {list.map((thread) => (
             <ReviewThreadCard
               key={thread.id}
@@ -571,11 +505,14 @@ function PrDiffFile({
               readOnly={readOnly}
             />
           ))}
-          {openAnchors[key] ? (
+          {anchor ? (
             <LineComposer
               value={drafts[key] ?? ""}
               onChange={(transform) =>
-                setDrafts((prev) => ({ ...prev, [key]: transform(prev[key] ?? "") }))
+                setDrafts((prev) => ({
+                  ...prev,
+                  [key]: transform(prev[key] ?? ""),
+                }))
               }
               onSubmit={() => void submitComment(key)}
               onCancel={() => closeComposer(key)}
@@ -584,107 +521,101 @@ function PrDiffFile({
           ) : null}
         </LineWidget>
       );
-    }
-    return map;
-  }, [
-    threadsByKey,
-    changesByKey,
-    openAnchors,
-    drafts,
-    postingKey,
-    replies,
-    resolution,
-    reactions,
-    readOnly,
-    canResolve,
-    submitComment,
-    closeComposer,
-  ]);
-
-  const renderGutter = useCallback(
-    ({ change, side, inHoverState, renderDefault }: GutterOptions) => {
-      // Lecture seule (vue diff sans PR) : rien où poster → gouttière nue.
-      if (readOnly) return renderDefault();
-      const anchor = gutterAnchor(change, side);
-      const key = getChangeKey(change);
-      // Pas d'ancre de ce côté, ou ligne hors des hunks d'origine → gouttière nue.
-      if (!anchor || !commentableKeys.has(key)) return renderDefault();
-      return (
-        <>
-          {renderDefault()}
-          {inHoverState ? (
-            <GutterCommentButton
-              className="absolute top-1/2 left-0.5 -translate-y-1/2"
-              onClick={() => setOpenAnchors((prev) => (prev[key] ? prev : { ...prev, [key]: anchor }))}
-            />
-          ) : null}
-        </>
-      );
     },
-    [commentableKeys, readOnly],
+    [
+      fileDiff,
+      placedKeys,
+      openAnchors,
+      drafts,
+      postingKey,
+      replies,
+      resolution,
+      reactions,
+      readOnly,
+      canResolve,
+      submitComment,
+      closeComposer,
+    ],
   );
 
-  const renderHunks = (rendered: HunkData[]): ReactElement[] => {
-    const nodes: ReactElement[] = [];
-
-    rendered.forEach((hunk, i) => {
-      const previous = i > 0 ? rendered[i - 1] : null;
-      const gap = getCollapsedLinesCountBetween(previous, hunk);
-      if (canExpand && gap > 0) {
-        // Écart en lignes anciennes : [start, end[. Sans hunk précédent, il part
-        // du début du fichier.
-        const start = previous ? previous.oldStart + previous.oldLines : 1;
-        const end = hunk.oldStart;
-        nodes.push(
-          <ExpandBar
-            key={`gap-${hunk.oldStart}`}
-            count={gap}
-            context={hunkScope(hunk)}
-            loading={loading}
-            failed={failed}
-            onExpandAll={gap <= EXPAND_STEP ? () => expand([start, end]) : undefined}
-            onExpandUp={gap > EXPAND_STEP ? () => expand([end - EXPAND_STEP, end]) : undefined}
-            // Rien au-dessus de la première zone : pas de « déplier vers le bas ».
-            onExpandDown={
-              gap > EXPAND_STEP && previous ? () => expand([start, start + EXPAND_STEP]) : undefined
-            }
-          />,
-        );
+  /**
+   * Après chaque rendu de la lib (montage, changement d'option, dépliage) :
+   * garder la main sur l'instance, traduire les barres de dépliage, et relever
+   * quelles annotations ont trouvé leur ligne. Le relevé se lit dans l'ombre —
+   * un `<slot>` par annotation placée, nommé comme la lib le nomme — parce que
+   * c'est la seule chose qui dise la vérité sur l'état de dépliage.
+   */
+  const onPostRender = useCallback(
+    (node: HTMLElement, instance: FileDiffInstance<AnnotationMeta>, phase: PostRenderPhase) => {
+      if (phase === "unmount") {
+        instanceRef.current = null;
+        // Rendre l'ombre au propre — sinon le montage SUIVANT sur le même
+        // élément croit avoir affaire à du HTML prérendu.
+        //
+        // Le démontage de la lib vide le `<pre>` mais le LAISSE dans le Shadow
+        // DOM. Son `hydrate` lit ça comme « le diff est déjà peint, je n'ai
+        // qu'à me rebrancher dessus » : il saute le rendu, et on reste sur le
+        // squelette vide. En production ça ne se voit pas — React jette
+        // l'élément avec le composant. En développement, `reactStrictMode`
+        // monte, démonte et remonte SUR LE MÊME NOEUD : le diff naissait vide,
+        // et il fallait replier puis déplier le fichier (donc deux clics) pour
+        // obtenir un élément neuf qui, lui, se peignait.
+        //
+        // Les feuilles de style adoptées vivent sur le `shadowRoot`, pas parmi
+        // ses enfants : elles survivent, et le prochain rendu reconstruit le
+        // reste (sprite, thème, code).
+        node.shadowRoot?.replaceChildren();
+        return;
       }
-      nodes.push(<Hunk key={`hunk-${hunk.oldStart}`} hunk={hunk} />);
-    });
-
-    // Queue du fichier : `getCollapsedLinesCountBetween` ne couvre que les écarts
-    // ENTRE hunks, elle se compte contre la longueur de la source. Tant que la
-    // source n'est pas chargée on ignore s'il reste des lignes — on propose quand
-    // même la barre (le clic charge, puis tranche), sinon une modif en haut d'un
-    // gros fichier n'offrirait aucun moyen de déplier vers le bas. Si le dernier
-    // hunk touchait déjà la fin, la barre disparaît une fois la source connue.
-    const last = rendered[rendered.length - 1];
-    if (canExpand && last) {
-      const start = last.oldStart + last.oldLines;
-      const count = source ? source.length - start + 1 : null;
-      if (count === null || count > 0) {
-        const end = count === null ? start + EXPAND_STEP : start + count;
-        nodes.push(
-          <ExpandBar
-            key="tail"
-            count={count}
-            loading={loading}
-            failed={failed}
-            onExpandAll={count !== null && count <= EXPAND_STEP ? () => expand([start, end]) : undefined}
-            onExpandDown={
-              count === null || count > EXPAND_STEP
-                ? () => expand([start, start + EXPAND_STEP])
-                : undefined
-            }
-          />,
-        );
+      instanceRef.current = instance;
+      const root = node.shadowRoot;
+      if (!root) return;
+      localizeDiffChrome(root, t);
+      const placed = new Set<string>();
+      for (const annotation of lineAnnotations) {
+        const slot = getLineAnnotationName(annotation);
+        if (root.querySelector(`slot[name="${slot}"]`)) placed.add(annotation.metadata.key);
       }
-    }
+      setPlacedKeys((prev) => (sameKeys(prev, placed) ? prev : placed));
+    },
+    [lineAnnotations, t],
+  );
 
-    return nodes;
-  };
+  const options = useMemo(
+    () => ({
+      theme: DIFF_THEMES,
+      themeType,
+      diffStyle: viewType,
+      // Le régime décidé plus haut, en côte-à-côte comme en unifié : la lib
+      // synchronise le défilement de ses deux volets.
+      overflow: wrap ? ("wrap" as const) : ("scroll" as const),
+      disableFileHeader: true,
+      // La carte porte déjà le nom du fichier et ses compteurs : le séparateur
+      // n'a qu'à dire ce qu'il masque, et à offrir de le déplier.
+      hunkSeparators: "line-info" as const,
+      expansionLineCount: EXPANSION_LINE_COUNT,
+      // Doublon assumé avec le pool de workers, qui l'emporte quand il colore :
+      // c'est le repli du fil principal, et il doit rendre la même chose.
+      lineDiffType: DIFF_LINE_DIFF_TYPE,
+      unsafeCSS: DIFF_UNSAFE_CSS,
+      loadDiffFiles: expandable ? loadDiffFiles : undefined,
+      enableGutterUtility: !readOnly,
+      onGutterUtilityClick: readOnly ? undefined : onGutterUtilityClick,
+      onLineEnter: readOnly ? undefined : onLineEnter,
+      onPostRender,
+    }),
+    [
+      themeType,
+      viewType,
+      wrap,
+      expandable,
+      loadDiffFiles,
+      readOnly,
+      onGutterUtilityClick,
+      onLineEnter,
+      onPostRender,
+    ],
+  );
 
   // Le dossier s'efface, le nom du fichier porte : dans une liste de trente
   // chemins qui partagent leurs six premiers segments, c'est le dernier qu'on
@@ -697,35 +628,7 @@ function PrDiffFile({
   // fichier sans changement de contenu (renommage pur), ou fichier texte que la
   // forge a jugé trop volumineux — quatre situations que le message unique
   // d'avant confondait.
-  const missing = parsed ? null : noPatchKind(file);
-
-  /**
-   * La largeur VISIBLE de la boîte du diff, publiée en variable CSS.
-   *
-   * C'est elle qui borne les commentaires de ligne : ils vivent dans une cellule
-   * de la table du diff, qui en unifié vaut sa plus longue LIGNE DE CODE (parfois
-   * trois fois la boîte). Sans borne, un commentaire s'étale sur une seule ligne
-   * loin à droite, et il faut faire défiler le code pour le lire.
-   *
-   * Mesurée en JS et non laissée au seul `100cqw` : la requête de conteneur dit
-   * la même chose, mais elle demande un moteur qui la suit ET une feuille de
-   * style fraîche — deux conditions qu'on ne contrôle pas chez le lecteur. La
-   * variable, elle, arrive avec le composant. `100cqw` reste le repli au premier
-   * rendu, avant que la mesure ait eu lieu.
-   */
-  const boxRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const box = boxRef.current;
-    if (!box) return;
-    const publish = () => box.style.setProperty("--pr-diff-box", `${box.clientWidth}px`);
-    publish();
-    // La boîte change de largeur sans que rien ne re-rende : fenêtre
-    // redimensionnée, panneau latéral ouvert, barre de défilement apparue.
-    const observer = new ResizeObserver(publish);
-    observer.observe(box);
-    return () => observer.disconnect();
-    // `collapsed` remonte la boîte : elle n'existe pas quand le fichier est replié.
-  }, [collapsed, viewType, wrap]);
+  const missing = fileDiff ? null : noPatchKind(file);
 
   return (
     <div className="overflow-hidden rounded-md border border-border">
@@ -757,27 +660,13 @@ function PrDiffFile({
       </button>
       {collapsed ? null : (
         <>
-          {parsed ? (
-            <div
-              ref={boxRef}
-              className={cn(
-                "text-[13px]",
-                // Le défilement n'a de sens qu'en unifié : le côte-à-côte tient
-                // ses deux volets à parts égales, donc à la largeur de la boîte.
-                viewType === "unified" && !wrap && "pr-diff-scroll overflow-x-auto",
-              )}
-            >
-              <Diff
-                viewType={viewType}
-                diffType={parsed.type as DiffType}
-                hunks={hunks}
-                tokens={tokens}
-                widgets={widgets}
-                renderGutter={renderGutter}
-              >
-                {renderHunks}
-              </Diff>
-            </div>
+          {fileDiff ? (
+            <FileDiff<AnnotationMeta>
+              fileDiff={fileDiff}
+              options={options}
+              lineAnnotations={lineAnnotations}
+              renderAnnotation={renderAnnotation}
+            />
           ) : missing === "image" ? (
             <PrImageDiff file={file} endpoint={endpoint} locale={locale} />
           ) : (
@@ -800,9 +689,9 @@ function PrDiffFile({
               ) : null}
             </div>
           )}
-          {/* Hors du `parsed ?` : un fichier binaire ou trop gros n'a pas de diff,
-              donc AUCUN de ses fils ne s'ancre — ils vivent tous ici plutôt que de
-              disparaître avec le diff qu'on ne sait pas rendre. */}
+          {/* Hors du `fileDiff ?` : un fichier binaire ou trop gros n'a pas de
+              diff, donc AUCUN de ses fils ne s'ancre — ils vivent tous ici
+              plutôt que de disparaître avec le diff qu'on ne sait pas rendre. */}
           <StaleThreads
             threads={staleThreads}
             replies={replies}
@@ -820,7 +709,14 @@ function PrDiffFile({
 const NO_COMMENTS: PullRequestReviewComment[] = [];
 const NO_THREADS: ReviewThreadState[] = [];
 const NO_REACTIONS: ReviewCommentReaction[] = [];
+const EMPTY_KEYS: ReadonlySet<string> = new Set<string>();
 const noop = () => {};
+
+function sameKeys(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const key of a) if (!b.has(key)) return false;
+  return true;
+}
 
 export function PrDiff({
   files,
@@ -861,11 +757,25 @@ export function PrDiff({
 }) {
   const t = useTranslations("PullRequests");
   const locale = useLocale();
+  const { resolvedTheme } = useTheme();
+  const isMobile = useIsMobile();
   const [viewType, setViewType] = useState<ViewType>("unified");
-  // Défaut au défilement, comme les forges : replier une ligne longue casse
-  // l'alignement des numéros et déforme le code indenté. Le repli reste à un
-  // clic pour qui lit une PR sur un écran étroit.
-  const [wrap, setWrap] = useState(false);
+  /**
+   * Repli des lignes longues : `null` tant que personne n'a tranché, et c'est
+   * alors la LARGEUR qui décide.
+   *
+   * Au large, défilement, comme les forges : replier une ligne longue casse
+   * l'alignement des numéros et déforme le code indenté. Sur un téléphone, ce
+   * raisonnement s'inverse — la boîte fait quelques dizaines de caractères, donc
+   * défiler horizontalement ne montre plus jamais une ligne entière, et il faut
+   * balayer ligne par ligne pour lire un hunk. Mieux vaut du code replié que du
+   * code hors champ.
+   *
+   * Un DÉFAUT, pas une contrainte : dès qu'on touche la bascule, le choix tient,
+   * et il survit à une rotation d'écran.
+   */
+  const [wrapChoice, setWrapChoice] = useState<boolean | null>(null);
+  const wrap = wrapChoice ?? isMobile;
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const commentsByPath = useMemo(() => {
@@ -889,17 +799,33 @@ export function PrDiff({
     );
   }, [reviewComments, reviewThreads, files]);
 
-  // Parse une fois puis indexe par chemin (nouveau chemin, ou ancien pour une suppression).
+  /**
+   * Le diff unifié complet de la PR, en une chaîne. Mémoïsé À PART, et c'est
+   * lui — pas le tableau `files` — qui commande l'analyse : un rafraîchissement
+   * qui rend exactement les mêmes patchs rend la même chaîne, donc les mêmes
+   * objets de diff. Or la lib HYDRATE ces objets-là (le contexte déplié y est
+   * fusionné) : les recréer à chaque `refetch` effacerait sous les doigts ce que
+   * l'utilisateur vient de déplier.
+   */
+  const diffText = useMemo(() => files.map(toUnifiedDiff).filter(Boolean).join("\n"), [files]);
+
+  /**
+   * Analyse une fois, puis indexe par chemin. La lib nomme chaque fichier
+   * d'après le côté `b/` du `diff --git` qu'on écrit — donc `file.filename`,
+   * pour un fichier ajouté, supprimé ou renommé comme pour les autres.
+   *
+   * Pas de préfixe de cache : il indexerait la coloration sur une clé stable
+   * alors que le contenu d'une PR change sous nous (un commit poussé, une
+   * review relancée).
+   */
   const parsedByPath = useMemo(() => {
-    const diffText = files.map(toUnifiedDiff).filter(Boolean).join("\n");
-    const parsed = diffText ? parseDiff(diffText) : [];
-    const map = new Map<string, (typeof parsed)[number]>();
-    for (const p of parsed) {
-      const key = p.newPath && p.newPath !== "/dev/null" ? p.newPath : p.oldPath;
-      map.set(key, p);
+    const map = new Map<string, FileDiffMetadata>();
+    if (!diffText) return map;
+    for (const patch of parsePatchFiles(diffText)) {
+      for (const parsed of patch.files) map.set(parsed.name, parsed);
     }
     return map;
-  }, [files]);
+  }, [diffText]);
 
   const orphanReplies = useReviewReplies(endpoint, onCommentPosted);
   const orphanResolution = useThreadResolution(endpoint, onCommentPosted);
@@ -926,80 +852,81 @@ export function PrDiff({
     });
 
   return (
-    <div className={cn("pr-diff-view flex flex-col gap-2", className)}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">
-          {t("fileCount", { count: files.length })}
-          <span className="ml-2 tabular-nums text-emerald-600 dark:text-emerald-400">
-            +{totalAdd}
-          </span>
-          <span className="ml-1 tabular-nums text-red-600 dark:text-red-400">−{totalDel}</span>
-        </p>
-        <div className="flex shrink-0 items-center gap-2">
-          {viewType === "unified" ? (
-          <button
-            type="button"
-            onClick={() => setWrap((w) => !w)}
-            aria-pressed={wrap}
-            aria-label={t("wrapLines")}
-            title={t("wrapLines")}
-            className={cn(
-              "flex size-7 items-center justify-center rounded-md border transition-colors",
-              wrap
-                ? "border-brand/40 bg-brand/10 text-brand"
-                : "border-border text-muted-foreground hover:bg-muted",
-            )}
-          >
-            <WrapText className="size-3.5" />
-          </button>
-          ) : null}
-          <SegmentedControl
-            className="w-40"
-            value={viewType}
-            onChange={setViewType}
-            options={[
-              { value: "unified", label: t("unified") },
-              { value: "split", label: t("split") },
-            ]}
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        {files.map((f) => (
-          <PrDiffFile
-            key={f.filename}
-            file={f}
-            parsed={f.patch ? parsedByPath.get(f.filename) : undefined}
-            viewType={viewType}
-            wrap={wrap}
-            locale={locale}
-            endpoint={endpoint}
-            prUrl={prUrl}
-            provider={provider}
-            readOnly={readOnly}
-            canResolve={canResolve}
-            collapsed={collapsed.has(f.filename)}
-            onToggle={() => toggle(f.filename)}
-            reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}
-            reviewThreads={reviewThreads}
-            reviewReactions={reviewReactions}
-            onCommentPosted={onCommentPosted}
-          />
-        ))}
-        {orphanThreads.length > 0 ? (
-          <div className="overflow-hidden rounded-md border border-border">
-            <StaleThreads
-              threads={orphanThreads}
-              replies={orphanReplies}
-              resolution={canResolve ? orphanResolution : undefined}
-              reactions={orphanReactions}
-              readOnly={readOnly}
-              label={(count) => t("orphanComments", { count })}
+    <PrDiffWorkers>
+      <div className={cn("pr-diff-view flex flex-col gap-2", className)}>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            {t("fileCount", { count: files.length })}
+            <span className="ml-2 tabular-nums text-emerald-600 dark:text-emerald-400">
+              +{totalAdd}
+            </span>
+            <span className="ml-1 tabular-nums text-red-600 dark:text-red-400">−{totalDel}</span>
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setWrapChoice(!wrap)}
+              aria-pressed={wrap}
+              aria-label={t("wrapLines")}
+              title={t("wrapLines")}
+              className={cn(
+                "flex size-7 items-center justify-center rounded-md border transition-colors",
+                wrap
+                  ? "border-brand/40 bg-brand/10 text-brand"
+                  : "border-border text-muted-foreground hover:bg-muted",
+              )}
+            >
+              <WrapText className="size-3.5" />
+            </button>
+            <SegmentedControl
+              className="w-40"
+              value={viewType}
+              onChange={setViewType}
+              options={[
+                { value: "unified", label: t("unified") },
+                { value: "split", label: t("split") },
+              ]}
             />
           </div>
-        ) : null}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {files.map((f) => (
+            <PrDiffFile
+              key={f.filename}
+              file={f}
+              fileDiff={f.patch ? parsedByPath.get(f.filename) : undefined}
+              viewType={viewType}
+              wrap={wrap}
+              themeType={resolvedTheme}
+              locale={locale}
+              endpoint={endpoint}
+              prUrl={prUrl}
+              provider={provider}
+              readOnly={readOnly}
+              canResolve={canResolve}
+              collapsed={collapsed.has(f.filename)}
+              onToggle={() => toggle(f.filename)}
+              reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}
+              reviewThreads={reviewThreads}
+              reviewReactions={reviewReactions}
+              onCommentPosted={onCommentPosted}
+            />
+          ))}
+          {orphanThreads.length > 0 ? (
+            <div className="overflow-hidden rounded-md border border-border">
+              <StaleThreads
+                threads={orphanThreads}
+                replies={orphanReplies}
+                resolution={canResolve ? orphanResolution : undefined}
+                reactions={orphanReactions}
+                readOnly={readOnly}
+                label={(count) => t("orphanComments", { count })}
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </PrDiffWorkers>
   );
 }

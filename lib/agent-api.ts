@@ -1027,18 +1027,31 @@ export async function setPrReviewThreadResolvedApi(
 }
 
 /**
- * Poste un commentaire sur une ligne du diff. Part immédiatement sur GitHub.
- * Lève une `ApiError` de code `lineNotInDiff` si GitHub refuse d'ancrer la ligne.
+ * Poste un commentaire sur une ligne du diff — ou sur une PLAGE de lignes, en
+ * passant `startLine` (`line` est alors la DERNIÈRE ligne visée, comme GitHub
+ * l'attend). Part immédiatement sur GitHub. Lève une `ApiError` de code
+ * `lineNotInDiff` si GitHub refuse d'ancrer la ligne.
  */
 export async function postPrReviewCommentApi(
   endpoint: PrEndpoint,
-  input: { body: string; path: string; line: number; side: "LEFT" | "RIGHT" },
+  input: {
+    body: string;
+    path: string;
+    line: number;
+    side: "LEFT" | "RIGHT";
+    startLine?: number;
+    startSide?: "LEFT" | "RIGHT";
+  },
 ): Promise<{ comment: PullRequestReviewComment }> {
+  const { startLine, startSide, ...rest } = input;
   return parseJson(
     await fetch(`${endpoint}/review-comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        ...rest,
+        ...(startLine != null ? { start_line: startLine, start_side: startSide } : {}),
+      }),
     }),
   );
 }

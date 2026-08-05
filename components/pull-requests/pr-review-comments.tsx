@@ -44,12 +44,12 @@ import {
   type ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
 import type { MessageKey } from "@/lib/i18n-keys";
-import type { PrReviewThread } from "@/lib/pr-review-diff";
+import type { PrReviewThread } from "@/lib/pr-diff-anchors";
 
 /**
  * Briques d'affichage des commentaires de review d'une PR : le fil ancré sous une
- * ligne (widget de `react-diff-view`), le composer d'un nouveau commentaire, et le
- * repli des fils périmés. Le placement, lui, vit dans `pr-diff`.
+ * ligne (annotation de `@pierre/diffs`), le composer d'un nouveau commentaire, et
+ * le repli des fils périmés. Le placement, lui, vit dans `pr-diff`.
  */
 
 /**
@@ -688,28 +688,37 @@ export function ReviewThreadCard({
 }
 
 /**
- * Widget d'une ligne : tous ses fils, puis le composer s'il est ouvert.
+ * Annotation d'une ligne : tous ses fils, puis le composer s'il est ouvert.
+ * Rendue en light DOM et projetée par la lib de diff sous la ligne visée.
  *
- * L'en-tête nomme la ligne visée. Sans lui, le fil flotte SOUS la ligne sans rien
- * dire de ce à quoi il se rattache — et en vue unifiée c'est franchement ambigu :
- * une ligne modifiée produit DEUX lignes portant le même numéro (la supprimée puis
- * l'ajoutée), donc deux widgets voisins. « ajoutée » / « supprimée » les départage.
+ * L'en-tête nomme la ligne. Sans lui, le fil flotte SOUS la ligne sans rien dire
+ * de ce à quoi il se rattache — et en vue unifiée c'est franchement ambigu : une
+ * ligne modifiée produit DEUX lignes portant le même numéro (la supprimée puis
+ * l'ajoutée), donc deux annotations voisines. « ajoutée » / « supprimée » les
+ * départage. Une plage (commentaire multi-lignes) se dit par ses deux bouts.
  */
 export function LineWidget({
   anchor,
   children,
 }: {
   /** Ligne visée + nature du changement, pour l'en-tête. */
-  anchor: { line: number; kind: "added" | "removed" | "context" };
+  anchor: {
+    line: number;
+    /** Première ligne d'une plage — absente pour une remarque sur une seule ligne. */
+    startLine?: number;
+    kind: "added" | "removed" | "context";
+  };
   children: React.ReactNode;
 }) {
   const t = useTranslations("PullRequests");
   const label =
-    anchor.kind === "added"
-      ? t("lineAnchorAdded", { line: anchor.line })
-      : anchor.kind === "removed"
-        ? t("lineAnchorRemoved", { line: anchor.line })
-        : t("lineAnchor", { line: anchor.line });
+    anchor.startLine != null
+      ? t("lineAnchorRange", { start: anchor.startLine, end: anchor.line })
+      : anchor.kind === "added"
+        ? t("lineAnchorAdded", { line: anchor.line })
+        : anchor.kind === "removed"
+          ? t("lineAnchorRemoved", { line: anchor.line })
+          : t("lineAnchor", { line: anchor.line });
 
   return (
     <div className="flex flex-col gap-2 bg-muted/20 px-3 py-2.5">
@@ -796,38 +805,5 @@ export function StaleThreads({
         </div>
       ) : null}
     </div>
-  );
-}
-
-/**
- * Bouton « + » de la gouttière — l'affordance de commentaire, façon GitHub. Rendu
- * uniquement au survol de la ligne (l'appelant décide), et posé en absolu : la
- * gouttière ne fait que 7ch, l'insérer dans le flux pousserait le numéro de ligne.
- */
-export function GutterCommentButton({
-  onClick,
-  className,
-}: {
-  onClick: () => void;
-  className?: string;
-}) {
-  const t = useTranslations("PullRequests");
-  return (
-    <button
-      type="button"
-      aria-label={t("addLineComment")}
-      onClick={(e) => {
-        // La gouttière porte ses propres handlers (survol, sélection) : le clic
-        // sur le « + » ne doit pas les déclencher en plus.
-        e.stopPropagation();
-        onClick();
-      }}
-      className={cn(
-        "flex size-4 items-center justify-center rounded-sm bg-brand text-[13px] leading-none font-semibold text-white",
-        className,
-      )}
-    >
-      +
-    </button>
   );
 }

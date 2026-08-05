@@ -984,6 +984,9 @@ export interface ReviewCommentPayload {
   path?: string;
   line?: number;
   side?: "LEFT" | "RIGHT";
+  /** Première ligne d'une remarque multi-lignes — `line` en est alors la dernière. */
+  startLine?: number;
+  startSide?: "LEFT" | "RIGHT";
   inReplyTo?: number;
 }
 
@@ -1004,6 +1007,8 @@ export function parseReviewCommentPayload(
     path?: unknown;
     line?: unknown;
     side?: unknown;
+    start_line?: unknown;
+    start_side?: unknown;
     in_reply_to?: unknown;
   };
   const bad = (error: string) => ({
@@ -1035,7 +1040,34 @@ export function parseReviewCommentPayload(
     return bad("Line required");
   }
   if (p.side !== "LEFT" && p.side !== "RIGHT") return bad("Invalid side");
-  return { ok: true, payload: { body, path: p.path, line: p.line, side: p.side } };
+
+  // Plage (MIN-181) : facultative, mais si elle est là elle doit décrire une
+  // plage — la forge refuse `start_line >= line`, et l'erreur qu'elle rend ne
+  // dit pas ça.
+  if (p.start_line == null) {
+    return { ok: true, payload: { body, path: p.path, line: p.line, side: p.side } };
+  }
+  if (
+    typeof p.start_line !== "number" ||
+    !Number.isSafeInteger(p.start_line) ||
+    p.start_line < 1 ||
+    p.start_line >= p.line
+  ) {
+    return bad("Invalid start_line");
+  }
+  const startSide = p.start_side ?? p.side;
+  if (startSide !== "LEFT" && startSide !== "RIGHT") return bad("Invalid start_side");
+  return {
+    ok: true,
+    payload: {
+      body,
+      path: p.path,
+      line: p.line,
+      side: p.side,
+      startLine: p.start_line,
+      startSide,
+    },
+  };
 }
 
 export async function createPrReviewCommentResponse(
@@ -1083,6 +1115,8 @@ export async function createPrReviewCommentResponse(
       path: payload.path as string,
       line: payload.line as number,
       side: payload.side as "LEFT" | "RIGHT",
+      startLine: payload.startLine,
+      startSide: payload.startSide,
     });
     await trace();
     return NextResponse.json({ comment });
