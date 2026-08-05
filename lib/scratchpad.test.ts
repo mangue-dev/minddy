@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendScratchpadTasks,
   cleanDictatedTaskLine,
+  containsMarkdownTaskLine,
   mergeScratchpad,
   removeCompletedTasks,
   scratchpadPreview,
@@ -240,6 +241,41 @@ describe("cleanDictatedTaskLine", () => {
 
   it("returns an empty string for a marker-only line", () => {
     expect(cleanDictatedTaskLine("- [ ] ")).toBe("");
+  });
+});
+
+describe("containsMarkdownTaskLine", () => {
+  it("recognises the four markers, whatever the bullet", () => {
+    expect(containsMarkdownTaskLine("- [ ] à faire")).toBe(true);
+    expect(containsMarkdownTaskLine("* [~] en cours")).toBe(true);
+    expect(containsMarkdownTaskLine("+ [x] fait")).toBe(true);
+    expect(containsMarkdownTaskLine("  - [-] annulé")).toBe(true);
+    expect(containsMarkdownTaskLine("- [X] fait")).toBe(true);
+  });
+
+  it("finds a task line anywhere in a pasted block", () => {
+    expect(
+      containsMarkdownTaskLine("# Feedback\n\n- [ ] filtrer la sidebar\n- [ ] badge public")
+    ).toBe(true);
+  });
+
+  it("accepts a marker alone at the end of a line", () => {
+    expect(containsMarkdownTaskLine("- [ ]")).toBe(true);
+  });
+
+  it("says no to prose, bullets and headings", () => {
+    expect(containsMarkdownTaskLine("Une note libre, sans case.")).toBe(false);
+    expect(containsMarkdownTaskLine("- une simple puce\n- une autre")).toBe(false);
+    expect(containsMarkdownTaskLine("## Une section\n\nDu texte.")).toBe(false);
+  });
+
+  it("says no to a bracket that is not a checkbox marker", () => {
+    expect(containsMarkdownTaskLine("- [lien](https://minddy.app)")).toBe(false);
+    expect(containsMarkdownTaskLine("- [ok] pas une case")).toBe(false);
+  });
+
+  it("says no to a marker that is not on its own line", () => {
+    expect(containsMarkdownTaskLine("voir - [ ] plus haut")).toBe(false);
   });
 });
 

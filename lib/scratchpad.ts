@@ -60,6 +60,21 @@ export const TASK_MARKER_BY_STATE: Record<PlanTaskState, string> = {
   cancelled: "[-]",
 };
 
+/** Une ligne de tâche markdown : une puce (`-`, `*`, `+`) puis l'un des quatre
+ *  marqueurs du carnet. Le `m` fait porter `^`/`$` sur chaque ligne. */
+const MARKDOWN_TASK_LINE = /^[ \t]*[-*+][ \t]+\[[ xX~-]\](?=[ \t]|$)/m;
+
+/**
+ * Le texte porte-t-il au moins une ligne de tâche markdown ?
+ *
+ * Sert au COLLAGE dans le carnet (components/scratchpad/paste-markdown.ts) : un
+ * presse-papier qui porte ces marqueurs porte du markdown, quoi qu'en dise sa
+ * version HTML — et c'est en markdown qu'il faut le relire.
+ */
+export function containsMarkdownTaskLine(text: string): boolean {
+  return MARKDOWN_TASK_LINE.test(text);
+}
+
 /** How a deliberate empty line (spacer) is stored. Markdown collapses runs of
  *  blank lines, so an empty paragraph the user typed for spacing would vanish on
  *  the WYSIWYG round-trip. A lone non-breaking space renders blank but is NOT a

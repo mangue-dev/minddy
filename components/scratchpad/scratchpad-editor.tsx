@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import {
   useEditor,
   EditorContent,
@@ -23,6 +23,7 @@ import { AgentBeam } from "@/components/agent-beam";
 import { Arrows } from "@/components/editor-arrows";
 import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
 import { ScratchpadParagraph } from "@/components/scratchpad/scratchpad-paragraph";
+import { PasteMarkdownTasks } from "@/components/scratchpad/paste-markdown";
 import {
   ScratchpadTaskItem,
   ScratchpadTaskList,
@@ -64,6 +65,33 @@ const PROSE = cn(
   "[&_strong]:font-semibold",
   "[&_hr]:my-4 [&_hr]:border-border"
 );
+
+/**
+ * Les réglages de la vue ProseMirror — figés au niveau du module, et c'est la
+ * moitié d'une règle qui vaut pour TOUTES les options de `useEditor` (cf. le
+ * commentaire au-dessus de l'appel) : tiptap les relit à chaque rendu et
+ * réapplique tout ce qui a changé d'identité, depuis son effet.
+ */
+const EDITOR_PROPS = {
+  attributes: { class: PROSE },
+  // Keep the caret off the bottom edge: ProseMirror scrolls it into view
+  // with this much room to spare, so writing at the end of a long note
+  // happens comfortably above the fold instead of on the last visible pixel
+  // (the trailing space below is the wrapper's pb-[40vh]).
+  scrollMargin: { top: 0, right: 0, bottom: 160, left: 0 },
+  scrollThreshold: { top: 0, right: 0, bottom: 160, left: 0 },
+  // Écrire périme le pointeur : tant qu'on n'a pas redéplacé la souris, la
+  // tâche qu'elle survole ne prend plus ⇧A/⇧P (cf. hover-keys.ts). Le
+  // signal est la FRAPPE, pas le changement de document : les flèches et
+  // les retours arrière sont de l'écriture eux aussi, et une insertion
+  // programmée (dictée, « tout démarrer ») n'en est pas. ProseMirror ne
+  // voit ici que les frappes tombées jusqu'à lui — un raccourci de survol
+  // qui a fait son office les arrête avant.
+  handleKeyDown: () => {
+    noteTyping();
+    return false;
+  },
+};
 
 function getMarkdown(editor: Editor): string {
   // tiptap-markdown adds `markdown` storage but doesn't augment TipTap's type.
@@ -238,52 +266,78 @@ export function ScratchpadEditor({
   });
   startDictationRef.current = dictation.start;
 
-  const slashItems: SlashItem[] = [
-    {
-      title: t("slashTask"),
-      icon: ListTodo,
-      keywords: ["task", "tache", "tâche", "todo", "à faire", "checkbox"],
-      run: (editor, range) =>
-        editor.chain().focus().deleteRange(range).toggleTaskList().run(),
-    },
-    {
-      title: t("slashDictate"),
-      icon: Mic,
-      keywords: ["dictate", "dicter", "voice", "voix", "micro", "vocal", "audio"],
-      run: (editor, range) => {
-        editor.chain().focus().deleteRange(range).run();
-        startDictationRef.current();
+  const slashItems: SlashItem[] = useMemo(
+    () => [
+      {
+        title: t("slashTask"),
+        icon: ListTodo,
+        keywords: ["task", "tache", "tâche", "todo", "à faire", "checkbox"],
+        run: (editor, range) =>
+          editor.chain().focus().deleteRange(range).toggleTaskList().run(),
       },
-    },
-    {
-      title: t("slashH1"),
-      icon: Heading1,
-      keywords: ["title", "titre", "h1", "heading", "section"],
-      run: (editor, range) =>
-        editor.chain().focus().deleteRange(range).setNode("heading", { level: 1 }).run(),
-    },
-    {
-      title: t("slashH2"),
-      icon: Heading2,
-      keywords: ["title", "titre", "h2", "heading", "section"],
-      run: (editor, range) =>
-        editor.chain().focus().deleteRange(range).setNode("heading", { level: 2 }).run(),
-    },
-    {
-      title: t("slashH3"),
-      icon: Heading3,
-      keywords: ["title", "titre", "h3", "heading", "section"],
-      run: (editor, range) =>
-        editor.chain().focus().deleteRange(range).setNode("heading", { level: 3 }).run(),
-    },
-    {
-      title: t("slashBullet"),
-      icon: List,
-      keywords: ["list", "liste", "bullet", "puce"],
-      run: (editor, range) =>
-        editor.chain().focus().deleteRange(range).toggleBulletList().run(),
-    },
-  ];
+      {
+        title: t("slashDictate"),
+        icon: Mic,
+        keywords: [
+          "dictate",
+          "dicter",
+          "voice",
+          "voix",
+          "micro",
+          "vocal",
+          "audio",
+        ],
+        run: (editor, range) => {
+          editor.chain().focus().deleteRange(range).run();
+          startDictationRef.current();
+        },
+      },
+      {
+        title: t("slashH1"),
+        icon: Heading1,
+        keywords: ["title", "titre", "h1", "heading", "section"],
+        run: (editor, range) =>
+          editor
+            .chain()
+            .focus()
+            .deleteRange(range)
+            .setNode("heading", { level: 1 })
+            .run(),
+      },
+      {
+        title: t("slashH2"),
+        icon: Heading2,
+        keywords: ["title", "titre", "h2", "heading", "section"],
+        run: (editor, range) =>
+          editor
+            .chain()
+            .focus()
+            .deleteRange(range)
+            .setNode("heading", { level: 2 })
+            .run(),
+      },
+      {
+        title: t("slashH3"),
+        icon: Heading3,
+        keywords: ["title", "titre", "h3", "heading", "section"],
+        run: (editor, range) =>
+          editor
+            .chain()
+            .focus()
+            .deleteRange(range)
+            .setNode("heading", { level: 3 })
+            .run(),
+      },
+      {
+        title: t("slashBullet"),
+        icon: List,
+        keywords: ["list", "liste", "bullet", "puce"],
+        run: (editor, range) =>
+          editor.chain().focus().deleteRange(range).toggleBulletList().run(),
+      },
+    ],
+    [t]
+  );
 
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -377,55 +431,62 @@ export function ScratchpadEditor({
   // so TaskList/TaskItem's Node type reads as a different identity than the one
   // useEditor expects. @tiptap/pm and @tiptap/core are single-versioned, so it's
   // purely a type artifact — cast to the react-side Extensions type.
-  const extensions = [
-    StarterKit.configure({ heading: { levels: [1, 2, 3] }, paragraph: false }),
-    ScratchpadParagraph,
-    ScratchpadTaskList,
-    ScratchpadTaskItem,
-    Arrows,
-    Markdown.configure({
-      html: false,
-      linkify: true,
-      transformPastedText: true,
-      transformCopiedText: true,
-    }),
-    // Placeholder on the current empty line (follows the cursor), so every new
-    // line invites input — not just the empty document.
-    Placeholder.configure({ placeholder, showOnlyCurrent: true }),
-    SectionCopy.configure({
-      label: copySectionLabel,
-      onCopy: (index) => copySectionRef.current(index),
-      launchLabel: launchSectionLabel,
-      onLaunch: (index) => launchSectionRef.current(index),
-    }),
-    SlashCommand.configure({ items: slashItems }),
-  ] as unknown as Extensions;
+  const extensions = useMemo(
+    () =>
+      [
+        StarterKit.configure({
+          heading: { levels: [1, 2, 3] },
+          paragraph: false,
+        }),
+        ScratchpadParagraph,
+        ScratchpadTaskList,
+        ScratchpadTaskItem,
+        Arrows,
+        Markdown.configure({
+          html: false,
+          linkify: true,
+          transformPastedText: true,
+          transformCopiedText: true,
+        }),
+        // APRÈS Markdown : elle emprunte son parseur pour relire un collage que
+        // le HTML du presse-papier aurait autrement emporté (paste-markdown.ts).
+        PasteMarkdownTasks,
+        // Placeholder on the current empty line (follows the cursor), so every
+        // new line invites input — not just the empty document.
+        Placeholder.configure({ placeholder, showOnlyCurrent: true }),
+        SectionCopy.configure({
+          label: copySectionLabel,
+          onCopy: (index) => copySectionRef.current(index),
+          launchLabel: launchSectionLabel,
+          onLaunch: (index) => launchSectionRef.current(index),
+        }),
+        SlashCommand.configure({ items: slashItems }),
+      ] as unknown as Extensions,
+    [placeholder, copySectionLabel, launchSectionLabel, slashItems]
+  );
 
+  // Le contenu de départ, figé au montage. tiptap ne lit `content` qu'à la
+  // CRÉATION de l'éditeur, alors que la prop, elle, change à chaque sauvegarde
+  // (le cache de la requête est réécrit) — la passer telle quelle ferait donc
+  // voir une option modifiée à chaque frappe. Cf. la règle ci-dessous.
+  const initialContentRef = useRef(initialValue);
+
+  // ⚠️ Les options passées ici sont relues à CHAQUE rendu par tiptap, qui
+  // réapplique d'un `editor.setOptions()` tout ce qui a changé d'identité —
+  // depuis son propre effet, donc en pleine phase de commit React. Or la
+  // moindre vue de nœud remontée au passage (nos tâches sont des composants
+  // React) se monte en `flushSync`, que React refuse là : « flushSync was
+  // called from inside a lifecycle method », et le carnet se redessine au
+  // petit bonheur en pleine frappe. D'où extensions mémoïsées, `editorProps`
+  // sorti du composant et contenu figé : plus rien ne bouge d'un rendu à
+  // l'autre, plus rien n'est réappliqué. Toute option ajoutée ici doit tenir
+  // la même règle.
   const editor = useEditor({
     immediatelyRender: false,
     autofocus: "end",
     extensions,
-    content: initialValue,
-    editorProps: {
-      attributes: { class: PROSE },
-      // Keep the caret off the bottom edge: ProseMirror scrolls it into view
-      // with this much room to spare, so writing at the end of a long note
-      // happens comfortably above the fold instead of on the last visible pixel
-      // (the trailing space below is the wrapper's pb-[40vh]).
-      scrollMargin: { top: 0, right: 0, bottom: 160, left: 0 },
-      scrollThreshold: { top: 0, right: 0, bottom: 160, left: 0 },
-      // Écrire périme le pointeur : tant qu'on n'a pas redéplacé la souris, la
-      // tâche qu'elle survole ne prend plus ⇧A/⇧P (cf. hover-keys.ts). Le
-      // signal est la FRAPPE, pas le changement de document : les flèches et
-      // les retours arrière sont de l'écriture eux aussi, et une insertion
-      // programmée (dictée, « tout démarrer ») n'en est pas. ProseMirror ne
-      // voit ici que les frappes tombées jusqu'à lui — un raccourci de survol
-      // qui a fait son office les arrête avant.
-      handleKeyDown: () => {
-        noteTyping();
-        return false;
-      },
-    },
+    content: initialContentRef.current,
+    editorProps: EDITOR_PROPS,
     onCreate: ({ editor }) => {
       editorRef.current = editor;
       if (markdownRef) markdownRef.current = () => getMarkdown(editor);

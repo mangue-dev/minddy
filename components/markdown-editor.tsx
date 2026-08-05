@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
@@ -53,6 +53,10 @@ const PROSE = cn(
   "[&_hr]:my-3 [&_hr]:border-border",
 );
 
+/** Les réglages de la vue ProseMirror — figés hors du composant, cf. la règle
+    au-dessus de l'appel à `useEditor`. */
+const EDITOR_PROPS = { attributes: { class: PROSE } };
+
 /**
  * Borderless WYSIWYG markdown editor. Content is edited as rendered rich text
  * (Notion-style — bold/headings/lists show live) and read/written as markdown.
@@ -100,9 +104,8 @@ export function MarkdownEditor({
   // demanderait de reconstruire le schéma, ce qu'aucun appelant ne fait.
   const [hasMentions] = useState(!!mentions);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
+  const extensions = useMemo(
+    () => [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       Arrows,
       ...(hasMentions
@@ -121,8 +124,24 @@ export function MarkdownEditor({
         transformCopiedText: true,
       }),
     ],
-    content: value,
-    editorProps: { attributes: { class: PROSE } },
+    [hasMentions],
+  );
+
+  // Le texte de départ, figé au montage : tiptap ne lit `content` qu'à la
+  // création de l'éditeur (la surface se remonte par `key`, cf. plus haut).
+  const initialContentRef = useRef(value);
+
+  // ⚠️ tiptap relit ces options à CHAQUE rendu et réapplique d'un
+  // `editor.setOptions()` tout ce qui a changé d'identité — depuis son propre
+  // effet, donc en pleine phase de commit React, où remonter une vue de nœud
+  // (les pilules de mention en sont) lève l'erreur `flushSync` décrite plus
+  // bas. D'où extensions mémoïsées, `editorProps` hors du composant et contenu
+  // figé : plus rien ne bouge d'un rendu à l'autre.
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions,
+    content: initialContentRef.current,
+    editorProps: EDITOR_PROPS,
     onCreate: ({ editor }) => syncEmpty(editor.isEmpty),
     onUpdate: ({ editor, transaction }) => {
       syncEmpty(editor.isEmpty);

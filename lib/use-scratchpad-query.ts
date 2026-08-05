@@ -259,7 +259,15 @@ export function useScratchpadDoc({
     const live = getLive();
     if (live === undefined || live !== baseRef.current.content) return;
     baseRef.current = { content: data.content, rev: data.rev };
-    if (live !== data.content) applyExternal(data.content, { emitUpdate: false });
+    if (live === data.content) return;
+    // HORS de la phase de commit (`queueMicrotask`) : remplacer le contenu
+    // remonte les vues React des tâches, et tiptap les monte en `flushSync`.
+    // Appelé directement dans l'effet, React refuse — « flushSync was called
+    // from inside a lifecycle method » (même piège que la pose des mentions,
+    // cf. components/markdown-editor.tsx). Une microtâche s'exécute juste après
+    // le commit, donc hors de tout rendu.
+    const adopted = data.content;
+    queueMicrotask(() => applyExternal(adopted, { emitUpdate: false }));
   }, [data, getLive, applyExternal]);
 
   return {
