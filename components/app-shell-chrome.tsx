@@ -1178,6 +1178,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
+      // `app-shell` : la prise de globals.css sur le <main> du shell, dont la
+      // réserve basse se recale sur la hauteur RÉELLE de la barre mobile
+      // (--mobile-nav-clearance). Rien d'autre ne s'y accroche.
+      className="app-shell"
       // Le bloc de navigation : la sidebar primaire, puis le point d'accueil de
       // la sidebar SECONDAIRE que la page y téléporte. Les deux vivent dans la
       // même boîte, à gauche du header — c'est ce qui décale le fil d'Ariane et

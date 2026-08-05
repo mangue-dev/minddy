@@ -670,9 +670,13 @@ export function AgentConversation({
       </div>
 
       {/* Composer : steering/interruption (live) ou lancement pré-écrit (compose).
-          Borné à la même largeur max que le fil et centré. */}
+          Borné à la même largeur max que le fil et centré. Sur la PAGE Agents il
+          se pose juste au-dessus de la barre de navigation mobile, donc dans le
+          dégradé qu'elle projette : `dock-above-nav` l'en sort (cf. globals.css).
+          Dans la modal, la classe ne coûte rien — le Sheet est son propre
+          contexte d'empilement. */}
       {phase !== "loading" && (
-        <div className="shrink-0">
+        <div className="dock-above-nav shrink-0">
           <div className="mx-auto w-full max-w-[800px]">
           {/* Rien ne s'intercale plus entre le fil et le composer. La barre
               « fichiers changés » vivait ici : elle grandissait d'une ligne à chaque

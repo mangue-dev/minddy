@@ -342,6 +342,51 @@ nav[aria-label="Navigation"]
   display: none;
 }
 
+/* ─── Le dégagement de la barre de navigation mobile ──────────────────────────
+   mangue-ui réserve 6 rem au bas du contenu (AppShell : `max-desktop:pb-[calc(
+   6rem+env(safe-area-inset-bottom))]`) pour que rien ne passe sous la pilule
+   flottante. Or la pilule ne mesure que 3 rem de boutons plus son ancrage bas :
+   la réserve dégage une fois et demie ce qu'il fallait, et sur mobile ce
+   surplus se paie partout — la fin d'une liste, la dernière colonne d'un board,
+   et surtout les écrans qui ANCRENT un champ en pied (le composer d'une pull
+   request, celui d'une session d'agent). Là, l'écart ne se rattrape pas au
+   défilement : il RESTE à l'écran, une quarantaine de pixels de vide entre la
+   barre et le champ, sur la surface la plus étroite du produit.
+
+   On repose donc la réserve sur ce que la pilule mesure vraiment, plus un filet
+   d'air — une seule règle, donc toutes les pages d'un coup. Elle vise le <main>
+   du shell (le seul de l'app, cf. la classe posée sur l'AppShell dans
+   components/app-shell-chrome.tsx) et l'emporte sans `!important` : un
+   utilitaire Tailwind vit dans @layer, et une règle hors layer bat tout ce qui
+   est layerisé, quelle que soit la spécificité.
+
+   À TENIR À JOUR AVEC mangue-ui : les deux mesures ci-dessous recopient sa
+   géométrie, et `lib/mobile-nav-clearance.test.ts` échoue si elle bouge. */
+:root {
+  /* La pilule : 3 rem de boutons (MobileNavItem, `h-12`) + son ancrage bas
+     (MobileNav : `pb-[max(1rem,env(safe-area-inset-bottom))]`). */
+  --mobile-nav-height: calc(3rem + max(1rem, env(safe-area-inset-bottom)));
+  /* Ce qu'on garde libre sous le contenu : la pilule et un filet d'air. */
+  --mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);
+}
+
+/* 1200px = `--breakpoint-desktop` (mangue-ui), le point où la pilule apparaît. */
+@media (width < 1200px) {
+  .app-shell main {
+    padding-bottom: var(--mobile-nav-clearance);
+  }
+
+  /* Un pied de page ANCRÉ (composer de pull request, de session d'agent) se
+     pose désormais juste au-dessus de la pilule — donc DANS le dégradé de 8 rem
+     qu'elle projette pour faire fondre ce qui défile dessous. Un champ n'a pas
+     à s'estomper, et son bouton d'envoi encore moins : cette classe l'en sort.
+     41 et pas 50 : au-dessus de la barre (z-40), sous les modales et les menus. */
+  .dock-above-nav {
+    position: relative;
+    z-index: 41;
+  }
+}
+
 /* Mobile full-screen search sheet: mangue-ui's <CommandList> ships a default
    max-height (max-h-72 ≈ 288px) sized for the desktop popover. In the full-
    screen sheet that squishes the command palette into the top third with a big

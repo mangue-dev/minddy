@@ -27,9 +27,9 @@ const HERO_COLUMN = "mx-auto w-full max-w-xl";
     à la FENÊTRE. Une gouttière basse de cette hauteur remonte le bloc d'exactement
     la moitié — c'est tout ce qui sépare les deux centres.
 
-    Desktop seulement : en dessous, le shell réserve déjà 6 rem au bas du contenu
-    pour que rien ne passe sous la barre de navigation flottante, et cette réserve
-    remonte le bloc plus que le header ne l'avait descendu. */
+    Desktop seulement : en dessous, le shell réserve déjà de quoi dégager la barre
+    de navigation flottante (`--mobile-nav-clearance`, globals.css), et cette
+    réserve remonte le bloc plus que le header ne l'avait descendu. */
 const HEADER_OFFSET = "desktop:pb-[60px]";
 
 /**

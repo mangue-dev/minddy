@@ -345,7 +345,9 @@ export function SessionCompose({
         )}
       </div>
 
-      <div className="shrink-0">
+      {/* Même pied que la conversation : ancré au bas de la page, donc sorti du
+          dégradé de la barre mobile par `dock-above-nav` (cf. globals.css). */}
+      <div className="dock-above-nav shrink-0">
         <div className="mx-auto w-full max-w-[800px]">
           <ChatInput
             key="session-compose"

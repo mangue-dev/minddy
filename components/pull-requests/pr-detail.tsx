@@ -1572,9 +1572,13 @@ export function PrDetail({
           Seulement sous l'onglet du FIL : il n'y a rien à commenter en face
           d'une liste de commits, et l'onglet Fichiers a ses propres champs,
           ancrés à leur ligne. ABSENT sans compte git : le message partirait sous
-          l'identité du bot (MIN-144). */}
+          l'identité du bot (MIN-144).
+
+          `dock-above-nav` : sur mobile il se pose juste au-dessus de la barre
+          flottante, donc dans le dégradé qu'elle projette — la classe l'en sort
+          (cf. globals.css). */}
       {tab === "activity" && canComment ? (
-        <div className="shrink-0 bg-background px-4 py-3 md:px-6">
+        <div className="dock-above-nav shrink-0 bg-background px-4 py-3 md:px-6">
           {/* Même colonne que le fil au-dessus : un composer pleine largeur ne
               serait plus en face de ce à quoi il répond. */}
           <div className="mx-auto max-w-3xl">
