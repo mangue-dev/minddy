@@ -673,7 +673,7 @@ describe("buildAgentContextMessage — pièces jointes image", () => {
 describe("buildAgentSystemPrompt — tools minddy aux deux ancrages", () => {
   const anchors = ["issue", "notebook"] as const;
 
-  it("cite les dix tools quel que soit l'ancrage", () => {
+  it("cite les douze tools quel que soit l'ancrage", () => {
     for (const anchor of anchors) {
       const prompt = buildAgentSystemPrompt({ anchor });
       for (const tool of [
@@ -682,6 +682,8 @@ describe("buildAgentSystemPrompt — tools minddy aux deux ancrages", () => {
         "read_attachment",
         "update_issue",
         "write_issue_plan",
+        "append_to_plan",
+        "edit_issue_text",
         "create_issue",
         "read_scratchpad",
         "add_scratchpad_tasks",

@@ -15,7 +15,18 @@ import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { isForgePrEvent, forgePrActor } from "@/lib/pr-events";
 import { getRepoProvider } from "@/lib/repo-providers";
-import { MAX_PLAN_LENGTH, PLAN_TASK_STATES, parsePlan, setTaskState } from "@/lib/plan";
+import {
+  MAX_PLAN_LENGTH,
+  PLAN_TASK_STATES,
+  appendToPlan,
+  parsePlan,
+  setTaskState,
+} from "@/lib/plan";
+import {
+  editIssueText,
+  type IssueTextField,
+  type IssueTextTools,
+} from "@/lib/server/text-edit";
 import {
   ISSUE_EFFORTS,
   ISSUE_PRIORITIES,
@@ -23,7 +34,10 @@ import {
 } from "@/lib/issue-validation";
 import { RECURRENCE_CADENCES } from "@/lib/recurrence";
 import { createIssueForProject } from "@/lib/server/create-issue";
-import { updateIssueFields } from "@/lib/server/update-issue";
+import {
+  MAX_DESCRIPTION_LENGTH,
+  updateIssueFields,
+} from "@/lib/server/update-issue";
 import {
   addIssueRelation,
   findIssueRelation,
@@ -171,6 +185,59 @@ function coreFail(r: {
   return fail(code, r.rawMessage ?? r.errorKey ?? "Request failed");
 }
 
+/**
+ * Le plan et la description d'un ticket TELS QU'ILS SONT STOCKÉS — le point de
+ * départ obligé des écritures chirurgicales (append, patch) : ce qu'on lit
+ * d'abord, on ne peut pas l'écraser sans le voir. Les deux colonnes d'un coup,
+ * en une seule chaîne littérale (`select` type ses colonnes en LISANT ce texte,
+ * une concaténation lui rend le résultat opaque).
+ */
+async function readIssueText(
+  issueId: string
+): Promise<{ plan: string; description: string } | { error: ToolResult }> {
+  const { data, error } = await getServiceClient()
+    .from("issues")
+    .select("plan, description")
+    .is("deleted_at", null)
+    .eq("id", issueId)
+    .maybeSingle();
+  if (error) return { error: fail("database_error", error.message) };
+  return {
+    plan: typeof data?.plan === "string" ? data.plan : "",
+    description: typeof data?.description === "string" ? data.description : "",
+  };
+}
+
+/** Les tâches du plan après écriture, avec les index que reprend
+ *  minddy_update_plan_task — le retour commun des trois tools de plan. */
+function planTaskSummary(plan: string | null | undefined) {
+  const parsed = parsePlan(plan ?? "");
+  return {
+    plan_tasks: parsed.tasks.map((t) => ({
+      task_index: t.index,
+      state: t.state,
+      text: t.text,
+    })),
+    plan_progress: parsed.progress,
+  };
+}
+
+/** Plafond du diff renvoyé par minddy_edit_issue_text : de quoi confirmer que
+ *  l'édition a atterri au bon endroit, sans re-transporter le document qu'on
+ *  vient précisément d'éviter de réécrire. */
+const MAX_EDIT_DIFF_CHARS = 2000;
+
+/** Les noms que porte CETTE surface, pour que les refus du patch renvoient vers
+ *  des tools qui existent ici (cf. IssueTextTools). */
+const MCP_TEXT_TOOLS: IssueTextTools = {
+  read: "minddy_get_issue",
+  appendToPlan: "minddy_append_to_plan",
+  replaceWhole: {
+    plan: "minddy_update_issues { fields: { plan } }",
+    description: "minddy_update_issues { fields: { description } }",
+  },
+};
+
 const PLAN_FIELD = z
   .string()
   .max(MAX_PLAN_LENGTH)
@@ -188,9 +255,13 @@ const PLAN_FIELD = z
       "option and state the assumption in the context section. Park a question " +
       "only when being wrong is expensive, under a '## Questions' heading. " +
       "checkboxes there are open questions, not work, and stay out of the " +
-      "progress count (tick one to mark it answered). To " +
-      "flip ONE task's state while executing, prefer minddy_update_plan_task " +
-      "instead of resending the whole plan."
+      "progress count (tick one to mark it answered). " +
+      "This field REPLACES the whole plan, so send it whole when WRITING one — " +
+      "but never to change part of an existing plan: minddy_append_to_plan adds " +
+      "a block, minddy_edit_issue_text rewrites a passage (old_string → " +
+      "new_string), minddy_update_plan_task flips a task's state. All three cost " +
+      "a few tokens instead of the whole document, and leave what you did not " +
+      "touch exactly as it was."
   );
 
 const PROJECT_ID = z
@@ -1151,8 +1222,13 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Apply the same field changes to 1–50 issues of a project (single edits: " +
         "pass one issue). Only the fields you send change; null clears a nullable " +
-        "field. category_ids REPLACES the issue's full category set. plan replaces " +
-        "the whole plan markdown. For one checkbox, use minddy_update_plan_task. " +
+        "field. category_ids REPLACES the issue's full category set. So do " +
+        "description and plan: every field here is a full replacement, which on a " +
+        "long text means re-emitting the whole document to change a line, and " +
+        "silently dropping whatever another client wrote meanwhile. To change PART " +
+        "of a plan or a description, patch it instead — minddy_edit_issue_text " +
+        "(rewrite a passage), minddy_append_to_plan (add a block), " +
+        "minddy_update_plan_task (flip a checkbox). " +
         "Returns per-issue failures, so check `failed` in the result.",
       inputSchema: {
         project_id: PROJECT_ID,
@@ -1284,14 +1360,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      const { data: row, error } = await getServiceClient()
-        .from("issues")
-        .select("plan")
-        .is("deleted_at", null)
-        .eq("id", ref.issue.id)
-        .maybeSingle();
-      if (error) return fail("database_error", error.message);
-      const plan = typeof row?.plan === "string" ? row.plan : "";
+      const current = await readIssueText(ref.issue.id);
+      if ("error" in current) return current.error;
+      const plan = current.plan;
       const parsed = parsePlan(plan);
 
       // Tout-ou-rien : valider chaque index avant de toucher au markdown.
@@ -1322,15 +1393,189 @@ export function registerMinddyTools(rawServer: McpServer): void {
       });
       if (!result.ok) return coreFail(result);
 
-      const refreshed = parsePlan((result.issue.plan as string) ?? "");
       return ok({
         issue: ref.issue.identifier,
-        plan_tasks: refreshed.tasks.map((t) => ({
-          task_index: t.index,
-          state: t.state,
-          text: t.text,
-        })),
-        plan_progress: refreshed.progress,
+        ...planTaskSummary(result.issue.plan as string | null),
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_append_to_plan",
+    {
+      title: "Append to plan",
+      description:
+        "Add a block to an issue's implementation plan WITHOUT touching a single " +
+        "byte of what is already there — an extra task, a note, a precision that " +
+        "landed after the plan was written. The block goes at the END of the plan " +
+        "(just above its '## Questions' heading when it has one, so a new checkbox " +
+        "isn't read as an open question), or at the end of a named section with " +
+        "`section`. Creates the plan when the issue has none. Prefer this to " +
+        "minddy_update_issues { fields: { plan } }, which rewrites the whole plan " +
+        "and drops everything you don't resend; to reword something already " +
+        "written, use minddy_edit_issue_text. Returns the refreshed plan_tasks " +
+        "and plan_progress.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        issue: ISSUE_REF,
+        markdown: z
+          .string()
+          .min(1)
+          .describe(
+            "The block to ADD, markdown: checkbox task lines ('- [ ] …') and/or a " +
+              "short paragraph. ONLY what is new — everything already in the plan " +
+              "is kept as-is, so never repeat it here."
+          ),
+        section: z
+          .string()
+          .optional()
+          .describe(
+            "Exact text of an existing heading to append under (e.g. 'Questions' " +
+              "to park an open question). Omit to append at the end of the plan. " +
+              "An unknown heading is an error, not a new section — read the plan " +
+              "with minddy_get_issue first."
+          ),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveIssueRef(scope.access, args.issue);
+      if ("error" in ref) return ref.error;
+
+      if (!args.markdown.trim()) {
+        return fail("invalid_params", "markdown must carry the block to add.");
+      }
+      const section = args.section?.trim() ? args.section.trim() : null;
+
+      const current = await readIssueText(ref.issue.id);
+      if ("error" in current) return current.error;
+
+      const next = appendToPlan(current.plan, args.markdown, section);
+      if (next === null) {
+        return fail(
+          "plan_section_not_found",
+          `The plan of ${ref.issue.identifier} has no "${section}" heading. ` +
+            "Read it with minddy_get_issue to see its headings, or omit " +
+            '"section" to append at the end of the plan.'
+        );
+      }
+      if (next.length > MAX_PLAN_LENGTH) {
+        return fail(
+          "invalid_params",
+          `The plan is capped at ${MAX_PLAN_LENGTH} characters; this block would ` +
+            `take it to ${next.length}.`
+        );
+      }
+
+      const result = await updateIssueFields({
+        issueId: ref.issue.id,
+        actorId: scope.userId,
+        input: { plan: next },
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return coreFail(result);
+
+      return ok({
+        issue: ref.issue.identifier,
+        ...planTaskSummary(result.issue.plan as string | null),
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_edit_issue_text",
+    {
+      title: "Edit issue text",
+      description:
+        "Rewrite ONE passage of an issue's plan or description IN PLACE, the way a " +
+        "code editor patches a file: old_string → new_string, copied verbatim from " +
+        "minddy_get_issue, and the match must be unique (add the surrounding lines, " +
+        "or set replace_all). Every other byte is left alone. This is how a decision " +
+        "gets reworded or a section rewritten without re-emitting the whole document " +
+        "through minddy_update_issues — and it is also the safe way round: a full " +
+        "rewrite silently overwrites whatever another client changed meanwhile, a " +
+        "stale old_string fails loudly. To ADD to a plan use minddy_append_to_plan, " +
+        "to flip a checkbox minddy_update_plan_task. Returns a unified diff of what " +
+        "changed (plus the refreshed plan_tasks when editing a plan).",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        issue: ISSUE_REF,
+        field: z
+          .enum(["plan", "description"])
+          .describe("Which text of the issue to patch."),
+        old_string: z
+          .string()
+          .min(1)
+          .describe(
+            "The exact passage to replace, copied VERBATIM from what " +
+              "minddy_get_issue returned — whitespace and line breaks included."
+          ),
+        new_string: z
+          .string()
+          .describe("What replaces it. An empty string deletes the passage."),
+        replace_all: z
+          .boolean()
+          .optional()
+          .describe(
+            "Replace EVERY occurrence instead of requiring a unique match " +
+              "(default false). Use it for a term repeated throughout the text."
+          ),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveIssueRef(scope.access, args.issue);
+      if ("error" in ref) return ref.error;
+
+      const field: IssueTextField = args.field;
+      const current = await readIssueText(ref.issue.id);
+      if ("error" in current) return current.error;
+
+      const edit = editIssueText({
+        field,
+        current: current[field],
+        oldString: args.old_string,
+        newString: args.new_string,
+        replaceAll: args.replace_all ?? false,
+        tools: MCP_TEXT_TOOLS,
+      });
+      if (!edit.ok) return fail(edit.code, edit.message);
+
+      // La description est TRONQUÉE en silence par updateIssueFields au-delà de
+      // sa borne : la vérifier ici est la seule façon de le dire.
+      const cap = field === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH;
+      if (edit.content.length > cap) {
+        return fail(
+          "invalid_params",
+          `The ${field} is capped at ${cap} characters; this edit would take it ` +
+            `to ${edit.content.length}.`
+        );
+      }
+
+      const result = await updateIssueFields({
+        issueId: ref.issue.id,
+        actorId: scope.userId,
+        input: { [field]: edit.content },
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return coreFail(result);
+
+      const truncated = edit.diff.length > MAX_EDIT_DIFF_CHARS;
+      return ok({
+        issue: ref.issue.identifier,
+        field,
+        additions: edit.additions,
+        deletions: edit.deletions,
+        length: edit.content.length,
+        diff: truncated ? `${edit.diff.slice(0, MAX_EDIT_DIFF_CHARS)}\n…` : edit.diff,
+        ...(truncated ? { diff_truncated: true } : {}),
+        ...(field === "plan"
+          ? planTaskSummary(result.issue.plan as string | null)
+          : {}),
       });
     }
   );

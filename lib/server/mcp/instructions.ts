@@ -28,8 +28,14 @@ export const MCP_SERVER_INSTRUCTIONS =
       "questions rather than work and never count towards progress (park one there only " +
       "when a detail is blocking; otherwise decide and state the assumption). " +
       "When asked to plan work, write the full plan into the issue " +
-      "(create/update); while executing one, keep task states current with " +
-      "minddy_update_plan_task (mark the task you start '- [~]', finished '- [x]'). " +
+      "(create/update). AFTERWARDS, never resend the document to change part of " +
+      "it: minddy_update_plan_task flips task states (mark the task you start " +
+      "'- [~]', finished '- [x]'), minddy_append_to_plan adds a block (a task, a " +
+      "note), and minddy_edit_issue_text rewrites one passage of the plan — or of " +
+      "the description — in place (old_string → new_string, unique match, like a " +
+      "code editor). Each costs a few tokens instead of the whole plan, and a " +
+      "stale old_string fails loudly where a full rewrite would silently overwrite " +
+      "someone else's edit. " +
       "Issues, objectives and comments can carry file attachments: minddy_get_issue " +
       "and minddy_list_objectives list their metadata (id + name/type/size), " +
       "minddy_add_attachment uploads one (base64, 10 MB max) to an issue or, via " +

@@ -76,7 +76,9 @@ export type UpdateIssueResult =
 // (lib/import/normalize.ts) ; la description est du markdown libre, bornée
 // comme le plan. Au-delà on tronque — pas de clé d'erreur dédiée.
 const MAX_TITLE_LENGTH = 500;
-const MAX_DESCRIPTION_LENGTH = 65_536;
+/** Exportée : la troncature ci-dessous est SILENCIEUSE, alors les appelants qui
+ *  doivent refuser bruyamment (le patch MCP de MIN-186) vérifient d'abord. */
+export const MAX_DESCRIPTION_LENGTH = 65_536;
 
 export async function updateIssueFields({
   issueId,

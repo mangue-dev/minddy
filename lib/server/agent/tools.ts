@@ -26,11 +26,14 @@ import type { AgentAnchor } from "./prompt";
  *                  plan, commentaires, pièces jointes), read_attachment,
  *                  update_issue (titre / description / effort — JAMAIS le statut),
  *                  write_issue_plan (écrit le plan SUR DEMANDE, sans l'appliquer),
+ *                  append_to_plan et edit_issue_text (MIN-186 : faire GROSSIR ou
+ *                  CORRIGER un plan/une description déjà écrits, sans les
+ *                  réémettre — write_issue_plan et update_issue remplacent tout),
  *                  create_issue — exécutés par lib/server/agent/issue-tools.ts.
  *  - carnet      : read_scratchpad, add_scratchpad_tasks, update_scratchpad_task,
  *                  set_scratchpad — exécutés par lib/server/agent/scratchpad-tools.ts.
  *
- * Les dix tools minddy sont servis aux DEUX ancrages (MIN-125) : l'ancrage du run
+ * Les douze tools minddy sont servis aux DEUX ancrages (MIN-125) : l'ancrage du run
  * ne décide plus que de la CIBLE PAR DÉFAUT des tools ticket (le ticket du run,
  * sinon `issue` est obligatoire) et de la formulation de `create_pr`. D'où deux
  * jeux qui ne diffèrent que par là : `AGENT_TOOLS` (run de ticket) et
@@ -708,6 +711,65 @@ const MINDDY_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
+      name: "append_to_plan",
+      description:
+        "Add a block to a ticket's existing implementation plan WITHOUT touching a byte of what is already there — an extra task you discovered was needed, a note, a precision. The block lands at the end of the plan (just above its '## Questions' heading when it has one), or at the end of a named section with `section`. This is how a plan GROWS: write_issue_plan replaces the whole document and destroys anything you don't resend, task states included. Same rule as everything else about the ticket plan: only touch it when the user asked you to.",
+      parameters: {
+        type: "object",
+        properties: {
+          markdown: {
+            type: "string",
+            description:
+              "The block to ADD, markdown: checkbox task lines ('- [ ] …') and/or a short paragraph. ONLY what is new — never repeat what the plan already says.",
+          },
+          section: {
+            type: "string",
+            description:
+              "Exact text of an existing heading to append under (e.g. 'Questions' to park an open question). Omit to append at the end. An unknown heading is an error, not a new section — read_issue first.",
+          },
+          issue: { type: "string", description: ISSUE_REF_DESCRIPTION },
+        },
+        required: ["markdown"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_issue_text",
+      description:
+        "Rewrite ONE passage of a ticket's plan or description IN PLACE — exactly like edit_file, but on the minddy ticket instead of a file: old_string → new_string, copied VERBATIM from what read_issue returned, and the match must be unique (add the surrounding lines, or set replace_all). Everything else stays byte for byte. Use it to reword a decision that changed, fix a wrong sentence in a description, or rewrite one section of a plan — instead of write_issue_plan / update_issue, which re-emit the whole text and silently drop what someone else changed meanwhile. A stale old_string fails loudly, which is the point.",
+      parameters: {
+        type: "object",
+        properties: {
+          field: {
+            type: "string",
+            enum: ["plan", "description"],
+            description: "Which text of the ticket to patch.",
+          },
+          old_string: {
+            type: "string",
+            description:
+              "The exact passage to replace, copied verbatim from read_issue (whitespace and line breaks included).",
+          },
+          new_string: {
+            type: "string",
+            description: "What replaces it. An empty string deletes the passage.",
+          },
+          replace_all: {
+            type: "boolean",
+            description:
+              "Replace EVERY occurrence instead of requiring a unique match (default false).",
+          },
+          issue: { type: "string", description: ISSUE_REF_DESCRIPTION },
+        },
+        required: ["field", "old_string", "new_string"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "create_issue",
       description:
         "Create a REAL ticket in the project this session works on. Use it when the user asks for one, or when work you ran into genuinely deserves a formal, trackable ticket (a substantial feature, a real bug the team should see) — never automatically, and never as a substitute for just doing the work. The ticket lands in the status the user chose for tickets created through Numo: that is an account setting, not a parameter, so you cannot pick it — the result tells you where it landed, report that.",
@@ -1036,7 +1098,13 @@ export const PR_REVIEW_TOOLS: AgentToolDef[] = [
 const STRING_EDIT_TOOLS = new Set(["edit_file", "apply_edits", "write_file"]);
 
 /** Tools qui prennent un `issue` : leur CIBLE PAR DÉFAUT dépend de l'ancrage. */
-const TARGETABLE_ISSUE_TOOLS = new Set(["read_issue", "update_issue", "write_issue_plan"]);
+const TARGETABLE_ISSUE_TOOLS = new Set([
+  "read_issue",
+  "update_issue",
+  "write_issue_plan",
+  "append_to_plan",
+  "edit_issue_text",
+]);
 
 /**
  * Phrase de ciblage ajoutée à ces tools selon l'ancrage. Sans elle, un run de

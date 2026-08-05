@@ -27,8 +27,19 @@ const FOREIGN_ID = "22222222-2222-4222-8222-222222222222";
 
 const TRASHED_ID = "33333333-3333-4333-8333-333333333333";
 
+/** Le plan stocké du ticket d'ancrage — ce que lisent append_to_plan et
+ *  edit_issue_text avant de patcher (MIN-186). */
+const STORED_PLAN =
+  "# Contexte\n\nLe plan de départ.\n\n## Tâches\n\n- [ ] Première tâche\n\n## Questions\n\n- [ ] Une question parquée\n";
+
 const ISSUE_ROWS = [
-  { id: ANCHOR_ID, number: 42, project_id: "proj-1" },
+  {
+    id: ANCHOR_ID,
+    number: 42,
+    project_id: "proj-1",
+    plan: STORED_PLAN,
+    description: "Une description de départ, à patcher.",
+  },
   { id: OTHER_ID, number: 7, project_id: "proj-1" },
   { id: FOREIGN_ID, number: 3, project_id: "proj-2" },
   // MIN-133 : même projet, mais à la corbeille — l'agent ne doit pas le voir.
@@ -121,7 +132,10 @@ vi.mock("@/lib/server/issue-reads", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/server/issue-reads")>();
   return { ...actual, getIssue, searchIssues };
 });
-vi.mock("@/lib/server/update-issue", () => ({ updateIssueFields }));
+vi.mock("@/lib/server/update-issue", () => ({
+  updateIssueFields,
+  MAX_DESCRIPTION_LENGTH: 65_536,
+}));
 vi.mock("@/lib/server/create-issue", () => ({ createIssueForProject }));
 
 import { executeIssueTool, type IssueToolContext } from "./issue-tools";
@@ -369,5 +383,126 @@ describe("write_issue_plan — ciblable", () => {
       expect.objectContaining({ issueId: OTHER_ID }),
     );
     expect(out.result).toMatchObject({ identifier: "MIN-7", tasks: 1 });
+  });
+});
+
+/**
+ * MIN-186 : l'agent de code ne pouvait toucher au plan qu'en le RÉÉMETTANT
+ * (`write_issue_plan`), ce qui détruit en silence les états de tâches et ce
+ * qu'un autre a écrit entre-temps. Ces deux tools écrivent chirurgicalement,
+ * sur le même cœur que le MCP et Numo.
+ */
+/** Le champ écrit par le DERNIER appel à updateIssueFields. Les espions hissés
+ *  n'ont pas de signature typée : on la rend ici, une fois. */
+const lastWrite = (): Record<string, unknown> => {
+  const calls = updateIssueFields.mock.calls as unknown as Array<
+    [{ input: Record<string, unknown> }]
+  >;
+  return calls[calls.length - 1][0].input;
+};
+
+describe("append_to_plan — faire grossir un plan sans le réémettre", () => {
+  it("ajoute le bloc AU-DESSUS des questions, sans toucher au reste", async () => {
+    const out = await executeIssueTool(ctx(), "append_to_plan", {
+      markdown: "- [ ] Deuxième tâche, découverte en route",
+    });
+    expect(out.success).toBe(true);
+    const written = lastWrite().plan as string;
+    expect(written).toContain("Le plan de départ.");
+    expect(written).toContain("- [ ] Première tâche");
+    expect(written.indexOf("Deuxième tâche")).toBeLessThan(
+      written.indexOf("## Questions"),
+    );
+    // Les index rendus sont ceux que le modèle réutilisera juste après.
+    expect(out.result).toMatchObject({
+      identifier: "MIN-42",
+      plan_progress: { done: 0, total: 2 },
+    });
+  });
+
+  it("vise une section existante, et refuse une section inconnue", async () => {
+    const parked = await executeIssueTool(ctx(), "append_to_plan", {
+      markdown: "- [ ] Deuxième question",
+      section: "Questions",
+    });
+    expect(parked.success).toBe(true);
+    // Une question n'est pas du travail : le total ne bouge pas.
+    expect(parked.result).toMatchObject({ plan_progress: { done: 0, total: 1 } });
+
+    updateIssueFields.mockClear();
+    const nope = await executeIssueTool(ctx(), "append_to_plan", {
+      markdown: "- [ ] perdu",
+      section: "Section inexistante",
+    });
+    expect(nope.success).toBe(false);
+    expect(String((nope.result as { error: string }).error)).toContain("read_issue");
+    expect(updateIssueFields).not.toHaveBeenCalled();
+  });
+
+  it("écrit sur le ticket VISÉ, pas sur celui du run", async () => {
+    const out = await executeIssueTool(ctx(), "append_to_plan", {
+      issue: "7",
+      markdown: "- [ ] Sur l'autre ticket",
+    });
+    // MIN-7 n'a pas de plan stocké : le bloc devient le plan.
+    expect(out.success).toBe(true);
+    expect(updateIssueFields).toHaveBeenCalledWith(
+      expect.objectContaining({ issueId: OTHER_ID }),
+    );
+  });
+});
+
+describe("edit_issue_text — corriger un passage en place", () => {
+  it("réécrit une phrase du plan et laisse le reste au byte près", async () => {
+    const out = await executeIssueTool(ctx(), "edit_issue_text", {
+      field: "plan",
+      old_string: "Le plan de départ.",
+      new_string: "Le plan de départ, corrigé.",
+    });
+    expect(out.success).toBe(true);
+    const written = lastWrite().plan as string;
+    expect(written).toContain("Le plan de départ, corrigé.");
+    expect(written).toContain("- [ ] Une question parquée");
+    expect(out.result).toMatchObject({ field: "plan", additions: 1, deletions: 1 });
+  });
+
+  it("patche aussi la description, et ne rend alors pas de tâches", async () => {
+    const out = await executeIssueTool(ctx(), "edit_issue_text", {
+      field: "description",
+      old_string: "à patcher",
+      new_string: "patchée",
+    });
+    expect(out.success).toBe(true);
+    expect(lastWrite()).toEqual({
+      description: "Une description de départ, patchée.",
+    });
+    expect((out.result as Record<string, unknown>).plan_tasks).toBeUndefined();
+  });
+
+  it("refuse BRUYAMMENT un passage périmé, sans rien écrire", async () => {
+    updateIssueFields.mockClear();
+    const out = await executeIssueTool(ctx(), "edit_issue_text", {
+      field: "plan",
+      old_string: "Une phrase que le plan ne porte plus",
+      new_string: "n'importe quoi",
+    });
+    expect(out.success).toBe(false);
+    expect(updateIssueFields).not.toHaveBeenCalled();
+    // Et le message renvoie vers la relecture, jamais vers un fichier.
+    // Et le message nomme les tools DE L'AGENT, pas ceux du MCP.
+    const error = String((out.result as { error: string }).error);
+    expect(error).toContain("read_issue");
+    expect(error).not.toMatch(/write_file|minddy_/);
+  });
+
+  it("refuse un `field` hors des deux textes du ticket", async () => {
+    updateIssueFields.mockClear();
+    const out = await executeIssueTool(ctx(), "edit_issue_text", {
+      field: "title",
+      old_string: "a",
+      new_string: "b",
+    });
+    expect(out.success).toBe(false);
+    expect(updateIssueFields).not.toHaveBeenCalled();
   });
 });

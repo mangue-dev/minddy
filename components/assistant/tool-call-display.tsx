@@ -288,6 +288,18 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("planTasksUpdated", { count: updated });
     },
   },
+  edit_issue_text: {
+    icon: FilePen,
+    getLabel: (args, _result, success, status, t) => {
+      // Le champ visé change ce que l'utilisateur lit : « le plan » et « la
+      // description » ne se corrigent pas au même endroit de l'écran.
+      const plan = args.field !== "description";
+      if (status === "running")
+        return plan ? t("editingPlanText") : t("editingDescriptionText");
+      if (!success) return t("editIssueTextFailed");
+      return plan ? t("planTextEdited") : t("descriptionTextEdited");
+    },
+  },
   set_issue_categories: {
     icon: Tags,
     getLabel: (_args, _result, success, status, t) => {

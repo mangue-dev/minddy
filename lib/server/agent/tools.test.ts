@@ -58,8 +58,8 @@ describe("agentToolsFor — web_search (inchangé)", () => {
 
 /**
  * MIN-125 : les tools minddy ne sont plus découpés par ancrage. Les DEUX ancrages
- * servent les dix — tickets ET carnet — et l'ancrage ne décide plus que de la
- * CIBLE PAR DÉFAUT, dite dans la description des trois tools qui prennent `issue`.
+ * servent les douze — tickets ET carnet — et l'ancrage ne décide plus que de la
+ * CIBLE PAR DÉFAUT, dite dans la description des tools qui prennent `issue`.
  */
 const MINDDY_TOOLS = [
   "search_issues",
@@ -67,6 +67,8 @@ const MINDDY_TOOLS = [
   "read_attachment",
   "update_issue",
   "write_issue_plan",
+  "append_to_plan",
+  "edit_issue_text",
   "create_issue",
   "read_scratchpad",
   "add_scratchpad_tasks",
@@ -76,7 +78,7 @@ const MINDDY_TOOLS = [
 
 describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
   for (const anchor of ["issue", "notebook"] as const) {
-    it(`sert les dix tools minddy + create_pr (ancrage ${anchor})`, () => {
+    it(`sert les douze tools minddy + create_pr (ancrage ${anchor})`, () => {
       const served = names({ anchor, webSearch: true, model: "openai/gpt-5.6-luna" });
       for (const tool of MINDDY_TOOLS) expect(served).toContain(tool);
       expect(served).toContain("create_pr");
@@ -85,12 +87,18 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
     });
   }
 
-  it("dit la cible par défaut selon l'ancrage, sur les trois tools ciblables", () => {
+  it("dit la cible par défaut selon l'ancrage, sur les tools ciblables", () => {
     const describeTool = (anchor: "issue" | "notebook", name: string) =>
       agentToolsFor({ anchor, webSearch: true }).find((t) => t.function.name === name)!
         .function.description;
 
-    for (const name of ["read_issue", "update_issue", "write_issue_plan"]) {
+    for (const name of [
+      "read_issue",
+      "update_issue",
+      "write_issue_plan",
+      "append_to_plan",
+      "edit_issue_text",
+    ]) {
       expect(describeTool("issue", name)).toMatch(/`issue` is OPTIONAL/);
       expect(describeTool("issue", name)).not.toMatch(/`issue` is REQUIRED/);
       expect(describeTool("notebook", name)).toMatch(/`issue` is REQUIRED/);

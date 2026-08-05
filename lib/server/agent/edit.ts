@@ -16,6 +16,29 @@ import { createTwoFilesPatch, diffLines } from "diff";
  * reste BRUYANT (throw) : jamais de corruption silencieuse.
  */
 
+/**
+ * Pourquoi une substitution a été refusée. Le message reste celui que l'agent
+ * de code lit depuis toujours (`execute.ts` n'en connaît que `.message`) ; ce
+ * `reason` s'ajoute à côté pour les appelants qui doivent RÉÉCRIRE le message —
+ * le tool MCP `minddy_edit_issue_text` édite un plan de ticket, pas un fichier,
+ * et n'a ni « the file » ni `write_file` à proposer (MIN-186).
+ */
+export type ReplaceFailure =
+  | "identical"
+  | "empty_old"
+  | "disproportionate"
+  | "not_found"
+  | "ambiguous";
+
+export class ReplaceError extends Error {
+  readonly reason: ReplaceFailure;
+  constructor(reason: ReplaceFailure, message: string) {
+    super(message);
+    this.name = "ReplaceError";
+    this.reason = reason;
+  }
+}
+
 // ── Fins de ligne ────────────────────────────────────────────────────────────
 
 function normalizeLineEndings(text: string): string {
@@ -412,10 +435,14 @@ export function replace(
   replaceAll = false,
 ): string {
   if (oldString === newString) {
-    throw new Error("No changes to apply: oldString and newString are identical.");
+    throw new ReplaceError(
+      "identical",
+      "No changes to apply: oldString and newString are identical.",
+    );
   }
   if (oldString === "") {
-    throw new Error(
+    throw new ReplaceError(
+      "empty_old",
       "oldString cannot be empty when editing an existing file. Provide the exact text to replace, or use write_file for an intentional full-file replacement.",
     );
   }
@@ -427,7 +454,8 @@ export function replace(
       if (index === -1) continue;
       notFound = false;
       if (isDisproportionateMatch(search, oldString)) {
-        throw new Error(
+        throw new ReplaceError(
+          "disproportionate",
           "Refusing replacement because the matched span is much larger than oldString. Re-read the file and provide the full exact oldString for the intended replacement.",
         );
       }
@@ -453,11 +481,13 @@ export function replace(
   }
 
   if (notFound) {
-    throw new Error(
+    throw new ReplaceError(
+      "not_found",
       "Could not find oldString in the file. It must match exactly, including whitespace, indentation, and line endings.",
     );
   }
-  throw new Error(
+  throw new ReplaceError(
+    "ambiguous",
     "Found multiple matches for oldString. Provide more surrounding context to make the match unique.",
   );
 }

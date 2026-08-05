@@ -3,7 +3,22 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getProjectAccess, type ProjectAccess } from "@/lib/server/project-access";
 import { createIssueForProject } from "@/lib/server/create-issue";
-import { updateIssueFields } from "@/lib/server/update-issue";
+import {
+  MAX_DESCRIPTION_LENGTH,
+  updateIssueFields,
+} from "@/lib/server/update-issue";
+import { editIssueText, type IssueTextTools } from "@/lib/server/text-edit";
+
+/** Les noms que Numo porte, pour que les refus du patch renvoient vers des tools
+ *  qui existent DANS LE CHAT (cf. IssueTextTools). */
+const NUMO_TEXT_TOOLS: IssueTextTools = {
+  read: "get_issue",
+  appendToPlan: "append_to_plan",
+  replaceWhole: {
+    plan: "update_issues { fields: { plan } }",
+    description: "update_issues { fields: { description } }",
+  },
+};
 import { addCommentToIssue } from "@/lib/server/add-comment";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import {
@@ -280,11 +295,11 @@ function readCtx(
   };
 }
 
-// ── Implementation plan (append_to_plan / update_plan_tasks) ───────────
-// Both tools are surgical by construction: they read the plan that is stored
-// RIGHT NOW and give back that same markdown with something added or one
-// marker flipped. Nothing the model didn't touch can be lost on the way —
-// which a full `update_issues { plan }` rewrite cannot promise.
+// ── Issue text (append_to_plan / update_plan_tasks / edit_issue_text) ──
+// All three are surgical by construction: they read the text that is stored
+// RIGHT NOW and give back that same markdown with something added, one marker
+// flipped, or one passage rewritten. Nothing the model didn't touch can be lost
+// on the way — which a full `update_issues { plan }` rewrite cannot promise.
 
 /** Task labels are elided here: the list exists to give the model an INDEX to
  *  address, and the plan markdown right beside it already carries the full text
@@ -303,19 +318,22 @@ const planTaskList = (parsed: ParsedPlan) =>
     ...(t.question ? { question: true } : {}),
   }));
 
-/** The issue's plan markdown as stored ("" when it has none). */
-async function readPlan(
+/** The issue's plan and description as stored ("" when it has none). */
+async function readIssueText(
   ctx: ToolContext,
   issueId: string
-): Promise<{ plan: string } | { error: string }> {
+): Promise<{ plan: string; description: string } | { error: string }> {
   const { data, error } = await ctx.supabase
     .from("issues")
-    .select("plan")
+    .select("plan, description")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
   if (error) return { error: error.message };
-  return { plan: typeof data?.plan === "string" ? data.plan : "" };
+  return {
+    plan: typeof data?.plan === "string" ? data.plan : "",
+    description: typeof data?.description === "string" ? data.description : "",
+  };
 }
 
 /** Save a rewritten plan and report back its refreshed tasks. */
@@ -847,7 +865,7 @@ export async function executeTool(
           typeof args.section === "string" && args.section.trim()
             ? args.section.trim()
             : null;
-        const current = await readPlan(ctx, issueId);
+        const current = await readIssueText(ctx, issueId);
         if ("error" in current) return toolError(current.error);
         const next = appendToPlan(current.plan, markdown, section);
         if (next === null) {
@@ -883,7 +901,7 @@ export async function executeTool(
           }
           changes.push({ index, state: row.state });
         }
-        const current = await readPlan(ctx, issueId);
+        const current = await readIssueText(ctx, issueId);
         if ("error" in current) return toolError(current.error);
         const parsed = parsePlan(current.plan);
         // All or nothing: a stale index points at another task, so refuse the
@@ -901,6 +919,58 @@ export async function executeTool(
           next = setTaskState(next, parsed.tasks[change.index].line, change.state);
         }
         return writePlan(ctx, issueId, next, changes.length);
+      }
+
+      case "edit_issue_text": {
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+        if (!scoped.ok) return toolError(scoped.error);
+        const field = args.field === "description" ? "description" : "plan";
+        if (args.field !== "plan" && args.field !== "description") {
+          return toolError('field must be "plan" or "description".');
+        }
+        const current = await readIssueText(ctx, issueId);
+        if ("error" in current) return toolError(current.error);
+
+        const edit = editIssueText({
+          field,
+          current: current[field],
+          oldString: typeof args.old_string === "string" ? args.old_string : "",
+          newString: typeof args.new_string === "string" ? args.new_string : "",
+          replaceAll: args.replace_all === true,
+          tools: NUMO_TEXT_TOOLS,
+        });
+        if (!edit.ok) return toolError(edit.message);
+
+        // Un plan patché repart par writePlan : même écriture, mêmes tâches
+        // rendues, donc les index restent utilisables juste après.
+        if (field === "plan") {
+          if (edit.content.length > MAX_PLAN_LENGTH) {
+            return toolError(`The plan is capped at ${MAX_PLAN_LENGTH} characters.`);
+          }
+          return writePlan(ctx, issueId, edit.content);
+        }
+        if (edit.content.length > MAX_DESCRIPTION_LENGTH) {
+          return toolError(
+            `The description is capped at ${MAX_DESCRIPTION_LENGTH} characters.`
+          );
+        }
+        const result = await updateIssueFields({
+          issueId,
+          actorId: ctx.userId,
+          input: { description: edit.content },
+          viaAssistant: true,
+        });
+        if (!result.ok) return libError(result);
+        return {
+          result: {
+            field,
+            additions: edit.additions,
+            deletions: edit.deletions,
+            length: edit.content.length,
+          },
+          success: true,
+        };
       }
 
       case "set_issue_categories": {

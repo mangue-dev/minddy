@@ -45,12 +45,13 @@ const ISSUE_FIELD_PROPERTIES = {
   title: { type: "string", description: "Issue title." },
   description: {
     type: "string",
-    description: "Issue description, markdown.",
+    description:
+      "Issue description, markdown. Replaces it whole — to fix one sentence of a long description, edit_issue_text patches it in place instead.",
   },
   plan: {
     type: ["string", "null"],
     description:
-      "Implementation plan, markdown, separate from the description. Ground every line in what you actually know (the issue, its comments, this conversation): you cannot see the repository, so never invent file paths, function or component names, or code snippets — the grounded technical plan is the code agent's job (launch_code_agent, mode 'plan'). On an issue that already HAS a plan, this field replaces it whole: to add a precision or an extra task use append_to_plan, to tick a task off use update_plan_tasks, and rewrite only when the user explicitly asked for it — then read the current plan with get_issue first and send it back COMPLETE (task state changes are diffed and logged server-side). Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. null clears the plan.",
+      "Implementation plan, markdown, separate from the description. Ground every line in what you actually know (the issue, its comments, this conversation): you cannot see the repository, so never invent file paths, function or component names, or code snippets — the grounded technical plan is the code agent's job (launch_code_agent, mode 'plan'). On an issue that already HAS a plan, this field replaces it whole: to add a precision or an extra task use append_to_plan, to reword a passage use edit_issue_text, to tick a task off use update_plan_tasks, and rewrite only when the user explicitly asked for it — then read the current plan with get_issue first and send it back COMPLETE (task state changes are diffed and logged server-side). Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. null clears the plan.",
   },
   status: {
     type: "string",
@@ -399,6 +400,40 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
         },
         required: ["issue_id", "tasks"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_issue_text",
+      description:
+        "Rewrite ONE passage of an issue's plan or description IN PLACE, the way a code editor patches a file: old_string → new_string, copied verbatim from get_issue, and the match must be unique (include the surrounding lines, or set replace_all). Every other byte is left alone. This is how you REWORD something already written — a decision that changed, a section to rephrase, a wrong sentence in a description — without re-emitting the whole document through update_issues, which would cost you the entire text and silently drop anything you didn't resend. A stale old_string fails loudly instead. To ADD to a plan use append_to_plan; to tick a task off, update_plan_tasks.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: { type: "string", description: "Issue id." },
+          field: {
+            type: "string",
+            enum: ["plan", "description"],
+            description: "Which text of the issue to patch.",
+          },
+          old_string: {
+            type: "string",
+            description:
+              "The exact passage to replace, copied VERBATIM from what get_issue returned — whitespace and line breaks included.",
+          },
+          new_string: {
+            type: "string",
+            description: "What replaces it. An empty string deletes the passage.",
+          },
+          replace_all: {
+            type: "boolean",
+            description:
+              "Replace EVERY occurrence instead of requiring a unique match (default false) — for a term repeated throughout the text.",
+          },
+        },
+        required: ["issue_id", "field", "old_string", "new_string"],
       },
     },
   },

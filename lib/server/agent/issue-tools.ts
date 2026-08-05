@@ -9,13 +9,21 @@ import {
   type ResolvedIssueRef,
 } from "@/lib/server/issue-reads";
 import { signedAttachmentUrl, downloadAttachment } from "@/lib/server/attachments";
-import { updateIssueFields } from "@/lib/server/update-issue";
+import {
+  MAX_DESCRIPTION_LENGTH,
+  updateIssueFields,
+} from "@/lib/server/update-issue";
+import {
+  editIssueText,
+  type IssueTextField,
+  type IssueTextTools,
+} from "@/lib/server/text-edit";
 import { createIssueForProject } from "@/lib/server/create-issue";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import { isEffort } from "@/lib/issue-validation";
 import type { NumoDefaultStatus } from "@/lib/numo-default-status";
-import { parsePlan } from "@/lib/plan";
+import { MAX_PLAN_LENGTH, appendToPlan, parsePlan } from "@/lib/plan";
 import type { AgentToolImage } from "./content";
 
 /**
@@ -38,6 +46,11 @@ import type { AgentToolImage } from "./content";
  *                          l'avaler (un champ hors schéma est vite halluciné).
  *  - `write_issue_plan` → écrit le plan markdown du ticket (updateIssueFields,
  *                          via_assistant) SANS lancer l'implémentation.
+ *  - `append_to_plan`   → ajoute un bloc au plan existant sans toucher au reste.
+ *  - `edit_issue_text`  → réécrit UN passage du plan ou de la description
+ *                          (old_string → new_string), comme `edit_file` sur un
+ *                          fichier. Les deux (MIN-186) partagent leur cœur avec
+ *                          le MCP et Numo : `appendToPlan` et `editIssueText`.
  *  - `create_issue`     → crée un ticket du projet, au statut d'atterrissage choisi
  *                          par le lanceur (Compte → Préférences), comme Numo chat.
  * Service client : l'accès a été contrôlé au lancement du run (membre du projet),
@@ -72,6 +85,8 @@ export const ISSUE_TOOL_NAMES = new Set([
   "read_attachment",
   "update_issue",
   "write_issue_plan",
+  "append_to_plan",
+  "edit_issue_text",
   "create_issue",
   "report_verdict",
 ]);
@@ -104,6 +119,18 @@ const ATTACHMENT_IMAGE_MAX_BYTES = 750 * 1024;
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
 }
+
+/** Les noms que porte l'agent de code, pour que les refus du patch renvoient
+ *  vers des tools qui existent DANS LE RUN (cf. IssueTextTools). */
+const AGENT_TEXT_TOOLS: IssueTextTools = {
+  read: "read_issue",
+  appendToPlan: "append_to_plan",
+  replaceWhole: { plan: "write_issue_plan", description: "update_issue" },
+};
+
+/** Cap du diff rendu par `edit_issue_text` : confirmer l'atterrissage de
+    l'édition, pas re-transporter le document qu'on vient d'éviter de réécrire. */
+const EDIT_DIFF_MAX_CHARS = 2000;
 
 /** MIME texte → contenu lisible inline (miroir du helper MCP). */
 function isTextMime(mime: string): boolean {
@@ -447,6 +474,163 @@ async function writeIssuePlan(
   };
 }
 
+/**
+ * Le plan et la description d'un ticket TELS QU'ILS SONT STOCKÉS — ce que les
+ * deux écritures chirurgicales ci-dessous lisent avant de patcher : ce qu'on
+ * n'a pas relu, on ne peut pas l'écraser sans le voir.
+ */
+async function readIssueText(
+  issueId: string,
+): Promise<{ plan: string; description: string } | { error: string }> {
+  const { data, error } = await getServiceClient()
+    .from("issues")
+    .select("plan, description")
+    .is("deleted_at", null)
+    .eq("id", issueId)
+    .maybeSingle();
+  if (error) return { error: error.message };
+  return {
+    plan: typeof data?.plan === "string" ? data.plan : "",
+    description: typeof data?.description === "string" ? data.description : "",
+  };
+}
+
+async function appendToIssuePlan(
+  ctx: IssueToolContext,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const markdown = typeof args.markdown === "string" ? args.markdown : "";
+  if (!markdown.trim()) {
+    return { result: { error: "markdown (the block to add) is required." }, success: false };
+  }
+  if (!ctx.actorId) return { result: { error: "Run has no owner." }, success: false };
+  const section =
+    typeof args.section === "string" && args.section.trim() ? args.section.trim() : null;
+
+  const target = await resolveTarget(ctx, args.issue);
+  if ("error" in target) return { result: { error: target.error }, success: false };
+
+  const current = await readIssueText(target.issue.id);
+  if ("error" in current) return { result: { error: current.error }, success: false };
+
+  const next = appendToPlan(current.plan, markdown, section);
+  if (next === null) {
+    return {
+      result: {
+        error: `The plan of ${target.issue.identifier} has no "${section}" heading. Read it with read_issue to see its headings, or omit "section" to append at the end.`,
+      },
+      success: false,
+    };
+  }
+  if (next.length > MAX_PLAN_LENGTH) {
+    return {
+      result: { error: `The plan is capped at ${MAX_PLAN_LENGTH} characters.` },
+      success: false,
+    };
+  }
+
+  const result = await updateIssueFields({
+    issueId: target.issue.id,
+    actorId: ctx.actorId,
+    input: { plan: next },
+    viaAssistant: true,
+  });
+  if (!result.ok) {
+    return {
+      result: { error: result.errorKey ?? result.rawMessage ?? "Plan update refused." },
+      success: false,
+    };
+  }
+
+  const parsed = parsePlan(next);
+  return {
+    result: {
+      ok: true,
+      identifier: target.issue.identifier,
+      plan_tasks: parsed.tasks.map((t) => ({
+        task_index: t.index,
+        state: t.state,
+        text: t.text,
+      })),
+      plan_progress: parsed.progress,
+    },
+    success: true,
+  };
+}
+
+async function editIssueTextTool(
+  ctx: IssueToolContext,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  if (args.field !== "plan" && args.field !== "description") {
+    return { result: { error: 'field must be "plan" or "description".' }, success: false };
+  }
+  const field: IssueTextField = args.field;
+  if (!ctx.actorId) return { result: { error: "Run has no owner." }, success: false };
+
+  const target = await resolveTarget(ctx, args.issue);
+  if ("error" in target) return { result: { error: target.error }, success: false };
+
+  const current = await readIssueText(target.issue.id);
+  if ("error" in current) return { result: { error: current.error }, success: false };
+
+  const edit = editIssueText({
+    field,
+    current: current[field],
+    oldString: typeof args.old_string === "string" ? args.old_string : "",
+    newString: typeof args.new_string === "string" ? args.new_string : "",
+    replaceAll: args.replace_all === true,
+    tools: AGENT_TEXT_TOOLS,
+  });
+  if (!edit.ok) return { result: { error: edit.message }, success: false };
+
+  // La description est TRONQUÉE en silence au-delà de sa borne : la vérifier
+  // ici est la seule façon de le dire au modèle.
+  const limit = field === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH;
+  if (edit.content.length > limit) {
+    return {
+      result: { error: `The ${field} is capped at ${limit} characters.` },
+      success: false,
+    };
+  }
+
+  const result = await updateIssueFields({
+    issueId: target.issue.id,
+    actorId: ctx.actorId,
+    input: { [field]: edit.content },
+    viaAssistant: true,
+  });
+  if (!result.ok) {
+    return {
+      result: { error: result.errorKey ?? result.rawMessage ?? "Issue update refused." },
+      success: false,
+    };
+  }
+
+  const parsed = field === "plan" ? parsePlan(edit.content) : null;
+  return {
+    result: {
+      ok: true,
+      identifier: target.issue.identifier,
+      field,
+      additions: edit.additions,
+      deletions: edit.deletions,
+      diff: cap(edit.diff, EDIT_DIFF_MAX_CHARS),
+      ...(parsed
+        ? {
+            plan_tasks: parsed.tasks.map((t) => ({
+              task_index: t.index,
+              state: t.state,
+              text: t.text,
+            })),
+            plan_progress: parsed.progress,
+          }
+        : {}),
+    },
+    success: true,
+  };
+}
+
 async function createIssue(
   ctx: IssueToolContext,
   args: Record<string, unknown>,
@@ -562,6 +746,10 @@ export async function executeIssueTool(
         return await updateIssue(ctx, args);
       case "write_issue_plan":
         return await writeIssuePlan(ctx, args);
+      case "append_to_plan":
+        return await appendToIssuePlan(ctx, args);
+      case "edit_issue_text":
+        return await editIssueTextTool(ctx, args);
       case "create_issue":
         return await createIssue(ctx, args);
       case "report_verdict":

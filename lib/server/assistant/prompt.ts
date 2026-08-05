@@ -110,12 +110,18 @@ A plan is written once and then GROWS. Anything you don't resend is destroyed, t
 included — so folding a new detail into a full rewrite silently wipes work.
 - append_to_plan adds a block (tasks, a note) without touching a byte of the rest. It is the
   default for anything new, starting with a precision the user just gave you.
+- edit_issue_text REWRITES one passage in place (old_string → new_string, copied verbatim from
+  get_issue, unique match). It is the answer to "reformule ça", "cette décision a changé",
+  "cette phrase est fausse" — adding never covered that case. It works on a DESCRIPTION too,
+  so a wrong sentence in a ticket no longer costs a full rewrite either.
 - update_plan_tasks flips task states by index (get_issue's \`plan_tasks\`) — the only way to
   tick a task off. Working through a plan, keep states current: "- [~]" on the task you start,
   "- [x]" once it's done.
 - update_issues { fields: { plan } } REPLACES everything. Reserve it for an issue with no plan
   yet, or a rewrite the user explicitly asked for — and then read the current plan with
-  get_issue first and resend it complete.`;
+  get_issue first and resend it complete.
+Beyond the tokens saved, patching is the safe way round: a full rewrite silently overwrites
+what someone else changed meanwhile, whereas a stale old_string fails loudly and you re-read.`;
 
 const SCRATCHPAD_BLOCK = `## Task notebook (the user's personal scratchpad)
 Every account has ONE task notebook ("carnet de tâches" in French, "task notebook" in

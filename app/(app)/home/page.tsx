@@ -10,6 +10,7 @@ import { displayName } from "@/lib/display-name";
 import { pickGreeting } from "@/lib/home-greeting";
 import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
 import { HomeSmartAssignWarning } from "@/components/home/home-smart-assign-warning";
+import { HomeProjectSignals } from "@/components/home/home-project-signals";
 import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { OnboardingCard } from "@/components/home/onboarding-card";
 
@@ -154,10 +155,21 @@ export default function HomePage() {
           est une réponse à donner, pas un bandeau à repousser du regard pour
           atteindre le salut. Même place pour l'avis de Smart Assign — et les
           garder dans le bloc, plutôt qu'au-dessus, est aussi ce qui laisse le
-          composer au centre de la fenêtre quoi qu'ils portent. */}
+          composer au centre de la fenêtre quoi qu'ils portent.
+
+          L'ordre est celui de l'urgence : quelqu'un qui m'attend, puis un
+          réglage qui trie mal, puis ce qui s'est empilé dans mes projets. Ces
+          dernières lignes sont là presque tout le temps, les deux premières
+          presque jamais — les mettre en dernier, c'est laisser la place du
+          dessus à ce qui, quand il paraît, mérite d'être lu en premier. */}
       <div className={cn(HERO_COLUMN, "flex flex-col gap-3 pb-10 pt-3")}>
         <PendingInvitationsBanner />
         <HomeSmartAssignWarning />
+        {/* Rien pendant l'onboarding : cette branche ne s'affiche pas tant que
+            la carte est là, et c'est tout ce qu'il faut — un compte qui monte
+            son premier projet n'a pas à s'entendre dire ce qu'il y a à trier
+            dedans. */}
+        <HomeProjectSignals />
       </div>
     </section>
   );
