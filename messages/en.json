@@ -694,7 +694,13 @@
       "shipped": "No shipped feedback",
       "declined": "No declined feedback",
       "spam": "No spam"
-    }
+    },
+    "authorTeamGroup": "Team",
+    "authorPeopleGroup": "Users",
+    "translated": "Translated",
+    "original": "Original",
+    "translatedFrom": "Original in {language} · translated by Numo",
+    "translatedReadOnly": "Switch to the original to edit the text."
   },
   "Categories": {
     "colorSwatchAria": "Color {color}",
@@ -2104,7 +2110,17 @@
     "importValueNoMember": "No member (kept in the description)",
     "importValueNewCategory": "New category",
     "importValueDropLabel": "Not imported",
-    "importWarn_unknownAssignee": "“{value}” matches no member → unassigned, kept in the description ({count})"
+    "importWarn_unknownAssignee": "“{value}” matches no member → unassigned, kept in the description ({count})",
+    "feedbackTranslationTitle": "Automatic translation",
+    "feedbackTranslationDesc": "Numo translates feedback written in a language other than your team's.",
+    "feedbackTranslationHelp": "Translation happens during the review, in the same pass: it costs nothing extra when there is nothing to translate. The original text is kept, and it is what the public board keeps showing — only your team sees the translation, with a toggle back to the original.",
+    "feedbackTeamLanguageLabel": "Team language",
+    "feedbackTeamLanguageDesc": "The language feedback is translated into.",
+    "feedbackNoTranslateLabel": "Languages to leave alone",
+    "feedbackNoTranslateDesc": "The ones your team reads unaided. Feedback written in any of them is left as is.",
+    "feedbackNoTranslateNone": "None",
+    "feedbackNoTranslateCount": "{count} languages",
+    "feedbackNoTranslateSearch": "Search a language…"
   },
   "Seed": {
     "emptyBoardCta": "Chat with Numo",

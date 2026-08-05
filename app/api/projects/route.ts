@@ -13,6 +13,7 @@ import {
 import { seedDefaultCategories } from "@/lib/server/categories";
 import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
+import { normalizeLanguage } from "@/lib/feedback/languages";
 
 // Bornes de longueur (MIN-118) — mêmes plafonds que updateProjectSettings :
 // au-delà on tronque. La couleur est un jeton court, jamais un texte.
@@ -67,6 +68,13 @@ export async function POST(request: NextRequest) {
     typeof input.color === "string" ? input.color.slice(0, MAX_COLOR_LENGTH) : null;
   const smartAssignEnabled = input.smart_assign_enabled === true;
   const autoAssignEnabled = input.auto_assign_enabled === true;
+  // La langue de l'interface au moment de la création devient celle de
+  // l'équipe, et c'est vers elle que Numo traduira les retours étrangers. Elle
+  // ne se lit QUE d'ici : l'app la tient dans un cookie, jamais sur le compte,
+  // donc une passe de revue qui tourne trois jours plus tard n'a aucun moyen de
+  // la retrouver. Absente (appel d'agent, script) → null, et la revue retombe
+  // sur la locale par défaut de l'app.
+  const teamLanguage = normalizeLanguage(input.locale);
   // Id fourni par le client (wizard de création, MIN-62) : la graine de l'orbe
   // générée est l'id du projet, et le wizard la montre AVANT de créer. Sans ça
   // l'aperçu afficherait un dégradé, le projet créé un autre. Un uuid v4 tiré au
@@ -107,6 +115,7 @@ export async function POST(request: NextRequest) {
       color,
       smart_assign_enabled: smartAssignEnabled,
       auto_assign_enabled: autoAssignEnabled,
+      ...(teamLanguage ? { feedback_team_language: teamLanguage } : {}),
     })
     .select("*")
     .single();

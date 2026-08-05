@@ -117,10 +117,17 @@ export function decideFeedbackReview(params: {
   const sensitivity = verdict.isSensitive
     ? (verdict.sensitivityKind ?? "other")
     : null;
-  // La saisie interne vient de l'équipe elle-même : elle sait ce qu'elle publie,
-  // on ne la privatise pas dans son dos. Un post déjà privé n'a rien à changer.
-  const forcePrivate =
-    verdict.isSensitive && post.isPublic && post.source !== "internal";
+  /**
+   * Un contenu sensible quitte le board public, quel que soit le canal par
+   * lequel il est arrivé.
+   *
+   * La saisie interne en était exemptée — « l'équipe sait ce qu'elle publie ».
+   * Mais ce qu'elle saisit n'est pas ce qu'elle a écrit : c'est le retour d'un
+   * utilisateur, reçu par mail ou raconté au téléphone, recopié à la main. Les
+   * données personnelles et les rapports de sécurité passent par là AUSSI, et
+   * l'exemption les publiait sans filet. Un post déjà privé n'a rien à changer.
+   */
+  const forcePrivate = verdict.isSensitive && post.isPublic;
 
   const reason = verdict.reason?.trim() || null;
 

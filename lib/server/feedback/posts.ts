@@ -68,13 +68,20 @@ export interface FeedbackPostRow {
   analysis_failures: number;
   team_response: string | null;
   team_response_at: string | null;
+  /** Langue du retour pris dans son ensemble, telle que la revue l'a lue. */
+  source_language: string | null;
+  /** Traduction dans la langue de l'équipe — à CÔTÉ du texte, jamais à sa
+      place : le board public montre toujours le retour tel qu'il a été écrit. */
+  translated_title: string | null;
+  translated_body: string | null;
+  translated_language: string | null;
   created_at: string;
   updated_at: string;
 }
 
 /** Colonnes rendues aux appelants — jamais l'embedding (payload inutile). */
 export const FEEDBACK_POST_SELECT =
-  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, review_state, sensitivity, moderation_reason, classified_at, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, analysis_failures, team_response, team_response_at, created_at, updated_at";
+  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, review_state, sensitivity, moderation_reason, classified_at, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, analysis_failures, team_response, team_response_at, source_language, translated_title, translated_body, translated_language, created_at, updated_at";
 
 export type CreateFeedbackPostResult =
   | { ok: true; post: FeedbackPostRow }

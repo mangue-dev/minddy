@@ -694,7 +694,13 @@
       "shipped": "Aucun retour livré",
       "declined": "Aucun retour décliné",
       "spam": "Aucun spam"
-    }
+    },
+    "authorTeamGroup": "Équipe",
+    "authorPeopleGroup": "Utilisateurs",
+    "translated": "Version traduite",
+    "original": "Version originale",
+    "translatedFrom": "Original en {language} · traduit par Numo",
+    "translatedReadOnly": "Passez à la version originale pour modifier le texte."
   },
   "Categories": {
     "colorSwatchAria": "Couleur {color}",
@@ -2104,7 +2110,17 @@
     "importValueNoMember": "Aucun membre (gardé en description)",
     "importValueNewCategory": "Nouvelle catégorie",
     "importValueDropLabel": "Non repris",
-    "importWarn_unknownAssignee": "« {value} » ne correspond à aucun membre → non assigné, gardé en description ({count})"
+    "importWarn_unknownAssignee": "« {value} » ne correspond à aucun membre → non assigné, gardé en description ({count})",
+    "feedbackTranslationTitle": "Traduction automatique",
+    "feedbackTranslationDesc": "Numo traduit les retours écrits dans une autre langue que celle de l'équipe.",
+    "feedbackTranslationHelp": "La traduction se fait pendant la revue, dans le même passage : elle ne coûte rien de plus quand il n'y a rien à traduire. Le texte d'origine est conservé, et c'est lui que le board public continue d'afficher — l'équipe seule voit la traduction, avec une bascule pour revenir à l'original.",
+    "feedbackTeamLanguageLabel": "Langue de l'équipe",
+    "feedbackTeamLanguageDesc": "Celle vers laquelle les retours sont traduits.",
+    "feedbackNoTranslateLabel": "Langues à ne pas traduire",
+    "feedbackNoTranslateDesc": "Celles que l'équipe lit sans aide. Un retour écrit dans l'une d'elles reste tel quel.",
+    "feedbackNoTranslateNone": "Aucune",
+    "feedbackNoTranslateCount": "{count} langues",
+    "feedbackNoTranslateSearch": "Chercher une langue…"
   },
   "Seed": {
     "emptyBoardCta": "Discuter avec Numo",

@@ -5,6 +5,7 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { canUseAutomations, canUseSmartAssign } from "@/lib/server/entitlements";
 import { parseAutomations } from "@/lib/automations";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
+import { normalizeLanguage, type FeedbackLanguage } from "@/lib/feedback/languages";
 import type { Project } from "@/lib/types";
 
 /**
@@ -83,6 +84,25 @@ export async function updateProjectSettings({
   }
   if (typeof input.feedback_review_skip_over_budget === "boolean") {
     updates.feedback_review_skip_over_budget = input.feedback_review_skip_over_budget;
+  }
+  // Traduction des retours. Les codes de langue sont NORMALISÉS ici et non pris
+  // tels quels : ils sont ensuite comparés entre eux (langue de l'équipe contre
+  // langue détectée contre liste blanche), et deux écritures d'une même langue
+  // feraient deux langues qui ne se reconnaissent pas.
+  if (typeof input.feedback_translate_enabled === "boolean") {
+    updates.feedback_translate_enabled = input.feedback_translate_enabled;
+  }
+  if ("feedback_team_language" in input) {
+    updates.feedback_team_language = normalizeLanguage(input.feedback_team_language);
+  }
+  if (Array.isArray(input.feedback_no_translate_languages)) {
+    updates.feedback_no_translate_languages = [
+      ...new Set(
+        input.feedback_no_translate_languages
+          .map(normalizeLanguage)
+          .filter((code): code is FeedbackLanguage => code !== null)
+      ),
+    ];
   }
   if (typeof input.smart_assign_enabled === "boolean") {
     if (

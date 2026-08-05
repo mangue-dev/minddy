@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -144,6 +144,7 @@ export function CreateProjectWizard({
   const tSettings = useTranslations("Settings");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const {
@@ -555,7 +556,16 @@ export function CreateProjectWizard({
 
     let created;
     try {
-      created = await createProject({ id: draftId, name: name.trim(), key });
+      // La langue de l'interface part AVEC la création : elle devient la
+      // langue de l'équipe du projet, celle vers laquelle Numo traduira les
+      // retours étrangers. C'est le seul moment où on peut la lire — l'app la
+      // tient dans un cookie, jamais sur le compte.
+      created = await createProject({
+        id: draftId,
+        name: name.trim(),
+        key,
+        locale,
+      });
     } catch (err) {
       // Nom, clé déjà prise, limite de plan : tout se règle à la première étape,
       // et le brouillon reste intact — on n'a rien perdu.

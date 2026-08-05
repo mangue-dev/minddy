@@ -329,6 +329,14 @@ export interface Project {
   /** When the review is on but the owner's AI budget is spent: publish without
       review instead of holding the feedback back. */
   feedback_review_skip_over_budget: boolean;
+  /** Numo traduit les retours écrits dans une autre langue que celle de
+      l'équipe, pendant la même passe de revue. */
+  feedback_translate_enabled: boolean;
+  /** Langue de l'équipe (ISO 639-1) — celle vers laquelle on traduit. `null` =
+      jamais renseignée : la revue retombe sur la locale par défaut de l'app. */
+  feedback_team_language: string | null;
+  /** Les langues qu'on lit sans aide, laissées telles quelles. */
+  feedback_no_translate_languages: string[];
   /** Automatisations de projet (MIN-147) : l'interrupteur général de la boucle
       Numo enchaînée. Off = les règles restent écrites mais rien ne se déclenche. */
   automations_enabled: boolean;
@@ -348,6 +356,9 @@ export interface CreateProjectInput {
   color?: string | null;
   smart_assign_enabled?: boolean;
   auto_assign_enabled?: boolean;
+  /** Langue de l'interface au moment de la création (MIN — traduction des
+      retours) : elle devient la langue de l'équipe du projet. */
+  locale?: string;
 }
 
 export interface ProjectUpdateInput {
@@ -359,6 +370,9 @@ export interface ProjectUpdateInput {
   smart_assign_rules?: Record<string, string>;
   feedback_review_enabled?: boolean;
   feedback_review_skip_over_budget?: boolean;
+  feedback_translate_enabled?: boolean;
+  feedback_team_language?: string | null;
+  feedback_no_translate_languages?: string[];
   automations_enabled?: boolean;
   automations?: AutomationRule[];
 }

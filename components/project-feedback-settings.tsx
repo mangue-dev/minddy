@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
@@ -14,6 +14,11 @@ import {
   ColorInput,
   ConfirmDeleteDialog,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Skeleton,
   Spinner,
   Switch,
@@ -28,12 +33,20 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Languages,
   MessagesSquare,
   RefreshCw,
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
+import { defaultLocale } from "@/i18n/config";
 import { DEFAULT_BOARD_ACCENT } from "@/lib/feedback/accent";
+import {
+  FEEDBACK_LANGUAGES,
+  languageLabel,
+  normalizeLanguage,
+  type FeedbackLanguage,
+} from "@/lib/feedback/languages";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { useProjects } from "@/lib/projects-context";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
@@ -43,6 +56,7 @@ import {
 } from "@/components/custom-domain-section";
 import { FeedbackIntegrationWizard } from "@/components/feedback-integration-wizard";
 import { EmptyScene } from "@/components/empty-scene";
+import { SearchMultiSelect } from "@/components/search-select";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 
@@ -408,7 +422,174 @@ export function ProjectFeedbackSettings({
 
       {/* ── Revue par Numo : s'applique aux trois canaux ────────────────── */}
       <NumoReviewSetting projectId={projectId} isOwner={isOwner} />
+
+      {/* ── Traduction : une étape de la même passe ─────────────────────── */}
+      <FeedbackTranslationSetting projectId={projectId} isOwner={isOwner} />
     </div>
+  );
+}
+
+/**
+ * Traduction automatique des retours (dans la même passe que la revue).
+ *
+ * Deux réglages, et un troisième qui n'en est pas un :
+ *
+ * - **la langue de l'équipe** — celle vers laquelle on traduit. Elle est semée
+ *   à la création du projet avec la langue de l'interface du créateur, parce
+ *   que c'est le seul instant où on peut la lire : l'app la tient dans un
+ *   cookie, jamais sur le compte, et une passe de revue qui tourne trois jours
+ *   plus tard n'aurait aucun moyen de la retrouver ;
+ * - **les langues qu'on lit sans aide** — une équipe française n'a pas besoin
+ *   qu'on lui traduise l'anglais ;
+ * - la langue de l'équipe elle-même, qui est dans la seconde liste d'office et
+ *   n'y est donc pas proposée : on ne traduit pas vers sa propre langue, et
+ *   offrir la case laisserait croire qu'on peut demander l'inverse.
+ */
+function FeedbackTranslationSetting({
+  projectId,
+  isOwner,
+}: {
+  projectId: string;
+  isOwner: boolean;
+}) {
+  const t = useTranslations("Settings");
+  const locale = useLocale();
+  const { projects, updateProject } = useProjects();
+  const project = projects.find((p) => p.id === projectId);
+
+  // Miroir local pour que le switch suive le doigt, puis réconciliation depuis
+  // le projet — le pattern de `NumoReviewSetting` juste au-dessus.
+  const [on, setOn] = useState(project?.feedback_translate_enabled !== false);
+  useEffect(() => {
+    if (project) setOn(project.feedback_translate_enabled !== false);
+  }, [project]);
+
+  if (!project) return null;
+
+  // NULL en base = jamais renseignée : la revue retombe sur la locale par
+  // défaut de l'app, et le sélecteur montre donc la même chose qu'elle.
+  const teamLanguage =
+    normalizeLanguage(project.feedback_team_language) ??
+    (normalizeLanguage(defaultLocale) as FeedbackLanguage);
+  const skipped = new Set(
+    (project.feedback_no_translate_languages ?? [])
+      .map(normalizeLanguage)
+      .filter((code): code is FeedbackLanguage => code !== null)
+  );
+
+  const patch = async (input: Parameters<typeof updateProject>[1]) => {
+    try {
+      await updateProject(projectId, input);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const selectedSkip = FEEDBACK_LANGUAGES.filter(
+    (code) => code !== teamLanguage && skipped.has(code)
+  );
+
+  const label = (code: string) => languageLabel(code, locale);
+
+  return (
+    <SettingsGroup
+      anchor={SETTINGS_SECTIONS.projectFeedbackTranslation}
+      icon={Languages}
+      title={t("feedbackTranslationTitle")}
+      description={t("feedbackTranslationDesc")}
+      help={t("feedbackTranslationHelp")}
+      action={
+        <>
+          <StatusPill
+            active={on}
+            label={on ? t("feedbackActive") : t("feedbackInactive")}
+          />
+          <Switch
+            checked={on}
+            disabled={!isOwner}
+            onCheckedChange={(v) => {
+              setOn(v);
+              void patch({ feedback_translate_enabled: v }).catch(() => setOn(!v));
+            }}
+            aria-label={t("feedbackTranslationTitle")}
+          />
+        </>
+      }
+    >
+      {on && (
+        <>
+          {/* Le sélecteur des réglages, celui de la langue de l'interface juste
+              à côté dans le compte — même contrôle, même largeur. */}
+          <SettingsRow
+            htmlFor="feedback-team-language"
+            label={t("feedbackTeamLanguageLabel")}
+            hint={t("feedbackTeamLanguageDesc")}
+            control={
+              <Select
+                value={teamLanguage}
+                disabled={!isOwner}
+                onValueChange={(value) =>
+                  void patch({ feedback_team_language: value })
+                }
+              >
+                <SelectTrigger id="feedback-team-language" className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FEEDBACK_LANGUAGES.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {label(code)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+          />
+          {/* Choix multiple : le combobox cherchable de l'app (celui des
+              catégories d'un ticket), et non une grille de cases — quatorze
+              cases à cocher dans une rangée de réglages font un mur qu'on
+              parcourt des yeux au lieu d'y chercher une langue.
+              La langue de l'équipe n'y est pas : elle est exclue d'office, et
+              l'offrir laisserait croire qu'on peut demander l'inverse. */}
+          <SettingsRow
+            label={t("feedbackNoTranslateLabel")}
+            hint={t("feedbackNoTranslateDesc")}
+            control={
+              <SearchMultiSelect
+                values={[...skipped]}
+                onChange={(codes) =>
+                  void patch({ feedback_no_translate_languages: codes })
+                }
+                options={FEEDBACK_LANGUAGES.filter(
+                  (code) => code !== teamLanguage
+                ).map((code) => ({ value: code, label: label(code) }))}
+                align="end"
+                searchPlaceholder={t("feedbackNoTranslateSearch")}
+                trigger={
+                  <button
+                    type="button"
+                    disabled={!isOwner}
+                    aria-label={t("feedbackNoTranslateLabel")}
+                    className="flex h-9 w-48 items-center justify-between gap-2 rounded-md border border-border bg-transparent px-3 text-sm outline-none transition-colors hover:bg-muted/50 focus-visible:border-ring disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    <span className="min-w-0 truncate">
+                      {selectedSkip.length === 0
+                        ? t("feedbackNoTranslateNone")
+                        : selectedSkip.length === 1
+                          ? label(selectedSkip[0])
+                          : t("feedbackNoTranslateCount", {
+                              count: selectedSkip.length,
+                            })}
+                    </span>
+                    <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                  </button>
+                }
+              />
+            }
+          />
+        </>
+      )}
+    </SettingsGroup>
   );
 }
 

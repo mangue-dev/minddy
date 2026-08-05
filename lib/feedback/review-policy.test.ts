@@ -142,12 +142,15 @@ describe("decideFeedbackReview — contenu sensible", () => {
     expect(d.sensitivity).toBe("other");
   });
 
-  it("ne privatise pas la saisie interne de l'équipe", () => {
+  it("privatise aussi la saisie interne", () => {
+    // Ce qu'un membre saisit n'est pas ce qu'il a écrit : c'est le retour d'un
+    // utilisateur, recopié à la main. Les données personnelles passent par là
+    // aussi, et l'exemption d'autrefois les publiait sans filet.
     const d = decide(
       verdict({ isSensitive: true, sensitivityKind: "legal" }),
       subject({ source: "internal", reviewState: "published" })
     );
-    expect(d.forcePrivate).toBe(false);
+    expect(d.forcePrivate).toBe(true);
     expect(d.sensitivity).toBe("legal");
   });
 

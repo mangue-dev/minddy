@@ -19,7 +19,19 @@ import {
   resolveFeedbackReviewMode,
   type FeedbackReviewMode,
 } from "@/lib/feedback/review-policy";
+import { defaultLocale } from "@/i18n/config";
 import {
+  effectiveSkipLanguages,
+  shouldTranslateFeedback,
+  type FeedbackTranslationSettings,
+} from "@/lib/feedback/translation-policy";
+import {
+  normalizeLanguage,
+  type FeedbackLanguage,
+} from "@/lib/feedback/languages";
+import {
+  FEEDBACK_BODY_MAX,
+  FEEDBACK_TITLE_MAX,
   FEEDBACK_SENSITIVITY_KINDS,
   normalizeSensitivityKind,
   type FeedbackPostSource,
@@ -126,6 +138,35 @@ async function loadSettings(): Promise<ReviewSettings> {
       1,
       Math.round(parseFloatOr(cfg["feedback_analysis_batch_size"], DEFAULT_BATCH_SIZE))
     ),
+  };
+}
+
+/**
+ * Réglages de traduction d'un projet (colonnes `projects`, défauts sûrs).
+ *
+ * `feedback_team_language` peut être NULL — les projets d'avant la migration, et
+ * ceux créés hors du wizard. On retombe alors sur la locale par défaut de l'app
+ * plutôt que de couper la traduction : une équipe qui n'a rien réglé lit
+ * probablement l'anglais, et le réglage est à un clic pour dire le contraire.
+ */
+export async function projectTranslationSettings(
+  projectId: string
+): Promise<FeedbackTranslationSettings> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("projects")
+    .select(
+      "feedback_translate_enabled, feedback_team_language, feedback_no_translate_languages"
+    )
+    .eq("id", projectId)
+    .maybeSingle();
+  const skip = data?.feedback_no_translate_languages;
+  return {
+    enabled: (data?.feedback_translate_enabled as boolean | undefined) ?? true,
+    teamLanguage:
+      normalizeLanguage(data?.feedback_team_language) ??
+      (normalizeLanguage(defaultLocale) as FeedbackLanguage),
+    skipLanguages: Array.isArray(skip) ? (skip as string[]) : [],
   };
 }
 
@@ -387,9 +428,10 @@ async function reviewOne(
   // recherche de doublons : on ne re-proposerait qu'une fusion déjà tranchée.
   const lookForDuplicates = post.analyzed_at === null;
 
-  const [rejectedPairs, catRows] = await Promise.all([
+  const [rejectedPairs, catRows, translation] = await Promise.all([
     lookForDuplicates ? fetchRejectedPairIds(post.id) : Promise.resolve(new Set<string>()),
     service.from("categories").select("id, name").eq("project_id", post.project_id),
+    projectTranslationSettings(post.project_id),
   ]);
 
   let candidates: MatchedPost[] = [];
@@ -413,7 +455,13 @@ async function reviewOne(
   })) as ProjectCategory[];
 
   // ── Un seul appel : doublon + catégories + junk + sensible ────────────────
-  const verdict = await reviewWithLlm(settings.model, post, candidates, categories);
+  const verdict = await reviewWithLlm(
+    settings.model,
+    post,
+    candidates,
+    categories,
+    translation
+  );
   if (!verdict) return false;
 
   // Garde de course : l'équipe a pu merger/publier/rejeter le post pendant l'appel.
@@ -462,6 +510,17 @@ async function reviewOne(
     moderation_reason: decision.moderationReason,
   };
   if (decision.markSpam) updates.status = "spam";
+  // La langue et la traduction sont des CONSTATS sur le texte soumis, pas des
+  // décisions de modération : elles ne passent pas par `decideFeedbackReview`,
+  // qui n'aurait rien à en dire. On les écrit telles que la passe les a lues —
+  // y compris `null`, qui efface une traduction devenue sans objet (l'équipe a
+  // ajouté la langue à sa liste blanche entre deux passes).
+  if (verdict.sourceLanguage) updates.source_language = verdict.sourceLanguage;
+  if (translation.enabled) {
+    updates.translated_title = verdict.translation?.title ?? null;
+    updates.translated_body = verdict.translation?.body ?? null;
+    updates.translated_language = verdict.translation?.language ?? null;
+  }
   // On ne touche à la suggestion que si l'on a bien cherché des doublons — sinon
   // on effacerait celle qu'une passe précédente avait posée (post déjà analysé
   // mais pas encore classé, cas des lignes d'avant MIN-87).
@@ -555,12 +614,17 @@ async function reviewWithLlm(
   model: string,
   post: ClaimedPost,
   candidates: MatchedPost[],
-  categories: ProjectCategory[]
+  categories: ProjectCategory[],
+  translation: FeedbackTranslationSettings
 ) {
   const candidateIds = candidates.map((c) => c.id);
   const categoryIds = categories.map((c) => c.id);
   const hasCandidates = candidateIds.length > 0;
   const hasCategories = categoryIds.length > 0;
+  // Le bloc « langue » ne coûte que là où il sert : un projet qui a coupé la
+  // traduction ne paie pas de champs qu'il jettera.
+  const wantsLanguage = translation.enabled;
+  const skipList = effectiveSkipLanguages(translation);
 
   const systemPrompt = `You review a post submitted to a product feedback board BEFORE it is published publicly. Call review_feedback exactly once. Never reply in plain text.
 
@@ -578,6 +642,13 @@ Decide, about the ONE new post below:
       : "no candidate to compare against — set duplicate_of to null and confidence to 0."
   }
 
+${
+    wantsLanguage
+      ? `5. language — the ISO 639-1 code (two lowercase letters, no region) of the language the post is written in, judged on the post AS A WHOLE. Borrowed technical words do not change it: a French sentence containing "bug", "dashboard" or "endpoint" is French ("fr"), not English. Judge by the grammar and the ordinary words, not by the jargon. Use "und" if the post is too short or too garbled to tell.
+6. translated_title / translated_body — a faithful translation of the post into ${translation.teamLanguage}, for the product team to read. Fill them ONLY if the language you reported at step 5 is none of: ${skipList.join(", ")}. Otherwise set both to null. Translate meaning, not word for word; keep product names, code, identifiers and quoted strings exactly as they are. translated_body must be null when the body is empty.
+`
+      : ""
+  }
 Junk and sensitive are the only two verdicts to be conservative about: flag them only when clearly warranted. Categories and duplicates are routine — answer them decisively.`;
 
   const candidateBlock = candidates
@@ -622,6 +693,16 @@ ${categoryBlock}`;
     properties.category_ids = { type: "array", items: { type: "string", enum: categoryIds } };
     required.push("category_ids");
   }
+  if (wantsLanguage) {
+    // `und` (ISO 639-2 « indéterminé ») plutôt que null : un petit modèle à qui
+    // l'on offre null pour une question factuelle le choisit dès qu'il hésite,
+    // et tout devient indéterminé. Un code à donner l'oblige à trancher, et
+    // `normalizeLanguage` refusera `und` comme n'importe quoi d'autre hors jeu.
+    properties.language = { type: "string" };
+    properties.translated_title = { type: ["string", "null"] };
+    properties.translated_body = { type: ["string", "null"] };
+    required.push("language", "translated_title", "translated_body");
+  }
 
   const args = await forcedToolCall(
     model,
@@ -656,6 +737,18 @@ ${categoryBlock}`;
       ? args.reason.trim().slice(0, 500)
       : null;
 
+  // La langue décide de la traduction, pas le modèle : il rend un fait (dans
+  // quelle langue est ce texte), la politique en tire une conséquence. Sans
+  // cette garde, une réponse trop zélée — une « traduction » française d'un
+  // texte déjà français, parce qu'il contenait trois mots anglais — écraserait
+  // le retour d'une paraphrase.
+  const sourceLanguage = wantsLanguage ? normalizeLanguage(args.language) : null;
+  const translate = shouldTranslateFeedback(translation, sourceLanguage);
+  const text = (value: unknown, max: number): string | null => {
+    const trimmed = typeof value === "string" ? value.trim() : "";
+    return trimmed ? trimmed.slice(0, max) : null;
+  };
+
   return {
     duplicateOf,
     confidence: clamp01(args.confidence),
@@ -664,6 +757,17 @@ ${categoryBlock}`;
     isSensitive: args.is_sensitive === true,
     sensitivityKind: args.is_sensitive === true ? normalizeSensitivityKind(args.sensitivity_kind) : null,
     reason,
+    sourceLanguage,
+    // Un titre traduit vide ne vaut rien : sans lui la bascule de l'interface
+    // n'a rien à montrer, donc pas de traduction du tout.
+    translation:
+      translate && text(args.translated_title, FEEDBACK_TITLE_MAX)
+        ? {
+            title: text(args.translated_title, FEEDBACK_TITLE_MAX)!,
+            body: text(args.translated_body, FEEDBACK_BODY_MAX),
+            language: translation.teamLanguage,
+          }
+        : null,
   };
 }
 

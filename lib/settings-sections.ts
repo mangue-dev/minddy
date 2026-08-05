@@ -10,6 +10,7 @@ import {
   Inbox,
   IterationCw,
   KeyRound,
+  Languages,
   ListPlus,
   Lock,
   LogOut,
@@ -110,6 +111,7 @@ export const SETTINGS_SECTIONS = {
   projectFeedbackBoard: "project-feedback-board",
   projectFeedbackApi: "project-feedback-api",
   projectFeedbackReview: "project-feedback-review",
+  projectFeedbackTranslation: "project-feedback-translation",
   projectGit: "project-git",
   projectImport: "project-import",
   projectIntegrations: "project-integrations",
@@ -517,6 +519,16 @@ export function useSettingsSections(): SettingsSection[] {
         keywords: [
           "feedback", "revue", "review", "numo", "modération", "moderation",
           "ia", "ai", "filtrer", "filter",
+        ],
+      }),
+      project({
+        id: SETTINGS_SECTIONS.projectFeedbackTranslation,
+        tab: "feedback",
+        icon: Languages,
+        title: tSettings("feedbackTranslationTitle"),
+        keywords: [
+          "feedback", "retours", "traduction", "translation", "translate",
+          "langue", "language", "langues", "languages", "numo", "ia", "ai",
         ],
       }),
       project({

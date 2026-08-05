@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useNow, useTranslations, useFormatter } from "next-intl";
+import { useLocale, useNow, useTranslations, useFormatter } from "next-intl";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   Badge,
@@ -43,6 +43,7 @@ import {
   GitMerge,
   Globe,
   Link2,
+  Languages,
   ListFilter,
   Lock,
   MessagesSquare,
@@ -70,6 +71,8 @@ import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { UserAvatar } from "@/components/user-avatar";
+import { Markdown } from "@/components/markdown";
+import { displayName } from "@/lib/display-name";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -97,6 +100,12 @@ import {
 } from "@/app/f/[token]/feedback-bits";
 import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { defaultLocale } from "@/i18n/config";
+import {
+  languageLabel,
+  normalizeLanguage,
+  type FeedbackLanguage,
+} from "@/lib/feedback/languages";
 import {
   FEEDBACK_POST_STATUSES,
   isResolvedFeedbackStatus,
@@ -489,17 +498,17 @@ function AuthorValue({
   name,
   email,
   pseudonym,
+  seed,
 }: {
   name: string | null;
   email: string | null;
   pseudonym: string | null;
+  /** Graine d'avatar résolue par `authorAvatarSeed`. */
+  seed: string;
 }) {
   const t = useTranslations("FeedbackBoard");
   const [copied, setCopied] = useState(false);
   const label = name?.trim() || email?.trim() || pseudonym || "";
-  // La graine de l'avatar est l'EMAIL quand il existe : deux homonymes n'ont
-  // pas le même visage, et le même utilisateur garde le sien même renommé.
-  const seed = email?.trim() || pseudonym || label;
 
   const copy = () => {
     if (!email) return;
@@ -569,6 +578,8 @@ function FeedbackRow({
   boardEnabled,
   dateLabel,
   categoryMap,
+  memberSeeds,
+  teamLanguage,
   onSelect,
 }: {
   post: TeamFeedbackListItem;
@@ -576,8 +587,19 @@ function FeedbackRow({
   boardEnabled: boolean;
   dateLabel: string;
   categoryMap: Map<string, Category>;
+  /** Email → graine d'avatar des membres (cf. `authorAvatarSeed`). */
+  memberSeeds: Map<string, string>;
+  /** Langue de l'équipe — décide si la traduction stockée vaut encore. */
+  teamLanguage: FeedbackLanguage;
   onSelect: () => void;
 }) {
+  // La colonne se lit dans la langue de l'équipe : un titre qu'on ne comprend
+  // pas ne sert à rien pour choisir quoi ouvrir. C'est le seul endroit où la
+  // traduction s'impose sans bascule — il n'y a pas la place pour une.
+  const title =
+    (normalizeLanguage(post.translated_language) === teamLanguage
+      ? post.translated_title
+      : null) ?? post.title;
   const authorLabel = post.author?.name?.trim() || post.author?.email?.trim() || null;
 
   return (
@@ -615,13 +637,13 @@ function FeedbackRow({
         </span>
       </div>
 
-      <span className="line-clamp-2 text-sm font-medium leading-snug">{post.title}</span>
+      <span className="line-clamp-2 text-sm font-medium leading-snug">{title}</span>
 
       <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         {authorLabel ? (
           <span className="flex min-w-0 items-center gap-1.5">
             <UserAvatar
-              seed={post.author?.email || post.author?.pseudonym || authorLabel}
+              seed={authorAvatarSeed(post.author, memberSeeds)}
               className="size-3.5"
             />
             <span className="max-w-[9rem] truncate">{authorLabel}</span>
@@ -730,6 +752,10 @@ export function FeedbackTeamPage() {
         p.body,
         p.submitted_title,
         p.submitted_body,
+        // On cherche un retour avec les mots qu'on a LUS : le titre traduit est
+        // celui que la colonne affiche, il doit donc répondre à la frappe.
+        p.translated_title,
+        p.translated_body,
         p.author?.name,
         p.author?.email,
         p.author?.pseudonym,
@@ -749,6 +775,10 @@ export function FeedbackTeamPage() {
     () => new Map(categories.map((c) => [c.id, c])),
     [categories]
   );
+  const memberSeeds = useMemberSeeds(members);
+  const teamLanguage =
+    normalizeLanguage(project?.feedback_team_language) ??
+    (normalizeLanguage(defaultLocale) as FeedbackLanguage);
 
   // Publie le retour sélectionné à Numo (MIN-52) : il résout « ce feedback »,
   // « promeus-le », « réponds-lui » sur ce post sans le chercher — comme le
@@ -816,6 +846,7 @@ export function FeedbackTeamPage() {
   const createDialog = (
     <InternalFeedbackDialog
       projectId={projectId}
+      members={members}
       boardEnabled={boardEnabled}
       open={createOpen}
       onOpenChange={setCreateOpen}
@@ -964,7 +995,7 @@ export function FeedbackTeamPage() {
                une pastille arrondie dans une gouttière de 8 px, et non un bandeau
                pleine largeur. Quatre listes qui se ressemblent doivent se
                ressembler jusque dans la forme de leur sélection. */
-            <ul className="flex flex-col px-2 pt-2 pb-4">
+            <ul className="flex flex-col gap-1 px-2 pt-2 pb-4">
               {listedPosts.map((post) => (
                 <li key={post.id}>
                   <FeedbackRow
@@ -973,6 +1004,8 @@ export function FeedbackTeamPage() {
                     boardEnabled={boardEnabled}
                     dateLabel={format.relativeTime(new Date(post.created_at), now)}
                     categoryMap={categoryMap}
+                    memberSeeds={memberSeeds}
+                    teamLanguage={teamLanguage}
                     onSelect={() => {
                       setSelectedId(post.id);
                       setMobileDetail(true);
@@ -1086,8 +1119,16 @@ function FeedbackDetail({
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const memberSeeds = useMemberSeeds(members);
+  // La langue vers laquelle la revue traduit. NULL en base = jamais renseignée
+  // (projet d'avant la migration) : même repli que côté serveur, pour que les
+  // deux jugent une traduction valide sur le même critère.
+  const teamLanguage =
+    normalizeLanguage(project?.feedback_team_language) ??
+    (normalizeLanguage(defaultLocale) as FeedbackLanguage);
   const {
     items: activityItems,
     addComment,
@@ -1134,6 +1175,10 @@ function FeedbackDetail({
   const [linkOpen, setLinkOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // Traduit, le retour s'ouvre sur sa traduction : c'est la version que
+  // l'équipe peut lire. La bascule est par retour et repart à zéro en changeant
+  // de retour (`key={selectedId}` remonte tout le détail).
+  const [showTranslated, setShowTranslated] = useState(true);
 
   useEffect(() => {
     if (post) {
@@ -1271,6 +1316,21 @@ function FeedbackDetail({
 
   const rawDiffers =
     post.submitted_title !== post.title || post.submitted_body !== post.body;
+
+  /**
+   * La traduction, si la revue en a produit une ET qu'elle vaut encore.
+   *
+   * `translated_language` est comparée à la langue de l'équipe : une équipe qui
+   * passe du français à l'anglais a en base des traductions françaises, et les
+   * présenter comme « la version que vous pouvez lire » serait un mensonge.
+   * Elles ne réapparaîtront que si la langue revient — on ne re-traduit pas
+   * l'historique.
+   */
+  const translation =
+    post.translated_title &&
+    normalizeLanguage(post.translated_language) === teamLanguage
+      ? { title: post.translated_title, body: post.translated_body }
+      : null;
 
   /**
    * Le statut d'un retour lié à un ticket n'est plus le sien : `status-sync` le
@@ -1439,7 +1499,55 @@ function FeedbackDetail({
         )}
 
         {/* Titre + description rapprochés, comme dans le triage — la
-            description est éditée en markdown rendu (même éditeur). */}
+            description est éditée en markdown rendu (même éditeur).
+
+            Traduit, le retour s'ouvre SUR sa traduction : c'est la version que
+            l'équipe peut lire, et la lui cacher derrière un onglet reviendrait
+            à ne pas l'avoir traduite. Mais elle est en LECTURE SEULE — éditer
+            une traduction produirait un texte que plus rien ne relie à ce que
+            l'utilisateur a écrit, et que la prochaine passe de revue écraserait
+            sans le savoir. La couche canonique, elle, s'édite comme avant, sous
+            l'onglet « version originale ». */}
+        {translation ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
+              {([true, false] as const).map((wanted) => (
+                <button
+                  key={String(wanted)}
+                  type="button"
+                  aria-pressed={showTranslated === wanted}
+                  onClick={() => setShowTranslated(wanted)}
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                    showTranslated === wanted
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {wanted ? t("translated") : t("original")}
+                </button>
+              ))}
+            </div>
+            {showTranslated ? (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Languages className="size-3.5" />
+                {t("translatedFrom", {
+                  language: languageLabel(post.source_language ?? "", locale),
+                })}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        {translation && showTranslated ? (
+          <div className="flex flex-col gap-2">
+            <h2 className="text-2xl leading-tight font-semibold">{translation.title}</h2>
+            {translation.body ? (
+              <Markdown className="text-sm">{translation.body}</Markdown>
+            ) : null}
+            <p className="text-xs text-muted-foreground">{t("translatedReadOnly")}</p>
+          </div>
+        ) : (
         <div className="flex flex-col gap-2">
           <AutoTextarea
             value={title}
@@ -1467,6 +1575,7 @@ function FeedbackDetail({
             className="min-h-16"
           />
         </div>
+        )}
 
         {/* Tout ce que le retour EST, sur des rangées clé/valeur — mêmes
             contrôles que le panneau d'issue. C'est ici, et nulle part ailleurs,
@@ -1639,6 +1748,7 @@ function FeedbackDetail({
                 name={post.author.name}
                 email={post.author.email}
                 pseudonym={post.author.pseudonym}
+                seed={authorAvatarSeed(post.author, memberSeeds)}
               />
             </PropertyRow>
           )}
@@ -2076,6 +2186,44 @@ function LinkIssueDialog({
 interface ComposerAuthor {
   email: string;
   name: string | null;
+  /** Graine d'avatar d'un membre de l'équipe — voir {@link authorAvatarSeed}. */
+  seed?: string | null;
+}
+
+/**
+ * La graine de l'avatar d'un auteur.
+ *
+ * Un membre de l'équipe a DÉJÀ un visage dans minddy, tiré au sort une fois
+ * pour toutes (`public.user_avatars`) et affiché partout ailleurs — sur ses
+ * tickets, dans le fil d'activité, dans le sélecteur d'assigné. Le semer ici
+ * sur son email lui en dessinerait un second, sans rapport avec le premier :
+ * la même personne, deux visages, sur deux écrans voisins.
+ *
+ * D'où l'ordre : la graine du compte s'il en a un, l'email sinon (un visiteur
+ * du board n'a pas de compte, et son email est ce qu'il a de stable), le
+ * pseudonyme en dernier recours.
+ */
+function authorAvatarSeed(
+  author: { email?: string | null; pseudonym?: string | null } | null,
+  memberSeeds: Map<string, string>
+): string {
+  const email = author?.email?.trim().toLowerCase() || null;
+  return (
+    (email ? memberSeeds.get(email) : null) ?? email ?? author?.pseudonym ?? ""
+  );
+}
+
+/** Email (en minuscules) → graine d'avatar, pour les membres du projet. */
+function useMemberSeeds(members: Member[]): Map<string, string> {
+  return useMemo(
+    () =>
+      new Map(
+        members
+          .filter((m) => m.email)
+          .map((m) => [m.email!.trim().toLowerCase(), m.avatar_seed])
+      ),
+    [members]
+  );
 }
 
 /**
@@ -2088,11 +2236,14 @@ interface ComposerAuthor {
  */
 function AuthorPicker({
   projectId,
+  members,
   value,
   onChange,
   onCreateRequested,
 }: {
   projectId: string;
+  /** Les membres du projet — eux aussi ont des retours à faire remonter. */
+  members: Member[];
   value: ComposerAuthor | null;
   onChange: (author: ComposerAuthor | null) => void;
   /** Bascule le champ en saisie d'une personne neuve, avec ce qui a été tapé. */
@@ -2112,6 +2263,31 @@ function AuthorPicker({
   });
   const users = data?.users ?? [];
   const typed = search.trim();
+
+  /**
+   * L'équipe d'abord. Un retour saisi à la main vient très souvent de
+   * l'intérieur — quelqu'un est tombé sur un défaut, l'a raconté en réunion, et
+   * on le consigne. Sans les membres dans cette liste, il fallait retaper de
+   * mémoire l'email d'un collègue qui est pourtant déjà dans le projet.
+   *
+   * Ils ne sont PAS filtrés à la main : cmdk filtre déjà les items sur leur
+   * valeur et leurs mots-clés, et le faire deux fois donnerait deux résultats
+   * différents pour une même frappe.
+   */
+  const teamOptions = useMemo(
+    () => members.filter((m) => m.email),
+    [members]
+  );
+  // Un membre qui a déjà écrit sur le board a AUSSI une ligne côté visiteurs :
+  // c'est la même personne, et c'est l'entrée « équipe » qu'on garde — elle
+  // seule porte son vrai visage et son nom de compte.
+  const teamEmails = useMemo(
+    () => new Set(teamOptions.map((m) => m.email!.trim().toLowerCase())),
+    [teamOptions]
+  );
+  const visitorOptions = users.filter(
+    (u) => !u.email || !teamEmails.has(u.email.trim().toLowerCase())
+  );
 
   const pick = (author: ComposerAuthor) => {
     onChange(author);
@@ -2141,7 +2317,7 @@ function AuthorPicker({
         >
           {value ? (
             <>
-              <UserAvatar seed={value.email} className="size-5" />
+              <UserAvatar seed={value.seed || value.email} className="size-5" />
               <span className="min-w-0 truncate">{value.name?.trim() || value.email}</span>
             </>
           ) : (
@@ -2150,8 +2326,30 @@ function AuthorPicker({
         </button>
       }
     >
-      <CommandGroup>
-        {users.map((u) => (
+      <CommandGroup heading={t("authorTeamGroup")}>
+        {teamOptions.map((m) => (
+          <CommandItem
+            key={m.user_id}
+            value={`member-${m.user_id}`}
+            keywords={[m.email ?? "", m.full_name ?? ""]}
+            onSelect={() =>
+              pick({ email: m.email!, name: m.full_name, seed: m.avatar_seed })
+            }
+          >
+            {/* Sa graine de compte, pas son email : le même visage que partout
+                ailleurs dans minddy. */}
+            <UserAvatar seed={m.avatar_seed} className="size-5 shrink-0" />
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate">{displayName(m)}</span>
+              {m.full_name?.trim() && m.email ? (
+                <span className="truncate text-xs text-muted-foreground">{m.email}</span>
+              ) : null}
+            </span>
+          </CommandItem>
+        ))}
+      </CommandGroup>
+      <CommandGroup heading={t("authorPeopleGroup")}>
+        {visitorOptions.map((u) => (
           <CommandItem
             key={u.id}
             value={u.id}
@@ -2265,12 +2463,16 @@ function NewAuthorFields({
  */
 function InternalFeedbackDialog({
   projectId,
+  members,
   boardEnabled,
   open,
   onOpenChange,
   onCreated,
 }: {
   projectId: string;
+  /** Les membres du projet, proposés comme auteurs au même titre que les
+      visiteurs du board. */
+  members: Member[];
   boardEnabled: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -2307,7 +2509,7 @@ function InternalFeedbackDialog({
    */
   const resolvedAuthor: ComposerAuthor | null = draftAuthor
     ? draftAuthor.email.trim().includes("@")
-      ? { email: draftAuthor.email.trim(), name: draftAuthor.name.trim() || null }
+      ? { email: draftAuthor.email.trim(), name: draftAuthor.name.trim() || null, seed: null }
       : null
     : author;
 
@@ -2400,6 +2602,7 @@ function InternalFeedbackDialog({
           ) : (
             <AuthorPicker
               projectId={projectId}
+              members={members}
               value={author}
               onChange={setAuthor}
               // Ce qui a été tapé n'est pas perdu au passage : un email part

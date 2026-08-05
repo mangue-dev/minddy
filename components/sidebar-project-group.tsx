@@ -177,7 +177,12 @@ export function SidebarProjectGroup({
       </div>
 
       {open ? (
-        <div className="flex flex-col">
+        // Le même écart de 4 px qu'entre les lignes du triage et des retours :
+        // les lignes de ces colonnes sont des pastilles arrondies qui prennent
+        // un fond au survol et à la sélection, et collées les unes aux autres
+        // elles se lisent comme un bloc unique — c'est le fond de la ligne
+        // survolée qui touche celui de sa voisine.
+        <div className="flex flex-col gap-1">
           {children}
           {hiddenCount > 0 ? (
             <button
