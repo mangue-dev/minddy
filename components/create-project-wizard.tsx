@@ -24,6 +24,7 @@ import {
   Layers,
   RefreshCw,
   Sparkles,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -74,6 +75,7 @@ import { ImportGuideBlock } from "@/components/import/import-guide";
 import { NumoIcon } from "@/components/numo-icon";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
 import { CloseProjectDraftDialog } from "@/components/close-project-draft-dialog";
+import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo } from "@/lib/types";
@@ -162,6 +164,7 @@ export function CreateProjectWizard({
   // qui ne dépend que du nom.
   const [draftExists, setDraftExists] = useState(false);
   const [closePromptOpen, setClosePromptOpen] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
 
   // Étape « D'où part-on ? » — la réponse décide de ce que l'étape d'amorce
   // demande, et de rien d'autre : le projet se crée de la même façon des deux
@@ -241,6 +244,7 @@ export function CreateProjectWizard({
     setError(null);
     setDraftExists(false);
     setClosePromptOpen(false);
+    setJoinOpen(false);
     setDraftId(crypto.randomUUID());
     setOrigin(null);
     setName("");
@@ -441,6 +445,19 @@ export function CreateProjectWizard({
 
   /** Le champ porte encore la proposition — personne ne l'a réécrite depuis. */
   const showsSuggestion = suggestedName !== "" && name === suggestedName;
+
+  /**
+   * L'issue de secours de l'étape « nom », côté projet existant : ce n'est pas
+   * un projet à créer qu'on avait, c'est celui de l'équipe à rejoindre. Le
+   * wizard reste ouvert dessous — on n'a rien décidé, on est venu lire comment
+   * on s'y prend.
+   */
+  const openJoin = () => {
+    // Un abandon qui n'en est pas un : sans cet événement, ces comptes se
+    // lisent comme des décrochages à l'étape du nom.
+    track("project_wizard_join_opened");
+    setJoinOpen(true);
+  };
 
   const submitProjectStep = () => {
     setError(null);
@@ -820,6 +837,26 @@ export function CreateProjectWizard({
                 {t("wizardNameSuggest")}
               </Button>
             ) : null)}
+
+          {/* L'autre chose qu'on peut vouloir ici, et que rien ne disait : ne
+              pas créer de projet du tout. Qui arrive par « un projet existant »
+              parce que son équipe est déjà sur minddy s'apprêtait à en créer un
+              DOUBLON — alors qu'il n'y a qu'à s'y faire inviter. Le lien
+              n'ouvre qu'une explication, le wizard reste là dessous : on ne
+              rejoint pas de son propre chef dans minddy, c'est le propriétaire
+              du projet qui invite. */}
+          {origin === "existing" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={openJoin}
+              className="h-auto self-start bg-transparent px-0 py-1 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
+            >
+              <UserPlus className="size-3.5" />
+              {t("wizardJoinLink")}
+            </Button>
+          )}
         </div>
       ),
     },
@@ -1201,6 +1238,15 @@ export function CreateProjectWizard({
         onOpenChange={setClosePromptOpen}
         onSave={() => void saveAndClose()}
         onDiscard={discardAndClose}
+      />
+
+      {/* La marche à suivre pour se faire inviter — la même qu'à l'étape 1 de
+          l'onboarding, à un mot près : le wizard s'ouvre de n'importe où, donc
+          l'invitation s'annonce là où elle attend depuis partout, l'inbox. */}
+      <OnboardingJoinDialog
+        open={joinOpen}
+        onOpenChange={setJoinOpen}
+        outro="inbox"
       />
     </>
   );

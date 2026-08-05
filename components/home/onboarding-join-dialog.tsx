@@ -15,7 +15,9 @@ import { Copy, Share2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 /**
- * « Rejoindre un projet », depuis l'étape 1 de l'onboarding.
+ * « Rejoindre un projet », depuis l'étape 1 de l'onboarding et depuis l'étape
+ * « nom » du wizard de création (chemin « projet existant ») — c'est là qu'on
+ * se rend compte qu'on s'apprêtait à créer un doublon de ce que l'équipe a déjà.
  *
  * On ne rejoint pas un projet de son propre chef dans minddy : c'est son
  * propriétaire qui invite, par adresse e-mail. Le dialog dit donc deux choses,
@@ -26,9 +28,16 @@ import { useAuth } from "@/lib/auth-context";
 export function OnboardingJoinDialog({
   open,
   onOpenChange,
+  outro = "home",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Où l'invitation attendra, dit depuis l'endroit d'où l'on ouvre : l'accueil
+   * la porte en haut de page, mais le wizard s'ouvre de n'importe où — là, le
+   * seul endroit vrai est la boîte de réception.
+   */
+  outro?: "home" | "inbox";
 }) {
   const t = useTranslations("Onboarding");
   const tc = useTranslations("Common");
@@ -100,7 +109,9 @@ export function OnboardingJoinDialog({
           <li>{t("joinStep3")}</li>
         </ol>
 
-        <p className="text-xs text-muted-foreground">{t("joinOutro")}</p>
+        <p className="text-xs text-muted-foreground">
+          {t(outro === "home" ? "joinOutro" : "joinOutroInbox")}
+        </p>
       </DialogContent>
     </Dialog>
   );

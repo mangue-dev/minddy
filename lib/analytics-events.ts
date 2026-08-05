@@ -91,6 +91,10 @@ export interface AnalyticsEventProps {
    *  de laquelle des deux entrées sert vraiment — un projet neuf à cadrer, ou
    *  un backlog qui existe déjà ailleurs. */
   project_wizard_origin_chosen: { origin: "new" | "existing" };
+  /** « Je souhaite rejoindre un projet », depuis l'étape « nom » : le compte
+   *  n'avait pas de projet à créer, il lui fallait une invitation. C'est un
+   *  ABANDON légitime du wizard — à retrancher de ceux qui décrochent. */
+  project_wizard_join_opened: NoProps;
   /** Ce que l'étape d'amorce a récolté, « rien » compris : l'écart entre
    *  l'origine choisie et l'amorce retenue dit si l'étape tient sa promesse. */
   project_wizard_seed_chosen: { seed: "brief" | "numo" | "import" | "none" };
@@ -448,6 +452,7 @@ const EVENT_NAMES = [
   "project_wizard_abandoned",
   "project_wizard_draft_saved",
   "project_wizard_origin_chosen",
+  "project_wizard_join_opened",
   "project_wizard_seed_chosen",
   "project_wizard_completed",
   "project_created",
