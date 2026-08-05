@@ -64,7 +64,7 @@ export function PrLinkIssue({
 
   // Même cache que le board « Tous les tickets » et que le picker de /agents :
   // rien n'est chargé tant que le menu n'est pas ouvert.
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,
     queryFn: globalBoardQueryFn,
     enabled: open,
@@ -123,7 +123,7 @@ export function PrLinkIssue({
         onOpenChange={setOpen}
         align="start"
         searchPlaceholder={t("linkIssueSearchPlaceholder")}
-        emptyText={isLoading ? t("linkIssueLoading") : t("linkIssueEmpty")}
+        emptyText={open && isPending ? t("linkIssueLoading") : t("linkIssueEmpty")}
         trigger={
           <Button
             variant="ghost"

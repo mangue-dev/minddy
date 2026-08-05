@@ -143,7 +143,7 @@ export function useScratchpadDoc({
   >;
 }) {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: SCRATCHPAD_KEY,
     queryFn: fetchScratchpad,
     enabled: open,
@@ -267,7 +267,7 @@ export function useScratchpadDoc({
     progress: data?.progress ?? EMPTY.progress,
     /** When the note last reached the server — the save indicator's "… ago". */
     updatedAt: data?.updated_at ?? null,
-    isLoading,
+    isLoading: open && isPending,
     isSaving,
     save,
   };

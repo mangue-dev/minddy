@@ -362,7 +362,7 @@ export function AgentsPage() {
   const tCommon = useTranslations("Common");
   const format = useFormatter();
   const router = useRouter();
-  const { projects, openCreateProject } = useProjects();
+  const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { sessions, loading } = useAgentSessionsQuery();
   // Les projets où l'agent peut travailler (dépôt lié) — ils seuls portent le
   // « + » de leur en-tête. Même requête que le composer, donc un seul appel.
@@ -656,7 +656,7 @@ export function AgentsPage() {
      faut d'abord, et cet écran ne dit que ça. Des projets sans aucune session, en
      revanche, gardent la vue normale : la conversation vierge y est déjà ouverte,
      il n'y a rien de plus à proposer. */
-  if (!loading && projects.length === 0 && sessions.length === 0) {
+  if (!loading && !projectsLoading && projects.length === 0 && sessions.length === 0) {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-5xl">

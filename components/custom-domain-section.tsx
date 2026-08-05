@@ -69,12 +69,12 @@ export function CustomDomainSection({
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey,
     queryFn: () => fetchCustomDomainApi(endpoint),
   });
 
-  if (isLoading || !data) return null;
+  if (isPending || !data) return null;
   const { configured, can_manage: canManage, domain } = data;
   // Déploiement sans env VERCEL_*, ou lecteur sans rien à voir : silence.
   if (!configured || (!domain && !canManage)) return null;

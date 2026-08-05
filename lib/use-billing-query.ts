@@ -48,7 +48,7 @@ export function useBillingSummary() {
           : "normal";
 
   return {
-    loading: status.isLoading || usage.isLoading,
+    loading: status.isPending || usage.isPending,
     status: status.data ?? null,
     usage: usage.data ?? null,
     planId: usage.data?.planId ?? status.data?.planId ?? "free",

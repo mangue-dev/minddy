@@ -127,7 +127,8 @@ function AddContextButton({
     open && kind === "member",
     scopeProjectId,
   );
-  const board = useNumoBoard(open && kind === "issue");
+  const boardOn = open && kind === "issue";
+  const board = useNumoBoard(boardOn);
   // Les objectifs viennent de l'index de la palette — la même source que le
   // « @ » du texte, donc la même liste des deux côtés du composer.
   const mentionSources = useMentionSources(scopeProjectId);
@@ -180,7 +181,7 @@ function AddContextButton({
   ];
 
   const loading =
-    (kind === "member" && membersLoading) || (kind === "issue" && board.isLoading);
+    (kind === "member" && membersLoading) || (boardOn && board.isPending);
 
   return (
     <div ref={anchorRef} className="shrink-0">

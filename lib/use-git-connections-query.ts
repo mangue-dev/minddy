@@ -13,7 +13,7 @@ export const gitConnectionsQueryKey = ["git-connections"] as const;
  * chercher les connexions pour une modale fermée.
  */
 export function useGitConnectionsQuery(enabled = true) {
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: gitConnectionsQueryKey,
     queryFn: fetchGitConnectionsApi,
     enabled,
@@ -21,6 +21,6 @@ export function useGitConnectionsQuery(enabled = true) {
   return {
     connections: data?.connections ?? [],
     providers: data?.providers ?? [],
-    loading: isLoading,
+    loading: enabled && isPending,
   };
 }

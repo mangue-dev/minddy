@@ -26,10 +26,11 @@ const objectivesKey = (projectId: string) => ["objectives", projectId] as const;
 export function useObjectivesQuery(projectId: string | null) {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const enabled = !!projectId;
+  const { data, isPending } = useQuery({
     queryKey: objectivesKey(projectId ?? ""),
     queryFn: objectivesQueryFn(projectId ?? ""),
-    enabled: !!projectId,
+    enabled,
   });
 
   const invalidate = useCallback(() => {
@@ -116,7 +117,7 @@ export function useObjectivesQuery(projectId: string | null) {
 
   return {
     objectives: (data ?? []) as Objective[],
-    loading: isLoading,
+    loading: enabled && isPending,
     createObjective,
     updateObjective,
     deleteObjective,

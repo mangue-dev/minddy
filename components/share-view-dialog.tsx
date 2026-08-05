@@ -43,10 +43,11 @@ export function ShareViewDialog({
   const queryClient = useQueryClient();
   const viewId = view?.id ?? null;
 
-  const { data: share, isLoading } = useQuery({
+  const shareEnabled = open && viewId !== null;
+  const { data: share, isPending } = useQuery({
     queryKey: ["view-share", viewId],
     queryFn: () => fetchViewShareApi(viewId as string),
-    enabled: open && viewId !== null,
+    enabled: shareEnabled,
   });
   const serverLevel: ViewShareLevel = share?.level ?? "private";
 
@@ -139,7 +140,7 @@ export function ShareViewDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
+        {shareEnabled && isPending ? (
           <div className="flex justify-center py-6">
             <Spinner />
           </div>

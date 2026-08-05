@@ -25,7 +25,7 @@ const QUERY_KEY = "pr-review-session";
 const ACTIVE_POLL_MS = 5000;
 
 export function usePrReviewSession(prId: string, enabled = true) {
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isPending, refetch } = useQuery({
     queryKey: [QUERY_KEY, prId] as const,
     queryFn: () => fetchPullRequestAiReviewApi(prId),
     enabled,
@@ -39,7 +39,7 @@ export function usePrReviewSession(prId: string, enabled = true) {
     active: run?.working === true,
     reviewedHeadSha: data?.reviewedHeadSha ?? null,
     model: data?.model ?? null,
-    loading: isLoading,
+    loading: enabled && isPending,
     refetch,
   };
 }

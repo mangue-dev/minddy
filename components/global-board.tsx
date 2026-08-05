@@ -86,7 +86,7 @@ function GlobalBoardInner() {
   const format = useFormatter();
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
-  const { projects, openCreateProject } = useProjects();
+  const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { openCreateIssue } = useCreate();
   const openAssistant = useAssistantPanel().open;
   const router = useRouter();
@@ -423,7 +423,7 @@ function GlobalBoardInner() {
   const openPid = openIssue?.project_id ?? "";
   const openProject = openIssue ? projectMap.get(openPid) : undefined;
 
-  if (loading || viewsLoading) {
+  if (loading || viewsLoading || projectsLoading) {
     return (
       <div className="min-h-0 flex-1 px-6 pt-4">
         <div className="flex gap-3">

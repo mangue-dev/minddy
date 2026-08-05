@@ -78,6 +78,9 @@ export function ConversationList({
   );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  // La liste part VIDE : sans ce drapeau, « aucune conversation » s'affiche le
+  // temps du fetch, y compris quand il y en a des dizaines.
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -85,6 +88,7 @@ export function ConversationList({
     void fetchConversations(projectId).then((data) => {
       if (active) {
         setConversations(data);
+        setLoaded(true);
       }
     });
 
@@ -140,7 +144,7 @@ export function ConversationList({
         {/* Aucune conversation : la même scène que partout ailleurs, à la
             taille du popover — le titre passe en encre, comme les autres états
             vides, au lieu d'une ligne grise qu'on prend pour une note. */}
-        {conversations.length === 0 && (
+        {loaded && conversations.length === 0 && (
           <EmptyScene
             size="compact"
             icon={History}

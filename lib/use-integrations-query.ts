@@ -10,14 +10,15 @@ export const integrationsQueryKey = (projectId: string) =>
     Shared cache with the settings tab; revoked rows are included so issue
     attribution keeps resolving names forever. */
 export function useIntegrationsQuery(projectId: string | null) {
-  const { data, isLoading } = useQuery({
+  const enabled = !!projectId;
+  const { data, isPending } = useQuery({
     queryKey: integrationsQueryKey(projectId ?? ""),
     queryFn: () => fetchIntegrationsApi(projectId as string),
-    enabled: !!projectId,
+    enabled,
   });
   return {
     integrations: data?.integrations ?? [],
     isOwner: !!data?.isOwner,
-    loading: isLoading,
+    loading: enabled && isPending,
   };
 }

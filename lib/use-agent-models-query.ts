@@ -78,7 +78,7 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
 }
 
 export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     // Une portée = un catalogue : les deux ne doivent jamais partager un cache.
     queryKey: scope === "user" ? agentModelsQueryKey : [...agentModelsQueryKey, scope],
     queryFn: () => fetchAgentModels(scope),
@@ -90,6 +90,6 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
     models: data?.models ?? [],
     maxMultiplier: data?.maxMultiplier ?? null,
     planId: data?.planId ?? null,
-    loading: isLoading,
+    loading: isPending,
   };
 }

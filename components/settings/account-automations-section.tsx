@@ -13,6 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Skeleton,
   Switch,
   toast,
 } from "mangue-ui";
@@ -100,7 +101,7 @@ export function AccountAutomationsSection() {
   const t = useTranslations("Automations");
   const tAgent = useTranslations("Agent");
   const { user, updateUserMetadata } = useAuth();
-  const { projects, updateProject } = useProjects();
+  const { projects, updateProject, loading: projectsLoading } = useProjects();
   const { includedUsd } = useBillingSummary();
 
   const [preset, setPreset] = useState<AutomationPresetId | null>(
@@ -400,7 +401,12 @@ export function AccountAutomationsSection() {
         title={t("projectsTitle")}
         description={t("projectsHint")}
       >
-        {owned.length === 0 ? (
+        {projectsLoading ? (
+          <div className="flex flex-col gap-2 py-3">
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-full" />
+          </div>
+        ) : owned.length === 0 ? (
           <EmptyScene
             size="compact"
             icon={FolderKanban}

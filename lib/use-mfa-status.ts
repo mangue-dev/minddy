@@ -22,7 +22,7 @@ export const mfaStatusQueryKey = ["mfa-status"] as const;
  * qu'on ne pense pas à ouvrir.
  */
 export function useMfaStatusQuery() {
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: mfaStatusQueryKey,
     queryFn: async (): Promise<MfaStatus> => {
       const response = await fetch("/api/account/mfa");
@@ -30,5 +30,5 @@ export function useMfaStatusQuery() {
       return (await response.json()) as MfaStatus;
     },
   });
-  return { status: data ?? null, loading: isLoading };
+  return { status: data ?? null, loading: isPending };
 }

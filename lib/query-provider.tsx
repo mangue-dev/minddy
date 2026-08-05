@@ -15,6 +15,17 @@ import { useState, type ReactNode } from "react";
  * (lib/realtime-provider.tsx) et les refetchs de montage réconcilient derrière.
  * C'est du stale-while-revalidate, pas une source de vérité : rien n'est servi
  * depuis le disque au-delà de PERSIST_MAX_AGE_MS.
+ *
+ * CE QUE ÇA IMPOSE AU RESTE DE L'APP. La restauration est asynchrone : le premier
+ * rendu se peint AVANT qu'elle ne rende la main, et pendant cette fenêtre
+ * react-query force `fetchStatus: "idle"` sur toutes les queries. Elles sont donc
+ * `pending`, sans donnée, et pourtant `isLoading` (= `isPending && isFetching`)
+ * vaut FAUX. Un écran qui gate son état vide sur `isLoading` le peint alors une
+ * image avant son propre squelette — sur toutes les pages à la fois, puisque la
+ * cause est ce provider. Le drapeau de chargement de l'UI se lit donc sur
+ * `isPending`, et sur `enabled && isPending` quand la query a une garde (une
+ * query désactivée reste `pending` pour toujours). Verrouillé par
+ * lib/query-loading.test.ts.
  */
 
 /** Clé de stockage. Voir clearPersistedQueryCache() pour la purge à la déconnexion. */

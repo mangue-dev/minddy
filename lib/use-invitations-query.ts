@@ -15,10 +15,11 @@ export function useMyInvitations() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
-  const { data, isLoading } = useQuery({
+  const enabled = !!userId;
+  const { data, isPending } = useQuery({
     queryKey: MY_INVITATIONS_KEY,
     queryFn: fetchMyInvitationsApi,
-    enabled: !!userId,
+    enabled,
   });
 
   const respond = useCallback(
@@ -36,7 +37,7 @@ export function useMyInvitations() {
 
   return {
     invitations: data ?? [],
-    loading: isLoading,
+    loading: enabled && isPending,
     respond,
   };
 }

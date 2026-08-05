@@ -15,10 +15,11 @@ const membersKey = (projectId: string) => ["members", projectId] as const;
 export function useMembersQuery(projectId: string | null, enabled: boolean) {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const on = enabled && !!projectId;
+  const { data, isPending } = useQuery({
     queryKey: membersKey(projectId ?? ""),
     queryFn: () => fetchMembersApi(projectId as string),
-    enabled: enabled && !!projectId,
+    enabled: on,
   });
 
   const invalidate = useCallback(() => {
@@ -61,7 +62,7 @@ export function useMembersQuery(projectId: string | null, enabled: boolean) {
     members: value.members,
     invitations: value.invitations,
     isOwner: value.isOwner,
-    loading: isLoading,
+    loading: on && isPending,
     invite,
     cancelInvitation,
     removeMember,

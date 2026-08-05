@@ -125,7 +125,7 @@ export function ProjectFeedbackSettings({
   const [busy, setBusy] = useState(false);
   const settingsPath = `/api/projects/${projectId}/feedback/settings`;
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ["feedback-settings", projectId],
     queryFn: () =>
       api<{ board: BoardSettings | null; shared_views: SharedView[] }>(settingsPath),
@@ -198,7 +198,7 @@ export function ProjectFeedbackSettings({
     }, 350);
   };
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex flex-col gap-6">
         <Skeleton className="h-16 w-full rounded-xl" />

@@ -358,7 +358,7 @@ export function PullRequestsPage() {
   const tProjects = useTranslations("Projects");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
-  const { projects, openCreateProject } = useProjects();
+  const { projects, openCreateProject, loading: projectsLoading } = useProjects();
 
   // Deep-links : `?pr=<id>` (direct, MIN-143) et `?run=<id>` (historique — la
   // sidebar d'issue et tous les liens déjà en circulation parlent en run).
@@ -519,7 +519,7 @@ export function PullRequestsPage() {
    * franchit : un projet, un dépôt lié, puis des pull requests. `anyPr` compte
    * tous les états, sinon « aucune ouverte » passerait pour « aucune jamais ».
    */
-  if (!loading && (projects.length === 0 || repoCount === 0 || !anyPr)) {
+  if (!loading && !projectsLoading && (projects.length === 0 || repoCount === 0 || !anyPr)) {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-5xl">

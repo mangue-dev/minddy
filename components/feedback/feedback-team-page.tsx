@@ -221,7 +221,7 @@ export function FeedbackTeamPage() {
   const project = projects.find((p) => p.id === projectId);
   const queryClient = useQueryClient();
 
-  const { data: listData, isLoading } = useQuery({
+  const { data: listData, isPending } = useQuery({
     queryKey: ["feedback", projectId],
     queryFn: () =>
       api<{ posts: TeamFeedbackListItem[] }>(`/api/projects/${projectId}/feedback`),
@@ -346,7 +346,7 @@ export function FeedbackTeamPage() {
   // d'afficher une liste vide à côté d'un « sélectionnez un retour ». Les deux
   // gestes restent à portée : en saisir un à la main, et aller ouvrir le board
   // public — c'est lui qui remplit la page ensuite.
-  if (!isLoading && posts.length === 0) {
+  if (!isPending && posts.length === 0) {
     return (
       <>
         <div className="flex h-full flex-col">
@@ -442,7 +442,7 @@ export function FeedbackTeamPage() {
         }
       >
         <div className="min-h-0 flex-1">
-          {isLoading ? (
+          {isPending ? (
             <div className="flex flex-col gap-2 p-4">
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
@@ -658,7 +658,7 @@ function FeedbackDetail({
     [members, issues, projectKey]
   );
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ["feedback-detail", projectId, postId],
     queryFn: () =>
       api<{ post: TeamFeedbackDetail }>(`/api/projects/${projectId}/feedback/${postId}`),
@@ -785,7 +785,7 @@ function FeedbackDetail({
   // qu'un projet avait des retours à afficher.
   const detailFade = useScrollFade<HTMLDivElement>();
 
-  if (isLoading || !post) {
+  if (isPending || !post) {
     return (
       <div className="flex flex-col gap-4 p-6">
         <Skeleton className="h-8 w-2/3" />

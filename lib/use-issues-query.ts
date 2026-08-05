@@ -61,10 +61,11 @@ export function useIssuesQuery(projectId: string | null) {
   const catHandles = useRef(new Map<string, PendingHandle[]>());
   const catBefore = useRef(new Map<string, string[]>());
 
-  const { data, isLoading, error } = useQuery({
+  const enabled = !!projectId;
+  const { data, isPending, error } = useQuery({
     queryKey: issuesKey(projectId ?? ""),
     queryFn: issuesQueryFn(projectId ?? ""),
-    enabled: !!projectId,
+    enabled,
   });
 
   const invalidate = useCallback(() => {
@@ -461,7 +462,7 @@ export function useIssuesQuery(projectId: string | null) {
 
   return {
     issues: (data ?? []) as Issue[],
-    loading: isLoading,
+    loading: enabled && isPending,
     error: error as Error | null,
     createIssue,
     updateIssue,

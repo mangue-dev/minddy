@@ -73,7 +73,10 @@ export function BranchCleanupDialog({
 }) {
   const t = useTranslations("Settings");
 
-  const [loading, setLoading] = useState(false);
+  // Vrai dès le départ : l'effet qui charge ne tourne qu'APRÈS le premier rendu,
+  // et partir à faux y peignait « aucune branche à nettoyer » le temps d'une
+  // image, avant même d'avoir demandé la liste.
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [branches, setBranches] = useState<AgentBranch[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());

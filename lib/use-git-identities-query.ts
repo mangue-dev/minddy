@@ -11,7 +11,7 @@ export const gitIdentitiesQueryKey = ["git-identities"] as const;
  * `useGitConnectionsQuery`, qui parle de l'installation de la GitHub App.
  */
 export function useGitIdentitiesQuery(enabled = true) {
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: gitIdentitiesQueryKey,
     queryFn: fetchGitIdentitiesApi,
     enabled,
@@ -19,6 +19,6 @@ export function useGitIdentitiesQuery(enabled = true) {
   return {
     identities: data?.identities ?? [],
     providers: data?.providers ?? [],
-    loading: isLoading,
+    loading: enabled && isPending,
   };
 }

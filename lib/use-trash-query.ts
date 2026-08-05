@@ -40,10 +40,11 @@ export function useTrashQuery(): UseTrashResult {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const { data, isLoading, error } = useQuery({
+  const enabled = !!user?.id;
+  const { data, isPending, error } = useQuery({
     queryKey: TRASH_KEY,
     queryFn: fetchTrashApi,
-    enabled: !!user?.id,
+    enabled,
   });
 
   const invalidate = useCallback(
@@ -94,7 +95,7 @@ export function useTrashQuery(): UseTrashResult {
   return {
     items: data?.items ?? [],
     retentionDays: data?.retention_days ?? 30,
-    loading: isLoading,
+    loading: enabled && isPending,
     error: error as Error | null,
     restore,
     purge,

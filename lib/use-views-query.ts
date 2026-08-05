@@ -16,7 +16,7 @@ export function useViewsQuery(scope: ViewScope) {
   // The scope object may be re-created every render — key on its content.
   const scopeId = scope.kind === "project" ? scope.projectId : "global";
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ["views", scopeId],
     queryFn: () => fetchViewsApi(scope),
   });
@@ -56,7 +56,7 @@ export function useViewsQuery(scope: ViewScope) {
 
   return {
     views: (data ?? []) as View[],
-    loading: isLoading,
+    loading: isPending,
     createView,
     updateView,
     deleteView,

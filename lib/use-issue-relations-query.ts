@@ -22,10 +22,11 @@ export function useIssueRelationsQuery(projectId: string | null) {
   // Local undo history (MIN-35): relation edits record like issue edits do.
   const { record } = useUndoHistory();
 
-  const { data, isLoading } = useQuery({
+  const enabled = !!projectId;
+  const { data, isPending } = useQuery({
     queryKey: relationsKey(projectId ?? ""),
     queryFn: () => fetchIssueRelationsApi(projectId as string),
-    enabled: !!projectId,
+    enabled,
   });
 
   const invalidate = useCallback(() => {
@@ -98,7 +99,7 @@ export function useIssueRelationsQuery(projectId: string | null) {
 
   return {
     relations: (data ?? []) as IssueRelation[],
-    loading: isLoading,
+    loading: enabled && isPending,
     addRelation,
     removeRelation,
   };

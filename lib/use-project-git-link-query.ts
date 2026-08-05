@@ -26,7 +26,7 @@ export const GIT_LINKED_PROJECTS_KEY = ["git-linked-projects"] as const;
  * d'un aller-retour.
  */
 export function useGitLinkedProjectsQuery() {
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: GIT_LINKED_PROJECTS_KEY,
     queryFn: fetchGitLinkedProjectsApi,
   });
@@ -34,20 +34,21 @@ export function useGitLinkedProjectsQuery() {
     () => new Set(data?.projectIds ?? []),
     [data],
   );
-  return { projectIds, loading: isLoading };
+  return { projectIds, loading: isPending };
 }
 
 /** État de liaison git d'un projet (lien courant, owner, providers dispo). */
 export function useProjectGitLinkQuery(projectId: string | null) {
-  const { data, isLoading } = useQuery({
+  const enabled = !!projectId;
+  const { data, isPending } = useQuery({
     queryKey: projectGitLinkQueryKey(projectId ?? ""),
     queryFn: () => fetchProjectGitLinkApi(projectId as string),
-    enabled: !!projectId,
+    enabled,
   });
   return {
     link: data?.link ?? null,
     isOwner: !!data?.isOwner,
     providers: data?.providers ?? [],
-    loading: isLoading,
+    loading: enabled && isPending,
   };
 }

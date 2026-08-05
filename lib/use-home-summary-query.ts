@@ -40,7 +40,7 @@ async function fetchHomeSummaryApi(): Promise<HomeSummaryResponse> {
 }
 
 export function useHomeSummaryQuery() {
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: HOME_SUMMARY_KEY,
     queryFn: fetchHomeSummaryApi,
   });
@@ -56,6 +56,6 @@ export function useHomeSummaryQuery() {
     newFeedbackTotal: data?.newFeedbackTotal ?? 0,
     relations: data?.relations ?? [],
     blockerStatuses: data?.blockerStatuses ?? {},
-    loading: isLoading,
+    loading: isPending,
   };
 }

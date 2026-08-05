@@ -20,10 +20,11 @@ export function useNotifications() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
-  const { data, isLoading } = useQuery({
+  const enabled = !!userId;
+  const { data, isPending } = useQuery({
     queryKey: NOTIFICATIONS_KEY,
     queryFn: fetchNotificationsApi,
-    enabled: !!userId,
+    enabled,
   });
 
   const notifications = (data ?? []) as MyNotification[];
@@ -122,7 +123,7 @@ export function useNotifications() {
   return {
     notifications,
     unreadCount,
-    loading: isLoading,
+    loading: enabled && isPending,
     markRead,
     markAllRead,
     markUnread,

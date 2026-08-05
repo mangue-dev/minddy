@@ -19,12 +19,13 @@ export function usePrMembersQuery(
   endpoint: PrEndpoint | null,
   enabled: boolean,
 ): { members: RepoMember[]; loading: boolean } {
-  const { data, isLoading } = useQuery({
+  const on = enabled && !!endpoint;
+  const { data, isPending } = useQuery({
     queryKey: ["pr-members", endpoint],
     queryFn: () => fetchPullRequestMembersApi(endpoint as PrEndpoint),
-    enabled: enabled && !!endpoint,
+    enabled: on,
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
-  return { members: data?.members ?? [], loading: isLoading };
+  return { members: data?.members ?? [], loading: on && isPending };
 }

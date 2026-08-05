@@ -11,13 +11,13 @@ export const agentPreferencesQueryKey = ["agent-preferences"] as const;
  * raisonnement (MIN-122 — null en base = `off`).
  */
 export function useAgentPreferencesQuery() {
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: agentPreferencesQueryKey,
     queryFn: fetchAgentPreferencesApi,
   });
   return {
     defaultModel: data?.default_model ?? null,
     defaultReasoningLevel: data?.default_reasoning_level ?? DEFAULT_REASONING_LEVEL,
-    loading: isLoading,
+    loading: isPending,
   };
 }

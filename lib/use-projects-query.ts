@@ -33,10 +33,11 @@ export function useProjectsQuery(): UseProjectsResult {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
-  const { data, isLoading, error } = useQuery({
+  const enabled = !!userId;
+  const { data, isPending, error } = useQuery({
     queryKey: PROJECTS_KEY,
     queryFn: fetchProjectsApi,
-    enabled: !!userId,
+    enabled,
   });
 
   const createProject = useCallback(
@@ -71,7 +72,7 @@ export function useProjectsQuery(): UseProjectsResult {
 
   return {
     projects: data ?? [],
-    loading: isLoading,
+    loading: enabled && isPending,
     error: error as Error | null,
     createProject,
     updateProject,

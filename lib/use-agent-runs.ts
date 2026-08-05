@@ -33,10 +33,11 @@ export function issueAgentRunsQueryKey(issueId: string) {
  * une session déjà vivante à cause d'un cache périmé).
  */
 export function useIssueAgentRunsQuery(issueId: string | null) {
-  const { data, isLoading } = useQuery({
+  const enabled = !!issueId;
+  const { data, isPending } = useQuery({
     queryKey: issueAgentRunsQueryKey(issueId ?? ""),
     queryFn: () => fetchIssueAgentRunsApi(issueId as string),
-    enabled: !!issueId,
+    enabled,
     refetchOnMount: "always",
     refetchInterval: (query) => {
       const runs = query.state.data?.runs ?? [];
@@ -49,7 +50,7 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
     runs: data?.runs ?? [],
     /** La PR du ticket, quel que soit son état — null s'il n'en a aucune. */
     pullRequest: data?.pullRequest ?? null,
-    loading: isLoading,
+    loading: enabled && isPending,
   };
 }
 
@@ -69,10 +70,11 @@ export function issueChainQueryKey(issueId: string) {
  * passé pendant que l'onglet dormait.
  */
 export function useIssueChainQuery(issueId: string | null) {
-  const { data, isLoading } = useQuery({
+  const on = !!issueId;
+  const { data, isPending } = useQuery({
     queryKey: issueChainQueryKey(issueId ?? ""),
     queryFn: () => fetchIssueAutomationApi(issueId as string),
-    enabled: !!issueId,
+    enabled: on,
     refetchOnMount: "always",
   });
   return {
@@ -80,7 +82,7 @@ export function useIssueChainQuery(issueId: string | null) {
     chain: data?.chain ?? null,
     plannedModes: data?.plannedModes ?? [],
     estimate: data?.estimate ?? null,
-    loading: isLoading,
+    loading: on && isPending,
   };
 }
 
@@ -96,10 +98,11 @@ export function agentRunQueryKey(runId: string) {
  * depuis un autre onglet), état frais à chaque montage.
  */
 export function useAgentRunQuery(runId: string | null) {
-  const { data, isLoading } = useQuery({
+  const enabled = !!runId;
+  const { data, isPending } = useQuery({
     queryKey: agentRunQueryKey(runId ?? ""),
     queryFn: () => fetchAgentRunApi(runId as string),
-    enabled: !!runId,
+    enabled,
     refetchOnMount: "always",
     refetchInterval: (query) => {
       const run = query.state.data?.run;
@@ -107,7 +110,7 @@ export function useAgentRunQuery(runId: string | null) {
       return run ? 12000 : false;
     },
   });
-  return { run: data?.run ?? null, loading: isLoading };
+  return { run: data?.run ?? null, loading: enabled && isPending };
 }
 
 /**
@@ -122,14 +125,15 @@ export function useAgentRunQuery(runId: string | null) {
  * rechargement complet. On refetch donc à chaque montage, comme les runs de l'issue.
  */
 export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
-  const { data, isLoading } = useQuery({
+  const enabled = !!runId;
+  const { data, isPending } = useQuery({
     queryKey: ["agent-run-events", runId],
     queryFn: () => fetchAgentRunEventsApi(runId as string),
-    enabled: !!runId,
+    enabled,
     refetchOnMount: "always",
     refetchInterval: active ? 2000 : false,
   });
-  return { events: data?.events ?? [], loading: isLoading };
+  return { events: data?.events ?? [], loading: enabled && isPending };
 }
 
 /** Cadence de suivi d'une CI en cours — une CI se compte en minutes, pas en
@@ -145,7 +149,7 @@ const CHECKS_POLL_MS = 15_000;
  * précisément le moment où l'utilisateur regarde.
  */
 export function usePullRequestQuery(prId: string, enabled: boolean) {
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isPending, refetch } = useQuery({
     queryKey: ["pull-request", prId],
     queryFn: () => fetchPullRequestApi(prId),
     enabled,
@@ -163,7 +167,7 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     // proposer un qu'elle retirerait une seconde plus tard.
     viewer: data?.viewer ?? null,
     mergeMethods: data?.mergeMethods ?? [],
-    loading: isLoading,
+    loading: enabled && isPending,
     refetch,
   };
 }
@@ -182,7 +186,7 @@ export function agentRunDiffQueryKey(runId: string) {
  * garderait sinon un diff d'avant le dernier tour).
  */
 export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: boolean) {
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: agentRunDiffQueryKey(runId),
     queryFn: () => fetchAgentRunDiffApi(runId),
     enabled,
@@ -193,7 +197,7 @@ export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: b
     files: data?.files ?? [],
     provider: data?.provider,
     url: data?.url ?? null,
-    loading: isLoading,
+    loading: enabled && isPending,
   };
 }
 
@@ -232,7 +236,7 @@ export function allPullRequestsQueryKey(
  * liste, sinon le deep-link ouvrirait la dernière PR au lieu de la bonne.
  *
  * `placeholderData` = la page PRÉCÉDENTE. La pagination met `limit` dans la clé
- * de cache : sans ça, « en voir plus » ouvre une clé vierge, donc `isLoading`
+ * de cache : sans ça, « en voir plus » ouvre une clé vierge, donc `isPending`
  * repasse à vrai — la liste entière retombe en squelettes, le bouton disparaît
  * et le panneau de détail se vide, pour revenir une seconde plus tard. C'est un
  * AGRANDISSEMENT de la liste, pas un changement d'écran : elle reste affichée, et
@@ -243,7 +247,7 @@ export function useAllPullRequestsQuery(
   limit: number = PULL_REQUESTS_PAGE,
   pin?: PullRequestPin,
 ) {
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const { data, isPending, isFetching, refetch } = useQuery({
     queryKey: allPullRequestsQueryKey(state, limit, pin),
     queryFn: () => fetchAllPullRequestsApi({ state, limit, pin }),
     placeholderData: (previous) => previous,
@@ -259,7 +263,7 @@ export function useAllPullRequestsQuery(
     truncated: data?.truncated ?? false,
     repoCount: data?.repoCount ?? 0,
     anyPr: data?.anyPr ?? false,
-    loading: isLoading,
+    loading: isPending,
     fetching: isFetching,
     refetch,
   };
@@ -277,7 +281,7 @@ export const allAgentSessionsQueryKey = ["agent-sessions", "all"] as const;
  * jusqu'à un rechargement complet.
  */
 export function useAgentSessionsQuery() {
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isPending, refetch } = useQuery({
     queryKey: allAgentSessionsQueryKey,
     queryFn: fetchAgentSessionsApi,
     refetchOnMount: "always",
@@ -286,15 +290,16 @@ export function useAgentSessionsQuery() {
       return sessions.some((s) => s.working) ? 5000 : false;
     },
   });
-  return { sessions: data?.sessions ?? [], loading: isLoading, refetch };
+  return { sessions: data?.sessions ?? [], loading: isPending, refetch };
 }
 
 /** Fil de conversation d'une PR (commentaires GitHub) et leurs réactions. */
 export function usePrCommentsQuery(prId: string | null) {
-  const { data, isLoading, refetch } = useQuery({
+  const enabled = !!prId;
+  const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-comments", prId],
     queryFn: () => fetchPullRequestCommentsApi(prId as string),
-    enabled: !!prId,
+    enabled,
   });
   return {
     comments: data?.comments ?? [],
@@ -304,7 +309,7 @@ export function usePrCommentsQuery(prId: string | null) {
     // Les réactions (MIN-147) voyagent avec les commentaires, comme côté review :
     // elles se rendent SOUS un message, et le corps de la PR y a les siennes.
     reactions: data?.reactions ?? [],
-    loading: isLoading,
+    loading: enabled && isPending,
     refetch,
   };
 }
@@ -315,15 +320,16 @@ export function usePrCommentsQuery(prId: string | null) {
  * travailler — c'est le seul moment où elle change sous les yeux du lecteur.
  */
 export function usePrCommitsQuery(prId: string | null) {
-  const { data, isLoading, refetch } = useQuery({
+  const enabled = !!prId;
+  const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-commits", prId],
     queryFn: () => fetchPullRequestCommitsApi(prId as string),
-    enabled: !!prId,
+    enabled,
   });
   return {
     commits: data?.commits ?? [],
     truncated: data?.truncated ?? false,
-    loading: isLoading,
+    loading: enabled && isPending,
     refetch,
   };
 }
@@ -334,12 +340,13 @@ export function usePrCommitsQuery(prId: string | null) {
  * plupart ne le sont jamais. Aucun polling — un commit est immuable.
  */
 export function usePrCommitDiffQuery(prId: string, sha: string | null) {
-  const { data, isLoading } = useQuery({
+  const enabled = !!sha;
+  const { data, isPending } = useQuery({
     queryKey: ["pr-commit-diff", prId, sha],
     queryFn: () => fetchPrCommitDiffApi(prId, sha as string),
-    enabled: !!sha,
+    enabled,
   });
-  return { diff: data ?? null, loading: isLoading };
+  return { diff: data ?? null, loading: enabled && isPending };
 }
 
 /**
@@ -348,10 +355,11 @@ export function usePrCommitDiffQuery(prId: string, sha: string | null) {
  * par PR) comme la conversation d'agent (indexée par run) — cf. `PrEndpoint`.
  */
 export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
-  const { data, isLoading, refetch } = useQuery({
+  const enabled = !!endpoint;
+  const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-review-comments", endpoint],
     queryFn: () => fetchPrReviewCommentsApi(endpoint as PrEndpoint),
-    enabled: !!endpoint,
+    enabled,
   });
   // `threads` (MIN-139) voyage avec les commentaires : c'est la même query, donc
   // le même rafraîchissement — résoudre un fil et répondre dedans ne peuvent pas
@@ -362,7 +370,7 @@ export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
     // Les réactions (MIN-139) voyagent avec, pour la même raison : elles se
     // rendent SOUS un commentaire, jamais séparément.
     reactions: data?.reactions ?? [],
-    loading: isLoading,
+    loading: enabled && isPending,
     refetch,
   };
 }

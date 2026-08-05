@@ -15,10 +15,11 @@ const categoriesKey = (projectId: string) => ["categories", projectId] as const;
 export function useCategoriesQuery(projectId: string | null) {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const enabled = !!projectId;
+  const { data, isPending } = useQuery({
     queryKey: categoriesKey(projectId ?? ""),
     queryFn: () => fetchCategoriesApi(projectId as string),
-    enabled: !!projectId,
+    enabled,
   });
 
   const invalidate = useCallback(() => {
@@ -59,7 +60,7 @@ export function useCategoriesQuery(projectId: string | null) {
 
   return {
     categories: (data ?? []) as Category[],
-    loading: isLoading,
+    loading: enabled && isPending,
     createCategory,
     updateCategory,
     deleteCategory,

@@ -28,7 +28,8 @@ export function useNumoMembers(
   scopeProjectId: string | null,
 ): { members: Member[]; loading: boolean } {
   const scoped = useMembersQuery(scopeProjectId, enabled && !!scopeProjectId);
-  const board = useNumoBoard(enabled && !scopeProjectId);
+  const boardOn = enabled && !scopeProjectId;
+  const board = useNumoBoard(boardOn);
 
   const global = useMemo(() => {
     const byId = new Map<string, Member>();
@@ -40,7 +41,7 @@ export function useNumoMembers(
 
   return scopeProjectId
     ? { members: scoped.members, loading: scoped.loading }
-    : { members: global, loading: board.isLoading };
+    : { members: global, loading: boardOn && board.isPending };
 }
 
 /**

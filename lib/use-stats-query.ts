@@ -15,9 +15,9 @@ function browserTimeZone(): string {
 /** Statistiques personnelles de l'utilisateur courant (MIN-12). */
 export function useStatsQuery() {
   const tz = browserTimeZone();
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ["stats", tz] as const,
     queryFn: () => fetchStatsApi(tz),
   });
-  return { stats: data, loading: isLoading };
+  return { stats: data, loading: isPending };
 }

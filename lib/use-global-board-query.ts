@@ -60,7 +60,7 @@ export function useGlobalBoardQuery() {
   // successful user write; undo/redo replays bypass the hook entirely.
   const { record } = useUndoHistory();
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,
     queryFn: globalBoardQueryFn,
     // Pas de staleTime court : depuis MIN-89 le pont temps réel invalide cette
@@ -428,7 +428,7 @@ export function useGlobalBoardQuery() {
     integrationsByProject: data?.integrations ?? {},
     relations: (data?.relations ?? []) as IssueRelation[],
     cycles: data?.cycles ?? null,
-    loading: isLoading,
+    loading: isPending,
     updateIssue,
     moveIssue,
     setCategories,

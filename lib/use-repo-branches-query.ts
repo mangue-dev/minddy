@@ -27,16 +27,17 @@ async function fetchBranches(issueId: string): Promise<RepoBranchesResult> {
 }
 
 export function useIssueRepoBranchesQuery(issueId: string | null) {
-  const { data, isLoading } = useQuery({
+  const enabled = issueId != null;
+  const { data, isPending } = useQuery({
     queryKey: issueRepoBranchesQueryKey(issueId ?? "none"),
     queryFn: () => fetchBranches(issueId as string),
-    enabled: issueId != null,
+    enabled,
     staleTime: 2 * 60 * 1000,
   });
   return {
     branches: data?.branches ?? [],
     defaultBranch: data?.defaultBranch ?? null,
-    loading: isLoading,
+    loading: enabled && isPending,
   };
 }
 
@@ -53,15 +54,16 @@ async function fetchProjectBranches(projectId: string): Promise<RepoBranchesResu
 }
 
 export function useProjectRepoBranchesQuery(projectId: string | null) {
-  const { data, isLoading } = useQuery({
+  const enabled = projectId != null;
+  const { data, isPending } = useQuery({
     queryKey: projectRepoBranchesQueryKey(projectId ?? "none"),
     queryFn: () => fetchProjectBranches(projectId as string),
-    enabled: projectId != null,
+    enabled,
     staleTime: 2 * 60 * 1000,
   });
   return {
     branches: data?.branches ?? [],
     defaultBranch: data?.defaultBranch ?? null,
-    loading: isLoading,
+    loading: enabled && isPending,
   };
 }
