@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
+import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
@@ -511,7 +512,7 @@ function PlainComposer({
           value={value}
           onChange={(e) => onChange(() => e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            if (isSendShortcut(e)) {
               e.preventDefault();
               onSubmit();
             }
@@ -525,10 +526,12 @@ function PlainComposer({
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={submitting}>
           {t("cancel")}
         </Button>
-        <Button size="sm" onClick={onSubmit} disabled={submitting || !value.trim()}>
-          {submitting ? <Spinner /> : null}
-          {submitLabel}
-        </Button>
+        <SendShortcutTooltip label={submitLabel}>
+          <Button size="sm" onClick={onSubmit} disabled={submitting || !value.trim()}>
+            {submitting ? <Spinner /> : null}
+            {submitLabel}
+          </Button>
+        </SendShortcutTooltip>
       </div>
     </div>
   );

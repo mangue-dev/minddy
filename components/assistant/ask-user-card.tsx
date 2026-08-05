@@ -12,6 +12,7 @@ import {
   cn,
 } from "mangue-ui";
 import { Square, SquareCheck, X } from "lucide-react";
+import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import {
   composeAskUserReply,
   type AskUserQuestion,
@@ -277,7 +278,19 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
     // La carte prend la PLACE du composer : elle en reprend la surface (carte
     // bordée, ombre légère, rounded-2xl) plutôt qu'une teinte de marque — elle
     // suit ainsi le thème clair/sombre comme le reste de l'interface.
-    <div className="relative rounded-2xl border border-border bg-card px-3.5 py-3 text-sm shadow-sm">
+    //
+    // Elle en reprend aussi le RACCOURCI : ⌘/Ctrl+Entrée envoie les réponses,
+    // depuis n'importe lequel de ses champs. Entrée seule garde son rôle de
+    // navigation (question suivante) — dans un champ d'une ligne, elle n'a pas
+    // de saut de ligne à insérer.
+    <div
+      className="relative rounded-2xl border border-border bg-card px-3.5 py-3 text-sm shadow-sm"
+      onKeyDown={(e) => {
+        if (!isSendShortcut(e) || !live || !allAnswered) return;
+        e.preventDefault();
+        submit();
+      }}
+    >
       {/* Croix « passer les questions » — coin haut droit de la carte. */}
       {showSkip && (
         <Tooltip>
@@ -388,15 +401,17 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
               </Button>
             )}
             {live && (isLast || allAnswered) && (
-              <Button
-                type="button"
-                size="sm"
-                disabled={!allAnswered}
-                onClick={submit}
-                className="h-7 rounded-full px-3.5"
-              >
-                {t("answerSend")}
-              </Button>
+              <SendShortcutTooltip label={t("answerSend")}>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!allAnswered}
+                  onClick={submit}
+                  className="h-7 rounded-full px-3.5"
+                >
+                  {t("answerSend")}
+                </Button>
+              </SendShortcutTooltip>
             )}
           </div>
         </div>

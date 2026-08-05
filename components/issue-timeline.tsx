@@ -46,6 +46,7 @@ import {
 } from "@/lib/describe-event";
 import type { TimelineItem } from "@/lib/use-issue-timeline";
 import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { toolRunningLabel } from "@/components/assistant/tool-call-display";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
@@ -514,15 +515,17 @@ function CommentBlock({
             >
               {tCommon("cancel")}
             </Button>
-            <Button
-              size="sm"
-              className="rounded-full px-4"
-              disabled={saving || !draft.trim()}
-              onClick={() => void saveEdit()}
-            >
-              {saving && <Spinner />}
-              {tCommon("save")}
-            </Button>
+            <SendShortcutTooltip label={tCommon("save")}>
+              <Button
+                size="sm"
+                className="rounded-full px-4"
+                disabled={saving || !draft.trim()}
+                onClick={() => void saveEdit()}
+              >
+                {saving && <Spinner />}
+                {tCommon("save")}
+              </Button>
+            </SendShortcutTooltip>
           </div>
         </div>
       ) : (
@@ -665,15 +668,17 @@ function ReplyComposer({
         <Button variant="ghost" size="sm" className="rounded-full" onClick={close}>
           {tCommon("cancel")}
         </Button>
-        <Button
-          size="sm"
-          className="rounded-full px-4"
-          disabled={posting || !canPost}
-          onClick={() => void submit()}
-        >
-          {posting && <Spinner />}
-          {t("reply")}
-        </Button>
+        <SendShortcutTooltip label={t("reply")}>
+          <Button
+            size="sm"
+            className="rounded-full px-4"
+            disabled={posting || !canPost}
+            onClick={() => void submit()}
+          >
+            {posting && <Spinner />}
+            {t("reply")}
+          </Button>
+        </SendShortcutTooltip>
         {/* Dictate at the far right of the reply row (spec). */}
         <DictateButton
           onTranscription={(text) =>
@@ -978,15 +983,17 @@ export function CommentComposer({
           disabled={posting}
         />
         {(canPost || posting) && (
-          <Button
-            size="sm"
-            className="rounded-full px-4"
-            disabled={posting || !canPost}
-            onClick={() => void submit()}
-          >
-            {posting && <Spinner />}
-            {t("comment")}
-          </Button>
+          <SendShortcutTooltip label={t("comment")}>
+            <Button
+              size="sm"
+              className="rounded-full px-4"
+              disabled={posting || !canPost}
+              onClick={() => void submit()}
+            >
+              {posting && <Spinner />}
+              {t("comment")}
+            </Button>
+          </SendShortcutTooltip>
         )}
       </div>
     </div>

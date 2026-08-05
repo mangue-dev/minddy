@@ -13,15 +13,25 @@
 // - it is revalidated on palette open only when stale (`refetchQueries({ stale:
 //   true })`), so hammering ⌘K doesn't hammer the server.
 //
-// Freshness: the index is a snapshot. Realtime only covers the user topic and
-// the project in the URL (lib/realtime-provider.tsx), so *other* projects can't
-// be live anyway. The current project therefore keeps its own fresh caches —
-// app-shell-chrome replaces the current project's index rows with
-// ["issues", projectId] / ["objectives", projectId] before building the rows.
+// Fraîcheur : l'index est un INSTANTANÉ, et le rafraîchir coûte 4 000 lignes.
+// Trois choses le tiennent à jour sans le recharger :
+// - le projet COURANT ne le lit même pas : app-shell-chrome remplace ses lignes
+//   par ["issues", projectId] / ["objectives", projectId], toujours vivants ;
+// - les actions ⌘; patchent la ligne qu'elles touchent (patchSearchIndexIssue) ;
+// - ce qui est écrit AILLEURS (Numo, le MCP, un coéquipier) est posé ligne à
+//   ligne par le pont temps réel — writeIndexRow plus bas. Sans lui, un ticket
+//   créé pendant la session n'était trouvable dans ⌘K qu'au rechargement complet
+//   de l'index, et seulement hors du projet courant.
+// Le rechargement complet reste le filet : marqué périmé par le pont, rejoué à
+// l'ouverture de la palette.
 
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import type { SearchIndexIssue, SearchIndexResponse } from "./types";
+import type {
+  SearchIndexIssue,
+  SearchIndexObjective,
+  SearchIndexResponse,
+} from "./types";
 
 export const SEARCH_INDEX_KEY = ["me", "search-index"] as const;
 
@@ -111,4 +121,68 @@ export function patchSearchIndexIssue(
         }
       : old
   );
+}
+
+/**
+ * Ajouter ou retirer une ligne de l'index, pour ce qui est écrit AILLEURS
+ * (lib/optimistic/remote-echo.ts).
+ *
+ * Le patch ci-dessus ne suffisait pas : il ne touche que des lignes DÉJÀ
+ * indexées. Un ticket que Numo vient de créer n'y est par définition pas — la
+ * palette ne le trouvait donc qu'après un rechargement complet de l'index (4 000
+ * lignes, déclenché à son ouverture quand l'instantané est périmé). Sauf dans le
+ * projet courant, dont app-shell-chrome remplace les lignes par ses caches
+ * vivants ; ailleurs, ⌘K ignorait le ticket.
+ *
+ * Une ligne inconnue est mise EN TÊTE : la route trie `updated_at desc`, et ce
+ * qui vient d'être écrit est ce qu'il y a de plus récent.
+ */
+function writeIndexRow<T extends { id: string }>(
+  queryClient: QueryClient,
+  slice: "issues" | "objectives",
+  id: string,
+  row: T | null
+): void {
+  queryClient.setQueryData<SearchIndexResponse>(SEARCH_INDEX_KEY, (old) => {
+    if (!old) return old;
+    const rows = old[slice] as unknown as T[];
+    let next: T[];
+    if (!row) {
+      next = rows.filter((r) => r.id !== id);
+      if (next.length === rows.length) return old;
+    } else if (rows.some((r) => r.id === id)) {
+      next = rows.map((r) => (r.id === id ? { ...r, ...row } : r));
+    } else {
+      next = [row, ...rows];
+    }
+    return { ...old, [slice]: next };
+  });
+}
+
+export function upsertSearchIndexIssue(
+  queryClient: QueryClient,
+  issue: SearchIndexIssue
+): void {
+  writeIndexRow(queryClient, "issues", issue.id, issue);
+}
+
+export function removeSearchIndexIssue(
+  queryClient: QueryClient,
+  issueId: string
+): void {
+  writeIndexRow<SearchIndexIssue>(queryClient, "issues", issueId, null);
+}
+
+export function upsertSearchIndexObjective(
+  queryClient: QueryClient,
+  objective: SearchIndexObjective
+): void {
+  writeIndexRow(queryClient, "objectives", objective.id, objective);
+}
+
+export function removeSearchIndexObjective(
+  queryClient: QueryClient,
+  objectiveId: string
+): void {
+  writeIndexRow<SearchIndexObjective>(queryClient, "objectives", objectiveId, null);
 }

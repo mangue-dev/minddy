@@ -22,6 +22,7 @@ import { ArrowUpDown, Check, ChevronDown, MessagesSquare, Megaphone } from "luci
 import { AutoTextarea } from "@/components/auto-textarea";
 import { EmptyState } from "@/components/empty-state";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import {
   FEEDBACK_POST_STATUSES,
   type FeedbackPostStatus,
@@ -522,7 +523,19 @@ function ComposerDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="top-24 translate-y-0 gap-0 sm:max-w-xl">
+      {/* ⌘/Ctrl+Entrée envoie depuis N'IMPORTE QUEL champ du modal — le titre
+          comme le corps. Le raccourci est posé ici plutôt que sur chaque champ
+          parce que le corps est un éditeur riche : la touche y remonte par
+          bouillonnement. `defaultPrevented` laisse la priorité à l'éditeur quand
+          il s'en sert lui-même (sortir d'un bloc de code). */}
+      <DialogContent
+        className="top-24 translate-y-0 gap-0 sm:max-w-xl"
+        onKeyDown={(e) => {
+          if (e.defaultPrevented || !isSendShortcut(e)) return;
+          e.preventDefault();
+          if (title.trim() && !pending) submit();
+        }}
+      >
         {/* Style « modal de création d'issue » : titre et description sont des
             surfaces d'écriture libres, sans containers. */}
         <DialogTitle className="sr-only">{t("composerTitle")}</DialogTitle>
@@ -596,10 +609,12 @@ function ComposerDialog({
           />
         </div>
         <div className="mt-3 flex items-center justify-end gap-4 border-t pt-3">
-          <Button onClick={() => title.trim() && submit()} disabled={pending || !title.trim()}>
-            {pending && <Spinner />}
-            {t("submitPost")}
-          </Button>
+          <SendShortcutTooltip label={t("submitPost")}>
+            <Button onClick={() => title.trim() && submit()} disabled={pending || !title.trim()}>
+              {pending && <Spinner />}
+              {t("submitPost")}
+            </Button>
+          </SendShortcutTooltip>
         </div>
       </DialogContent>
     </Dialog>

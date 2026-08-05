@@ -39,6 +39,7 @@ import {
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { Markdown } from "@/components/markdown";
 import { MentionTextarea } from "@/components/mention-textarea";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { usePrMembersQuery } from "@/lib/use-pr-members-query";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
 import type { PrEndpoint } from "@/lib/agent-api";
@@ -187,15 +188,17 @@ export function PrCommentComposer({
                   {t("cancel")}
                 </Button>
               ) : null}
-              <Button
-                size="sm"
-                className={cn(!line && "rounded-full px-4")}
-                disabled={!canPost}
-                onClick={onSubmit}
-              >
-                {posting ? <Spinner /> : null}
-                {submitLabel}
-              </Button>
+              <SendShortcutTooltip label={submitLabel}>
+                <Button
+                  size="sm"
+                  className={cn(!line && "rounded-full px-4")}
+                  disabled={!canPost}
+                  onClick={onSubmit}
+                >
+                  {posting ? <Spinner /> : null}
+                  {submitLabel}
+                </Button>
+              </SendShortcutTooltip>
             </>
           ) : null}
         </div>

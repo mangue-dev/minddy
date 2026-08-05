@@ -35,6 +35,7 @@ import {
   type SlashCommandOption,
 } from "@/components/assistant/slash-menu";
 import { AttachmentPills, DropOverlay, useFileDrop } from "@/components/attachments";
+import { SendShortcutKeys, isSendShortcut } from "@/components/send-shortcut";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
 import type { AssistantCommandId, AssistantMention } from "@/lib/assistant-types";
@@ -571,7 +572,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             return;
           }
         }
-        if (e.key === "Enter" && !e.shiftKey) {
+        // ⌘/Ctrl + Entrée ENVOIE ; Entrée seule passe à la ligne. Ce composer
+        // n'est pas un champ de chat d'une ligne : on y écrit une consigne de
+        // plusieurs phrases, on y cite des tickets, on y colle un bout de log —
+        // et Entrée partait au milieu d'une pensée. Le contrat est le même dans
+        // les quatre surfaces qui le montent (accueil, panneau Numo, page
+        // agents, conversation d'agent), puisqu'elles montent CE composer, et le
+        // même que dans tous les autres composers de l'app (`send-shortcut`).
+        if (isSendShortcut(e)) {
           e.preventDefault();
           handleSubmit();
         }
@@ -913,7 +921,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                         disabled={(disabled ?? false) || (sendDisabled ?? false) || uploads.uploading}
                         onClick={handleSubmit}
                         ariaLabel={t("send")}
-                        tooltipLabel={t("send")}
+                        // Entrée ne partant plus, le raccourci qui part doit se
+                        // lire quelque part : au survol du bouton, comme sur
+                        // tous les boutons d'envoi de l'app.
+                        tooltipLabel={
+                          <span className="inline-flex items-center gap-1.5">
+                            {t("send")}
+                            <SendShortcutKeys />
+                          </span>
+                        }
                       />
                     ))}
                 </>

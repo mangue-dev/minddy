@@ -66,6 +66,7 @@ import {
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
+import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { UserAvatar } from "@/components/user-avatar";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
@@ -735,6 +736,17 @@ export function PrDetail({
   // serveur refusera en `noEffect`.
   const reviewHasNoEffect =
     reviewVerdict === "request_changes" && !postVerdict && !relaunching;
+  // Ce qui empêche la review de partir, et son libellé : le bouton du pied de
+  // dialogue et le raccourci ⌘/Ctrl+Entrée du champ lisent les deux — sinon la
+  // touche enverrait ce que le bouton refuse.
+  const reviewSubmitDisabled =
+    submitting || reviewHasNoEffect || (!reviewMessage.trim() && reviewVerdict !== "approve");
+  const reviewSubmitLabel =
+    reviewMode === "findings"
+      ? t("reviewFixSubmit")
+      : reviewVerdict === "request_changes" && relaunching
+        ? t("sendToNumo")
+        : t("reviewSubmit");
 
   const submitReview = async () => {
     if (!reviewVerdict || submitting || reviewHasNoEffect) return;
@@ -1745,6 +1757,14 @@ export function PrDetail({
           <Textarea
             value={reviewMessage}
             onChange={(e) => setReviewMessage(e.target.value)}
+            // Même raccourci que les autres composers de l'app : ⌘/Ctrl+Entrée
+            // envoie, Entrée passe à la ligne. Le bouton n'est atteignable que
+            // si la review a de quoi partir — la garde est la sienne, relue ici.
+            onKeyDown={(e) => {
+              if (!isSendShortcut(e)) return;
+              e.preventDefault();
+              if (!reviewSubmitDisabled) void submitReview();
+            }}
             placeholder={t(
               reviewVerdict === "approve" ? "reviewApprovePlaceholder" : "reviewPlaceholder",
             )}
@@ -1824,21 +1844,15 @@ export function PrDetail({
               >
                 {t("cancel")}
               </Button>
-              <Button
-                disabled={
-                  submitting ||
-                  reviewHasNoEffect ||
-                  (!reviewMessage.trim() && reviewVerdict !== "approve")
-                }
-                onClick={() => void submitReview()}
-              >
-                {submitting ? <Spinner /> : null}
-                {reviewMode === "findings"
-                  ? t("reviewFixSubmit")
-                  : reviewVerdict === "request_changes" && relaunching
-                    ? t("sendToNumo")
-                    : t("reviewSubmit")}
-              </Button>
+              <SendShortcutTooltip label={reviewSubmitLabel}>
+                <Button
+                  disabled={reviewSubmitDisabled}
+                  onClick={() => void submitReview()}
+                >
+                  {submitting ? <Spinner /> : null}
+                  {reviewSubmitLabel}
+                </Button>
+              </SendShortcutTooltip>
             </div>
           </DialogFooter>
         </DialogContent>

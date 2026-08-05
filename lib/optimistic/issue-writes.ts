@@ -107,6 +107,28 @@ export function applyPendingBoard(
 }
 
 /**
+ * La ligne d'un ticket telle qu'elle est DÉJÀ en cache, cherchée dans les deux
+ * caches qui la portent. Le cache du projet d'abord : c'est le plus riche (il
+ * seul porte `attachment_count`).
+ *
+ * Sert à décider quoi faire d'une ligne venue d'ailleurs — la compléter ou
+ * l'ajouter (lib/optimistic/remote-issue-echo.ts).
+ */
+export function findCachedIssue(
+  queryClient: QueryClient,
+  projectId: string,
+  issueId: string
+): Issue | undefined {
+  const fromProject = queryClient
+    .getQueryData<Issue[]>(issuesKey(projectId))
+    ?.find((i) => i.id === issueId);
+  if (fromProject) return fromProject;
+  return queryClient
+    .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
+    ?.issues.find((i) => i.id === issueId);
+}
+
+/**
  * Patch optimiste d'un ticket PARTOUT où sa ligne est recopiée : le cache de son
  * projet, le board cross-projet et l'index de la palette. C'est la version
  * partagée de ce que les rejouages d'annulation faisaient dans leur coin.
@@ -270,4 +292,43 @@ export function patchObjectiveEverywhere(
       objectives: { ...old.objectives, [projectId]: list.map(apply) },
     };
   });
+}
+
+/**
+ * Un objectif corbeillé ou purgé s'en va des deux mêmes caches. Le pendant de
+ * {@link removeIssueEverywhere}, qui manquait : jusqu'ici seul un refetch
+ * faisait disparaître un objectif supprimé ailleurs.
+ */
+export function removeObjectiveEverywhere(
+  queryClient: QueryClient,
+  projectId: string,
+  objectiveId: string
+): void {
+  const drop = (o: Objective) => o.id !== objectiveId;
+  queryClient.setQueryData<Objective[]>(objectivesKey(projectId), (old) =>
+    old?.filter(drop)
+  );
+  queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) => {
+    const list = old?.objectives[projectId];
+    if (!old || !list) return old;
+    return {
+      ...old,
+      objectives: { ...old.objectives, [projectId]: list.filter(drop) },
+    };
+  });
+}
+
+/** L'objectif tel qu'il est DÉJÀ en cache — le pendant de {@link findCachedIssue}. */
+export function findCachedObjective(
+  queryClient: QueryClient,
+  projectId: string,
+  objectiveId: string
+): Objective | undefined {
+  const fromProject = queryClient
+    .getQueryData<Objective[]>(objectivesKey(projectId))
+    ?.find((o) => o.id === objectiveId);
+  if (fromProject) return fromProject;
+  return queryClient
+    .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
+    ?.objectives[projectId]?.find((o) => o.id === objectiveId);
 }

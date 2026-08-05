@@ -62,6 +62,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
+import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -697,6 +698,17 @@ function FeedbackDetail({
     onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
   });
 
+  // Publier la réponse d'équipe. Le bouton du bas et le ⌘/Ctrl+Entrée du champ
+  // passent par le même geste et la même garde : la touche ne doit pas pouvoir
+  // envoyer ce que le bouton refuse.
+  const respondDisabled =
+    patch.isPending || response.trim() === (post?.team_response ?? "");
+  const publishResponse = () =>
+    patch.mutate(
+      { team_response: response },
+      { onSuccess: () => setRespondEditing(false) },
+    );
+
   const action = useMutation({
     mutationFn: ({ path, body: payload }: { path: string; body?: unknown }) =>
       api(`/api/projects/${projectId}/feedback/${path}`, {
@@ -1140,6 +1152,13 @@ function FeedbackDetail({
               <AutoTextarea
                 value={response}
                 onChange={(e) => setResponse(e.target.value)}
+                // Une réponse d'équipe est un message publié à qui a écrit le
+                // retour : elle part au même raccourci que partout ailleurs.
+                onKeyDown={(e) => {
+                  if (!isSendShortcut(e)) return;
+                  e.preventDefault();
+                  if (!respondDisabled) publishResponse();
+                }}
                 placeholder={t("respondPlaceholder", { project: projectName })}
                 className="min-h-16 w-full resize-none rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
                 maxLength={5000}
@@ -1157,20 +1176,19 @@ function FeedbackDetail({
                     {t("respondCancel")}
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={patch.isPending || response.trim() === (post.team_response ?? "")}
-                  onClick={() =>
-                    patch.mutate(
-                      { team_response: response },
-                      { onSuccess: () => setRespondEditing(false) }
-                    )
-                  }
+                <SendShortcutTooltip
+                  label={post.team_response ? t("respondUpdate") : t("saveResponse")}
                 >
-                  {patch.isPending && <Spinner />}
-                  {post.team_response ? t("respondUpdate") : t("saveResponse")}
-                </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={respondDisabled}
+                    onClick={publishResponse}
+                  >
+                    {patch.isPending && <Spinner />}
+                    {post.team_response ? t("respondUpdate") : t("saveResponse")}
+                  </Button>
+                </SendShortcutTooltip>
               </div>
             </>
           )}

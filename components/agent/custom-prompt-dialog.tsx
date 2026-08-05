@@ -12,6 +12,7 @@ import {
   DialogTitle,
   Textarea,
 } from "mangue-ui";
+import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 
 /**
  * Où part la consigne écrite ici : le presse-papier (« Copier le prompt » →
@@ -53,6 +54,8 @@ export function CustomPromptDialog({
     if (target) setInstructions("");
   }, [target]);
 
+  const submitLabel = target === "launch" ? t("menuLaunch") : tIssueUI("copyAsPrompt");
+
   const submit = () => {
     const trimmed = instructions.trim();
     if (!trimmed || !target) return;
@@ -90,7 +93,7 @@ export function CustomPromptDialog({
             // ⌘/Ctrl+Entrée valide : la touche Entrée seule reste un retour à la
             // ligne, une consigne tenant souvent sur plusieurs.
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              if (isSendShortcut(e)) {
                 e.preventDefault();
                 submit();
               }
@@ -100,11 +103,11 @@ export function CustomPromptDialog({
             aria-label={t("customPromptTitle")}
           />
           <DialogFooter>
-            <Button type="submit" disabled={!instructions.trim()}>
-              {target === "launch"
-                ? t("menuLaunch")
-                : tIssueUI("copyAsPrompt")}
-            </Button>
+            <SendShortcutTooltip label={submitLabel}>
+              <Button type="submit" disabled={!instructions.trim()}>
+                {submitLabel}
+              </Button>
+            </SendShortcutTooltip>
           </DialogFooter>
         </form>
       </DialogContent>

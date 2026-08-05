@@ -9,7 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
-import { useQueryClient, type QueryKey } from "@tanstack/react-query";
+import {
+  useQueryClient,
+  type QueryClient,
+  type QueryKey,
+} from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
 import { useAuth } from "./auth-context";
@@ -20,6 +24,7 @@ import {
   issueWrites,
   objectiveWrites,
 } from "./optimistic/issue-writes";
+import { adoptRemoteRow, remoteEchoOf } from "./optimistic/remote-echo";
 import { shouldCatchUpOnResume, wakeRealtime } from "./realtime-resume";
 import type { Project } from "./types";
 
@@ -31,8 +36,15 @@ import type { Project } from "./types";
  *   user:{userId}       — notifications, my project list, my invitations
  *   project:{projectId} — content of a project I'm a member of
  *
- * Events only invalidate React Query caches (reads stay on the REST routes);
- * per-key coalescing absorbs write bursts (Numo/MCP) into a single refetch.
+ * Un événement fait DEUX choses, dans cet ordre. La ligne diffusée est écrite
+ * dans les caches de tickets tout de suite (lib/optimistic/remote-issue-echo.ts)
+ * — la charge utile porte la ligne entière, il n'y a rien à demander au serveur
+ * pour l'afficher ; puis les caches sont invalidés, ce qui réconcilie derrière
+ * ce que la ligne ne dit pas. Sans le premier temps, un ticket créé par Numo
+ * n'apparaissait qu'au retour du refetch, soit plusieurs secondes sur `/all`
+ * (`/api/me/board` est une route agrégée). Le regroupement par clé absorbe les
+ * rafales d'écritures (Numo/MCP) en un seul rafraîchissement.
+ *
  * Subscriptions are gated on the restored session: joining with the anon token
  * would be refused on private channels (and was how the old postgres_changes
  * bridges silently died).
@@ -175,6 +187,49 @@ function keysForUserEvent(change: BroadcastChange): Invalidation[] {
   }
 }
 
+/**
+ * Cet écho est-il celui d'une écriture qu'on vient de faire (MIN-156) ?
+ *
+ * Il décide de DEUX choses, qui vont ensemble : ne pas rafraîchir des caches qui
+ * portent déjà la ligne serveur, et ne pas y réécrire la ligne diffusée
+ * par-dessus une édition suivante déjà partie (adoptRemoteRow). Les événements
+ * des autres clients — Numo, le MCP, un coéquipier — ne matchent aucune écriture
+ * locale et passent donc par les deux chemins.
+ */
+function isOwnEcho(change: BroadcastChange): boolean {
+  const id = (change.record ?? change.old_record)?.id;
+  switch (change.table) {
+    case "issues":
+      return issueWrites.wasJustWritten(id, change.record);
+    // La ligne du TICKET : c'est `issue_id` sur la table de liaison.
+    case "issue_categories":
+      return issueWrites.wasJustWritten(issueIdOf(change), change.record);
+    case "objectives":
+      return objectiveWrites.wasJustWritten(id, change.record);
+    default:
+      return false;
+  }
+}
+
+/**
+ * Ce qu'un événement de projet écrit dans les caches AVANT toute invalidation.
+ *
+ * Une diffusion porte la ligne : l'écrire tout de suite, c'est la seule façon
+ * qu'un ticket créé par Numo (ou par le MCP, ou par un coéquipier) apparaisse
+ * *à l'instant* plutôt qu'au retour du refetch — et pour `/all` ce refetch est
+ * `/api/me/board`, plusieurs secondes. L'invalidation qui suit reste : elle
+ * réconcilie ce que la ligne ne dit pas (catégories liées, pièces jointes, vues
+ * dérivées calculées en SQL). Voir lib/optimistic/remote-echo.ts.
+ */
+function applyProjectEvent(
+  queryClient: QueryClient,
+  change: BroadcastChange,
+  projectId: string
+): void {
+  if (isOwnEcho(change)) return;
+  adoptRemoteRow(queryClient, projectId, remoteEchoOf(change));
+}
+
 function keysForProjectEvent(
   change: BroadcastChange,
   projectId: string
@@ -192,14 +247,7 @@ function keysForProjectEvent(
       // course qu'on vient de fermer. Les événements des autres clients (Numo,
       // MCP, coéquipiers) ne matchent aucune écriture locale et passent donc
       // inchangés, comme les vues dérivées qu'on ne patche pas.
-      return issueWrites.wasJustWritten(
-        // La ligne du TICKET : c'est `id` sur `issues`, `issue_id` sur la table
-        // de liaison des catégories.
-        change.table === "issues"
-          ? (change.record ?? change.old_record)?.id
-          : issueIdOf(change),
-        change.record
-      )
+      return isOwnEcho(change)
         ? ISSUE_DERIVED_KEYS
         : [active(["issues", projectId]), ...ISSUE_AGGREGATE_KEYS];
     case "issue_relations":
@@ -212,10 +260,7 @@ function keysForProjectEvent(
     // d'une création / suppression, doit atteindre les deux, sans quoi `/all`
     // gardait un objectif renommé sous son ancien nom.
     case "objectives":
-      return objectiveWrites.wasJustWritten(
-        (change.record ?? change.old_record)?.id,
-        change.record
-      )
+      return isOwnEcho(change)
         ? [{ key: SEARCH_INDEX_KEY, refetch: "none" }]
         : [
             active(["objectives", projectId]),
@@ -508,7 +553,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     (
       topic: string,
       keysFor: (change: BroadcastChange) => Invalidation[],
-      scopeKeys: QueryKey[]
+      scopeKeys: QueryKey[],
+      /** Écriture immédiate dans les caches, jouée avant l'invalidation. */
+      apply?: (change: BroadcastChange) => void
     ) => {
       const supabase = getSupabase();
       let cancelled = false;
@@ -524,7 +571,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         channel = supabase.channel(topic, { config: { private: true } });
         for (const event of BROADCAST_EVENTS) {
           channel.on("broadcast", { event }, ({ payload }) => {
-            for (const invalidation of keysFor(payload as BroadcastChange)) {
+            const change = payload as BroadcastChange;
+            // La ligne d'abord (elle est dans la charge utile, c'est ce que
+            // l'utilisateur voit), le rafraîchissement ensuite.
+            apply?.(change);
+            for (const invalidation of keysFor(change)) {
               invalidateCoalesced(invalidation);
             }
           });
@@ -580,11 +631,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         openScope(
           `project:${id}`,
           (change) => keysForProjectEvent(change, id),
-          projectScopeKeys(id)
+          projectScopeKeys(id),
+          (change) => applyProjectEvent(queryClient, change, id)
         )
       );
     }
-  }, [userId, topicIds, openScope]);
+  }, [userId, topicIds, openScope, queryClient]);
 
   /**
    * Reprise après une absence — l'onglet revient au premier plan, la machine
