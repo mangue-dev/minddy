@@ -82,6 +82,48 @@ Le sitemap ([app/sitemap.ts](app/sitemap.ts)) lit cette table, comme le proxy,
 les métadonnées de page et les liens de la nav et du pied de page. Ajouter une
 page publique = une entrée de plus dans `PUBLIC_ROUTES`, rien d'autre à câbler.
 
+## TypeScript : l'éditeur et le dépôt ne compilent pas avec le même binaire
+
+Depuis MIN-180, `typescript` est en **7.0.2**, le compilateur natif. C'est lui
+que lancent `npm run typecheck` et le type-check de `next build` : sur le Mac
+(12 cœurs), 14,8 s → 2,1 s à froid pour le premier, 15,4 s → 2,4 s pour le
+second, et le build complet passe de 26,6 s à 13,2 s.
+
+**Le gain est plus modeste sur Vercel, et c'est une question de cœurs.** La
+machine de build est en `standard` (4 cœurs) : mesuré à conditions égales — même
+machine, même cache, deux déploiements consécutifs ne différant que par la version
+du compilateur — le type-check y passe de **38,9 s à 14,5 s** (×2,7, pas ×6), et
+le travail de build de 59,7 s à 43,3 s. Le compilateur natif est massivement
+parallèle ; sur 4 cœurs il ne peut pas rendre ce qu'il rend sur 12. Ne pas
+transposer les chiffres du poste à la CI, dans un sens ni dans l'autre.
+
+**La contrepartie**, à savoir plutôt qu'à découvrir : `typescript@7` ne livre pas
+de `tsserver.js`. `typescript.tsdk` ne peut donc pas pointer dessus, et l'éditeur
+continue d'utiliser son TypeScript embarqué — en JS, en 5.x. **L'éditeur et la CI
+ne font plus tourner le même compilateur.** Sur ce code les deux rendent des
+diagnostics identiques, mesuré en MIN-174 : dépôt propre à 0 erreur des deux
+côtés, et sur 6 sondes portant 11 fautes délibérées, mêmes codes, mêmes
+`ligne:colonne`, mêmes messages — garde-fou i18n compris (un translator passé en
+prop sans son namespace reste refusé). C'est donc vivable. Mais si un jour un
+diagnostic diverge, **c'est `npm run typecheck` qui fait foi**, pas le
+soulignement rouge de l'éditeur.
+
+`typescript@7` ne livre pas non plus l'API du compilateur : son export racine
+pointe sur `lib/version.cjs`, le paquet ne contient que `bin/tsc` et le binaire
+natif. D'où l'alias `typescript-api` (→ `typescript@5.9.3`) dans `package.json`,
+dont [le test structurel de MIN-169](lib/server/agent/subagent-runner-init.test.ts)
+est le seul consommateur — il lui faut `createSourceFile` pour lire un arbre.
+Ce n'est pas une coquille : un `import ts from "typescript"` ailleurs dans le
+dépôt ne compilerait pas.
+
+Deux réflexes qui vont avec :
+
+- `incremental` est à `true` : **purger `tsconfig.tsbuildinfo`** avant tout
+  comptage d'erreurs ou toute mesure de durée, sinon les deux mentent.
+- Le dépôt tient **deux lockfiles**. Ajouter par `pnpm add`, puis resynchroniser
+  avec `npm install --package-lock-only --legacy-peer-deps` (le dépôt porte un
+  conflit de peers tiptap préexistant qui bloque npm sans ce drapeau).
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import ts from "typescript";
+// `typescript-api` est un alias vers `typescript@5` (voir package.json), et ce
+// n'est pas une coquille : depuis MIN-180 le dépôt vérifie avec `typescript@7`,
+// qui ne livre plus l'API du compilateur — le paquet ne contient que `bin/tsc`
+// et le binaire natif, son export racine pointe sur `lib/version.cjs`. Ce test
+// est le seul consommateur de l'API ; il lui faut un TypeScript en JS.
+import ts from "typescript-api";
 import { describe, expect, it } from "vitest";
 
 import { Subagents, type SubagentRecord, type SubagentRunner } from "./subagent";
