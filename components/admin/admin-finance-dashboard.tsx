@@ -60,6 +60,9 @@ const FEATURES = [
   "smart_assign",
   "feedback_classify",
   "feedback_analyze",
+  // Retour dicté (board public + dashboard) : l'écoute ET le rangement par Numo
+  // sous un même run, donc « coût moyen / run » = le prix d'une prise.
+  "feedback_voice",
   "embedding",
   "agent_code",
   // Temps machine de la sandbox, pas un appel LLM : la colonne Tokens reste
@@ -73,6 +76,8 @@ const FEATURES = [
   "pr_review",
   // Correspondance des colonnes d'un import CSV (MIN-98) : un appel par fichier.
   "import_map",
+  // Découpe d'un brief en objectifs + tickets (MIN-172) : un appel par brief.
+  "brief_split",
   // Démo de dictée de la landing (MIN-150) : la SEULE ligne que personne ne
   // paye — un visiteur sans compte, à qui la plateforme offre le passage. Un
   // run = une démo jouée, donc « coût moyen / run » est le prix d'un passage.

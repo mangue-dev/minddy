@@ -43,7 +43,16 @@ export type AiFeature =
    * passage. Les ranger sous 'transcription'/'dictation' les mélangeait à la
    * dictée des vrais comptes, et rendait les deux questions insolubles.
    */
-  | "landing_demo";
+  | "landing_demo"
+  /**
+   * Dicter un retour — au board public comme dans le dashboard. Ses DEUX appels
+   * (l'écoute puis le rangement par Numo) s'écrivent sous cette seule feature,
+   * sous un run_id commun : une ligne = une prise, son coût moyen par run = le
+   * prix d'un retour dicté. Côté utilisateur elle rejoint le segment
+   * « Retours » (`USAGE_SEGMENTS`) : c'est du feedback, pas de la dictée de
+   * ticket, et c'est dans cette ligne-là qu'on ira chercher sa dépense.
+   */
+  | "feedback_voice";
 
 /** Forme de l'objet `usage` renvoyé par OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

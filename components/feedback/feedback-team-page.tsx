@@ -69,6 +69,10 @@ import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
+import { AgentBeamOverlay } from "@/components/agent-beam";
+import { DictateButton } from "@/components/ai-elements/dictate-button";
+import { NumoIcon } from "@/components/numo-icon";
+import { useFeedbackDictation } from "@/lib/use-feedback-dictation";
 import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { UserAvatar } from "@/components/user-avatar";
 import { Markdown } from "@/components/markdown";
@@ -2494,6 +2498,8 @@ function InternalFeedbackDialog({
   onCreated: (postId: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
+  const tDictate = useTranslations("Dictate");
+  const locale = useLocale();
   const [author, setAuthor] = useState<ComposerAuthor | null>(null);
   // Personne neuve en cours de saisie. `null` = on est sur le sélecteur.
   const [draftAuthor, setDraftAuthor] = useState<{ email: string; name: string } | null>(
@@ -2505,7 +2511,86 @@ function InternalFeedbackDialog({
   // Le MarkdownEditor ne committe qu'au blur — la ref porte toujours la
   // dernière valeur commitée, et submit() force le blur avant de lire.
   const bodyRef = useRef("");
+  const [initialBody, setInitialBody] = useState("");
   const [editorKey, setEditorKey] = useState(0);
+
+  // ── Dictée ────────────────────────────────────────────────────────────────
+  // Le même geste qu'au board public, sur la même paire de champs : on raconte
+  // le retour reçu, Numo l'écrit. Ce qui change tient au transport — ici on est
+  // authentifié, et c'est le membre qui parle qui paye.
+
+  const [transcribing, setTranscribing] = useState(false);
+
+  const applyPatch = (patch: { title?: string; body?: string }) => {
+    if (patch.title !== undefined) setTitle(patch.title);
+    if (patch.body !== undefined) {
+      bodyRef.current = patch.body;
+      setInitialBody(patch.body);
+      setEditorKey((k) => k + 1);
+    }
+  };
+
+  const {
+    busy: numoBusy,
+    onTranscript,
+    noteRun,
+    reset: resetDictation,
+  } = useFeedbackDictation({
+    getDraft: () => ({ title, body: bodyRef.current }),
+    applyPatch,
+    dictate: async ({ runId, transcript, draft, history }) => {
+      const res = await fetch(`/api/projects/${projectId}/dictate-feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId, transcript, draft, history }),
+      });
+      if (!res.ok) {
+        if (res.status === 503) {
+          toast.error(tDictate("unavailable"));
+          return { ok: false, handled: true };
+        }
+        if (res.status === 429) {
+          const data = (await res.json().catch(() => ({}))) as { retry_after?: number };
+          const minutes = Math.max(1, Math.ceil((data.retry_after ?? 3600) / 60));
+          toast.error(tDictate("rateLimitReached", { minutes }));
+          return { ok: false, handled: true };
+        }
+        return { ok: false };
+      }
+      const data = (await res.json()) as {
+        patch: { title?: string; body?: string };
+        reply: string;
+      };
+      return { ok: true, patch: data.patch, reply: data.reply };
+    },
+  });
+
+  /** L'écoute passe par la route de transcription commune, mais s'inscrit au
+      ledger sous `feedback_voice` : au compteur d'usage, dicter un retour est
+      une dépense de « Retours », pas de « Dictée vocale ». */
+  const uploadAudio = async (blob: Blob): Promise<string | null> => {
+    const form = new FormData();
+    form.append(
+      "audio",
+      blob,
+      `feedback.${blob.type.includes("ogg") ? "ogg" : "webm"}`
+    );
+    form.append("lang", locale);
+    form.append("feature", "feedback_voice");
+    const res = await fetch("/api/transcribe", { method: "POST", body: form });
+    if (!res.ok) {
+      if (res.status === 413) toast.error(tDictate("tooLarge"));
+      else if (res.status === 429) {
+        const data = (await res.json().catch(() => ({}))) as { retry_after?: number };
+        const minutes = Math.max(1, Math.ceil((data.retry_after ?? 60) / 60));
+        toast.error(tDictate("rateLimitReached", { minutes }));
+      } else toast.error(tDictate("error"));
+      return null;
+    }
+    const data = (await res.json()) as { text?: string; runId?: string };
+    noteRun(data.runId ?? null);
+    return data.text ?? "";
+  };
 
   const reset = () => {
     setAuthor(null);
@@ -2513,7 +2598,9 @@ function InternalFeedbackDialog({
     setTitle("");
     setIsPublic(true);
     bodyRef.current = "";
+    setInitialBody("");
     setEditorKey((k) => k + 1);
+    resetDictation();
   };
 
   /**
@@ -2528,11 +2615,11 @@ function InternalFeedbackDialog({
       : null
     : author;
 
-  const canSubmit = !busy && !!title.trim() && !!resolvedAuthor;
+  const canSubmit = !busy && !numoBusy && !!title.trim() && !!resolvedAuthor;
 
   const submit = async () => {
     const signer = resolvedAuthor;
-    if (busy || !title.trim() || !signer) return;
+    if (busy || numoBusy || !title.trim() || !signer) return;
     setBusy(true);
     try {
       (document.activeElement as HTMLElement | null)?.blur();
@@ -2563,6 +2650,11 @@ function InternalFeedbackDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        // Une dictée en vol atterrit dans ce formulaire : fermer la jetterait.
+        if (!next && (transcribing || numoBusy)) {
+          toast.info(tDictate("inFlight"), { id: "dictation-in-flight" });
+          return;
+        }
         if (!next) reset();
         onOpenChange(next);
       }}
@@ -2596,7 +2688,7 @@ function InternalFeedbackDialog({
         />
         <MarkdownEditor
           key={editorKey}
-          value=""
+          value={initialBody}
           onCommit={(markdown) => {
             bodyRef.current = markdown;
           }}
@@ -2653,7 +2745,35 @@ function InternalFeedbackDialog({
           </div>
         ) : null}
 
-        <div className="mt-3 flex items-center justify-end gap-4 border-t pt-3">
+        {/* La voix à gauche, la création à droite — la même barre qu'au board
+            public et qu'au modal de ticket. Pendant que Numo range, son visage
+            prend la place du micro. */}
+        <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
+          {numoBusy ? (
+            <span
+              className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
+              aria-hidden
+            >
+              <NumoIcon
+                state="thinking"
+                className="size-6 text-primary animate-in fade-in duration-300"
+              />
+            </span>
+          ) : (
+            <DictateButton
+              onTranscription={onTranscript}
+              uploadAudio={uploadAudio}
+              onProcessingChange={setTranscribing}
+              disabled={busy}
+              shortcutKey="mod+shift+d"
+              className="-ml-2"
+            />
+          )}
+          {numoBusy && (
+            <span className="sr-only" role="status">
+              {tDictate("numoWorking")}
+            </span>
+          )}
           <SendShortcutTooltip label={t("create")}>
             <Button disabled={!canSubmit} onClick={() => void submit()}>
               {busy && <Spinner />}
@@ -2661,6 +2781,10 @@ function InternalFeedbackDialog({
             </Button>
           </SendShortcutTooltip>
         </div>
+
+        {/* Numo reprend la dictée : le liseré souligne le bord du modal pendant
+            qu'il travaille — même signal que son visage, plus haut. */}
+        <AgentBeamOverlay active={numoBusy} />
       </DialogContent>
     </Dialog>
   );

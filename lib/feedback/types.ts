@@ -108,6 +108,28 @@ export const FEEDBACK_TITLE_MAX = 200;
 export const FEEDBACK_BODY_MAX = 10_000;
 
 /**
+ * Ce qu'une dictée de retour peut toucher : le titre et le corps, rien d'autre.
+ *
+ * La visibilité (« rendre public ») reste au clavier, délibérément — c'est le
+ * seul choix du composeur qui engage la personne, et il vient d'être expliqué
+ * juste au-dessus. Le laisser à la voix, c'est laisser un modèle décider de la
+ * publication de quelqu'un sur un malentendu. Même raison pour l'auteur du
+ * modal interne : c'est au NOM DE QUI on écrit, et ça ne se devine pas.
+ */
+export interface FeedbackVoiceDraft {
+  title: string;
+  body: string;
+}
+
+export type FeedbackVoicePatch = Partial<FeedbackVoiceDraft>;
+
+/** Un tour de la conversation de dictée — jetable, jamais persisté. */
+export interface FeedbackVoiceTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/**
  * État de PUBLICATION d'un post (MIN-54), distinct du choix de visibilité
  * `is_public` de l'auteur. `pending` = en attente de la revue IA (catégorisation
  * + modération), invisible du board même si public ; `published` = vérifié, listé

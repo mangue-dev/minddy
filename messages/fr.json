@@ -537,6 +537,7 @@
     "composerTitle": "Partager un retour",
     "postTitlePlaceholder": "Résumez votre besoin en une phrase",
     "postBodyPlaceholder": "Décrivez en détail votre besoin",
+    "voiceTooltip": "Décrivez votre besoin à voix haute, on remplit le retour",
     "submitPost": "Envoyer",
     "similarTitle": "Ce retour existe peut-être déjà. Votez plutôt :",
     "sortTop": "Populaires",
@@ -792,7 +793,10 @@
     "rateLimitReached": "Quota de dictée atteint. Réessayez dans {minutes} min.",
     "tooLarge": "Enregistrement trop lourd. Réessayez avec une dictée plus courte.",
     "error": "Échec de la transcription.",
-    "emptyResult": "Aucune voix détectée."
+    "emptyResult": "Aucune voix détectée.",
+    "unavailable": "La dictée n'est pas disponible pour le moment.",
+    "inFlight": "Dictée en cours — un instant.",
+    "numoWorking": "Numo écrit le retour…"
   },
   "Field": {
     "title": "Titre",
@@ -2874,6 +2878,10 @@
         "label": "Classification automatique",
         "desc": "Classe les retours entrants par catégorie, écarte le spam, masque les contenus sensibles et publie le reste sur le board. Sans ce tri, chaque retour attend une revue manuelle."
       },
+      "feedback_voice_enabled": {
+        "label": "Retour dicté",
+        "desc": "Ouvre le micro dans les deux composeurs de retour — le board public et la saisie interne. La prise est transcrite puis rangée par Numo dans le titre et le corps ; la dépense va au compte de qui parle, ou au owner du board pour un visiteur. Coupé, le micro disparaît et l'écriture reste."
+      },
       "feedback_analysis_model": {
         "label": "Analyse des retours",
         "desc": "Fusionne les doublons évidents du board et propose la fusion pour les autres."
@@ -2969,6 +2977,7 @@
         "smart_assign": "Assignation intelligente",
         "feedback_classify": "Classification des retours",
         "feedback_analyze": "Analyse des retours",
+        "feedback_voice": "Retour dicté",
         "embedding": "Embeddings",
         "agent_code": "Agent Numo",
         "sandbox_compute": "Sandbox des agents",

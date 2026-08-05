@@ -18,16 +18,24 @@ import {
   DropdownMenuTrigger,
   Spinner,
   Switch,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
   toast,
 } from "mangue-ui";
-import { ArrowUpDown, Check, ChevronDown, ListFilter, MessagesSquare, Megaphone } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, ListFilter, Mic, MessagesSquare, Megaphone } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
+import { AgentBeamOverlay } from "@/components/agent-beam";
+import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { EmptyScene } from "@/components/empty-scene";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { NumoIcon } from "@/components/numo-icon";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";
 import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { HelpHint } from "@/components/settings/help-hint";
+import { useFeedbackDictation } from "@/lib/use-feedback-dictation";
 import {
   FEEDBACK_PUBLIC_STATUSES,
   type PublicIdentity,
@@ -35,7 +43,7 @@ import {
   type PublicStatusFilter,
   type SimilarPost,
 } from "@/lib/feedback/types";
-import { createPostAction, findSimilarPostsAction } from "./actions";
+import { createPostAction, dictateFeedbackAction, findSimilarPostsAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -161,6 +169,7 @@ export function FeedbackBoardClient({
       <ComposerDialog
         token={token}
         basePath={basePath}
+        identified={!!identity}
         open={composerOpen}
         onOpenChange={setComposerOpen}
         onNeedAuth={requireAuth}
@@ -337,17 +346,21 @@ function FilterBar({
 function ComposerDialog({
   token,
   basePath,
+  identified,
   open,
   onOpenChange,
   onNeedAuth,
 }: {
   token: string;
   basePath: string;
+  /** Le visiteur a passé la porte OTP — seule condition pour ouvrir le micro. */
+  identified: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onNeedAuth: (run: () => void) => void;
 }) {
   const t = useTranslations("PublicFeedback");
+  const tDictate = useTranslations("Dictate");
   const router = useRouter();
   const [title, setTitle] = useState("");
   // Coché par défaut : publier sur le board. Décoché = retour privé à l'équipe.
@@ -418,6 +431,90 @@ function ComposerDialog({
     };
   }, [title, token, open]);
 
+  // ── Dictée (MIN-37) ────────────────────────────────────────────────────────
+  // Une prise = deux étapes visibles : l'écoute (le micro passe en spinner),
+  // puis Numo qui range (son visage remplace le micro, et le liseré souligne le
+  // modal). Le transport diffère du dashboard, la mécanique non — d'où le hook.
+
+  const [transcribing, setTranscribing] = useState(false);
+
+  /** Remplace le titre / le corps par ce que Numo vient d'écrire. Le corps est
+      un éditeur riche : le remonter est la seule façon d'y poser du texte. */
+  const applyPatch = (patch: { title?: string; body?: string }) => {
+    const nextTitle = patch.title ?? title;
+    const nextBody = patch.body ?? bodyRef.current;
+    if (patch.title !== undefined) setTitle(patch.title);
+    if (patch.body !== undefined) {
+      bodyRef.current = patch.body;
+      setInitialBody(patch.body);
+      setEditorKey((k) => k + 1);
+    }
+    persistDraft(nextTitle, nextBody);
+  };
+
+  const {
+    busy: numoBusy,
+    onTranscript,
+    noteRun,
+    reset: resetDictation,
+  } = useFeedbackDictation({
+    getDraft: () => ({ title, body: bodyRef.current }),
+    applyPatch,
+    dictate: async ({ runId, transcript, draft, history }) => {
+      const result = await dictateFeedbackAction(token, {
+        runId: runId ?? undefined,
+        transcript,
+        draft,
+        history,
+      });
+      if (result.ok) return { ok: true, patch: result.patch, reply: result.reply };
+      if (result.error === "notAuthenticated") {
+        // La session a expiré entre l'écoute et le rangement : on renvoie à la
+        // porte, la prise est perdue mais le texte déjà écrit reste.
+        onNeedAuth(() => {});
+        return { ok: false, handled: true };
+      }
+      if (result.error === "unavailable") {
+        toast.error(tDictate("unavailable"));
+        return { ok: false, handled: true };
+      }
+      if (result.error === "rateLimited") {
+        toast.error(tDictate("rateLimitReached", { minutes: 60 }));
+        return { ok: false, handled: true };
+      }
+      return { ok: false };
+    },
+  });
+
+  /** L'écoute : la prise part au board, qui la transcrit et rend le run. */
+  const uploadAudio = async (blob: Blob): Promise<string | null> => {
+    const form = new FormData();
+    form.append(
+      "audio",
+      blob,
+      `feedback.${blob.type.includes("ogg") ? "ogg" : "webm"}`
+    );
+    const res = await fetch(`/f/${token}/voice`, { method: "POST", body: form });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        retry_after?: number;
+      };
+      if (res.status === 401) onNeedAuth(() => {});
+      else if (res.status === 413) toast.error(tDictate("tooLarge"));
+      else if (res.status === 422) toast.error(tDictate("emptyResult"));
+      else if (res.status === 429) {
+        const minutes = Math.max(1, Math.ceil((data.retry_after ?? 3600) / 60));
+        toast.error(tDictate("rateLimitReached", { minutes }));
+      } else if (res.status === 503) toast.error(tDictate("unavailable"));
+      else toast.error(tDictate("error"));
+      return null;
+    }
+    const data = (await res.json()) as { text?: string; runId?: string };
+    noteRun(data.runId ?? null);
+    return data.text ?? "";
+  };
+
   const reset = () => {
     setTitle("");
     setIsPublic(true);
@@ -427,6 +524,7 @@ function ComposerDialog({
     bodyRef.current = "";
     setInitialBody("");
     setEditorKey((k) => k + 1);
+    resetDictation();
   };
 
   const submit = () => {
@@ -471,6 +569,12 @@ function ComposerDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        // Une dictée en vol travaille SUR ce formulaire : le transcript, puis
+        // le texte de Numo, vont y atterrir. Fermer maintenant les jetterait.
+        if (!next && (transcribing || numoBusy)) {
+          toast.info(tDictate("inFlight"), { id: "dictation-in-flight" });
+          return;
+        }
         if (!next) reset();
         onOpenChange(next);
       }}
@@ -485,7 +589,7 @@ function ComposerDialog({
         onKeyDown={(e) => {
           if (e.defaultPrevented || !isSendShortcut(e)) return;
           e.preventDefault();
-          if (title.trim() && !pending) submit();
+          if (title.trim() && !pending && !numoBusy) submit();
         }}
       >
         {/* Style « modal de création d'issue » : titre et description sont des
@@ -501,7 +605,7 @@ function ComposerDialog({
           onKeyDown={(e) => {
             if (e.key !== "Enter") return;
             e.preventDefault();
-            if (title.trim()) submit();
+            if (title.trim() && !pending && !numoBusy) submit();
           }}
           placeholder={t("postTitlePlaceholder")}
           maxLength={200}
@@ -576,14 +680,74 @@ function ComposerDialog({
             onCheckedChange={setIsPublic}
           />
         </div>
-        <div className="mt-3 flex items-center justify-end gap-4 border-t pt-3">
+        {/* Barre du bas : la voix à gauche, l'envoi à droite — la même que le
+            modal de création de ticket, parce que c'est le même geste. Pendant
+            que Numo range, son visage prend la place du micro. */}
+        <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
+          {numoBusy ? (
+            <span
+              className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
+              aria-hidden
+            >
+              <NumoIcon
+                state="thinking"
+                className="size-6 text-primary animate-in fade-in duration-300"
+              />
+            </span>
+          ) : identified ? (
+            /* L'infobulle dit ce que le micro FAIT, pas comment il s'appelle :
+               un visiteur ne vient pas ici chercher une dictée, et « Dictée
+               vocale » ne lui apprend rien. Elle promet le résultat — parler,
+               et trouver le retour écrit. */
+            <DictateButton
+              onTranscription={onTranscript}
+              uploadAudio={uploadAudio}
+              onProcessingChange={setTranscribing}
+              tooltipLabel={t("voiceTooltip")}
+              disabled={pending}
+              className="-ml-2"
+            />
+          ) : (
+            /* Pas encore identifié : le micro EXISTE, il demande d'abord qui
+               parle. Le cacher ferait apparaître un bouton de nulle part une
+               fois l'email vérifié — et dicter fait dépenser l'équipe, donc on
+               sait toujours qui a parlé. Même promesse en infobulle : la porte
+               ne se justifie que si on sait déjà ce qu'il y a derrière. */
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onNeedAuth(() => {})}
+                    aria-label={t("voiceTooltip")}
+                    className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  >
+                    <Mic className="size-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{t("voiceTooltip")}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {numoBusy && (
+            <span className="sr-only" role="status">
+              {tDictate("numoWorking")}
+            </span>
+          )}
           <SendShortcutTooltip label={t("submitPost")}>
-            <Button onClick={() => title.trim() && submit()} disabled={pending || !title.trim()}>
+            <Button
+              onClick={() => title.trim() && submit()}
+              disabled={pending || numoBusy || !title.trim()}
+            >
               {pending && <Spinner />}
               {t("submitPost")}
             </Button>
           </SendShortcutTooltip>
         </div>
+
+        {/* Numo reprend la dictée : le liseré souligne le bord du modal pendant
+            qu'il travaille — même signal que son visage, plus haut. */}
+        <AgentBeamOverlay active={numoBusy} />
       </DialogContent>
     </Dialog>
   );

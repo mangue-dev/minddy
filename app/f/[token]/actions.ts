@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
 import { isCustomPublicHost } from "@/lib/server/custom-domains";
@@ -18,8 +19,17 @@ import { requestFeedbackOtp, verifyFeedbackOtp } from "@/lib/server/feedback/otp
 import { createFeedbackPost } from "@/lib/server/feedback/posts";
 import { votePost, unvotePost } from "@/lib/server/feedback/votes";
 import { embedText, matchFeedbackPosts } from "@/lib/server/embeddings";
+import {
+  feedbackVoiceEnabled,
+  normalizeVoiceDraft,
+  normalizeVoiceHistory,
+  normalizeVoiceTranscript,
+  runFeedbackVoicePass,
+} from "@/lib/server/feedback/voice";
+import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
+import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
-import type { SimilarPost } from "@/lib/feedback/types";
+import type { FeedbackVoicePatch, SimilarPost } from "@/lib/feedback/types";
 
 /**
  * Server actions du board public (MIN-37). Le cookie de session est path-scopé
@@ -190,6 +200,75 @@ export async function togglePostVoteAction(
     : await unvotePost({ postId, userId: session.user.id });
   if (ok) revalidatePath(`/f/${token}`, "layout");
   return { ok };
+}
+
+// ── Retour dicté : le rangement par Numo ─────────────────────────────────────
+
+export type DictateFeedbackState =
+  | { ok: true; patch: FeedbackVoicePatch; reply: string }
+  | { ok: false; error: "notAuthenticated" | "rateLimited" | "unavailable" | "failed" };
+
+/**
+ * Deuxième moitié d'une prise : le transcript rendu par `./voice/route.ts`
+ * devient un patch du composeur. Une server action suffit ici — c'est du JSON,
+ * et le cookie de session voyage avec.
+ *
+ * `runId` vient de l'étape d'écoute : les deux appels d'une même prise se
+ * rangent ainsi sous une seule ligne du ledger. On l'accepte du client parce
+ * qu'il n'ouvre rien — c'est une clé de regroupement, revalidée en UUID, et
+ * l'imputation ne s'en déduit pas (elle vient du board, comme ici).
+ */
+export async function dictateFeedbackAction(
+  token: string,
+  input: { runId?: string; transcript: string; draft: unknown; history: unknown }
+): Promise<DictateFeedbackState> {
+  const resolved = await resolveSession(token);
+  if (!resolved) return { ok: false, error: "notAuthenticated" };
+  const { ctx, session } = resolved;
+
+  if (!(await feedbackVoiceEnabled())) return { ok: false, error: "unavailable" };
+
+  const rate = checkSessionRateLimit(session.user.id, "feedback:dictate", {
+    limit: 40,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rate.allowed) return { ok: false, error: "rateLimited" };
+
+  if (!(await ownerHasUsageBudget(ctx.project.id))) {
+    return { ok: false, error: "unavailable" };
+  }
+
+  const transcript = normalizeVoiceTranscript(input.transcript);
+  if (!transcript.trim()) return { ok: false, error: "failed" };
+
+  const locale = (await getLocale()) === "fr" ? "fr" : "en";
+  try {
+    const { patch, reply, usage } = await runFeedbackVoicePass({
+      transcript,
+      draft: normalizeVoiceDraft(input.draft),
+      history: normalizeVoiceHistory(input.history),
+      locale,
+      projectName: ctx.project.name,
+      surface: "board",
+      runId: isUuid(input.runId) ? input.runId : newRunId(),
+      // 1 quand l'écoute a bien eu lieu : la ligne d'après, dans le même run.
+      seq: isUuid(input.runId) ? 1 : 0,
+      billTo: { projectOwner: ctx.project.id },
+      projectId: ctx.project.id,
+    });
+    after(() => recordAiUsage(usage));
+    return { ok: true, patch, reply };
+  } catch (err) {
+    console.error("[feedback/dictate] pass failed:", (err as Error).message);
+    return { ok: false, error: "failed" };
+  }
+}
+
+function isUuid(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  );
 }
 
 // ── Suggestions live (« ce post existe peut-être déjà ») ─────────────────────

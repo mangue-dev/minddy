@@ -3,7 +3,6 @@ import "server-only";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { avatarDataUri } from "@/lib/avatar";
 import { ISSUE_PRIORITIES, isPriority } from "@/lib/issue-validation";
-import type { TranscribeAudioFormat } from "@/lib/server/openrouter-transcribe";
 import {
   DEMO_CATEGORY_IDS,
   DEMO_MEMBER_IDS,
@@ -76,16 +75,10 @@ export function resetDailyBudget(): void {
   dailyWindow = { day: -1, count: 0 };
 }
 
-export function resolveAudioFormat(mimeType: string): TranscribeAudioFormat | null {
-  const lower = mimeType.toLowerCase();
-  if (lower.includes("webm")) return "webm";
-  if (lower.includes("ogg")) return "ogg";
-  if (lower.includes("wav")) return "wav";
-  if (lower.includes("mpeg") || lower.includes("mp3")) return "mp3";
-  if (lower.includes("m4a") || lower.includes("mp4")) return "m4a";
-  if (lower.includes("aac")) return "aac";
-  return null;
-}
+// La table MIME → format vit avec le client de transcription : elle est la même
+// pour la démo, la dictée authentifiée et le retour dicté. Ré-exportée ici parce
+// que les gardes d'entrée de la démo se lisent (et se testent) d'un seul bloc.
+export { resolveAudioFormat } from "@/lib/server/openrouter-transcribe";
 
 export function resolveLocale(value: unknown): Locale {
   return typeof value === "string" && (locales as readonly string[]).includes(value)

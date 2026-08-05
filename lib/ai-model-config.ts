@@ -94,6 +94,11 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   { key: "demo_dictation_enabled", kind: "flag", fallback: "true", group: "voice" },
   // Board de feedback
   { key: "feedback_classify_enabled", kind: "flag", fallback: "true", group: "feedback" },
+  // Dicter un retour, au board public comme dans le dashboard. Elle tourne sur
+  // les deux modèles de la voix (`transcription_model` puis `dictate_model`) :
+  // c'est la même prise, rangée dans d'autres champs. Le drapeau la coupe
+  // partout d'un coup — le micro disparaît, l'écriture reste.
+  { key: "feedback_voice_enabled", kind: "flag", fallback: "true", group: "feedback" },
   { key: "feedback_analysis_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "feedback" },
   { key: "feedback_embedding_model", kind: "model", fallback: "openai/text-embedding-3-small", group: "feedback" },
 ];

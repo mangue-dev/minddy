@@ -38,6 +38,18 @@ type DictateStatus = "idle" | "starting" | "recording" | "processing";
 export interface DictateButtonProps {
   /** Called with the transcribed text when recording completes. */
   onTranscription: (text: string) => void;
+  /**
+   * Remplace l'envoi par défaut à `/api/transcribe`. Reçoit la prise et la
+   * locale, rend le texte transcrit — ou `null` quand l'appelant a déjà dit
+   * l'échec à sa façon (le bouton se tait alors).
+   *
+   * Le point d'entrée de la transcription n'est pas le même partout : le board
+   * public a le sien (session visiteur, dépense imputée au owner), et une
+   * dictée de retour s'inscrit au ledger sous sa propre feature. Ce qui reste
+   * commun — capter le micro, l'onde, le chrono, la garde de silence — reste
+   * ici, et c'est bien pour ça que le crochet est une prop et pas un fork.
+   */
+  uploadAudio?: (blob: Blob, locale: string) => Promise<string | null>;
   /** Position the button absolutely (top-right). Defaults to inline-flex. */
   floating?: boolean;
   /** Disable the button (e.g. when streaming or submitting). */
@@ -128,6 +140,7 @@ function pickRecorderMimeType(): string | undefined {
 
 export function DictateButton({
   onTranscription,
+  uploadAudio,
   floating = false,
   disabled = false,
   tooltipLabel,
@@ -180,8 +193,34 @@ export function DictateButton({
     };
   }, [cleanupStream]);
 
+  // Le crochet d'envoi, lu par une ref : l'appelant le referme sur son propre
+  // état (le brouillon en cours, un run à reprendre) sans avoir à le mémoïser.
+  const uploadAudioRef = useRef(uploadAudio);
+  useEffect(() => {
+    uploadAudioRef.current = uploadAudio;
+  });
+
   const sendForTranscription = useCallback(
     async (blob: Blob) => {
+      const upload = uploadAudioRef.current;
+      if (upload) {
+        try {
+          const text = (await upload(blob, locale))?.trim() ?? "";
+          if (!isMountedRef.current) return;
+          // Même garde qu'en dessous : sans lettre ni chiffre, Whisper a meublé
+          // du silence. L'appelant, lui, a déjà dit ses propres échecs.
+          if (/[\p{L}\p{N}]/u.test(text)) onTranscription(text);
+          else if (text) toast.error(t("emptyResult"));
+        } catch (err) {
+          if (!isMountedRef.current) return;
+          console.error("[DictateButton] upload failed", err);
+          toast.error(t("error"));
+        } finally {
+          if (isMountedRef.current) setStatus("idle");
+        }
+        return;
+      }
+
       const formData = new FormData();
       formData.append("audio", blob, `dictate.${blob.type.includes("ogg") ? "ogg" : "webm"}`);
       // Language hint = the UI locale. Whisper's auto-detect is unreliable on
@@ -432,8 +471,12 @@ export function DictateButton({
                 type="button"
                 onClick={handleClick}
                 disabled={disabled || status === "starting" || status === "processing"}
+                // En enregistrement, le bouton ARRÊTE : c'est ça qu'il faut
+                // annoncer, quelle que soit l'étiquette au repos. Une infobulle
+                // qui promet un résultat (« on remplit le retour ») décrirait
+                // sinon un bouton qui fait l'inverse.
                 aria-label={
-                  tooltipLabel ?? (isRecording ? t("stop") : t("start"))
+                  isRecording ? t("stop") : (tooltipLabel ?? t("start"))
                 }
                 aria-pressed={isRecording}
                 className={cn(

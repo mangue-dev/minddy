@@ -164,6 +164,7 @@ export type BillableFeature =
   | "smart_assign"
   | "feedback_classify"
   | "feedback_analyze"
+  | "feedback_voice"
   | "embedding"
   | "agent_code"
   | "sandbox_compute"
@@ -208,11 +209,14 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
     barClass: "bg-blue-500",
   },
   { id: "dictation", features: ["dictation", "transcription"], barClass: "bg-amber-500" },
-  // Les retours : le tri d'un retour à son arrivée ET les embeddings, qui ne
-  // servent qu'à eux (rapprochement des doublons du board public).
+  // Les retours : le tri d'un retour à son arrivée, la dictée de celui qu'on
+  // écrit, ET les embeddings, qui ne servent qu'à eux (rapprochement des
+  // doublons du board public). La voix reste ici plutôt qu'avec la dictée des
+  // tickets : c'est la dépense d'un retour, et c'est cette ligne-là qu'on lit
+  // quand on se demande ce que coûte le board.
   {
     id: "feedback",
-    features: ["feedback_classify", "feedback_analyze", "embedding"],
+    features: ["feedback_classify", "feedback_analyze", "feedback_voice", "embedding"],
     barClass: "bg-emerald-500",
   },
   // Smart Assign a SA ligne, et non une moitié muette de « retours &

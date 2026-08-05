@@ -14,6 +14,27 @@ export type TranscribeAudioFormat =
   | "webm"
   | "aac";
 
+/**
+ * Le type MIME que le navigateur a réellement enregistré → le format attendu
+ * par OpenRouter, ou `null` si ce n'est pas de l'audio qu'on sait lire.
+ *
+ * Ici et pas dans chaque route : les quatre appelants (dictée authentifiée,
+ * démo de la landing, retour dicté) enregistrent avec le MÊME `MediaRecorder`,
+ * donc la table est la même — et une copie qui dérive fait un 400 sur un
+ * navigateur, jamais sur celui du développeur.
+ */
+export function resolveAudioFormat(mimeType: string): TranscribeAudioFormat | null {
+  const lower = mimeType.toLowerCase();
+  if (lower.includes("webm")) return "webm";
+  if (lower.includes("ogg")) return "ogg";
+  if (lower.includes("wav")) return "wav";
+  if (lower.includes("mpeg") || lower.includes("mp3")) return "mp3";
+  if (lower.includes("flac")) return "flac";
+  if (lower.includes("m4a") || lower.includes("mp4")) return "m4a";
+  if (lower.includes("aac")) return "aac";
+  return null;
+}
+
 export interface TranscribeAudioOptions {
   language?: string;
   temperature?: number;

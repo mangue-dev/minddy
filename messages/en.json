@@ -537,6 +537,7 @@
     "composerTitle": "Share feedback",
     "postTitlePlaceholder": "Summarize your need in one sentence",
     "postBodyPlaceholder": "Describe your need in detail",
+    "voiceTooltip": "Describe what you need out loud, we fill the feedback in",
     "submitPost": "Send",
     "similarTitle": "This may already exist. Vote instead:",
     "sortTop": "Popular",
@@ -792,7 +793,10 @@
     "rateLimitReached": "Dictation quota reached. Try again in {minutes} min.",
     "tooLarge": "Recording too large. Try a shorter dictation.",
     "error": "Transcription failed.",
-    "emptyResult": "No speech was detected."
+    "emptyResult": "No speech was detected.",
+    "unavailable": "Voice dictation isn't available right now.",
+    "inFlight": "Dictation in progress — one moment.",
+    "numoWorking": "Numo is writing the feedback…"
   },
   "Field": {
     "title": "Title",
@@ -2874,6 +2878,10 @@
         "label": "Automatic classification",
         "desc": "Sorts incoming feedback into categories, drops spam, hides sensitive content and publishes the rest to the board. Without it, every post waits for manual review."
       },
+      "feedback_voice_enabled": {
+        "label": "Dictated feedback",
+        "desc": "Opens the mic in both feedback composers — the public board and internal capture. The take is transcribed, then Numo writes it into the title and body; the spend goes to whoever speaks, or to the board owner for a visitor. Turned off, the mic disappears and typing stays."
+      },
       "feedback_analysis_model": {
         "label": "Feedback analysis",
         "desc": "Merges obvious duplicates on the board and suggests merges for the rest."
@@ -2969,6 +2977,7 @@
         "smart_assign": "Smart assignment",
         "feedback_classify": "Feedback classification",
         "feedback_analyze": "Feedback analysis",
+        "feedback_voice": "Dictated feedback",
         "embedding": "Embeddings",
         "agent_code": "Numo agent",
         "sandbox_compute": "Agent sandbox",

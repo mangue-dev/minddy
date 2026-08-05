@@ -4,10 +4,10 @@ import { getAppConfigValues } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import {
+  resolveAudioFormat,
   transcribeAudio,
-  type TranscribeAudioFormat,
 } from "@/lib/server/openrouter-transcribe";
-import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
+import { recordAiUsage, newRunId, type AiFeature } from "@/lib/server/ai-usage";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
   isPlanLimitError,
@@ -26,16 +26,15 @@ const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 const FALLBACK_MODEL = aiModelFallback("transcription_model");
 
-function resolveAudioFormat(mimeType: string): TranscribeAudioFormat | null {
-  const lower = mimeType.toLowerCase();
-  if (lower.includes("webm")) return "webm";
-  if (lower.includes("ogg")) return "ogg";
-  if (lower.includes("wav")) return "wav";
-  if (lower.includes("mpeg") || lower.includes("mp3")) return "mp3";
-  if (lower.includes("flac")) return "flac";
-  if (lower.includes("m4a") || lower.includes("mp4")) return "m4a";
-  if (lower.includes("aac")) return "aac";
-  return null;
+/**
+ * Sous quelle feature du ledger inscrire la prise. Par défaut `transcription`,
+ * la dictée d'un ticket ou d'un objectif. Une SEULE autre valeur est acceptée :
+ * la dictée d'un retour, qui se compte à part (côté utilisateur elle tombe dans
+ * « Retours » et non dans « Dictée vocale »). Allowlist, pas passe-plat — le
+ * client ne choisit pas librement une ligne de facturation.
+ */
+function resolveFeature(value: FormDataEntryValue | null): AiFeature {
+  return value === "feedback_voice" ? "feedback_voice" : "transcription";
 }
 
 export async function POST(request: NextRequest) {
@@ -121,6 +120,12 @@ export async function POST(request: NextRequest) {
   const arrayBuffer = await audio.arrayBuffer();
   const audioBase64 = Buffer.from(arrayBuffer).toString("base64");
 
+  // Un run par prise. Il est RENDU au client : l'étape suivante d'une dictée
+  // (le rangement par Numo) le repasse à sa route, et les deux appels se lisent
+  // alors comme une seule ligne au ledger.
+  const runId = newRunId();
+  const feature = resolveFeature(formData.get("feature"));
+
   try {
     const result = await transcribeAudio(model, audioBase64, format, apiKey, {
       language,
@@ -131,8 +136,8 @@ export async function POST(request: NextRequest) {
     // Suivi des coûts : appel unique (un run d'un seul appel). Best-effort.
     after(() =>
       recordAiUsage({
-        runId: newRunId(),
-        feature: "transcription",
+        runId,
+        feature,
         model,
         promptTokens: result.inputTokens || null,
         completionTokens: result.outputTokens || null,
@@ -146,6 +151,7 @@ export async function POST(request: NextRequest) {
     return Response.json({
       text: result.text,
       model,
+      runId,
       durationSeconds: result.seconds,
     });
   } catch (e) {
