@@ -11,6 +11,7 @@ import {
   Loader2,
   Megaphone,
   Mic,
+  WandSparkles,
 } from "lucide-react";
 import {
   Button,
@@ -51,13 +52,20 @@ export const SEGMENT_UI: Record<
   {
     icon: ComponentType<{ className?: string; strokeWidth?: number }>;
     text: string;
-    labelKey: "segmentAgents" | "segmentNumo" | "segmentDictation" | "segmentFeedback";
+    labelKey:
+      | "segmentAgents"
+      | "segmentNumo"
+      | "segmentDictation"
+      | "segmentFeedback"
+      | "segmentSmartAssign";
   }
 > = {
   agents: { icon: Bot, text: "text-violet-600 dark:text-violet-400", labelKey: "segmentAgents" },
   numo: { icon: NumoRowIcon, text: "text-blue-600 dark:text-blue-400", labelKey: "segmentNumo" },
   dictation: { icon: Mic, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
   feedback: { icon: Megaphone, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
+  // WandSparkles : l'icône de Smart Assign dans les réglages de projet.
+  smart_assign: { icon: WandSparkles, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentSmartAssign" },
 };
 
 const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {

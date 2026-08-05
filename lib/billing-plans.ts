@@ -170,7 +170,12 @@ export type BillableFeature =
   | "web_search"
   | "pr_review";
 
-export type UsageSegmentId = "agents" | "numo" | "dictation" | "feedback";
+export type UsageSegmentId =
+  | "agents"
+  | "numo"
+  | "dictation"
+  | "feedback"
+  | "smart_assign";
 
 export interface UsageSegment {
   id: UsageSegmentId;
@@ -203,11 +208,20 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
     barClass: "bg-blue-500",
   },
   { id: "dictation", features: ["dictation", "transcription"], barClass: "bg-amber-500" },
+  // Les retours : le tri d'un retour à son arrivée ET les embeddings, qui ne
+  // servent qu'à eux (rapprochement des doublons du board public).
   {
     id: "feedback",
-    features: ["feedback_classify", "feedback_analyze", "embedding", "smart_assign"],
+    features: ["feedback_classify", "feedback_analyze", "embedding"],
     barClass: "bg-emerald-500",
   },
+  // Smart Assign a SA ligne, et non une moitié muette de « retours &
+  // automatisations » : deux features qu'on n'arme pas ensemble, dont on ne se
+  // demande pas le coût ensemble. Elle porte son nom de produit — le nom
+  // « automatisations » désigne déjà les chaînes de règles (MIN-147), qui ne
+  // dépensent rien en propre et se lisent dans la ligne agents, celle des runs
+  // qu'elles lancent.
+  { id: "smart_assign", features: ["smart_assign"], barClass: "bg-fuchsia-500" },
 ];
 
 /** Multiple d'usage d'un plan vs Free (« 10× plus d'usage ») — pour l'UI, qui
