@@ -5,6 +5,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
 import { cn } from "mangue-ui";
+import { Arrows } from "@/components/editor-arrows";
 import {
   MENTION_HYDRATION_META,
   MentionNode,
@@ -103,6 +104,7 @@ export function MarkdownEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      Arrows,
       ...(hasMentions
         ? [
             MentionNode,

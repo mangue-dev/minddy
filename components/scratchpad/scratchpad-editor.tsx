@@ -20,6 +20,7 @@ import {
 } from "@/lib/scratchpad";
 import { isQuestionHeading } from "@/lib/plan";
 import { AgentBeam } from "@/components/agent-beam";
+import { Arrows } from "@/components/editor-arrows";
 import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
 import { ScratchpadParagraph } from "@/components/scratchpad/scratchpad-paragraph";
 import {
@@ -381,6 +382,7 @@ export function ScratchpadEditor({
     ScratchpadParagraph,
     ScratchpadTaskList,
     ScratchpadTaskItem,
+    Arrows,
     Markdown.configure({
       html: false,
       linkify: true,
