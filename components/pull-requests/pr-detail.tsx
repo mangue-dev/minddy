@@ -38,6 +38,7 @@ import {
   Github,
   Gitlab,
   MessageSquare,
+  MoreHorizontal,
   Reply,
   RotateCcw,
   Send,
@@ -643,6 +644,19 @@ export function PrDetail({
   const reviewUpToDate =
     !!currentHeadSha && reviewSession.reviewedHeadSha === currentHeadSha;
 
+  // Quatre libellés pour UN seul geste (faire relire par Numo) : ils disent où
+  // en est la passe. Le même texte sert aux trois affordances du même geste —
+  // l'entrée du menu Review, le bouton de repli sans compte git, et l'entrée du
+  // menu « … » du mobile —, d'où l'extraction : elles ne doivent jamais en dire
+  // des choses différentes.
+  const aiReviewLabel = aiReviewActive
+    ? t("numoReviewRunning")
+    : reviewUpToDate
+      ? t("numoReviewUpToDateShort")
+      : reviewSession.run
+        ? t("numoReviewRerun")
+        : t("aiReview");
+
   /**
    * La carte de la session de relecture, ou rien : elle est là dès qu'une
    * session existe sur cette PR, et elle y RESTE une fois terminée (MIN-168).
@@ -1065,100 +1079,160 @@ export function PrDetail({
             <PrStateBadge state={badgeState} icon />
           </div>
         ) : (
-          <div className="ml-auto flex items-center gap-1.5">
+          // Quatre boutons côte à côte tiennent sur un écran large et débordaient
+          // du téléphone : la grappe ne rétrécit pas (un libellé ne se coupe
+          // pas), elle poussait donc hors de l'écran. Elle RETOMBE à la ligne
+          // (`flex-wrap`) plutôt que de déborder, et sous `lg` tout ce qui n'est
+          // pas le geste principal — fusionner, ou proposer — passe sous un
+          // « … ». Ce qui reste visible est ce pour quoi on ouvre une PR sur son
+          // téléphone ; le reste est à un tap.
+          //
+          // Le seuil est `lg`, pas `md` : à `md` la page est DÉJÀ en deux
+          // colonnes, et le détail n'a que ce que la liste (320 px) et le rail
+          // lui laissent — la ligne complète y déborderait encore. Au-delà, elle
+          // tient, quitte à s'écrire sur deux lignes.
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
             {mergeBlockedByRepo ? (
               <span className="text-xs text-muted-foreground">{t("mergeBlockedByRepo")}</span>
             ) : null}
 
-            {/* « Demander des changements » a QUITTÉ le menu : c'est le seul
-                geste de review qui ne se contente pas de parler — il peut faire
-                travailler Numo —, et cette moitié-là ne demande AUCUNE identité
-                git. L'enterrer sous un chevron réservé aux comptes connectés
-                faisait perdre l'action à ceux qui n'ont justement qu'elle. Le
-                dialogue s'adapte : avec un compte, le verdict part aussi. */}
-            <Button variant="outline" size="sm" onClick={() => openReview("request_changes")}>
-              <NumoIcon animated={false} />
-              {t("reviewRequestChanges")}
-            </Button>
-
-            {/* Review — les verdicts qui ne font que PARLER (approuver,
-                commenter), donc réservés à qui a un compte git pour les signer ;
-                puis la relecture par Numo (MIN-141), séparée parce qu'elle ne
-                demande rien et part au clic.
-
-                « Faire vérifier par Numo » RESTE quel que soit le compte git :
-                c'est un geste d'AGENT, il ne dépend d'aucune identité humaine.
-                Quand c'est la seule entrée qui survit, le menu à une entrée
-                devient un bouton simple — un chevron qui n'ouvre qu'une ligne
-                est une fausse promesse. */}
-            {canComment ? (
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    {aiReviewActive ? <Spinner /> : null}
-                    {t("review")}
-                    <ChevronDown className="size-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => openReview("approve")}>
-                    <Check />
-                    {t("reviewApprove")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => openReview("comment")}>
-                    <MessageSquare />
-                    {t("reviewComment")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    // Déjà relu ce diff, ou une passe en cours : l'entrée reste
-                    // VISIBLE et se grise, avec son libellé qui dit pourquoi.
-                    disabled={aiReviewActive || reviewUpToDate}
-                    onSelect={openAiReviewDialog}
-                  >
-                    <NumoIcon animated={false} />
-                    {aiReviewActive
-                      ? t("numoReviewRunning")
-                      : reviewUpToDate
-                        ? t("numoReviewUpToDateShort")
-                        : reviewSession.run
-                          ? t("numoReviewRerun")
-                          : t("aiReview")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={aiReviewActive || reviewUpToDate}
-                onClick={openAiReviewDialog}
-              >
-                {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
-                {/* Mêmes quatre libellés que l'entrée du menu : c'est le MÊME
-                    geste, et c'est ici la seule affordance de qui n'a pas de
-                    compte git — elle ne doit pas en dire moins. */}
-                {aiReviewActive
-                  ? t("numoReviewRunning")
-                  : reviewUpToDate
-                    ? t("numoReviewUpToDateShort")
-                    : reviewSession.run
-                      ? t("numoReviewRerun")
-                      : t("aiReview")}
+            {/* ── Écran large : chaque geste porte son nom ─────────────────── */}
+            <div className="hidden items-center gap-1.5 lg:flex">
+              {/* « Demander des changements » a QUITTÉ le menu : c'est le seul
+                  geste de review qui ne se contente pas de parler — il peut faire
+                  travailler Numo —, et cette moitié-là ne demande AUCUNE identité
+                  git. L'enterrer sous un chevron réservé aux comptes connectés
+                  faisait perdre l'action à ceux qui n'ont justement qu'elle. Le
+                  dialogue s'adapte : avec un compte, le verdict part aussi. */}
+              <Button variant="outline" size="sm" onClick={() => openReview("request_changes")}>
+                <NumoIcon animated={false} />
+                {t("reviewRequestChanges")}
               </Button>
-            )}
 
-            {canWrite ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmAction({ kind: "close" })}
-                disabled={!!acting || isWorking}
-              >
-                {acting === "close" ? <Spinner /> : <X />}
-                {t("close")}
-              </Button>
-            ) : null}
+              {/* Review — les verdicts qui ne font que PARLER (approuver,
+                  commenter), donc réservés à qui a un compte git pour les signer ;
+                  puis la relecture par Numo (MIN-141), séparée parce qu'elle ne
+                  demande rien et part au clic.
+
+                  « Faire vérifier par Numo » RESTE quel que soit le compte git :
+                  c'est un geste d'AGENT, il ne dépend d'aucune identité humaine.
+                  Quand c'est la seule entrée qui survit, le menu à une entrée
+                  devient un bouton simple — un chevron qui n'ouvre qu'une ligne
+                  est une fausse promesse. */}
+              {canComment ? (
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      {aiReviewActive ? <Spinner /> : null}
+                      {t("review")}
+                      <ChevronDown className="size-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => openReview("approve")}>
+                      <Check />
+                      {t("reviewApprove")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => openReview("comment")}>
+                      <MessageSquare />
+                      {t("reviewComment")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      // Déjà relu ce diff, ou une passe en cours : l'entrée reste
+                      // VISIBLE et se grise, avec son libellé qui dit pourquoi.
+                      disabled={aiReviewActive || reviewUpToDate}
+                      onSelect={openAiReviewDialog}
+                    >
+                      <NumoIcon animated={false} />
+                      {aiReviewLabel}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={aiReviewActive || reviewUpToDate}
+                  onClick={openAiReviewDialog}
+                >
+                  {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
+                  {/* Mêmes quatre libellés que l'entrée du menu : c'est le MÊME
+                      geste, et c'est ici la seule affordance de qui n'a pas de
+                      compte git — elle ne doit pas en dire moins. */}
+                  {aiReviewLabel}
+                </Button>
+              )}
+
+              {canWrite ? (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setConfirmAction({ kind: "close" })}
+                  disabled={!!acting || isWorking}
+                >
+                  {acting === "close" ? <Spinner /> : <X />}
+                  {t("close")}
+                </Button>
+              ) : null}
+            </div>
+
+            {/* ── Écran étroit : les mêmes gestes, sous un « … » ───────────── */}
+            {/* Un seul menu à plat, dans l'ordre de la ligne large : demander des
+                changements, les verdicts qui parlent (si compte git), la
+                relecture de Numo, puis fermer, détaché parce qu'il termine la
+                PR. Rien n'est retiré au passage — l'écran étroit perd la place,
+                pas les actions. */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="lg:hidden"
+                  aria-label={t("moreActions")}
+                >
+                  {aiReviewActive ? <Spinner /> : <MoreHorizontal />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => openReview("request_changes")}>
+                  <NumoIcon animated={false} />
+                  {t("reviewRequestChanges")}
+                </DropdownMenuItem>
+                {canComment ? (
+                  <>
+                    <DropdownMenuItem onSelect={() => openReview("approve")}>
+                      <Check />
+                      {t("reviewApprove")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => openReview("comment")}>
+                      <MessageSquare />
+                      {t("reviewComment")}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+                <DropdownMenuItem
+                  disabled={aiReviewActive || reviewUpToDate}
+                  onSelect={openAiReviewDialog}
+                >
+                  <NumoIcon animated={false} />
+                  {aiReviewLabel}
+                </DropdownMenuItem>
+                {canWrite ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      disabled={!!acting || isWorking}
+                      onSelect={() => setConfirmAction({ kind: "close" })}
+                    >
+                      <X />
+                      {t("close")}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {!canWrite ? null : isDraft ? (
               // Une PR brouillon ne se fusionne pas : le geste qu'elle appelle est

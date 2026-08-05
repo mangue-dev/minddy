@@ -2517,6 +2517,7 @@
     "readyForReview": "Prête pour la review",
     "readyForReviewToast": "Pull request marquée prête pour la review.",
     "review": "Review",
+    "moreActions": "Actions de la pull request",
     "reviewApprove": "Approuver",
     "reviewRequestChanges": "Demander des changements",
     "reviewComment": "Commenter",
