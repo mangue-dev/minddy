@@ -2608,7 +2608,11 @@
     "imageAbsent": "Rien ici",
     "imageFailed": "Aperçu indisponible",
     "fileModified": "Modifié",
-    "noContentChange": "Renommé seulement — aucun changement de contenu."
+    "noContentChange": "Renommé seulement — aucun changement de contenu.",
+    "fileTreeHint": "Parcourir les fichiers modifiés",
+    "fileTreeTitle": "Fichiers modifiés",
+    "linesAdded": "{count, plural, one {# ligne ajoutée} other {# lignes ajoutées}}",
+    "linesRemoved": "{count, plural, one {# ligne supprimée} other {# lignes supprimées}}"
   },
   "Triage": {
     "projectNotFound": "Projet introuvable",

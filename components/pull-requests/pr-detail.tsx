@@ -1337,12 +1337,28 @@ export function PrDetail({
         )}
       </div>
 
+      {/* Le fondu s'ÉTEINT sous l'onglet Fichiers (MIN-182). Un masque délave
+          tout ce qu'il contient, éléments collants compris : l'en-tête de
+          fichier du diff devrait sinon s'arrêter 2rem plus bas pour rester net,
+          et un en-tête qui flotte à 32 px du bord se voit. Le fondu dit « il y a
+          du texte au-dessus » — l'en-tête collant le dit mieux, et en nommant le
+          fichier. Sous les deux autres onglets il reste, il n'y a rien qui colle
+          à protéger.
+
+          `onScroll` continue de tourner : la mesure ne coûte rien et le fondu
+          revient juste, sans transition ratée, dès qu'on change d'onglet. */}
       <div
         ref={feedFade.ref}
-        {...feedFade.scrollProps}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6"
+        onScroll={feedFade.scrollProps.onScroll}
+        style={tab === "files" ? undefined : feedFade.scrollProps.style}
+        // Le padding VERTICAL est descendu d'un cran, sur l'enveloppe (MIN-182).
+        // Mesuré : `position: sticky` se cale sur le CONTENU du conteneur de
+        // défilement, pas sur son bord — un `py-6` ici arrêtait l'en-tête de
+        // fichier 24 px trop bas, et `scroll-padding-top: 0` n'y change rien.
+        // Descendu, il défile avec le contenu et l'en-tête colle au bandeau.
+        className="min-h-0 flex-1 overflow-y-auto px-4 md:px-6"
       >
-        <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6">
           {/* Titre de la PR + méta. Le TITRE de la pull request, et non celui du
               ticket : depuis MIN-143 elles ne vont plus par paires, et une PR
               humaine peut n'en avoir aucun. (Numo nomme les siennes

@@ -80,18 +80,22 @@ export function PrCommitDiffSheet({
             ) : null}
           </SheetDescription>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        {/* Pas de padding en HAUT du conteneur qui défile : `position: sticky` se
+            cale sur son contenu, pas sur son bord, et l'en-tête de fichier du
+            diff s'arrêterait 16 px trop bas (MIN-182). Il est rendu à chaque
+            branche, où il défile avec le contenu. */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           {loading ? (
             <div className="flex h-full items-center justify-center">
               <Spinner className="size-5 text-muted-foreground" />
             </div>
           ) : !diff ? (
-            <p className="text-sm text-muted-foreground">{t("commitDiffUnavailable")}</p>
+            <p className="pt-4 text-sm text-muted-foreground">{t("commitDiffUnavailable")}</p>
           ) : diff.files.length === 0 ? (
             // Un commit vide, ou un commit de fusion dont le premier parent
             // porte déjà tout : la forge répond zéro fichier, ce n'est pas une
             // panne.
-            <p className="text-sm text-muted-foreground">{t("commitDiffEmpty")}</p>
+            <p className="pt-4 text-sm text-muted-foreground">{t("commitDiffEmpty")}</p>
           ) : (
             <PrDiff
               files={diff.files}
@@ -99,6 +103,7 @@ export function PrCommitDiffSheet({
               prUrl={diff.url}
               provider={diff.provider ?? provider}
               readOnly
+              className="pt-4"
             />
           )}
         </div>

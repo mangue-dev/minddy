@@ -2608,7 +2608,11 @@
     "imageAbsent": "Nothing here",
     "imageFailed": "Preview unavailable",
     "fileModified": "Modified",
-    "noContentChange": "Renamed only — no content change."
+    "noContentChange": "Renamed only — no content change.",
+    "fileTreeHint": "Browse the changed files",
+    "fileTreeTitle": "Changed files",
+    "linesAdded": "{count, plural, one {# line added} other {# lines added}}",
+    "linesRemoved": "{count, plural, one {# line removed} other {# lines removed}}"
   },
   "Triage": {
     "projectNotFound": "Project not found",

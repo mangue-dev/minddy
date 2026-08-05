@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge, cn, SegmentedControl, toast, useIsMobile, useTheme } from "mangue-ui";
 import { ChevronDown, ChevronRight, WrapText } from "lucide-react";
@@ -33,6 +34,13 @@ import {
   DIFF_UNSAFE_CSS,
 } from "@/lib/diff-theme";
 import { PrImageDiff } from "@/components/pull-requests/pr-image-diff";
+import { PrFileTreeButton } from "@/components/pull-requests/pr-file-tree";
+import {
+  fileAnchorId,
+  fileStatusOf,
+  FILE_STATUS_LABELS,
+  type FileStatus,
+} from "@/lib/pr-file-tree";
 import { groupReviewThreads, type ReviewThreadState } from "@/lib/pr-review-threads";
 import type { ReviewCommentReaction } from "@/lib/pr-review-reactions";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -123,27 +131,6 @@ const FILE_STATUS_STYLES: Record<FileStatus, string> = {
   modified:
     "border-blue-600/20 bg-blue-600/10 text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/15 dark:text-blue-400",
 };
-
-const FILE_STATUS_LABELS = {
-  added: "fileAdded",
-  removed: "fileRemoved",
-  renamed: "fileRenamed",
-  modified: "fileModified",
-} as const satisfies Record<FileStatus, string>;
-
-type FileStatus = "added" | "removed" | "renamed" | "modified";
-
-/**
- * Statut normalisé d'un fichier. GitHub en connaît plus que les quatre qu'on
- * peint (`copied`, `changed`, `unchanged`) : tout ce qui n'est pas un ajout, un
- * retrait ou un renommage se dit « modifié ». `previous_filename` sert de
- * second témoin du renommage — GitLab le pose aussi.
- */
-function fileStatusOf(file: PullRequestFile): FileStatus {
-  if (file.status === "added" || file.status === "removed") return file.status;
-  if (file.status === "renamed" || file.previous_filename) return "renamed";
-  return "modified";
-}
 
 function FileStatusBadge({ status }: { status: FileStatus }) {
   const t = useTranslations("PullRequests");
@@ -327,6 +314,7 @@ function PrDiffFile({
   canResolve,
   collapsed,
   onToggle,
+  registerCard,
   reviewComments,
   reviewThreads,
   reviewReactions,
@@ -351,6 +339,8 @@ function PrDiffFile({
   canResolve?: boolean;
   collapsed: boolean;
   onToggle: () => void;
+  /** Confie la carte au parent, qui est celui qui sait défiler jusqu'à elle. */
+  registerCard: (path: string, node: HTMLElement | null) => void;
   /** Commentaires de review de CE fichier (déjà filtrés par le parent). */
   reviewComments: PullRequestReviewComment[];
   /** État des fils de la PR, TOUS fichiers confondus : l'appariement se fait par
@@ -362,6 +352,11 @@ function PrDiffFile({
   onCommentPosted: () => unknown;
 }) {
   const t = useTranslations("PullRequests");
+
+  const setCardRef = useCallback(
+    (node: HTMLDivElement | null) => registerCard(file.filename, node),
+    [registerCard, file.filename],
+  );
 
   // Brouillons indexés par clé d'ancre : un envoi qui échoue GARDE son texte, et
   // ouvrir un second composer ne détruit pas le premier. Ils ne sont vidés qu'au
@@ -729,11 +724,36 @@ function PrDiffFile({
   const missing = fileDiff ? null : noPatchKind(file);
 
   return (
-    <div className="overflow-hidden rounded-md border border-border">
+    // `overflow-clip` et non `overflow-hidden` : les deux découpent les coins
+    // arrondis, mais `hidden` fait de la carte un CONTENEUR DE DÉFILEMENT, ce
+    // qui neutralise le `sticky` de l'en-tête (il collerait au bord de la carte,
+    // c'est-à-dire nulle part). `clip` ne défile pas, donc l'en-tête colle au
+    // vrai conteneur, celui de l'hôte.
+    <div
+      ref={setCardRef}
+      id={fileAnchorId(file.filename)}
+      className="overflow-clip rounded-md border border-border"
+    >
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-2 bg-card px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60"
+        className={cn(
+          // Collé au bord haut, partout : `top-0` et rien d'autre. Les trois
+          // hôtes ont un conteneur qui commence sous un en-tête (le bandeau de
+          // la PR, celui des deux feuilles), donc l'en-tête de fichier vient s'y
+          // poser contre — et un décalage, si petit soit-il, se lirait comme un
+          // élément qui flotte.
+          //
+          // Collant DANS SA CARTE : le `sticky` est borné par son bloc
+          // conteneur, donc l'en-tête du fichier suivant chasse le précédent en
+          // arrivant. C'est le comportement voulu, et il est gratuit — surtout
+          // ne pas fabriquer un en-tête flottant unique par-dessus la liste.
+          "sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60",
+          // Le diff a le MÊME fond que la carte (`--diffs-light-bg: var(--card)`) :
+          // sans ce trait, l'en-tête collé flotterait au milieu du code sans
+          // qu'on voie où il commence.
+          collapsed ? null : "border-b border-border",
+        )}
       >
         {collapsed ? (
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
@@ -876,6 +896,41 @@ export function PrDiff({
   const wrap = wrapChoice ?? isMobile;
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
+  /** Les cartes montées, par chemin — ce que l'arbre vise quand on clique une ligne. */
+  const cards = useRef(new Map<string, HTMLElement>());
+  const registerCard = useCallback((path: string, node: HTMLElement | null) => {
+    if (node) cards.current.set(path, node);
+    else cards.current.delete(path);
+  }, []);
+
+  /**
+   * Emmène au fichier : on le déplie s'il était replié, PUIS on défile. L'ordre
+   * n'est pas cosmétique — défiler vers une carte encore repliée viserait une
+   * boîte de 40 px, et le dépliage qui suit ferait pousser le diff ailleurs.
+   *
+   * `flushSync` plutôt qu'un `requestAnimationFrame` : il garantit que le
+   * dépliage est DANS LE DOM avant qu'on mesure, là où l'image suivante n'est
+   * qu'un pari sur l'ordonnancement de React.
+   */
+  const jumpToFile = useCallback((path: string) => {
+    flushSync(() => {
+      setCollapsed((prev) => {
+        if (!prev.has(path)) return prev;
+        const next = new Set(prev);
+        next.delete(path);
+        return next;
+      });
+    });
+    const card = cards.current.get(path);
+    card?.scrollIntoView({ block: "start" });
+    // Le focus SUIT le saut, sur l'en-tête du fichier visé (le premier bouton de
+    // la carte). Sans ça il resterait sur le compteur, en haut de la vue, alors
+    // que l'oeil est vingt fichiers plus bas — et Radix, en le rendant au
+    // déclencheur à la fermeture du panneau, y ramènerait le défilement avec.
+    // `preventScroll` : le cadrage vient d'être fait, le focus n'a pas à le refaire.
+    card?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+  }, []);
+
   const commentsByPath = useMemo(() => {
     const map = new Map<string, PullRequestReviewComment[]>();
     for (const c of reviewComments) {
@@ -935,7 +990,9 @@ export function PrDiff({
   );
 
   if (files.length === 0) {
-    return <p className="text-sm text-muted-foreground">{t("noDiff")}</p>;
+    // `className` porte l'espacement que l'hôte attend autour du diff : le
+    // perdre ici collerait le message au bord.
+    return <p className={cn("text-sm text-muted-foreground", className)}>{t("noDiff")}</p>;
   }
 
   const totalAdd = files.reduce((s, f) => s + f.additions, 0);
@@ -953,13 +1010,15 @@ export function PrDiff({
     <PrDiffWorkers>
       <div className={cn("pr-diff-view flex flex-col gap-2", className)}>
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            {t("fileCount", { count: files.length })}
-            <span className="ml-2 tabular-nums text-emerald-600 dark:text-emerald-400">
-              +{totalAdd}
-            </span>
-            <span className="ml-1 tabular-nums text-red-600 dark:text-red-400">−{totalDel}</span>
-          </p>
+          {/* Le compteur EST le déclencheur de l'arbre : il occupait déjà cette
+              place et dit déjà de quoi l'arbre parle. Un bouton de plus dans la
+              barre serait un chrome que personne n'a demandé. */}
+          <PrFileTreeButton
+            files={files}
+            totalAdditions={totalAdd}
+            totalDeletions={totalDel}
+            onSelect={jumpToFile}
+          />
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -1005,6 +1064,7 @@ export function PrDiff({
               canResolve={canResolve}
               collapsed={collapsed.has(f.filename)}
               onToggle={() => toggle(f.filename)}
+              registerCard={registerCard}
               reviewComments={commentsByPath.get(f.filename) ?? NO_COMMENTS}
               reviewThreads={reviewThreads}
               reviewReactions={reviewReactions}

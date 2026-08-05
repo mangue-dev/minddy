@@ -67,13 +67,17 @@ export function AgentDiffSheet({
             <SheetDescription>{t("diffDescription")}</SheetDescription>
           )}
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        {/* Pas de padding en HAUT du conteneur qui défile : `position: sticky` se
+            cale sur son contenu, pas sur son bord, et l'en-tête de fichier du
+            diff s'arrêterait 16 px trop bas (MIN-182). Il est rendu à chaque
+            branche, où il défile avec le contenu. */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           {loading ? (
             <div className="flex h-full items-center justify-center">
               <Spinner className="size-5 text-muted-foreground" />
             </div>
           ) : files.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("diffEmpty")}</p>
+            <p className="pt-4 text-sm text-muted-foreground">{t("diffEmpty")}</p>
           ) : (
             // Vue diff de la CONVERSATION : elle n'a qu'un run à donner — sa
             // session n'a parfois aucune PR (compare base…branche). Elle passe
@@ -89,6 +93,7 @@ export function AgentDiffSheet({
                 prUrl={url}
                 provider={provider}
                 readOnly
+                className="pt-4"
               />
             </PrEndpointProvider>
           )}
