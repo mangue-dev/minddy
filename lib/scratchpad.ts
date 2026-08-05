@@ -218,8 +218,10 @@ export interface ScratchpadPreviewSection {
 }
 
 /**
- * Ce qui RESTE à faire dans la note, groupé par section — l'aperçu que l'accueil
- * affiche du carnet (components/home/home-scratchpad-section.tsx).
+ * Ce qui RESTE à faire dans la note, groupé par section — de quoi en donner un
+ * aperçu court sans l'ouvrir. Sans consommateur depuis que l'accueil s'est
+ * réduit au salut et au composer ; gardé (et couvert) pour la prochaine surface
+ * qui voudra résumer le carnet.
  *
  * « Reste » = ni terminé, ni annulé, ni une question : sous un titre
  * `## Questions`, une case cochée répond à une question, elle ne livre pas un

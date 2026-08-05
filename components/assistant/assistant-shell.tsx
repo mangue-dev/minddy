@@ -10,7 +10,7 @@ import {
   forwardRef,
 } from "react";
 import { useTranslations } from "next-intl";
-import { History, Maximize2, Minimize2, Plus, SquarePen, X } from "lucide-react";
+import { History, Maximize2, Minimize2, Plus, X } from "lucide-react";
 import {
   Button,
   cn,
@@ -54,12 +54,9 @@ import {
   contextChips,
   withPinnedContext,
 } from "@/lib/assistant-context";
-import { useNumoMembers } from "@/lib/use-numo-mentionables";
-import { useMentionSources } from "@/lib/use-mention-sources";
+import { useNumoMentionables } from "@/lib/use-numo-mentionables";
+import { useSlashCommands } from "@/components/assistant/slash-menu";
 import { useProjects } from "@/lib/projects-context";
-import { displayName } from "@/lib/display-name";
-import type { MentionOption } from "@/components/mention-suggest";
-import type { SlashCommandOption } from "@/components/assistant/slash-menu";
 import type {
   AssistantCommandId,
   AssistantMention,
@@ -74,12 +71,18 @@ const STARTER_KEYS = ["s1", "s2", "s3", "s4"] as const;
 export type AssistantDisplayMode = "compact" | "expanded";
 
 export interface AssistantShellHandle {
-  /** Send a message. `projectId` null = global mode. The optional
-   *  pageContext rides on this one send (used by contextual one-shot opens). */
+  /** Send a message. `projectId` null = global mode. Ce qui suit ne vaut que
+   *  pour CET envoi : le contexte de page des ouvertures contextuelles, et les
+   *  mentions et la commande du composer qui a écrit le message ailleurs (la
+   *  home). `pageContext` absent = celui du shell. */
   sendMessage: (
     projectId: string | null,
     message: string,
-    pageContext?: AssistantPageContext | null,
+    options?: {
+      pageContext?: AssistantPageContext | null;
+      mentions?: AssistantMention[];
+      command?: AssistantCommandId;
+    },
   ) => void;
   /** Pre-fill the composer without sending. */
   fill: (text: string) => void;
@@ -215,45 +218,7 @@ export const AssistantShell = forwardRef<
 
   // Mentions « @ » dans le texte : la liste ne se charge qu'à la première
   // frappe d'un « @ » (et reste ensuite en cache).
-  const [mentionsWanted, setMentionsWanted] = useState(false);
-  const { members } = useNumoMembers(mentionsWanted, projectId);
-  // Tickets et objectifs viennent de l'index de la palette, comme les mentions
-  // d'une description : il porte déjà tout, de tous mes projets.
-  const { issues, objectives, armNow } = useMentionSources(projectId);
-  const mentionables = useMemo<MentionOption[]>(
-    () => [
-      ...members.map((m) => ({
-        type: "member" as const,
-        id: m.user_id,
-        label: displayName(m),
-        avatarSeed: m.avatar_seed,
-        keywords: m.email ? [m.email] : [],
-      })),
-      ...projects.map((p) => ({
-        type: "project" as const,
-        id: p.id,
-        label: p.name,
-        iconUrl: p.icon_url,
-        keywords: [p.key],
-      })),
-      // Le TITRE en second rang, et cherchable : on retrouve « le ticket sur
-      // les webhooks » sans en connaître le numéro.
-      ...issues.map((i) => ({
-        type: "issue" as const,
-        id: i.id,
-        label: i.identifier,
-        detail: i.title,
-        keywords: [i.title],
-      })),
-      ...objectives.map((o) => ({
-        type: "objective" as const,
-        id: o.id,
-        label: o.name,
-        color: o.color,
-      })),
-    ],
-    [members, projects, issues, objectives],
-  );
+  const { mentionables, onMentionQuery } = useNumoMentionables(projectId);
 
   // Read by the send handlers without stale closures. The host may set the
   // context the same tick it dispatches a one-shot send, so the imperative
@@ -273,9 +238,14 @@ export const AssistantShell = forwardRef<
   useImperativeHandle(
     ref,
     () => ({
-      sendMessage: (pid, msg, ctx) =>
+      sendMessage: (pid, msg, opts) =>
         sendMessage(pid, msg, {
-          pageContext: ctx !== undefined ? ctx : effectiveContextRef.current,
+          pageContext:
+            opts?.pageContext !== undefined
+              ? opts.pageContext
+              : effectiveContextRef.current,
+          ...(opts?.mentions?.length ? { mentions: opts.mentions } : {}),
+          ...(opts?.command ? { command: opts.command } : {}),
         }),
       fill: (text) => chatInputRef.current?.fill(text),
     }),
@@ -299,21 +269,7 @@ export const AssistantShell = forwardRef<
     [projectId, sendMessage]
   );
 
-  // Les commandes « / » du composer (MIN-159) — ids canoniques, libellés
-  // localisés. Les keywords portent les deux langues : « /create » trouve la
-  // commande même quand l'interface est en français, et inversement.
-  const slashCommands = useMemo<SlashCommandOption[]>(
-    () => [
-      {
-        id: "create-issue",
-        label: t("slashCreateIssueLabel"),
-        description: t("slashCreateIssueDescription"),
-        icon: SquarePen,
-        keywords: ["create issue", "créer ticket"],
-      },
-    ],
-    [t],
-  );
+  const slashCommands = useSlashCommands();
 
   // Réponse envoyée depuis une carte de questions ask_user (MIN-86) : part comme
   // un message utilisateur normal — le tool result « awaiting_user_response » est
@@ -818,12 +774,7 @@ export const AssistantShell = forwardRef<
                   beam={isBusy}
                   noBorder={!hasMessages}
                   mentionables={mentionables}
-                  onMentionQuery={(active) => {
-                    if (active) {
-                      setMentionsWanted(true);
-                      armNow();
-                    }
-                  }}
+                  onMentionQuery={onMentionQuery}
                   commands={slashCommands}
                   contextSlot={
                     <AssistantContextBar

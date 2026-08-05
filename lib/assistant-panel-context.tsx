@@ -12,7 +12,11 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
-import type { AssistantPageContext } from "@/lib/assistant-types";
+import type {
+  AssistantCommandId,
+  AssistantMention,
+  AssistantPageContext,
+} from "@/lib/assistant-types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { trackEvent } from "@/lib/analytics";
 
@@ -24,6 +28,14 @@ export interface OpenAssistantOptions {
   projectId?: string | null;
   /** Auto-send a one-shot message right after opening. */
   prompt?: string;
+  /**
+   * Ce que le « @ » et le « / » du composer d'origine ont posé dans `prompt`.
+   * L'accueil ouvre son propre composer, mentions et commande comprises : sans
+   * ces deux-là, le texte arriverait bien à Numo mais dépouillé de ce qu'il
+   * désigne — une mention redevenue du texte, une commande sans effet.
+   */
+  mentions?: AssistantMention[];
+  command?: AssistantCommandId;
   /** Pre-fill the composer without sending (one-shot). */
   draft?: string;
   /**

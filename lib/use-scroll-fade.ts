@@ -35,8 +35,8 @@ function maskImage(
  *
  * Works the same on a box that only CLIPS (`overflow: hidden`): nothing scrolls,
  * so only the trailing edge ever fades — which is exactly the "there is more
- * text below" of a preview (components/home/home-scratchpad-section.tsx). Such a
- * preview wants a longer ramp than a scroller's edge hint, hence `fade`.
+ * text below" of a truncated preview. Such a preview wants a longer ramp than a
+ * scroller's edge hint, hence `fade`.
  */
 export function useScrollFade<T extends HTMLElement>(
   axis: "x" | "y" = "y",

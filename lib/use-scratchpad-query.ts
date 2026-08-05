@@ -92,11 +92,10 @@ export function useScratchpadProgress(): PlanProgress {
 }
 
 /**
- * La note ELLE-MÊME, depuis ce même cache toujours chaud : l'aperçu de l'accueil
- * (components/home/home-scratchpad-section.tsx) montre les tâches qui restent,
- * groupées par section, et n'a donc pas que le compte à lire. Le GET est le même
- * que celui du badge — une seule requête pour les deux, et le pont temps réel
- * les rafraîchit ensemble.
+ * La note ELLE-MÊME, depuis ce même cache toujours chaud : une surface qui
+ * montre les tâches qui restent, groupées par section, n'a pas que le compte à
+ * lire. Le GET est le même que celui du badge — une seule requête pour les
+ * deux, et le pont temps réel les rafraîchit ensemble.
  */
 export function useScratchpadSummary(): { content: string; progress: PlanProgress } {
   const { data } = useQuery({

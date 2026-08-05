@@ -918,3 +918,26 @@ nav[aria-label="Navigation"]
       0 0 0 7px color-mix(in oklab, var(--ring) 22%, transparent);
   }
 }
+
+/* ─── Le shimmer balaie dans le sens de la lecture ────────────────────────────
+   `text-shimmer` (mangue-ui) est le signal « ça tourne » des surfaces de Numo :
+   l'action en vol d'un appel d'outil, l'en-tête d'un accordéon de travail, le
+   titre d'un bloc de raisonnement, la ligne d'une relecture de PR. Une bande
+   claire traverse un texte éteint — et jusqu'ici elle le traversait de DROITE à
+   GAUCHE, à rebours de la lecture.
+
+   La cause est un signe, pas une durée. Avec `background-size: 300%`, un
+   `background-position` de X% décale l'image de (largeur − 3×largeur)·X, donc
+   vers la GAUCHE à mesure que X grandit : à 0% la bande (au milieu du dégradé)
+   est à 1,5 largeur À DROITE du texte, à 100% elle est à 0,5 largeur à gauche.
+   Balayer avec le texte, c'est donc aller de 100% à 0%.
+
+   Échanger les deux bornes suffit, et il ne faut toucher qu'à elles : c'est
+   parce que la bande est hors du texte AUX DEUX bouts que les extrêmes sont
+   identiques et que la boucle n'a pas de couture. On redéfinit les seules
+   images-clés, pas l'utilitaire — mangue-ui arrive par l'@import du haut, cette
+   règle est plus bas, elle gagne. À retirer quand mangue-ui > 0.5.0 la porte. */
+@keyframes text-shimmer {
+  from { background-position: 100% center; }
+  to { background-position: 0% center; }
+}

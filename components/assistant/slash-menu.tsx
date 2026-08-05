@@ -4,7 +4,9 @@
 // liste de mentions (mention-suggest), pour les Skills : taper « / » en début
 // de message ouvre la liste, choisir pose la commande en pilule dans le texte.
 
-import type { LucideIcon } from "lucide-react";
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
+import { SquarePen, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui";
 import type { AssistantCommandId } from "@/lib/assistant-types";
 
@@ -17,6 +19,31 @@ export interface SlashCommandOption {
   icon: LucideIcon;
   /** Termes de recherche en plus du libellé (l'alias de l'autre langue). */
   keywords?: string[];
+}
+
+/**
+ * Les commandes « / » offertes par les composers de Numo (MIN-159) — ids
+ * canoniques, libellés localisés. Une seule table pour toutes les surfaces qui
+ * lui parlent (le panneau, l'accueil) : une commande ajoutée ici s'ouvre des
+ * deux côtés, et son libellé ne peut pas diverger de l'une à l'autre.
+ *
+ * Les keywords portent les deux langues : « /create » trouve la commande même
+ * quand l'interface est en français, et inversement.
+ */
+export function useSlashCommands(): SlashCommandOption[] {
+  const t = useTranslations("Assistant");
+  return useMemo(
+    () => [
+      {
+        id: "create-issue",
+        label: t("slashCreateIssueLabel"),
+        description: t("slashCreateIssueDescription"),
+        icon: SquarePen,
+        keywords: ["create issue", "créer ticket"],
+      },
+    ],
+    [t],
+  );
 }
 
 /** Les commandes qui correspondent à la requête tapée après le « / ». */
