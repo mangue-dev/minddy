@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   Button,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -15,35 +18,30 @@ import {
   DropdownMenuTrigger,
   Spinner,
   Switch,
-  cn,
   toast,
 } from "mangue-ui";
-import { ArrowUpDown, Check, ChevronDown, MessagesSquare, Megaphone } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, ListFilter, MessagesSquare, Megaphone } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyScene } from "@/components/empty-scene";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { SearchMenu } from "@/components/search-menu";
+import { checkedProps } from "@/components/search-select";
 import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
+import { HelpHint } from "@/components/settings/help-hint";
 import {
   FEEDBACK_PUBLIC_STATUSES,
-  type FeedbackPostStatus,
-  type PublicCategory,
   type PublicIdentity,
   type PublicPost,
+  type PublicStatusFilter,
   type SimilarPost,
 } from "@/lib/feedback/types";
-import {
-  createPostAction,
-  findSimilarPostsAction,
-  togglePostVoteAction,
-} from "./actions";
+import { createPostAction, findSimilarPostsAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
-  CategoryTag,
   FEEDBACK_TO_ISSUE_STATUS,
-  FeedbackStatusBadge,
-  VoteButton,
+  FeedbackPostRow,
 } from "./feedback-bits";
 
 /**
@@ -62,9 +60,8 @@ export function FeedbackBoardClient({
   basePath,
   posts,
   sort,
-  status,
-  categories,
-  activeCategory,
+  filter,
+  boardEmpty,
   identity,
   ssoError,
 }: {
@@ -73,10 +70,10 @@ export function FeedbackBoardClient({
   basePath: string;
   posts: PublicPost[];
   sort: "top" | "recent";
-  status: FeedbackPostStatus | null;
-  /** Catégories filtrables (board show_categories) — vide sinon (MIN-52). */
-  categories: PublicCategory[];
-  activeCategory: string | null;
+  /** null = le défaut du board : les retours encore vivants. */
+  filter: PublicStatusFilter;
+  /** Aucun retour public, filtre à part — départage les deux états vides. */
+  boardEmpty: boolean;
   identity: PublicIdentity | null;
   ssoError: boolean;
 }) {
@@ -108,33 +105,44 @@ export function FeedbackBoardClient({
           {t("composerTitle")}
         </Button>
 
-        {categories.length > 0 && (
-          <div className="desktop:hidden">
-            <CategoryFilterList
-              basePath={basePath}
-              categories={categories}
-              sort={sort}
-              status={status}
-              active={activeCategory}
-            />
-          </div>
-        )}
-
-        <FilterBar basePath={basePath} sort={sort} status={status} category={activeCategory} />
+        <FilterBar basePath={basePath} sort={sort} filter={filter} />
 
         {posts.length === 0 ? (
-          /* Filtre actif = la vue est vide, pas le board. */
-          <EmptyState
-            icon={<MessagesSquare className="size-6" />}
-            description={status || activeCategory ? t("emptyFiltered") : t("empty")}
-          />
+          /* Le vide se NOMME : « aucun retour ouvert » dit à la fois ce qui
+             manque et sous quel filtre on regarde, là où « rien ne correspond »
+             laissait chercher lequel. Et le board par défaut ne montre que les
+             retours vivants : vide ici ne veut pas dire vide tout court, c'est
+             le serveur qui tranche (`boardEmpty`), pas le filtre. */
+          <EmptyScene
+            icon={MessagesSquare}
+            title={
+              boardEmpty || filter === "all"
+                ? t("empty")
+                : // Clé assemblée à l'exécution (lib/i18n-keys.ts).
+                  t(`emptyStatus.${filter ?? "open"}` as MessageKey<"PublicFeedback">)
+            }
+          >
+            {boardEmpty || filter === "all" ? (
+              <Button onClick={() => setComposerOpen(true)}>
+                <Megaphone />
+                {t("composerTitle")}
+              </Button>
+            ) : (
+              /* La sortie du filtre, sous la phrase qui vient de le nommer : le
+                 combobox est une pastille de 20 px en haut de page, et c'est ici
+                 qu'on se demande où sont passés les autres retours. */
+              <Button variant="outline" asChild>
+                <Link href={buildHref(basePath, sort, "all")}>{t("emptySeeAll")}</Link>
+              </Button>
+            )}
+          </EmptyScene>
         ) : (
           <ul className="flex flex-col divide-y divide-border/60">
             {posts.map((post) => (
-              <PostRow
+              <FeedbackPostRow
                 key={post.id}
                 token={token}
-                basePath={basePath}
+                href={`${basePath}/p/${post.id}`}
                 post={post}
                 onNeedAuth={requireAuth}
               />
@@ -148,17 +156,6 @@ export function FeedbackBoardClient({
           <Megaphone />
           {t("composerTitle")}
         </Button>
-        {categories.length > 0 && (
-          <div className="mt-5">
-            <CategoryFilterList
-              basePath={basePath}
-              categories={categories}
-              sort={sort}
-              status={status}
-              active={activeCategory}
-            />
-          </div>
-        )}
       </aside>
 
       <ComposerDialog
@@ -187,60 +184,127 @@ export function FeedbackBoardClient({
 function buildHref(
   basePath: string,
   sort: "top" | "recent",
-  status: FeedbackPostStatus | null,
-  category: string | null = null
+  filter: PublicStatusFilter
 ): string {
   const params = new URLSearchParams();
   if (sort === "recent") params.set("sort", "recent");
-  if (status) params.set("status", status);
-  if (category) params.set("category", category);
+  // Le défaut est l'ABSENCE de paramètre : l'URL du board reste l'URL du board.
+  if (filter) params.set("status", filter);
   const query = params.toString();
   // basePath "" (domaine personnalisé) : la racine du board est "/".
   return `${basePath || "/"}${query ? `?${query}` : ""}`;
 }
 
-function FilterBar({
+/**
+ * Le filtre d'état, en UN déclencheur.
+ *
+ * C'était six pastilles en ligne, qui débordaient sur mobile et donnaient le
+ * même poids visuel à « Ouvert » qu'à « Décliné » — alors que l'un est ce qu'on
+ * vient voir et l'autre ce qu'on vient rarement chercher. Le même combobox
+ * cherchable que le dashboard le replie : « Ouverts » d'abord, qui est le point
+ * de départ et groupe les trois états vivants, les états exacts ensuite, « tous »
+ * en dernier pour qui veut l'archive.
+ */
+function StatusFilterMenu({
   basePath,
   sort,
-  status,
-  category,
+  filter,
 }: {
   basePath: string;
   sort: "top" | "recent";
-  status: FeedbackPostStatus | null;
-  /** Filtre catégorie courant — préservé quand on change statut/tri (MIN-52). */
-  category: string | null;
+  filter: PublicStatusFilter;
+}) {
+  const t = useTranslations("PublicFeedback");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  const label =
+    filter === null
+      ? t("filterOpen")
+      : filter === "all"
+        ? t("filterAll")
+        : t(`status.${filter}`);
+
+  const pick = (next: PublicStatusFilter) => {
+    setOpen(false);
+    router.push(buildHref(basePath, sort, next));
+  };
+
+  return (
+    <SearchMenu
+      open={open}
+      onOpenChange={setOpen}
+      align="start"
+      searchPlaceholder={t("filterSearch")}
+      trigger={
+        <button
+          type="button"
+          className="flex w-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ListFilter className="size-3" />
+          {label}
+          <ChevronDown className="size-3" />
+        </button>
+      }
+    >
+      <CommandGroup>
+        {/* Les `value` de cmdk sont l'IDENTITÉ des lignes, pas une étiquette :
+            le groupe « Ouverts » et le statut `open` partageaient
+            « filter-open », et cmdk allumait donc les deux d'un coup. Deux
+            préfixes distincts, et la question ne se repose plus. */}
+        <CommandItem
+          value="group-open"
+          keywords={[t("filterOpen")]}
+          onSelect={() => pick(null)}
+          {...checkedProps(filter === null)}
+        >
+          <span className="truncate">{t("filterOpen")}</span>
+        </CommandItem>
+        {FEEDBACK_PUBLIC_STATUSES.map((value) => (
+          <CommandItem
+            key={value}
+            value={`status-${value}`}
+            keywords={[t(`status.${value}`)]}
+            onSelect={() => pick(value)}
+            {...checkedProps(filter === value)}
+          >
+            <StatusIndicator
+              status={FEEDBACK_TO_ISSUE_STATUS[value]}
+              className="size-4 shrink-0"
+            />
+            <span className="truncate">{t(`status.${value}`)}</span>
+          </CommandItem>
+        ))}
+      </CommandGroup>
+      <CommandSeparator className="my-1" />
+      <CommandGroup>
+        <CommandItem
+          value="filter-all"
+          keywords={[t("filterAll")]}
+          onSelect={() => pick("all")}
+          {...checkedProps(filter === "all")}
+        >
+          <span className="truncate">{t("filterAll")}</span>
+        </CommandItem>
+      </CommandGroup>
+    </SearchMenu>
+  );
+}
+
+function FilterBar({
+  basePath,
+  sort,
+  filter,
+}: {
+  basePath: string;
+  sort: "top" | "recent";
+  filter: PublicStatusFilter;
 }) {
   const t = useTranslations("PublicFeedback");
   const router = useRouter();
   return (
-    // Sur mobile, statuts et tri passent sur deux lignes ; le tri est compacté
-    // en dropdown partout.
-    <div className="flex flex-col gap-2 border-b border-border/60 pb-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-      <div className="flex min-w-0 items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {FEEDBACK_PUBLIC_STATUSES.map((value) => {
-          const active = status === value;
-          return (
-            <Link
-              key={value}
-              // re-cliquer le filtre actif le retire
-              href={buildHref(basePath, sort, active ? null : value, category)}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                active
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <StatusIndicator
-                status={FEEDBACK_TO_ISSUE_STATUS[value]}
-                className="size-3.5"
-              />
-              {t(`status.${value}`)}
-            </Link>
-          );
-        })}
-      </div>
+    <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-3">
+      <StatusFilterMenu basePath={basePath} sort={sort} filter={filter} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
@@ -256,7 +320,7 @@ function FilterBar({
           {(["top", "recent"] as const).map((value) => (
             <DropdownMenuItem
               key={value}
-              onSelect={() => router.push(buildHref(basePath, value, status, category))}
+              onSelect={() => router.push(buildHref(basePath, value, filter))}
             >
               {value === "top" ? t("sortTop") : t("sortRecent")}
               {sort === value && <Check className="ml-auto size-4" />}
@@ -265,118 +329,6 @@ function FilterBar({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-  );
-}
-
-// ── Filtres par catégorie (sous « Partager un retour ») ───────────────────────
-
-function CategoryFilterList({
-  basePath,
-  categories,
-  sort,
-  status,
-  active,
-}: {
-  basePath: string;
-  categories: PublicCategory[];
-  sort: "top" | "recent";
-  status: FeedbackPostStatus | null;
-  active: string | null;
-}) {
-  const t = useTranslations("PublicFeedback");
-  return (
-    <div className="flex flex-col gap-0.5">
-      <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
-        {t("categoriesTitle")}
-      </p>
-      {categories.map((c) => {
-        const isActive = active === c.id;
-        return (
-          <Link
-            key={c.id}
-            // re-cliquer la catégorie active la retire
-            href={buildHref(basePath, sort, status, isActive ? null : c.id)}
-            aria-current={isActive ? "true" : undefined}
-            className={cn(
-              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-              isActive
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-            )}
-          >
-            <span
-              className="size-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: c.color }}
-              aria-hidden
-            />
-            <span className="min-w-0 truncate">{c.name}</span>
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Ligne de post ─────────────────────────────────────────────────────────────
-
-function PostRow({
-  token,
-  basePath,
-  post,
-  onNeedAuth,
-}: {
-  token: string;
-  basePath: string;
-  post: PublicPost;
-  onNeedAuth: (run: () => void) => void;
-}) {
-  const t = useTranslations("PublicFeedback");
-  const format = useFormatter();
-  const router = useRouter();
-  const [optimistic, setOptimistic] = useState<{ voted: boolean; count: number } | null>(null);
-  const voted = optimistic?.voted ?? post.votedByMe;
-  const count = optimistic?.count ?? post.voteCount;
-
-  const toggle = () => {
-    const next = { voted: !voted, count: count + (voted ? -1 : 1) };
-    setOptimistic(next);
-    void togglePostVoteAction(token, post.id, next.voted)
-      .then((result) => {
-        if (!result.ok) {
-          setOptimistic(null);
-          if (result.notAuthenticated) onNeedAuth(toggle);
-          return;
-        }
-        router.refresh();
-      })
-      .catch(() => setOptimistic(null));
-  };
-
-  return (
-    <li className="flex flex-col gap-2 py-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <Link href={`${basePath}/p/${post.id}`} className="group flex flex-col gap-1">
-            <h3 className="text-[15px] font-semibold leading-snug group-hover:text-brand">
-              {post.title}
-            </h3>
-            {post.body && (
-              <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                {post.body}
-              </p>
-            )}
-          </Link>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            <FeedbackStatusBadge status={post.status} />
-            <span>{format.dateTime(new Date(post.createdAt), { dateStyle: "medium" })}</span>
-            {post.categories.map((c) => (
-              <CategoryTag key={c.id} category={c} />
-            ))}
-          </div>
-        </div>
-        <VoteButton count={count} voted={voted} onToggle={toggle} />
-      </div>
-    </li>
   );
 }
 
@@ -596,12 +548,28 @@ function ComposerDialog({
           </p>
         )}
         <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
-          <label htmlFor="feedback-make-public" className="flex min-w-0 cursor-pointer flex-col">
-            <span className="text-sm font-medium">{t("makePublic")}</span>
+          {/* Le ⓘ vit HORS du <label> : dedans, l'ouvrir basculerait aussi
+              l'interrupteur — lire l'explication rendrait public le retour
+              qu'on hésitait justement à publier. */}
+          <div className="flex min-w-0 flex-col">
+            <div className="flex items-center gap-1.5">
+              <label
+                htmlFor="feedback-make-public"
+                className="cursor-pointer text-sm font-medium"
+              >
+                {t("makePublic")}
+              </label>
+              <HelpHint>
+                <span className="flex flex-col gap-2">
+                  <span className="block">{t("makePublicHelpAnonymous")}</span>
+                  <span className="block">{t("makePublicHelpPrivate")}</span>
+                </span>
+              </HelpHint>
+            </div>
             <span className="text-xs text-muted-foreground">
               {isPublic ? t("makePublicHint") : t("makePrivateHint")}
             </span>
-          </label>
+          </div>
           <Switch
             id="feedback-make-public"
             checked={isPublic}

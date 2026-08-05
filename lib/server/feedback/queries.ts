@@ -6,7 +6,6 @@ import {
   isHiddenFeedbackStatus,
   sortFeedbackResolvedLast,
   type FeedbackPostStatus,
-  type PublicCategory,
   type PublicPost,
 } from "@/lib/feedback/types";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
@@ -34,8 +33,7 @@ const PUBLIC_POST_SELECT = `${FEEDBACK_POST_SELECT}, feedback_users!author_id (p
 function toPublicPost(
   row: PostWithAuthor,
   viewerId: string | null,
-  votedPostIds: Set<string>,
-  categories: PublicCategory[] = []
+  votedPostIds: Set<string>
 ): PublicPost {
   return {
     id: row.id,
@@ -51,80 +49,7 @@ function toPublicPost(
     votedByMe: votedPostIds.has(row.id),
     teamResponse: row.team_response,
     teamResponseAt: row.team_response_at,
-    categories,
   };
-}
-
-/**
- * Résout les catégories publiques (MIN-52) d'un lot de posts, uniquement quand
- * le board les expose (`include`). Deux lectures : les liens de jonction et les
- * catégories du projet ; renvoie une map post_id → catégories triées par nom.
- */
-async function fetchPostCategories(
-  projectId: string,
-  postIds: string[],
-  include: boolean
-): Promise<Map<string, PublicCategory[]>> {
-  if (!include || postIds.length === 0) return new Map();
-  const service = getServiceClient();
-  const [linksRes, catsRes] = await Promise.all([
-    service
-      .from("feedback_post_categories")
-      .select("post_id, category_id")
-      .in("post_id", postIds),
-    service.from("categories").select("id, name, color").eq("project_id", projectId),
-  ]);
-  const catById = new Map<string, PublicCategory>(
-    (catsRes.data ?? []).map((c) => [
-      c.id as string,
-      { id: c.id as string, name: c.name as string, color: c.color as string },
-    ])
-  );
-  const byPost = new Map<string, PublicCategory[]>();
-  for (const link of (linksRes.data ?? []) as { post_id: string; category_id: string }[]) {
-    const cat = catById.get(link.category_id);
-    if (!cat) continue;
-    const arr = byPost.get(link.post_id) ?? [];
-    arr.push(cat);
-    byPost.set(link.post_id, arr);
-  }
-  for (const arr of byPost.values()) arr.sort((a, b) => a.name.localeCompare(b.name));
-  return byPost;
-}
-
-/**
- * Catégories réellement portées par au moins un post public du board (MIN-52) —
- * la matière des filtres par catégorie affichés sous « Partager un retour ». On
- * n'expose que celles utilisées : pas de filtre mort. Indépendant du filtre
- * courant (calculé sur tous les posts publics), pour rester stable en filtrant.
- */
-export async function listPublicCategories(projectId: string): Promise<PublicCategory[]> {
-  const service = getServiceClient();
-  const { data: posts } = await service
-    .from("feedback_posts")
-    .select("id")
-    .is("deleted_at", null)
-    .eq("project_id", projectId)
-    .eq("is_public", true)
-    .eq("review_state", "published")
-    .neq("status", "spam")
-    .is("merged_into_id", null);
-  const postIds = (posts ?? []).map((p) => p.id as string);
-  if (postIds.length === 0) return [];
-  const { data: links } = await service
-    .from("feedback_post_categories")
-    .select("category_id")
-    .in("post_id", postIds);
-  const usedIds = [...new Set((links ?? []).map((l) => l.category_id as string))];
-  if (usedIds.length === 0) return [];
-  const { data: cats } = await service
-    .from("categories")
-    .select("id, name, color")
-    .eq("project_id", projectId)
-    .in("id", usedIds);
-  return (cats ?? [])
-    .map((c) => ({ id: c.id as string, name: c.name as string, color: c.color as string }))
-    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function fetchViewerVotes(
@@ -145,11 +70,13 @@ export async function listPublicPosts(params: {
   projectId: string;
   viewerId: string | null;
   sort: PublicSort;
-  status?: FeedbackPostStatus | null;
-  /** Board.show_categories : n'expose les catégories que si activé (MIN-52). */
-  includeCategories?: boolean;
-  /** Filtre par catégorie (MIN-52) — ne garde que les posts qui la portent. */
-  categoryId?: string | null;
+  /**
+   * Les statuts à garder (`publicFilterStatuses`) — `null`/absent = tous. Une
+   * LISTE et non un statut : le filtre par défaut du board en groupe trois
+   * (ouvert, prévu, en cours), et le faire côté SQL évite de charger l'archive
+   * pour la jeter ensuite.
+   */
+  statuses?: readonly FeedbackPostStatus[] | null;
 }): Promise<PublicPost[]> {
   const service = getServiceClient();
   let query = service
@@ -165,16 +92,9 @@ export async function listPublicPosts(params: {
     // Le spam n'a jamais de page publique — c'est ce que le statut décide.
     .neq("status", "spam")
     .limit(PUBLIC_LIST_LIMIT);
-  if (params.status) query = query.eq("status", params.status);
-  if (params.categoryId) {
-    // Les ids des posts portant cette catégorie, restreints ensuite par .in().
-    const { data: links } = await service
-      .from("feedback_post_categories")
-      .select("post_id")
-      .eq("category_id", params.categoryId);
-    const ids = (links ?? []).map((l) => l.post_id as string);
-    if (ids.length === 0) return [];
-    query = query.in("id", ids);
+  if (params.statuses) {
+    if (params.statuses.length === 0) return [];
+    query = query.in("status", [...params.statuses]);
   }
   query =
     params.sort === "top"
@@ -183,17 +103,37 @@ export async function listPublicPosts(params: {
   const { data, error } = await query;
   if (error) console.error("[feedback-queries] list failed:", error.message);
   const rows = (data ?? []) as unknown as PostWithAuthor[];
-  const ids = rows.map((r) => r.id);
-  const [voted, categoriesByPost] = await Promise.all([
-    fetchViewerVotes(params.viewerId, ids),
-    fetchPostCategories(params.projectId, ids, params.includeCategories ?? false),
-  ]);
-  const posts = rows.map((r) =>
-    toPublicPost(r, params.viewerId, voted, categoriesByPost.get(r.id) ?? [])
+  const voted = await fetchViewerVotes(
+    params.viewerId,
+    rows.map((r) => r.id)
   );
+  const posts = rows.map((r) => toPublicPost(r, params.viewerId, voted));
   // Terminés (livrés / refusés) rangés en bas, l'ordre choisi (votes/date)
   // conservé au sein de chaque groupe.
   return sortFeedbackResolvedLast(posts, (p) => p.status);
+}
+
+/**
+ * Le board a-t-il seulement un retour public ?
+ *
+ * À n'appeler QUE quand la liste rend zéro ligne, et pour une seule raison :
+ * distinguer les deux vides. Un board neuf doit lire « soyez le premier » ; un
+ * board dont tout est livré ou décliné doit lire « rien ne correspond à ce
+ * filtre » — sinon on lui annonce qu'il est vide devant vingt retours traités,
+ * et le visiteur n'a aucune raison d'aller chercher « tous ».
+ */
+export async function hasAnyPublicPost(projectId: string): Promise<boolean> {
+  const service = getServiceClient();
+  const { count } = await service
+    .from("feedback_posts")
+    .select("id", { count: "exact", head: true })
+    .is("deleted_at", null)
+    .eq("project_id", projectId)
+    .is("merged_into_id", null)
+    .eq("is_public", true)
+    .eq("review_state", "published")
+    .neq("status", "spam");
+  return (count ?? 0) > 0;
 }
 
 export interface PublicPostDetail {
@@ -208,8 +148,6 @@ export async function getPublicPostDetail(params: {
   projectId: string;
   postId: string;
   viewerId: string | null;
-  /** Board.show_categories : n'expose les catégories que si activé (MIN-52). */
-  includeCategories?: boolean;
 }): Promise<PublicPostDetail | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -237,7 +175,7 @@ export async function getPublicPostDetail(params: {
     };
   }
 
-  const [voted, mergedFromRes, categoriesByPost] = await Promise.all([
+  const [voted, mergedFromRes] = await Promise.all([
     fetchViewerVotes(params.viewerId, [row.id]),
     service
       .from("feedback_posts")
@@ -245,11 +183,10 @@ export async function getPublicPostDetail(params: {
       .is("deleted_at", null)
       .eq("merged_into_id", row.id)
       .order("created_at", { ascending: true }),
-    fetchPostCategories(params.projectId, [row.id], params.includeCategories ?? false),
   ]);
 
   return {
-    post: toPublicPost(row, params.viewerId, voted, categoriesByPost.get(row.id) ?? []),
+    post: toPublicPost(row, params.viewerId, voted),
     mergedIntoId: null,
     mergedFromTitles: (mergedFromRes.data ?? []).map((p) => p.title as string),
   };
@@ -300,8 +237,16 @@ export interface MyFeedbackEntry {
   mergedFromTitle: string | null;
 }
 
-/** « Mes feedbacks » : mes posts (y compris fusionnés — suivis jusqu'au
-    canonique) et mes votes, avec leur avancement. */
+/**
+ * « Mes feedbacks » : mes posts (y compris fusionnés — suivis jusqu'au
+ * canonique) et mes votes, avec leur avancement.
+ *
+ * Un retour privé n'y entre que si je l'ai ÉCRIT. Privé veut dire « lu par
+ * l'équipe seule » : le voir dans sa liste parce qu'on a voté dessus avant que
+ * l'équipe ne le retire du board, ou parce que le sien y a été fusionné, c'est
+ * lire le retour de quelqu'un d'autre à un endroit où le board a promis qu'on
+ * ne le lirait pas.
+ */
 export async function listMyFeedback(params: {
   projectId: string;
   viewerId: string;
@@ -345,10 +290,18 @@ export async function listMyFeedback(params: {
     }
   }
 
+  /** Lisible ici seulement si public, ou écrit par moi. */
+  const readable = (row: PostWithAuthor) =>
+    row.is_public || row.author_id === params.viewerId;
+
   const entries: { row: PostWithAuthor; relation: "authored" | "voted"; mergedFromTitle: string | null }[] = [];
   const seen = new Set<string>();
   for (const row of authored) {
-    const canonical = row.merged_into_id ? canonicalById.get(row.merged_into_id) : null;
+    // Mon retour fusionné dans le retour PRIVÉ d'un autre : on ne suit pas le
+    // pointeur, on reste sur le mien. Suivre montrerait son titre et son
+    // avancement — précisément ce que « privé » retire de ma vue.
+    const target = row.merged_into_id ? canonicalById.get(row.merged_into_id) : null;
+    const canonical = target && readable(target) ? target : null;
     const display = canonical ?? row;
     if (seen.has(display.id)) continue;
     seen.add(display.id);
@@ -362,6 +315,9 @@ export async function listMyFeedback(params: {
     // Les votes suivent déjà le merge (déplacés vers le canonique) ; un
     // tombstone voté ne devrait pas exister, on l'ignore par sécurité.
     if (!row || row.merged_into_id !== null || seen.has(row.id)) continue;
+    // Voté puis passé en privé par l'équipe : il sort de la liste comme il est
+    // sorti du board.
+    if (!readable(row)) continue;
     seen.add(row.id);
     entries.push({ row, relation: "voted", mergedFromTitle: null });
   }

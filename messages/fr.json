@@ -536,13 +536,12 @@
     "myFeedback": "Mes retours",
     "composerTitle": "Partager un retour",
     "postTitlePlaceholder": "Résumez votre besoin en une phrase",
-    "postBodyPlaceholder": "Qu'essayez-vous de faire ?",
+    "postBodyPlaceholder": "Décrivez en détail votre besoin",
     "submitPost": "Envoyer",
     "similarTitle": "Ce retour existe peut-être déjà. Votez plutôt :",
     "sortTop": "Populaires",
     "sortRecent": "Récents",
-    "categoriesTitle": "Catégories",
-    "empty": "Aucun retour pour l'instant. Partagez le premier.",
+    "empty": "Aucun retour pour l'instant.",
     "back": "Tous les retours",
     "ssoError": "Connexion impossible : le lien a peut-être expiré. Réessayez depuis l'application où vous étiez.",
     "authTitle": "Confirmez votre email",
@@ -558,7 +557,6 @@
     "mergedFrom": "Regroupe aussi : {titles}",
     "teamResponse": "Réponse de l'équipe {project}",
     "meSignInPrompt": "Connectez-vous pour retrouver vos retours et vos votes.",
-    "meIntro": "En public, vous apparaissez sous le nom {pseudonym}.",
     "meEmpty": "Vous n'avez encore ni retour ni vote.",
     "meAuthored": "Votre retour",
     "meVoted": "Vous avez voté",
@@ -582,7 +580,6 @@
       "failed": "Une erreur est survenue — réessayez",
       "notAuthenticated": "Connectez-vous pour continuer"
     },
-    "emptyFiltered": "Aucun retour ne correspond à ce filtre.",
     "similarChecking": "Recherche de retours proches…",
     "makePublic": "Rendre public",
     "makePublicHint": "Tout le monde peut le voir et voter.",
@@ -595,7 +592,20 @@
     "metaBoardDescription": "Votez pour la suite de {project}, ou dites à l'équipe ce dont vous avez besoin.",
     "metaMineDescription": "Les retours que vous avez envoyés à {project}, et tout ce pour quoi vous avez voté.",
     "metaPostDescription": "Votez et commentez ce retour adressé à {project}.",
-    "authLegalNotice": "Votre adresse sert uniquement à vérifier votre identité et à vous répondre. Elle n'est jamais affichée publiquement. <privacy>Politique de confidentialité</privacy>."
+    "authLegalNotice": "Votre adresse sert uniquement à vérifier votre identité et à vous répondre. Elle n'est jamais affichée publiquement. <privacy>Politique de confidentialité</privacy>.",
+    "makePublicHelpAnonymous": "Un retour public s'affiche sans votre nom : les autres visiteurs lisent le besoin et votent pour lui, jamais qui l'a écrit.",
+    "makePublicHelpPrivate": "Gardez-le privé s'il contient des informations personnelles ou celles de votre entreprise, un identifiant ou un mot de passe, ou s'il décrit une faille de sécurité. L'équipe le recevra quand même.",
+    "filterOpen": "Ouverts",
+    "filterAll": "Tous",
+    "filterSearch": "Filtrer les retours…",
+    "emptySeeAll": "Voir tous les retours",
+    "emptyStatus": {
+      "open": "Aucun retour ouvert",
+      "planned": "Aucun retour prévu",
+      "in_progress": "Aucun retour en cours",
+      "shipped": "Aucun retour livré",
+      "declined": "Aucun retour décliné"
+    }
   },
   "FeedbackBoard": {
     "title": "Retours",

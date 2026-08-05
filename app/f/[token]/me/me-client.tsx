@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useFormatter, useTranslations } from "next-intl";
-import { Button } from "mangue-ui";
-import { ArrowLeft, Ban, Clock, GitMerge, Lock, UserRound } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Badge, Button } from "mangue-ui";
+import { Ban, Clock, GitMerge, Lock, UserRound } from "lucide-react";
 import type { PublicIdentity, PublicPost } from "@/lib/feedback/types";
 import { FeedbackAuthDialog } from "../feedback-auth";
-import { FeedbackStatusBadge } from "../feedback-bits";
+import { BackToBoardLink, FeedbackPostRow } from "../feedback-bits";
 
 export interface MyFeedbackItem {
   post: PublicPost;
@@ -16,7 +15,12 @@ export interface MyFeedbackItem {
 }
 
 /** « Mes feedbacks » (MIN-37) : suivi pull-based de ses posts et votes, avec
-    avancement — y compris après merge (le canonique est suivi à la place). */
+    avancement — y compris après merge (le canonique est suivi à la place).
+
+    La ligne est celle du board, à l'identique (`FeedbackPostRow`) : c'est le
+    même retour, on peut y voter d'ici comme de là-bas, et ce qui n'appartient
+    qu'à cette page — privé, en vérification, écrit ou voté — s'ajoute à la ligne
+    de méta au lieu de lui inventer une deuxième forme. */
 export function MyFeedbackClient({
   token,
   basePath,
@@ -30,18 +34,11 @@ export function MyFeedbackClient({
   entries: MyFeedbackItem[];
 }) {
   const t = useTranslations("PublicFeedback");
-  const format = useFormatter();
   const [authOpen, setAuthOpen] = useState(false);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-16 pt-2 desktop:px-0">
-      <Link
-        href={basePath || "/"}
-        className="flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-3.5" />
-        {t("back")}
-      </Link>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-16 pt-5 desktop:px-0">
+      <BackToBoardLink basePath={basePath} />
 
       {!identity ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-12 text-center">
@@ -54,12 +51,11 @@ export function MyFeedbackClient({
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-base font-semibold">{t("myFeedback")}</h2>
-            <p className="text-xs text-muted-foreground">
-              {t("meIntro", { pseudonym: identity.pseudonym })}
-            </p>
-          </div>
+          {/* Le pseudonyme ne se dit plus ici : il ne s'affiche NULLE PART côté
+              public — ni sur une ligne du board, ni sur la page d'un retour.
+              L'annoncer était promettre au visiteur qu'il verrait ce nom
+              quelque part, et l'envoyer le chercher pour rien. */}
+          <h2 className="text-base font-semibold">{t("myFeedback")}</h2>
 
           {entries.length === 0 ? (
             <div className="rounded-lg border border-dashed px-6 py-12 text-center">
@@ -68,60 +64,51 @@ export function MyFeedbackClient({
           ) : (
             <ul className="flex flex-col divide-y divide-border/60">
               {entries.map((entry) => (
-                <li key={`${entry.relation}:${entry.post.id}`}>
-                  <Link
-                    href={`${basePath}/p/${entry.post.id}`}
-                    className="group flex flex-col gap-1 py-3"
-                  >
-                    <p className="text-sm font-medium leading-snug group-hover:text-brand">
-                      {entry.post.title}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                      {/* Un retour écarté par la modération ne dit pas « spam »
-                          à celui qui l'a écrit — c'est le mot de l'équipe, pas
-                          une réponse à un visiteur. Il lit « non publié ». */}
-                      {entry.post.status === "spam" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
-                          <Ban className="size-2.5" />
-                          {t("rejected")}
-                        </span>
-                      ) : (
-                        <FeedbackStatusBadge status={entry.post.status} />
-                      )}
+                <FeedbackPostRow
+                  key={`${entry.relation}:${entry.post.id}`}
+                  token={token}
+                  href={`${basePath}/p/${entry.post.id}`}
+                  post={entry.post}
+                  statusBadge={
+                    // Un retour écarté par la modération ne dit pas « spam » à
+                    // celui qui l'a écrit — c'est le mot de l'équipe, pas une
+                    // réponse à un visiteur. Il lit « non publié ».
+                    entry.post.status === "spam" ? (
+                      <Badge variant="secondary" icon={<Ban />}>
+                        {t("rejected")}
+                      </Badge>
+                    ) : undefined
+                  }
+                  meta={
+                    <>
                       {!entry.post.isPublic && (
-                        <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
-                          <Lock className="size-2.5" />
+                        <Badge variant="secondary" icon={<Lock />}>
                           {t("private")}
-                        </span>
+                        </Badge>
                       )}
                       {/* Revue avant publication (MIN-54) : l'auteur voit son
                           retour en attente tant qu'il n'est pas publié. */}
                       {entry.relation === "authored" &&
                         entry.post.isPublic &&
                         entry.post.reviewState === "pending" && (
-                          <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
-                            <Clock className="size-2.5" />
+                          <Badge variant="secondary" icon={<Clock />}>
                             {t("pendingReview")}
-                          </span>
+                          </Badge>
                         )}
                       <span>
                         {entry.relation === "authored" ? t("meAuthored") : t("meVoted")}
                       </span>
-                      <span>▲ {entry.post.voteCount}</span>
-                      <span>
-                        {format.dateTime(new Date(entry.post.createdAt), {
-                          dateStyle: "medium",
-                        })}
-                      </span>
-                    </div>
-                    {entry.mergedFromTitle && (
+                    </>
+                  }
+                  footer={
+                    entry.mergedFromTitle ? (
                       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <GitMerge className="size-3" />
                         {t("meMergedFrom", { title: entry.mergedFromTitle })}
                       </p>
-                    )}
-                  </Link>
-                </li>
+                    ) : undefined
+                  }
+                />
               ))}
             </ul>
           )}

@@ -20,14 +20,15 @@ import {
 } from "@/lib/server/feedback/identity";
 import { getPublicSiteTabs } from "@/lib/server/feedback/public-nav";
 import {
-  listPublicCategories,
+  hasAnyPublicPost,
   listPublicPosts,
   type PublicSort,
 } from "@/lib/server/feedback/queries";
 import {
   FEEDBACK_PUBLIC_STATUSES,
   isFeedbackPostStatus,
-  type PublicCategory,
+  publicFilterStatuses,
+  type PublicStatusFilter,
 } from "@/lib/feedback/types";
 import { FeedbackBoardClient } from "./feedback-board-client";
 import { HeaderIdentity } from "./header-identity";
@@ -47,7 +48,6 @@ type PageProps = {
   searchParams: Promise<{
     sort?: string;
     status?: string;
-    category?: string;
     sso?: string;
     ssoError?: string;
   }>;
@@ -110,30 +110,29 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
     }),
   ]);
   const sort: PublicSort = search.sort === "recent" ? "recent" : "top";
-  // Seuls les statuts que le board sait nommer : `?status=spam` n'est pas un
-  // filtre, c'est une question à laquelle la page n'a rien à répondre.
-  const status =
-    isFeedbackPostStatus(search.status) &&
-    FEEDBACK_PUBLIC_STATUSES.includes(search.status)
-      ? search.status
-      : null;
-  const showCategories = ctx.board.show_categories;
-  const activeCategory =
-    showCategories && typeof search.category === "string" ? search.category : null;
-  const [posts, categories, identity] = await Promise.all([
+  // Seuls les statuts que le board sait nommer, plus « all » : `?status=spam`
+  // n'est pas un filtre, c'est une question à laquelle la page n'a rien à
+  // répondre. Tout le reste — y compris le paramètre absent — retombe sur le
+  // défaut : les retours encore vivants.
+  const filter: PublicStatusFilter =
+    search.status === "all"
+      ? "all"
+      : isFeedbackPostStatus(search.status) &&
+          FEEDBACK_PUBLIC_STATUSES.includes(search.status)
+        ? search.status
+        : null;
+  const [posts, identity] = await Promise.all([
     listPublicPosts({
       projectId: ctx.project.id,
       viewerId: session?.user.id ?? null,
       sort,
-      status,
-      includeCategories: showCategories,
-      categoryId: activeCategory,
+      statuses: publicFilterStatuses(filter),
     }),
-    showCategories
-      ? listPublicCategories(ctx.project.id)
-      : Promise.resolve<PublicCategory[]>([]),
     toPublicIdentity(session),
   ]);
+  // Une lecture de plus, et seulement quand il n'y a rien à montrer : elle
+  // décide lequel des deux vides le board annonce.
+  const boardEmpty = posts.length === 0 ? !(await hasAnyPublicPost(ctx.project.id)) : false;
 
   return (
     <PublicPageShell
@@ -156,9 +155,8 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
           basePath={base}
           posts={posts}
           sort={sort}
-          status={status}
-          categories={categories}
-          activeCategory={activeCategory}
+          filter={filter}
+          boardEmpty={boardEmpty}
           identity={identity}
           ssoError={search.ssoError === "1"}
         />

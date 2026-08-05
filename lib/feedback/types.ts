@@ -50,6 +50,36 @@ export const FEEDBACK_RESOLVED_STATUSES: readonly FeedbackPostStatus[] = [
   "spam",
 ];
 
+/**
+ * Ce qui est encore vivant : ouvert, prévu, en cours. Le complément exact de
+ * `FEEDBACK_RESOLVED_STATUSES` parmi les statuts publics — et le point de départ
+ * du board. Un visiteur y vient pour voter sur ce qui peut encore bouger ; lui
+ * ouvrir l'archive de tout ce qui est tranché, c'est lui faire chercher la
+ * matière votable au milieu de ce sur quoi son vote ne changera plus rien.
+ */
+export const FEEDBACK_OPEN_STATUSES: readonly FeedbackPostStatus[] =
+  FEEDBACK_PUBLIC_STATUSES.filter((status) => !FEEDBACK_RESOLVED_STATUSES.includes(status));
+
+/**
+ * Le filtre d'état du board public, tel qu'il vit dans l'URL :
+ * - `null` (paramètre absent) — le défaut, les retours encore vivants ;
+ * - `"all"` — tout ce qui est public, résolus compris ;
+ * - un statut — celui-là seul.
+ *
+ * Le défaut est l'ABSENCE de paramètre, et pas une valeur nommée : une URL de
+ * board partagée reste l'URL du board, et un lien `?status=planned` d'avant ce
+ * groupement continue de dire exactement ce qu'il disait.
+ */
+export type PublicStatusFilter = FeedbackPostStatus | "all" | null;
+
+/** Les statuts qu'un filtre laisse passer — `null` = aucune restriction. */
+export function publicFilterStatuses(
+  filter: PublicStatusFilter
+): readonly FeedbackPostStatus[] | null {
+  if (filter === "all") return null;
+  return filter === null ? FEEDBACK_OPEN_STATUSES : [filter];
+}
+
 export function isResolvedFeedbackStatus(status: FeedbackPostStatus): boolean {
   return FEEDBACK_RESOLVED_STATUSES.includes(status);
 }
@@ -118,15 +148,15 @@ export function normalizeSensitivityKind(value: unknown): FeedbackSensitivityKin
     : "other";
 }
 
-/** Catégorie telle qu'exposée publiquement (MIN-52) — slice minimal du modèle
-    interne : ni project_id ni dates. */
-export interface PublicCategory {
-  id: string;
-  name: string;
-  color: string;
-}
-
-/** Post tel que rendu sur le board public (anonymisé). */
+/**
+ * Post tel que rendu sur le board public (anonymisé).
+ *
+ * Il portait ses catégories : elles ne sortent plus côté public. Le classement
+ * d'un retour est une lecture d'ÉQUIPE — ce qu'elle en fait, pas ce qu'il est —
+ * et un visiteur n'a rien à en tirer : il vient dire un besoin et voter. Le
+ * réglage `show_categories` du board reste en place pour le MCP et les
+ * intégrations, il ne pilote simplement plus de rendu public.
+ */
 export interface PublicPost {
   id: string;
   title: string;
@@ -144,8 +174,6 @@ export interface PublicPost {
   votedByMe: boolean;
   teamResponse: string | null;
   teamResponseAt: string | null;
-  /** Catégories du post — vide sauf si le board a activé show_categories. */
-  categories: PublicCategory[];
 }
 
 /** Onglet de navigation du site public (board + vues partagées du projet). */

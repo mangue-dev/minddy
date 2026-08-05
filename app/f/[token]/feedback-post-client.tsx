@@ -1,15 +1,19 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { ArrowLeft, GitMerge } from "lucide-react";
+import { GitMerge } from "lucide-react";
 import { MessageResponse } from "@/components/ai-elements/message";
 import type { PublicIdentity, PublicPost } from "@/lib/feedback/types";
 import { togglePostVoteAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
-import { CategoryTag, FeedbackStatusBadge, VoteButton } from "./feedback-bits";
+import {
+  AuthorAvatar,
+  BackToBoardLink,
+  FeedbackStatusBadge,
+  VoteButton,
+} from "./feedback-bits";
 
 /**
  * Page publique d'un post (MIN-37) : besoin votable rendu en markdown, réponse
@@ -69,13 +73,7 @@ export function FeedbackPostClient({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-16 pt-5 desktop:px-0">
-      <Link
-        href={basePath || "/"}
-        className="flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-3.5" />
-        {t("back")}
-      </Link>
+      <BackToBoardLink basePath={basePath} />
 
       <div className="flex flex-col gap-2.5">
         <div className="flex items-start justify-between gap-4">
@@ -83,11 +81,9 @@ export function FeedbackPostClient({
           <VoteButton count={count} voted={voted} onToggle={toggleVote} />
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <AuthorAvatar pseudonym={post.authorPseudonym} />
           <FeedbackStatusBadge status={post.status} />
           <span>{format.dateTime(new Date(post.createdAt), { dateStyle: "medium" })}</span>
-          {post.categories.map((c) => (
-            <CategoryTag key={c.id} category={c} />
-          ))}
         </div>
       </div>
 

@@ -536,13 +536,12 @@
     "myFeedback": "My feedback",
     "composerTitle": "Share feedback",
     "postTitlePlaceholder": "Summarize your need in one sentence",
-    "postBodyPlaceholder": "What are you trying to do?",
+    "postBodyPlaceholder": "Describe your need in detail",
     "submitPost": "Send",
     "similarTitle": "This may already exist. Vote instead:",
     "sortTop": "Popular",
     "sortRecent": "Recent",
-    "categoriesTitle": "Categories",
-    "empty": "No feedback yet. Be the first to share one.",
+    "empty": "No feedback yet.",
     "back": "All feedback",
     "ssoError": "Sign-in failed: the link may have expired. Try again from the app you came from.",
     "authTitle": "Confirm your email",
@@ -558,7 +557,6 @@
     "mergedFrom": "Also covers: {titles}",
     "teamResponse": "Response from the {project} team",
     "meSignInPrompt": "Sign in to see your feedback and votes.",
-    "meIntro": "Publicly, you appear as {pseudonym}.",
     "meEmpty": "You have no feedback or votes yet.",
     "meAuthored": "Your feedback",
     "meVoted": "You voted",
@@ -582,7 +580,6 @@
       "failed": "Something went wrong — try again",
       "notAuthenticated": "Sign in to continue"
     },
-    "emptyFiltered": "No feedback matches this filter.",
     "similarChecking": "Looking for similar feedback…",
     "makePublic": "Make public",
     "makePublicHint": "Everyone can see it and vote for it.",
@@ -595,7 +592,20 @@
     "metaBoardDescription": "Vote on what {project} should build next, or tell the team what you need.",
     "metaMineDescription": "The feedback you sent to {project}, and everything you voted for.",
     "metaPostDescription": "Vote and comment on this feedback for {project}.",
-    "authLegalNotice": "Your address is only used to verify who you are and to reply to you. It is never shown publicly. <privacy>Privacy policy</privacy>."
+    "authLegalNotice": "Your address is only used to verify who you are and to reply to you. It is never shown publicly. <privacy>Privacy policy</privacy>.",
+    "makePublicHelpAnonymous": "Public feedback appears without your name: other visitors read the need and vote for it, never who wrote it.",
+    "makePublicHelpPrivate": "Keep it private if it carries personal or company information, a credential, or describes a security flaw. The team still receives it.",
+    "filterOpen": "Open",
+    "filterAll": "All",
+    "filterSearch": "Filter feedback…",
+    "emptySeeAll": "See all feedback",
+    "emptyStatus": {
+      "open": "No open feedback",
+      "planned": "No planned feedback",
+      "in_progress": "No feedback in progress",
+      "shipped": "No shipped feedback",
+      "declined": "No declined feedback"
+    }
   },
   "FeedbackBoard": {
     "title": "Feedback",
