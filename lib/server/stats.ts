@@ -153,10 +153,14 @@ export async function getUserStats(
     supabase.rpc("get_user_stats", { p_tz: tz, p_since: since }),
     // Charge actuelle : issues ouvertes qui me sont assignées (live, RLS scope
     // les projets accessibles). Détaché non requis — c'est un instantané du présent.
+    // `projects!inner(deleted_at)` porte le filtre de la corbeille : un projet
+    // jeté garde ses tickets et `can_access_project` ignore `deleted_at`, donc
+    // sans lui la charge comptait des tickets qui ne sont plus nulle part.
     supabase
       .from("issues")
-      .select("status")
+      .select("status, projects!inner(deleted_at)")
       .is("deleted_at", null)
+      .is("projects.deleted_at", null)
       .eq("assignee_id", userId)
       .not("status", "in", `(${CLOSED_STATUSES.join(",")})`),
     // Stats de cycle (MIN-58) : cadence, tickets/cycle, durée par effort.

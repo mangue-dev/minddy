@@ -150,8 +150,16 @@ function keysForUserEvent(change: BroadcastChange): Invalidation[] {
     // Assign (réglage du projet, liste des membres) : la marque de la sidebar
     // et la bannière de l'accueil s'effacent donc dès que les règles sont
     // enregistrées, sans attendre une navigation.
+    // Un projet qui part à la corbeille (ou qui en revient) change aussi le
+    // PÉRIMÈTRE des chiffres de la sidebar : sans ça, la ligne disparaissait de
+    // la liste — ["projects"] se rafraîchit — mais sa part du badge « Accueil »
+    // restait, faute d'avoir redemandé la table.
     case "projects":
-      return [active(["projects"]), active(SMART_ASSIGN_WARNINGS_KEY)];
+      return [
+        active(["projects"]),
+        active(SMART_ASSIGN_WARNINGS_KEY),
+        active(TRIAGE_COUNTS_KEY),
+      ];
     // Mon adhésion à moi a changé (rejoint / retiré) : ce n'est pas seulement
     // une ligne de plus ou de moins dans la barre latérale, c'est le PÉRIMÈTRE
     // de tous mes agrégats — le board cross-projet, le tableau de bord et

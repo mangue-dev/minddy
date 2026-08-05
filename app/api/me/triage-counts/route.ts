@@ -27,6 +27,9 @@ export async function GET(request: NextRequest) {
   // `feedback_*` sont RLS deny-all (cf. supabase/migrations/…_feedback.sql),
   // d'où une lecture service-role bornée, elle, aux ids lus juste avant — sous
   // RLS, donc.
+  //
+  // Cette liste sert AUSSI de périmètre : elle exclut les projets à la corbeille,
+  // et le compte doit l'exclure avec elle (voir la jointure plus bas).
   const { data: projectRows, error: projectsError } = await auth.supabase
     .from("projects")
     .select("id")
@@ -41,7 +44,21 @@ export async function GET(request: NextRequest) {
   }
 
   const [triageRes, feedbackRes] = await Promise.all([
-    auth.supabase.from("issues").select("project_id").eq("status", "triage").is("deleted_at", null),
+    // `projects!inner(deleted_at)` n'est pas une colonne lue, c'est le FILTRE de
+    // la corbeille : jeter un projet ne touche pas ses tickets (ils reviennent
+    // avec lui), et `can_access_project` ne regarde pas `deleted_at` — ceux d'un
+    // projet jeté continuent donc de passer RLS. Sans ce filtre, ils tombaient
+    // dans `counts` sous l'id d'un projet que la sidebar ne liste plus : aucune
+    // ligne ne les portait, mais le badge « Accueil » — qui SOMME la table — les
+    // comptait. Un « +1 » qu'on ne pouvait trouver nulle part, jusqu'à ce que
+    // vider la corbeille le fasse disparaître. Même jointure que le tableau de
+    // bord (app/api/me/summary/route.ts) et la réconciliation des cycles.
+    auth.supabase
+      .from("issues")
+      .select("project_id, projects!inner(deleted_at)")
+      .eq("status", "triage")
+      .is("deleted_at", null)
+      .is("projects.deleted_at", null),
     getServiceClient()
       .from("feedback_posts")
       .select("project_id")
