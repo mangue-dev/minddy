@@ -696,13 +696,26 @@ export async function listVisibleRepos(
 ): Promise<VisibleRepo[]> {
   const { data } = await supabase
     .from("project_git_links")
-    .select("provider, repo_full_name, project:projects(id, key, name, icon_url)");
+    .select(
+      "provider, repo_full_name, project:projects(id, key, name, icon_url, deleted_at)",
+    );
   return ((data ?? []) as unknown as Array<{
     provider: string;
     repo_full_name: string | null;
-    project: VisibleRepo["project"] | null;
+    project: (VisibleRepo["project"] & { deleted_at: string | null }) | null;
   }>)
-    .filter((r) => !!r.repo_full_name && !!r.project && isRepoProviderId(r.provider))
+    .filter(
+      (r) =>
+        !!r.repo_full_name &&
+        !!r.project &&
+        // Projet à la CORBEILLE (MIN-133) : sa ligne reste en base, et la policy
+        // `projects_select` ne regarde que l'accès — il revenait donc de la
+        // jointure comme n'importe quel autre. La page listait alors les pull
+        // requests d'un projet que l'utilisateur ne voit plus nulle part
+        // ailleurs, sous un en-tête portant son nom. Le restaurer les ramène.
+        !r.project.deleted_at &&
+        isRepoProviderId(r.provider),
+    )
     .map((r) => ({
       provider: r.provider as RepoProviderId,
       repoFullName: r.repo_full_name as string,

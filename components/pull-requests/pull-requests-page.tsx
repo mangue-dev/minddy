@@ -19,11 +19,18 @@ import { NumoIcon } from "@/components/numo-icon";
 import { PrDetail } from "@/components/pull-requests/pr-detail";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
-import { ProjectOrb } from "@/components/project-orb";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
+import {
+  PROJECT_GROUP_INDENT,
+  PROJECT_GROUP_LIMIT,
+  SidebarProjectGroup,
+  groupByProject,
+  toggledSet,
+  type ProjectGroup,
+} from "@/components/sidebar-project-group";
 import { UserAvatar } from "@/components/user-avatar";
 import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
@@ -31,7 +38,7 @@ import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { prIdentifier } from "@/lib/repo-providers";
 import type { MessageKey } from "@/lib/i18n-keys";
-import type { PullRequestStateFilter } from "@/lib/agent-api";
+import type { PullRequestListItem, PullRequestStateFilter } from "@/lib/agent-api";
 
 /**
  * Page Pull Requests (MIN-66, élargie par MIN-143) — vue liste/détail façon
@@ -203,6 +210,149 @@ function PrFilterMenu({
   );
 }
 
+/**
+ * Une pull request dans la liste. Elle dit ce qu'elle disait déjà — identifiant,
+ * ticket lié, état, date, titre, auteur — MOINS son projet, qui est écrit
+ * au-dessus d'elle par l'accordéon et n'a plus à l'être une fois par ligne.
+ */
+function PrRow({
+  pr,
+  selected,
+  dateLabel,
+  onSelect,
+}: {
+  pr: PullRequestListItem;
+  selected: boolean;
+  dateLabel: string;
+  onSelect: () => void;
+}) {
+  const t = useTranslations("PullRequests");
+  // L'identifiant de la PR d'abord — c'est CETTE ligne qu'on regarde ; le ticket
+  // lié se lit à droite, derrière un chevron qui dit la relation (même forme que
+  // le sous-ticket dans la carte d'issue).
+  const identifier = prIdentifier(pr.provider, pr.pr_number);
+  const linkedIssue =
+    pr.issue && pr.project ? issueIdentifier(pr.project.key, pr.issue.number) : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      // La sélection DÉRIVÉE de la page, et non l'état des CLICS : les deux
+      // divergent dans les deux cas d'ouverture les plus courants — à l'arrivée
+      // sur la page (rien n'a été cliqué, la première PR s'affiche) et sur un
+      // `?run=`, résolu en PR sans passer par l'état. La liste ne surlignait
+      // alors rien, en face d'une PR bel et bien ouverte.
+      aria-current={selected ? "true" : undefined}
+      className={cn(
+        "flex flex-col gap-1 rounded-lg py-2 pr-2 text-left outline-none transition-colors",
+        PROJECT_GROUP_INDENT,
+        selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60",
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span className="flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+          <span className="shrink-0 text-foreground">{identifier}</span>
+          {linkedIssue ? (
+            <>
+              <ChevronRight className="size-3 shrink-0" aria-hidden />
+              <span className="truncate">{linkedIssue}</span>
+            </>
+          ) : null}
+        </span>
+        {pr.activeRunId ? <Spinner className="size-3 shrink-0" /> : null}
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          <PrStateBadge state={pr.pr_state} className="h-5 px-2 text-[10px]" />
+          <span className="text-xs text-muted-foreground">{dateLabel}</span>
+        </span>
+      </div>
+      <span className="line-clamp-2 text-sm font-medium">
+        {pr.title ?? pr.issue?.title ?? identifier}
+      </span>
+      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+        {/* L'AUTEUR distingue une PR de Numo d'une PR humaine, maintenant qu'elles
+            cohabitent. Le run tranche : il ne ment pas, là où le login de la forge
+            dépend de l'installation. */}
+        {pr.runId ? (
+          <NumoIcon animated={false} className="size-3.5 shrink-0" />
+        ) : pr.author ? (
+          <UserAvatar
+            url={pr.author.avatar_url}
+            seed={pr.author.login}
+            className="size-3.5 shrink-0"
+          />
+        ) : null}
+        {pr.runId ? (
+          <span className="truncate">{t("numoAuthor")}</span>
+        ) : (
+          <GitLogin login={pr.author?.login} className="text-xs" />
+        )}
+      </span>
+    </button>
+  );
+}
+
+/** Un projet et ses pull requests — la coque partagée, garnie de `PrRow`. */
+function PrGroupRows({
+  group,
+  open,
+  showAll,
+  collapsible,
+  selectedId,
+  fmtDay,
+  onToggle,
+  onShowAll,
+  onSelect,
+}: {
+  group: ProjectGroup<PullRequestListItem>;
+  open: boolean;
+  showAll: boolean;
+  collapsible: boolean;
+  selectedId: string | null;
+  fmtDay: (at: string) => string;
+  onToggle: () => void;
+  onShowAll: () => void;
+  onSelect: (prId: string) => void;
+}) {
+  const tCommon = useTranslations("Common");
+  const prs = group.items;
+
+  // La PR OUVERTE reste visible : si elle est au-delà des cinq premières, la
+  // coupe descend jusqu'à elle plutôt que de la cacher.
+  const selectedIndex = prs.findIndex((p) => p.prId === selectedId);
+  const shown = showAll
+    ? prs
+    : prs.slice(0, Math.max(PROJECT_GROUP_LIMIT, selectedIndex + 1));
+
+  return (
+    <SidebarProjectGroup
+      project={group.project}
+      fallbackLabel={tCommon("noProjectGroup")}
+      open={open}
+      collapsible={collapsible}
+      onToggle={onToggle}
+      hiddenCount={prs.length - shown.length}
+      onShowAll={onShowAll}
+      showMoreLabel={tCommon("showMore")}
+      // Replié, l'en-tête garde le seul signal qui n'attend pas : un agent
+      // travaille sur l'une de ces PR.
+      collapsedBadge={
+        prs.some((p) => p.activeRunId) ? <Spinner className="size-3 shrink-0" /> : null
+      }
+    >
+      {shown.map((pr) => (
+        <PrRow
+          key={pr.prId}
+          pr={pr}
+          selected={pr.prId === selectedId}
+          dateLabel={fmtDay(pr.updated_at)}
+          onSelect={() => onSelect(pr.prId)}
+        />
+      ))}
+    </SidebarProjectGroup>
+  );
+}
+
 export function PullRequestsPage() {
   const t = useTranslations("PullRequests");
   const tProjects = useTranslations("Projects");
@@ -227,6 +377,23 @@ export function PullRequestsPage() {
   const [mobileDetail, setMobileDetail] = useState(!!deepLink);
   // Issue liée ouverte dans le panneau latéral (par-dessus la page, pas de navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
+  // Accordéon de la liste : les projets REPLIÉS (tout est déplié par défaut — on
+  // arrive pour voir, pas pour ouvrir) et ceux dont on a demandé toutes les PR.
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  /** Replie / déplie un projet. Le replier remet sa liste à ses cinq premières. */
+  const toggleGroup = (key: string) => {
+    const wasOpen = !collapsedGroups.has(key);
+    setCollapsedGroups((prev) => toggledSet(prev, key));
+    if (wasOpen && expandedGroups.has(key)) {
+      setExpandedGroups((prev) => toggledSet(prev, key));
+    }
+  };
 
   // Le deep-link est ÉPINGLÉ côté serveur : la PR visée entre dans la réponse
   // même si elle tombe hors de la page (une PR d'il y a six mois). Sans ça, le
@@ -335,6 +502,14 @@ export function PullRequestsPage() {
       : null,
   );
 
+  const groups = useMemo(
+    () => groupByProject(visible, (p) => p.project),
+    [visible],
+  );
+  // Un filtre en cours DÉPLIE tout et lève la coupe des cinq : chercher, c'est
+  // demander à voir ce qui correspond, pas à savoir où c'est rangé.
+  const filtering = query.trim().length > 0;
+
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
 
@@ -441,90 +616,28 @@ export function PullRequestsPage() {
             )}
           </EmptyScene>
         ) : (
-          <div className="flex flex-col px-2 pt-2 pb-4">
-            {visible.map((pr) => {
-              // L'identifiant de la PR d'abord — c'est CETTE ligne qu'on regarde ;
-              // le ticket lié se lit à droite, derrière un chevron qui dit la
-              // relation (même forme que le sous-ticket dans la carte d'issue).
-              const identifier = prIdentifier(pr.provider, pr.pr_number);
-              const linkedIssue =
-                pr.issue && pr.project
-                  ? issueIdentifier(pr.project.key, pr.issue.number)
-                  : null;
-              return (
-                <button
-                  key={pr.prId}
-                  type="button"
-                  onClick={() => {
-                    setSelectedPrId(pr.prId);
-                    setMobileDetail(true);
-                  }}
-                  // `selectedId` — la sélection DÉRIVÉE — et non `selectedPrId`,
-                  // qui n'enregistre que les CLICS. Les deux divergent dans les
-                  // deux cas d'ouverture les plus courants : à l'arrivée sur la
-                  // page (rien n'a été cliqué, la première PR s'affiche) et sur
-                  // un `?run=`, résolu en PR sans passer par l'état. La liste ne
-                  // surlignait alors rien, en face d'une PR bel et bien ouverte.
-                  aria-current={pr.prId === selectedId ? "true" : undefined}
-                  className={cn(
-                    "flex flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-                    pr.prId === selectedId
-                      ? "bg-muted"
-                      : "hover:bg-muted/60 focus-visible:bg-muted/60",
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
-                      <span className="shrink-0 text-foreground">{identifier}</span>
-                      {linkedIssue ? (
-                        <>
-                          <ChevronRight className="size-3 shrink-0" aria-hidden />
-                          <span className="truncate">{linkedIssue}</span>
-                        </>
-                      ) : null}
-                    </span>
-                    {pr.activeRunId ? <Spinner className="size-3 shrink-0" /> : null}
-                    <span className="ml-auto flex shrink-0 items-center gap-1.5">
-                      <PrStateBadge state={pr.pr_state} className="h-5 px-2 text-[10px]" />
-                      <span className="text-xs text-muted-foreground">{fmtDay(pr.updated_at)}</span>
-                    </span>
-                  </div>
-                  <span className="line-clamp-2 text-sm font-medium">
-                    {pr.title ?? pr.issue?.title ?? identifier}
-                  </span>
-                  <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                    {/* L'AUTEUR distingue une PR de Numo d'une PR humaine, maintenant
-                        qu'elles cohabitent. Le run tranche : il ne ment pas, là où le
-                        login de la forge dépend de l'installation. */}
-                    {pr.runId ? (
-                      <NumoIcon animated={false} className="size-3.5 shrink-0" />
-                    ) : pr.author ? (
-                      <UserAvatar
-                        url={pr.author.avatar_url}
-                        seed={pr.author.login}
-                        className="size-3.5 shrink-0"
-                      />
-                    ) : null}
-                    {pr.runId ? (
-                      <span className="truncate">{t("numoAuthor")}</span>
-                    ) : (
-                      <GitLogin login={pr.author?.login} className="text-xs" />
-                    )}
-                    {pr.project ? (
-                      <>
-                        <span aria-hidden>·</span>
-                        <ProjectOrb
-                          seed={pr.project.id}
-                          iconUrl={pr.project.icon_url}
-                          className="size-3.5 shrink-0"
-                        />
-                        <span className="truncate">{pr.project.name}</span>
-                      </>
-                    ) : null}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="flex flex-col gap-2 px-2 pt-2 pb-4">
+            {/* Un projet, ses pull requests — même accordéon que la colonne des
+                conversations de l'agent (`SidebarProjectGroup`). C'est lui qui
+                porte le projet, et c'est pour ça que les lignes ne le portent
+                plus : il serait écrit une fois par ligne sous son propre titre. */}
+            {groups.map((g) => (
+              <PrGroupRows
+                key={g.key}
+                group={g}
+                open={filtering || !collapsedGroups.has(g.key)}
+                showAll={filtering || expandedGroups.has(g.key)}
+                collapsible={!filtering}
+                selectedId={selectedId}
+                fmtDay={fmtDay}
+                onToggle={() => toggleGroup(g.key)}
+                onShowAll={() => setExpandedGroups((prev) => toggledSet(prev, g.key))}
+                onSelect={(prId) => {
+                  setSelectedPrId(prId);
+                  setMobileDetail(true);
+                }}
+              />
+            ))}
 
             {hasMore ? (
               <Button

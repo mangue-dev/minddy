@@ -52,7 +52,14 @@ interface RunRow {
   completed_at: string | null;
   awaiting_input: boolean;
   issue: { id: string; number: number; title: string } | null;
-  project: { id: string; key: string; name: string; icon_url: string | null } | null;
+  project: {
+    id: string;
+    key: string;
+    name: string;
+    icon_url: string | null;
+    /** Lu pour ÉCARTER les sessions d'un projet à la corbeille — jamais rendu. */
+    deleted_at: string | null;
+  } | null;
   /** PR RELUE par ce run (MIN-168). Null partout ailleurs. */
   pull_request: { id: string; number: number; title: string | null; url: string | null } | null;
 }
@@ -92,7 +99,7 @@ export interface AgentSessionListItem {
    * vit dans `pr_number` / `pr_url` / `pr_state`, et les deux ne se mélangent pas.
    */
   pullRequest: { id: string; number: number; title: string | null; url: string | null } | null;
-  project: RunRow["project"];
+  project: { id: string; key: string; name: string; icon_url: string | null } | null;
   /** Un run de l'issue TRAVAILLE (queued/running) → « Numo travaille ». */
   working: boolean;
   /** Nombre total de runs de l'issue (≥ 1) → accès à l'historique (MIN-68). */
@@ -116,7 +123,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url), pull_request:pull_requests(id, number, title, url)",
+      "id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url, deleted_at), pull_request:pull_requests(id, number, title, url)",
     )
     .order("created_at", { ascending: false });
 
@@ -130,10 +137,16 @@ export async function GET(request: NextRequest) {
   // Même raisonnement pour une session de RELECTURE dont la PR n'est plus
   // lisible (dépôt délié depuis) : sans elle, la session n'a plus ni titre ni
   // badge et se lirait comme une session carnet, pour une PR qui n'est plus là.
+  // Même raisonnement, un cran plus haut, pour un PROJET à la corbeille : sa
+  // ligne reste en base et la policy `projects_select` ne regarde que l'accès, si
+  // bien que ses sessions revenaient dans la liste — sous un en-tête portant le
+  // nom d'un projet que l'utilisateur ne voit plus nulle part ailleurs. Le
+  // restaurer les ramène, comme le reste de son contenu.
   const rows = ((data ?? []) as unknown as RunRow[]).filter(
     (r) =>
       (r.issue_id === null || r.issue !== null) &&
-      (r.pull_request_id === null || r.pull_request !== null),
+      (r.pull_request_id === null || r.pull_request !== null) &&
+      !r.project?.deleted_at,
   );
   // Les lignes arrivent triées par created_at DESC : le 1er run vu par issue est la
   // DERNIÈRE session en date — c'est elle le représentant (badge fidèle à l'état de
@@ -170,7 +183,16 @@ export async function GET(request: NextRequest) {
         updated_at: r.updated_at,
         issue: r.issue,
         pullRequest: r.pull_request,
-        project: r.project,
+        // Sans son `deleted_at`, qui n'a servi qu'au filtre ci-dessus : la
+        // réponse ne porte que ce que la liste peint.
+        project: r.project
+          ? {
+              id: r.project.id,
+              key: r.project.key,
+              name: r.project.name,
+              icon_url: r.project.icon_url,
+            }
+          : null,
         working: isWorking,
         runCount: 1,
         lastCompletedAt: r.completed_at,

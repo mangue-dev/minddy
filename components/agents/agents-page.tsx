@@ -12,14 +12,21 @@ import {
   TooltipTrigger,
   cn,
 } from "mangue-ui";
-import { Bot, ChevronRight, Folder, Plus } from "lucide-react";
+import { Bot, Plus } from "lucide-react";
 import { AgentSessionDetail } from "@/components/agents/agent-session-detail";
 import { EmptyScene } from "@/components/empty-scene";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
 import { SessionCompose } from "@/components/agents/session-compose";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
-import { ProjectOrb } from "@/components/project-orb";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import {
+  PROJECT_GROUP_INDENT,
+  PROJECT_GROUP_LIMIT,
+  SidebarProjectGroup,
+  groupByProject,
+  toggledSet,
+  type ProjectGroup,
+} from "@/components/sidebar-project-group";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useProjects } from "@/lib/projects-context";
@@ -64,40 +71,7 @@ function sessionKey(s: AgentSessionListItem): string {
   return s.issue?.id ?? s.runId;
 }
 
-/** Clé du groupe des sessions ORPHELINES (projet non joint — RLS aberrante). */
-const NO_PROJECT_KEY = "__no_project__";
-
-/** Conversations montrées par projet avant « Afficher plus ». */
-const GROUP_LIMIT = 5;
-
-interface SessionGroup {
-  key: string;
-  project: AgentSessionListItem["project"];
-  sessions: AgentSessionListItem[];
-}
-
-/**
- * Un groupe par PROJET, dans l'ordre d'apparition des sessions — qui arrivent
- * déjà triées de la plus récente à la plus ancienne. Le projet dont on a parlé
- * en dernier est donc en tête, et ses conversations sont dans le même ordre.
- */
-function groupByProject(sessions: AgentSessionListItem[]): SessionGroup[] {
-  const groups = new Map<string, SessionGroup>();
-  for (const s of sessions) {
-    const key = s.project?.id ?? NO_PROJECT_KEY;
-    const group = groups.get(key);
-    if (group) group.sessions.push(s);
-    else groups.set(key, { key, project: s.project, sessions: [s] });
-  }
-  return [...groups.values()];
-}
-
-/** Ajoute ou retire une clé d'un ensemble, sans le muter. */
-function toggledSet(set: ReadonlySet<string>, key: string): Set<string> {
-  const next = new Set(set);
-  if (!next.delete(key)) next.add(key);
-  return next;
-}
+type SessionGroup = ProjectGroup<AgentSessionListItem>;
 
 /**
  * Une conversation dans la liste : SON TITRE, sur une ligne, et rien d'autre —
@@ -147,9 +121,9 @@ function SessionRow({
           type="button"
           onClick={onSelect}
           className={cn(
-            // `pl-8` aligne le titre sur le NOM du projet, un niveau plus haut
-            // (px-2 + orbe + sa gouttière).
-            "flex items-center gap-2 rounded-md py-1.5 pr-2 pl-8 text-left outline-none transition-colors",
+            "flex items-center gap-2 rounded-md py-1.5 pr-2 text-left outline-none transition-colors",
+            // Aligné sur le NOM du projet, un niveau plus haut.
+            PROJECT_GROUP_INDENT,
             selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60",
           )}
         >
@@ -198,7 +172,7 @@ function SessionRow({
  * projet remet le compteur à cinq — c'est le chemin de retour, sans un second
  * bouton à ajouter.
  */
-function ProjectGroup({
+function SessionGroupRows({
   group,
   open,
   showAll,
@@ -215,12 +189,6 @@ function ProjectGroup({
   group: SessionGroup;
   open: boolean;
   showAll: boolean;
-  /**
-   * Faux pendant un filtre : la liste est alors dépliée de force, et un en-tête
-   * qui ne peut plus rien replier n'est plus un bouton — il redevient l'étiquette
-   * du projet, sans chevron ni clic mort. Le chevron étant en BOUT de ligne, son
-   * absence ne décale rien.
-   */
   collapsible: boolean;
   /**
    * Le projet a-t-il un DÉPÔT lié ? Sans lui, l'agent n'a rien à cloner : le
@@ -238,75 +206,49 @@ function ProjectGroup({
   onNewSession: () => void;
 }) {
   const t = useTranslations("Agents");
-  const { sessions } = group;
+  // « Afficher plus » et « Sans projet » sont ceux de l'accordéon, partagés avec
+  // la colonne des pull requests : une seule paire de mots pour un seul geste.
+  const tCommon = useTranslations("Common");
+  const sessions = group.items;
 
   // La conversation OUVERTE reste visible : si elle est au-delà des cinq
   // premières, la coupe descend jusqu'à elle plutôt que de la cacher.
   const selectedIndex = sessions.findIndex((s) => sessionKey(s) === selectedKey);
   const shown = showAll
     ? sessions
-    : sessions.slice(0, Math.max(GROUP_LIMIT, selectedIndex + 1));
-  const hidden = sessions.length - shown.length;
+    : sessions.slice(0, Math.max(PROJECT_GROUP_LIMIT, selectedIndex + 1));
 
   const working = sessions.some((s) => s.working);
   const unreadSessions = sessions.filter((s) => isAgentSessionUnread(s, reads));
   const awaiting = unreadSessions.some((s) => s.awaitingInput);
 
-  const headerClass =
-    "flex min-w-0 flex-1 items-center gap-2 rounded-md py-1.5 pl-2 text-left";
-  const header = (
-    <>
-      {/* L'icône du projet ouvre la ligne — c'est elle qu'on cherche du regard en
-          descendant la colonne, pas le chevron, qui ne dit qu'un état de pliage.
-          Les titres dessous s'alignent sur le NOM du projet (`pl-8`). */}
-      {group.project ? (
-        <ProjectOrb
-          seed={group.project.id}
-          iconUrl={group.project.icon_url}
-          className="size-4 shrink-0"
-        />
-      ) : (
-        <Folder className="size-4 shrink-0 text-muted-foreground" />
-      )}
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">
-        {group.project?.name ?? t("noProjectGroup")}
-      </span>
-      {/* Replié seulement : déplié, chaque ligne porte déjà le sien. */}
-      {!open && working ? (
-        <Spinner className="size-3 shrink-0 text-muted-foreground" />
-      ) : !open && unreadSessions.length > 0 ? (
-        <span
-          className={cn(
-            "size-2 shrink-0 rounded-full",
-            awaiting ? "bg-yellow-500" : "bg-blue-500",
-          )}
-          aria-label={awaiting ? t("awaitingAnswer") : t("unread")}
-        />
-      ) : null}
-    </>
-  );
-
   return (
-    <div className="flex flex-col">
-      {/* Le repli et le « + » sont deux gestes distincts : deux boutons côte à
-          côte, dans une ligne qui s'allume d'un seul tenant au survol (un bouton
-          dans un bouton n'existe pas, en HTML comme à la souris). */}
-      <div className="group/project flex items-center rounded-md pr-1 transition-colors hover:bg-muted/60 focus-within:bg-muted/60">
-        {collapsible ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={open}
-            className={cn(headerClass, "outline-none")}
-          >
-            {header}
-          </button>
-        ) : (
-          <div className={headerClass}>{header}</div>
-        )}
-        {/* Sans projet joint, rien à pré-choisir ; sans dépôt lié, rien à lancer :
-            dans les deux cas le raccourci n'existe pas. */}
-        {group.project && canLaunch ? (
+    <SidebarProjectGroup
+      project={group.project}
+      fallbackLabel={tCommon("noProjectGroup")}
+      open={open}
+      collapsible={collapsible}
+      onToggle={onToggle}
+      hiddenCount={sessions.length - shown.length}
+      onShowAll={onShowAll}
+      showMoreLabel={tCommon("showMore")}
+      collapsedBadge={
+        working ? (
+          <Spinner className="size-3 shrink-0 text-muted-foreground" />
+        ) : unreadSessions.length > 0 ? (
+          <span
+            className={cn(
+              "size-2 shrink-0 rounded-full",
+              awaiting ? "bg-yellow-500" : "bg-blue-500",
+            )}
+            aria-label={awaiting ? t("awaitingAnswer") : t("unread")}
+          />
+        ) : null
+      }
+      actions={
+        /* Sans projet joint, rien à pré-choisir ; sans dépôt lié, rien à lancer :
+           dans les deux cas le raccourci n'existe pas. */
+        group.project && canLaunch ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -326,58 +268,25 @@ function ProjectGroup({
               {t("newInProject", { project: group.project.name })}
             </TooltipContent>
           </Tooltip>
-        ) : null}
-        {/* Le chevron ferme la ligne, à droite de tout : le « + » réserve sa
-            place même invisible, donc rien ne bouge au survol. Il rejoue le
-            geste du grand bouton d'en-tête — d'où `aria-hidden` et le retrait du
-            parcours clavier : un seul contrôle annoncé, pas deux. */}
-        {collapsible ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            tabIndex={-1}
-            aria-hidden
-            className="flex size-6 shrink-0 items-center justify-center outline-none"
-          >
-            <ChevronRight
-              className={cn(
-                "size-3 text-muted-foreground transition-transform",
-                open && "rotate-90",
-              )}
-            />
-          </button>
-        ) : null}
-      </div>
-
-      {open ? (
-        <div className="flex flex-col">
-          {shown.map((s) => {
-            const key = sessionKey(s);
-            const unread = isAgentSessionUnread(s, reads);
-            return (
-              <SessionRow
-                key={key}
-                session={s}
-                selected={key === selectedKey}
-                unread={unread}
-                awaiting={unread && s.awaitingInput}
-                dateLabel={fmtDay(s.updated_at)}
-                onSelect={() => onSelect(key)}
-              />
-            );
-          })}
-          {hidden > 0 ? (
-            <button
-              type="button"
-              onClick={onShowAll}
-              className="rounded-md py-1.5 pr-2 pl-8 text-left text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
-            >
-              {t("showMore")}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+        ) : null
+      }
+    >
+      {shown.map((s) => {
+        const key = sessionKey(s);
+        const unread = isAgentSessionUnread(s, reads);
+        return (
+          <SessionRow
+            key={key}
+            session={s}
+            selected={key === selectedKey}
+            unread={unread}
+            awaiting={unread && s.awaitingInput}
+            dateLabel={fmtDay(s.updated_at)}
+            onSelect={() => onSelect(key)}
+          />
+        );
+      })}
+    </SidebarProjectGroup>
   );
 }
 
@@ -734,7 +643,10 @@ export function AgentsPage() {
   }, [sessions, query]);
 
   const listCount = visibleSessions.length;
-  const groups = useMemo(() => groupByProject(visibleSessions), [visibleSessions]);
+  const groups = useMemo(
+    () => groupByProject(visibleSessions, (s) => s.project),
+    [visibleSessions],
+  );
   // Un filtre en cours DÉPLIE tout et lève la coupe des cinq : chercher, c'est
   // demander à voir ce qui correspond, pas à savoir où c'est rangé.
   const filtering = query.trim().length > 0;
@@ -805,7 +717,7 @@ export function AgentsPage() {
                 brouillon n'est pas une conversation — la colonne ne montre que ce
                 qui existe, c'est-à-dire à partir du premier message envoyé. */}
             {groups.map((g) => (
-              <ProjectGroup
+              <SessionGroupRows
                 key={g.key}
                 group={g}
                 open={filtering || !collapsedGroups.has(g.key)}

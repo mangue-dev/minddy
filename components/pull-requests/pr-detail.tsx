@@ -951,6 +951,17 @@ export function PrDetail({
         >
           <ChevronLeft />
         </Button>
+        {/* L'orbe du projet ouvre l'en-tête, comme celui d'une conversation de
+            l'agent : la colonne ne dit plus le projet ligne par ligne (il est
+            écrit une fois, sur l'en-tête de son accordéon), et le détail est
+            l'endroit où l'on veut savoir de quel dépôt on parle. */}
+        {item.project ? (
+          <ProjectOrb
+            seed={item.project.id}
+            iconUrl={item.project.icon_url}
+            className="size-4 shrink-0"
+          />
+        ) : null}
         <span className="flex min-w-0 items-center gap-1 font-mono text-sm">
           {forgeUrl ? (
             <a
@@ -1006,15 +1017,12 @@ export function PrDetail({
             </span>
           )}
         </span>
-        {/* Une PR terminale n'a plus d'actions : le badge prend la place qu'elles
-            occupaient à droite, là où l'œil cherchait le bouton. Tant qu'elle est
-            ouverte — ou seulement fermée, donc rouvrable — il reste à gauche,
-            contre l'identifiant. */}
-        <PrStateBadge
-          state={badgeState}
-          icon
-          className={cn(isTerminal && !canReopen && "ml-auto")}
-        />
+        {/* Tant que la PR est VIVANTE, son état se lit à gauche, contre
+            l'identifiant : la droite appartient aux actions, qui sont ce qu'on y
+            cherche. Terminée (fusionnée, fermée), c'est l'inverse — l'état DEVIENT
+            la nouvelle, et il va prendre la place des actions, à la fin de la
+            ligne (voir la grappe de droite plus bas). */}
+        {!isTerminal ? <PrStateBadge state={badgeState} icon /> : null}
         {/* Approbations : « n approbations », et la mention du blocage à côté du
             bouton Fusionner. Pas de « n/N » — le N vient de la protection de
             branche, qui coûte une permission GitHub hors périmètre. */}
@@ -1037,10 +1045,13 @@ export function PrDetail({
         ) : null}
 
         {isTerminal ? (
-          // Le seul geste qui reste à une PR fermée. Sans confirmation : rouvrir
-          // ne détruit rien, et le bouton d'à côté la referme.
-          canReopen ? (
-            <div className="ml-auto flex items-center gap-1.5">
+          // Fin de ligne d'une PR terminée : le seul geste qui lui reste — rouvrir,
+          // sans confirmation, ça ne détruit rien et le bouton d'à côté la referme
+          // — puis son ÉTAT, en dernier. Le badge ferme la ligne dans les deux cas,
+          // fusionnée (rien avant lui) comme fermée (le bouton avant lui) : c'est
+          // toujours au même endroit qu'on lit ce qu'elle est devenue.
+          <div className="ml-auto flex items-center gap-1.5">
+            {canReopen ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -1050,8 +1061,9 @@ export function PrDetail({
                 {acting === "reopen" ? <Spinner /> : <RotateCcw />}
                 {t("reopen")}
               </Button>
-            </div>
-          ) : null
+            ) : null}
+            <PrStateBadge state={badgeState} icon />
+          </div>
         ) : (
           <div className="ml-auto flex items-center gap-1.5">
             {mergeBlockedByRepo ? (
