@@ -36,15 +36,38 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  * true, et seulement si le modèle a répondu un membre valide. C'est ce que
  * l'activité du ticket distingue — sans ça les trois se lisaient pareil.
  *
- * Everything runs in `after()` — never on the request's critical path — and
- * re-checks its preconditions at execution time, so a stale schedule (toggle
- * flipped, someone assigned meanwhile, status changed back) is a silent no-op.
+ * Le run re-vérifie TOUT au moment où il s'exécute : un déclenchement périmé
+ * (toggle retombé, quelqu'un a assigné entre-temps, statut revenu en triage)
+ * est un no-op silencieux.
+ *
+ * ## Ce qui est fait tout de suite, et ce qui est différé
+ *
+ * Tout vivait dans `after()`. Ça ne tient pas : le travail d'après la réponse
+ * est au mieux best-effort, et un ticket créé par le MCP en a fait les frais —
+ * l'événement `created` écrit, l'affectation jamais. Le coupable n'était pas la
+ * décision (elle prend une seconde) mais sa longueur : six aller-retours de
+ * LECTURE avant la moindre écriture, dont trois pour un contrôle de budget sur
+ * un chemin qui ne dépense rien. Six occasions de disparaître sans trace.
+ *
+ * D'où la découpe :
+ * - le cas DÉTERMINISTE (membre unique, ou aucune règle) écrit avant la réponse.
+ *   C'est une update ; l'attendre coûte moins cher que de la perdre ;
+ * - seul l'appel au MODÈLE reste différé — plusieurs secondes de latence n'ont
+ *   rien à faire dans un POST — et c'est LUI seul que le budget garde ;
+ * - `sweepUnassignedIssues` (cron) rattrape ce que ce dernier `after()` perd.
  */
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // Surchargeable en base via la clé app_config `smart_assign_model`.
 const SMART_ASSIGN_DEFAULT_MODEL = aiModelFallback("smart_assign_model");
 const MAX_DESCRIPTION_CHARS = 4000;
+
+/** Fenêtre du rattrapage : au-delà, un ticket sans assigné est un choix, pas
+    un accident (cf. sweepUnassignedIssues). */
+const SWEEP_WINDOW_MS = 24 * 60 * 60_000;
+/** Assez pour absorber une rafale de sous-tickets, assez peu pour tenir dans
+    la fenêtre du cron — le reste est repris au réveil suivant. */
+const SWEEP_LIMIT = 100;
 
 /** Statuses Smart Assign acts on: anything past triage that is still a real,
     living issue. */
@@ -63,47 +86,74 @@ export interface SmartAssignParams {
   /** Who created / transitioned the issue — suppresses their own notification
       when Smart Assign picks them. NULL for integration-created issues. */
   triggerActorId: string | null;
-  trigger: "create" | "triage_exit";
+  /** `sweep` = le rattrapage du cron. Il n'a pas de réponse à rendre, donc il
+      ATTEND l'appel au modèle au lieu de le différer — différer, c'est
+      justement ce qui a fait perdre l'affectation qu'il vient réparer. */
+  trigger: "create" | "triage_exit" | "sweep";
 }
 
-/** Fire-and-forget entry point for the two server cores (create/update issue).
-    Cheap: the real work happens after the response, in runSmartAssign. */
-export function scheduleSmartAssign(params: SmartAssignParams): void {
-  afterOrNow(() =>
-    runSmartAssign(params).catch((e) =>
-      console.error("[smart-assign] run failed:", (e as Error).message)
-    )
-  );
+/**
+ * Point d'entrée des deux cœurs d'écriture (création / mise à jour d'un
+ * ticket) : à ATTENDRE, et sans filet à poser — il ne lève jamais.
+ *
+ * Ce qu'on attend, c'est la décision et, dans le cas déterministe, l'écriture.
+ * Pas l'appel au modèle : celui-là part en `after()` depuis `runSmartAssign`.
+ *
+ * Renvoie l'assigné écrit, pour que l'appelant puisse rendre un ticket à jour
+ * plutôt qu'une ligne qu'il sait déjà périmée.
+ */
+export async function applySmartAssign(
+  params: SmartAssignParams
+): Promise<string | null> {
+  try {
+    return await runSmartAssign(params);
+  } catch (err) {
+    console.error("[smart-assign] run failed:", (err as Error).message);
+    return null;
+  }
 }
 
-export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
+/**
+ * Le run lui-même. Renvoie l'assigné que CE run a écrit — donc `null` s'il n'y
+ * avait rien à faire, mais aussi quand l'appel au modèle a été différé : à ce
+ * moment-là rien n'est encore écrit, et prétendre le contraire mentirait à
+ * l'appelant comme au balayeur qui compte.
+ */
+export async function runSmartAssign(
+  params: SmartAssignParams
+): Promise<string | null> {
   const service = getServiceClient();
+
+  // Les trois lectures EN PARALLÈLE : elles ne dépendent pas les unes des
+  // autres, et c'est la longueur de ce prélude qui décide si l'affectation
+  // survit. Un aller-retour de temps d'horloge, pas trois.
+  const [{ data: project }, { data: issue }, { data: memberRows }] =
+    await Promise.all([
+      service
+        .from("projects")
+        .select("id, name, owner_id, smart_assign_enabled, smart_assign_rules")
+        .eq("id", params.projectId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+      service
+        .from("issues")
+        .select("id, title, description, status, priority, effort, assignee_id")
+        .is("deleted_at", null)
+        .eq("id", params.issueId)
+        .maybeSingle(),
+      service
+        .from("project_members")
+        .select("user_id")
+        .eq("project_id", params.projectId),
+    ]);
 
   // Re-check everything at execution time — the world may have moved since
   // the schedule (toggle off, project deleted, issue assigned or re-triaged).
-  const { data: project } = await service
-    .from("projects")
-    .select("id, name, owner_id, smart_assign_enabled, smart_assign_rules")
-    .eq("id", params.projectId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (!project?.smart_assign_enabled) return;
-  if (!(await canUseSmartAssign(project.owner_id as string))) return;
-
-  const { data: issue } = await service
-    .from("issues")
-    .select("id, title, description, status, priority, effort, assignee_id")
-    .is("deleted_at", null)
-    .eq("id", params.issueId)
-    .maybeSingle();
-  if (!issue || issue.assignee_id !== null) return;
-  if (!isSmartAssignEligibleStatus(issue.status)) return;
+  if (!project?.smart_assign_enabled) return null;
+  if (!issue || issue.assignee_id !== null) return null;
+  if (!isSmartAssignEligibleStatus(issue.status)) return null;
 
   // The team = owner (no project_members row) + members.
-  const { data: memberRows } = await service
-    .from("project_members")
-    .select("user_id")
-    .eq("project_id", params.projectId);
   const ownerId = project.owner_id as string;
   const memberIds = [
     ownerId,
@@ -117,30 +167,64 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
   // possible : sans aucune, le modèle n'a que des noms à comparer, et le prompt
   // lui dit déjà de retomber sur le owner dans ce cas. Autant ne pas payer
   // l'appel — le résultat est le même, en moins cher et sans latence.
-  let chosen: string;
-  // Le modèle a-t-il VRAIMENT choisi ? L'activité du ticket le dit, et les deux
-  // modes ne se valent pas : le repli sur le propriétaire — faute d'appel, ou
-  // faute de réponse exploitable — reste une affectation automatique.
-  let chosenByModel = false;
   if (memberIds.length === 1 || !hasAnyRule(memberIds, rules)) {
-    // Seul membre, ou aucune règle : pas d'ambiguïté à lever, pas d'IA.
-    chosen = ownerId;
-  } else {
-    const picked = await chooseAssigneeViaAI({
-      service,
-      projectId: params.projectId,
-      projectName: (project.name as string) ?? "",
-      issue,
-      memberIds,
-      ownerId,
-      rules,
-    });
-    chosen = picked ?? ownerId; // the contract is "always assign" — owner on any failure
-    chosenByModel = picked !== null;
+    // Seul membre, ou aucune règle : pas d'ambiguïté à lever, pas d'IA — donc
+    // rien à facturer, rien à garder, et aucune raison d'attendre la réponse
+    // pour écrire. C'est le cas de l'immense majorité des projets.
+    return await claimForSmartAssign(service, params, ownerId, false);
   }
 
-  // Compare-and-set against a concurrent manual assignment: only claim the
-  // issue if it is still unassigned. No row back → someone beat us, stop.
+  // Reste le seul morceau qui coûte : quelques secondes de latence et une ligne
+  // d'usage. Il part après la réponse — sauf pour le balayeur, qui n'en a pas.
+  const askTheModel = async () => {
+    // Le budget ne garde QUE la dépense. Le mettre en tête du run revenait à
+    // suspendre aussi les affectations déterministes, qui ne coûtent rien ; et
+    // budget à sec ou modèle muet, le contrat reste le même — on assigne
+    // quelqu'un, à défaut le propriétaire.
+    const picked = (await canUseSmartAssign(ownerId))
+      ? await chooseAssigneeViaAI({
+          service,
+          projectId: params.projectId,
+          projectName: (project.name as string) ?? "",
+          issue,
+          memberIds,
+          ownerId,
+          rules,
+        })
+      : null;
+    // Le modèle a-t-il VRAIMENT choisi ? L'activité du ticket le dit, et les
+    // deux modes ne se valent pas : le repli sur le propriétaire — faute
+    // d'appel, ou faute de réponse exploitable — reste une affectation
+    // automatique.
+    return await claimForSmartAssign(
+      service,
+      params,
+      picked ?? ownerId,
+      picked !== null
+    );
+  };
+  if (params.trigger === "sweep") return await askTheModel();
+  afterOrNow(async () => {
+    await askTheModel();
+  });
+  return null;
+}
+
+/**
+ * L'écriture : compare-and-set contre une affectation manuelle concurrente
+ * (aucune ligne en retour → quelqu'un nous a devancés), puis l'activité et la
+ * notification.
+ *
+ * Les trois vont ensemble et dans cet ordre : une affectation sans son
+ * événement serait une main invisible dans la timeline — pire que pas
+ * d'affectation du tout.
+ */
+async function claimForSmartAssign(
+  service: SupabaseClient,
+  params: SmartAssignParams,
+  chosen: string,
+  chosenByModel: boolean
+): Promise<string | null> {
   const { data: claimed } = await service
     .from("issues")
     .update({ assignee_id: chosen })
@@ -149,7 +233,7 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
     .is("assignee_id", null)
     .select("id")
     .maybeSingle();
-  if (!claimed) return;
+  if (!claimed) return null;
 
   await insertEvents(service, [
     {
@@ -178,6 +262,84 @@ export async function runSmartAssign(params: SmartAssignParams): Promise<void> {
       },
     ]);
   }
+  return chosen;
+}
+
+/**
+ * Le RATTRAPAGE (cron `/api/cron/smart-assign`) : les tickets qu'un
+ * déclenchement aurait dû assigner et qui sont restés sans personne.
+ *
+ * Il existe parce que rien ne garantit qu'un `after()` aille au bout — c'est
+ * exactement comme ça qu'un ticket créé par le MCP est resté orphelin, sans
+ * erreur, sans trace, sans nouvelle tentative. Le cas déterministe n'en dépend
+ * plus ; l'appel au modèle, si.
+ *
+ * Deux bornes, qui disent ce que ce balayage est et n'est pas :
+ *
+ * - **24 h**, sur la création OU la dernière modification. C'est un filet sous
+ *   un déclenchement récent, pas une relecture de l'arriéré : activer le toggle
+ *   ne doit pas assigner d'un coup trois ans de backlog.
+ * - **Jamais assigné**, au sens de l'activité : un ticket qui porte un
+ *   événement `assignee_id` est sorti du périmètre, quel qu'en soit l'auteur.
+ *   Sans ça, vider l'assigné d'un ticket à la main le verrait revenir tout seul
+ *   dans l'heure — un « filet » qui contredit un geste explicite n'en est pas un.
+ */
+export async function sweepUnassignedIssues(
+  limit = SWEEP_LIMIT
+): Promise<{ candidates: number; assigned: number }> {
+  const service = getServiceClient();
+  const since = new Date(Date.now() - SWEEP_WINDOW_MS).toISOString();
+
+  const { data: rows, error } = await service
+    .from("issues")
+    .select("id, project_id, projects!inner(smart_assign_enabled, deleted_at)")
+    .is("deleted_at", null)
+    .is("assignee_id", null)
+    .not("status", "in", "(triage,canceled,duplicate)")
+    .eq("projects.smart_assign_enabled", true)
+    .is("projects.deleted_at", null)
+    .or(`created_at.gte.${since},updated_at.gte.${since}`)
+    .order("created_at", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+
+  const candidates = (rows ?? []) as Array<{ id: string; project_id: string }>;
+  if (candidates.length === 0) return { candidates: 0, assigned: 0 };
+
+  const { data: touched } = await service
+    .from("issue_events")
+    .select("issue_id")
+    .eq("field", "assignee_id")
+    .in(
+      "issue_id",
+      candidates.map((c) => c.id)
+    );
+  const everAssigned = new Set((touched ?? []).map((e) => e.issue_id as string));
+
+  let assigned = 0;
+  for (const candidate of candidates) {
+    if (everAssigned.has(candidate.id)) continue;
+    try {
+      // `trigger: "sweep"` → l'appel au modèle est attendu, pas différé, et
+      // l'acteur est nul : personne n'a rien fait, la notification part donc
+      // même vers celui qui avait créé le ticket.
+      const chosen = await runSmartAssign({
+        issueId: candidate.id,
+        projectId: candidate.project_id,
+        triggerActorId: null,
+        trigger: "sweep",
+      });
+      if (chosen) assigned++;
+    } catch (err) {
+      // Un ticket qui explose ne doit pas emporter les suivants.
+      console.error(
+        "[smart-assign] sweep failed:",
+        candidate.id,
+        (err as Error).message
+      );
+    }
+  }
+  return { candidates: candidates.length, assigned };
 }
 
 /**

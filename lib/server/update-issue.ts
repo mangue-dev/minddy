@@ -25,8 +25,8 @@ import { insertNotifications } from "@/lib/server/notifications";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import {
+  applySmartAssign,
   isSmartAssignEligibleStatus,
-  scheduleSmartAssign,
 } from "@/lib/server/smart-assign";
 import { scheduleCycleCapture } from "@/lib/server/cycles";
 import { statusAllowsCycle } from "@/lib/cycle";
@@ -495,16 +495,19 @@ export async function updateIssueFields({
   }
 
   // Smart Assign (MIN-31): an unassigned issue leaving triage gets an assignee
-  // after the response (opt-in per project; the run re-checks everything).
+  // (opt-in per project; the run re-checks everything). ATTENDU, comme à la
+  // création : le cas déterministe écrit avant la réponse, seul l'appel au
+  // modèle repart en `after()` (voir l'en-tête de lib/server/smart-assign.ts).
   const assigneeAfterUpdate =
     "assignee_id" in updates ? updates.assignee_id : before.assignee_id;
+  let smartAssignee: string | null = null;
   if (
     "status" in updates &&
     before.status === "triage" &&
     isSmartAssignEligibleStatus(updates.status) &&
     assigneeAfterUpdate == null
   ) {
-    scheduleSmartAssign({
+    smartAssignee = await applySmartAssign({
       issueId,
       projectId: before.project_id as string,
       triggerActorId: actorId,
@@ -573,5 +576,12 @@ export async function updateIssueFields({
     groups: { project: data.project_id as string },
   });
 
-  return { ok: true, issue: mapIssueRow(data) };
+  // Même raison qu'à la création : `data` a été lu avant que Smart Assign
+  // n'écrive, seul le ticket rendu porte la correction.
+  return {
+    ok: true,
+    issue: mapIssueRow(
+      smartAssignee ? { ...data, assignee_id: smartAssignee } : data
+    ),
+  };
 }

@@ -23,8 +23,8 @@ import { insertNotifications } from "@/lib/server/notifications";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import {
+  applySmartAssign,
   isSmartAssignEligibleStatus,
-  scheduleSmartAssign,
 } from "@/lib/server/smart-assign";
 import { ensureIssueLimit } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
@@ -446,10 +446,16 @@ export async function createIssueForProject({
   }
 
   // Smart Assign (MIN-31): an issue born past triage without an assignee gets
-  // one after the response (opt-in per project; the run re-checks everything).
-  // Integration issues are forced to "triage" by their routes, so never match.
+  // one (opt-in per project; the run re-checks everything). Integration issues
+  // are forced to "triage" by their routes, so never match.
+  //
+  // ATTENDU, contrairement aux effets de bord ci-dessus : le cas déterministe
+  // écrit ici même, avant la réponse. Différé, il se perdait — c'est tout le
+  // sujet de MIN-31 revisité (voir l'en-tête de lib/server/smart-assign.ts).
+  // Seul l'appel au modèle repart en `after()`, depuis le run.
+  let smartAssignee: string | null = null;
   if (data.assignee_id == null && isSmartAssignEligibleStatus(data.status)) {
-    scheduleSmartAssign({
+    smartAssignee = await applySmartAssign({
       issueId: data.id as string,
       projectId,
       triggerActorId: actorId,
@@ -488,5 +494,18 @@ export async function createIssueForProject({
     groups: { project: projectId },
   });
 
-  return { ok: true, issue: { ...data, category_ids: categoryIds } };
+  // `data` reste la ligne TELLE QU'ELLE EST NÉE — les effets de bord différés
+  // s'appuient dessus (la notification « créé assigné » ne doit pas se déclencher
+  // sur le choix de Smart Assign, qui envoie déjà la sienne) et l'analytics
+  // ci-dessus compte les tickets créés AVEC un assigné. Seul le ticket rendu
+  // porte la correction : l'agent MCP lit cette réponse pour savoir à qui il a
+  // affaire, et le direct ne rattrape que ce qu'il voit passer.
+  return {
+    ok: true,
+    issue: {
+      ...data,
+      ...(smartAssignee ? { assignee_id: smartAssignee } : {}),
+      category_ids: categoryIds,
+    },
+  };
 }

@@ -13,6 +13,10 @@
       "schedule": "*/2 * * * *"
     },
     {
+      "path": "/api/cron/smart-assign",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/billing-sync",
       "schedule": "15 * * * *"
     },
