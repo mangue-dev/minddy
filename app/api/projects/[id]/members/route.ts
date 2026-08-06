@@ -58,6 +58,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         .select("id, project_id, invited_email, status, created_at")
         .eq("project_id", id)
         .eq("status", "pending")
+        // Les périmées sortent de la liste comme elles sortent du décompte de
+        // `ensureMemberSlotAvailable` : le compteur d'invités de l'écran se
+        // calcule sur CETTE liste (`project-members.tsx`), les deux doivent
+        // compter la même chose ou le formulaire se désarme pour rien.
+        .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false }),
     ]);
 

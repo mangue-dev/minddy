@@ -5,6 +5,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { displayName } from "@/lib/display-name";
+import { claimPendingInvitationsLate } from "@/lib/server/members";
 import type { MyInvitation } from "@/lib/types";
 
 /** GET /api/projects/invitations — the caller's own pending invitations (Home banner). */
@@ -14,12 +15,28 @@ export async function GET(request: NextRequest) {
   const t = await getTranslations("ApiErrors");
 
   const service = getServiceClient();
-  const { data: invites, error } = await service
-    .from("project_invitations")
-    .select("id, project_id, invited_by, created_at")
-    .eq("invited_user_id", auth.user.id)
-    .eq("status", "pending")
-    .order("created_at", { ascending: false });
+  const listMine = () =>
+    service
+      .from("project_invitations")
+      .select("id, project_id, invited_by, created_at")
+      .eq("invited_user_id", auth.user.id)
+      .eq("status", "pending")
+      // `status = 'pending'` ne dit pas qu'une invitation est vivante : rien ne
+      // repasse les périmées à un autre statut (MIN-197 pose `expires_at` à 30
+      // jours, la purge de `retention.ts` n'efface qu'à 90). Sans ce filtre, une
+      // invitation morte reste dans l'inbox pendant deux mois.
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false });
+
+  // Le rattrapage tourne EN PARALLÈLE de la lecture, pas avant : dans le cas
+  // courant — rien à réclamer — il ne coûte qu'une sonde indexée qui ne rallonge
+  // aucune horloge, et la lecture est déjà bonne. Ce n'est que s'il a rattaché
+  // quelque chose que la première lecture est périmée et qu'on la refait.
+  const [claimed, first] = await Promise.all([
+    claimPendingInvitationsLate(auth.user),
+    listMine(),
+  ]);
+  const { data: invites, error } = claimed ? await listMine() : first;
 
   if (error) {
     console.error("[api/invitations] list failed:", error.message);
@@ -86,11 +103,19 @@ export async function PATCH(request: NextRequest) {
   const service = getServiceClient();
   const { data: invitation } = await service
     .from("project_invitations")
-    .select("id, project_id, invited_by, invited_user_id, status")
+    .select("id, project_id, invited_by, invited_user_id, status, expires_at")
     .eq("id", invitationId)
     .maybeSingle();
 
-  if (!invitation || invitation.status !== "pending") {
+  // Périmée = introuvable. C'est le SEUL endroit où l'expiration décide d'un
+  // accès : `attachPendingInvitations` la respecte déjà pour les adresses sans
+  // compte, mais une invitation née avec son `invited_user_id` (l'adresse avait
+  // déjà un compte) n'y passe jamais — sans cette garde, elle s'accepte encore
+  // trente jours après sa mort.
+  const expired =
+    invitation?.expires_at != null &&
+    Date.parse(invitation.expires_at as string) <= Date.now();
+  if (!invitation || invitation.status !== "pending" || expired) {
     return NextResponse.json({ error: t("invitationNotFound") }, { status: 404 });
   }
   if (invitation.invited_user_id !== auth.user.id) {

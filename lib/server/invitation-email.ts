@@ -27,7 +27,12 @@ import { projectOrbGradient } from "@/lib/project-orb-colors";
  */
 
 const RESEND_URL = "https://api.resend.com/emails";
-const DEFAULT_FROM = "minddy <invites@minddy.app>";
+// L'app envoie depuis `mail.minddy.app`, jamais depuis la racine : c'est ce
+// sous-domaine qui est vérifié dans Resend, et la racine ne l'est plus du tout.
+// Une adresse en `@minddy.app` ici ne partirait pas — elle serait refusée à
+// l'envoi. La racine garde la boîte humaine (`hello@`, chez Infomaniak) et sa
+// réputation, que le courrier de l'app n'entame plus.
+const DEFAULT_FROM = "minddy <invites@mail.minddy.app>";
 
 /** La palette de minddy (`app/globals.css` + jetons mangue-ui, thème clair),
     en hexadécimal parce qu'un client mail ne lit pas `oklch()`. */

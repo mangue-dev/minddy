@@ -125,7 +125,13 @@ export async function ensureMemberSlotAvailable(
       .from("project_invitations")
       .select("id", { count: "exact", head: true })
       .eq("project_id", projectId)
-      .eq("status", "pending"),
+      .eq("status", "pending")
+      // Une invitation PÉRIMÉE ne promet plus rien : elle ne peut plus être ni
+      // rattachée ni acceptée (MIN-197). La compter mangerait une place du plan
+      // pendant les soixante jours qui séparent l'expiration (30 j) de la purge
+      // (`RETENTION_DAYS.pendingInvitations`, 90 j) — c'est le même piège que
+      // MIN-133 avec la corbeille, sous une autre forme.
+      .gt("expires_at", new Date().toISOString()),
   ]);
   if (members.error) throw new Error(members.error.message);
   if (invitations.error) throw new Error(invitations.error.message);

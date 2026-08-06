@@ -125,6 +125,22 @@ export async function inviteMember({
     }
   }
 
+  // Une invitation périmée pour cette adresse tient encore la place dans l'index
+  // unique partiel `(project_id, invited_email) where status = 'pending'` : sans
+  // ce ménage, l'insertion ci-dessous rendrait 409 « invitation déjà en attente »
+  // pour une invitation que plus personne ne peut ni voir ni accepter — l'adresse
+  // serait bannie du projet jusqu'à la purge des 90 jours (`retention.ts`).
+  // Supprimée plutôt que passée à `cancelled` : la ligne n'a plus de lecteur, et
+  // `RETENTION_DAYS.pendingInvitations` dit déjà qu'une adresse qui n'a jamais
+  // rejoint ne se garde pas « sans finalité ».
+  await service
+    .from("project_invitations")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("invited_email", normalized)
+    .eq("status", "pending")
+    .lte("expires_at", new Date().toISOString());
+
   const { data: invitation, error } = await service
     .from("project_invitations")
     .insert({
@@ -192,10 +208,10 @@ export async function inviteMember({
 
 /**
  * Rattache à un compte les invitations laissées en attente sur son adresse
- * (MIN-197). Appelé à l'arrivée d'une session (/auth/callback) : c'est le seul
- * endroit où l'email est VÉRIFIÉ par Supabase, et c'est l'email — pas le token
- * du lien — qui fait foi. Best-effort de bout en bout : l'invitant ne saura
- * rien d'un échec, et l'invité retentera à sa prochaine session.
+ * (MIN-197). Appelé à l'arrivée d'une session (/auth/callback), où l'email est
+ * VÉRIFIÉ par Supabase — et c'est l'email, pas le token du lien, qui fait foi.
+ * Best-effort de bout en bout : l'invitant ne saura rien d'un échec, et l'invité
+ * retentera à sa prochaine session (`claimPendingInvitationsLate`).
  */
 export async function attachPendingInvitations(user: {
   id: string;
@@ -225,6 +241,59 @@ export async function attachPendingInvitations(user: {
   for (const row of data ?? []) {
     pushInvitation(user.id, row.invited_by as string);
   }
+}
+
+/**
+ * Le rattrapage (MIN-197). `/auth/callback` n'est PAS traversé par toute session :
+ * une connexion par mot de passe n'y passe jamais. Le cas se produit pour de bon —
+ * l'antivirus de messagerie du destinataire visite le lien de confirmation avant
+ * lui, GoTrue confirme le compte, la personne se retrouve sur /login avec
+ * `confirmation_failed` (MIN-117) et se connecte par mot de passe. Son invitation
+ * n'est alors jamais réclamée : elle meurt à 30 jours sans que personne ne la voie.
+ *
+ * Appelé sur la lecture des invitations de quelqu'un — le seul endroit où
+ * l'absence de rattachement se voit.
+ *
+ * **La vérification de l'email se refait ici, côté service.** Le `user` que
+ * `getAuthedUser` rend est reconstruit depuis les claims du JWT et ne porte pas
+ * `email_confirmed_at` ; quant à `user_metadata.email_verified`, il est
+ * MODIFIABLE par le compte lui-même (`auth.updateUser({ data })`) et ne prouve
+ * donc rien. On relit le compte par l'API admin, dont `fetchAuthUsersById` sert
+ * un cache de 60 s — sans quoi la garde d'`attachPendingInvitations` serait un
+ * no-op silencieux, ou pire, une garde qu'on croit tenue.
+ *
+ * Une sonde en lecture d'abord, pour ne payer ni l'aller-retour admin ni un
+ * UPDATE dans le cas courant, qui est « il n'y a rien à réclamer ».
+ *
+ * @returns `true` si quelque chose a pu être rattaché — l'appelant relit alors.
+ */
+export async function claimPendingInvitationsLate(user: {
+  id: string;
+  email?: string | null;
+}): Promise<boolean> {
+  const email = user.email?.trim().toLowerCase();
+  if (!email) return false;
+
+  const service = getServiceClient();
+  const { data: waiting, error } = await service
+    .from("project_invitations")
+    .select("id")
+    .eq("invited_email", email)
+    .is("invited_user_id", null)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .limit(1);
+
+  if (error) {
+    console.error("[members] late claim probe failed:", error.message);
+    return false;
+  }
+  if (!waiting || waiting.length === 0) return false;
+
+  const account = (await fetchAuthUsersById(service, [user.id])).get(user.id);
+  if (!account) return false;
+  await attachPendingInvitations(account);
+  return true;
 }
 
 /** La notification système d'une invitation. Best-effort de bout en bout. */
@@ -329,7 +398,9 @@ export async function cancelInvitation({
   return { ok: true };
 }
 
-/** Pending invitations of a project (for the assistant's member reads). */
+/** Pending invitations of a project (for the assistant's member reads). Les
+    périmées n'en font pas partie : `status = 'pending'` ne suffit pas à dire
+    qu'une invitation est vivante (MIN-197). */
 export async function listPendingInvitations(
   projectId: string
 ): Promise<Array<{ id: string; email: string; created_at: string }>> {
@@ -339,6 +410,7 @@ export async function listPendingInvitations(
     .select("id, invited_email, created_at")
     .eq("project_id", projectId)
     .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false });
   if (error) {
     console.error("[members] list invitations failed:", error.message);

@@ -56,6 +56,14 @@ function table(rows: () => Row[]) {
     );
     return query;
   };
+  query.gt = (column: string, value: unknown) => {
+    filters.push(
+      (row) =>
+        Date.parse(String((row as Record<string, unknown>)[column])) >
+        Date.parse(String(value))
+    );
+    return query;
+  };
   // `or("owner_id.eq.X,id.in.(a,b)")` — la seule forme utilisée par la garde.
   query.or = (expression: string) => {
     const owner = /owner_id\.eq\.([^,)]+)/.exec(expression)?.[1];
@@ -169,10 +177,15 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     project_id: PROJECT,
     user_id: `u${n}`,
   });
-  const invitation = (n: number, status: string): Row => ({
+  // `expires_at` est NOT NULL en base (MIN-197) : le double le modélise, sinon
+  // il testerait une ligne qui ne peut pas exister.
+  const LIVE = new Date(Date.now() + 30 * 86_400_000).toISOString();
+  const DEAD = new Date(Date.now() - 86_400_000).toISOString();
+  const invitation = (n: number, status: string, expires = LIVE): Row => ({
     id: `inv${n}`,
     project_id: PROJECT,
     status,
+    expires_at: expires,
   });
 
   it("laisse passer les deux premiers invités du plan gratuit", async () => {
@@ -198,6 +211,18 @@ describe("plafond d'invités par projet (MIN-199)", () => {
   it("rend sa place à une invitation annulée ou acceptée", async () => {
     memberRows = [member(1)];
     invitationRows = [invitation(1, "cancelled"), invitation(2, "accepted")];
+    await expect(
+      ensureMemberSlotAvailable(OWNER, PROJECT)
+    ).resolves.toBeUndefined();
+  });
+
+  // Rien ne repasse une invitation périmée à un autre statut : elle reste
+  // `pending` jusqu'à la purge des 90 jours. Si elle comptait, une place du plan
+  // resterait prise deux mois par une invitation que plus personne ne peut
+  // accepter — le piège de MIN-133 (la corbeille qui coûte) sous une autre forme.
+  it("rend sa place à une invitation PÉRIMÉE, restée pending", async () => {
+    memberRows = [member(1)];
+    invitationRows = [invitation(1, "pending", DEAD)];
     await expect(
       ensureMemberSlotAvailable(OWNER, PROJECT)
     ).resolves.toBeUndefined();

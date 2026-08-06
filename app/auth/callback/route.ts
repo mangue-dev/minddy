@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
-import { afterOrNow } from "@/lib/server/after-safe";
 import { attachPendingInvitations } from "@/lib/server/members";
 
 const EMAIL_OTP_TYPES: ReadonlySet<EmailOtpType> = new Set([
@@ -85,17 +84,33 @@ function onAuthArrival(
 
 /**
  * Les invitations laissées en attente sur cette adresse deviennent les siennes
- * (MIN-197). C'est ICI que ça se joue et nulle part ailleurs : c'est le seul
- * point où minddy tient un email VÉRIFIÉ par Supabase — et c'est cet email,
- * jamais le `?invite=` du lien, qui décide de qui hérite de quoi.
+ * (MIN-197). C'est le point de rattachement PRINCIPAL : celui où minddy tient un
+ * email VÉRIFIÉ par Supabase — et c'est cet email, jamais le `?invite=` du lien,
+ * qui décide de qui hérite de quoi. Le rattrapage des sessions qui ne passent
+ * pas par ici vit dans `claimPendingInvitationsLate`.
  *
- * Après la réponse, par `afterOrNow` : l'invité part vers /home, il verra son
- * bandeau au chargement suivant. Une panne ici ne coûte rien, le rattachement
- * se rejouera à sa prochaine session.
+ * **Attendu avant la redirection**, et non différé comme le reste du travail de
+ * fond. La séquence est serrée : on redirige vers /home, qui demande aussitôt
+ * ses invitations — et cette lecture filtre sur `invited_user_id`, que seul ce
+ * rattachement pose. Différé, il courait contre le premier chargement, et le
+ * perdre donne le pire accueil possible : quelqu'un qui vient de s'inscrire pour
+ * rejoindre une équipe atterrit sur « créez votre premier projet », sans un mot
+ * du projet qui l'a fait venir.
+ *
+ * Le coût est une attente, pas une requête de plus : elle avait déjà lieu, elle
+ * se paie juste avant la réponse. Les notifications push, elles, restent
+ * différées — `attachPendingInvitations` les passe à `afterOrNow`.
+ *
+ * Best-effort : une panne ici ne doit pas coûter la session qu'on vient
+ * d'établir. Le rattachement se rejouera au prochain passage.
  */
-function claimInvitations(user: User | null): void {
+async function claimInvitations(user: User | null): Promise<void> {
   if (!user) return;
-  afterOrNow(() => attachPendingInvitations(user));
+  try {
+    await attachPendingInvitations(user);
+  } catch (err) {
+    console.error("[auth/callback] claim invitations failed:", err);
+  }
 }
 
 /**
@@ -155,7 +170,7 @@ export async function GET(request: NextRequest) {
         return buildFailureRedirect(origin, "exchange_failed");
       }
       onAuthArrival(data.user, "oauth");
-      claimInvitations(data.user);
+      await claimInvitations(data.user);
     } else if (tokenHash && otpType) {
       const { data, error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
@@ -174,7 +189,7 @@ export async function GET(request: NextRequest) {
         );
       }
       onAuthArrival(data.user, otpType === "signup" ? "email_confirmation" : "otp");
-      claimInvitations(data.user);
+      await claimInvitations(data.user);
     }
 
     return NextResponse.redirect(`${origin}${next}`);

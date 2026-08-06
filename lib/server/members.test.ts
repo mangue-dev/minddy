@@ -39,14 +39,20 @@ const newId = () => `row-${++nextId}`;
 /** Double de chaîne PostgREST : accumule les filtres, puis lit/insère/modifie. */
 function table(name: string, rows: () => Row[]) {
   const filters: ((row: Row) => boolean)[] = [];
+  /** `limit(n)` : tronque après les filtres, comme PostgREST. */
+  let cap: number | null = null;
   type Payload = Record<string, unknown>;
   let staged:
     | { kind: "insert"; payload: Payload }
     | { kind: "update"; patch: Payload }
+    | { kind: "delete" }
     | null = null;
   const query: Record<string, unknown> = {};
 
-  const matching = () => rows().filter((row) => filters.every((f) => f(row)));
+  const matching = () => {
+    const hits = rows().filter((row) => filters.every((f) => f(row)));
+    return cap == null ? hits : hits.slice(0, cap);
+  };
 
   query.select = () => query;
   query.insert = (payload: Payload) => {
@@ -55,6 +61,10 @@ function table(name: string, rows: () => Row[]) {
   };
   query.update = (patch: Payload) => {
     staged = { kind: "update", patch };
+    return query;
+  };
+  query.delete = () => {
+    staged = { kind: "delete" };
     return query;
   };
   query.eq = (column: string, value: unknown) => {
@@ -71,7 +81,17 @@ function table(name: string, rows: () => Row[]) {
     );
     return query;
   };
+  query.lte = (column: string, value: unknown) => {
+    filters.push(
+      (row) => Date.parse(String(row[column])) <= Date.parse(String(value))
+    );
+    return query;
+  };
   query.order = () => query;
+  query.limit = (n: number) => {
+    cap = n;
+    return query;
+  };
 
   /** L'insertion, avec l'index unique partiel de `project_invitations`. */
   const runInsert = (payload: Payload) => {
@@ -105,6 +125,13 @@ function table(name: string, rows: () => Row[]) {
       for (const row of touched) Object.assign(row, staged.patch);
       return { data: touched, error: null };
     }
+    if (staged?.kind === "delete") {
+      const doomed = new Set(matching());
+      const kept = rows().filter((row) => !doomed.has(row));
+      rows().length = 0;
+      rows().push(...kept);
+      return { data: [...doomed], error: null };
+    }
     return { data: matching(), error: null };
   };
 
@@ -132,11 +159,26 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 
+/** Les comptes que l'API admin rend, par id — ce que voit `fetchAuthUsersById`.
+    Vide = on retombe sur le compte générique des tests d'invitation, qui n'a pas
+    d'email confirmé (il n'en a pas besoin : il est l'INVITANT, pas l'invité). */
+let adminAccounts = new Map<string, Record<string, unknown>>();
+/** Combien de fois l'API admin a été touchée — la sonde du rattrapage existe
+    pour que ce compteur reste à zéro quand il n'y a rien à réclamer. */
+let adminLookups = 0;
+
 vi.mock("@/lib/server/auth-users", () => ({
   findAuthUserByEmail: async (_service: unknown, email: string) =>
     accounts.get(email) ?? null,
-  fetchAuthUsersById: async (_service: unknown, ids: string[]) =>
-    new Map(ids.map((id) => [id, { id, email: `${id}@example.test` }])),
+  fetchAuthUsersById: async (_service: unknown, ids: string[]) => {
+    adminLookups += 1;
+    return new Map(
+      ids.map((id) => [
+        id,
+        adminAccounts.get(id) ?? { id, email: `${id}@example.test` },
+      ])
+    );
+  },
   toNamed: (user: { email?: string } | undefined) => ({
     email: user?.email ?? null,
     full_name: null,
@@ -164,7 +206,11 @@ vi.mock("@/lib/server/after-safe", () => ({
   },
 }));
 
-import { attachPendingInvitations, inviteMember } from "./members";
+import {
+  attachPendingInvitations,
+  claimPendingInvitationsLate,
+  inviteMember,
+} from "./members";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
 const PROJECT = "22222222-2222-4222-8222-222222222222";
@@ -179,6 +225,8 @@ beforeEach(() => {
   memberRows = [];
   invitationRows = [];
   accounts = new Map();
+  adminAccounts = new Map();
+  adminLookups = 0;
   background = [];
   sendInvitationEmail.mockClear();
 });
@@ -271,6 +319,26 @@ describe("inviteMember — une adresse sans compte", () => {
     expect(invitationRows).toHaveLength(1);
   });
 
+  // La contrepartie du 409 ci-dessus. L'index unique partiel ne connaît que
+  // `status = 'pending'`, et rien ne repasse une invitation périmée à un autre
+  // statut : sans le ménage fait avant l'insertion, une adresse restait bannie
+  // du projet entre son expiration (30 j) et la purge de `retention.ts` (90 j).
+  it("réinvite une adresse dont l'invitation a expiré", async () => {
+    await inviteMember({ projectId: PROJECT, actorId: OWNER, email: "a@example.test" });
+    invitationRows[0].expires_at = new Date(Date.now() - 86_400_000).toISOString();
+    const mort = invitationRows[0].id;
+
+    const again = await inviteMember({
+      projectId: PROJECT,
+      actorId: OWNER,
+      email: "a@example.test",
+    });
+
+    expect(again.ok).toBe(true);
+    expect(invitationRows).toHaveLength(1);
+    expect(invitationRows[0].id).not.toBe(mort);
+  });
+
   it("refuse toujours une adresse qui n'en est pas une", async () => {
     const result = await inviteMember({
       projectId: PROJECT,
@@ -361,6 +429,77 @@ describe("attachPendingInvitations", () => {
   it("laisse les invitations déjà répondues où elles sont", async () => {
     seed({ status: "rejected" });
     await attachPendingInvitations(CONFIRMED);
+    expect(invitationRows[0].invited_user_id).toBeNull();
+  });
+});
+
+/**
+ * Le rattrapage des sessions qui ne passent pas par /auth/callback — une
+ * connexion par mot de passe. Ce qu'on épingle surtout, c'est que la
+ * confirmation d'email se REVÉRIFIE côté service : l'objet passé ici vient des
+ * claims du JWT et ne porte pas `email_confirmed_at`, donc croire ce qu'on lui
+ * donne reviendrait à ne plus avoir de garde du tout.
+ */
+describe("claimPendingInvitationsLate", () => {
+  const LATE = "66666666-6666-4666-8666-666666666666";
+  /** Ce que rend `getAuthedUser` : un id, un email, et rien de vérifiable. */
+  const SESSION = { id: LATE, email: "Tardive@Example.test" };
+
+  const seed = (patch: Partial<Row> = {}) => {
+    invitationRows = [
+      {
+        id: "inv-late",
+        project_id: PROJECT,
+        invited_email: "tardive@example.test",
+        invited_user_id: null,
+        invited_by: OWNER,
+        status: "pending",
+        expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+        ...patch,
+      },
+    ];
+  };
+
+  it("rattache l'invitation restée orpheline, compte confirmé", async () => {
+    seed();
+    adminAccounts.set(LATE, {
+      id: LATE,
+      email: "tardive@example.test",
+      email_confirmed_at: "2026-08-06T10:00:00Z",
+    });
+
+    await expect(claimPendingInvitationsLate(SESSION)).resolves.toBe(true);
+    expect(invitationRows[0].invited_user_id).toBe(LATE);
+  });
+
+  // La garde ne peut pas venir de la session : le compte fait foi.
+  it("ne rattache rien si le compte n'a pas d'email confirmé", async () => {
+    seed();
+    adminAccounts.set(LATE, {
+      id: LATE,
+      email: "tardive@example.test",
+      email_confirmed_at: null,
+    });
+
+    await expect(claimPendingInvitationsLate(SESSION)).resolves.toBe(true);
+    expect(invitationRows[0].invited_user_id).toBeNull();
+  });
+
+  it("ne touche pas l'API admin quand il n'y a rien à réclamer", async () => {
+    seed({ invited_user_id: MEMBER });
+    await expect(claimPendingInvitationsLate(SESSION)).resolves.toBe(false);
+    expect(adminLookups).toBe(0);
+  });
+
+  it("ignore une invitation périmée, sans aller chercher le compte", async () => {
+    seed({ expires_at: new Date(Date.now() - 86_400_000).toISOString() });
+    await expect(claimPendingInvitationsLate(SESSION)).resolves.toBe(false);
+    expect(adminLookups).toBe(0);
+  });
+
+  it("ne fait rien pour une session sans email", async () => {
+    seed();
+    await expect(claimPendingInvitationsLate({ id: LATE })).resolves.toBe(false);
     expect(invitationRows[0].invited_user_id).toBeNull();
   });
 });

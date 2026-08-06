@@ -8,7 +8,9 @@ import "server-only";
  */
 
 const RESEND_URL = "https://api.resend.com/emails";
-const DEFAULT_FROM = "minddy <feedback@minddy.app>";
+// `mail.minddy.app` et pas la racine : c'est le sous-domaine vérifié dans
+// Resend, la racine ne l'est plus (cf. `lib/server/invitation-email.ts`).
+const DEFAULT_FROM = "minddy <feedback@mail.minddy.app>";
 
 export interface SendOtpEmailParams {
   to: string;
