@@ -359,27 +359,32 @@ export async function getIssue(
         .is("deleted_at", null)
         .eq("parent_id", issue.id)
         .order("number", { ascending: true }),
-      // Attachment metadata (MIN-24): comment_id null = on the issue itself.
-      // File contents stay behind the app's signed-URL door — agents only see
-      // names/types/sizes here.
+      // Resource metadata (MIN-24, MIN-184): comment_id null = on the issue
+      // itself. A file's contents stay behind the app's signed-URL door — agents
+      // only see names/types/sizes here; a link carries its url outright.
       ctx.db
         .from("attachments")
-        .select("id, comment_id, file_name, mime_type, size_bytes")
+        .select("id, comment_id, kind, url, file_name, mime_type, size_bytes")
         .eq("issue_id", issue.id)
         .order("created_at", { ascending: true }),
     ]);
 
-  const attachmentsByComment = new Map<string | null, Record<string, unknown>[]>();
+  const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
   for (const row of attachmentRows ?? []) {
     const key = (row.comment_id as string | null) ?? null;
-    const list = attachmentsByComment.get(key) ?? [];
-    list.push({
-      id: row.id,
-      file_name: row.file_name,
-      mime_type: row.mime_type,
-      size_bytes: row.size_bytes,
-    });
-    attachmentsByComment.set(key, list);
+    const list = resourcesByComment.get(key) ?? [];
+    list.push(
+      row.kind === "link"
+        ? { id: row.id, kind: "link", url: row.url, title: row.file_name }
+        : {
+            id: row.id,
+            kind: "file",
+            file_name: row.file_name,
+            mime_type: row.mime_type,
+            size_bytes: row.size_bytes,
+          }
+    );
+    resourcesByComment.set(key, list);
   }
 
   // Resolve author display names (auth admin — best effort). MCP comments are
@@ -396,14 +401,14 @@ export async function getIssue(
       : c.via_mcp
         ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
         : displayName(named, "User");
-    const commentAttachments = attachmentsByComment.get(c.id as string);
+    const commentResources = resourcesByComment.get(c.id as string);
     return {
       id: c.id,
       author,
       body: c.body,
       parent_id: c.parent_id,
       created_at: c.created_at,
-      ...(commentAttachments ? { attachments: commentAttachments } : {}),
+      ...(commentResources ? { resources: commentResources } : {}),
     };
   });
 
@@ -480,7 +485,7 @@ export async function getIssue(
       ...issueFields,
       identifier: issueIdentifier(ctx.projectKey, issue.number as number),
       category_ids: categories.map((c) => c.category_id),
-      attachments: attachmentsByComment.get(null) ?? [],
+      resources: resourcesByComment.get(null) ?? [],
     },
     comments: commentRows,
     sub_issues: ((subIssues ?? []) as Array<Record<string, unknown>>).map((s) => ({

@@ -17,7 +17,7 @@ import type {
 } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-constants";
 import type { RecurrenceCadence } from "@/lib/recurrence";
-import type { AttachmentInput } from "@/lib/types";
+import type { AttachmentInput, ResourceInput } from "@/lib/types";
 
 export type DraftKind = "issue" | "objective";
 
@@ -42,8 +42,12 @@ export interface IssueDraft extends DraftBase {
   /** Cadence de répétition (MIN-136). Absente des brouillons écrits avant. */
   recurrence?: RecurrenceCadence | null;
   category_ids: string[];
-  /** Already-uploaded storage references (the bucket keeps them). */
-  attachments: AttachmentInput[];
+  /** Resources already added: storage references (the bucket keeps them) and
+      resolved links. */
+  resources: ResourceInput[];
+  /** Ce que le brouillon s'appelait avant MIN-184 — des brouillons portant
+      cette clé dorment déjà dans des navigateurs, `readDrafts` les migre. */
+  attachments?: AttachmentInput[];
 }
 
 export interface ObjectiveDraft extends DraftBase {
@@ -53,8 +57,10 @@ export interface ObjectiveDraft extends DraftBase {
   lead_user_id: string | null;
   target_date: string | null;
   color: string | null;
-  /** Already-uploaded storage references (the bucket keeps them). Absent from
-      drafts saved before objectives took attachments — read it defensively. */
+  /** Resources already added. Absent from drafts saved before objectives took
+      any — read it defensively. */
+  resources?: ResourceInput[];
+  /** Idem : la clé d'avant MIN-184, migrée à la lecture. */
   attachments?: AttachmentInput[];
 }
 
@@ -69,13 +75,27 @@ const keyFor = (kind: DraftKind) => `minddy:drafts:${kind}`;
 
 const byRecency = (a: DraftBase, b: DraftBase) => b.updatedAt - a.updatedAt;
 
+/**
+ * Un brouillon écrit avant MIN-184 porte ses fichiers sous `attachments`. Il
+ * dort dans un navigateur qu'aucun déploiement ne met à jour : sa clé est lue
+ * ici et versée dans `resources`, faute de quoi restaurer un tel brouillon
+ * perdrait silencieusement ce qu'on y avait joint.
+ */
+function migrateDraft<K extends DraftKind>(draft: DraftFor<K>): DraftFor<K> {
+  const legacy = (draft as { attachments?: AttachmentInput[] }).attachments;
+  if (!legacy || (draft as { resources?: ResourceInput[] }).resources) return draft;
+  return { ...draft, resources: legacy };
+}
+
 function readRaw<K extends DraftKind>(kind: K): DraftFor<K>[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(keyFor(kind));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as DraftFor<K>[]) : [];
+    return Array.isArray(parsed)
+      ? (parsed as DraftFor<K>[]).map(migrateDraft)
+      : [];
   } catch {
     // Corrupt JSON or localStorage unavailable (private mode) — start empty.
     return [];

@@ -37,9 +37,10 @@ import type { AgentToolImage } from "./content";
  *                          avec Numo/MCP).
  *  - `read_issue`       → tout le ticket (getIssue) + plan parsé en tâches +
  *                          derniers commentaires.
- *  - `read_attachment`  → une pièce jointe : texte inline quand c'est lisible,
- *                          l'IMAGE ELLE-MÊME quand c'est une maquette et que le
- *                          modèle du run la voit (MIN-111), sinon URL signée courte
+ *  - `read_resource`    → une ressource : l'url et le titre pour un LIEN ; pour un
+ *                          FICHIER, texte inline quand c'est lisible, l'IMAGE
+ *                          ELLE-MÊME quand c'est une maquette et que le modèle du
+ *                          run la voit (MIN-111), sinon URL signée courte
  *                          (curl-able depuis la sandbox).
  *  - `update_issue`     → titre, description, effort. JAMAIS le statut ni la
  *                          priorité : ce sont des décisions de l'utilisateur, et le
@@ -70,7 +71,7 @@ export interface IssueToolContext {
    *  (`user_metadata.numo_default_status`) — jamais un paramètre du modèle. */
   numoDefaultStatus: NumoDefaultStatus;
   /** Le modèle du run accepte-t-il une image en entrée ? (cf. `supportsImageInput`).
-   *  Faux → `read_attachment` se comporte exactement comme avant MIN-111. */
+   *  Faux → `read_resource` se comporte exactement comme avant MIN-111. */
   imageInput?: boolean;
   /** Run COURANT — la ligne sur laquelle `report_verdict` écrit son verdict. */
   runId?: string | null;
@@ -83,6 +84,9 @@ export interface IssueToolContext {
 export const ISSUE_TOOL_NAMES = new Set([
   "search_issues",
   "read_issue",
+  "read_resource",
+  // Le nom d'avant MIN-184, gardé POUR L'EXÉCUTION seule : il n'est plus servi
+  // dans la liste des tools, mais un checkpoint repris rejoue l'ancien appel.
   "read_attachment",
   "read_feedback",
   "update_issue",
@@ -356,31 +360,59 @@ async function readFeedback(
   };
 }
 
-async function readAttachment(
+async function readResource(
   ctx: IssueToolContext,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const attachmentId = typeof args.attachment_id === "string" ? args.attachment_id : "";
-  if (!attachmentId) {
-    return { result: { error: "attachment_id is required (get it from read_issue)." }, success: false };
+  // `attachment_id` reste accepté : un checkpoint écrit avant MIN-184 rejoue
+  // l'ancien appel avec l'ancien argument, et le rejeu doit aboutir.
+  const resourceId =
+    typeof args.resource_id === "string"
+      ? args.resource_id
+      : typeof args.attachment_id === "string"
+        ? args.attachment_id
+        : "";
+  if (!resourceId) {
+    return { result: { error: "resource_id is required (get it from read_issue)." }, success: false };
   }
 
   const service = getServiceClient();
   // Périmètre = le PROJET du run, pas le seul ticket d'ancrage : les ids que
-  // `read_issue` renvoie sur un autre ticket doivent être ouvrables. Le ticket
-  // porteur est relu puis épinglé au projet — une pièce d'un autre projet est
+  // `read_issue` renvoie sur un autre ticket doivent être ouvrables. Le parent
+  // est relu puis épinglé au projet — une ressource d'un autre projet est
   // introuvable, exactement comme avant.
   const { data: row } = await service
     .from("attachments")
-    .select("id, issue_id, storage_path, file_name, mime_type, size_bytes, comment_id")
-    .eq("id", attachmentId)
+    .select(
+      "id, issue_id, objective_id, project_id, kind, url, storage_path, file_name, mime_type, size_bytes, comment_id",
+    )
+    .eq("id", resourceId)
     .maybeSingle();
   if (!row) {
-    return { result: { error: "Attachment not found." }, success: false };
+    return { result: { error: "Resource not found." }, success: false };
   }
-  const scoped = await assertIssueInProject(service, row.issue_id as string, ctx.projectId);
-  if (!scoped.ok) {
-    return { result: { error: "Attachment not found in this project." }, success: false };
+  // Une ressource pend d'un ticket OU d'un objectif : le ticket passe par
+  // `assertIssueInProject` (qui vérifie aussi qu'il n'est pas à la corbeille),
+  // l'objectif par le `project_id` que la ligne porte elle-même.
+  const inProject = row.issue_id
+    ? (await assertIssueInProject(service, row.issue_id as string, ctx.projectId)).ok
+    : row.project_id === ctx.projectId;
+  if (!inProject) {
+    return { result: { error: "Resource not found in this project." }, success: false };
+  }
+
+  // Un lien n'a pas d'octets : ni URL signée, ni contenu inline.
+  if (row.kind === "link") {
+    return {
+      result: {
+        id: row.id,
+        kind: "link",
+        url: row.url,
+        title: row.file_name,
+        comment_id: row.comment_id ?? null,
+      },
+      success: true,
+    };
   }
 
   const fileName = (row.file_name as string) || "attachment";
@@ -841,8 +873,11 @@ export async function executeIssueTool(
         return await searchIssuesTool(ctx, args);
       case "read_issue":
         return await readIssue(ctx, args);
+      case "read_resource":
+      // Alias d'exécution : un run repris rejoue un checkpoint écrit sous
+      // l'ancien nom (cf. content.test.ts), et ce rejeu doit aboutir.
       case "read_attachment":
-        return await readAttachment(ctx, args);
+        return await readResource(ctx, args);
       case "read_feedback":
         return await readFeedback(ctx, args);
       case "update_issue":

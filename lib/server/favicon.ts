@@ -175,6 +175,36 @@ function parseIconLinks(html: string): IconCandidate[] {
   return candidates.sort((a, b) => b.priority - a.priority || b.size - a.size);
 }
 
+/** Titre lisible d'une page : `og:title` s'il est là, sinon `<title>`. */
+function parsePageTitle(html: string): string | null {
+  const og = html.match(
+    /<meta\b[^>]*property\s*=\s*["']og:title["'][^>]*>/i
+  )?.[0];
+  const ogContent = og?.match(
+    /content\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i
+  );
+  const raw =
+    ogContent?.[2] ??
+    ogContent?.[3] ??
+    ogContent?.[4] ??
+    html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ??
+    null;
+  if (raw == null) return null;
+  const text = decodeBasicEntities(raw).replace(/\s+/g, " ").trim();
+  return text || null;
+}
+
+/** Les cinq entités que HTML impose ; le reste passe tel quel (un titre n'est
+    pas du HTML rendu, il finit dans un nœud texte). */
+function decodeBasicEntities(text: string): string {
+  return text
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, "&");
+}
+
 export interface ResolvedIcon {
   url: string;
   contentType: string;
@@ -196,26 +226,41 @@ async function tryFetchIcon(rawUrl: string): Promise<ResolvedIcon | null> {
   }
 }
 
+/** Ce qu'on sait dire d'une URL après un seul passage sur la page. */
+export interface LinkPreview {
+  /** L'URL finale, redirects suivis — celle qu'on enregistre. */
+  url: string;
+  /** `og:title` ou `<title>` ; le hostname quand la page n'en donne pas. */
+  title: string;
+  /** Le favicon téléchargé, null si le site n'en a aucun d'exploitable. */
+  icon: ResolvedIcon | null;
+}
+
 /**
- * Résout et télécharge le favicon d'un site : parse le HTML de la page pour les
- * `<link rel*="icon">` (apple-touch-icon > icon > shortcut, départagés par
- * taille déclarée), sinon `/favicon.ico` à l'origine. Lève FaviconError
- * ("invalidUrl" si l'URL est irrécupérable, "notFound" si aucun favicon
- * exploitable).
+ * Lit une page une seule fois et en tire ce qui décrit un lien : son titre et
+ * son favicon (`<link rel*="icon">`, apple-touch-icon > icon > shortcut,
+ * départagés par taille déclarée, sinon `/favicon.ico` à l'origine).
+ *
+ * **Ne lève que sur une URL irrécupérable** (`FaviconError("invalidUrl")` :
+ * protocole non http(s), IP privée, DNS mort). Un site injoignable ou sans
+ * favicon rend un aperçu partiel — le hostname pour titre, `icon: null` —
+ * parce qu'un lien reste un lien valide même si son site est éteint.
  */
-export async function resolveFavicon(siteUrl: string): Promise<ResolvedIcon> {
+export async function resolveLinkPreview(siteUrl: string): Promise<LinkPreview> {
   const normalized = /^[a-z][a-z0-9+.-]*:/i.test(siteUrl.trim())
     ? siteUrl.trim()
     : `https://${siteUrl.trim()}`;
 
   let base: URL | null = null;
   let candidates: IconCandidate[] = [];
+  let title: string | null = null;
   try {
     const { response, finalUrl } = await guardedFetch(normalized);
     base = finalUrl;
     if (response.ok) {
       const html = (await readCapped(response, MAX_HTML_BYTES)).toString("utf8");
       candidates = parseIconLinks(html);
+      title = parsePageTitle(html);
     }
   } catch (err) {
     // Une URL invalide (protocole, IP privée, DNS) est irrécupérable ; un site
@@ -228,6 +273,9 @@ export async function resolveFavicon(siteUrl: string): Promise<ResolvedIcon> {
     }
   }
 
+  const url = (base ?? new URL(normalized)).toString();
+  const hostname = (base ?? new URL(normalized)).hostname.replace(/^www\./, "");
+
   for (const candidate of candidates.slice(0, 5)) {
     let href: string;
     try {
@@ -236,12 +284,24 @@ export async function resolveFavicon(siteUrl: string): Promise<ResolvedIcon> {
       continue;
     }
     const icon = await tryFetchIcon(href);
-    if (icon) return icon;
+    if (icon) return { url, title: title ?? hostname, icon };
   }
 
   if (base) {
     const fallback = await tryFetchIcon(new URL("/favicon.ico", base).toString());
-    if (fallback) return fallback;
+    if (fallback) return { url, title: title ?? hostname, icon: fallback };
   }
-  throw new FaviconError("notFound");
+  return { url, title: title ?? hostname, icon: null };
+}
+
+/**
+ * Le favicon seul, pour l'icône d'un projet (MIN-62) : même passage que
+ * {@link resolveLinkPreview}, mais l'absence de favicon est ici une erreur —
+ * il n'y a rien à stocker. Lève FaviconError ("invalidUrl" si l'URL est
+ * irrécupérable, "notFound" si aucun favicon exploitable).
+ */
+export async function resolveFavicon(siteUrl: string): Promise<ResolvedIcon> {
+  const { icon } = await resolveLinkPreview(siteUrl);
+  if (!icon) throw new FaviconError("notFound");
+  return icon;
 }

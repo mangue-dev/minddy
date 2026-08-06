@@ -189,10 +189,12 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   let removedStorageObjects = 0;
 
   if (ownedIds.length) {
+    // Une ressource de type lien n'a pas d'objet — `storage_path` nul.
     const { data: attachments } = await service
       .from("attachments")
       .select("storage_path")
-      .in("project_id", ownedIds);
+      .in("project_id", ownedIds)
+      .not("storage_path", "is", null);
     removedStorageObjects += await removeObjects(
       service,
       "attachments",

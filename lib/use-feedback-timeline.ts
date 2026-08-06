@@ -4,13 +4,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import {
   addFeedbackCommentApi,
-  deleteAttachmentApi,
+  deleteResourceApi,
   deleteFeedbackCommentApi,
   fetchFeedbackCommentsApi,
   fetchFeedbackEventsApi,
   updateFeedbackCommentApi,
 } from "./comments-api";
-import type { AttachmentInput, Comment } from "./types";
+import type { Comment, ResourceInput } from "./types";
 import type { CommentVisibility } from "./feedback/types";
 import type { TimelineItem } from "./use-issue-timeline";
 
@@ -94,7 +94,7 @@ export function useFeedbackTimeline(projectId: string, postId: string | null) {
       body: string,
       mentionedUserIds: string[] = [],
       parentId: string | null = null,
-      attachments: AttachmentInput[] = [],
+      attachments: ResourceInput[] = [],
       visibility: CommentVisibility = "internal"
     ) => {
       await addFeedbackCommentApi(
@@ -126,7 +126,7 @@ export function useFeedbackTimeline(projectId: string, postId: string | null) {
   );
   const deleteAttachment = useCallback(
     async (attachmentId: string) => {
-      await deleteAttachmentApi(attachmentId);
+      await deleteResourceApi(attachmentId);
       invalidate();
     },
     [invalidate]

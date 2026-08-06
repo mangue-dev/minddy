@@ -5,13 +5,13 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   insertAttachments,
-  parseAttachmentsInput,
+  parseResourcesInput,
 } from "@/lib/server/attachments";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/objectives/[id]/attachments — the objective-LEVEL attachments (not
-    the ones on comments), RLS-scoped to project members. */
+/** GET /api/objectives/[id]/resources — the objective-LEVEL resources, files
+    and links alike (not the ones on comments), RLS-scoped to project members. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -26,14 +26,15 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("[api/objectives/:id/attachments] list failed:", error.message);
+    console.error("[api/objectives/:id/resources] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json(data ?? []);
 }
 
-/** POST /api/objectives/[id]/attachments — register files (already uploaded to
-    storage by the client) on an existing objective. */
+/** POST /api/objectives/[id]/resources — register resources on an existing
+    objective: files already uploaded to storage by the client, links already
+    resolved by /api/projects/[id]/link-preview. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -62,12 +63,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("objectiveNotFound") }, { status: 404 });
   }
 
-  const attachments = parseAttachmentsInput(
-    (body as { attachments?: unknown })?.attachments,
+  const resources = parseResourcesInput(
+    (body as { resources?: unknown })?.resources,
     `projects/${objective.project_id}/`
   );
-  if (attachments === null || attachments.length === 0) {
-    return NextResponse.json({ error: t("attachmentInvalid") }, { status: 400 });
+  if (resources === null || resources.length === 0) {
+    return NextResponse.json({ error: t("resourceInvalid") }, { status: 400 });
   }
 
   try {
@@ -76,11 +77,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       objectiveId: id,
       commentId: null,
       createdBy: auth.user.id,
-      attachments,
+      resources,
     });
     return NextResponse.json(rows, { status: 201 });
   } catch (e) {
-    console.error("[api/objectives/:id/attachments] insert failed:", (e as Error).message);
+    console.error("[api/objectives/:id/resources] insert failed:", (e as Error).message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 }

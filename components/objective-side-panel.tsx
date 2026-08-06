@@ -29,7 +29,7 @@ import {
   PropertyRow,
 } from "@/components/issue-property-fields";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
-import { ObjectiveAttachmentsSection } from "@/components/objective-attachments-section";
+import { ObjectiveResourcesSection } from "@/components/objective-resources-section";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
@@ -455,7 +455,7 @@ export function ObjectiveSidePanel({
               />
             </div>
 
-            <ObjectiveAttachmentsSection
+            <ObjectiveResourcesSection
               objectiveId={objective.id}
               projectId={projectId}
             />

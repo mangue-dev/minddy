@@ -34,12 +34,12 @@ import {
   filterCommands,
   type SlashCommandOption,
 } from "@/components/assistant/slash-menu";
-import { AttachmentPills, DropOverlay, useFileDrop } from "@/components/attachments";
+import { ResourcePills, DropOverlay, useFileDrop } from "@/components/resources";
 import { SendShortcutKeys, isSendShortcut } from "@/components/send-shortcut";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
 import type { AssistantCommandId, AssistantMention } from "@/lib/assistant-types";
-import type { AttachmentInput } from "@/lib/types";
+import type { ResourceInput } from "@/lib/types";
 
 /** What the "+" offers Numo: files it can actually read (images, PDF, CSV,
     text-ish) — MIN-24 scope. */
@@ -84,7 +84,7 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
 interface ChatInputProps {
   onSend: (
     message: string,
-    attachments: AttachmentInput[],
+    attachments: ResourceInput[],
     mentions: AssistantMention[],
     /** La commande « / » posée en tête du message, quand il y en a une. */
     command?: AssistantCommandId,
@@ -195,7 +195,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     ref
   ) {
     const t = useTranslations("Assistant");
-    const tAttach = useTranslations("Attachments");
+    const tAttach = useTranslations("Resources");
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -789,9 +789,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           {contextSlot}
           {uploads.pending.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2.5">
-              <AttachmentPills
+              <ResourcePills
                 pillClassName="rounded-md shadow-none"
-                attachments={uploads.pending.filter((p) => p.status === "done")}
+                resources={uploads.pending.filter((p) => p.status === "done")}
                 pending={uploads.pending}
                 onRemove={(a) => {
                   const match = uploads.pending.find(

@@ -161,7 +161,9 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .order("created_at"),
     service
       .from("attachments")
-      .select("id, project_id, issue_id, comment_id, file_name, mime_type, size_bytes, created_at")
+      .select(
+        "id, project_id, issue_id, comment_id, kind, url, file_name, mime_type, size_bytes, created_at"
+      )
       .eq("created_by", userId)
       .order("created_at"),
     ownedIds.length
@@ -290,8 +292,9 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
         "Tickets que vous avez créés ou qui vous sont assignés, plus tous ceux " +
         "des projets que vous possédez.",
       attachments:
-        "Métadonnées seulement. Les fichiers eux-mêmes restent téléchargeables " +
-        "depuis l'application tant que le compte existe.",
+        "Ressources que vous avez ajoutées : fichiers (métadonnées seulement — " +
+        "les fichiers eux-mêmes restent téléchargeables depuis l'application " +
+        "tant que le compte existe) et liens, dont l'URL figure ici.",
       secrets:
         "Aucune clé ni aucun jeton ne figure dans ce fichier : seuls les " +
         "préfixes déjà affichés dans les réglages y apparaissent.",

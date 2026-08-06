@@ -447,7 +447,8 @@ const ATTACHMENT_PARENT: Record<TrashType, string> = {
  * objectif et un feedback ont leurs propres fichiers depuis 20260728091000 et
  * 20260731090000. Les oublier laisserait les objets orphelins dans le bucket,
  * la ligne `attachments` partie en cascade — invisibles, et impossibles à
- * rattraper ensuite.
+ * rattraper ensuite. Les ressources de type LIEN n'ont pas d'objet : filtrées
+ * ici, sinon la liste porterait des nulls que `remove()` refuse.
  */
 export async function attachmentPaths(
   service: SupabaseClient,
@@ -458,7 +459,8 @@ export async function attachmentPaths(
   const { data } = await service
     .from("attachments")
     .select("storage_path")
-    .in(ATTACHMENT_PARENT[type], ids);
+    .in(ATTACHMENT_PARENT[type], ids)
+    .not("storage_path", "is", null);
   return (data ?? []).map((a) => a.storage_path as string);
 }
 

@@ -36,11 +36,13 @@ export const MCP_SERVER_INSTRUCTIONS =
       "code editor). Each costs a few tokens instead of the whole plan, and a " +
       "stale old_string fails loudly where a full rewrite would silently overwrite " +
       "someone else's edit. " +
-      "Issues, objectives and comments can carry file attachments: minddy_get_issue " +
-      "and minddy_list_objectives list their metadata (id + name/type/size), " +
-      "minddy_add_attachment uploads one (base64, 10 MB max) to an issue or, via " +
-      "comment_id, to a comment, and minddy_get_attachment downloads one by id " +
-      "(signed URL, or the bytes inline). An issue worked by minddy's code agent " +
+      "Issues, objectives and comments can carry RESOURCES — a file or a link: " +
+      "minddy_get_issue and minddy_list_objectives list them (id + kind, then " +
+      "name/type/size for a file, url for a link), minddy_add_resource adds one " +
+      "to an issue or, via comment_id, to a comment (a file inline as base64, " +
+      "10 MB max, or just a url — minddy resolves its title and favicon itself), " +
+      "and minddy_get_resource reads one by id (a file's signed URL or its bytes " +
+      "inline; a link's url and title). An issue worked by minddy's code agent " +
       "carries a PULL REQUEST: minddy_get_pull_request reads it from the issue: " +
       "state, branches, description and per-file diffs. A pull request of a linked " +
       "repository normally finds its issue by CONVENTION (the identifier in the branch, " +

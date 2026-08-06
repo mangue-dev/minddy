@@ -7,9 +7,9 @@ import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-valida
 import { isRecurrenceCadence, startDueDateISO } from "@/lib/recurrence";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import {
-  copyAttachmentsToProject,
+  copyResourcesToProject,
   insertAttachments,
-  parseAttachmentsInput,
+  parseResourcesInput,
 } from "@/lib/server/attachments";
 import {
   insertEvents,
@@ -53,7 +53,7 @@ export type CreateIssueResult =
         | "invalidRecurrence"
         | "recurrenceNeedsDueDate"
         | "databaseError"
-        | "attachmentInvalid"
+        | "resourceInvalid"
         | "issueLimitReached"
         | "remoteIssueAlreadyImported";
       /** ICU values the message needs (ex. `limit` pour `issueLimitReached`). */
@@ -155,24 +155,25 @@ export async function createIssueForProject({
     throw err;
   }
 
-  // Files the client already uploaded under this project's storage prefix.
-  const parsedAttachments = parseAttachmentsInput(
-    input.attachments,
+  // Resources for the new issue: files the client already uploaded under this
+  // project's storage prefix, and links /link-preview already resolved.
+  const parsedResources = parseResourcesInput(
+    input.resources,
     `projects/${projectId}/`
   );
-  if (parsedAttachments === null) {
-    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  if (parsedResources === null) {
+    return { ok: false, status: 400, errorKey: "resourceInvalid" };
   }
 
   // Cross-project creation: files uploaded under another project's prefix, to be
   // COPIED into this one. Validated with the generic `projects/` family here;
-  // per-file source access is checked at copy time (copyAttachmentsToProject).
-  const parsedCopyAttachments = parseAttachmentsInput(
-    input.copy_attachments,
+  // per-file source access is checked at copy time (copyResourcesToProject).
+  const parsedCopyResources = parseResourcesInput(
+    input.copy_resources,
     "projects/"
   );
-  if (parsedCopyAttachments === null) {
-    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  if (parsedCopyResources === null) {
+    return { ok: false, status: 400, errorKey: "resourceInvalid" };
   }
 
   const row: Record<string, unknown> = {
@@ -288,25 +289,25 @@ export async function createIssueForProject({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  // Attachment rows — the issue exists from here on, so a failure must not
-  // fail the request (the files just don't get registered). Cross-project files
+  // Resource rows — the issue exists from here on, so a failure must not
+  // fail the request (the resources just don't get registered). Cross-project files
   // are copied into this project's storage prefix first, then registered
   // alongside the local ones.
   try {
-    const copied = await copyAttachmentsToProject(service, {
+    const copied = await copyResourcesToProject(service, {
       targetProjectId: projectId,
       actorId,
-      attachments: parsedCopyAttachments,
+      resources: parsedCopyResources,
     });
     await insertAttachments(service, {
       projectId,
       issueId: data.id as string,
       commentId: null,
       createdBy: actorId,
-      attachments: [...parsedAttachments, ...copied],
+      resources: [...parsedResources, ...copied],
     });
   } catch (e) {
-    console.error("[create-issue] attachments failed:", (e as Error).message);
+    console.error("[create-issue] resources failed:", (e as Error).message);
   }
 
   // Attach categories that belong to this project — matched by ID (same-project
@@ -486,7 +487,7 @@ export async function createIssueForProject({
       has_assignee: data.assignee_id != null,
       has_parent: data.parent_id != null,
       category_count: categoryIds.length,
-      attachment_count: parsedAttachments.length,
+      resource_count: parsedResources.length,
       // Doublon volontaire du groupe : une propriété se découpe gratuitement,
       // l'agrégation par groupe suppose l'add-on payant (voir useAnalytics).
       project_id: projectId,

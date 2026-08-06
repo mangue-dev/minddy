@@ -336,20 +336,20 @@ function keysForProjectEvent(
       return postId ? [active(["feedback-comments", projectId, postId])] : [];
     }
     case "attachments": {
-      // Comment attachments ride the comments cache; entity-level ones have
-      // their own query.
+      // The table keeps its name; the NOTION is a resource (MIN-184). Those on
+      // comments ride the comments cache; entity-level ones have their own query.
       const issueId = issueIdOf(change);
       if (issueId) {
         return [
           active(["comments", issueId]),
-          active(["issue-attachments", issueId]),
+          active(["issue-resources", issueId]),
         ];
       }
       const objectiveId = objectiveIdOf(change);
       if (objectiveId) {
         return [
           active(["objective-comments", objectiveId]),
-          active(["objective-attachments", objectiveId]),
+          active(["objective-resources", objectiveId]),
         ];
       }
       const postId = feedbackPostIdOf(change);
@@ -437,10 +437,10 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["members", projectId],
   ["comments"],
   ["events"],
-  ["issue-attachments"],
+  ["issue-resources"],
   ["objective-comments"],
   ["objective-events"],
-  ["objective-attachments"],
+  ["objective-resources"],
   ["feedback", projectId],
   ["feedback-detail", projectId],
   ["feedback-count", projectId],

@@ -20,9 +20,16 @@ export interface Objective {
   updated_at: string;
 }
 
-/** A file attached to an issue (comment_id null) or to a comment/reply.
-    The file itself lives in the private `attachments` Storage bucket and is
-    served through GET /api/attachments/file?path=… (302 → signed URL). */
+/**
+ * A resource attached to an issue/objective (comment_id null) or to a
+ * comment/reply — a FILE or a LINK (MIN-184). A file lives in the private
+ * `attachments` Storage bucket and is served through
+ * GET /api/attachments/file?path=… (302 → signed URL); a link carries its URL
+ * and, when the site had one, its favicon inlined as a data URI.
+ *
+ * The table is still named `attachments`: the rename is one of the notion, not
+ * of the storage.
+ */
 export interface Attachment {
   id: string;
   project_id: string;
@@ -31,7 +38,13 @@ export interface Attachment {
   objective_id: string | null;
   feedback_post_id?: string | null;
   comment_id: string | null;
-  storage_path: string;
+  kind: ResourceKind;
+  /** Set for a file, null for a link (attachments_kind_ck). */
+  storage_path: string | null;
+  /** Set for a link, null for a file (attachments_kind_ck). */
+  url?: string | null;
+  /** Favicon of a link, `data:image/…;base64,…`; null when the site had none. */
+  icon_data_url?: string | null;
   file_name: string;
   mime_type: string;
   size_bytes: number;
@@ -39,13 +52,39 @@ export interface Attachment {
   created_at: string;
 }
 
+export type ResourceKind = "file" | "link";
+
 /** What the client sends after a direct-to-storage upload; the server
     validates the path prefix and creates the `attachments` row. */
 export interface AttachmentInput {
+  kind?: "file";
   storage_path: string;
   file_name: string;
   mime_type: string;
   size_bytes: number;
+}
+
+/** The file half of a resource — the historical `AttachmentInput`, kept under
+    that name for the composers that only take files (chat, PR composer). */
+export type FileResourceInput = AttachmentInput;
+
+/** What the client sends once /api/projects/[id]/link-preview has resolved the
+    link's title and favicon for it. */
+export interface LinkResourceInput {
+  kind: "link";
+  url: string;
+  /** The link's display name — the page title, or its hostname. */
+  file_name: string;
+  icon_data_url?: string | null;
+}
+
+/** Either half of a resource, as the registration routes accept it. */
+export type ResourceInput = FileResourceInput | LinkResourceInput;
+
+export function isLinkResource(
+  input: ResourceInput
+): input is LinkResourceInput {
+  return input.kind === "link";
 }
 
 export interface Comment {
@@ -318,11 +357,12 @@ export interface CreateObjectiveInput {
   lead_user_id?: string | null;
   target_date?: string | null;
   color?: string | null;
-  attachments?: AttachmentInput[];
+  resources?: ResourceInput[];
   /** Cross-project creation: files the browser uploaded under the SOURCE
       project's storage prefix. Same rule as issues — a storage object can't be
-      referenced across projects, so the server COPIES each into the target. */
-  copy_attachments?: AttachmentInput[];
+      referenced across projects, so the server COPIES each into the target.
+      Links need no copy and ride `resources`. */
+  copy_resources?: ResourceInput[];
 }
 
 /** Field changes Numo applies to an objective from a voice transcript — the
@@ -715,10 +755,11 @@ export interface Issue {
       Invariant (SQL trigger): a cycled issue is assigned to the cycle's owner. */
   cycle_id: string | null;
   category_ids: string[];
-  /** Count of issue-LEVEL attachments (comment attachments excluded). Only the
-      board list endpoint populates it; undefined elsewhere. Used by « copier le
-      prompt » to flag attachments in the XML without a per-card fetch. */
-  attachment_count?: number;
+  /** Count of issue-LEVEL resources, files and links alike (the ones on
+      comments excluded). Only the board list endpoint populates it; undefined
+      elsewhere. Used by « copier le prompt » to flag resources in the XML
+      without a per-card fetch. */
+  resource_count?: number;
 }
 
 /**
@@ -837,12 +878,13 @@ export interface CreateIssueInput {
       scoped to one project). The server matches them against the target
       project's categories by name and keeps the ones that exist. */
   category_names?: string[];
-  attachments?: AttachmentInput[];
+  resources?: ResourceInput[];
   /** Cross-project creation: files the browser uploaded under the SOURCE
       project's storage prefix. A storage object can't be referenced across
       projects, so the server COPIES each into the target project (after
-      checking the actor can reach the source) and registers the copy. */
-  copy_attachments?: AttachmentInput[];
+      checking the actor can reach the source) and registers the copy. Links
+      need no copy and ride `resources`. */
+  copy_resources?: ResourceInput[];
 }
 
 /** Field changes Numo applies to the create-issue form via voice dictation.

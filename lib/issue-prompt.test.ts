@@ -19,7 +19,7 @@ const issue = {
   due_date: null,
   plan: null,
   category_ids: [],
-  attachment_count: 0,
+  resource_count: 0,
 } as unknown as Issue;
 
 const input = {
@@ -28,7 +28,7 @@ const input = {
   projectKey: "MIN",
   categories: ["UI"],
   relations: [{ type: "blocks" as const, identifier: "MIN-7", title: "Palette v2" }],
-  attachmentCount: 2,
+  resourceCount: 2,
 };
 
 describe("buildIssuePrompt", () => {
@@ -38,7 +38,7 @@ describe("buildIssuePrompt", () => {
     expect(prompt).toContain("<identifier>MIN-42</identifier>");
     expect(prompt).toContain("<category>UI</category>");
     expect(prompt).toContain('<relation type="blocks">');
-    expect(prompt).toContain('<attachments count="2" />');
+    expect(prompt).toContain('<resources count="2" />');
     expect(prompt).toContain("This issue has no implementation plan yet.");
     expect(prompt).toContain("minddy_update_issues");
   });
@@ -107,7 +107,7 @@ describe("buildIssueCustomPrompt", () => {
     expect(prompt).toContain("<identifier>MIN-42</identifier>");
     expect(prompt).toContain("<category>UI</category>");
     expect(prompt).toContain('<relation type="blocks">');
-    expect(prompt).toContain('<attachments count="2" />');
+    expect(prompt).toContain('<resources count="2" />');
     expect(prompt).toContain(instructions);
     expect(prompt).toContain('project_id "proj-1"');
     expect(prompt).toContain("minddy_add_comment");

@@ -1,14 +1,53 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Dialog, DialogContent, DialogTitle, Spinner, cn } from "mangue-ui";
-import { FileSpreadsheet, FileText, ImageIcon, Paperclip, X } from "lucide-react";
-import type { AttachmentInput } from "@/lib/types";
-import type { PendingAttachment } from "@/lib/use-attachment-uploads";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Input,
+  Spinner,
+  cn,
+} from "mangue-ui";
+import {
+  FileSpreadsheet,
+  FileText,
+  ImageIcon,
+  Link2,
+  Paperclip,
+  Plus,
+  X,
+} from "lucide-react";
+import type { ResourceKind } from "@/lib/types";
+import type { PendingResource } from "@/lib/use-attachment-uploads";
 
-/** Saved rows (with id) and just-uploaded composer entries (without) alike. */
-export type AttachmentLike = AttachmentInput & { id?: string };
+/**
+ * Saved rows (with id) and just-added composer entries (without) alike, in the
+ * one shape that fits both halves of a resource. Deliberately permissive: a
+ * file carries `storage_path`/`mime_type`/`size_bytes`, a link carries `url`
+ * and its favicon, and `kind` defaults to "file" — the comment and chat
+ * surfaces hand over rows written before MIN-184, which never carry links.
+ */
+export interface ResourceLike {
+  id?: string;
+  kind?: ResourceKind | null;
+  file_name: string;
+  /** File half. */
+  storage_path?: string | null;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  /** Link half. */
+  url?: string | null;
+  icon_data_url?: string | null;
+}
 
 /** The single read door for the private bucket (302 → signed URL). */
 export function attachmentFileUrl(storagePath: string, download = false): string {
@@ -21,7 +60,8 @@ function isImage(mime: string): boolean {
   return mime.startsWith("image/");
 }
 
-/** Paperclip button + hidden multi-file input, shared by every composer. */
+/** Paperclip button + hidden multi-file input, shared by every composer that
+    only takes files (comments, Numo shell, PR composer). */
 export function AttachButton({
   onFiles,
   disabled,
@@ -33,7 +73,7 @@ export function AttachButton({
   accept?: string;
   className?: string;
 }) {
-  const t = useTranslations("Attachments");
+  const t = useTranslations("Resources");
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -62,6 +102,172 @@ export function AttachButton({
       </Button>
     </>
   );
+}
+
+/**
+ * The « + » of a surface that takes BOTH halves of a resource (MIN-184):
+ * a dropdown with *Attachment* — the same hidden file input as AttachButton —
+ * and *Link*, which opens {@link AddLinkDialog}.
+ *
+ * One button rather than two: the two gestures produce the same thing, and the
+ * sidebar row has one slot for « add something here ».
+ */
+export function AddResourceButton({
+  onFiles,
+  onLink,
+  disabled,
+  accept,
+  className,
+}: {
+  onFiles: (files: FileList) => void;
+  /** Resolves once the link is registered — the dialog closes on success and
+      stays open, with its error, otherwise. */
+  onLink: (url: string) => Promise<void>;
+  disabled?: boolean;
+  accept?: string;
+  className?: string;
+}) {
+  const t = useTranslations("Resources");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept={accept}
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) onFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("add")}
+            title={t("add")}
+            disabled={disabled}
+            className={cn("rounded-full text-muted-foreground", className)}
+          >
+            <Plus className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
+            <Paperclip className="size-4" />
+            <span>{t("addFile")}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setLinkOpen(true)}>
+            <Link2 className="size-4" />
+            <span>{t("addLink")}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <AddLinkDialog open={linkOpen} onOpenChange={setLinkOpen} onSubmit={onLink} />
+    </>
+  );
+}
+
+/**
+ * « Coller un lien » : un champ, une validation, rien de plus. `https://` est
+ * préfixé quand le schéma manque — c'est ce que les gens collent le plus
+ * souvent, et le refuser pour ça ne rendrait service à personne.
+ */
+export function AddLinkDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (url: string) => Promise<void>;
+}) {
+  const t = useTranslations("Resources");
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setValue("");
+    setError(null);
+    setBusy(false);
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("linkDialogTitle")}</DialogTitle>
+        </DialogHeader>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const url = normalizeUrl(value);
+            if (!url) {
+              setError(t("linkInvalid"));
+              return;
+            }
+            setBusy(true);
+            setError(null);
+            try {
+              await onSubmit(url);
+              onOpenChange(false);
+            } catch (err) {
+              setError((err as Error).message || t("linkFailed"));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <Input
+            autoFocus
+            type="url"
+            inputMode="url"
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setError(null);
+            }}
+            placeholder={t("linkPlaceholder")}
+            aria-invalid={error ? true : undefined}
+          />
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <DialogFooter>
+            <Button type="submit" disabled={busy || !value.trim()}>
+              {busy && <Spinner className="size-4" />}
+              {t("addLink")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** `minddy.app` → `https://minddy.app`; null when it's not an http(s) URL at
+    all (the server checks again — this only spares a round trip). */
+function normalizeUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    if (!url.hostname.includes(".")) return null;
+    return candidate;
+  } catch {
+    return null;
+  }
 }
 
 /** Forward pasted files into a composer's upload queue. */
@@ -135,7 +341,7 @@ export function DropOverlay({
   icon?: React.ReactNode;
   className?: string;
 }) {
-  const t = useTranslations("Attachments");
+  const t = useTranslations("Resources");
   if (!show) return null;
   return (
     <div
@@ -170,18 +376,21 @@ function formatBytes(n: number, mb: string, kb: string): string {
 }
 
 /**
- * Common display for attachments everywhere in the app.
+ * Common display for resources everywhere in the app — a file and a link read
+ * as the same chip, which is the whole point of the notion (MIN-184). What
+ * differs is only what fits inside: a file shows its type icon and its weight,
+ * a link its favicon and nothing else (a link has no size to speak of).
  *
  * - `pill` — bordered chip with icon, name and size; click previews images in a
- *   dialog and downloads everything else; `onRemove` adds an X (composer rows,
- *   author's own attachments).
+ *   dialog, downloads other files, opens a link in a new tab; `onRemove` adds
+ *   an X (composer rows, the author's own resources).
  * - `ultra-compact` — icon + truncated name only, for dense surfaces (chat
  *   bubbles, reply rows).
  *
- * `pending` renders the in-flight uploads of a composer as spinner pills.
+ * `pending` renders the in-flight entries of a composer as spinner pills.
  */
-export function AttachmentPills({
-  attachments,
+export function ResourcePills({
+  resources,
   pending,
   variant = "pill",
   onRemove,
@@ -190,51 +399,89 @@ export function AttachmentPills({
   className,
   pillClassName,
 }: {
-  attachments?: AttachmentLike[];
-  pending?: PendingAttachment[];
+  resources?: ResourceLike[];
+  pending?: PendingResource[];
   variant?: "pill" | "ultra-compact";
-  onRemove?: (attachment: AttachmentLike) => void;
-  /** Per-attachment gate for the X (default: every one when onRemove is set). */
-  canRemove?: (attachment: AttachmentLike) => boolean;
+  onRemove?: (resource: ResourceLike) => void;
+  /** Per-resource gate for the X (default: every one when onRemove is set). */
+  canRemove?: (resource: ResourceLike) => boolean;
   onRemovePending?: (localId: string) => void;
   className?: string;
   /** Applied to each chip — e.g. `rounded-md` for the Numo composer's
       concentric nesting, matching its PageContextBadge. */
   pillClassName?: string;
 }) {
-  const t = useTranslations("Attachments");
-  const [preview, setPreview] = useState<AttachmentLike | null>(null);
+  const t = useTranslations("Resources");
+  const [preview, setPreview] = useState<ResourceLike | null>(null);
 
-  const done = attachments ?? [];
+  const done = resources ?? [];
   const inFlight = pending ?? [];
   if (done.length === 0 && inFlight.length === 0) return null;
 
   const compact = variant === "ultra-compact";
   // The pill variant mirrors the assistant's PageContextBadge anatomy (same
-  // height, icon tile, typography) — attachments read as context chips.
+  // height, icon tile, typography) — resources read as context chips.
   const pillClass = cn(
     compact
       ? "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-[11px] text-foreground/90"
       : "flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-border bg-card py-1 pl-1 pr-2.5 text-xs shadow-sm",
     pillClassName
   );
-  const icon = (mime: string) =>
+
+  /** The chip's leading square — a MIME type icon, or the site's favicon. */
+  const iconTile = (inner: React.ReactNode) =>
     compact ? (
-      <TypeIcon mime={mime} className="size-3 shrink-0 text-muted-foreground" />
+      inner
     ) : (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border border-border/60 bg-muted text-muted-foreground">
-        <TypeIcon mime={mime} className="h-3 w-3" />
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-[5px] border border-border/60 bg-muted text-muted-foreground">
+        {inner}
       </span>
+    );
+
+  const linkIcon = (iconDataUrl: string | null | undefined) =>
+    iconTile(
+      // A favicon is an inline data URI — next/image has nothing to optimize,
+      // and the fallback covers the sites that have none.
+      iconDataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={iconDataUrl}
+          alt=""
+          aria-hidden
+          className={
+            compact ? "size-3 shrink-0 rounded-[2px]" : "h-3.5 w-3.5 object-contain"
+          }
+        />
+      ) : (
+        <Link2
+          className={compact ? "size-3 shrink-0 text-muted-foreground" : "h-3 w-3"}
+          aria-hidden
+        />
+      )
     );
 
   return (
     <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
       {done.map((a) => {
-        const image = isImage(a.mime_type);
-        const label = image ? t("preview") : t("download");
+        // A resource is a link when it says so AND carries an URL; anything
+        // else is a file, which is what every row written before MIN-184 is.
+        const url = a.kind === "link" ? (a.url ?? null) : null;
+        const path = a.storage_path ?? null;
+        const mime = a.mime_type ?? "application/octet-stream";
+        const image = !url && isImage(mime);
+        const label = url ? t("openLink") : image ? t("preview") : t("download");
         const body = (
           <>
-            {icon(a.mime_type)}
+            {url
+              ? linkIcon(a.icon_data_url)
+              : iconTile(
+                  <TypeIcon
+                    mime={mime}
+                    className={
+                      compact ? "size-3 shrink-0 text-muted-foreground" : "h-3 w-3"
+                    }
+                  />
+                )}
             <span
               className={cn(
                 "truncate",
@@ -243,16 +490,30 @@ export function AttachmentPills({
             >
               {a.file_name}
             </span>
-            {!compact && (
+            {!compact && !url && (
               <span className="shrink-0 text-muted-foreground">
-                {formatBytes(a.size_bytes, t("mb"), t("kb"))}
+                {formatBytes(a.size_bytes ?? 0, t("mb"), t("kb"))}
               </span>
             )}
           </>
         );
         return (
-          <span key={a.id ?? a.storage_path} className={cn(pillClass, "group/pill")}>
-            {image ? (
+          <span
+            key={a.id ?? url ?? path ?? a.file_name}
+            className={cn(pillClass, "group/pill")}
+          >
+            {url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={url}
+                aria-label={label}
+                className="flex min-w-0 items-center gap-[inherit] hover:underline"
+              >
+                {body}
+              </a>
+            ) : image && path ? (
               <button
                 type="button"
                 onClick={() => setPreview(a)}
@@ -261,14 +522,16 @@ export function AttachmentPills({
               >
                 {body}
               </button>
-            ) : (
+            ) : path ? (
               <a
-                href={attachmentFileUrl(a.storage_path, true)}
+                href={attachmentFileUrl(path, true)}
                 title={label}
                 className="flex min-w-0 items-center gap-[inherit] hover:underline"
               >
                 {body}
               </a>
+            ) : (
+              <span className="flex min-w-0 items-center gap-[inherit]">{body}</span>
             )}
             {onRemove && (canRemove?.(a) ?? true) && (
               <button
@@ -314,7 +577,7 @@ export function AttachmentPills({
       <Dialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
         <DialogContent className="max-w-3xl p-2">
           <DialogTitle className="sr-only">{preview?.file_name}</DialogTitle>
-          {preview && (
+          {preview?.storage_path && (
             <>
               {/* Storage file behind an auth redirect — next/image can't optimize it. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}

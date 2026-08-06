@@ -286,7 +286,7 @@ export async function getModelContextWindow(
 }
 
 /**
- * Le modèle du run accepte-t-il une image en entrée ? Décide si `read_attachment`
+ * Le modèle du run accepte-t-il une image en entrée ? Décide si `read_resource`
  * RENVOIE la maquette au lieu d'en décrire les métadonnées (MIN-111), et si le
  * prompt annonce la capacité. Même source que la fenêtre de contexte : l'index
  * OpenRouter. Hors OpenRouter (BYOK direct openai/anthropic/google/generic), on

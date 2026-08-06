@@ -84,7 +84,7 @@ import {
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
-import { IssueAttachmentsSection } from "@/components/issue-attachments-section";
+import { IssueResourcesSection } from "@/components/issue-resources-section";
 import { IssuePlan } from "@/components/issue-plan";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
@@ -439,7 +439,7 @@ export function IssueSidePanel({
         projectKey,
         categories: promptContext.categories,
         relations: promptContext.relations,
-        attachmentCount: issue.attachment_count,
+        resourceCount: issue.resource_count,
       })
     );
     if (autoStart) {
@@ -468,7 +468,7 @@ export function IssueSidePanel({
         projectKey,
         categories: promptContext.categories,
         relations: promptContext.relations,
-        attachmentCount: issue.attachment_count,
+        resourceCount: issue.resource_count,
       })
     );
     toast.success(
@@ -491,7 +491,7 @@ export function IssueSidePanel({
         projectKey,
         categories: promptContext.categories,
         relations: promptContext.relations,
-        attachmentCount: issue.attachment_count,
+        resourceCount: issue.resource_count,
       })
     );
     toast.success(t("verifyPromptCopied"));
@@ -524,7 +524,7 @@ export function IssueSidePanel({
             projectKey,
             categories: promptContext.categories,
             relations: promptContext.relations,
-            attachmentCount: issue.attachment_count,
+            resourceCount: issue.resource_count,
           },
           instructions
         )
@@ -1016,7 +1016,7 @@ export function IssueSidePanel({
                     />
                   </PropertyRow>
 
-                  <IssueAttachmentsSection
+                  <IssueResourcesSection
                     issueId={issue.id}
                     projectId={issue.project_id}
                   />

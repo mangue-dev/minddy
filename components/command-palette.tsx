@@ -598,7 +598,7 @@ export function CommandPalette({
               projectKey: project?.key ?? "",
               categories: promptCategories,
               // Relations non résolues ici (données board) — bloc omis du prompt
-              attachmentCount: full.attachment_count,
+              resourceCount: full.resource_count,
             });
             await navigator.clipboard.writeText(prompt);
             // Copier un prompt, c'est prendre le ticket en main : la chaîne qui

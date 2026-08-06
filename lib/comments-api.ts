@@ -1,6 +1,6 @@
 "use client";
 
-import type { AttachmentInput, Comment, IssueEvent } from "./types";
+import type { Comment, IssueEvent, ResourceInput } from "./types";
 import type { CommentVisibility } from "./feedback/types";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
@@ -34,7 +34,7 @@ export async function addCommentApi(
   body: string,
   mentionedUserIds: string[] = [],
   parentId: string | null = null,
-  attachments: AttachmentInput[] = []
+  attachments: ResourceInput[] = []
 ): Promise<Comment> {
   // Seulement des métadonnées : la longueur en tranche, jamais le texte.
   trackEvent("comment_added", {
@@ -91,7 +91,7 @@ export async function addFeedbackCommentApi(
   body: string,
   mentionedUserIds: string[] = [],
   parentId: string | null = null,
-  attachments: AttachmentInput[] = [],
+  attachments: ResourceInput[] = [],
   /** 'public' publishes it on the board as the team's response (MIN-196). */
   visibility: CommentVisibility = "internal"
 ): Promise<Comment> {
@@ -157,7 +157,7 @@ export async function addObjectiveCommentApi(
   body: string,
   mentionedUserIds: string[] = [],
   parentId: string | null = null,
-  attachments: AttachmentInput[] = []
+  attachments: ResourceInput[] = []
 ): Promise<Comment> {
   trackEvent("comment_added", {
     target: "objective",
@@ -180,8 +180,9 @@ export async function addObjectiveCommentApi(
   );
 }
 
-export async function deleteAttachmentApi(attachmentId: string): Promise<void> {
-  const response = await fetch(`/api/attachments/${attachmentId}`, {
+/** One resource, file or link — the uploader's own only (checked server-side). */
+export async function deleteResourceApi(resourceId: string): Promise<void> {
+  const response = await fetch(`/api/resources/${resourceId}`, {
     method: "DELETE",
   });
   if (!response.ok) {
@@ -190,7 +191,7 @@ export async function deleteAttachmentApi(attachmentId: string): Promise<void> {
       (data as { error?: string } | null)?.error || "Delete failed"
     );
   }
-  trackEvent("attachment_removed", { target: "issue" });
+  trackEvent("resource_removed", { target: "issue" });
 }
 
 export async function updateCommentApi(commentId: string, body: string): Promise<Comment> {

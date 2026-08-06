@@ -79,9 +79,12 @@ import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { SITE_URL } from "@/lib/site";
 import {
   downloadAttachment,
+  insertAttachments,
   signedAttachmentUrl,
   uploadAttachment,
 } from "@/lib/server/attachments";
+import { FaviconError } from "@/lib/server/favicon";
+import { resolveLinkResource } from "@/lib/server/link-resource";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
 import {
   forgeFor,
@@ -139,7 +142,7 @@ const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
 const WRITE_IDEMPOTENT = { ...WRITE, idempotentHint: true } as const;
 
-/** Above this, minddy_get_attachment never embeds bytes inline (base64 would
+/** Above this, minddy_get_resource never embeds bytes inline (base64 would
     swamp the model's context) — the signed download_url is the way in. */
 const MAX_INLINE_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -677,9 +680,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "effort, assignee, objective, due date, parent), its implementation plan " +
         "(raw markdown plus parsed plan_tasks with stable task_index for " +
         "minddy_update_plan_task, and plan_progress), comments with author names, " +
-        "attachment metadata (id + file name/type/size, on the issue and on each " +
-        "comment; add files with minddy_add_attachment, download them with " +
-        "minddy_get_attachment), sub-issues, and the last " +
+        "resource metadata — files AND links (id + kind, file name/type/size or " +
+        "url, on the issue and on each comment; add one with " +
+        "minddy_add_resource, read one with minddy_get_resource) —, sub-issues, " +
+        "and the last " +
         "activity events (status changes, reassignments…) with resolved actors: " +
         "'what happened on this issue?'. It also carries `linked_feedback` — the " +
         "user requests from the feedback board this issue implements (title, " +
@@ -1025,8 +1029,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "status (planned/in_progress/done/canceled), lead, target date, " +
         "progress: { done, total, percent } computed from linked issues " +
         "(status 'done' / all linked), same as the UI's progress bar. Plus, when " +
-        "present, the objective's own attachments (file name/type/size + id; " +
-        "download the bytes with minddy_get_attachment).",
+        "present, the objective's own resources — files AND links (id + kind, " +
+        "file name/type/size or url; read one with minddy_get_resource).",
       inputSchema: { project_id: PROJECT_ID },
       annotations: READ_ONLY,
     },
@@ -1051,11 +1055,13 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .is("deleted_at", null)
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null),
-        // Objective-level attachments (comment_id null) — metadata only; the
-        // bytes come from minddy_get_attachment by id.
+        // Objective-level resources (comment_id null) — metadata only; a
+        // file's bytes come from minddy_get_resource by id.
         service
           .from("attachments")
-          .select("id, objective_id, file_name, mime_type, size_bytes")
+          .select(
+            "id, objective_id, kind, url, file_name, mime_type, size_bytes"
+          )
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null)
           .is("comment_id", null)
@@ -1064,17 +1070,22 @@ export function registerMinddyTools(rawServer: McpServer): void {
       if (error) return fail("database_error", error.message);
       if (issuesError) return fail("database_error", issuesError.message);
 
-      const attachmentsByObjective = new Map<string, Record<string, unknown>[]>();
+      const resourcesByObjective = new Map<string, Record<string, unknown>[]>();
       for (const row of attachmentRows ?? []) {
         const id = row.objective_id as string;
-        const list = attachmentsByObjective.get(id) ?? [];
-        list.push({
-          id: row.id,
-          file_name: row.file_name,
-          mime_type: row.mime_type,
-          size_bytes: row.size_bytes,
-        });
-        attachmentsByObjective.set(id, list);
+        const list = resourcesByObjective.get(id) ?? [];
+        list.push(
+          row.kind === "link"
+            ? { id: row.id, kind: "link", url: row.url, title: row.file_name }
+            : {
+                id: row.id,
+                kind: "file",
+                file_name: row.file_name,
+                mime_type: row.mime_type,
+                size_bytes: row.size_bytes,
+              }
+        );
+        resourcesByObjective.set(id, list);
       }
 
       // Progression : done/total restent des comptes bruts de tickets pour le
@@ -1110,7 +1121,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           const p =
             progress.get(o.id as string) ??
             { done: 0, total: 0, totalPoints: 0, earnedPoints: 0 };
-          const atts = attachmentsByObjective.get(o.id as string);
+          const atts = resourcesByObjective.get(o.id as string);
           return {
             ...o,
             lead_name: o.lead_user_id
@@ -1124,7 +1135,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
                   ? 0
                   : Math.round((p.earnedPoints / p.totalPoints) * 100),
             },
-            ...(atts ? { attachments: atts } : {}),
+            ...(atts ? { resources: atts } : {}),
           };
         }),
       });
@@ -1628,8 +1639,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Post a markdown comment on an issue, e.g. to report progress or leave a " +
         "note for the team. The timeline shows the agent as the author (this API " +
-        "key's name with an '(mcp)' marker), not the key's owner. To attach a file " +
-        "to the comment, call minddy_add_attachment with the returned comment id.",
+        "key's name with an '(mcp)' marker), not the key's owner. To attach a " +
+        "resource to the comment, call minddy_add_resource with the returned " +
+        "comment id.",
       inputSchema: {
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
@@ -1655,15 +1667,17 @@ export function registerMinddyTools(rawServer: McpServer): void {
   );
 
   server.registerTool(
-    "minddy_add_attachment",
+    "minddy_add_resource",
     {
-      title: "Add attachment",
+      title: "Add resource",
       description:
-        "Attach a file to an issue, or to one of its comments (pass comment_id, " +
-        "e.g. the id minddy_add_comment returned). Content is sent inline as " +
-        "base64, 10 MB max after decoding. The file lands in minddy's private " +
-        "storage and shows as a pill in the app; minddy_get_issue lists the " +
-        "attachment metadata.",
+        "Attach a resource to an issue, or to one of its comments (pass " +
+        "comment_id, e.g. the id minddy_add_comment returned). A resource is " +
+        "EITHER a file — content inline as base64 with its file_name, 10 MB max " +
+        "after decoding, landing in minddy's private storage — OR a link: pass " +
+        "`url` alone and minddy fetches the page's title and favicon itself. The " +
+        "two are exclusive: send one or the other, never both. Either way it " +
+        "shows as the same pill in the app, and minddy_get_issue lists it.",
       inputSchema: {
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
@@ -1674,21 +1688,37 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .describe(
             "Attach to this comment of the issue instead of the issue itself."
           ),
+        url: z
+          .string()
+          .max(2000)
+          .optional()
+          .describe(
+            "A LINK resource: the http(s) address to attach. Its title and " +
+              "favicon are resolved server-side, so send nothing else. Leave out " +
+              "when attaching a file."
+          ),
         file_name: z
           .string()
           .min(1)
           .max(200)
-          .describe("Display name, extension included (e.g. 'screenshot.png')."),
+          .optional()
+          .describe(
+            "A FILE resource: display name, extension included (e.g. " +
+              "'screenshot.png'). Required with content_base64."
+          ),
         mime_type: z
           .string()
           .max(120)
           .optional()
-          .describe("MIME type; defaults to application/octet-stream."),
+          .describe("MIME type of the file; defaults to application/octet-stream."),
         content_base64: z
           .string()
           .min(1)
           .max(14_000_000)
-          .describe("File content, base64-encoded (no 'data:' prefix)."),
+          .optional()
+          .describe(
+            "A FILE resource: its content, base64-encoded (no 'data:' prefix)."
+          ),
       },
       annotations: WRITE,
     },
@@ -1698,16 +1728,19 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      const normalized = args.content_base64.replace(/\s/g, "");
-      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
-        return fail("invalid_params", "content_base64 is not valid base64.");
-      }
-      const data = Buffer.from(normalized, "base64");
-      if (data.byteLength === 0) {
-        return fail("invalid_params", "Empty file.");
-      }
-      if (data.byteLength > 10 * 1024 * 1024) {
-        return fail("invalid_params", "File exceeds the 10 MB cap.");
+      // Les deux moitiés sont exclusives : un appel qui porte les deux (ou
+      // aucune) est une intention ambiguë, pas quelque chose à deviner.
+      const wantsLink = !!args.url?.trim();
+      const wantsFile = !!args.content_base64;
+      if (wantsLink === wantsFile) {
+        return fail(
+          "invalid_params",
+          wantsLink
+            ? "A resource is either a file or a link: send url, or " +
+                "content_base64 + file_name, not both."
+            : "Nothing to attach: send url for a link, or content_base64 + " +
+                "file_name for a file."
+        );
       }
 
       if (args.comment_id) {
@@ -1721,6 +1754,56 @@ export function registerMinddyTools(rawServer: McpServer): void {
         }
       }
 
+      if (wantsLink) {
+        let resource;
+        try {
+          resource = await resolveLinkResource(args.url as string);
+        } catch (e) {
+          if (e instanceof FaviconError) {
+            return fail(
+              "invalid_params",
+              "That url can't be reached: it must be a public http(s) address."
+            );
+          }
+          return fail("database_error", (e as Error).message);
+        }
+        try {
+          const [row] = await insertAttachments(getServiceClient(), {
+            projectId: scope.access.project.id,
+            issueId: ref.issue.id,
+            commentId: args.comment_id ?? null,
+            createdBy: scope.userId,
+            resources: [resource],
+          });
+          return ok({
+            resource: {
+              id: row.id,
+              kind: "link",
+              url: row.url,
+              title: row.file_name,
+              comment_id: row.comment_id,
+            },
+          });
+        } catch (e) {
+          return fail("database_error", (e as Error).message);
+        }
+      }
+
+      if (!args.file_name?.trim()) {
+        return fail("invalid_params", "file_name is required with content_base64.");
+      }
+      const normalized = (args.content_base64 as string).replace(/\s/g, "");
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
+        return fail("invalid_params", "content_base64 is not valid base64.");
+      }
+      const data = Buffer.from(normalized, "base64");
+      if (data.byteLength === 0) {
+        return fail("invalid_params", "Empty file.");
+      }
+      if (data.byteLength > 10 * 1024 * 1024) {
+        return fail("invalid_params", "File exceeds the 10 MB cap.");
+      }
+
       try {
         const attachment = await uploadAttachment(getServiceClient(), {
           projectId: scope.access.project.id,
@@ -1732,8 +1815,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
           data,
         });
         return ok({
-          attachment: {
+          resource: {
             id: attachment.id,
+            kind: "file",
             file_name: attachment.file_name,
             mime_type: attachment.mime_type,
             size_bytes: attachment.size_bytes,
@@ -1747,30 +1831,32 @@ export function registerMinddyTools(rawServer: McpServer): void {
   );
 
   server.registerTool(
-    "minddy_get_attachment",
+    "minddy_get_resource",
     {
-      title: "Get attachment",
+      title: "Get resource",
       description:
-        "Download one attachment of an issue, an objective, or a comment. Pass the " +
-        "attachment_id you got from minddy_get_issue (issue and comment attachments) " +
-        "or minddy_list_objectives (objective attachments). By default returns the " +
-        "file metadata and a short-lived signed download_url (~10 min). Fetch that " +
-        "URL to grab the bytes without loading them into context, whatever the size. " +
-        "Set include_content=true to also embed the file inline (base64): images come " +
-        "back viewable, text-ish files as readable text, anything else as a resource " +
-        "blob. Inline content is capped at 10 MB; larger files stay URL-only.",
+        "Read one resource of an issue, an objective, or a comment. Pass the " +
+        "resource_id you got from minddy_get_issue (issue and comment resources) " +
+        "or minddy_list_objectives (objective resources). A LINK comes back as its " +
+        "url and title — there is nothing to download, fetch the page yourself if " +
+        "you need its content. A FILE returns its metadata and a short-lived " +
+        "signed download_url (~10 min); fetch that URL to grab the bytes without " +
+        "loading them into context, whatever the size. Set include_content=true to " +
+        "also embed a file inline (base64): images come back viewable, text-ish " +
+        "files as readable text, anything else as a blob. Inline content is capped " +
+        "at 10 MB; larger files stay URL-only.",
       inputSchema: {
         project_id: PROJECT_ID,
-        attachment_id: z
+        resource_id: z
           .string()
           .uuid()
-          .describe("Attachment id from minddy_get_issue / minddy_list_objectives."),
+          .describe("Resource id from minddy_get_issue / minddy_list_objectives."),
         include_content: z
           .boolean()
           .optional()
           .describe(
             "Embed the file bytes in the result (base64), not just the URL. " +
-              "Default false. Skipped for files over 10 MB."
+              "Default false. Ignored for links and for files over 10 MB."
           ),
       },
       annotations: READ_ONLY,
@@ -1780,18 +1866,31 @@ export function registerMinddyTools(rawServer: McpServer): void {
       if ("error" in scope) return scope.error;
 
       const service = getServiceClient();
-      // Scope by project_id (attachments carry it directly) — one door for
-      // issue, objective and comment attachments alike.
+      // Scope by project_id (resources carry it directly) — one door for
+      // issue, objective and comment resources alike.
       const { data: row, error } = await service
         .from("attachments")
         .select(
-          "id, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id"
+          "id, kind, url, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id"
         )
-        .eq("id", args.attachment_id)
+        .eq("id", args.resource_id)
         .eq("project_id", scope.access.project.id)
         .maybeSingle();
       if (error) return fail("database_error", error.message);
-      if (!row) return fail("not_found", "Attachment not found in this project.");
+      if (!row) return fail("not_found", "Resource not found in this project.");
+
+      // Un lien n'a pas d'octets : ni URL signée, ni contenu inline.
+      if (row.kind === "link") {
+        return ok({
+          id: row.id,
+          kind: "link",
+          url: row.url,
+          title: row.file_name,
+          issue_id: row.issue_id,
+          objective_id: row.objective_id,
+          comment_id: row.comment_id,
+        });
+      }
 
       const fileName = (row.file_name as string) || "attachment";
       const mime = (row.mime_type as string) || "application/octet-stream";
@@ -1804,6 +1903,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
 
       const meta: Record<string, unknown> = {
         id: row.id,
+        kind: "file",
         file_name: row.file_name,
         mime_type: row.mime_type,
         size_bytes: row.size_bytes,

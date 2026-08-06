@@ -20,12 +20,12 @@ import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
-  AttachButton,
-  AttachmentPills,
+  AddResourceButton,
+  ResourcePills,
   DropOverlay,
   pasteFileHandler,
   useFileDrop,
-} from "@/components/attachments";
+} from "@/components/resources";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeamOverlay } from "@/components/agent-beam";
@@ -317,7 +317,7 @@ export function CreateIssueDialog({
       due_date: fields.due_date,
       recurrence: fields.recurrence,
       category_ids: categoryIds,
-      attachments: uploads.inputs,
+      resources: uploads.inputs,
     });
   };
 
@@ -391,7 +391,7 @@ export function CreateIssueDialog({
       recurrence: draft.recurrence ?? null,
     });
     setCategoryIds(draft.category_ids);
-    uploads.restore(draft.attachments);
+    uploads.restore(draft.resources);
     setActiveDraftId(draft.id);
   };
 
@@ -423,7 +423,7 @@ export function CreateIssueDialog({
           recurrence: fields.recurrence,
           assignee_id: fields.assignee_id,
           category_names: categoryNames,
-          copy_attachments: uploads.inputs,
+          copy_resources: uploads.inputs,
         });
         toast.success(t("issueCreatedInProjectToast", { project: other.name }));
       } else {
@@ -432,7 +432,7 @@ export function CreateIssueDialog({
           description: description.trim() || null,
           ...fields,
           category_ids: categoryIds,
-          attachments: uploads.inputs,
+          resources: uploads.inputs,
         });
         toast.success(t("issueCreatedToast"));
       }
@@ -447,7 +447,7 @@ export function CreateIssueDialog({
         status: fields.status,
         effort: fields.effort,
         cross_project: other !== null,
-        attachment_count: uploads.inputs.length,
+        resource_count: uploads.inputs.length,
         description_length_bucket: lengthBucket(description),
         created_from_draft: activeDraftId !== null,
       });
@@ -560,13 +560,16 @@ export function CreateIssueDialog({
                 className="mb-3"
               />
             )}
-            {/* Attachments are context — they sit ABOVE the text being written. */}
-            <AttachmentPills
-              attachments={uploads.pending.filter((p) => p.status === "done")}
+            {/* Resources are context — they sit ABOVE the text being written. */}
+            <ResourcePills
+              resources={uploads.pending.filter((p) => p.status === "done")}
               pending={uploads.pending}
               onRemove={(a) => {
-                const match = uploads.pending.find(
-                  (p) => p.storage_path === a.storage_path
+                // A link has no storage path — match on whichever identifies it.
+                const match = uploads.pending.find((p) =>
+                  a.kind === "link"
+                    ? p.url === a.url
+                    : p.storage_path === a.storage_path
                 );
                 if (match) uploads.remove(match.localId);
               }}
@@ -695,7 +698,11 @@ export function CreateIssueDialog({
                   {t("numoWorking")}
                 </span>
               )}
-              <AttachButton onFiles={uploads.addFiles} disabled={submitting} />
+              <AddResourceButton
+                onFiles={uploads.addFiles}
+                onLink={uploads.addLink}
+                disabled={submitting}
+              />
               <div className="ml-auto flex items-center gap-4">
                 <label
                   htmlFor={createMoreId}

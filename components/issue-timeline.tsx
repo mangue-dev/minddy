@@ -53,18 +53,18 @@ import { toolRunningLabel } from "@/components/assistant/tool-call-display";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
   AttachButton,
-  AttachmentPills,
+  ResourcePills,
   DropOverlay,
   pasteFileHandler,
   useFileDrop,
-} from "@/components/attachments";
+} from "@/components/resources";
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
-import type { AttachmentInput, Comment, Member } from "@/lib/types";
+import type { Comment, Member, ResourceInput } from "@/lib/types";
 import type { CommentVisibility } from "@/lib/feedback/types";
 
 type EventItem = Extract<TimelineItem, { kind: "event" }>;
@@ -603,8 +603,8 @@ function CommentBlock({
         )
       )}
       {!working && !failed && (comment.attachments?.length ?? 0) > 0 && (
-        <AttachmentPills
-          attachments={comment.attachments}
+        <ResourcePills
+          resources={comment.attachments}
           onRemove={
             mine
               ? (a) => {
@@ -676,7 +676,7 @@ function ReplyComposer({
     parentId: string,
     body: string,
     mentionedUserIds: string[],
-    attachments: AttachmentInput[]
+    attachments: ResourceInput[]
   ) => Promise<void>;
 }) {
   const t = useTranslations("Timeline");
@@ -734,8 +734,8 @@ function ReplyComposer({
     >
       <DropOverlay show={drop.dragging} />
       {/* Attachments are context — they sit ABOVE the text being written. */}
-      <AttachmentPills
-        attachments={uploads.pending.filter((p) => p.status === "done")}
+      <ResourcePills
+        resources={uploads.pending.filter((p) => p.status === "done")}
         pending={uploads.pending}
         onRemove={(a) => {
           const match = uploads.pending.find((p) => p.storage_path === a.storage_path);
@@ -811,7 +811,7 @@ function CommentCard({
     parentId: string,
     body: string,
     mentionedUserIds: string[],
-    attachments: AttachmentInput[]
+    attachments: ResourceInput[]
   ) => Promise<void>;
   onEditComment: (commentId: string, body: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
@@ -954,7 +954,7 @@ export function IssueActivity({
     parentId: string,
     body: string,
     mentionedUserIds: string[],
-    attachments: AttachmentInput[]
+    attachments: ResourceInput[]
   ) => Promise<void>;
   onEditComment: (commentId: string, body: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
@@ -1029,7 +1029,7 @@ export function CommentComposer({
   onSubmit: (
     body: string,
     mentionedUserIds: string[],
-    attachments: AttachmentInput[],
+    attachments: ResourceInput[],
     visibility: CommentVisibility
   ) => Promise<void>;
   /**
@@ -1093,8 +1093,8 @@ export function CommentComposer({
     >
       <DropOverlay show={drop.dragging} />
       {/* Attachments are context — they sit ABOVE the text being written. */}
-      <AttachmentPills
-        attachments={uploads.pending.filter((p) => p.status === "done")}
+      <ResourcePills
+        resources={uploads.pending.filter((p) => p.status === "done")}
         pending={uploads.pending}
         onRemove={(a) => {
           const match = uploads.pending.find((p) => p.storage_path === a.storage_path);

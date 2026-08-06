@@ -11,7 +11,7 @@ import type {
   AssistantPageContext,
   ConversationStatus,
 } from "./assistant-types";
-import type { AttachmentInput } from "./types";
+import type { FileResourceInput, ResourceInput } from "./types";
 import { trackEvent } from "./analytics";
 import { durationBucket, errorReason, lengthBucket } from "./analytics-sanitize";
 
@@ -118,7 +118,7 @@ type Action =
       type: "ADD_USER_MESSAGE";
       content: string;
       context?: AssistantPageContext | null;
-      attachments?: AttachmentInput[];
+      attachments?: ResourceInput[];
       mentions?: AssistantMention[];
     }
   | { type: "DONE" }
@@ -416,7 +416,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       message: string,
       options?: {
         pageContext?: AssistantPageContext | null;
-        attachments?: AttachmentInput[];
+        attachments?: ResourceInput[];
         /** Les « @ » écrits dans le message (membres, projets). */
         mentions?: AssistantMention[];
         /** La commande « / » posée en tête du message (menu slash). */
@@ -437,6 +437,14 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       });
       const startedAt = performance.now();
       let toolCalls = 0;
+
+      // Le shell ne prend que des FICHIERS : ses envois vivent sous le préfixe
+      // `chat/{uid}`, hors projet, et une pièce du chat n'a pas de ligne en base
+      // où poser l'url d'un lien. Le composer n'en produit donc jamais (addLink
+      // refuse ce préfixe) — le filtre est la borne de type qui le dit.
+      const files = (options?.attachments ?? []).filter(
+        (a): a is FileResourceInput => a.kind !== "link"
+      );
 
       // Abort previous request if still running
       abortRef.current?.abort();
@@ -459,9 +467,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           message,
           conversationId: state.conversationId || undefined,
           ...(options?.pageContext ? { pageContext: options.pageContext } : {}),
-          ...(options?.attachments?.length
-            ? { attachments: options.attachments }
-            : {}),
+          ...(files.length ? { attachments: files } : {}),
           ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
           ...(options?.command ? { command: options.command } : {}),
         };

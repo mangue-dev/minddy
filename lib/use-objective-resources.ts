@@ -2,14 +2,14 @@
 
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteAttachmentApi } from "./comments-api";
-import type { Attachment, AttachmentInput } from "./types";
+import { deleteResourceApi } from "./comments-api";
+import type { Attachment, ResourceInput } from "./types";
 
-const attachmentsKey = (objectiveId: string) =>
-  ["objective-attachments", objectiveId] as const;
+const resourcesKey = (objectiveId: string) =>
+  ["objective-resources", objectiveId] as const;
 
-async function fetchObjectiveAttachments(objectiveId: string): Promise<Attachment[]> {
-  const response = await fetch(`/api/objectives/${objectiveId}/attachments`);
+async function fetchObjectiveResources(objectiveId: string): Promise<Attachment[]> {
+  const response = await fetch(`/api/objectives/${objectiveId}/resources`);
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(
@@ -19,15 +19,15 @@ async function fetchObjectiveAttachments(objectiveId: string): Promise<Attachmen
   return (data ?? []) as Attachment[];
 }
 
-/** Register already-uploaded files on an existing objective. */
-export async function addObjectiveAttachmentsApi(
+/** Register already-added resources on an existing objective. */
+export async function addObjectiveResourcesApi(
   objectiveId: string,
-  attachments: AttachmentInput[]
+  resources: ResourceInput[]
 ): Promise<void> {
-  const response = await fetch(`/api/objectives/${objectiveId}/attachments`, {
+  const response = await fetch(`/api/objectives/${objectiveId}/resources`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ attachments }),
+    body: JSON.stringify({ resources }),
   });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
@@ -38,38 +38,40 @@ export async function addObjectiveAttachmentsApi(
 }
 
 /**
- * Objective-LEVEL attachments of the side panel (comment attachments ride the
- * comments query). Twin of useIssueAttachments. Live updates come from the
- * realtime bridge invalidating ["objective-attachments", objectiveId].
+ * Objective-LEVEL resources of the side panel (the ones on comments ride the
+ * comments query). Twin of useIssueResources. Live updates come from the
+ * realtime bridge invalidating ["objective-resources", objectiveId].
  */
-export function useObjectiveAttachments(objectiveId: string | null) {
+export function useObjectiveResources(objectiveId: string | null) {
   const queryClient = useQueryClient();
 
   const { data } = useQuery({
-    queryKey: attachmentsKey(objectiveId ?? ""),
-    queryFn: () => fetchObjectiveAttachments(objectiveId as string),
+    queryKey: resourcesKey(objectiveId ?? ""),
+    queryFn: () => fetchObjectiveResources(objectiveId as string),
     enabled: !!objectiveId,
   });
 
   const invalidate = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: attachmentsKey(objectiveId as string) });
+    void queryClient.invalidateQueries({
+      queryKey: resourcesKey(objectiveId as string),
+    });
   }, [objectiveId, queryClient]);
 
   const add = useCallback(
-    async (attachments: AttachmentInput[]) => {
-      await addObjectiveAttachmentsApi(objectiveId as string, attachments);
+    async (resources: ResourceInput[]) => {
+      await addObjectiveResourcesApi(objectiveId as string, resources);
       invalidate();
     },
     [objectiveId, invalidate]
   );
 
   const remove = useCallback(
-    async (attachmentId: string) => {
-      await deleteAttachmentApi(attachmentId);
+    async (resourceId: string) => {
+      await deleteResourceApi(resourceId);
       invalidate();
     },
     [invalidate]
   );
 
-  return { attachments: data ?? [], add, remove };
+  return { resources: data ?? [], add, remove };
 }

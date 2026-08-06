@@ -109,7 +109,7 @@ export function applyPendingBoard(
 /**
  * La ligne d'un ticket telle qu'elle est DÉJÀ en cache, cherchée dans les deux
  * caches qui la portent. Le cache du projet d'abord : c'est le plus riche (il
- * seul porte `attachment_count`).
+ * seul porte `resource_count`).
  *
  * Sert à décider quoi faire d'une ligne venue d'ailleurs — la compléter ou
  * l'ajouter (lib/optimistic/remote-issue-echo.ts).

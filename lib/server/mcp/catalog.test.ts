@@ -96,3 +96,56 @@ describe("catalogue MCP — le feedback dit ce que l'app fait", () => {
     expect(tool("minddy_get_feedback").description).toContain("visibility");
   });
 });
+
+/**
+ * MIN-184 — la pièce jointe devient une RESSOURCE : un fichier OU un lien. Les
+ * tools MCP sont redécouverts à chaque connexion, donc le renommage est franc
+ * et rien ne persiste l'ancien nom côté client. Ce qui doit tenir, en revanche,
+ * c'est que la capacité EXPOSÉE dise les deux moitiés — un agent qui ne lit
+ * qu'« attach a file » n'essaiera jamais d'attacher un lien, et la feature
+ * n'existera pas pour lui.
+ */
+describe("catalogue MCP — ressources", () => {
+  it("remplace les tools pièce jointe par les tools ressource", () => {
+    const names = mcpToolCatalog().map((t) => t.name);
+    expect(names).toContain("minddy_add_resource");
+    expect(names).toContain("minddy_get_resource");
+    expect(names).not.toContain("minddy_add_attachment");
+    expect(names).not.toContain("minddy_get_attachment");
+  });
+
+  it("annonce les deux moitiés de minddy_add_resource, exclusives", () => {
+    const description = tool("minddy_add_resource").description ?? "";
+    expect(description).toMatch(/file/i);
+    expect(description).toMatch(/link/i);
+    // Aucun des quatre champs de contenu n'est requis : c'est le handler qui
+    // tranche l'exclusivité, un schéma ne sait pas dire « l'un ou l'autre ».
+    for (const optional of ["url", "file_name", "mime_type", "content_base64"]) {
+      expect(param("minddy_add_resource", optional).required).toBe(false);
+    }
+    for (const required of ["project_id", "issue"]) {
+      expect(param("minddy_add_resource", required).required).toBe(true);
+    }
+  });
+
+  it("nomme minddy_get_resource par resource_id, et dit ce qu'un lien rend", () => {
+    expect(tool("minddy_get_resource").readOnly).toBe(true);
+    expect(param("minddy_get_resource", "resource_id").required).toBe(true);
+    expect(tool("minddy_get_resource").description).toMatch(/LINK/);
+  });
+
+  it("dit la ressource dans le mode d'emploi du serveur, et n'y garde plus la pièce jointe", () => {
+    expect(MCP_SERVER_INSTRUCTIONS).toContain("minddy_add_resource");
+    expect(MCP_SERVER_INSTRUCTIONS).toContain("minddy_get_resource");
+    expect(MCP_SERVER_INSTRUCTIONS).not.toContain("minddy_add_attachment");
+    expect(MCP_SERVER_INSTRUCTIONS).not.toContain("minddy_get_attachment");
+  });
+
+  it("annonce les ressources dans les tools de LECTURE, les deux types nommés", () => {
+    for (const name of ["minddy_get_issue", "minddy_list_objectives"]) {
+      const description = tool(name).description ?? "";
+      expect(description, `${name} ne parle pas de ressources`).toMatch(/resource/i);
+      expect(description, `${name} ne nomme pas les liens`).toMatch(/link/i);
+    }
+  });
+});

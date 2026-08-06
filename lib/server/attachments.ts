@@ -2,32 +2,88 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getProjectAccess } from "@/lib/server/project-access";
-import type { Attachment, AttachmentInput } from "@/lib/types";
+import type {
+  Attachment,
+  LinkResourceInput,
+  ResourceInput,
+} from "@/lib/types";
+import { isLinkResource } from "@/lib/types";
 
 /** Client-checked too (use-attachment-uploads) — keep the two in sync. */
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB
+/** Files and links confounded — a resource is a resource (MIN-184). */
 export const MAX_ATTACHMENTS_PER_ENTITY = 10;
+export const MAX_LINK_URL_LENGTH = 2000;
+/** A favicon reduced to 32 px WebP weighs ~1-2 Ko; past this it isn't one. */
+export const MAX_ICON_DATA_URL_BYTES = 24 * 1024;
+
+/** `data:image/png;base64,…` — the only shape a favicon may take in a row. */
+const ICON_DATA_URL_RE = /^data:image\/(png|jpeg|webp|x-icon|vnd\.microsoft\.icon|gif);base64,[A-Za-z0-9+/=]+$/;
+
+/** The link half of {@link parseResourcesInput}. Null on anything malformed. */
+function parseLinkResource(a: Record<string, unknown>): LinkResourceInput | null {
+  if (typeof a.url !== "string" || typeof a.file_name !== "string") return null;
+  const raw = a.url.trim();
+  if (!raw || raw.length > MAX_LINK_URL_LENGTH) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  // http(s) only: `javascript:`, `data:` and friends have no business here.
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+
+  const fileName = a.file_name.trim().slice(0, 200);
+  if (!fileName) return null;
+
+  let icon: string | null = null;
+  if (a.icon_data_url != null) {
+    if (typeof a.icon_data_url !== "string") return null;
+    const candidate = a.icon_data_url.trim();
+    if (
+      !ICON_DATA_URL_RE.test(candidate) ||
+      candidate.length > MAX_ICON_DATA_URL_BYTES
+    ) {
+      return null;
+    }
+    icon = candidate;
+  }
+
+  return { kind: "link", url: raw, file_name: fileName, icon_data_url: icon };
+}
 
 /**
- * Validate the attachment descriptors a client sends after its direct-to-storage
- * uploads. `requiredPrefix` pins the path family the caller is allowed to
+ * Validate the resource descriptors a client sends — a FILE (after its
+ * direct-to-storage upload) or a LINK (after /link-preview resolved its title
+ * and favicon). `requiredPrefix` pins the path family a file is allowed to
  * reference (`projects/{pid}/` or `chat/{uid}/`) so nobody can register a row
  * pointing at someone else's file. Returns null when the payload is malformed
  * (callers answer 400); absent/empty input yields [].
  */
-export function parseAttachmentsInput(
+export function parseResourcesInput(
   raw: unknown,
   requiredPrefix: string,
   max = MAX_ATTACHMENTS_PER_ENTITY
-): AttachmentInput[] | null {
+): ResourceInput[] | null {
   if (raw == null) return [];
   if (!Array.isArray(raw) || raw.length > max) return null;
 
-  const out: AttachmentInput[] = [];
+  const out: ResourceInput[] = [];
   for (const item of raw) {
-    const a = item as Partial<AttachmentInput> | null;
+    if (!item || typeof item !== "object") return null;
+    const a = item as Record<string, unknown>;
+    const kind = a.kind ?? "file";
+    if (kind !== "file" && kind !== "link") return null;
+
+    if (kind === "link") {
+      const link = parseLinkResource(a);
+      if (!link) return null;
+      out.push(link);
+      continue;
+    }
+
     if (
-      !a ||
       typeof a.storage_path !== "string" ||
       typeof a.file_name !== "string" ||
       typeof a.mime_type !== "string" ||
@@ -104,7 +160,7 @@ export async function uploadAttachment(
       issueId: args.issueId,
       commentId: args.commentId ?? null,
       createdBy: args.createdBy,
-      attachments: [
+      resources: [
         {
           storage_path: path,
           file_name: args.fileName.trim().slice(0, 200) || "fichier",
@@ -128,26 +184,31 @@ const PROJECT_PATH_RE = /^projects\/([0-9a-fA-F-]{36})\//;
  * returning descriptors (with the new target paths) ready for insertAttachments.
  * Cross-project issue creation needs this: the browser uploaded the files under
  * the source project, and a storage object can't be referenced across projects.
+ * A LINK has no storage object to copy — it goes through untouched.
  *
  * Each source project is access-checked against the actor (cached) so a client
  * can't smuggle another project's file into one it owns; files whose source is
- * unreadable or whose copy fails are skipped (best-effort, like all attachment
+ * unreadable or whose copy fails are skipped (best-effort, like all resource
  * handling). A null actor (integration) can't be access-checked, so nothing is
  * copied.
  */
-export async function copyAttachmentsToProject(
+export async function copyResourcesToProject(
   service: SupabaseClient,
   args: {
     targetProjectId: string;
     actorId: string | null;
-    attachments: AttachmentInput[];
+    resources: ResourceInput[];
   }
-): Promise<AttachmentInput[]> {
-  if (args.attachments.length === 0 || !args.actorId) return [];
+): Promise<ResourceInput[]> {
+  if (args.resources.length === 0 || !args.actorId) return [];
   const access = new Map<string, boolean>();
-  const out: AttachmentInput[] = [];
+  const out: ResourceInput[] = [];
 
-  for (const a of args.attachments) {
+  for (const a of args.resources) {
+    if (isLinkResource(a)) {
+      out.push(a);
+      continue;
+    }
     const sourcePid = PROJECT_PATH_RE.exec(a.storage_path)?.[1];
     if (!sourcePid) continue;
     // Already in the target project — register as-is, no copy needed.
@@ -177,9 +238,10 @@ export async function copyAttachmentsToProject(
   return out;
 }
 
-/** Insert the rows for files already uploaded to storage (service client —
-    callers have checked project access). The parent is an issue OR an objective
-    OR a feedback post (exactly one — the attachments_parent_ck constraint). */
+/** Insert the rows for resources — files already uploaded to storage, links
+    already resolved (service client — callers have checked project access).
+    The parent is an issue OR an objective OR a feedback post (exactly one —
+    the attachments_parent_ck constraint). */
 export async function insertAttachments(
   service: SupabaseClient,
   args: {
@@ -189,25 +251,47 @@ export async function insertAttachments(
     feedbackPostId?: string | null;
     commentId?: string | null;
     createdBy: string | null;
-    attachments: AttachmentInput[];
+    resources: ResourceInput[];
   }
 ): Promise<Attachment[]> {
-  if (args.attachments.length === 0) return [];
+  if (args.resources.length === 0) return [];
   const { data, error } = await service
     .from("attachments")
     .insert(
-      args.attachments.map((a) => ({
-        project_id: args.projectId,
-        issue_id: args.issueId ?? null,
-        objective_id: args.objectiveId ?? null,
-        feedback_post_id: args.feedbackPostId ?? null,
-        comment_id: args.commentId ?? null,
-        created_by: args.createdBy,
-        ...a,
-      }))
+      args.resources.map((a) => {
+        const parent = {
+          project_id: args.projectId,
+          issue_id: args.issueId ?? null,
+          objective_id: args.objectiveId ?? null,
+          feedback_post_id: args.feedbackPostId ?? null,
+          comment_id: args.commentId ?? null,
+          created_by: args.createdBy,
+        };
+        // A link weighs nothing and isn't a file: the MIME says "an URL",
+        // which is what keeps the type-icon branch of the pill honest.
+        return isLinkResource(a)
+          ? {
+              ...parent,
+              kind: "link" as const,
+              url: a.url,
+              icon_data_url: a.icon_data_url ?? null,
+              storage_path: null,
+              file_name: a.file_name,
+              mime_type: "text/uri-list",
+              size_bytes: 0,
+            }
+          : {
+              ...parent,
+              kind: "file" as const,
+              storage_path: a.storage_path,
+              file_name: a.file_name,
+              mime_type: a.mime_type,
+              size_bytes: a.size_bytes,
+            };
+      })
     )
     .select("*");
-  if (error) throw new Error(`attachments insert failed: ${error.message}`);
+  if (error) throw new Error(`resources insert failed: ${error.message}`);
   return (data ?? []) as Attachment[];
 }
 

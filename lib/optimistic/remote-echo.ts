@@ -230,7 +230,7 @@ export function adoptRemoteRow(
       // est par définition pas.
       upsertSearchIndexIssue(queryClient, indexIssueOf(echo.row));
       if (cached) {
-        // La ligne diffusée ne porte PAS `category_ids` (ni `attachment_count`) :
+        // La ligne diffusée ne porte PAS `category_ids` (ni `resource_count`) :
         // ce sont des agrégats que la route calcule. Ne pas les citer dans le
         // patch, c'est justement les préserver.
         const patch = echo.row as Partial<Issue>;

@@ -113,7 +113,7 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 
   // Les tools minddy sont les MÊMES aux deux ancrages (MIN-125) : seule la cible
   // par défaut des tools ticket change, et la description de chaque tool le dit.
-  const minddyTools = `- \`search_issues\` — find a ticket of this project by subject, or resolve 'MIN-42' / a bare number. \`read_issue\` — the LIVE state of a ticket: every field, its plan parsed into tasks, attachments, recent comments, sub-issues, relations. \`read_attachment\` — open an attachment (text inline; ${
+  const minddyTools = `- \`search_issues\` — find a ticket of this project by subject, or resolve 'MIN-42' / a bare number. \`read_issue\` — the LIVE state of a ticket: every field, its plan parsed into tasks, resources, recent comments, sub-issues, relations. \`read_resource\` — open a resource of a ticket; a link comes back as its url and title, a file as text inline (${
     images
       ? "an image comes back AS AN IMAGE you can actually look at — open the mockups a ticket carries BEFORE implementing them, and describe what you see so the user knows you looked; other binaries"
       : "binaries"
@@ -228,7 +228,7 @@ ${gitOwnership}
 - One pull request lives per session at a time, on this session's working branch. If one already exists, every push updates it automatically (a rejected/closed one is reopened by the push) — you have nothing to manage.
 - If NO pull request exists yet, nothing forces one: create it with \`create_pr\` when the user asks for it, or propose it (or just do it) once you've completed a reviewable piece of work they asked for. Never open a PR for trivial or exploratory turns.`
     : `## The ticket
-- Your first message carries a SNAPSHOT of the ticket. It goes stale: whenever fresh state matters — the user mentions a comment, an attachment, an edit you haven't seen, or you need the current plan — call \`read_issue\` instead of guessing. Open attachments that matter to the request (specs, mockups, logs) with \`read_attachment\`.
+- Your first message carries a SNAPSHOT of the ticket. It goes stale: whenever fresh state matters — the user mentions a comment, a resource, an edit you haven't seen, or you need the current plan — call \`read_issue\` instead of guessing. Open the files that matter to the request (specs, mockups, logs) with \`read_resource\`.
 - **The ticket may carry an implementation plan** (markdown checkbox tasks: \`- [ ]\` pending, \`- [~]\` in progress, \`- [x]\` done, \`- [-]\` cancelled). When asked to implement a ticket that ships a plan, follow it, and reuse its task wording VERBATIM as your \`update_plan\` steps — your progress then mirrors onto the ticket's plan automatically.
 - **When the user asks for a plan** ("prépare un plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work — reply and stop unless they also asked to implement. Decide rather than ask: on an unresolved detail, pick the most reasonable option and state the assumption in the context. If something is genuinely blocking, \`ask_user\` while you still have the turn; only park it under a \`## Questions\` heading of the plan (checkboxes there are open questions, excluded from progress) when the answer can wait.
 - Never write the ticket's plan unprompted: it belongs to the user. Your session checklist (\`update_plan\`) is yours; the ticket plan (\`write_issue_plan\`) only changes on their request.
@@ -330,7 +330,7 @@ This is a CONVERSATION, not a one-shot pass. You read, you comment on the pull r
 - \`read_file\` — returns content with line numbers.
 - \`run_command\` — read-only work in the repository: \`git diff\`, \`git log\`, the project's type-check, a targeted test. Long output is truncated in the MIDDLE (you always get the beginning and the end) and saved in full at the returned \`full_output_path\`, readable with \`grep\` and \`read_file\` — so never pipe to \`head\`/\`tail\`. Commands already run at the repository ROOT; pass \`workdir\` instead of \`cd <dir> && …\`.
 - \`comment_pr_line\` — post one remark ANCHORED to a line of the diff. \`comment_pr\` — post your summary in the pull request's conversation. \`reply_pr_thread\` — reply inside an existing review thread.
-- \`search_issues\` / \`read_issue\` — the ticket this pull request implements, and any other ticket of the project. \`read_attachment\` — open an attachment (text inline; ${attachments} via a signed URL you can curl).
+- \`search_issues\` / \`read_issue\` — the ticket this pull request implements, and any other ticket of the project. \`read_resource\` — open a resource of the ticket; a link comes back as its url and title, a file as text inline (${attachments} via a signed URL you can curl).
 
 ## How to read the diff
 The repository is checked out on the pull request's head, and the base branch is at \`origin/<base>\`. So:
@@ -673,12 +673,21 @@ You are a FRESH session: you did NOT write that code and you have none of the pr
 Everything above is context. Act on the user's message.`;
 }
 
-/** Pièce jointe annoncée dans l'amorce (l'agent l'ouvre via read_attachment). */
-export interface AgentAttachmentContext {
+/**
+ * Ressource annoncée dans l'amorce. Un FICHIER n'y est que nommé — l'agent
+ * l'ouvre via `read_resource`. Un LIEN, lui, s'écrit en entier : son url tient
+ * en une ligne, et la faire chercher par un appel de tool serait un aller-retour
+ * pour un renseignement qu'on a déjà.
+ */
+export interface AgentResourceContext {
   id: string;
+  kind?: "file" | "link";
   name: string;
-  mimeType: string;
-  sizeBytes: number;
+  /** Lien seul. */
+  url?: string | null;
+  /** Fichier seul. */
+  mimeType?: string;
+  sizeBytes?: number;
 }
 
 function formatSize(bytes: number): string {
@@ -699,20 +708,20 @@ function landingStatusLine(status: string | null | undefined): string {
 }
 
 /**
- * Message utilisateur de CONTEXTE : dépôt + ticket (description + plan + pièces
- * jointes). Volontairement présenté comme du contexte — la demande réelle est le
+ * Message utilisateur de CONTEXTE : dépôt + ticket (description + plan +
+ * ressources). Volontairement présenté comme du contexte — la demande réelle est le
  * message utilisateur qui suit (le prompt du lanceur, poussé à part par
  * l'appelant). Les instructions du dépôt (AGENTS.md/CLAUDE.md) sont aussi
  * injectées à part, juste après. C'est un SNAPSHOT : l'état vivant du ticket
- * (champs, plan, commentaires, pièces) se relit à tout moment via `read_issue`.
+ * (champs, plan, commentaires, ressources) se relit à tout moment via `read_issue`.
  */
 export function buildAgentContextMessage(input: {
   issue: AgentIssueContext;
   repo: AgentRepoContext;
   projectName?: string | null;
-  attachments?: AgentAttachmentContext[];
-  /** Le modèle du run voit-il les images (MIN-111) ? Marque alors les pièces
-   *  jointes image comme OUVRABLES — sans ça, l'agent lit « mockup.png » dans une
+  resources?: AgentResourceContext[];
+  /** Le modèle du run voit-il les images (MIN-111) ? Marque alors les ressources
+   *  image comme OUVRABLES — sans ça, l'agent lit « mockup.png » dans une
    *  liste et passe à côté du seul document qui dit à quoi l'écran doit ressembler. */
   images?: boolean;
   /** Statut d'atterrissage d'un ticket créé par l'agent (réglage du lanceur). */
@@ -725,24 +734,25 @@ export function buildAgentContextMessage(input: {
   const descBlock = issue.description?.trim()
     ? `\n\n## Ticket description\n${issue.description.trim()}`
     : "";
-  const attachments = input.attachments ?? [];
-  const attachmentsBlock =
-    attachments.length > 0
-      ? `\n\n## Attachments on the ticket (open with read_attachment)\n${attachments
-          .map(
-            (a) =>
-              `- ${a.name} (${a.mimeType}, ${formatSize(a.sizeBytes)}) — id: ${a.id}${
-                input.images === true && a.mimeType.startsWith("image/")
-                  ? " — an image: read_attachment shows it to you, look at it before implementing it"
-                  : ""
-              }`,
-          )
+  const resources = input.resources ?? [];
+  const resourcesBlock =
+    resources.length > 0
+      ? `\n\n## Resources on the ticket (open a file with read_resource)\n${resources
+          .map((a) => {
+            if (a.kind === "link") return `- ${a.name} — ${a.url}`;
+            const mime = a.mimeType ?? "application/octet-stream";
+            return `- ${a.name} (${mime}, ${formatSize(a.sizeBytes ?? 0)}) — id: ${a.id}${
+              input.images === true && mime.startsWith("image/")
+                ? " — an image: read_resource shows it to you, look at it before implementing it"
+                : ""
+            }`;
+          })
           .join("\n")}`
       : "";
 
   return `Repository: **${repo.fullName}** — working branch **${repo.workBranch}** (based on **${repo.defaultBranch}**). The harness commits and pushes ${repo.workBranch} at the end of each of your turns; until you change a file it stays local and no branch is created on the repository.
 
-# Ticket — ${issue.identifier}: ${issue.title}${input.projectName ? `\nProject: ${input.projectName}` : ""}${descBlock}${planBlock}${attachmentsBlock}
+# Ticket — ${issue.identifier}: ${issue.title}${input.projectName ? `\nProject: ${input.projectName}` : ""}${descBlock}${planBlock}${resourcesBlock}
 
 This ticket is the session's anchor and context. Everything above is a snapshot taken at session start — \`read_issue\` gives you the live state (fields, plan, comments, attachments) whenever it matters. The user's messages drive the work; if none follows, the ticket itself is the request.${landingStatusLine(input.numoDefaultStatus)}`;
 }

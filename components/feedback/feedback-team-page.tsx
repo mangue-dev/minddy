@@ -97,7 +97,7 @@ import {
 } from "@/lib/ask-numo-context";
 import type { EventContext } from "@/lib/describe-event";
 import type {
-  AttachmentInput,
+  ResourceInput,
   Category,
   Issue,
   IssueRelationType,
@@ -1288,7 +1288,7 @@ function FeedbackDetail({
       parentId: string,
       body: string,
       mentionedUserIds: string[],
-      attachments: AttachmentInput[]
+      attachments: ResourceInput[]
     ) => addComment(body, mentionedUserIds, parentId, attachments),
     [addComment]
   );
@@ -1296,7 +1296,7 @@ function FeedbackDetail({
     (
       body: string,
       mentionedUserIds: string[],
-      attachments: AttachmentInput[],
+      attachments: ResourceInput[],
       visibility: CommentVisibility
     ) => addComment(body, mentionedUserIds, null, attachments, visibility),
     [addComment]

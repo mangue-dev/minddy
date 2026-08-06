@@ -6,10 +6,10 @@ import { removeStorageObjects } from "@/lib/server/attachments";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** DELETE /api/attachments/[id] — remove one attachment (uploader-only,
+/** DELETE /api/resources/[id] — remove one resource, file or link (uploader-only,
     checked here: the RLS delete policy is gone so a direct PostgREST delete
     can't drop the row while orphaning the storage object), then best-effort
-    delete of the storage object. */
+    delete of the storage object. A link has none — its favicon rides the row. */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -26,13 +26,15 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     .maybeSingle();
 
   if (error) {
-    console.error("[api/attachments/:id] delete failed:", error.message);
+    console.error("[api/resources/:id] delete failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) {
-    return NextResponse.json({ error: t("attachmentNotFound") }, { status: 404 });
+    return NextResponse.json({ error: t("resourceNotFound") }, { status: 404 });
   }
 
-  await removeStorageObjects(service, [data.storage_path]);
+  if (data.storage_path) {
+    await removeStorageObjects(service, [data.storage_path]);
+  }
   return NextResponse.json({ ok: true });
 }

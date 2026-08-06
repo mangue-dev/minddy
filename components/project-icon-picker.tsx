@@ -15,7 +15,7 @@ import {
 } from "mangue-ui";
 import { ImageUp, Trash2 } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
-import { DropOverlay, useFileDrop } from "@/components/attachments";
+import { DropOverlay, useFileDrop } from "@/components/resources";
 import {
   clearProjectIconApi,
   importProjectIconApi,

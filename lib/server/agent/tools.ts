@@ -23,7 +23,7 @@ import type { AgentAnchor } from "./prompt";
  *                  (serveur de dev / watcher : démarrer, sonder, arrêter — MIN-114)
  *  - livraison   : create_pr (ouvre LA pull request du ticket quand il n'y en a pas)
  *  - tickets     : search_issues, read_issue (état VIVANT d'un ticket : champs,
- *                  plan, commentaires, pièces jointes), read_attachment,
+ *                  plan, commentaires, ressources), read_resource,
  *                  update_issue (titre / description / effort — JAMAIS le statut),
  *                  write_issue_plan (écrit le plan SUR DEMANDE, sans l'appliquer),
  *                  append_to_plan et edit_issue_text (MIN-186 : faire GROSSIR ou
@@ -581,17 +581,17 @@ const CORE_TOOLS: AgentToolDef[] = [
 ];
 
 /**
- * Description de `read_attachment`, en deux versions : un run dont le modèle voit
+ * Description de `read_resource`, en deux versions : un run dont le modèle voit
  * les images ANNONCE qu'il peut regarder une maquette (MIN-111) ; les autres
  * gardent le texte d'avant, au mot près. Promettre une capacité qu'on n'a pas ferait
  * dire au modèle « je regarde la maquette » sur un résultat qui ne porte que des
  * métadonnées. `agentToolsFor` choisit.
  */
-const READ_ATTACHMENT_DESCRIPTION =
-  "Open one attachment of the ticket (or of one of its comments) by id — get the id from read_issue. Text files come back inline (capped); binaries and large files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
+const READ_RESOURCE_DESCRIPTION =
+  "Open one resource of the ticket (or of one of its comments) by id — get the id from read_issue. A LINK returns its url and title; there is nothing to download, fetch the page yourself if you need what's on it. A FILE: text comes back inline (capped); binaries and large files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
 
-const READ_ATTACHMENT_DESCRIPTION_WITH_IMAGES =
-  "Open one attachment of the ticket (or of one of its comments) by id — get the id from read_issue. An IMAGE (png, jpeg, webp, gif) comes back as the image itself, attached to the result: you actually see it. When the ticket carries a mockup, a screenshot or a diagram, open it BEFORE writing the code it describes, and say what you see — a layout you were shown beats a layout you were told about. Text files come back inline (capped); other binaries and oversized files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
+const READ_RESOURCE_DESCRIPTION_WITH_IMAGES =
+  "Open one resource of the ticket (or of one of its comments) by id — get the id from read_issue. A LINK returns its url and title; there is nothing to download, fetch the page yourself if you need what's on it. A FILE that is an IMAGE (png, jpeg, webp, gif) comes back as the image itself, attached to the result: you actually see it. When the ticket carries a mockup, a screenshot or a diagram, open it BEFORE writing the code it describes, and say what you see — a layout you were shown beats a layout you were told about. Text files come back inline (capped); other binaries and oversized files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
 
 /** États de tâche du carnet, tels que les tools les acceptent. */
 const SCRATCHPAD_TASK_STATES = ["pending", "in_progress", "completed", "cancelled"];
@@ -635,7 +635,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "read_issue",
       description:
-        "Read a minddy ticket in full: every field (title, description, status, priority, effort, assignee, due date…), its implementation plan parsed into tasks with their states, its attachments (metadata + ids), the most recent comments, sub-issues, relations, and `linked_feedback` — the user requests from the product's feedback board that this ticket implements. Any ticket context you were given at session start is a SNAPSHOT — call this whenever fresh state matters (the user may have edited the ticket, added comments or attachments mid-session, or refers to something not in your context). Returns the last 15 comments by default.",
+        "Read a minddy ticket in full: every field (title, description, status, priority, effort, assignee, due date…), its implementation plan parsed into tasks with their states, its resources — files and links (metadata + ids) —, the most recent comments, sub-issues, relations, and `linked_feedback` — the user requests from the product's feedback board that this ticket implements. Any ticket context you were given at session start is a SNAPSHOT — call this whenever fresh state matters (the user may have edited the ticket, added comments or resources mid-session, or refers to something not in your context). Returns the last 15 comments by default.",
       parameters: {
         type: "object",
         properties: {
@@ -669,17 +669,18 @@ const MINDDY_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
-      name: "read_attachment",
-      description: READ_ATTACHMENT_DESCRIPTION,
+      name: "read_resource",
+      description: READ_RESOURCE_DESCRIPTION,
       parameters: {
         type: "object",
         properties: {
-          attachment_id: {
+          resource_id: {
             type: "string",
-            description: "Attachment id from read_issue (issue or comment attachments).",
+            description:
+              "Resource id from read_issue (on the issue or on one of its comments).",
           },
         },
-        required: ["attachment_id"],
+        required: ["resource_id"],
       },
     },
   },
@@ -1083,7 +1084,7 @@ const PR_REVIEW_CORE_TOOL_NAMES: ReadonlySet<string> = new Set([
 const PR_REVIEW_MINDDY_TOOL_NAMES: ReadonlySet<string> = new Set([
   "search_issues",
   "read_issue",
-  "read_attachment",
+  "read_resource",
 ]);
 
 /**
@@ -1167,7 +1168,7 @@ export function agentToolsFor(opts: {
   webSearch: boolean;
   /** Modèle du run — décide de l'interface d'édition servie. */
   model?: string | null;
-  /** Le modèle du run voit-il les images (MIN-111) ? Change ce que `read_attachment`
+  /** Le modèle du run voit-il les images (MIN-111) ? Change ce que `read_resource`
    *  ANNONCE — le tool est là dans les deux cas, mais il ne promet une maquette
    *  regardable que quand elle le sera vraiment. */
   images?: boolean;
@@ -1205,10 +1206,10 @@ export function agentToolsFor(opts: {
     })
     .map((t) => {
       const name = t.function.name;
-      if (opts.images === true && name === "read_attachment") {
+      if (opts.images === true && name === "read_resource") {
         return {
           ...t,
-          function: { ...t.function, description: READ_ATTACHMENT_DESCRIPTION_WITH_IMAGES },
+          function: { ...t.function, description: READ_RESOURCE_DESCRIPTION_WITH_IMAGES },
         };
       }
       if (name === "spawn_agent" && opts.subagentModels !== true) {

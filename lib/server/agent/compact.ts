@@ -146,7 +146,7 @@ function cap(str: string, max: number): string {
  * pas rejouée (MIN-111) : un résumé porte les décisions, pas les pixels — et
  * réinjecter les maquettes dans un sous-appel dont la sortie est du texte ne ferait
  * que payer deux fois. Le marqueur dit qu'elles ont existé ; le texte qui
- * l'accompagne (le résultat de `read_attachment`) en garde le nom de fichier.
+ * l'accompagne (le résultat de `read_resource`) en garde le nom de fichier.
  */
 function summaryText(m: CompactMessage): string {
   const text = textOf(m.content).trim();

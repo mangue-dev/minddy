@@ -19,7 +19,7 @@ import { ContextPill } from "./context-pill";
 import { contextChips } from "@/lib/assistant-context";
 import { useProjects } from "@/lib/projects-context";
 import { MentionChip } from "@/components/mention-chip";
-import { AttachmentPills, type AttachmentLike } from "@/components/attachments";
+import { ResourcePills, type ResourceLike } from "@/components/resources";
 
 interface ChatMessageProps {
   message: AssistantMessage;
@@ -224,9 +224,9 @@ export const ChatMessage = memo(function ChatMessage({
             {message.context && <MessageContextChips context={message.context} />}
             {Array.isArray(message.metadata?.attachments) &&
               message.metadata.attachments.length > 0 && (
-                <AttachmentPills
+                <ResourcePills
                   variant="ultra-compact"
-                  attachments={message.metadata.attachments as AttachmentLike[]}
+                  resources={message.metadata.attachments as ResourceLike[]}
                   className="justify-end"
                 />
               )}

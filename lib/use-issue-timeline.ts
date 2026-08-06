@@ -4,13 +4,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import {
   addCommentApi,
-  deleteAttachmentApi,
+  deleteResourceApi,
   deleteCommentApi,
   fetchCommentsApi,
   fetchEventsApi,
   updateCommentApi,
 } from "./comments-api";
-import type { AttachmentInput, Comment, IssueEvent } from "./types";
+import type { Comment, IssueEvent, ResourceInput } from "./types";
 
 export type TimelineItem =
   | { kind: "comment"; at: string; comment: Comment; replies: Comment[] }
@@ -82,7 +82,7 @@ export function useIssueTimeline(issueId: string | null) {
       body: string,
       mentionedUserIds: string[] = [],
       parentId: string | null = null,
-      attachments: AttachmentInput[] = []
+      attachments: ResourceInput[] = []
     ) => {
       await addCommentApi(issueId as string, body, mentionedUserIds, parentId, attachments);
       void queryClient.invalidateQueries({ queryKey: commentsKey(issueId as string) });
@@ -105,7 +105,7 @@ export function useIssueTimeline(issueId: string | null) {
   );
   const deleteAttachment = useCallback(
     async (attachmentId: string) => {
-      await deleteAttachmentApi(attachmentId);
+      await deleteResourceApi(attachmentId);
       void queryClient.invalidateQueries({ queryKey: commentsKey(issueId as string) });
     },
     [issueId, queryClient]

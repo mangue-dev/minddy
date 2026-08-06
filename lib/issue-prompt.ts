@@ -21,9 +21,10 @@ export interface IssuePromptInput {
   /** This issue's relations to other issues, listed in a <relations> block so
       the agent knows what blocks it, what it blocks, and what it relates to. */
   relations?: PromptRelation[];
-  /** Number of issue-level attachments — flagged in an <attachments> block so
-      the agent knows files are attached (fetch them via the MCP if needed). */
-  attachmentCount?: number;
+  /** Number of issue-level resources — flagged in a <resources> block so the
+      agent knows files or links are attached (read them via the MCP if
+      needed). */
+  resourceCount?: number;
 }
 
 /**
@@ -36,7 +37,7 @@ function issueBlock({
   projectKey,
   categories,
   relations,
-  attachmentCount,
+  resourceCount,
 }: IssuePromptInput): string {
   const identifier = issueIdentifier(projectKey, issue.number);
 
@@ -61,9 +62,9 @@ function issueBlock({
         ]
       : [];
 
-  const attachmentsBlock =
-    attachmentCount && attachmentCount > 0
-      ? [`  <attachments count="${attachmentCount}" />`]
+  const resourcesBlock =
+    resourceCount && resourceCount > 0
+      ? [`  <resources count="${resourceCount}" />`]
       : [];
 
   const fields = [
@@ -78,7 +79,7 @@ function issueBlock({
       ? [`  <description>\n${issue.description}\n  </description>`]
       : []),
     ...relationsBlock,
-    ...attachmentsBlock,
+    ...resourcesBlock,
   ];
 
   return `<issue>\n${fields.join("\n")}\n</issue>`;
@@ -242,7 +243,7 @@ ${issueBlock(input)}
 Explore the codebase first, then write a real engineering plan in markdown: a short context (goal, approach), ordered checkbox tasks — \`- [ ]\` — naming the actual files, components and functions to touch, and a final verification step. Keep it concrete: no generic advice, no task the code doesn't call for.
 
 Optionally, if minddy MCP tools are available in your environment (parameters for this issue: project_id "${projectId}", issue "${identifier}"):
-- Read the full issue with \`minddy_get_issue\` first — its description, attachments and relations.
+- Read the full issue with \`minddy_get_issue\` first — its description, resources and relations.
 - Save the plan to the issue's \`plan\` field with \`minddy_update_issues\`, so the plan and its progress live in minddy.
 
 If the minddy MCP tools are not available, that's fine — write the plan to a local markdown file (e.g. \`${identifier}-plan.md\`) and point me to it. Don't paste a long plan into your answer: a file is where I can actually read and keep it.
@@ -271,7 +272,7 @@ This issue already has an implementation plan (${progress.done}/${progress.total
 Then go through it one task at a time, checking each against the real code: is it still accurate (right files, right components, right approach), still needed, and in the right order? Is a step missing, or vague enough to be useless? Correct what has drifted, drop what the code no longer calls for, add what's missing, and make sure the plan ends on a verification step. Leave completed tasks — \`- [x]\` — and their progress alone: they describe work already done.
 
 Optionally, if minddy MCP tools are available in your environment (parameters for this issue: project_id "${projectId}", issue "${identifier}"):
-- Read the full issue and its plan with \`minddy_get_issue\` first — plus its description, attachments and relations.
+- Read the full issue and its plan with \`minddy_get_issue\` first — plus its description, resources and relations.
 - Save the corrected plan back to the issue's \`plan\` field with \`minddy_update_issues\`, preserving the task markers of everything already done.
 
 If the minddy MCP tools are not available, ask me to paste the current plan before reviewing it — don't guess at what it contains.

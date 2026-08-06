@@ -109,9 +109,9 @@ import { useAskNumoTarget } from "@/lib/ask-numo-context";
 import { useCategoryCreateOption } from "@/lib/use-picker-create";
 import { useAuth } from "@/lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
-import { DropOverlay, useFileDrop } from "@/components/attachments";
+import { DropOverlay, useFileDrop } from "@/components/resources";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
-import { addIssueAttachmentsApi } from "@/lib/use-issue-attachments";
+import { addIssueResourcesApi } from "@/lib/use-issue-resources";
 import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
@@ -933,7 +933,7 @@ export function IssueCard({
 }) {
   const t = useTranslations("IssueUI");
   const tRel = useTranslations("Relations");
-  const tAttach = useTranslations("Attachments");
+  const tAttach = useTranslations("Resources");
   const tAgent = useTranslations("Agent");
   const tPlan = useTranslations("Plan");
   const tCommon = useTranslations("Common");
@@ -969,7 +969,7 @@ export function IssueCard({
   const identifier = issueIdentifier(projectKey, issue.number);
   const uploads = useAttachmentUploads(() => `projects/${issue.project_id}`, {
     onUploaded: (input, localId) => {
-      addIssueAttachmentsApi(issue.id, [input])
+      addIssueResourcesApi(issue.id, [input])
         .then(() => {
           void queryClient.invalidateQueries({
             queryKey: ["issue-attachments", issue.id],
@@ -1110,7 +1110,7 @@ export function IssueCard({
       issue: promptIssue,
       projectId,
       projectKey,
-      attachmentCount: issue.attachment_count,
+      resourceCount: issue.resource_count,
       ...promptContext(),
     });
     await navigator.clipboard.writeText(prompt);
@@ -1134,7 +1134,7 @@ export function IssueCard({
         issue,
         projectId,
         projectKey,
-        attachmentCount: issue.attachment_count,
+        resourceCount: issue.resource_count,
         ...promptContext(),
       })
     );
@@ -1154,7 +1154,7 @@ export function IssueCard({
         issue,
         projectId,
         projectKey,
-        attachmentCount: issue.attachment_count,
+        resourceCount: issue.resource_count,
         ...promptContext(),
       })
     );
@@ -1182,7 +1182,7 @@ export function IssueCard({
           issue,
           projectId,
           projectKey,
-          attachmentCount: issue.attachment_count,
+          resourceCount: issue.resource_count,
           ...promptContext(),
         },
         instructions

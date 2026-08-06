@@ -64,7 +64,7 @@ import type {
   AssistantPageContext,
   AssistantPinnedContext,
 } from "@/lib/assistant-types";
-import type { AttachmentInput } from "@/lib/types";
+import type { ResourceInput } from "@/lib/types";
 
 const STARTER_KEYS = ["s1", "s2", "s3", "s4"] as const;
 
@@ -255,7 +255,7 @@ export const AssistantShell = forwardRef<
   const handleSend = useCallback(
     (
       message: string,
-      attachments: AttachmentInput[] = [],
+      attachments: ResourceInput[] = [],
       mentions: AssistantMention[] = [],
       command?: AssistantCommandId,
     ) => {

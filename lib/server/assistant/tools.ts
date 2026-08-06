@@ -214,7 +214,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_issue",
       description:
-        "Get one issue in full: all fields, categories, comments (with author names), attachment metadata (file name/type/size, on the issue and per comment), sub-issues, its relations to other issues (blocks / blocked_by / related, each with the other issue's identifier, title and status — read them before saying an issue is ready to start), the duplicate target if any, and linked_feedback: the user requests from the feedback board this issue implements (title, status, vote_count, comment_count). Those are the WHY behind the work, in the users' own words — when an issue carries one, read it with get_feedback before deciding what to build, especially if it has comments. Pass issue_id when known, or number (the N of KEY-N).",
+        "Get one issue in full: all fields, categories, comments (with author names), its resources — files AND links (kind, then file name/type/size or url, on the issue and per comment) —, sub-issues, its relations to other issues (blocks / blocked_by / related, each with the other issue's identifier, title and status — read them before saying an issue is ready to start), the duplicate target if any, and linked_feedback: the user requests from the feedback board this issue implements (title, status, vote_count, comment_count). Those are the WHY behind the work, in the users' own words — when an issue carries one, read it with get_feedback before deciding what to build, especially if it has comments. Pass issue_id when known, or number (the N of KEY-N).",
       parameters: {
         type: "object",
         properties: {
@@ -241,8 +241,34 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_objectives",
       description:
-        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date.",
+        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date, plus their resources (files and links) when they carry any.",
       parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_resource",
+      description:
+        "Attach a LINK to an issue or to an objective — a doc, a design, a reference. It shows in the sidebar as the same pill as a file, with the site's favicon; minddy fetches the page's title itself, so send the url alone. Files can't be attached this way (you have none to send): a person adds those from the app.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+            description: "The link's http(s) address.",
+          },
+          issue_id: {
+            type: "string",
+            description: "Attach to this issue. Exclusive with objective_id.",
+          },
+          objective_id: {
+            type: "string",
+            description: "Attach to this objective. Exclusive with issue_id.",
+          },
+        },
+        required: ["url"],
+      },
     },
   },
   {

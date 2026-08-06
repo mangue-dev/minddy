@@ -35,7 +35,7 @@ import {
   DropOverlay,
   pasteFileHandler,
   useFileDrop,
-} from "@/components/attachments";
+} from "@/components/resources";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { Markdown } from "@/components/markdown";
 import { MentionTextarea } from "@/components/mention-textarea";

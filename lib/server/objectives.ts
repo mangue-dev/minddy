@@ -7,9 +7,9 @@ import { isDateOrNull } from "@/lib/issue-validation";
 import { isValidColor } from "@/lib/category-colors";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import {
-  copyAttachmentsToProject,
+  copyResourcesToProject,
   insertAttachments,
-  parseAttachmentsInput,
+  parseResourcesInput,
 } from "@/lib/server/attachments";
 import {
   buildObjectiveFieldChangeEvents,
@@ -38,7 +38,7 @@ export type ObjectiveResult =
         | "invalidStatus"
         | "invalidDate"
         | "invalidColor"
-        | "attachmentInvalid"
+        | "resourceInvalid"
         | "noFieldsToUpdate"
         | "projectNotFound"
         | "objectiveNotFound"
@@ -95,22 +95,23 @@ export async function createObjective({
     row.color = input.color ?? null;
   }
 
-  // Files the client already uploaded under this project's storage prefix, and
-  // — for cross-project creation — those uploaded under another project's,
-  // which get copied here first (same two-list scheme as create-issue).
-  const parsedAttachments = parseAttachmentsInput(
-    input.attachments,
+  // Resources for the new objective: files the client already uploaded under
+  // this project's storage prefix (plus, for cross-project creation, those
+  // uploaded under another project's, copied here first — same two-list scheme
+  // as create-issue) and links /link-preview already resolved.
+  const parsedResources = parseResourcesInput(
+    input.resources,
     `projects/${projectId}/`
   );
-  if (parsedAttachments === null) {
-    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  if (parsedResources === null) {
+    return { ok: false, status: 400, errorKey: "resourceInvalid" };
   }
-  const parsedCopyAttachments = parseAttachmentsInput(
-    input.copy_attachments,
+  const parsedCopyResources = parseResourcesInput(
+    input.copy_resources,
     "projects/"
   );
-  if (parsedCopyAttachments === null) {
-    return { ok: false, status: 400, errorKey: "attachmentInvalid" };
+  if (parsedCopyResources === null) {
+    return { ok: false, status: 400, errorKey: "resourceInvalid" };
   }
 
   const access = await getProjectAccess(actorId, projectId);
@@ -130,23 +131,23 @@ export async function createObjective({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  // Attachment rows — the objective exists from here on, so a failure must not
-  // fail the request (the files just don't get registered).
+  // Resource rows — the objective exists from here on, so a failure must not
+  // fail the request (the resources just don't get registered).
   try {
-    const copied = await copyAttachmentsToProject(service, {
+    const copied = await copyResourcesToProject(service, {
       targetProjectId: projectId,
       actorId,
-      attachments: parsedCopyAttachments,
+      resources: parsedCopyResources,
     });
     await insertAttachments(service, {
       projectId,
       objectiveId: data.id as string,
       commentId: null,
       createdBy: actorId,
-      attachments: [...parsedAttachments, ...copied],
+      resources: [...parsedResources, ...copied],
     });
   } catch (e) {
-    console.error("[objectives] attachments failed:", (e as Error).message);
+    console.error("[objectives] resources failed:", (e as Error).message);
   }
 
   const created: EventRow[] = [

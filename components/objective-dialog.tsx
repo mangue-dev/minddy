@@ -28,12 +28,12 @@ import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
-  AttachButton,
-  AttachmentPills,
+  AddResourceButton,
+  ResourcePills,
   DropOverlay,
   pasteFileHandler,
   useFileDrop,
-} from "@/components/attachments";
+} from "@/components/resources";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
@@ -225,7 +225,7 @@ export function ObjectiveDialog({
   // revenu) : avec la suite Numo, c'est la fenêtre où fermer perd la dictée.
   const [transcribing, setTranscribing] = useState(false);
 
-  // Drafts, attachments and voice dictation share the same two conditions: each
+  // Drafts, resources and voice dictation share the same two conditions: each
   // is project-scoped (the draft store, the storage prefix, the dictation route)
   // and each only makes sense while composing — editing an objective happens in
   // the side panel, whose own attach button and mic write straight to it.
@@ -290,7 +290,7 @@ export function ObjectiveDialog({
       lead_user_id: form.lead_user_id,
       target_date: form.target_date,
       color: form.color,
-      attachments: uploads.inputs,
+      resources: uploads.inputs,
     });
   };
 
@@ -355,7 +355,7 @@ export function ObjectiveDialog({
     });
     editorNonEmptyRef.current = draft.description.trim() !== "";
     setEditorKey((k) => k + 1); // remount the editor with the draft's content
-    uploads.restore(draft.attachments ?? []);
+    uploads.restore(draft.resources ?? []);
     setActiveDraftId(draft.id);
   };
 
@@ -380,7 +380,7 @@ export function ObjectiveDialog({
         toast.success(t("updatedToast"));
       } else if (other && onCreateInProject) {
         // Cross-project: the lead references THIS project's members and doesn't
-        // exist in the target — only the portable fields travel. Attachments are
+        // exist in the target — only the portable fields travel. Resources are
         // COPIED into the target project by the server (their storage paths
         // carry THIS project's prefix, so they can't be referenced as-is).
         await onCreateInProject(other.id, {
@@ -389,11 +389,11 @@ export function ObjectiveDialog({
           status: form.status,
           target_date: form.target_date,
           color: form.color,
-          copy_attachments: uploads.inputs,
+          copy_resources: uploads.inputs,
         });
         toast.success(t("createdInProjectToast", { project: other.name }));
       } else {
-        await onCreate({ ...payload, attachments: uploads.inputs });
+        await onCreate({ ...payload, resources: uploads.inputs });
         toast.success(t("createdToast"));
       }
       // The draft became a real objective — drop it from the local store.
@@ -482,14 +482,17 @@ export function ObjectiveDialog({
                   className="mb-3"
                 />
               )}
-            {/* Attachments are context — they sit ABOVE the text being written. */}
+            {/* Resources are context — they sit ABOVE the text being written. */}
             {composerEnabled && (
-              <AttachmentPills
-                attachments={uploads.pending.filter((p) => p.status === "done")}
+              <ResourcePills
+                resources={uploads.pending.filter((p) => p.status === "done")}
                 pending={uploads.pending}
                 onRemove={(a) => {
-                  const match = uploads.pending.find(
-                    (p) => p.storage_path === a.storage_path
+                  // A link has no storage path — match on whichever identifies it.
+                  const match = uploads.pending.find((p) =>
+                    a.kind === "link"
+                      ? p.url === a.url
+                      : p.storage_path === a.storage_path
                   );
                   if (match) uploads.remove(match.localId);
                 }}
@@ -584,7 +587,11 @@ export function ObjectiveDialog({
                   />
                 ))}
               {composerEnabled && (
-                <AttachButton onFiles={uploads.addFiles} disabled={submitting} />
+                <AddResourceButton
+                  onFiles={uploads.addFiles}
+                  onLink={uploads.addLink}
+                  disabled={submitting}
+                />
               )}
               <div className="ml-auto flex items-center justify-end max-sm:w-full">
                 {showSplit ? (

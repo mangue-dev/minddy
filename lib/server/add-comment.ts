@@ -4,7 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import {
   insertAttachments,
-  parseAttachmentsInput,
+  parseResourcesInput,
 } from "@/lib/server/attachments";
 import {
   insertNotifications,
@@ -94,7 +94,7 @@ export async function addCommentToIssue({
 
   // Validate the attachment descriptors before creating anything: the paths
   // must live under this project's storage prefix.
-  const parsedAttachments = parseAttachmentsInput(
+  const parsedAttachments = parseResourcesInput(
     attachments,
     `projects/${issue.project_id}/`
   );
@@ -160,7 +160,7 @@ export async function addCommentToIssue({
       issueId,
       commentId: data.id as string,
       createdBy: actorId,
-      attachments: parsedAttachments,
+      resources: parsedAttachments,
     });
   } catch (e) {
     console.error("[add-comment] attachments failed:", (e as Error).message);
@@ -255,7 +255,7 @@ export async function addCommentToObjective({
     return { ok: false, status: 404, errorKey: "objectiveNotFound" };
   }
 
-  const parsedAttachments = parseAttachmentsInput(
+  const parsedAttachments = parseResourcesInput(
     attachments,
     `projects/${objective.project_id}/`
   );
@@ -317,7 +317,7 @@ export async function addCommentToObjective({
       objectiveId,
       commentId: data.id as string,
       createdBy: actorId,
-      attachments: parsedAttachments,
+      resources: parsedAttachments,
     });
   } catch (e) {
     console.error("[add-comment] objective attachments failed:", (e as Error).message);
@@ -428,7 +428,7 @@ export async function addCommentToFeedbackPost({
     return { ok: false, status: 404, errorKey: "feedbackNotFound" };
   }
 
-  const parsedAttachments = parseAttachmentsInput(
+  const parsedAttachments = parseResourcesInput(
     attachments,
     `projects/${post.project_id}/`
   );
@@ -500,7 +500,7 @@ export async function addCommentToFeedbackPost({
       feedbackPostId: postId,
       commentId: data.id as string,
       createdBy: actorId,
-      attachments: parsedAttachments,
+      resources: parsedAttachments,
     });
   } catch (e) {
     console.error("[add-comment] feedback attachments failed:", (e as Error).message);

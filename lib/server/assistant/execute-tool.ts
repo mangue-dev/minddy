@@ -24,6 +24,10 @@ import {
   addCommentToIssue,
 } from "@/lib/server/add-comment";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
+import { getServiceClient } from "@/lib/supabase-service";
+import { insertAttachments } from "@/lib/server/attachments";
+import { FaviconError } from "@/lib/server/favicon";
+import { resolveLinkResource } from "@/lib/server/link-resource";
 import {
   addIssueRelation,
   findIssueRelation,
@@ -1057,6 +1061,76 @@ export async function executeTool(
         });
         if (!result.ok) return libError(result);
         return { result: { comment: result.comment }, success: true };
+      }
+
+      /**
+       * Numo n'a pas de fichier à envoyer : sa moitié de la ressource, c'est le
+       * LIEN. La cible est un ticket OU un objectif, jamais les deux — un
+       * `insertAttachments` avec deux parents violerait attachments_parent_ck.
+       */
+      case "add_resource": {
+        const url = typeof args.url === "string" ? args.url.trim() : "";
+        if (!url) return toolError("url is required.");
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const objectiveId =
+          typeof args.objective_id === "string" ? args.objective_id : "";
+        if (!!issueId === !!objectiveId) {
+          return toolError(
+            "Pass issue_id OR objective_id — a resource hangs from one parent."
+          );
+        }
+
+        if (issueId) {
+          const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+          if (!scoped.ok) return toolError(scoped.error);
+        } else {
+          const { data: objective } = await ctx.supabase
+            .from("objectives")
+            .select("id")
+            .is("deleted_at", null)
+            .eq("id", objectiveId)
+            .eq("project_id", projectId)
+            .maybeSingle();
+          if (!objective) {
+            return toolError("Objective not found in this project.");
+          }
+        }
+
+        let resource;
+        try {
+          resource = await resolveLinkResource(url);
+        } catch (e) {
+          if (e instanceof FaviconError) {
+            return toolError(
+              "That url can't be reached — it must be a public http(s) address."
+            );
+          }
+          return toolError((e as Error).message);
+        }
+
+        try {
+          const [row] = await insertAttachments(getServiceClient(), {
+            projectId,
+            issueId: issueId || null,
+            objectiveId: objectiveId || null,
+            commentId: null,
+            createdBy: ctx.userId,
+            resources: [resource],
+          });
+          return {
+            result: {
+              resource: {
+                id: row.id,
+                kind: "link",
+                url: row.url,
+                title: row.file_name,
+              },
+            },
+            success: true,
+          };
+        } catch (e) {
+          return toolError((e as Error).message);
+        }
       }
 
       case "launch_code_agent": {

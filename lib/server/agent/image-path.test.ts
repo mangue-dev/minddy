@@ -24,7 +24,7 @@ import { TOOL_RESULT_MAX_CHARS } from "./prune";
 /** Data URL nettement plus longue que le cap de troncature des résultats. */
 const DATA_URL = `data:image/png;base64,${"Q".repeat(TOOL_RESULT_MAX_CHARS * 3)}`;
 
-/** Corps SSE d'un round : un tool-call `read_attachment`, puis l'usage. */
+/** Corps SSE d'un round : un tool-call `read_resource`, puis l'usage. */
 function sseToolCall(id: string): string {
   const chunks = [
     {
@@ -37,7 +37,7 @@ function sseToolCall(id: string): string {
               {
                 index: 0,
                 id,
-                function: { name: "read_attachment", arguments: JSON.stringify({ attachment_id: "att-1" }) },
+                function: { name: "read_resource", arguments: JSON.stringify({ resource_id: "att-1" }) },
               },
             ],
           },
@@ -104,7 +104,7 @@ const baseParams = {
   emit: async () => {},
 };
 
-/** Le résultat que renvoie `read_attachment` sur une maquette (cf. issue-tools.ts). */
+/** Le résultat que renvoie `read_resource` sur une maquette (cf. issue-tools.ts). */
 const attachmentOutcome = {
   result: { id: "att-1", file_name: "mockup.png", mime_type: "image/png", image: "attached" },
   success: true,

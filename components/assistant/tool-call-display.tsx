@@ -314,6 +314,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("commentAdded") : t("addCommentFailed");
     },
   },
+  add_resource: {
+    icon: Link2,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("addingResource");
+      return success ? t("resourceAdded") : t("addResourceFailed");
+    },
+  },
   create_view: {
     icon: SlidersHorizontal,
     getLabel: (_args, result, success, status, t) => {
@@ -783,9 +790,15 @@ const TOOL_META: Record<string, ToolMeta> = {
       return issue ? t("agentReadIssueTarget", { issue }) : t("agentReadIssue");
     },
   },
+  read_resource: {
+    icon: FileSearch,
+    getLabel: (_a, _r, _s, _st, t) => t("agentReadResource"),
+  },
+  // Le nom d'avant MIN-184 : les runs déjà déroulés le portent dans leurs
+  // events, et une relecture ne doit pas afficher un appel sans libellé.
   read_attachment: {
     icon: FileSearch,
-    getLabel: (_a, _r, _s, _st, t) => t("agentReadAttachment"),
+    getLabel: (_a, _r, _s, _st, t) => t("agentReadResource"),
   },
   update_issue: {
     icon: FilePen,

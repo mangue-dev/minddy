@@ -33,7 +33,7 @@ export function useForgeUploads(
       détient, et l'insertion doit respecter ce qui a été tapé entre-temps. */
   edit: (transform: (draft: string) => string) => void,
 ) {
-  const t = useTranslations("Attachments");
+  const t = useTranslations("Resources");
   const [uploading, setUploading] = useState(0);
   // `addFiles` est appelé depuis des gestionnaires de collage / dépôt dont la
   // fermeture peut être périmée : la référence, elle, ne l'est jamais.

@@ -113,6 +113,7 @@ import {
   toPrLineThreads,
   type AgentAnchor,
   type AgentRepoContext,
+  type AgentResourceContext,
 } from "./prompt";
 import {
   loadPrReviewBoot,
@@ -205,7 +206,7 @@ const MAX_CHECKPOINT_BYTES = 8_000_000;
 /**
  * Images montrées au modèle par TOUR (MIN-111) — même esprit que
  * `MAX_WEB_SEARCHES_PER_TURN` : une maquette ou deux états d'un même écran, c'est
- * ce dont un tour a besoin. Au-delà, `read_attachment` répond sans image.
+ * ce dont un tour a besoin. Au-delà, `read_resource` répond sans image.
  */
 const MAX_IMAGES_PER_TURN = 2;
 /** Borne du re-queue « message en attente » sur erreur mid-turn (catch final) :
@@ -890,9 +891,10 @@ interface IssueContext {
   plan: string | null;
   projectName: string | null;
   projectKey: string;
-  /** Pièces jointes du ticket (et de ses commentaires) — annoncées dans l'amorce
-      pour que l'agent sache qu'elles existent (il les ouvre via read_attachment). */
-  attachments: Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>;
+  /** Ressources du ticket (et de ses commentaires) — annoncées dans l'amorce
+      pour que l'agent sache qu'elles existent : un fichier s'y ouvre via
+      `read_resource`, un lien s'y lit directement. */
+  resources: AgentResourceContext[];
 }
 
 async function loadIssueContext(run: AgentRun, issueId: string): Promise<IssueContext> {
@@ -907,7 +909,7 @@ async function loadIssueContext(run: AgentRun, issueId: string): Promise<IssueCo
     service.from("projects").select("key, name").eq("id", run.project_id).maybeSingle(),
     service
       .from("attachments")
-      .select("id, file_name, mime_type, size_bytes")
+      .select("id, kind, url, file_name, mime_type, size_bytes")
       .eq("issue_id", issueId)
       .order("created_at", { ascending: true }),
   ]);
@@ -920,17 +922,29 @@ async function loadIssueContext(run: AgentRun, issueId: string): Promise<IssueCo
     plan: (issue as { plan?: string | null } | null)?.plan ?? null,
     projectName: (project as { name?: string } | null)?.name ?? null,
     projectKey: key,
-    attachments: ((attachmentRows ?? []) as Array<{
+    resources: ((attachmentRows ?? []) as Array<{
       id: string;
+      kind: string | null;
+      url: string | null;
       file_name: string | null;
       mime_type: string | null;
       size_bytes: number | null;
-    }>).map((a) => ({
-      id: a.id,
-      name: a.file_name ?? "attachment",
-      mimeType: a.mime_type ?? "application/octet-stream",
-      sizeBytes: a.size_bytes ?? 0,
-    })),
+    }>).map((a) =>
+      a.kind === "link"
+        ? {
+            id: a.id,
+            kind: "link" as const,
+            name: a.file_name ?? "link",
+            url: a.url,
+          }
+        : {
+            id: a.id,
+            kind: "file" as const,
+            name: a.file_name ?? "attachment",
+            mimeType: a.mime_type ?? "application/octet-stream",
+            sizeBytes: a.size_bytes ?? 0,
+          }
+    ),
   };
 }
 
@@ -1296,7 +1310,7 @@ export async function executeAgentRun(
 
     // Le modèle du run VOIT-IL les images (MIN-111) ? Résolu ici, avant l'amorce,
     // pour la même raison que web_search : le prompt ne doit décrire que ce que le
-    // run sait vraiment faire. C'est aussi ce qui autorise `read_attachment` à
+    // run sait vraiment faire. C'est aussi ce qui autorise `read_resource` à
     // renvoyer une maquette au lieu de sa fiche signalétique.
     const imageInput = await supportsImageInput(run.model, provider, apiKey).catch(() => false);
 
@@ -1419,7 +1433,7 @@ export async function executeAgentRun(
               },
               repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
               projectName: issue.projectName,
-              attachments: issue.attachments,
+              resources: issue.resources,
               images: imageInput,
               numoDefaultStatus,
             })

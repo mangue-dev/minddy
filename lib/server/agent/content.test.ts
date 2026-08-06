@@ -13,7 +13,7 @@ import { markSystemPromptCache } from "./caching";
 
 /**
  * MIN-111 : l'historique de l'agent n'est plus fait que de chaînes. Un résultat de
- * `read_attachment` peut porter une IMAGE, et cet historique EST le checkpoint —
+ * `read_resource` peut porter une IMAGE, et cet historique EST le checkpoint —
  * il traverse l'estimation de tokens, la compaction, l'élagage et le cache de
  * prompt. Ce fichier vérifie que chacun de ces cinq passages le laisse entier, et
  * qu'aucun ne confond les octets d'une data URL avec un coût de contexte.
@@ -24,7 +24,9 @@ const dataUrl = `data:image/png;base64,${"A".repeat(1_000_000)}`;
 
 const imagePart = (url = dataUrl): AgentContentPart => ({ type: "image_url", image_url: { url } });
 
-/** Le résultat de `read_attachment` sur une maquette : métadonnées + image. */
+/** Le résultat de `read_resource` sur une maquette : métadonnées + image. Le
+    tool-call ci-dessous garde volontairement le nom d'AVANT MIN-184 : un
+    checkpoint écrit alors se rejoue tel quel, et l'alias doit tenir. */
 const attachmentResult = (name: string): AgentContentPart[] => [
   { type: "text", text: JSON.stringify({ file_name: name, mime_type: "image/png" }) },
   imagePart(),

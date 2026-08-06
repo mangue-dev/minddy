@@ -130,7 +130,7 @@ export interface AnalyticsEventProps {
     effort?: string | null;
     /** Créé depuis le sélecteur « dans un autre projet ». */
     cross_project?: boolean;
-    attachment_count?: number;
+    resource_count?: number;
     description_length_bucket?: string;
     /** Le ticket vient d'un brouillon local récupéré (MIN-41). */
     created_from_draft?: boolean;
@@ -160,8 +160,18 @@ export interface AnalyticsEventProps {
   plan_task_toggled: { to_state: "pending" | "in_progress" | "completed" | "cancelled" };
   comment_added: { target: "issue" | "objective" | "feedback"; length_bucket: string };
   comment_deleted: { target: "issue" | "objective" | "feedback" };
-  attachment_uploaded: { target: "issue" | "objective" | "comment"; size_bucket: string; kind: string };
-  attachment_removed: { target: "issue" | "objective" | "comment" };
+  /** Une ressource ajoutée — fichier OU lien (MIN-184). Aucune donnée de
+      contenu : ni l'URL, ni le titre, ni le nom de fichier. `size_bucket` et
+      `mime_kind` (la FAMILLE MIME : image, application…) n'existent que pour un
+      fichier. */
+  resource_added: {
+    target: "issue" | "objective" | "comment";
+    kind: "file" | "link";
+    size_bucket?: string;
+    mime_kind?: string;
+    compressed?: boolean;
+  };
+  resource_removed: { target: "issue" | "objective" | "comment" };
   sub_issue_created: NoProps;
   issue_relation_added: { relation: string };
   issue_relation_removed: { relation: string };
@@ -508,8 +518,8 @@ const EVENT_NAMES = [
   "plan_task_toggled",
   "comment_added",
   "comment_deleted",
-  "attachment_uploaded",
-  "attachment_removed",
+  "resource_added",
+  "resource_removed",
   "sub_issue_created",
   "issue_relation_added",
   "issue_relation_removed",

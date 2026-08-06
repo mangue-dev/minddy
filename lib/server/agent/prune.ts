@@ -64,7 +64,7 @@ interface PrunableMessage {
 export const MAX_HISTORY_IMAGES = 3;
 /** Note qui remplace une image élaguée (même contrat que PRUNE_STUB : re-demandable). */
 export const IMAGE_ELIDED_NOTE =
-  "[Image elided to save context. Call read_attachment again if you still need to look at it.]";
+  "[Image elided to save context. Call read_resource again if you still need to look at it.]";
 
 /**
  * Borne le nombre d'images RETENUES dans l'historique : garde les

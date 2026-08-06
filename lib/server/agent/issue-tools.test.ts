@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Tools TICKET de l'agent de code. Deux couches sont testées ici :
- *  - MIN-111 : `read_attachment` sur une maquette doit RENVOYER l'image, en data
+ *  - MIN-111 : `read_resource` sur une maquette doit RENVOYER l'image, en data
  *    URL (l'URL signée expire en 10 min ; le checkpoint est rejoué bien plus tard),
  *    et se comporter exactement comme avant dès que l'une des trois conditions
  *    manque : modèle texte, format non montrable, fichier trop lourd.
@@ -152,7 +152,7 @@ const ctx = (over: Partial<IssueToolContext> = {}): IssueToolContext => ({
 });
 
 const read = (imageInput: boolean) =>
-  executeIssueTool(ctx({ imageInput }), "read_attachment", { attachment_id: "att-1" });
+  executeIssueTool(ctx({ imageInput }), "read_resource", { resource_id: "att-1" });
 
 beforeEach(() => {
   attachment = { ...attachmentBase };
@@ -160,7 +160,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("read_attachment sur une image", () => {
+describe("read_resource sur une image", () => {
   it("renvoie l'image en data URL quand le modèle la voit", async () => {
     const out = await read(true);
     expect(out.success).toBe(true);
@@ -222,10 +222,10 @@ describe("read_attachment sur une image", () => {
 
 /**
  * MIN-125 : la pièce jointe est cadrée au PROJET du run, plus au seul ticket
- * d'ancrage — sinon les `attachment_id` que `read_issue` renvoie sur un autre
+ * d'ancrage — sinon les `resource_id` que `read_issue` renvoie sur un autre
  * ticket ne seraient ouvrables par rien.
  */
-describe("read_attachment — périmètre projet", () => {
+describe("read_resource — périmètre projet", () => {
   it("ouvre une pièce d'un AUTRE ticket du même projet", async () => {
     attachment = { ...attachmentBase, issue_id: OTHER_ID };
     const out = await read(true);

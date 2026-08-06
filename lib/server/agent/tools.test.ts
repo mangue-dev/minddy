@@ -64,7 +64,7 @@ describe("agentToolsFor — web_search (inchangé)", () => {
 const MINDDY_TOOLS = [
   "search_issues",
   "read_issue",
-  "read_attachment",
+  "read_resource",
   "update_issue",
   "write_issue_plan",
   "append_to_plan",
@@ -105,7 +105,7 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
       expect(describeTool("notebook", name)).toMatch(/search_issues/);
     }
     // Les autres tools ticket n'ont pas de cible : pas de phrase de ciblage.
-    for (const name of ["search_issues", "create_issue", "read_attachment"]) {
+    for (const name of ["search_issues", "create_issue", "read_resource"]) {
       expect(describeTool("notebook", name)).not.toMatch(/`issue` is (OPTIONAL|REQUIRED)/);
     }
   });
@@ -139,15 +139,15 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
 });
 
 /**
- * MIN-111 : `read_attachment` est toujours servi, mais il n'ANNONCE une image
+ * MIN-111 : `read_resource` est toujours servi, mais il n'ANNONCE une image
  * regardable que sur un run dont le modèle en accepte. La description du tool est
  * ce que le modèle lit en premier — la laisser promettre une capacité absente
  * ferait « je vois la maquette » sur des métadonnées.
  */
-describe("agentToolsFor — read_attachment et les images", () => {
+describe("agentToolsFor — read_resource et les images", () => {
   const description = (images: boolean) =>
     agentToolsFor({ anchor: "issue", webSearch: true, images }).find(
-      (t) => t.function.name === "read_attachment",
+      (t) => t.function.name === "read_resource",
     )!.function.description;
 
   it("promet l'image sur un run multimodal", () => {
@@ -159,7 +159,7 @@ describe("agentToolsFor — read_attachment et les images", () => {
     expect(description(false)).not.toMatch(/image itself/);
     expect(description(false)).toBe(
       agentToolsFor({ anchor: "issue", webSearch: true }).find(
-        (t) => t.function.name === "read_attachment",
+        (t) => t.function.name === "read_resource",
       )!.function.description,
     );
   });
@@ -325,7 +325,7 @@ describe("agentToolsFor — ancrage pull request", () => {
       "run_command",
       "search_issues",
       "read_issue",
-      "read_attachment",
+      "read_resource",
       "comment_pr_line",
       "comment_pr",
       "reply_pr_thread",

@@ -41,7 +41,7 @@ import {
   type ChatMessage,
 } from "@/lib/server/assistant/loop";
 import { buildAttachmentParts } from "@/lib/server/assistant/attachment-parts";
-import { parseAttachmentsInput } from "@/lib/server/attachments";
+import { parseResourcesInput } from "@/lib/server/attachments";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
 import type { AttachmentInput } from "@/lib/types";
 
@@ -254,14 +254,19 @@ export async function POST(request: NextRequest) {
 
   // Shell attachments: the client uploaded them under its own chat/ prefix;
   // the descriptors ride the request and live on the message's metadata.
-  const attachments = parseAttachmentsInput(
+  // FILES only — the shell has no link composer, and a chat attachment has no
+  // DB row to carry a link's url anyway.
+  const parsedResources = parseResourcesInput(
     body.attachments,
     `chat/${user.id}/`,
     5
   );
-  if (attachments === null) {
+  if (parsedResources === null) {
     return Response.json({ error: "Invalid attachments" }, { status: 400 });
   }
+  const attachments = parsedResources.filter(
+    (a): a is AttachmentInput => a.kind !== "link"
+  );
 
   const service = getServiceClient();
 

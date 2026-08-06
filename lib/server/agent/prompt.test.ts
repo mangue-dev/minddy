@@ -375,14 +375,14 @@ describe("buildAgentContextMessage", () => {
   it("annonce les pièces jointes avec id, type et taille", () => {
     const msg = buildAgentContextMessage({
       ...base,
-      attachments: [
+      resources: [
         { id: "att-1", name: "spec.md", mimeType: "text/markdown", sizeBytes: 2048 },
         { id: "att-2", name: "mock.png", mimeType: "image/png", sizeBytes: 3 * 1024 * 1024 },
       ],
     });
     expect(msg).toContain("spec.md (text/markdown, 2 KB) — id: att-1");
     expect(msg).toContain("mock.png (image/png, 3.0 MB) — id: att-2");
-    expect(msg).toContain("read_attachment");
+    expect(msg).toContain("read_resource");
   });
 
   it("sans pièce jointe, pas de section ; le snapshot renvoie vers read_issue", () => {
@@ -614,7 +614,7 @@ describe("buildAgentSystemPrompt — auto-relecture rendue par le harness", () =
  * maquette » sur un résultat qui ne porte que des métadonnées.
  */
 describe("buildAgentSystemPrompt — maquettes visibles", () => {
-  it("annonce que read_attachment rend l'image, sur un run multimodal", () => {
+  it("annonce que read_resource rend l'image, sur un run multimodal", () => {
     const prompt = buildAgentSystemPrompt({ anchor: "issue", images: true });
     expect(prompt).toMatch(/AS AN IMAGE you can actually look at/);
     expect(prompt).toMatch(/mockups a ticket carries BEFORE implementing/);
@@ -626,7 +626,7 @@ describe("buildAgentSystemPrompt — maquettes visibles", () => {
       buildAgentSystemPrompt({ anchor: "issue", images: false }),
     ]) {
       expect(prompt).not.toMatch(/AS AN IMAGE/);
-      expect(prompt).toContain("`read_attachment`"); // le tool reste décrit
+      expect(prompt).toContain("`read_resource`"); // le tool reste décrit
       expect(prompt).toMatch(/binaries via a signed URL/);
     }
   });
@@ -645,7 +645,7 @@ describe("buildAgentContextMessage — pièces jointes image", () => {
   const ticket = {
     issue: { identifier: "MIN-42", title: "Add search", description: null, plan: null },
     repo,
-    attachments: [
+    resources: [
       { id: "att-1", name: "spec.md", mimeType: "text/markdown", sizeBytes: 2048 },
       { id: "att-2", name: "mock.png", mimeType: "image/png", sizeBytes: 120 * 1024 },
     ],
@@ -653,7 +653,7 @@ describe("buildAgentContextMessage — pièces jointes image", () => {
 
   it("marque les images comme ouvrables quand le run les voit", () => {
     const msg = buildAgentContextMessage({ ...ticket, images: true });
-    expect(msg).toMatch(/mock\.png .*— an image: read_attachment shows it to you/);
+    expect(msg).toMatch(/mock\.png .*— an image: read_resource shows it to you/);
     // Le fichier texte, lui, n'est pas annoncé comme une image.
     expect(msg).toMatch(/spec\.md \(text\/markdown, 2 KB\) — id: att-1\n/);
   });
@@ -679,7 +679,7 @@ describe("buildAgentSystemPrompt — tools minddy aux deux ancrages", () => {
       for (const tool of [
         "search_issues",
         "read_issue",
-        "read_attachment",
+        "read_resource",
         "update_issue",
         "write_issue_plan",
         "append_to_plan",
@@ -984,7 +984,7 @@ describe("buildAgentSystemPrompt — ancrage pull request", () => {
       "run_command",
       "read_issue",
       "search_issues",
-      "read_attachment",
+      "read_resource",
     ]) {
       expect(prompt).toContain(tool);
     }
