@@ -7,7 +7,7 @@ import { hasUsageBudget } from "@/lib/server/usage";
 
 /**
  * Entitlements (MIN-72) — les gardes de plan appelées par les routes de
- * mutation. Les limites STRUCTURELLES (nb de projets, d'issues, membres,
+ * mutation. Les limites STRUCTURELLES (nb de projets, d'issues, d'invités,
  * agents) vivent ici ; le budget d'usage IA vit dans lib/server/usage.ts.
  *
  * Règle d'attribution : une limite structurelle se vérifie toujours sur le
@@ -96,11 +96,45 @@ export async function ensureIssueLimit(projectId: string): Promise<void> {
   }
 }
 
-/** Garde d'invitation de membres : réservé aux plans avec `allowMembers` (Pro). */
-export async function ensureMembersAllowed(ownerId: string): Promise<void> {
+/**
+ * Garde d'invitation : le plafond d'invités PAR PROJET du plan du owner
+ * (MIN-199). Le owner ne compte pas — il n'a pas de ligne `project_members` —,
+ * donc « 2 invités » veut bien dire deux personnes en plus de soi.
+ *
+ * Une invitation encore EN ATTENTE occupe sa place : sans ça, on en envoie
+ * cinquante d'un coup et le plafond ne veut plus rien dire.
+ *
+ * Vérifié à l'invitation, jamais rétroactivement : un projet qui dépasse déjà
+ * son plafond (abonnement expiré, plan rétrogradé) garde tous ses membres,
+ * seule la prochaine invitation est refusée. Aucune migration de données.
+ */
+export async function ensureMemberSlotAvailable(
+  ownerId: string,
+  projectId: string
+): Promise<void> {
   const { plan } = await getResolvedBilling(ownerId);
-  if (!plan.allowMembers) {
-    throw new PlanLimitError("members_pro_only");
+  if (plan.maxMembersPerProject == null) return;
+
+  const service = getServiceClient();
+  const [members, invitations] = await Promise.all([
+    service
+      .from("project_members")
+      .select("user_id", { count: "exact", head: true })
+      .eq("project_id", projectId),
+    service
+      .from("project_invitations")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("status", "pending"),
+  ]);
+  if (members.error) throw new Error(members.error.message);
+  if (invitations.error) throw new Error(invitations.error.message);
+
+  const used = (members.count ?? 0) + (invitations.count ?? 0);
+  if (used >= plan.maxMembersPerProject) {
+    throw new PlanLimitError("member_limit_reached", {
+      limit: plan.maxMembersPerProject,
+    });
   }
 }
 

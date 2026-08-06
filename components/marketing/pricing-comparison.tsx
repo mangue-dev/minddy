@@ -143,7 +143,14 @@ const GROUPS: ReadonlyArray<Group> = [
   {
     key: "team",
     rows: [
-      { key: "members", hint: true, value: (plan) => plan.allowMembers },
+      {
+        key: "members",
+        hint: true,
+        value: (plan, t) =>
+          plan.maxMembersPerProject == null
+            ? t("unlimited")
+            : String(plan.maxMembersPerProject),
+      },
       // Pas un champ de plan : l'annuel n'existe que là où il y a un prix.
       { key: "annual", hint: true, value: (plan) => plan.priceEurMonthly > 0 },
     ],

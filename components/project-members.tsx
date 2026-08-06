@@ -16,10 +16,9 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { UserPlus, Users, X } from "lucide-react";
+import { UserPlus, X } from "lucide-react";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePlanGates } from "@/lib/use-billing-query";
-import { EmptyScene } from "@/components/empty-scene";
 import {
   SettingsEmpty,
   SettingsListRow,
@@ -44,12 +43,18 @@ export function ProjectMembers({
   const tb = useTranslations("Billing");
   const { members, invitations, isOwner, loading, invite, cancelInvitation, removeMember } =
     useMembersQuery(projectId, enabled);
-  // Le travail en équipe est un verrou de plan (Pro) : côté serveur
-  // `inviteMember` refuse déjà en 403 `membersProOnly` — l'UI ne doit pas
-  // proposer un formulaire dont l'envoi ne peut que échouer. La LISTE reste
-  // visible : un projet peut garder des membres d'un abonnement expiré, et
-  // son propriétaire doit pouvoir les voir et les retirer.
-  const { membersAllowed } = usePlanGates();
+  // Le plan plafonne le nombre d'INVITÉS d'un projet, il ne ferme plus la porte
+  // (MIN-199) : le formulaire est donc toujours là, avec son compteur, et ne se
+  // désarme qu'une fois la dernière place prise. Le compte suit celui du
+  // serveur (`ensureMemberSlotAvailable`) : les membres hors owner, plus les
+  // invitations encore en attente.
+  const { maxMembersPerProject } = usePlanGates();
+  const guestsUsed =
+    members.filter((m) => !m.is_owner).length + invitations.length;
+  // Un projet peut dépasser son plafond (abonnement expiré) : on ne retire
+  // personne, on refuse seulement la suivante — d'où le `>=`.
+  const limitReached =
+    maxMembersPerProject != null && guestsUsed >= maxMembersPerProject;
 
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
@@ -90,38 +95,54 @@ export function ProjectMembers({
 
   return (
     <div className="flex flex-col gap-4">
-      {isOwner &&
-        (membersAllowed ? (
-          <>
-            <form onSubmit={handleInvite} className="flex items-end gap-2">
-              <div className="flex flex-1 flex-col gap-1.5">
-                <label htmlFor="invite-email" className="text-sm font-medium">
-                  {t("inviteByEmail")}
-                </label>
-                <Input
-                  id="invite-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t("invitePlaceholder")}
-                />
-              </div>
-              <Button type="submit" disabled={inviting}>
-                {inviting ? <Spinner /> : <UserPlus />}
-                {t("invite")}
-              </Button>
-            </form>
-            <p className="-mt-2 text-xs text-muted-foreground">
-              {t("inviteHint")}
-            </p>
-          </>
-        ) : (
-          <EmptyScene size="compact" icon={Users} title={tb("membersGateTitle")}>
-            <Button asChild size="sm">
-              <Link href="/billing">{tb("membersGateCta")}</Link>
+      {isOwner && (
+        <>
+          <form onSubmit={handleInvite} className="flex items-end gap-2">
+            <div className="flex flex-1 flex-col gap-1.5">
+              <label htmlFor="invite-email" className="text-sm font-medium">
+                {t("inviteByEmail")}
+              </label>
+              <Input
+                id="invite-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("invitePlaceholder")}
+                disabled={limitReached}
+              />
+            </div>
+            <Button type="submit" disabled={inviting || limitReached}>
+              {inviting ? <Spinner /> : <UserPlus />}
+              {t("invite")}
             </Button>
-          </EmptyScene>
-        ))}
+          </form>
+          <p className="-mt-2 text-xs text-muted-foreground">
+            {t("inviteHint")}
+          </p>
+          {maxMembersPerProject != null && (
+            <p className="-mt-3 text-xs text-muted-foreground">
+              {limitReached ? (
+                <>
+                  {t("inviteLimitReached", { limit: maxMembersPerProject })}{" "}
+                  <Link
+                    href="/billing"
+                    className="font-medium text-foreground underline underline-offset-2"
+                  >
+                    {tb("membersGateCta")}
+                  </Link>
+                </>
+              ) : (
+                <span className="tabular-nums">
+                  {t("guestCount", {
+                    used: guestsUsed,
+                    limit: maxMembersPerProject,
+                  })}
+                </span>
+              )}
+            </p>
+          )}
+        </>
+      )}
 
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium">{t("membersLabel")}</p>

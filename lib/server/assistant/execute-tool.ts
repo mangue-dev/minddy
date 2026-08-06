@@ -348,6 +348,8 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
   alreadyOwner: "That person is the project owner.",
   alreadyMember: "That person is already a member of the project.",
   invitationAlreadyPending: "There is already a pending invitation for that email.",
+  memberLimitReached:
+    "This project has reached the number of guests the owner's plan allows (members plus pending invitations). Relay that as-is.",
   cannotRemoveOwner: "The project owner cannot be removed.",
   invalidColor: "That color is invalid (use a hex color like #7c5cff).",
   categoryNotFound: "Category not found in this project.",

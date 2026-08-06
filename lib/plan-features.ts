@@ -28,6 +28,12 @@ export function planFeatureLabels(plan: BillingPlan, t: PlanFeatureTranslator): 
     plan.maxIssuesPerProject == null
       ? t("featureUnlimitedIssues")
       : t("featureMaxIssues", { n: plan.maxIssuesPerProject }),
+    // Les invités se lisent avec les autres QUANTITÉS, et sur les trois cartes
+    // (MIN-199) : la ligne n'apparaissait qu'en Pro, ce qui laissait croire au
+    // gratuit qu'on n'y travaille jamais à plusieurs.
+    plan.maxMembersPerProject == null
+      ? t("featureUnlimitedMembers")
+      : t("featureMaxMembers", { n: plan.maxMembersPerProject }),
     ...(plan.allowAgents ? [t("featureAgents")] : []),
     // Le BYOK suit l'agent parce qu'il ne vaut QUE pour lui (`resolveAgentApiKey`
     // n'est appelé que par la boucle de l'agent) et qu'il est gardé par la même
@@ -36,6 +42,5 @@ export function planFeatureLabels(plan: BillingPlan, t: PlanFeatureTranslator): 
     // minddy, l'inférence de l'agent peut rester chez vous — donc il se lit sur
     // la carte, pas seulement en FAQ.
     ...(plan.allowAgents ? [t("featureByok")] : []),
-    ...(plan.allowMembers ? [t("featureMembers")] : []),
   ];
 }

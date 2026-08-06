@@ -12,18 +12,32 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * sorti du décompte, tout de suite, sans attendre la purge des 30 jours. Le
  * double Supabase applique donc les filtres pour de vrai, sinon il ne dirait
  * rien de ce que la garde compte vraiment.
+ *
+ * MIN-199 y ajoute le plafond d'INVITÉS par projet, qui a le même piège sous une
+ * autre forme : ce qu'on compte n'est pas seulement ce qui existe (les membres)
+ * mais aussi ce qui est promis (les invitations en attente).
  */
 
 interface Row extends Record<string, unknown> {
   id: string;
   owner_id?: string;
   project_id?: string;
+  user_id?: string;
+  status?: string;
   deleted_at?: string | null;
 }
 
 let projectRows: Row[] = [];
 let issueRows: Row[] = [];
-let memberRows: { project_id: string; user_id: string }[] = [];
+let memberRows: Row[] = [];
+let invitationRows: Row[] = [];
+
+/** Le plan que la garde lit — réécrit par les tests qui changent de palier. */
+let plan: {
+  maxProjects: number | null;
+  maxIssuesPerProject: number | null;
+  maxMembersPerProject: number | null;
+};
 
 /** Double de chaîne PostgREST : accumule les filtres, puis compte. */
 function table(rows: () => Row[]) {
@@ -54,36 +68,35 @@ function table(rows: () => Row[]) {
     data: rows().find((row) => filters.every((f) => f(row))) ?? null,
     error: null,
   });
-  // `select(..., { count: "exact", head: true })` est awaité tel quel.
-  query.then = (resolve: (value: unknown) => unknown) =>
-    Promise.resolve({
-      count: rows().filter((row) => filters.every((f) => f(row))).length,
+  // Un `select()` est awaité tel quel, avec ou sans `{ count: "exact", head }` :
+  // on rend les deux formes, la garde ne lit que celle qui la concerne.
+  query.then = (resolve: (value: unknown) => unknown) => {
+    const matching = rows().filter((row) => filters.every((f) => f(row)));
+    return Promise.resolve({
+      data: matching,
+      count: matching.length,
       error: null,
     }).then(resolve);
+  };
 
   return query;
 }
 
+const TABLES: Record<string, () => Row[]> = {
+  projects: () => projectRows,
+  issues: () => issueRows,
+  project_members: () => memberRows,
+  project_invitations: () => invitationRows,
+};
+
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    from: (name: string) => {
-      if (name === "project_members") {
-        return {
-          select: () => ({
-            eq: async () => ({ data: memberRows, error: null }),
-          }),
-        };
-      }
-      return table(() => (name === "projects" ? projectRows : issueRows));
-    },
+    from: (name: string) => table(TABLES[name] ?? (() => [])),
   }),
 }));
 
-// Plan Free : 2 projets, 300 tickets par projet.
 vi.mock("@/lib/server/billing-accounts", () => ({
-  getResolvedBilling: async () => ({
-    plan: { maxProjects: 2, maxIssuesPerProject: 300 },
-  }),
+  getResolvedBilling: async () => ({ plan }),
 }));
 
 vi.mock("@/lib/server/usage", () => ({ hasUsageBudget: async () => true }));
@@ -91,6 +104,7 @@ vi.mock("@/lib/server/usage", () => ({ hasUsageBudget: async () => true }));
 import {
   countAccessibleProjects,
   ensureIssueLimit,
+  ensureMemberSlotAvailable,
   ensureProjectLimit,
 } from "./entitlements";
 
@@ -102,6 +116,9 @@ beforeEach(() => {
   projectRows = [];
   issueRows = [];
   memberRows = [];
+  invitationRows = [];
+  // Plan Free : 2 projets, 300 tickets par projet, 2 invités par projet.
+  plan = { maxProjects: 2, maxIssuesPerProject: 300, maxMembersPerProject: 2 };
 });
 
 describe("limite de projets", () => {
@@ -143,5 +160,72 @@ describe("limite de tickets par projet", () => {
     projectRows = [{ id: PROJECT, owner_id: OWNER, deleted_at: null }];
     issueRows = fill(300, null);
     await expect(ensureIssueLimit(PROJECT)).rejects.toThrow();
+  });
+});
+
+describe("plafond d'invités par projet (MIN-199)", () => {
+  const member = (n: number): Row => ({
+    id: `m${n}`,
+    project_id: PROJECT,
+    user_id: `u${n}`,
+  });
+  const invitation = (n: number, status: string): Row => ({
+    id: `inv${n}`,
+    project_id: PROJECT,
+    status,
+  });
+
+  it("laisse passer les deux premiers invités du plan gratuit", async () => {
+    await expect(
+      ensureMemberSlotAvailable(OWNER, PROJECT)
+    ).resolves.toBeUndefined();
+
+    memberRows = [member(1)];
+    await expect(
+      ensureMemberSlotAvailable(OWNER, PROJECT)
+    ).resolves.toBeUndefined();
+
+    memberRows = [member(1), member(2)];
+    await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
+  });
+
+  it("compte une invitation EN ATTENTE comme une place prise", async () => {
+    memberRows = [member(1)];
+    invitationRows = [invitation(1, "pending")];
+    await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
+  });
+
+  it("rend sa place à une invitation annulée ou acceptée", async () => {
+    memberRows = [member(1)];
+    invitationRows = [invitation(1, "cancelled"), invitation(2, "accepted")];
+    await expect(
+      ensureMemberSlotAvailable(OWNER, PROJECT)
+    ).resolves.toBeUndefined();
+  });
+
+  it("ne compte que le projet visé", async () => {
+    memberRows = [
+      { id: "m1", project_id: "autre-projet", user_id: "u1" },
+      { id: "m2", project_id: "autre-projet", user_id: "u2" },
+    ];
+    await expect(
+      ensureMemberSlotAvailable(OWNER, PROJECT)
+    ).resolves.toBeUndefined();
+  });
+
+  it("ne compte jamais rien quand le plan est illimité (Pro)", async () => {
+    plan.maxMembersPerProject = null;
+    memberRows = Array.from({ length: 50 }, (_, i) => member(i));
+    await expect(
+      ensureMemberSlotAvailable(OWNER, PROJECT)
+    ).resolves.toBeUndefined();
+  });
+
+  it("ne rétrograde pas un projet déjà au-dessus de son plafond", async () => {
+    // Abonnement expiré : les 4 membres restent, seule la 5e invitation est
+    // refusée — la garde ne s'exécute qu'à l'invitation, jamais rétroactivement.
+    memberRows = [member(1), member(2), member(3), member(4)];
+    await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
+    expect(memberRows).toHaveLength(4);
   });
 });

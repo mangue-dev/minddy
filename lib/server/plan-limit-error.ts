@@ -14,7 +14,7 @@ import type { MessageKey } from "@/lib/i18n-keys";
 export type PlanLimitCode =
   | "project_limit_reached"
   | "issue_limit_reached"
-  | "members_pro_only"
+  | "member_limit_reached"
   | "agents_not_in_plan"
   | "usage_budget_exceeded"
   | "model_above_plan";
@@ -41,7 +41,7 @@ export function isPlanLimitError(error: unknown): error is PlanLimitError {
 const PLAN_LIMIT_I18N_KEYS: Record<PlanLimitCode, MessageKey<"ApiErrors">> = {
   project_limit_reached: "projectLimitReached",
   issue_limit_reached: "issueLimitReached",
-  members_pro_only: "membersProOnly",
+  member_limit_reached: "memberLimitReached",
   agents_not_in_plan: "agentsNotInPlan",
   usage_budget_exceeded: "usageBudgetExceeded",
   model_above_plan: "modelAbovePlan",

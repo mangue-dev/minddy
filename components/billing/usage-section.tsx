@@ -45,7 +45,11 @@ export function UsageSection() {
           <LimitRow
             icon={Users}
             label={t("limitMembers")}
-            value={usage.limits.allowMembers ? t("included") : t("notIncluded")}
+            value={
+              usage.limits.maxMembersPerProject == null
+                ? t("unlimited")
+                : String(usage.limits.maxMembersPerProject)
+            }
           />
         </div>
       )}

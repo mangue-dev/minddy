@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       projectsUsed,
       maxIssuesPerProject: plan.maxIssuesPerProject,
       allowAgents: plan.allowAgents,
-      allowMembers: plan.allowMembers,
+      maxMembersPerProject: plan.maxMembersPerProject,
     },
   };
   return Response.json(response);

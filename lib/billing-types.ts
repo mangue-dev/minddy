@@ -52,6 +52,7 @@ export interface UsageSummaryResponse {
     projectsUsed: number;
     maxIssuesPerProject: number | null;
     allowAgents: boolean;
-    allowMembers: boolean;
+    /** Invités par projet, owner non compris. `null` = illimité. */
+    maxMembersPerProject: number | null;
   };
 }

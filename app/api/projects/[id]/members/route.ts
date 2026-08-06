@@ -115,7 +115,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     email: (body as { email?: unknown })?.email,
   });
   if (!result.ok) {
-    return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
+    // `errorParams` porte le `{limit}` de `memberLimitReached` : un message à
+    // placeholder appelé sans ses valeurs afficherait son chemin de clé.
+    return NextResponse.json(
+      { error: t(result.errorKey, result.errorParams) },
+      { status: result.status }
+    );
   }
   return NextResponse.json(result.invitation, { status: 201 });
 }

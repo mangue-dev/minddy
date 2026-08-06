@@ -50,8 +50,18 @@ export interface BillingPlan {
   maxIssuesPerProject: number | null;
   /** Accès aux agents de code (lancement de runs sur la clé plateforme ou BYOK). */
   allowAgents: boolean;
-  /** Travail en équipe : inviter des membres dans ses projets. */
-  allowMembers: boolean;
+  /**
+   * Invités par projet — les personnes qu'on fait entrer, le OWNER NON COMPRIS
+   * (« 2 invités » = deux personnes en plus de soi). `null` = illimité.
+   *
+   * C'était un booléen, vrai sur le seul Pro (MIN-199) : personne ne pouvait
+   * faire entrer qui que ce soit sans passer à 20 €/mois. On faisait donc payer
+   * l'effet de réseau AVANT qu'il existe, alors que c'est lui qui amène les
+   * utilisateurs suivants. Ce qui se vend, c'est désormais la QUANTITÉ — comme
+   * `maxProjects` et `maxIssuesPerProject` — et ce qui reste au Pro, c'est
+   * l'équipe qui grandit.
+   */
+  maxMembersPerProject: number | null;
   /** Plan mis en avant dans l'UI. */
   highlighted?: boolean;
 }
@@ -65,7 +75,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     maxProjects: 2,
     maxIssuesPerProject: 300,
     allowAgents: false,
-    allowMembers: false,
+    maxMembersPerProject: 2,
   },
   {
     id: "go",
@@ -75,7 +85,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     maxProjects: null,
     maxIssuesPerProject: null,
     allowAgents: true,
-    allowMembers: false,
+    maxMembersPerProject: 5,
     highlighted: true,
   },
   {
@@ -86,7 +96,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     maxProjects: null,
     maxIssuesPerProject: null,
     allowAgents: true,
-    allowMembers: true,
+    maxMembersPerProject: null,
   },
 ];
 // Un plan « Ultra » (~100-200 €, gros budget d'usage) est envisagé : l'ajouter

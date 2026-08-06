@@ -12,7 +12,7 @@ import {
   toNamed,
 } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
-import { ensureMembersAllowed } from "@/lib/server/entitlements";
+import { ensureMemberSlotAvailable } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { isPushConfigured } from "@/lib/server/push/vapid";
@@ -38,7 +38,7 @@ type InviteError =
   | "alreadyOwner"
   | "alreadyMember"
   | "invitationAlreadyPending"
-  | "membersProOnly"
+  | "memberLimitReached"
   | "databaseError";
 
 export async function inviteMember({
@@ -51,7 +51,13 @@ export async function inviteMember({
   email: unknown;
 }): Promise<
   | { ok: true; invitation: Invitation }
-  | { ok: false; status: number; errorKey: InviteError }
+  | {
+      ok: false;
+      status: number;
+      errorKey: InviteError;
+      /** Valeurs du message quand sa clé porte un placeholder (`{limit}`). */
+      errorParams?: Record<string, string | number>;
+    }
 > {
   const access = await getProjectAccess(actorId, projectId);
   if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
@@ -59,12 +65,18 @@ export async function inviteMember({
     return { ok: false, status: 403, errorKey: "ownerOnlyInvite" };
   }
 
-  // Travail en équipe = plans avec allowMembers (Pro) — MIN-72.
+  // Le plafond d'invités du plan, membres + invitations en attente (MIN-199).
+  // L'acteur EST le owner : la branche `isOwner` ci-dessus l'a déjà établi.
   try {
-    await ensureMembersAllowed(actorId);
+    await ensureMemberSlotAvailable(actorId, projectId);
   } catch (err) {
     if (isPlanLimitError(err)) {
-      return { ok: false, status: err.status, errorKey: "membersProOnly" };
+      return {
+        ok: false,
+        status: err.status,
+        errorKey: "memberLimitReached",
+        errorParams: err.params,
+      };
     }
     throw err;
   }
