@@ -818,7 +818,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "respond_to_feedback",
       description:
-        "Reply PUBLICLY on a feedback post — the message is posted to the board's public thread, where everyone reading the request sees it, signed on behalf of the team (never with a member's name, nor yours). This is PUBLIC-facing and cannot be edited or taken back afterwards: only do it when explicitly asked, and post it once it says what the team means. For a triage note nobody outside the team should read, use add_feedback_comment instead. Omit feedback_post_id to target the current post (feedback comment mode).",
+        "Reply PUBLICLY on a feedback post — the message is posted to the board's public thread, where everyone reading the request sees it, signed on behalf of the team (never with a member's name, nor yours). This is PUBLIC-facing and cannot be edited or taken back afterwards: only do it when explicitly asked, and post it once it says what the team means. It is the ONLY way you can write on a feedback post, and there is no team-only equivalent here: a triage note is something the user writes themself, in the feedback panel. Omit feedback_post_id to target the current post (feedback comment mode).",
       parameters: {
         type: "object",
         properties: {

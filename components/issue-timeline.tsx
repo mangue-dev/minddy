@@ -365,6 +365,7 @@ function CommentBlock({
   onDelete,
   onDeleteAttachment,
   deletesReplies,
+  isReply = false,
 }: {
   comment: Comment;
   ctx: EventContext;
@@ -373,6 +374,10 @@ function CommentBlock({
   onDelete: (commentId: string) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   deletesReplies: boolean;
+  /** Message d'un fil, pas sa racine : le badge « Public » ne se répète pas à
+      chaque ligne — la racine et la teinte de la carte le disent déjà, et cinq
+      badges pour une seule idée se lisent comme du bruit. */
+  isReply?: boolean;
 }) {
   const t = useTranslations("Timeline");
   const tCommon = useTranslations("Common");
@@ -457,7 +462,7 @@ function CommentBlock({
         {/* Ce que ce commentaire engage, dit avant de le lire : « Public » veut
             dire qu'il est SUR le board, lisible par tout le monde. L'absence de
             badge est la valeur par défaut de toute l'app — une note d'équipe. */}
-        {isPublic && (
+        {isPublic && !isReply && (
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 px-1.5 py-0.5 text-[11px] font-medium text-brand">
@@ -640,12 +645,23 @@ function ReplyComposer({
   currentUserId,
   projectId,
   rootId,
+  threadIsPublic = false,
   onReply,
 }: {
   members: Member[];
   currentUserId: string | null;
   projectId: string;
   rootId: string;
+  /**
+   * Le fil est PUBLIC (MIN-196) : la réponse partira sur le board, sans que
+   * personne l'ait choisi ici — une réponse hérite de la visibilité de son fil,
+   * c'est le serveur qui le décide et il n'y a rien à basculer.
+   *
+   * D'où ce drapeau, dont le seul rôle est de le DIRE : sans lui, le geste le
+   * plus naturel de l'écran (répondre à quelqu'un) publierait sur une page
+   * indexable dans le même costume qu'une note d'équipe.
+   */
+  threadIsPublic?: boolean;
   onReply: (
     parentId: string,
     body: string,
@@ -691,13 +707,18 @@ function ReplyComposer({
         className="flex w-full items-center gap-2 rounded-b-lg px-3.5 py-2.5 text-left text-sm text-muted-foreground outline-none transition-colors hover:text-foreground"
       >
         <ActorAvatar members={members} id={currentUserId} name={meName} />
-        <span>{t("replyPlaceholder")}</span>
+        <span>{threadIsPublic ? t("replyPublicPlaceholder") : t("replyPlaceholder")}</span>
       </button>
     );
   }
   return (
     <div
-      className="relative flex flex-col rounded-b-lg"
+      className={cn(
+        "relative flex flex-col rounded-b-lg",
+        // Le même air que le composeur en mode public : ce qui s'écrit ici part
+        // au même endroit, ça doit se ressembler.
+        threadIsPublic && "bg-brand/[0.03]"
+      )}
       onPaste={pasteFileHandler(uploads.addFiles)}
       {...drop.handlers}
     >
@@ -721,12 +742,18 @@ function ReplyComposer({
         onEscape={() => {
           if (!draft.trim()) close();
         }}
-        placeholder={t("replyPlaceholder")}
+        placeholder={threadIsPublic ? t("replyPublicPlaceholder") : t("replyPlaceholder")}
         autoFocus
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
       />
       <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5">
+        {threadIsPublic && (
+          <span className="mr-auto inline-flex items-center gap-1.5 text-xs font-medium text-brand">
+            <Globe className="size-3.5" />
+            {t("replyGoesPublic")}
+          </span>
+        )}
         <AttachButton onFiles={uploads.addFiles} disabled={posting} />
         <Button variant="ghost" size="sm" className="rounded-full" onClick={close}>
           {tCommon("cancel")}
@@ -780,8 +807,18 @@ function CommentCard({
   onDeleteComment: (commentId: string) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
 }) {
+  // La visibilité se lit sur la RACINE : c'est elle dont hérite toute réponse.
+  const threadIsPublic = item.comment.visibility === "public";
   return (
-    <li className="flex flex-col rounded-lg border border-border bg-card">
+    <li
+      className={cn(
+        "flex flex-col rounded-lg border bg-card",
+        // Un fil public se voit d'un coup d'œil dans une liste qui en mélange
+        // deux sortes : c'est ce qui distingue une note d'équipe d'une
+        // conversation que des gens lisent sur le board.
+        threadIsPublic ? "border-brand/30" : "border-border"
+      )}
+    >
       <div className="px-3.5 py-3">
         <CommentBlock
           comment={item.comment}
@@ -803,6 +840,7 @@ function CommentCard({
             onDelete={onDeleteComment}
             onDeleteAttachment={onDeleteAttachment}
             deletesReplies={false}
+            isReply
           />
         </div>
       ))}
@@ -812,6 +850,7 @@ function CommentCard({
           currentUserId={currentUserId}
           projectId={projectId}
           rootId={item.comment.id}
+          threadIsPublic={threadIsPublic}
           onReply={onReply}
         />
       </div>

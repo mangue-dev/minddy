@@ -143,9 +143,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     id: string;
     feedback_post_id: string;
     parent_id: string | null;
+    visibility: string;
   };
+  // La visibilité qu'on lit ici est celle de la LIGNE CRÉÉE, pas celle qu'on a
+  // demandée : une réponse hérite de la visibilité de son fil, et une réponse
+  // sous un commentaire public est donc publique même si le composeur a envoyé
+  // « interne ». Relire la demande laisserait Numo répondre sur le board.
   const trigger =
-    visibility === "public"
+    created.visibility === "public"
       ? null
       : mentionsNumo(commentBody)
         ? "mention"

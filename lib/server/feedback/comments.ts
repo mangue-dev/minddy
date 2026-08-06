@@ -26,19 +26,21 @@ import {
  * anciennes `team_response` reprises par la migration (ni l'un ni l'autre).
  */
 
-/** Fil plat : un retour n'est pas un forum, on ne threade pas les réponses. */
+/** Profondeur ≤ 1, comme les fils de tickets : `parent_id` porte toujours la
+    RACINE du fil, jamais la réponse qu'on visait. */
 const PUBLIC_THREAD_LIMIT = 200;
 
 interface PublicCommentRow {
   id: string;
   body: string;
   created_at: string;
+  parent_id: string | null;
   feedback_user_id: string | null;
   feedback_users: { pseudonym: string } | null;
 }
 
 const PUBLIC_COMMENT_SELECT =
-  "id, body, created_at, feedback_user_id, feedback_users!feedback_user_id (pseudonym)";
+  "id, body, created_at, parent_id, feedback_user_id, feedback_users!feedback_user_id (pseudonym)";
 
 function toPublicComment(row: PublicCommentRow, viewerId: string | null): PublicComment {
   return {
@@ -48,6 +50,7 @@ function toPublicComment(row: PublicCommentRow, viewerId: string | null): Public
     authorSeed: row.feedback_users?.pseudonym ?? null,
     isTeam: row.feedback_user_id === null,
     isMine: viewerId !== null && row.feedback_user_id === viewerId,
+    parentId: row.parent_id,
   };
 }
 
@@ -133,6 +136,34 @@ export type AddPublicCommentResult =
   | { ok: false; error: "empty" | "closed" | "notFound" | "failed" };
 
 /**
+ * La RACINE du fil visé, ou `null` si le parent n'en est pas un du bon retour.
+ *
+ * Répondre à une réponse range le message sous la même racine (profondeur ≤ 1) :
+ * la conversation reste une liste de fils, pas un arbre. Le parent doit être
+ * public et appartenir à CE retour — sinon on rattacherait une réponse publique
+ * à une note d'équipe, et le board la lirait.
+ */
+async function resolvePublicThreadRoot(
+  service: ReturnType<typeof getServiceClient>,
+  postId: string,
+  parentId: string
+): Promise<string | null> {
+  const { data: parent } = await service
+    .from("comments")
+    .select("id, parent_id, feedback_post_id, visibility")
+    .eq("id", parentId)
+    .maybeSingle();
+  if (
+    !parent ||
+    parent.feedback_post_id !== postId ||
+    parent.visibility !== "public"
+  ) {
+    return null;
+  }
+  return (parent.parent_id as string | null) ?? (parent.id as string);
+}
+
+/**
  * Un visiteur ajoute un commentaire au fil public.
  *
  * Trois refus, et ils ne disent pas la même chose : `closed` = le board ne
@@ -147,6 +178,8 @@ export async function addPublicComment(params: {
   postId: string;
   feedbackUserId: string;
   body: string;
+  /** Le message auquel on répond — rangé sous la racine de son fil. */
+  parentId?: string | null;
 }): Promise<AddPublicCommentResult> {
   const text = params.body.trim().slice(0, FEEDBACK_COMMENT_BODY_MAX);
   if (!text) return { ok: false, error: "empty" };
@@ -170,6 +203,12 @@ export async function addPublicComment(params: {
     return { ok: false, error: "notFound" };
   }
 
+  let rootId: string | null = null;
+  if (params.parentId) {
+    rootId = await resolvePublicThreadRoot(service, params.postId, params.parentId);
+    if (!rootId) return { ok: false, error: "notFound" };
+  }
+
   const { data, error } = await service
     .from("comments")
     .insert({
@@ -178,6 +217,7 @@ export async function addPublicComment(params: {
       feedback_user_id: params.feedbackUserId,
       body: text,
       visibility: "public",
+      parent_id: rootId,
     })
     .select(PUBLIC_COMMENT_SELECT)
     .single();
@@ -216,6 +256,12 @@ export async function addPublicComment(params: {
  * garde : elle exclut du même coup les commentaires des autres et ceux de
  * l'équipe (qui n'en portent pas). La modération d'équipe, elle, passe par la
  * route interne — même table, autre porte.
+ *
+ * Un message auquel ON A RÉPONDU ne se supprime plus, et c'est structurel :
+ * `comments.parent_id` cascade, donc supprimer une racine emporterait toutes
+ * ses réponses — celle de l'équipe comprise. Sans cette garde, n'importe qui
+ * pourrait effacer la réponse publique de l'équipe en effaçant sa propre
+ * question. On retire ce qu'on a dit tant que personne n'a parlé après.
  */
 export async function deletePublicComment(params: {
   postId: string;
@@ -223,6 +269,12 @@ export async function deletePublicComment(params: {
   feedbackUserId: string;
 }): Promise<boolean> {
   const service = getServiceClient();
+  const { count: replyCount } = await service
+    .from("comments")
+    .select("id", { count: "exact", head: true })
+    .eq("parent_id", params.commentId);
+  if ((replyCount ?? 0) > 0) return false;
+
   const { error, count } = await service
     .from("comments")
     .delete({ count: "exact" })

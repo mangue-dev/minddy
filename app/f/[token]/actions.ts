@@ -224,7 +224,9 @@ export type PublicCommentState =
 export async function addPublicCommentAction(
   token: string,
   postId: string,
-  body: string
+  body: string,
+  /** Le message auquel on répond (rangé sous la racine de son fil). */
+  parentId: string | null = null
 ): Promise<PublicCommentState> {
   const resolved = await resolveSession(token);
   if (!resolved) return { ok: false, error: "notAuthenticated" };
@@ -241,6 +243,7 @@ export async function addPublicCommentAction(
     postId,
     feedbackUserId: session.user.id,
     body,
+    parentId,
   });
   if (!result.ok) {
     return { ok: false, error: result.error === "closed" ? "closed" : "failed" };

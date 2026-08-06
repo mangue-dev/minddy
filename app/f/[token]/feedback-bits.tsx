@@ -253,6 +253,74 @@ export function AuthorAvatar({
 }
 
 /**
+ * La discussion d'un retour, en un seul badge.
+ *
+ * Il en portait deux : « L'équipe a répondu » d'un côté, le nombre de
+ * commentaires de l'autre — et jamais les deux à la fois, parce que côte à côte
+ * ils disaient deux fois la même chose (il y a à lire là-dedans). Résultat, le
+ * nombre disparaissait justement quand la discussion était la plus vivante :
+ * celle où l'équipe a parlé.
+ *
+ * Un seul badge, donc, qui dit toujours COMBIEN. Ce que l'équipe ajoute passe
+ * dans l'ICÔNE : l'orbe du projet, celle du header, au lieu de la bulle
+ * générique. Une bulle dit « il y a des messages » ; l'orbe dit qu'un de ces
+ * messages vient du produit — et c'est ça, la nouvelle. Le mot qu'on perd en
+ * chemin est rendu par l'infobulle, parce qu'un logo de 14 px n'a jamais dit
+ * « l'équipe a répondu » à qui ne le savait pas déjà.
+ *
+ * Pas de commentaire → pas de badge : un « 0 » n'est pas une information, c'est
+ * une case vide qu'on a laissée dans la ligne.
+ */
+function FeedbackCommentsBadge({
+  post,
+  project,
+}: {
+  post: PublicPost;
+  project: PublicProject;
+}) {
+  const t = useTranslations("PublicFeedback");
+  if (post.commentCount === 0) return null;
+
+  // L'équipe a parlé : son message est l'un de ceux qu'on compte.
+  const teamIsIn = post.teamRepliedAt !== null;
+  const badge = (
+    <Badge
+      variant="secondary"
+      // Pas de teinte en plus : l'orbe du projet est déjà en couleur là où la
+      // bulle est grise, et le badge d'état juste à côté peint DÉJÀ le sien
+      // (« En cours » en ambre, « Livré » en vert). Deux badges colorés côte à
+      // côte, et on ne sait plus lequel des deux est la nouvelle.
+      icon={
+        teamIsIn ? (
+          <ProjectOrb
+            seed={project.id}
+            iconUrl={project.iconUrl}
+            className="size-3.5 rounded-[4px]"
+          />
+        ) : (
+          <MessageSquare />
+        )
+      }
+    >
+      {t("commentCount", { count: post.commentCount })}
+    </Badge>
+  );
+  return (
+    <Tooltip>
+      {/* Le `span` porte le déclencheur : `Badge` rend un `span` lui aussi, mais
+          `asChild` a besoin d'un nœud à qui poser les handlers sans écraser les
+          classes de teinte. */}
+      <TooltipTrigger asChild>
+        <span className="flex">{badge}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        {teamIsIn ? t("teamRepliedHint", { project: project.name }) : t("commentsHint")}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
  * La date d'un retour, DITE.
  *
  * Une date nue au milieu d'une ligne de méta ne dit pas de quoi elle est la
@@ -379,37 +447,7 @@ export function FeedbackPostRow({
             {statusBadge ?? (
               <FeedbackStatusBadge status={post.status} projectName={project.name} />
             )}
-            {/* Ce qui distingue un retour lu d'un retour entendu. L'état dit où
-                en est le besoin ; ce badge dit qu'un humain a écrit quelque
-                chose — la seule raison d'ouvrir un retour qu'on a déjà lu.
-                Il porte l'ICÔNE DU PROJET, celle du header : une bulle de
-                message générique dit « il y a un message », l'orbe dit de qui —
-                et c'est tout l'intérêt de la nouvelle. */}
-            {post.teamRepliedAt && (
-              <Badge
-                variant="secondary"
-                icon={
-                  <ProjectOrb
-                    seed={project.id}
-                    iconUrl={project.iconUrl}
-                    className="size-3.5 rounded-[4px]"
-                  />
-                }
-              >
-                {t("teamReplied")}
-              </Badge>
-            )}
-            {/* La discussion, quand elle existe et que l'équipe n'y a pas
-                encore parlé : le badge du dessus dit déjà qu'il y a à lire, et
-                deux badges côte à côte pour la même raison d'ouvrir feraient
-                du bruit. Le nombre, lui, dit quelque chose de plus — un retour
-                à douze réponses ne se lit pas comme un retour à une. */}
-            {!post.teamRepliedAt && post.commentCount > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <MessageSquare className="size-3.5" />
-                {post.commentCount}
-              </span>
-            )}
+            <FeedbackCommentsBadge post={post} project={project} />
             <FeedbackPostedAt post={post} />
             {meta}
           </div>

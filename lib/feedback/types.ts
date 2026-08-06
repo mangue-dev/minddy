@@ -238,6 +238,13 @@ export interface PublicComment {
   isTeam: boolean;
   /** Écrit par le visiteur qui lit — le seul à pouvoir le supprimer. */
   isMine: boolean;
+  /**
+   * La RACINE du fil quand ce message y répond, null quand il en est un.
+   * Profondeur ≤ 1, comme partout ailleurs dans l'app : on répond à un fil, pas
+   * à une réponse. Un board de retours n'est pas un forum — un arbre y coûterait
+   * une navigation à des gens venus dire une chose et voter.
+   */
+  parentId: string | null;
 }
 
 /**

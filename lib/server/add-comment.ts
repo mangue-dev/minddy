@@ -11,7 +11,7 @@ import {
   projectMemberIds,
   type NotificationRow,
 } from "@/lib/server/notifications";
-import type { CommentVisibility } from "@/lib/feedback/types";
+import { isCommentVisibility, type CommentVisibility } from "@/lib/feedback/types";
 
 /**
  * Shared comment-creation core: normalizes replies onto their thread's ROOT
@@ -402,7 +402,10 @@ export async function addCommentToFeedbackPost({
   mcpKeyId?: string | null;
   visibility?: CommentVisibility;
 }): Promise<AddCommentResult> {
-  const isPublic = visibility === "public";
+  // La visibilité EFFECTIVE. Sur un commentaire racine, c'est celle qu'on
+  // demande ; sur une réponse, c'est celle du fil, quoi qu'on ait demandé —
+  // voir plus bas. Un fil ne peut pas être public à moitié.
+  let effectiveVisibility: CommentVisibility = visibility;
   const text = body.trim().slice(0, MAX_COMMENT_LENGTH);
   const mentioned = (mentionedUserIds ?? []).filter(
     (v): v is string => typeof v === "string"
@@ -437,9 +440,13 @@ export async function addCommentToFeedbackPost({
   }
 
   // Replies: the stored parent_id is always the thread's ROOT comment
-  // (depth ≤ 1); the parent must belong to this feedback post — and to the same
-  // side of the wall: replying publicly under an internal note (or the reverse)
-  // would tear a thread in half, half of it readable by the board.
+  // (depth ≤ 1); the parent must belong to this feedback post.
+  //
+  // A reply INHERITS its thread's visibility, whatever the caller asked for. A
+  // thread cannot be half public — answering a board comment is answering ON the
+  // board, and answering under a team note stays internal. Deriving it here
+  // rather than trusting the caller also means no UI can publish by accident:
+  // there is exactly one place that decides, and it reads the parent.
   let rootId: string | null = null;
   const threadAuthorIds: (string | null)[] = [];
   if (parentId) {
@@ -451,9 +458,9 @@ export async function addCommentToFeedbackPost({
     if (!parent || parent.feedback_post_id !== postId) {
       return { ok: false, status: 404, errorKey: "commentNotFound" };
     }
-    if ((parent.visibility as string) !== visibility) {
-      return { ok: false, status: 404, errorKey: "commentNotFound" };
-    }
+    effectiveVisibility = isCommentVisibility(parent.visibility)
+      ? parent.visibility
+      : "internal";
     rootId = (parent.parent_id as string | null) ?? (parent.id as string);
     threadAuthorIds.push(parent.author_id as string | null);
     if (parent.parent_id) {
@@ -476,7 +483,7 @@ export async function addCommentToFeedbackPost({
       via_assistant: viaAssistant,
       via_mcp: !!mcpKeyId,
       api_key_id: mcpKeyId,
-      visibility,
+      visibility: effectiveVisibility,
     })
     .select("*")
     .single();
@@ -506,7 +513,9 @@ export async function addCommentToFeedbackPost({
   const valid = await projectMemberIds(service, post.project_id as string);
 
   const mentionSet = new Set(
-    isPublic ? [] : mentioned.filter((uid) => uid !== actorId && valid.has(uid))
+    effectiveVisibility === "public"
+      ? []
+      : mentioned.filter((uid) => uid !== actorId && valid.has(uid))
   );
   const commentSet = new Set<string>();
   for (const uid of threadAuthorIds) {

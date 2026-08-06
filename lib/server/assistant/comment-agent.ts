@@ -698,7 +698,9 @@ export async function runFeedbackCommentMention({
         }),
         service
           .from("comments")
-          .select("id, author_id, body, via_assistant, created_at")
+          .select(
+            "id, author_id, body, via_assistant, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)"
+          )
           .eq("feedback_post_id", postId)
           .neq("id", replyId)
           .order("created_at", { ascending: false })
@@ -737,13 +739,37 @@ export async function runFeedbackCommentMention({
     const authorName = (id: string | null, viaAssistant?: boolean): string =>
       viaAssistant ? "Numo" : displayName(toNamed(id ? users.get(id) : null), "User");
 
-    const thread: CommentPromptThreadEntry[] = recentComments.map((c) => ({
-      author: authorName(c.author_id as string | null, !!c.via_assistant),
-      body: (c.body as string) ?? "",
-      attachments: attachmentsByComment
-        .get(c.id as string)
-        ?.map((a) => a.file_name),
-    }));
+    // Le fil d'un retour mele DEUX conversations (MIN-196) : les notes d'equipe
+    // et ce qui s'ecrit sur le board public. Les servir a plat, avec un visiteur
+    // rendu en « User » comme n'importe quel coequipier, c'est demander au
+    // modele de raisonner sur des propos dont il ignore et l'origine et la
+    // portee — et de repondre « comme l'a dit X plus haut » a propos d'un
+    // inconnu qui a ecrit sur une page publique.
+    //
+    // Chaque entree porte donc d'ou elle vient. Numo ne repond QUE dans les fils
+    // internes (le declencheur se coupe sur le public, voir la route des
+    // commentaires) : le public est ici de la LECTURE.
+    const thread: CommentPromptThreadEntry[] = recentComments.map((c) => {
+      const visitor = c.feedback_users as unknown as {
+        name: string | null;
+        email: string | null;
+        pseudonym: string;
+      } | null;
+      const who = visitor
+        ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
+        : authorName(c.author_id as string | null, !!c.via_assistant);
+      return {
+        author: visitor
+          ? `${who} (board visitor — PUBLIC comment)`
+          : c.visibility === "public"
+            ? `${who} (team — PUBLIC reply, read on the board)`
+            : who,
+        body: (c.body as string) ?? "",
+        attachments: attachmentsByComment
+          .get(c.id as string)
+          ?.map((a) => a.file_name),
+      };
+    });
 
     const linked = linkedIssue
       ? {
