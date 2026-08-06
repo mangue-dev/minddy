@@ -98,6 +98,35 @@ describe("catalogue MCP — le feedback dit ce que l'app fait", () => {
 });
 
 /**
+ * Un agent qui écrit un commentaire n'a AUCUNE mesure de ce qu'est un
+ * commentaire ici : mesuré le 2026-08-06 sur la base, les commentaires écrits
+ * par le MCP faisaient 2 555 caractères de médiane contre 177 pour ceux écrits
+ * à la main — quatorze fois plus long, avec titres et sections, là où le fil
+ * porte des phrases. Le seul endroit qui pouvait le lui dire ne disait rien du
+ * tout (`body` valait « Markdown. »). Ce qui doit tenir : la consigne de
+ * brièveté est dans la description ET dans le champ, avec un chiffre — un
+ * adjectif seul ne borne rien.
+ */
+describe("catalogue MCP — un commentaire est court", () => {
+  const bodyParam = { minddy_add_comment: "body", minddy_add_feedback_comment: "body" };
+
+  for (const [name, field] of Object.entries(bodyParam)) {
+    it(`borne ${name} dans sa description et dans ${field}`, () => {
+      expect(tool(name).description).toContain("1000 characters");
+      expect(param(name, field).description).toMatch(/1000 characters/);
+      expect(param(name, field).description).toMatch(/no headings/i);
+    });
+  }
+
+  it("borne aussi la réponse publique de minddy_respond_feedback", () => {
+    expect(tool("minddy_respond_feedback").description).toMatch(/KEEP IT SHORT/);
+    expect(param("minddy_respond_feedback", "response").description).toMatch(
+      /two or three sentences/i
+    );
+  });
+});
+
+/**
  * MIN-184 — la pièce jointe devient une RESSOURCE : un fichier OU un lien. Les
  * tools MCP sont redécouverts à chaque connexion, donc le renommage est franc
  * et rien ne persiste l'ancien nom côté client. Ce qui doit tenir, en revanche,

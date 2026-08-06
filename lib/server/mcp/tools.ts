@@ -1638,14 +1638,29 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Add comment",
       description:
         "Post a markdown comment on an issue, e.g. to report progress or leave a " +
-        "note for the team. The timeline shows the agent as the author (this API " +
+        "note for the team. " +
+        "KEEP IT SHORT — a message to a colleague, not a report: a few sentences, " +
+        "or a handful of one-line bullets, 1000 characters at most. Say what you " +
+        "did and what it means for whoever reads the ticket; drop the preamble, " +
+        "the restating of the ticket back at its author, the file-by-file " +
+        "inventory and the closing recap. NO HEADINGS — a comment that needs " +
+        "sections is a comment that is too long. Detail that IS the work belongs " +
+        "in the code, in the plan or in the pull request: point at it, never copy " +
+        "it here. " +
+        "The timeline shows the agent as the author (this API " +
         "key's name with an '(mcp)' marker), not the key's owner. To attach a " +
         "resource to the comment, call minddy_add_resource with the returned " +
         "comment id.",
       inputSchema: {
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
-        body: z.string().min(1).describe("Markdown."),
+        body: z
+          .string()
+          .min(1)
+          .describe(
+            "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
+              "at most, no headings."
+          ),
       },
       annotations: WRITE,
     },
@@ -2851,14 +2866,23 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Add feedback comment",
       description:
         "Post an internal, team-only comment on a feedback post (never shown on the " +
-        "public board), e.g. to leave triage notes. The timeline shows the agent as " +
+        "public board), e.g. to leave triage notes. " +
+        "KEEP IT SHORT — a triage note, not a memo: two or three sentences, or a " +
+        "few one-line bullets, 1000 characters at most, no headings. " +
+        "The timeline shows the agent as " +
         "the author (this API key's name with an '(mcp)' marker), not the key's owner. " +
         "To answer the person who submitted the request, where everyone reading it on " +
         "the board will see the reply, use minddy_respond_feedback instead.",
       inputSchema: {
         project_id: PROJECT_ID,
         feedback_post_id: z.string().uuid(),
-        body: z.string().min(1).describe("Markdown."),
+        body: z
+          .string()
+          .min(1)
+          .describe(
+            "Markdown, SHORT: two or three sentences, 1000 characters at most, " +
+              "no headings."
+          ),
       },
       annotations: WRITE,
     },
@@ -3067,13 +3091,23 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "Reply PUBLICLY on a feedback post: the message is posted to the public " +
         "board thread, where everyone reading the request sees it, signed on behalf " +
         "of the team (never with a member's name). This is PUBLIC-facing and it is " +
-        "not editable afterwards — post it once it says what the team means. For a " +
+        "not editable afterwards — post it once it says what the team means. " +
+        "KEEP IT SHORT — the person wants to know where their request stands, not " +
+        "read a report: two or three plain sentences, no headings, no roadmap " +
+        "recap. " +
+        "For a " +
         "triage note nobody outside the team should read, use " +
         "minddy_add_feedback_comment instead.",
       inputSchema: {
         project_id: PROJECT_ID,
         feedback_post_id: z.string().uuid(),
-        response: z.string().min(1).describe("Public reply, shown on the board."),
+        response: z
+          .string()
+          .min(1)
+          .describe(
+            "Public reply, shown on the board. SHORT: two or three sentences, " +
+              "no headings."
+          ),
       },
       annotations: WRITE,
     },
