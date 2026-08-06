@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 import { useLocale } from "next-intl";
 
-import { savePushDeviceApi } from "@/lib/push-devices-api";
-import { isPushSupported, registerPushServiceWorker } from "@/lib/push/client";
+import { refreshThisDeviceSubscription } from "@/lib/push/client";
 
 /**
  * Monte le service worker des notifications push (MIN-183). Aucun rendu : ce
@@ -25,45 +24,32 @@ import { isPushSupported, registerPushServiceWorker } from "@/lib/push/client";
  * appareils DÉJÀ abonnés — sinon le navigateur, qui décharge un worker inactif,
  * n'aurait plus personne pour recevoir l'événement `push`.
  *
- * ## Et on rattrape la rotation d'endpoint
+ * ## Et on remet l'abonnement d'aplomb
  *
- * Le navigateur peut renouveler un abonnement sans passer par
- * `pushsubscriptionchange` (le worker n'était pas actif, l'événement s'est
- * perdu). La ligne en base pointerait alors sur un endpoint mort, et l'appareil
- * cesserait de recevoir quoi que ce soit en le disant nulle part. Un re-POST au
- * chargement le remet d'aplomb : l'upsert porte sur `endpoint`, donc c'est sans
- * effet quand rien n'a bougé, et l'ancienne ligne part quand quelque chose a
- * bougé.
+ * Deux dérives se rattrapent au chargement, et aucune ne se signale d'elle-même :
+ *
+ *   • l'ENDPOINT a tourné sans passer par `pushsubscriptionchange` (le worker
+ *     n'était pas actif, l'événement s'est perdu). La ligne en base pointerait
+ *     sur un endpoint mort ;
+ *   • l'abonnement en place porte une AUTRE clé publique que la nôtre. Sur
+ *     `localhost`, l'origine est partagée entre tous les projets de la machine
+ *     et l'abonnement d'un voisin est visible d'ici ; en production, c'est ce
+ *     qu'une rotation de la paire VAPID laisse derrière elle. Le service de push
+ *     répond alors 403 à chaque envoi, éternellement.
+ *
+ * `refreshThisDeviceSubscription` traite les deux : l'upsert porte sur
+ * `endpoint`, donc c'est sans effet quand rien n'a bougé, et l'ancienne ligne
+ * part avec `oldEndpoint` quand il a fallu se réabonner.
  */
 export function PushServiceWorker() {
   const locale = useLocale();
 
   useEffect(() => {
-    if (!isPushSupported()) return;
-    if (Notification.permission !== "granted") return;
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const registration = await registerPushServiceWorker();
-        const subscription = await registration.pushManager.getSubscription();
-        // Permission accordée mais plus d'abonnement : l'utilisateur l'a retiré
-        // depuis la carte des réglages, ou vidé les données du site. Rien à
-        // rétablir sans son geste — le worker reste, muet.
-        if (!subscription || cancelled) return;
-        // Rafraîchit `last_seen_at` au passage : la carte peut dire quand
-        // l'appareil s'est manifesté pour la dernière fois.
-        await savePushDeviceApi(subscription.toJSON(), locale, { track: false });
-      } catch (e) {
-        // Best-effort de bout en bout : l'app n'a pas à broncher parce qu'un
-        // service worker n'a pas voulu s'enregistrer.
-        console.error("[push] enregistrement du service worker échoué:", e);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    void refreshThisDeviceSubscription(locale).catch((e) => {
+      // Best-effort de bout en bout : l'app n'a pas à broncher parce qu'un
+      // service worker n'a pas voulu s'enregistrer.
+      console.error("[push] remise d'aplomb de l'abonnement échouée:", e);
+    });
   }, [locale]);
 
   return null;
