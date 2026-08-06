@@ -9,6 +9,7 @@ import {
   recordForgePrGesture,
   notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
+import { notifyPullRequestOpened } from "@/lib/server/agent/pr-opened-notify";
 import {
   githubPrState,
   githubPrStateForAction,
@@ -240,6 +241,20 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
     payload.pull_request && INGESTED_PR_ACTIONS.has(action)
       ? await ingestPullRequest(repoFullName, number, payload.pull_request)
       : null;
+
+  // Inbox : le projet apprend qu'une pull request attend des yeux. Ici, juste
+  // après l'ingestion, et pas plus bas avec les autres notifications : celles-ci
+  // partent à l'auteur d'un RUN, or une PR humaine n'en a pas — c'est justement
+  // celle dont personne n'était prévenu. Le bot de l'App est écarté : quand il
+  // ouvre, c'est Numo, et l'annonce est déjà partie côté agent.
+  if (action === "opened" && !isBot(payload.sender)) {
+    await notifyPullRequestOpened(ingested, {
+      actor: {
+        accountId: actorAccountId(payload.sender),
+        login: payload.sender?.login ?? null,
+      },
+    });
+  }
 
   // Direct : l'en-tête a bougé, et un `synchronize` a poussé des commits. Émis
   // ICI, avant les gardes de cycle de vie plus bas — une PR sans run, un acteur

@@ -130,6 +130,7 @@ import {
 import { resolveAgentApiKey, getModelContextWindow, supportsImageInput } from "./model";
 import { forgeFor, isForgeApiError, type Forge } from "./forge";
 import { prStateFromRef, upsertPullRequest } from "./pull-requests";
+import { notifyPullRequestOpened } from "./pr-opened-notify";
 import type { PullRequestRef } from "./pr";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
@@ -1575,7 +1576,7 @@ export async function executeAgentRun(
       // page Pull Requests lit désormais au lieu d'`agent_runs`. Le run, lui, est
       // la meilleure source du ticket : il le SAIT, là où l'ingestion webhook
       // doit le déduire du nom de branche.
-      await upsertPullRequest({
+      const prRow = await upsertPullRequest({
         provider: target.provider,
         repoFullName: target.repoFullName,
         number: pr.number,
@@ -1592,6 +1593,11 @@ export async function executeAgentRun(
         updatedAt: pr.updatedAt,
         issueId: run.issue_id,
       });
+      // Inbox : le projet apprend qu'une pull request attend des yeux. Ici et
+      // pas au webhook — celui-ci n'arrive jamais en dev, et l'ouverture faite
+      // par Numo porte le compte de l'App, que les récepteurs écartent comme
+      // écho. La réouverture, elle, ne s'annonce pas : la PR était déjà connue.
+      if (kind === "opened") await notifyPullRequestOpened(prRow);
       // Run CARNET : aucun ticket à synchroniser ni à commenter — la PR vit dans
       // la conversation de la session (et sur la page Pull requests).
       if (issue && run.issue_id) {

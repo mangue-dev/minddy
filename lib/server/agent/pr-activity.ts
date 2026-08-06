@@ -75,6 +75,10 @@ function isFilterSafe(value: string): boolean {
  * possible : `git_user_identities` côté GitHub (le compte autorisé), la connexion
  * OAuth côté GitLab (elle EST déjà l'identité de la personne).
  *
+ * Exporté pour `pr-opened-notify.ts`, qui s'en sert dans l'autre sens : non plus
+ * « ce geste est-il un écho du nôtre » mais « qui, chez nous, vient d'ouvrir
+ * cette PR » — la seule personne à qui ne pas l'annoncer.
+ *
  * Une seule requête sur le chemin webhook : on demande les lignes que l'id OU le
  * login pourraient désigner, puis `forgeAccountMatches` tranche en mémoire — le
  * `.or(...)` est un filet large, la règle est celle-là.
@@ -82,7 +86,7 @@ function isFilterSafe(value: string): boolean {
  * Vide quand personne n'a connecté ce compte : c'est alors quelqu'un qui n'agit
  * pas depuis minddy, et rien n'est à dédoublonner.
  */
-async function minddyUsersForForgeAccount(opts: {
+export async function minddyUsersForForgeAccount(opts: {
   provider: ForgeProvider;
   accountId: string | null;
   login: string | null;

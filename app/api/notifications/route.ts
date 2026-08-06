@@ -49,6 +49,9 @@ export async function GET(request: NextRequest) {
     ...new Set(notifs.map((n) => n.feedback_post_id).filter(Boolean)),
   ] as string[];
   const routineIds = [...new Set(notifs.map((n) => n.routine_id).filter(Boolean))] as string[];
+  const prIds = [
+    ...new Set(notifs.map((n) => n.pull_request_id).filter(Boolean)),
+  ] as string[];
   const projectIds = [...new Set(notifs.map((n) => n.project_id).filter(Boolean))] as string[];
   const actorIds = [...new Set(notifs.map((n) => n.actor_id).filter(Boolean))] as string[];
   const commentIds = [...new Set(notifs.map((n) => n.comment_id).filter(Boolean))] as string[];
@@ -58,6 +61,7 @@ export async function GET(request: NextRequest) {
     { data: objectives },
     { data: feedbackPosts },
     { data: routines },
+    { data: pullRequests },
     { data: projects },
     actorsById,
     actorSeeds,
@@ -80,6 +84,11 @@ export async function GET(request: NextRequest) {
     routineIds.length
       ? service.from("agent_routines").select("id, title").in("id", routineIds)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    // La PULL REQUEST d'une notification d'ouverture : son numéro et son titre
+    // font la première ligne, comme la référence et le titre d'un ticket.
+    prIds.length
+      ? service.from("pull_requests").select("id, number, title").in("id", prIds)
+      : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
     projectIds.length
       ? service.from("projects").select("id, key").in("id", projectIds)
       : Promise.resolve({ data: [] as { id: string; key: string }[] }),
@@ -107,6 +116,7 @@ export async function GET(request: NextRequest) {
   const objectiveMap = new Map((objectives ?? []).map((o) => [o.id, o]));
   const feedbackMap = new Map((feedbackPosts ?? []).map((f) => [f.id, f]));
   const routineMap = new Map((routines ?? []).map((r) => [r.id, r]));
+  const prMap = new Map((pullRequests ?? []).map((p) => [p.id, p]));
   const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
   const commentMap = new Map((comments ?? []).map((c) => [c.id, c]));
 
@@ -136,13 +146,17 @@ export async function GET(request: NextRequest) {
     (!n.feedback_post_id || !feedbackPosts || feedbackMap.has(n.feedback_post_id)) &&
     // Une routine supprimée emporte ses notifications par cascade : ce filtre
     // ne rattrape donc qu'une lecture partielle, pas une suppression.
-    (!n.routine_id || !routines || routineMap.has(n.routine_id));
+    (!n.routine_id || !routines || routineMap.has(n.routine_id)) &&
+    // Idem pour une pull request : la ligne part par cascade avec elle, ce
+    // filtre ne rattrape donc qu'une lecture partielle.
+    (!n.pull_request_id || !pullRequests || prMap.has(n.pull_request_id));
 
   const result: MyNotification[] = notifs.filter(targetAlive).map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
     const objective = n.objective_id ? objectiveMap.get(n.objective_id) : undefined;
     const feedback = n.feedback_post_id ? feedbackMap.get(n.feedback_post_id) : undefined;
     const routine = n.routine_id ? routineMap.get(n.routine_id) : undefined;
+    const pullRequest = n.pull_request_id ? prMap.get(n.pull_request_id) : undefined;
     const project = n.project_id ? projectMap.get(n.project_id) : undefined;
     const actor = n.actor_id ? actorsById.get(n.actor_id) : undefined;
     const comment = n.comment_id ? commentMap.get(n.comment_id) : undefined;
@@ -168,6 +182,9 @@ export async function GET(request: NextRequest) {
       feedback_title: feedback?.title ?? null,
       routine_id: n.routine_id ?? null,
       routine_title: routine?.title ?? null,
+      pull_request_id: n.pull_request_id ?? null,
+      pull_request_number: pullRequest?.number ?? null,
+      pull_request_title: pullRequest?.title ?? null,
       project_id: n.project_id,
       project_key: project?.key ?? null,
       actor_name: fromNumo

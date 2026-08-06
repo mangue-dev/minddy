@@ -70,6 +70,9 @@ export interface PushContext {
   feedbackPosts: Map<string, string>;
   /** Titre d'une ROUTINE (MIN-185) — la bannière ne montre que lui. */
   routines: Map<string, string>;
+  /** Numéro + titre d'une PULL REQUEST — la bannière les montre comme la
+   *  référence et le titre d'un ticket. */
+  pullRequests: Map<string, { number: number; title: string | null }>;
   projectKeys: Map<string, string>;
   actorNames: Map<string, string>;
   apiKeyActors: Map<string, ApiKeyActor>;
@@ -82,6 +85,7 @@ export function emptyPushContext(): PushContext {
     objectives: new Map(),
     feedbackPosts: new Map(),
     routines: new Map(),
+    pullRequests: new Map(),
     projectKeys: new Map(),
     actorNames: new Map(),
     apiKeyActors: new Map(),
@@ -107,11 +111,12 @@ export async function loadPushContext(
   const objectiveIds = ids((r) => r.objective_id);
   const feedbackIds = ids((r) => r.feedback_post_id);
   const routineIds = ids((r) => r.routine_id);
+  const prIds = ids((r) => r.pull_request_id);
   const projectIds = ids((r) => r.project_id);
   const actorIds = ids((r) => r.actor_id);
   const keyIds = ids((r) => r.api_key_id);
 
-  const [issues, objectives, feedback, routines, projects, actors, keyActors] =
+  const [issues, objectives, feedback, routines, pullRequests, projects, actors, keyActors] =
     await Promise.all([
     issueIds.length
       ? service
@@ -138,6 +143,12 @@ export async function loadPushContext(
     routineIds.length
       ? service.from("agent_routines").select("id, title").in("id", routineIds)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    // Une PULL REQUEST : pas de corbeille non plus, la ligne part avec elle.
+    prIds.length
+      ? service.from("pull_requests").select("id, number, title").in("id", prIds)
+      : Promise.resolve({
+          data: [] as { id: string; number: number; title: string | null }[],
+        }),
     projectIds.length
       ? service.from("projects").select("id, key").in("id", projectIds)
       : Promise.resolve({ data: [] as { id: string; key: string }[] }),
@@ -153,6 +164,9 @@ export async function loadPushContext(
   for (const o of objectives.data ?? []) ctx.objectives.set(o.id, o.name);
   for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, f.title);
   for (const r of routines.data ?? []) ctx.routines.set(r.id, r.title);
+  for (const p of pullRequests.data ?? []) {
+    ctx.pullRequests.set(p.id, { number: p.number, title: p.title });
+  }
   for (const p of projects.data ?? []) ctx.projectKeys.set(p.id, p.key);
   for (const [id, user] of actors) {
     // Repli VIDE plutôt que « User » : le libellé de repli est traduit, et sa
@@ -197,6 +211,11 @@ export function buildPushPayload(
     const routineTitle = ctx.routines.get(row.routine_id);
     if (!routineTitle) return null;
     title = routineTitle;
+  } else if (row.pull_request_id) {
+    const pr = ctx.pullRequests.get(row.pull_request_id);
+    if (!pr) return null;
+    // `#12 · Réparer…` — le pendant exact de `MIN-42 · …` pour un ticket.
+    title = pr.title ? `#${pr.number} · ${pr.title}` : `#${pr.number}`;
   } else if (row.issue_id) {
     const issue = ctx.issues.get(row.issue_id);
     if (!issue) return null;

@@ -69,10 +69,15 @@ export function categoryOfNotificationType(
     case "agent_done":
     case "agent_question":
     case "agent_failed":
-    // Les PR notifiées SONT celles de Numo : elles suivent la bascule « agent »
-    // plutôt qu'une sixième, qui serait un réglage de plus à gérer pour rien.
+    // Une routine, c'est Numo qui tourne tout seul : même bascule que ses runs.
+    case "routine_done":
+    // Le travail de code suit la même bascule que l'agent, y compris quand il
+    // vient d'un humain : `pr_opened` annonce TOUTE pull request du projet, pas
+    // seulement celles de Numo. Une sixième catégorie serait un réglage de plus
+    // à gérer pour distinguer deux choses qu'on lit au même endroit.
     case "pr_reviewed":
     case "pr_merged":
+    case "pr_opened":
     // Une chaîne d'automatisation, c'est Numo qui travaille : même bascule que
     // ses runs, plutôt qu'une sixième catégorie à gérer pour rien.
     case "automation_paused":

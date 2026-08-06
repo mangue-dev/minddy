@@ -1054,8 +1054,10 @@
     "someone": "Quelqu'un",
     "linePrReviewed": "Votre pull request a été relue",
     "linePrMerged": "Votre pull request a été fusionnée",
+    "linePrOpened": "Une pull request vient de s'ouvrir",
     "lineAutomationPaused": "L'automatisation attend ton feu vert",
-    "lineAutomationStopped": "L'automatisation s'est arrêtée"
+    "lineAutomationStopped": "L'automatisation s'est arrêtée",
+    "lineRoutineDone": "La routine a terminé son passage"
   },
   "NotificationSettings": {
     "title": "Notifications de l'inbox",
@@ -1067,7 +1069,7 @@
     "commentLabel": "Commentaires",
     "commentDesc": "Quelqu'un commente un de vos tickets, répond dans un fil où vous avez écrit, ou Numo vous répond.",
     "agentLabel": "Agent Numo",
-    "agentDesc": "L'agent finit son travail, vous pose une question ou s'arrête sur une erreur.",
+    "agentDesc": "L'agent finit son travail, vous pose une question ou s'arrête sur une erreur. Les routines et les pull requests suivent la même bascule.",
     "feedbackLabel": "Retours",
     "feedbackDesc": "Un retour arrive sur le board d'un de vos projets."
   },

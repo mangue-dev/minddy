@@ -12,12 +12,20 @@ import { insertNotifications } from "@/lib/server/notifications";
  * d'automatisation (`lib/server/automations/hooks.ts`), et pour la même raison :
  * le point d'appel est au plus bas de la pile.
  *
- * **On ne notifie QUE quand il y a matière.** Une routine quotidienne qui
- * annonce « rien à signaler » chaque matin se fait couper au bout de trois
- * jours, et emporte dans sa chute les deux notifications qui comptaient. Donc :
- * une pull request ouverte (`agent_done`), ou un passage en échec
- * (`agent_failed`). Un passage qui conclut sans rien pousser ne dit rien — il se
- * lit dans « Exécutions précédentes », qui est fait pour ça.
+ * **Toute fin de passage se dit**, avec le mot qui lui revient : une pull request
+ * ouverte (`agent_done`), un passage en échec (`agent_failed`), et sinon le
+ * passage terminé lui-même (`routine_done`). Ce dernier manquait, et son absence
+ * ne se voyait pas : une routine qui tourne bien sans rien pousser était
+ * indiscernable d'une routine morte — il fallait ouvrir son écran pour le
+ * savoir.
+ *
+ * Ce qui garde ça vivable, c'est `replaceUnread` : les quatre types se
+ * déplacent l'un l'autre, donc une routine quotidienne laisse UNE ligne non lue,
+ * pas une par matin. Le détail de chaque passage, lui, reste dans « Exécutions
+ * précédentes », qui est fait pour ça.
+ *
+ * Un passage ANNULÉ ne dit rien : il n'a pas fini, et l'annoncer « terminé »
+ * serait faux. S'il a quand même laissé une pull request, celle-ci parle.
  */
 export async function notifyRoutineOfRunEnd(run: {
   id: string;
@@ -29,7 +37,8 @@ export async function notifyRoutineOfRunEnd(run: {
   if (!run.routine_id) return;
   const openedPr = run.pr_number != null;
   const failed = run.status === "failed";
-  if (!openedPr && !failed) return;
+  const completed = run.status === "completed";
+  if (!openedPr && !failed && !completed) return;
 
   try {
     const service = getServiceClient();
@@ -47,7 +56,7 @@ export async function notifyRoutineOfRunEnd(run: {
         {
           user_id: owner,
           project_id: run.project_id,
-          type: failed ? "agent_failed" : "agent_done",
+          type: failed ? "agent_failed" : openedPr ? "agent_done" : "routine_done",
           issue_id: null,
           // La cible est la ROUTINE : c'est là que ses exécutions se lisent, et
           // nulle part ailleurs. Sans ce champ, la ligne d'inbox ne mènerait

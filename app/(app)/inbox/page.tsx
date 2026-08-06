@@ -39,6 +39,8 @@ const AGENT_TYPES: readonly NotificationType[] = [
   "agent_done",
   "agent_question",
   "agent_failed",
+  // Une routine, c'est Numo qui tourne tout seul : son visage, comme un run.
+  "routine_done",
 ];
 
 type InboxFilter = "all" | "unread" | "mentions";
@@ -127,7 +129,7 @@ function RowAvatar({
           ? Megaphone
           : n.type === "pr_merged"
             ? GitMerge
-            : n.type === "pr_reviewed"
+            : n.type === "pr_reviewed" || n.type === "pr_opened"
               ? GitPullRequest
               : MessageSquare;
   return (
@@ -233,6 +235,9 @@ export default function InboxPage() {
     // Une routine (MIN-185) : son titre EST la ligne — elle n'a pas de ticket
     // à nommer, et le repli « un ticket » mentirait sur ce qui s'est passé.
     if (n.routine_id) return n.routine_title ?? "";
+    // Une pull request : son titre, précédé de son numéro par la référence
+    // ci-dessous — elle n'a pas forcément de ticket à nommer.
+    if (n.pull_request_id) return n.pull_request_title ?? "";
     return (
       n.issue_title ??
       t("someIssueFallback", { entity: tIssue("entity").toLowerCase() })
@@ -440,6 +445,13 @@ export default function InboxPage() {
                           {n.issue_id && n.project_key && n.issue_number != null && (
                             <span className="shrink-0 font-mono text-xs text-muted-foreground">
                               {n.project_key}-{n.issue_number}
+                            </span>
+                          )}
+                          {/* Une PR se reconnaît à son numéro, à la place où un
+                              ticket porte sa référence. */}
+                          {n.pull_request_id && n.pull_request_number != null && (
+                            <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                              #{n.pull_request_number}
                             </span>
                           )}
                           <span

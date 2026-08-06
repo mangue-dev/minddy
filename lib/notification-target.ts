@@ -21,6 +21,9 @@ export interface NotificationTarget {
   /** Une ROUTINE (MIN-185) : ses exécutions se lisent dans la routine, et
       nulle part ailleurs — d'où une destination à elle. */
   routine_id?: string | null;
+  /** Une PULL REQUEST : elle se lit sur la page Pull requests, qui est globale
+      comme la vue Agents — et elle n'a pas forcément de ticket. */
+  pull_request_id?: string | null;
 }
 
 /**
@@ -36,6 +39,9 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
   // Agents, tous projets confondus), donc elle mène quelque part même si la
   // ligne n'a pas de projet.
   if (n.routine_id) return `/agents?tab=routines&routine=${n.routine_id}`;
+  // La pull request aussi : sa page est globale, et une PR sans ticket n'a rien
+  // d'autre à ouvrir — c'est même le cas normal d'une PR humaine.
+  if (n.pull_request_id) return `/pull-requests?pr=${n.pull_request_id}`;
   if (!n.project_id) return null;
   if (n.objective_id) {
     return `/projects/${n.project_id}/objectives?open=${n.objective_id}`;
@@ -63,6 +69,8 @@ export const NOTIFICATION_LINE_KEYS: Record<
   feedback_new: "lineFeedbackNew",
   pr_reviewed: "linePrReviewed",
   pr_merged: "linePrMerged",
+  pr_opened: "linePrOpened",
   automation_paused: "lineAutomationPaused",
   automation_stopped: "lineAutomationStopped",
+  routine_done: "lineRoutineDone",
 };

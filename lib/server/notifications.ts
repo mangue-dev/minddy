@@ -24,6 +24,9 @@ export interface NotificationRow {
   /** Set instead of the three above for a ROUTINE notification (MIN-185) — a
       scheduled run has no ticket, and its executions live in the routine. */
   routine_id?: string | null;
+  /** Set instead of all the above for a PULL REQUEST notification: elle se lit
+      sur la page Pull requests, et n'a pas forcément de ticket. */
+  pull_request_id?: string | null;
   comment_id?: string | null;
   actor_id: string | null;
   /** L'action est passée par le serveur MCP : l'acteur affiché dans l'inbox est
@@ -40,11 +43,15 @@ export interface NotificationRow {
   via_automation?: boolean;
 }
 
-/** The agent types displace each other: one live agent notification per issue. */
+/** The agent types displace each other: one live agent notification per issue.
+ *  `routine_done` en fait partie : c'est la fin de passage d'une routine, elle
+ *  se substitue au « terminé » ou à l'« échec » du passage précédent — sinon
+ *  une routine quotidienne empile une ligne par matin. */
 const AGENT_TYPES: readonly NotificationType[] = [
   "agent_done",
   "agent_question",
   "agent_failed",
+  "routine_done",
 ];
 
 const siblingTypes = (type: NotificationType): readonly NotificationType[] =>

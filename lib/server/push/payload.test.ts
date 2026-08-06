@@ -35,8 +35,10 @@ const ALL_TYPES: readonly NotificationType[] = [
   "feedback_new",
   "pr_reviewed",
   "pr_merged",
+  "pr_opened",
   "automation_paused",
   "automation_stopped",
+  "routine_done",
 ];
 
 function ctxWithIssue(actorName = "Alice"): PushContext {
@@ -113,10 +115,11 @@ describe("buildPushPayload", () => {
     expect(mcp!.body).not.toContain(fr.Inbox.someone);
   });
 
-  it("suit la cible : objectif, retour de board, ticket", () => {
+  it("suit la cible : objectif, retour de board, pull request, ticket", () => {
     const ctx = ctxWithIssue();
     ctx.objectives.set("obj", "Refonte de l'inbox");
     ctx.feedbackPosts.set("fp", "Mode sombre s'il vous plaît");
+    ctx.pullRequests.set("pr", { number: 12, title: "Ajouter le mode sombre" });
 
     const objective = buildPushPayload(
       ctx,
@@ -136,6 +139,17 @@ describe("buildPushPayload", () => {
     expect(feedback).toMatchObject({
       title: "Mode sombre s'il vous plaît",
       url: `/projects/${PROJECT}/feedback?post=fp`,
+    });
+
+    // Une PR ouverte mène à la page Pull requests, qui n'est pas dans un projet.
+    const pr = buildPushPayload(
+      ctx,
+      issueRow("pr_opened", { issue_id: null, pull_request_id: "pr" }),
+      "fr"
+    );
+    expect(pr).toMatchObject({
+      title: "#12 · Ajouter le mode sombre",
+      url: "/pull-requests?pr=pr",
     });
   });
 

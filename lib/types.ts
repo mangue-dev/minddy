@@ -146,10 +146,16 @@ export type NotificationType =
   | "pr_reviewed"
   /** A PR the agent opened for me was merged on the forge. */
   | "pr_merged"
+  /** Une pull request vient de s'ouvrir sur un dépôt lié à un de mes projets —
+      de Numo ou d'un humain, elle attend des yeux dans les deux cas. */
+  | "pr_opened"
   /** Une chaîne d'automatisation attend un feu vert humain (MIN-147). */
   | "automation_paused"
   /** Une chaîne d'automatisation s'est arrêtée : budget, quota, vérif en échec. */
-  | "automation_stopped";
+  | "automation_stopped"
+  /** Un passage de routine s'est terminé sans rien pousser — le cas où ni la PR
+      ni l'échec ne parlent, et où la routine ne disait donc rien du tout. */
+  | "routine_done";
 
 /** A notification enriched for the Inbox UI. */
 export interface MyNotification {
@@ -170,6 +176,11 @@ export interface MyNotification {
       a scheduled run has no ticket; its executions live in the routine. */
   routine_id: string | null;
   routine_title: string | null;
+  /** Set instead of all of the above when it points at a PULL REQUEST : elle se
+      lit sur la page Pull requests, qui n'appartient à aucun projet. */
+  pull_request_id: string | null;
+  pull_request_number: number | null;
+  pull_request_title: string | null;
   project_id: string | null;
   project_key: string | null;
   actor_name: string | null;

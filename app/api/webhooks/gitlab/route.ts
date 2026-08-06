@@ -9,6 +9,7 @@ import {
   recordForgePrGesture,
   notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
+import { notifyPullRequestOpened } from "@/lib/server/agent/pr-opened-notify";
 import {
   gitlabMrState,
   gitlabMrStateForAction,
@@ -239,6 +240,20 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   const ingested = INGESTED_MR_ACTIONS.has(action)
     ? await ingestMergeRequest(repoFullName, iid, attrs, payload.user)
     : null;
+
+  // Inbox : le projet apprend qu'une merge request attend des yeux. Ici, juste
+  // après l'ingestion, et pas plus bas avec les autres notifications : celles-ci
+  // partent à l'auteur d'un RUN, or une MR humaine n'en a pas — c'est justement
+  // celle dont personne n'était prévenu. Le compte de service est écarté : quand
+  // il ouvre, c'est Numo, et l'annonce est déjà partie côté agent.
+  if (action === "open" && !(await isServiceAccount(repoFullName, payload.user))) {
+    await notifyPullRequestOpened(ingested, {
+      actor: {
+        accountId: actorAccountId(payload.user),
+        login: payload.user?.username ?? null,
+      },
+    });
+  }
 
   // Direct : l'en-tête a bougé. `oldrev` est le seul `update` qui porte un PUSH
   // — c'est là, et là seulement, que la liste des commits change.
