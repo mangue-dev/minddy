@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -49,12 +49,15 @@ import {
   type Routine,
 } from "@/lib/routines-api";
 import {
+  patchRoutineInCache,
   routineRunsQueryKey,
+  routinesQueryKey,
   useRoutineRunsQuery,
 } from "@/lib/use-routines-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import {
   describeSchedule,
+  nextRunAt,
   weekdayName,
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
@@ -156,6 +159,13 @@ export function RoutineDetail({
         timeStyle: "short",
       })
     : null;
+  /**
+   * Le prochain passage se lit dans la LISTE des exécutions, en tête — c'est
+   * une date de la même série que celles d'en dessous, simplement pas encore
+   * arrivée. Une routine en pause n'en a pas : son échéance est désarmée
+   * (`next_run_at` null), et en annoncer une serait un mensonge à l'écran.
+   */
+  const showNextRun = !!nextAt && routine.enabled;
 
   const patch = async (fields: Parameters<typeof updateRoutineApi>[1]) => {
     setBusy(true);
@@ -184,6 +194,42 @@ export function RoutineDetail({
     } finally {
       setBusy(false);
     }
+  };
+
+  /**
+   * L'interrupteur bascule TOUT DE SUITE.
+   *
+   * C'est un ÉTAT, et un état se renverse d'un doigt : attendre l'écriture puis
+   * le rechargement de la liste laissait deux secondes d'interrupteur figé sur
+   * l'ancienne position, pendant lesquelles le geste semblait n'avoir servi à
+   * rien. On écrit donc dans le cache d'abord — la colonne et ce volet lisent la
+   * même entrée, tout bouge dans le même rendu —, on envoie ensuite, et on
+   * REMET l'instantané d'avant si le serveur refuse (403 d'un membre, cadence
+   * devenue illisible), avec son message.
+   *
+   * `next_run_at` suit dans le même mouvement : le désactiver désarme
+   * l'échéance, le réactiver la recalcule — avec la MÊME fonction que le
+   * serveur, sinon la ligne « prochain passage » afficherait une date pour en
+   * montrer une autre une seconde plus tard.
+   */
+  const toggleSeq = useRef(0);
+  const toggleEnabled = (enabled: boolean) => {
+    const seq = ++toggleSeq.current;
+    const previous = patchRoutineInCache(queryClient, routine.id, {
+      enabled,
+      next_run_at: optimisticNextRunAt(routine, enabled),
+    });
+    void updateRoutineApi(routine.id, { enabled })
+      .then(({ routine: saved }) => {
+        // Une bascule plus récente est partie entre-temps : sa réponse fait foi,
+        // pas celle-ci — deux clics rapides ne doivent pas finir à l'envers.
+        if (seq === toggleSeq.current) patchRoutineInCache(queryClient, saved.id, saved);
+      })
+      .catch((err) => {
+        if (seq !== toggleSeq.current) return;
+        if (previous) queryClient.setQueryData(routinesQueryKey(), previous);
+        toast.error((err as Error).message);
+      });
   };
 
   const remove = async () => {
@@ -305,10 +351,14 @@ export function RoutineDetail({
                 chercher dans un menu. */}
             <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
               {t("enabledLabel")}
+              {/* Pas de `disabled` pendant sa propre écriture : elle est
+                  optimiste, il n'y a rien à attendre. `busy` ne le grise que
+                  pour les autres gestes (un lancement, une suppression en
+                  cours), où l'état pourrait changer sous la main. */}
               <Switch
                 checked={routine.enabled}
                 disabled={busy}
-                onCheckedChange={(enabled) => void patch({ enabled })}
+                onCheckedChange={toggleEnabled}
               />
             </label>
             <DropdownMenu>
@@ -364,12 +414,12 @@ export function RoutineDetail({
           titre de trois mots et une heure, tout tassé en haut de l'écran — et
           « ce qu'elle fait » était précisément ce qu'on venait vérifier. */}
       <div className="flex shrink-0 flex-col gap-1 px-4 pb-2">
-        <p className="text-xs text-muted-foreground">
-          {cadence}
-          {nextAt && routine.enabled
-            ? ` · ${t("nextRunAt", { date: nextAt })}`
-            : ""}
-        </p>
+        {/* La cadence SEULE : le prochain passage descend dans la liste des
+            exécutions, à sa place chronologique. Les deux tenaient sur la même
+            ligne, et « Tous les jours à 18 h · prochain passage 7 août » se
+            lisait comme une seule information alors que c'en est deux — une
+            règle, et une date qui la suit. */}
+        <p className="text-xs text-muted-foreground">{cadence}</p>
 
         {routine.last_error ? (
           <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -398,10 +448,15 @@ export function RoutineDetail({
         )}
       </div>
 
-      {/* ── Exécutions précédentes : UNE LIGNE par passage ─────────────
+      {/* ── Exécutions : UNE LIGNE par passage ─────────────────────────
           Pleine largeur, sa date et l'état de sa pull request. Pas le fil :
           empiler des conversations dans une liste rend les deux illisibles.
           Ouvrir une ligne ouvre le fil, à sa place.
+
+          En TÊTE, le passage à VENIR — la même liste, un cran plus tôt dans le
+          temps. Grisé et sans chevron : il n'a rien produit, il n'y a rien à
+          ouvrir. Il ne paraît que si la routine est armée : une routine en
+          pause n'a pas de prochain passage, et en annoncer un serait faux.
 
           Absentes pendant l'ÉDITION : on règle la routine ou on lit ce qu'elle
           a produit, jamais les deux en même temps — et le formulaire a besoin
@@ -410,7 +465,7 @@ export function RoutineDetail({
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="shrink-0 px-4 pt-2 pb-1.5">
             <h3 className="text-xs font-medium text-muted-foreground">
-              {t("previousRuns")}
+              {t("runs")}
             </h3>
           </div>
 
@@ -420,88 +475,109 @@ export function RoutineDetail({
                 <Skeleton key={i} className="h-10 rounded-md" />
               ))}
             </div>
-          ) : runs.length === 0 ? (
-            <div className="px-4 py-8">
-              {/* Le geste EST là où le vide se constate : « elle n'a pas encore
-                tourné » appelle « alors fais-la tourner », pas un détour par le
-                menu. Réservé au propriétaire, comme le reste. */}
-              <EmptyScene icon={Play} title={t("noRunsYet")} size="compact">
-                {isOwner ? (
-                  <Button
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => void runNow()}
-                  >
-                    <Play className="size-4" />
-                    {t("runNow")}
-                  </Button>
-                ) : null}
-              </EmptyScene>
-            </div>
           ) : (
             <div
               ref={listFade.ref}
               {...listFade.scrollProps}
               className="min-h-0 flex-1 overflow-y-auto"
             >
-              <ul className="flex flex-col divide-y divide-border border-t border-border">
-                {runs.map((run) => (
-                  /* La ligne entière ouvre le passage — sauf le badge de pull
-                   request, qui mène à la PR. D'où le bouton ÉTENDU sous la
-                   ligne plutôt qu'autour d'elle : un bouton dans un bouton n'est
-                   pas du HTML valide, et le badge doit rester cliquable pour
-                   lui-même. Les éléments `relative` qui suivent se peignent
-                   au-dessus de lui et gardent leurs propres clics. */
-                  <li
-                    key={run.id}
-                    className="relative flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setOpenRunId(run.id)}
-                      aria-label={t("openRun", {
-                        date: format.dateTime(new Date(run.created_at), {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        }),
-                      })}
-                      className="absolute inset-0 outline-none"
-                    />
-                    <span className="pointer-events-none relative min-w-0 flex-1 truncate text-sm">
-                      {format.dateTime(new Date(run.created_at), {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </span>
-                    {/* L'ÉTAT de la pull request quand il y en a une — c'est ce
-                      qu'un passage produit de visible, et c'est aussi le chemin
-                      vers elle. Sinon l'état du run, qui répond à la même
-                      question d'un cran plus bas. */}
-                    {run.pr_state ? (
+              {/* Rien à encadrer quand il n'y a ni passage à venir ni passage
+                  passé : la liste disparaît entièrement plutôt que de laisser
+                  son filet du haut tout seul au-dessus de l'écran vide. */}
+              {showNextRun || runs.length > 0 ? (
+                <ul className="flex flex-col divide-y divide-border border-t border-border">
+                  {showNextRun ? (
+                    /* Le passage à VENIR. Tout est en `text-muted-foreground` :
+                       c'est ce qui le distingue d'un passage qui a eu lieu, sans
+                       lui donner ni icône ni badge à part. Aucun geste — la ligne
+                       n'est pas cliquable, il n'y a encore rien à lire. */
+                    <li className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground">
+                      <span className="min-w-0 flex-1 truncate">
+                        {t("nextRunAt", { date: nextAt as string })}
+                      </span>
+                    </li>
+                  ) : null}
+                  {runs.map((run) => (
+                    /* La ligne entière ouvre le passage — sauf le badge de pull
+                     request, qui mène à la PR. D'où le bouton ÉTENDU sous la
+                     ligne plutôt qu'autour d'elle : un bouton dans un bouton n'est
+                     pas du HTML valide, et le badge doit rester cliquable pour
+                     lui-même. Les éléments `relative` qui suivent se peignent
+                     au-dessus de lui et gardent leurs propres clics. */
+                    <li
+                      key={run.id}
+                      className="relative flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
+                    >
                       <button
                         type="button"
-                        onClick={() =>
-                          router.push(`/pull-requests?run=${run.id}`)
-                        }
-                        className="relative shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <PrStateBadge state={run.pr_state} icon />
-                      </button>
-                    ) : (
-                      <span className="pointer-events-none relative shrink-0 text-xs text-muted-foreground">
-                        {tAgents(
-                          agentSessionStatusKey({
-                            status: run.status,
-                            prNumber: run.pr_number,
-                            prState: run.pr_state,
+                        onClick={() => setOpenRunId(run.id)}
+                        aria-label={t("openRun", {
+                          date: format.dateTime(new Date(run.created_at), {
+                            dateStyle: "medium",
+                            timeStyle: "short",
                           }),
-                        )}
+                        })}
+                        className="absolute inset-0 outline-none"
+                      />
+                      <span className="pointer-events-none relative min-w-0 flex-1 truncate text-sm">
+                        {format.dateTime(new Date(run.created_at), {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
                       </span>
-                    )}
-                    <ChevronRight className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
-                  </li>
-                ))}
-              </ul>
+                      {/* L'ÉTAT de la pull request quand il y en a une — c'est ce
+                        qu'un passage produit de visible, et c'est aussi le chemin
+                        vers elle. Sinon l'état du run, qui répond à la même
+                        question d'un cran plus bas. */}
+                      {run.pr_state ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            router.push(`/pull-requests?run=${run.id}`)
+                          }
+                          className="relative shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <PrStateBadge state={run.pr_state} icon />
+                        </button>
+                      ) : (
+                        <span className="pointer-events-none relative shrink-0 text-xs text-muted-foreground">
+                          {tAgents(
+                            agentSessionStatusKey({
+                              status: run.status,
+                              prNumber: run.pr_number,
+                              prState: run.pr_state,
+                            }),
+                          )}
+                        </span>
+                      )}
+                      <ChevronRight className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {/* Le geste EST là où le vide se constate : « elle n'a pas encore
+                  tourné » appelle « alors fais-la tourner », pas un détour par
+                  le menu. Réservé au propriétaire, comme le reste. Il reste
+                  sous la ligne du prochain passage quand elle est là : les deux
+                  disent des choses différentes — ce qui n'a pas eu lieu, et ce
+                  qu'on peut faire tout de suite sans attendre. */}
+              {runs.length === 0 ? (
+                <div className="px-4 py-8">
+                  <EmptyScene icon={Play} title={t("noRunsYet")} size="compact">
+                    {isOwner ? (
+                      <Button
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void runNow()}
+                      >
+                        <Play className="size-4" />
+                        {t("runNow")}
+                      </Button>
+                    ) : null}
+                  </EmptyScene>
+                </div>
+              ) : null}
             </div>
           )}
         </div>
@@ -555,6 +631,24 @@ function PrHeaderAction({ run }: { run: AgentRunSummary }) {
       {t("openPullRequest")}
     </Button>
   );
+}
+
+/**
+ * L'échéance que le serveur VA écrire, calculée ici pour ne pas l'attendre :
+ * `null` quand on met la routine en pause (l'échéance est désarmée), la
+ * prochaine occurrence quand on la réveille. C'est `updateRoutine` qui fait
+ * foi, mais il fait exactement ce calcul-là, avec cette fonction-là.
+ *
+ * Une cadence que `nextRunAt` refuse (fuseau retiré d'ICU, donnée bricolée) ne
+ * se devine pas : on garde la valeur en place et on laisse la réponse trancher.
+ */
+function optimisticNextRunAt(routine: Routine, enabled: boolean): string | null {
+  if (!enabled) return null;
+  try {
+    return nextRunAt(routineSchedule(routine), new Date()).toISOString();
+  } catch {
+    return routine.next_run_at;
+  }
 }
 
 /** La cadence d'une routine, telle que le calcul et la phrase l'attendent. */

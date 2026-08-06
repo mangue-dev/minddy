@@ -495,24 +495,51 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
 
   const { data } = await service
     .from("agent_routines")
-    .select("*")
+    // Même garde que le balayage du cron : un projet à la corbeille sort de la
+    // liste. Le chemin « membre » ne peut pas filtrer `deleted_at` lui-même
+    // (`project_members` ne le porte pas), et sans cette jointure un membre
+    // lisait dans la colonne une routine dont le détail répond 404 —
+    // `getProjectAccess` écarte les projets corbeillés.
+    .select("*, projects!inner(deleted_at)")
+    .is("projects.deleted_at", null)
     .in("project_id", [...ids])
     .order("created_at", { ascending: false });
-  return (data ?? []) as Routine[];
+  return ((data ?? []) as Array<Routine & { projects?: unknown }>).map(
+    ({ projects: _joined, ...routine }) => routine as Routine,
+  );
 }
 
-/** Les routines dont l'échéance est passée — le balayage du cron. */
+/**
+ * Les routines dont l'échéance est passée — le balayage du cron.
+ *
+ * **Un projet à la CORBEILLE ne fait plus travailler personne.** La suppression
+ * d'un projet est douce (`deleted_at`, MIN-133) : la routine, elle, survit à sa
+ * ligne — et sans ce filtre elle partirait tous les lundis sur un projet que
+ * son propriétaire croit supprimé, en dépensant son budget, sans figurer nulle
+ * part dans l'écran (`listRoutinesForUser` écarte les projets corbeillés,
+ * comme `getProjectAccess`). Même doctrine que le moteur d'automatisations,
+ * qui écarte les projets corbeillés de son propre balayage.
+ *
+ * La jointure est INTERNE et le filtre est DANS la requête, jamais après :
+ * écartée en JS, une routine de projet corbeillé garderait sa place en tête de
+ * la fenêtre (son échéance ne bouge plus, donc elle trie toujours première) et
+ * affamerait les routines vivantes.
+ */
 export async function dueRoutines(limit = 20): Promise<Routine[]> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_routines")
-    .select("*")
+    .select("*, projects!inner(deleted_at)")
+    .is("projects.deleted_at", null)
     .eq("enabled", true)
     .not("next_run_at", "is", null)
     .lte("next_run_at", new Date().toISOString())
     .order("next_run_at", { ascending: true })
     .limit(limit);
-  return (data ?? []) as Routine[];
+  // La jointure ajoute une clé au retour : elle ne voyage pas plus loin.
+  return ((data ?? []) as Array<Routine & { projects?: unknown }>).map(
+    ({ projects: _joined, ...routine }) => routine as Routine,
+  );
 }
 
 /**
@@ -555,6 +582,26 @@ export async function claimRoutine(
     return { claimed: false, nextRunAt: null };
   }
   return { claimed: !!data, nextRunAt: next };
+}
+
+/**
+ * « Lancer maintenant » : le passage n'est pas celui du calendrier, mais c'en
+ * est un — `last_run_at` le dit, et l'alerte du passage précédent s'éteint,
+ * exactement comme le fait le cron quand son lancement part.
+ *
+ * Sans ça, un passage déclenché à la main laissait `last_run_at` sur l'échéance
+ * d'avant, et les deux surfaces qui le rendent (`list_routines` du chat et du
+ * MCP, toutes deux annoncées comme « quand elle a tourné pour la dernière
+ * fois ») répondaient à côté. **`next_run_at` n'est pas touché** : essayer sa
+ * routine un mardi ne fait pas sauter le lundi suivant.
+ */
+export async function stampRoutineLaunched(routineId: string): Promise<void> {
+  const service = getServiceClient();
+  const { error } = await service
+    .from("agent_routines")
+    .update({ last_run_at: new Date().toISOString(), last_error: null })
+    .eq("id", routineId);
+  if (error) console.error("[routines] stamp launch failed:", error.message);
 }
 
 /**

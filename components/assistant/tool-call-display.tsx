@@ -555,12 +555,14 @@ const TOOL_META: Record<string, ToolMeta> = {
   // ── Routines (MIN-185) ───────────────────────────────────────────────
   create_routine: {
     icon: CalendarClock,
-    getLabel: (args, _result, success, status, t) => {
+    getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("creatingRoutine");
       if (!success) return t("createRoutineFailed");
-      // Le titre EST ce qu'on vient de poser : le montrer évite d'aller
-      // vérifier dans l'onglet ce que Numo a compris.
-      const title = typeof args.title === "string" ? args.title : "";
+      // Le titre vient du RÉSULTAT, jamais des arguments : il n'y a pas de
+      // champ « nom » dans le tool — minddy l'écrit lui-même à partir de
+      // l'instruction. Le lire dans `args` ne rendait donc jamais rien.
+      const routine = result?.routine as Record<string, unknown> | undefined;
+      const title = typeof routine?.title === "string" ? routine.title : "";
       return title ? t("routineCreatedNamed", { title }) : t("routineCreated");
     },
   },

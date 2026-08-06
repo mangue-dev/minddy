@@ -120,10 +120,13 @@ export function RoutinesPanel({
      * Hors filtre, TOUS les projets où l'on peut poser une routine ont leur
      * accordéon, même vides. C'est de là que part la création : le « + » vit
      * dans l'en-tête d'un projet, et un projet sans routine n'en avait donc
-     * aucun — il fallait deviner que le « + » de la colonne existait pour
-     * commencer sa première. Les projets où l'on est simple MEMBRE n'entrent
-     * que s'ils ont des routines à lire : un en-tête vide sans rien à voir ni
-     * rien à faire n'est qu'une ligne de plus à parcourir.
+     * aucun. Les projets où l'on est simple MEMBRE n'entrent que s'ils ont des
+     * routines à lire : un en-tête vide sans rien à voir ni rien à faire n'est
+     * qu'une ligne de plus à parcourir.
+     *
+     * Ces accordéons-là ne se voient qu'à partir de la PREMIÈRE routine : tant
+     * qu'il n'y en a aucune, c'est l'état vide qui tient la colonne, et c'est
+     * son bouton qui ouvre le wizard.
      */
     const seen = new Set(found.map((g) => g.key));
     const extra = projects
@@ -160,6 +163,13 @@ export function RoutinesPanel({
         : anyEligible
           ? null
           : "emptyNotOwner";
+  /**
+   * Ce que dit l'écran quand il n'y a AUCUNE routine — la même phrase des deux
+   * côtés, la colonne et le volet. Un mur qui empêche d'en poser une (aucun
+   * projet, aucun dépôt lié, pas propriétaire) le dit à la place : « créez
+   * votre première routine » à quelqu'un qui ne le peut pas serait une impasse.
+   */
+  const emptyTitle = emptyReason ? t(emptyReason as "emptyNoRepo") : t("emptyTitle");
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: routinesQueryKey() });
 
@@ -177,20 +187,22 @@ export function RoutinesPanel({
         </div>
       ))}
     </div>
-  ) : routines.length === 0 && groups.length === 0 ? (
-    /* Un seul appel à l'action : le wizard. Les exemples pré-écrits vivent DANS
+  ) : routines.length === 0 ? (
+    /* AUCUNE routine, quels que soient les projets : l'état vide passe devant
+       les accordéons. Un projet éligible mais vide a bien son en-tête et son
+       « + » — mais uniquement à partir de la deuxième routine : tant qu'il n'y
+       en a aucune, une pile d'accordéons vides dit moins bien « il n'y a rien
+       ici » qu'une phrase et un bouton.
+
+       Un seul appel à l'action : le wizard. Les exemples pré-écrits vivent DANS
        son étape `job` — les proposer deux fois obligerait à les tenir à jour à
        deux endroits. */
     <div className="px-3 py-6">
-      <EmptyScene
-        icon={CalendarClock}
-        title={emptyReason ? t(emptyReason as "emptyNoRepo") : t("emptyTitle")}
-        size="compact"
-      >
+      <EmptyScene icon={CalendarClock} title={emptyTitle} size="compact">
         {anyEligible ? (
           <Button size="sm" onClick={() => openWizard()}>
             <Plus />
-            {t("newRoutine")}
+            {t("createFirst")}
           </Button>
         ) : null}
       </EmptyScene>
@@ -327,6 +339,26 @@ export function RoutinesPanel({
               void refresh();
             }}
           />
+        ) : loading ? (
+          /* Rien pendant le chargement : la colonne montre déjà ses squelettes,
+             et annoncer « aucune routine » avant d'avoir la réponse ferait
+             clignoter un état vide sur une liste qui n'est pas vide. */
+          null
+        ) : routines.length === 0 ? (
+          /* AUCUNE routine : le volet dit la MÊME chose que la colonne, en
+             grand. C'est la surface qu'on regarde en arrivant sur l'onglet —
+             y laisser « choisissez une routine » quand il n'y en a aucune
+             envoyait chercher dans une colonne vide. */
+          <div className="flex flex-1 flex-col items-center justify-center p-6">
+            <EmptyScene icon={CalendarClock} title={emptyTitle}>
+              {anyEligible ? (
+                <Button onClick={() => openWizard()}>
+                  <Plus className="size-4" />
+                  {t("createFirst")}
+                </Button>
+              ) : null}
+            </EmptyScene>
+          </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6">
             <p className="text-sm text-muted-foreground">{t("noSelection")}</p>

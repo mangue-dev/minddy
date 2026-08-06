@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 
-import { fetchRoutineRunsApi, fetchRoutinesApi } from "./routines-api";
+import { fetchRoutineRunsApi, fetchRoutinesApi, type Routine } from "./routines-api";
 import { isAgentRunWorking } from "./agent-api";
 
 /**
@@ -24,6 +24,35 @@ export function routinesQueryKey() {
 
 export function routineRunsQueryKey(routineId: string) {
   return ["routines", routineId, "runs"] as const;
+}
+
+/**
+ * Écrit une routine DANS LE CACHE, sans requête — le socle de la bascule
+ * OPTIMISTE de l'interrupteur (MIN-185).
+ *
+ * La colonne et le volet de détail lisent la même entrée : un seul écrit met
+ * les deux à jour dans le même rendu, sans attendre le serveur. Rend
+ * l'instantané d'AVANT, à réinstaller tel quel si l'écriture est refusée —
+ * remettre « à la main » le champ qu'on croit avoir changé raterait tout ce que
+ * le serveur change avec lui (ici `next_run_at`).
+ *
+ * `undefined` = la liste n'est pas encore en cache : il n'y a alors rien à
+ * annuler, et le prochain chargement dira la vérité.
+ */
+export function patchRoutineInCache(
+  queryClient: QueryClient,
+  routineId: string,
+  fields: Partial<Routine>,
+): { routines: Routine[] } | undefined {
+  const previous = queryClient.getQueryData<{ routines: Routine[] }>(routinesQueryKey());
+  if (!previous) return undefined;
+  queryClient.setQueryData(routinesQueryKey(), {
+    ...previous,
+    routines: previous.routines.map((r) =>
+      r.id === routineId ? { ...r, ...fields } : r,
+    ),
+  });
+  return previous;
 }
 
 export function useRoutinesQuery() {

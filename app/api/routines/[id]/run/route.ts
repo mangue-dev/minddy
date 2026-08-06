@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getRoutineForUser } from "@/lib/server/routines";
+import { getRoutineForUser, stampRoutineLaunched } from "@/lib/server/routines";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 
 /**
@@ -71,5 +71,8 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     routineId: routine.id,
   });
   if (!result.ok) return launchErrorResponse(result);
+  // Le passage est parti : la routine retient qu'elle a tourné (et l'alerte du
+  // passage précédent s'éteint), sans que son calendrier bouge d'un pouce.
+  await stampRoutineLaunched(routine.id);
   return NextResponse.json({ run: result.run });
 }

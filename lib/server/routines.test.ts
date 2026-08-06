@@ -205,6 +205,7 @@ const {
   createRoutine,
   deleteRoutine,
   listRoutinesForUser,
+  stampRoutineLaunched,
   updateRoutine,
 } = await import("./routines");
 
@@ -414,6 +415,21 @@ describe("listRoutinesForUser", () => {
     world.routines = [makeRoutine()];
     const rows = await listRoutinesForUser(MEMBER_ID);
     expect(rows.map((r) => r.id)).toEqual([ROUTINE_ID]);
+  });
+});
+
+describe("stampRoutineLaunched", () => {
+  it("note le passage à la main SANS déplacer l'échéance", async () => {
+    // « Lancer maintenant » ne passe pas par le claim du cron : sans cette
+    // écriture, `last_run_at` restait sur le passage d'avant, et les deux
+    // `list_routines` (chat, MCP) annonçaient la mauvaise date. L'échéance, en
+    // revanche, appartient à la cadence — essayer sa routine un mardi ne doit
+    // pas faire sauter le lundi suivant.
+    world.routines = [makeRoutine({ next_run_at: "2030-01-07T08:00:00.000Z", last_error: "quota" })];
+    await stampRoutineLaunched(ROUTINE_ID);
+    expect(world.routines[0].last_run_at).toBeTruthy();
+    expect(world.routines[0].last_error).toBeNull();
+    expect(world.routines[0].next_run_at).toBe("2030-01-07T08:00:00.000Z");
   });
 });
 

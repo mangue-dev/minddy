@@ -565,6 +565,16 @@ export function AgentsPage() {
     setSelectedRoutineId(routineParam);
     setMobileDetail(true);
   }, [routineParam]);
+  // `?tab=routines` ARRIVÉ APRÈS le montage — la palette de commandes pousse
+  // cette adresse, et depuis /agents elle ne remonte pas la page : l'état
+  // initial ne rejoue pas, donc sans cet effet le geste ne faisait rien du
+  // tout. À SENS UNIQUE : quitter l'onglet efface le paramètre (`switchTab`),
+  // et un effet qui retomberait sur « conversations » à chaque URL sans `tab`
+  // annulerait le clic qui vient de l'ouvrir.
+  useEffect(() => {
+    if (tabParam !== "routines") return;
+    setTab("routines");
+  }, [tabParam]);
 
   // Un brouillon POSÉ ouvre son volet, même si l'URL, elle, ne bouge pas :
   // `router.push` vers l'adresse COURANTE est inerte, donc les effets de params
@@ -732,9 +742,16 @@ export function AgentsPage() {
   const switchTab = (next: "sessions" | "routines") => {
     setTab(next);
     setMobileDetail(false);
-    // L'URL cesse de désigner l'onglet qu'on vient de quitter, sinon un
-    // rechargement rouvrirait l'autre.
-    if (tabParam || routineParam) router.replace("/agents");
+    // L'URL PORTE l'onglet : un rechargement rouvre celui qu'on regardait, et
+    // l'adresse se partage. En repartant vers les conversations, le paramètre
+    // s'efface — il désignerait sinon l'onglet qu'on vient de quitter. La
+    // routine ouverte sort de l'adresse dans les deux cas : c'est l'onglet
+    // qu'on désigne, pas une sélection.
+    if (next === "routines") {
+      if (tabParam !== "routines" || routineParam) router.replace("/agents?tab=routines");
+    } else if (tabParam || routineParam) {
+      router.replace("/agents");
+    }
   };
 
   // ── Onglet ROUTINES (MIN-185) : sa propre liste, son propre détail ────
