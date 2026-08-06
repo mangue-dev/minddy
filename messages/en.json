@@ -275,6 +275,7 @@
     "add": "Add a resource",
     "addFile": "Attachment",
     "addLink": "Link",
+    "addLinkSubmit": "Add link",
     "linkDialogTitle": "Add a link",
     "linkPlaceholder": "https://example.com",
     "linkInvalid": "Enter a valid web address.",

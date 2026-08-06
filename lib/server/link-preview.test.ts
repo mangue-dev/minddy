@@ -83,6 +83,16 @@ describe("resolveLinkPreview — ce qui aboutit", () => {
     expect(preview.title).toBe("Linear");
   });
 
+  it("préfixe aussi un hôte à port, qui n'est pas un schéma", async () => {
+    // `exemple.com:8080` porte un `:` sans porter de schéma. Le confondre avec
+    // un protocole exotique le faisait refuser côté serveur alors même que
+    // l'app venait de l'accepter.
+    fetchMock.mockResolvedValue(htmlResponse("<title>App</title>"));
+    const preview = await resolveLinkPreview("exemple.com:8080/docs");
+    expect(preview.url).toBe("https://exemple.com:8080/docs");
+    expect(preview.title).toBe("App");
+  });
+
   it("prend og:title devant <title>", async () => {
     fetchMock.mockResolvedValue(
       htmlResponse(

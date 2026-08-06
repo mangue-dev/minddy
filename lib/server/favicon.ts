@@ -2,6 +2,7 @@ import "server-only";
 
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { withUrlScheme } from "@/lib/url-normalize";
 
 /**
  * Résolution du favicon d'un site live (MIN-62), portée du pattern AutoKap
@@ -247,9 +248,10 @@ export interface LinkPreview {
  * parce qu'un lien reste un lien valide même si son site est éteint.
  */
 export async function resolveLinkPreview(siteUrl: string): Promise<LinkPreview> {
-  const normalized = /^[a-z][a-z0-9+.-]*:/i.test(siteUrl.trim())
-    ? siteUrl.trim()
-    : `https://${siteUrl.trim()}`;
+  // Même complétion qu'au clavier, et par le même code : `minddy_add_resource`
+  // et le tool `add_resource` de Numo arrivent ici SANS être passés par le
+  // dialog, et doivent accepter « linear.app » comme lui.
+  const normalized = withUrlScheme(siteUrl);
 
   let base: URL | null = null;
   let candidates: IconCandidate[] = [];

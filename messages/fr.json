@@ -275,6 +275,7 @@
     "add": "Ajouter une ressource",
     "addFile": "Pièce jointe",
     "addLink": "Lien",
+    "addLinkSubmit": "Ajouter le lien",
     "linkDialogTitle": "Ajouter un lien",
     "linkPlaceholder": "https://exemple.com",
     "linkInvalid": "Saisissez une adresse web valide.",

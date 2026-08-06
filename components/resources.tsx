@@ -27,6 +27,7 @@ import {
   X,
 } from "lucide-react";
 import type { ResourceKind } from "@/lib/types";
+import { normalizeWebUrl } from "@/lib/url-normalize";
 import type { PendingResource } from "@/lib/use-attachment-uploads";
 
 /**
@@ -176,8 +177,9 @@ export function AddResourceButton({
 
 /**
  * « Coller un lien » : un champ, une validation, rien de plus. `https://` est
- * préfixé quand le schéma manque — c'est ce que les gens collent le plus
- * souvent, et le refuser pour ça ne rendrait service à personne.
+ * préfixé quand le schéma manque ([url-normalize.ts](../lib/url-normalize.ts)) —
+ * personne ne tape un schéma, et refuser « linear.app » pour ça reviendrait à
+ * faire faire à la main ce que la machine sait compléter.
  */
 export function AddLinkDialog({
   open,
@@ -210,7 +212,7 @@ export function AddLinkDialog({
           className="flex flex-col gap-3"
           onSubmit={async (e) => {
             e.preventDefault();
-            const url = normalizeUrl(value);
+            const url = normalizeWebUrl(value);
             if (!url) {
               setError(t("linkInvalid"));
               return;
@@ -227,10 +229,17 @@ export function AddLinkDialog({
             }
           }}
         >
+          {/* PAS `type="url"` : le navigateur validerait le champ AVANT le
+              submit, et refuserait « linear.app » — précisément ce que
+              `normalizeWebUrl` est là pour compléter. `inputMode` suffit à
+              obtenir le clavier URL sur mobile, sans la validation native. */}
           <Input
             autoFocus
-            type="url"
+            type="text"
             inputMode="url"
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
             value={value}
             onChange={(e) => {
               setValue(e.target.value);
@@ -243,31 +252,13 @@ export function AddLinkDialog({
           <DialogFooter>
             <Button type="submit" disabled={busy || !value.trim()}>
               {busy && <Spinner className="size-4" />}
-              {t("addLink")}
+              {t("addLinkSubmit")}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
-}
-
-/** `minddy.app` → `https://minddy.app`; null when it's not an http(s) URL at
-    all (the server checks again — this only spares a round trip). */
-function normalizeUrl(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`;
-  try {
-    const url = new URL(candidate);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    if (!url.hostname.includes(".")) return null;
-    return candidate;
-  } catch {
-    return null;
-  }
 }
 
 /** Forward pasted files into a composer's upload queue. */
