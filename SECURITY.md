@@ -96,6 +96,10 @@ par ce chemin.
   - tokens OAuth GitLab → `GIT_TOKEN_ENCRYPTION_SECRET` /
     `GITLAB_TOKEN_ENCRYPTION_SECRET`
   - clés IA « BYOK » → `AI_KEY_ENCRYPTION_SECRET`
+  - secrets SSO des boards de feedback → `FEEDBACK_SSO_ENCRYPTION_SECRET`
+    (MIN-119). Chiffrés et non hachés parce qu'ils sont **partagés** avec le
+    backend de l'éditeur, qui doit pouvoir les relire ; qui les détient peut
+    forger l'identité de n'importe quel visiteur du board.
   - clés API / grants OAuth → stockés en **sha256** (jamais réversibles).
 - **Pas de pgcrypto colonne :** inutile ici — les secrets sont déjà chiffrés
   côté app, et email/nom vivent dans `auth.users` (chiffré par Supabase).

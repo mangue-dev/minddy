@@ -7,7 +7,7 @@ est un sous-traitant au sens de l'article 28. Il faut, pour chacun : un contrat
 de sous-traitance (DPA) accepté, une base de transfert valide s'il traite hors
 de l'Union européenne, et la garantie qu'il n'agit que sur instruction.
 
-**Dernière revue : 30 juillet 2026.** À reprendre à chaque ajout de prestataire,
+**Dernière revue : 6 août 2026.** À reprendre à chaque ajout de prestataire,
 et au moins une fois par an.
 
 > **⚠️ Colonne « DPA » à confirmer.** Le tableau ci-dessous recense les DPA que
@@ -30,7 +30,7 @@ et au moins une fois par an.
 | **Supabase** | Base de données, authentification, stockage de fichiers | Toutes les données applicatives | UE — Irlande (`eu-west-1`) | Non | — | [DPA](https://supabase.com/legal/dpa) — à confirmer |
 | **Vercel** | Hébergement de l'application, exécution des fonctions, bacs à sable de l'agent | Données en transit ; journaux de requêtes | États-Unis, avec points de présence mondiaux | Oui | CCT + DPF | [DPA](https://vercel.com/legal/dpa) — à confirmer |
 | **Stripe** | Paiement et abonnements | E-mail, identifiants client et abonnement, données de paiement (chez Stripe uniquement) | Irlande (entité UE) + États-Unis | Oui | CCT intragroupe | [DPA](https://stripe.com/legal/dpa) — à confirmer |
-| **OpenRouter** | Routage des appels aux modèles de langage | Contenu transmis aux modèles (tickets, code, messages) | États-Unis | Oui | CCT | [Politique](https://openrouter.ai/privacy) — à confirmer |
+| **OpenRouter** | Routage des appels aux modèles de langage | Contenu transmis aux modèles (tickets, code, messages, **retours déposés sur un board public et audio de leur dictée**) | États-Unis | Oui | CCT | [Politique](https://openrouter.ai/privacy) — à confirmer |
 | **PostHog** | Mesure d'audience | Événements d'usage, identifiant de mesure | UE — Allemagne (`eu.posthog.com`) | Non | — | [DPA](https://posthog.com/dpa) — à confirmer |
 | **Resend** | E-mails transactionnels | Adresse de destination, contenu du message | États-Unis | Oui | CCT | [DPA](https://resend.com/legal/dpa) — à confirmer |
 | **GitHub** | Connexion aux dépôts, *pull requests* de l'agent | Identifiant du compte, contenu du dépôt relié | États-Unis | Oui | CCT (Microsoft) | [DPA](https://github.com/customer-terms/github-data-protection-agreement) — à confirmer |
@@ -93,6 +93,16 @@ Le contenu transmis aux modèles (texte des tickets, commentaires, extraits de
 code lus par l'agent) sort du périmètre européen à cet endroit. C'est le
 transfert le plus sensible du service et il doit être annoncé comme tel dans la
 politique de confidentialité.
+
+**Y compris les retours des boards publics** (traitement n° 6), et c'est le cas
+qui demande le plus d'attention : les personnes concernées ne sont pas des
+clients de minddy mais ceux de son client, elles n'ont accepté aucune condition
+d'utilisation, et le texte qu'elles écrivent part au modèle AVANT toute revue —
+donc avant que quoi que ce soit ait pu repérer qu'il contient des données
+personnelles. Trois appels au maximum par retour : la revue (modération,
+catégorisation, dédoublonnage, traduction), le calcul de l'embedding, et pour une
+dictée la transcription de l'audio puis la mise en forme du formulaire. Aucun de
+ces appels ne porte l'identité de l'auteur.
 
 - **Transfert hors UE** : oui — CCT.
 - **Rétention chez le fournisseur : variable, et hors du contrôle de minddy.**

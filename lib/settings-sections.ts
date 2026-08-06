@@ -19,6 +19,7 @@ import {
   Plug,
   Repeat,
   Settings2,
+  ShieldOff,
   Sparkles,
   Tags,
   Ticket,
@@ -112,6 +113,7 @@ export const SETTINGS_SECTIONS = {
   projectFeedbackApi: "project-feedback-api",
   projectFeedbackReview: "project-feedback-review",
   projectFeedbackTranslation: "project-feedback-translation",
+  projectFeedbackParticipants: "project-feedback-participants",
   projectGit: "project-git",
   projectImport: "project-import",
   projectIntegrations: "project-integrations",
@@ -529,6 +531,18 @@ export function useSettingsSections(): SettingsSection[] {
         keywords: [
           "feedback", "retours", "traduction", "translation", "translate",
           "langue", "language", "langues", "languages", "numo", "ia", "ai",
+        ],
+      }),
+      project({
+        id: SETTINGS_SECTIONS.projectFeedbackParticipants,
+        tab: "feedback",
+        icon: ShieldOff,
+        title: tSettings("feedbackParticipantsTitle"),
+        keywords: [
+          "feedback", "participants", "visiteurs", "visitors", "effacer",
+          "erase", "supprimer", "delete", "droit à l'oubli", "right to be forgotten",
+          "rgpd", "gdpr", "données personnelles", "donnees personnelles",
+          "personal data", "email",
         ],
       }),
       project({

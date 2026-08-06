@@ -57,6 +57,17 @@ export const RETENTION_DAYS = {
    * l'écran ne puissent pas diverger.
    */
   trash: TRASH_RETENTION_DAYS,
+  /**
+   * Identités de board qui n'ont RIEN produit : vérifiées par code puis plus
+   * rien — ni retour, ni vote, ni commentaire, ni session vivante. Leur adresse
+   * était conservée sans finalité, ce que l'article 5.1.e n'admet pas.
+   *
+   * 90 jours, soit la durée de vie d'une session de board : en deçà, la purge
+   * courrait après des gens encore connectés. Le tri lui-même est en SQL
+   * (`purge_dormant_feedback_identities`) — six « n'existe pas » que PostgREST
+   * ne sait pas exprimer.
+   */
+  dormantFeedbackIdentities: 90,
 } as const;
 
 export type RetentionKey = keyof typeof RETENTION_DAYS;
@@ -183,6 +194,21 @@ async function purgeExpiredFeedbackAuth(service: Service, now: Date) {
 }
 
 /**
+ * Identités de board dormantes (MIN-119, art. 5.1.e).
+ *
+ * Lot borné comme les autres : le balayage du lendemain reprend la suite. La
+ * fonction rend le nombre de lignes réellement supprimées.
+ */
+async function purgeDormantFeedbackIdentities(service: Service, now: Date) {
+  const { data, error } = await service.rpc("purge_dormant_feedback_identities", {
+    p_before: cutoff(RETENTION_DAYS.dormantFeedbackIdentities, now),
+    p_limit: 500,
+  });
+  if (error) throw error;
+  return typeof data === "number" ? data : 0;
+}
+
+/**
  * Charge utile des webhooks Stripe au-delà de `stripeWebhookPayload` jours.
  * `update`, pas `delete` : la ligne garde son rôle d'anti-rejeu.
  */
@@ -254,6 +280,9 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
     await step("agent_run_traces", () => purgeAgentRunTraces(service, now)),
     await step("oauth_authorization_codes", () => purgeExpiredOauthCodes(service, now)),
     await step("feedback_auth", () => purgeExpiredFeedbackAuth(service, now)),
+    await step("feedback_dormant_identities", () =>
+      purgeDormantFeedbackIdentities(service, now)
+    ),
     await step("stripe_webhook_payloads", () => stripPayloads(service, now)),
     await step("trash", () => purgeTrash(service, now)),
   ];

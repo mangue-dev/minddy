@@ -39,6 +39,11 @@ describe("RETENTION_DAYS", () => {
     ["agentRunTrace", 30, "traces des runs d'agent : 30 jours après la fin"],
     ["stripeWebhookPayload", 90, "charge utile des webhooks Stripe : 90 jours"],
     ["trash", 30, "corbeille : 30 jours avant suppression définitive"],
+    [
+      "dormantFeedbackIdentities",
+      90,
+      "participants de board sans contribution : 90 jours",
+    ],
   ] as const)("%s vaut %i jours — %s", (key, days, _promise) => {
     expect(RETENTION_DAYS[key]).toBe(days);
   });

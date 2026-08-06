@@ -45,6 +45,7 @@ import {
   useFeedbackBoardSettings,
   type BoardSettings,
 } from "@/components/feedback/feedback-settings-shared";
+import { FeedbackParticipantsGroup } from "@/components/feedback/feedback-participants-group";
 import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
 import { EmptyScene } from "@/components/empty-scene";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
@@ -341,6 +342,11 @@ export function ProjectFeedbackSettings({
         isOwner={isOwner}
         anchor={SETTINGS_SECTIONS.projectFeedbackTranslation}
       />
+
+      {/* ── Effacer un participant : le droit à l'oubli, outillé (MIN-119) ─
+          Après les trois canaux, parce que ça ne se règle pas — ça s'exerce,
+          une fois, quand quelqu'un le demande. */}
+      <FeedbackParticipantsGroup projectId={projectId} />
     </div>
   );
 }

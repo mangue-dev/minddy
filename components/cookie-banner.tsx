@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "mangue-ui/components/ui/button";
 import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-consent";
 import { useAnalytics } from "@/lib/use-analytics";
 import { localizedHref } from "@/lib/locale-href";
+import { SITE_URL } from "@/lib/site";
 import type { Locale } from "@/i18n/config";
 
 /**
@@ -48,12 +48,21 @@ export function CookieBanner() {
         <p className="text-sm font-semibold text-card-foreground">{t("title")}</p>
         <p className="text-xs text-muted-foreground">
           {t("description")}{" "}
-          <Link
-            href={localizedHref("/cookies", locale)}
+          {/* URL ABSOLUE, et une balise <a> plutôt qu'un <Link> : ce bandeau est
+              monté par le root layout, donc aussi sur un board de feedback servi
+              depuis le domaine de son éditeur (MIN-36). Là-bas, le proxy réécrit
+              tout ce qu'il ne reconnaît pas vers /f/<token>/… : un `/cookies`
+              relatif partait en 404, et le consentement se recueillait sans que
+              la personne puisse lire à quoi elle consent. Même correctif que la
+              mention d'information du board (app/f/[token]/feedback-auth.tsx). */}
+          <a
+            href={`${SITE_URL}${localizedHref("/cookies", locale)}`}
+            target="_blank"
+            rel="noreferrer"
             className="underline underline-offset-4 hover:text-foreground"
           >
             {t("learnMore")}
-          </Link>
+          </a>
         </p>
         <div className="flex gap-2">
           <Button size="sm" onClick={() => choose("accepted")}>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { cn } from "mangue-ui";
 import { MinddyLogo } from "@/components/minddy-logo";
+import { SITE_URL } from "@/lib/site";
 import type { PublicSiteTab } from "@/lib/feedback/types";
 
 /**
@@ -12,6 +13,15 @@ import type { PublicSiteTab } from "@/lib/feedback/types";
  * projet), un slot d'actions à droite et la mention « made with minddy ».
  * Deux modes de hauteur : fullHeight (h-dvh, le contenu gère son overflow —
  * kanban) ou page scrollable naturelle (min-h-dvh — board de feedback).
+ *
+ * PIED DE PAGE LÉGAL (RGPD art. 13). Il tient en un lien, et il est ici plutôt
+ * que dans le board parce que le besoin est le même sur les deux surfaces : ce
+ * sont des pages où minddy traite les données de gens qui n'ont pas de compte
+ * chez lui. La mention au point de collecte du board ne vit, elle, que dans le
+ * dialogue de vérification par email — un visiteur arrivé par SSO ne le voit
+ * jamais (son identité est posée par le backend de l'éditeur), et un simple
+ * lecteur non plus, alors qu'il reçoit le bandeau cookies. URL absolue : sur un
+ * domaine personnalisé, `/privacy` ne mène nulle part.
  */
 export async function PublicPageShell({
   heading,
@@ -88,6 +98,23 @@ export async function PublicPageShell({
         )}
       </header>
       {children}
+      <footer className="shrink-0 border-t border-border/60">
+        <div
+          className={cn(
+            containerClass,
+            "flex items-center justify-end px-4 py-3 desktop:px-6"
+          )}
+        >
+          <a
+            href={`${SITE_URL}/privacy`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            {t("privacyLink")}
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -52,6 +52,15 @@ export default async function CookiesPage() {
                 purpose: t("essentialCookie2Purpose"),
                 duration: t("essentialCookie2Duration"),
               },
+              // MIN-119 — la session d'un board public de feedback. Elle n'est
+              // pas déposée sur minddy.app mais sur le board qu'on visite, y
+              // compris sous le domaine de son éditeur : raison de plus pour la
+              // déclarer, c'est le seul endroit qui en parle.
+              {
+                name: t("essentialCookie3Name"),
+                purpose: t("essentialCookie3Purpose"),
+                duration: t("essentialCookie3Duration"),
+              },
             ]}
           />
 

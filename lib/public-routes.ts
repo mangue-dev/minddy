@@ -141,7 +141,7 @@ export const PUBLIC_ROUTES = [
     en: "/privacy",
     fr: "/fr/confidentialite",
     namespace: "Privacy",
-    lastModified: "2026-08-05",
+    lastModified: "2026-08-06",
     priority: 0.3,
   },
   {
@@ -149,7 +149,7 @@ export const PUBLIC_ROUTES = [
     en: "/cookies",
     fr: "/fr/cookies",
     namespace: "Cookies",
-    lastModified: "2026-07-23",
+    lastModified: "2026-08-06",
     priority: 0.3,
   },
 ] as const satisfies ReadonlyArray<PublicRoute>;

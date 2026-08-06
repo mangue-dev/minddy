@@ -104,6 +104,13 @@ export default async function PrivacyPage() {
       <Section title={t("processorTitle")}>
         <P>{t("processorP1")}</P>
         <P>{t("processorP2")}</P>
+        {/* MIN-119 — chaque retour déposé sur un board passe par un modèle
+            (modération, catégorisation, traduction), et une dictée y ajoute
+            l'audio. Le taire revenait à ne pas déclarer un destinataire, pour des
+            gens qui n'ont même pas de compte chez nous. Et ce sont les mêmes
+            fournisseurs que ceux de la section suivante : ce qu'on ne peut pas
+            garantir là-bas, on ne peut pas le garantir ici non plus. */}
+        <P>{t("processorP3")}</P>
       </Section>
 
       <Section title={t("agentTitle")}>
