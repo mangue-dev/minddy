@@ -4076,8 +4076,8 @@
     "cadenceDaily": "Every day at {time} ({timezone})",
     "cadenceWeekly": "Every {weekday} at {time} ({timezone})",
     "cadenceMonthly": "On the {day} of each month at {time} ({timezone})",
-    "enabledLabel": "Active",
-    "paused": "paused",
+    "enabledLabel": "Enable",
+    "paused": "Paused",
     "runNow": "Run now",
     "runStarted": "Run started",
     "nextRunAt": "next run {date}",
@@ -4117,6 +4117,12 @@
     "openRun": "Open the run of {date}",
     "emptyNoProject": "No project, so no repository for a routine to work in",
     "emptyNoRepo": "None of your projects has a repository connected. A routine clones one to work in: link one in a project's settings.",
-    "emptyNotOwner": "Only a project's owner can schedule a routine — it runs on their AI budget."
+    "emptyNotOwner": "Only a project's owner can schedule a routine — it runs on their AI budget.",
+    "quitTitle": "Discard this routine?",
+    "quitDescription": "Nothing has been created yet: the instruction and the cadence you have set will be lost.",
+    "quitConfirm": "Discard",
+    "quitCancel": "Keep editing",
+    "newRoutineHint": "Or schedule a new one",
+    "groupEmpty": "No routine yet"
   }
 }

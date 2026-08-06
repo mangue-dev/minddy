@@ -133,7 +133,7 @@ export function IssuePlan({
           placeholder={t("editorPlaceholder")}
           autoFocus
           spellCheck={false}
-          className="min-h-[45vh] w-full resize-y rounded-lg border border-border bg-transparent p-3 font-mono text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 focus-visible:border-ring"
+          className="min-h-[45vh] w-full resize-y rounded-lg border border-input bg-control p-3 font-mono text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 focus-visible:border-ring"
         />
         <div className="flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>

@@ -11,6 +11,23 @@ import { Plus } from "lucide-react";
 import { CommandGroup, CommandItem, CommandSeparator, Spinner, toast } from "mangue-ui";
 import { SearchMenu } from "@/components/search-menu";
 
+/**
+ * Le déclencheur d'un picker qui se PRÉSENTE COMME UN CHAMP — posé dans une
+ * ligne de formulaire, à côté d'un `Input` ou d'un `Button` outline.
+ *
+ * Il vit ici, et pas recopié chez chaque appelant, parce qu'il a divergé
+ * exactement comme ça : les deux copies écrivaient `bg-transparent`, et le
+ * champ paraissait donc VIDE à côté de ses voisins, qui sont en `bg-control`
+ * (cf. `Input` et le variant `outline` de `Button` dans mangue-ui). Un fond
+ * transparent est légitime sur une carte ; dans une rangée de champs, il se lit
+ * comme un contrôle désactivé ou pas encore chargé.
+ *
+ * Les pickers dont le déclencheur est une PASTILLE (les champs compacts d'un
+ * ticket) n'ont rien à voir avec ceci : ils passent leur propre `trigger`.
+ */
+export const PICKER_FIELD_TRIGGER =
+  "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-control px-3 text-sm outline-none transition-colors hover:bg-control-hover focus-visible:border-ring";
+
 export type PickerOption = {
   value: string;
   /** Shown text — also the primary search term. */

@@ -25,7 +25,7 @@ import {
   type FeedbackLanguage,
 } from "@/lib/feedback/languages";
 import { useProjects } from "@/lib/projects-context";
-import { SearchMultiSelect } from "@/components/search-select";
+import { PICKER_FIELD_TRIGGER, SearchMultiSelect } from "@/components/search-select";
 import { FieldGroup } from "@/components/ui/field";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import type { SettingsSectionId } from "@/lib/settings-sections";
@@ -653,7 +653,10 @@ export function FeedbackTranslationGroup({
                     type="button"
                     disabled={!isOwner}
                     aria-label={t("feedbackNoTranslateLabel")}
-                    className="flex h-9 w-48 items-center justify-between gap-2 rounded-md border border-border bg-transparent px-3 text-sm outline-none transition-colors hover:bg-muted/50 focus-visible:border-ring disabled:pointer-events-none disabled:opacity-50"
+                    className={cn(
+                      PICKER_FIELD_TRIGGER,
+                      "w-48 disabled:pointer-events-none disabled:opacity-50",
+                    )}
                   >
                     <span className="min-w-0 truncate">
                       {selectedSkip.length === 0

@@ -71,6 +71,19 @@ export function RoutinesPanel({
   );
 
   /**
+   * Un projet éligible au « + » : possédé ET avec un dépôt à cloner.
+   *
+   * Déclarée AVANT les `useMemo` qui l'appellent, et pas à côté de ses autres
+   * lectrices : un `const` fléché reste dans sa zone morte jusqu'à sa ligne, et
+   * un memo qui l'appelle au premier rendu lève un `ReferenceError` — que le
+   * type-check ne voit pas, puisque la référence est parfaitement typée.
+   */
+  const canCreateIn = (projectId: string | undefined) =>
+    !!projectId &&
+    projectById.get(projectId)?.owner_id === user?.id &&
+    gitLinked.has(projectId);
+
+  /**
    * Ce que la colonne AFFICHE. Le filtre ne touche pas `routines`, qui porte la
    * sélection : sinon taper trois lettres ferait sauter la routine ouverte, une
    * fois par lettre. Une routine se cherche par son nom, son instruction ou son
@@ -87,31 +100,46 @@ export function RoutinesPanel({
     );
   }, [routines, query, projectById]);
 
-  const groups = useMemo(
-    () =>
-      groupByProject(visible, (r) => {
-        const project = projectById.get(r.project_id);
-        return project
-          ? {
-              id: project.id,
-              name: project.name,
-              key: project.key,
-              icon_url: project.icon_url,
-            }
-          : null;
-      }),
-    [visible, projectById],
-  );
+  const groups = useMemo(() => {
+    const found = groupByProject(visible, (r) => {
+      const project = projectById.get(r.project_id);
+      return project
+        ? {
+            id: project.id,
+            name: project.name,
+            key: project.key,
+            icon_url: project.icon_url,
+          }
+        : null;
+    });
+    // Un FILTRE en cours ne montre que ce qui correspond : un accordéon vide
+    // sous une recherche se lirait comme un résultat.
+    if (query.trim()) return found;
+
+    /**
+     * Hors filtre, TOUS les projets où l'on peut poser une routine ont leur
+     * accordéon, même vides. C'est de là que part la création : le « + » vit
+     * dans l'en-tête d'un projet, et un projet sans routine n'en avait donc
+     * aucun — il fallait deviner que le « + » de la colonne existait pour
+     * commencer sa première. Les projets où l'on est simple MEMBRE n'entrent
+     * que s'ils ont des routines à lire : un en-tête vide sans rien à voir ni
+     * rien à faire n'est qu'une ligne de plus à parcourir.
+     */
+    const seen = new Set(found.map((g) => g.key));
+    const extra = projects
+      .filter((p) => !seen.has(p.id) && canCreateIn(p.id))
+      .map((p) => ({
+        key: p.id,
+        project: { id: p.id, name: p.name, key: p.key, icon_url: p.icon_url },
+        items: [] as Routine[],
+      }));
+    return [...found, ...extra];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, projectById, projects, query, gitLinked, user?.id]);
 
   const selected = routines.find((r) => r.id === selectedId) ?? null;
   const selectedIsOwner =
     !!selected && projectById.get(selected.project_id)?.owner_id === user?.id;
-
-  /** Un projet éligible au « + » : possédé ET avec un dépôt à cloner. */
-  const canCreateIn = (projectId: string | undefined) =>
-    !!projectId &&
-    projectById.get(projectId)?.owner_id === user?.id &&
-    gitLinked.has(projectId);
 
   const anyEligible = projects.some((p) => canCreateIn(p.id));
   /**
@@ -149,7 +177,7 @@ export function RoutinesPanel({
         </div>
       ))}
     </div>
-  ) : routines.length === 0 ? (
+  ) : routines.length === 0 && groups.length === 0 ? (
     /* Un seul appel à l'action : le wizard. Les exemples pré-écrits vivent DANS
        son étape `job` — les proposer deux fois obligerait à les tenir à jour à
        deux endroits. */
@@ -167,7 +195,7 @@ export function RoutinesPanel({
         ) : null}
       </EmptyScene>
     </div>
-  ) : visible.length === 0 ? (
+  ) : query.trim() && visible.length === 0 ? (
     // Le filtre a simplement vidé la liste : une ligne discrète suffit, la
     // colonne n'est pas vide, elle est restreinte.
     <p className="px-4 py-6 text-center text-sm text-muted-foreground">
@@ -215,14 +243,29 @@ export function RoutinesPanel({
             ) : null
           }
         >
-          {g.items.map((routine) => (
-            <RoutineRow
-              key={routine.id}
-              routine={routine}
-              selected={routine.id === selectedId}
-              onSelect={() => onSelect(routine.id)}
-            />
-          ))}
+          {g.items.length === 0 ? (
+            // Un projet ÉLIGIBLE mais encore vide : la ligne dit ce qu'il y a à
+            // voir (rien) plutôt que de laisser un accordéon ouvert sur du vide,
+            // qui se lit comme un chargement qui n'aboutit pas. Le « + » de
+            // l'en-tête est juste au-dessus.
+            <p
+              className={cn(
+                "py-1.5 pr-2 text-xs text-muted-foreground",
+                PROJECT_GROUP_INDENT,
+              )}
+            >
+              {t("groupEmpty")}
+            </p>
+          ) : (
+            g.items.map((routine) => (
+              <RoutineRow
+                key={routine.id}
+                routine={routine}
+                selected={routine.id === selectedId}
+                onSelect={() => onSelect(routine.id)}
+              />
+            ))
+          )}
         </SidebarProjectGroup>
       ))}
     </div>
@@ -285,8 +328,16 @@ export function RoutinesPanel({
             }}
           />
         ) : (
-          <div className="flex flex-1 items-center justify-center p-6">
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6">
             <p className="text-sm text-muted-foreground">{t("noSelection")}</p>
+            {/* Le geste, sous la phrase : arriver ici sans rien de sélectionné,
+                c'est aussi souvent vouloir en poser une que vouloir en lire une. */}
+            {anyEligible ? (
+              <Button size="sm" variant="outline" onClick={() => openWizard()}>
+                <Plus className="size-4" />
+                {t("newRoutine")}
+              </Button>
+            ) : null}
           </div>
         )}
       </div>
@@ -341,7 +392,9 @@ function RoutineRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex items-center gap-2 rounded-md py-1.5 pr-2 text-left outline-none transition-colors",
+        // `pr-3` et non `pr-2` : le point d'état (en pause, passage manqué)
+        // touchait le bord droit de la colonne.
+        "flex items-center gap-2 rounded-md py-1.5 pr-3 text-left outline-none transition-colors",
         PROJECT_GROUP_INDENT,
         selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60",
       )}

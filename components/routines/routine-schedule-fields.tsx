@@ -2,10 +2,10 @@
 
 import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Button, Combobox, Input, cn } from "mangue-ui";
+import { Combobox, Input, cn } from "mangue-ui";
 import { CalendarDays, CalendarRange, ChevronDown, Sun } from "lucide-react";
 
-import { SearchMultiSelect } from "@/components/search-select";
+import { PICKER_FIELD_TRIGGER, SearchMultiSelect } from "@/components/search-select";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
 import {
   sortedWeekdays,
@@ -31,11 +31,10 @@ import {
  * la routine à la mauvaise heure — ou la refusait au moment de créer, ce qui
  * est mieux mais toujours trop tard.
  *
- * La FRÉQUENCE se dessine de deux façons, et c'est la seule chose que `variant`
- * décide : en cartes illustrées (le wizard, où choisir un rythme est l'étape
- * elle-même et mérite qu'on la regarde), en trois boutons (l'éditeur du détail,
- * un volet étroit où trois scènes isométriques écraseraient l'instruction juste
- * au-dessus). Les champs, eux, sont les mêmes des deux côtés.
+ * La FRÉQUENCE se choisit en cartes illustrées, des deux côtés : le volet de
+ * détail est aussi large que la modale du wizard, et deux dessins différents
+ * pour un même choix n'auraient fait que le rendre méconnaissable d'un écran à
+ * l'autre.
  */
 
 const FREQUENCY_ICONS: Record<RoutineFrequency, typeof Sun> = {
@@ -44,20 +43,13 @@ const FREQUENCY_ICONS: Record<RoutineFrequency, typeof Sun> = {
   monthly: CalendarRange,
 };
 
-/** Le déclencheur commun des pickers de jours — un champ, pas un bouton nu. */
-const FIELD_TRIGGER =
-  "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border bg-transparent px-3 text-sm outline-none transition-colors hover:bg-muted/50 focus-visible:border-ring";
-
 export function RoutineScheduleFields({
   value,
   onChange,
-  variant = "cards",
   className,
 }: {
   value: RoutineSchedule;
   onChange: (next: RoutineSchedule) => void;
-  /** `cards` (défaut) = scènes illustrées ; `compact` = trois boutons. */
-  variant?: "cards" | "compact";
   className?: string;
 }) {
   const t = useTranslations("Routines");
@@ -113,39 +105,21 @@ export function RoutineScheduleFields({
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {variant === "cards" ? (
-        <div
-          className="grid grid-cols-1 gap-4 sm:grid-cols-3"
-          role="radiogroup"
-          aria-label={t("frequencyLabel")}
-        >
-          {(["daily", "weekly", "monthly"] as const).map((f) => (
-            <WizardChoiceCard
-              key={f}
-              selected={value.frequency === f}
-              icon={FREQUENCY_ICONS[f]}
-              label={t(`frequency_${f}` as "frequency_daily")}
-              onSelect={() => setFrequency(f)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t("frequencyLabel")}>
-          {(["daily", "weekly", "monthly"] as const).map((f) => (
-            <Button
-              key={f}
-              type="button"
-              role="radio"
-              aria-checked={value.frequency === f}
-              variant={value.frequency === f ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFrequency(f)}
-            >
-              {t(`frequency_${f}` as "frequency_daily")}
-            </Button>
-          ))}
-        </div>
-      )}
+      <div
+        className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+        role="radiogroup"
+        aria-label={t("frequencyLabel")}
+      >
+        {(["daily", "weekly", "monthly"] as const).map((f) => (
+          <WizardChoiceCard
+            key={f}
+            selected={value.frequency === f}
+            icon={FREQUENCY_ICONS[f]}
+            label={t(`frequency_${f}` as "frequency_daily")}
+            onSelect={() => setFrequency(f)}
+          />
+        ))}
+      </div>
 
       {/* Les trois réglages sur UNE ligne : le jour, l'heure, le fuseau. Ils
           répondent à une seule question — quand ? — et se lisent ensemble.
@@ -168,7 +142,7 @@ export function RoutineScheduleFields({
               options={weekdayOptions}
               searchPlaceholder={t("weekdaySearch")}
               trigger={
-                <button type="button" className={FIELD_TRIGGER}>
+                <button type="button" className={PICKER_FIELD_TRIGGER}>
                   <span
                     className={cn(
                       "truncate",
@@ -195,7 +169,7 @@ export function RoutineScheduleFields({
               options={dayOptions}
               searchPlaceholder={t("dayOfMonthSearch")}
               trigger={
-                <button type="button" className={FIELD_TRIGGER}>
+                <button type="button" className={PICKER_FIELD_TRIGGER}>
                   <span
                     className={cn(
                       "truncate",

@@ -446,6 +446,22 @@ export function CreateRoutineWizard({
       onStepIndexChange={setStepIndex}
       submitting={creating}
       error={error}
+      /**
+       * Un clic à côté ne doit pas emporter le brouillon. La question n'est
+       * posée QU'ENTRE les deux bouts du parcours : sur la première étape il
+       * n'y a rien à perdre, et sur `done` la routine existe déjà — fermer y
+       * EST la façon de finir. Même règle que le wizard du board public.
+       */
+      dismissConfirm={
+        stepIndex > 0 && order[Math.min(stepIndex, order.length - 1)] !== "done"
+          ? {
+              title: t("quitTitle"),
+              description: t("quitDescription"),
+              confirmLabel: t("quitConfirm"),
+              cancelLabel: t("quitCancel"),
+            }
+          : undefined
+      }
       onSubmit={(id) => {
         if (id === "done") {
           handleOpenChange(false);

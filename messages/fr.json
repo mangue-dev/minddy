@@ -4076,8 +4076,8 @@
     "cadenceDaily": "Tous les jours à {time} ({timezone})",
     "cadenceWeekly": "Chaque {weekday} à {time} ({timezone})",
     "cadenceMonthly": "Le {day} de chaque mois à {time} ({timezone})",
-    "enabledLabel": "Active",
-    "paused": "en pause",
+    "enabledLabel": "Activer",
+    "paused": "En pause",
     "runNow": "Lancer maintenant",
     "runStarted": "Passage lancé",
     "nextRunAt": "prochain passage {date}",
@@ -4117,6 +4117,12 @@
     "openRun": "Ouvrir l'exécution du {date}",
     "emptyNoProject": "Aucun projet, donc aucun dépôt où une routine pourrait travailler",
     "emptyNoRepo": "Aucun de vos projets n'a de dépôt connecté. Une routine en clone un pour travailler : liez-en un dans les réglages d'un projet.",
-    "emptyNotOwner": "Seul le propriétaire d'un projet peut poser une routine — c'est son budget IA qui tourne."
+    "emptyNotOwner": "Seul le propriétaire d'un projet peut poser une routine — c'est son budget IA qui tourne.",
+    "quitTitle": "Abandonner ce brouillon ?",
+    "quitDescription": "Rien n'a encore été créé : l'instruction et la cadence que vous avez réglées seront perdues.",
+    "quitConfirm": "Abandonner",
+    "quitCancel": "Continuer",
+    "newRoutineHint": "Ou posez-en une nouvelle",
+    "groupEmpty": "Aucune routine pour l'instant"
   }
 }
