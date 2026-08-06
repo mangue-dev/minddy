@@ -2,22 +2,11 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn, Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
-import {
-  ChevronDown,
-  ChevronRight,
-  FileMinus,
-  FilePen,
-  FilePlus,
-  FileSymlink,
-} from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { PullRequestFile } from "@/lib/agent-api";
-import {
-  buildFileTree,
-  FILE_STATUS_LABELS,
-  type FileStatus,
-  type FileTreeNode,
-} from "@/lib/pr-file-tree";
+import { buildFileTree, type FileTreeNode } from "@/lib/pr-file-tree";
+import { DiffCounters, FileStatusIcon } from "@/components/pull-requests/pr-file-marks";
 
 /**
  * « Qu'est-ce que cette PR touche, et emmène-moi à ce fichier » (MIN-182) —
@@ -38,21 +27,6 @@ import {
  * Échap qui se disputent. Un seul geste partout, donc, et pas de bifurcation
  * mobile à écrire ni à vérifier.
  */
-
-const STATUS_ICONS = {
-  added: FilePlus,
-  removed: FileMinus,
-  renamed: FileSymlink,
-  modified: FilePen,
-} as const satisfies Record<FileStatus, unknown>;
-
-/** Mêmes couleurs que le badge de la carte de fichier, en trait plutôt qu'en aplat. */
-const STATUS_COLORS: Record<FileStatus, string> = {
-  added: "text-green-600 dark:text-green-400",
-  removed: "text-destructive",
-  renamed: "text-violet-600 dark:text-violet-400",
-  modified: "text-blue-600 dark:text-blue-400",
-};
 
 /**
  * Les rails d'indentation : un trait vertical par niveau au-dessus de la ligne.
@@ -95,23 +69,6 @@ function Segmented({ label }: { label: string }) {
   );
 }
 
-function Counters({ additions, deletions }: { additions: number; deletions: number }) {
-  const t = useTranslations("PullRequests");
-  return (
-    <span className="ml-2 flex shrink-0 items-center gap-1 pt-px text-[11px] tabular-nums">
-      <span
-        className="text-emerald-600 dark:text-emerald-400"
-        title={t("linesAdded", { count: additions })}
-      >
-        +{additions}
-      </span>
-      <span className="text-red-600 dark:text-red-400" title={t("linesRemoved", { count: deletions })}>
-        −{deletions}
-      </span>
-    </span>
-  );
-}
-
 /**
  * Le squelette commun aux deux lignes. Sans `gap` : les rails se touchent pour
  * former une colonne, et les écarts sont posés un par un après eux.
@@ -133,8 +90,6 @@ function TreeRows({
   onToggleDir: (path: string) => void;
   onSelect: (path: string) => void;
 }) {
-  const t = useTranslations("PullRequests");
-
   return (
     <ul className="flex flex-col">
       {nodes.map((node) => {
@@ -161,7 +116,11 @@ function TreeRows({
                 <span className="ml-1.5 min-w-0 flex-1 font-mono text-xs font-medium break-words">
                   <Segmented label={node.label} />
                 </span>
-                <Counters additions={node.additions} deletions={node.deletions} />
+                <DiffCounters
+                  additions={node.additions}
+                  deletions={node.deletions}
+                  className="ml-2 pt-px"
+                />
               </button>
               {open ? (
                 <TreeRows
@@ -176,8 +135,6 @@ function TreeRows({
           );
         }
 
-        const Icon = STATUS_ICONS[node.status];
-        const status = t(FILE_STATUS_LABELS[node.status]);
         return (
           <li key={node.path}>
             <button
@@ -193,14 +150,15 @@ function TreeRows({
               className={ROW_CLASS}
             >
               <Rails depth={depth} />
-              <span className={cn("mt-px shrink-0", STATUS_COLORS[node.status])} title={status}>
-                <Icon className="size-3.5" aria-hidden />
-                <span className="sr-only">{status}</span>
-              </span>
+              <FileStatusIcon status={node.status} className="mt-px" />
               <span className="ml-1.5 min-w-0 flex-1 font-mono text-xs break-words">
                 <Segmented label={node.label} />
               </span>
-              <Counters additions={node.additions} deletions={node.deletions} />
+              <DiffCounters
+                additions={node.additions}
+                deletions={node.deletions}
+                className="ml-2 pt-px"
+              />
             </button>
           </li>
         );

@@ -36,6 +36,11 @@ import {
 import { PrImageDiff } from "@/components/pull-requests/pr-image-diff";
 import { PrFileTreeButton } from "@/components/pull-requests/pr-file-tree";
 import {
+  DiffCounters,
+  DiffStatBar,
+  FilePathLabel,
+} from "@/components/pull-requests/pr-file-marks";
+import {
   fileAnchorId,
   fileStatusOf,
   FILE_STATUS_LABELS,
@@ -116,7 +121,7 @@ export function toUnifiedDiff(f: PullRequestFile): string {
 }
 
 /**
- * Ce qu'est arrivé au fichier, dit en couleur — même forme que les badges
+ * Ce qui est arrivé au fichier, dit en couleur — même forme que les badges
  * d'état de PR (`pr-state-badge`) : teinte à 10 %, bord à 20 %, jamais un aplat.
  * Et mêmes couleurs que là-bas, pour que le vert veuille dire la même chose d'un
  * bout à l'autre de la page : vert ajouté, rouge supprimé, violet renommé, bleu
@@ -141,46 +146,6 @@ function FileStatusBadge({ status }: { status: FileStatus }) {
     >
       {t(FILE_STATUS_LABELS[status])}
     </Badge>
-  );
-}
-
-/**
- * Le carré de cinq blocs de GitHub : la proportion d'ajouts et de retraits, lue
- * d'un coup d'oeil. Les compteurs chiffrés disent le volume, cette barre dit la
- * NATURE du changement — un fichier réécrit et un fichier étoffé ne se
- * ressemblent pas, même à +40/−40.
- */
-function DiffStatBar({ additions, deletions }: { additions: number; deletions: number }) {
-  const total = additions + deletions;
-  // Un côté non nul vaut toujours au moins un bloc, et jamais les cinq quand
-  // l'autre existe : sur +2/−300, l'arrondi effacerait sinon l'ajout, et un
-  // fichier purement ajouté ne se distinguerait plus d'un fichier retouché.
-  const green =
-    total === 0
-      ? 0
-      : deletions === 0
-        ? 5
-        : additions === 0
-          ? 0
-          : Math.min(4, Math.max(1, Math.round((additions / total) * 5)));
-  const red = total === 0 ? 0 : 5 - green;
-
-  return (
-    <span className="flex shrink-0 gap-px" aria-hidden>
-      {Array.from({ length: 5 }, (_, i) => (
-        <span
-          key={i}
-          className={cn(
-            "size-2 rounded-[1px]",
-            i < green
-              ? "bg-emerald-500 dark:bg-emerald-400"
-              : i < green + red
-                ? "bg-red-500 dark:bg-red-400"
-                : "bg-border",
-          )}
-        />
-      ))}
-    </span>
   );
 }
 
@@ -710,13 +675,6 @@ function PrDiffFile({
     ],
   );
 
-  // Le dossier s'efface, le nom du fichier porte : dans une liste de trente
-  // chemins qui partagent leurs six premiers segments, c'est le dernier qu'on
-  // cherche des yeux.
-  const slash = file.filename.lastIndexOf("/");
-  const dir = slash === -1 ? "" : file.filename.slice(0, slash + 1);
-  const name = slash === -1 ? file.filename : file.filename.slice(slash + 1);
-
   // Un fichier sans patch : image qu'on sait montrer, binaire qu'on ne sait pas,
   // fichier sans changement de contenu (renommage pur), ou fichier texte que la
   // forge a jugé trop volumineux — quatre situations que le message unique
@@ -760,20 +718,9 @@ function PrDiffFile({
         ) : (
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         )}
-        <span className="min-w-0 flex-1 truncate font-mono text-xs" title={file.filename}>
-          {file.previous_filename ? (
-            <span className="text-muted-foreground">{file.previous_filename} → </span>
-          ) : null}
-          <span className="text-muted-foreground">{dir}</span>
-          <span className="font-medium">{name}</span>
-        </span>
+        <FilePathLabel path={file.filename} previousPath={file.previous_filename} />
         <FileStatusBadge status={fileStatusOf(file)} />
-        <span className="shrink-0 text-[11px] tabular-nums text-emerald-600 dark:text-emerald-400">
-          +{file.additions}
-        </span>
-        <span className="shrink-0 text-[11px] tabular-nums text-red-600 dark:text-red-400">
-          −{file.deletions}
-        </span>
+        <DiffCounters additions={file.additions} deletions={file.deletions} />
         <DiffStatBar additions={file.additions} deletions={file.deletions} />
       </button>
       {collapsed ? null : (

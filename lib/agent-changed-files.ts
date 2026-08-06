@@ -4,6 +4,7 @@ import {
   type AgentFileChangeStatus,
   type AgentRunEvent,
 } from "./agent-api";
+import type { FileStatus } from "./pr-file-tree";
 
 /**
  * Dérivations « fichiers changés » d'un run d'agent (MIN-46, note « diff par tour »),
@@ -61,6 +62,16 @@ export function cumulativeBranchFiles(events: AgentRunEvent[]): {
 /** A-t-on au moins un event `files_changed` ? (⇒ le run a committé du code.) */
 export function hasCommittedChanges(events: AgentRunEvent[]): boolean {
   return events.some((e) => e.type === "files_changed");
+}
+
+/**
+ * Le statut d'un fichier dans le vocabulaire des diffs de PR, pour que le bloc
+ * d'un tour d'agent porte les mêmes marques qu'eux (icône, couleur, mot). Le
+ * seul écart entre les deux nomenclatures : git dit `deleted`, la forge dit
+ * `removed`.
+ */
+export function prFileStatus(status: AgentFileChangeStatus): FileStatus {
+  return status === "deleted" ? "removed" : status;
 }
 
 /** Totaux +/− d'une liste (0 quand inconnus — vue live). */

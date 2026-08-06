@@ -7,6 +7,45 @@
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
 
+/* ── Les flèches d'Inter, que Google ne sert pas ──────────────────────────────
+   `next/font/google` ne charge d'Inter que les sous-ensembles publiés par
+   Google, et AUCUN ne couvre le bloc des flèches : la plage latine y met « ↑ »
+   (U+2191) et « ↓ » (U+2193), mais pas « → » (U+2192) ni « ↔ » (U+2194). Le
+   maillon suivant de la pile est « Inter Fallback », que next/font définit comme
+   `local(Arial)` avec un `size-adjust: 107.12%` — chaque flèche était donc
+   dessinée par Arial, agrandie de 7 % : 0,99 em de trait, contre 0,73 em pour la
+   vraie flèche d'Inter. D'où la flèche trop longue, et étrangère au texte qui
+   l'entoure : celle que pose « -> » dans les éditeurs
+   (components/editor-arrows.ts) comme celles écrites en dur dans l'UI.
+   Mesuré au navigateur, à 16 px : 17,14 px d'avance avant, 15,22 px après.
+
+   Ce @font-face porte le MÊME nom de famille que celui de next/font — `Inter`,
+   nom réel et non haché, puisque c'est une police Google. Les faces d'une même
+   famille s'additionnent par plage de caractères : il comble le trou sans
+   qu'aucune pile de polices ait à bouger, et l'héritage du body comme les
+   utilitaires `font-sans` / `font-display` / `font-mono` en profitent d'un coup.
+
+   Le fichier est un sous-ensemble d'InterVariable 4.001 (rsms.me/inter, licence
+   OFL dans app/fonts/), réduit aux deux plages de flèches — 8 Ko, 34 signes :
+
+     pyftsubset InterVariable.woff2 --unicodes="U+2190-21FF,U+27F0-27FF" \
+       --flavor=woff2 --layout-features='' --no-hinting \
+       --output-file=app/fonts/inter-arrows.woff2
+
+   Il couvre plus large que le seul « → », et c'est le même défaut partout :
+   « ↗ ↳ ↵ ⇒ ⇧ ⟷ » n'étaient dans AUCUNE face d'Inter et tombaient jusqu'à la
+   police du système (SF ici, Segoe UI Symbol sous Windows) — les pastilles de
+   raccourci de la palette en font partie. Ce qu'Inter ne dessine pas non plus
+   (« ⇄ », U+21C4) retombe comme avant. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/inter-arrows.woff2") format("woff2");
+  unicode-range: U+2190-21FF, U+27F0-27FF;
+}
+
 /* ── Your theme ───────────────────────────────────────────────────────────────
    This file is yours. Override any mangue-ui token here — your values win by
    cascade (they come after the @import). The whole library recolors from
