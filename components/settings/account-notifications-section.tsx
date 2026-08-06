@@ -19,6 +19,8 @@ const CATEGORIES: readonly NotificationCategory[] = [
   "mention",
   "comment",
   "agent",
+  "routine",
+  "pullRequest",
   "feedback",
 ];
 

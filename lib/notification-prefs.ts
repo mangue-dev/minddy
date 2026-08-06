@@ -11,15 +11,25 @@ export const NOTIF_ASSIGNED_META_KEY = "notif_assigned";
 export const NOTIF_MENTION_META_KEY = "notif_mention";
 export const NOTIF_COMMENT_META_KEY = "notif_comment";
 export const NOTIF_AGENT_META_KEY = "notif_agent";
+export const NOTIF_ROUTINE_META_KEY = "notif_routine";
+export const NOTIF_PULL_REQUEST_META_KEY = "notif_pull_request";
 export const NOTIF_FEEDBACK_META_KEY = "notif_feedback";
 
 /** One toggle per trigger family — finer grain would just be noise to manage.
- *  Order = the settings UI's, and the one Numo's tool schema advertises. */
+ *  Order = the settings UI's, and the one Numo's tool schema advertises.
+ *
+ *  Les ROUTINES et les PULL REQUESTS ont la leur depuis qu'elles annoncent autre
+ *  chose que des runs : une routine tourne toute seule tous les matins, et une
+ *  pull request qui s'ouvre concerne tout le projet, Numo ou pas. Les laisser
+ *  sous « agent » revenait à ne pouvoir couper le bruit qu'en coupant aussi les
+ *  questions que Numo pose. */
 export const NOTIFICATION_CATEGORIES = [
   "assigned",
   "mention",
   "comment",
   "agent",
+  "routine",
+  "pullRequest",
   "feedback",
 ] as const;
 
@@ -30,6 +40,8 @@ export interface NotificationPrefs {
   mention: boolean;
   comment: boolean;
   agent: boolean;
+  routine: boolean;
+  pullRequest: boolean;
   feedback: boolean;
 }
 
@@ -38,6 +50,8 @@ export const NOTIFICATION_CATEGORY_META_KEYS: Record<NotificationCategory, strin
   mention: NOTIF_MENTION_META_KEY,
   comment: NOTIF_COMMENT_META_KEY,
   agent: NOTIF_AGENT_META_KEY,
+  routine: NOTIF_ROUTINE_META_KEY,
+  pullRequest: NOTIF_PULL_REQUEST_META_KEY,
   feedback: NOTIF_FEEDBACK_META_KEY,
 };
 
@@ -51,6 +65,8 @@ export function resolveNotificationPrefs(
     mention: meta?.[NOTIF_MENTION_META_KEY] !== false,
     comment: meta?.[NOTIF_COMMENT_META_KEY] !== false,
     agent: meta?.[NOTIF_AGENT_META_KEY] !== false,
+    routine: meta?.[NOTIF_ROUTINE_META_KEY] !== false,
+    pullRequest: meta?.[NOTIF_PULL_REQUEST_META_KEY] !== false,
     feedback: meta?.[NOTIF_FEEDBACK_META_KEY] !== false,
   };
 }
@@ -69,21 +85,38 @@ export function categoryOfNotificationType(
     case "agent_done":
     case "agent_question":
     case "agent_failed":
-    // Une routine, c'est Numo qui tourne tout seul : même bascule que ses runs.
-    case "routine_done":
-    // Le travail de code suit la même bascule que l'agent, y compris quand il
-    // vient d'un humain : `pr_opened` annonce TOUTE pull request du projet, pas
-    // seulement celles de Numo. Une sixième catégorie serait un réglage de plus
-    // à gérer pour distinguer deux choses qu'on lit au même endroit.
-    case "pr_reviewed":
-    case "pr_merged":
-    case "pr_opened":
     // Une chaîne d'automatisation, c'est Numo qui travaille : même bascule que
-    // ses runs, plutôt qu'une sixième catégorie à gérer pour rien.
+    // ses runs, plutôt qu'une catégorie de plus à gérer pour rien.
     case "automation_paused":
     case "automation_stopped":
       return "agent";
+    case "routine_done":
+      return "routine";
+    // Toute la vie d'une pull request sous la même bascule — ouverte, relue,
+    // fusionnée. Une seule des trois sous un autre interrupteur serait un piège :
+    // on coupe « les pull requests » et il en reste.
+    case "pr_opened":
+    case "pr_reviewed":
+    case "pr_merged":
+      return "pullRequest";
     case "feedback_new":
       return "feedback";
   }
+}
+
+/**
+ * La bascule qui gouverne une notification — le type NE SUFFIT PAS.
+ *
+ * Une routine annonce la fin de ses passages avec les types de l'agent
+ * (`agent_done` quand elle a ouvert une pull request, `agent_failed` quand elle
+ * s'est arrêtée) : seul `routine_id` distingue son passage du run qu'on a lancé
+ * à la main. Sans ce détour, couper « Routines » aurait laissé passer l'échec du
+ * lendemain matin — la moitié de ce qu'on voulait couper.
+ */
+export function categoryOfNotification(n: {
+  type: NotificationType;
+  routine_id?: string | null;
+}): NotificationCategory {
+  if (n.routine_id) return "routine";
+  return categoryOfNotificationType(n.type);
 }

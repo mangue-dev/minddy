@@ -1162,7 +1162,18 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           notif_agent: {
             type: "boolean",
-            description: "Inbox: notify on code-agent activity (runs, pull requests).",
+            description:
+              "Inbox: notify on code-agent activity — a run finishes, asks a question or fails, and automation chains.",
+          },
+          notif_routine: {
+            type: "boolean",
+            description:
+              "Inbox: notify when one of the user's scheduled routines finishes a run, opens a pull request or fails.",
+          },
+          notif_pull_request: {
+            type: "boolean",
+            description:
+              "Inbox: notify on pull-request activity — one opens on a project the user belongs to, or theirs is reviewed or merged.",
           },
           notif_feedback: {
             type: "boolean",

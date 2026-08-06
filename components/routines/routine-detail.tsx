@@ -35,6 +35,7 @@ import {
 import { AgentConversation } from "@/components/agent/agent-conversation";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { EmptyScene } from "@/components/empty-scene";
+import { Markdown } from "@/components/markdown";
 import { ProjectOrb } from "@/components/project-orb";
 import {
   PR_STATE_STYLES,
@@ -209,7 +210,7 @@ export function RoutineDetail({
    *
    * `next_run_at` suit dans le même mouvement : le désactiver désarme
    * l'échéance, le réactiver la recalcule — avec la MÊME fonction que le
-   * serveur, sinon la ligne « prochain passage » afficherait une date pour en
+   * serveur, sinon la ligne « prochaine exécution » afficherait une date pour en
    * montrer une autre une seconde plus tard.
    */
   const toggleSeq = useRef(0);
@@ -416,7 +417,7 @@ export function RoutineDetail({
       <div className="flex shrink-0 flex-col gap-1 px-4 pb-2">
         {/* La cadence SEULE : le prochain passage descend dans la liste des
             exécutions, à sa place chronologique. Les deux tenaient sur la même
-            ligne, et « Tous les jours à 18 h · prochain passage 7 août » se
+            ligne, et « Tous les jours à 18 h · prochaine exécution 7 août » se
             lisait comme une seule information alors que c'en est deux — une
             règle, et une date qui la suit. */}
         <p className="text-xs text-muted-foreground">{cadence}</p>
@@ -436,16 +437,10 @@ export function RoutineDetail({
           </p>
         ) : null}
 
-        {/* L'instruction, coupée par le CSS et non par un compteur de
-            caractères : la plupart des routines tiennent en entier, et celles
-            qui débordent s'arrêtent sur une ligne pleine avec des points de
-            suspension, jamais au milieu d'un mot. Masquée en édition — le
-            champ juste au-dessus porte déjà le texte complet, et modifiable. */}
-        {editing && isOwner ? null : (
-          <p className="mt-1 line-clamp-6 text-sm whitespace-pre-line text-muted-foreground">
-            {routine.prompt}
-          </p>
-        )}
+        {/* L'instruction, rendue et repliée (cf. `RoutinePrompt`). Masquée en
+            édition — le champ juste au-dessus porte déjà le texte complet, et
+            modifiable. */}
+        {editing && isOwner ? null : <RoutinePrompt prompt={routine.prompt} />}
       </div>
 
       {/* ── Exécutions : UNE LIGNE par passage ─────────────────────────
@@ -592,6 +587,75 @@ export function RoutineDetail({
         cancelLabel={tCommon("cancel")}
         onConfirm={() => void remove()}
       />
+    </div>
+  );
+}
+
+/**
+ * L'INSTRUCTION de la routine : rendue en markdown, repliée, et dépliable.
+ *
+ * Elle EST du markdown à la source — titres, listes, chemins de fichiers en
+ * `code` — et l'afficher brut faisait lire des `##` et des `**` à la place de
+ * la structure qu'ils portent. Elle fait aussi couramment plusieurs milliers de
+ * signes : c'est un cahier des charges, pas une phrase. D'où deux décisions qui
+ * vont ensemble :
+ *
+ *  - **repliée par défaut.** On ouvre une routine pour voir ce qu'elle a
+ *    produit ; dépliée d'office, l'instruction pousserait la liste des
+ *    exécutions hors de l'écran, à chaque fois, pour un texte qu'on a écrit
+ *    soi-même.
+ *  - **`line-clamp` ne peut plus servir.** Il compte des lignes DANS un bloc, et
+ *    un rendu markdown en produit plusieurs (titres, paragraphes, listes) : il
+ *    ne couperait plus rien. C'est donc une HAUTEUR qui borne, et le fondu de
+ *    `useScrollFade` qui dit que le texte continue — sur une boîte qui clippe,
+ *    son `edges.end` est exactement ce signal-là, déjà mesuré, déjà amorti.
+ *
+ * Dépliée, elle ne pousse toujours rien : elle défile DANS sa boîte, et la
+ * liste des exécutions reste à l'écran sous elle.
+ */
+function RoutinePrompt({ prompt }: { prompt: string }) {
+  const t = useTranslations("Routines");
+  const [expanded, setExpanded] = useState(false);
+  /* Un fondu plus long que celui d'un bord de défilement (2 rem par défaut) :
+     ici il ne signale pas une lisière, il éteint une fin de texte coupée. */
+  const fade = useScrollFade<HTMLDivElement>("y", "3rem");
+  /**
+   * « Voir plus » n'existe que s'il y a vraiment plus à voir : une instruction
+   * de deux lignes ne porte pas un bouton qui ne révélerait rien.
+   *
+   * Le constat se FIGE une fois relevé. Déplié, `edges.end` répond à une autre
+   * question — « reste-t-il à défiler ? » — et retombe à faux dès qu'on touche
+   * le bas : le bouton du retour disparaîtrait sous le doigt, au moment précis
+   * où l'on veut replier.
+   */
+  const [truncated, setTruncated] = useState(false);
+  useEffect(() => {
+    if (!expanded && fade.edges.end) setTruncated(true);
+  }, [expanded, fade.edges.end]);
+
+  return (
+    <div className="mt-1 flex flex-col items-start gap-1">
+      <div
+        ref={fade.ref}
+        {...fade.scrollProps}
+        className={cn(
+          "w-full",
+          // Replié : la hauteur des six lignes que `line-clamp-6` donnait.
+          expanded ? "max-h-[40vh] overflow-y-auto" : "max-h-36 overflow-hidden",
+        )}
+      >
+        <Markdown className="text-muted-foreground">{prompt}</Markdown>
+      </div>
+      {truncated ? (
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto p-0 text-xs"
+          onClick={() => setExpanded((e) => !e)}
+        >
+          {expanded ? t("promptShowLess") : t("promptShowMore")}
+        </Button>
+      ) : null}
     </div>
   );
 }

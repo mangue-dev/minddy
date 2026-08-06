@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NotificationType } from "@/lib/types";
 import {
-  categoryOfNotificationType,
+  categoryOfNotification,
   resolveNotificationPrefs,
   type NotificationPrefs,
 } from "@/lib/notification-prefs";
@@ -86,7 +86,9 @@ export async function insertNotifications(
   );
   const kept = rows.filter((r) => {
     const prefs = prefsById.get(r.user_id);
-    return !prefs || prefs[categoryOfNotificationType(r.type)];
+    // La LIGNE, pas seulement son type : une routine emprunte les types de
+    // l'agent, et seul son `routine_id` la range sous la bonne bascule.
+    return !prefs || prefs[categoryOfNotification(r)];
   });
   if (kept.length === 0) return;
 
