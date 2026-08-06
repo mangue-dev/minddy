@@ -22,6 +22,7 @@ import {
   createRun,
   activeRunForIssue,
   activeRunForPullRequest,
+  activeRunForRoutine,
   inheritableWorkForIssue,
   insertRunMessage,
   bumpRunActivity,
@@ -141,6 +142,21 @@ export interface LaunchAgentInput {
    */
   chainId?: string | null;
   budgetUsd?: number | null;
+  /**
+   * Passage d'une ROUTINE (MIN-185). Un run de routine EST un run carnet — même
+   * ancrage, même `create_pr`, même chemin de drain — auquel cette seule ligne
+   * ajoute trois choses : la ligne de facture « Routines », le jeu de tools sans
+   * `ask_user` ni `create_routine`, et l'exclusion de la liste des
+   * conversations. `projectId` et `prompt` restent requis, comme tout run
+   * carnet : la routine les fournit.
+   */
+  routineId?: string | null;
+  /**
+   * Titre DÉJÀ écrit du run, quand l'appelant en a un — le titre de la routine
+   * (MIN-185). Il remplace la génération par petit modèle, qui est sautée dans
+   * ce cas : un titre écrit une fois vaut mieux qu'un titre repayé chaque matin.
+   */
+  title?: string | null;
 }
 
 /**
@@ -199,8 +215,15 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // « Un seul agent actif par ticket » est une règle du TICKET : les runs carnet,
   // indépendants les uns des autres, peuvent travailler en parallèle (chacun sur
   // sa branche). Le quota reste leur seul plafond.
+  //
+  // Une ROUTINE (MIN-185) retrouve cette règle, pour la même raison qu'un
+  // ticket : un passage qui traîne ne doit pas se faire doubler par l'échéance
+  // suivante — même instruction, même dépense, deux fois.
   if (issueId) {
     const active = await activeRunForIssue(issueId);
+    if (active) return { ok: false, error: "alreadyRunning", run: active };
+  } else if (input.routineId) {
+    const active = await activeRunForRoutine(input.routineId);
     if (active) return { ok: false, error: "alreadyRunning", run: active };
   }
 
@@ -212,8 +235,14 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // qui suivent, et se pose sur le run à sa création — ainsi la session n'existe
   // jamais sans son titre, et l'attente ne s'ajoute pas au lancement.
   // Un run d'issue n'en a pas besoin : son titre est celui du ticket.
+  //
+  // Un passage de ROUTINE non plus (MIN-185), et pour une raison qui coûte
+  // cher : son titre est celui de la routine, écrit UNE fois à la création.
+  // Le laisser passer ici ferait payer un appel de résumé à CHAQUE échéance —
+  // tous les matins pour une routine quotidienne — afin de réécrire un titre
+  // qu'on a déjà.
   const titlePromise =
-    !issueId && input.prompt?.trim()
+    !issueId && !input.routineId && input.prompt?.trim()
       ? generateShortTitle({
           text: input.prompt,
           kind: "note",
@@ -285,7 +314,9 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       connectionId: link.connection_id,
       createdBy: input.userId,
       prompt: input.prompt ?? null,
-      title: await titlePromise,
+      // Le titre fourni gagne : c'est celui de la routine, et il n'a rien à
+      // attendre d'une génération qui n'a pas eu lieu.
+      title: input.title?.trim() || (await titlePromise),
       model,
       modelForced: !!input.forced,
       reasoningLevel,
@@ -297,6 +328,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       intent: input.intent ?? "implement",
       chainId: input.chainId ?? null,
       budgetUsd: input.budgetUsd ?? null,
+      routineId: input.routineId ?? null,
       branchName: inherited?.branchName ?? null,
       baseBranch: inherited ? inherited.baseBranch : input.baseBranch ?? null,
       prNumber: inherited?.prNumber ?? null,

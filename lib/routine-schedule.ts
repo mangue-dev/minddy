@@ -1,0 +1,326 @@
+/**
+ * La CADENCE d'une routine (MIN-185) : quand elle repasse, et comment le dire.
+ *
+ * Logique PURE, partagée client + serveur (aucun import server-only) : le
+ * wizard calcule le premier passage pour le montrer AVANT de créer, la fabrique
+ * le calcule pour l'écrire, et le cron le recalcule à chaque réarmement. Une
+ * seule fonction pour les trois, sinon l'écran promet une heure que la base ne
+ * tient pas.
+ *
+ * **Structurée, pas une expression cron** : `frequency` + heure + minute + jour
+ * + fuseau IANA. Une expression cron serait à écrire par l'utilisateur,
+ * illisible dans l'UI, et à traduire quand même pour l'afficher.
+ *
+ * **Le fuseau est toujours explicite** — « 9 h » n'a pas de sens sans lui — et
+ * un fuseau inconnu est REFUSÉ, jamais silencieusement ramené à UTC : une
+ * routine qui part trois heures trop tôt tous les matins ne se remarque que sur
+ * la facture. C'est l'écart avec `lib/due-soon.ts`, qui retombe sur UTC parce
+ * qu'il ne fait que ranger un ticket dans une colonne.
+ */
+
+export type RoutineFrequency = "daily" | "weekly" | "monthly";
+
+export const ROUTINE_FREQUENCIES: RoutineFrequency[] = ["daily", "weekly", "monthly"];
+
+export function isRoutineFrequency(value: unknown): value is RoutineFrequency {
+  return typeof value === "string" && (ROUTINE_FREQUENCIES as string[]).includes(value);
+}
+
+export interface RoutineSchedule {
+  frequency: RoutineFrequency;
+  /** 0–23, dans `timezone`. */
+  hour: number;
+  /** 0–59, dans `timezone`. */
+  minute: number;
+  /** 0 = dimanche … 6 = samedi. `weekly` seulement. */
+  weekday?: number | null;
+  /** 1–31. `monthly` seulement. Un 31 sur un mois court retombe sur son dernier jour. */
+  dayOfMonth?: number | null;
+  /** Fuseau IANA (« Europe/Paris »). Jamais deviné. */
+  timezone: string;
+}
+
+/** Levée par `nextRunAt` et `assertSchedule` — refus, jamais repli silencieux. */
+export class RoutineScheduleError extends Error {
+  constructor(readonly code: RoutineScheduleErrorCode) {
+    super(code);
+    this.name = "RoutineScheduleError";
+  }
+}
+
+export type RoutineScheduleErrorCode =
+  | "invalidFrequency"
+  | "invalidHour"
+  | "invalidMinute"
+  | "invalidWeekday"
+  | "invalidDayOfMonth"
+  | "unknownTimezone";
+
+/** Le fuseau est-il connu d'`Intl` ? (Un nom bricolé lève dans le formateur.) */
+export function isKnownTimezone(tz: string): boolean {
+  if (!tz || typeof tz !== "string") return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Valide la cadence, et refuse les incohérences de FORME autant que de valeur :
+ * un `weekday` sur une cadence mensuelle est une cadence dont personne ne sait
+ * dire ce qu'elle veut. C'est un refus et pas un champ ignoré — un champ ignoré
+ * fait croire à l'appelant qu'il a été entendu.
+ */
+export function assertSchedule(schedule: RoutineSchedule): void {
+  if (!isRoutineFrequency(schedule.frequency)) {
+    throw new RoutineScheduleError("invalidFrequency");
+  }
+  if (!Number.isInteger(schedule.hour) || schedule.hour < 0 || schedule.hour > 23) {
+    throw new RoutineScheduleError("invalidHour");
+  }
+  if (!Number.isInteger(schedule.minute) || schedule.minute < 0 || schedule.minute > 59) {
+    throw new RoutineScheduleError("invalidMinute");
+  }
+  if (schedule.frequency === "weekly") {
+    const d = schedule.weekday;
+    if (!Number.isInteger(d) || (d as number) < 0 || (d as number) > 6) {
+      throw new RoutineScheduleError("invalidWeekday");
+    }
+  } else if (schedule.weekday != null) {
+    throw new RoutineScheduleError("invalidWeekday");
+  }
+  if (schedule.frequency === "monthly") {
+    const d = schedule.dayOfMonth;
+    if (!Number.isInteger(d) || (d as number) < 1 || (d as number) > 31) {
+      throw new RoutineScheduleError("invalidDayOfMonth");
+    }
+  } else if (schedule.dayOfMonth != null) {
+    throw new RoutineScheduleError("invalidDayOfMonth");
+  }
+  if (!isKnownTimezone(schedule.timezone)) {
+    throw new RoutineScheduleError("unknownTimezone");
+  }
+}
+
+/** Les champs d'un instant, LUS dans un fuseau (le pendant de `getUTC*`). */
+interface ZonedParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  /** 0 = dimanche … 6 = samedi. */
+  weekday: number;
+}
+
+const WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+function zonedParts(at: Date, timeZone: string): ZonedParts {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    weekday: "short",
+  }).formatToParts(at);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day")),
+    // `hour12: false` rend minuit « 24 » sur certaines ICU : on le ramène à 0.
+    hour: Number(get("hour")) % 24,
+    minute: Number(get("minute")),
+    second: Number(get("second")),
+    weekday: WEEKDAY_INDEX[get("weekday")] ?? 0,
+  };
+}
+
+/** Décalage du fuseau à cet instant, en millisecondes (positif à l'est). */
+function offsetMs(at: Date, timeZone: string): number {
+  const p = zonedParts(at, timeZone);
+  const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  // La milliseconde ne traverse pas `formatToParts` : on la remet, sinon
+  // l'offset porterait un résidu sous la seconde.
+  return asUtc - (at.getTime() - at.getMilliseconds());
+}
+
+/**
+ * L'instant UTC où l'horloge de `timeZone` affiche cette date et cette heure.
+ *
+ * Deux passes, et c'est le changement d'heure qui les impose : le décalage à
+ * appliquer dépend de l'instant qu'on cherche, qu'on ne connaît pas encore. La
+ * première passe donne un candidat, la seconde le corrige avec le décalage
+ * VRAI de ce candidat. Aux deux bascules annuelles :
+ *  - heure inexistante (le printemps saute 2 h → 3 h) : le résultat retombe
+ *    après le saut, soit la première heure qui existe — jamais la veille ;
+ *  - heure doublée (l'automne rejoue 2 h → 3 h) : on retient la PREMIÈRE
+ *    occurrence, celle que l'horloge affiche en premier.
+ */
+function zonedTimeToUtc(
+  timeZone: string,
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+): Date {
+  const wanted = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  const firstGuess = new Date(wanted - offsetMs(new Date(wanted), timeZone));
+  return new Date(wanted - offsetMs(firstGuess, timeZone));
+}
+
+/** Nombre de jours du mois (1-indexé) — pour ramener un 31 sur un mois court. */
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/**
+ * Le PROCHAIN passage, strictement après `from`.
+ *
+ * « Strictement » est la règle : appelée avec `from` exactement sur l'échéance
+ * — ce que fait le cron au moment de réarmer — elle AVANCE d'une période. Sans
+ * ça, une routine réarmée sur elle-même repartirait en boucle au tour suivant.
+ *
+ * Le calcul se fait sur l'horloge LOCALE du fuseau, pas en ajoutant des
+ * millisecondes : « tous les lundis à 9 h » reste 9 h de part et d'autre du
+ * changement d'heure, ce qu'un `+7 × 86 400 000` ne tient pas.
+ */
+export function nextRunAt(schedule: RoutineSchedule, from: Date): Date {
+  assertSchedule(schedule);
+  const tz = schedule.timezone;
+  const now = zonedParts(from, tz);
+
+  if (schedule.frequency === "daily") {
+    // Aujourd'hui à l'heure dite, sinon demain. On repart de la date locale et
+    // on ajoute des JOURS de calendrier, jamais 24 h.
+    for (let add = 0; add <= 2; add++) {
+      const d = new Date(Date.UTC(now.year, now.month - 1, now.day + add));
+      const at = zonedTimeToUtc(
+        tz,
+        d.getUTCFullYear(),
+        d.getUTCMonth() + 1,
+        d.getUTCDate(),
+        schedule.hour,
+        schedule.minute,
+      );
+      if (at.getTime() > from.getTime()) return at;
+    }
+    // Inatteignable : deux jours d'avance couvrent tous les décalages.
+    throw new RoutineScheduleError("invalidFrequency");
+  }
+
+  if (schedule.frequency === "weekly") {
+    const target = schedule.weekday as number;
+    // Le premier jour ≥ aujourd'hui qui tombe le bon jour de semaine, puis le
+    // suivant si l'heure est déjà passée.
+    let delta = (target - now.weekday + 7) % 7;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const d = new Date(Date.UTC(now.year, now.month - 1, now.day + delta));
+      const at = zonedTimeToUtc(
+        tz,
+        d.getUTCFullYear(),
+        d.getUTCMonth() + 1,
+        d.getUTCDate(),
+        schedule.hour,
+        schedule.minute,
+      );
+      if (at.getTime() > from.getTime()) return at;
+      delta += 7;
+    }
+    throw new RoutineScheduleError("invalidWeekday");
+  }
+
+  // Mensuel : le jour demandé, ramené au dernier jour des mois plus courts —
+  // « le 31 » sur février veut dire la fin de février, pas « on saute ce mois ».
+  const wantedDay = schedule.dayOfMonth as number;
+  for (let add = 0; add <= 2; add++) {
+    const year = now.year + Math.floor((now.month - 1 + add) / 12);
+    const month = ((now.month - 1 + add) % 12) + 1;
+    const day = Math.min(wantedDay, daysInMonth(year, month));
+    const at = zonedTimeToUtc(tz, year, month, day, schedule.hour, schedule.minute);
+    if (at.getTime() > from.getTime()) return at;
+  }
+  throw new RoutineScheduleError("invalidDayOfMonth");
+}
+
+/**
+ * Traduit une cadence en une phrase, avec le catalogue i18n de l'appelant.
+ *
+ * Elle sert au récapitulatif du wizard ET à l'en-tête de la routine : la MÊME
+ * fonction, sinon les deux surfaces finissent par dire deux choses de la même
+ * routine. Les trois messages portent des placeholders (`{time}`, `{weekday}`,
+ * `{day}`, `{timezone}`) — ils s'appellent donc avec leurs valeurs.
+ */
+export function describeSchedule(
+  schedule: RoutineSchedule,
+  t: (
+    key: "cadenceDaily" | "cadenceWeekly" | "cadenceMonthly",
+    values: Record<string, string | number>,
+  ) => string,
+  opts?: { weekdayLabel?: (weekday: number) => string; locale?: string },
+): string {
+  const time = formatTimeOfDay(schedule.hour, schedule.minute, opts?.locale);
+  if (schedule.frequency === "daily") {
+    return t("cadenceDaily", { time, timezone: schedule.timezone });
+  }
+  if (schedule.frequency === "weekly") {
+    const weekday = schedule.weekday ?? 1;
+    return t("cadenceWeekly", {
+      weekday: opts?.weekdayLabel?.(weekday) ?? weekdayName(weekday, opts?.locale),
+      time,
+      timezone: schedule.timezone,
+    });
+  }
+  return t("cadenceMonthly", {
+    day: schedule.dayOfMonth ?? 1,
+    time,
+    timezone: schedule.timezone,
+  });
+}
+
+/** « 09:00 » / « 9:00 AM » selon la locale — l'heure telle qu'on la lit. */
+export function formatTimeOfDay(hour: number, minute: number, locale?: string): string {
+  // Le 4 janvier 1970 est un dimanche en UTC : n'importe quelle date fait
+  // l'affaire, seule l'heure est formatée.
+  const at = new Date(Date.UTC(1970, 0, 4, hour, minute));
+  return new Intl.DateTimeFormat(locale || "en-US", {
+    timeZone: "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(at);
+}
+
+/** Le nom du jour de semaine dans la langue de l'utilisateur. */
+export function weekdayName(weekday: number, locale?: string): string {
+  // 4 janvier 1970 = dimanche : +weekday donne le bon jour.
+  const at = new Date(Date.UTC(1970, 0, 4 + (weekday % 7)));
+  return new Intl.DateTimeFormat(locale || "en-US", {
+    timeZone: "UTC",
+    weekday: "long",
+  }).format(at);
+}
+
+/** Le fuseau du navigateur, ou UTC hors navigateur (le wizard le préremplit). */
+export function browserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}

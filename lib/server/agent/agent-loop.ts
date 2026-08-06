@@ -8,6 +8,7 @@ import {
   OPENROUTER_USAGE_INCLUDE,
   type OpenRouterUsage,
   type NormalizedUsage,
+  type AiFeature,
   type AiUsageBillTo,
 } from "@/lib/server/ai-usage";
 import {
@@ -63,7 +64,8 @@ import {
  *    aucun appel en vol) → l'appelant persiste le checkpoint et reprend au chunk
  *    suivant (handoff multi-jobs Vercel, comme AutoKap).
  *  - pas de persistance assistant_messages : `messages` EST le checkpoint.
- *  - chaque appel → `recordAiUsage(feature:'agent_code', run_id)` ; chaque étape
+ *  - chaque appel → `recordAiUsage(feature, run_id)` — `agent_code`, ou
+ *    `routine_code` sur un passage de routine (MIN-185) ; chaque étape
  *    → `emit` vers agent_run_events (live view).
  *  - FIN DE TOUR NATURELLE : le tour se termine quand le modèle répond SANS
  *    tool-call — sa réponse texte est le message à l'utilisateur (`reply`). Un seul
@@ -234,6 +236,16 @@ export interface RunAgentLoopParams {
   runId: string;
   /** Imputation des lignes `ai_usage` du run (MIN-131) — jamais devinée ici. */
   billTo: AiUsageBillTo;
+  /**
+   * Sous quelle FEATURE les appels de cette boucle s'écrivent au ledger.
+   * `agent_code` par défaut ; `routine_code` pour un passage de routine
+   * (MIN-185) — même moteur, autre ligne de facture. Résolu UNE fois par
+   * l'appelant et passé ici : le résoudre à chaque `recordAiUsage` invite à en
+   * oublier un, et une ligne oubliée range la dépense sous « Agents » pour
+   * toujours. Les sous-agents héritent du même champ : ils se facturent avec
+   * leur mère.
+   */
+  feature?: Extract<AiFeature, "agent_code" | "routine_code">;
   projectId?: string | null;
   /** Budget du chunk courant, mesuré depuis l'entrée dans la boucle. */
   softDeadlineMs: number;
@@ -938,6 +950,9 @@ async function streamCompletion(opts: {
 export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoopResult> {
   const { messages, tools, model, apiKey, baseUrl, runId, execTool, emit } = params;
   const provider = params.provider ?? DEFAULT_AGENT_PROVIDER;
+  // La ligne de facture de ce chunk, résolue UNE fois : `agent_code`, ou
+  // `routine_code` quand le run est un passage de routine (MIN-185).
+  const usageFeature: AiFeature = params.feature ?? "agent_code";
   const startedAt = Date.now();
   const elapsed = () => Date.now() - startedAt;
 
@@ -1098,7 +1113,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           await recordAiUsage({
             runId,
             seq: seq++,
-            feature: "agent_code",
+            feature: usageFeature,
             model: summaryStream.modelUsed ?? model,
             generationId: summaryStream.generationId,
             promptTokens: summaryStream.usage.promptTokens,
@@ -1222,7 +1237,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     await recordAiUsage({
       runId,
       seq: seq++,
-      feature: "agent_code",
+      feature: usageFeature,
       model: stream.modelUsed ?? model,
       generationId: stream.generationId,
       promptTokens: stream.usage.promptTokens,

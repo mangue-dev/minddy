@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   ArrowRight,
   Bot,
+  CalendarClock,
   Gauge,
   Info,
   Loader2,
@@ -54,6 +55,7 @@ export const SEGMENT_UI: Record<
     text: string;
     labelKey:
       | "segmentAgents"
+      | "segmentRoutines"
       | "segmentNumo"
       | "segmentDictation"
       | "segmentFeedback"
@@ -61,6 +63,9 @@ export const SEGMENT_UI: Record<
   }
 > = {
   agents: { icon: Bot, text: "text-violet-600 dark:text-violet-400", labelKey: "segmentAgents" },
+  // Les routines (MIN-185), juste après les agents : même moteur, autre ligne
+  // de facture — un abonnement qu'on a laissé tourner, pas un geste qu'on a fait.
+  routines: { icon: CalendarClock, text: "text-sky-600 dark:text-sky-400", labelKey: "segmentRoutines" },
   numo: { icon: NumoRowIcon, text: "text-blue-600 dark:text-blue-400", labelKey: "segmentNumo" },
   dictation: { icon: Mic, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
   feedback: { icon: Megaphone, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },

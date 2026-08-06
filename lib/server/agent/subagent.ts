@@ -135,9 +135,11 @@ const STEERING_POLL_MS = 3_000;
 /**
  * Base des seq `ai_usage` des appels d'un sous-agent — à côté de
  * `SANDBOX_USAGE_SEQ_BASE` (1e9) et `WEB_SEARCH_SEQ_BASE` (1,5e9). Le `feature`
- * reste `agent_code` (aucune migration : le CHECK l'autorise depuis
- * `20260806091000_ai_usage_agent_feature.sql`), et le modèle réellement utilisé
- * étant déjà écrit par ligne, le coût d'un sous-agent reste isolable en SQL.
+ * est CELUI DE SA MÈRE : `agent_code` d'ordinaire, `routine_code` quand le run
+ * parent est un passage de routine (MIN-185) — une fille lancée par une routine
+ * est une dépense de cette routine, et la ranger ailleurs ferait mentir la
+ * ligne « Routines » de la facture. Le modèle réellement utilisé étant déjà
+ * écrit par ligne, le coût d'un sous-agent reste isolable en SQL.
  */
 export const SUBAGENT_USAGE_SEQ_BASE = 2_000_000_000;
 /** Seq réservés à UN sous-agent (rounds + compactions). */

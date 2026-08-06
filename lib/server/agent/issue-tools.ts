@@ -19,6 +19,7 @@ import {
   type IssueTextTools,
 } from "@/lib/server/text-edit";
 import { createIssueForProject } from "@/lib/server/create-issue";
+import { createRoutine } from "@/lib/server/routines";
 import { getTeamFeedbackDetail } from "@/lib/server/feedback/team-queries";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
@@ -55,6 +56,10 @@ import type { AgentToolImage } from "./content";
  *                          le MCP et Numo : `appendToPlan` et `editIssueText`.
  *  - `create_issue`     → crée un ticket du projet, au statut d'atterrissage choisi
  *                          par le lanceur (Compte → Préférences), comme Numo chat.
+ *  - `create_routine`   → pose une ROUTINE (MIN-185) : un run programmé qui
+ *                          revient tout seul. Même fabrique que les trois autres
+ *                          portes ; l'appelant est le lanceur du run, donc un
+ *                          run lancé par un non-propriétaire se voit refuser.
  * Service client : l'accès a été contrôlé au lancement du run (membre du projet),
  * et toute lecture/écriture est épinglée au projet du run.
  */
@@ -94,6 +99,7 @@ export const ISSUE_TOOL_NAMES = new Set([
   "append_to_plan",
   "edit_issue_text",
   "create_issue",
+  "create_routine",
   "report_verdict",
 ]);
 
@@ -808,6 +814,93 @@ async function createIssue(
   };
 }
 
+/**
+ * `create_routine` (MIN-185) depuis un run d'agent : la MÊME fabrique que le
+ * wizard, le chat et le MCP.
+ *
+ * L'appelant est le `created_by` du run — pas le owner du projet. Un run lancé
+ * par un membre non-propriétaire se voit donc refuser la création, et le message
+ * de refus doit le dire assez clairement pour que l'agent le RAPPORTE au lieu de
+ * réessayer avec d'autres paramètres.
+ *
+ * Le tool n'est pas servi à un run de routine (drapeau `interactive` de
+ * `agentToolsFor`) : une routine ne s'auto-réplique pas.
+ */
+async function createRoutineTool(
+  ctx: IssueToolContext,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  if (!ctx.actorId) {
+    return {
+      result: { error: "This session has no user to create a routine for." },
+      success: false,
+    };
+  }
+  const result = await createRoutine({
+    projectId: ctx.projectId,
+    actorId: ctx.actorId,
+    title: typeof args.title === "string" ? args.title : "",
+    prompt: typeof args.prompt === "string" ? args.prompt : "",
+    model: typeof args.model === "string" ? args.model : null,
+    reasoningLevel: typeof args.reasoning_level === "string" ? args.reasoning_level : null,
+    baseBranch: typeof args.base_branch === "string" ? args.base_branch : null,
+    frequency: typeof args.frequency === "string" ? args.frequency : "",
+    hour: typeof args.hour === "number" ? args.hour : 9,
+    minute: typeof args.minute === "number" ? args.minute : 0,
+    weekday: typeof args.weekday === "number" ? args.weekday : null,
+    dayOfMonth: typeof args.day_of_month === "number" ? args.day_of_month : null,
+    timezone: typeof args.timezone === "string" ? args.timezone : "",
+  });
+  if (!result.ok) {
+    return { result: { error: routineToolError(result) }, success: false };
+  }
+  const routine = result.routine;
+  return {
+    result: {
+      ok: true,
+      routine: {
+        id: routine.id,
+        title: routine.title,
+        frequency: routine.frequency,
+        hour: routine.hour,
+        minute: routine.minute,
+        weekday: routine.weekday,
+        day_of_month: routine.day_of_month,
+        timezone: routine.timezone,
+        next_run_at: routine.next_run_at,
+      },
+    },
+    success: true,
+  };
+}
+
+/** Refus de la fabrique, dit en clair pour que l'agent le rapporte tel quel. */
+function routineToolError(r: {
+  errorKey: string;
+  modelLimit?: { model: string; multiplier: number; limit: number; planId: string };
+}): string {
+  switch (r.errorKey) {
+    case "ownerOnly":
+      return "Refused: only the OWNER of this project can create a routine — this session was launched by someone else. Report this to the user; do not retry.";
+    case "noRepo":
+      return "Refused: this project has no linked repository, so a routine would have nothing to clone.";
+    case "titleRequired":
+      return "title is required.";
+    case "promptRequired":
+      return "prompt is required — it is the instruction the routine runs at every occurrence.";
+    case "unknownTimezone":
+      return "Refused: `timezone` must be a valid IANA name (e.g. 'Europe/Paris'). Ask the user rather than guessing; never fall back to UTC.";
+    case "invalidSchedule":
+      return "Refused: the cadence does not hold together. 'weekly' takes a weekday (0=Sunday…6=Saturday) and no day_of_month; 'monthly' takes a day_of_month (1–31) and no weekday.";
+    case "modelAbovePlan":
+      return r.modelLimit
+        ? `Refused: ${r.modelLimit.model} is ×${r.modelLimit.multiplier}, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Omit \`model\` to use the account default.`
+        : "Refused: that model is above the plan's ceiling. Omit `model` to use the account default.";
+    default:
+      return "Could not create the routine.";
+  }
+}
+
 /** Cap du verdict écrit en base — un rapport, pas une dissertation. */
 const VERDICT_SUMMARY_MAX_CHARS = 2000;
 const VERDICT_BLOCKER_MAX_CHARS = 400;
@@ -890,6 +983,8 @@ export async function executeIssueTool(
         return await editIssueTextTool(ctx, args);
       case "create_issue":
         return await createIssue(ctx, args);
+      case "create_routine":
+        return await createRoutineTool(ctx, args);
       case "report_verdict":
         return await reportVerdict(ctx, args);
       default:

@@ -1111,6 +1111,16 @@ export async function executeAgentRun(
   const runBillTo: AiUsageBillTo = run.created_by
     ? { userId: run.created_by }
     : { unattributed: `run ${run.id} sans created_by` };
+  /**
+   * SOUS QUELLE LIGNE ce run se facture (MIN-185). Techniquement c'est le même
+   * run ; en facturation, non : un run d'agent est un geste qu'on a fait, un
+   * passage de routine est un abonnement qu'on a laissé tourner. Résolu ICI,
+   * une fois, avant le `try` — le métrage de la microVM vit dans le `finally`,
+   * et une des deux moitiés rangée ailleurs que l'autre rendrait la séparation
+   * à moitié fausse.
+   */
+  const usageFeature = run.routine_id ? "routine_code" : "agent_code";
+  const sandboxUsageFeature = run.routine_id ? "routine_compute" : "sandbox_compute";
   let sandbox: Sandbox | null = null;
   // Jobs de fond du chunk (MIN-114), visibles du `finally` : quel que soit le
   // chemin de sortie (fin de tour, erreur, interruption), rien ne survit au chunk.
@@ -1384,6 +1394,9 @@ export async function executeAgentRun(
       const system = buildAgentSystemPrompt({
         locale: commentLocale,
         anchor,
+        // Un passage de ROUTINE (MIN-185) : le prompt cesse de décrire
+        // `ask_user`, que le jeu de tools ne sert pas, et dit le mandat de PR.
+        interactive: !run.routine_id,
         webSearch: webSearchAllowed,
         applyPatch: usesApplyPatch(run.model),
         images: imageInput,
@@ -1993,6 +2006,9 @@ export async function executeAgentRun(
           reasoningLevel: job.thinkingEffort ?? run.reasoning_level,
           runId: run.run_id ?? run.id,
           billTo: runBillTo,
+          // Un sous-agent se facture AVEC SA MÈRE : lancé par une routine, il
+          // s'écrit `routine_code` comme elle. Sa dépense est celle du passage.
+          feature: usageFeature,
           projectId: run.project_id,
           softDeadlineMs: Math.max(1_000, budget),
           // Budget d'usage : le RESTANT snapshoté à l'entrée du chunk. Légèrement
@@ -2193,6 +2209,9 @@ export async function executeAgentRun(
         images: imageInput,
         subagentModels,
         chain: !!run.chain_id,
+        // Un passage de ROUTINE (MIN-185) perd `ask_user` (personne devant
+        // l'écran) et `create_routine` (une routine ne s'auto-réplique pas).
+        interactive: !run.routine_id,
       }),
       model: run.model,
       apiKey,
@@ -2202,6 +2221,9 @@ export async function executeAgentRun(
       reasoningLevel: run.reasoning_level,
       runId: run.run_id ?? run.id,
       billTo: runBillTo,
+      // La ligne de facture du run (MIN-185) : « Routines » et pas « Agents »
+      // quand ce run est un passage de routine.
+      feature: usageFeature,
       projectId: run.project_id,
       softDeadlineMs,
       budgetUsd,
@@ -2647,6 +2669,9 @@ export async function executeAgentRun(
         runId: run.run_id ?? run.id,
         seq: SANDBOX_USAGE_SEQ_BASE + run.continuations,
         billTo: runBillTo,
+        // Les minutes de microVM d'une routine se rangent avec elle : sans ça,
+        // la moitié compute de sa dépense resterait sous « Agents ».
+        feature: sandboxUsageFeature,
         projectId: run.project_id,
         durationMs: Date.now() - callStart,
       }).catch(() => {});

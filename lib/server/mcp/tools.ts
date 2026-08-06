@@ -87,6 +87,13 @@ import { FaviconError } from "@/lib/server/favicon";
 import { resolveLinkResource } from "@/lib/server/link-resource";
 import { createObjective, updateObjective } from "@/lib/server/objectives";
 import {
+  createRoutine,
+  deleteRoutine,
+  listRoutinesForUser,
+  updateRoutine,
+  type Routine,
+} from "@/lib/server/routines";
+import {
   forgeFor,
 } from "@/lib/server/agent/forge";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
@@ -307,6 +314,79 @@ const PROJECT_ID = z
   .string()
   .uuid()
   .describe("Project UUID. Use minddy_list_projects to discover ids.");
+
+/** Une routine (MIN-185) telle qu'un client MCP la relit — cadence en clair,
+    jamais une expression cron : c'est ce qu'il devra réafficher à l'utilisateur. */
+function mcpRoutine(routine: Routine) {
+  return {
+    id: routine.id,
+    title: routine.title,
+    prompt: routine.prompt,
+    model: routine.model,
+    reasoning_level: routine.reasoning_level,
+    base_branch: routine.base_branch,
+    frequency: routine.frequency,
+    hour: routine.hour,
+    minute: routine.minute,
+    weekday: routine.weekday,
+    day_of_month: routine.day_of_month,
+    timezone: routine.timezone,
+    enabled: routine.enabled,
+    next_run_at: routine.next_run_at,
+    last_run_at: routine.last_run_at,
+    // CODE du dernier passage manqué ('quota', 'noRepo'…) : à traduire côté
+    // client, jamais à afficher tel quel.
+    last_error: routine.last_error,
+  };
+}
+
+/** Refus de la fabrique de routines → erreur MCP, avec le code qui va bien. */
+function routineFailure(r: {
+  errorKey: string;
+  modelLimit?: { model: string; multiplier: number; limit: number; planId: string };
+}): ToolResult {
+  switch (r.errorKey) {
+    case "ownerOnly":
+      return fail(
+        "forbidden",
+        "Only the project's OWNER can create or change a routine — it is their AI usage budget that runs on every occurrence. There is no way around it."
+      );
+    case "projectNotFound":
+      return fail("not_found", "Project not found or not accessible.");
+    case "routineNotFound":
+      return fail("not_found", "No routine with that id in this project.");
+    case "noRepo":
+      return fail(
+        "invalid_params",
+        "This project has no linked repository, so a routine would have nothing to clone. Link one first."
+      );
+    case "titleRequired":
+      return fail("invalid_params", "title must be 1 to 120 characters.");
+    case "promptRequired":
+      return fail("invalid_params", "prompt is required — it is the instruction each run receives.");
+    case "unknownTimezone":
+      return fail(
+        "invalid_params",
+        "timezone must be a valid IANA name (e.g. 'Europe/Paris'). Pass the user's own timezone; never guess and never fall back to UTC."
+      );
+    case "invalidSchedule":
+      return fail(
+        "invalid_params",
+        "The cadence does not hold together: 'weekly' takes a weekday (0=Sunday…6=Saturday) and no day_of_month; 'monthly' takes a day_of_month (1–31) and no weekday."
+      );
+    case "modelAbovePlan":
+      return fail(
+        "forbidden",
+        r.modelLimit
+          ? `The model ${r.modelLimit.model} costs ${r.modelLimit.multiplier}x minddy's default model, above the ${r.modelLimit.limit}x ceiling of the ${r.modelLimit.planId} plan. Omit model to use the account default.`
+          : "That model is above the plan's model ceiling. Omit model to use the account default."
+      );
+    case "noFieldsToUpdate":
+      return fail("invalid_params", "Pass at least one field to change.");
+    default:
+      return fail("database_error", "Could not save the routine.");
+  }
+}
 
 const ISSUE_REF = z
   .string()
@@ -3428,6 +3508,249 @@ export function registerMinddyTools(rawServer: McpServer): void {
             : {}),
         },
       });
+    }
+  );
+
+  // ── Routines (MIN-185) ──────────────────────────────────────────────
+  //
+  // La description de `minddy_create_routine` est celle que `catalog.ts` rejoue
+  // dans `/llms.txt` : elle doit se suffire à elle-même, et surtout DIRE CE QUE
+  // N'EST PAS une routine. Un ticket récurrent, une automatisation de projet et
+  // une routine se ressemblent de loin ; sans cette phrase, un client crée la
+  // mauvaise des trois et personne ne s'en aperçoit avant que ça tourne.
+  server.registerTool(
+    "minddy_list_routines",
+    {
+      title: "List routines",
+      description:
+        "List the project's ROUTINES — the jobs minddy's coding agent runs BY " +
+        "ITSELF on a schedule. Each one gives its id, title, the instruction it " +
+        "runs, its cadence (frequency + hour/minute + weekday or day_of_month + " +
+        "IANA timezone), its model, whether it is enabled, when it last ran, when " +
+        "it runs next, and the code of the last missed run ('quota' = the monthly " +
+        "usage budget was exhausted, 'noRepo' = the repository was unlinked). Call " +
+        "it before creating one, to adjust what is already scheduled instead of " +
+        "stacking a second routine doing the same job.",
+      inputSchema: { project_id: PROJECT_ID },
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const rows = (await listRoutinesForUser(scope.userId)).filter(
+        (r) => r.project_id === scope.access.project.id
+      );
+      return ok({ routines: rows.map(mcpRoutine) });
+    }
+  );
+
+  server.registerTool(
+    "minddy_create_routine",
+    {
+      title: "Create routine",
+      description:
+        "Create a ROUTINE: a named job that minddy's coding agent runs BY ITSELF " +
+        "on a schedule, in a sandbox on the project's linked repository — a " +
+        "security review every Monday, a dependency sweep on the 1st, a monthly " +
+        "inventory. OWNER ONLY: only the project's owner can create one, because " +
+        "it is their AI usage budget that leaves every Monday morning; a member " +
+        "gets a 'forbidden' refusal and there is no way around it. " +
+        "It is NOT a recurring ticket (that is an issue with a `recurrence` — a " +
+        "task that comes back on a board) and NOT a project automation (those " +
+        "react to an event on an issue): nothing triggers a routine but the clock, " +
+        "and each occurrence is a real agent run with its own sandbox and tools. " +
+        "Two things follow from running unattended, and the instruction must be " +
+        "written for them: the agent CANNOT ask anything (no question will ever be " +
+        "answered — it decides and documents its choice), and it MAY open a pull " +
+        "request without being asked when it finds something worth fixing, and " +
+        "simply concludes when it does not. So write `prompt` as a complete brief: " +
+        "what to look at, what counts as a finding, what to do with one. The model " +
+        "is chosen per routine and frozen on it — the strongest one for a security " +
+        "review, the cheapest for a monthly inventory — and its spend is billed " +
+        "under 'Routines', separately from agent runs. Requires a linked repository.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        title: z
+          .string()
+          .min(1)
+          .max(120)
+          .describe("Short name shown in the Routines tab, e.g. 'Weekly security review'."),
+        prompt: z
+          .string()
+          .min(1)
+          .describe(
+            "The INSTRUCTION the agent receives at every occurrence, in the user's " +
+              "language. It must stand on its own — nobody will be there to clarify it."
+          ),
+        frequency: z
+          .enum(["daily", "weekly", "monthly"])
+          .describe(
+            "'daily', 'weekly' (then pass weekday) or 'monthly' (then pass day_of_month)."
+          ),
+        hour: z
+          .number()
+          .int()
+          .min(0)
+          .max(23)
+          .describe("Hour of the run, 0–23, expressed IN `timezone`."),
+        timezone: z
+          .string()
+          .describe(
+            "IANA timezone the hour is expressed in ('Europe/Paris', " +
+              "'America/New_York'). REQUIRED, and it must be the USER'S timezone: " +
+              "pass the one their machine reports, never guess, never default to " +
+              "UTC — a wrong timezone runs the routine hours off, every single " +
+              "time, and nothing on screen says so. An unknown name is refused."
+          ),
+        minute: z.number().int().min(0).max(59).optional().describe("Minute, 0–59. Default 0."),
+        weekday: z
+          .number()
+          .int()
+          .min(0)
+          .max(6)
+          .optional()
+          .describe(
+            "Day of the week for a 'weekly' routine: 0 = Sunday, 1 = Monday … " +
+              "6 = Saturday. Required for 'weekly', REFUSED on other cadences."
+          ),
+        day_of_month: z
+          .number()
+          .int()
+          .min(1)
+          .max(31)
+          .optional()
+          .describe(
+            "Day of the month for a 'monthly' routine, 1–31. On a shorter month it " +
+              "falls back to that month's last day (31 in February = the 28th), it " +
+              "never skips a month. Required for 'monthly', REFUSED on other cadences."
+          ),
+        model: z
+          .string()
+          .optional()
+          .describe(
+            "Exact model id to freeze on this routine. Omit for the owner's default. " +
+              "A model above the plan's ceiling is refused here, at creation."
+          ),
+        reasoning_level: z
+          .enum(["off", "low", "medium", "high"])
+          .optional()
+          .describe("Reasoning effort of the runs. Omit for the owner's default."),
+        base_branch: z
+          .string()
+          .optional()
+          .describe("Branch the runs start from. Omit for the repository's default branch."),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await createRoutine({
+        projectId: scope.access.project.id,
+        actorId: scope.userId,
+        title: args.title,
+        prompt: args.prompt,
+        model: args.model ?? null,
+        reasoningLevel: args.reasoning_level ?? null,
+        baseBranch: args.base_branch ?? null,
+        frequency: args.frequency,
+        hour: args.hour,
+        minute: args.minute ?? 0,
+        weekday: args.weekday ?? null,
+        dayOfMonth: args.day_of_month ?? null,
+        timezone: args.timezone,
+      });
+      if (!result.ok) return routineFailure(result);
+      return ok({ routine: mcpRoutine(result.routine) });
+    }
+  );
+
+  server.registerTool(
+    "minddy_update_routine",
+    {
+      title: "Update routine",
+      description:
+        "Change an existing routine: pause it or bring it back (`enabled`), move " +
+        "its cadence, swap its model, or rewrite its instruction. OWNER ONLY. " +
+        "Touching the cadence — or re-enabling a paused routine — RECOMPUTES the " +
+        "next occurrence, so a change takes effect at the next one, never at the " +
+        "one already scheduled. Pausing keeps the routine and its past runs; only " +
+        "minddy_delete_routine removes them. Get the id from minddy_list_routines.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        routine_id: z.string().uuid().describe("From minddy_list_routines."),
+        title: z.string().min(1).max(120).optional(),
+        prompt: z.string().min(1).optional().describe("REPLACES the current instruction."),
+        enabled: z
+          .boolean()
+          .optional()
+          .describe("false pauses the routine; true re-arms it on its next occurrence."),
+        frequency: z.enum(["daily", "weekly", "monthly"]).optional(),
+        hour: z.number().int().min(0).max(23).optional(),
+        minute: z.number().int().min(0).max(59).optional(),
+        weekday: z.number().int().min(0).max(6).optional().describe("0 = Sunday … 6 = Saturday."),
+        day_of_month: z.number().int().min(1).max(31).optional(),
+        timezone: z
+          .string()
+          .optional()
+          .describe("IANA timezone of the hour. Pass the user's, never a guess."),
+        model: z.string().optional(),
+        reasoning_level: z.enum(["off", "low", "medium", "high"]).optional(),
+        base_branch: z.string().optional(),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await updateRoutine({
+        routineId: args.routine_id,
+        actorId: scope.userId,
+        ...(args.title !== undefined ? { title: args.title } : {}),
+        ...(args.prompt !== undefined ? { prompt: args.prompt } : {}),
+        ...(args.enabled !== undefined ? { enabled: args.enabled } : {}),
+        ...(args.model !== undefined ? { model: args.model } : {}),
+        ...(args.reasoning_level !== undefined
+          ? { reasoningLevel: args.reasoning_level }
+          : {}),
+        ...(args.base_branch !== undefined ? { baseBranch: args.base_branch } : {}),
+        ...(args.frequency !== undefined ? { frequency: args.frequency } : {}),
+        ...(args.hour !== undefined ? { hour: args.hour } : {}),
+        ...(args.minute !== undefined ? { minute: args.minute } : {}),
+        ...(args.weekday !== undefined ? { weekday: args.weekday } : {}),
+        ...(args.day_of_month !== undefined ? { dayOfMonth: args.day_of_month } : {}),
+        ...(args.timezone !== undefined ? { timezone: args.timezone } : {}),
+      });
+      if (!result.ok) return routineFailure(result);
+      return ok({ routine: mcpRoutine(result.routine) });
+    }
+  );
+
+  server.registerTool(
+    "minddy_delete_routine",
+    {
+      title: "Delete routine",
+      description:
+        "Delete a routine and everything it ran. OWNER ONLY and IRREVERSIBLE: its " +
+        "past executions go with it. To simply stop it from running, pass " +
+        "enabled: false to minddy_update_routine instead — that keeps its history " +
+        "readable. Confirm with the user before deleting one they did not just " +
+        "create by mistake.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        routine_id: z.string().uuid().describe("From minddy_list_routines."),
+      },
+      annotations: { ...WRITE, destructiveHint: true },
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await deleteRoutine({
+        routineId: args.routine_id,
+        actorId: scope.userId,
+      });
+      if (!result.ok) return routineFailure(result);
+      return ok({ deleted: true, routine_id: args.routine_id });
     }
   );
 

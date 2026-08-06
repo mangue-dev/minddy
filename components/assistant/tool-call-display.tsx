@@ -9,6 +9,7 @@ import type { SeedProposal } from "@/lib/seed/types";
 import {
   Activity,
   Bot,
+  CalendarClock,
   ChevronRight,
   FilePen,
   FilePlus2,
@@ -549,6 +550,36 @@ const TOOL_META: Record<string, ToolMeta> = {
       if (mode === "implement") return t("codeAgentLaunchedImplement");
       if (mode === "verify") return t("codeAgentLaunchedVerify");
       return t("codeAgentLaunched");
+    },
+  },
+  // ── Routines (MIN-185) ───────────────────────────────────────────────
+  create_routine: {
+    icon: CalendarClock,
+    getLabel: (args, _result, success, status, t) => {
+      if (status === "running") return t("creatingRoutine");
+      if (!success) return t("createRoutineFailed");
+      // Le titre EST ce qu'on vient de poser : le montrer évite d'aller
+      // vérifier dans l'onglet ce que Numo a compris.
+      const title = typeof args.title === "string" ? args.title : "";
+      return title ? t("routineCreatedNamed", { title }) : t("routineCreated");
+    },
+  },
+  list_routines: {
+    icon: CalendarClock,
+    getLabel: (_args, result, _success, status, t) => {
+      if (status === "running") return t("loadingRoutines");
+      return t("foundRoutines", { count: resultCount(result, "routines") });
+    },
+  },
+  update_routine: {
+    icon: CalendarClock,
+    getLabel: (args, _result, success, status, t) => {
+      if (status === "running") return t("updatingRoutine");
+      if (!success) return t("updateRoutineFailed");
+      // Activer/désactiver est le geste qu'on relit le plus : il se dit.
+      if (args.enabled === false) return t("routineDisabled");
+      if (args.enabled === true) return t("routineEnabled");
+      return t("routineUpdated");
     },
   },
   read_pull_request: {

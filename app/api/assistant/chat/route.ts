@@ -25,6 +25,7 @@ import {
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
 import {
+  buildClockBlock,
   buildGlobalSystemPrompt,
   buildPageContextBlock,
   buildSystemPrompt,
@@ -471,6 +472,15 @@ export async function POST(request: NextRequest) {
   if (pageContext) {
     systemPrompt += `\n${buildPageContextBlock(pageContext)}`;
   }
+
+  // L'heure de l'utilisateur (MIN-185) : le fuseau vient du navigateur, avec la
+  // requête, parce qu'il n'existe nulle part ailleurs. Sans lui, une routine
+  // demandée « à 13 h » part en UTC et tourne à côté, tous les lundis.
+  const timezone =
+    typeof body.timezone === "string" && body.timezone.length <= 64
+      ? body.timezone
+      : "";
+  if (timezone) systemPrompt += buildClockBlock(timezone);
 
   // Load conversation history
   const { data: history } = await supabase

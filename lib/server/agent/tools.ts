@@ -3,6 +3,10 @@ import "server-only";
 import { MAX_BACKGROUND_JOBS } from "./background";
 import { usesApplyPatch } from "./patch";
 import { SUBAGENT_TEMPLATE_IDS } from "./subagent-templates";
+import {
+  CREATE_ROUTINE_DESCRIPTION,
+  CREATE_ROUTINE_PARAMETERS,
+} from "@/lib/server/routine-tool-schema";
 // Type SEUL (donc effacé à la compilation) : l'ancrage est déclaré dans le module
 // des prompts, qui est celui qui le décline en texte.
 import type { AgentAnchor } from "./prompt";
@@ -29,11 +33,14 @@ import type { AgentAnchor } from "./prompt";
  *                  append_to_plan et edit_issue_text (MIN-186 : faire GROSSIR ou
  *                  CORRIGER un plan/une description déjà écrits, sans les
  *                  réémettre — write_issue_plan et update_issue remplacent tout),
- *                  create_issue — exécutés par lib/server/agent/issue-tools.ts.
+ *                  create_issue, create_routine (MIN-185 : poser un run
+ *                  programmé, retiré à un run de routine pour qu'elle ne
+ *                  s'auto-réplique pas) — exécutés par
+ *                  lib/server/agent/issue-tools.ts.
  *  - carnet      : read_scratchpad, add_scratchpad_tasks, update_scratchpad_task,
  *                  set_scratchpad — exécutés par lib/server/agent/scratchpad-tools.ts.
  *
- * Les douze tools minddy sont servis aux DEUX ancrages (MIN-125) : l'ancrage du run
+ * Les tools minddy sont servis aux DEUX ancrages (MIN-125) : l'ancrage du run
  * ne décide plus que de la CIBLE PAR DÉFAUT des tools ticket (le ticket du run,
  * sinon `issue` est obligatoire) et de la formulation de `create_pr`. D'où deux
  * jeux qui ne diffèrent que par là : `AGENT_TOOLS` (run de ticket) et
@@ -818,6 +825,14 @@ const MINDDY_TOOLS: AgentToolDef[] = [
   {
     type: "function",
     function: {
+      name: "create_routine",
+      description: CREATE_ROUTINE_DESCRIPTION,
+      parameters: CREATE_ROUTINE_PARAMETERS,
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "report_verdict",
       description:
         "Report the RESULT of the verification step you were asked to run. Call it exactly once, at the very end of your turn, after you have actually looked at the code — never before, and never instead of doing the work. `ok` is the whole point: true means the work matches the plan and you found nothing that must be fixed; false means it does not, and the run will be retried with your summary as its instruction. Say WHY in `summary`, and list the concrete things that must change in `blockers` (empty array when ok is true). This tool is only available inside an automated chain — nobody reads a verdict outside one.",
@@ -1116,6 +1131,16 @@ export const PR_REVIEW_TOOLS: AgentToolDef[] = [
 /** Les deux interfaces d'édition, mutuellement EXCLUSIVES (MIN-115). */
 const STRING_EDIT_TOOLS = new Set(["edit_file", "apply_edits", "write_file"]);
 
+/**
+ * Ce qu'un run SANS INTERLOCUTEUR n'a pas (MIN-185) — cf. `agentToolsFor`, qui
+ * documente les deux pourquoi. La liste est ici, à côté des autres exclusions
+ * structurelles, pour qu'on la trouve en cherchant « qui retire un tool ? ».
+ */
+const NON_INTERACTIVE_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
+  "ask_user",
+  "create_routine",
+]);
+
 /** Tools qui prennent un `issue` : leur CIBLE PAR DÉFAUT dépend de l'ancrage. */
 const TARGETABLE_ISSUE_TOOLS = new Set([
   "read_issue",
@@ -1187,6 +1212,23 @@ export function agentToolsFor(opts: {
    * tool sans lecteur est une invitation à s'en servir pour rien.
    */
   chain?: boolean;
+  /**
+   * Quelqu'un peut-il RÉPONDRE à ce run ? Faux pour un passage de ROUTINE
+   * (MIN-185), et deux tools disparaissent alors — par le JEU DE TOOLS, jamais
+   * par une phrase de prompt, même doctrine que la lecture seule d'une session
+   * de relecture :
+   *
+   *  - **`ask_user`** : personne n'est devant l'écran à 9 h du matin. Une
+   *    question laisserait le run planté en attente jusqu'à ce qu'on passe —
+   *    une microVM gelée et un travail jamais rendu. La routine décide, et
+   *    documente son choix dans sa réponse.
+   *  - **`create_routine`** : une routine ne s'auto-réplique pas. Sans cette
+   *    exclusion, une routine mal formulée pose une routine chaque nuit, et
+   *    rien dans le produit ne la rattrape.
+   *
+   * `undefined` vaut « interactif » : tous les appelants historiques le sont.
+   */
+  interactive?: boolean;
 }): AgentToolDef[] {
   const patch = usesApplyPatch(opts.model);
   const tools =
@@ -1201,6 +1243,7 @@ export function agentToolsFor(opts: {
       if (name === "web_search") return opts.webSearch;
       if (name === "apply_patch") return patch;
       if (name === "report_verdict") return opts.chain === true;
+      if (NON_INTERACTIVE_FORBIDDEN_TOOLS.has(name)) return opts.interactive !== false;
       if (STRING_EDIT_TOOLS.has(name)) return !patch;
       return true;
     })

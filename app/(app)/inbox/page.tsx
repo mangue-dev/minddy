@@ -230,6 +230,9 @@ export default function InboxPage() {
   const titleOf = (n: MyNotification): string => {
     if (n.objective_id) return n.objective_name ?? "";
     if (n.feedback_post_id) return n.feedback_title ?? "";
+    // Une routine (MIN-185) : son titre EST la ligne — elle n'a pas de ticket
+    // à nommer, et le repli « un ticket » mentirait sur ce qui s'est passé.
+    if (n.routine_id) return n.routine_title ?? "";
     return (
       n.issue_title ??
       t("someIssueFallback", { entity: tIssue("entity").toLowerCase() })

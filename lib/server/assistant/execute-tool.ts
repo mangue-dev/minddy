@@ -39,6 +39,11 @@ import { createObjective, updateObjective } from "@/lib/server/objectives";
 import { createCategory, updateCategory } from "@/lib/server/categories";
 import { updateProjectSettings } from "@/lib/server/update-project";
 import {
+  createRoutine,
+  listRoutinesForUser,
+  updateRoutine,
+} from "@/lib/server/routines";
+import {
   cancelInvitation,
   inviteMember,
   listPendingInvitations,
@@ -249,6 +254,78 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
     default:
       return "Could not launch the code agent.";
   }
+}
+
+/**
+ * Refus d'une écriture de routine (MIN-185), dits à Numo pour qu'il les relaie
+ * plutôt que d'inventer une raison — ou pire, de chercher un contournement.
+ * `ownerOnly` en particulier : c'est une règle, pas un obstacle technique.
+ */
+function routineErrorMessage(r: {
+  errorKey: string;
+  modelLimit?: { model: string; multiplier: number; limit: number; planId: string };
+}): string {
+  switch (r.errorKey) {
+    case "ownerOnly":
+      return "Only the project's OWNER can create or change a routine — it is their usage budget that runs every time. Tell the user plainly; there is no way around it, do not retry and do not offer one.";
+    case "projectNotFound":
+      return "Project not found or not accessible.";
+    case "routineNotFound":
+      return "No routine with that id. Call list_routines.";
+    case "noRepo":
+      return "This project has no linked repository, so a routine would have nothing to clone. Link one in the project's Git settings first.";
+    case "titleRequired":
+      return "title is required — write one yourself from the request.";
+    case "promptRequired":
+      return "prompt is required: it IS the instruction the agent gets at every run.";
+    case "unknownTimezone":
+      return "That timezone is not a valid IANA name. Pass the user's timezone exactly as it appears in your context (e.g. 'Europe/Paris'), never a guess and never an abbreviation.";
+    case "invalidSchedule":
+      return "The cadence does not hold together: 'weekly' needs a weekday (0=Sunday…6=Saturday) and no day_of_month; 'monthly' needs a day_of_month (1–31) and no weekday; hour is 0–23 and minute 0–59.";
+    case "modelAbovePlan":
+      return r.modelLimit
+        ? `The model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's default model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Call list_agent_models to pick one within the ceiling.`
+        : "That model is above the usage ceiling of the user's plan. Call list_agent_models to pick a cheaper one.";
+    case "noFieldsToUpdate":
+      return "Nothing to change — pass at least one field.";
+    default:
+      return "Could not save the routine.";
+  }
+}
+
+/** Une routine, telle que Numo la relit et la rapporte — cadence en clair. */
+function routineForTool(routine: {
+  id: string;
+  title: string;
+  prompt: string;
+  model: string | null;
+  frequency: string;
+  hour: number;
+  minute: number;
+  weekday: number | null;
+  day_of_month: number | null;
+  timezone: string;
+  enabled: boolean;
+  next_run_at: string | null;
+  last_run_at: string | null;
+  last_error: string | null;
+}) {
+  return {
+    id: routine.id,
+    title: routine.title,
+    prompt: routine.prompt,
+    model: routine.model,
+    frequency: routine.frequency,
+    hour: routine.hour,
+    minute: routine.minute,
+    weekday: routine.weekday,
+    day_of_month: routine.day_of_month,
+    timezone: routine.timezone,
+    enabled: routine.enabled,
+    next_run_at: routine.next_run_at,
+    last_run_at: routine.last_run_at,
+    last_error: routine.last_error,
+  };
 }
 
 /** Readable messages for the settings cores' errorKeys — the assistant does not
@@ -1199,6 +1276,62 @@ export async function executeTool(
           },
           success: true,
         };
+      }
+
+      // ── Routines (MIN-185) ──────────────────────────────────────────
+      case "create_routine": {
+        const result = await createRoutine({
+          projectId,
+          actorId: ctx.userId,
+          title: typeof args.title === "string" ? args.title : "",
+          prompt: typeof args.prompt === "string" ? args.prompt : "",
+          model: typeof args.model === "string" ? args.model : null,
+          reasoningLevel:
+            typeof args.reasoning_level === "string" ? args.reasoning_level : null,
+          baseBranch: typeof args.base_branch === "string" ? args.base_branch : null,
+          frequency: typeof args.frequency === "string" ? args.frequency : "",
+          hour: typeof args.hour === "number" ? args.hour : 9,
+          minute: typeof args.minute === "number" ? args.minute : 0,
+          weekday: typeof args.weekday === "number" ? args.weekday : null,
+          dayOfMonth: typeof args.day_of_month === "number" ? args.day_of_month : null,
+          // Le fuseau du navigateur est dans le contexte de Numo : s'il ne
+          // l'a pas passé, on refuse plutôt que de partir en UTC.
+          timezone: typeof args.timezone === "string" ? args.timezone : "",
+        });
+        if (!result.ok) return toolError(routineErrorMessage(result));
+        return { result: { routine: routineForTool(result.routine) }, success: true };
+      }
+
+      case "list_routines": {
+        const rows = (await listRoutinesForUser(ctx.userId)).filter(
+          (r) => r.project_id === projectId,
+        );
+        return { result: { routines: rows.map(routineForTool) }, success: true };
+      }
+
+      case "update_routine": {
+        const routineId = typeof args.routine_id === "string" ? args.routine_id : "";
+        if (!routineId) return toolError("routine_id is required (see list_routines).");
+        const result = await updateRoutine({
+          routineId,
+          actorId: ctx.userId,
+          ...(typeof args.title === "string" ? { title: args.title } : {}),
+          ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}),
+          ...(typeof args.enabled === "boolean" ? { enabled: args.enabled } : {}),
+          ...("model" in args ? { model: typeof args.model === "string" ? args.model : null } : {}),
+          ...(typeof args.reasoning_level === "string"
+            ? { reasoningLevel: args.reasoning_level }
+            : {}),
+          ...(typeof args.base_branch === "string" ? { baseBranch: args.base_branch } : {}),
+          ...(typeof args.frequency === "string" ? { frequency: args.frequency } : {}),
+          ...(typeof args.hour === "number" ? { hour: args.hour } : {}),
+          ...(typeof args.minute === "number" ? { minute: args.minute } : {}),
+          ...(typeof args.weekday === "number" ? { weekday: args.weekday } : {}),
+          ...(typeof args.day_of_month === "number" ? { dayOfMonth: args.day_of_month } : {}),
+          ...(typeof args.timezone === "string" ? { timezone: args.timezone } : {}),
+        });
+        if (!result.ok) return toolError(routineErrorMessage(result));
+        return { result: { routine: routineForTool(result.routine) }, success: true };
       }
 
       case "read_pull_request": {

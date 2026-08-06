@@ -229,6 +229,19 @@ export interface AnalyticsEventProps {
   agent_model_changed: { model: string };
   agent_preferences_updated: { field: string };
 
+  // ── Routines (MIN-185) — un run d'agent qui revient tout seul ──
+  // On mesure la FORME du geste (cadence, modèle choisi ou non), jamais
+  // l'instruction : elle décrit le dépôt de quelqu'un.
+  routine_created: {
+    frequency: string;
+    model: string;
+    reasoning_level: string;
+    has_branch: boolean;
+    prompt_length_bucket: string;
+  };
+  /** « Lancer maintenant » : un passage hors calendrier, déclenché à la main. */
+  routine_run_now: NoProps;
+
   // ── Pull requests ──
   pr_list_viewed: { count: number };
   pr_opened: { state: string; provider: string };
@@ -571,6 +584,9 @@ const EVENT_NAMES = [
   "agent_question_answered",
   "agent_model_changed",
   "agent_preferences_updated",
+  // Routines
+  "routine_created",
+  "routine_run_now",
   // Pull requests
   "pr_list_viewed",
   "pr_opened",

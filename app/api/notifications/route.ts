@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
   const feedbackPostIds = [
     ...new Set(notifs.map((n) => n.feedback_post_id).filter(Boolean)),
   ] as string[];
+  const routineIds = [...new Set(notifs.map((n) => n.routine_id).filter(Boolean))] as string[];
   const projectIds = [...new Set(notifs.map((n) => n.project_id).filter(Boolean))] as string[];
   const actorIds = [...new Set(notifs.map((n) => n.actor_id).filter(Boolean))] as string[];
   const commentIds = [...new Set(notifs.map((n) => n.comment_id).filter(Boolean))] as string[];
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest) {
     { data: issues },
     { data: objectives },
     { data: feedbackPosts },
+    { data: routines },
     { data: projects },
     actorsById,
     actorSeeds,
@@ -72,6 +74,11 @@ export async function GET(request: NextRequest) {
     feedbackPostIds.length
       ? service.from("feedback_posts").select("id, title").in("id", feedbackPostIds)
       .is("deleted_at", null)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    // La ROUTINE d'une notification programmée (MIN-185) : son titre EST le
+    // titre de la ligne d'inbox — elle n'a ni ticket ni commentaire à montrer.
+    routineIds.length
+      ? service.from("agent_routines").select("id, title").in("id", routineIds)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
     projectIds.length
       ? service.from("projects").select("id, key").in("id", projectIds)
@@ -99,6 +106,7 @@ export async function GET(request: NextRequest) {
   const issueMap = new Map((issues ?? []).map((i) => [i.id, i]));
   const objectiveMap = new Map((objectives ?? []).map((o) => [o.id, o]));
   const feedbackMap = new Map((feedbackPosts ?? []).map((f) => [f.id, f]));
+  const routineMap = new Map((routines ?? []).map((r) => [r.id, r]));
   const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
   const commentMap = new Map((comments ?? []).map((c) => [c.id, c]));
 
@@ -125,12 +133,16 @@ export async function GET(request: NextRequest) {
   const targetAlive = (n: (typeof notifs)[number]): boolean =>
     (!n.issue_id || !issues || issueMap.has(n.issue_id)) &&
     (!n.objective_id || !objectives || objectiveMap.has(n.objective_id)) &&
-    (!n.feedback_post_id || !feedbackPosts || feedbackMap.has(n.feedback_post_id));
+    (!n.feedback_post_id || !feedbackPosts || feedbackMap.has(n.feedback_post_id)) &&
+    // Une routine supprimée emporte ses notifications par cascade : ce filtre
+    // ne rattrape donc qu'une lecture partielle, pas une suppression.
+    (!n.routine_id || !routines || routineMap.has(n.routine_id));
 
   const result: MyNotification[] = notifs.filter(targetAlive).map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
     const objective = n.objective_id ? objectiveMap.get(n.objective_id) : undefined;
     const feedback = n.feedback_post_id ? feedbackMap.get(n.feedback_post_id) : undefined;
+    const routine = n.routine_id ? routineMap.get(n.routine_id) : undefined;
     const project = n.project_id ? projectMap.get(n.project_id) : undefined;
     const actor = n.actor_id ? actorsById.get(n.actor_id) : undefined;
     const comment = n.comment_id ? commentMap.get(n.comment_id) : undefined;
@@ -154,6 +166,8 @@ export async function GET(request: NextRequest) {
       objective_name: objective?.name ?? null,
       feedback_post_id: n.feedback_post_id ?? null,
       feedback_title: feedback?.title ?? null,
+      routine_id: n.routine_id ?? null,
+      routine_title: routine?.title ?? null,
       project_id: n.project_id,
       project_key: project?.key ?? null,
       actor_name: fromNumo

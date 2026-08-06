@@ -19,6 +19,7 @@ import { agentSessionStatusKey } from "@/components/agents/agent-session-status"
 import { SessionCompose } from "@/components/agents/session-compose";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { RoutinesPanel } from "@/components/routines/routines-panel";
 import {
   PROJECT_GROUP_INDENT,
   PROJECT_GROUP_LIMIT,
@@ -291,6 +292,47 @@ function SessionGroupRows({
 }
 
 /**
+ * Les deux moitiés de la vue Agents (MIN-185) : les CONVERSATIONS — ce qu'on a
+ * demandé à Numo — et les ROUTINES — ce qu'il fait tout seul. Deux listes qui
+ * n'ont rien à faire ensemble : une routine quotidienne noierait la colonne des
+ * conversations en une semaine, et c'est exactement pour ça que ses runs en
+ * sortent (`.is("routine_id", null)` dans /api/agent-runs).
+ *
+ * L'onglet est porté par l'URL (`?tab=routines`) : une notification de routine
+ * y renvoie directement, et le lien se partage.
+ */
+function AgentsTabs({
+  tab,
+  onChange,
+}: {
+  tab: "sessions" | "routines";
+  onChange: (tab: "sessions" | "routines") => void;
+}) {
+  const t = useTranslations("Agents");
+  return (
+    <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5" role="tablist">
+      {(["sessions", "routines"] as const).map((id) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={tab === id}
+          onClick={() => onChange(id)}
+          className={cn(
+            "flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+            tab === id
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {id === "sessions" ? t("tabConversations") : t("tabRoutines")}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
  * Bouton « Nouveau » de la colonne : il OUVRE une conversation vierge, il ne
  * demande rien d'abord. Il n'y a plus de menu ici — lancer l'agent SUR UN TICKET
  * se fait depuis le ticket lui-même (carte ou panneau), là où l'on sait de quel
@@ -378,6 +420,14 @@ export function AgentsPage() {
   const issueParam = searchParams.get("issue");
   const runParam = searchParams.get("run");
   const composeParam = searchParams.get("compose");
+  // Onglet Conversations / Routines (MIN-185), porté par l'URL : une
+  // notification de routine ouvre `?tab=routines&routine=<id>`.
+  const tabParam = searchParams.get("tab");
+  const routineParam = searchParams.get("routine");
+  const [tab, setTab] = useState<"sessions" | "routines">(
+    tabParam === "routines" || routineParam ? "routines" : "sessions",
+  );
+  const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(routineParam);
 
   const draft = useAgentComposeDraft();
   // Le brouillon n'est honoré que si l'URL le signale ENCORE : une navigation vers
@@ -508,6 +558,13 @@ export function AgentsPage() {
     setSelectedKey(runParam);
     setMobileDetail(true);
   }, [runParam]);
+  // Deep-link vers une routine (notification, lien partagé) : l'onglet suit.
+  useEffect(() => {
+    if (!routineParam) return;
+    setTab("routines");
+    setSelectedRoutineId(routineParam);
+    setMobileDetail(true);
+  }, [routineParam]);
 
   // Un brouillon POSÉ ouvre son volet, même si l'URL, elle, ne bouge pas :
   // `router.push` vers l'adresse COURANTE est inerte, donc les effets de params
@@ -671,6 +728,40 @@ export function AgentsPage() {
     );
   }
 
+  /** Le sélecteur d'onglet, posé en tête de la colonne dans les deux cas. */
+  const switchTab = (next: "sessions" | "routines") => {
+    setTab(next);
+    setMobileDetail(false);
+    // L'URL cesse de désigner l'onglet qu'on vient de quitter, sinon un
+    // rechargement rouvrirait l'autre.
+    if (tabParam || routineParam) router.replace("/agents");
+  };
+
+  // ── Onglet ROUTINES (MIN-185) : sa propre liste, son propre détail ────
+  if (tab === "routines") {
+    return (
+      <div className="flex h-full min-h-0">
+        <RoutinesPanel
+          selectedId={selectedRoutineId}
+          onSelect={(id) => {
+            setSelectedRoutineId(id);
+            setMobileDetail(!!id);
+          }}
+          mobileDetail={mobileDetail}
+          onBack={() => setMobileDetail(false)}
+          renderSidebar={(list) => (
+            <SecondarySidebar title={t("title")} hiddenOnMobile={mobileDetail}>
+              <div className="px-2 pt-2">
+                <AgentsTabs tab={tab} onChange={switchTab} />
+              </div>
+              {list}
+            </SecondarySidebar>
+          )}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0">
       {/* ── Gauche : liste des sessions ─────────────────────────────────── */}
@@ -685,6 +776,9 @@ export function AgentsPage() {
         }}
         actions={<NewSessionButton onClick={() => startNewSession()} />}
       >
+        <div className="px-2 pt-2">
+          <AgentsTabs tab={tab} onChange={switchTab} />
+        </div>
         {loading ? (
           /* À la forme de la liste : deux projets, quelques conversations d'une
              ligne dessous. */

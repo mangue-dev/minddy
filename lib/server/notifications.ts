@@ -21,6 +21,9 @@ export interface NotificationRow {
   objective_id?: string | null;
   /** Set instead of issue_id/objective_id for a feedback-post notification. */
   feedback_post_id?: string | null;
+  /** Set instead of the three above for a ROUTINE notification (MIN-185) — a
+      scheduled run has no ticket, and its executions live in the routine. */
+  routine_id?: string | null;
   comment_id?: string | null;
   actor_id: string | null;
   /** L'action est passée par le serveur MCP : l'acteur affiché dans l'inbox est
@@ -93,6 +96,12 @@ export async function insertNotifications(
           .in("type", siblingTypes(r.type) as string[])
           .is("read_at", null);
         del = r.issue_id ? del.eq("issue_id", r.issue_id) : del.is("issue_id", null);
+        // Une notification de ROUTINE (MIN-185) n'a pas de ticket : sans ce
+        // second filtre, le `issue_id is null` ci-dessus déplacerait la ligne
+        // de TOUTES les routines du compte — deux routines en échec le même
+        // matin n'en laisseraient qu'une, et l'autre disparaîtrait sans avoir
+        // été lue. Chaque routine déplace la sienne, et elle seule.
+        del = r.routine_id ? del.eq("routine_id", r.routine_id) : del.is("routine_id", null);
         return del;
       })
     );

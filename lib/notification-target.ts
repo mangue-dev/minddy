@@ -18,6 +18,9 @@ export interface NotificationTarget {
   issue_id: string | null;
   objective_id?: string | null;
   feedback_post_id?: string | null;
+  /** Une ROUTINE (MIN-185) : ses exécutions se lisent dans la routine, et
+      nulle part ailleurs — d'où une destination à elle. */
+  routine_id?: string | null;
 }
 
 /**
@@ -29,6 +32,10 @@ export interface NotificationTarget {
  * qu'une notification d'objectif peut porter un `issue_id` de contexte.
  */
 export function notificationTargetPath(n: NotificationTarget): string | null {
+  // La routine passe AVANT le test de projet : son écran est global (la vue
+  // Agents, tous projets confondus), donc elle mène quelque part même si la
+  // ligne n'a pas de projet.
+  if (n.routine_id) return `/agents?tab=routines&routine=${n.routine_id}`;
   if (!n.project_id) return null;
   if (n.objective_id) {
     return `/projects/${n.project_id}/objectives?open=${n.objective_id}`;

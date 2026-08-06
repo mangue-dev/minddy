@@ -132,6 +132,12 @@ function issueIdOf(change: BroadcastChange): string | null {
   return typeof issueId === "string" ? issueId : null;
 }
 
+/** La ROUTINE d'un run diffusé (MIN-185), quand il en porte une. */
+function routineIdOf(change: BroadcastChange): string | null {
+  const routineId = (change.record ?? change.old_record)?.routine_id;
+  return typeof routineId === "string" ? routineId : null;
+}
+
 function objectiveIdOf(change: BroadcastChange): string | null {
   const objectiveId = (change.record ?? change.old_record)?.objective_id;
   return typeof objectiveId === "string" ? objectiveId : null;
@@ -363,6 +369,18 @@ function keysForProjectEvent(
     // les transitions visibles (voir 20260907090000_agent_runs_broadcast).
     case "agent_runs": {
       const issueId = issueIdOf(change);
+      const routineId = routineIdOf(change);
+      // Un passage de ROUTINE (MIN-185) n'est pas une conversation : il sort de
+      // la liste des sessions (`.is("routine_id", null)` côté route), donc
+      // l'invalider ne rafraîchirait rien — c'est la liste des EXÉCUTIONS de sa
+      // routine qui doit bouger, et la liste des routines elle-même (son
+      // `last_run_at` et son alerte viennent de changer).
+      if (routineId) {
+        return [
+          active(["routines", routineId, "runs"]),
+          active(["routines"]),
+        ];
+      }
       return [
         active(ALL_AGENT_SESSIONS_KEY),
         active(ALL_PULL_REQUESTS_KEY),

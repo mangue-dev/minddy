@@ -15,6 +15,13 @@ import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
 import { NOTIFICATION_CATEGORIES } from "@/lib/notification-prefs";
 import { AUTOMATION_PRESET_IDS } from "@/lib/automations";
 import { REASONING_LEVELS } from "@/lib/agent-reasoning";
+import {
+  CREATE_ROUTINE_DESCRIPTION,
+  CREATE_ROUTINE_PARAMETERS,
+  LIST_ROUTINES_DESCRIPTION,
+  UPDATE_ROUTINE_DESCRIPTION,
+  UPDATE_ROUTINE_PARAMETERS,
+} from "@/lib/server/routine-tool-schema";
 import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-validation";
 import { RELATION_TYPE_VALUES } from "@/lib/relation-validation";
 import { TRASH_TYPES } from "@/lib/server/trash";
@@ -1613,6 +1620,35 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         // par défaut, et les trois consignes natives ne serviraient jamais.
         required: ["issue_id", "mode"],
       },
+    },
+  },
+  // ── Routines (MIN-185) : un run d'agent qui revient tout seul ──────────
+  {
+    type: "function",
+    function: {
+      name: "create_routine",
+      description: CREATE_ROUTINE_DESCRIPTION,
+      // `project_id` n'est pas déclaré ici : en mode global, `buildGlobalTools`
+      // l'injecte et le rend REQUIS pour tous les tools de projet ; en mode
+      // projet, il vient de la conversation. Le déclarer en double ferait
+      // apparaître deux fois la même clé dans `required`.
+      parameters: CREATE_ROUTINE_PARAMETERS,
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_routines",
+      description: LIST_ROUTINES_DESCRIPTION,
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_routine",
+      description: UPDATE_ROUTINE_DESCRIPTION,
+      parameters: UPDATE_ROUTINE_PARAMETERS,
     },
   },
   {

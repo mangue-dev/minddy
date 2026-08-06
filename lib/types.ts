@@ -166,6 +166,10 @@ export interface MyNotification {
   /** Set instead of the issue/objective fields when it points at a feedback post. */
   feedback_post_id: string | null;
   feedback_title: string | null;
+  /** Set instead of all of the above when it points at a ROUTINE (MIN-185) —
+      a scheduled run has no ticket; its executions live in the routine. */
+  routine_id: string | null;
+  routine_title: string | null;
   project_id: string | null;
   project_key: string | null;
   actor_name: string | null;

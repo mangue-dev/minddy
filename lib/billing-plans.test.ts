@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { BILLING_PLANS, getBillingPlan, nextBillingPlanId } from "./billing-plans";
+import {
+  BILLABLE_FEATURES,
+  BILLING_PLANS,
+  USAGE_SEGMENTS,
+  getBillingPlan,
+  nextBillingPlanId,
+} from "./billing-plans";
 
 /**
  * L'échelle des plans, du point de vue de « que proposer à quelqu'un qui a épuisé
@@ -27,6 +33,39 @@ describe("nextBillingPlanId", () => {
       expect(target.includedUsageUsd).toBeGreaterThan(plan.includedUsageUsd);
       expect(target.allowAgents).toBe(true);
     }
+  });
+});
+
+/**
+ * L'invariant qui attrape tout seul la feature oubliée (MIN-185). Une feature
+ * hors segment n'est refusée par rien : `segmentizeUsage` l'ignore (la barre
+ * sous-compte face au total affiché) et `segmentForFeature` retombe sur
+ * « Numo » (l'historique la range sous le mauvais nom). Les deux se découvrent
+ * sur une facture, des semaines plus tard.
+ */
+describe("USAGE_SEGMENTS", () => {
+  it("range CHAQUE feature facturable dans exactement un segment", () => {
+    for (const feature of BILLABLE_FEATURES) {
+      const owners = USAGE_SEGMENTS.filter((s) =>
+        (s.features as readonly string[]).includes(feature),
+      );
+      expect(owners.map((s) => s.id), `feature ${feature}`).toHaveLength(1);
+    }
+  });
+
+  it("ne liste aucune feature qui n'existe pas", () => {
+    // Le sens inverse : un segment qui garde le nom d'une feature retirée
+    // compterait zéro pour toujours, sans que rien ne le dise.
+    for (const segment of USAGE_SEGMENTS) {
+      for (const feature of segment.features) {
+        expect(BILLABLE_FEATURES, `segment ${segment.id}`).toContain(feature);
+      }
+    }
+  });
+
+  it("donne à chaque segment sa propre couleur de barre", () => {
+    const classes = USAGE_SEGMENTS.map((s) => s.barClass);
+    expect(new Set(classes).size).toBe(classes.length);
   });
 });
 

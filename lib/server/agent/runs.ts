@@ -17,6 +17,8 @@ import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
 import { notifyChainOfRunEnd } from "@/lib/server/automations/hooks";
+import { notifyRoutineOfRunEnd, stampRoutineRunEnd } from "@/lib/server/routine-hooks";
+import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
  * Accès données des runs de l'agent de code (MIN-46) : création, claim CAS,
@@ -47,9 +49,16 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<AgentRunStatus> = new Set([
 /**
  * Qui a lancé le run. `automation` (MIN-147) est le quatrième : une règle de
  * projet, pas un geste — c'est ce qui distingue, dans l'analytics comme dans
- * l'UI, une chaîne qui se déroule d'un clic sur « lancer Numo ».
+ * l'UI, une chaîne qui se déroule d'un clic sur « lancer Numo ». `routine`
+ * (MIN-185) est le cinquième : une échéance, pas même une règle — personne
+ * n'était devant l'écran, pas même pour changer un statut.
  */
-export type AgentRunTrigger = "button" | "chat" | "mention" | "automation";
+export type AgentRunTrigger =
+  | "button"
+  | "chat"
+  | "mention"
+  | "automation"
+  | "routine";
 
 /**
  * Ce que l'agent a répondu au tool `report_verdict` (MIN-147), servi aux seules
@@ -174,6 +183,15 @@ export interface AgentRun {
   /** Chaîne d'automatisation (MIN-147) dont ce run est une étape. Null = run
    *  ordinaire, lancé à la main. */
   chain_id: string | null;
+  /**
+   * ROUTINE (MIN-185) dont ce run est un passage. Non nul ⇒ trois écarts avec
+   * un run carnet ordinaire, et ils sont TOUS portés par cette colonne : la
+   * dépense se compte sous « Routines » (`routine_code`/`routine_compute`), le
+   * jeu de tools perd `ask_user` et `create_routine` (personne devant l'écran ;
+   * pas d'auto-réplication), et la liste des conversations l'exclut — sans ça
+   * une routine quotidienne noierait la colonne Agents en une semaine.
+   */
+  routine_id: string | null;
   /** Plafond de dépense de CE run, en USD. Null = seuls le quota et le plafond
    *  de la chaîne bornent. */
   budget_usd: number | null;
@@ -223,6 +241,8 @@ export interface CreateRunInput {
   /** Étape d'une chaîne d'automatisation (MIN-147) : son id et son plafond. */
   chainId?: string | null;
   budgetUsd?: number | null;
+  /** Passage d'une ROUTINE (MIN-185) — cf. `AgentRun.routine_id`. */
+  routineId?: string | null;
   /** Ce qu'on demande au run — persisté, contrairement à avant MIN-147. */
   intent?: AgentLaunchIntent | null;
   /**
@@ -299,6 +319,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       run_id: randomUUID(),
       chain_id: input.chainId ?? null,
       budget_usd: input.budgetUsd ?? null,
+      routine_id: input.routineId ?? null,
       intent: input.intent ?? null,
       // Affinité de déploiement (MIN-165) : posée UNE fois, à la création. Tous
       // les chunks d'un run lancé depuis un preview restent sur ce déploiement.
@@ -326,6 +347,10 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       // ne se lit dans l'analytics que comme une rafale de lancements.
       intent: input.intent ?? "implement",
       in_chain: !!input.chainId,
+      // Un passage de ROUTINE (MIN-185) : sans ce drapeau, l'analytics les lit
+      // comme des sessions carnet, et « combien de runs part-il tout seul ? »
+      // n'a pas de réponse.
+      in_routine: !!input.routineId,
       scope: runScope(input),
       has_base_branch: !!input.baseBranch,
       resumes_pr: input.prNumber != null,
@@ -395,6 +420,43 @@ export async function activeRunForPullRequest(
     .limit(1)
     .maybeSingle();
   return (data as AgentRun | null) ?? null;
+}
+
+/**
+ * Run ACTIF (queued/running) de la ROUTINE, ou null (MIN-185). Une routine ne se
+ * marche pas dessus : un passage qui traîne (quota, sandbox lente) ne doit pas
+ * se faire doubler par l'échéance suivante — deux passages parallèles sur la
+ * même instruction, c'est deux fois la dépense pour deux fois le même travail,
+ * et potentiellement deux pull requests. L'index partiel unique
+ * `idx_agent_runs_active_routine` en garantit au plus un.
+ */
+export async function activeRunForRoutine(routineId: string): Promise<AgentRun | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("*")
+    .eq("routine_id", routineId)
+    .in("status", ACTIVE_STATUSES)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as AgentRun | null) ?? null;
+}
+
+/**
+ * Les « Exécutions précédentes » d'une routine (MIN-185), la plus récente en
+ * tête. C'est LE seul endroit où les runs d'une routine se lisent : ils sont
+ * exclus de `/api/agent-runs`, donc de la colonne des conversations.
+ */
+export async function runsForRoutine(routineId: string, limit = 50): Promise<AgentRun[]> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("*")
+    .eq("routine_id", routineId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as AgentRun[];
 }
 
 /**
@@ -650,6 +712,21 @@ export async function stampRun(
     // assure qu'un seul gagne, donc un seul avancement de chaîne. Le re-queue de
     // steering (`queued`, non terminal) en est exclu d'office.
     if (run.chain_id) notifyChainOfRunEnd(run);
+    // Même passage obligé pour une ROUTINE (MIN-185) : son propriétaire apprend
+    // qu'une pull request est là ou que le passage a échoué, et la routine
+    // elle-même retient l'issue du dernier passage.
+    //
+    // `afterOrNow` et non une promesse détachée : la réponse HTTP peut partir
+    // avant que ces deux écritures aboutissent, et une promesse que personne ne
+    // retient meurt avec l'invocation (cf. lib/server/after-safe.ts). Ce qui se
+    // perdrait ici, c'est l'alerte de budget épuisé qu'on vient précisément de
+    // rendre visible.
+    if (run.routine_id) {
+      afterOrNow(async () => {
+        await notifyRoutineOfRunEnd(run);
+        await stampRoutineRunEnd(run);
+      });
+    }
   }
   return run;
 }

@@ -155,24 +155,44 @@ export const SANDBOX_USD_PER_MINUTE = 0.002;
 
 // ── Segments d'affichage de l'usage ─────────────────────────────────────────
 
-/** 1:1 avec `AiFeature` (lib/server/ai-usage.ts) + le CHECK de la migration. */
-export type BillableFeature =
-  | "numo_chat"
-  | "numo_comment"
-  | "dictation"
-  | "transcription"
-  | "smart_assign"
-  | "feedback_classify"
-  | "feedback_analyze"
-  | "feedback_voice"
-  | "embedding"
-  | "agent_code"
-  | "sandbox_compute"
-  | "web_search"
-  | "pr_review";
+/**
+ * Les features du ledger que l'utilisateur voit dans sa barre d'usage — 1:1 avec
+ * `AiFeature` (lib/server/ai-usage.ts) + le CHECK de la migration, à ceci près
+ * que les features internes (`import_map`, `brief_split`, `landing_demo`) n'y
+ * sont pas : personne ne les lit.
+ *
+ * Une LISTE, pas seulement une union : c'est elle que `billing-plans.test.ts`
+ * parcourt pour vérifier que chaque feature tombe dans exactement UN segment.
+ * Une feature ajoutée à l'union sans segment ne lèverait rien — la barre la
+ * sous-compterait en silence face au total, et l'historique la rangerait sous
+ * « Numo » par repli. Le test est le seul endroit qui l'attrape ; il lui faut
+ * de quoi énumérer.
+ */
+export const BILLABLE_FEATURES = [
+  "numo_chat",
+  "numo_comment",
+  "dictation",
+  "transcription",
+  "smart_assign",
+  "feedback_classify",
+  "feedback_analyze",
+  "feedback_voice",
+  "embedding",
+  "agent_code",
+  "sandbox_compute",
+  "web_search",
+  "pr_review",
+  // Une ROUTINE (MIN-185) : le même run que `agent_code`/`sandbox_compute`, sur
+  // une autre ligne de facture. Cf. le segment `routines` plus bas.
+  "routine_code",
+  "routine_compute",
+] as const;
+
+export type BillableFeature = (typeof BILLABLE_FEATURES)[number];
 
 export type UsageSegmentId =
   | "agents"
+  | "routines"
   | "numo"
   | "dictation"
   | "feedback"
@@ -200,9 +220,24 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
     features: ["agent_code", "sandbox_compute", "pr_review"],
     barClass: "bg-violet-500",
   },
+  // Les ROUTINES (MIN-185), juste après les agents — c'est à eux qu'on les
+  // compare. Techniquement c'est le même run ; en facturation ce n'est pas la
+  // même dépense : un run d'agent est un geste qu'on a fait, une routine est un
+  // abonnement qu'on a laissé tourner, et « qu'est-ce qui a mangé mon budget ce
+  // mois-ci ? » ne se répond que si les deux se lisent séparément. Tokens ET
+  // minutes de microVM, sinon la séparation serait à moitié fausse.
+  // `web_search` déclenchée DANS une routine reste rangée avec Numo, comme
+  // celle d'un run d'agent : c'est le même tool, au même prix anecdotique.
+  {
+    id: "routines",
+    features: ["routine_code", "routine_compute"],
+    barClass: "bg-sky-500",
+  },
   // La recherche web est un tool de Numo (chat, commentaires) ET des agents,
   // mais elle reste anecdotique face au reste : on la range avec Numo plutôt que
-  // d'ajouter une 5e couleur à la barre pour quelques centimes.
+  // d'ajouter une couleur à la barre pour quelques centimes. (Les routines, à
+  // l'inverse, ont mérité la leur : une dépense récurrente qu'on veut pouvoir
+  // regarder seule, pas quelques centimes noyés.)
   {
     id: "numo",
     features: ["numo_chat", "numo_comment", "web_search"],

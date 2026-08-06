@@ -198,4 +198,11 @@ export interface AssistantChatRequest {
    * d'instructions accroché à ce message (même mécanique que les mentions).
    */
   command?: AssistantCommandId;
+  /**
+   * Le fuseau IANA du navigateur (MIN-185). Sans lui, « crée une routine tous
+   * les lundis à 13 h » partirait en UTC sans que personne ne le sache — et se
+   * découvrirait des semaines plus tard, à l'heure où la routine tourne. C'est
+   * une donnée que seul le client connaît : le serveur ne peut pas la deviner.
+   */
+  timezone?: string;
 }

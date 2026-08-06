@@ -52,7 +52,19 @@ export type AiFeature =
    * « Retours » (`USAGE_SEGMENTS`) : c'est du feedback, pas de la dictée de
    * ticket, et c'est dans cette ligne-là qu'on ira chercher sa dépense.
    */
-  | "feedback_voice";
+  | "feedback_voice"
+  /**
+   * Un run de ROUTINE (MIN-185). Techniquement c'est le run de `agent_code`, au
+   * mot près — mêmes appels, même sandbox. En facturation, non : un run d'agent
+   * est un geste qu'on a fait, une routine est un abonnement qu'on a laissé
+   * tourner, et les confondre rend « qu'est-ce qui a mangé mon budget ce
+   * mois-ci ? » insoluble quand la réponse est « quelque chose qui tourne tout
+   * seul ». D'où DEUX features, une par nature de coût — sans
+   * `routine_compute`, les minutes de microVM d'une routine resteraient sous
+   * « Agents ». Les sous-agents d'un run de routine se facturent avec leur mère.
+   */
+  | "routine_code"
+  | "routine_compute";
 
 /** Forme de l'objet `usage` renvoyé par OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

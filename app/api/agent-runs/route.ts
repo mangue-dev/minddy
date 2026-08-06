@@ -125,6 +125,10 @@ export async function GET(request: NextRequest) {
     .select(
       "id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url, deleted_at), pull_request:pull_requests(id, number, title, url)",
     )
+    // Un passage de ROUTINE (MIN-185) n'est PAS une conversation : il vit dans
+    // sa routine, sous « Exécutions précédentes », et nulle part ailleurs. Sans
+    // ce filtre, une routine quotidienne noierait cette colonne en une semaine.
+    .is("routine_id", null)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

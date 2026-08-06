@@ -2,6 +2,7 @@
 
 import { useCallback, useReducer, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { browserTimezone } from "./routine-schedule";
 import type {
   AssistantCommandId,
   AssistantMention,
@@ -470,6 +471,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           ...(files.length ? { attachments: files } : {}),
           ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
           ...(options?.command ? { command: options.command } : {}),
+          // Le fuseau du navigateur voyage avec chaque message : Numo en a
+          // besoin pour poser une routine à l'heure qu'on lui dit (MIN-185).
+          ...(browserTimezone() ? { timezone: browserTimezone() } : {}),
         };
 
         const response = await fetch("/api/assistant/chat", {

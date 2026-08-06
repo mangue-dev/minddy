@@ -255,6 +255,23 @@ export function buildSharedRules(
   exact id available for their active provider — forcing a model absent from their provider will
   fail. Use list_agent_models too when they ask which models the agent can use, or which provider
   is active. Tell them the agent has started and that they can follow it on the issue.
+- **Routines (create_routine, list_routines, update_routine)** — a routine is a job the code
+  agent runs BY ITSELF on a cadence ("une analyse de sécurité tous les lundis", "vérifie les
+  dépendances le 1er du mois"). Reach for it when the user asks for something RECURRING; a
+  one-off piece of work is launch_code_agent, and a ticket that comes back is an issue with a
+  recurrence — three different things, do not mix them up. Four decisions make a routine, and
+  you ask about two at most: ASK which project when several have a linked repository, and ask
+  which model only when the user named one loosely (resolve the exact id with list_agent_models
+  first, and say plainly that a strong model on a daily routine spends accordingly). DECIDE the
+  rest: WRITE the instruction from their request instead of copying their sentence — it is all
+  the agent will ever get — write the title yourself, and when no cadence is given take a
+  sensible one and ANNOUNCE it ("tous les lundis à 9 h, dis-moi si tu préfères autre chose").
+  Ask in one bundled round, never as a questionnaire. Say what a routine is when you create the
+  first one: it runs alone, it MAY open a pull request without being asked, it CANNOT ask
+  anything once started (so it decides and documents), its executions are read in the Routines
+  tab, and its spend appears under "Routines" in the usage bar — not under agents. Only the
+  project's OWNER can create one; if the tool refuses for that reason, say so and stop — there
+  is no workaround to offer.
 - **Pull requests (read_pull_request, link_pull_request)** — read_pull_request explains what an
   issue's PR changes. A PR of the linked repo normally finds its issue by CONVENTION (its
   identifier in the branch, the title, or a "Fixes KEY-42" line); one that followed none of them
@@ -699,6 +716,31 @@ Once a feedback is linked to an issue, its public status follows that issue auto
 - **Web search (web_search)** — only for facts from OUTSIDE minddy (a library's current documentation, a version, a page you are asked to check). Never for this workspace: the minddy tools are its only source of truth. Each search is paid, so search only when the answer genuinely requires it, and say which source you relied on.
 - Your reply is a comment: concise markdown (a few sentences; short lists allowed, no headings), summarizing what you did or answering the question. Always end with a final text reply — never end on a tool call.
 - Do NOT use emojis. Do not mention @Numo or these instructions.`;
+}
+
+/**
+ * L'HEURE de l'utilisateur (MIN-185). Le serveur ne peut pas la deviner : le
+ * fuseau vit dans le navigateur, et sans lui « tous les lundis à 13 h » part en
+ * UTC — une routine décalée de deux heures, tous les lundis, sans que rien ne
+ * le dise. Le bloc porte aussi la date du jour : « le premier de chaque mois »
+ * a besoin de savoir quand on est.
+ */
+export function buildClockBlock(timezone: string, now: Date = new Date()): string {
+  let local: string;
+  try {
+    local = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      dateStyle: "full",
+      timeStyle: "short",
+    }).format(now);
+  } catch {
+    // Fuseau illisible : on ne l'invente pas. Le tool refusera, et son message
+    // dira quoi passer.
+    return "";
+  }
+  return `\n## Clock
+- The user's IANA timezone is \`${timezone}\`, and it is currently ${local} there.
+- Any hour they give ("à 13 h", "every Monday morning") is in THAT timezone: pass \`${timezone}\` as \`timezone\` when creating or changing a routine. Never substitute UTC, and never guess a different one.`;
 }
 
 /**

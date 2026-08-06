@@ -14,7 +14,11 @@ import {
 } from "@/lib/server/billing-accounts";
 import { resolveUsageWindow } from "@/lib/billing-cycle";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
-import { recordAiUsage, type AiUsageBillTo } from "@/lib/server/ai-usage";
+import {
+  recordAiUsage,
+  type AiFeature,
+  type AiUsageBillTo,
+} from "@/lib/server/ai-usage";
 
 /**
  * Budget d'usage (MIN-72) — le dépensé d'un user sur la fenêtre courante,
@@ -214,13 +218,19 @@ export async function ownerHasUsageBudget(projectId: string): Promise<boolean> {
 
 /**
  * Métrage du compute Vercel Sandbox d'un run agent : wall-clock × $/min, une
- * ligne `sandbox_compute` au ledger (provider 'vercel'). `seq` doit être unique
- * dans le run côté appelant (une ligne par tranche de drain).
+ * ligne au ledger (provider 'vercel'). `seq` doit être unique dans le run côté
+ * appelant (une ligne par tranche de drain).
+ *
+ * `feature` distingue la microVM d'un run d'agent (`sandbox_compute`, le
+ * défaut) de celle d'un passage de ROUTINE (`routine_compute`, MIN-185) — les
+ * deux moitiés d'une dépense de routine, tokens et minutes, se rangent sous le
+ * même segment ou la séparation ne veut rien dire.
  */
 export async function recordSandboxUsage(params: {
   runId: string;
   seq: number;
   billTo: AiUsageBillTo;
+  feature?: Extract<AiFeature, "sandbox_compute" | "routine_compute">;
   projectId: string | null;
   durationMs: number;
 }): Promise<void> {
@@ -230,7 +240,7 @@ export async function recordSandboxUsage(params: {
   await recordAiUsage({
     runId: params.runId,
     seq: params.seq,
-    feature: "sandbox_compute",
+    feature: params.feature ?? "sandbox_compute",
     provider: "vercel",
     model: "vercel/sandbox",
     cost,

@@ -74,6 +74,11 @@ const FEATURES = [
   // Review d'une PR par Numo (MIN-141) : un appel, sur un modèle plus cher que
   // celui de l'agent — c'est la ligne qui répond à « combien coûte une review ? ».
   "pr_review",
+  // Une ROUTINE (MIN-185) : le même moteur qu'`agent_code`/`sandbox_compute`,
+  // sur ses propres lignes — c'est ici qu'on lit ce que coûte, en dollars, ce
+  // qui tourne tout seul chez les comptes.
+  "routine_code",
+  "routine_compute",
   // Correspondance des colonnes d'un import CSV (MIN-98) : un appel par fichier.
   "import_map",
   // Découpe d'un brief en objectifs + tickets (MIN-172) : un appel par brief.
