@@ -151,8 +151,9 @@ function ActorAvatar({
   return <UserAvatar seed={seed} className={cn("size-5", className)} />;
 }
 
-/** Avatar for feedback submitted through the public board — the anonymous
-    end-user has no team identity, so the board itself stands in as the actor. */
+/** Avatar de repli pour un retour venu du board dont on ne connaît pas
+    l'auteur : le board tient lieu d'acteur. Auteur connu → son propre visage,
+    celui de la fiche auteur (`authorAvatarSeed`). */
 function BoardAvatar({ className }: { className?: string }) {
   return (
     <span
@@ -276,12 +277,16 @@ function EventRow({
   // Une App de la forge (`vercel[bot]`, et le nôtre quand Numo pousse) : le nom
   // d'un côté, la marque de bot de l'autre — jamais `[bot]` en toutes lettres.
   const forgeLogin = forgeActor?.login ? parseForgeLogin(forgeActor.login) : null;
-  // Soumission board (feedback) : l'auteur est un utilisateur final anonyme
-  // sans identité équipe — le board tient lieu d'acteur.
+  // Soumission board (feedback) : l'auteur est un utilisateur final sans
+  // identité équipe, mais il n'est pas anonyme pour autant — le board a son
+  // email (c'est par lui qu'on le recontacte). C'est donc LUI que la ligne
+  // nomme, comme la fiche auteur du panneau ; le board ne tient lieu d'acteur
+  // que pour les rares posts sans auteur connu.
   const viaBoard =
     entity === "feedback" &&
     item.event.type === "created" &&
     item.event.field === "board";
+  const boardAuthor = viaBoard ? ctx.feedbackAuthor ?? null : null;
   // via_mcp : l'acteur affiché est l'AGENT (nom canonique + logo), pas
   // l'utilisateur — l'action peut venir d'un workflow automatisé.
   const actor = actorName(ctx.members, item.event.actor_id, t);
@@ -302,7 +307,7 @@ function EventRow({
           : viaMcp
             ? mcpActorName(item.event.api_key_agent, item.event.api_key_name, t)
             : viaBoard
-              ? t("boardActor")
+              ? boardAuthor?.label ?? t("boardActor")
               : actor;
   const summary =
     entity === "feedback"
@@ -327,7 +332,11 @@ function EventRow({
       ) : viaIntegration ? (
         <IntegrationAvatar />
       ) : viaBoard ? (
-        <BoardAvatar />
+        boardAuthor ? (
+          <UserAvatar seed={boardAuthor.seed} className="size-5 shrink-0" />
+        ) : (
+          <BoardAvatar />
+        )
       ) : (
         <ActorAvatar members={ctx.members} id={item.event.actor_id} name={actor} />
       )}

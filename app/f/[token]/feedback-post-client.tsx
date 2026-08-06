@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { GitMerge } from "lucide-react";
 import { MessageResponse } from "@/components/ai-elements/message";
-import type { PublicIdentity, PublicPost } from "@/lib/feedback/types";
+import { ProjectOrb } from "@/components/project-orb";
+import type { PublicIdentity, PublicPost, PublicProject } from "@/lib/feedback/types";
 import { togglePostVoteAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
 import {
   AuthorAvatar,
   BackToBoardLink,
+  FeedbackPostedAt,
   FeedbackStatusBadge,
   VoteButton,
 } from "./feedback-bits";
@@ -24,7 +26,7 @@ import {
 export function FeedbackPostClient({
   token,
   basePath,
-  projectName,
+  project,
   post,
   mergedFromTitles,
   identity,
@@ -32,7 +34,7 @@ export function FeedbackPostClient({
   token: string;
   /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
   basePath: string;
-  projectName: string;
+  project: PublicProject;
   post: PublicPost;
   mergedFromTitles: string[];
   identity: PublicIdentity | null;
@@ -75,15 +77,21 @@ export function FeedbackPostClient({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-16 pt-5 desktop:px-0">
       <BackToBoardLink basePath={basePath} />
 
+      {/* Qui, dans quel état, depuis quand — AVANT le titre. En dessous, la
+          ligne se lisait comme une signature de bas de page alors qu'elle est
+          le cadre de lecture du titre : savoir qu'un besoin est « Prévu »
+          change ce qu'on lit ensuite, et l'apprendre après coup oblige à le
+          relire. C'est aussi l'ordre de la ligne du board — la même carte,
+          dépliée. */}
       <div className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <AuthorAvatar pseudonym={post.authorPseudonym} />
+          <FeedbackStatusBadge status={post.status} projectName={project.name} />
+          <FeedbackPostedAt post={post} />
+        </div>
         <div className="flex items-start justify-between gap-4">
           <h2 className="min-w-0 text-xl font-semibold leading-snug">{post.title}</h2>
           <VoteButton count={count} voted={voted} onToggle={toggleVote} />
-        </div>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          <AuthorAvatar pseudonym={post.authorPseudonym} />
-          <FeedbackStatusBadge status={post.status} />
-          <span>{format.dateTime(new Date(post.createdAt), { dateStyle: "medium" })}</span>
         </div>
       </div>
 
@@ -100,11 +108,32 @@ export function FeedbackPostClient({
         </div>
       )}
 
+      {/* La réponse de l'équipe est un MESSAGE, pas un encart.
+          L'encadré teinté en faisait une propriété du retour — une bannière que
+          le produit affiche sur sa propre page, au même titre qu'un statut.
+          C'est pourtant quelqu'un qui répond à quelqu'un, et ça se lit à la
+          forme : l'orbe du projet en guise d'avatar, la signature, la date,
+          puis le texte — exactement le gabarit d'un commentaire de l'app.
+          Le filet du haut suffit à le détacher du besoin auquel il répond. */}
       {post.teamResponse && (
-        <div className="flex flex-col gap-1.5 rounded-lg border border-brand/25 bg-brand/5 px-4 py-3">
-          <p className="text-xs font-semibold text-brand">
-            {t("teamResponse", { project: projectName })}
-          </p>
+        <div className="flex flex-col gap-2 border-t pt-5">
+          <div className="flex items-center gap-2">
+            <ProjectOrb
+              seed={project.id}
+              iconUrl={project.iconUrl}
+              className="size-6 rounded-[7px]"
+            />
+            <span className="min-w-0 truncate text-sm font-medium">
+              {t("teamName", { project: project.name })}
+            </span>
+            {post.teamResponseAt && (
+              <span className="shrink-0 text-xs text-muted-foreground/80">
+                {format.dateTime(new Date(post.teamResponseAt), { dateStyle: "medium" })}
+              </span>
+            )}
+          </div>
+          {/* Saisie dans un textarea nu côté équipe : du texte, pas du markdown.
+              Le rendre en markdown mangerait un `*` ou un `#` écrit à la main. */}
           <p className="whitespace-pre-wrap text-sm leading-relaxed">{post.teamResponse}</p>
         </div>
       )}

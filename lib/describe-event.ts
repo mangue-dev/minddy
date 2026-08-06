@@ -15,6 +15,10 @@ export interface EventContext {
   categories: Category[];
   issues: Issue[];
   projectKey: string;
+  /** Auteur du retour affiché (fil feedback) — le board n'est qu'un canal, pas
+      un acteur : quand on connaît la personne qui a écrit, c'est elle que la
+      ligne « a soumis ce retour » nomme, avec le visage de la fiche auteur. */
+  feedbackAuthor?: { label: string; seed: string } | null;
 }
 
 /** Translators the caller resolves via useTranslations and passes in. */

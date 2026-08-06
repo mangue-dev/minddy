@@ -124,7 +124,11 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
         <FeedbackPostClient
           token={token}
           basePath={base}
-          projectName={ctx.project.name}
+          project={{
+            id: ctx.project.id,
+            name: ctx.project.name,
+            iconUrl: ctx.project.icon_url,
+          }}
           post={detail.post}
           mergedFromTitles={detail.mergedFromTitles}
           identity={identity}

@@ -153,6 +153,11 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
         <FeedbackBoardClient
           token={token}
           basePath={base}
+          project={{
+            id: ctx.project.id,
+            name: ctx.project.name,
+            iconUrl: ctx.project.icon_url,
+          }}
           posts={posts}
           sort={sort}
           filter={filter}

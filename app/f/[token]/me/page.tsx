@@ -99,7 +99,17 @@ export default async function MyFeedbackPage({ params }: PageProps) {
       actions={<HeaderIdentity token={token} basePath={base} identity={identity} />}
     >
       <main className="min-h-0 flex-1">
-        <MyFeedbackClient token={token} basePath={base} identity={identity} entries={entries} />
+        <MyFeedbackClient
+          token={token}
+          basePath={base}
+          project={{
+            id: ctx.project.id,
+            name: ctx.project.name,
+            iconUrl: ctx.project.icon_url,
+          }}
+          identity={identity}
+          entries={entries}
+        />
       </main>
     </PublicPageShell>
   );

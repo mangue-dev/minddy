@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button } from "mangue-ui";
-import { Ban, Clock, GitMerge, Lock, UserRound } from "lucide-react";
-import type { PublicIdentity, PublicPost } from "@/lib/feedback/types";
+import { Clock, GitMerge, UserRound } from "lucide-react";
+import type { PublicIdentity, PublicPost, PublicProject } from "@/lib/feedback/types";
 import { FeedbackAuthDialog } from "../feedback-auth";
-import { BackToBoardLink, FeedbackPostRow } from "../feedback-bits";
+import { BackToBoardLink, FeedbackPostRow, UnpublishedBadge } from "../feedback-bits";
 
 export interface MyFeedbackItem {
   post: PublicPost;
@@ -24,12 +24,15 @@ export interface MyFeedbackItem {
 export function MyFeedbackClient({
   token,
   basePath,
+  project,
   identity,
   entries,
 }: {
   token: string;
   /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
   basePath: string;
+  /** Le produit : nom (infobulles d'état) et icône (badge « L'équipe a répondu »). */
+  project: PublicProject;
   identity: PublicIdentity | null;
   entries: MyFeedbackItem[];
 }) {
@@ -62,30 +65,28 @@ export function MyFeedbackClient({
               <p className="text-sm text-muted-foreground">{t("meEmpty")}</p>
             </div>
           ) : (
-            <ul className="flex flex-col divide-y divide-border/60">
+            <ul className="-mx-3 flex flex-col gap-0.5">
               {entries.map((entry) => (
                 <FeedbackPostRow
                   key={`${entry.relation}:${entry.post.id}`}
                   token={token}
                   href={`${basePath}/p/${entry.post.id}`}
                   post={entry.post}
+                  project={project}
                   statusBadge={
-                    // Un retour écarté par la modération ne dit pas « spam » à
-                    // celui qui l'a écrit — c'est le mot de l'équipe, pas une
-                    // réponse à un visiteur. Il lit « non publié ».
-                    entry.post.status === "spam" ? (
-                      <Badge variant="secondary" icon={<Ban />}>
-                        {t("rejected")}
-                      </Badge>
+                    // Absent du board, quelle qu'en soit la raison : gardé privé
+                    // par son auteur, ou écarté par la modération. Les deux se
+                    // disent du même mot. « Spam » est le vocabulaire de
+                    // l'équipe et pas une réponse à un visiteur ; et un badge
+                    // « Privé » posé à côté du statut faisait deux étiquettes
+                    // pour une seule idée — c'est le STATUT qui est « non
+                    // publié ».
+                    entry.post.status === "spam" || !entry.post.isPublic ? (
+                      <UnpublishedBadge projectName={project.name} />
                     ) : undefined
                   }
                   meta={
                     <>
-                      {!entry.post.isPublic && (
-                        <Badge variant="secondary" icon={<Lock />}>
-                          {t("private")}
-                        </Badge>
-                      )}
                       {/* Revue avant publication (MIN-54) : l'auteur voit son
                           retour en attente tant qu'il n'est pas publié. */}
                       {entry.relation === "authored" &&

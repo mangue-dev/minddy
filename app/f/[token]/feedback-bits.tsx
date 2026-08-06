@@ -5,15 +5,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { ArrowLeft, Ban, ChevronUp } from "lucide-react";
-import { Badge, cn } from "mangue-ui";
+import { ArrowLeft, Ban, ChevronUp, EyeOff } from "lucide-react";
+import { Badge, Button, Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
+import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import type { IssueStatus } from "@/lib/issue-constants";
-import type {
-  FeedbackPostStatus,
-  PublicIdentity,
-  PublicPost,
+import type { MessageKey } from "@/lib/i18n-keys";
+import {
+  isHiddenFeedbackStatus,
+  type FeedbackPostStatus,
+  type PublicIdentity,
+  type PublicPost,
+  type PublicProject,
 } from "@/lib/feedback/types";
 import { togglePostVoteAction } from "./actions";
 
@@ -65,13 +69,26 @@ const STATUS_BADGE_CLASSES: Record<FeedbackPostStatus, string | null> = {
  */
 export function FeedbackStatusBadge({
   status,
+  projectName,
   className,
 }: {
   status: FeedbackPostStatus;
+  /**
+   * Le nom du produit — et, en le passant, la demande d'une infobulle qui
+   * EXPLIQUE l'état.
+   *
+   * Un visiteur du board ne connaît pas la convention : « Prévu » ne dit pas
+   * qui l'a prévu ni ce que ça engage, et « Ouvert » se lit aussi bien
+   * « personne ne l'a lu » que « c'est en discussion ». La phrase nomme
+   * l'équipe qui a posé l'état, donc elle a besoin du projet. Côté équipe on ne
+   * le passe pas : le mot y suffit, et la surface porte déjà ses propres
+   * infobulles.
+   */
+  projectName?: string;
   className?: string;
 }) {
   const t = useTranslations("PublicFeedback");
-  return (
+  const badge = (
     <Badge
       variant="secondary"
       icon={
@@ -86,6 +103,51 @@ export function FeedbackStatusBadge({
       {t(`status.${status}`)}
     </Badge>
   );
+  if (!projectName) return badge;
+  return (
+    <Tooltip>
+      {/* Le `span` porte le déclencheur : `Badge` rend un `span` lui aussi, mais
+          `asChild` a besoin d'un nœud à qui poser les handlers sans écraser les
+          classes de teinte. */}
+      <TooltipTrigger asChild>
+        <span className="flex">{badge}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        {/* Clé assemblée à l'exécution (lib/i18n-keys.ts). */}
+        {t(`statusHint.${status}` as MessageKey<"PublicFeedback">, { project: projectName })}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * Le badge « non publié » de « mes retours ».
+ *
+ * Un retour absent du board l'est pour deux raisons — son auteur l'a gardé
+ * privé, ou la modération l'a écarté — et elles ne se disent PAS à celui qui a
+ * écrit. « Spam » est le mot de l'équipe, pas une réponse à un visiteur ; et un
+ * badge « Privé » à côté d'un statut fait deux étiquettes pour une seule idée.
+ * Un seul badge, un seul mot, la même infobulle dans les deux cas : ce n'est
+ * pas sur le board, l'équipe l'a quand même.
+ */
+export function UnpublishedBadge({ projectName }: { projectName?: string }) {
+  const t = useTranslations("PublicFeedback");
+  const badge = (
+    <Badge variant="secondary" icon={<EyeOff />} className="text-muted-foreground">
+      {t("rejected")}
+    </Badge>
+  );
+  if (!projectName) return badge;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="flex">{badge}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        {t("unpublishedHint", { project: projectName })}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function VoteButton({
@@ -93,34 +155,53 @@ export function VoteButton({
   voted,
   onToggle,
   size = "md",
+  className,
 }: {
   count: number;
   voted: boolean;
   onToggle: () => void;
   size?: "md" | "sm";
+  className?: string;
 }) {
   const t = useTranslations("PublicFeedback");
+  // Le chevron et un nombre, sans un mot : ce que le clic FAIT ne se lit nulle
+  // part, et il ne se devine pas non plus dans l'autre sens — un compteur déjà
+  // allumé se retire, ce que la flèche vers le haut dit mal. La phrase dit le
+  // geste et son sens courant, et sert d'étiquette accessible du même coup.
+  const label = voted ? t("unvote") : t("vote");
   return (
-    <button
-      type="button"
-      aria-label={voted ? t("unvote") : t("vote")}
-      aria-pressed={voted}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onToggle();
-      }}
-      className={cn(
-        "inline-flex shrink-0 items-center rounded-full border font-semibold tabular-nums transition-colors",
-        size === "md" ? "gap-1 px-3 py-1.5 text-sm" : "gap-0.5 px-2 py-0.5 text-xs",
-        voted
-          ? "border-primary/50 bg-primary/10 text-primary"
-          : "text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-      )}
-    >
-      <ChevronUp className={size === "md" ? "size-4" : "size-3.5"} />
-      {count}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          aria-pressed={voted}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggle();
+          }}
+          className={cn(
+            "inline-flex shrink-0 items-center rounded-full border font-semibold tabular-nums transition-colors",
+            size === "md" ? "gap-1 px-3 py-1.5 text-sm" : "gap-0.5 px-2 py-0.5 text-xs",
+            voted
+              ? "border-primary/50 bg-primary/10 text-primary"
+              : // Pas voté n'est pas « éteint ». En gris sur transparent, le
+                // geste central du board était l'élément le plus pâle de la
+                // carte — et depuis que la carte s'allume au survol, son fond
+                // remontait carrément sous le compteur. Il prend le fond des
+                // chips neutres (`--control`) et son texte plein : un bouton
+                // qu'on voit, dont l'état voté reste distinct par la teinte.
+                "bg-control text-foreground hover:border-foreground/30 hover:bg-control-hover",
+            className
+          )}
+        >
+          <ChevronUp className={size === "md" ? "size-4" : "size-3.5"} />
+          {count}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -155,6 +236,11 @@ export function IdentityAvatar({
  *
  * Sans auteur (saisie interne non rattachée), `UserAvatar` rend un disque neutre
  * plutôt qu'un visage : la ligne garde son gabarit, et on n'invente personne.
+ *
+ * Sa taille est celle du badge d'état qu'il précède (`h-7`), et pas une taille
+ * choisie pour lui : les deux ouvrent la même ligne de méta, et un visage de
+ * 16 px devant un badge de 28 se lisait comme une puce de liste plutôt que
+ * comme quelqu'un.
  */
 export function AuthorAvatar({
   pseudonym,
@@ -163,28 +249,47 @@ export function AuthorAvatar({
   pseudonym: string | null;
   className?: string;
 }) {
-  return <UserAvatar seed={pseudonym} className={cn("size-4", className)} />;
+  return <UserAvatar seed={pseudonym} className={cn("size-7", className)} />;
+}
+
+/**
+ * La date d'un retour, DITE.
+ *
+ * Une date nue au milieu d'une ligne de méta ne dit pas de quoi elle est la
+ * date — création, dernier vote, réponse de l'équipe. Le verbe la fixe. Et il
+ * change avec ce qu'on regarde : sur « mes retours » vivent des retours privés
+ * et des retours en attente de vérification, qui ne sont publiés nulle part —
+ * leur coller « Publié le » à côté d'un badge « Non publié » écrirait la
+ * contradiction sur la même ligne.
+ */
+export function FeedbackPostedAt({ post }: { post: PublicPost }) {
+  const t = useTranslations("PublicFeedback");
+  const format = useFormatter();
+  const date = format.dateTime(new Date(post.createdAt), { dateStyle: "medium" });
+  const onBoard =
+    post.isPublic && post.reviewState === "published" && !isHiddenFeedbackStatus(post.status);
+  return <span>{onBoard ? t("postedOn", { date }) : t("sentOn", { date })}</span>;
 }
 
 /**
  * Le retour au board, depuis une page d'un retour comme depuis « mes retours ».
  *
- * Il portait le gabarit de la ligne de méta qu'il surplombe — même taille, même
- * gris, aucun fond — et se lisait donc comme une légende posée sous le header
- * plutôt que comme la commande qu'il est. Une pastille bordée lui rend la
- * silhouette d'un bouton, et la marge au-dessus le décolle du header.
+ * C'est le SEUL chemin de sortie de ces deux pages : elles n'ont ni sidebar ni
+ * fil d'Ariane, et le header ne porte que l'identité du visiteur. Il a donc le
+ * gabarit d'un vrai bouton plein — pas la pastille grise de 24 px qu'il était,
+ * qui portait la taille et la couleur de la ligne de méta juste en dessous et
+ * se lisait comme une légende plutôt que comme la commande qu'il est.
  */
 export function BackToBoardLink({ basePath }: { basePath: string }) {
   const t = useTranslations("PublicFeedback");
   return (
-    <Link
-      // basePath "" (domaine personnalisé) : la racine du board est "/".
-      href={basePath || "/"}
-      className="flex w-fit items-center gap-1.5 rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-    >
-      <ArrowLeft className="size-3.5" />
-      {t("back")}
-    </Link>
+    <Button asChild className="w-fit">
+      {/* basePath "" (domaine personnalisé) : la racine du board est "/". */}
+      <Link href={basePath || "/"}>
+        <ArrowLeft />
+        {t("back")}
+      </Link>
+    </Button>
   );
 }
 
@@ -203,6 +308,7 @@ export function FeedbackPostRow({
   token,
   href,
   post,
+  project,
   onNeedAuth,
   statusBadge,
   meta,
@@ -211,6 +317,9 @@ export function FeedbackPostRow({
   token: string;
   href: string;
   post: PublicPost;
+  /** Le produit : son nom nourrit les infobulles d'état, son icône signe le
+      badge « L'équipe a répondu ». */
+  project: PublicProject;
   /** Ouvre la porte OTP puis rejoue le vote. Le board public en a besoin ; « mes
       retours » ne s'affiche que connecté et s'en passe. */
   onNeedAuth?: (run: () => void) => void;
@@ -225,7 +334,7 @@ export function FeedbackPostRow({
   /** Ligne libre sous la méta (« votre retour a été regroupé avec celui-ci »). */
   footer?: ReactNode;
 }) {
-  const format = useFormatter();
+  const t = useTranslations("PublicFeedback");
   const router = useRouter();
   const [optimistic, setOptimistic] = useState<{ voted: boolean; count: number } | null>(null);
   const voted = optimistic?.voted ?? post.votedByMe;
@@ -247,28 +356,55 @@ export function FeedbackPostRow({
   };
 
   return (
-    <li className="flex flex-col gap-2 py-4">
+    /* La cible du survol, c'est le RETOUR — pas son titre. Un titre qui bleuit
+       désigne un lien au milieu d'une carte dont le reste ne réagit pas, et il
+       fallait viser trois mots pour l'ouvrir. Le fond qui s'allume désigne la
+       carte entière, et le lien s'étend derrière elle (`before:inset-0`) pour
+       que la surface qui s'allume soit exactement celle qui s'ouvre. Ce qui
+       doit rester cliquable par-dessus — le vote, les badges à infobulle — se
+       repositionne (`relative`), sinon la nappe du lien le recouvre. */
+    <li className="relative flex flex-col gap-2 rounded-lg px-3 py-3.5 transition-colors hover:bg-muted/50">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <Link href={href} className="group flex flex-col gap-1">
-            <h3 className="text-[15px] font-semibold leading-snug group-hover:text-brand">
-              {post.title}
-            </h3>
+          <Link href={href} className="flex flex-col gap-1 before:absolute before:inset-0 before:content-['']">
+            <h3 className="text-[15px] font-semibold leading-snug">{post.title}</h3>
             {post.body && (
               <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                 {post.body}
               </p>
             )}
           </Link>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <div className="relative mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <AuthorAvatar pseudonym={post.authorPseudonym} />
-            {statusBadge ?? <FeedbackStatusBadge status={post.status} />}
-            <span>{format.dateTime(new Date(post.createdAt), { dateStyle: "medium" })}</span>
+            {statusBadge ?? (
+              <FeedbackStatusBadge status={post.status} projectName={project.name} />
+            )}
+            {/* Ce qui distingue un retour lu d'un retour entendu. L'état dit où
+                en est le besoin ; ce badge dit qu'un humain a écrit quelque
+                chose — la seule raison d'ouvrir un retour qu'on a déjà lu.
+                Il porte l'ICÔNE DU PROJET, celle du header : une bulle de
+                message générique dit « il y a un message », l'orbe dit de qui —
+                et c'est tout l'intérêt de la nouvelle. */}
+            {post.teamResponse && (
+              <Badge
+                variant="secondary"
+                icon={
+                  <ProjectOrb
+                    seed={project.id}
+                    iconUrl={project.iconUrl}
+                    className="size-3.5 rounded-[4px]"
+                  />
+                }
+              >
+                {t("teamReplied")}
+              </Badge>
+            )}
+            <FeedbackPostedAt post={post} />
             {meta}
           </div>
           {footer}
         </div>
-        <VoteButton count={count} voted={voted} onToggle={toggle} />
+        <VoteButton count={count} voted={voted} onToggle={toggle} className="relative" />
       </div>
     </li>
   );

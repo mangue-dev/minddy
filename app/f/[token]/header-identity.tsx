@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "mangue-ui";
 import { LogOut, MessagesSquare } from "lucide-react";
@@ -61,6 +62,10 @@ export function HeaderIdentity({
           <MessagesSquare className="size-4" />
           {t("myFeedback")}
         </DropdownMenuItem>
+        {/* Aller voir ses retours et fermer sa session sont deux gestes de
+            nature différente, et le second ne se rattrape pas : le filet les
+            sépare pour qu'un clic ne glisse pas de l'un à l'autre. */}
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
           disabled={pending}

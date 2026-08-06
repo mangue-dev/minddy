@@ -24,7 +24,7 @@ import {
   TooltipTrigger,
   toast,
 } from "mangue-ui";
-import { ArrowUpDown, Check, ChevronDown, ListFilter, Mic, MessagesSquare, Megaphone } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, ListFilter, Mic, MessagesSquare, Megaphone, Search } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -35,11 +35,13 @@ import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";
 import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { HelpHint } from "@/components/settings/help-hint";
+import { SidebarFilterField, matchesFilter } from "@/components/sidebar-filter-field";
 import { useFeedbackDictation } from "@/lib/use-feedback-dictation";
 import {
   FEEDBACK_PUBLIC_STATUSES,
   type PublicIdentity,
   type PublicPost,
+  type PublicProject,
   type PublicStatusFilter,
   type SimilarPost,
 } from "@/lib/feedback/types";
@@ -66,6 +68,7 @@ const SIMILAR_MIN_CHARS = 15;
 export function FeedbackBoardClient({
   token,
   basePath,
+  project,
   posts,
   sort,
   filter,
@@ -76,6 +79,8 @@ export function FeedbackBoardClient({
   token: string;
   /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
   basePath: string;
+  /** Le produit : nom (infobulles d'état) et icône (badge « L'équipe a répondu »). */
+  project: PublicProject;
   posts: PublicPost[];
   sort: "top" | "recent";
   /** null = le défaut du board : les retours encore vivants. */
@@ -88,6 +93,7 @@ export function FeedbackBoardClient({
   const t = useTranslations("PublicFeedback");
   const [authOpen, setAuthOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const pendingAfterAuth = useRef<(() => void) | null>(null);
 
   const requireAuth = (run: () => void) => {
@@ -98,6 +104,14 @@ export function FeedbackBoardClient({
       setAuthOpen(true);
     }
   };
+
+  // La recherche travaille sur la page déjà chargée, en place et sans aller-
+  // retour — le même geste que les filtres de sidebar de l'app, et la même
+  // fonction de correspondance (mots, sans accents, titre ET corps).
+  const query = search.trim();
+  const visible = query
+    ? posts.filter((post) => matchesFilter(query, [post.title, post.body]))
+    : posts;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl gap-8 px-4 pb-16 pt-4 desktop:px-6">
@@ -113,49 +127,77 @@ export function FeedbackBoardClient({
           {t("composerTitle")}
         </Button>
 
-        <FilterBar basePath={basePath} sort={sort} filter={filter} />
+        <FilterBar
+          basePath={basePath}
+          sort={sort}
+          filter={filter}
+          search={search}
+          onSearchChange={setSearch}
+          // Un board sans le moindre retour public n'a rien à chercher : le
+          // champ y promettrait une liste qui n'existe pas.
+          searchable={!boardEmpty}
+        />
 
-        {posts.length === 0 ? (
-          /* Le vide se NOMME : « aucun retour ouvert » dit à la fois ce qui
-             manque et sous quel filtre on regarde, là où « rien ne correspond »
-             laissait chercher lequel. Et le board par défaut ne montre que les
-             retours vivants : vide ici ne veut pas dire vide tout court, c'est
-             le serveur qui tranche (`boardEmpty`), pas le filtre. */
-          <EmptyScene
-            icon={MessagesSquare}
-            title={
-              boardEmpty || filter === "all"
-                ? t("empty")
-                : // Clé assemblée à l'exécution (lib/i18n-keys.ts).
-                  t(`emptyStatus.${filter ?? "open"}` as MessageKey<"PublicFeedback">)
-            }
-          >
-            {boardEmpty || filter === "all" ? (
-              <Button onClick={() => setComposerOpen(true)}>
-                <Megaphone />
-                {t("composerTitle")}
+        {visible.length === 0 ? (
+          query ? (
+            /* Le vide de la RECHERCHE, pas celui du filtre : il nomme les mots
+               tapés, et la sortie qu'il propose est de les effacer — pas
+               d'élargir le filtre, qui n'est pas ce qui vient de vider la
+               liste. */
+            <EmptyScene icon={Search} title={t("emptySearch", { query })}>
+              <Button variant="outline" onClick={() => setSearch("")}>
+                {t("emptySearchClear")}
               </Button>
-            ) : (
-              /* La sortie du filtre, sous la phrase qui vient de le nommer : le
-                 combobox est une pastille de 20 px en haut de page, et c'est ici
-                 qu'on se demande où sont passés les autres retours. */
-              <Button variant="outline" asChild>
-                <Link href={buildHref(basePath, sort, "all")}>{t("emptySeeAll")}</Link>
-              </Button>
-            )}
-          </EmptyScene>
+            </EmptyScene>
+          ) : (
+            /* Le vide se NOMME : « aucun retour ouvert » dit à la fois ce qui
+               manque et sous quel filtre on regarde, là où « rien ne correspond »
+               laissait chercher lequel. Et le board par défaut ne montre que les
+               retours vivants : vide ici ne veut pas dire vide tout court, c'est
+               le serveur qui tranche (`boardEmpty`), pas le filtre. */
+            <EmptyScene
+              icon={MessagesSquare}
+              title={
+                boardEmpty || filter === "all"
+                  ? t("empty")
+                  : // Clé assemblée à l'exécution (lib/i18n-keys.ts).
+                    t(`emptyStatus.${filter ?? "open"}` as MessageKey<"PublicFeedback">)
+              }
+            >
+              {boardEmpty || filter === "all" ? (
+                <Button onClick={() => setComposerOpen(true)}>
+                  <Megaphone />
+                  {t("composerTitle")}
+                </Button>
+              ) : (
+                /* La sortie du filtre, sous la phrase qui vient de le nommer : le
+                   combobox est une pastille de 20 px en haut de page, et c'est ici
+                   qu'on se demande où sont passés les autres retours. */
+                <Button variant="outline" asChild>
+                  <Link href={buildHref(basePath, sort, "all")}>{t("emptySeeAll")}</Link>
+                </Button>
+              )}
+            </EmptyScene>
+          )
         ) : (
-          <ul className="flex flex-col divide-y divide-border/60">
-            {posts.map((post) => (
-              <FeedbackPostRow
-                key={post.id}
-                token={token}
-                href={`${basePath}/p/${post.id}`}
-                post={post}
-                onNeedAuth={requireAuth}
-              />
-            ))}
-          </ul>
+          <>
+            {/* Des cartes, donc de l'air entre elles : le filet qui les séparait
+                collait deux retours l'un à l'autre, et un fond de survol arrêté
+                net sur ce filet se lisait comme une erreur de rendu. */}
+            <ul className="-mx-3 flex flex-col gap-0.5">
+              {visible.map((post) => (
+                <FeedbackPostRow
+                  key={post.id}
+                  token={token}
+                  href={`${basePath}/p/${post.id}`}
+                  post={post}
+                  project={project}
+                  onNeedAuth={requireAuth}
+                />
+              ))}
+            </ul>
+            <EndOfList filter={filter} query={query} />
+          </>
         )}
       </div>
 
@@ -300,19 +342,48 @@ function StatusFilterMenu({
   );
 }
 
+/**
+ * La barre de tête du board : chercher, filtrer, trier — dans cet ordre.
+ *
+ * L'ordre est celui de la question qu'on se pose : « est-ce que mon besoin est
+ * déjà là ? » d'abord, et seulement ensuite « montre-moi ce qui est prévu » ou
+ * « les plus votés ». La recherche prend la place, les deux déclencheurs se
+ * rangent à droite, côte à côte, parce qu'ils font la même chose — restreindre
+ * puis ordonner la même liste.
+ *
+ * Le champ est celui des sidebars (`SidebarFilterField`) : ni bordure ni fond,
+ * la grammaire discrète des filtres de l'app. Une vraie boîte de recherche
+ * bordée, en haut d'une page publique, se lirait comme la recherche du SITE.
+ */
 function FilterBar({
   basePath,
   sort,
   filter,
+  search,
+  onSearchChange,
+  searchable,
 }: {
   basePath: string;
   sort: "top" | "recent";
   filter: PublicStatusFilter;
+  search: string;
+  onSearchChange: (value: string) => void;
+  searchable: boolean;
 }) {
   const t = useTranslations("PublicFeedback");
   const router = useRouter();
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-3">
+    <div className="flex items-center gap-3 border-b border-border/60 pb-3">
+      {searchable ? (
+        <SidebarFilterField
+          value={search}
+          onChange={onSearchChange}
+          placeholder={t("searchPlaceholder")}
+          clearLabel={t("searchClear")}
+        />
+      ) : (
+        <span className="flex-1" />
+      )}
       <StatusFilterMenu basePath={basePath} sort={sort} filter={filter} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -338,6 +409,29 @@ function FilterBar({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  );
+}
+
+/**
+ * La fin de la liste, DITE.
+ *
+ * Un board se termine sans rien : la page s'arrête, et rien ne dit si on a tout
+ * vu ou si le chargement s'est arrêté là. La ligne ferme la liste — et elle
+ * nomme ce dont c'est la fin, parce que ce n'est presque jamais « tous les
+ * retours » : le board s'ouvre sur les vivants, et les résolus, eux, sont
+ * derrière un filtre qu'on n'a pas encore ouvert.
+ */
+function EndOfList({ filter, query }: { filter: PublicStatusFilter; query: string }) {
+  const t = useTranslations("PublicFeedback");
+  return (
+    <p className="pt-2 text-center text-xs text-muted-foreground">
+      {query
+        ? t("endOfSearch")
+        : // Clé assemblée à l'exécution (lib/i18n-keys.ts) : « all » et les
+          // statuts exacts sont des clés à part entière, `null` retombe sur
+          // « ouverts » comme le fait déjà l'état vide.
+          t(`endOfList.${filter ?? "open"}` as MessageKey<"PublicFeedback">)}
+    </p>
   );
 }
 

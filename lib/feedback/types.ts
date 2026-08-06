@@ -198,6 +198,20 @@ export interface PublicPost {
   teamResponseAt: string | null;
 }
 
+/**
+ * Le projet tel que le board public le montre : son nom et son icône.
+ *
+ * Les deux voyagent ENSEMBLE parce qu'ils se rendent ensemble — l'orbe et le
+ * nom sont les deux moitiés de « qui répond », et la même paire sert le header,
+ * le badge « L'équipe a répondu » et la signature de sa réponse. Passer le seul
+ * nom obligeait chaque surface à retrouver l'icône par ses propres moyens.
+ */
+export interface PublicProject {
+  id: string;
+  name: string;
+  iconUrl: string | null;
+}
+
 /** Onglet de navigation du site public (board + vues partagées du projet). */
 export interface PublicSiteTab {
   label: string;

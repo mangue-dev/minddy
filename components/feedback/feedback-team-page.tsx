@@ -37,6 +37,7 @@ import {
   Ban,
   Check,
   ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Clock,
   Copy,
@@ -373,8 +374,19 @@ function CategorySummary({
   );
 }
 
-/** Compteur de voix d'un retour. Absent quand le board public est éteint : sans
-    lui, personne ne peut voter, et un « 0 » permanent serait un reproche. */
+/**
+ * Compteur de voix d'un retour. Absent quand le board public est éteint : sans
+ * lui, personne ne peut voter, et un « 0 » permanent serait un reproche.
+ *
+ * Il se peint comme les chips neutres du reste de l'app (`--control` +
+ * `--foreground`, la paire que les tokens documentent pour ça) et non en gris
+ * sur rien. En gris sur rien, il ne se voyait pas : le fond était transparent,
+ * le filet à `--border` disparaît sur une ligne de liste, et le texte à
+ * `--muted-foreground` tombait à ~4,6:1 sur clair — pire encore sur une ligne
+ * SÉLECTIONNÉE, où le `bg-muted` de la ligne remontait sous un texte muted.
+ * Le chiffre qui décide de l'ordre de la colonne était le plus pâle de l'écran,
+ * juste à côté de badges à fond plein.
+ */
 function VoteCount({
   count,
   size = "sm",
@@ -393,7 +405,7 @@ function VoteCount({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded-md border font-semibold tabular-nums text-muted-foreground",
+        "inline-flex shrink-0 items-center rounded-md border bg-control font-semibold tabular-nums text-foreground",
         size === "md" ? "h-7 gap-1.5 px-3 text-xs" : "gap-1 px-1.5 py-0.5 text-xs",
         className
       )}
@@ -1173,19 +1185,35 @@ function FeedbackDetail({
     [addComment]
   );
 
-  // describeFeedbackEvent reads members (actors) + issues/projectKey (refs);
-  // objectives/categories are unused for feedback.
-  const eventCtx = useMemo<EventContext>(
-    () => ({ members, objectives: [], categories: [], issues, projectKey }),
-    [members, issues, projectKey]
-  );
-
   const { data, isPending } = useQuery({
     queryKey: ["feedback-detail", projectId, postId],
     queryFn: () =>
       api<{ post: TeamFeedbackDetail }>(`/api/projects/${projectId}/feedback/${postId}`),
   });
   const post = data?.post ?? null;
+
+  // describeFeedbackEvent reads members (actors) + issues/projectKey (refs);
+  // objectives/categories are unused for feedback. `feedbackAuthor` nomme la
+  // soumission board : la personne qui a écrit, du même nom et du même visage
+  // que la fiche auteur ci-dessous — jamais deux graphies à deux blocs d'écart.
+  const author = post?.author ?? null;
+  const authorSeed = authorAvatarSeed(author, memberSeeds);
+  const eventCtx = useMemo<EventContext>(
+    () => ({
+      members,
+      objectives: [],
+      categories: [],
+      issues,
+      projectKey,
+      feedbackAuthor: author
+        ? {
+            label: author.name?.trim() || author.email?.trim() || author.pseudonym,
+            seed: authorSeed,
+          }
+        : null,
+    }),
+    [members, issues, projectKey, author, authorSeed]
+  );
 
   const [title, setTitle] = useState("");
   const [response, setResponse] = useState("");
@@ -1194,6 +1222,23 @@ function FeedbackDetail({
   const [linkOpen, setLinkOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  /**
+   * Refuser et écarter passent par une confirmation : ce sont les deux gestes
+   * qui répondent non à quelqu'un, et le seul écran d'équipe où ils tiennent à
+   * un clic — sur le bouton, sous son chevron, et dans le sélecteur de statut de
+   * la fiche, qui pose exactement le même statut.
+   *
+   * L'ouverture et le statut visé sont DEUX états plutôt qu'un seul nullable :
+   * la boîte reste à l'écran le temps de son animation de sortie, et un état
+   * remis à null lui ferait relire « Refuser » au moment même où l'on ferme
+   * « Marquer comme spam ».
+   */
+  const [confirmStatus, setConfirmStatus] = useState<"declined" | "spam">("declined");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const askStatus = (status: "declined" | "spam") => {
+    setConfirmStatus(status);
+    setConfirmOpen(true);
+  };
   // Traduit, le retour s'ouvre sur sa traduction : c'est la version que
   // l'équipe peut lire. La bascule est par retour et repart à zéro en changeant
   // de retour (`key={selectedId}` remonte tout le détail).
@@ -1431,10 +1476,10 @@ function FeedbackDetail({
               variant="destructive"
               size="sm"
               disabled={patch.isPending}
-              onClick={() => patch.mutate({ status: "declined" })}
+              onClick={() => askStatus("declined")}
               menuLabel={t("markSpam")}
               menu={
-                <DropdownMenuItem onSelect={() => patch.mutate({ status: "spam" })}>
+                <DropdownMenuItem onSelect={() => askStatus("spam")}>
                   <Ban className="size-4" />
                   {t("markSpam")}
                 </DropdownMenuItem>
@@ -1596,6 +1641,38 @@ function FeedbackDetail({
         </div>
         )}
 
+        {/* Ce que la personne a écrit, mot pour mot — le repli qu'on vient
+            chercher quand le texte au-dessus a été retouché. Sa place est ICI,
+            collé à ce texte : c'est de lui qu'il est la version d'avant, et
+            renvoyé sous la fiche il devenait une propriété du retour, ce qu'il
+            n'est pas. Chevron plutôt que le triangle natif, comme les autres
+            sections dépliables de l'app, et un filet à gauche qui le pose en
+            citation : c'est un texte qu'on relit, pas un champ de plus qu'on
+            pourrait éditer. */}
+        {rawDiffers && (
+          <details className="group rounded-md border border-border/60 px-3 py-2">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+              <ChevronRight className="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
+              {t("rawTitle")}
+            </summary>
+            {/* ml-1.5 + pl-3 : le filet tombe dans l'axe du chevron, et le
+                texte reprend exactement la marge du libellé au-dessus. */}
+            <div className="mt-2 ml-1.5 flex flex-col gap-1.5 border-l-2 border-border/60 pl-3 text-sm">
+              <p className="font-medium">{post.submitted_title}</p>
+              {post.submitted_body ? (
+                <p className="whitespace-pre-wrap text-muted-foreground">
+                  {post.submitted_body}
+                </p>
+              ) : (
+                // Sans cette ligne, « envoyé sans description » et « description
+                // inchangée, seul le titre a bougé » se ressemblent : rien sous
+                // le titre. Elle dit lequel des deux on lit.
+                <p className="italic text-muted-foreground/70">{t("rawNoBody")}</p>
+              )}
+            </div>
+          </details>
+        )}
+
         {/* Tout ce que le retour EST, sur des rangées clé/valeur — mêmes
             contrôles que le panneau d'issue. C'est ici, et nulle part ailleurs,
             qu'on lit son statut, sa nature, sa visibilité, son auteur. */}
@@ -1625,7 +1702,16 @@ function FeedbackDetail({
               <SearchSelect
                 value={post.status}
                 onChange={(value) => {
-                  if (value && value !== post.status) patch.mutate({ status: value });
+                  if (!value || value === post.status) return;
+                  // Le sélecteur pose le même statut que le bouton « Refuser » et
+                  // que son entrée « spam » : il demande donc la même
+                  // confirmation. Les autres statuts (prévu, en cours, livré,
+                  // ouvert) ne ferment rien et passent directement.
+                  if (value === "declined" || value === "spam") {
+                    askStatus(value);
+                    return;
+                  }
+                  patch.mutate({ status: value });
                 }}
                 options={FEEDBACK_POST_STATUSES.map((status) => ({
                   value: status,
@@ -1787,22 +1873,6 @@ function FeedbackDetail({
             </span>
           </PropertyRow>
         </div>
-
-        {rawDiffers && (
-          <details className="rounded-md border border-border/60 px-3 py-2">
-            <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-              {t("rawTitle")}
-            </summary>
-            <div className="mt-2 flex flex-col gap-1 text-sm">
-              <p className="font-medium">{post.submitted_title}</p>
-              {post.submitted_body && (
-                <p className="whitespace-pre-wrap text-muted-foreground">
-                  {post.submitted_body}
-                </p>
-              )}
-            </div>
-          </details>
-        )}
 
         {post.merged_from.length > 0 && (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -2002,6 +2072,29 @@ function FeedbackDetail({
         // requise : la faire échouer bruyamment vaut mieux qu'un ticket créé
         // ailleurs et détaché de son retour.
         onCreateInProject={() => Promise.reject(new Error(t("errorGeneric")))}
+      />
+      {/* Refuser / écarter. Rien n'est détruit — le statut se rechange après
+          coup — mais les deux se voient du dehors : l'un affiche un non sur le
+          board, l'autre en retire le retour. La boîte dit lequel des deux. */}
+      <ConfirmDeleteDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={
+          confirmStatus === "spam"
+            ? t("markSpamTitle", { title: post.title })
+            : t("declineTitle", { title: post.title })
+        }
+        description={
+          confirmStatus === "spam" ? t("markSpamConfirm") : t("declineConfirm")
+        }
+        confirmLabel={confirmStatus === "spam" ? t("markSpam") : t("decline")}
+        cancelLabel={tCommon("cancel")}
+        // L'échec est déjà dit par le `onError` de la mutation : on avale le
+        // rejet pour que la boîte se ferme sur le toast, et non sur une
+        // promesse non capturée qui la laisserait ouverte et figée.
+        onConfirm={async () => {
+          await patch.mutateAsync({ status: confirmStatus }).catch(() => {});
+        }}
       />
       <ConfirmDeleteDialog
         open={deleteOpen}
