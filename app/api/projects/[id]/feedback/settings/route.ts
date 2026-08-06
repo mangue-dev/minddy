@@ -11,6 +11,7 @@ import {
   rotateBoardToken,
   rotateSsoSecret,
   setBoardAccent,
+  setBoardAllowComments,
   setBoardShowCategories,
   setBoardShowViews,
   setBoardVisibleViews,
@@ -34,6 +35,7 @@ function boardPayload(
     show_views: board.show_views,
     visible_view_ids: board.visible_view_ids,
     show_categories: board.show_categories,
+    allow_comments: board.allow_comments,
     accent_light: board.accent_light,
     accent_dark: board.accent_dark,
     token: board.token,
@@ -114,6 +116,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
   }
+  if (typeof body.allow_comments === "boolean") {
+    const ok = await setBoardAllowComments(id, body.allow_comments);
+    if (!ok) {
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    }
+  }
   // Accent optionnel (MIN-59) : chaque champ est soit un hex valide, soit null
   // (retour au défaut). Une valeur non-null non-hex est rejetée.
   const accentPatch: { accent_light?: string | null; accent_dark?: string | null } = {};
@@ -152,6 +160,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     typeof body.enabled !== "boolean" &&
     typeof body.show_views !== "boolean" &&
     typeof body.show_categories !== "boolean" &&
+    typeof body.allow_comments !== "boolean" &&
     Object.keys(accentPatch).length === 0 &&
     body.visible_view_ids === undefined
   ) {

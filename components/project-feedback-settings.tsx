@@ -79,6 +79,7 @@ interface BoardSettings {
   show_views: boolean;
   visible_view_ids: string[];
   show_categories: boolean;
+  allow_comments: boolean;
   accent_light: string | null;
   accent_dark: string | null;
   token: string;
@@ -330,6 +331,25 @@ export function ProjectFeedbackSettings({
                 />
               )}
             </SettingsRow>
+
+            {/* Commentaires publics (MIN-196) — la seule rangée du board qui
+                ouvre une PAROLE et pas un affichage : elle vient donc avant
+                celles qui règlent ce qu'on montre. Éteinte, le fil déjà écrit
+                reste lisible ; c'est ce que dit son hint. */}
+            {board && (
+              <SettingsRow
+                label={t("feedbackAllowComments")}
+                hint={t("feedbackAllowCommentsDesc")}
+                control={
+                  <Switch
+                    checked={board.allow_comments}
+                    disabled={!isOwner}
+                    onCheckedChange={(v) => void patchBoard({ allow_comments: v })}
+                    aria-label={t("feedbackAllowComments")}
+                  />
+                }
+              />
+            )}
 
             {/* Onglets des vues partagées */}
             {board && (

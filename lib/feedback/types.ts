@@ -194,8 +194,50 @@ export interface PublicPost {
   authorPseudonym: string | null;
   isMine: boolean;
   votedByMe: boolean;
-  teamResponse: string | null;
-  teamResponseAt: string | null;
+  /** Nombre de commentaires PUBLICS du fil (réponse d'équipe comprise). */
+  commentCount: number;
+  /** Date du dernier commentaire public de l'équipe — le badge « L'équipe a
+      répondu » du board se lit là-dessus, sans charger les fils. */
+  teamRepliedAt: string | null;
+}
+
+/**
+ * Visibilité d'un commentaire de retour (MIN-196). Les fils de tickets et
+ * d'objectifs sont internes par construction ; seuls les retours ont les deux.
+ */
+export const COMMENT_VISIBILITIES = ["internal", "public"] as const;
+export type CommentVisibility = (typeof COMMENT_VISIBILITIES)[number];
+
+export function isCommentVisibility(value: unknown): value is CommentVisibility {
+  return (
+    typeof value === "string" &&
+    (COMMENT_VISIBILITIES as readonly string[]).includes(value)
+  );
+}
+
+/** Borne d'un commentaire public — plus courte que celle d'un retour : on y
+    précise un cas, on n'y écrit pas un second retour. */
+export const FEEDBACK_COMMENT_BODY_MAX = 5_000;
+
+/**
+ * Un commentaire du fil public, tel que le board le rend — anonymisé ICI, à la
+ * source, comme `PublicPost`.
+ *
+ * `authorSeed` est le PSEUDONYME de qui a écrit, et rien d'autre : il ne sert
+ * qu'à semer un avatar. Ni nom ni email ne sortent, et le pseudonyme lui-même
+ * ne s'affiche jamais — l'avatar en est la seule trace, et deux commentaires de
+ * la même personne portent le même visage. Null + `isTeam` = la voix de
+ * l'équipe, signée par l'orbe du projet.
+ */
+export interface PublicComment {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorSeed: string | null;
+  /** Écrit par l'équipe (ou par la réponse d'équipe d'avant MIN-196). */
+  isTeam: boolean;
+  /** Écrit par le visiteur qui lit — le seul à pouvoir le supprimer. */
+  isMine: boolean;
 }
 
 /**

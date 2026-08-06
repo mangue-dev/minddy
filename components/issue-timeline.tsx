@@ -22,6 +22,8 @@ import {
   Ellipsis,
   Github,
   Gitlab,
+  Globe,
+  Lock,
   MessagesSquare,
   Pencil,
   Plug,
@@ -63,6 +65,7 @@ import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
 import type { AttachmentInput, Comment, Member } from "@/lib/types";
+import type { CommentVisibility } from "@/lib/feedback/types";
 
 type EventItem = Extract<TimelineItem, { kind: "event" }>;
 type CommentItem = Extract<TimelineItem, { kind: "comment" }>;
@@ -378,13 +381,22 @@ function CommentBlock({
   const viaNumo = !!comment.via_assistant;
   const viaMcp = !viaNumo && !!comment.via_mcp;
   const author = actorName(ctx.members, comment.author_id, t);
-  // via_mcp : l'auteur affiché est l'AGENT (nom canonique + logo), pas
-  // l'utilisateur ; le propriétaire (author_id) garde édition et suppression.
+  // Fil public d'un retour (MIN-196). Deux nouveautés dans ce bloc, et une
+  // seule règle : ici, dans la vue d'ÉQUIPE, on NOMME le visiteur. C'est
+  // exactement l'inverse du board, où il n'est qu'un avatar — et c'est pour ça
+  // qu'on lui demande de se connecter avant d'écrire : sans identité, il n'y a
+  // personne à modérer. L'avatar, lui, reste semé sur le pseudonyme : le même
+  // visage des deux côtés, pour reconnaître d'un coup d'œil sur le board le
+  // commentaire qu'on vient de lire ici.
+  const visitor = comment.feedback_users ?? null;
+  const isPublic = comment.visibility === "public";
   const name = viaNumo
     ? "Numo"
     : viaMcp
       ? mcpActorName(comment.api_key_agent, comment.api_key_name, t)
-      : author;
+      : visitor
+        ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
+        : author;
   // Live @Numo reply: 'working' comments update in place (current tool, then
   // streaming text) until only the final message remains. A 'working' row older
   // than 5 minutes is an orphan (server died) → error; the timeline polls while
@@ -407,6 +419,10 @@ function CommentBlock({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const mine = !!currentUserId && comment.author_id === currentUserId;
   const edited = comment.updated_at !== comment.created_at;
+  // Le commentaire d'un visiteur ne s'édite pas — réécrire les mots de
+  // quelqu'un sous son avatar n'est pas de la modération. Il se supprime, et
+  // par n'importe quel membre : c'est la page publique de l'équipe.
+  const moderable = !!visitor;
 
   const saveEdit = async () => {
     const body = draft.trim();
@@ -432,20 +448,58 @@ function CommentBlock({
           <NumoAvatar />
         ) : viaMcp ? (
           <McpAvatar agent={comment.api_key_agent} />
+        ) : visitor ? (
+          <UserAvatar seed={visitor.pseudonym} className="size-5" />
         ) : (
           <ActorAvatar members={ctx.members} id={comment.author_id} name={author} />
         )}
         <span className="min-w-0 truncate text-sm font-medium text-foreground">{name}</span>
+        {/* Ce que ce commentaire engage, dit avant de le lire : « Public » veut
+            dire qu'il est SUR le board, lisible par tout le monde. L'absence de
+            badge est la valeur par défaut de toute l'app — une note d'équipe. */}
+        {isPublic && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 px-1.5 py-0.5 text-[11px] font-medium text-brand">
+                <Globe className="size-3" />
+                {t("publicComment")}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">{t("publicCommentHint")}</TooltipContent>
+          </Tooltip>
+        )}
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {timeAgo(comment.created_at, t)}
         </span>
-        {edited && !viaNumo && (
+        {edited && !viaNumo && !visitor && (
           <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
         )}
         <span className="min-w-0 flex-1" />
+        {/* Modération : le seul geste sur le commentaire d'un visiteur est de le
+            retirer du board, et il est ouvert à toute l'équipe. */}
+        {moderable && !editing && !working && (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("commentActions")}
+                className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+              >
+                <Ellipsis className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
+                <Trash2 />
+                {tCommon("delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {/* Numo's comments are read-only for users (no edit, no delete — RLS
             enforces both); deleting one's own thread root still cascades. */}
-        {mine && !editing && !working && !viaNumo && (
+        {mine && !moderable && !editing && !working && !viaNumo && (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -919,20 +973,34 @@ export function CommentComposer({
   members,
   projectId,
   onSubmit,
+  publicOption,
 }: {
   members: Member[];
   projectId: string;
   onSubmit: (
     body: string,
     mentionedUserIds: string[],
-    attachments: AttachmentInput[]
+    attachments: AttachmentInput[],
+    visibility: CommentVisibility
   ) => Promise<void>;
+  /**
+   * Le fil d'un retour peut être adressé à deux publics (MIN-196) : on offre
+   * alors la bascule. Absente ailleurs — un ticket ou un objectif n'a pas de
+   * page publique, et une bascule qui n'a qu'une position est un mensonge.
+   *
+   * `disabledReason` (board non publié) garde la bascule VISIBLE mais éteinte,
+   * avec sa raison : la faire disparaître laisserait croire que les retours ne
+   * se répondent pas, alors qu'il manque un réglage à deux écrans d'ici.
+   */
+  publicOption?: { disabledReason?: string };
 }) {
   const t = useTranslations("Timeline");
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+  const [visibility, setVisibility] = useState<CommentVisibility>("internal");
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   const drop = useFileDrop(uploads.addFiles);
+  const isPublic = visibility === "public";
 
   const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading;
 
@@ -940,9 +1008,20 @@ export function CommentComposer({
     if (!canPost) return;
     setPosting(true);
     try {
-      await onSubmit(draft.trim(), extractMentions(draft, members), uploads.inputs);
+      await onSubmit(
+        draft.trim(),
+        // Un commentaire public n'emporte pas de mention : il s'adresse à qui a
+        // écrit le retour, pas à un collègue.
+        isPublic ? [] : extractMentions(draft, members),
+        uploads.inputs,
+        visibility
+      );
       setDraft("");
       uploads.clear();
+      // Retour à « interne » après chaque envoi. Les deux erreurs possibles ne
+      // se valent pas : une note d'équipe écrite en interne par mégarde ne
+      // coûte rien et se répare, un mot publié par mégarde a déjà été lu.
+      setVisibility("internal");
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -954,7 +1033,11 @@ export function CommentComposer({
     <div
       className={cn(
         "relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring",
-        drop.dragging && "border-brand"
+        drop.dragging && "border-brand",
+        // Le composeur CHANGE D'AIR quand ce qu'on écrit part sur le board.
+        // Une pastille discrète se rate ; la bordure du champ, non — et c'est
+        // la seule chose que regarde quelqu'un en train de taper.
+        isPublic && "border-brand/50 bg-brand/[0.03]"
       )}
       onPaste={pasteFileHandler(uploads.addFiles)}
       {...drop.handlers}
@@ -976,7 +1059,7 @@ export function CommentComposer({
         onChange={setDraft}
         members={members}
         onSubmit={() => void submit()}
-        placeholder={t("commentPlaceholder")}
+        placeholder={isPublic ? t("publicCommentPlaceholder") : t("commentPlaceholder")}
         dropUp
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
@@ -984,6 +1067,15 @@ export function CommentComposer({
       {/* Dictate sits where the Comment button lives while the composer is
           empty, and slides to its left once there is text to post. */}
       <div className="flex items-center justify-end gap-1.5 px-2.5 pb-2.5">
+        {publicOption && (
+          <VisibilityToggle
+            visibility={visibility}
+            onChange={setVisibility}
+            disabledReason={publicOption.disabledReason}
+            disabled={posting}
+          />
+        )}
+        <span className="min-w-0 flex-1" />
         <AttachButton onFiles={uploads.addFiles} disabled={posting} />
         <DictateButton
           onTranscription={(text) =>
@@ -1006,5 +1098,62 @@ export function CommentComposer({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * À qui on écrit : à l'équipe, ou au board (MIN-196).
+ *
+ * Un seul bouton qui bascule, pas deux onglets — il n'y a que deux positions,
+ * et celle qui compte est celle qu'on QUITTE. Éteint, il dit « Interne » au
+ * gris de tout le reste de l'écran ; allumé, il porte le globe et la couleur
+ * de marque, exactement la même que le badge des commentaires publics du fil
+ * juste au-dessus : le bouton et son résultat se ressemblent.
+ */
+function VisibilityToggle({
+  visibility,
+  onChange,
+  disabledReason,
+  disabled,
+}: {
+  visibility: CommentVisibility;
+  onChange: (next: CommentVisibility) => void;
+  /** Board non publié : le geste n'a nulle part où aboutir, on dit pourquoi. */
+  disabledReason?: string;
+  disabled?: boolean;
+}) {
+  const t = useTranslations("Timeline");
+  const isPublic = visibility === "public";
+  const locked = !!disabledReason;
+  const button = (
+    <button
+      type="button"
+      disabled={disabled || locked}
+      aria-pressed={isPublic}
+      onClick={() => onChange(isPublic ? "internal" : "public")}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+        isPublic
+          ? "border-brand/40 bg-brand/10 text-brand"
+          : "border-transparent text-muted-foreground hover:bg-control hover:text-foreground",
+        (disabled || locked) && "cursor-not-allowed opacity-50"
+      )}
+    >
+      {isPublic ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
+      {isPublic ? t("visibilityPublic") : t("visibilityInternal")}
+    </button>
+  );
+  return (
+    <Tooltip>
+      {/* `span` porteur : un bouton désactivé n'émet pas les événements de
+          survol dont l'infobulle a besoin — et c'est justement désactivé
+          qu'elle a le plus à dire. */}
+      <TooltipTrigger asChild>
+        <span className="flex">{button}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        {disabledReason ?? (isPublic ? t("visibilityPublicHint") : t("visibilityInternalHint"))}
+      </TooltipContent>
+    </Tooltip>
   );
 }

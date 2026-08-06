@@ -17,6 +17,10 @@ import {
 } from "@/lib/server/feedback/identity";
 import { requestFeedbackOtp, verifyFeedbackOtp } from "@/lib/server/feedback/otp";
 import { createFeedbackPost } from "@/lib/server/feedback/posts";
+import {
+  addPublicComment,
+  deletePublicComment,
+} from "@/lib/server/feedback/comments";
 import { votePost, unvotePost } from "@/lib/server/feedback/votes";
 import { embedText, matchFeedbackPosts } from "@/lib/server/embeddings";
 import {
@@ -198,6 +202,67 @@ export async function togglePostVoteAction(
   const ok = vote
     ? await votePost({ postId, userId: session.user.id })
     : await unvotePost({ postId, userId: session.user.id });
+  if (ok) revalidatePath(`/f/${token}`, "layout");
+  return { ok };
+}
+
+// ── Commentaires publics (MIN-196) ───────────────────────────────────────────
+
+export type PublicCommentState =
+  | { ok: true }
+  | { ok: false; error: "notAuthenticated" | "closed" | "rateLimited" | "failed" };
+
+/**
+ * Répondre publiquement à un retour. La connexion est obligatoire — non pour
+ * afficher qui écrit (le fil est anonyme, seul l'avatar sort), mais pour que
+ * l'équipe ait quelqu'un à qui rattacher un propos qu'elle doit pouvoir modérer.
+ *
+ * `notAuthenticated` rejoue la porte OTP puis le commentaire, exactement comme
+ * le vote : quelqu'un qui vient d'écrire trois phrases ne doit pas les perdre
+ * parce qu'on lui demande son email à ce moment-là.
+ */
+export async function addPublicCommentAction(
+  token: string,
+  postId: string,
+  body: string
+): Promise<PublicCommentState> {
+  const resolved = await resolveSession(token);
+  if (!resolved) return { ok: false, error: "notAuthenticated" };
+  const { ctx, session } = resolved;
+
+  const rate = checkSessionRateLimit(session.user.id, "feedback:comment", {
+    limit: 20,
+  });
+  if (!rate.allowed) return { ok: false, error: "rateLimited" };
+
+  const result = await addPublicComment({
+    projectId: ctx.project.id,
+    boardAllowsComments: ctx.board.allow_comments,
+    postId,
+    feedbackUserId: session.user.id,
+    body,
+  });
+  if (!result.ok) {
+    return { ok: false, error: result.error === "closed" ? "closed" : "failed" };
+  }
+  revalidatePath(`/f/${token}`, "layout");
+  return { ok: true };
+}
+
+/** Retirer SON commentaire. Le fil est anonyme : personne d'autre ne peut le
+    faire depuis le board — l'équipe, elle, modère depuis sa vue. */
+export async function deletePublicCommentAction(
+  token: string,
+  postId: string,
+  commentId: string
+): Promise<{ ok: boolean }> {
+  const resolved = await resolveSession(token);
+  if (!resolved) return { ok: false };
+  const ok = await deletePublicComment({
+    postId,
+    commentId,
+    feedbackUserId: resolved.session.user.id,
+  });
   if (ok) revalidatePath(`/f/${token}`, "layout");
   return { ok };
 }

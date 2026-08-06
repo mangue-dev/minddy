@@ -6,10 +6,17 @@ import {
   isHiddenFeedbackStatus,
   sortFeedbackResolvedLast,
   type FeedbackPostStatus,
+  type PublicComment,
   type PublicPost,
 } from "@/lib/feedback/types";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
+import {
+  emptyCommentSummary,
+  listPublicComments,
+  publicCommentSummaries,
+  type PublicCommentSummary,
+} from "@/lib/server/feedback/comments";
 
 /**
  * Lectures du board public (MIN-37). Tout passe par le service client (RLS
@@ -33,7 +40,8 @@ const PUBLIC_POST_SELECT = `${FEEDBACK_POST_SELECT}, feedback_users!author_id (p
 function toPublicPost(
   row: PostWithAuthor,
   viewerId: string | null,
-  votedPostIds: Set<string>
+  votedPostIds: Set<string>,
+  comments: PublicCommentSummary = emptyCommentSummary()
 ): PublicPost {
   return {
     id: row.id,
@@ -47,8 +55,8 @@ function toPublicPost(
     authorPseudonym: row.feedback_users?.pseudonym ?? null,
     isMine: viewerId !== null && row.author_id === viewerId,
     votedByMe: votedPostIds.has(row.id),
-    teamResponse: row.team_response,
-    teamResponseAt: row.team_response_at,
+    commentCount: comments.count,
+    teamRepliedAt: comments.teamRepliedAt,
   };
 }
 
@@ -103,11 +111,14 @@ export async function listPublicPosts(params: {
   const { data, error } = await query;
   if (error) console.error("[feedback-queries] list failed:", error.message);
   const rows = (data ?? []) as unknown as PostWithAuthor[];
-  const voted = await fetchViewerVotes(
-    params.viewerId,
-    rows.map((r) => r.id)
+  const ids = rows.map((r) => r.id);
+  const [voted, comments] = await Promise.all([
+    fetchViewerVotes(params.viewerId, ids),
+    publicCommentSummaries(ids),
+  ]);
+  const posts = rows.map((r) =>
+    toPublicPost(r, params.viewerId, voted, comments.get(r.id))
   );
-  const posts = rows.map((r) => toPublicPost(r, params.viewerId, voted));
   // Terminés (livrés / refusés) rangés en bas, l'ordre choisi (votes/date)
   // conservé au sein de chaque groupe.
   return sortFeedbackResolvedLast(posts, (p) => p.status);
@@ -142,6 +153,9 @@ export interface PublicPostDetail {
   mergedIntoId: string | null;
   /** Titres des posts fusionnés dans celui-ci (mention « fusionné depuis »). */
   mergedFromTitles: string[];
+  /** Le fil public du retour (MIN-196), anonymisé, du plus ancien au plus
+      récent. La réponse d'équipe en fait partie — elle n'est plus à côté. */
+  comments: PublicComment[];
 }
 
 export async function getPublicPostDetail(params: {
@@ -172,10 +186,11 @@ export async function getPublicPostDetail(params: {
       post: toPublicPost(row, params.viewerId, new Set<string>()),
       mergedIntoId: row.merged_into_id,
       mergedFromTitles: [],
+      comments: [],
     };
   }
 
-  const [voted, mergedFromRes] = await Promise.all([
+  const [voted, mergedFromRes, comments] = await Promise.all([
     fetchViewerVotes(params.viewerId, [row.id]),
     service
       .from("feedback_posts")
@@ -183,12 +198,18 @@ export async function getPublicPostDetail(params: {
       .is("deleted_at", null)
       .eq("merged_into_id", row.id)
       .order("created_at", { ascending: true }),
+    listPublicComments({ postId: row.id, viewerId: params.viewerId }),
   ]);
 
   return {
-    post: toPublicPost(row, params.viewerId, voted),
+    post: toPublicPost(row, params.viewerId, voted, {
+      count: comments.length,
+      teamRepliedAt:
+        comments.filter((c) => c.isTeam).at(-1)?.createdAt ?? null,
+    }),
     mergedIntoId: null,
     mergedFromTitles: (mergedFromRes.data ?? []).map((p) => p.title as string),
+    comments,
   };
 }
 
@@ -323,9 +344,12 @@ export async function listMyFeedback(params: {
   }
 
   const ids = entries.map((e) => e.row.id);
-  const voted = await fetchViewerVotes(params.viewerId, ids);
+  const [voted, comments] = await Promise.all([
+    fetchViewerVotes(params.viewerId, ids),
+    publicCommentSummaries(ids),
+  ]);
   return entries.map((e) => ({
-    post: toPublicPost(e.row, params.viewerId, voted),
+    post: toPublicPost(e.row, params.viewerId, voted, comments.get(e.row.id)),
     relation: e.relation,
     mergedFromTitle: e.mergedFromTitle,
   }));

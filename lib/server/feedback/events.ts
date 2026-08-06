@@ -63,20 +63,9 @@ export function buildFeedbackFieldChangeEvents(
       to_value: s(updates.status),
     });
   }
-  // Réponse d'équipe : on ne journalise pas le texte, seulement l'action
-  // (publiée / retirée) — comme le corps, la valeur n'a pas à fuiter dans le fil.
-  if (
-    "team_response" in updates &&
-    (updates.team_response ?? null) !== (before.team_response ?? null)
-  ) {
-    events.push({
-      feedback_post_id: postId,
-      actor_id: actorId,
-      type: "updated",
-      field: "team_response",
-      to_value: updates.team_response ? "set" : "cleared",
-    });
-  }
+  // La réponse d'équipe ne passe plus par ici (MIN-196) : c'est un commentaire
+  // public, et le fil d'activité montre déjà les commentaires. Les lignes
+  // `team_response` déjà écrites restent lisibles — voir lib/describe-event.ts.
   // Visibilité : on journalise le sens (rendu public / privé) — pas de from/to,
   // l'action se suffit à elle-même dans le fil.
   if (

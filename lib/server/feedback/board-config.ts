@@ -7,6 +7,7 @@ import {
   enableBoardForProject,
   getBoardForProject,
   rotateSsoSecret,
+  setBoardAllowComments,
   setBoardShowCategories,
   setBoardShowViews,
   setBoardVisibleViews,
@@ -42,6 +43,8 @@ export interface FeedbackBoardConfig {
   sso_configured: boolean;
   show_categories: boolean;
   show_views: boolean;
+  /** Commentaires publics sur les retours (MIN-196). Faux = lecture seule. */
+  allow_comments: boolean;
   /** Les vues partagées montrées en onglets quand `show_views` est vrai. */
   visible_view_ids: string[];
 }
@@ -55,6 +58,7 @@ const NO_BOARD: FeedbackBoardConfig = {
   sso_configured: false,
   show_categories: false,
   show_views: false,
+  allow_comments: false,
   visible_view_ids: [],
 };
 
@@ -79,6 +83,7 @@ export async function getFeedbackBoardConfig(
     sso_configured: board.sso_secret !== null,
     show_categories: board.show_categories,
     show_views: board.show_views,
+    allow_comments: board.allow_comments,
     visible_view_ids: board.visible_view_ids ?? [],
   };
 }
@@ -105,13 +110,24 @@ export async function configureFeedbackBoard(input: {
    *  réglages, pour que Numo puisse RÉGLER ce que get_feedback_board lui LIT. */
   showCategories?: boolean;
   showViews?: boolean;
+  allowComments?: boolean;
   visibleViewIds?: string[];
   origin?: string;
 }): Promise<ConfigureBoardResult> {
-  const { projectId, enabled, generateSso, showCategories, showViews, visibleViewIds } =
-    input;
+  const {
+    projectId,
+    enabled,
+    generateSso,
+    showCategories,
+    showViews,
+    allowComments,
+    visibleViewIds,
+  } = input;
   const touchesDisplay =
-    showCategories !== undefined || showViews !== undefined || visibleViewIds !== undefined;
+    showCategories !== undefined ||
+    showViews !== undefined ||
+    allowComments !== undefined ||
+    visibleViewIds !== undefined;
   if (enabled === undefined && !generateSso && !touchesDisplay) {
     return { ok: false, errorKey: "noFieldsToUpdate" };
   }
@@ -134,6 +150,12 @@ export async function configureFeedbackBoard(input: {
       return { ok: false, errorKey: "databaseError" };
     }
     if (showViews !== undefined && !(await setBoardShowViews(projectId, showViews))) {
+      return { ok: false, errorKey: "databaseError" };
+    }
+    if (
+      allowComments !== undefined &&
+      !(await setBoardAllowComments(projectId, allowComments))
+    ) {
       return { ok: false, errorKey: "databaseError" };
     }
     if (visibleViewIds !== undefined && !(await setBoardVisibleViews(projectId, visibleViewIds))) {

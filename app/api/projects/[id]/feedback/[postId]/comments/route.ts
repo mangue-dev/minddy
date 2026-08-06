@@ -12,6 +12,10 @@ import {
   replyTargetsNumoFeedback,
   runFeedbackCommentMention,
 } from "@/lib/server/assistant/comment-agent";
+import {
+  isCommentVisibility,
+  type CommentVisibility,
+} from "@/lib/feedback/types";
 
 // @Numo replies run in after() once the response is sent — same window as the
 // issue/objective comment routes so the agent loop isn't cut mid-flight.
@@ -26,10 +30,18 @@ type RouteContext = { params: Promise<{ id: string; postId: string }> };
 const COMMENT_BODY_MAX = 10_000;
 const MAX_MENTIONS = 50;
 
-/** GET — the feedback post's internal comment thread. Service-role read gated by
-    project membership: feedback stays RLS deny-all, so these team-only comments
-    are read through the service client (never RLS), like the rest of the
-    feedback team channel. */
+/** GET — the feedback post's comment thread, internal AND public (MIN-196), in
+    one chronological list: for the team they are the same conversation, and the
+    `visibility` field is what the timeline paints a badge from.
+
+    Service-role read gated by project membership: feedback stays RLS deny-all,
+    so these are read through the service client (never RLS), like the rest of
+    the feedback team channel.
+
+    A public comment written by a VISITOR carries their real identity here —
+    name and email — and only here. That identity is the whole reason signing in
+    is required to comment: the team must be able to moderate. The board itself
+    never sees more than a pseudonym-seeded avatar. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);
@@ -44,7 +56,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const service = getServiceClient();
   const { data, error } = await service
     .from("comments")
-    .select("*, attachments(*)")
+    .select("*, attachments(*), feedback_users!feedback_user_id (id, name, email, pseudonym)")
     .eq("feedback_post_id", postId)
     .order("created_at", { ascending: true });
 
@@ -65,7 +77,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   );
 }
 
-/** POST — add an internal comment on the feedback post (author = caller). */
+/** POST — add a comment on the feedback post (author = caller). `visibility`
+    picks the side: `internal` (the default) stays team-only, `public` publishes
+    it on the board as the team's voice — that is how a team response is written
+    since MIN-196. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);
@@ -89,13 +104,18 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     mentioned_user_ids?: unknown;
     parent_id?: unknown;
     attachments?: unknown;
+    visibility?: unknown;
   };
 
+  const visibility: CommentVisibility = isCommentVisibility(input.visibility)
+    ? input.visibility
+    : "internal";
   const commentBody =
     typeof input.body === "string" ? input.body.slice(0, COMMENT_BODY_MAX) : "";
   const result = await addCommentToFeedbackPost({
     postId,
     actorId: guard.userId,
+    visibility,
     body: commentBody,
     parentId:
       typeof input.parent_id === "string" ? input.parent_id.slice(0, 64) : null,
@@ -113,17 +133,25 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   // @Numo → fire-and-forget agent reply, after the response is sent. Triggers:
   // an explicit @numo mention, or a reply posted right under a Numo comment.
+  //
+  // Never on a PUBLIC comment (MIN-196): what is written there is read by
+  // visitors on the board, and an agent answering in that thread would be
+  // speaking to them, as the team, without anyone having asked. A "@numo" typed
+  // in a public reply is text — the board prints it and nothing more.
   const service = getServiceClient();
   const created = result.comment as {
     id: string;
     feedback_post_id: string;
     parent_id: string | null;
   };
-  const trigger = mentionsNumo(commentBody)
-    ? "mention"
-    : (await replyTargetsNumoFeedback(service, created))
-      ? "reply"
-      : null;
+  const trigger =
+    visibility === "public"
+      ? null
+      : mentionsNumo(commentBody)
+        ? "mention"
+        : (await replyTargetsNumoFeedback(service, created))
+          ? "reply"
+          : null;
   if (trigger) {
     const locale = await getLocale();
     const { supabase } = guard;

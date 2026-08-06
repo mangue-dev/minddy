@@ -66,8 +66,6 @@ export interface FeedbackPostRow {
   analyzed_at: string | null;
   /** Échecs consécutifs de la passe de revue — 3 = abandon (MIN-87). */
   analysis_failures: number;
-  team_response: string | null;
-  team_response_at: string | null;
   /** Langue du retour pris dans son ensemble, telle que la revue l'a lue. */
   source_language: string | null;
   /** Traduction dans la langue de l'équipe — à CÔTÉ du texte, jamais à sa
@@ -81,7 +79,7 @@ export interface FeedbackPostRow {
 
 /** Colonnes rendues aux appelants — jamais l'embedding (payload inutile). */
 export const FEEDBACK_POST_SELECT =
-  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, review_state, sensitivity, moderation_reason, classified_at, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, analysis_failures, team_response, team_response_at, source_language, translated_title, translated_body, translated_language, created_at, updated_at";
+  "id, project_id, author_id, created_by_member, title, body, submitted_title, submitted_body, status, is_public, review_state, sensitivity, moderation_reason, classified_at, vote_count, issue_id, merged_into_id, suggested_merge_into_id, suggested_confidence, source, analyzed_at, analysis_failures, source_language, translated_title, translated_body, translated_language, created_at, updated_at";
 
 export type CreateFeedbackPostResult =
   | { ok: true; post: FeedbackPostRow }
@@ -324,12 +322,8 @@ export async function updateFeedbackPostFields(params: {
     }
     updates.status = input.status;
   }
-  if ("team_response" in input) {
-    const response =
-      typeof input.team_response === "string" ? input.team_response.trim() : "";
-    updates.team_response = response || null;
-    updates.team_response_at = response ? new Date().toISOString() : null;
-  }
+  // La réponse d'équipe n'est plus un champ du retour (MIN-196) : c'est un
+  // commentaire public de son fil, écrit par addCommentToFeedbackPost.
   // Visibilité (MIN-37) : l'équipe peut basculer un post public/privé depuis le
   // dashboard. false = retiré du board (list, détail non-auteur, suggestions).
   if ("is_public" in input) {

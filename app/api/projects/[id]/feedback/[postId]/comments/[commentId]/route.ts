@@ -16,38 +16,47 @@ type RouteContext = {
 const COMMENT_BODY_MAX = 10_000;
 
 /**
- * Edit / delete an internal feedback comment. Feedback is RLS deny-all, so
- * (unlike issue/objective comments, which go through /api/comments/[id] on the
- * RLS client) these run on the service client, gated by project membership.
- * The author-only + not-via_assistant rule the RLS enforces elsewhere is
- * reproduced HERE: a user only edits/deletes their OWN comments, never Numo's
- * (deleting one's own thread root still cascades its replies, Numo's included).
+ * Edit / delete a feedback comment. Feedback is RLS deny-all, so (unlike
+ * issue/objective comments, which go through /api/comments/[id] on the RLS
+ * client) these run on the service client, gated by project membership. The
+ * author-only + not-via_assistant rule the RLS enforces elsewhere is reproduced
+ * HERE: a user only edits/deletes their OWN comments, never Numo's (deleting
+ * one's own thread root still cascades its replies, Numo's included).
+ *
+ * One exception, and it only widens DELETE: a public comment written by a
+ * VISITOR (`feedback_user_id` set, no `author_id`) can be removed by any member
+ * of the project. That is moderation — the reason the board asks people to sign
+ * in before they can comment at all — and without it the team would be able to
+ * read abuse on its own public page without being able to take it down.
+ *
+ * It never widens PATCH: rewriting someone else's public words under their
+ * avatar is not moderating, it is ventriloquism. The team can delete, not edit.
  */
-async function loadOwnComment(
+type FeedbackCommentGuard =
+  | { ok: true }
+  | { ok: false; status: number };
+
+async function guardComment(
   service: ReturnType<typeof getServiceClient>,
   postId: string,
   commentId: string,
-  userId: string
-): Promise<
-  | { ok: true; comment: { id: string; author_id: string | null; via_assistant: boolean } }
-  | { ok: false; status: number }
-> {
+  userId: string,
+  { allowVisitorModeration }: { allowVisitorModeration: boolean }
+): Promise<FeedbackCommentGuard> {
   const { data } = await service
     .from("comments")
-    .select("id, author_id, via_assistant, feedback_post_id")
+    .select("id, author_id, via_assistant, feedback_post_id, feedback_user_id, visibility")
     .eq("id", commentId)
     .maybeSingle();
   if (!data || data.feedback_post_id !== postId) return { ok: false, status: 404 };
+
+  const byVisitor = data.feedback_user_id !== null && data.visibility === "public";
+  if (byVisitor) {
+    return allowVisitorModeration ? { ok: true } : { ok: false, status: 403 };
+  }
   // Not the author, or a Numo comment → not yours to edit/delete.
   if (data.author_id !== userId || data.via_assistant) return { ok: false, status: 403 };
-  return {
-    ok: true,
-    comment: {
-      id: data.id as string,
-      author_id: data.author_id as string | null,
-      via_assistant: !!data.via_assistant,
-    },
-  };
+  return { ok: true };
 }
 
 /** PATCH — edit the comment body (author-only, own non-Numo comment). */
@@ -73,7 +82,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   if (!text) return NextResponse.json({ error: t("commentEmpty") }, { status: 400 });
 
   const service = getServiceClient();
-  const own = await loadOwnComment(service, postId, commentId, guard.userId);
+  const own = await guardComment(service, postId, commentId, guard.userId, {
+    allowVisitorModeration: false,
+  });
   if (!own.ok) {
     return NextResponse.json({ error: t("commentNotFound") }, { status: own.status });
   }
@@ -91,8 +102,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(data);
 }
 
-/** DELETE — remove the comment (author-only). Deleting a thread root cascades
-    its replies (parent_id FK), whose attachment objects are cleaned up here. */
+/** DELETE — remove the comment: one's own, or any visitor's public comment on
+    the board (moderation). Deleting a thread root cascades its replies
+    (parent_id FK), whose attachment objects are cleaned up here. */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id, postId, commentId } = await params;
   const guard = await requireProjectMember(request, id);
@@ -103,7 +115,9 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   if (!post) return NextResponse.json({ error: t("feedbackNotFound") }, { status: 404 });
 
   const service = getServiceClient();
-  const own = await loadOwnComment(service, postId, commentId, guard.userId);
+  const own = await guardComment(service, postId, commentId, guard.userId, {
+    allowVisitorModeration: true,
+  });
   if (!own.ok) {
     return NextResponse.json({ error: t("commentNotFound") }, { status: own.status });
   }

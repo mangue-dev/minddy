@@ -11,6 +11,7 @@ import {
   updateFeedbackCommentApi,
 } from "./comments-api";
 import type { AttachmentInput, Comment } from "./types";
+import type { CommentVisibility } from "./feedback/types";
 import type { TimelineItem } from "./use-issue-timeline";
 
 /** React-query keys for a feedback post's activity + internal comments. Both are
@@ -93,7 +94,8 @@ export function useFeedbackTimeline(projectId: string, postId: string | null) {
       body: string,
       mentionedUserIds: string[] = [],
       parentId: string | null = null,
-      attachments: AttachmentInput[] = []
+      attachments: AttachmentInput[] = [],
+      visibility: CommentVisibility = "internal"
     ) => {
       await addFeedbackCommentApi(
         projectId,
@@ -101,7 +103,8 @@ export function useFeedbackTimeline(projectId: string, postId: string | null) {
         body,
         mentionedUserIds,
         parentId,
-        attachments
+        attachments,
+        visibility
       );
       invalidate();
     },

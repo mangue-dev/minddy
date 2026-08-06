@@ -11,6 +11,7 @@ import {
   projectMemberIds,
   type NotificationRow,
 } from "@/lib/server/notifications";
+import type { CommentVisibility } from "@/lib/feedback/types";
 
 /**
  * Shared comment-creation core: normalizes replies onto their thread's ROOT
@@ -368,11 +369,17 @@ export async function addCommentToObjective({
  * Feedback-thread twin of addCommentToIssue: same reply-threading and
  * attachment handling, but the parent is a feedback post. Feedback is RLS
  * deny-all, so access is checked HERE (via the post's project) and the write
- * uses the service client — the feedback convention. These are INTERNAL,
- * team-only comments: they never surface on the public board. Notifications
- * target @mentions + the thread authors (a feedback post has no owner/assignee).
+ * uses the service client — the feedback convention. Notifications target
+ * @mentions + the thread authors (a feedback post has no owner/assignee).
  * Used by POST /api/projects/[id]/feedback/[postId]/comments and the @Numo
  * feedback agent.
+ *
+ * `visibility` (MIN-196) decides who reads it. `internal` — the default, and
+ * everything written before MIN-196 — stays team-only. `public` publishes it on
+ * the board as the TEAM's voice: it is signed "<project> team" there, never with
+ * the author's name, which is why the member still owns the row (`author_id`)
+ * but the board never reads it. A public comment carries no @mentions either:
+ * it is addressed to whoever wrote the request, not to a colleague.
  */
 export async function addCommentToFeedbackPost({
   postId,
@@ -383,6 +390,7 @@ export async function addCommentToFeedbackPost({
   attachments,
   viaAssistant = false,
   mcpKeyId = null,
+  visibility = "internal",
 }: {
   postId: string;
   actorId: string;
@@ -392,7 +400,9 @@ export async function addCommentToFeedbackPost({
   attachments?: unknown;
   viaAssistant?: boolean;
   mcpKeyId?: string | null;
+  visibility?: CommentVisibility;
 }): Promise<AddCommentResult> {
+  const isPublic = visibility === "public";
   const text = body.trim().slice(0, MAX_COMMENT_LENGTH);
   const mentioned = (mentionedUserIds ?? []).filter(
     (v): v is string => typeof v === "string"
@@ -427,16 +437,21 @@ export async function addCommentToFeedbackPost({
   }
 
   // Replies: the stored parent_id is always the thread's ROOT comment
-  // (depth ≤ 1); the parent must belong to this feedback post.
+  // (depth ≤ 1); the parent must belong to this feedback post — and to the same
+  // side of the wall: replying publicly under an internal note (or the reverse)
+  // would tear a thread in half, half of it readable by the board.
   let rootId: string | null = null;
   const threadAuthorIds: (string | null)[] = [];
   if (parentId) {
     const { data: parent } = await service
       .from("comments")
-      .select("id, parent_id, feedback_post_id, author_id")
+      .select("id, parent_id, feedback_post_id, author_id, visibility")
       .eq("id", parentId)
       .maybeSingle();
     if (!parent || parent.feedback_post_id !== postId) {
+      return { ok: false, status: 404, errorKey: "commentNotFound" };
+    }
+    if ((parent.visibility as string) !== visibility) {
       return { ok: false, status: 404, errorKey: "commentNotFound" };
     }
     rootId = (parent.parent_id as string | null) ?? (parent.id as string);
@@ -461,6 +476,7 @@ export async function addCommentToFeedbackPost({
       via_assistant: viaAssistant,
       via_mcp: !!mcpKeyId,
       api_key_id: mcpKeyId,
+      visibility,
     })
     .select("*")
     .single();
@@ -485,10 +501,12 @@ export async function addCommentToFeedbackPost({
 
   // Notifications: @mentions + the thread authors — never the requester
   // themself, members only. (A feedback post has no owner/assignee/lead.)
+  // A public reply carries no mention: it is addressed to the person who wrote
+  // the request, and an "@" typed in it is text the board will print verbatim.
   const valid = await projectMemberIds(service, post.project_id as string);
 
   const mentionSet = new Set(
-    mentioned.filter((uid) => uid !== actorId && valid.has(uid))
+    isPublic ? [] : mentioned.filter((uid) => uid !== actorId && valid.has(uid))
   );
   const commentSet = new Set<string>();
   for (const uid of threadAuthorIds) {

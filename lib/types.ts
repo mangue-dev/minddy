@@ -5,6 +5,7 @@ import type { RepoProviderId } from "./repo-providers";
 import type { RecurrenceCadence } from "./recurrence";
 import type { BillingPlanId } from "./billing-plans";
 import type { AutomationOverride, AutomationRule } from "./automations";
+import type { CommentVisibility } from "./feedback/types";
 
 export interface Objective {
   id: string;
@@ -72,6 +73,20 @@ export interface Comment {
   assistant_status?: "working" | "done" | "error" | null;
   /** Tool currently executing while assistant_status='working' (shown live). */
   assistant_tool?: string | null;
+  /** Feedback threads only (MIN-196): 'public' means the comment is READ ON THE
+      BOARD. Everything else — issues, objectives, and every comment written
+      before MIN-196 — is 'internal'. */
+  visibility?: CommentVisibility;
+  /** The board VISITOR who wrote a public comment, when it isn't the team's own
+      voice. Their real name/email is resolved here, for the team only: the
+      board itself never sees more than a pseudonym-seeded avatar. */
+  feedback_user_id?: string | null;
+  feedback_users?: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    pseudonym: string;
+  } | null;
   created_at: string;
   updated_at: string;
 }

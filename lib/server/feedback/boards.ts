@@ -22,6 +22,9 @@ export interface FeedbackBoardRow {
   visible_view_ids: string[];
   /** Opt-in : afficher les catégories des posts sur le board public (MIN-52). */
   show_categories: boolean;
+  /** Commentaires publics sur les retours (MIN-196). Faux = lecture seule :
+      le fil déjà écrit reste lisible, plus personne n'y ajoute rien. */
+  allow_comments: boolean;
   /** Accents optionnels du board public (MIN-59), hex par thème ; null = défaut. */
   accent_light: string | null;
   accent_dark: string | null;
@@ -31,7 +34,7 @@ export interface FeedbackBoardRow {
 }
 
 const BOARD_SELECT =
-  "id, project_id, token, enabled, show_views, visible_view_ids, show_categories, accent_light, accent_dark, sso_secret, created_at, updated_at";
+  "id, project_id, token, enabled, show_views, visible_view_ids, show_categories, allow_comments, accent_light, accent_dark, sso_secret, created_at, updated_at";
 
 export interface PublicBoardContext {
   board: FeedbackBoardRow;
@@ -139,6 +142,19 @@ export async function setBoardShowCategories(
   const { error } = await service
     .from("feedback_boards")
     .update({ show_categories: showCategories })
+    .eq("project_id", projectId);
+  return !error;
+}
+
+/** Commentaires publics sur les retours du board (MIN-196). */
+export async function setBoardAllowComments(
+  projectId: string,
+  allowComments: boolean
+): Promise<boolean> {
+  const service = getServiceClient();
+  const { error } = await service
+    .from("feedback_boards")
+    .update({ allow_comments: allowComments })
     .eq("project_id", projectId);
   return !error;
 }

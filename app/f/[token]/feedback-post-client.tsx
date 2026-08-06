@@ -2,13 +2,18 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { GitMerge } from "lucide-react";
 import { MessageResponse } from "@/components/ai-elements/message";
-import { ProjectOrb } from "@/components/project-orb";
-import type { PublicIdentity, PublicPost, PublicProject } from "@/lib/feedback/types";
+import type {
+  PublicComment,
+  PublicIdentity,
+  PublicPost,
+  PublicProject,
+} from "@/lib/feedback/types";
 import { togglePostVoteAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
+import { PublicComments } from "./public-comments";
 import {
   AuthorAvatar,
   BackToBoardLink,
@@ -18,9 +23,10 @@ import {
 } from "./feedback-bits";
 
 /**
- * Page publique d'un post (MIN-37) : besoin votable rendu en markdown, réponse
- * d'équipe signée « Équipe <projet> ». Toute action nécessitant une identité
- * passe par la porte OTP puis se rejoue automatiquement.
+ * Page publique d'un post (MIN-37) : besoin votable rendu en markdown, puis le
+ * fil public où l'équipe répond et où l'on peut préciser sa demande (MIN-196).
+ * Toute action nécessitant une identité passe par la porte OTP puis se rejoue
+ * automatiquement — le vote comme le commentaire.
  */
 
 export function FeedbackPostClient({
@@ -29,6 +35,8 @@ export function FeedbackPostClient({
   project,
   post,
   mergedFromTitles,
+  comments,
+  allowComments,
   identity,
 }: {
   token: string;
@@ -37,10 +45,12 @@ export function FeedbackPostClient({
   project: PublicProject;
   post: PublicPost;
   mergedFromTitles: string[];
+  comments: PublicComment[];
+  /** Réglage du board : faux = fil en lecture seule. */
+  allowComments: boolean;
   identity: PublicIdentity | null;
 }) {
   const t = useTranslations("PublicFeedback");
-  const format = useFormatter();
   const router = useRouter();
   const [authOpen, setAuthOpen] = useState(false);
   const pendingAfterAuth = useRef<(() => void) | null>(null);
@@ -108,35 +118,20 @@ export function FeedbackPostClient({
         </div>
       )}
 
-      {/* La réponse de l'équipe est un MESSAGE, pas un encart.
-          L'encadré teinté en faisait une propriété du retour — une bannière que
-          le produit affiche sur sa propre page, au même titre qu'un statut.
-          C'est pourtant quelqu'un qui répond à quelqu'un, et ça se lit à la
-          forme : l'orbe du projet en guise d'avatar, la signature, la date,
-          puis le texte — exactement le gabarit d'un commentaire de l'app.
-          Le filet du haut suffit à le détacher du besoin auquel il répond. */}
-      {post.teamResponse && (
-        <div className="flex flex-col gap-2 border-t pt-5">
-          <div className="flex items-center gap-2">
-            <ProjectOrb
-              seed={project.id}
-              iconUrl={project.iconUrl}
-              className="size-6 rounded-[7px]"
-            />
-            <span className="min-w-0 truncate text-sm font-medium">
-              {t("teamName", { project: project.name })}
-            </span>
-            {post.teamResponseAt && (
-              <span className="shrink-0 text-xs text-muted-foreground/80">
-                {format.dateTime(new Date(post.teamResponseAt), { dateStyle: "medium" })}
-              </span>
-            )}
-          </div>
-          {/* Saisie dans un textarea nu côté équipe : du texte, pas du markdown.
-              Le rendre en markdown mangerait un `*` ou un `#` écrit à la main. */}
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{post.teamResponse}</p>
-        </div>
-      )}
+      {/* La réponse de l'équipe n'est plus un encart : c'est le premier message
+          du fil public (MIN-196). L'encadré en faisait une propriété du retour —
+          une bannière que le produit affiche sur sa propre page, au même titre
+          qu'un statut — alors que c'est quelqu'un qui répond à quelqu'un. Elle
+          se lit maintenant là où on peut lui répondre. */}
+      <PublicComments
+        token={token}
+        project={project}
+        postId={post.id}
+        comments={comments}
+        allowComments={allowComments}
+        identity={identity}
+        onNeedAuth={requireAuth}
+      />
 
       <FeedbackAuthDialog
         token={token}

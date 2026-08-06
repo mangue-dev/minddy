@@ -707,6 +707,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Show the project's shared views as tabs on the public site, next to the board.",
           },
+          allow_comments: {
+            type: "boolean",
+            description:
+              "Let signed-in visitors reply publicly on a request. false leaves the existing thread readable but closes it to new comments; the team can still reply publicly. Needs an existing board.",
+          },
           visible_view_ids: {
             type: "array",
             items: { type: "string" },
@@ -813,7 +818,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "respond_to_feedback",
       description:
-        "Publish (or update) the official TEAM RESPONSE on a feedback post — the single reply shown PUBLICLY to everyone who submitted it, signed on behalf of the team. This is PUBLIC-facing: only do it when explicitly asked. Pass an empty string to remove the response. Omit feedback_post_id to target the current post (feedback comment mode).",
+        "Reply PUBLICLY on a feedback post — the message is posted to the board's public thread, where everyone reading the request sees it, signed on behalf of the team (never with a member's name, nor yours). This is PUBLIC-facing and cannot be edited or taken back afterwards: only do it when explicitly asked, and post it once it says what the team means. For a triage note nobody outside the team should read, use add_feedback_comment instead. Omit feedback_post_id to target the current post (feedback comment mode).",
       parameters: {
         type: "object",
         properties: {
@@ -823,8 +828,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
           response: {
             type: "string",
-            description:
-              "The public team response (markdown/plain text). Empty string clears it.",
+            description: "The public reply, shown on the board (plain text).",
           },
         },
         required: ["response"],

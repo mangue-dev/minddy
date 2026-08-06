@@ -19,7 +19,10 @@ const NUMO_TEXT_TOOLS: IssueTextTools = {
     description: "update_issues { fields: { description } }",
   },
 };
-import { addCommentToIssue } from "@/lib/server/add-comment";
+import {
+  addCommentToFeedbackPost,
+  addCommentToIssue,
+} from "@/lib/server/add-comment";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import {
   addIssueRelation,
@@ -1432,6 +1435,8 @@ export async function executeTool(
           showCategories:
             typeof args.show_categories === "boolean" ? args.show_categories : undefined,
           showViews: typeof args.show_views === "boolean" ? args.show_views : undefined,
+          allowComments:
+            typeof args.allow_comments === "boolean" ? args.allow_comments : undefined,
           visibleViewIds: Array.isArray(args.visible_view_ids)
             ? args.visible_view_ids.filter((v): v is string => typeof v === "string")
             : undefined,
@@ -1480,7 +1485,9 @@ export async function executeTool(
         if (!detail) return toolError("Feedback post not found in this project.");
         const { data: comments } = await ctx.service
           .from("comments")
-          .select("author_id, via_assistant, body, created_at")
+          .select(
+            "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)"
+          )
           .eq("feedback_post_id", postId)
           .order("created_at", { ascending: true });
         // Resolve author display names (never surface raw uuids to the model).
@@ -1504,7 +1511,6 @@ export async function executeTool(
               vote_count: detail.vote_count,
               is_public: detail.is_public,
               source: detail.source,
-              team_response: detail.team_response,
               author: detail.author
                 ? { name: detail.author.name, email: detail.author.email }
                 : null,
@@ -1515,18 +1521,30 @@ export async function executeTool(
                     status: detail.issue.status,
                   }
                 : null,
-              comments: (comments ?? []).map((c) => ({
-                author: c.via_assistant
-                  ? "Numo"
-                  : displayName(
-                      toNamed(
-                        c.author_id ? commentUsers.get(c.author_id as string) : null
-                      ),
-                      "User"
-                    ),
-                body: c.body,
-                created_at: c.created_at,
-              })),
+              comments: (comments ?? []).map((c) => {
+                // Un commentaire public écrit par un VISITEUR du board : Numo
+                // travaille pour l'équipe, il le voit donc nommé, comme elle.
+                const visitor = c.feedback_users as unknown as {
+                  name: string | null;
+                  email: string | null;
+                  pseudonym: string;
+                } | null;
+                return {
+                  author: visitor
+                    ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
+                    : c.via_assistant
+                      ? "Numo"
+                      : displayName(
+                          toNamed(
+                            c.author_id ? commentUsers.get(c.author_id as string) : null
+                          ),
+                          "User"
+                        ),
+                  visibility: (c.visibility as string) ?? "internal",
+                  body: c.body,
+                  created_at: c.created_at,
+                };
+              }),
             },
           },
           success: true,
@@ -1604,18 +1622,19 @@ export async function executeTool(
         }
         const scoped = await getProjectFeedbackPost(projectId, postId);
         if (!scoped) return toolError("Feedback post not found in this project.");
-        const result = await updateFeedbackPostFields({
+        // La réponse d'équipe est un commentaire PUBLIC du fil du retour
+        // (MIN-196), plus un champ du retour. Signée « Équipe <projet> » sur le
+        // board — jamais du nom de qui l'a écrite, Numo compris.
+        const result = await addCommentToFeedbackPost({
           postId,
           actorId: ctx.userId,
-          input: { team_response: args.response },
+          body: args.response,
+          visibility: "public",
           viaAssistant: true,
         });
-        if (!result.ok) return toolError(result.errorKey);
+        if (!result.ok) return toolError(result.errorKey ?? "databaseError");
         return {
-          result: {
-            feedback_post_id: postId,
-            team_response: result.post.team_response,
-          },
+          result: { feedback_post_id: postId, comment: result.comment },
           success: true,
         };
       }

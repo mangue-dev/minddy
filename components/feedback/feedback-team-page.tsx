@@ -114,6 +114,7 @@ import {
 import {
   FEEDBACK_POST_STATUSES,
   isResolvedFeedbackStatus,
+  type CommentVisibility,
   type FeedbackPostStatus,
   type FeedbackReviewState,
 } from "@/lib/feedback/types";
@@ -1180,8 +1181,12 @@ function FeedbackDetail({
     [addComment]
   );
   const handleComment = useCallback(
-    (body: string, mentionedUserIds: string[], attachments: AttachmentInput[]) =>
-      addComment(body, mentionedUserIds, null, attachments),
+    (
+      body: string,
+      mentionedUserIds: string[],
+      attachments: AttachmentInput[],
+      visibility: CommentVisibility
+    ) => addComment(body, mentionedUserIds, null, attachments, visibility),
     [addComment]
   );
 
@@ -1216,8 +1221,6 @@ function FeedbackDetail({
   );
 
   const [title, setTitle] = useState("");
-  const [response, setResponse] = useState("");
-  const [respondEditing, setRespondEditing] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
@@ -1245,11 +1248,7 @@ function FeedbackDetail({
   const [showTranslated, setShowTranslated] = useState(true);
 
   useEffect(() => {
-    if (post) {
-      setTitle(post.title);
-      setResponse(post.team_response ?? "");
-      setRespondEditing(false);
-    }
+    if (post) setTitle(post.title);
   }, [post?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshDetail = () => {
@@ -1268,17 +1267,6 @@ function FeedbackDetail({
     onSuccess: refreshDetail,
     onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
   });
-
-  // Publier la réponse d'équipe. Le bouton du bas et le ⌘/Ctrl+Entrée du champ
-  // passent par le même geste et la même garde : la touche ne doit pas pouvoir
-  // envoyer ce que le bouton refuse.
-  const respondDisabled =
-    patch.isPending || response.trim() === (post?.team_response ?? "");
-  const publishResponse = () =>
-    patch.mutate(
-      { team_response: response },
-      { onSuccess: () => setRespondEditing(false) },
-    );
 
   const action = useMutation({
     mutationFn: ({ path, body: payload }: { path: string; body?: unknown }) =>
@@ -1906,91 +1894,12 @@ function FeedbackDetail({
           </div>
         )}
 
-        <section className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold">{t("respondTitle")}</h3>
-          {post.team_response && !respondEditing ? (
-            // État publié : la réponse telle que le board la montre, avec sa
-            // date — l'édition est un mode explicite.
-            <div className="flex flex-col gap-1.5 rounded-lg border border-brand/25 bg-brand/5 px-4 py-3">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                {post.team_response}
-              </p>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {post.team_response_at
-                    ? t("respondPublishedAt", {
-                        date: format.dateTime(new Date(post.team_response_at), {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        }),
-                      })
-                    : null}
-                </span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setResponse(post.team_response ?? "");
-                    setRespondEditing(true);
-                  }}
-                >
-                  {t("respondEdit")}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <AutoTextarea
-                value={response}
-                onChange={(e) => setResponse(e.target.value)}
-                // Une réponse d'équipe est un message publié à qui a écrit le
-                // retour : elle part au même raccourci que partout ailleurs.
-                onKeyDown={(e) => {
-                  if (!isSendShortcut(e)) return;
-                  e.preventDefault();
-                  if (!respondDisabled) publishResponse();
-                }}
-                placeholder={t("respondPlaceholder", { project: projectName })}
-                // `bg-card`, comme le composeur de commentaire juste dessous :
-                // en transparent, le champ n'était plus une surface d'écriture
-                // posée sur la page mais un trou dedans, et les deux zones de
-                // saisie de l'écran ne se ressemblaient pas.
-                className="min-h-16 w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
-                maxLength={5000}
-              />
-              <div className="flex items-center justify-end gap-2">
-                {respondEditing && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setResponse(post.team_response ?? "");
-                      setRespondEditing(false);
-                    }}
-                  >
-                    {t("respondCancel")}
-                  </Button>
-                )}
-                <SendShortcutTooltip
-                  label={post.team_response ? t("respondUpdate") : t("saveResponse")}
-                >
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={respondDisabled}
-                    onClick={publishResponse}
-                  >
-                    {patch.isPending && <Spinner />}
-                    {post.team_response ? t("respondUpdate") : t("saveResponse")}
-                  </Button>
-                </SendShortcutTooltip>
-              </div>
-            </>
-          )}
-        </section>
-
-        {/* Journal d'activité + commentaires internes — parité tickets/objectifs
-            (MIN-51). Commentaires team-only : jamais exposés sur le board public. */}
+        {/* Journal d'activité + LE fil du retour — interne et public dans la
+            même liste (MIN-196). La « réponse d'équipe » n'est plus une section
+            à part au-dessus : c'était un champ que le produit publiait sur sa
+            propre page, alors que c'est quelqu'un qui répond à quelqu'un. Elle
+            s'écrit maintenant là où on écrit tout le reste, la bascule du
+            composeur décidant à qui. */}
         <div className="flex flex-col gap-3">
           <IssueActivity
             items={activityItems}
@@ -2007,6 +1916,12 @@ function FeedbackDetail({
             members={members}
             projectId={projectId}
             onSubmit={handleComment}
+            // Sans board publié, un commentaire public n'a aucune page où
+            // s'afficher : la bascule reste visible mais éteinte, et dit
+            // pourquoi plutôt que de disparaître sans explication.
+            publicOption={{
+              disabledReason: boardEnabled ? undefined : t("publicNeedsBoard"),
+            }}
           />
         </div>
         </div>

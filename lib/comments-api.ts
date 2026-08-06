@@ -1,6 +1,7 @@
 "use client";
 
 import type { AttachmentInput, Comment, IssueEvent } from "./types";
+import type { CommentVisibility } from "./feedback/types";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 
@@ -90,7 +91,9 @@ export async function addFeedbackCommentApi(
   body: string,
   mentionedUserIds: string[] = [],
   parentId: string | null = null,
-  attachments: AttachmentInput[] = []
+  attachments: AttachmentInput[] = [],
+  /** 'public' publishes it on the board as the team's response (MIN-196). */
+  visibility: CommentVisibility = "internal"
 ): Promise<Comment> {
   trackEvent("comment_added", {
     target: "feedback",
@@ -98,6 +101,7 @@ export async function addFeedbackCommentApi(
     is_reply: parentId !== null,
     mention_count: mentionedUserIds.length,
     attachment_count: attachments.length,
+    visibility,
   });
   return parseJson<Comment>(
     await fetch(`/api/projects/${projectId}/feedback/${postId}/comments`, {
@@ -108,6 +112,7 @@ export async function addFeedbackCommentApi(
         mentioned_user_ids: mentionedUserIds,
         parent_id: parentId,
         attachments,
+        visibility,
       }),
     })
   );

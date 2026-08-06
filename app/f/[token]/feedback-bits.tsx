@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { ArrowLeft, Ban, ChevronUp, EyeOff } from "lucide-react";
+import { ArrowLeft, Ban, ChevronUp, EyeOff, MessageSquare } from "lucide-react";
 import { Badge, Button, Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { ProjectOrb } from "@/components/project-orb";
@@ -385,7 +385,7 @@ export function FeedbackPostRow({
                 Il porte l'ICÔNE DU PROJET, celle du header : une bulle de
                 message générique dit « il y a un message », l'orbe dit de qui —
                 et c'est tout l'intérêt de la nouvelle. */}
-            {post.teamResponse && (
+            {post.teamRepliedAt && (
               <Badge
                 variant="secondary"
                 icon={
@@ -398,6 +398,17 @@ export function FeedbackPostRow({
               >
                 {t("teamReplied")}
               </Badge>
+            )}
+            {/* La discussion, quand elle existe et que l'équipe n'y a pas
+                encore parlé : le badge du dessus dit déjà qu'il y a à lire, et
+                deux badges côte à côte pour la même raison d'ouvrir feraient
+                du bruit. Le nombre, lui, dit quelque chose de plus — un retour
+                à douze réponses ne se lit pas comme un retour à une. */}
+            {!post.teamRepliedAt && post.commentCount > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <MessageSquare className="size-3.5" />
+                {post.commentCount}
+              </span>
             )}
             <FeedbackPostedAt post={post} />
             {meta}

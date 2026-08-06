@@ -2595,7 +2595,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Fetch one feedback post in full: title, body (the user's request), the raw " +
         "submitted text, public status, vote_count, author (real identity), the " +
-        "linked issue if any, and its internal, team-only comment thread.",
+        "linked issue if any, and its whole comment thread. Each comment carries a " +
+        "`visibility`: 'internal' is a team-only note, 'public' is read by everyone " +
+        "on the board — including the replies visitors wrote there.",
       inputSchema: { project_id: PROJECT_ID, feedback_post_id: z.string().uuid() },
       annotations: READ_ONLY,
     },
@@ -2611,7 +2613,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const service = getServiceClient();
       const { data: comments } = await service
         .from("comments")
-        .select("author_id, via_assistant, body, created_at")
+        .select(
+          "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)"
+        )
         .eq("feedback_post_id", args.feedback_post_id)
         .order("created_at", { ascending: true });
       const users = await fetchAuthUsersById(
@@ -2632,7 +2636,6 @@ export function registerMinddyTools(rawServer: McpServer): void {
           vote_count: detail.vote_count,
           is_public: detail.is_public,
           source: detail.source,
-          team_response: detail.team_response,
           author: detail.author
             ? { name: detail.author.name, email: detail.author.email }
             : null,
@@ -2643,13 +2646,29 @@ export function registerMinddyTools(rawServer: McpServer): void {
                 status: detail.issue.status,
               }
             : null,
-          comments: (comments ?? []).map((c) => ({
-            author: c.via_assistant
-              ? "Numo"
-              : displayName(toNamed(c.author_id ? users.get(c.author_id as string) : null), "User"),
-            body: c.body,
-            created_at: c.created_at,
-          })),
+          comments: (comments ?? []).map((c) => {
+            const visitor = c.feedback_users as unknown as {
+              name: string | null;
+              email: string | null;
+              pseudonym: string;
+            } | null;
+            return {
+              // Un commentaire public écrit par un VISITEUR se nomme par son
+              // identité réelle (l'agent est côté équipe, comme la vue équipe) ;
+              // le board, lui, n'en montre jamais que l'avatar.
+              author: visitor
+                ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
+                : c.via_assistant
+                  ? "Numo"
+                  : displayName(
+                      toNamed(c.author_id ? users.get(c.author_id as string) : null),
+                      "User"
+                    ),
+              visibility: (c.visibility as string) ?? "internal",
+              body: c.body,
+              created_at: c.created_at,
+            };
+          }),
         },
       });
     }
@@ -2662,7 +2681,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Post an internal, team-only comment on a feedback post (never shown on the " +
         "public board), e.g. to leave triage notes. The timeline shows the agent as " +
-        "the author (this API key's name with an '(mcp)' marker), not the key's owner.",
+        "the author (this API key's name with an '(mcp)' marker), not the key's owner. " +
+        "To answer the person who submitted the request, where everyone reading it on " +
+        "the board will see the reply, use minddy_respond_feedback instead.",
       inputSchema: {
         project_id: PROJECT_ID,
         feedback_post_id: z.string().uuid(),
@@ -2790,15 +2811,18 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Respond to feedback",
       description:
-        "Publish (or update) the official TEAM RESPONSE on a feedback post: the " +
-        "single reply shown PUBLICLY to everyone who submitted it, signed on behalf " +
-        "of the team. This is PUBLIC-facing. Pass an empty string to remove it.",
+        "Reply PUBLICLY on a feedback post: the message is posted to the public " +
+        "board thread, where everyone reading the request sees it, signed on behalf " +
+        "of the team (never with a member's name). This is PUBLIC-facing and it is " +
+        "not editable afterwards — post it once it says what the team means. For a " +
+        "triage note nobody outside the team should read, use " +
+        "minddy_add_feedback_comment instead.",
       inputSchema: {
         project_id: PROJECT_ID,
         feedback_post_id: z.string().uuid(),
-        response: z.string().describe("Public team response; empty string clears it."),
+        response: z.string().min(1).describe("Public reply, shown on the board."),
       },
-      annotations: WRITE_IDEMPOTENT,
+      annotations: WRITE,
     },
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
@@ -2806,17 +2830,15 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
       if ("error" in ref) return ref.error;
 
-      const result = await updateFeedbackPostFields({
+      const result = await addCommentToFeedbackPost({
         postId: ref.post.id,
         actorId: scope.userId,
-        input: { team_response: args.response },
+        body: args.response,
+        visibility: "public",
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
-      return ok({
-        feedback_post_id: ref.post.id,
-        team_response: result.post.team_response,
-      });
+      return ok({ feedback_post_id: ref.post.id, comment: result.comment });
     }
   );
 
@@ -2870,6 +2892,14 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .boolean()
           .optional()
           .describe("true returns the SSO secret, creating it if there is none."),
+        allow_comments: z
+          .boolean()
+          .optional()
+          .describe(
+            "Let signed-in visitors reply publicly on a request. false leaves the " +
+              "existing thread readable but closes it to new comments; the team can " +
+              "still reply publicly. Needs an existing board."
+          ),
       },
       annotations: WRITE_IDEMPOTENT,
     },
@@ -2883,11 +2913,15 @@ export function registerMinddyTools(rawServer: McpServer): void {
         projectId: scope.access.project.id,
         enabled: args.enabled,
         generateSso: args.generate_sso_secret === true,
+        allowComments: args.allow_comments,
       });
       if (!result.ok) {
         switch (result.errorKey) {
           case "noFieldsToUpdate":
-            return fail("invalid_params", "Pass enabled and/or generate_sso_secret.");
+            return fail(
+              "invalid_params",
+              "Pass enabled, allow_comments and/or generate_sso_secret."
+            );
           case "boardNotFound":
             return fail(
               "not_found",

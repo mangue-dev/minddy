@@ -131,6 +131,8 @@ export default async function PublicFeedbackPostPage({ params }: PageProps) {
           }}
           post={detail.post}
           mergedFromTitles={detail.mergedFromTitles}
+          comments={detail.comments}
+          allowComments={ctx.board.allow_comments}
           identity={identity}
         />
       </main>
