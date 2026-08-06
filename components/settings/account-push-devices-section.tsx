@@ -114,9 +114,15 @@ export function AccountPushDevicesSection() {
           const result = await subscribeThisDevice(locale);
           if (!result.ok) {
             if (result.reason === "denied") {
-              setPermission(pushPermission());
+              // La permission n'est pas forcément REFUSÉE : fermer la fenêtre du
+              // navigateur sans répondre la laisse à « default », et redemander
+              // marchera. Annoncer « bloqué, rouvrez les réglages du site »
+              // serait alors faux — l'interrupteur qui revient à l'arrêt dit
+              // déjà que ça n'a pas pris.
+              const after = pushPermission();
+              setPermission(after);
               trackEvent("push_permission_denied", {});
-              toast.error(t("deniedHint"));
+              if (after === "denied") toast.error(t("deniedHint"));
             } else if (result.reason === "needs-install") {
               setNeedsInstall(true);
               toast.error(t("iosInstallHint"));

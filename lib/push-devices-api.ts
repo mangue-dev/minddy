@@ -40,14 +40,18 @@ const platformProp = (): string =>
  * `oldEndpoint` n'est passé que par un ré-abonnement (le navigateur a fait
  * tourner l'endpoint tout seul) : l'ancienne ligne ne désigne plus rien.
  *
- * `track: false` pour les appels qui ne sont PAS une activation — le
- * rafraîchissement au chargement de l'app repasse par ici à chaque visite, et
- * compter ça comme une activation gonflerait l'événement d'un facteur cent.
+ * `refresh: true` dit au serveur que PERSONNE n'a demandé cet appel — la remise
+ * d'aplomb au chargement de l'app. Il ne doit alors pas toucher à `enabled`,
+ * sans quoi chaque chargement de page rallume l'appareil qu'on vient d'éteindre.
+ *
+ * `track: false` va avec, côté analytics : ce rafraîchissement repasse par ici à
+ * chaque visite, et le compter comme une activation gonflerait l'événement d'un
+ * facteur cent.
  */
 export async function savePushDeviceApi(
   subscription: PushSubscriptionJSON,
   locale: string,
-  opts: { oldEndpoint?: string; track?: boolean } = {}
+  opts: { oldEndpoint?: string; track?: boolean; refresh?: boolean } = {}
 ): Promise<PushDevice> {
   const { device } = await parseJson<{ device: PushDevice }>(
     await fetch("/api/account/push-subscriptions", {
@@ -58,6 +62,7 @@ export async function savePushDeviceApi(
         keys: subscription.keys,
         locale,
         oldEndpoint: opts.oldEndpoint,
+        refresh: opts.refresh,
       }),
     })
   );

@@ -233,8 +233,12 @@ export async function refreshThisDeviceSubscription(
   const { subscription, staleEndpoint } = await subscriptionForOurKey(registration, key);
   return savePushDeviceApi(subscription.toJSON(), locale, {
     oldEndpoint: staleEndpoint,
-    // Un rafraîchissement n'est pas une activation : le compter en gonflerait
-    // l'événement d'un facteur cent (une visite = un appel).
+    // Un rafraîchissement n'est PAS une activation, et le serveur doit le
+    // savoir : sans ce drapeau, l'appel rallume la ligne, et l'appareil qu'on
+    // vient d'éteindre se rallume au chargement de page suivant.
+    refresh: true,
+    // Même raison côté analytics : une visite = un appel, le compter comme une
+    // activation gonflerait l'événement d'un facteur cent.
     track: false,
   });
 }

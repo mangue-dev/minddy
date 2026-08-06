@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { deviceLabelFromUserAgent } from "@/lib/device-label";
 import { PUSH_DEVICE_COLUMNS } from "@/lib/server/push/columns";
+import { resolveRegistrationState } from "@/lib/server/push/registration";
 import type { PushDevice } from "@/lib/types";
 
 /**
@@ -44,6 +45,12 @@ export async function GET(request: NextRequest) {
  * navigateur a fait tourner l'abonnement tout seul, l'ancienne ligne ne désigne
  * plus rien et doit partir, sans quoi la carte montrerait deux fois le même
  * appareil.
+ *
+ * `refresh: true` marque les appels que PERSONNE n'a demandés — la remise
+ * d'aplomb au chargement de l'app, le ré-abonnement spontané du navigateur.
+ * Eux ne touchent pas à `enabled` : voir lib/server/push/registration.ts, c'est
+ * toute la différence entre un interrupteur qui tient et un qui se rallume à la
+ * page suivante.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -57,11 +64,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
 
-  const { endpoint, keys, locale, oldEndpoint } = (body ?? {}) as {
+  const { endpoint, keys, locale, oldEndpoint, refresh } = (body ?? {}) as {
     endpoint?: unknown;
     keys?: { p256dh?: unknown; auth?: unknown };
     locale?: unknown;
     oldEndpoint?: unknown;
+    refresh?: unknown;
   };
 
   const p256dh = keys?.p256dh;
@@ -77,6 +85,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("pushSubscriptionInvalid") }, { status: 400 });
   }
 
+  const rotatedFrom =
+    typeof oldEndpoint === "string" && oldEndpoint && oldEndpoint !== endpoint
+      ? oldEndpoint
+      : null;
+
+  // L'état ANTÉRIEUR de cet appareil : sa propre ligne, ou celle que le
+  // ré-abonnement vient de périmer. La RLS ne rend que les miennes, donc rien à
+  // filtrer de plus.
+  const { data: priorRows } = await auth.supabase
+    .from("push_subscriptions")
+    .select("endpoint, enabled, locale")
+    .in("endpoint", rotatedFrom ? [endpoint, rotatedFrom] : [endpoint]);
+  const priorRow =
+    priorRows?.find((r) => r.endpoint === endpoint) ?? priorRows?.[0] ?? null;
+  const state = resolveRegistrationState(
+    priorRow
+      ? { enabled: priorRow.enabled as boolean, locale: priorRow.locale as string }
+      : null,
+    { locale, refresh }
+  );
+
   const now = new Date().toISOString();
   const userAgent = request.headers.get("user-agent");
   const { data, error } = await auth.supabase
@@ -91,10 +120,10 @@ export async function POST(request: NextRequest) {
         // requête pour une étiquette qu'on affichera telle quelle.
         device_label: deviceLabelFromUserAgent(userAgent),
         user_agent: userAgent,
-        locale: typeof locale === "string" && locale.trim() ? locale.trim() : "en",
-        // Un ré-enregistrement RALLUME l'appareil : on ne repasse par ce chemin
-        // qu'en ayant délibérément (re)donné la permission.
-        enabled: true,
+        locale: state.locale,
+        // Une activation allume ; un rafraîchissement respecte le réglage en
+        // place (lib/server/push/registration.ts).
+        enabled: state.enabled,
         last_seen_at: now,
         failure_count: 0,
       },
@@ -108,11 +137,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  if (typeof oldEndpoint === "string" && oldEndpoint && oldEndpoint !== endpoint) {
+  if (rotatedFrom) {
     const { error: cleanupError } = await auth.supabase
       .from("push_subscriptions")
       .delete()
-      .eq("endpoint", oldEndpoint);
+      .eq("endpoint", rotatedFrom);
     // Best-effort : au pire une ligne morte de plus, que le premier 410 purgera.
     if (cleanupError) {
       console.error(

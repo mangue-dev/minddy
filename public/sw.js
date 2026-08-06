@@ -112,6 +112,11 @@ self.addEventListener("pushsubscriptionchange", (event) => {
             endpoint: subscription.endpoint,
             keys: json.keys,
             oldEndpoint: oldEndpoint || undefined,
+            // Le navigateur a fait tourner l'abonnement de lui-même : personne
+            // n'a rien demandé. `refresh` dit au serveur de reprendre l'état de
+            // l'ancienne ligne (allumé/éteint, langue) au lieu de tout remettre
+            // par défaut — un worker n'a ni interrupteur ni cookie de langue.
+            refresh: true,
           }),
         });
       } catch (e) {
