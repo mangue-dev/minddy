@@ -424,10 +424,24 @@ function CommentBlock({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const mine = !!currentUserId && comment.author_id === currentUserId;
   const edited = comment.updated_at !== comment.created_at;
-  // Le commentaire d'un visiteur ne s'édite pas — réécrire les mots de
-  // quelqu'un sous son avatar n'est pas de la modération. Il se supprime, et
-  // par n'importe quel membre : c'est la page publique de l'équipe.
-  const moderable = !!visitor;
+  /**
+   * Ce qu'on peut faire à ce commentaire, et les deux règles ne se recouvrent
+   * pas.
+   *
+   * SUPPRIMER un commentaire PUBLIC est ouvert à toute l'équipe, quel qu'en soit
+   * l'auteur — la règle suit l'endroit où sont les mots, pas la main qui les a
+   * tapés. Ils sont sur une page que l'équipe publie en son nom : réserver le
+   * retrait à l'auteur laissait un propos abusif en ligne jusqu'à son retour,
+   * rendait irrécupérable la réponse d'un collègue parti, et laissait les
+   * réponses d'équipe reprises par la migration — sans auteur par construction —
+   * supprimables par personne.
+   *
+   * ÉDITER reste à l'auteur. Réécrire les mots d'un autre sous son nom n'est pas
+   * de la modération ; et ceux d'un VISITEUR ne se réécrivent jamais. Corriger
+   * une coquille dans sa propre réponse publiée, en revanche, reste permis.
+   */
+  const canDelete = isPublic || (mine && !viaNumo);
+  const canEdit = mine && !viaNumo && !visitor;
 
   const saveEdit = async () => {
     const body = draft.trim();
@@ -480,9 +494,12 @@ function CommentBlock({
           <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
         )}
         <span className="min-w-0 flex-1" />
-        {/* Modération : le seul geste sur le commentaire d'un visiteur est de le
-            retirer du board, et il est ouvert à toute l'équipe. */}
-        {moderable && !editing && !working && (
+        {/* UN seul menu, deux règles. Il apparaît dès qu'un geste est possible :
+            supprimer (tout commentaire public, ou le sien) ou éditer (le sien
+            seulement). Les commentaires de Numo restent en lecture seule tant
+            qu'ils sont internes ; publiés, ils se retirent comme le reste — il
+            faut bien que quelqu'un puisse dépublier ce qu'un agent a publié. */}
+        {(canEdit || canDelete) && !editing && !working && (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -495,41 +512,23 @@ function CommentBlock({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
-                <Trash2 />
-                {tCommon("delete")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        {/* Numo's comments are read-only for users (no edit, no delete — RLS
-            enforces both); deleting one's own thread root still cascades. */}
-        {mine && !moderable && !editing && !working && !viaNumo && (
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("commentActions")}
-                className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-              >
-                <Ellipsis className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={() => {
-                  setDraft(comment.body);
-                  setEditing(true);
-                }}
-              >
-                <Pencil />
-                {tCommon("edit")}
-              </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
-                <Trash2 />
-                {tCommon("delete")}
-              </DropdownMenuItem>
+              {canEdit && (
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setDraft(comment.body);
+                    setEditing(true);
+                  }}
+                >
+                  <Pencil />
+                  {tCommon("edit")}
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
+                  <Trash2 />
+                  {tCommon("delete")}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -623,7 +622,18 @@ function CommentBlock({
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={t("deleteCommentTitle")}
-        description={deletesReplies ? t("deleteThreadDescription") : t("deleteCommentDescription")}
+        // Supprimer un message PUBLIC ne se confirme pas comme une note d'équipe :
+        // ce qui disparaît est une page que des gens ont lue, et parfois la
+        // réponse qu'on leur avait faite. La phrase doit le dire avant le clic.
+        description={
+          isPublic
+            ? deletesReplies
+              ? t("deletePublicThreadDescription")
+              : t("deletePublicCommentDescription")
+            : deletesReplies
+              ? t("deleteThreadDescription")
+              : t("deleteCommentDescription")
+        }
         confirmLabel={tCommon("delete")}
         cancelLabel={tCommon("cancel")}
         onConfirm={async () => {

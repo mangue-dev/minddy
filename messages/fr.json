@@ -1491,6 +1491,9 @@
     "loadFailed": "Impossible de charger les tickets récurrents."
   },
   "Relations": {
+    "linkedFeedback": "Retours",
+    "votes": "{count, plural, =1 {1 voix} other {# voix}}",
+    "feedbackPrivate": "Privé",
     "relations": "Relations",
     "blocks": "Bloque",
     "blocked_by": "Bloqué par",
@@ -2230,6 +2233,8 @@
     "deleteCommentTitle": "Supprimer le commentaire ?",
     "deleteCommentDescription": "Ce commentaire sera définitivement supprimé.",
     "deleteThreadDescription": "Ce commentaire et ses réponses seront définitivement supprimés.",
+    "deletePublicCommentDescription": "Il disparaît du board public aussitôt, pour tout le monde. C'est irréversible.",
+    "deletePublicThreadDescription": "Ce message et toutes ses réponses disparaissent du board public aussitôt, pour tout le monde — les réponses de votre équipe comprises. C'est irréversible.",
     "now": "À l'instant",
     "minutesAgo": "Il y a {m} min",
     "hoursAgo": "Il y a {h} h",

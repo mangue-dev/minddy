@@ -61,6 +61,19 @@ describe("afterOrNow", () => {
     ).not.toThrow();
   });
 
+  it("le crochet ATTEND le travail — sinon la lambda gèle en vol", async () => {
+    // `after()` rend au `waitUntil` de la plateforme ce que rend son callback.
+    // Un callback qui rend la main avant la fin du travail laisse geler
+    // l'invocation, et une requête sortante en cours meurt : « fetch failed ».
+    let done = false;
+    afterOrNow(async () => {
+      await new Promise((r) => setTimeout(r, 5));
+      done = true;
+    });
+    await H.registered[0]();
+    expect(done).toBe(true);
+  });
+
   it("une promesse rejetée est avalée, pas laissée non gérée", async () => {
     H.throws = true;
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});

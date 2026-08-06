@@ -124,6 +124,43 @@ Deux réflexes qui vont avec :
   avec `npm install --package-lock-only --legacy-peer-deps` (le dépôt porte un
   conflit de peers tiptap préexistant qui bloque npm sans ce drapeau).
 
+## Travail de fond : une promesse détachée meurt avec la réponse
+
+Dans une requête, tout travail hors chemin critique — horodatage d'usage, purge
+opportuniste, glissade de session, flush d'analytics — passe par
+**`afterOrNow`** ([lib/server/after-safe.ts](lib/server/after-safe.ts)).
+
+```ts
+// ❌ la réponse part, Vercel gèle l'invocation, le fetch meurt en vol
+void service.from("api_keys").update({ last_used_at: now }).eq("id", id)
+  .then(({ error }) => { if (error) console.error(…) });
+
+// ✅ après la réponse, mais l'invocation reste en vie le temps qu'il faut
+afterOrNow(async () => {
+  const { error } = await service.from("api_keys").update({ last_used_at: now }).eq("id", id);
+  if (error) console.error(…);
+});
+```
+
+Une promesse détachée n'est connue de personne : dès que la réponse est rendue,
+la fonction est gelée et la connexion sortante coupée. `after()` est le seul
+canal qui dise le contraire à la plateforme — Next passe au `waitUntil` ce que
+**rend** son callback ([after-context.js](node_modules/next/dist/server/after/after-context.js),
+`await callback()`). D'où la forme du crochet : il faut lui **rendre** la
+promesse, pas la détacher à l'intérieur. `afterOrNow` s'en charge, et retombe
+sur une exécution immédiate hors requête (cascades d'automatisations, MIN-147).
+
+**Ce que ça donne dans les logs** : `TypeError: fetch failed` — le message
+d'erreur réseau que `postgrest-js` recopie tel quel dans `error.message`. Le
+signe qui tranche, c'est l'asymétrie : *seuls* les appels détachés échouent, les
+`await` du même handler passent. Une panne Supabase, elle, ferait tomber les
+deux. Ne pas partir chercher une panne.
+
+Et surtout, ça ne se voit pas toujours. La requête réussit, l'utilisateur n'a
+rien, le test passe — au mieux une ligne d'erreur isolée, au pire rien du tout :
+la glissade de session du board public était détachée depuis le début, sans
+jamais rien dire, et les sessions expiraient à 90 jours fixes au lieu de glisser.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

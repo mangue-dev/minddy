@@ -635,7 +635,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "read_issue",
       description:
-        "Read a minddy ticket in full: every field (title, description, status, priority, effort, assignee, due date…), its implementation plan parsed into tasks with their states, its attachments (metadata + ids), the most recent comments, sub-issues and relations. Any ticket context you were given at session start is a SNAPSHOT — call this whenever fresh state matters (the user may have edited the ticket, added comments or attachments mid-session, or refers to something not in your context). Returns the last 15 comments by default.",
+        "Read a minddy ticket in full: every field (title, description, status, priority, effort, assignee, due date…), its implementation plan parsed into tasks with their states, its attachments (metadata + ids), the most recent comments, sub-issues, relations, and `linked_feedback` — the user requests from the product's feedback board that this ticket implements. Any ticket context you were given at session start is a SNAPSHOT — call this whenever fresh state matters (the user may have edited the ticket, added comments or attachments mid-session, or refers to something not in your context). Returns the last 15 comments by default.",
       parameters: {
         type: "object",
         properties: {
@@ -645,6 +645,24 @@ const MINDDY_TOOLS: AgentToolDef[] = [
             description: "Return the FULL comment thread instead of the last 15 (default false).",
           },
         },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_feedback",
+      description:
+        "Read a user request from the product's feedback board — the WHY behind a ticket, in the words of the people who asked for it. Ids come from read_issue's `linked_feedback`. Returns the request (the team's canonical wording AND the original submitted text), its vote count, and its whole discussion. Read it before implementing a ticket that carries one: the ticket says what to build, the feedback says what problem people actually hit, and the two diverge more often than they look. Each comment says where it comes from — `board visitor` is a user of the product describing their case, `team` is your colleagues; and `visibility` public means it is on the public board, internal means it is a team-only note (which may be the arbitration that overrides the request). Never confuse a team decision with a user's need.",
+      parameters: {
+        type: "object",
+        properties: {
+          feedback_post_id: {
+            type: "string",
+            description: "Feedback id, from read_issue's linked_feedback.",
+          },
+        },
+        required: ["feedback_post_id"],
       },
     },
   },

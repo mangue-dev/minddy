@@ -1491,6 +1491,9 @@
     "loadFailed": "Couldn't load the recurring issues."
   },
   "Relations": {
+    "linkedFeedback": "Feedback",
+    "votes": "{count, plural, =1 {1 vote} other {# votes}}",
+    "feedbackPrivate": "Private",
     "relations": "Relations",
     "blocks": "Blocking",
     "blocked_by": "Blocked by",
@@ -2230,6 +2233,8 @@
     "deleteCommentTitle": "Delete comment?",
     "deleteCommentDescription": "This comment will be permanently deleted.",
     "deleteThreadDescription": "This comment and its replies will be permanently deleted.",
+    "deletePublicCommentDescription": "It disappears from the public board at once, for everyone. This cannot be undone.",
+    "deletePublicThreadDescription": "This message and every reply to it disappear from the public board at once, for everyone — your team's replies included. This cannot be undone.",
     "now": "Just now",
     "minutesAgo": "{m}min ago",
     "hoursAgo": "{h}h ago",

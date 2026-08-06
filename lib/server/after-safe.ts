@@ -19,24 +19,25 @@ import { after } from "next/server";
  * Le repli exécute le travail TOUT DE SUITE plutôt qu'après la réponse : sans
  * requête, il n'y a pas de réponse à attendre. Le contrat des appelants est
  * inchangé — hors chemin critique, best-effort, jamais de throw vers l'appelant.
+ *
+ * Le crochet ATTEND la promesse du travail : `after()` passe ce que rend son
+ * callback au `waitUntil` de la plateforme, et c'est cette promesse-là qui
+ * maintient l'invocation en vie après la réponse. La détacher (`void p.catch`)
+ * rendrait la main tout de suite, la lambda gèlerait, et le travail mourrait en
+ * vol — sur une requête HTTP sortante, en « TypeError: fetch failed ».
  */
 export function afterOrNow(work: () => void | Promise<void>): void {
-  const run = () => {
+  const run = async () => {
     try {
-      const result = work();
-      if (result instanceof Promise) {
-        void result.catch((e) =>
-          console.error("[after-safe] background work failed:", (e as Error).message),
-        );
-      }
+      await work();
     } catch (e) {
-      console.error("[after-safe] background work threw:", (e as Error).message);
+      console.error("[after-safe] background work failed:", (e as Error).message);
     }
   };
   try {
     after(run);
   } catch {
     // Hors contexte de requête : on fait le travail maintenant.
-    run();
+    void run();
   }
 }

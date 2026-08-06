@@ -10,9 +10,9 @@ import { Badge, Button, Tooltip, TooltipContent, TooltipTrigger, cn } from "mang
 import { StatusIndicator } from "@/components/issue-indicators";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
-import type { IssueStatus } from "@/lib/issue-constants";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
+  FEEDBACK_TO_ISSUE_STATUS,
   isHiddenFeedbackStatus,
   type FeedbackPostStatus,
   type PublicIdentity,
@@ -25,19 +25,6 @@ import { togglePostVoteAction } from "./actions";
     statuts d'issue), vote en pill horizontal (style UserJot), avatars
     déterministes, et LA ligne de retour — celle du board comme celle de
     « mes retours ». */
-
-/** Statut public → statut d'issue équivalent (pour l'icône Linear-style). */
-export const FEEDBACK_TO_ISSUE_STATUS: Record<FeedbackPostStatus, IssueStatus> = {
-  open: "backlog",
-  planned: "todo",
-  in_progress: "in_progress",
-  shipped: "done",
-  declined: "canceled",
-  // Le spam n'a pas d'équivalent chez les tickets : il emprunte l'icône du
-  // ticket annulé pour les endroits qui n'affichent QUE l'indicateur (le
-  // sélecteur de statut), mais le badge, lui, se peint avec son propre signe.
-  spam: "canceled",
-};
 
 /** Teintes du badge par statut — appariées à la couleur des icônes d'issue
     mais déclinées par thème : les hex des icônes (#FADB28…) sont pensés pour

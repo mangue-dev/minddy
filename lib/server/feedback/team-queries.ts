@@ -3,7 +3,10 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
-import { sortFeedbackResolvedLast } from "@/lib/feedback/types";
+import {
+  sortFeedbackResolvedLast,
+  type IssueLinkedFeedback,
+} from "@/lib/feedback/types";
 
 /**
  * Lectures côté équipe (MIN-37) — contrairement au board public, les vraies
@@ -163,4 +166,52 @@ export async function getTeamFeedbackDetail(
     })),
     issue: (issueRes.data as { id: string; number: number; status: string } | null) ?? null,
   };
+}
+
+// ── Le feedback ACCROCHÉ À UN TICKET (MIN-196) ──────────────────────────────
+
+export type { IssueLinkedFeedback };
+
+/**
+ * Les retours qu'un ticket met en œuvre. Plusieurs sont possibles : plusieurs
+ * demandes convergent souvent vers un même travail.
+ *
+ * Le service client, toujours : `feedback_posts` est RLS deny-all, donc une
+ * lecture par le client de session rendrait une liste VIDE au lieu d'une
+ * erreur. L'appelant a déjà prouvé son accès au projet, on filtre dessus.
+ */
+export async function listFeedbackForIssue(
+  projectId: string,
+  issueId: string
+): Promise<IssueLinkedFeedback[]> {
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("feedback_posts")
+    .select("id, title, status, vote_count, is_public")
+    .is("deleted_at", null)
+    .eq("project_id", projectId)
+    .eq("issue_id", issueId)
+    // Un doublon fusionné n'existe plus qu'à travers son canonique : le montrer
+    // ferait deux entrées pour une seule demande.
+    .is("merged_into_id", null)
+    .order("vote_count", { ascending: false });
+  if (error) {
+    console.error("[feedback-queries] by-issue failed:", error.message);
+    return [];
+  }
+  const rows = (data ?? []) as unknown as Omit<IssueLinkedFeedback, "comment_count">[];
+  if (rows.length === 0) return [];
+
+  const { data: commentRows } = await service
+    .from("comments")
+    .select("feedback_post_id")
+    .in(
+      "feedback_post_id",
+      rows.map((r) => r.id)
+    );
+  const counts = new Map<string, number>();
+  for (const c of (commentRows ?? []) as { feedback_post_id: string }[]) {
+    counts.set(c.feedback_post_id, (counts.get(c.feedback_post_id) ?? 0) + 1);
+  }
+  return rows.map((r) => ({ ...r, comment_count: counts.get(r.id) ?? 0 }));
 }

@@ -6,6 +6,7 @@ import { findAvatarSeed } from "@/lib/server/avatar-seeds";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
 import { generatePseudonym } from "@/lib/feedback/pseudonym";
 import type { PublicIdentity } from "@/lib/feedback/types";
+import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
  * Identités et sessions des utilisateurs finaux du board (MIN-37). Jamais
@@ -213,16 +214,19 @@ export async function getFeedbackSession(
 
   const remaining = new Date(data.expires_at as string).getTime() - Date.now();
   if (remaining < SESSION_TTL_MS / 2) {
-    void service
-      .from("feedback_sessions")
-      .update({
-        expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
-        last_seen_at: new Date().toISOString(),
-      })
-      .eq("id", data.id as string)
-      .then(({ error }) => {
-        if (error) console.error("[feedback-identity] session slide failed:", error.message);
-      });
+    // Après la réponse, mais rattaché à l'invocation : détachée, la glissade
+    // mourrait au gel de la lambda et la session n'avancerait jamais.
+    const slid = {
+      expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
+      last_seen_at: new Date().toISOString(),
+    };
+    afterOrNow(async () => {
+      const { error } = await service
+        .from("feedback_sessions")
+        .update(slid)
+        .eq("id", data.id as string);
+      if (error) console.error("[feedback-identity] session slide failed:", error.message);
+    });
   }
 
   return { sessionId: data.id as string, boardId, user };

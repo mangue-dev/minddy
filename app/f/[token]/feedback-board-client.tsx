@@ -39,6 +39,7 @@ import { SidebarFilterField, matchesFilter } from "@/components/sidebar-filter-f
 import { useFeedbackDictation } from "@/lib/use-feedback-dictation";
 import {
   FEEDBACK_PUBLIC_STATUSES,
+  FEEDBACK_TO_ISSUE_STATUS,
   type PublicIdentity,
   type PublicPost,
   type PublicProject,
@@ -50,7 +51,6 @@ import { FeedbackAuthDialog } from "./feedback-auth";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
-  FEEDBACK_TO_ISSUE_STATUS,
   FeedbackPostRow,
 } from "./feedback-bits";
 

@@ -11,11 +11,17 @@
 // there's no Dialog around a card.)
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, CommandGroup, CommandItem, cn, toast } from "mangue-ui";
-import { Link2, X } from "lucide-react";
+import { Link2, MessagesSquare, X } from "lucide-react";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_PRIORITY, RELATION_TYPES } from "@/lib/relation-constants";
+import {
+  FEEDBACK_TO_ISSUE_STATUS,
+  type IssueLinkedFeedback,
+} from "@/lib/feedback/types";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { SearchMenu } from "@/components/search-menu";
@@ -46,7 +52,22 @@ export function RelationsSection({
 }) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  // Chargé ICI plutôt que passé en prop : le panneau s'ouvre sur un ticket à la
+  // fois, et faire descendre ces zéro à trois lignes depuis la page obligerait
+  // chaque écran qui monte un panneau (tableau, liste, cycle, vue globale) à
+  // les charger pour tous ses tickets d'abord.
+  const { data: feedbackData } = useQuery({
+    queryKey: ["issue-feedback", issue.id],
+    queryFn: async (): Promise<{ feedback: IssueLinkedFeedback[] }> => {
+      const res = await fetch(`/api/issues/${issue.id}/feedback`);
+      if (!res.ok) throw new Error("failed");
+      return res.json();
+    },
+  });
+  const feedback = feedbackData?.feedback ?? [];
   // Étape courante du popover : null = choisir le type, sinon = choisir la cible
   // de ce type. La recherche est contrôlée pour repartir vide à chaque étape —
   // sans quoi « bloc » (tapé pour filtrer les types) filtrerait ensuite les
@@ -229,6 +250,62 @@ export function RelationsSection({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Les retours du board que ce ticket met en œuvre (MIN-196).
+          Ils vivent dans « Relations » parce que c'en est une — mais dans son
+          propre groupe, et SANS croix : le lien se défait depuis le retour,
+          jamais d'ici. Un ticket ne sait pas combien de demandes il porte, et
+          les détacher de cet écran retirerait à quelqu'un le suivi de la sienne
+          sans que l'écran qui le lui montre soit sous les yeux. */}
+      {feedback.length > 0 && (
+        <div className="flex flex-col pb-2">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <MessagesSquare className="size-3.5" />
+            {t("linkedFeedback")}
+          </div>
+          <div className="flex flex-col">
+            {feedback.map((post) => (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() =>
+                  // Le retour se traite dans l'onglet Retours, jamais dans ce
+                  // panneau : c'est là que vivent son fil, sa modération et sa
+                  // promotion. Le panneau dit qu'il existe et y conduit.
+                  router.push(
+                    `/projects/${issue.project_id}/feedback?post=${post.id}`
+                  )
+                }
+                className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted/60"
+              >
+                <StatusIndicator
+                  status={FEEDBACK_TO_ISSUE_STATUS[post.status]}
+                  className="size-4 shrink-0"
+                />
+                {/* Les voix à la place de l'identifiant : un retour n'en a pas,
+                    et c'est son poids qui dit s'il faut aller le lire. */}
+                <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
+                  {t("votes", { count: post.vote_count })}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">{post.title}</span>
+                {post.comment_count > 0 && (
+                  <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                    <MessagesSquare className="size-3" />
+                    {post.comment_count}
+                  </span>
+                )}
+                {/* Un retour privé n'est pas sur le board : le dire ici évite
+                    d'aller chercher sur une page publique ce qui n'y est pas. */}
+                {!post.is_public && (
+                  <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    {t("feedbackPrivate")}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </>

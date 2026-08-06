@@ -117,7 +117,7 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
     images
       ? "an image comes back AS AN IMAGE you can actually look at — open the mockups a ticket carries BEFORE implementing them, and describe what you see so the user knows you looked; other binaries"
       : "binaries"
-  } via a signed URL you can curl in the sandbox).
+  } via a signed URL you can curl in the sandbox). \`read_feedback\` — open a user request from the product's feedback board, with its whole discussion. When \`read_issue\` shows \`linked_feedback\`, that request is WHY the ticket exists, in the words of the people who hit the problem: read it before implementing, especially when it carries comments. The ticket says what to build; the feedback says what people actually ran into, and the two diverge more often than they look.
 - \`update_issue\` — rename a ticket, rewrite its description, change its effort estimate. \`write_issue_plan\` — write a ticket's persistent implementation plan (see below). \`append_to_plan\` — add a block to an existing plan. \`edit_issue_text\` — rewrite ONE passage of a plan or description in place, by handing over the exact passage to replace. \`create_issue\` — create a real ticket in this project.
 - \`read_scratchpad\` — the LIVE state of the user's notebook (their personal notes doc): full markdown + every checkbox task with a stable \`task_index\`, and \`rev\`. \`update_scratchpad_task\` — tick notebook tasks by index. \`add_scratchpad_tasks\` — append tasks. \`set_scratchpad\` — rewrite the whole notebook (the only way to DELETE a task).`;
 

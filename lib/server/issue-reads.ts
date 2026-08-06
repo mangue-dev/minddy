@@ -7,6 +7,10 @@ import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus } from "@/lib/issue-validation";
 import { resolveRelations } from "@/lib/relation-constants";
+import {
+  listFeedbackForIssue,
+  type IssueLinkedFeedback,
+} from "@/lib/server/feedback/team-queries";
 import type { IssueRelation } from "@/lib/types";
 
 // ── Lectures partagées Numo / MCP ───────────────────────────────────────
@@ -307,6 +311,17 @@ export interface IssueDetail {
   sub_issues: Array<Record<string, unknown>>;
   duplicate_of?: Record<string, unknown>;
   relations: Array<Record<string, unknown>>;
+  /**
+   * Les retours du board que ce ticket met en œuvre (MIN-196) — absent quand il
+   * n'y en a pas.
+   *
+   * C'est la DEMANDE derrière le travail, et c'est souvent la seule chose qui
+   * dise pourquoi il est demandé : un agent qui lit « ajouter un filtre par
+   * date » sans savoir que trois personnes l'ont réclamé pour retrouver leurs
+   * exports du mois construit le mauvais filtre. On ne met ici que de quoi
+   * décider d'aller voir ; `get_feedback` ouvre le retour et sa conversation.
+   */
+  linked_feedback?: IssueLinkedFeedback[];
 }
 
 export async function getIssue(
@@ -442,6 +457,16 @@ export async function getIssue(
     };
   });
 
+  // Les retours que ce ticket met en œuvre (MIN-196). Lu par `ctx.service` et
+  // non par `ctx.db` : `feedback_posts` est RLS deny-all, et le client de
+  // session de Numo n'y rendrait pas une erreur mais une liste VIDE — le
+  // silence le plus coûteux, puisqu'il se lit « ce ticket ne vient de nulle
+  // part ». L'accès au projet est déjà prouvé par la lecture du ticket.
+  const linkedFeedback = await listFeedbackForIssue(
+    ctx.projectId,
+    issue.id as string
+  );
+
   const categories = (issue.issue_categories ?? []) as Array<{
     category_id: string;
   }>;
@@ -464,6 +489,7 @@ export async function getIssue(
     })),
     relations,
     ...(duplicateOf ? { duplicate_of: duplicateOf } : {}),
+    ...(linkedFeedback.length > 0 ? { linked_feedback: linkedFeedback } : {}),
   };
 }
 

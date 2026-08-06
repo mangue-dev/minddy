@@ -100,7 +100,6 @@ import { AutoTextarea } from "@/components/auto-textarea";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { StatusIndicator } from "@/components/issue-indicators";
 import {
-  FEEDBACK_TO_ISSUE_STATUS,
   FeedbackStatusBadge,
 } from "@/app/f/[token]/feedback-bits";
 import { useProjects } from "@/lib/projects-context";
@@ -113,6 +112,7 @@ import {
 } from "@/lib/feedback/languages";
 import {
   FEEDBACK_POST_STATUSES,
+  FEEDBACK_TO_ISSUE_STATUS,
   isResolvedFeedbackStatus,
   type CommentVisibility,
   type FeedbackPostStatus,
@@ -353,9 +353,19 @@ function FeedbackFilterMenu({
 function CategorySummary({
   categoryIds,
   categoryMap,
+  separated = false,
 }: {
   categoryIds: string[];
   categoryMap: Map<string, Category>;
+  /**
+   * Précéder le résumé d'une puce de séparation (« · »).
+   *
+   * Elle est rendue ICI, et non par l'appelant, parce que c'est ici seulement
+   * qu'on sait s'il y aura quelque chose derrière : une catégorie supprimée
+   * laisse son id sur le retour sans que `categoryMap` la résolve, et un
+   * appelant qui compterait `categoryIds` afficherait une puce suivie de rien.
+   */
+  separated?: boolean;
 }) {
   const cats = categoryIds
     .map((id) => categoryMap.get(id))
@@ -363,15 +373,25 @@ function CategorySummary({
   if (cats.length === 0) return null;
   const [first, ...rest] = cats;
   return (
-    <span className="flex min-w-0 items-center gap-1">
-      <span
-        className="size-2 shrink-0 rounded-full"
-        style={{ backgroundColor: first.color }}
-        aria-hidden
-      />
-      <span className="max-w-[7rem] truncate">{first.name}</span>
-      {rest.length > 0 && <span className="shrink-0">+{rest.length}</span>}
-    </span>
+    <>
+      {separated && (
+        <span aria-hidden className="shrink-0 text-muted-foreground/60">
+          ·
+        </span>
+      )}
+      {/* `shrink-0` : sur une ligne trop courte, c'est l'AUTEUR qui se tronque.
+          Une catégorie tient en un ou deux mots et les rogner les rend
+          illisibles, là où un email coupé reste reconnaissable à son début. */}
+      <span className="flex shrink-0 items-center gap-1">
+        <span
+          className="size-2 shrink-0 rounded-full"
+          style={{ backgroundColor: first.color }}
+          aria-hidden
+        />
+        <span className="max-w-[7rem] truncate">{first.name}</span>
+        {rest.length > 0 && <span className="shrink-0">+{rest.length}</span>}
+      </span>
+    </>
   );
 }
 
@@ -671,14 +691,22 @@ function FeedbackRow({
 
       <span className="line-clamp-2 text-sm font-medium leading-snug">{title}</span>
 
-      <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      {/* UNE ligne, toujours. Elle passait à la ligne (`flex-wrap`) : une carte
+          gagnait un étage dès qu'un auteur avait un email long, et la colonne
+          se mettait à respirer irrégulièrement d'une ligne à l'autre — sur une
+          liste qu'on parcourt à la verticale, c'est le rythme qui se casse, pas
+          seulement la place. `overflow-hidden` autorise les enfants à rétrécir ;
+          l'AUTEUR est le seul qui le fasse, parce qu'il est le seul dont la
+          longueur soit imprévisible (un email, parfois très long) et le seul
+          dont la fin ne porte rien. */}
+      <span className="flex min-w-0 items-center gap-1.5 overflow-hidden text-xs text-muted-foreground">
         {authorLabel ? (
           <span className="flex min-w-0 items-center gap-1.5">
             <UserAvatar
               seed={authorAvatarSeed(post.author, memberSeeds)}
-              className="size-3.5"
+              className="size-3.5 shrink-0"
             />
-            <span className="max-w-[9rem] truncate">{authorLabel}</span>
+            <span className="truncate">{authorLabel}</span>
           </span>
         ) : null}
         <ReviewBadges
@@ -688,7 +716,15 @@ function FeedbackRow({
           reviewFailed={reviewGaveUp(post)}
           className={LIST_BADGE}
         />
-        <CategorySummary categoryIds={post.category_ids} categoryMap={categoryMap} />
+        <CategorySummary
+          categoryIds={post.category_ids}
+          categoryMap={categoryMap}
+          // La puce ne sépare que deux TEXTES : elle demande donc un auteur à sa
+          // gauche. Les badges de revue, eux, sont des pastilles — elles se
+          // détachent seules, et les encadrer de points ferait de la ponctuation
+          // autour de ce qui n'en demande pas.
+          separated={!!authorLabel}
+        />
       </span>
     </button>
   );

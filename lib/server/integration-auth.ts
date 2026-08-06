@@ -6,6 +6,7 @@ import {
   INTEGRATION_KEY_PREFIX,
   hashIntegrationKey,
 } from "@/lib/server/integration-key";
+import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
  * Authentification par clé d'intégration pour l'API publique (/api/v1/…,
@@ -80,14 +81,16 @@ export async function authenticateIntegrationKey(
     .maybeSingle();
   if (!project) return { ok: false, response: invalidKey() };
 
-  // Fire-and-forget : ne pas retarder la requête pour un horodatage d'usage.
-  void service
-    .from("integrations")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", integration.id)
-    .then(({ error }) => {
-      if (error) console.error("[integration-auth] last_used_at:", error.message);
-    });
+  // Un horodatage d'usage ne retarde pas la requête : il part APRÈS la réponse,
+  // mais rattaché à l'invocation — détaché, il mourrait au gel de la lambda.
+  const usedAt = new Date().toISOString();
+  afterOrNow(async () => {
+    const { error } = await service
+      .from("integrations")
+      .update({ last_used_at: usedAt })
+      .eq("id", integration.id);
+    if (error) console.error("[integration-auth] last_used_at:", error.message);
+  });
 
   return { ok: true, integration: integration as AuthedIntegration, project };
 }

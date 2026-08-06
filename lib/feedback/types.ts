@@ -1,3 +1,5 @@
+import type { IssueStatus } from "@/lib/issue-constants";
+
 /**
  * Types partagés du feedback public (MIN-37) — importables côté client comme
  * côté serveur (pas de "server-only" ici). Les shapes publiques sont
@@ -18,6 +20,28 @@ export const FEEDBACK_POST_STATUSES = [
   "spam",
 ] as const;
 export type FeedbackPostStatus = (typeof FEEDBACK_POST_STATUSES)[number];
+
+/**
+ * Statut public → statut d'issue équivalent, pour emprunter l'icône
+ * Linear-style des tickets (`StatusIndicator`).
+ *
+ * Il vit ICI, dans le module partagé, et non dans les briques du board public :
+ * quatre surfaces le rendent — le board, le sélecteur du board, la vue équipe,
+ * et la section « Relations » d'un ticket — et la dernière est sur le chemin
+ * chaud du tableau. L'y faire importer un composant du board public tirerait
+ * tout le public dans le bundle de l'app pour une table de six entrées.
+ */
+export const FEEDBACK_TO_ISSUE_STATUS: Record<FeedbackPostStatus, IssueStatus> = {
+  open: "backlog",
+  planned: "todo",
+  in_progress: "in_progress",
+  shipped: "done",
+  declined: "canceled",
+  // Le spam n'a pas d'équivalent chez les tickets : il emprunte l'icône du
+  // ticket annulé pour les endroits qui n'affichent QUE l'indicateur (le
+  // sélecteur de statut), mais le badge, lui, se peint avec son propre signe.
+  spam: "canceled",
+};
 
 export function isFeedbackPostStatus(value: unknown): value is FeedbackPostStatus {
   return (
@@ -287,4 +311,26 @@ export interface PublicIdentity {
    * Ne sert QUE dans le header, que son propriétaire est seul à voir.
    */
   avatarSeed: string | null;
+}
+
+/**
+ * Un retour vu depuis le TICKET qui le met en œuvre (MIN-196) — la lecture
+ * inverse de `feedback_posts.issue_id`.
+ *
+ * Volontairement MAIGRE : ni corps, ni auteur, ni fil. C'est ce que lisent la
+ * section « Relations » d'un ticket et le préambule d'un agent — assez pour
+ * savoir qu'il y a une demande derrière ce travail et si elle vaut le détour
+ * (son poids en voix, s'il y a une conversation), et pour aller la lire au bon
+ * endroit. Le retour entier s'ouvre ensuite par `get_feedback`.
+ */
+export interface IssueLinkedFeedback {
+  id: string;
+  title: string;
+  status: FeedbackPostStatus;
+  vote_count: number;
+  /** false = retour privé : remonté à l'équipe, absent du board public. */
+  is_public: boolean;
+  /** TOUS les commentaires du retour, publics et internes confondus — c'est ce
+      que rend `get_feedback`, et le compte ne sert qu'à décider d'y aller. */
+  comment_count: number;
 }

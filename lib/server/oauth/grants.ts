@@ -10,6 +10,7 @@ import {
 } from "@/lib/server/oauth/crypto";
 import type { OAuthClient } from "@/lib/server/oauth/clients";
 import { mapClientNameToAgent } from "@/lib/mcp-agents";
+import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
  * Grants OAuth : une ligne active par (user × client), tokens opaques
@@ -93,13 +94,14 @@ export async function ensureGrantWithActorKey({
     return null;
   }
 
-  void service
-    .from("oauth_clients")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("client_id", client.client_id)
-    .then(({ error }) => {
-      if (error) console.error("[oauth/grants] client last_used:", error.message);
-    });
+  const usedAt = new Date().toISOString();
+  afterOrNow(async () => {
+    const { error } = await service
+      .from("oauth_clients")
+      .update({ last_used_at: usedAt })
+      .eq("client_id", client.client_id);
+    if (error) console.error("[oauth/grants] client last_used:", error.message);
+  });
 
   return { grantId: grant.id as string };
 }
@@ -213,21 +215,16 @@ export async function verifyOAuthAccessToken(
   const actorKey = data.api_keys as unknown as { revoked_at: string | null };
   if (actorKey?.revoked_at) return null;
 
-  // Fire-and-forget : ne pas retarder la requête pour un horodatage d'usage.
-  void service
-    .from("oauth_grants")
-    .update({ last_used_at: now })
-    .eq("id", data.id)
-    .then(({ error }) => {
-      if (error) console.error("[oauth/grants] last_used_at:", error.message);
-    });
-  void service
-    .from("api_keys")
-    .update({ last_used_at: now })
-    .eq("id", data.api_key_id)
-    .then(({ error }) => {
-      if (error) console.error("[oauth/grants] key last_used_at:", error.message);
-    });
+  // Un horodatage d'usage ne retarde pas la requête : il part APRÈS la réponse,
+  // mais rattaché à l'invocation — détaché, il mourrait au gel de la lambda.
+  afterOrNow(async () => {
+    const [grant, key] = await Promise.all([
+      service.from("oauth_grants").update({ last_used_at: now }).eq("id", data.id),
+      service.from("api_keys").update({ last_used_at: now }).eq("id", data.api_key_id),
+    ]);
+    if (grant.error) console.error("[oauth/grants] last_used_at:", grant.error.message);
+    if (key.error) console.error("[oauth/grants] key last_used_at:", key.error.message);
+  });
 
   return { userId: data.user_id as string, keyId: data.api_key_id as string };
 }

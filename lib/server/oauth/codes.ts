@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { CODE_PREFIX, generateSecret, sha256Hex } from "@/lib/server/oauth/crypto";
+import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
  * Codes d'autorisation à usage unique (10 min). Le claim est atomique
@@ -91,14 +92,16 @@ export async function findReplayedCode(code: string): Promise<string | null> {
   return (data?.grant_id as string) ?? null;
 }
 
-/** Purge opportuniste des codes expirés depuis plus d'un jour. */
+/** Purge opportuniste des codes expirés depuis plus d'un jour. Hors chemin
+    critique, donc APRÈS la réponse — mais par `afterOrNow`, sans quoi le DELETE
+    part en vol libre et meurt au gel de la lambda (« fetch failed »). */
 export function cleanupExpiredCodes(): void {
   const cutoff = new Date(Date.now() - 24 * 3600_000).toISOString();
-  void getServiceClient()
-    .from("oauth_authorization_codes")
-    .delete()
-    .lt("expires_at", cutoff)
-    .then(({ error }) => {
-      if (error) console.error("[oauth/codes] cleanup:", error.message);
-    });
+  afterOrNow(async () => {
+    const { error } = await getServiceClient()
+      .from("oauth_authorization_codes")
+      .delete()
+      .lt("expires_at", cutoff);
+    if (error) console.error("[oauth/codes] cleanup:", error.message);
+  });
 }

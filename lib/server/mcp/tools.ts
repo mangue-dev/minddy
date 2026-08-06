@@ -645,7 +645,12 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "comment; add files with minddy_add_attachment, download them with " +
         "minddy_get_attachment), sub-issues, and the last " +
         "activity events (status changes, reassignments…) with resolved actors: " +
-        "'what happened on this issue?'.",
+        "'what happened on this issue?'. It also carries `linked_feedback` — the " +
+        "user requests from the feedback board this issue implements (title, " +
+        "status, vote_count, comment_count). That is the WHY behind the work, in " +
+        "the users' own words: when an issue carries one, read it with " +
+        "minddy_get_feedback before deciding what to build, especially if it has " +
+        "comments — people qualify their request there.",
       inputSchema: { project_id: PROJECT_ID, issue: ISSUE_REF },
       annotations: READ_ONLY,
     },

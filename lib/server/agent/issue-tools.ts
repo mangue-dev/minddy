@@ -19,6 +19,7 @@ import {
   type IssueTextTools,
 } from "@/lib/server/text-edit";
 import { createIssueForProject } from "@/lib/server/create-issue";
+import { getTeamFeedbackDetail } from "@/lib/server/feedback/team-queries";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import { isEffort } from "@/lib/issue-validation";
@@ -83,6 +84,7 @@ export const ISSUE_TOOL_NAMES = new Set([
   "search_issues",
   "read_issue",
   "read_attachment",
+  "read_feedback",
   "update_issue",
   "write_issue_plan",
   "append_to_plan",
@@ -95,6 +97,10 @@ export const ISSUE_TOOL_NAMES = new Set([
 const COMMENTS_DEFAULT_LIMIT = 15;
 /** Cap par corps de commentaire injecté. */
 const COMMENT_BODY_MAX_CHARS = 2000;
+/** Cap du corps d'un retour : plus généreux qu'un commentaire, parce que c'est
+    l'ÉNONCÉ du besoin — le tronquer, c'est perdre le cas d'usage décrit à la
+    fin. Reste sous le cap de la boucle (headTail 6000). */
+const FEEDBACK_BODY_MAX_CHARS = 4000;
 /** Cap du contenu texte inline d'une pièce jointe — aligné sur le cap des
     résultats de tools de la boucle (headTail 6000) : au-delà, le contenu serait
     élidé au milieu de toute façon ; l'URL signée est la voie pour le fichier entier. */
@@ -250,6 +256,101 @@ async function readIssue(
       sub_issues: detail.sub_issues,
       relations: detail.relations,
       ...(detail.duplicate_of ? { duplicate_of: detail.duplicate_of } : {}),
+      ...(detail.linked_feedback ? { linked_feedback: detail.linked_feedback } : {}),
+    },
+    success: true,
+  };
+}
+
+/**
+ * `read_feedback` (MIN-196) — la DEMANDE derrière le ticket, dans les mots de
+ * qui l'a formulée, avec sa conversation.
+ *
+ * L'agent arrive ici par `read_issue`, qui liste les retours du ticket dans
+ * `linked_feedback` : c'est de là que vient l'id. Le périmètre est le PROJET du
+ * run, comme pour les pièces jointes — un retour d'un autre projet est refusé.
+ *
+ * Chaque commentaire porte sa visibilité, parce que les deux ne s'écoutent pas
+ * pareil : un commentaire PUBLIC vient d'un utilisateur du produit qui décrit
+ * son cas — c'est la matière la plus proche du besoin réel — tandis qu'une note
+ * INTERNE est une décision d'équipe, qui peut contredire la demande. Les
+ * confondre, c'est prendre l'arbitrage de l'équipe pour le besoin de l'usager,
+ * ou l'inverse.
+ */
+async function readFeedback(
+  ctx: IssueToolContext,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const postId = typeof args.feedback_post_id === "string" ? args.feedback_post_id : "";
+  if (!postId) {
+    return {
+      result: { error: "feedback_post_id is required (get it from read_issue's linked_feedback)." },
+      success: false,
+    };
+  }
+
+  const detail = await getTeamFeedbackDetail(ctx.projectId, postId);
+  if (!detail) {
+    return {
+      result: { error: "Feedback not found in this project." },
+      success: false,
+    };
+  }
+
+  const service = getServiceClient();
+  const { data: rows } = await service
+    .from("comments")
+    .select(
+      "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
+    )
+    .eq("feedback_post_id", postId)
+    .order("created_at", { ascending: true });
+
+  const authorIds = (rows ?? [])
+    .map((c) => c.author_id as string | null)
+    .filter((v): v is string => !!v);
+  const users = await fetchAuthUsersById(service, authorIds).catch(() => null);
+
+  const comments = (rows ?? []).map((c) => {
+    const visitor = c.feedback_users as unknown as {
+      name: string | null;
+      email: string | null;
+      pseudonym: string;
+    } | null;
+    return {
+      author: visitor
+        ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
+        : c.via_assistant
+          ? "Numo"
+          : displayName(
+              toNamed(c.author_id && users ? users.get(c.author_id as string) : null),
+              "User",
+            ),
+      // « board visitor » = quelqu'un HORS de l'équipe. C'est ce qui distingue
+      // un besoin rapporté d'un arbitrage interne.
+      from: visitor ? "board visitor" : "team",
+      visibility: (c.visibility as string) ?? "internal",
+      body: cap(String(c.body ?? ""), COMMENT_BODY_MAX_CHARS),
+      created_at: c.created_at,
+    };
+  });
+
+  return {
+    result: {
+      feedback: {
+        id: detail.id,
+        title: detail.title,
+        // Le texte SOUMIS à côté du canonique : l'équipe réécrit souvent le
+        // titre et le corps, et l'original est ce que la personne a tapé.
+        body: cap(String(detail.body ?? ""), FEEDBACK_BODY_MAX_CHARS),
+        submitted_title: detail.submitted_title,
+        submitted_body: cap(String(detail.submitted_body ?? ""), FEEDBACK_BODY_MAX_CHARS),
+        status: detail.status,
+        vote_count: detail.vote_count,
+        is_public: detail.is_public,
+        source: detail.source,
+      },
+      comments,
     },
     success: true,
   };
@@ -742,6 +843,8 @@ export async function executeIssueTool(
         return await readIssue(ctx, args);
       case "read_attachment":
         return await readAttachment(ctx, args);
+      case "read_feedback":
+        return await readFeedback(ctx, args);
       case "update_issue":
         return await updateIssue(ctx, args);
       case "write_issue_plan":

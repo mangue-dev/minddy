@@ -126,6 +126,7 @@ const READ_ONLY_TOOLS = new Set([
   "search_issues",
   "read_issue",
   "read_attachment",
+  "read_feedback",
   "read_scratchpad",
   // Suivi des sous-agents (MIN-112) : deux lectures du registre en mémoire, sans
   // effet de bord. `spawn_agent` n'y est PAS — il lance du travail.
@@ -505,6 +506,8 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
       return { title: cap(String(args.title ?? ""), 200) };
     case "read_attachment":
       return { attachment_id: String(args.attachment_id ?? "") };
+    case "read_feedback":
+      return { feedback_post_id: String(args.feedback_post_id ?? "") };
     // Tools minddy (MIN-125). Sans ces cas, les events persistés partent avec
     // `{}` et le fil relu affiche « Recherche de « … » » ou « 0 tâche » — le
     // résumé EST ce que la relecture du run a pour raconter l'appel.

@@ -214,7 +214,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_issue",
       description:
-        "Get one issue in full: all fields, categories, comments (with author names), attachment metadata (file name/type/size, on the issue and per comment), sub-issues, its relations to other issues (blocks / blocked_by / related, each with the other issue's identifier, title and status — read them before saying an issue is ready to start), and the duplicate target if any. Pass issue_id when known, or number (the N of KEY-N).",
+        "Get one issue in full: all fields, categories, comments (with author names), attachment metadata (file name/type/size, on the issue and per comment), sub-issues, its relations to other issues (blocks / blocked_by / related, each with the other issue's identifier, title and status — read them before saying an issue is ready to start), the duplicate target if any, and linked_feedback: the user requests from the feedback board this issue implements (title, status, vote_count, comment_count). Those are the WHY behind the work, in the users' own words — when an issue carries one, read it with get_feedback before deciding what to build, especially if it has comments. Pass issue_id when known, or number (the N of KEY-N).",
       parameters: {
         type: "object",
         properties: {
