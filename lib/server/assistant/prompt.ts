@@ -784,6 +784,12 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `- Open feedback post: "${ctx.feedbackTitle ?? "(untitled)"}" (id: ${ctx.feedbackId}).`,
       `When the user says "ce feedback", "ce retour", "this feedback", "promeus-le", "réponds-lui" or similar, they mean the feedback post above — use its id directly with the feedback tools (get_feedback, promote_feedback_to_issue, link_feedback_to_issue, respond_to_feedback). Do not search for it.`
     );
+  } else if (ctx.routineId) {
+    lines.push(
+      `- Open routine: "${ctx.routineTitle ?? "(untitled)"}" (id: ${ctx.routineId}).`,
+      `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction, its cadence, its model), call list_routines${ctx.projectId ? ` on project ${ctx.projectId}` : ""} and match that id; do not ask the user to repeat it.`,
+      `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`
+    );
   }
   if (ctx.viewId) {
     lines.push(

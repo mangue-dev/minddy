@@ -59,6 +59,7 @@ import { ReasoningCombobox } from "./reasoning-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentRunHistory } from "./agent-run-history";
 import { AgentDiffSheet } from "./agent-diff-sheet";
+import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 
 /**
  * Cœur réutilisable de la conversation de l'agent de code (MIN-46 + MIN-68), extrait
@@ -155,6 +156,16 @@ export function AgentConversation({
   const t = useTranslations("Agent");
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
+
+  /**
+   * Le FAB de Numo s'efface tant que cette conversation est à l'écran : son
+   * composer est épinglé en bas à droite, et le FAB tombe pile sur son bouton
+   * d'envoi. C'est déclaré ICI, par le composant qui porte ce composer, plutôt
+   * que par une liste de routes — la page Agents nous monte sous son onglet
+   * Conversations mais pas sous son onglet Routines, à la même URL, et une
+   * routine ouverte sur l'un de ses passages nous remonte à nouveau.
+   */
+  useSuppressAssistantFab(active);
 
   /** Traduit un code d'erreur d'API agent, ou laisse passer le message brut. */
   const agentErrorMessage = useAgentErrorMessage();

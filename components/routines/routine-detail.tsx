@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,6 @@ import {
   DropdownMenuTrigger,
   Skeleton,
   Switch,
-  Textarea,
   cn,
   toast,
 } from "mangue-ui";
@@ -33,15 +32,20 @@ import {
 } from "lucide-react";
 
 import { AgentConversation } from "@/components/agent/agent-conversation";
-import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { EmptyScene } from "@/components/empty-scene";
 import { Markdown } from "@/components/markdown";
+import { ModelBadge } from "@/components/model-badge";
 import { ProjectOrb } from "@/components/project-orb";
 import {
   PR_STATE_STYLES,
   PrStateBadge,
 } from "@/components/pull-requests/pr-state-badge";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
+import { BranchCombobox } from "@/components/agent/branch-combobox";
+import { ModelCombobox } from "@/components/agent/model-combobox";
+import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
+import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
+import { SettingsRow } from "@/components/settings/settings-ui";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
 import {
   deleteRoutineApi,
@@ -55,7 +59,10 @@ import {
   routinesQueryKey,
   useRoutineRunsQuery,
 } from "@/lib/use-routines-query";
+import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import {
   describeSchedule,
   nextRunAt,
@@ -118,7 +125,6 @@ export function RoutineDetail({
   const t = useTranslations("Routines");
   const tAgents = useTranslations("Agents");
   const tCommon = useTranslations("Common");
-  const locale = useLocale();
   const format = useFormatter();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -131,28 +137,31 @@ export function RoutineDetail({
    * ce qu'elle est et ce qu'elle a fait, pas relire un fil en particulier.
    */
   const [openRunId, setOpenRunId] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
+  /**
+   * Le BROUILLON d'édition, ou `null` quand on lit. Il vit ICI et non dans le
+   * formulaire parce que « Enregistrer » a quitté le bas du formulaire pour
+   * l'en-tête, où il prend la place de l'interrupteur : le bouton et les champs
+   * ne sont plus dans le même composant, et c'est le volet qui les tient tous
+   * les deux.
+   *
+   * Sa présence EST le mode : plus de booléen `editing` à tenir d'accord avec
+   * lui.
+   */
+  const [draft, setDraft] = useState<RoutineDraft | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   // Le fondu du bas de la liste, comme partout où un contenu déborde.
   const listFade = useScrollFade<HTMLDivElement>();
 
+  const editing = draft !== null && isOwner;
+
   // Changer de routine referme ce qu'on lisait de la précédente.
   useEffect(() => {
     setOpenRunId(null);
-    setEditing(false);
+    setDraft(null);
   }, [routine.id]);
   const openRun: AgentRunSummary | null =
     runs.find((r) => r.id === openRunId) ?? null;
-
-  const cadence = describeSchedule(
-    routineSchedule(routine),
-    (key, values) => t(key, values),
-    {
-      locale,
-      weekdayLabel: (d) => weekdayName(d, locale),
-    },
-  );
 
   const nextAt = routine.next_run_at
     ? format.dateTime(new Date(routine.next_run_at), {
@@ -178,6 +187,28 @@ export function RoutineDetail({
     } finally {
       setBusy(false);
     }
+  };
+
+  /**
+   * Enregistre le brouillon. Les champs de JOUR n'existent que pour leur
+   * cadence : les envoyer tous les deux ferait refuser la cadence côté serveur.
+   */
+  const saveDraft = async () => {
+    if (!draft || !draft.prompt.trim()) return;
+    await patch({
+      prompt: draft.prompt.trim(),
+      model: draft.model || null,
+      reasoningLevel: draft.reasoning,
+      baseBranch: draft.baseBranch || null,
+      frequency: draft.schedule.frequency,
+      hour: draft.schedule.hour,
+      minute: draft.schedule.minute,
+      weekdays: draft.schedule.frequency === "weekly" ? draft.schedule.weekdays : [],
+      daysOfMonth:
+        draft.schedule.frequency === "monthly" ? draft.schedule.daysOfMonth : [],
+      timezone: draft.schedule.timezone,
+    });
+    setDraft(null);
   };
 
   const runNow = async () => {
@@ -345,7 +376,32 @@ export function RoutineDetail({
           </Badge>
         ) : null}
 
-        {isOwner ? (
+        {/* PENDANT L'ÉDITION, « Annuler / Enregistrer » PRENNENT LA PLACE de
+            l'interrupteur et du menu — ils ne s'y ajoutent pas.
+            Ce n'est pas qu'une question de place : un interrupteur qui écrit
+            immédiatement, à côté d'un formulaire qui attend d'être enregistré,
+            ce sont deux notions d'« appliqué » sur la même ligne. Et « Lancer
+            maintenant » lancerait la routine telle qu'elle est ENREGISTRÉE,
+            c'est-à-dire pas celle qu'on est en train d'écrire. */}
+        {!isOwner ? null : editing ? (
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDraft(null)}
+              disabled={busy}
+            >
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => void saveDraft()}
+              disabled={busy || !draft?.prompt.trim()}
+            >
+              {tCommon("save")}
+            </Button>
+          </div>
+        ) : (
           <div className="flex shrink-0 items-center gap-2">
             {/* L'interrupteur reste DEHORS : c'est l'état de la routine — elle
                 tourne, ou elle est en pause —, pas un geste ponctuel qu'on va
@@ -380,9 +436,9 @@ export function RoutineDetail({
                   <Play className="size-4" />
                   {t("runNow")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setEditing((e) => !e)}>
+                <DropdownMenuItem onSelect={() => setDraft(draftFrom(routine))}>
                   <Pencil className="size-4" />
-                  {editing ? t("stopEditing") : tCommon("edit")}
+                  {tCommon("edit")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -395,53 +451,49 @@ export function RoutineDetail({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        ) : null}
+        )}
       </div>
 
-      {editing && isOwner ? (
+      {editing && draft ? (
         <RoutineEditor
-          routine={routine}
+          draft={draft}
+          onChange={setDraft}
+          projectId={routine.project_id}
           busy={busy}
-          onCancel={() => setEditing(false)}
-          onSave={async (fields) => {
-            await patch(fields);
-            setEditing(false);
-          }}
         />
-      ) : null}
+      ) : (
+        <>
+          {/* ── La cadence, puis CE QU'ELLE FAIT ────────────────────────
+              L'instruction sous la cadence : sans elle, une routine n'était
+              qu'un titre de trois mots et une heure, tout tassé en haut de
+              l'écran — et « ce qu'elle fait » était précisément ce qu'on venait
+              vérifier. */}
+          <div className="flex shrink-0 flex-col gap-1 px-4 pb-2">
+            <RoutineSummary
+              schedule={routineSchedule(routine)}
+              model={routine.model}
+            />
 
-      {/* ── La cadence, puis CE QU'ELLE FAIT ────────────────────────────
-          L'instruction sous la cadence : sans elle, une routine n'était qu'un
-          titre de trois mots et une heure, tout tassé en haut de l'écran — et
-          « ce qu'elle fait » était précisément ce qu'on venait vérifier. */}
-      <div className="flex shrink-0 flex-col gap-1 px-4 pb-2">
-        {/* La cadence SEULE : le prochain passage descend dans la liste des
-            exécutions, à sa place chronologique. Les deux tenaient sur la même
-            ligne, et « Tous les jours à 18 h · prochaine exécution 7 août » se
-            lisait comme une seule information alors que c'en est deux — une
-            règle, et une date qui la suit. */}
-        <p className="text-xs text-muted-foreground">{cadence}</p>
-
-        {routine.last_error ? (
-          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-            <AlertTriangle className="size-3.5 shrink-0" />
-            <span>{routineErrorLabel(routine.last_error, t)}</span>
-            {routine.last_error === "quota" ? (
-              <Link
-                href="/settings/billing"
-                className="underline underline-offset-2"
-              >
-                {t("seeBilling")}
-              </Link>
+            {routine.last_error ? (
+              <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="size-3.5 shrink-0" />
+                <span>{routineErrorLabel(routine.last_error, t)}</span>
+                {routine.last_error === "quota" ? (
+                  <Link
+                    href="/settings/billing"
+                    className="underline underline-offset-2"
+                  >
+                    {t("seeBilling")}
+                  </Link>
+                ) : null}
+              </p>
             ) : null}
-          </p>
-        ) : null}
 
-        {/* L'instruction, rendue et repliée (cf. `RoutinePrompt`). Masquée en
-            édition — le champ juste au-dessus porte déjà le texte complet, et
-            modifiable. */}
-        {editing && isOwner ? null : <RoutinePrompt prompt={routine.prompt} />}
-      </div>
+            {/* L'instruction, rendue et repliée (cf. `RoutinePrompt`). */}
+            <RoutinePrompt prompt={routine.prompt} />
+          </div>
+        </>
+      )}
 
       {/* ── Exécutions : UNE LIGNE par passage ─────────────────────────
           Pleine largeur, sa date et l'état de sa pull request. Pas le fil :
@@ -456,7 +508,7 @@ export function RoutineDetail({
           Absentes pendant l'ÉDITION : on règle la routine ou on lit ce qu'elle
           a produit, jamais les deux en même temps — et le formulaire a besoin
           de toute la hauteur pour ne pas se lire au défilement. */}
-      {editing && isOwner ? null : (
+      {editing ? null : (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="shrink-0 px-4 pt-2 pb-1.5">
             <h3 className="text-xs font-medium text-muted-foreground">
@@ -747,85 +799,234 @@ function routineErrorLabel(
 }
 
 /**
- * L'édition d'une routine : son INSTRUCTION et sa cadence.
+ * COMMENT la routine est réglée, en une ligne : sa cadence, et le modèle qui
+ * l'exécute. Les deux réglages qui décident de ce que coûte et de ce que vaut
+ * chaque exécution, ensemble parce qu'ils répondent à la même question.
  *
- * Pas de champ « nom » — le titre est écrit par minddy à partir de
- * l'instruction, et réécrit dès qu'elle change. Pas de wizard rejoué non plus :
- * on ne repasse pas par quatre écrans pour déplacer une heure.
+ * La date du prochain passage, elle, n'est pas ici : elle vit dans la liste des
+ * exécutions, à sa place chronologique. Les trois tenaient sur cette ligne, et
+ * « Tous les jours à 18 h · prochaine exécution 7 août » se lisait comme une
+ * seule information alors que c'en est deux — une règle, et une date qui la
+ * suit.
+ *
+ * En LECTURE il décrit la routine enregistrée, sous l'en-tête. En ÉDITION il
+ * décrit le BROUILLON, sous les champs qui le fabriquent : c'est la phrase que
+ * les réglages produisent, et la lire juste en dessous d'eux évite d'avoir à
+ * traduire « lundi, 9, 0, Europe/Paris » de tête. Un modèle FIGÉ sur la routine
+ * ne suit pas le défaut du compte, et c'est bien pour ça qu'il se lit plutôt
+ * que de se deviner ; sans modèle explicite, le badge le dit au lieu de
+ * disparaître — « lequel tourne ? » se pose surtout dans ce cas-là.
  */
-function RoutineEditor({
-  routine,
-  busy,
-  onCancel,
-  onSave,
+function RoutineSummary({
+  schedule,
+  model,
 }: {
-  routine: Routine;
-  busy: boolean;
-  onCancel: () => void;
-  onSave: (fields: Parameters<typeof updateRoutineApi>[1]) => Promise<void>;
+  schedule: RoutineSchedule;
+  model: string | null;
 }) {
   const t = useTranslations("Routines");
-  const tCommon = useTranslations("Common");
-  const [prompt, setPrompt] = useState(routine.prompt);
-  const [schedule, setSchedule] = useState<RoutineSchedule>(() =>
-    routineSchedule(routine),
-  );
+  const locale = useLocale();
+
+  // Une cadence en cours d'édition peut être momentanément invalide (aucun jour
+  // coché) : `describeSchedule` lève, et une ligne de résumé n'est pas l'endroit
+  // où le dire — les champs, eux, le signalent déjà.
+  let cadence: string | null = null;
+  try {
+    cadence = describeSchedule(schedule, (key, values) => t(key, values), {
+      locale,
+      weekdayLabel: (d) => weekdayName(d, locale),
+    });
+  } catch {
+    cadence = null;
+  }
 
   return (
-    <div className="flex shrink-0 flex-col gap-3 px-4 py-3">
-      {/* Le MÊME champ que l'étape `job` du wizard, dictée comprise : on
-          réécrit une instruction dans les mêmes conditions qu'on l'a écrite. */}
-      <div className="relative">
-        <Textarea
-          autoFocus
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder={t("promptPlaceholder")}
-          aria-label={t("promptLabel")}
-          maxLength={20000}
-          rows={6}
-          className="min-h-36 resize-none pb-12"
-        />
-        <DictateButton
-          floating
-          disabled={busy}
-          onTranscription={(text) =>
-            setPrompt((current) =>
-              current.trim() ? `${current.trim()} ${text}` : text,
-            )
-          }
-        />
-      </div>
-      <p className="text-xs text-muted-foreground">{t("titleAutoHint")}</p>
-
-      <RoutineScheduleFields value={schedule} onChange={setSchedule} />
-
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
-          {tCommon("cancel")}
-        </Button>
-        <Button
-          size="sm"
-          disabled={busy || !prompt.trim()}
-          onClick={() =>
-            void onSave({
-              prompt: prompt.trim(),
-              frequency: schedule.frequency,
-              hour: schedule.hour,
-              minute: schedule.minute,
-              // Les champs de jour n'existent QUE pour leur cadence : les
-              // envoyer tous les deux ferait refuser la cadence.
-              weekdays:
-                schedule.frequency === "weekly" ? schedule.weekdays : [],
-              daysOfMonth:
-                schedule.frequency === "monthly" ? schedule.daysOfMonth : [],
-              timezone: schedule.timezone,
-            })
-          }
-        >
-          {tCommon("save")}
-        </Button>
-      </div>
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      {cadence ? <p className="text-xs text-muted-foreground">{cadence}</p> : null}
+      <ModelBadge
+        model={model}
+        size={12}
+        fallbackLabel={t("modelDefaultBadge")}
+        tooltip={t("modelTooltip")}
+      />
     </div>
+  );
+}
+
+/** Le brouillon d'édition : tout ce qu'une routine expose au réglage. */
+interface RoutineDraft {
+  prompt: string;
+  /** "" = le modèle par défaut du compte (pas de modèle figé sur la routine). */
+  model: string;
+  reasoning: ReasoningLevel;
+  /** "" = la branche par défaut du dépôt. */
+  baseBranch: string;
+  schedule: RoutineSchedule;
+}
+
+/** Le brouillon tel qu'une routine enregistrée le donne. */
+function draftFrom(routine: Routine): RoutineDraft {
+  return {
+    prompt: routine.prompt,
+    model: routine.model ?? "",
+    reasoning: routine.reasoning_level,
+    baseBranch: routine.base_branch ?? "",
+    schedule: routineSchedule(routine),
+  };
+}
+
+/**
+ * L'édition d'une routine : tout ce qui décide de ce qu'elle fait, et de ce que
+ * ça coûte — son instruction, son modèle, son niveau de raisonnement, sa
+ * branche de départ et sa cadence.
+ *
+ * Pas de champ « nom » : le titre est écrit par minddy à partir de
+ * l'instruction, et réécrit dès qu'elle change. Pas de wizard rejoué non plus —
+ * on ne repasse pas par quatre écrans pour déplacer une heure.
+ *
+ * Pas de boutons non plus : « Annuler » et « Enregistrer » sont dans l'en-tête,
+ * à la place de l'interrupteur, où ils restent visibles quelle que soit la
+ * longueur de l'instruction. Ce formulaire ne fait que tenir des champs, et
+ * c'est le volet qui possède le brouillon.
+ */
+function RoutineEditor({
+  draft,
+  onChange,
+  projectId,
+  busy,
+}: {
+  draft: RoutineDraft;
+  onChange: (draft: RoutineDraft) => void;
+  /** Ancrage du listing de branches : une routine clone le dépôt du projet. */
+  projectId: string;
+  busy: boolean;
+}) {
+  const t = useTranslations("Routines");
+  const tAgent = useTranslations("Agent");
+  const tCommon = useTranslations("Common");
+  // Le défaut du COMPTE, puis celui de l'instance : ce que la routine exécutera
+  // si on ne lui fige aucun modèle. Le combobox l'affiche comme option « défaut ».
+  const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
+  const { defaultModel } = useAgentPreferencesQuery();
+
+  const set = <K extends keyof RoutineDraft>(key: K, value: RoutineDraft[K]) =>
+    onChange({ ...draft, [key]: value });
+
+  return (
+    /**
+     * Le formulaire DÉFILE, et c'est la seule façon d'atteindre son bas.
+     *
+     * Il était `shrink-0` dans un parent `overflow-hidden` : une instruction
+     * longue poussait tout ce qui la suivait hors de l'écran, sans aucun moyen
+     * de le rattraper. `flex-1` + `min-h-0` lui donne la place restante, et
+     * `overflow-y-auto` la rend parcourable.
+     */
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-3">
+      {/* CE QU'ELLE FAIT — en tête, parce que c'est la routine : le reste ne
+          fait que dire avec quoi et quand. */}
+      <EditorSection title={t("promptLabel")}>
+        {/* Le MÊME champ que l'étape `job` du wizard — c'est littéralement le
+            même composant : dictée, plafond de saisie et hauteur bornée. */}
+        <RoutinePromptField
+          autoFocus
+          value={draft.prompt}
+          onChange={(value) => set("prompt", value)}
+          disabled={busy}
+        />
+      </EditorSection>
+
+      {/* AVEC QUOI elle travaille : le modèle, ce qu'on lui laisse réfléchir, et
+          le code dont elle part. Les trois étaient figés à la création sans
+          aucune surface pour changer d'avis — il fallait supprimer la routine et
+          la refaire.
+
+          En RANGÉES (libellé à gauche, contrôle à droite) et non empilés : trois
+          contrôles à la suite sans libellé de ligne ne disaient pas lequel
+          réglait quoi, et le sélecteur de modèle en pleine largeur écrasait les
+          deux autres alors qu'il n'est pas plus important. Les trois portent
+          maintenant la même pastille compacte. */}
+      <EditorSection title={t("sectionAgent")}>
+        <div className="divide-y divide-border/60">
+          <SettingsRow
+            label={t("modelLabel")}
+            control={
+              <ModelCombobox
+                variant="compact"
+                value={draft.model}
+                onChange={(value) => set("model", value)}
+                defaultLabel={t("modelDefault")}
+                defaultModelId={defaultModel || providerDefaultModel}
+                placeholder={t("modelPlaceholder")}
+                emptyLabel={t("modelEmpty")}
+                loadingLabel={tCommon("loading")}
+                freeTextLabel={(query) => t("modelFreeText", { model: query })}
+              />
+            }
+          />
+          <SettingsRow
+            label={t("reasoningLabel")}
+            control={
+              <ReasoningCombobox
+                value={draft.reasoning}
+                onChange={(value) => set("reasoning", value)}
+              />
+            }
+          />
+          {/* La branche de DÉPART : celle que chaque exécution clone et depuis
+              laquelle elle ouvre sa pull request. Ancrée au projet, comme le
+              compose d'une session de carnet — une routine n'a pas de ticket. */}
+          <SettingsRow
+            label={t("baseBranchLabel")}
+            control={
+              <BranchCombobox
+                projectId={projectId}
+                value={draft.baseBranch}
+                onChange={(value) => set("baseBranch", value)}
+                defaultLabel={tAgent("branchDefault")}
+                defaultHint={tAgent("branchDefaultHint")}
+                placeholder={tAgent("branchSearchPlaceholder")}
+                emptyLabel={tAgent("branchSearchEmpty")}
+                loadingLabel={tAgent("branchSearchLoading")}
+                disabled={busy}
+              />
+            }
+          />
+        </div>
+      </EditorSection>
+
+      {/* QUAND elle part. */}
+      <EditorSection title={t("sectionSchedule")}>
+        <RoutineScheduleFields
+          value={draft.schedule}
+          onChange={(value) => set("schedule", value)}
+        />
+        {/* Ce que tous les champs ci-dessus donnent, en clair. Sous eux, et non
+            en bas de l'écran : c'est leur résultat qui se relit avant
+            d'enregistrer. */}
+        <RoutineSummary schedule={draft.schedule} model={draft.model || null} />
+      </EditorSection>
+    </div>
+  );
+}
+
+/**
+ * Une section du formulaire : un titre, et ce qu'il coiffe.
+ *
+ * Le titre reprend celui des « Exécutions » du mode lecture (`text-xs`,
+ * `font-medium`, atténué) — c'est déjà le niveau « section » de ce volet, et en
+ * inventer un deuxième aurait donné deux hiérarchies dans le même panneau.
+ */
+function EditorSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
+      {children}
+    </section>
   );
 }

@@ -74,6 +74,15 @@ export interface AssistantPanelContextValue {
     ctx: AssistantPageContext | null,
     ownerId: string,
   ) => void;
+  /**
+   * Une surface affiche-t-elle déjà un composer épinglé en bas d'écran, là où
+   * le FAB se pose ? Déclaré par la surface elle-même (`useSuppressAssistantFab`)
+   * plutôt que déduit d'une liste de routes : sur une même route, une page peut
+   * en montrer un ou non selon l'onglet ouvert.
+   */
+  fabSuppressed: boolean;
+  /** `ownerId` compte les surfaces : plusieurs peuvent être montées à la fois. */
+  setFabSuppressed: (suppressed: boolean, ownerId: string) => void;
   open: (opts?: OpenAssistantOptions) => void;
   close: () => void;
   toggle: () => void;
@@ -118,6 +127,25 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  /**
+   * Les surfaces qui masquent le FAB, par id. Un ENSEMBLE et non un booléen :
+   * deux peuvent se chevaucher (une conversation d'agent en pleine page, une
+   * autre dans une modale par-dessus), et la première à se démonter rendrait
+   * le FAB alors que la seconde le recouvre encore.
+   */
+  const [fabOwners, setFabOwners] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const setFabSuppressed = useCallback((suppressed: boolean, ownerId: string) => {
+    setFabOwners((prev) => {
+      if (suppressed === prev.has(ownerId)) return prev;
+      const next = new Set(prev);
+      if (suppressed) next.add(ownerId);
+      else next.delete(ownerId);
+      return next;
+    });
+  }, []);
 
   const open = useCallback((opts?: OpenAssistantOptions) => {
     // `prompt` = ouverture programmatique (home, action de ticket) ; sans lui
@@ -164,6 +192,8 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
       activePageContext,
       ambientContext,
       setAmbientContext,
+      fabSuppressed: fabOwners.size > 0,
+      setFabSuppressed,
       open,
       close,
       toggle,
@@ -176,6 +206,8 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
       activePageContext,
       ambientContext,
       setAmbientContext,
+      fabOwners,
+      setFabSuppressed,
       open,
       close,
       toggle,
@@ -226,4 +258,23 @@ export function useAssistantContext(
     setAmbientContext(next, ownerId);
     return () => setAmbientContext(null, ownerId);
   }, [contextKey, ownerId, setAmbientContext]);
+}
+
+/**
+ * Masque le FAB de Numo tant que ce composant est monté et `active`.
+ *
+ * À appeler depuis la surface qui porte un composer épinglé en bas d'écran : le
+ * FAB s'y poserait dessus, souvent pile sur son bouton d'envoi. C'est la
+ * surface qui sait, pas la route — la page Agents montre une conversation sous
+ * son onglet Conversations et une simple liste sous son onglet Routines, à la
+ * même URL.
+ */
+export function useSuppressAssistantFab(active = true): void {
+  const { setFabSuppressed } = useAssistantPanel();
+  const ownerId = useId();
+
+  useEffect(() => {
+    setFabSuppressed(active, ownerId);
+    return () => setFabSuppressed(false, ownerId);
+  }, [active, ownerId, setFabSuppressed]);
 }

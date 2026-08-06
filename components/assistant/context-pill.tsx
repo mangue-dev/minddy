@@ -22,6 +22,7 @@ import {
   Eye,
   EyeOff,
   FileText,
+  CalendarClock,
   IterationCw,
   Layers,
   LayoutGrid,
@@ -62,6 +63,12 @@ const STYLES: Record<
   feedback: {
     icon: MessagesSquare,
     tint: "bg-rose-500/12 text-rose-600 dark:text-rose-400",
+  },
+  // La même horloge que l'onglet Routines et son état vide : une routine se
+  // reconnaît à sa figure, ici comme là-bas.
+  routine: {
+    icon: CalendarClock,
+    tint: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
   },
   view: {
     icon: LayoutGrid,

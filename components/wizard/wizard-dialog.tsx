@@ -190,14 +190,22 @@ export function WizardDialog<Id extends string>({
           />
         </div>
 
-        <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 pt-4 pb-12">
+        {/* Une étape plus HAUTE que la modale doit rester atteignable.
+            `items-center` centrait le formulaire dans une boîte qui défile :
+            dès qu'il débordait, son HAUT passait au-dessus du point de départ
+            du défilement et devenait inaccessible — on ne pouvait plus remonter
+            au premier champ. Des marges `auto` centrent tout aussi bien tant
+            qu'il reste de la place, et retombent à zéro dès qu'il n'y en a
+            plus : le formulaire repart alors du haut et se parcourt en
+            entier. */}
+        <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 pt-4 pb-12">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               onSubmit(step.id);
             }}
             className={cn(
-              "flex w-full flex-col items-center gap-7",
+              "my-auto flex w-full flex-col items-center gap-7",
               step.wide ? "max-w-2xl" : "max-w-lg",
             )}
           >

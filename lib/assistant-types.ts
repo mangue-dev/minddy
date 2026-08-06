@@ -149,6 +149,9 @@ export interface AssistantPageContext {
   /** The feedback post open in the team dashboard, when any (MIN-52). */
   feedbackId?: string;
   feedbackTitle?: string;
+  /** The routine open in the Agents page's Routines tab, when any (MIN-185). */
+  routineId?: string;
+  routineTitle?: string;
   /** The pull request open on the Pull Requests page, when any (MIN-66). It maps
       to `issueId` above (the issue the code agent implemented). */
   prNumber?: number;

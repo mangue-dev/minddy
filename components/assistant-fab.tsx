@@ -30,19 +30,25 @@ import { useZenMode } from "@/lib/zen-mode-context";
  * panneau, au-dessus du composer, pas sur le bouton qui l'ouvre.
  */
 /** Les pages où Numo est déjà joignable sans lui — cf. `hiddenForRoute`. */
-const HIDDEN_ROUTES = ["/agents", "/pull-requests"];
+const HIDDEN_ROUTES = ["/pull-requests"];
 
 export function AssistantFab() {
-  const { isOpen, toggle } = useAssistantPanel();
+  const { isOpen, toggle, fabSuppressed } = useAssistantPanel();
   const { isBusy } = useAssistantChatContext();
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");
-  // Deux pages ont déjà Numo sous la main, et le FAB y ferait doublon (l'anim de
-  // sortie joue au passage) :
-  //  · Agents — sa conversation y est en plein écran ;
-  //  · Pull requests — le composer du fil est épinglé en bas, avec `@Numo` dans
-  //    ses suggestions, et le FAB tombe pile sur son bouton d'envoi (MIN-162).
+  /**
+   * Pull requests : le composer du fil est épinglé en bas, avec `@Numo` dans ses
+   * suggestions, et le FAB tombe pile sur son bouton d'envoi (MIN-162).
+   *
+   * La page Agents était ici aussi, et c'était trop grossier : la route ne dit
+   * pas ce que la page MONTRE. Sous `?tab=routines`, elle affiche une liste sans
+   * aucun composer, et Numo y devenait injoignable à la souris alors que rien ne
+   * le recouvrait. C'est donc la conversation d'agent elle-même qui se déclare
+   * (`useSuppressAssistantFab`), où qu'elle soit montée — onglet Conversations,
+   * passage de routine ouvert, modale d'un ticket.
+   */
   const pathname = usePathname();
   const hiddenForRoute = HIDDEN_ROUTES.some((route) => pathname.startsWith(route));
   // Mode zen (MIN-134) : le FAB part avec le reste du chrome. Numo reste
@@ -51,7 +57,7 @@ export function AssistantFab() {
 
   return (
     <AnimatePresence>
-      {!isOpen && !hiddenForRoute && !zen && (
+      {!isOpen && !hiddenForRoute && !fabSuppressed && !zen && (
         <motion.div
           key="assistant-fab"
           initial={{ opacity: 0, y: 14, scale: 0.92 }}

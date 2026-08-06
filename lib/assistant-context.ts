@@ -19,6 +19,7 @@ export type AssistantContextKind =
   | "issues"
   | "objective"
   | "feedback"
+  | "routine"
   | "view"
   | "cycle"
   | "member";
@@ -130,6 +131,15 @@ export function contextChips(
     });
   }
 
+  if (ctx?.routineId) {
+    chips.push({
+      key: "routine",
+      kind: "routine",
+      label: ctx.routineTitle ?? t("contextRoutine"),
+      tooltip: t("contextRoutine"),
+    });
+  }
+
   if (ctx?.viewId || ctx?.onglet) {
     // Le nom de la vue prime ; l'onglet ne concerne que les messages persistés
     // avant les vues v2 (un seul onglet depuis).
@@ -187,6 +197,7 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   issues: ["issueIds", "issueIdentifiers", "issueTitles"],
   objective: ["objectiveId", "objectiveName", "objectiveColor"],
   feedback: ["feedbackId", "feedbackTitle"],
+  routine: ["routineId", "routineTitle"],
   view: ["viewId", "viewName", "onglet"],
   cycle: ["cycleId", "cycleLabel"],
 };

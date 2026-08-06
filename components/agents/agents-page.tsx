@@ -625,10 +625,18 @@ export function AgentsPage() {
     if (id) markRead(id);
   }, [shownReal?.issue?.id, shownReal?.lastCompletedAt, markRead]);
 
-  // Publie l'issue active à Numo : il résout « cette issue » (et sa PR le cas
-  // échéant), la lit et peut agir dessus — brouillon compris (issue sans PR).
+  /**
+   * Publie l'issue active à Numo : il résout « cette issue » (et sa PR le cas
+   * échéant), la lit et peut agir dessus — brouillon compris (issue sans PR).
+   *
+   * RIEN sous l'onglet Routines, où c'est `RoutinesPanel` qui publie la routine
+   * ouverte. Les hooks ne se sautent pas : cet appel s'exécute même quand la
+   * page rend l'autre onglet, et les deux surfaces se disputeraient alors le
+   * contexte ambiant — Numo aurait reçu, selon l'ordre des effets, le ticket
+   * d'une conversation qui n'est même pas à l'écran.
+   */
   useAssistantContext(
-    activeItem && activeItem.project && activeItem.issue
+    tab !== "routines" && activeItem && activeItem.project && activeItem.issue
       ? {
           projectId: activeItem.project.id,
           issueId: activeItem.issue.id,

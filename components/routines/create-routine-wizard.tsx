@@ -2,14 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Button, Textarea, cn, toast } from "mangue-ui";
+import { Button, cn, toast } from "mangue-ui";
 import { Play } from "lucide-react";
 
-import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { ProjectOrb } from "@/components/project-orb";
+import { BranchCombobox } from "@/components/agent/branch-combobox";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
+import { SettingsRow } from "@/components/settings/settings-ui";
 import { WizardDialog, type WizardStep } from "@/components/wizard/wizard-dialog";
+import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
 import { useProjects } from "@/lib/projects-context";
 import { useAuth } from "@/lib/auth-context";
@@ -70,6 +72,7 @@ export function CreateRoutineWizard({
   onCreated: (routine: Routine) => void;
 }) {
   const t = useTranslations("Routines");
+  const tAgent = useTranslations("Agent");
   const tCommon = useTranslations("Common");
   const locale = useLocale();
   const { user } = useAuth();
@@ -95,6 +98,8 @@ export function CreateRoutineWizard({
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("");
   const [reasoning, setReasoning] = useState<ReasoningLevel | null>(null);
+  /** "" = la branche par défaut du dépôt, ce qui est le cas courant. */
+  const [baseBranch, setBaseBranch] = useState("");
   // La cadence tient dans UN état, celui-là même que le calcul et la phrase
   // lisible attendent : rien à recomposer entre l'écran et le serveur.
   const [schedule, setSchedule] = useState<RoutineSchedule>(() => ({
@@ -208,6 +213,7 @@ export function CreateRoutineWizard({
         prompt: prompt.trim(),
         model: model || null,
         reasoningLevel: reasoning ?? defaultReasoningLevel,
+        baseBranch: baseBranch || null,
         frequency: schedule.frequency,
         hour: schedule.hour,
         minute: schedule.minute,
@@ -282,25 +288,14 @@ export function CreateRoutineWizard({
       submitDisabled: !prompt.trim(),
       content: (
         <div className="flex flex-col gap-4">
-          <div className="relative">
-            <Textarea
-              autoFocus
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={t("promptPlaceholder")}
-              aria-label={t("promptLabel")}
-              maxLength={20000}
-              rows={6}
-              className="min-h-36 resize-none pb-12"
-            />
-            <DictateButton
-              floating
-              disabled={creating}
-              onTranscription={(text) =>
-                setPrompt((current) => (current.trim() ? `${current.trim()} ${text}` : text))
-              }
-            />
-          </div>
+          {/* Le MÊME champ que la modification d'une routine (volet de détail) :
+              même dictée, même plafond de saisie, même hauteur bornée. */}
+          <RoutinePromptField
+            autoFocus
+            value={prompt}
+            onChange={setPrompt}
+            disabled={creating}
+          />
 
           {/* Trois instructions pré-écrites : elles remplacent le champ, elles ne
               s'y ajoutent pas — on choisit un point de départ, on ne colle pas
@@ -318,11 +313,6 @@ export function CreateRoutineWizard({
             ))}
           </div>
 
-          {/* Aucun champ « nom » : minddy écrit le titre de la routine à partir
-              de cette instruction, et le réécrit à chaque fois qu'elle change.
-              Un nom saisi à la main cesse de la décrire dès la première
-              réécriture, et personne ne pense à le corriger. */}
-          <p className="text-xs text-muted-foreground">{t("titleAutoHint")}</p>
         </div>
       ),
     },
@@ -332,24 +322,56 @@ export function CreateRoutineWizard({
       title: t("stepModelTitle"),
       subtitle: t("stepModelDesc"),
       content: (
-        <div className="flex flex-col gap-4">
-          <ModelCombobox
-            value={model}
-            onChange={setModel}
-            defaultLabel={t("modelDefault")}
-            defaultModelId={defaultModel || providerDefaultModel}
-            placeholder={t("modelPlaceholder")}
-            emptyLabel={t("modelEmpty")}
-            loadingLabel={tCommon("loading")}
-            freeTextLabel={(query) => t("modelFreeText", { model: query })}
+        /* Les trois réglages de l'agent en RANGÉES — mêmes libellés, mêmes
+           pastilles et même ordre que l'éditeur du volet de détail : on ne
+           réapprend pas l'écran quand on revient changer un réglage. */
+        <div className="divide-y divide-border/60">
+          <SettingsRow
+            label={t("modelLabel")}
+            control={
+              <ModelCombobox
+                variant="compact"
+                value={model}
+                onChange={setModel}
+                defaultLabel={t("modelDefault")}
+                defaultModelId={defaultModel || providerDefaultModel}
+                placeholder={t("modelPlaceholder")}
+                emptyLabel={t("modelEmpty")}
+                loadingLabel={tCommon("loading")}
+                freeTextLabel={(query) => t("modelFreeText", { model: query })}
+              />
+            }
           />
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{t("reasoningLabel")}</span>
-            <ReasoningCombobox
-              value={reasoning ?? defaultReasoningLevel}
-              onChange={setReasoning}
-            />
-          </div>
+          <SettingsRow
+            label={t("reasoningLabel")}
+            control={
+              <ReasoningCombobox
+                value={reasoning ?? defaultReasoningLevel}
+                onChange={setReasoning}
+              />
+            }
+          />
+          {/* La branche de DÉPART se choisit ICI plutôt qu'après coup : une
+              routine qui part de la mauvaise base ouvre des pull requests
+              inutilisables, et c'est au moment de la poser qu'on sait sur quoi
+              elle doit travailler. Le listing est ancré au projet choisi à
+              l'étape précédente. */}
+          <SettingsRow
+            label={t("baseBranchLabel")}
+            control={
+              <BranchCombobox
+                projectId={projectId}
+                value={baseBranch}
+                onChange={setBaseBranch}
+                defaultLabel={tAgent("branchDefault")}
+                defaultHint={tAgent("branchDefaultHint")}
+                placeholder={tAgent("branchSearchPlaceholder")}
+                emptyLabel={tAgent("branchSearchEmpty")}
+                loadingLabel={tAgent("branchSearchLoading")}
+                disabled={creating}
+              />
+            }
+          />
         </div>
       ),
     },

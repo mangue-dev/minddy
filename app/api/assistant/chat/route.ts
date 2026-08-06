@@ -136,6 +136,8 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     objectiveColor: pick("objectiveColor"),
     feedbackId: pick("feedbackId"),
     feedbackTitle: pick("feedbackTitle"),
+    routineId: pick("routineId"),
+    routineTitle: pick("routineTitle"),
     viewId: pick("viewId"),
     viewName: pick("viewName"),
     cycleId: pick("cycleId"),

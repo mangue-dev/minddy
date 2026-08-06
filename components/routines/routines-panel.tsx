@@ -17,6 +17,7 @@ import {
 } from "@/components/sidebar-project-group";
 import { CreateRoutineWizard } from "@/components/routines/create-routine-wizard";
 import { RoutineDetail } from "@/components/routines/routine-detail";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
@@ -143,6 +144,27 @@ export function RoutinesPanel({
   const selected = routines.find((r) => r.id === selectedId) ?? null;
   const selectedIsOwner =
     !!selected && projectById.get(selected.project_id)?.owner_id === user?.id;
+
+  /**
+   * Publie la routine ouverte à Numo — « change son heure », « mets-la en
+   * pause », « qu'est-ce qu'elle fait déjà ? » se résolvent alors sur celle-ci,
+   * sans la chercher, exactement comme le panneau d'un ticket publie son ticket
+   * et le tableau de bord des retours son retour.
+   *
+   * Le PROJET part avec elle : une routine n'existe que dans le sien, et les
+   * outils de routine le demandent. Sans routine sélectionnée, rien n'est
+   * publié : cette colonne est cross-projet, et il n'y aurait pas de projet
+   * unique à annoncer.
+   */
+  useAssistantContext(
+    selected
+      ? {
+          projectId: selected.project_id,
+          routineId: selected.id,
+          routineTitle: selected.title,
+        }
+      : null,
+  );
 
   const anyEligible = projects.some((p) => canCreateIn(p.id));
   /**

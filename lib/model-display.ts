@@ -44,12 +44,35 @@ export function providerFromModel(modelId: string | null | undefined): string {
   return PROVIDER_ALIASES[provider] ?? provider;
 }
 
+/** Majuscule initiale, puis correction de casse des marques et acronymes. */
+function capitalize(word: string): string {
+  const cap = word.charAt(0).toUpperCase() + word.slice(1);
+  return TOKEN_FIXUPS[cap] ?? cap;
+}
+
 function formatToken(tok: string): string {
   if (!tok) return tok;
-  // Tokens de version : garde tel quel, mais majuscule le préfixe "v" (v4 → V4).
-  if (/\d/.test(tok)) return tok.replace(/^v(?=\d)/i, "V");
-  const cap = tok.charAt(0).toUpperCase() + tok.slice(1);
-  return TOKEN_FIXUPS[cap] ?? cap;
+  /**
+   * Token de VERSION (« k3 », « v4 », « qwen3.5 ») : le numéro reste tel quel,
+   * mais les lettres qui le précèdent se capitalisent comme partout ailleurs.
+   * Elles ne le faisaient pas, et « moonshotai/kimi-k3 » se lisait « Kimi k3 » —
+   * le cas « v4 » était traité seul, en dur, et c'était le seul.
+   *
+   * L'exception est la famille de raisonnement d'OpenAI : « o3 » s'écrit en
+   * minuscule, chez OpenAI comme dans l'index OpenRouter, qui la nomme
+   * « OpenAI: o3 Pro ». C'est bien une exception de marque et non une règle sur
+   * les préfixes d'une lettre : « k3 » et « r1 » se capitalisent, eux.
+   */
+  const versioned = /^([a-z]+)([\d.].*)$/i.exec(tok);
+  if (versioned) {
+    const [, letters, version] = versioned;
+    if (letters.toLowerCase() === "o") return `o${version}`;
+    return `${capitalize(letters)}${version}`;
+  }
+  // Un token qui COMMENCE par un chiffre se garde intact : « 4o » de GPT-4o,
+  // « 70b » d'un Llama, « 2.5 » d'un Gemini.
+  if (/\d/.test(tok)) return tok;
+  return capitalize(tok);
 }
 
 /**
