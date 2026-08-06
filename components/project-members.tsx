@@ -119,7 +119,11 @@ export function ProjectMembers({
           <p className="-mt-2 text-xs text-muted-foreground">
             {t("inviteHint")}
           </p>
-          {maxMembersPerProject != null && (
+          {/* Tant que la liste charge, `guestsUsed` vaut 0 parce qu'on n'a
+              encore RIEN reçu — pas parce que le projet est vide. Afficher le
+              compteur là annoncerait « 0 invité sur 2 » à un projet plein, une
+              demi-seconde, à chaque ouverture de l'onglet. */}
+          {!loading && maxMembersPerProject != null && (
             <p className="-mt-3 text-xs text-muted-foreground">
               {limitReached ? (
                 <>

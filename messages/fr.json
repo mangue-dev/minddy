@@ -1169,7 +1169,7 @@
     "invitePlaceholder": "collegue@exemple.com",
     "invite": "Inviter",
     "inviteHint": "L'invité doit déjà avoir un compte minddy. Il verra l'invitation sur son accueil.",
-    "guestCount": "{used} invités sur {limit} dans ce projet, invitations en attente comprises.",
+    "guestCount": "{used, plural, one {# invité} other {# invités}} sur {limit} dans ce projet, invitations en attente comprises.",
     "inviteLimitReached": "Votre plan s'arrête à {limit} invités par projet.",
     "membersLabel": "Membres",
     "owner": "Propriétaire",
