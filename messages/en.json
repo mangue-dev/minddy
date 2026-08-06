@@ -4058,8 +4058,6 @@
     "createdDesc": "It will run on its own from now on. Its runs are read here, in the Routines tab.",
     "promptLabel": "Instruction",
     "promptPlaceholder": "Review the code for security flaws, and open a pull request for what you can fix.",
-    "titleLabel": "Name",
-    "titlePlaceholder": "Weekly security review",
     "exampleSecurityLabel": "Security review",
     "exampleSecurity": "Review the repository for security flaws: unvalidated input, secrets in the code, missing authorization checks. Open a pull request for what you can fix with confidence, and report the rest.",
     "exampleDepsLabel": "Dependency sweep",
@@ -4089,7 +4087,7 @@
     "runStarted": "Run started",
     "nextRunAt": "next run {date}",
     "previousRuns": "Previous runs",
-    "noRunsYet": "It has not run yet",
+    "noRunsYet": "This routine has not run yet",
     "seeBilling": "See billing",
     "lastErrorBadge": "A run was skipped",
     "deleteTitle": "Delete “{title}”?",
@@ -4104,8 +4102,18 @@
     "error_modelAbovePlan": "That model is above your plan's ceiling. Pick another one.",
     "error_unknownTimezone": "Unknown timezone. Use an IANA name, like Europe/Paris.",
     "error_invalidSchedule": "This cadence is incomplete: pick a day for a weekly or monthly routine.",
-    "error_titleRequired": "A name is required.",
     "error_promptRequired": "An instruction is required — it is what the agent runs.",
-    "seeRoutine": "See the routine"
+    "seeRoutine": "See the routine",
+    "filterPlaceholder": "Filter {count} routines…",
+    "titleAutoHint": "minddy names the routine from this instruction, and renames it whenever you change it.",
+    "stopEditing": "Stop editing",
+    "weekdayPlaceholder": "Pick one or more days",
+    "weekdaySearch": "Search a day…",
+    "dayOfMonthPlaceholder": "Pick one or more days",
+    "dayOfMonthSearch": "Search a day…",
+    "timezonePlaceholder": "Pick a timezone",
+    "timezoneSearch": "Search a city or a zone…",
+    "timezoneEmpty": "No timezone found",
+    "actionsLabel": "Routine actions"
   }
 }

@@ -328,8 +328,8 @@ function mcpRoutine(routine: Routine) {
     frequency: routine.frequency,
     hour: routine.hour,
     minute: routine.minute,
-    weekday: routine.weekday,
-    day_of_month: routine.day_of_month,
+    weekdays: routine.weekdays,
+    days_of_month: routine.days_of_month,
     timezone: routine.timezone,
     enabled: routine.enabled,
     next_run_at: routine.next_run_at,
@@ -360,8 +360,6 @@ function routineFailure(r: {
         "invalid_params",
         "This project has no linked repository, so a routine would have nothing to clone. Link one first."
       );
-    case "titleRequired":
-      return fail("invalid_params", "title must be 1 to 120 characters.");
     case "promptRequired":
       return fail("invalid_params", "prompt is required — it is the instruction each run receives.");
     case "unknownTimezone":
@@ -372,7 +370,7 @@ function routineFailure(r: {
     case "invalidSchedule":
       return fail(
         "invalid_params",
-        "The cadence does not hold together: 'weekly' takes a weekday (0=Sunday…6=Saturday) and no day_of_month; 'monthly' takes a day_of_month (1–31) and no weekday."
+        "The cadence does not hold together: 'weekly' takes at least one day in weekdays (0=Sunday…6=Saturday) and no days_of_month; 'monthly' takes at least one day in days_of_month (1–31) and no weekdays."
       );
     case "modelAbovePlan":
       return fail(
@@ -3525,7 +3523,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "List the project's ROUTINES — the jobs minddy's coding agent runs BY " +
         "ITSELF on a schedule. Each one gives its id, title, the instruction it " +
-        "runs, its cadence (frequency + hour/minute + weekday or day_of_month + " +
+        "runs, its cadence (frequency + hour/minute + weekdays or days_of_month + " +
         "IANA timezone), its model, whether it is enabled, when it last ran, when " +
         "it runs next, and the code of the last missed run ('quota' = the monthly " +
         "usage budget was exhausted, 'noRepo' = the repository was unlinked). Call " +
@@ -3549,7 +3547,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Create routine",
       description:
-        "Create a ROUTINE: a named job that minddy's coding agent runs BY ITSELF " +
+        "Create a ROUTINE: a job that minddy's coding agent runs BY ITSELF " +
         "on a schedule, in a sandbox on the project's linked repository — a " +
         "security review every Monday, a dependency sweep on the 1st, a monthly " +
         "inventory. OWNER ONLY: only the project's owner can create one, because " +
@@ -3559,6 +3557,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "task that comes back on a board) and NOT a project automation (those " +
         "react to an event on an issue): nothing triggers a routine but the clock, " +
         "and each occurrence is a real agent run with its own sandbox and tools. " +
+        "There is NO name to pass: minddy writes the routine's title from its " +
+        "instruction, and rewrites it whenever the instruction changes. " +
         "Two things follow from running unattended, and the instruction must be " +
         "written for them: the agent CANNOT ask anything (no question will ever be " +
         "answered — it decides and documents its choice), and it MAY open a pull " +
@@ -3570,11 +3570,6 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "under 'Routines', separately from agent runs. Requires a linked repository.",
       inputSchema: {
         project_id: PROJECT_ID,
-        title: z
-          .string()
-          .min(1)
-          .max(120)
-          .describe("Short name shown in the Routines tab, e.g. 'Weekly security review'."),
         prompt: z
           .string()
           .min(1)
@@ -3585,7 +3580,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         frequency: z
           .enum(["daily", "weekly", "monthly"])
           .describe(
-            "'daily', 'weekly' (then pass weekday) or 'monthly' (then pass day_of_month)."
+            "'daily', 'weekly' (then pass weekdays) or 'monthly' (then pass days_of_month)."
           ),
         hour: z
           .number()
@@ -3603,26 +3598,24 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "time, and nothing on screen says so. An unknown name is refused."
           ),
         minute: z.number().int().min(0).max(59).optional().describe("Minute, 0–59. Default 0."),
-        weekday: z
-          .number()
-          .int()
-          .min(0)
-          .max(6)
+        weekdays: z
+          .array(z.number().int().min(0).max(6))
           .optional()
           .describe(
-            "Day of the week for a 'weekly' routine: 0 = Sunday, 1 = Monday … " +
-              "6 = Saturday. Required for 'weekly', REFUSED on other cadences."
+            "Days of the week a 'weekly' routine runs on: 0 = Sunday, 1 = Monday … " +
+              "6 = Saturday. SEVERAL are allowed — [1, 4] means every Monday AND " +
+              "Thursday. At least one is required for 'weekly'; REFUSED on other " +
+              "cadences."
           ),
-        day_of_month: z
-          .number()
-          .int()
-          .min(1)
-          .max(31)
+        days_of_month: z
+          .array(z.number().int().min(1).max(31))
           .optional()
           .describe(
-            "Day of the month for a 'monthly' routine, 1–31. On a shorter month it " +
-              "falls back to that month's last day (31 in February = the 28th), it " +
-              "never skips a month. Required for 'monthly', REFUSED on other cadences."
+            "Days of the month a 'monthly' routine runs on, 1–31. SEVERAL are " +
+              "allowed — [1, 15] means the 1st AND the 15th. On a shorter month a " +
+              "day falls back to that month's last day (31 in February = the 28th), " +
+              "never skipping a month. At least one is required for 'monthly'; " +
+              "REFUSED on other cadences."
           ),
         model: z
           .string()
@@ -3648,7 +3641,6 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const result = await createRoutine({
         projectId: scope.access.project.id,
         actorId: scope.userId,
-        title: args.title,
         prompt: args.prompt,
         model: args.model ?? null,
         reasoningLevel: args.reasoning_level ?? null,
@@ -3656,8 +3648,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         frequency: args.frequency,
         hour: args.hour,
         minute: args.minute ?? 0,
-        weekday: args.weekday ?? null,
-        dayOfMonth: args.day_of_month ?? null,
+        weekdays: args.weekdays ?? null,
+        daysOfMonth: args.days_of_month ?? null,
         timezone: args.timezone,
       });
       if (!result.ok) return routineFailure(result);
@@ -3679,8 +3671,14 @@ export function registerMinddyTools(rawServer: McpServer): void {
       inputSchema: {
         project_id: PROJECT_ID,
         routine_id: z.string().uuid().describe("From minddy_list_routines."),
-        title: z.string().min(1).max(120).optional(),
-        prompt: z.string().min(1).optional().describe("REPLACES the current instruction."),
+        prompt: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "REPLACES the current instruction. The title is rewritten from it — " +
+              "there is no name to pass."
+          ),
         enabled: z
           .boolean()
           .optional()
@@ -3688,8 +3686,11 @@ export function registerMinddyTools(rawServer: McpServer): void {
         frequency: z.enum(["daily", "weekly", "monthly"]).optional(),
         hour: z.number().int().min(0).max(23).optional(),
         minute: z.number().int().min(0).max(59).optional(),
-        weekday: z.number().int().min(0).max(6).optional().describe("0 = Sunday … 6 = Saturday."),
-        day_of_month: z.number().int().min(1).max(31).optional(),
+        weekdays: z
+          .array(z.number().int().min(0).max(6))
+          .optional()
+          .describe("0 = Sunday … 6 = Saturday. Several allowed."),
+        days_of_month: z.array(z.number().int().min(1).max(31)).optional(),
         timezone: z
           .string()
           .optional()
@@ -3706,7 +3707,6 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const result = await updateRoutine({
         routineId: args.routine_id,
         actorId: scope.userId,
-        ...(args.title !== undefined ? { title: args.title } : {}),
         ...(args.prompt !== undefined ? { prompt: args.prompt } : {}),
         ...(args.enabled !== undefined ? { enabled: args.enabled } : {}),
         ...(args.model !== undefined ? { model: args.model } : {}),
@@ -3717,8 +3717,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         ...(args.frequency !== undefined ? { frequency: args.frequency } : {}),
         ...(args.hour !== undefined ? { hour: args.hour } : {}),
         ...(args.minute !== undefined ? { minute: args.minute } : {}),
-        ...(args.weekday !== undefined ? { weekday: args.weekday } : {}),
-        ...(args.day_of_month !== undefined ? { dayOfMonth: args.day_of_month } : {}),
+        ...(args.weekdays !== undefined ? { weekdays: args.weekdays } : {}),
+        ...(args.days_of_month !== undefined ? { daysOfMonth: args.days_of_month } : {}),
         ...(args.timezone !== undefined ? { timezone: args.timezone } : {}),
       });
       if (!result.ok) return routineFailure(result);

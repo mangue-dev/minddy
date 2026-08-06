@@ -18,7 +18,7 @@ const paris = (over: Partial<RoutineSchedule> = {}): RoutineSchedule => ({
   frequency: "weekly",
   hour: 9,
   minute: 0,
-  weekday: 1, // lundi
+  weekdays: [1], // lundi
   timezone: "Europe/Paris",
   ...over,
 });
@@ -76,10 +76,62 @@ describe("nextRunAt — hebdomadaire", () => {
   });
 });
 
+describe("nextRunAt — plusieurs jours", () => {
+  it("prend le PROCHAIN des jours retenus, pas le premier de la liste", () => {
+    // Lundi, mardi et jeudi. On est mardi 10 février à 10 h (l'échéance de 9 h
+    // est passée) : la suivante est jeudi, pas lundi prochain.
+    const next = nextRunAt(
+      paris({ weekdays: [4, 1, 2] }),
+      new Date("2026-02-10T09:00:00Z"),
+    );
+    expect(localClock(next, "Europe/Paris")).toBe("12/02/2026, 09:00");
+  });
+
+  it("repart au premier jour de la semaine suivante après le dernier", () => {
+    // Jeudi 12 février, 10 h : plus rien cette semaine → lundi 16.
+    const next = nextRunAt(
+      paris({ weekdays: [1, 2, 4] }),
+      new Date("2026-02-12T09:00:00Z"),
+    );
+    expect(localClock(next, "Europe/Paris")).toBe("16/02/2026, 09:00");
+  });
+
+  it("enchaîne les jours du mois retenus dans l'ordre", () => {
+    // Le 1, le 3 et le 12. Depuis le 4 février, la prochaine est le 12.
+    const monthly = paris({
+      frequency: "monthly",
+      weekdays: null,
+      daysOfMonth: [12, 1, 3],
+    });
+    expect(
+      localClock(nextRunAt(monthly, new Date("2026-02-04T12:00:00Z")), "Europe/Paris"),
+    ).toBe("12/02/2026, 09:00");
+    // Après le 12, on bascule sur le 1er du mois suivant.
+    expect(
+      localClock(nextRunAt(monthly, new Date("2026-02-13T12:00:00Z")), "Europe/Paris"),
+    ).toBe("01/03/2026, 09:00");
+  });
+
+  it("ne joue qu'UNE fois quand deux jours retombent au même endroit", () => {
+    // 30 et 31 en février tombent tous les deux le 28 : c'est une occurrence.
+    const at = nextRunAt(
+      paris({ frequency: "monthly", weekdays: null, daysOfMonth: [30, 31] }),
+      new Date("2026-02-01T12:00:00Z"),
+    );
+    expect(localClock(at, "Europe/Paris")).toBe("28/02/2026, 09:00");
+    // Et la suivante est bien en mars, pas une seconde fois en février.
+    expect(localClock(nextRunAt(paris({
+      frequency: "monthly",
+      weekdays: null,
+      daysOfMonth: [30, 31],
+    }), at), "Europe/Paris")).toBe("30/03/2026, 09:00");
+  });
+});
+
 describe("nextRunAt — quotidien", () => {
   it("garde l'heure du jour même quand elle est encore devant", () => {
     const next = nextRunAt(
-      paris({ frequency: "daily", weekday: null, hour: 22 }),
+      paris({ frequency: "daily", weekdays: null, hour: 22 }),
       new Date("2026-02-05T12:00:00Z"),
     );
     expect(localClock(next, "Europe/Paris")).toBe("05/02/2026, 22:00");
@@ -87,7 +139,7 @@ describe("nextRunAt — quotidien", () => {
 
   it("bascule à demain dès que l'heure du jour est passée", () => {
     const next = nextRunAt(
-      paris({ frequency: "daily", weekday: null, hour: 9 }),
+      paris({ frequency: "daily", weekdays: null, hour: 9 }),
       new Date("2026-02-05T12:00:00Z"),
     );
     expect(localClock(next, "Europe/Paris")).toBe("06/02/2026, 09:00");
@@ -98,7 +150,7 @@ describe("nextRunAt — quotidien", () => {
     // jour-là. La routine doit repartir sur la première heure qui existe, pas
     // revenir en arrière ni disparaître.
     const next = nextRunAt(
-      paris({ frequency: "daily", weekday: null, hour: 2, minute: 30 }),
+      paris({ frequency: "daily", weekdays: null, hour: 2, minute: 30 }),
       new Date("2026-03-29T00:30:00Z"),
     );
     expect(next.getTime()).toBeGreaterThan(Date.parse("2026-03-29T00:30:00Z"));
@@ -111,7 +163,7 @@ describe("nextRunAt — mensuel", () => {
   it("ramène le 31 au dernier jour d'un mois de 30 jours", () => {
     // On ne saute pas le mois : « le 31 » veut dire la fin du mois.
     const next = nextRunAt(
-      paris({ frequency: "monthly", weekday: null, dayOfMonth: 31 }),
+      paris({ frequency: "monthly", weekdays: null, daysOfMonth: [31] }),
       new Date("2026-04-15T12:00:00Z"),
     );
     expect(localClock(next, "Europe/Paris")).toBe("30/04/2026, 09:00");
@@ -119,7 +171,7 @@ describe("nextRunAt — mensuel", () => {
 
   it("ramène le 31 au 28 février d'une année ordinaire", () => {
     const next = nextRunAt(
-      paris({ frequency: "monthly", weekday: null, dayOfMonth: 31 }),
+      paris({ frequency: "monthly", weekdays: null, daysOfMonth: [31] }),
       new Date("2026-02-01T12:00:00Z"),
     );
     expect(localClock(next, "Europe/Paris")).toBe("28/02/2026, 09:00");
@@ -127,7 +179,7 @@ describe("nextRunAt — mensuel", () => {
 
   it("passe au mois suivant quand le jour est derrière nous", () => {
     const next = nextRunAt(
-      paris({ frequency: "monthly", weekday: null, dayOfMonth: 3 }),
+      paris({ frequency: "monthly", weekdays: null, daysOfMonth: [3] }),
       new Date("2026-02-15T12:00:00Z"),
     );
     expect(localClock(next, "Europe/Paris")).toBe("03/03/2026, 09:00");
@@ -135,7 +187,7 @@ describe("nextRunAt — mensuel", () => {
 
   it("franchit décembre → janvier", () => {
     const next = nextRunAt(
-      paris({ frequency: "monthly", weekday: null, dayOfMonth: 5 }),
+      paris({ frequency: "monthly", weekdays: null, daysOfMonth: [5] }),
       new Date("2026-12-20T12:00:00Z"),
     );
     expect(localClock(next, "Europe/Paris")).toBe("05/01/2027, 09:00");
@@ -158,12 +210,12 @@ describe("assertSchedule", () => {
 
   it("refuse un weekday sur une cadence mensuelle, et l'inverse", () => {
     expect(() =>
-      assertSchedule(paris({ frequency: "monthly", dayOfMonth: 1, weekday: 3 })),
+      assertSchedule(paris({ frequency: "monthly", daysOfMonth: [1], weekdays: [3] })),
     ).toThrow(RoutineScheduleError);
     expect(() =>
-      assertSchedule(paris({ frequency: "weekly", weekday: 1, dayOfMonth: 12 })),
+      assertSchedule(paris({ frequency: "weekly", weekdays: [1], daysOfMonth: [12] })),
     ).toThrow(RoutineScheduleError);
-    expect(() => assertSchedule(paris({ frequency: "weekly", weekday: null }))).toThrow(
+    expect(() => assertSchedule(paris({ frequency: "weekly", weekdays: [] }))).toThrow(
       RoutineScheduleError,
     );
   });
@@ -176,7 +228,7 @@ describe("assertSchedule", () => {
   it("accepte une cadence bien formée", () => {
     expect(() => assertSchedule(paris())).not.toThrow();
     expect(() =>
-      assertSchedule(paris({ frequency: "daily", weekday: null })),
+      assertSchedule(paris({ frequency: "daily", weekdays: null })),
     ).not.toThrow();
   });
 });
@@ -197,8 +249,8 @@ describe("describeSchedule", () => {
     expect(String(seen[0][1].time)).toContain("09");
 
     seen.length = 0;
-    describeSchedule(paris({ frequency: "monthly", weekday: null, dayOfMonth: 4 }), t as never);
+    describeSchedule(paris({ frequency: "monthly", weekdays: null, daysOfMonth: [4] }), t as never);
     expect(seen[0][0]).toBe("cadenceMonthly");
-    expect(seen[0][1].day).toBe(4);
+    expect(String(seen[0][1].day)).toBe("4");
   });
 });

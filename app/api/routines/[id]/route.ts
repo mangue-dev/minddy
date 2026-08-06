@@ -16,7 +16,6 @@ export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const MAX_TITLE_LENGTH = 120;
 const MAX_PROMPT_LENGTH = 20_000;
 const MAX_SHORT_FIELD = 255;
 
@@ -26,6 +25,12 @@ function str(value: unknown, max: number): string | undefined {
 
 function num(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function days(value: unknown): number[] {
+  return Array.isArray(value)
+    ? value.filter((v): v is number => typeof v === "number").slice(0, 31)
+    : [];
 }
 
 export async function GET(request: NextRequest, ctx: RouteContext) {
@@ -56,7 +61,6 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
     actorId: auth.user.id,
     // Seuls les champs PRÉSENTS partent : la fabrique distingue « absent » de
     // « vidé », et un `undefined` qui traverse effacerait un modèle choisi.
-    ...(body.title !== undefined ? { title: str(body.title, MAX_TITLE_LENGTH) } : {}),
     ...(body.prompt !== undefined ? { prompt: str(body.prompt, MAX_PROMPT_LENGTH) } : {}),
     ...(body.model !== undefined ? { model: str(body.model, MAX_SHORT_FIELD) || null } : {}),
     ...(body.reasoningLevel !== undefined
@@ -68,8 +72,8 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
     ...(body.frequency !== undefined ? { frequency: str(body.frequency, 32) } : {}),
     ...(body.hour !== undefined ? { hour: num(body.hour) } : {}),
     ...(body.minute !== undefined ? { minute: num(body.minute) } : {}),
-    ...(body.weekday !== undefined ? { weekday: num(body.weekday) ?? null } : {}),
-    ...(body.dayOfMonth !== undefined ? { dayOfMonth: num(body.dayOfMonth) ?? null } : {}),
+    ...(body.weekdays !== undefined ? { weekdays: days(body.weekdays) } : {}),
+    ...(body.daysOfMonth !== undefined ? { daysOfMonth: days(body.daysOfMonth) } : {}),
     ...(body.timezone !== undefined ? { timezone: str(body.timezone, 64) } : {}),
     ...(typeof body.enabled === "boolean" ? { enabled: body.enabled } : {}),
   });

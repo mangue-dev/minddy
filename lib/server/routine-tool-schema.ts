@@ -27,13 +27,15 @@ import { REASONING_LEVELS } from "@/lib/agent-reasoning";
 const FREQUENCY_VALUES = [...ROUTINE_FREQUENCIES];
 
 export const CREATE_ROUTINE_DESCRIPTION =
-  "Create a ROUTINE: a named job that minddy's coding agent runs BY ITSELF on a " +
+  "Create a ROUTINE: a job that minddy's coding agent runs BY ITSELF on a " +
   "schedule, in a sandbox on the project's linked repository — a security review " +
   "every Monday, a dependency sweep on the first of the month, a monthly inventory " +
   "of something. It is NOT a recurring ticket (that is an issue with a `recurrence`) " +
   "and NOT a project automation (those react to an event): nothing triggers it but " +
   "the clock, and it produces a real agent run with its own streaming, sandbox and " +
-  "tools. `prompt` IS the instruction the agent receives, so WRITE it from the " +
+  "tools. There is NO name to pass: minddy writes the routine's title from its " +
+  "instruction, and rewrites it whenever the instruction changes. `prompt` IS the " +
+  "instruction the agent receives, so WRITE it from the " +
   "user's request rather than copying their sentence — nobody will be at the screen " +
   "to clarify it: the routine CANNOT ask questions, it decides and documents its " +
   "choice. It MAY open a pull request on its own when it finds something worth " +
@@ -46,12 +48,13 @@ export const CREATE_ROUTINE_DESCRIPTION =
 
 export const UPDATE_ROUTINE_DESCRIPTION =
   "Change an existing routine: turn it on or off (`enabled`), move its cadence, " +
-  "swap its model or rewrite its instruction. OWNER ONLY. Touching the cadence or " +
-  "re-enabling it recomputes the next run — so 'move it to 7am' takes effect at the " +
+  "swap its model or rewrite its instruction (its title follows). OWNER ONLY. " +
+  "Touching the cadence or re-enabling it recomputes the next run — so 'move it to 7am' takes effect at the " +
   "NEXT occurrence, not at the one already scheduled. Get the id from list_routines.";
 
 export const LIST_ROUTINES_DESCRIPTION =
-  "List the routines of a project: id, title, instruction, cadence in plain fields, " +
+  "List the routines of a project: id, title (written by minddy from the " +
+  "instruction), instruction, cadence in plain fields, " +
   "model, whether it is enabled, when it last ran and when it runs next, and the " +
   "code of the last missed run (an exhausted usage budget, an unlinked repository). " +
   "Call it before creating one, to reuse or adjust what is already scheduled instead " +
@@ -63,8 +66,8 @@ export const ROUTINE_SCHEDULE_PROPERTIES: Record<string, unknown> = {
     type: "string",
     enum: FREQUENCY_VALUES,
     description:
-      "How often it runs: 'daily', 'weekly' (then pass weekday) or 'monthly' (then " +
-      "pass day_of_month).",
+      "How often it runs: 'daily', 'weekly' (then pass weekdays) or 'monthly' " +
+      "(then pass days_of_month).",
   },
   hour: {
     type: "number",
@@ -74,18 +77,24 @@ export const ROUTINE_SCHEDULE_PROPERTIES: Record<string, unknown> = {
     type: "number",
     description: "Minute of the run, 0–59. Defaults to 0.",
   },
-  weekday: {
-    type: "number",
+  weekdays: {
+    type: "array",
+    items: { type: "number" },
     description:
-      "Day of the week for a 'weekly' routine: 0 = Sunday, 1 = Monday … 6 = Saturday. " +
-      "Required for 'weekly', REFUSED on the other cadences.",
+      "Days of the week a 'weekly' routine runs on: 0 = Sunday, 1 = Monday … " +
+      "6 = Saturday. SEVERAL are allowed — [1, 4] is 'every Monday and Thursday', " +
+      "and it runs on each of them. At least one is required for 'weekly', and the " +
+      "field is REFUSED on the other cadences.",
   },
-  day_of_month: {
-    type: "number",
+  days_of_month: {
+    type: "array",
+    items: { type: "number" },
     description:
-      "Day of the month for a 'monthly' routine, 1–31. On a shorter month it falls " +
-      "back to the last day (31 in February means the 28th), never skips the month. " +
-      "Required for 'monthly', REFUSED on the other cadences.",
+      "Days of the month a 'monthly' routine runs on, 1–31. SEVERAL are allowed — " +
+      "[1, 15] is 'the 1st and the 15th'. On a shorter month a day falls back to " +
+      "that month's last day (31 in February means the 28th) and never skips the " +
+      "month. At least one is required for 'monthly', and the field is REFUSED on " +
+      "the other cadences.",
   },
   timezone: {
     type: "string",
@@ -101,12 +110,6 @@ export const ROUTINE_SCHEDULE_PROPERTIES: Record<string, unknown> = {
 export const CREATE_ROUTINE_PARAMETERS = {
   type: "object" as const,
   properties: {
-    title: {
-      type: "string",
-      description:
-        "Short name shown in the Routines tab, e.g. 'Weekly security review'. Write it " +
-        "yourself from the request; do not ask for it.",
-    },
     prompt: {
       type: "string",
       description:
@@ -133,12 +136,13 @@ export const CREATE_ROUTINE_PARAMETERS = {
       description: "Branch the runs start from. Omit for the repository's default branch.",
     },
   } as Record<string, unknown>,
-  // `minute`, `weekday` et `day_of_month` restent hors du requis : les deux
+  // `minute`, `weekdays` et `days_of_month` restent hors du requis : les deux
   // derniers dépendent de la cadence, et un champ requis mais interdit selon la
   // fréquence est un piège. Tout le reste EST requis — un petit modèle ne
   // remplit pas un champ optionnel, et `timezone` absent fait partir la routine
-  // trois heures à côté sans que personne ne le voie.
-  required: ["title", "prompt", "frequency", "hour", "timezone"],
+  // trois heures à côté sans que personne ne le voie. Pas de `title` : il est
+  // écrit par minddy, à partir de l'instruction.
+  required: ["prompt", "frequency", "hour", "timezone"],
 };
 
 /** Paramètres de `update_routine` — tout est optionnel sauf la cible. */
@@ -146,8 +150,12 @@ export const UPDATE_ROUTINE_PARAMETERS = {
   type: "object" as const,
   properties: {
     routine_id: { type: "string", description: "Routine id, from list_routines." },
-    title: { type: "string", description: "New name." },
-    prompt: { type: "string", description: "New instruction (REPLACES the current one)." },
+    prompt: {
+      type: "string",
+      description:
+        "New instruction (REPLACES the current one). The routine's title is rewritten " +
+        "from it automatically — there is no name to pass.",
+    },
     enabled: {
       type: "boolean",
       description:

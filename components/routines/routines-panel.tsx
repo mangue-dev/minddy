@@ -7,6 +7,8 @@ import { Button, Skeleton, Tooltip, TooltipContent, TooltipTrigger, cn } from "m
 import { CalendarClock, Plus } from "lucide-react";
 
 import { EmptyScene } from "@/components/empty-scene";
+import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { matchesFilter } from "@/components/sidebar-filter-field";
 import {
   PROJECT_GROUP_INDENT,
   SidebarProjectGroup,
@@ -38,17 +40,14 @@ export function RoutinesPanel({
   onSelect,
   mobileDetail,
   onBack,
-  renderSidebar,
+  tabs,
 }: {
   selectedId: string | null;
   onSelect: (routineId: string | null) => void;
   mobileDetail: boolean;
   onBack: () => void;
-  /**
-   * La colonne est rendue par la page (elle porte `SecondarySidebar` et son
-   * filtre) : ce panneau lui passe son contenu et reçoit le volet de droite.
-   */
-  renderSidebar: (list: ReactNode) => ReactNode;
+  /** Le sélecteur d'onglet Conversations / Routines, posé en tête de colonne. */
+  tabs: ReactNode;
 }) {
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
@@ -61,6 +60,7 @@ export function RoutinesPanel({
 
   const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -70,9 +70,26 @@ export function RoutinesPanel({
     [projects],
   );
 
+  /**
+   * Ce que la colonne AFFICHE. Le filtre ne touche pas `routines`, qui porte la
+   * sélection : sinon taper trois lettres ferait sauter la routine ouverte, une
+   * fois par lettre. Une routine se cherche par son nom, son instruction ou son
+   * projet — les trois choses que la ligne et son détail montrent.
+   */
+  const visible = useMemo(() => {
+    if (!query.trim()) return routines;
+    return routines.filter((r) =>
+      matchesFilter(query, [
+        r.title,
+        r.prompt,
+        projectById.get(r.project_id)?.name ?? null,
+      ]),
+    );
+  }, [routines, query, projectById]);
+
   const groups = useMemo(
     () =>
-      groupByProject(routines, (r) => {
+      groupByProject(visible, (r) => {
         const project = projectById.get(r.project_id);
         return project
           ? {
@@ -83,7 +100,7 @@ export function RoutinesPanel({
             }
           : null;
       }),
-    [routines, projectById],
+    [visible, projectById],
   );
 
   const selected = routines.find((r) => r.id === selectedId) ?? null;
@@ -128,6 +145,12 @@ export function RoutinesPanel({
         ) : null}
       </EmptyScene>
     </div>
+  ) : visible.length === 0 ? (
+    // Le filtre a simplement vidé la liste : une ligne discrète suffit, la
+    // colonne n'est pas vide, elle est restreinte.
+    <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+      {tCommon("noFilterMatch")}
+    </p>
   ) : (
     <div className="flex flex-col gap-2 px-2 pt-2 pb-4">
       {groups.map((g) => (
@@ -185,7 +208,40 @@ export function RoutinesPanel({
 
   return (
     <>
-      {renderSidebar(list)}
+      <SecondarySidebar
+        title={t("title")}
+        hiddenOnMobile={mobileDetail}
+        filter={{
+          value: query,
+          onChange: setQuery,
+          placeholder: t("filterPlaceholder", { count: visible.length }),
+          clearLabel: tCommon("clearFilter"),
+        }}
+        actions={
+          /* Le « + » de la colonne, exactement à la place de celui des
+             conversations. Il n'existe QUE si un projet peut en accueillir une
+             (possédé, dépôt lié) : un bouton qui mène à un 403 ne s'affiche pas. */
+          anyEligible ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => openWizard()}
+                  className="-mr-2 text-muted-foreground hover:text-foreground"
+                  aria-label={t("newRoutine")}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("newRoutine")}</TooltipContent>
+            </Tooltip>
+          ) : undefined
+        }
+      >
+        <div className="px-2 pt-2">{tabs}</div>
+        {list}
+      </SecondarySidebar>
 
       <div
         className={cn(
@@ -247,8 +303,8 @@ function RoutineRow({
       frequency: routine.frequency,
       hour: routine.hour,
       minute: routine.minute,
-      weekday: routine.weekday,
-      dayOfMonth: routine.day_of_month,
+      weekdays: routine.weekdays,
+      daysOfMonth: routine.days_of_month,
       timezone: routine.timezone,
     },
     (key, values) => t(key, values),

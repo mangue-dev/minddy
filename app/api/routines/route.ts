@@ -22,7 +22,6 @@ import {
 export const runtime = "nodejs";
 
 /** Bornes du corps, comme la route de lancement carnet (MIN-118). */
-const MAX_TITLE_LENGTH = 120;
 const MAX_PROMPT_LENGTH = 20_000;
 const MAX_SHORT_FIELD = 255;
 
@@ -30,7 +29,6 @@ export const ROUTINE_ERROR_STATUS: Record<RoutineErrorKey, number> = {
   projectNotFound: 404,
   ownerOnly: 403,
   routineNotFound: 404,
-  titleRequired: 400,
   promptRequired: 400,
   noRepo: 409,
   invalidSchedule: 400,
@@ -74,6 +72,14 @@ function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/** Les jours d'une cadence — bornés en nombre, jamais en valeur (la fabrique
+    valide l'intervalle et la cohérence avec la fréquence). */
+function days(value: unknown): number[] {
+  return Array.isArray(value)
+    ? value.filter((v): v is number => typeof v === "number").slice(0, 31)
+    : [];
+}
+
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
@@ -95,7 +101,6 @@ export async function POST(request: NextRequest) {
   const result = await createRoutine({
     projectId,
     actorId: auth.user.id,
-    title: str(body.title, MAX_TITLE_LENGTH),
     prompt: str(body.prompt, MAX_PROMPT_LENGTH),
     model: str(body.model, MAX_SHORT_FIELD) || null,
     reasoningLevel: str(body.reasoningLevel, 32) || null,
@@ -103,8 +108,8 @@ export async function POST(request: NextRequest) {
     frequency: str(body.frequency, 32),
     hour: num(body.hour) ?? 9,
     minute: num(body.minute) ?? 0,
-    weekday: num(body.weekday),
-    dayOfMonth: num(body.dayOfMonth),
+    weekdays: days(body.weekdays),
+    daysOfMonth: days(body.daysOfMonth),
     timezone: str(body.timezone, 64),
     ...(typeof body.enabled === "boolean" ? { enabled: body.enabled } : {}),
   });

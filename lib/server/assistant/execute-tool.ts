@@ -274,14 +274,12 @@ function routineErrorMessage(r: {
       return "No routine with that id. Call list_routines.";
     case "noRepo":
       return "This project has no linked repository, so a routine would have nothing to clone. Link one in the project's Git settings first.";
-    case "titleRequired":
-      return "title is required — write one yourself from the request.";
     case "promptRequired":
       return "prompt is required: it IS the instruction the agent gets at every run.";
     case "unknownTimezone":
       return "That timezone is not a valid IANA name. Pass the user's timezone exactly as it appears in your context (e.g. 'Europe/Paris'), never a guess and never an abbreviation.";
     case "invalidSchedule":
-      return "The cadence does not hold together: 'weekly' needs a weekday (0=Sunday…6=Saturday) and no day_of_month; 'monthly' needs a day_of_month (1–31) and no weekday; hour is 0–23 and minute 0–59.";
+      return "The cadence does not hold together: 'weekly' needs at least one weekday in `weekdays` (0=Sunday…6=Saturday) and no days_of_month; 'monthly' needs at least one day in `days_of_month` (1–31) and no weekdays; hour is 0–23 and minute 0–59.";
     case "modelAbovePlan":
       return r.modelLimit
         ? `The model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's default model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Call list_agent_models to pick one within the ceiling.`
@@ -293,6 +291,13 @@ function routineErrorMessage(r: {
   }
 }
 
+/** Les jours d'une cadence, tels qu'un modèle les envoie (souvent en vrac). */
+function numberList(value: unknown): number[] {
+  return Array.isArray(value)
+    ? value.filter((v): v is number => typeof v === "number" && Number.isFinite(v))
+    : [];
+}
+
 /** Une routine, telle que Numo la relit et la rapporte — cadence en clair. */
 function routineForTool(routine: {
   id: string;
@@ -302,8 +307,8 @@ function routineForTool(routine: {
   frequency: string;
   hour: number;
   minute: number;
-  weekday: number | null;
-  day_of_month: number | null;
+  weekdays: number[];
+  days_of_month: number[];
   timezone: string;
   enabled: boolean;
   next_run_at: string | null;
@@ -318,8 +323,8 @@ function routineForTool(routine: {
     frequency: routine.frequency,
     hour: routine.hour,
     minute: routine.minute,
-    weekday: routine.weekday,
-    day_of_month: routine.day_of_month,
+    weekdays: routine.weekdays,
+    days_of_month: routine.days_of_month,
     timezone: routine.timezone,
     enabled: routine.enabled,
     next_run_at: routine.next_run_at,
@@ -1283,7 +1288,6 @@ export async function executeTool(
         const result = await createRoutine({
           projectId,
           actorId: ctx.userId,
-          title: typeof args.title === "string" ? args.title : "",
           prompt: typeof args.prompt === "string" ? args.prompt : "",
           model: typeof args.model === "string" ? args.model : null,
           reasoningLevel:
@@ -1292,8 +1296,8 @@ export async function executeTool(
           frequency: typeof args.frequency === "string" ? args.frequency : "",
           hour: typeof args.hour === "number" ? args.hour : 9,
           minute: typeof args.minute === "number" ? args.minute : 0,
-          weekday: typeof args.weekday === "number" ? args.weekday : null,
-          dayOfMonth: typeof args.day_of_month === "number" ? args.day_of_month : null,
+          weekdays: numberList(args.weekdays),
+          daysOfMonth: numberList(args.days_of_month),
           // Le fuseau du navigateur est dans le contexte de Numo : s'il ne
           // l'a pas passé, on refuse plutôt que de partir en UTC.
           timezone: typeof args.timezone === "string" ? args.timezone : "",
@@ -1315,7 +1319,6 @@ export async function executeTool(
         const result = await updateRoutine({
           routineId,
           actorId: ctx.userId,
-          ...(typeof args.title === "string" ? { title: args.title } : {}),
           ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}),
           ...(typeof args.enabled === "boolean" ? { enabled: args.enabled } : {}),
           ...("model" in args ? { model: typeof args.model === "string" ? args.model : null } : {}),
@@ -1326,8 +1329,10 @@ export async function executeTool(
           ...(typeof args.frequency === "string" ? { frequency: args.frequency } : {}),
           ...(typeof args.hour === "number" ? { hour: args.hour } : {}),
           ...(typeof args.minute === "number" ? { minute: args.minute } : {}),
-          ...(typeof args.weekday === "number" ? { weekday: args.weekday } : {}),
-          ...(typeof args.day_of_month === "number" ? { dayOfMonth: args.day_of_month } : {}),
+          ...(Array.isArray(args.weekdays) ? { weekdays: numberList(args.weekdays) } : {}),
+          ...(Array.isArray(args.days_of_month)
+            ? { daysOfMonth: numberList(args.days_of_month) }
+            : {}),
           ...(typeof args.timezone === "string" ? { timezone: args.timezone } : {}),
         });
         if (!result.ok) return toolError(routineErrorMessage(result));

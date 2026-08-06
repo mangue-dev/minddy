@@ -839,7 +839,6 @@ async function createRoutineTool(
   const result = await createRoutine({
     projectId: ctx.projectId,
     actorId: ctx.actorId,
-    title: typeof args.title === "string" ? args.title : "",
     prompt: typeof args.prompt === "string" ? args.prompt : "",
     model: typeof args.model === "string" ? args.model : null,
     reasoningLevel: typeof args.reasoning_level === "string" ? args.reasoning_level : null,
@@ -847,8 +846,12 @@ async function createRoutineTool(
     frequency: typeof args.frequency === "string" ? args.frequency : "",
     hour: typeof args.hour === "number" ? args.hour : 9,
     minute: typeof args.minute === "number" ? args.minute : 0,
-    weekday: typeof args.weekday === "number" ? args.weekday : null,
-    dayOfMonth: typeof args.day_of_month === "number" ? args.day_of_month : null,
+    weekdays: Array.isArray(args.weekdays)
+      ? args.weekdays.filter((d): d is number => typeof d === "number")
+      : [],
+    daysOfMonth: Array.isArray(args.days_of_month)
+      ? args.days_of_month.filter((d): d is number => typeof d === "number")
+      : [],
     timezone: typeof args.timezone === "string" ? args.timezone : "",
   });
   if (!result.ok) {
@@ -864,8 +867,8 @@ async function createRoutineTool(
         frequency: routine.frequency,
         hour: routine.hour,
         minute: routine.minute,
-        weekday: routine.weekday,
-        day_of_month: routine.day_of_month,
+        weekdays: routine.weekdays,
+        days_of_month: routine.days_of_month,
         timezone: routine.timezone,
         next_run_at: routine.next_run_at,
       },
@@ -884,14 +887,12 @@ function routineToolError(r: {
       return "Refused: only the OWNER of this project can create a routine — this session was launched by someone else. Report this to the user; do not retry.";
     case "noRepo":
       return "Refused: this project has no linked repository, so a routine would have nothing to clone.";
-    case "titleRequired":
-      return "title is required.";
     case "promptRequired":
       return "prompt is required — it is the instruction the routine runs at every occurrence.";
     case "unknownTimezone":
       return "Refused: `timezone` must be a valid IANA name (e.g. 'Europe/Paris'). Ask the user rather than guessing; never fall back to UTC.";
     case "invalidSchedule":
-      return "Refused: the cadence does not hold together. 'weekly' takes a weekday (0=Sunday…6=Saturday) and no day_of_month; 'monthly' takes a day_of_month (1–31) and no weekday.";
+      return "Refused: the cadence does not hold together. 'weekly' takes at least one day in `weekdays` (0=Sunday…6=Saturday) and no days_of_month; 'monthly' takes at least one day in `days_of_month` (1–31) and no weekdays.";
     case "modelAbovePlan":
       return r.modelLimit
         ? `Refused: ${r.modelLimit.model} is ×${r.modelLimit.multiplier}, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Omit \`model\` to use the account default.`

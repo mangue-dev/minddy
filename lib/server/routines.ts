@@ -7,6 +7,7 @@ import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { isReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import { generateShortTitle } from "@/lib/server/short-title";
 import {
   RoutineScheduleError,
   assertSchedule,
@@ -53,8 +54,8 @@ export interface Routine {
   frequency: RoutineFrequency;
   hour: number;
   minute: number;
-  weekday: number | null;
-  day_of_month: number | null;
+  weekdays: number[];
+  days_of_month: number[];
   timezone: string;
   enabled: boolean;
   next_run_at: string | null;
@@ -77,7 +78,6 @@ export type RoutineErrorKey =
   | "projectNotFound"
   | "ownerOnly"
   | "routineNotFound"
-  | "titleRequired"
   | "promptRequired"
   | "noRepo"
   | "invalidSchedule"
@@ -108,7 +108,12 @@ export interface CreateRoutineInput {
   projectId: string;
   /** Qui demande. La garde owner porte sur LUI, quelle que soit la porte. */
   actorId: string;
-  title: string;
+  /**
+   * PAS de titre : il est ÉCRIT par un petit modèle à partir de l'instruction,
+   * ici et nulle part ailleurs (cf. `titleFor`). Aucune porte n'en propose un —
+   * un nom donné à la main est un champ de plus à remplir pour un résultat
+   * moins bon, et il divergeait de l'instruction dès la première réécriture.
+   */
   prompt: string;
   model?: string | null;
   reasoningLevel?: string | null;
@@ -116,8 +121,8 @@ export interface CreateRoutineInput {
   frequency: string;
   hour: number;
   minute?: number | null;
-  weekday?: number | null;
-  dayOfMonth?: number | null;
+  weekdays?: number[] | null;
+  daysOfMonth?: number[] | null;
   timezone: string;
   enabled?: boolean;
 }
@@ -127,21 +132,56 @@ function toSchedule(input: {
   frequency: string;
   hour: number;
   minute?: number | null;
-  weekday?: number | null;
-  dayOfMonth?: number | null;
+  weekdays?: number[] | null;
+  daysOfMonth?: number[] | null;
   timezone: string;
 }): RoutineSchedule {
   const frequency = isRoutineFrequency(input.frequency) ? input.frequency : "weekly";
+  // Dédoublonnés et triés dès l'entrée : deux fois le même jour n'est pas deux
+  // occurrences, et l'ordre de saisie n'a pas à survivre jusqu'à l'affichage.
+  const uniq = (days: number[] | null | undefined) =>
+    [...new Set(days ?? [])].sort((a, b) => a - b);
   return {
     frequency,
     hour: Number(input.hour),
     minute: Number(input.minute ?? 0),
     // Les champs de jour n'existent QUE pour leur cadence : les laisser traîner
     // d'une cadence à l'autre ferait passer `assertSchedule` pour un caprice.
-    weekday: frequency === "weekly" ? (input.weekday ?? null) : null,
-    dayOfMonth: frequency === "monthly" ? (input.dayOfMonth ?? null) : null,
+    weekdays: frequency === "weekly" ? uniq(input.weekdays) : [],
+    daysOfMonth: frequency === "monthly" ? uniq(input.daysOfMonth) : [],
     timezone: String(input.timezone ?? ""),
   };
+}
+
+/**
+ * Le TITRE d'une routine : écrit par le petit modèle qui nomme déjà les
+ * sessions carnet et les conversations de Numo, à partir de son instruction.
+ *
+ * Il n'est jamais demandé à l'utilisateur, et il se REFAIT à chaque fois que
+ * l'instruction change : un nom saisi une fois cesse de décrire la routine dès
+ * la première réécriture, et personne ne pense à le corriger. L'appel coûte
+ * quelques centimes de millier de tokens, une fois par édition — à comparer au
+ * titre que MIN-185 a justement retiré du lancement, qui se repayait à CHAQUE
+ * passage.
+ *
+ * La dépense est celle de la routine (`routine_code`), comme tout ce qu'elle
+ * fait faire.
+ *
+ * Repli si le modèle ne répond pas : la première phrase de l'instruction,
+ * coupée. Une routine sans titre n'a pas de ligne lisible dans la colonne.
+ */
+async function titleFor(prompt: string, userId: string, projectId: string): Promise<string> {
+  const generated = await generateShortTitle({
+    text: prompt,
+    kind: "note",
+    // La langue du titre est celle de l'instruction, sans qu'on ait à la
+    // connaître ici — c'est la personne qui l'a écrite.
+    locale: "auto",
+    usage: { feature: "routine_code", userId, projectId },
+  }).catch(() => null);
+  if (generated?.trim()) return generated.trim().slice(0, MAX_TITLE_LENGTH);
+  const first = prompt.trim().split(/[.\n!?]/)[0]?.trim() ?? "";
+  return (first || prompt.trim()).slice(0, MAX_TITLE_LENGTH);
 }
 
 /** Traduit un refus de cadence en résultat de fabrique. */
@@ -195,8 +235,6 @@ export async function createRoutine(
   // refuser, et le refus doit être le même quelle que soit la porte.
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
 
-  const title = input.title?.trim() ?? "";
-  if (!title) return { ok: false, status: 400, errorKey: "titleRequired" };
   const prompt = input.prompt?.trim() ?? "";
   if (!prompt) return { ok: false, status: 400, errorKey: "promptRequired" };
 
@@ -219,6 +257,9 @@ export async function createRoutine(
   const refusal = await refuseModelAbovePlan(input.actorId, model);
   if (refusal) return refusal;
 
+  // Le titre en DERNIER : après tous les refus, pour ne pas payer un appel de
+  // nommage à une routine qu'on s'apprête à refuser.
+  const title = await titleFor(prompt, input.actorId, input.projectId);
   const enabled = input.enabled !== false;
   const service = getServiceClient();
   const { data, error } = await service
@@ -228,7 +269,7 @@ export async function createRoutine(
       // Acteur technique = le owner, c'est-à-dire l'appelant (la garde ci-dessus
       // le garantit). Écrit en colonne pour que le cron n'ait pas à re-joindre.
       owner_id: input.actorId,
-      title: title.slice(0, MAX_TITLE_LENGTH),
+      title,
       prompt: prompt.slice(0, MAX_PROMPT_LENGTH),
       model,
       reasoning_level: isReasoningLevel(input.reasoningLevel)
@@ -240,8 +281,8 @@ export async function createRoutine(
       frequency: schedule.frequency,
       hour: schedule.hour,
       minute: schedule.minute,
-      weekday: schedule.weekday,
-      day_of_month: schedule.dayOfMonth,
+      weekdays: schedule.weekdays,
+      days_of_month: schedule.daysOfMonth,
       timezone: schedule.timezone,
       enabled,
       // Une routine désarmée n'a pas d'échéance : l'index partiel du cron ne la
@@ -260,7 +301,7 @@ export async function createRoutine(
 export interface UpdateRoutineInput {
   routineId: string;
   actorId: string;
-  title?: string;
+  /** Réécrire l'instruction REFAIT le titre : cf. `titleFor`. */
   prompt?: string;
   model?: string | null;
   reasoningLevel?: string | null;
@@ -268,8 +309,8 @@ export interface UpdateRoutineInput {
   frequency?: string;
   hour?: number;
   minute?: number | null;
-  weekday?: number | null;
-  dayOfMonth?: number | null;
+  weekdays?: number[] | null;
+  daysOfMonth?: number[] | null;
   timezone?: string;
   enabled?: boolean;
 }
@@ -298,15 +339,16 @@ export async function updateRoutine(
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
 
   const updates: Record<string, unknown> = {};
-  if (typeof input.title === "string") {
-    const title = input.title.trim();
-    if (!title) return { ok: false, status: 400, errorKey: "titleRequired" };
-    updates.title = title.slice(0, MAX_TITLE_LENGTH);
-  }
   if (typeof input.prompt === "string") {
     const prompt = input.prompt.trim();
     if (!prompt) return { ok: false, status: 400, errorKey: "promptRequired" };
     updates.prompt = prompt.slice(0, MAX_PROMPT_LENGTH);
+    // Le titre SUIT l'instruction. Une routine dont on a réécrit le travail
+    // garderait sinon le nom de ce qu'elle faisait avant — et c'est ce nom-là
+    // qu'on lit dans la colonne pour décider si elle sert encore.
+    if (prompt !== routine.prompt) {
+      updates.title = await titleFor(prompt, input.actorId, routine.project_id);
+    }
   }
   if ("model" in input) {
     const model = input.model?.trim() ? input.model.trim().slice(0, MAX_MODEL_LENGTH) : null;
@@ -330,8 +372,8 @@ export async function updateRoutine(
     input.frequency !== undefined ||
     input.hour !== undefined ||
     input.minute !== undefined ||
-    input.weekday !== undefined ||
-    input.dayOfMonth !== undefined ||
+    input.weekdays !== undefined ||
+    input.daysOfMonth !== undefined ||
     input.timezone !== undefined;
   const enabledTouched = typeof input.enabled === "boolean";
   const enabled = enabledTouched ? (input.enabled as boolean) : routine.enabled;
@@ -342,8 +384,9 @@ export async function updateRoutine(
       frequency: input.frequency ?? routine.frequency,
       hour: input.hour ?? routine.hour,
       minute: input.minute ?? routine.minute,
-      weekday: input.weekday !== undefined ? input.weekday : routine.weekday,
-      dayOfMonth: input.dayOfMonth !== undefined ? input.dayOfMonth : routine.day_of_month,
+      weekdays: input.weekdays !== undefined ? input.weekdays : routine.weekdays,
+      daysOfMonth:
+        input.daysOfMonth !== undefined ? input.daysOfMonth : routine.days_of_month,
       timezone: input.timezone ?? routine.timezone,
     });
     try {
@@ -358,8 +401,8 @@ export async function updateRoutine(
       updates.frequency = schedule.frequency;
       updates.hour = schedule.hour;
       updates.minute = schedule.minute;
-      updates.weekday = schedule.weekday;
-      updates.day_of_month = schedule.dayOfMonth;
+      updates.weekdays = schedule.weekdays;
+      updates.days_of_month = schedule.daysOfMonth;
       updates.timezone = schedule.timezone;
     }
     if (enabledTouched) updates.enabled = enabled;
@@ -486,14 +529,7 @@ export async function claimRoutine(
   routine: Routine,
 ): Promise<{ claimed: boolean; nextRunAt: string | null }> {
   if (!routine.next_run_at) return { claimed: false, nextRunAt: null };
-  const schedule = toSchedule({
-    frequency: routine.frequency,
-    hour: routine.hour,
-    minute: routine.minute,
-    weekday: routine.weekday,
-    dayOfMonth: routine.day_of_month,
-    timezone: routine.timezone,
-  });
+  const schedule = routineSchedule(routine);
   let next: string | null;
   try {
     // Depuis MAINTENANT et non depuis l'échéance ratée : une routine réveillée
@@ -543,8 +579,8 @@ export function routineSchedule(routine: Routine): RoutineSchedule {
     frequency: routine.frequency,
     hour: routine.hour,
     minute: routine.minute,
-    weekday: routine.weekday,
-    dayOfMonth: routine.day_of_month,
+    weekdays: routine.weekdays,
+    daysOfMonth: routine.days_of_month,
     timezone: routine.timezone,
   };
 }

@@ -59,8 +59,8 @@ export interface Routine {
   frequency: RoutineFrequency;
   hour: number;
   minute: number;
-  weekday: number | null;
-  day_of_month: number | null;
+  weekdays: number[];
+  days_of_month: number[];
   timezone: string;
   enabled: boolean;
   next_run_at: string | null;
@@ -74,7 +74,7 @@ export interface Routine {
 /** Ce qu'une création envoie — la même forme que la fabrique attend. */
 export interface RoutineInput {
   projectId: string;
-  title: string;
+  /** Pas de titre : minddy l'écrit à partir de l'instruction (cf. `titleFor`). */
   prompt: string;
   model?: string | null;
   reasoningLevel?: ReasoningLevel;
@@ -82,8 +82,8 @@ export interface RoutineInput {
   frequency: RoutineFrequency;
   hour: number;
   minute: number;
-  weekday?: number | null;
-  dayOfMonth?: number | null;
+  weekdays?: number[] | null;
+  daysOfMonth?: number[] | null;
   timezone: string;
 }
 

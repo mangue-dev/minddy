@@ -749,14 +749,7 @@ export function AgentsPage() {
           }}
           mobileDetail={mobileDetail}
           onBack={() => setMobileDetail(false)}
-          renderSidebar={(list) => (
-            <SecondarySidebar title={t("title")} hiddenOnMobile={mobileDetail}>
-              <div className="px-2 pt-2">
-                <AgentsTabs tab={tab} onChange={switchTab} />
-              </div>
-              {list}
-            </SecondarySidebar>
-          )}
+          tabs={<AgentsTabs tab={tab} onChange={switchTab} />}
         />
       </div>
     );

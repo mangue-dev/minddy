@@ -32,10 +32,20 @@ export interface RoutineSchedule {
   hour: number;
   /** 0–59, dans `timezone`. */
   minute: number;
-  /** 0 = dimanche … 6 = samedi. `weekly` seulement. */
-  weekday?: number | null;
-  /** 1–31. `monthly` seulement. Un 31 sur un mois court retombe sur son dernier jour. */
-  dayOfMonth?: number | null;
+  /**
+   * Les jours de semaine retenus, 0 = dimanche … 6 = samedi. `weekly`
+   * seulement, et au moins un — une cadence hebdomadaire sans jour n'a aucune
+   * occurrence. PLUSIEURS : « le lundi et le jeudi » est une cadence aussi
+   * légitime que « le lundi », et la traiter comme un cas à part aurait
+   * dédoublé le calcul du prochain passage.
+   */
+  weekdays?: number[] | null;
+  /**
+   * Les jours du mois retenus, 1–31. `monthly` seulement, au moins un. Un 31
+   * sur un mois court retombe sur son dernier jour — et si un autre jour de la
+   * liste tombe au même endroit, l'occurrence ne compte qu'une fois.
+   */
+  daysOfMonth?: number[] | null;
   /** Fuseau IANA (« Europe/Paris »). Jamais deviné. */
   timezone: string;
 }
@@ -83,20 +93,26 @@ export function assertSchedule(schedule: RoutineSchedule): void {
   if (!Number.isInteger(schedule.minute) || schedule.minute < 0 || schedule.minute > 59) {
     throw new RoutineScheduleError("invalidMinute");
   }
+  const weekdays = schedule.weekdays ?? [];
+  const daysOfMonth = schedule.daysOfMonth ?? [];
   if (schedule.frequency === "weekly") {
-    const d = schedule.weekday;
-    if (!Number.isInteger(d) || (d as number) < 0 || (d as number) > 6) {
+    if (
+      weekdays.length === 0 ||
+      weekdays.some((d) => !Number.isInteger(d) || d < 0 || d > 6)
+    ) {
       throw new RoutineScheduleError("invalidWeekday");
     }
-  } else if (schedule.weekday != null) {
+  } else if (weekdays.length > 0) {
     throw new RoutineScheduleError("invalidWeekday");
   }
   if (schedule.frequency === "monthly") {
-    const d = schedule.dayOfMonth;
-    if (!Number.isInteger(d) || (d as number) < 1 || (d as number) > 31) {
+    if (
+      daysOfMonth.length === 0 ||
+      daysOfMonth.some((d) => !Number.isInteger(d) || d < 1 || d > 31)
+    ) {
       throw new RoutineScheduleError("invalidDayOfMonth");
     }
-  } else if (schedule.dayOfMonth != null) {
+  } else if (daysOfMonth.length > 0) {
     throw new RoutineScheduleError("invalidDayOfMonth");
   }
   if (!isKnownTimezone(schedule.timezone)) {
@@ -226,35 +242,59 @@ export function nextRunAt(schedule: RoutineSchedule, from: Date): Date {
   }
 
   if (schedule.frequency === "weekly") {
-    const target = schedule.weekday as number;
-    // Le premier jour ≥ aujourd'hui qui tombe le bon jour de semaine, puis le
-    // suivant si l'heure est déjà passée.
-    let delta = (target - now.weekday + 7) % 7;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const d = new Date(Date.UTC(now.year, now.month - 1, now.day + delta));
-      const at = zonedTimeToUtc(
-        tz,
-        d.getUTCFullYear(),
-        d.getUTCMonth() + 1,
-        d.getUTCDate(),
-        schedule.hour,
-        schedule.minute,
-      );
-      if (at.getTime() > from.getTime()) return at;
-      delta += 7;
+    // Plusieurs jours possibles : on regarde CHAQUE jour retenu, on garde la
+    // première occurrence à venir. Deux semaines d'horizon suffisent (le pire
+    // cas est « aujourd'hui, mais l'heure est passée »).
+    const targets = [...new Set(schedule.weekdays as number[])];
+    let best: Date | null = null;
+    for (const target of targets) {
+      let delta = (target - now.weekday + 7) % 7;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const d = new Date(Date.UTC(now.year, now.month - 1, now.day + delta));
+        const at = zonedTimeToUtc(
+          tz,
+          d.getUTCFullYear(),
+          d.getUTCMonth() + 1,
+          d.getUTCDate(),
+          schedule.hour,
+          schedule.minute,
+        );
+        if (at.getTime() > from.getTime()) {
+          if (!best || at.getTime() < best.getTime()) best = at;
+          break;
+        }
+        delta += 7;
+      }
     }
-    throw new RoutineScheduleError("invalidWeekday");
+    if (!best) throw new RoutineScheduleError("invalidWeekday");
+    return best;
   }
 
-  // Mensuel : le jour demandé, ramené au dernier jour des mois plus courts —
+  // Mensuel : chaque jour demandé, ramené au dernier jour des mois plus courts —
   // « le 31 » sur février veut dire la fin de février, pas « on saute ce mois ».
-  const wantedDay = schedule.dayOfMonth as number;
+  // Deux jours de la liste peuvent donc tomber au MÊME endroit (30 et 31 en
+  // février) : c'est une occurrence, pas deux, et prendre le minimum le règle
+  // sans avoir à dédoublonner.
+  const wantedDays = [...new Set(schedule.daysOfMonth as number[])];
   for (let add = 0; add <= 2; add++) {
     const year = now.year + Math.floor((now.month - 1 + add) / 12);
     const month = ((now.month - 1 + add) % 12) + 1;
-    const day = Math.min(wantedDay, daysInMonth(year, month));
-    const at = zonedTimeToUtc(tz, year, month, day, schedule.hour, schedule.minute);
-    if (at.getTime() > from.getTime()) return at;
+    const last = daysInMonth(year, month);
+    let best: Date | null = null;
+    for (const wanted of wantedDays) {
+      const at = zonedTimeToUtc(
+        tz,
+        year,
+        month,
+        Math.min(wanted, last),
+        schedule.hour,
+        schedule.minute,
+      );
+      if (at.getTime() > from.getTime() && (!best || at.getTime() < best.getTime())) {
+        best = at;
+      }
+    }
+    if (best) return best;
   }
   throw new RoutineScheduleError("invalidDayOfMonth");
 }
@@ -280,18 +320,47 @@ export function describeSchedule(
     return t("cadenceDaily", { time, timezone: schedule.timezone });
   }
   if (schedule.frequency === "weekly") {
-    const weekday = schedule.weekday ?? 1;
+    // Les jours DANS L'ORDRE de la semaine, quel que soit l'ordre où ils ont
+    // été cochés — « lundi et jeudi », jamais « jeudi et lundi ».
+    const days = sortedWeekdays(schedule.weekdays);
     return t("cadenceWeekly", {
-      weekday: opts?.weekdayLabel?.(weekday) ?? weekdayName(weekday, opts?.locale),
+      weekday: joinList(
+        days.map((d) => opts?.weekdayLabel?.(d) ?? weekdayName(d, opts?.locale)),
+        opts?.locale,
+      ),
       time,
       timezone: schedule.timezone,
     });
   }
+  const days = [...new Set(schedule.daysOfMonth ?? [1])].sort((a, b) => a - b);
   return t("cadenceMonthly", {
-    day: schedule.dayOfMonth ?? 1,
+    day: joinList(days.map(String), opts?.locale),
     time,
     timezone: schedule.timezone,
   });
+}
+
+/**
+ * Les jours de semaine triés dans l'ordre où la SEMAINE les présente — lundi
+ * d'abord, dimanche à la fin —, et non dans l'ordre 0–6 d'`Intl`, qui ferait
+ * commencer la liste par dimanche.
+ */
+export function sortedWeekdays(weekdays: number[] | null | undefined): number[] {
+  const rank = (d: number) => (d + 6) % 7;
+  return [...new Set(weekdays ?? [1])].sort((a, b) => rank(a) - rank(b));
+}
+
+/** « lundi, mardi et jeudi » — la conjonction est celle de la langue. */
+function joinList(parts: string[], locale?: string): string {
+  if (parts.length <= 1) return parts[0] ?? "";
+  try {
+    return new Intl.ListFormat(locale || "en-US", {
+      style: "long",
+      type: "conjunction",
+    }).format(parts);
+  } catch {
+    return parts.join(", ");
+  }
 }
 
 /** « 09:00 » / « 9:00 AM » selon la locale — l'heure telle qu'on la lit. */

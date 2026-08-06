@@ -7,18 +7,30 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   ConfirmDeleteDialog,
-  Input,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Skeleton,
   Switch,
   Textarea,
   cn,
   toast,
 } from "mangue-ui";
-import { AlertTriangle, ChevronLeft, Pencil, Play, Trash2, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronLeft,
+  MoreHorizontal,
+  Pencil,
+  Play,
+  Trash2,
+} from "lucide-react";
 
 import { AgentEventFeed } from "@/components/agent/agent-event-feed";
 import { EmptyScene } from "@/components/empty-scene";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
+import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
 import {
   deleteRoutineApi,
   runRoutineNowApi,
@@ -26,11 +38,8 @@ import {
   type Routine,
 } from "@/lib/routines-api";
 import { routineRunsQueryKey, useRoutineRunsQuery } from "@/lib/use-routines-query";
-import {
-  describeSchedule,
-  weekdayName,
-  type RoutineFrequency,
-} from "@/lib/routine-schedule";
+import { useScrollFade } from "@/lib/use-scroll-fade";
+import { describeSchedule, weekdayName, type RoutineSchedule } from "@/lib/routine-schedule";
 import type { AgentRunSummary } from "@/lib/agent-api";
 
 /**
@@ -42,14 +51,18 @@ import type { AgentRunSummary } from "@/lib/agent-api";
  * (`AgentEventFeed`, streaming compris) — un run de routine n'est pas un mode
  * dégradé.
  *
- * L'édition se fait ICI, champ par champ, et pas en rejouant le wizard : un
- * wizard est un parcours d'établissement, le rejouer pour changer une heure
- * ferait repasser par quatre écrans.
+ * **L'en-tête suit celui des autres volets de détail** (conversation, pull
+ * request, retour) : le titre seul sur sa ligne, aucune bordure sous lui — le
+ * contenu respire jusqu'en haut — et les gestes regroupés dans un menu « … »
+ * plutôt qu'alignés en boutons. Ce qui les distingue vraiment, l'interrupteur
+ * actif/en pause, reste dehors : c'est un état, pas une action ponctuelle.
+ *
+ * La CADENCE sort de l'en-tête et vit avec les exécutions, là où elle répond à
+ * la question qu'on se pose en lisant la liste des passages.
  *
  * **`last_error` se LIT.** C'est ce qui rend tenable l'absence de garde-fou de
- * dépense propre aux routines : un passage sauté faute de budget se dit dans
- * l'en-tête, avec le lien vers la facturation — pas seulement dans une colonne
- * de la base.
+ * dépense propre aux routines : un passage sauté faute de budget se dit ici,
+ * avec le lien vers la facturation — pas seulement dans une colonne de la base.
  */
 export function RoutineDetail({
   routine,
@@ -59,8 +72,8 @@ export function RoutineDetail({
   onDeleted,
 }: {
   routine: Routine;
-  /** Les cinq actions (interrupteur, lancer, éditer, supprimer) sont au
-   *  propriétaire seul — un bouton qui mène à un 403 ne s'affiche pas. */
+  /** Les gestes (interrupteur, lancer, éditer, supprimer) sont au propriétaire
+   *  seul — un bouton qui mène à un 403 ne s'affiche pas. */
   isOwner: boolean;
   onBack: () => void;
   onChanged: () => void;
@@ -78,6 +91,8 @@ export function RoutineDetail({
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Le fondu des bords, comme partout où un contenu déborde de sa boîte.
+  const runsFade = useScrollFade<HTMLDivElement>("x");
 
   // Le passage le plus récent est ouvert par défaut : c'est celui qu'on vient
   // lire. La sélection suit la routine — changer de routine repart du sien.
@@ -88,18 +103,10 @@ export function RoutineDetail({
   const selectedRun: AgentRunSummary | null =
     runs.find((r) => r.id === selectedRunId) ?? runs[0] ?? null;
 
-  const cadence = describeSchedule(
-    {
-      frequency: routine.frequency,
-      hour: routine.hour,
-      minute: routine.minute,
-      weekday: routine.weekday,
-      dayOfMonth: routine.day_of_month,
-      timezone: routine.timezone,
-    },
-    (key, values) => t(key, values),
-    { locale, weekdayLabel: (d) => weekdayName(d, locale) },
-  );
+  const cadence = describeSchedule(routineSchedule(routine), (key, values) => t(key, values), {
+    locale,
+    weekdayLabel: (d) => weekdayName(d, locale),
+  });
 
   const nextAt = routine.next_run_at
     ? format.dateTime(new Date(routine.next_run_at), {
@@ -149,78 +156,59 @@ export function RoutineDetail({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      {/* ── En-tête : ce que la routine EST, et ce qu'on peut lui faire ── */}
-      <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 pt-4 pb-3">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={tAgents("backToList")}
-            className="md:hidden"
-            onClick={onBack}
-          >
-            <ChevronLeft />
-          </Button>
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-            {routine.title}
-          </span>
-          {isOwner ? (
-            <div className="flex shrink-0 items-center gap-1">
-              <Switch
-                checked={routine.enabled}
-                disabled={busy}
-                aria-label={t("enabledLabel")}
-                onCheckedChange={(enabled) => void patch({ enabled })}
-              />
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                disabled={busy}
-                aria-label={t("runNow")}
-                title={t("runNow")}
-                onClick={() => void runNow()}
-              >
-                <Play className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={editing ? tCommon("cancel") : tCommon("edit")}
-                onClick={() => setEditing((e) => !e)}
-              >
-                {editing ? <X className="size-4" /> : <Pencil className="size-4" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={tCommon("delete")}
-                onClick={() => setConfirmingDelete(true)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </div>
-          ) : null}
-        </div>
+      {/* ── En-tête : le titre, et rien d'autre sur sa ligne ─────────────
+          Même géométrie que la conversation d'un agent et le volet d'une pull
+          request (`px-4 pt-4 pb-2.5`, sans bordure) : le contenu monte jusqu'en
+          haut au lieu d'être posé sous une barre. */}
+      <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={tAgents("backToList")}
+          className="md:hidden"
+          onClick={onBack}
+        >
+          <ChevronLeft />
+        </Button>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{routine.title}</span>
 
-        <p className="text-xs text-muted-foreground">
-          {cadence}
-          {nextAt && routine.enabled ? ` · ${t("nextRunAt", { date: nextAt })}` : ""}
-          {!routine.enabled ? ` · ${t("paused")}` : ""}
-        </p>
-
-        {/* Le passage manqué, en clair. Sans cette ligne, un budget épuisé ne se
-            lirait que dans une colonne de la base — et la routine aurait l'air
-            de ne rien faire pour une raison inconnue. */}
-        {routine.last_error ? (
-          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-            <AlertTriangle className="size-3.5 shrink-0" />
-            <span>{routineErrorLabel(routine.last_error, t)}</span>
-            {routine.last_error === "quota" ? (
-              <Link href="/settings/billing" className="underline underline-offset-2">
-                {t("seeBilling")}
-              </Link>
-            ) : null}
-          </p>
+        {isOwner ? (
+          <div className="flex shrink-0 items-center gap-2">
+            {/* L'interrupteur reste DEHORS : c'est l'état de la routine — elle
+                tourne, ou elle est en pause —, pas un geste ponctuel qu'on va
+                chercher dans un menu. */}
+            <Switch
+              checked={routine.enabled}
+              disabled={busy}
+              aria-label={t("enabledLabel")}
+              onCheckedChange={(enabled) => void patch({ enabled })}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" aria-label={t("actionsLabel")}>
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled={busy} onSelect={() => void runNow()}>
+                  <Play className="size-4" />
+                  {t("runNow")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setEditing((e) => !e)}>
+                  <Pencil className="size-4" />
+                  {editing ? t("stopEditing") : tCommon("edit")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => setConfirmingDelete(true)}
+                >
+                  <Trash2 className="size-4" />
+                  {tCommon("delete")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ) : null}
       </div>
 
@@ -236,12 +224,31 @@ export function RoutineDetail({
         />
       ) : null}
 
+      {/* ── La cadence, hors de l'en-tête ───────────────────────────────── */}
+      <div className="flex shrink-0 flex-col gap-1 px-4 pb-2">
+        <p className="text-xs text-muted-foreground">
+          {cadence}
+          {nextAt && routine.enabled ? ` · ${t("nextRunAt", { date: nextAt })}` : ""}
+          {!routine.enabled ? ` · ${t("paused")}` : ""}
+        </p>
+
+        {routine.last_error ? (
+          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="size-3.5 shrink-0" />
+            <span>{routineErrorLabel(routine.last_error, t)}</span>
+            {routine.last_error === "quota" ? (
+              <Link href="/settings/billing" className="underline underline-offset-2">
+                {t("seeBilling")}
+              </Link>
+            ) : null}
+          </p>
+        ) : null}
+      </div>
+
       {/* ── Exécutions précédentes ─────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 px-4 pt-3 pb-1">
-          <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            {t("previousRuns")}
-          </h3>
+        <div className="shrink-0 px-4 pt-2 pb-1">
+          <h3 className="text-xs font-medium text-muted-foreground">{t("previousRuns")}</h3>
         </div>
 
         {loading ? (
@@ -256,9 +263,13 @@ export function RoutineDetail({
           </div>
         ) : (
           <>
-            {/* Une ligne par passage : sa date et son issue. Deux passages d'une
-                même routine ne se distinguent que par là. */}
-            <div className="flex shrink-0 gap-1 overflow-x-auto px-4 pb-2">
+            {/* Une pastille par passage : sa date et son état. Deux passages
+                d'une même routine ne se distinguent que par là. */}
+            <div
+              ref={runsFade.ref}
+              {...runsFade.scrollProps}
+              className="flex shrink-0 gap-1 overflow-x-auto px-4 pb-2"
+            >
               {runs.map((run) => (
                 <button
                   key={run.id}
@@ -315,6 +326,18 @@ export function RoutineDetail({
   );
 }
 
+/** La cadence d'une routine, telle que le calcul et la phrase l'attendent. */
+function routineSchedule(routine: Routine): RoutineSchedule {
+  return {
+    frequency: routine.frequency,
+    hour: routine.hour,
+    minute: routine.minute,
+    weekdays: routine.weekdays,
+    daysOfMonth: routine.days_of_month,
+    timezone: routine.timezone,
+  };
+}
+
 /** Le motif d'un passage manqué, en une phrase. Le CODE vient du serveur. */
 function routineErrorLabel(
   code: string,
@@ -335,8 +358,11 @@ function routineErrorLabel(
 }
 
 /**
- * L'édition, champ par champ — l'instruction, le titre, la cadence. Pas de
- * wizard rejoué : on ne repasse pas par quatre écrans pour déplacer une heure.
+ * L'édition d'une routine : son INSTRUCTION et sa cadence.
+ *
+ * Pas de champ « nom » — le titre est écrit par minddy à partir de
+ * l'instruction, et réécrit dès qu'elle change. Pas de wizard rejoué non plus :
+ * on ne repasse pas par quatre écrans pour déplacer une heure.
  */
 function RoutineEditor({
   routine,
@@ -351,26 +377,13 @@ function RoutineEditor({
 }) {
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
-  const locale = useLocale();
-  const [title, setTitle] = useState(routine.title);
   const [prompt, setPrompt] = useState(routine.prompt);
-  const [frequency, setFrequency] = useState<RoutineFrequency>(routine.frequency);
-  const [hour, setHour] = useState(routine.hour);
-  const [minute, setMinute] = useState(routine.minute);
-  const [weekday, setWeekday] = useState(routine.weekday ?? 1);
-  const [dayOfMonth, setDayOfMonth] = useState(routine.day_of_month ?? 1);
-  const [timezone, setTimezone] = useState(routine.timezone);
+  const [schedule, setSchedule] = useState<RoutineSchedule>(() => routineSchedule(routine));
 
   return (
-    <div className="flex shrink-0 flex-col gap-3 border-b border-border bg-muted/20 px-4 py-3">
-      <Input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        maxLength={120}
-        aria-label={t("titleLabel")}
-        className="h-9"
-      />
+    <div className="flex shrink-0 flex-col gap-3 px-4 py-3">
       <Textarea
+        autoFocus
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         rows={4}
@@ -378,94 +391,28 @@ function RoutineEditor({
         aria-label={t("promptLabel")}
         className="resize-none"
       />
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-          {t("frequencyLabel")}
-          <select
-            value={frequency}
-            onChange={(e) => setFrequency(e.target.value as RoutineFrequency)}
-            className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
-          >
-            {(["daily", "weekly", "monthly"] as const).map((f) => (
-              <option key={f} value={f}>
-                {t(`frequency_${f}` as "frequency_daily")}
-              </option>
-            ))}
-          </select>
-        </label>
-        {frequency === "weekly" ? (
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            {t("weekdayLabel")}
-            <select
-              value={weekday}
-              onChange={(e) => setWeekday(Number(e.target.value))}
-              className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
-            >
-              {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-                <option key={d} value={d}>
-                  {weekdayName(d, locale)}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        {frequency === "monthly" ? (
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            {t("dayOfMonthLabel")}
-            <select
-              value={dayOfMonth}
-              onChange={(e) => setDayOfMonth(Number(e.target.value))}
-              className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
-            >
-              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-          {t("timeLabel")}
-          <Input
-            type="time"
-            value={`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`}
-            onChange={(e) => {
-              const [h, m] = e.target.value.split(":");
-              if (h !== undefined) setHour(Number(h) || 0);
-              if (m !== undefined) setMinute(Number(m) || 0);
-            }}
-            className="h-9 w-28"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-          {t("timezoneLabel")}
-          <Input
-            value={timezone}
-            onChange={(e) => setTimezone(e.target.value.trim())}
-            className="h-9 w-44"
-          />
-        </label>
-      </div>
+      <p className="text-xs text-muted-foreground">{t("titleAutoHint")}</p>
+
+      <RoutineScheduleFields value={schedule} onChange={setSchedule} />
+
       <div className="flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
           {tCommon("cancel")}
         </Button>
         <Button
           size="sm"
-          disabled={busy || !title.trim() || !prompt.trim()}
+          disabled={busy || !prompt.trim()}
           onClick={() =>
             void onSave({
-              title: title.trim(),
               prompt: prompt.trim(),
-              frequency,
-              hour,
-              minute,
+              frequency: schedule.frequency,
+              hour: schedule.hour,
+              minute: schedule.minute,
               // Les champs de jour n'existent QUE pour leur cadence : les
               // envoyer tous les deux ferait refuser la cadence.
-              weekday: frequency === "weekly" ? weekday : null,
-              dayOfMonth: frequency === "monthly" ? dayOfMonth : null,
-              timezone,
+              weekdays: schedule.frequency === "weekly" ? schedule.weekdays : [],
+              daysOfMonth: schedule.frequency === "monthly" ? schedule.daysOfMonth : [],
+              timezone: schedule.timezone,
             })
           }
         >

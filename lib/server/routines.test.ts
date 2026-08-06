@@ -29,8 +29,8 @@ interface RoutineRow extends Record<string, unknown> {
   frequency: "daily" | "weekly" | "monthly";
   hour: number;
   minute: number;
-  weekday: number | null;
-  day_of_month: number | null;
+  weekdays: number[];
+  days_of_month: number[];
   timezone: string;
   enabled: boolean;
   next_run_at: string | null;
@@ -61,8 +61,8 @@ function makeRoutine(over: Partial<RoutineRow> = {}): RoutineRow {
     frequency: "weekly",
     hour: 9,
     minute: 0,
-    weekday: 1,
-    day_of_month: null,
+    weekdays: [1],
+    days_of_month: [],
     timezone: "Europe/Paris",
     enabled: true,
     next_run_at: "2020-01-06T08:00:00.000Z",
@@ -175,6 +175,17 @@ vi.mock("@/lib/server/agent/quota", () => ({
   checkAgentQuota: async () => ({ allowed: true, unlimited: false, mode: "platform" }),
 }));
 
+// Le petit modèle qui NOMME la routine : on ne l'appelle pas pour de vrai, mais
+// on compte ses passages — le titre doit se refaire quand l'instruction change,
+// et seulement là.
+const titleCalls: string[] = [];
+vi.mock("@/lib/server/short-title", () => ({
+  generateShortTitle: async ({ text }: { text: string }) => {
+    titleCalls.push(text);
+    return `Titre de « ${text.slice(0, 12)} »`;
+  },
+}));
+
 vi.mock("@/lib/server/agent/model-plan", () => ({
   ensureModelInPlan: async () => {
     if (world.modelAbovePlan) {
@@ -201,17 +212,17 @@ beforeEach(() => {
   world.routines = [];
   world.hasRepo = true;
   world.modelAbovePlan = false;
+  titleCalls.length = 0;
 });
 
 const validInput = (over: Record<string, unknown> = {}) => ({
   projectId: PROJECT_ID,
   actorId: OWNER_ID,
-  title: "Analyse de sécurité",
   prompt: "Relis le code à la recherche de failles et corrige-les.",
   frequency: "weekly",
   hour: 9,
   minute: 0,
-  weekday: 1,
+  weekdays: [1],
   timezone: "Europe/Paris",
   ...over,
 });
@@ -222,6 +233,9 @@ describe("createRoutine", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.routine.owner_id).toBe(OWNER_ID);
+    // Le titre est ÉCRIT à partir de l'instruction, jamais demandé.
+    expect(titleCalls).toHaveLength(1);
+    expect(result.routine.title).toContain("Titre de");
     expect(result.routine.next_run_at).toBeTruthy();
     // L'échéance est devant : une routine ne naît jamais en retard.
     expect(new Date(result.routine.next_run_at as string).getTime()).toBeGreaterThan(Date.now());
@@ -238,9 +252,28 @@ describe("createRoutine", () => {
     expect(result).toMatchObject({ ok: false, status: 409, errorKey: "noRepo" });
   });
 
+  it("ne PAYE pas de titre pour une routine qu'on refuse", async () => {
+    // Le nommage est un appel modèle : le faire avant les refus reviendrait à
+    // payer pour une routine qui n'existera jamais.
+    world.hasRepo = false;
+    await createRoutine(validInput() as never);
+    world.hasRepo = true;
+    await createRoutine(validInput({ actorId: MEMBER_ID }) as never);
+    await createRoutine(validInput({ timezone: "Nowhere/Here" }) as never);
+    expect(titleCalls).toHaveLength(0);
+  });
+
+  it("accepte plusieurs jours de semaine", async () => {
+    const result = await createRoutine(validInput({ weekdays: [4, 1, 1] }) as never);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Dédoublonnés et triés dès l'entrée.
+    expect(result.routine.weekdays).toEqual([1, 4]);
+  });
+
   it("refuse un weekday sur une cadence mensuelle", async () => {
     const result = await createRoutine(
-      validInput({ frequency: "monthly", weekday: 1, dayOfMonth: null }) as never,
+      validInput({ frequency: "monthly", weekdays: [1], daysOfMonth: [] }) as never,
     );
     // La cadence mensuelle veut un jour du mois : sans lui, elle est incomplète.
     expect(result).toMatchObject({ ok: false, errorKey: "invalidSchedule" });
@@ -279,9 +312,31 @@ describe("updateRoutine", () => {
     const result = await updateRoutine({
       routineId: ROUTINE_ID,
       actorId: MEMBER_ID,
-      title: "Autre titre",
+      prompt: "Une autre instruction.",
     });
     expect(result).toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
+  });
+
+  it("REFAIT le titre quand l'instruction change, et seulement là", async () => {
+    await updateRoutine({
+      routineId: ROUTINE_ID,
+      actorId: OWNER_ID,
+      prompt: "Une instruction toute neuve.",
+    });
+    expect(titleCalls).toHaveLength(1);
+
+    // Réécrire À L'IDENTIQUE ne rappelle pas le modèle : rien n'a changé.
+    titleCalls.length = 0;
+    await updateRoutine({
+      routineId: ROUTINE_ID,
+      actorId: OWNER_ID,
+      prompt: "Une instruction toute neuve.",
+    });
+    expect(titleCalls).toHaveLength(0);
+
+    // Déplacer l'heure non plus — le titre décrit le travail, pas l'horaire.
+    await updateRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID, hour: 7 });
+    expect(titleCalls).toHaveLength(0);
   });
 
   it("recalcule l'échéance dès qu'on touche à la cadence", async () => {
@@ -384,7 +439,7 @@ describe("claimRoutine", () => {
   it("ne RATTRAPE pas les passages manqués", async () => {
     // Trois jours sans budget : la routine repart sur la prochaine occurrence
     // réelle, elle ne joue pas trois fois.
-    world.routines = [makeRoutine({ frequency: "daily", weekday: null })];
+    world.routines = [makeRoutine({ frequency: "daily", weekdays: [] })];
     const result = await claimRoutine(world.routines[0]);
     expect(result.claimed).toBe(true);
     const next = new Date(result.nextRunAt as string).getTime();
