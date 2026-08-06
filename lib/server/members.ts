@@ -17,6 +17,7 @@ import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { isPushConfigured } from "@/lib/server/push/vapid";
 import { sendPushToUser } from "@/lib/server/push/send";
+import { sendInvitationEmail } from "@/lib/server/invitation-email";
 import type { Invitation } from "@/lib/types";
 
 /**
@@ -25,16 +26,22 @@ import type { Invitation } from "@/lib/types";
  * so access is enforced HERE: inviting, cancelling an invitation and removing
  * another member are owner-only; a member may remove only themselves (leave).
  *
- * Invitations are in-app (no email is sent): an invite resolves the email to an
- * existing minddy account and inserts a pending row the invitee accepts from the
- * Home banner.
+ * **On invite une ADRESSE, pas un compte** (MIN-197). L'invitation est une ligne
+ * `project_invitations` que l'invité accepte depuis son inbox ; elle peut naître
+ * sans `invited_user_id` quand l'adresse n'a pas encore de compte minddy, et se
+ * rattache à un compte plus tard — à la première session dont l'email vérifié
+ * correspond (`attachPendingInvitations`, appelé par /auth/callback). Un email
+ * part dans les deux cas : c'est le seul canal qui atteigne quelqu'un qui ne
+ * revient pas de lui-même.
+ *
+ * On ne fait JAMAIS rejoindre automatiquement : l'acceptation reste un geste de
+ * l'invité (PATCH /api/projects/invitations).
  */
 
 type InviteError =
   | "projectNotFound"
   | "ownerOnlyInvite"
   | "invalidEmail"
-  | "noAccountForEmail"
   | "alreadyOwner"
   | "alreadyMember"
   | "invitationAlreadyPending"
@@ -45,10 +52,17 @@ export async function inviteMember({
   projectId,
   actorId,
   email,
+  origin,
+  locale = "en",
 }: {
   projectId: string;
   actorId: string;
   email: unknown;
+  /** Origine du déploiement, pour le lien du mail. Défaut : l'URL canonique. */
+  origin?: string;
+  /** Langue du mail. On ne connaît pas celle de l'invité — on prend celle de
+      l'invitant, qui est la personne dont l'invité attend le message. */
+  locale?: "fr" | "en";
 }): Promise<
   | { ok: true; invitation: Invitation }
   | {
@@ -92,22 +106,23 @@ export async function inviteMember({
   const service = getServiceClient();
 
   // Resolve the email to an existing minddy account — live, via Supabase Auth.
+  // `null` n'est plus une fin de non-recevoir (MIN-197) : l'invitation part
+  // quand même, sans `invited_user_id`, et le mail fait le reste.
   const memberUser = await findAuthUserByEmail(service, normalized);
-  if (!memberUser) {
-    return { ok: false, status: 404, errorKey: "noAccountForEmail" };
-  }
-  if (memberUser.id === access.project.owner_id) {
-    return { ok: false, status: 409, errorKey: "alreadyOwner" };
-  }
+  if (memberUser) {
+    if (memberUser.id === access.project.owner_id) {
+      return { ok: false, status: 409, errorKey: "alreadyOwner" };
+    }
 
-  const { data: existingMember } = await service
-    .from("project_members")
-    .select("user_id")
-    .eq("project_id", projectId)
-    .eq("user_id", memberUser.id)
-    .maybeSingle();
-  if (existingMember) {
-    return { ok: false, status: 409, errorKey: "alreadyMember" };
+    const { data: existingMember } = await service
+      .from("project_members")
+      .select("user_id")
+      .eq("project_id", projectId)
+      .eq("user_id", memberUser.id)
+      .maybeSingle();
+    if (existingMember) {
+      return { ok: false, status: 409, errorKey: "alreadyMember" };
+    }
   }
 
   const { data: invitation, error } = await service
@@ -115,11 +130,13 @@ export async function inviteMember({
     .insert({
       project_id: projectId,
       invited_email: normalized,
-      invited_user_id: memberUser.id,
+      invited_user_id: memberUser?.id ?? null,
       invited_by: actorId,
       status: "pending",
     })
-    .select("id, project_id, invited_email, invited_user_id, status, created_at")
+    .select(
+      "id, project_id, invited_email, invited_user_id, status, created_at, token"
+    )
     .single();
 
   if (error) {
@@ -135,9 +152,64 @@ export async function inviteMember({
   // répondue. Elle échappe donc au branchement push d'`insertNotifications`, et
   // c'est justement la ligne d'inbox qui attend le plus une notification — on
   // la pousse ici, à la main (MIN-183).
-  pushInvitation(memberUser.id, actorId);
+  if (memberUser) pushInvitation(memberUser.id, actorId);
 
-  return { ok: true, invitation: invitation as Invitation };
+  // Le mail part APRÈS la réponse, mais par `afterOrNow` : une promesse
+  // détachée serait gelée avec l'invocation et mourrait en vol (CLAUDE.md).
+  const { token, ...row } = invitation as Invitation & { token: string };
+  afterOrNow(async () => {
+    const inviters = await fetchAuthUsersById(getServiceClient(), [actorId]);
+    const named = toNamed(inviters.get(actorId));
+    await sendInvitationEmail({
+      to: normalized,
+      inviterName: displayName(named, ""),
+      projectName: access.project.name,
+      token,
+      locale,
+      origin,
+    });
+  });
+
+  // Le token ne ressort PAS de la fonction : l'appelant le rendrait en JSON à
+  // qui invite, et il n'a rien à y faire — c'est un secret de l'email.
+  return { ok: true, invitation: row };
+}
+
+/**
+ * Rattache à un compte les invitations laissées en attente sur son adresse
+ * (MIN-197). Appelé à l'arrivée d'une session (/auth/callback) : c'est le seul
+ * endroit où l'email est VÉRIFIÉ par Supabase, et c'est l'email — pas le token
+ * du lien — qui fait foi. Best-effort de bout en bout : l'invitant ne saura
+ * rien d'un échec, et l'invité retentera à sa prochaine session.
+ */
+export async function attachPendingInvitations(user: {
+  id: string;
+  email?: string | null;
+  email_confirmed_at?: string | null;
+}): Promise<void> {
+  const email = user.email?.trim().toLowerCase();
+  // Un email non confirmé n'établit rien : sans cette garde, il suffirait de
+  // s'inscrire avec l'adresse de quelqu'un d'autre pour récupérer ses
+  // invitations. OAuth (Google/GitHub) rend un email déjà confirmé.
+  if (!email || !user.email_confirmed_at) return;
+
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("project_invitations")
+    .update({ invited_user_id: user.id })
+    .eq("invited_email", email)
+    .is("invited_user_id", null)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .select("id, invited_by");
+
+  if (error) {
+    console.error("[members] attach invitations failed:", error.message);
+    return;
+  }
+  for (const row of data ?? []) {
+    pushInvitation(user.id, row.invited_by as string);
+  }
 }
 
 /** La notification système d'une invitation. Best-effort de bout en bout. */

@@ -695,6 +695,17 @@ export interface MembersResponse {
   isOwner: boolean;
 }
 
+/**
+ * Ce qu'un `?invite=<token>` permet de dire sur l'écran de connexion (MIN-197).
+ * Résolu côté serveur (`lib/server/invitation-token.ts`) et passé au formulaire.
+ */
+export interface InvitationPreview {
+  projectName: string;
+  /** Vide si le compte de l'invitant n'a ni nom ni email lisible. */
+  inviterName: string;
+  invitedEmail: string;
+}
+
 /** A pending invitation as shown to the invitee on their Home banner. */
 export interface MyInvitation {
   id: string;

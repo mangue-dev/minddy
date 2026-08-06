@@ -193,7 +193,13 @@ export function ProjectMembers({
                 title={inv.invited_email}
                 action={
                   <>
-                    <Badge variant="outline">{t("pending")}</Badge>
+                    {/* Deux attentes différentes (MIN-197) : une invitation
+                        sans `invited_user_id` attend une INSCRIPTION, pas une
+                        réponse — dire « en attente » des deux laisserait croire
+                        que la personne a vu l'invitation et ne répond pas. */}
+                    <Badge variant="outline">
+                      {inv.invited_user_id ? t("pending") : t("pendingSignup")}
+                    </Badge>
                     <Button
                       type="button"
                       variant="ghost"

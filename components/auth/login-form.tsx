@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, Input, Spinner, cn, toast } from "mangue-ui";
-import { Github } from "lucide-react";
+import { Github, UserPlus } from "lucide-react";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { MfaChallenge } from "@/components/auth/mfa-challenge";
 import { localizedHref } from "@/lib/locale-href";
@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth-context";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { useAnalytics } from "@/lib/use-analytics";
 import { errorReason } from "@/lib/analytics-sanitize";
+import type { InvitationPreview } from "@/lib/types";
 
 /** Logo Google multicolore (inline — pas d'asset externe). */
 function GoogleGlyph() {
@@ -43,7 +44,7 @@ function GoogleGlyph() {
 
 type OAuthProvider = "google" | "github";
 
-function LoginForm() {
+export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   const t = useTranslations("Auth");
   const locale = useLocale() as Locale;
   const router = useRouter();
@@ -59,10 +60,20 @@ function LoginForm() {
   const { track } = useAnalytics();
 
   const redirectTo = sanitizeInternalRedirectPath(searchParams.get("redirect"));
-  const [isSignUp, setIsSignUp] = useState(searchParams.get("mode") === "signup");
+  // Arriver par un lien d'invitation, c'est très majoritairement ne pas avoir
+  // de compte (MIN-197) : l'écran s'ouvre sur l'inscription. Un `?mode=` reste
+  // prioritaire, et la bascule connexion/inscription est à un clic.
+  const [isSignUp, setIsSignUp] = useState(
+    searchParams.get("mode") === "signup" ||
+      (invite !== null && searchParams.get("mode") !== "signin")
+  );
 
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  // L'adresse invitée est celle à laquelle le mail est arrivé : c'est ELLE qui
+  // rattache la personne au projet, pas le token du lien. La pré-remplir évite
+  // la faute qui coûte le plus cher ici — s'inscrire avec une autre adresse et
+  // ne rien voir venir.
+  const [email, setEmail] = useState(invite?.invitedEmail ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -226,6 +237,26 @@ function LoginForm() {
             <Spinner className="size-6" />
           ) : (
           <div className="w-full max-w-[380px] space-y-8">
+            {/* Le bandeau d'invitation (MIN-197). Il ne fait qu'ANNONCER : rien
+                ici ne rattache la personne au projet — c'est l'email vérifié de
+                sa session qui s'en charge, à /auth/callback. */}
+            {invite && (
+              <div className="flex gap-3 rounded-lg border border-border bg-card p-3.5">
+                <UserPlus className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-snug">
+                    {t("inviteBannerTitle", {
+                      actor: invite.inviterName || t("inviteBannerSomeone"),
+                      project: invite.projectName,
+                    })}
+                  </p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {t("inviteBannerBody", { email: invite.invitedEmail })}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div>
               <h1 className="font-display text-2xl font-semibold tracking-tight">
                 {isSignUp ? t("createAccount") : t("welcomeBack")}
@@ -407,13 +438,5 @@ function LoginForm() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<Spinner className="size-6" />}>
-      <LoginForm />
-    </Suspense>
   );
 }

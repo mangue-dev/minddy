@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
+import { afterOrNow } from "@/lib/server/after-safe";
+import { attachPendingInvitations } from "@/lib/server/members";
 
 const EMAIL_OTP_TYPES: ReadonlySet<EmailOtpType> = new Set([
   "signup",
@@ -82,6 +84,21 @@ function onAuthArrival(
 }
 
 /**
+ * Les invitations laissées en attente sur cette adresse deviennent les siennes
+ * (MIN-197). C'est ICI que ça se joue et nulle part ailleurs : c'est le seul
+ * point où minddy tient un email VÉRIFIÉ par Supabase — et c'est cet email,
+ * jamais le `?invite=` du lien, qui décide de qui hérite de quoi.
+ *
+ * Après la réponse, par `afterOrNow` : l'invité part vers /home, il verra son
+ * bandeau au chargement suivant. Une panne ici ne coûte rien, le rattachement
+ * se rejouera à sa prochaine session.
+ */
+function claimInvitations(user: User | null): void {
+  if (!user) return;
+  afterOrNow(() => attachPendingInvitations(user));
+}
+
+/**
  * Exchanges the auth code (OAuth) or email OTP (confirmation / magic link) for a
  * session, writing the session cookies, then redirects to `next` (default /home).
  */
@@ -138,6 +155,7 @@ export async function GET(request: NextRequest) {
         return buildFailureRedirect(origin, "exchange_failed");
       }
       onAuthArrival(data.user, "oauth");
+      claimInvitations(data.user);
     } else if (tokenHash && otpType) {
       const { data, error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
@@ -156,6 +174,7 @@ export async function GET(request: NextRequest) {
         );
       }
       onAuthArrival(data.user, otpType === "signup" ? "email_confirmation" : "otp");
+      claimInvitations(data.user);
     }
 
     return NextResponse.redirect(`${origin}${next}`);

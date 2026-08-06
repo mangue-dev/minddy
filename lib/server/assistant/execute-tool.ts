@@ -344,7 +344,6 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
   projectKeyAlreadyUsed: "That project key is already used by another of your projects.",
   noFieldsToUpdate: "No fields to update.",
   invalidEmail: "That email address is invalid.",
-  noAccountForEmail: "No minddy account exists for that email address.",
   alreadyOwner: "That person is the project owner.",
   alreadyMember: "That person is already a member of the project.",
   invitationAlreadyPending: "There is already a pending invitation for that email.",
@@ -1889,6 +1888,7 @@ export async function executeTool(
           projectId,
           actorId: ctx.userId,
           email: args.email,
+          locale: ctx.locale === "fr" ? "fr" : "en",
         });
         if (!result.ok) return settingsError(result.errorKey);
         return {
