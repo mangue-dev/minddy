@@ -30,6 +30,7 @@ export function BulkIssueActions({
   cycle,
   objectives,
   onLink,
+  surface,
 }: {
   count: number;
   members: Member[];
@@ -40,6 +41,8 @@ export function BulkIssueActions({
   cycle?: BulkCycleActions;
   objectives?: Objective[];
   onLink?: () => void;
+  /** L'écran d'où part la sélection, pour l'analytics (défaut « board »). */
+  surface?: string;
 }) {
   const t = useTranslations("BulkActions");
   const { requestBulkActions } = useBulkActions();
@@ -59,6 +62,7 @@ export function BulkIssueActions({
   const openActions = () =>
     requestBulkActions({
       count,
+      surface,
       members: uniqueMembers,
       onUpdate,
       onDelete,

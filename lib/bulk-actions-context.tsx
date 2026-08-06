@@ -39,6 +39,9 @@ export interface BulkCycleActions {
 export interface BulkActionsRequest {
   /** Number of selected tickets — drives the item title, plurals and confirms. */
   count: number;
+  /** D'où part la sélection, pour l'analytics seule. Par défaut « board » — le
+   *  triage (sa colonne de gauche) se nomme, sinon tout se compterait ensemble. */
+  surface?: string;
   /** Assignable members across the selection's projects (already de-duplicated). */
   members: Member[];
   /** Applies a field patch to every selected ticket. */
@@ -78,7 +81,10 @@ export function BulkActionsProvider({ children }: { children: ReactNode }) {
     // MIN-75 : le bouton « Actions » de la pill de sélection. C'est le seul
     // point de passage vers les actions groupées — la taille de la sélection
     // dit si la fonction sert à deux tickets ou à trente.
-    trackEvent("bulk_selection_started", { surface: "board", count: next.count });
+    trackEvent("bulk_selection_started", {
+      surface: next.surface ?? "board",
+      count: next.count,
+    });
     setRequest(next);
     setOpenSignal((n) => n + 1);
   }, []);

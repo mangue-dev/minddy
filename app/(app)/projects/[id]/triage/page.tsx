@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
@@ -34,6 +34,8 @@ import {
 } from "@/components/issue-property-fields";
 import { PriorityIndicator } from "@/components/issue-indicators";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
+import { BulkIssueActions } from "@/components/bulk-issue-actions";
+import { AskNumoProvider, useAskNumoTarget } from "@/lib/ask-numo-context";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AutoTextarea } from "@/components/auto-textarea";
@@ -47,8 +49,13 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
+import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { useAssistantContext } from "@/lib/assistant-panel-context";
+import {
+  useAssistantContext,
+  useAssistantPanel,
+} from "@/lib/assistant-panel-context";
+import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import type { Issue, IssueUpdateInput } from "@/lib/types";
 
@@ -71,11 +78,14 @@ export default function TriagePage() {
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
 
-  const { issues, loading, updateIssue, setCategories } = useIssuesQuery(projectId);
+  const { issues, loading, updateIssue, deleteIssue, setCategories } =
+    useIssuesQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
+  const { addRelation } = useIssueRelationsQuery(projectId);
   const mentions = useDescriptionMentions(projectId, members);
+  const { open: openAssistant } = useAssistantPanel();
 
   const triageIssues = useMemo(
     () =>
@@ -110,6 +120,75 @@ export default function TriagePage() {
   // que du côté où il reste quelque chose à découvrir.
   const detailFade = useScrollFade<HTMLDivElement>();
   const selected = triageIssues.find((i) => i.id === selectedId) ?? null;
+
+  /**
+   * Sélection groupée (MIN-75), le même geste que sur le board : Maj+clic sur
+   * une ligne l'ajoute ou la retire, la pilule flottante porte les actions.
+   * Deux sélections cohabitent ici sans se confondre — `selectedId`, le ticket
+   * OUVERT à droite, et celle-ci, les tickets PRIS ensemble.
+   *
+   * Elle se dérive de `triageIssues` et non de `visibleIssues` : le filtre de la
+   * colonne sert justement à aller chercher le ticket suivant à prendre, et le
+   * lier à la sélection la ferait fondre à chaque lettre tapée.
+   */
+  const [bulkIds, setBulkIds] = useState<Set<string>>(new Set());
+  const toggleBulk = useCallback((issueId: string) => {
+    setBulkIds((current) => {
+      const next = new Set(current);
+      if (next.has(issueId)) next.delete(issueId);
+      else next.add(issueId);
+      return next;
+    });
+  }, []);
+  const clearBulk = useCallback(() => setBulkIds(new Set()), []);
+  // Un ticket qui quitte le triage (accepté, refusé, doublon) quitte la
+  // sélection du même coup : elle ne retient que ce que la colonne montre encore.
+  const bulkIssues = useMemo(
+    () => triageIssues.filter((issue) => bulkIds.has(issue.id)),
+    [triageIssues, bulkIds]
+  );
+  const updateBulk = useCallback(
+    (updates: IssueUpdateInput) => {
+      bulkIssues.forEach((issue) => {
+        void updateIssue(issue.id, updates).catch((err) =>
+          toast.error((err as Error).message)
+        );
+      });
+    },
+    [bulkIssues, updateIssue]
+  );
+  // Une relation a exactement deux bouts : l'action n'existe qu'à deux tickets
+  // (même règle que le board, et le triage est mono-projet par construction).
+  const bulkLink = useMemo(() => {
+    if (bulkIssues.length !== 2) return undefined;
+    const [first, second] = bulkIssues;
+    return () => {
+      void addRelation(first.id, "related", second.id).catch((err) =>
+        toast.error((err as Error).message)
+      );
+      clearBulk();
+    };
+  }, [bulkIssues, addRelation, clearBulk]);
+
+  /**
+   * « @ » (MIN-105) : le ticket sous le pointeur — ou la sélection quand il y en
+   * a une — part dans Numo. Même contexte que le bouton Numo de la pilule.
+   */
+  const handleAskNumo = useCallback(
+    (targets: Issue[]) => {
+      if (!project || targets.length === 0) return;
+      openAssistant({
+        projectId,
+        pageContext: {
+          projectId,
+          ...issuesPageContext(targets, (issue) =>
+            issueIdentifier(project.key, issue.number)
+          ),
+        },
+      });
+    },
+    [openAssistant, project, projectId]
+  );
 
   // Publish the selected triage issue to Numo so "accepte ce ticket" resolves.
   useAssistantContext(
@@ -283,6 +362,11 @@ export default function TriagePage() {
   }
 
   return (
+    /* « @ » au survol d'une ligne (ou sur la sélection) ouvre Numo — même
+       arbitrage que sur le board : la sélection prime sur le survol (MIN-105).
+       Le contexte traverse le portail de la barre secondaire, qui n'est déportée
+       que dans le DOM. */
+    <AskNumoProvider selectedIssues={bulkIssues} onAskNumo={handleAskNumo}>
     <div className="flex h-full min-h-0">
       {/* ── Left: pending list ─────────────────────────────────────────── */}
       <SecondarySidebar
@@ -310,38 +394,19 @@ export default function TriagePage() {
         ) : (
           <div className="flex flex-col gap-1 px-2 pt-2 pb-4">
             {visibleIssues.map((issue) => (
-              <button
+              <TriageRow
                 key={issue.id}
-                type="button"
-                onClick={() => {
+                issue={issue}
+                identifier={issueIdentifier(project.key, issue.number)}
+                createdLabel={fmtDay(issue.created_at)}
+                open={issue.id === selectedId}
+                picked={bulkIds.has(issue.id)}
+                onOpen={() => {
                   setSelectedId(issue.id);
                   setMobileDetail(true);
                 }}
-                className={cn(
-                  "flex flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-                  issue.id === selectedId
-                    ? "bg-muted"
-                    : "hover:bg-muted/60 focus-visible:bg-muted/60"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                    {issueIdentifier(project.key, issue.number)}
-                  </span>
-                  <IntegrationIndicator issue={issue} />
-                  <RemoteIssueIndicator issue={issue} />
-
-                  <span className="ml-auto flex shrink-0 items-center gap-1.5">
-                    {issue.priority !== "none" && (
-                      <PriorityIndicator priority={issue.priority} className="size-3.5" />
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {fmtDay(issue.created_at)}
-                    </span>
-                  </span>
-                </div>
-                <span className="line-clamp-2 text-sm font-medium">{issue.title}</span>
-              </button>
+                onToggleBulk={toggleBulk}
+              />
             ))}
           </div>
         )}
@@ -590,6 +655,97 @@ export default function TriagePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {bulkIssues.length > 0 && (
+        <BulkIssueActions
+          surface="triage"
+          count={bulkIssues.length}
+          members={members}
+          onUpdate={updateBulk}
+          onDelete={async () => {
+            await Promise.all(bulkIssues.map((issue) => deleteIssue(issue.id)));
+            clearBulk();
+          }}
+          onClear={clearBulk}
+          onAskNumo={() => handleAskNumo(bulkIssues)}
+          // Triage mono-projet : tous ses objectifs sont proposables. Pas de
+          // ligne de cycle en revanche — un ticket en triage n'y est pas
+          // éligible (voir CYCLE_INELIGIBLE_STATUSES).
+          objectives={objectives}
+          onLink={bulkLink}
+        />
+      )}
     </div>
+    </AskNumoProvider>
+  );
+}
+
+/**
+ * Une ligne de la colonne de triage. Composant à part parce qu'elle s'inscrit
+ * comme cible de « @ » (un hook par ligne, impossible dans un `.map`).
+ *
+ * Clic = ouvrir le ticket à droite ; Maj+clic = le prendre dans la sélection
+ * groupée, exactement comme une carte du board.
+ */
+function TriageRow({
+  issue,
+  identifier,
+  createdLabel,
+  open,
+  picked,
+  onOpen,
+  onToggleBulk,
+}: {
+  issue: Issue;
+  identifier: string;
+  createdLabel: string;
+  /** Le ticket affiché dans le volet de détail. */
+  open: boolean;
+  /** Pris dans la sélection groupée. */
+  picked: boolean;
+  onOpen: () => void;
+  onToggleBulk: (issueId: string) => void;
+}) {
+  const askNumoRef = useAskNumoTarget(issue);
+  return (
+    <button
+      ref={askNumoRef}
+      type="button"
+      aria-pressed={picked}
+      onClick={(e) => {
+        if (e.shiftKey) {
+          e.preventDefault();
+          onToggleBulk(issue.id);
+          return;
+        }
+        onOpen();
+      }}
+      className={cn(
+        "flex flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
+        open && "bg-muted",
+        !open && !picked && "hover:bg-muted/60 focus-visible:bg-muted/60",
+        // Prise dans la sélection : la même teinte que la carte prise sur le
+        // board. Le ticket ouvert le reste visiblement s'il est aussi pris —
+        // sinon la colonne ne dirait plus ce que montre le volet de droite.
+        picked && "bg-primary/10",
+        picked && open && "ring-1 ring-primary/40"
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+          {identifier}
+        </span>
+        <IntegrationIndicator issue={issue} />
+        <RemoteIssueIndicator issue={issue} />
+
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          {issue.priority !== "none" && (
+            <PriorityIndicator priority={issue.priority} className="size-3.5" />
+          )}
+          <span className="text-xs text-muted-foreground">{createdLabel}</span>
+        </span>
+      </div>
+      <span className="line-clamp-2 text-sm font-medium">{issue.title}</span>
+    </button>
   );
 }

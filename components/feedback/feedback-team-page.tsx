@@ -86,7 +86,15 @@ import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useFeedbackTimeline } from "@/lib/use-feedback-timeline";
 import { useAuth } from "@/lib/auth-context";
-import { useAssistantContext } from "@/lib/assistant-panel-context";
+import {
+  useAssistantContext,
+  useAssistantPanel,
+} from "@/lib/assistant-panel-context";
+import {
+  AskNumoFeedbackProvider,
+  useAskNumoFeedbackTarget,
+  type AskNumoFeedback,
+} from "@/lib/ask-numo-context";
 import type { EventContext } from "@/lib/describe-event";
 import type {
   AttachmentInput,
@@ -654,9 +662,15 @@ function FeedbackRow({
       ? post.translated_title
       : null) ?? post.title;
   const authorLabel = post.author?.name?.trim() || post.author?.email?.trim() || null;
+  // « @ » pendant qu'on survole cette ligne parle de CE retour (MIN-105). Le
+  // titre passé est le canonique et non celui affiché ci-dessus : c'est celui
+  // que publie déjà le contexte ambiant, et deux titres pour un même retour
+  // selon la façon de l'ouvrir se liraient comme deux retours.
+  const askNumoRef = useAskNumoFeedbackTarget(post);
 
   return (
     <button
+      ref={askNumoRef}
       type="button"
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
@@ -864,6 +878,27 @@ export function FeedbackTeamPage() {
         : { projectId }
       : null
   );
+
+  /**
+   * « @ » au survol d'une ligne (MIN-105) : le retour VISÉ part dans Numo, même
+   * s'il n'est pas celui qui est ouvert à droite. Le contexte explicite passé
+   * ici l'emporte sur l'ambiant publié juste au-dessus — sans quoi le raccourci
+   * ne parlerait jamais que du retour déjà sélectionné.
+   */
+  const { open: openAssistant } = useAssistantPanel();
+  const handleAskNumo = useCallback(
+    (post: AskNumoFeedback) => {
+      openAssistant({
+        projectId,
+        pageContext: {
+          projectId,
+          feedbackId: post.id,
+          feedbackTitle: post.title,
+        },
+      });
+    },
+    [openAssistant, projectId]
+  );
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
   const openIssue: Issue | null = issues.find((i) => i.id === openIssueId) ?? null;
   const handleAddRelation = useCallback(
@@ -999,6 +1034,10 @@ export function FeedbackTeamPage() {
   }
 
   return (
+    /* « @ » au survol d'une ligne de la colonne ouvre Numo sur ce retour
+       (MIN-105). Le contexte traverse le portail de la barre secondaire, qui
+       n'est déportée que dans le DOM. */
+    <AskNumoFeedbackProvider onAskNumo={handleAskNumo}>
     <div className="flex h-full min-h-0">
       {/* ── Liste ────────────────────────────────────────────────────────── */}
       <SecondarySidebar
@@ -1176,6 +1215,7 @@ export function FeedbackTeamPage() {
         onRemoveRelation={handleRemoveRelation}
       />
     </div>
+    </AskNumoFeedbackProvider>
   );
 }
 
