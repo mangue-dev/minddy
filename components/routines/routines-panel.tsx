@@ -21,7 +21,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
-import { describeSchedule, weekdayName } from "@/lib/routine-schedule";
+import { describeSchedule } from "@/lib/routine-schedule";
 import type { Routine } from "@/lib/routines-api";
 
 /**
@@ -253,6 +253,7 @@ export function RoutinesPanel({
           <RoutineDetail
             key={selected.id}
             routine={selected}
+            project={projectById.get(selected.project_id) ?? null}
             isOwner={selectedIsOwner}
             onBack={onBack}
             onChanged={() => void refresh()}
@@ -308,7 +309,9 @@ function RoutineRow({
       timezone: routine.timezone,
     },
     (key, values) => t(key, values),
-    { locale, weekdayLabel: (d) => weekdayName(d, locale) },
+    // Sans le fuseau : sur une ligne de colonne, « (Europe/Paris) » prend plus
+    // de place que la cadence elle-même. Il se lit dans la routine.
+    { locale, omitTimezone: true },
   );
 
   return (

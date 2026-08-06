@@ -4114,6 +4114,9 @@
     "timezonePlaceholder": "Choisir un fuseau",
     "timezoneSearch": "Chercher une ville ou un fuseau…",
     "timezoneEmpty": "Aucun fuseau trouvé",
-    "actionsLabel": "Actions de la routine"
+    "actionsLabel": "Actions de la routine",
+    "cadenceDailyShort": "Tous les jours à {time}",
+    "cadenceWeeklyShort": "Chaque {weekday} à {time}",
+    "cadenceMonthlyShort": "Le {day} de chaque mois à {time}"
   }
 }

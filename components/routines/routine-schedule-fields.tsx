@@ -3,12 +3,13 @@
 import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, Combobox, Input, cn } from "mangue-ui";
-import { ChevronDown } from "lucide-react";
+import { CalendarDays, CalendarRange, ChevronDown, Sun } from "lucide-react";
 
 import { SearchMultiSelect } from "@/components/search-select";
+import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
 import {
   sortedWeekdays,
-  weekdayName,
+  weekdayLabel,
   type RoutineFrequency,
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
@@ -29,7 +30,19 @@ import {
  * noms IANA, personne ne les tape de mémoire, et un nom mal tapé faisait partir
  * la routine à la mauvaise heure — ou la refusait au moment de créer, ce qui
  * est mieux mais toujours trop tard.
+ *
+ * La FRÉQUENCE se dessine de deux façons, et c'est la seule chose que `variant`
+ * décide : en cartes illustrées (le wizard, où choisir un rythme est l'étape
+ * elle-même et mérite qu'on la regarde), en trois boutons (l'éditeur du détail,
+ * un volet étroit où trois scènes isométriques écraseraient l'instruction juste
+ * au-dessus). Les champs, eux, sont les mêmes des deux côtés.
  */
+
+const FREQUENCY_ICONS: Record<RoutineFrequency, typeof Sun> = {
+  daily: Sun,
+  weekly: CalendarDays,
+  monthly: CalendarRange,
+};
 
 /** Le déclencheur commun des pickers de jours — un champ, pas un bouton nu. */
 const FIELD_TRIGGER =
@@ -38,10 +51,13 @@ const FIELD_TRIGGER =
 export function RoutineScheduleFields({
   value,
   onChange,
+  variant = "cards",
   className,
 }: {
   value: RoutineSchedule;
   onChange: (next: RoutineSchedule) => void;
+  /** `cards` (défaut) = scènes illustrées ; `compact` = trois boutons. */
+  variant?: "cards" | "compact";
   className?: string;
 }) {
   const t = useTranslations("Routines");
@@ -66,11 +82,12 @@ export function RoutineScheduleFields({
     });
 
   // Lundi en tête, dimanche à la fin : l'ordre de la semaine, pas celui d'`Intl`.
+  // Capitale en tête : c'est un libellé de champ, pas un mot dans une phrase.
   const weekdayOptions = useMemo(
     () =>
       [1, 2, 3, 4, 5, 6, 0].map((d) => ({
         value: String(d),
-        label: weekdayName(d, locale),
+        label: weekdayLabel(d, locale),
       })),
     [locale],
   );
@@ -87,8 +104,8 @@ export function RoutineScheduleFields({
   const selectedWeekdays = sortedWeekdays(value.weekdays);
   const selectedDays = [...(value.daysOfMonth ?? [])].sort((a, b) => a - b);
 
-  const weekdayLabel = selectedWeekdays.length
-    ? selectedWeekdays.map((d) => weekdayName(d, locale)).join(", ")
+  const weekdaysLabel = selectedWeekdays.length
+    ? selectedWeekdays.map((d) => weekdayLabel(d, locale)).join(", ")
     : t("weekdayPlaceholder");
   const dayLabel = selectedDays.length
     ? selectedDays.join(", ")
@@ -96,25 +113,50 @@ export function RoutineScheduleFields({
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {/* La fréquence : trois boutons, pas un select — trois choix qui tiennent
-          sur une ligne se lisent mieux qu'une liste à dérouler. */}
-      <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t("frequencyLabel")}>
-        {(["daily", "weekly", "monthly"] as const).map((f) => (
-          <Button
-            key={f}
-            type="button"
-            role="radio"
-            aria-checked={value.frequency === f}
-            variant={value.frequency === f ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFrequency(f)}
-          >
-            {t(`frequency_${f}` as "frequency_daily")}
-          </Button>
-        ))}
-      </div>
+      {variant === "cards" ? (
+        <div
+          className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+          role="radiogroup"
+          aria-label={t("frequencyLabel")}
+        >
+          {(["daily", "weekly", "monthly"] as const).map((f) => (
+            <WizardChoiceCard
+              key={f}
+              selected={value.frequency === f}
+              icon={FREQUENCY_ICONS[f]}
+              label={t(`frequency_${f}` as "frequency_daily")}
+              onSelect={() => setFrequency(f)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t("frequencyLabel")}>
+          {(["daily", "weekly", "monthly"] as const).map((f) => (
+            <Button
+              key={f}
+              type="button"
+              role="radio"
+              aria-checked={value.frequency === f}
+              variant={value.frequency === f ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFrequency(f)}
+            >
+              {t(`frequency_${f}` as "frequency_daily")}
+            </Button>
+          ))}
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {/* Les trois réglages sur UNE ligne : le jour, l'heure, le fuseau. Ils
+          répondent à une seule question — quand ? — et se lisent ensemble.
+          (Une cadence quotidienne n'a pas de jour à choisir : ses deux champs
+          restants s'élargissent d'eux-mêmes.) */}
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-3",
+          value.frequency === "daily" ? "sm:grid-cols-2" : "sm:grid-cols-3",
+        )}
+      >
         {value.frequency === "weekly" ? (
           <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
             {t("weekdayLabel")}
@@ -133,7 +175,7 @@ export function RoutineScheduleFields({
                       selectedWeekdays.length ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
-                    {weekdayLabel}
+                    {weekdaysLabel}
                   </span>
                   <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
                 </button>
@@ -185,7 +227,7 @@ export function RoutineScheduleFields({
           />
         </label>
 
-        <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground sm:col-span-2">
+        <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
           {t("timezoneLabel")}
           <TimezoneCombobox
             value={value.timezone}

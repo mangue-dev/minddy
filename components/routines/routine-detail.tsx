@@ -29,6 +29,7 @@ import {
 
 import { AgentEventFeed } from "@/components/agent/agent-event-feed";
 import { EmptyScene } from "@/components/empty-scene";
+import { ProjectOrb } from "@/components/project-orb";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
 import {
@@ -66,12 +67,16 @@ import type { AgentRunSummary } from "@/lib/agent-api";
  */
 export function RoutineDetail({
   routine,
+  project,
   isOwner,
   onBack,
   onChanged,
   onDeleted,
 }: {
   routine: Routine;
+  /** Le projet porteur — son orbe ouvre l'en-tête, comme sur une conversation :
+   *  « de quel dépôt parle-t-on ? » est la question qu'on se pose en arrivant. */
+  project: { id: string; icon_url: string | null } | null;
   /** Les gestes (interrupteur, lancer, éditer, supprimer) sont au propriétaire
    *  seul — un bouton qui mène à un 403 ne s'affiche pas. */
   isOwner: boolean;
@@ -170,6 +175,13 @@ export function RoutineDetail({
         >
           <ChevronLeft />
         </Button>
+        {project ? (
+          <ProjectOrb
+            seed={project.id}
+            iconUrl={project.icon_url}
+            className="size-4 shrink-0"
+          />
+        ) : null}
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{routine.title}</span>
 
         {isOwner ? (
@@ -259,7 +271,17 @@ export function RoutineDetail({
           </div>
         ) : runs.length === 0 ? (
           <div className="px-4 py-8">
-            <EmptyScene icon={Play} title={t("noRunsYet")} size="compact" />
+            {/* Le geste EST là où le vide se constate : « elle n'a pas encore
+                tourné » appelle « alors fais-la tourner », pas un détour par le
+                menu. Réservé au propriétaire, comme le reste. */}
+            <EmptyScene icon={Play} title={t("noRunsYet")} size="compact">
+              {isOwner ? (
+                <Button size="sm" disabled={busy} onClick={() => void runNow()}>
+                  <Play className="size-4" />
+                  {t("runNow")}
+                </Button>
+              ) : null}
+            </EmptyScene>
           </div>
         ) : (
           <>
@@ -393,7 +415,7 @@ function RoutineEditor({
       />
       <p className="text-xs text-muted-foreground">{t("titleAutoHint")}</p>
 
-      <RoutineScheduleFields value={schedule} onChange={setSchedule} />
+      <RoutineScheduleFields value={schedule} onChange={setSchedule} variant="compact" />
 
       <div className="flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>

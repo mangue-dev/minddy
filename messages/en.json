@@ -4114,6 +4114,9 @@
     "timezonePlaceholder": "Pick a timezone",
     "timezoneSearch": "Search a city or a zone…",
     "timezoneEmpty": "No timezone found",
-    "actionsLabel": "Routine actions"
+    "actionsLabel": "Routine actions",
+    "cadenceDailyShort": "Every day at {time}",
+    "cadenceWeeklyShort": "Every {weekday} at {time}",
+    "cadenceMonthlyShort": "On the {day} of each month at {time}"
   }
 }

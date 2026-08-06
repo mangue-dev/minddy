@@ -310,34 +310,51 @@ export function nextRunAt(schedule: RoutineSchedule, from: Date): Date {
 export function describeSchedule(
   schedule: RoutineSchedule,
   t: (
-    key: "cadenceDaily" | "cadenceWeekly" | "cadenceMonthly",
+    key:
+      | "cadenceDaily"
+      | "cadenceWeekly"
+      | "cadenceMonthly"
+      | "cadenceDailyShort"
+      | "cadenceWeeklyShort"
+      | "cadenceMonthlyShort",
     values: Record<string, string | number>,
   ) => string,
-  opts?: { weekdayLabel?: (weekday: number) => string; locale?: string },
+  opts?: {
+    weekdayLabel?: (weekday: number) => string;
+    locale?: string;
+    /**
+     * Sans le fuseau — la version de la COLONNE. « (Europe/Paris) » y prend
+     * plus de place que la cadence elle-même, sur une ligne qui doit se
+     * parcourir du regard. Le fuseau se lit dans la routine, où il compte
+     * vraiment : c'est là qu'on vérifie à quelle heure elle part.
+     */
+    omitTimezone?: boolean;
+  },
 ): string {
   const time = formatTimeOfDay(schedule.hour, schedule.minute, opts?.locale);
+  const short = opts?.omitTimezone === true;
   if (schedule.frequency === "daily") {
-    return t("cadenceDaily", { time, timezone: schedule.timezone });
+    return short
+      ? t("cadenceDailyShort", { time })
+      : t("cadenceDaily", { time, timezone: schedule.timezone });
   }
   if (schedule.frequency === "weekly") {
     // Les jours DANS L'ORDRE de la semaine, quel que soit l'ordre où ils ont
     // été cochés — « lundi et jeudi », jamais « jeudi et lundi ».
     const days = sortedWeekdays(schedule.weekdays);
-    return t("cadenceWeekly", {
-      weekday: joinList(
-        days.map((d) => opts?.weekdayLabel?.(d) ?? weekdayName(d, opts?.locale)),
-        opts?.locale,
-      ),
-      time,
-      timezone: schedule.timezone,
-    });
+    const weekday = joinList(
+      days.map((d) => opts?.weekdayLabel?.(d) ?? weekdayName(d, opts?.locale)),
+      opts?.locale,
+    );
+    return short
+      ? t("cadenceWeeklyShort", { weekday, time })
+      : t("cadenceWeekly", { weekday, time, timezone: schedule.timezone });
   }
   const days = [...new Set(schedule.daysOfMonth ?? [1])].sort((a, b) => a - b);
-  return t("cadenceMonthly", {
-    day: joinList(days.map(String), opts?.locale),
-    time,
-    timezone: schedule.timezone,
-  });
+  const day = joinList(days.map(String), opts?.locale);
+  return short
+    ? t("cadenceMonthlyShort", { day, time })
+    : t("cadenceMonthly", { day, time, timezone: schedule.timezone });
 }
 
 /**
@@ -383,6 +400,17 @@ export function weekdayName(weekday: number, locale?: string): string {
     timeZone: "UTC",
     weekday: "long",
   }).format(at);
+}
+
+/**
+ * Le nom du jour, capitale en tête — la forme d'un LIBELLÉ de champ (« Lundi »),
+ * qui n'est pas celle d'un mot DANS une phrase (« chaque lundi »). Le français
+ * écrit les jours en minuscule au fil du texte : capitaliser partout aurait
+ * abîmé la phrase de cadence pour arranger le sélecteur.
+ */
+export function weekdayLabel(weekday: number, locale?: string): string {
+  const name = weekdayName(weekday, locale);
+  return name.charAt(0).toLocaleUpperCase(locale || "en-US") + name.slice(1);
 }
 
 /** Le fuseau du navigateur, ou UTC hors navigateur (le wizard le préremplit). */
