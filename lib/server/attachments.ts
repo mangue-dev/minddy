@@ -322,15 +322,27 @@ export async function downloadAttachment(
   return Buffer.from(await data.arrayBuffer());
 }
 
-/** Best-effort storage cleanup — a failure must never fail the business write
-    (the leftover is an orphan object, same class as an abandoned upload). */
+/**
+ * Best-effort storage cleanup — a failure must never fail the business write
+ * (the leftover is an orphan object, same class as an abandoned upload).
+ *
+ * Les chemins vides sont écartés ICI, au goulot, parce qu'un seul null empoisonne
+ * le LOT ENTIER : `storage.remove()` poste `{ prefixes: [...] }` et le service
+ * refuse la requête complète si un élément n'est pas une chaîne — donc plus rien
+ * n'est effacé, silencieusement (l'erreur n'est que journalisée). Depuis MIN-184
+ * une ressource peut être un LIEN, sans objet dans le bucket : le `storage_path`
+ * nul est devenu une valeur ordinaire, et chaque appelant qui ramasse des chemins
+ * doit déjà la filtrer. Ce garde-fou est la deuxième ceinture, pour celui qui
+ * l'oubliera.
+ */
 export async function removeStorageObjects(
   service: SupabaseClient,
-  paths: string[]
+  paths: (string | null | undefined)[]
 ): Promise<void> {
-  if (paths.length === 0) return;
+  const cleaned = paths.filter((p): p is string => typeof p === "string" && p !== "");
+  if (cleaned.length === 0) return;
   try {
-    const { error } = await service.storage.from("attachments").remove(paths);
+    const { error } = await service.storage.from("attachments").remove(cleaned);
     if (error) {
       console.error("[attachments] storage cleanup failed:", error.message);
     }

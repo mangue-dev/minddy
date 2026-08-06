@@ -95,7 +95,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("commentNotFound") }, { status: own.status });
   }
 
-  // Snapshot storage paths first — the root's replies cascade with it.
+  // Snapshot storage paths first — the root's replies cascade with it. Une
+  // ressource LIEN n'a pas d'objet (`storage_path` nul, MIN-184) : l'écarter
+  // ici, sinon la liste porterait un null que `storage.remove()` refuse EN
+  // BLOC — un seul lien sur le fil, et plus aucun fichier ne serait effacé.
   const { data: replies } = await service
     .from("comments")
     .select("id")
@@ -104,7 +107,8 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { data: attachmentRows } = await service
     .from("attachments")
     .select("storage_path")
-    .in("comment_id", commentIds);
+    .in("comment_id", commentIds)
+    .not("storage_path", "is", null);
 
   const { error } = await service.from("comments").delete().eq("id", commentId);
   if (error) {

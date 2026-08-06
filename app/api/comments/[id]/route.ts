@@ -52,8 +52,11 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const t = await getTranslations("ApiErrors");
 
   // Snapshot storage paths first — deleting a thread root cascades its replies
-  // (parent_id FK), whose attachment rows go with them. Objects are removed
-  // only once the delete succeeds.
+  // (parent_id FK), whose resource rows go with them. Objects are removed
+  // only once the delete succeeds. Une ressource LIEN n'a pas d'objet
+  // (`storage_path` nul, MIN-184) : l'écarter ici, sinon la liste porterait un
+  // null que `storage.remove()` refuse EN BLOC — un seul lien sur le fil, et
+  // plus aucun fichier du commentaire ne serait effacé.
   const service = getServiceClient();
   const { data: replies } = await service
     .from("comments")
@@ -63,7 +66,8 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { data: attachmentRows } = await service
     .from("attachments")
     .select("storage_path")
-    .in("comment_id", commentIds);
+    .in("comment_id", commentIds)
+    .not("storage_path", "is", null);
 
   const { data, error } = await auth.supabase
     .from("comments")

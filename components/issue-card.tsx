@@ -972,7 +972,7 @@ export function IssueCard({
       addIssueResourcesApi(issue.id, [input])
         .then(() => {
           void queryClient.invalidateQueries({
-            queryKey: ["issue-attachments", issue.id],
+            queryKey: ["issue-resources", issue.id],
           });
           toast.success(tAttach("addedTo", { id: identifier }));
         })
