@@ -6,7 +6,6 @@ import {
   CircleDot,
   CircleSlash,
   Eye,
-  FileDiff,
   GitBranch,
   GitCommitHorizontal,
   GitMerge,
@@ -31,8 +30,8 @@ import { cn } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
+import { PrHunk } from "@/components/pull-requests/pr-hunk";
 import { UserAvatar } from "@/components/user-avatar";
-import { hunkPreview } from "@/lib/pr-diff-hunk";
 import { displayLineOf } from "@/lib/pr-review-threads";
 import type { PrTimelineEvent, PrReviewState } from "@/lib/pr-timeline";
 import type { PullRequestReviewComment } from "@/lib/agent-api";
@@ -322,59 +321,26 @@ export function PrTimelineReview({
  * la séparation nette (fond, bordure, avatar) dit que ce qui suit est quelqu'un
  * qui PARLE, pas une suite du diff.
  *
- * Sans hunk (GitLab n'en sert aucun), l'extrait disparaît et l'ancre
- * `fichier:ligne` porte seule le contexte : le bloc se lit encore.
- *
- * Exporté parce que le déroulé de la passe de Numo (`PrReviewActivity`) montre
- * les mêmes points : ils doivent se lire pareil des deux côtés, sous peine d'un
- * commentaire de ligne qui a deux apparences dans la même page.
+ * Les deux premières parties sont `PrHunk`, c'est-à-dire le rendu de l'onglet
+ * Fichiers : le même code, dans la même page, ne peut pas avoir deux apparences
+ * selon l'onglet d'où on le regarde. Sans hunk (GitLab n'en sert aucun),
+ * l'extrait disparaît et l'ancre `fichier:ligne` porte seule le contexte : le
+ * bloc se lit encore.
  */
 export function ReviewCommentBlock({ comment }: { comment: PullRequestReviewComment }) {
-  const t = useTranslations("PullRequests");
   const format = useFormatter();
   const now = useNow();
-  const line = displayLineOf(comment);
-  const preview = hunkPreview(comment.diff_hunk);
 
   return (
-    <li className="overflow-hidden rounded-md border border-border bg-background">
-      <span className="flex items-center gap-1.5 border-b border-border bg-muted/40 px-2.5 py-1.5">
-        <FileDiff className="size-3.5 shrink-0 text-muted-foreground/70" />
-        <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-          {line != null ? t("staleAnchor", { path: comment.path, line }) : comment.path}
-        </span>
-      </span>
-
-      {preview.length > 0 ? (
-        <div className="overflow-x-auto border-b border-border font-mono text-[11px] leading-5">
-          {preview.map((l, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex whitespace-pre",
-                l.type === "add" && "bg-emerald-500/10",
-                l.type === "del" && "bg-destructive/10",
-              )}
-            >
-              {/* La gouttière porte le numéro du côté qui existe — comme le diff
-                  de l'onglet Fichiers, pour que les deux vues se lisent pareil. */}
-              <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground/50">
-                {l.newLine ?? l.oldLine ?? ""}
-              </span>
-              <span
-                className={cn(
-                  "w-3 shrink-0 select-none text-muted-foreground/60",
-                  l.type === "add" && "text-emerald-600 dark:text-emerald-500",
-                  l.type === "del" && "text-destructive",
-                )}
-              >
-                {l.type === "add" ? "+" : l.type === "del" ? "-" : " "}
-              </span>
-              <span className="pr-3 text-foreground/90">{l.content || " "}</span>
-            </div>
-          ))}
-        </div>
-      ) : null}
+    <li className="overflow-clip rounded-md border border-border bg-background">
+      <PrHunk
+        path={comment.path}
+        line={displayLineOf(comment)}
+        diffHunk={comment.diff_hunk}
+        // Le bloc est en `bg-background` (c'est ce qui le détache de la carte de
+        // review) : le diff doit prendre ce fond-là, pas celui d'une carte.
+        className="pr-diff-view-inset border-b border-border"
+      />
 
       <div className="flex flex-col gap-1 px-2.5 py-2">
         <span className="flex items-center gap-1.5">

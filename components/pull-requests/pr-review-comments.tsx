@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
+import { PrHunk } from "@/components/pull-requests/pr-hunk";
 import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
@@ -782,19 +783,23 @@ export function StaleThreads({
             const line = displayLineOf(thread.root);
             return (
               <div key={thread.id} className="flex flex-col gap-1.5">
-                <span className="font-mono text-[11px] text-muted-foreground">
-                  {line != null
-                    ? t("staleAnchor", { path: thread.root.path, line })
-                    : thread.root.path}
-                </span>
                 {/* Le hunk tel qu'il était au moment du commentaire — le contexte
                     que le diff courant ne montre plus. Sans lui, « et le cas nul ? »
-                    se lit sans savoir de quel code il parlait. */}
-                {thread.root.diff_hunk ? (
-                  <pre className="overflow-x-auto rounded-md border border-border bg-muted/40 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                    {thread.root.diff_hunk}
-                  </pre>
-                ) : null}
+                    se lit sans savoir de quel code il parlait.
+
+                    Rendu par la lib de diff comme le fichier juste au-dessus, et
+                    non plus en `<pre>` brut : un fil périmé parle du même code
+                    que le diff, il n'a pas à s'afficher dans une autre langue.
+                    `maxLines={0}` — tout le hunk : ici il EST le seul contexte,
+                    là où dans le fil d'activité il ne fait que rappeler une ligne
+                    qu'on peut aller lire dans l'onglet Fichiers. */}
+                <PrHunk
+                  path={thread.root.path}
+                  line={line}
+                  diffHunk={thread.root.diff_hunk}
+                  maxLines={0}
+                  className="rounded-md border border-border"
+                />
                 <ReviewThreadCard
                   thread={thread}
                   replies={replies}

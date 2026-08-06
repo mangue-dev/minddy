@@ -97,6 +97,16 @@
   --diffs-dark-modified-color: var(--brand);
 }
 
+/* Un extrait de code posé DANS une carte plutôt que dans la carte d'un fichier :
+   le hunk d'un commentaire de review, dans le fil d'activité. Le bloc qui le
+   porte y est en `bg-background` — c'est ce qui le détache de la carte de review
+   autour — et le diff doit prendre ce fond-là, sinon il s'y rend en blanc sur
+   gris. Une variable, le reste vient de `.pr-diff-view`, qu'on porte avec. */
+.pr-diff-view-inset {
+  --diffs-light-bg: var(--background);
+  --diffs-dark-bg: var(--background);
+}
+
 /* Damier des panneaux d'image du diff : une image transparente doit se voir
    COMME transparente, pas se confondre avec le fond de la carte. */
 .pr-image-checker {

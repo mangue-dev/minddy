@@ -158,14 +158,19 @@ export function AgentSessionDetail({
             </div>
           }
           headerActions={
-            reviewed.url ? (
-              <Button asChild size="sm" variant="outline">
-                <a href={reviewed.url} target="_blank" rel="noreferrer">
-                  <GitPullRequest className="size-3.5" />
-                  {t("openPullRequest")}
-                </a>
-              </Button>
-            ) : undefined
+            // Vers la PR DANS minddy (`?pr=`), comme partout ailleurs — la carte,
+            // le panneau du ticket, l'en-tête d'une session de code. Ce bouton
+            // partait sur la forge : le seul de l'app à sortir de minddy pour
+            // montrer une pull request qu'on sait afficher.
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => router.push(`/pull-requests?pr=${reviewed.id}`)}
+            >
+              <GitPullRequest className="size-3.5" />
+              {t("openPullRequest")}
+            </Button>
           }
         />
       </div>
