@@ -85,6 +85,7 @@ export interface AccountExport {
   scratchpad: Row | null;
   assistant_conversations: Row[];
   notifications: Row[];
+  push_devices: Row[];
   statistics: Row[];
   billing: Row | null;
   ai_usage: Row[];
@@ -134,6 +135,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     scratchpad,
     conversations,
     notifications,
+    pushDevices,
     statistics,
     billing,
     aiUsage,
@@ -180,6 +182,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     service
       .from("notifications")
       .select("id, project_id, type, issue_id, comment_id, read_at, created_at")
+      .eq("user_id", userId)
+      .order("created_at"),
+    // Appareils abonnés aux notifications push (MIN-183). NI `endpoint`, NI
+    // `p256dh`/`auth` : ce trio EST la capacité de pousser une notification à
+    // cette personne, et le ressortir dans un fichier téléchargeable en ferait
+    // un secret de plus à protéger, pour aucune information supplémentaire —
+    // le libellé dit déjà quel appareil c'est.
+    service
+      .from("push_subscriptions")
+      .select("device_label, enabled, created_at, last_push_at")
       .eq("user_id", userId)
       .order("created_at"),
     service
@@ -313,6 +325,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       messages: messagesByConversation.get(c.id as string) ?? [],
     })),
     notifications: list("notifications", notifications),
+    push_devices: list("push_subscriptions", pushDevices),
     statistics: list("stat_events", statistics),
     billing: one("billing_accounts", billing),
     ai_usage: list("ai_usage", aiUsage),

@@ -29,6 +29,10 @@ import { UserAvatar } from "@/components/user-avatar";
 import { mcpActorLabel } from "@/lib/mcp-agents";
 import { useNotifications } from "@/lib/use-notifications";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
+import {
+  notificationTargetPath,
+  NOTIFICATION_LINE_KEYS,
+} from "@/lib/notification-target";
 import type { MyInvitation, MyNotification, NotificationType } from "@/lib/types";
 
 const AGENT_TYPES: readonly NotificationType[] = [
@@ -36,21 +40,6 @@ const AGENT_TYPES: readonly NotificationType[] = [
   "agent_question",
   "agent_failed",
 ];
-
-/** i18n key of the "who did what" sentence under the title. */
-const LINE_KEYS: Record<NotificationType, string> = {
-  assigned: "lineAssigned",
-  mention: "lineMention",
-  comment: "lineComment",
-  agent_done: "lineAgentDone",
-  agent_question: "lineAgentQuestion",
-  agent_failed: "lineAgentFailed",
-  feedback_new: "lineFeedbackNew",
-  pr_reviewed: "linePrReviewed",
-  pr_merged: "linePrMerged",
-  automation_paused: "lineAutomationPaused",
-  automation_stopped: "lineAutomationStopped",
-};
 
 type InboxFilter = "all" | "unread" | "mentions";
 
@@ -228,15 +217,13 @@ export default function InboxPage() {
   const act = (p: Promise<void>) =>
     void p.catch((e) => toast.error((e as Error).message));
 
+  // La destination est celle de `lib/notification-target.ts` — la même que
+  // suivra le clic sur la notification SYSTÈME (MIN-183), qui n'a pas cette
+  // page sous la main pour la recalculer.
   const open = (n: MyNotification) => {
     if (!n.read_at) act(markRead([n.id]));
-    if (n.project_id && n.objective_id) {
-      router.push(`/projects/${n.project_id}/objectives?open=${n.objective_id}`);
-    } else if (n.project_id && n.feedback_post_id) {
-      router.push(`/projects/${n.project_id}/feedback?post=${n.feedback_post_id}`);
-    } else if (n.project_id && n.issue_id) {
-      router.push(`/projects/${n.project_id}?issue=${n.issue_id}`);
-    }
+    const path = notificationTargetPath(n);
+    if (path) router.push(path);
   };
 
   /** Ligne 1 : ce dont on parle — réf + titre du ticket, ou nom de la cible. */
@@ -266,9 +253,7 @@ export default function InboxPage() {
 
   /** Ligne 2 : qui a fait quoi — complétée par l'extrait du commentaire. */
   const sentenceOf = (n: MyNotification): string => {
-    const sentence = t(LINE_KEYS[n.type] as Parameters<typeof t>[0], {
-      actor: actorOf(n),
-    });
+    const sentence = t(NOTIFICATION_LINE_KEYS[n.type], { actor: actorOf(n) });
     return n.comment_excerpt ? `${sentence} : ${n.comment_excerpt}` : sentence;
   };
 

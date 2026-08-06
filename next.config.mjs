@@ -168,6 +168,29 @@ const nextConfig = {
       headers: securityHeaders(BASE_CSP),
     });
 
+    // Le service worker des notifications push (MIN-183).
+    //
+    // `Content-Type` : servi depuis `public/`, il l'a déjà — mais un service
+    // worker refusé pour cause de type MIME échoue à l'enregistrement, sans
+    // recours possible côté client. On le pose explicitement.
+    //
+    // `Cache-Control` : le navigateur re-télécharge `/sw.js` pour comparer les
+    // octets et décider s'il y a une nouvelle version. Un worker mis en cache
+    // est un worker qui ne se met jamais à jour.
+    //
+    // ⚠ SURTOUT PAS de `Content-Security-Policy` ici, malgré ce que suggère le
+    // guide PWA de Next : l'entrée fourre-tout ci-dessus en pose DÉJÀ une sur
+    // `/sw.js`, et deux en-têtes CSP sur une même réponse se cumulent en
+    // intersection — la plus stricte gagne, sur chaque directive. C'est le même
+    // piège que `/oauth/authorize` plus haut, dans l'autre sens.
+    headers.push({
+      source: "/sw.js",
+      headers: [
+        { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+      ],
+    });
+
     // Les pages publiques, dans leurs deux langues. Recopiées de
     // `lib/public-routes.ts` faute de pouvoir importer du TypeScript ici —
     // `lib/public-routes.test.ts` vérifie qu'elles ne divergent pas.

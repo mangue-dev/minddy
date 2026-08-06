@@ -82,6 +82,7 @@
     "sharp": "^0.35.3",
     "streamdown": "^2.5.0",
     "tiptap-markdown": "^0.9.0",
+    "web-push": "^3.6.7",
     "zod": "^4.4.3",
     "zustand": "^5.0.9"
   },
@@ -93,6 +94,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "markdown-it": "^14.3.0",
     "playwright": "^1.62.0",
     "tailwindcss": "^4",

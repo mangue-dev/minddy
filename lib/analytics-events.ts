@@ -327,6 +327,21 @@ export interface AnalyticsEventProps {
   custom_domain_removed: NoProps;
   smart_assign_toggled: { enabled: boolean };
 
+  // ── Notifications push / web (MIN-183) ──
+  //
+  // AUCUNE PII : ni endpoint (c'est une adresse de livraison, donc un
+  // identifiant d'appareil stable), ni user-agent brut, ni libellé d'appareil.
+  // `platform` reste au niveau de `navigator.platform` (« MacIntel »,
+  // « iPhone ») — assez pour savoir d'où viennent les activations, jamais assez
+  // pour reconnaître quelqu'un.
+  push_device_enabled: { platform: string };
+  push_device_disabled: NoProps;
+  push_device_removed: NoProps;
+  /** La boîte de dialogue du navigateur a été refusée (ou l'était déjà) : c'est
+   *  LE point de perte du parcours, et il ne se rattrape pas depuis la page. */
+  push_permission_denied: NoProps;
+  push_test_sent: NoProps;
+
   // Membres, catégories, import
   project_member_invited: NoProps;
   project_member_removed: NoProps;
@@ -630,6 +645,11 @@ const EVENT_NAMES = [
   "custom_domain_added",
   "custom_domain_removed",
   "smart_assign_toggled",
+  "push_device_enabled",
+  "push_device_disabled",
+  "push_device_removed",
+  "push_permission_denied",
+  "push_test_sent",
   "project_member_invited",
   "project_member_removed",
   "project_invitation_responded",

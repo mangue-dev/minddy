@@ -7,6 +7,10 @@ import {
   resolveNotificationPrefs,
   type NotificationPrefs,
 } from "@/lib/notification-prefs";
+import { afterOrNow } from "@/lib/server/after-safe";
+import { isPushConfigured } from "@/lib/server/push/vapid";
+import { buildPushPayload, loadPushContext } from "@/lib/server/push/payload";
+import { sendPushToUser } from "@/lib/server/push/send";
 
 export interface NotificationRow {
   user_id: string;
@@ -95,7 +99,45 @@ export async function insertNotifications(
   }
 
   const { error } = await service.from("notifications").insert(kept);
-  if (error) console.error("[notifications] insert failed:", error.message);
+  if (error) {
+    console.error("[notifications] insert failed:", error.message);
+    return;
+  }
+
+  // Web Push (MIN-183) : les mêmes lignes partent en notification système, sur
+  // les appareils que le destinataire a enregistrés. Ici, et pas ailleurs, pour
+  // deux raisons :
+  //   • c'est le SEUL point d'insertion — treize producteurs y convergent, donc
+  //     brancher ici couvre tout ce qui tombe dans l'inbox, aujourd'hui et
+  //     demain, sans qu'aucun d'eux n'ait à le savoir ;
+  //   • le filtre de préférences (MIN-82) est déjà passé sur `kept`. Une seule
+  //     bascule gouverne les deux surfaces, il n'y a rien à refiltrer — et donc
+  //     aucun second filtre à tenir en phase avec le premier.
+  //
+  // Après l'insert et SEULEMENT s'il a réussi : une notification qu'on n'a pas
+  // su écrire ne doit pas sonner sur un téléphone en laissant l'inbox vide.
+  //
+  // `afterOrNow` est indispensable : la moitié des producteurs tournent hors
+  // requête (cascades d'automatisations, fin de run d'agent, crons). Un `void`
+  // détaché mourrait avec la réponse, en « TypeError: fetch failed » (cf.
+  // lib/server/after-safe.ts).
+  pushNotifications(service, kept);
+}
+
+/** Le volet push d'`insertNotifications`, isolé pour se lire seul. Best-effort
+    de bout en bout : rien de ce qui suit ne remonte à l'appelant. */
+function pushNotifications(service: SupabaseClient, kept: NotificationRow[]): void {
+  if (!isPushConfigured()) return;
+  afterOrNow(async () => {
+    const ctx = await loadPushContext(service, kept);
+    // Séquentiel par destinataire : `sendPushToUser` parallélise déjà par
+    // appareil, et un insert vise rarement plus d'une poignée de personnes.
+    for (const row of kept) {
+      await sendPushToUser(service, row.user_id, (locale) =>
+        buildPushPayload(ctx, row, locale)
+      );
+    }
+  });
 }
 
 /** The set of userIds that can access a project (owner + members). */

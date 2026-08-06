@@ -152,6 +152,30 @@ export interface MyNotification {
   comment_excerpt: string | null;
 }
 
+/**
+ * Un appareil abonné aux notifications push (MIN-183) — une entrée par
+ * navigateur, telle que la carte des réglages la montre.
+ *
+ * `p256dh` / `auth` n'y sont PAS : ce sont les clés du chiffrement de bout en
+ * bout, des secrets d'appareil qui ne sortent jamais du serveur (voir
+ * lib/server/push/columns.ts). `endpoint`, lui, sort — c'est ce que le client
+ * compare au sien pour reconnaître « cet appareil-ci ».
+ */
+export interface PushDevice {
+  id: string;
+  endpoint: string;
+  /** « Chrome sur macOS » — calculé côté serveur (lib/device-label.ts). */
+  device_label: string | null;
+  /** La langue de l'appareil, figée à l'abonnement : le téléphone en français
+      et le portable de travail en anglais sont deux appareils. */
+  locale: string;
+  /** Éteint sans être désinscrit : la permission reste acquise, un clic rallume. */
+  enabled: boolean;
+  created_at: string;
+  last_seen_at: string;
+  last_push_at: string | null;
+}
+
 // ── Statistiques utilisateur (MIN-12) ────────────────────────────────────────
 export interface StatsTotals {
   created: number;

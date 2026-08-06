@@ -1,5 +1,6 @@
 import {
   AppWindow,
+  BellRing,
   Bot,
   CalendarClock,
   Code2,
@@ -94,6 +95,7 @@ export const SETTINGS_SECTIONS = {
   accountAutomations: "account-automations",
   accountAutomationsProjects: "account-automations-projects",
   accountNotifications: "account-notifications",
+  accountPushDevices: "account-push-devices",
   accountMcp: "account-mcp",
   accountConnectedApps: "account-connected-apps",
   accountGitConnections: "account-git-connections",
@@ -181,6 +183,7 @@ export function useSettingsSections(): SettingsSection[] {
   const tAutomations = useTranslations("Automations");
   const tCycles = useTranslations("Cycles");
   const tNotifications = useTranslations("NotificationSettings");
+  const tPush = useTranslations("Push");
   const tNav = useTranslations("Nav");
   const tRecurrence = useTranslations("Recurrence");
   const tSettings = useTranslations("Settings");
@@ -332,6 +335,18 @@ export function useSettingsSections(): SettingsSection[] {
           "notifications", "notification", "inbox", "alertes", "alerts",
           "mentions", "assignations", "assignments", "commentaires",
           "comments", "feedback",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountPushDevices,
+        tab: "inbox",
+        icon: BellRing,
+        title: tPush("devicesTitle"),
+        keywords: [
+          "push", "notifications système", "notifications systeme",
+          "system notifications", "appareil", "appareils", "device", "devices",
+          "téléphone", "telephone", "phone", "mobile", "navigateur", "browser",
+          "pwa", "alertes", "alerts", "web push",
         ],
       }),
       account({
@@ -583,6 +598,7 @@ export function useSettingsSections(): SettingsSection[] {
     tAutomations,
     tCycles,
     tNotifications,
+    tPush,
     tNav,
     tRecurrence,
     tSettings,

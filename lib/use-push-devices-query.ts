@@ -1,0 +1,15 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { fetchPushDevicesApi } from "./push-devices-api";
+
+export const pushDevicesQueryKey = ["push-devices"] as const;
+
+/** Les appareils abonnés aux notifications push du compte (MIN-183). */
+export function usePushDevicesQuery() {
+  const { data, isPending } = useQuery({
+    queryKey: pushDevicesQueryKey,
+    queryFn: fetchPushDevicesApi,
+  });
+  return { devices: data?.devices ?? [], loading: isPending };
+}

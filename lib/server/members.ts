@@ -1,10 +1,22 @@
 import "server-only";
 
+import { createTranslator } from "next-intl";
+
+import en from "@/messages/en.json";
+import fr from "@/messages/fr.json";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { findAuthUserByEmail } from "@/lib/server/auth-users";
+import {
+  fetchAuthUsersById,
+  findAuthUserByEmail,
+  toNamed,
+} from "@/lib/server/auth-users";
+import { displayName } from "@/lib/display-name";
 import { ensureMembersAllowed } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
+import { afterOrNow } from "@/lib/server/after-safe";
+import { isPushConfigured } from "@/lib/server/push/vapid";
+import { sendPushToUser } from "@/lib/server/push/send";
 import type { Invitation } from "@/lib/types";
 
 /**
@@ -105,7 +117,39 @@ export async function inviteMember({
     console.error("[members] invite failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+
+  // Une invitation atterrit dans l'inbox SANS passer par `notifications` : elle
+  // vit dans sa table, se répond au lieu de se lire, et disparaît une fois
+  // répondue. Elle échappe donc au branchement push d'`insertNotifications`, et
+  // c'est justement la ligne d'inbox qui attend le plus une notification — on
+  // la pousse ici, à la main (MIN-183).
+  pushInvitation(memberUser.id, actorId);
+
   return { ok: true, invitation: invitation as Invitation };
+}
+
+/** La notification système d'une invitation. Best-effort de bout en bout. */
+function pushInvitation(inviteeId: string, inviterId: string): void {
+  if (!isPushConfigured()) return;
+  afterOrNow(async () => {
+    const service = getServiceClient();
+    const inviters = await fetchAuthUsersById(service, [inviterId]);
+    const inviterName = displayName(toNamed(inviters.get(inviterId)), "");
+
+    await sendPushToUser(service, inviteeId, (locale) => {
+      const messages = locale === "fr" ? (fr as typeof en) : en;
+      const t = createTranslator({ locale, messages, namespace: "Inbox" });
+      return {
+        // Le titre est le NOM DE LA CHOSE partout ailleurs (le ticket, le
+        // retour) ; pour une invitation, la chose est l'inbox elle-même, où la
+        // réponse se donne.
+        title: t("groupInvitations"),
+        body: t("lineInvitation", { actor: inviterName || t("someone") }),
+        url: "/inbox",
+        tag: "/inbox",
+      };
+    });
+  });
 }
 
 /** Remove a member: the owner removes anyone, a member removes only themselves

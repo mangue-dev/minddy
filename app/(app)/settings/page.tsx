@@ -25,6 +25,7 @@ import { AccountPreferencesSection } from "@/components/settings/account-prefere
 import { AccountCyclesSection } from "@/components/settings/account-cycles-section";
 import { AccountAutomationsSection } from "@/components/settings/account-automations-section";
 import { AccountNotificationsSection } from "@/components/settings/account-notifications-section";
+import { AccountPushDevicesSection } from "@/components/settings/account-push-devices-section";
 import { AccountMcpSection } from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
 import { AccountGitConnectionsSection } from "@/components/settings/account-git-connections-section";
@@ -85,7 +86,15 @@ export default function AccountSettingsPage() {
       value: "inbox",
       label: t("inboxTab"),
       icon: Inbox,
-      content: <AccountNotificationsSection />,
+      // CE QUI atterrit dans l'inbox d'abord, OÙ ça sonne ensuite (MIN-183) :
+      // les appareils push n'ont de sens qu'une fois les catégories choisies,
+      // et c'est la même bascule qui gouverne les deux surfaces.
+      content: (
+        <>
+          <AccountNotificationsSection />
+          <AccountPushDevicesSection />
+        </>
+      ),
     },
     {
       value: "mcp",
