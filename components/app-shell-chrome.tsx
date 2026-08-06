@@ -19,6 +19,7 @@ import {
   Settings,
   ListTodo,
   Keyboard,
+  CalendarClock,
   GitPullRequest,
   NotebookPen,
   IterationCw,
@@ -267,6 +268,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const ti = useTranslations("Issue");
   const tk = useTranslations("Keyboard");
   const tScratch = useTranslations("Scratchpad");
+  const tRoutines = useTranslations("Routines");
   const tSettings = useTranslations("Settings");
   const tExport = useTranslations("Export");
   const tBilling = useTranslations("Billing");
@@ -611,6 +613,26 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 label: t("agents"),
                 icon: NumoNavIcon,
                 onSelect: () => router.push("/agents"),
+              },
+              {
+                // Les ROUTINES (MIN-185) sont un onglet de la vue Agents, pas
+                // une page : sans entrée à elles, chercher « routine » ne
+                // menait nulle part — l'onglet ne se trouvait qu'en sachant
+                // déjà qu'il existe.
+                key: "go-routines",
+                label: tRoutines("title"),
+                icon: CalendarClock,
+                keywords: [
+                  "routine",
+                  "routines",
+                  "schedule",
+                  "scheduled",
+                  "cron",
+                  "récurrent",
+                  "programmé",
+                  "planifié",
+                ],
+                onSelect: () => router.push("/agents?tab=routines"),
               },
             ]
           : []),

@@ -4,6 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import {
   activeRunForIssue,
+  activeRunForRoutine,
   getRun,
   insertRunMessage,
   newerRunExistsForIssue,
@@ -105,6 +106,19 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           { status: 409 },
         );
       }
+      if (active && active.id !== runId) {
+        return NextResponse.json(
+          { error: "alreadyRunning", code: "alreadyRunning" },
+          { status: 409 },
+        );
+      }
+    } else if (run.routine_id) {
+      // Un passage de ROUTINE (MIN-185) se reprend comme une conversation
+      // carnet — sauf qu'une routine, elle, n'a droit qu'à UN passage actif à
+      // la fois (`idx_agent_runs_active_routine`). Sans cette garde, répondre à
+      // un vieux passage pendant que l'échéance du jour travaille ferait
+      // remonter une violation d'unicité en 500, là où le refus est connu.
+      const active = await activeRunForRoutine(run.routine_id);
       if (active && active.id !== runId) {
         return NextResponse.json(
           { error: "alreadyRunning", code: "alreadyRunning" },

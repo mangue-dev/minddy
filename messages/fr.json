@@ -4117,6 +4117,11 @@
     "actionsLabel": "Actions de la routine",
     "cadenceDailyShort": "Tous les jours à {time}",
     "cadenceWeeklyShort": "Chaque {weekday} à {time}",
-    "cadenceMonthlyShort": "Le {day} de chaque mois à {time}"
+    "cadenceMonthlyShort": "Le {day} de chaque mois à {time}",
+    "backToRuns": "Retour aux exécutions",
+    "openRun": "Ouvrir l'exécution du {date}",
+    "emptyNoProject": "Aucun projet, donc aucun dépôt où une routine pourrait travailler",
+    "emptyNoRepo": "Aucun de vos projets n'a de dépôt connecté. Une routine en clone un pour travailler : liez-en un dans les réglages d'un projet.",
+    "emptyNotOwner": "Seul le propriétaire d'un projet peut poser une routine — c'est son budget IA qui tourne."
   }
 }

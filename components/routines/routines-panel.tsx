@@ -55,7 +55,7 @@ export function RoutinesPanel({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { projects } = useProjects();
-  const { projectIds: gitLinked } = useGitLinkedProjectsQuery();
+  const { projectIds: gitLinked, loading: gitLoading } = useGitLinkedProjectsQuery();
   const { routines, loading } = useRoutinesQuery();
 
   const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
@@ -114,6 +114,24 @@ export function RoutinesPanel({
     gitLinked.has(projectId);
 
   const anyEligible = projects.some((p) => canCreateIn(p.id));
+  /**
+   * POURQUOI on ne peut rien poser, quand c'est le cas. Trois murs différents,
+   * et les confondre laisse chercher : aucun projet du tout, des projets mais
+   * aucun dépôt lié (une routine clone un dépôt), ou des projets à dépôt mais
+   * dont on n'est pas propriétaire (seul le owner engage son budget).
+   *
+   * Le composer des conversations dit déjà le deuxième mur ; l'onglet Routines
+   * ne disait rien, et son écran vide se lisait comme un bug.
+   */
+  const noRepoAnywhere = !gitLoading && projects.length > 0 && gitLinked.size === 0;
+  const emptyReason =
+    projects.length === 0
+      ? "emptyNoProject"
+      : noRepoAnywhere
+        ? "emptyNoRepo"
+        : anyEligible
+          ? null
+          : "emptyNotOwner";
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: routinesQueryKey() });
 
@@ -136,7 +154,11 @@ export function RoutinesPanel({
        son étape `job` — les proposer deux fois obligerait à les tenir à jour à
        deux endroits. */
     <div className="px-3 py-6">
-      <EmptyScene icon={CalendarClock} title={t("emptyTitle")} size="compact">
+      <EmptyScene
+        icon={CalendarClock}
+        title={emptyReason ? t(emptyReason as "emptyNoRepo") : t("emptyTitle")}
+        size="compact"
+      >
         {anyEligible ? (
           <Button size="sm" onClick={() => openWizard()}>
             <Plus />

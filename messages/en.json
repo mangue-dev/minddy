@@ -4117,6 +4117,11 @@
     "actionsLabel": "Routine actions",
     "cadenceDailyShort": "Every day at {time}",
     "cadenceWeeklyShort": "Every {weekday} at {time}",
-    "cadenceMonthlyShort": "On the {day} of each month at {time}"
+    "cadenceMonthlyShort": "On the {day} of each month at {time}",
+    "backToRuns": "Back to the runs",
+    "openRun": "Open the run of {date}",
+    "emptyNoProject": "No project, so no repository for a routine to work in",
+    "emptyNoRepo": "None of your projects has a repository connected. A routine clones one to work in: link one in a project's settings.",
+    "emptyNotOwner": "Only a project's owner can schedule a routine — it runs on their AI budget."
   }
 }

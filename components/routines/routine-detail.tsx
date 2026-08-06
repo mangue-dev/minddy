@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -21,15 +22,18 @@ import {
 import {
   AlertTriangle,
   ChevronLeft,
+  ChevronRight,
+  GitPullRequest,
   MoreHorizontal,
   Pencil,
   Play,
   Trash2,
 } from "lucide-react";
 
-import { AgentEventFeed } from "@/components/agent/agent-event-feed";
+import { AgentConversation } from "@/components/agent/agent-conversation";
 import { EmptyScene } from "@/components/empty-scene";
 import { ProjectOrb } from "@/components/project-orb";
+import { PR_STATE_STYLES, PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
 import {
@@ -47,10 +51,20 @@ import type { AgentRunSummary } from "@/lib/agent-api";
  * Une ROUTINE (MIN-185) et ses « Exécutions précédentes ».
  *
  * C'est LE seul endroit où ses runs se lisent : ils sortent de la liste des
- * conversations, sinon une routine quotidienne y prendrait toute la place. Un
- * passage sélectionné se déroule dans le MÊME fil que n'importe quelle session
- * (`AgentEventFeed`, streaming compris) — un run de routine n'est pas un mode
- * dégradé.
+ * conversations, sinon une routine quotidienne y prendrait toute la place.
+ *
+ * **Deux niveaux, pas un.** La routine montre la LISTE de ses passages — une
+ * ligne pleine largeur par passage, sa date et l'état de sa pull request. Ouvrir
+ * une ligne ouvre la VRAIE conversation de ce run (`AgentConversation`, celle-là
+ * même que l'onglet Conversations sert) : le fil, le diff, la pull request, et
+ * le composer pour lui répondre. Un run de routine n'est pas un mode dégradé —
+ * il se poursuit comme n'importe quelle session, simplement depuis l'onglet
+ * Routines.
+ *
+ * L'en-tête suit ce qu'on regarde : le titre de la routine et ses réglages sur
+ * la liste, la DATE du passage et un retour dans la conversation. Le reste des
+ * gestes de routine (l'interrupteur, le menu) n'y a rien à faire : on ne règle
+ * pas une cadence en lisant ce qu'un passage a produit.
  *
  * **L'en-tête suit celui des autres volets de détail** (conversation, pull
  * request, retour) : le titre seul sur sa ligne, aucune bordure sous lui — le
@@ -89,24 +103,29 @@ export function RoutineDetail({
   const tCommon = useTranslations("Common");
   const locale = useLocale();
   const format = useFormatter();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   const { runs, loading } = useRoutineRunsQuery(routine.id);
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  /**
+   * Le passage OUVERT, ou `null` — c'est lui, et lui seul, qui décide de ce que
+   * ce volet montre : la liste des passages, ou la conversation de l'un d'eux.
+   * Rien n'est ouvert par défaut : arriver sur une routine, c'est vouloir voir
+   * ce qu'elle est et ce qu'elle a fait, pas relire un fil en particulier.
+   */
+  const [openRunId, setOpenRunId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
-  // Le fondu des bords, comme partout où un contenu déborde de sa boîte.
-  const runsFade = useScrollFade<HTMLDivElement>("x");
+  // Le fondu du bas de la liste, comme partout où un contenu déborde.
+  const listFade = useScrollFade<HTMLDivElement>();
 
-  // Le passage le plus récent est ouvert par défaut : c'est celui qu'on vient
-  // lire. La sélection suit la routine — changer de routine repart du sien.
+  // Changer de routine referme ce qu'on lisait de la précédente.
   useEffect(() => {
-    setSelectedRunId(null);
+    setOpenRunId(null);
     setEditing(false);
   }, [routine.id]);
-  const selectedRun: AgentRunSummary | null =
-    runs.find((r) => r.id === selectedRunId) ?? runs[0] ?? null;
+  const openRun: AgentRunSummary | null = runs.find((r) => r.id === openRunId) ?? null;
 
   const cadence = describeSchedule(routineSchedule(routine), (key, values) => t(key, values), {
     locale,
@@ -158,6 +177,59 @@ export function RoutineDetail({
       setBusy(false);
     }
   };
+
+  /**
+   * UN PASSAGE OUVERT : la vraie conversation de ce run — le même composant que
+   * l'onglet Conversations sert, avec son fil, son diff, sa pull request et son
+   * composer. On peut donc RÉPONDRE à un passage de routine : il reprend là où
+   * il s'est arrêté, comme n'importe quelle session.
+   *
+   * L'en-tête ne porte plus que ce qui vaut ici : le retour vers la liste des
+   * passages, et la DATE de celui-ci à la place du titre. Ni interrupteur ni
+   * menu — on ne règle pas une cadence en lisant ce qu'un passage a produit.
+   *
+   * À droite, la conversation pose elle-même le DIFF ; la pull request, elle,
+   * vient de l'hôte (`headerActions`), exactement comme sur la page Agents :
+   * `AgentConversation` ne sait proposer que d'en CRÉER une, jamais d'ouvrir
+   * celle qui existe — c'est au volet qui l'accueille de savoir où elle se lit.
+   */
+  if (openRun) {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <AgentConversation
+          key={openRun.id}
+          noteRunId={openRun.id}
+          active
+          headerTitle={
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("backToRuns")}
+                onClick={() => setOpenRunId(null)}
+              >
+                <ChevronLeft />
+              </Button>
+              {project ? (
+                <ProjectOrb
+                  seed={project.id}
+                  iconUrl={project.icon_url}
+                  className="size-4 shrink-0"
+                />
+              ) : null}
+              <span className="truncate text-sm font-medium">
+                {format.dateTime(new Date(openRun.created_at), {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </span>
+            </div>
+          }
+          headerActions={<PrHeaderAction run={openRun} />}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -257,16 +329,19 @@ export function RoutineDetail({
         ) : null}
       </div>
 
-      {/* ── Exécutions précédentes ─────────────────────────────────────── */}
+      {/* ── Exécutions précédentes : UNE LIGNE par passage ─────────────
+          Pleine largeur, sa date et l'état de sa pull request. Pas le fil :
+          empiler des conversations dans une liste rend les deux illisibles.
+          Ouvrir une ligne ouvre le fil, à sa place. */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 px-4 pt-2 pb-1">
+        <div className="shrink-0 px-4 pt-2 pb-1.5">
           <h3 className="text-xs font-medium text-muted-foreground">{t("previousRuns")}</h3>
         </div>
 
         {loading ? (
           <div className="flex flex-col gap-2 px-4 py-2">
             {[0, 1].map((i) => (
-              <Skeleton key={i} className="h-8 rounded-md" />
+              <Skeleton key={i} className="h-10 rounded-md" />
             ))}
           </div>
         ) : runs.length === 0 ? (
@@ -284,54 +359,68 @@ export function RoutineDetail({
             </EmptyScene>
           </div>
         ) : (
-          <>
-            {/* Une pastille par passage : sa date et son état. Deux passages
-                d'une même routine ne se distinguent que par là. */}
-            <div
-              ref={runsFade.ref}
-              {...runsFade.scrollProps}
-              className="flex shrink-0 gap-1 overflow-x-auto px-4 pb-2"
-            >
+          <div
+            ref={listFade.ref}
+            {...listFade.scrollProps}
+            className="min-h-0 flex-1 overflow-y-auto"
+          >
+            <ul className="flex flex-col divide-y divide-border border-t border-border">
               {runs.map((run) => (
-                <button
+                /* La ligne entière ouvre le passage — sauf le badge de pull
+                   request, qui mène à la PR. D'où le bouton ÉTENDU sous la
+                   ligne plutôt qu'autour d'elle : un bouton dans un bouton n'est
+                   pas du HTML valide, et le badge doit rester cliquable pour
+                   lui-même. Les éléments `relative` qui suivent se peignent
+                   au-dessus de lui et gardent leurs propres clics. */
+                <li
                   key={run.id}
-                  type="button"
-                  onClick={() => setSelectedRunId(run.id)}
-                  className={cn(
-                    "shrink-0 rounded-full border px-3 py-1 text-xs transition-colors",
-                    selectedRun?.id === run.id
-                      ? "border-brand/50 bg-muted"
-                      : "border-border text-muted-foreground hover:bg-muted/50",
-                  )}
+                  className="relative flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
                 >
-                  {format.dateTime(new Date(run.created_at), {
-                    day: "numeric",
-                    month: "short",
-                    hour: "numeric",
-                    minute: "numeric",
-                  })}
-                  {" · "}
-                  {tAgents(
-                    agentSessionStatusKey({
-                      status: run.status,
-                      prNumber: run.pr_number,
-                      prState: run.pr_state,
-                    }),
+                  <button
+                    type="button"
+                    onClick={() => setOpenRunId(run.id)}
+                    aria-label={t("openRun", {
+                      date: format.dateTime(new Date(run.created_at), {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }),
+                    })}
+                    className="absolute inset-0 outline-none"
+                  />
+                  <span className="pointer-events-none relative min-w-0 flex-1 truncate text-sm">
+                    {format.dateTime(new Date(run.created_at), {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </span>
+                  {/* L'ÉTAT de la pull request quand il y en a une — c'est ce
+                      qu'un passage produit de visible, et c'est aussi le chemin
+                      vers elle. Sinon l'état du run, qui répond à la même
+                      question d'un cran plus bas. */}
+                  {run.pr_state ? (
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/pull-requests?run=${run.id}`)}
+                      className="relative shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <PrStateBadge state={run.pr_state} icon />
+                    </button>
+                  ) : (
+                    <span className="pointer-events-none relative shrink-0 text-xs text-muted-foreground">
+                      {tAgents(
+                        agentSessionStatusKey({
+                          status: run.status,
+                          prNumber: run.pr_number,
+                          prState: run.pr_state,
+                        }),
+                      )}
+                    </span>
                   )}
-                </button>
+                  <ChevronRight className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
+                </li>
               ))}
-            </div>
-
-            {selectedRun ? (
-              <AgentEventFeed
-                key={selectedRun.id}
-                runId={selectedRun.id}
-                status={selectedRun.status}
-                prompt={selectedRun.prompt}
-                className="min-h-0 flex-1"
-              />
-            ) : null}
-          </>
+            </ul>
+          </div>
         )}
       </div>
 
@@ -345,6 +434,41 @@ export function RoutineDetail({
         onConfirm={() => void remove()}
       />
     </div>
+  );
+}
+
+/**
+ * Ce que l'en-tête d'un passage montre de sa pull request — même règle que sur
+ * la page Agents : une PR VIVANTE est une action (« Ouvrir la pull request »),
+ * une PR FINIE est un état (le badge, cliquable — la PR se consulte encore).
+ * Aucune PR : rien, et la conversation propose alors d'en créer une.
+ */
+function PrHeaderAction({ run }: { run: AgentRunSummary }) {
+  const t = useTranslations("Agents");
+  const router = useRouter();
+  if (run.pr_number == null) return null;
+  const closed =
+    run.pr_state === "merged" || run.pr_state === "closed" ? run.pr_state : null;
+  const open = () => router.push(`/pull-requests?run=${run.id}`);
+  return closed ? (
+    <button
+      type="button"
+      onClick={open}
+      className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <PrStateBadge state={closed} icon />
+    </button>
+  ) : (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={open}
+      className={cn(run.pr_state === "open" && PR_STATE_STYLES.open)}
+    >
+      <GitPullRequest className="size-3.5" />
+      {t("openPullRequest")}
+    </Button>
   );
 }
 
