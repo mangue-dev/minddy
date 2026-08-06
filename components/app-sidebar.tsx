@@ -112,14 +112,22 @@ export type AppNavItem = NavItem & {
   shortcut?: string;
   /**
    * Rejoue le `badge` dans un coin de l'icône quand la sidebar est REPLIÉE (les
-   * badges normaux n'y sont pas rendus, faute de place). Réservé aux indicateurs
-   * compacts — spinner « agent en cours », pastille non-lu — pas aux compteurs.
+   * badges normaux n'y sont pas rendus, faute de place). À porter par TOUTE
+   * entrée qui signale quelque chose — spinner « agent en cours », pastille
+   * non-lu, compteur de file : le mode rail est celui des pages où l'on trie,
+   * et c'est précisément là que la file ne doit pas disparaître.
+   *
+   * Le coin ne tient qu'une forme COMPACTE (≈ 14 px). Un badge plus large —
+   * un compteur à trois caractères, deux marques côte à côte — passe par
+   * `badgeCollapsed`, qui lui donne sa version repliée.
    */
   showBadgeCollapsed?: boolean;
   /**
    * Ce que la pastille de coin porte à la place du `badge`, quand celui-ci n'y
-   * tiendrait pas. Cas réel : l'entrée « Accueil » du mode projet cumule le
-   * triangle Smart Assign et un compteur ; repliée, seul le triangle passe.
+   * tiendrait pas : compteur plafonné à « 9+ » (`countBadgeCollapsed`), ou une
+   * seule des marques d'un badge qui en cumule plusieurs. Cas réel : l'entrée
+   * « Accueil » du mode projet cumule le triangle Smart Assign et un compteur ;
+   * repliée, elle garde le triangle, et le compteur seulement à défaut.
    */
   badgeCollapsed?: ReactNode;
   /**

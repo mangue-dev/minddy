@@ -193,6 +193,58 @@ function countBadge(count: number, label?: string) {
 }
 
 /**
+ * Le même compteur, REPLIÉ en pastille de coin pour le mode rail : la ligne n'y
+ * est plus qu'une icône, et le chiffre posé au bout n'a plus de bout où se
+ * poser. Sans lui la file disparaît purement et simplement dès qu'une page porte
+ * une sidebar secondaire — c'est-à-dire sur les pages mêmes où l'on trie.
+ *
+ * Trois écarts avec la version dépliée, tous imposés par la boîte de 36 px :
+ *
+ * - **Plafond à « 9+ »**, pas « 99+ ». Ce n'est pas un choix de goût : la
+ *   pastille est ancrée en haut à DROITE de la boîte et grandit vers la gauche,
+ *   c'est-à-dire par-dessus l'icône. Trois caractères l'effacent, et le rail ne
+ *   montre plus alors qu'un compteur sans dire de quoi.
+ * - **Fond à la couleur de la barre**, là où la version dépliée n'a pas de fond
+ *   du tout : posé à même les traits de l'icône, un chiffre nu ne se lit pas.
+ *   Une pastille TEINTÉE ferait une seconde forme à lire ; à la couleur du fond,
+ *   elle ne se voit pas — elle découpe simplement l'icône, et le chiffre a l'air
+ *   posé dessus, sans rien ajouter. Le `px` la fait respirer : sans lui, la
+ *   découpe s'arrête au chiffre et un trait d'icône vient le toucher.
+ * - **`aria-label` porte le compte EXACT** quand l'affichage plafonne : « 9+ »
+ *   lu à voix haute ne dit rien de ce qui attend.
+ *
+ * Son encombrement est celui du spinner « agent en cours » (14 px), à un ou deux
+ * pixels près : tout ce qui se replie dans ce coin y tient la même place.
+ */
+function countBadgeCollapsed(count: number, label?: string) {
+  return (
+    <span
+      className="flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sidebar px-[3px] text-[10px] font-medium leading-none tabular-nums text-sidebar-foreground/90"
+      aria-label={label ?? String(count)}
+    >
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
+/**
+ * Les champs de badge d'une entrée qui porte un COMPTEUR, dépliée et repliée
+ * d'un seul geste — l'oubli du second est invisible tant qu'on ne va pas sur
+ * une page à sidebar secondaire. Zéro ne rend rien : la ligne reste nue.
+ */
+function countBadges(
+  count: number,
+  label?: string
+): Pick<AppNavItem, "badge" | "badgeCollapsed" | "showBadgeCollapsed"> {
+  if (count <= 0) return {};
+  return {
+    badge: countBadge(count, label),
+    badgeCollapsed: countBadgeCollapsed(count, label),
+    showBadgeCollapsed: true,
+  };
+}
+
+/**
  * La marque d'un brouillon de projet, à la place exacte du compteur « à trier »
  * d'un projet créé : c'est le seul point où la ligne diffère, et le vide y
  * laisserait croire à un projet sans rien à trier.
@@ -417,8 +469,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ),
     [triageCounts, currentProjectId]
   );
-  // L'entrée « Accueil » cumule donc deux marques. Repliée, la pastille de coin
-  // ne garde que le triangle : un compteur n'y tiendrait pas.
+  // L'entrée « Accueil » cumule donc deux marques. Le coin de l'icône n'en tient
+  // qu'UNE : le triangle passe devant, parce qu'un réglage incomplet ne se
+  // rattrape pas tout seul là où une file finit toujours par se vider.
   const homeBadge =
     smartAssignBadge || triageElsewhere > 0 ? (
       <span className="flex items-center gap-1.5">
@@ -431,6 +484,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           : null}
       </span>
     ) : undefined;
+  const homeBadgeCollapsed =
+    smartAssignBadge ??
+    (triageElsewhere > 0
+      ? countBadgeCollapsed(
+          triageElsewhere,
+          t("triageElsewhereBadge", { count: triageElsewhere })
+        )
+      : undefined);
 
   // Agents : un spinner sur l'onglet dès qu'une session TRAVAILLE (génération en
   // cours), tous projets confondus ; sinon une bulle bleue si au moins une session a
@@ -924,7 +985,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     href: "/inbox",
     active: isInbox,
     shortcut: "I",
-    badge: inboxCount > 0 ? countBadge(inboxCount) : undefined,
+    ...countBadges(inboxCount, t("inboxBadge", { count: inboxCount })),
   };
 
   // Verrous de plan (MIN-72) : Agents & Pull Requests restent visibles mais
@@ -939,7 +1000,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     shortcut: "R",
     disabled: !agentsAllowed,
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
-    badge: agentsAllowed && openPrCount > 0 ? countBadge(openPrCount) : undefined,
+    ...countBadges(
+      agentsAllowed ? openPrCount : 0,
+      t("pullRequestsBadge", { count: openPrCount })
+    ),
   };
   const agentsItem: AppNavItem = {
     key: "agents",
@@ -985,7 +1049,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               shortcut: "H",
               badge: homeBadge,
               showBadgeCollapsed: true,
-              badgeCollapsed: smartAssignBadge,
+              badgeCollapsed: homeBadgeCollapsed,
             },
           ],
         },
@@ -1015,7 +1079,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: `${base}/triage`,
               active: pathname.startsWith(`${base}/triage`),
               shortcut: "T",
-              badge: triageCount > 0 ? countBadge(triageCount) : undefined,
+              ...countBadges(
+                triageCount,
+                t("triageBadge", { count: triageCount })
+              ),
             },
             {
               key: "feedback",
@@ -1024,7 +1091,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: `${base}/feedback`,
               active: pathname.startsWith(`${base}/feedback`),
               shortcut: "F",
-              badge: feedbackCount > 0 ? countBadge(feedbackCount) : undefined,
+              ...countBadges(
+                feedbackCount,
+                t("feedbackBadge", { count: feedbackCount })
+              ),
             },
             {
               key: "settings",
@@ -1076,10 +1146,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               label: p.name,
               icon: projectOrbIcon(p.id, p.icon_url),
               href: `/projects/${p.id}`,
-              badge:
-                toTriage > 0
-                  ? countBadge(toTriage, t("triageBadge", { count: toTriage }))
-                  : undefined,
+              ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
             };
           }),
           // Les brouillons, à la suite des projets et dans la même liste : c'est
@@ -1126,7 +1193,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, t, tProjects]);
+  }, [currentProject, pathname, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, homeBadgeCollapsed, t, tProjects]);
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
   const modeKey = currentProject ? `project-${currentProject.id}` : "home";
