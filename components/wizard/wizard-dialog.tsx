@@ -1,10 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Button,
+  ConfirmDeleteDialog,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -39,6 +40,10 @@ import { WizardStepper } from "@/components/wizard/wizard-stepper";
  *
  * Le shell ne fait reculer que vers les étapes DÉJÀ validées — jamais avancer :
  * sauter en avant contournerait la validation de l'étape en cours.
+ *
+ * Il sait aussi retenir une fermeture accidentelle (`dismissConfirm`), ce qu'un
+ * parcours de plusieurs étapes finit toujours par demander : un clic à côté ne
+ * doit pas emporter ce qu'on est en train de faire.
  */
 
 export interface WizardStep<Id extends string = string> {
@@ -81,6 +86,7 @@ export function WizardDialog<Id extends string>({
   onSubmit,
   submitting = false,
   error,
+  dismissConfirm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -96,8 +102,24 @@ export function WizardDialog<Id extends string>({
   submitting?: boolean;
   /** Message d'échec, sous le corps de l'étape. */
   error?: ReactNode;
+  /**
+   * Les deux fermetures ACCIDENTELLES — le clic au-dehors et Échap — demandent
+   * confirmation, avec ces mots-là. Le bouton de fermeture, lui, n'est jamais
+   * intercepté : cliquer une croix est un geste explicite, et le faire répéter
+   * n'empêcherait aucune erreur, ça n'ajouterait qu'un clic à qui veut sortir.
+   *
+   * Passer `undefined` là où il n'y a plus rien à perdre (la dernière étape,
+   * la première) : une question sans enjeu apprend à répondre sans lire.
+   */
+  dismissConfirm?: {
+    title: string;
+    description?: string;
+    confirmLabel: string;
+    cancelLabel: string;
+  };
 }) {
   const tCommon = useTranslations("Common");
+  const [confirmingDismiss, setConfirmingDismiss] = useState(false);
 
   // Une étape peut disparaître de la liste sous l'index (l'utilisateur change
   // une réponse en amont) : on borne plutôt que de rendre du vide.
@@ -112,8 +134,27 @@ export function WizardDialog<Id extends string>({
     if (target >= 0 && target < index) onStepIndexChange(target);
   };
 
+  /**
+   * La garde est posée SUR LA MODALE, et pas sur son contenu : toutes les
+   * fermetures que la modale déclenche d'elle-même — clic au-dehors, Échap, et
+   * le glissé vers le bas de la feuille mobile — passent par ce
+   * `onOpenChange`, alors que les crochets `onInteractOutside` /
+   * `onEscapeKeyDown` du contenu n'existent que dans la version bureau (en
+   * dessous de 480 px, mangue-ui rend un `Drawer`, qui ne les reçoit pas).
+   *
+   * Le bouton de fermeture, lui, appelle `onOpenChange` EN DIRECT, sans passer
+   * par la modale : il n'est donc pas intercepté, et c'est voulu.
+   */
+  const handleModalOpenChange = (next: boolean) => {
+    if (!next && dismissConfirm) {
+      setConfirmingDismiss(true);
+      return;
+    }
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleModalOpenChange}>
       <DialogContent
         showCloseButton={false}
         className="flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 !rounded-2xl sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
@@ -227,6 +268,22 @@ export function WizardDialog<Id extends string>({
             </div>
           </form>
         </div>
+
+        {/* Rendue DANS la modale : c'est ce qui l'inscrit au-dessus d'elle dans
+            la pile de calques de Radix, donc le clic qui la ferme ne redescend
+            pas fermer le wizard derrière. Hors du `<form>`, aussi : son bouton
+            de confirmation n'a rien à soumettre. */}
+        {dismissConfirm && (
+          <ConfirmDeleteDialog
+            open={confirmingDismiss}
+            onOpenChange={setConfirmingDismiss}
+            title={dismissConfirm.title}
+            description={dismissConfirm.description}
+            confirmLabel={dismissConfirm.confirmLabel}
+            cancelLabel={dismissConfirm.cancelLabel}
+            onConfirm={() => onOpenChange(false)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

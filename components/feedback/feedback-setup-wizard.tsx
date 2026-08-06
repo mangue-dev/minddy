@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,7 +13,21 @@ import {
   type WizardStep,
 } from "@/components/wizard/wizard-dialog";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
-import { integrationsQueryKey } from "@/lib/use-integrations-query";
+import { CustomDomainSection } from "@/components/custom-domain-section";
+import {
+  BoardAccentRow,
+  BoardVisibilityRows,
+  FeedbackTranslationGroup,
+  NumoReviewGroup,
+  SettingsRows,
+  feedbackDomainKey,
+  feedbackSettingsKey,
+  useFeedbackBoardSettings,
+} from "@/components/feedback/feedback-settings-shared";
+import {
+  integrationsQueryKey,
+  useIntegrationsQuery,
+} from "@/lib/use-integrations-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 import {
   FREE_COMPOSE_PARAM,
@@ -23,15 +37,31 @@ import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 
 /**
- * « Intégrer dans mon app » (MIN-37) : wizard qui génère un prompt tout-en-un
- * décrivant quoi brancher, où et comment. Étapes : type (board/API) → SSO
- * (board uniquement, fortement recommandé) → instruction libre de placement →
- * le prompt.
+ * Le wizard de configuration des retours — LE point d'entrée de l'onglet
+ * Retours, dont il est devenu la première chose qu'on y voit.
  *
- * La forme est celle de tous les wizards de minddy (`WizardDialog`) : ce
- * fichier ne décrit que ses étapes.
+ * Il descend du wizard « Intégrer dans mon app » (MIN-37), qui ne faisait que
+ * générer un prompt d'intégration, et il en garde le fil : on répond d'abord à
+ * la seule question qui décide de tout — **comment les retours arrivent** — et
+ * chaque étape suivante découle de cette réponse. Ce qui a changé, c'est qu'il
+ * CONFIGURE en chemin au lieu de renvoyer l'utilisateur régler la même chose à
+ * la main juste après :
  *
- * Le prompt fini a DEUX destinations, ouvertes toutes les deux dans les DEUX
+ *     board  →  type → SSO → ce que voit le public → allure → revue → où le
+ *               brancher → le prompt
+ *     API    →  type → revue → où le brancher → le prompt
+ *
+ * Les étapes du milieu ne réinventent rien : ce sont les rangées et les cartes
+ * de l'onglet Retours, importées telles quelles
+ * ([feedback-settings-shared.tsx](feedback-settings-shared.tsx)), et elles
+ * écrivent EN DIRECT par la même route. D'où le seul effet de bord notable du
+ * parcours : valider « board public » à la première étape crée et allume le
+ * board tout de suite, parce que sans lui les étapes suivantes n'auraient rien
+ * à régler. Si l'utilisateur revient en arrière et repart vers l'API, le board
+ * est rendu dans l'état où on l'a trouvé — mais on ne l'éteint que si c'est
+ * NOUS qui l'avions allumé.
+ *
+ * Le prompt final a DEUX destinations, ouvertes toutes les deux dans les DEUX
  * modes :
  *  • le presse-papier, pour l'agent de code de l'utilisateur (Claude Code,
  *    Cursor…) ;
@@ -46,25 +76,32 @@ import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
  */
 
 type Mode = "board" | "api";
-type StepId = "type" | "sso" | "placement" | "done";
+type StepId = "type" | "sso" | "board" | "look" | "review" | "placement" | "done";
 
 /** Une instruction de placement, pas un cahier des charges. */
 const PLACEMENT_MAX_CHARS = 500;
 
-export function FeedbackIntegrationWizard({
+export function FeedbackSetupWizard({
   projectId,
+  isOwner,
+  open,
+  onOpenChange,
 }: {
   projectId: string;
+  /** Le parcours provisionne et crée des secrets : réservé au owner. */
+  isOwner: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("Settings");
   const tCommon = useTranslations("Common");
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("board");
   const [sso, setSso] = useState(true);
   const [placement, setPlacement] = useState("");
   const [stepIndex, setStepIndex] = useState(0);
+  const [working, setWorking] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [keyCreated, setKeyCreated] = useState(false);
@@ -74,22 +111,55 @@ export function FeedbackIntegrationWizard({
   );
   const [copied, setCopied] = useState(false);
   const [envCopied, setEnvCopied] = useState(false);
+  /** Ce parcours a-t-il allumé le board lui-même ? Seul ce cas se défait. */
+  const [provisionedBoard, setProvisionedBoard] = useState(false);
+
+  const {
+    board,
+    sharedViews,
+    isPending,
+    patchBoard,
+    patchBoardDebounced,
+    post,
+  } = useFeedbackBoardSettings(projectId);
+  const { integrations } = useIntegrationsQuery(projectId);
+  const hasFeedbackKey = integrations.some(
+    (i) => i.kind === "feedback" && !i.revoked_at,
+  );
 
   // Numo ne peut travailler que sur un dépôt : sans lien git, l'option ne se
   // montre pas — un bouton qui n'aurait rien à cloner ne vaut pas un refus.
   const { link } = useProjectGitLinkQuery(projectId);
   const canHandOffToNumo = !!link;
 
+  /**
+   * Le parcours s'ouvre sur ce qui est DÉJÀ en place, pas sur les valeurs par
+   * défaut : quelqu'un qui revient régler un détail ne doit pas avoir à
+   * re-choisir ce qu'il a choisi la dernière fois. Une seule fois par ouverture,
+   * et seulement quand les réglages sont chargés — semer sur un board inconnu
+   * reviendrait à semer sur du vide.
+   */
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      seeded.current = false;
+      return;
+    }
+    if (seeded.current || isPending) return;
+    seeded.current = true;
+    setMode(!board?.enabled && hasFeedbackKey ? "api" : "board");
+    setSso(board?.sso_configured ?? true);
+  }, [open, isPending, board, hasFeedbackKey]);
+
   // Le SSO ne se pose que pour le board : en mode API, c'est l'app appelante
-  // qui dit au nom de qui elle dépose.
+  // qui dit au nom de qui elle dépose. Les réglages du board non plus, pour la
+  // même raison — il n'y en a pas.
   const steps: StepId[] =
     mode === "board"
-      ? ["type", "sso", "placement", "done"]
-      : ["type", "placement", "done"];
+      ? ["type", "sso", "board", "look", "review", "placement", "done"]
+      : ["type", "review", "placement", "done"];
 
   const reset = () => {
-    setMode("board");
-    setSso(true);
     setPlacement("");
     setStepIndex(0);
     setPrompt(null);
@@ -97,11 +167,12 @@ export function FeedbackIntegrationWizard({
     setEnv(null);
     setCopied(false);
     setEnvCopied(false);
+    setProvisionedBoard(false);
   };
 
   const handleOpenChange = (next: boolean) => {
     if (!next) reset();
-    setOpen(next);
+    onOpenChange(next);
   };
 
   const copyToClipboard = async (text: string) => {
@@ -114,6 +185,51 @@ export function FeedbackIntegrationWizard({
       // La copie automatique qui suit la génération peut être refusée (elle ne
       // part pas d'un clic). Rien à dire ici : la dernière étape porte le
       // bouton « Copier le prompt », et LUI part bien d'un geste.
+    }
+  };
+
+  /**
+   * Le choix du canal, APPLIQUÉ. Le board doit exister pour que les trois
+   * étapes suivantes aient quelque chose à régler — et repartir vers l'API le
+   * rend dans l'état où on l'a trouvé.
+   */
+  const applyType = async () => {
+    const alreadyOn = board?.enabled === true;
+    setWorking(true);
+    try {
+      if (mode === "board") {
+        if (!alreadyOn) {
+          if (!(await patchBoard({ enabled: true }))) return;
+          setProvisionedBoard(true);
+        }
+      } else if (provisionedBoard) {
+        if (!(await patchBoard({ enabled: false }))) return;
+        setProvisionedBoard(false);
+      }
+      setStepIndex((i) => i + 1);
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  /**
+   * L'identité des visiteurs, APPLIQUÉE. Le secret existant n'est jamais
+   * régénéré (une intégration en place casserait en silence) — il n'est
+   * supprimé que si l'utilisateur demande explicitement l'autre mode, ce que
+   * dit la carte « vérification email » quand un secret existe.
+   */
+  const applySso = async () => {
+    const configured = board?.sso_configured ?? false;
+    if (sso === configured) {
+      setStepIndex((i) => i + 1);
+      return;
+    }
+    setWorking(true);
+    try {
+      if (!(await post(sso ? "rotate_sso" : "clear_sso"))) return;
+      setStepIndex((i) => i + 1);
+    } finally {
+      setWorking(false);
     }
   };
 
@@ -162,7 +278,7 @@ export function FeedbackIntegrationWizard({
       );
       // Le board/la clé ont pu être provisionnés : rafraîchir les vues settings.
       void queryClient.invalidateQueries({
-        queryKey: ["feedback-settings", projectId],
+        queryKey: feedbackSettingsKey(projectId),
       });
       void queryClient.invalidateQueries({
         queryKey: integrationsQueryKey(projectId),
@@ -249,9 +365,79 @@ export function FeedbackIntegrationWizard({
             selected={!sso}
             icon={Mail}
             label={t("feedbackWizardSsoNo")}
-            description={t("feedbackWizardSsoNoDesc")}
+            // Choisir l'e-mail quand un secret existe SUPPRIME ce secret : la
+            // carte le dit avant le clic, pas un toast après.
+            description={
+              board?.sso_configured
+                ? t("feedbackWizardSsoNoDescClear")
+                : t("feedbackWizardSsoNoDesc")
+            }
             onSelect={() => setSso(false)}
           />
+        </div>
+      ),
+    },
+
+    // À partir d'ici, les rangées sont celles de l'onglet Retours et écrivent
+    // en direct : le board existe déjà, l'étape « type » vient de l'allumer.
+    board: {
+      id: "board",
+      title: t("feedbackWizardBoardTitle"),
+      subtitle: t("feedbackWizardBoardDesc"),
+      wide: true,
+      content: board ? (
+        <SettingsRows>
+          <BoardVisibilityRows
+            board={board}
+            sharedViews={sharedViews}
+            isOwner={isOwner}
+            onPatch={patchBoard}
+          />
+        </SettingsRows>
+      ) : null,
+    },
+
+    look: {
+      id: "look",
+      title: t("feedbackWizardLookTitle"),
+      subtitle: t("feedbackWizardLookDesc"),
+      wide: true,
+      content: (
+        <div className="flex flex-col gap-4">
+          {board && (
+            <SettingsRows>
+              <BoardAccentRow
+                board={board}
+                isOwner={isOwner}
+                onToggle={patchBoard}
+                onColorChange={patchBoardDebounced}
+              />
+            </SettingsRows>
+          )}
+          {/* La section se masque seule sans les env VERCEL_* : sur un
+              déploiement qui ne sait pas brancher de domaine, l'étape se réduit
+              à la couleur, ce qui est exactement ce qu'elle a à dire. */}
+          <CustomDomainSection
+            endpoint={`/api/projects/${projectId}/feedback/domain`}
+            queryKey={feedbackDomainKey(projectId)}
+            className="rounded-xl border border-border bg-card p-4"
+          />
+        </div>
+      ),
+    },
+
+    // Les deux cartes de la page, telles quelles : elles portent leur propre
+    // interrupteur maître, et la revue comme la traduction s'appliquent aux
+    // trois canaux — l'étape est donc la même dans les deux parcours.
+    review: {
+      id: "review",
+      title: t("feedbackWizardReviewTitle"),
+      subtitle: t("feedbackWizardReviewDesc"),
+      wide: true,
+      content: (
+        <div className="flex flex-col gap-4">
+          <NumoReviewGroup projectId={projectId} isOwner={isOwner} />
+          <FeedbackTranslationGroup projectId={projectId} isOwner={isOwner} />
         </div>
       ),
     },
@@ -264,29 +450,39 @@ export function FeedbackIntegrationWizard({
         // Décrire un emplacement, c'est raconter son app — plus facile à dire
         // qu'à taper. Le micro se pose DANS le champ, et le transcrit s'ajoute
         // à la suite de ce qui est déjà écrit plutôt que de l'écraser.
-        <div className="relative">
-          <Textarea
-            autoFocus
-            value={placement}
-            onChange={(e) => setPlacement(e.target.value)}
-            placeholder={t("feedbackWizardPlacementPlaceholder")}
-            aria-label={t("feedbackWizardPlacementTitle")}
-            maxLength={PLACEMENT_MAX_CHARS}
-            rows={5}
-            className="min-h-32 resize-none pb-12"
-          />
-          <DictateButton
-            floating
-            disabled={generating}
-            onTranscription={(text) =>
-              setPlacement((current) =>
-                (current.trim() ? `${current.trim()} ${text}` : text).slice(
-                  0,
-                  PLACEMENT_MAX_CHARS,
-                ),
-              )
-            }
-          />
+        <div className="flex flex-col gap-3">
+          <div className="relative">
+            <Textarea
+              autoFocus
+              value={placement}
+              onChange={(e) => setPlacement(e.target.value)}
+              placeholder={t("feedbackWizardPlacementPlaceholder")}
+              aria-label={t("feedbackWizardPlacementTitle")}
+              maxLength={PLACEMENT_MAX_CHARS}
+              rows={5}
+              className="min-h-32 resize-none pb-12"
+            />
+            <DictateButton
+              floating
+              disabled={generating}
+              onTranscription={(text) =>
+                setPlacement((current) =>
+                  (current.trim() ? `${current.trim()} ${text}` : text).slice(
+                    0,
+                    PLACEMENT_MAX_CHARS,
+                  ),
+                )
+              }
+            />
+          </div>
+          {/* Générer, en mode API, MINTE une clé. Le dire avant le clic : la
+              configuration, elle, est déjà enregistrée — fermer ici ne perd
+              rien, et c'est ce qui rend le renoncement possible. */}
+          {mode === "api" && (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {t("feedbackWizardPlacementKeyNote")}
+            </p>
+          )}
         </div>
       ),
     },
@@ -396,34 +592,38 @@ export function FeedbackIntegrationWizard({
     },
   };
 
-  return (
-    <>
-      <div className="flex items-start justify-between gap-4 rounded-lg border border-brand/25 bg-brand/5 p-4">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <p className="text-sm font-medium">{t("feedbackWizardTitle")}</p>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {t("feedbackWizardDesc")}
-          </p>
-        </div>
-        <Button size="sm" className="shrink-0" onClick={() => setOpen(true)}>
-          {t("feedbackWizardButton")}
-        </Button>
-      </div>
+  // Ce qu'un clic à côté emporterait. Rien, tant qu'aucune étape n'est validée ;
+  // rien non plus sur la dernière, où fermer EST la façon de finir — la question
+  // n'est donc posée qu'entre les deux.
+  const currentStep = steps[Math.min(stepIndex, steps.length - 1)];
+  const atStake = stepIndex > 0 && currentStep !== "done";
 
-      <WizardDialog
-        open={open}
-        onOpenChange={handleOpenChange}
-        label={t("feedbackWizardTitle")}
-        steps={steps.map((id) => stepDefs[id])}
-        stepIndex={stepIndex}
-        onStepIndexChange={setStepIndex}
-        submitting={generating}
-        onSubmit={(id) => {
-          if (id === "placement") void generate();
-          else if (id === "done") handleOpenChange(false);
-          else setStepIndex((i) => i + 1);
-        }}
-      />
-    </>
+  return (
+    <WizardDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      label={t("feedbackWizardTitle")}
+      steps={steps.map((id) => stepDefs[id])}
+      stepIndex={stepIndex}
+      onStepIndexChange={setStepIndex}
+      submitting={working || generating}
+      dismissConfirm={
+        atStake
+          ? {
+              title: t("feedbackWizardQuitTitle"),
+              description: t("feedbackWizardQuitDesc"),
+              confirmLabel: t("feedbackWizardQuitConfirm"),
+              cancelLabel: t("feedbackWizardQuitCancel"),
+            }
+          : undefined
+      }
+      onSubmit={(id) => {
+        if (id === "type") void applyType();
+        else if (id === "sso") void applySso();
+        else if (id === "placement") void generate();
+        else if (id === "done") handleOpenChange(false);
+        else setStepIndex((i) => i + 1);
+      }}
+    />
   );
 }

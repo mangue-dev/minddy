@@ -139,10 +139,12 @@ export async function setDomain(
   }
 
   // Remplacement : la cible avait un autre domaine → on le détache proprement.
+  // Le « s'il y en avait un » est DANS `removeDomain`, et pas dans un
+  // `if (previous)` ici : cette garde-là est compilée en `if (true)`.
+  // L'explication tient sur `removeDomain`.
   const previous = await getDomainRowForTarget(target);
-  if (previous) {
-    const removed = await removeDomain(previous);
-    if (!removed) return { ok: false, error: "api_error" };
+  if (!(await removeDomain(previous))) {
+    return { ok: false, error: "api_error" };
   }
 
   const added = await addDomainToVercel(domain);
@@ -189,8 +191,32 @@ export async function detachDomainFromVercelOnly(row: CustomDomainRow): Promise<
   invalidateCustomDomainCache(row.domain);
 }
 
-/** Détache de Vercel PUIS supprime la ligne (l'inverse laisse un orphelin). */
-export async function removeDomain(row: CustomDomainRow): Promise<boolean> {
+/**
+ * Détache de Vercel PUIS supprime la ligne (l'inverse laisse un orphelin).
+ *
+ * **`null` = rien à détacher, et c'est un succès.** Les trois appelants partent
+ * d'une recherche qui peut ne rien trouver, et un détachement est idempotent par
+ * nature : le « s'il y en a un » a sa place ici, une fois, plutôt que recopié
+ * sur chaque site d'appel.
+ *
+ * Ce n'est pas qu'une commodité, c'est la seule protection qu'on contrôle.
+ * Turbopack (Next 16.3) évalue `await getDomainRowForTarget(target)` comme une
+ * valeur toujours vraie — la fonction est `async`, donc son retour est une
+ * Promise, donc un objet, et l'`await` n'est pas modélisé. Le `if (previous)`
+ * qui protégeait cet appel dans `setDomain` était compilé en `if (true)`, en dev
+ * COMME en production (vérifié dans les deux sorties) : le premier domaine
+ * attaché à un board ou à une vue partagée mourait en
+ * `TypeError: Cannot read properties of null (reading 'domain')`, avec une pile
+ * qui désigne une branche que la source rend inatteignable.
+ *
+ * Donc : **ne pas remettre de garde sur le site d'appel.** Elle serait relue
+ * comme une protection, et n'en serait pas une. C'est le seul endroit du dépôt
+ * où le compilateur replie une condition portant sur une valeur d'exécution —
+ * vérifié sur toute la sortie de `.next` — mais c'est un endroit.
+ */
+export async function removeDomain(row: CustomDomainRow | null): Promise<boolean> {
+  if (!row) return true;
+
   const removed = await removeDomainFromVercel(row.domain);
   if (!removed.ok) return false;
 

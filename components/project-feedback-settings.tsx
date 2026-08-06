@@ -1,29 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import {
   Badge,
   Button,
-  Checkbox,
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  ColorInput,
   ConfirmDeleteDialog,
   Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Skeleton,
   Spinner,
   Switch,
   cn,
-  toast,
 } from "mangue-ui";
 import {
   Check,
@@ -33,31 +25,28 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  Languages,
   MessagesSquare,
   RefreshCw,
-  Sparkles,
-  TriangleAlert,
 } from "lucide-react";
-import { defaultLocale } from "@/i18n/config";
 import { getAppEnv } from "@/lib/env";
-import { DEFAULT_BOARD_ACCENT } from "@/lib/feedback/accent";
-import {
-  FEEDBACK_LANGUAGES,
-  languageLabel,
-  normalizeLanguage,
-  type FeedbackLanguage,
-} from "@/lib/feedback/languages";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
-import { useProjects } from "@/lib/projects-context";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import {
   CustomDomainSection,
   fetchCustomDomainApi,
 } from "@/components/custom-domain-section";
-import { FeedbackIntegrationWizard } from "@/components/feedback-integration-wizard";
+import {
+  BoardAccentRow,
+  BoardVisibilityRows,
+  FeedbackTranslationGroup,
+  NumoReviewGroup,
+  StatusPill,
+  feedbackDomainKey,
+  useFeedbackBoardSettings,
+  type BoardSettings,
+} from "@/components/feedback/feedback-settings-shared";
+import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
 import { EmptyScene } from "@/components/empty-scene";
-import { SearchMultiSelect } from "@/components/search-select";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 
@@ -72,62 +61,19 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
  * réglages emploient depuis MIN-167. Ses `Channel` et `Row` locaux ont donc été
  * SUPPRIMÉS au profit de `SettingsGroup` / `SettingsRow` : la source du patron
  * doit en être un consommateur, sinon les deux redivergent au premier ajustement.
+ *
+ * **La page n'est plus la porte d'entrée** : le wizard de configuration l'est
+ * ([feedback-setup-wizard.tsx](feedback/feedback-setup-wizard.tsx)). Tant
+ * qu'aucun canal n'est ouvert, l'onglet ne montre QUE lui — une liste
+ * d'interrupteurs éteints ne dit pas par où commencer, et le premier réglage à
+ * prendre (comment les retours arrivent) commande tous les autres. Une fois un
+ * canal en place, les cartes reviennent : on retouche un détail sans refaire le
+ * parcours.
+ *
+ * Les rangées et les cartes sont partagées avec le wizard
+ * ([feedback-settings-shared.tsx](feedback/feedback-settings-shared.tsx)) : les
+ * deux surfaces montrent le même interrupteur et écrivent par la même route.
  */
-
-interface BoardSettings {
-  enabled: boolean;
-  show_views: boolean;
-  visible_view_ids: string[];
-  show_categories: boolean;
-  allow_comments: boolean;
-  accent_light: string | null;
-  accent_dark: string | null;
-  token: string;
-  sso_secret: string | null;
-  sso_configured: boolean;
-}
-
-interface SharedView {
-  id: string;
-  name: string;
-}
-
-interface FeedbackSettingsData {
-  board: BoardSettings | null;
-  shared_views: SharedView[];
-}
-
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
-  });
-  const data = (await response.json().catch(() => null)) as
-    | (T & { error?: string })
-    | null;
-  if (!response.ok) throw new Error(data?.error || "error");
-  return data as T;
-}
-
-/** Pastille d'état : point coloré + libellé, pour lire le statut d'un coup. */
-function StatusPill({ active, label }: { active: boolean; label: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium",
-        active ? "bg-brand/10 text-brand" : "bg-muted text-muted-foreground",
-      )}
-    >
-      <span
-        className={cn(
-          "size-1.5 rounded-full",
-          active ? "bg-brand" : "bg-muted-foreground/40",
-        )}
-      />
-      {label}
-    </span>
-  );
-}
 
 export function ProjectFeedbackSettings({
   projectId,
@@ -137,23 +83,15 @@ export function ProjectFeedbackSettings({
   isOwner: boolean;
 }) {
   const t = useTranslations("Settings");
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const settingsPath = `/api/projects/${projectId}/feedback/settings`;
-
-  const { data, isPending } = useQuery({
-    queryKey: ["feedback-settings", projectId],
-    queryFn: () =>
-      api<{ board: BoardSettings | null; shared_views: SharedView[] }>(settingsPath),
-  });
-  const board = data?.board ?? null;
-  const sharedViews = data?.shared_views ?? [];
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const { board, sharedViews, isPending, busy, patchBoard, patchBoardDebounced, post } =
+    useFeedbackBoardSettings(projectId);
 
   // Domaine personnalisé (MIN-36) — même query que la CustomDomainSection
   // (dédupliquée par React Query) pour préférer le domaine vérifié dans l'URL.
   const domainPath = `/api/projects/${projectId}/feedback/domain`;
   const { data: domainData } = useQuery({
-    queryKey: ["feedback-domain", projectId],
+    queryKey: feedbackDomainKey(projectId),
     queryFn: () => fetchCustomDomainApi(domainPath),
     enabled: Boolean(board?.enabled),
   });
@@ -164,55 +102,6 @@ export function ProjectFeedbackSettings({
   const feedbackKeyCount = integrations.filter(
     (i) => i.kind === "feedback" && !i.revoked_at,
   ).length;
-
-  const mutate = async (fn: () => Promise<unknown>) => {
-    setBusy(true);
-    try {
-      await fn();
-      await queryClient.invalidateQueries({ queryKey: ["feedback-settings", projectId] });
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Optimiste (MIN-40) : patch le cache `board` tout de suite pour que le switch
-  // suive le doigt, puis persiste ; revert + toast à l'échec. (post/mutate
-  // gardent leur spinner : générer un secret SSO n'est pas un simple toggle.)
-  const patchBoard = async (body: Partial<BoardSettings>) => {
-    const key = ["feedback-settings", projectId];
-    const previous = queryClient.getQueryData<FeedbackSettingsData>(key);
-    queryClient.setQueryData<FeedbackSettingsData>(key, (old) =>
-      old && old.board ? { ...old, board: { ...old.board, ...body } } : old,
-    );
-    try {
-      await api(settingsPath, { method: "PATCH", body: JSON.stringify(body) });
-    } catch (e) {
-      queryClient.setQueryData(key, previous);
-      toast.error((e as Error).message);
-    }
-  };
-  const post = (action: string) =>
-    mutate(() => api(settingsPath, { method: "POST", body: JSON.stringify({ action }) }));
-
-  // Accent (MIN-59) : le picker `ColorInput` émet en continu pendant le drag. On
-  // patche le cache tout de suite (le swatch suit le doigt) mais on debounce
-  // l'appel réseau pour ne pas spammer la DB. Échec → resync depuis le serveur.
-  const accentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const patchBoardDebounced = (body: Partial<BoardSettings>) => {
-    const key = ["feedback-settings", projectId];
-    queryClient.setQueryData<FeedbackSettingsData>(key, (old) =>
-      old && old.board ? { ...old, board: { ...old.board, ...body } } : old,
-    );
-    if (accentTimer.current) clearTimeout(accentTimer.current);
-    accentTimer.current = setTimeout(() => {
-      api(settingsPath, { method: "PATCH", body: JSON.stringify(body) }).catch((e) => {
-        toast.error((e as Error).message);
-        void queryClient.invalidateQueries({ queryKey: key });
-      });
-    }, 350);
-  };
 
   if (isPending) {
     return (
@@ -248,11 +137,62 @@ export function ProjectFeedbackSettings({
       ? `${origin}/f/${board.token}`
       : null;
   const boardOn = board?.enabled ?? false;
+  /** Un canal ouvert quelque part : c'est ce qui fait exister la configuration. */
+  const configured = boardOn || feedbackKeyCount > 0;
+
+  // Rien d'ouvert : la scène, et rien d'autre. Le geste est le wizard — un
+  // membre qui n'y a pas droit lit la scène et sait quoi demander au owner.
+  if (!configured) {
+    return (
+      <div className="flex flex-col gap-6">
+        <FeedbackWizardMount
+          projectId={projectId}
+          isOwner={isOwner}
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+        />
+        <EmptyScene icon={MessagesSquare} title={t("feedbackSetupEmptyTitle")}>
+          {isOwner && (
+            <Button onClick={() => setWizardOpen(true)}>
+              {t("feedbackSetupButton")}
+            </Button>
+          )}
+        </EmptyScene>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Intégrer dans mon app : prompt tout-en-un (owner : secrets) ── */}
-      {isOwner && <FeedbackIntegrationWizard projectId={projectId} />}
+      {/* La MÊME place dans l'arbre que dans la branche « rien d'ouvert »
+          au-dessus : allumer le board à la première étape fait basculer la page
+          d'une branche à l'autre, et un wizard remonté à ce moment-là repartirait
+          de son étape 1 sous les doigts de l'utilisateur. */}
+      <FeedbackWizardMount
+        projectId={projectId}
+        isOwner={isOwner}
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+      />
+
+      {/* ── Le parcours complet, en tête : c'est par lui qu'on configure ── */}
+      {isOwner && (
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-brand/25 bg-brand/5 p-4">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <p className="text-sm font-medium">{t("feedbackSetupTitle")}</p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {t("feedbackSetupDesc")}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="shrink-0"
+            onClick={() => setWizardOpen(true)}
+          >
+            {t("feedbackSetupButtonAgain")}
+          </Button>
+        </div>
+      )}
 
       {/* ── Canal 1 : board public ─────────────────────────────────────── */}
       <SettingsGroup
@@ -276,7 +216,7 @@ export function ProjectFeedbackSettings({
           </>
         }
       >
-        {boardOn && (
+        {boardOn && board && (
           <>
             {/* Lien public + domaine personnalisé (MIN-36) fusionnés : le lien
                 affiche déjà le domaine vérifié, donc `primaryUrlShown` évite de
@@ -299,7 +239,7 @@ export function ProjectFeedbackSettings({
               )}
               <CustomDomainSection
                 endpoint={domainPath}
-                queryKey={["feedback-domain", projectId]}
+                queryKey={feedbackDomainKey(projectId)}
                 primaryUrlShown
               />
             </div>
@@ -312,16 +252,16 @@ export function ProjectFeedbackSettings({
                 <span
                   className={cn(
                     "text-xs font-medium",
-                    board?.sso_configured ? "text-brand" : "text-muted-foreground",
+                    board.sso_configured ? "text-brand" : "text-muted-foreground",
                   )}
                 >
-                  {board?.sso_configured
+                  {board.sso_configured
                     ? t("feedbackIdentitySso")
                     : t("feedbackIdentityEmail")}
                 </span>
               }
             >
-              {isOwner && board && (
+              {isOwner && (
                 <SsoSetup
                   board={board}
                   busy={busy}
@@ -332,101 +272,23 @@ export function ProjectFeedbackSettings({
               )}
             </SettingsRow>
 
-            {/* Commentaires publics (MIN-196) — la seule rangée du board qui
-                ouvre une PAROLE et pas un affichage : elle vient donc avant
-                celles qui règlent ce qu'on montre. Éteinte, le fil déjà écrit
-                reste lisible ; c'est ce que dit son hint. */}
-            {board && (
-              <SettingsRow
-                label={t("feedbackAllowComments")}
-                hint={t("feedbackAllowCommentsDesc")}
-                control={
-                  <Switch
-                    checked={board.allow_comments}
-                    disabled={!isOwner}
-                    onCheckedChange={(v) => void patchBoard({ allow_comments: v })}
-                    aria-label={t("feedbackAllowComments")}
-                  />
-                }
-              />
-            )}
-
-            {/* Onglets des vues partagées */}
-            {board && (
-              <SettingsRow
-                label={t("feedbackShowViews")}
-                hint={t("feedbackShowViewsDesc")}
-                control={
-                  <Switch
-                    checked={board.show_views}
-                    disabled={!isOwner}
-                    onCheckedChange={(v) => void patchBoard({ show_views: v })}
-                    aria-label={t("feedbackShowViews")}
-                  />
-                }
-              >
-                {board.show_views &&
-                  (sharedViews.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      {t("feedbackNoSharedViews")}
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-1.5">
-                      {sharedViews.map((view) => {
-                        const checked = board.visible_view_ids.includes(view.id);
-                        return (
-                          <label
-                            key={view.id}
-                            className="flex items-center gap-2.5 text-sm"
-                          >
-                            <Checkbox
-                              checked={checked}
-                              disabled={!isOwner}
-                              onCheckedChange={(next) => {
-                                const ids = next
-                                  ? [...board.visible_view_ids, view.id]
-                                  : board.visible_view_ids.filter(
-                                      (id) => id !== view.id,
-                                    );
-                                void patchBoard({ visible_view_ids: ids });
-                              }}
-                            />
-                            {view.name}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  ))}
-              </SettingsRow>
-            )}
-
-            {/* Catégories des posts sur le board public (MIN-52) — off par
-                défaut : les catégories restent internes au dashboard équipe. */}
-            {board && (
-              <SettingsRow
-                label={t("feedbackShowCategories")}
-                hint={t("feedbackShowCategoriesDesc")}
-                control={
-                  <Switch
-                    checked={board.show_categories}
-                    disabled={!isOwner}
-                    onCheckedChange={(v) => void patchBoard({ show_categories: v })}
-                    aria-label={t("feedbackShowCategories")}
-                  />
-                }
-              />
-            )}
+            {/* Commentaires publics, onglets de vues, catégories — les mêmes
+                rangées que l'étape « Ce que voit le public » du wizard. */}
+            <BoardVisibilityRows
+              board={board}
+              sharedViews={sharedViews}
+              isOwner={isOwner}
+              onPatch={patchBoard}
+            />
 
             {/* Couleur d'accent du board public (MIN-59) — optionnelle, une par
                 thème ; off par défaut = bleu minddy. */}
-            {board && (
-              <AccentColorSetting
-                board={board}
-                isOwner={isOwner}
-                onToggle={patchBoard}
-                onColorChange={patchBoardDebounced}
-              />
-            )}
+            <BoardAccentRow
+              board={board}
+              isOwner={isOwner}
+              onToggle={patchBoard}
+              onColorChange={patchBoardDebounced}
+            />
           </>
         )}
       </SettingsGroup>
@@ -467,175 +329,47 @@ export function ProjectFeedbackSettings({
       </SettingsGroup>
 
       {/* ── Revue par Numo : s'applique aux trois canaux ────────────────── */}
-      <NumoReviewSetting projectId={projectId} isOwner={isOwner} />
+      <NumoReviewGroup
+        projectId={projectId}
+        isOwner={isOwner}
+        anchor={SETTINGS_SECTIONS.projectFeedbackReview}
+      />
 
       {/* ── Traduction : une étape de la même passe ─────────────────────── */}
-      <FeedbackTranslationSetting projectId={projectId} isOwner={isOwner} />
+      <FeedbackTranslationGroup
+        projectId={projectId}
+        isOwner={isOwner}
+        anchor={SETTINGS_SECTIONS.projectFeedbackTranslation}
+      />
     </div>
   );
 }
 
 /**
- * Traduction automatique des retours (dans la même passe que la revue).
- *
- * Deux réglages, et un troisième qui n'en est pas un :
- *
- * - **la langue de l'équipe** — celle vers laquelle on traduit. Elle est semée
- *   à la création du projet avec la langue de l'interface du créateur, parce
- *   que c'est le seul instant où on peut la lire : l'app la tient dans un
- *   cookie, jamais sur le compte, et une passe de revue qui tourne trois jours
- *   plus tard n'aurait aucun moyen de la retrouver ;
- * - **les langues qu'on lit sans aide** — une équipe française n'a pas besoin
- *   qu'on lui traduise l'anglais ;
- * - la langue de l'équipe elle-même, qui est dans la seconde liste d'office et
- *   n'y est donc pas proposée : on ne traduit pas vers sa propre langue, et
- *   offrir la case laisserait croire qu'on peut demander l'inverse.
+ * Le wizard, monté au même endroit dans les deux états de la page — et
+ * seulement pour le owner, qui est le seul à pouvoir provisionner un board ou
+ * fabriquer une clé. Le nommer plutôt que de recopier ses quatre props aux deux
+ * endroits, c'est ce qui garantit qu'il reste UNE seule place dans l'arbre.
  */
-function FeedbackTranslationSetting({
+function FeedbackWizardMount({
   projectId,
   isOwner,
+  open,
+  onOpenChange,
 }: {
   projectId: string;
   isOwner: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const t = useTranslations("Settings");
-  const locale = useLocale();
-  const { projects, updateProject } = useProjects();
-  const project = projects.find((p) => p.id === projectId);
-
-  // Miroir local pour que le switch suive le doigt, puis réconciliation depuis
-  // le projet — le pattern de `NumoReviewSetting` juste au-dessus.
-  const [on, setOn] = useState(project?.feedback_translate_enabled !== false);
-  useEffect(() => {
-    if (project) setOn(project.feedback_translate_enabled !== false);
-  }, [project]);
-
-  if (!project) return null;
-
-  // NULL en base = jamais renseignée : la revue retombe sur la locale par
-  // défaut de l'app, et le sélecteur montre donc la même chose qu'elle.
-  const teamLanguage =
-    normalizeLanguage(project.feedback_team_language) ??
-    (normalizeLanguage(defaultLocale) as FeedbackLanguage);
-  const skipped = new Set(
-    (project.feedback_no_translate_languages ?? [])
-      .map(normalizeLanguage)
-      .filter((code): code is FeedbackLanguage => code !== null)
-  );
-
-  const patch = async (input: Parameters<typeof updateProject>[1]) => {
-    try {
-      await updateProject(projectId, input);
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
-
-  const selectedSkip = FEEDBACK_LANGUAGES.filter(
-    (code) => code !== teamLanguage && skipped.has(code)
-  );
-
-  const label = (code: string) => languageLabel(code, locale);
-
+  if (!isOwner) return null;
   return (
-    <SettingsGroup
-      anchor={SETTINGS_SECTIONS.projectFeedbackTranslation}
-      icon={Languages}
-      title={t("feedbackTranslationTitle")}
-      description={t("feedbackTranslationDesc")}
-      help={t("feedbackTranslationHelp")}
-      action={
-        <>
-          <StatusPill
-            active={on}
-            label={on ? t("feedbackActive") : t("feedbackInactive")}
-          />
-          <Switch
-            checked={on}
-            disabled={!isOwner}
-            onCheckedChange={(v) => {
-              setOn(v);
-              void patch({ feedback_translate_enabled: v }).catch(() => setOn(!v));
-            }}
-            aria-label={t("feedbackTranslationTitle")}
-          />
-        </>
-      }
-    >
-      {on && (
-        <>
-          {/* Le sélecteur des réglages, celui de la langue de l'interface juste
-              à côté dans le compte — même contrôle, même largeur. */}
-          <SettingsRow
-            htmlFor="feedback-team-language"
-            label={t("feedbackTeamLanguageLabel")}
-            hint={t("feedbackTeamLanguageDesc")}
-            control={
-              <Select
-                value={teamLanguage}
-                disabled={!isOwner}
-                onValueChange={(value) =>
-                  void patch({ feedback_team_language: value })
-                }
-              >
-                <SelectTrigger id="feedback-team-language" className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FEEDBACK_LANGUAGES.map((code) => (
-                    <SelectItem key={code} value={code}>
-                      {label(code)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            }
-          />
-          {/* Choix multiple : le combobox cherchable de l'app (celui des
-              catégories d'un ticket), et non une grille de cases — quatorze
-              cases à cocher dans une rangée de réglages font un mur qu'on
-              parcourt des yeux au lieu d'y chercher une langue.
-              La langue de l'équipe n'y est pas : elle est exclue d'office, et
-              l'offrir laisserait croire qu'on peut demander l'inverse. */}
-          <SettingsRow
-            label={t("feedbackNoTranslateLabel")}
-            hint={t("feedbackNoTranslateDesc")}
-            control={
-              <SearchMultiSelect
-                values={[...skipped]}
-                onChange={(codes) =>
-                  void patch({ feedback_no_translate_languages: codes })
-                }
-                options={FEEDBACK_LANGUAGES.filter(
-                  (code) => code !== teamLanguage
-                ).map((code) => ({ value: code, label: label(code) }))}
-                align="end"
-                searchPlaceholder={t("feedbackNoTranslateSearch")}
-                trigger={
-                  <button
-                    type="button"
-                    disabled={!isOwner}
-                    aria-label={t("feedbackNoTranslateLabel")}
-                    className="flex h-9 w-48 items-center justify-between gap-2 rounded-md border border-border bg-transparent px-3 text-sm outline-none transition-colors hover:bg-muted/50 focus-visible:border-ring disabled:pointer-events-none disabled:opacity-50"
-                  >
-                    <span className="min-w-0 truncate">
-                      {selectedSkip.length === 0
-                        ? t("feedbackNoTranslateNone")
-                        : selectedSkip.length === 1
-                          ? label(selectedSkip[0])
-                          : t("feedbackNoTranslateCount", {
-                              count: selectedSkip.length,
-                            })}
-                    </span>
-                    <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                  </button>
-                }
-              />
-            }
-          />
-        </>
-      )}
-    </SettingsGroup>
+    <FeedbackSetupWizard
+      projectId={projectId}
+      isOwner={isOwner}
+      open={open}
+      onOpenChange={onOpenChange}
+    />
   );
 }
 
@@ -649,175 +383,6 @@ function ManageKeysButton({ projectId }: { projectId: string }) {
         {t("feedbackApiManageKeys")}
       </Link>
     </Button>
-  );
-}
-
-/**
- * Revue par Numo — l'étape qui catégorise, filtre et modère chaque retour avant
- * publication. Deux interrupteurs, sur le projet (pas sur le board : la revue
- * couvre aussi l'API et la saisie interne).
- *
- * Le second n'existe que tant que le premier est armé : il ne répond qu'à la
- * question « et si le budget IA est épuisé ? ». Désarmer la revue est possible
- * mais déconseillé, d'où l'avertissement en clair plutôt qu'un simple libellé.
- */
-function NumoReviewSetting({
-  projectId,
-  isOwner,
-}: {
-  projectId: string;
-  isOwner: boolean;
-}) {
-  const t = useTranslations("Settings");
-  const { projects, updateProject } = useProjects();
-  const project = projects.find((p) => p.id === projectId);
-
-  // Miroir local pour que les switches suivent le doigt, puis reconciliation
-  // depuis le projet (refetch) — le pattern de SmartAssignSection.
-  const [reviewOn, setReviewOn] = useState(project?.feedback_review_enabled !== false);
-  const [skipOn, setSkipOn] = useState(
-    project?.feedback_review_skip_over_budget === true,
-  );
-  useEffect(() => {
-    if (!project) return;
-    setReviewOn(project.feedback_review_enabled !== false);
-    setSkipOn(project.feedback_review_skip_over_budget === true);
-  }, [project]);
-
-  if (!project) return null;
-
-  const patch = async (
-    field: "feedback_review_enabled" | "feedback_review_skip_over_budget",
-    next: boolean,
-    revert: (value: boolean) => void,
-  ) => {
-    revert(next);
-    try {
-      await updateProject(projectId, { [field]: next });
-    } catch (e) {
-      revert(!next);
-      toast.error((e as Error).message);
-    }
-  };
-
-  return (
-    <SettingsGroup
-      anchor={SETTINGS_SECTIONS.projectFeedbackReview}
-      icon={Sparkles}
-      title={t("feedbackReviewTitle")}
-      description={t("feedbackReviewDesc")}
-      help={t("feedbackReviewHelp")}
-      action={
-        <>
-          <StatusPill
-            active={reviewOn}
-            label={reviewOn ? t("feedbackActive") : t("feedbackInactive")}
-          />
-          <Switch
-            checked={reviewOn}
-            disabled={!isOwner}
-            onCheckedChange={(v) =>
-              void patch("feedback_review_enabled", v, setReviewOn)
-            }
-            aria-label={t("feedbackReviewTitle")}
-          />
-        </>
-      }
-    >
-      {!reviewOn && (
-        <div className="py-3.5">
-          <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-600 dark:text-amber-500">
-            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-            {t("feedbackReviewOffWarning")}
-          </p>
-        </div>
-      )}
-      {reviewOn && (
-        <SettingsRow
-          label={t("feedbackReviewSkipLabel")}
-          hint={t("feedbackReviewSkipDesc")}
-          control={
-            <Switch
-              checked={skipOn}
-              disabled={!isOwner}
-              onCheckedChange={(v) =>
-                void patch("feedback_review_skip_over_budget", v, setSkipOn)
-              }
-              aria-label={t("feedbackReviewSkipLabel")}
-            />
-          }
-        />
-      )}
-    </SettingsGroup>
-  );
-}
-
-/** Couleur d'accent du board (MIN-59) : switch optionnel qui révèle deux
- *  `ColorInput` (clair/sombre). Off = accents null → bleu minddy par défaut.
- *  Activer amorce les deux couleurs sur le défaut pour donner un point de départ. */
-function AccentColorSetting({
-  board,
-  isOwner,
-  onToggle,
-  onColorChange,
-}: {
-  board: BoardSettings;
-  isOwner: boolean;
-  onToggle: (body: Partial<BoardSettings>) => void | Promise<void>;
-  onColorChange: (body: Partial<BoardSettings>) => void;
-}) {
-  const t = useTranslations("Settings");
-  const custom = board.accent_light !== null || board.accent_dark !== null;
-
-  return (
-    <SettingsRow
-      label={t("feedbackAccentTitle")}
-      hint={t("feedbackAccentDesc")}
-      control={
-        <Switch
-          checked={custom}
-          disabled={!isOwner}
-          aria-label={t("feedbackAccentTitle")}
-          onCheckedChange={(v) =>
-            void onToggle(
-              v
-                ? {
-                    accent_light: board.accent_light ?? DEFAULT_BOARD_ACCENT,
-                    accent_dark: board.accent_dark ?? DEFAULT_BOARD_ACCENT,
-                  }
-                : { accent_light: null, accent_dark: null },
-            )
-          }
-        />
-      }
-    >
-      {custom && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t("feedbackAccentLight")}
-            </span>
-            <ColorInput
-              value={board.accent_light ?? DEFAULT_BOARD_ACCENT}
-              onChange={(next) => onColorChange({ accent_light: next })}
-              label={t("feedbackAccentLight")}
-              disabled={!isOwner}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t("feedbackAccentDark")}
-            </span>
-            <ColorInput
-              value={board.accent_dark ?? DEFAULT_BOARD_ACCENT}
-              onChange={(next) => onColorChange({ accent_dark: next })}
-              label={t("feedbackAccentDark")}
-              disabled={!isOwner}
-            />
-          </div>
-        </div>
-      )}
-    </SettingsRow>
   );
 }
 
@@ -838,7 +403,7 @@ function SsoSetup({
 }: {
   board: BoardSettings;
   busy: boolean;
-  onPost: (action: string) => Promise<void>;
+  onPost: (action: string) => Promise<boolean>;
   publicUrl: string | null;
   origin: string;
 }) {
@@ -936,7 +501,9 @@ function SsoSetup({
         description={t("feedbackSsoRotateConfirmDesc")}
         confirmLabel={t("feedbackSsoRotate")}
         cancelLabel={tc("cancel")}
-        onConfirm={() => onPost("rotate_sso")}
+        onConfirm={async () => {
+          await onPost("rotate_sso");
+        }}
       />
     </div>
   );

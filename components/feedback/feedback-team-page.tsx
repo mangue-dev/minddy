@@ -61,6 +61,7 @@ import {
 // (ChevronUp sert au compteur de voix des posts)
 import { EmptyState } from "@/components/empty-state";
 import { EmptyScene } from "@/components/empty-scene";
+import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { SearchMenu } from "@/components/search-menu";
@@ -746,6 +747,10 @@ export function FeedbackTeamPage() {
   const { projects } = useProjects();
   const project = projects.find((p) => p.id === projectId);
   const queryClient = useQueryClient();
+  // Le wizard provisionne et fabrique des secrets : il n'est offert qu'au owner.
+  const { user } = useAuth();
+  const isOwner = !!project && project.owner_id === user?.id;
+  const [setupOpen, setSetupOpen] = useState(false);
 
   const { data: listData, isPending } = useQuery({
     queryKey: ["feedback", projectId],
@@ -945,12 +950,24 @@ export function FeedbackTeamPage() {
                   <Plus />
                   {t("newFeedback")}
                 </Button>
-                <Button variant="outline" asChild>
-                  <Link href={`/projects/${projectId}/settings?tab=feedback`}>
+                {/* Régler la collecte se fait ICI, pas au bout d'un lien :
+                    c'est le geste que la scène propose, et l'envoyer dans un
+                    onglet de réglages lui ferait quitter la page qu'il vient
+                    remplir. Un membre, lui, n'a que la lecture des réglages à
+                    offrir — il garde donc le lien. */}
+                {isOwner ? (
+                  <Button variant="outline" onClick={() => setSetupOpen(true)}>
                     <Globe />
                     {t("emptyConfigure")}
-                  </Link>
-                </Button>
+                  </Button>
+                ) : (
+                  <Button variant="outline" asChild>
+                    <Link href={`/projects/${projectId}/settings?tab=feedback`}>
+                      <Globe />
+                      {t("emptyConfigure")}
+                    </Link>
+                  </Button>
+                )}
               </EmptyScene>
             </div>
           </div>
@@ -958,6 +975,25 @@ export function FeedbackTeamPage() {
 
         {/* Le dialog reste monté : c'est lui que « Nouveau retour » ouvre. */}
         {createDialog}
+
+        {/* Le board a pu s'allumer pendant le parcours, et `board_enabled` vient
+            de la liste : la refetcher à la fermeture, sinon la page continue de
+            refuser de publier un retour sur un board désormais actif. */}
+        {isOwner && (
+          <FeedbackSetupWizard
+            projectId={projectId}
+            isOwner={isOwner}
+            open={setupOpen}
+            onOpenChange={(next) => {
+              setSetupOpen(next);
+              if (!next) {
+                void queryClient.invalidateQueries({
+                  queryKey: ["feedback", projectId],
+                });
+              }
+            }}
+          />
+        )}
       </>
     );
   }

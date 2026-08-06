@@ -122,31 +122,39 @@ export function CustomDomainSection({
       {!domain ? (
         <>
           <p className="text-xs leading-relaxed text-muted-foreground">{t("description")}</p>
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              save();
-            }}
-          >
+          {/* Pas de `<form>` ici, et c'est la seule chose à savoir avant d'en
+              remettre un : cette section vit DANS des surfaces qui en sont
+              déjà un — le dialog de partage d'une vue, une étape du wizard de
+              configuration des retours. Un formulaire dans un formulaire est du
+              HTML invalide, que React signale à l'hydratation. D'où la touche
+              Entrée gérée à la main, et le `type="button"` : sans lui, le bouton
+              soumettrait le formulaire du PARENT (l'étape du wizard avancerait,
+              le dialog de partage se fermerait). */}
+          <div className="flex items-center gap-2">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                save();
+              }}
               placeholder={t("placeholder")}
               className="font-mono text-xs"
               disabled={busy}
             />
             <Button
-              type="submit"
+              type="button"
               variant="outline"
               size="sm"
               className="shrink-0"
               disabled={busy || !input.trim()}
+              onClick={save}
             >
               {busy && <Spinner />}
               {t("save")}
             </Button>
-          </form>
+          </div>
           <p className="text-xs text-muted-foreground">{t("apexHint")}</p>
         </>
       ) : (
