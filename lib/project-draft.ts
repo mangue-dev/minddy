@@ -89,7 +89,6 @@ export interface ProjectDraft {
    */
   icon: ProjectIconChoice;
   repo: DraftRepo | null;
-  feedbackEnabled: boolean;
   smartAssignEnabled: boolean;
   autoAssignEnabled: boolean;
   /** Dernière écriture (ISO) — l'ordre de la barre latérale, du plus récent. */
@@ -125,7 +124,6 @@ export function projectDraftFromRow(row: ProjectDraftRow): ProjectDraft {
     seed: normalizeSeed(data.seed),
     icon: normalizeIconChoice(data.icon),
     repo: normalizeRepo(data.repo),
-    feedbackEnabled: data.feedbackEnabled === true,
     // Smart Assign est proposé ACTIVÉ par le wizard : un brouillon muet doit
     // retomber sur le même défaut, pas sur `false`.
     smartAssignEnabled: data.smartAssignEnabled !== false,
@@ -152,7 +150,6 @@ export function projectDraftToRow(draft: ProjectDraftInput): {
       seed: draft.seed,
       icon: draft.icon,
       repo: draft.repo,
-      feedbackEnabled: draft.feedbackEnabled,
       smartAssignEnabled: draft.smartAssignEnabled,
       autoAssignEnabled: draft.autoAssignEnabled,
     },

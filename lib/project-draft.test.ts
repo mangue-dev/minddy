@@ -23,7 +23,6 @@ const draft: ProjectDraftInput = {
     externalRepoId: "42",
     fullName: "mangue-dev/comete",
   },
-  feedbackEnabled: true,
   smartAssignEnabled: false,
   autoAssignEnabled: true,
 };

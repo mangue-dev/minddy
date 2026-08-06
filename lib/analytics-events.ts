@@ -100,7 +100,6 @@ export interface AnalyticsEventProps {
   project_wizard_seed_chosen: { seed: "brief" | "numo" | "import" | "none" };
   project_wizard_completed: {
     has_git_link: boolean;
-    feedback_enabled: boolean;
     smart_assign_enabled: boolean;
     auto_assign_enabled: boolean;
   };

@@ -1839,8 +1839,6 @@
     "wizardIconDesc": "Drop an image on the preview, or import your site's favicon. Otherwise the project keeps its gradient.",
     "wizardGitDesc": "The Numo agent uses it to open its pull requests. Optional. You can link it later.",
     "wizardNoRepo": "no repository",
-    "wizardFeedbackLabel": "Public board",
-    "wizardFeedbackDesc": "A public page where your users suggest ideas and vote.",
     "wizardSmartAssignLabel": "Smart Assign",
     "wizardSmartAssignDesc": "Automatically assigns any issue that gets past triage without an assignee.",
     "wizardAutoAssignLabel": "Auto-assignment",

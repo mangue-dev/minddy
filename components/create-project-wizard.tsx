@@ -214,7 +214,6 @@ export function CreateProjectWizard({
 
   // Étape « Finitions ». Smart Assign est proposé ACTIVÉ : c'est le réglage
   // qu'on veut par défaut sur un projet neuf, et le décocher reste à un clic.
-  const [feedbackEnabled, setFeedbackEnabled] = useState(false);
   const [smartAssignEnabled, setSmartAssignEnabled] = useState(true);
   const [autoAssignEnabled, setAutoAssignEnabled] = useState(false);
 
@@ -261,7 +260,6 @@ export function CreateProjectWizard({
     setNumo(false);
     setCsvFile(null);
     setCsvLost(false);
-    setFeedbackEnabled(false);
     setSmartAssignEnabled(true);
     setAutoAssignEnabled(false);
   }, []);
@@ -286,7 +284,6 @@ export function CreateProjectWizard({
     // repart vide, avec la note qui explique pourquoi.
     setCsvFile(null);
     setCsvLost(draft.seed?.kind === "import");
-    setFeedbackEnabled(draft.feedbackEnabled);
     setSmartAssignEnabled(draft.smartAssignEnabled);
     setAutoAssignEnabled(draft.autoAssignEnabled);
     setDraftExists(true);
@@ -321,7 +318,6 @@ export function CreateProjectWizard({
     seed,
     icon,
     repo,
-    feedbackEnabled,
     smartAssignEnabled,
     autoAssignEnabled,
   });
@@ -628,34 +624,11 @@ export function CreateProjectWizard({
         }),
       );
     }
-    if (feedbackEnabled) {
-      await enrich("feedback board", async () => {
-        const response = await fetch(
-          `/api/projects/${created.id}/feedback/settings`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ enabled: true }),
-          },
-        );
-        if (!response.ok) {
-          const data = (await response.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          throw new Error(data?.error || "Error");
-        }
-        void queryClient.invalidateQueries({
-          queryKey: ["feedback-settings", created.id],
-        });
-      });
-    }
-
     // L'icône et les réglages sont posés après la création : la liste en cache
     // date déjà d'avant.
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
     track("project_wizard_completed", {
       has_git_link: !!repo,
-      feedback_enabled: feedbackEnabled,
       smart_assign_enabled: smartAssignEnabled,
       auto_assign_enabled: autoAssignEnabled,
     });
@@ -1195,20 +1168,6 @@ export function CreateProjectWizard({
             <Switch
               checked={autoAssignEnabled}
               onCheckedChange={setAutoAssignEnabled}
-            />
-          </label>
-          <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
-            <span className="flex min-w-0 flex-col gap-0.5 text-left">
-              <span className="text-sm font-medium">
-                {t("wizardFeedbackLabel")}
-              </span>
-              <span className="text-xs leading-relaxed text-muted-foreground">
-                {t("wizardFeedbackDesc")}
-              </span>
-            </span>
-            <Switch
-              checked={feedbackEnabled}
-              onCheckedChange={setFeedbackEnabled}
             />
           </label>
         </div>

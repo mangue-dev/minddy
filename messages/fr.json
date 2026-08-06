@@ -1839,8 +1839,6 @@
     "wizardIconDesc": "Déposez une image sur l'aperçu, ou importez le favicon de votre site. Sinon, le projet garde son dégradé.",
     "wizardGitDesc": "L'agent Numo s'en sert pour ouvrir ses pull requests. Optionnel : vous pouvez le relier plus tard.",
     "wizardNoRepo": "aucun dépôt",
-    "wizardFeedbackLabel": "Board public",
-    "wizardFeedbackDesc": "Une page publique où vos utilisateurs proposent des idées et votent.",
     "wizardSmartAssignLabel": "Smart Assign",
     "wizardSmartAssignDesc": "Attribue automatiquement chaque ticket qui passe le triage sans assigné.",
     "wizardAutoAssignLabel": "Auto-attribution",
