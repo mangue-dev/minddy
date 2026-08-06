@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
 import { mcpToolCatalog } from "./catalog";
 import { MCP_SERVER_INSTRUCTIONS } from "./instructions";
 
@@ -61,5 +62,37 @@ describe("catalogue MCP — édition partielle d'un plan", () => {
   it("garde des noms d'outils uniques", () => {
     const names = mcpToolCatalog().map((t) => t.name);
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+/**
+ * Ce que l'audit MCP du 2026-08-06 a trouvé désynchronisé du feedback, et qui
+ * ne doit pas se re-désynchroniser : les descriptions et le mode d'emploi
+ * sont de la PROSE, que rien ne relie à ses constantes. Ces trois assertions
+ * sont ce lien — elles échouent le jour où un statut s'ajoute sans être dit.
+ */
+describe("catalogue MCP — le feedback dit ce que l'app fait", () => {
+  it("nomme les six statuts d'un retour, `spam` compris", () => {
+    const description = tool("minddy_list_feedback").description ?? "";
+    for (const status of FEEDBACK_POST_STATUSES) {
+      expect(description, `statut "${status}" absent de la description`).toContain(
+        status
+      );
+    }
+  });
+
+  it("annonce minddy_update_feedback, et son statut verrouillé par le ticket", () => {
+    expect(tool("minddy_update_feedback").readOnly).toBe(false);
+    for (const optional of ["status", "is_public", "review_state"]) {
+      expect(param("minddy_update_feedback", optional).required).toBe(false);
+    }
+    expect(MCP_SERVER_INSTRUCTIONS).toContain("minddy_update_feedback");
+  });
+
+  it("ne décrit plus le fil de commentaires comme team-only (MIN-196)", () => {
+    // Le fil porte deux visibilités : le dire « internal, team-only » cachait
+    // à l'agent les réponses publiques des visiteurs.
+    expect(MCP_SERVER_INSTRUCTIONS).not.toContain("team-only comment thread");
+    expect(tool("minddy_get_feedback").description).toContain("visibility");
   });
 });

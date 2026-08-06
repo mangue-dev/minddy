@@ -32,6 +32,7 @@ import {
   ISSUE_PRIORITIES,
   ISSUE_STATUSES,
 } from "@/lib/issue-validation";
+import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-validation";
 import { RECURRENCE_CADENCES } from "@/lib/recurrence";
 import { createIssueForProject } from "@/lib/server/create-issue";
 import {
@@ -56,7 +57,10 @@ import {
   promoteFeedbackPost,
   unlinkFeedbackIssue,
 } from "@/lib/server/feedback/promote";
-import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
+import {
+  FEEDBACK_POST_STATUSES,
+  FEEDBACK_REVIEW_STATES,
+} from "@/lib/feedback/types";
 import {
   integrationUsage,
   integrationWebhookDoc,
@@ -170,19 +174,51 @@ function isTextMime(mime: string): boolean {
   );
 }
 
-/** Map a lib/server/* core failure to a stable MCP error. */
-function coreFail(r: {
+/** Ce qu'un échec de cœur DIT à l'agent. Les `errorKey` sont des clés du
+ *  namespace i18n `ApiErrors` : nues, elles ne veulent rien dire hors de l'app,
+ *  et les `params` que le cœur a calculés (la limite du plan) se perdaient en
+ *  route. Ici on les rend en anglais, comme le reste de la surface MCP. */
+const CORE_MESSAGES: Record<
+  string,
+  (params?: Record<string, string | number>) => string
+> = {
+  issueLimitReached: (params) =>
+    `This project has reached the ${params?.limit ?? "issue"} issue limit of its ` +
+    "owner's plan. The owner must upgrade the plan or free up issues — retrying " +
+    "will not help.",
+};
+
+interface CoreFailure {
   status: number;
   errorKey?: string;
   rawMessage?: string;
-}): ToolResult {
+  /** Valeurs ICU du message (ex. `limit` pour `issueLimitReached`). */
+  params?: Record<string, string | number>;
+}
+
+/** Le message lisible d'un échec de cœur — celui de `coreFail`, réutilisé par
+ *  les tools qui rendent leurs échecs PAR TICKET dans un tableau `failed`. */
+function coreMessage(r: CoreFailure, fallback = "Request failed"): string {
+  const known = r.errorKey ? CORE_MESSAGES[r.errorKey] : undefined;
+  return known ? known(r.params) : (r.rawMessage ?? r.errorKey ?? fallback);
+}
+
+/** Map a lib/server/* core failure to a stable MCP error. */
+function coreFail(r: CoreFailure): ToolResult {
+  // 403 = une limite de PLAN, donc un refus définitif tant que rien ne change
+  // côté compte — jamais une panne. Le rendre en `database_error` disait
+  // « réessaie » à un agent qui n'aurait jamais pu réussir : il retentait sans
+  // fin et personne n'apprenait la cause. Même raisonnement, et même code
+  // stable, que l'API publique (app/api/v1/issues/route.ts).
+  if (r.status === 403) return fail("plan_limit_reached", coreMessage(r));
+  if (r.status === 409) return fail("conflict", coreMessage(r));
   const code =
     r.status === 404
       ? "not_found"
       : r.status === 400
         ? "invalid_params"
         : "database_error";
-  return fail(code, r.rawMessage ?? r.errorKey ?? "Request failed");
+  return fail(code, coreMessage(r));
 }
 
 /**
@@ -1206,7 +1242,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         } else {
           subIssuesFailed.push({
             title: sub.title,
-            error: subResult.rawMessage ?? subResult.errorKey ?? "create failed",
+            error: coreMessage(subResult, "create failed"),
           });
         }
       }
@@ -1304,7 +1340,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           if (!result.ok) {
             failed.push({
               issue: resolved.issue.identifier,
-              error: result.rawMessage ?? result.errorKey ?? "update failed",
+              error: coreMessage(result, "update failed"),
             });
             continue;
           }
@@ -1319,7 +1355,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           if (!result.ok) {
             failed.push({
               issue: resolved.issue.identifier,
-              error: result.rawMessage ?? result.errorKey ?? "categories update failed",
+              error: coreMessage(result, "categories update failed"),
             });
             continue;
           }
@@ -1910,7 +1946,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         project_id: PROJECT_ID,
         name: z.string().min(1),
         description: z.string().optional().describe("Markdown."),
-        status: z.enum(["planned", "in_progress", "done", "canceled"]).optional(),
+        status: z.enum(OBJECTIVE_STATUS_VALUES).optional(),
         lead_user_id: z.string().optional().describe("Member user_id."),
         target_date: z.string().optional().describe("ISO 8601 date."),
         color: z.string().optional().describe("Hex color, e.g. '#6b7280'."),
@@ -1943,7 +1979,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         objective_id: z.string().uuid(),
         name: z.string().min(1).optional(),
         description: z.string().nullable().optional(),
-        status: z.enum(["planned", "in_progress", "done", "canceled"]).optional(),
+        status: z.enum(OBJECTIVE_STATUS_VALUES).optional(),
         lead_user_id: z.string().nullable().optional(),
         target_date: z.string().nullable().optional(),
         color: z.string().nullable().optional(),
@@ -2476,7 +2512,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         else
           failed.push({
             issue: resolved.issue.identifier,
-            error: r.rawMessage ?? r.errorKey ?? "update failed",
+            error: coreMessage(r, "update failed"),
           });
       }
       return ok({ added, failed, cycle_id: ensured.current.id });
@@ -2544,7 +2580,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         else
           failed.push({
             issue: resolved.issue.identifier,
-            error: r.rawMessage ?? r.errorKey ?? "update failed",
+            error: coreMessage(r, "update failed"),
           });
       }
       return ok({ removed, failed });
@@ -2559,9 +2595,14 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "List a project's feedback posts (user requests from the feedback board, its " +
         "API, or internal entry): id (the feedback_post_id other feedback tools " +
-        "take), title, public status (open/planned/in_progress/shipped/declined), " +
-        "vote_count, whether it's public, source, and the linked tracking issue if " +
-        "any. Sorted by votes; merged duplicates are excluded.",
+        "take), title, status (open/planned/in_progress/shipped/declined/spam — " +
+        "'spam' is a request the team or the AI review set aside, and it never " +
+        "shows on the public board), vote_count, is_public, review_state, source, " +
+        "category_ids, and the linked tracking issue if any. Sorted by votes; " +
+        "merged duplicates are excluded. A post is actually VISIBLE on the board " +
+        "only when is_public AND review_state is 'published' AND status is not " +
+        "'spam' — a 'pending' post is still in the AI review queue and nobody has " +
+        "seen it yet, so don't tell the user their request is up.",
       inputSchema: {
         project_id: PROJECT_ID,
         status: z
@@ -2575,10 +2616,14 @@ export function registerMinddyTools(rawServer: McpServer): void {
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const posts = await listTeamFeedback(scope.access.project.id);
-      const statuses = args.status ? new Set(args.status) : null;
+      // Le filtre part DANS la requête : le plafond de 500 de listTeamFeedback
+      // est appliqué après le tri par votes, donc filtrer la fenêtre renvoyée
+      // aurait rendu une liste vide sur les statuts sans voix — `spam` en
+      // premier, celui qu'on vient justement de rendre demandable.
+      const posts = await listTeamFeedback(scope.access.project.id, {
+        statuses: args.status,
+      });
       const rows = posts
-        .filter((p) => !statuses || statuses.has(p.status))
         .slice(0, args.limit ?? 50)
         .map((p) => ({
           id: p.id,
@@ -2586,7 +2631,12 @@ export function registerMinddyTools(rawServer: McpServer): void {
           status: p.status,
           vote_count: p.vote_count,
           is_public: p.is_public,
+          // Sans lui, un retour encore dans la file de revue IA est
+          // indiscernable d'un retour publié (cf. la règle de visibilité
+          // annoncée dans la description).
+          review_state: p.review_state,
           source: p.source,
+          category_ids: p.category_ids,
           linked_issue_id: p.issue_id,
         }));
       return ok({ feedback: rows });
@@ -2599,10 +2649,16 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Get feedback",
       description:
         "Fetch one feedback post in full: title, body (the user's request), the raw " +
-        "submitted text, public status, vote_count, author (real identity), the " +
-        "linked issue if any, and its whole comment thread. Each comment carries a " +
-        "`visibility`: 'internal' is a team-only note, 'public' is read by everyone " +
-        "on the board — including the replies visitors wrote there.",
+        "submitted text, status, vote_count, review_state, category_ids, author " +
+        "(real identity), the linked issue if any, and its whole comment thread. " +
+        "Each comment carries a `visibility`: 'internal' is a team-only note, " +
+        "'public' is read by everyone on the board — including the replies visitors " +
+        "wrote there. When the request came in a language the team does not read, " +
+        "the review TRANSLATES it: `translated_title` / `translated_body` sit BESIDE " +
+        "the original (which stays as written, and is what the board shows), and " +
+        "`translated_language` says which language they are in — read the " +
+        "translation when it matches the team's, exactly as the team's own view " +
+        "does. `source_language` is the language of the request itself.",
       inputSchema: { project_id: PROJECT_ID, feedback_post_id: z.string().uuid() },
       annotations: READ_ONLY,
     },
@@ -2637,9 +2693,19 @@ export function registerMinddyTools(rawServer: McpServer): void {
           body: detail.body,
           submitted_title: detail.submitted_title,
           submitted_body: detail.submitted_body,
+          // La traduction vit À CÔTÉ du texte, jamais à sa place : le board
+          // public montre toujours l'original, la vue équipe préfère la
+          // traduction quand elle est dans SA langue. Le MCP est le canal
+          // équipe — il lui faut donc les deux, et la langue de chacune.
+          source_language: detail.source_language,
+          translated_title: detail.translated_title,
+          translated_body: detail.translated_body,
+          translated_language: detail.translated_language,
           status: detail.status,
           vote_count: detail.vote_count,
           is_public: detail.is_public,
+          review_state: detail.review_state,
+          category_ids: detail.category_ids,
           source: detail.source,
           author: detail.author
             ? { name: detail.author.name, email: detail.author.email }
@@ -2710,6 +2776,88 @@ export function registerMinddyTools(rawServer: McpServer): void {
       });
       if (!result.ok) return coreFail(result);
       return ok({ comment: result.comment });
+    }
+  );
+
+  server.registerTool(
+    "minddy_update_feedback",
+    {
+      title: "Update feedback post",
+      description:
+        "Decide on a feedback post: set its `status` (the public answer the board " +
+        "shows — open, planned, in_progress, shipped, declined, or spam for a " +
+        "request set aside, which drops off the board entirely), its `is_public` " +
+        "(false keeps the request for the team only), and its `review_state` " +
+        "('published' pushes a post out of the AI review queue by hand, 'pending' " +
+        "puts it back). Only the fields you send change. " +
+        "The status of a post LINKED TO AN ISSUE is not its own — it is copied from " +
+        "that issue on every transition — so setting it here is refused: move the " +
+        "issue instead, with minddy_update_issues. To answer the person rather than " +
+        "decide, use minddy_respond_feedback.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        feedback_post_id: z.string().uuid(),
+        status: z
+          .enum(FEEDBACK_POST_STATUSES)
+          .optional()
+          .describe("Public status. Refused on a post linked to an issue."),
+        is_public: z
+          .boolean()
+          .optional()
+          .describe("false takes the request off the public board."),
+        review_state: z
+          .enum(FEEDBACK_REVIEW_STATES)
+          .optional()
+          .describe("Publication queue: 'pending' or 'published'."),
+      },
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+      if ("error" in ref) return ref.error;
+
+      const input: Record<string, unknown> = {};
+      if (args.status !== undefined) input.status = args.status;
+      if (args.is_public !== undefined) input.is_public = args.is_public;
+      if (args.review_state !== undefined) input.review_state = args.review_state;
+      if (Object.keys(input).length === 0) {
+        return fail(
+          "invalid_params",
+          "Pass at least one of status, is_public, review_state."
+        );
+      }
+
+      // Même verrou que la vue équipe (`statusLocked`) : un retour lié tient son
+      // statut de son ticket, que `status-sync` recopie à chaque transition.
+      // L'accepter ici offrirait un geste que la prochaine transition écrase.
+      if (args.status !== undefined && ref.post.issue_id) {
+        return fail(
+          "status_follows_issue",
+          "This feedback post is linked to an issue: its public status is copied " +
+            "from that issue on every transition, so it can't be set directly. " +
+            "Move the issue instead (minddy_update_issues), or detach the post " +
+            "with minddy_unlink_feedback first."
+        );
+      }
+
+      const result = await updateFeedbackPostFields({
+        postId: ref.post.id,
+        actorId: scope.userId,
+        input,
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return coreFail(result);
+      return ok({
+        feedback: {
+          id: result.post.id,
+          title: result.post.title,
+          status: result.post.status,
+          is_public: result.post.is_public,
+          review_state: result.post.review_state,
+        },
+      });
     }
   );
 

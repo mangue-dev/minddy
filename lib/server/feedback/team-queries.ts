@@ -5,6 +5,7 @@ import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
 import {
   sortFeedbackResolvedLast,
+  type FeedbackPostStatus,
   type IssueLinkedFeedback,
 } from "@/lib/feedback/types";
 
@@ -47,14 +48,30 @@ export interface TeamFeedbackListItem extends FeedbackPostRow {
   category_ids: string[];
 }
 
-export async function listTeamFeedback(projectId: string): Promise<TeamFeedbackListItem[]> {
+/**
+ * Les retours d'un projet, vue équipe — plafonnés à 500, triés par votes.
+ *
+ * `statuses` filtre DANS LA REQUÊTE, et c'est la seule façon correcte de le
+ * faire : le tri est par votes, donc les statuts « réglés » (spam en tête, qui
+ * ne récolte pas de voix) sont précisément ceux que le plafond coupe. Filtrer
+ * après coup sur la fenêtre renvoyait une liste vide là où la base avait la
+ * réponse — silencieusement, et d'autant plus souvent que le projet est gros.
+ */
+export async function listTeamFeedback(
+  projectId: string,
+  options: { statuses?: readonly FeedbackPostStatus[] } = {}
+): Promise<TeamFeedbackListItem[]> {
   const service = getServiceClient();
-  const { data } = await service
+  let query = service
     .from("feedback_posts")
     .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
     .is("deleted_at", null)
     .eq("project_id", projectId)
-    .is("merged_into_id", null)
+    .is("merged_into_id", null);
+  if (options.statuses?.length) {
+    query = query.in("status", options.statuses as string[]);
+  }
+  const { data } = await query
     .order("vote_count", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(500);

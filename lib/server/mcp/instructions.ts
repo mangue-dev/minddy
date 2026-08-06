@@ -66,18 +66,25 @@ export const MCP_SERVER_INSTRUCTIONS =
       "A project can also collect user requests on a FEEDBACK board (also fed by its " +
       "API and internal entry), separate from issues: a user need with a public " +
       "status and votes. minddy_list_feedback / minddy_get_feedback read them (the " +
-      "latter includes the internal, team-only comment thread); minddy_promote_feedback " +
+      "latter includes the WHOLE comment thread — team-only notes and the public " +
+      "replies visitors wrote on the board alike, each tagged by its 'visibility' — " +
+      "plus the translation of a request written in a language the team does not " +
+      "read); minddy_promote_feedback " +
       "turns one into a new linked issue and minddy_link_feedback / " +
       "minddy_unlink_feedback wire it to an existing one (once linked, the post's " +
-      "public status follows the issue); minddy_add_feedback_comment leaves an " +
+      "public status follows the issue, and can no longer be set by hand); " +
+      "minddy_update_feedback decides on a post that is NOT linked — status " +
+      "(open, planned, in_progress, shipped, declined, spam), visibility, " +
+      "publication; minddy_add_feedback_comment leaves an " +
       "internal note; minddy_respond_feedback publishes the team's PUBLIC reply. " +
       "You can also WIRE THE USER'S OWN APPLICATION to minddy from their repo, " +
       "which is something only you can do — minddy's in-app assistant has no access " +
       "to their code. minddy_get_feedback_board reads the public board's setup: take " +
       "its public_url verbatim for any 'Feedback' link or button (it already " +
       "resolves the project's custom domain, and a board URL is an opaque token that " +
-      "cannot be guessed), and minddy_configure_feedback_board publishes the board " +
-      "or hands you its SSO secret. minddy_create_integration creates the API key an " +
+      "cannot be guessed), and minddy_configure_feedback_board publishes the board, " +
+      "opens or closes its public comments, or hands you its SSO secret. " +
+      "minddy_create_integration creates the API key an " +
       "application uses to push server-to-server — kind 'feedback' to submit " +
       "end-user requests to the board, kind 'issues' to create issues in triage — " +
       "and returns, ONCE, the plaintext key plus a `usage` object with the exact " +

@@ -105,6 +105,7 @@ import {
 } from "@/lib/server/trash";
 import { getProjectFeedbackPost } from "@/lib/server/feedback/team-guard";
 import { listTeamFeedback, getTeamFeedbackDetail } from "@/lib/server/feedback/team-queries";
+import { isFeedbackPostStatus } from "@/lib/feedback/types";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
@@ -1454,14 +1455,16 @@ export async function executeTool(
       }
 
       case "list_feedback": {
-        const posts = await listTeamFeedback(projectId);
+        // Filtre côté requête, pas sur la fenêtre de 500 renvoyée : celle-ci
+        // est ordonnée par votes, donc un statut qui n'en récolte pas (spam,
+        // declined) tombe hors plafond et la liste revenait vide à tort.
         const statuses = Array.isArray(args.status)
-          ? new Set(args.status.filter((v): v is string => typeof v === "string"))
-          : null;
+          ? args.status.filter(isFeedbackPostStatus)
+          : undefined;
+        const posts = await listTeamFeedback(projectId, { statuses });
         const limit =
           typeof args.limit === "number" ? Math.min(Math.max(1, args.limit), 200) : 50;
         const rows = posts
-          .filter((p) => !statuses || statuses.has(p.status))
           .slice(0, limit)
           .map((p) => ({
             id: p.id,
