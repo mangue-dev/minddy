@@ -134,9 +134,7 @@ export async function inviteMember({
       invited_by: actorId,
       status: "pending",
     })
-    .select(
-      "id, project_id, invited_email, invited_user_id, status, created_at, token"
-    )
+    .select("id, project_id, invited_email, status, created_at, token")
     .single();
 
   if (error) {
@@ -156,7 +154,22 @@ export async function inviteMember({
 
   // Le mail part APRÈS la réponse, mais par `afterOrNow` : une promesse
   // détachée serait gelée avec l'invocation et mourrait en vol (CLAUDE.md).
-  const { token, ...row } = invitation as Invitation & { token: string };
+  //
+  // La ligne rendue est RECOMPOSÉE champ par champ, et pas obtenue en soustrayant
+  // le token d'un `...row` : deux colonnes n'ont rien à faire dans la réponse —
+  // le `token`, secret de l'email, et `invited_user_id`, qui dirait si l'adresse
+  // a un compte minddy. Une liste blanche les retient toutes les deux, y compris
+  // les colonnes que la table gagnera plus tard ; un `select` restrictif, lui,
+  // se laisse élargir d'un mot sans que rien ne le signale.
+  const raw = invitation as Invitation & { token: string };
+  const row: Invitation = {
+    id: raw.id,
+    project_id: raw.project_id,
+    invited_email: raw.invited_email,
+    status: raw.status,
+    created_at: raw.created_at,
+  };
+  const token = raw.token;
   afterOrNow(async () => {
     const inviters = await fetchAuthUsersById(getServiceClient(), [actorId]);
     const named = toNamed(inviters.get(actorId));
@@ -164,6 +177,8 @@ export async function inviteMember({
       to: normalized,
       inviterName: displayName(named, ""),
       projectName: access.project.name,
+      projectId: access.project.id,
+      projectIconUrl: access.project.icon_url,
       token,
       locale,
       origin,

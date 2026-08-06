@@ -186,20 +186,24 @@ export function ProjectMembers({
       {isOwner && invitations.length > 0 && (
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium">{t("pendingInvitations")}</p>
-          <div className="flex flex-col divide-y divide-border">
+          {/* L'attente est dite UNE fois, pour la liste entière, et jamais par
+              ligne (MIN-197). Un état par ligne — « en attente d'inscription »
+              contre « en attente de réponse » — répondrait à la question « cette
+              adresse a-t-elle un compte minddy ? » pour n'importe quelle adresse
+              qu'on saisit : un oracle d'énumération de comptes. L'invitant a
+              besoin de savoir qu'une invitation peut attendre une inscription ;
+              il n'a pas besoin de savoir LAQUELLE le fait. */}
+          <p className="text-xs text-muted-foreground">
+            {t("pendingInvitationsHint")}
+          </p>
+          <div className="mt-1 flex flex-col divide-y divide-border">
             {invitations.map((inv) => (
               <SettingsListRow
                 key={inv.id}
                 title={inv.invited_email}
                 action={
                   <>
-                    {/* Deux attentes différentes (MIN-197) : une invitation
-                        sans `invited_user_id` attend une INSCRIPTION, pas une
-                        réponse — dire « en attente » des deux laisserait croire
-                        que la personne a vu l'invitation et ne répond pas. */}
-                    <Badge variant="outline">
-                      {inv.invited_user_id ? t("pending") : t("pendingSignup")}
-                    </Badge>
+                    <Badge variant="outline">{t("pending")}</Badge>
                     <Button
                       type="button"
                       variant="ghost"

@@ -53,7 +53,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         .order("created_at", { ascending: true }),
       service
         .from("project_invitations")
-        .select("id, project_id, invited_email, invited_user_id, status, created_at")
+        // Sans `invited_user_id` : le rendre au client dirait quelles adresses
+        // ont un compte minddy (cf. le type `Invitation`).
+        .select("id, project_id, invited_email, status, created_at")
         .eq("project_id", id)
         .eq("status", "pending")
         .order("created_at", { ascending: false }),
@@ -108,7 +110,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  const rl = checkSessionRateLimit(auth.user.id, "project-members-write");
+  // 20/min et pas les 60 par défaut. Ce que la route écrit se compte sur les
+  // doigts : le plan plafonne à 2 invités (Free) ou 5 (Go), et même un projet
+  // Pro qui embarque toute une équipe le fait à la main, un formulaire à la
+  // fois — 20 par minute, c'est déjà une invitation toutes les 3 secondes sans
+  // relâche. Au-delà, ce n'est plus quelqu'un qui invite.
+  const rl = checkSessionRateLimit(auth.user.id, "project-members-write", {
+    limit: 20,
+  });
   if (!rl.allowed) {
     return NextResponse.json(
       { error: "Too many requests", retry_after: rl.retryAfter },

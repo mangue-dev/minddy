@@ -2,18 +2,7 @@
 
 import { useState, type ComponentType } from "react";
 import { cn } from "mangue-ui";
-
-/**
- * Deterministic hue in [0,360) from a seed string (djb2-style hash), so the
- * same project always renders the same gradient. Mirrors AutoKap's `projectHue`.
- */
-function projectHue(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return ((hash % 360) + 360) % 360;
-}
+import { projectHue } from "@/lib/project-orb-colors";
 
 /**
  * Safari's accelerated compositing clips a filtered child — here the blurred

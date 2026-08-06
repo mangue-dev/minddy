@@ -1,6 +1,7 @@
 import "server-only";
 
 import { SITE_URL } from "@/lib/site";
+import { projectOrbGradient } from "@/lib/project-orb-colors";
 
 /**
  * L'email d'invitation à un projet (MIN-197) — Resend en fetch brut, comme
@@ -15,10 +16,33 @@ import { SITE_URL } from "@/lib/site";
  * Sans `RESEND_API_KEY` (dev), le lien est écrit en console et l'envoi est
  * considéré réussi : le flux complet reste jouable en local. En production,
  * l'absence de clé est une panne — on la journalise et on rend `false`.
+ *
+ * **Le gabarit est en tableaux et en styles en ligne, à dessein.** Un client
+ * mail n'est pas un navigateur : Outlook rend le HTML avec le moteur de Word
+ * (ni flexbox, ni grille, ni `border-radius`), Gmail supprime `<style>` sur
+ * certains chemins, et personne ne lit `oklch()`. D'où les couleurs de minddy
+ * converties en hexadécimal (`lib/project-orb-colors.ts`) et les images en URL
+ * absolue sur `SITE_URL` — jamais sur l'`origin` du déploiement, qui peut être
+ * une preview inaccessible depuis la boîte de réception.
  */
 
 const RESEND_URL = "https://api.resend.com/emails";
-const DEFAULT_FROM = "minddy <invitations@minddy.app>";
+const DEFAULT_FROM = "minddy <invites@minddy.app>";
+
+/** La palette de minddy (`app/globals.css` + jetons mangue-ui, thème clair),
+    en hexadécimal parce qu'un client mail ne lit pas `oklch()`. */
+const INK = "#16181e"; // --primary
+const TITLE = "#0a0a0a"; // --foreground
+const MUTED = "#606369"; // --muted-foreground
+const FAINT = "#8b8e96"; // le pied de page, un cran sous --muted-foreground
+const BORDER = "#d9dce5"; // --border
+const HAIRLINE = "#eceef3"; // le filet interne à la carte, plus discret
+const PAGE = "#f5f7fb"; // --background
+const CARD = "#ffffff"; // --card
+const ON_INK = "#fafafa"; // --primary-foreground
+
+const FONT =
+  "-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 export interface SendInvitationEmailParams {
   to: string;
@@ -26,6 +50,11 @@ export interface SendInvitationEmailParams {
       retombe sur « Quelqu'un », dans la langue du mail. */
   inviterName: string;
   projectName: string;
+  /** Graine de l'orbe du projet — son id, comme dans l'app. */
+  projectId: string;
+  /** L'icône importée du projet, quand il en a une (`projects.icon_url`) ;
+      sinon l'orbe dégradé, exactement comme `<ProjectOrb>`. */
+  projectIconUrl?: string | null;
   token: string;
   locale: "fr" | "en";
   /** Origine du site pour ce déploiement (dev/preview/prod). */
@@ -43,6 +72,26 @@ function escapeHtml(value: string): string {
 
 export function invitationLink(token: string, origin: string = SITE_URL): string {
   return `${origin.replace(/\/$/, "")}/login?invite=${encodeURIComponent(token)}`;
+}
+
+/**
+ * L'icône du projet, 48 px, coins arrondis — l'image importée si elle en a une,
+ * sinon l'orbe. On n'accepte qu'une URL `https://` : une image en `http` fait
+ * hurler les clients mail, et une `data:` est soit ignorée, soit un motif de
+ * spam.
+ */
+function projectIconHtml(params: SendInvitationEmailParams): string {
+  const url = params.projectIconUrl?.trim();
+  if (url && url.startsWith("https://")) {
+    return `<img src="${escapeHtml(url)}" width="48" height="48" alt="" style="display:block;width:48px;height:48px;border:1px solid ${BORDER};border-radius:12px;object-fit:cover;" />`;
+  }
+
+  const orb = projectOrbGradient(params.projectId);
+  // Outlook ignore `border-radius` et `linear-gradient` : il lui reste l'aplat,
+  // en carré. C'est la dégradation qu'on accepte — pas une case vide.
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="48" style="width:48px;border-collapse:separate;">
+              <tr><td height="48" bgcolor="${orb.base}" style="width:48px;height:48px;border-radius:12px;background-color:${orb.base};background-image:linear-gradient(135deg,${orb.from} 0%,${orb.to} 100%);font-size:0;line-height:48px;">&nbsp;</td></tr>
+            </table>`;
 }
 
 export async function sendInvitationEmail(
@@ -65,24 +114,84 @@ export async function sendInvitationEmail(
     ? `${inviter} vous invite sur « ${params.projectName} »`
     : `${inviter} invited you to "${params.projectName}"`;
 
-  const intro = fr
-    ? `${inviter} vous invite à rejoindre le projet « ${params.projectName} » sur minddy.`
-    : `${inviter} invited you to join the "${params.projectName}" project on minddy.`;
-  const cta = fr ? "Voir l'invitation" : "See the invitation";
-  const hint = fr
-    ? "Pas encore de compte ? Créez-le avec cette adresse email : l'invitation vous attendra."
-    : "No account yet? Create one with this email address and the invitation will be waiting for you.";
+  // Le texte qui suit l'objet dans la liste des messages. Sans lui, les clients
+  // y recopient le début du corps — ici « minddy », le mot du logo.
+  const preheader = fr
+    ? `Rejoignez « ${params.projectName} » sur minddy.`
+    : `Join "${params.projectName}" on minddy.`;
+  const title = fr
+    ? `${inviter} vous invite à rejoindre ${params.projectName}`
+    : `${inviter} invited you to join ${params.projectName}`;
+  const lead = fr
+    ? "minddy, c'est là que l'équipe suit ses tickets, ses objectifs et ses retours."
+    : "minddy is where the team tracks its issues, objectives and feedback.";
+  const cta = fr ? "Rejoindre le projet" : "Join the project";
+  const note = fr
+    ? `Invitation envoyée à ${params.to}. Créez votre compte avec cette adresse : elle vous rattache au projet.`
+    : `This invitation was sent to ${params.to}. Create your account with that address and it will bring you into the project.`;
   const ignore = fr
     ? "Si vous ne connaissez pas cette personne, ignorez cet email — rien ne se passera."
     : "If you don't know this person, ignore this email — nothing will happen.";
 
-  const text = `${intro}\n\n${cta} : ${link}\n\n${hint}\n\n${ignore}`;
-  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#18181b;max-width:520px">
-  <p style="margin:0 0 20px">${escapeHtml(intro)}</p>
-  <p style="margin:0 0 24px"><a href="${link}" style="display:inline-block;background:#18181b;color:#fafafa;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:500">${escapeHtml(cta)}</a></p>
-  <p style="margin:0 0 8px;color:#52525b;font-size:14px">${escapeHtml(hint)}</p>
-  <p style="margin:0;color:#a1a1aa;font-size:13px">${escapeHtml(ignore)}</p>
-</div>`;
+  const text = `${title}\n\n${lead}\n\n${cta} : ${link}\n\n${note}\n\n${ignore}\n\nminddy — ${SITE_URL}`;
+
+  const html = `<!doctype html>
+<html lang="${fr ? "fr" : "en"}">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;width:100%;background-color:${PAGE};-webkit-font-smoothing:antialiased;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px;">${escapeHtml(preheader)}</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;background-color:${PAGE};">
+  <tr>
+    <td align="center" style="padding:40px 20px;font-family:${FONT};">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="480" style="width:100%;max-width:480px;">
+
+        <tr>
+          <td style="padding:0 4px 20px;">
+            <img src="${SITE_URL}/web-app-manifest-192x192.png" width="28" height="28" alt="" style="display:inline-block;width:28px;height:28px;vertical-align:middle;border:0;border-radius:7px;" />
+            <span style="display:inline-block;vertical-align:middle;padding-left:6px;font-family:${FONT};font-size:15px;font-weight:600;letter-spacing:-0.01em;color:${INK};">minddy</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td bgcolor="${CARD}" style="background-color:${CARD};border:1px solid ${BORDER};border-radius:16px;padding:32px;">
+            ${projectIconHtml(params)}
+            <h1 style="margin:20px 0 0;font-family:${FONT};font-size:20px;line-height:1.35;font-weight:600;letter-spacing:-0.015em;color:${TITLE};">${escapeHtml(title)}</h1>
+            <p style="margin:10px 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:${MUTED};">${escapeHtml(lead)}</p>
+
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 0;">
+              <tr>
+                <td bgcolor="${INK}" style="background-color:${INK};border-radius:10px;">
+                  <a href="${link}" style="display:inline-block;padding:11px 20px;font-family:${FONT};font-size:14px;font-weight:500;line-height:20px;color:${ON_INK};text-decoration:none;border-radius:10px;">${escapeHtml(cta)}</a>
+                </td>
+              </tr>
+            </table>
+
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:24px 0 0;">
+              <tr><td height="1" bgcolor="${HAIRLINE}" style="height:1px;line-height:1px;font-size:0;background-color:${HAIRLINE};">&nbsp;</td></tr>
+            </table>
+            <p style="margin:20px 0 0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">${escapeHtml(note)}</p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:20px 4px 0;">
+            <p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.6;color:${FAINT};">${escapeHtml(ignore)}</p>
+            <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${FAINT};"><a href="${SITE_URL}" style="color:${FAINT};text-decoration:none;">minddy.app</a></p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
 
   try {
     const response = await fetch(RESEND_URL, {

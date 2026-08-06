@@ -229,6 +229,32 @@ describe("inviteMember — une adresse sans compte", () => {
     expect(result.invitation).not.toHaveProperty("token");
   });
 
+  // L'énumération de comptes : `invited_user_id` rendu au client dirait, pour
+  // n'importe quelle adresse qu'on saisit, si elle a un compte minddy. Les deux
+  // cas sont vérifiés — l'adresse inconnue ET celle qui a un compte, puisque
+  // c'est justement la DIFFÉRENCE entre les deux réponses qui serait l'oracle.
+  it("ne rend PAS invited_user_id, compte ou pas", async () => {
+    const unknown = await inviteMember({
+      projectId: PROJECT,
+      actorId: OWNER,
+      email: "inconnue@example.test",
+    });
+    const account = "55555555-5555-4555-8555-555555555555";
+    accounts.set("connue@example.test", { id: account });
+    const known = await inviteMember({
+      projectId: PROJECT,
+      actorId: OWNER,
+      email: "connue@example.test",
+    });
+
+    expect(unknown.ok && known.ok).toBe(true);
+    if (!unknown.ok || !known.ok) return;
+    expect(unknown.invitation).not.toHaveProperty("invited_user_id");
+    expect(known.invitation).not.toHaveProperty("invited_user_id");
+    // La colonne est bien écrite en base : c'est la RÉPONSE qui la tait.
+    expect(invitationRows[1].invited_user_id).toBe(account);
+  });
+
   it("refuse la seconde invitation vers la même adresse (index unique)", async () => {
     await inviteMember({ projectId: PROJECT, actorId: OWNER, email: "a@example.test" });
     const second = await inviteMember({

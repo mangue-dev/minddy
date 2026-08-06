@@ -1180,8 +1180,8 @@
     "removeMemberDescription": "They'll lose access to the project and its issues. You can invite them again later.",
     "invitationSent": "Invitation sent to {email}.",
     "pendingInvitations": "Pending invitations",
-    "pending": "Awaiting reply",
-    "pendingSignup": "Awaiting signup",
+    "pendingInvitationsHint": "An invitation waits 30 days. If the person has no minddy account yet, it will be there when they sign up with that address.",
+    "pending": "Pending",
     "cancelInvitationAria": "Cancel invitation"
   },
   "Meta": {

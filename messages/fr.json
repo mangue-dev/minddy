@@ -1180,8 +1180,8 @@
     "removeMemberDescription": "Cette personne perdra l'accès au projet et à ses tickets. Vous pourrez l'inviter à nouveau plus tard.",
     "invitationSent": "Invitation envoyée à {email}.",
     "pendingInvitations": "Invitations en attente",
-    "pending": "En attente de réponse",
-    "pendingSignup": "En attente d'inscription",
+    "pendingInvitationsHint": "Une invitation attend 30 jours. Si la personne n'a pas encore de compte minddy, elle la retrouvera en s'inscrivant avec cette adresse.",
+    "pending": "En attente",
     "cancelInvitationAria": "Annuler l'invitation"
   },
   "Meta": {

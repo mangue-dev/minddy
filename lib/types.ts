@@ -680,11 +680,18 @@ export interface SearchIndexResponse {
   truncated: boolean;
 }
 
+/**
+ * Une invitation en attente, telle que l'API la rend. **Sans
+ * `invited_user_id`**, et c'est le point : la colonne existe en base (elle
+ * rattache l'invitation à un compte, cf. `attachPendingInvitations`), mais la
+ * rendre au client dirait, pour n'importe quelle adresse qu'on saisit, si elle a
+ * un compte minddy — un oracle d'énumération de comptes, ouvert à tout membre du
+ * projet. Le serveur la lit, le client ne la voit pas.
+ */
 export interface Invitation {
   id: string;
   project_id: string;
   invited_email: string;
-  invited_user_id: string | null;
   status: string;
   created_at: string;
 }
