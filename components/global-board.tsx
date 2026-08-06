@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button, Skeleton, toast } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import { FolderPlus, LayoutGrid, ListTodo, Plus } from "lucide-react";
+import { FolderPlus, LayoutGrid, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -23,7 +23,6 @@ import {
   useAssistantPanel,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
-import { EmptyState } from "@/components/empty-state";
 import { EmptyScene } from "@/components/empty-scene";
 import { GlobalKanbanBoard } from "@/components/global-kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
@@ -622,14 +621,11 @@ function GlobalBoardInner() {
             )}
           </div>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="min-h-0 flex-1 px-6 pt-4">
-          <EmptyState
-            icon={<ListTodo className="size-6" />}
-            description={activeView?.kind === "my" ? t("emptyMy") : t("emptyAll")}
-          />
-        </div>
       ) : (
+        /* Aucun ticket ne passe les filtres : le board reste debout, colonnes
+           vides. « Vide dans cette vue » n'est pas une impasse — c'est un
+           réglage de filtre, et l'écran qui le montre est le board lui-même.
+           Même geste que sur le board d'un projet. */
         <div className="min-h-0 flex-1 pt-3">
           <GlobalKanbanBoard
             issues={filtered}

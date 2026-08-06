@@ -1023,9 +1023,7 @@
   },
   "GlobalBoard": {
     "allTitle": "Tous les tickets",
-    "emptyNoProject": "Créez votre premier projet",
-    "emptyMy": "Aucun ticket ne vous est assigné dans cette vue.",
-    "emptyAll": "Aucun ticket ne correspond à cette vue."
+    "emptyNoProject": "Créez votre premier projet"
   },
   "Inbox": {
     "title": "Inbox",

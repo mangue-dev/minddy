@@ -1023,9 +1023,7 @@
   },
   "GlobalBoard": {
     "allTitle": "All issues",
-    "emptyNoProject": "Create your first project",
-    "emptyMy": "No issues assigned to you in this view.",
-    "emptyAll": "No issues match this view."
+    "emptyNoProject": "Create your first project"
   },
   "Inbox": {
     "title": "Inbox",
