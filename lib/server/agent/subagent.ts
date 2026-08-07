@@ -123,8 +123,13 @@ const TASK_MAX_CHARS = 500;
  * checkpoint : il finirait par franchir `MAX_CHECKPOINT_BYTES` (8 Mo) et le
  * garde-fou anti-runaway couperait le tour — pour un historique dont personne ne se
  * sert au-delà des derniers.
+ *
+ * C'est un plancher, pas un plafond dur : `records()` ne sacrifie jamais une fille
+ * en vol pour tenir ce compte, donc le pire cas réel est `SUBAGENT_RECORDS_KEPT +
+ * maxParallel` records. Une trentaine de records de plus pèse quelques dizaines de
+ * Ko à côté des 8 Mo — rien, comparé à une reprise perdue.
  */
-const SUBAGENT_RECORDS_KEPT = 20;
+export const SUBAGENT_RECORDS_KEPT = 20;
 
 /**
  * Sous-agents lançables sur UN chunk, toutes vagues confondues (le plafond de
@@ -945,14 +950,40 @@ export class Subagents {
     return resumable.length;
   }
 
-  /** Records à persister dans le checkpoint : les plus récents, rapport capé. */
+  /**
+   * Records à persister dans le checkpoint : rapport capé, et une troncature qui
+   * n'évince JAMAIS une fille vivante.
+   *
+   * Trancher par ancienneté seule perdait des filles en vol. `allRecords()` est
+   * `[...history, ...jobs]` et `jobs` n'est jamais purgé : une fille reprise à
+   * l'amorçage du chunk (`resumeSuspended`) s'y range AVANT les spawns du chunk, et
+   * les vingt que le plafond autorise suffisaient à la pousser hors de la fenêtre —
+   * avec ses `messages`, c'est-à-dire avec le seul moyen de la reprendre. Le parent
+   * avait dit « sub-1 lancé » dans le fil ; personne n'en entendait plus parler.
+   *
+   * On garde donc TOUS les vivants, et on ne complète qu'avec les morts les plus
+   * récents (l'ordre d'origine est conservé : `restore()` le relit tel quel).
+   */
   records(): SubagentRecord[] {
-    return this.allRecords()
-      .slice(-SUBAGENT_RECORDS_KEPT)
-      .map((r) => ({
-        ...r,
-        ...(r.report ? { report: cap(r.report, SUBAGENT_RECORD_REPORT_MAX_CHARS) } : {}),
-      }));
+    const all = this.allRecords();
+    // Budget des MORTS : ce qui reste une fois les vivants servis. Décrémenté à
+    // rebours plutôt que `dead.slice(-room)` — `slice(-0)` rend le tableau ENTIER,
+    // donc un chunk saturé de vivantes (`maxParallel` monte à 32) garderait tous
+    // les morts au lieu d'aucun.
+    let room = Math.max(0, SUBAGENT_RECORDS_KEPT - all.filter((r) => this.isLive(r)).length);
+    const kept: SubagentRecord[] = [];
+    for (let i = all.length - 1; i >= 0; i--) {
+      const record = all[i];
+      if (!this.isLive(record)) {
+        if (room === 0) continue;
+        room--;
+      }
+      kept.push(record);
+    }
+    return kept.reverse().map((r) => ({
+      ...r,
+      ...(r.report ? { report: cap(r.report, SUBAGENT_RECORD_REPORT_MAX_CHARS) } : {}),
+    }));
   }
 
   /**

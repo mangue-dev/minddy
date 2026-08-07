@@ -4,6 +4,7 @@ import {
   subagentUsageSeq,
   MAX_SUBAGENTS_PER_CHUNK,
   PARENT_WRITE_TOOLS,
+  SUBAGENT_RECORDS_KEPT,
   SUBAGENT_USAGE_SEQ_BASE,
   SUBAGENT_LIMIT_REASON,
   SUBAGENT_WRITE_LOCKED_REASON,
@@ -693,6 +694,54 @@ describe("suspension et reprise entre chunks", () => {
     expect(next.subagents.resumeSuspended()).toBe(0);
     expect(next.subagents.pending()).toBe(0);
   });
+
+  it("la troncature du checkpoint n'évince JAMAIS une fille vivante", async () => {
+    /**
+     * MIN-211. La fenêtre du checkpoint était prise par ANCIENNETÉ seule. Or une
+     * fille reprise entre dans `jobs` à l'amorçage du chunk : les spawns du chunk se
+     * rangent après elle, et le plafond en autorise assez pour la pousser dehors —
+     * avec ses `messages`, c'est-à-dire avec le seul moyen de la reprendre. Le fil
+     * disait « sub-7 lancé » ; personne n'en entendait plus jamais parler.
+     */
+    const { subagents, finish } = makeSubagents({ seqBase: 40 });
+    subagents.restore([
+      {
+        id: "sub-7", task: "long rename", mode: "explore", model: null, thinkingEffort: null,
+        status: "suspended", rounds: 4, costUsd: 0.02, startedAt: 1, delivered: false,
+        messages: HISTORY, slot: 7,
+      },
+    ]);
+    expect(subagents.resumeSuspended()).toBe(1);
+
+    // Le parent a de la marge : il part en éventail et brûle tout son plafond de
+    // spawns pendant que la reprise, elle, continue de travailler.
+    for (let i = 0; i < MAX_SUBAGENTS_PER_CHUNK; i++) {
+      expect((await subagents.spawn(EXPLORE)).success).toBe(true);
+      await finish(`sub-${41 + i}`, {});
+    }
+
+    // Fin de chunk : la reprise re-sauve son état, et c'est ce record-là qui doit
+    // survivre à la troncature.
+    const suspending = subagents.suspendAll();
+    await finish("sub-7", { status: "suspended", report: "", messages: HISTORY, rounds: 9 });
+    expect(await suspending).toBe(1);
+
+    const checkpoint = subagents.records();
+    const alive = checkpoint.find((r) => r.id === "sub-7");
+    expect(alive?.status).toBe("suspended");
+    expect(alive?.messages).toEqual(HISTORY);
+    // Ce sont les MORTS les plus anciens qui payent, et le checkpoint reste borné.
+    expect(checkpoint).toHaveLength(SUBAGENT_RECORDS_KEPT);
+    expect(checkpoint.map((r) => r.id)).not.toContain("sub-41");
+    expect(checkpoint.map((r) => r.id)).toContain("sub-60");
+
+    // Le chunk suivant la reprend : c'est tout l'enjeu.
+    const next = makeSubagents({ seqBase: 60 });
+    next.subagents.restore(checkpoint);
+    expect(next.subagents.resumeSuspended()).toBe(1);
+    expect(next.started[0].resumeMessages).toEqual(HISTORY);
+    expect(next.started[0].roundsSoFar).toBe(9);
+  }, 20_000);
 
   it("un record `suspended` SANS historique n'est pas repris (checkpoint bricolé)", () => {
     const { subagents, started } = makeSubagents();
