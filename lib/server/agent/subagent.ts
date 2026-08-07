@@ -373,6 +373,11 @@ export interface SubagentsOptions {
    * mural restant) : renvoie un motif de refus, ou null pour laisser passer. Sans
    * lui, un `spawn_agent` lancé à dix secondes de la soft-deadline serait coupé
    * aussitôt et rendrait un rapport vide — un round payé pour rien.
+   *
+   * Il doit garder le seuil du CHUNK (`chunkFitsSubagentResume`), pas celui de la
+   * fille : ce qu'elle reçoit est le restant MOINS la réserve du parent, et opposer
+   * le restant au seul minimum de la fille laissait passer un lancement 120 s trop
+   * tôt (MIN-212).
    */
   budgetGuard?: () => string | null;
 }

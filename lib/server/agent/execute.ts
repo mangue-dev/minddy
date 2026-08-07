@@ -61,8 +61,8 @@ import {
   maxParallelSubagents,
   subagentRoundsLeft,
   SUBAGENT_MAX_ROUNDS,
-  SUBAGENT_MIN_MS,
   SUBAGENT_PARENT_RESERVE_MS,
+  SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS,
 } from "./subagent-config";
 import { getAgentModelsForUser } from "./models-catalog";
 import { pruneToolOutputs } from "./prune";
@@ -2361,9 +2361,23 @@ export async function executeAgentRun(
       seqBase: run.continuations * MAX_SUBAGENTS_PER_CHUNK,
       budgetGuard: () => {
         const left = chunkRemainingMs();
-        return left >= SUBAGENT_MIN_MS
+        /**
+         * MÊME seuil que l'admission d'une REPRISE (MIN-212), et pour la même
+         * arithmétique : la fille reçoit `left − SUBAGENT_PARENT_RESERVE_MS`, donc
+         * opposer `left` au seul `SUBAGENT_MIN_MS` admettait un lancement 120 s trop
+         * tôt — et le `Math.max(1_000, budget)` du lanceur lui rendait alors UNE
+         * seconde. Le zombie temporel était refermé du côté de la reprise et resté
+         * ouvert du côté du lancement : la fille jouait un round non borné par cette
+         * seconde (il mord sur la réserve de finalisation du parent), se suspendait,
+         * et le chunk suivant était différé pour la reprendre pour de bon.
+         *
+         * `chunkFitsSubagentResume` plutôt qu'une comparaison écrite ici : c'est la
+         * doctrine de `chunk-budget.ts` — deux seuils posés à la main finissent
+         * toujours par diverger, et celui-ci avait déjà divergé.
+         */
+        return chunkFitsSubagentResume(left)
           ? null
-          : `Not enough time left in this turn to delegate (${Math.max(0, Math.round(left / 1000))}s): a sub-agent launched now would be cut off before it could report. Do what you can yourself and reply — you can delegate at the start of the next turn.`;
+          : `Not enough time left in this turn to delegate (${Math.max(0, Math.round(left / 1000))}s left, and delegating needs ${Math.round(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS / 1000)}s: the sub-agent's own work, plus the time I need to read its report and finish). One launched now would be cut off before it could report. Do what you can yourself and reply — you can delegate at the start of the next turn.`;
       },
     });
     subagentRegistry = subagents;

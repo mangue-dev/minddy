@@ -79,6 +79,16 @@ describe("chunkFitsSubagentResume", () => {
     // seconde à sa fille : un round par chunk, chacun payant son réveil de microVM.
     expect(budgetFor(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS)).toBe(SUBAGENT_MIN_MS);
     expect(budgetFor(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS - 1)).toBeLessThan(SUBAGENT_MIN_MS);
+    // Le seuil que `budgetGuard` gardait AVANT — le minimum de la fille opposé au
+    // restant du CHUNK — laissait passer toute cette bande, et le lanceur y rendait
+    // la seconde du `Math.max(1_000, …)`. C'est elle que la garde doit refuser.
+    for (const left of [SUBAGENT_MIN_MS, 60_000, SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS - 1]) {
+      expect(left, "cas de non-régression mal choisi : l'ancienne garde le refusait déjà")
+        .toBeGreaterThanOrEqual(SUBAGENT_MIN_MS);
+      expect(chunkFitsSubagentResume(left), `un spawn à ${left} ms de restant doit être refusé`)
+        .toBe(false);
+      expect(budgetFor(left)).toBeLessThan(SUBAGENT_MIN_MS);
+    }
   });
 });
 

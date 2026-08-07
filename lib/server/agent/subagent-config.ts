@@ -58,13 +58,16 @@ export function subagentRoundsLeft(roundsSoFar: number | undefined): number {
  */
 export const SUBAGENT_PARENT_RESERVE_MS = 120_000;
 
-/** En dessous, un `spawn_agent` est REFUSÉ : la fille n'aurait pas le temps de
- *  produire un rapport utile, et un round payé pour rien est un round perdu. */
+/** Ce qu'une fille doit avoir POUR ELLE : en dessous, elle n'a pas le temps de
+ *  produire un rapport utile, et un round payé pour rien est un round perdu.
+ *  Ce n'est pas ce qu'on oppose au chunk — le chunk doit porter ça PLUS la réserve
+ *  du parent, cf. `SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS`. */
 export const SUBAGENT_MIN_MS = 30_000;
 
 /**
- * Soft-deadline qu'un chunk doit avoir pour qu'y REPRENDRE une fille ait un sens :
- * la réserve du parent PLUS le minimum vital de la fille. C'est le pendant TEMPS de
+ * Temps qu'un chunk doit avoir devant lui pour qu'y faire tourner une fille ait un
+ * sens — la REPRENDRE à l'amorçage comme en LANCER une en cours de route : la
+ * réserve du parent PLUS le minimum vital de la fille. C'est le pendant TEMPS de
  * `subagentRoundsLeft`, et il vient du même bug.
  *
  * Le budget d'une fille vaut `min(SUBAGENT_MAX_MS, restant du chunk − réserve)`, et
@@ -79,11 +82,19 @@ export const SUBAGENT_MIN_MS = 30_000;
  * seul round, ce qui est le zombie à l'état pur. Ce qui corrige, c'est de refuser
  * l'ADMISSION du chunk — `executeAgentRun` re-queue le run tel quel, sans
  * incrémenter `continuations`, et le prochain drain à budget plein le reprend.
+ *
+ * Le LANCEMENT s'y oppose désormais aussi (`budgetGuard`). Il ne gardait que
+ * `SUBAGENT_MIN_MS`, en l'opposant au restant du chunk au lieu du budget de la
+ * fille : entre 30 s et 150 s de restant, un `spawn_agent` passait, et la fille
+ * recevait la même seconde. Version étroite du même défaut, sur la voie sœur —
+ * bornée par l'admission ci-dessus (le chunk suivant est différé jusqu'à une
+ * fenêtre pleine), mais c'est un round joué dans la réserve du parent pour rien.
  */
 export const SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS =
   SUBAGENT_PARENT_RESERVE_MS + SUBAGENT_MIN_MS;
 
-/** Ce chunk peut-il reprendre une fille pour de bon, plutôt qu'un round pour rien ? */
+/** Ce chunk peut-il faire tourner une fille pour de bon — la reprendre ou en lancer
+ *  une —, plutôt que de lui payer un round pour rien ? */
 export function chunkFitsSubagentResume(softDeadlineMs: number): boolean {
   return softDeadlineMs >= SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS;
 }

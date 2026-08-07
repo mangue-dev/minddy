@@ -119,6 +119,12 @@ function callPos(name: string): number {
 const deferStamp = declaration("deferStamp");
 const gate = enclosingGate(deferStamp);
 
+/** La propriété `budgetGuard:` passée au registre de sous-agents. */
+const budgetGuard = find(
+  (n): n is ts.PropertyAssignment =>
+    ts.isPropertyAssignment(n) && ts.isIdentifier(n.name) && n.name.text === "budgetGuard",
+)[0];
+
 describe("admission d'un chunk qui doit reprendre un sous-agent (execute.ts)", () => {
   it("re-queue SANS incrémenter `continuations` ni réécrire le checkpoint", () => {
     const keys = keysOf(deferStamp.initializer);
@@ -167,5 +173,37 @@ describe("admission d'un chunk qui doit reprendre un sous-agent (execute.ts)", (
       "le garde d'admission doit précéder `getOrCreateAgentSandbox` — sinon le chunk " +
         "refusé paie quand même le réveil de la microVM (MIN-212)",
     ).toBeLessThan(callPos("getOrCreateAgentSandbox"));
+  });
+});
+
+describe("lancement d'un sous-agent en cours de chunk (execute.ts)", () => {
+  /**
+   * La voie SŒUR de l'admission, et le reste du même ticket. `budgetGuard` opposait
+   * le restant du chunk au minimum de la FILLE (`SUBAGENT_MIN_MS`, 30 s), alors que
+   * la fille reçoit ce restant MOINS la réserve du parent (120 s) : entre les deux,
+   * un `spawn_agent` passait et le lanceur lui rendait la seconde du
+   * `Math.max(1_000, budget)` — le zombie temporel, refermé côté reprise et resté
+   * ouvert côté lancement.
+   *
+   * Structurel pour la même raison que le reste du fichier : la garde est une
+   * closure sur `chunkRemainingMs`, inatteignable sans microVM. Ce qui se teste,
+   * c'est QUEL seuil elle lit — et le compilateur, lui, accepte les deux.
+   */
+  it("garde le MÊME seuil que l'admission d'une reprise", () => {
+    expect(
+      budgetGuard,
+      "`budgetGuard` introuvable dans execute.ts — l'ancre du test a bougé",
+    ).toBeDefined();
+    const reads = valueReads(budgetGuard.initializer);
+    expect(
+      [...reads],
+      "`budgetGuard` doit décider par `chunkFitsSubagentResume`, comme l'admission : " +
+        "deux seuils écrits à la main divergent (MIN-212, MIN-213)",
+    ).toContain("chunkFitsSubagentResume");
+    expect(
+      [...reads],
+      "`budgetGuard` ne doit PAS opposer `SUBAGENT_MIN_MS` au restant du chunk : " +
+        "c'est le budget de la FILLE, réserve du parent non déduite (MIN-212)",
+    ).not.toContain("SUBAGENT_MIN_MS");
   });
 });
