@@ -21,6 +21,7 @@ import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { NewVersionBanner } from "@/components/new-version-banner";
 import { PushServiceWorker } from "@/components/push-service-worker";
+import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
@@ -76,6 +77,12 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                           <AnalyticsProjectGroup />
                           <NewVersionBanner />
                           <PushServiceWorker />
+                          {/* Suspense obligatoire : il lit `useSearchParams`,
+                              parce que la cible d'une notification vit dans la
+                              query (`?issue=…`). */}
+                          <Suspense fallback={null}>
+                            <PushNotificationDismiss />
+                          </Suspense>
                         </UndoProvider>
                       </KeyboardProvider>
                     </SecondarySidebarProvider>

@@ -46,8 +46,36 @@ self.addEventListener("push", (event) => {
     data: { url: data.url || "/inbox" },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    self.registration.showNotification(title, options).then(notifyClients)
+  );
 });
+
+/**
+ * Prévient les onglets ouverts qu'une notification vient d'être affichée, pour
+ * que celui qui regarde DÉJÀ la page concernée la referme aussitôt
+ * (components/push-notification-dismiss.tsx). Sans ce message, ce cas-là n'a
+ * aucun signal : ni la route ni la visibilité ne changent quand la bannière
+ * tombe sous les yeux de quelqu'un qui est au bon endroit.
+ *
+ * Le worker ne décide de rien et n'envoie aucune URL : il ne sait pas ce que
+ * chaque onglet affiche, et le rapprochement vit en un seul exemplaire, côté
+ * page (lib/push/dismiss.ts). Ici on ne fait que réveiller tout le monde.
+ *
+ * `includeUncontrolled: true` est OBLIGATOIRE : ce worker n'a pas de handler
+ * `fetch` et n'appelle pas `clients.claim()`, donc il ne CONTRÔLE aucun onglet.
+ * Sans ce drapeau, `matchAll` rendrait une liste vide, toujours. Un client
+ * non contrôlé reçoit très bien un `postMessage`.
+ */
+async function notifyClients() {
+  const windows = await self.clients.matchAll({
+    type: "window",
+    includeUncontrolled: true,
+  });
+  for (const client of windows) {
+    client.postMessage({ type: "push-shown" });
+  }
+}
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

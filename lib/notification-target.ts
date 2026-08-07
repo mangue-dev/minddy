@@ -53,6 +53,27 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
   return null;
 }
 
+/**
+ * Les paramètres de requête qui IDENTIFIENT la cible dans les chemins ci-dessus,
+ * par opposition à ceux qui ne font que décorer l'écran (`tab=routines`).
+ *
+ * Ils servent à répondre à « la page affichée est-elle celle de cette
+ * notification ? », pour refermer la bannière poussée quand on y arrive
+ * (lib/push/dismiss.ts). Le chemin seul n'y suffit pas : deux routines vivent
+ * sur le même `/agents`, deux tickets sur le même board.
+ *
+ * **Une cible de plus dans `notificationTargetPath` = son paramètre ici**, sinon
+ * arriver sur l'une refermerait les notifications de toutes les autres. Le test
+ * de lib/push/dismiss.test.ts le vérifie cible par cible.
+ */
+export const NOTIFICATION_TARGET_PARAMS = [
+  "open",
+  "post",
+  "issue",
+  "routine",
+  "pr",
+] as const;
+
 /** La clé i18n de la phrase « qui a fait quoi », namespace `Inbox`. Typée en
  *  `MessageKey` et non en `string` : une clé retirée du catalogue ne compile
  *  plus, au lieu de s'afficher en « Inbox.… » à l'écran. */
