@@ -2382,10 +2382,22 @@ export async function executeAgentRun(
     // leur état et repartiront au chunk suivant. Sur tout autre chemin de sortie —
     // fin de tour, interruption, erreur, budget épuisé — le run s'arrête là, donc
     // elles sont COUPÉES et leur rapport partiel est livré une bonne fois.
-    if (result.status === "suspended") {
+    //
+    // D'où la lecture du drapeau d'interruption ICI (MIN-206), AVANT la décision, et
+    // pas seulement après le push WIP : un « Stop » cliqué pendant les quelques
+    // secondes de finalisation laissait des filles `suspended` — donc REPRENABLES —
+    // dans le checkpoint d'un tour que l'utilisateur croit arrêté. Il écrivait
+    // ensuite « fais plutôt X », et le tour suivant relançait la fille de la tâche
+    // ABANDONNÉE : elle repartait écrire dans la sandbox et brûler le quota, pendant
+    // que le parent, garé sur elle (`parkedForSubagents`), ne lisait pas la nouvelle
+    // consigne. Un tour arrêté n'a pas de suite : ses filles sont coupées.
+    const stopRequested = result.status === "suspended" && (await readInterruptFlag(run.id));
+    if (result.status === "suspended" && !stopRequested) {
       await subagents.suspendAll().catch(() => 0);
     } else {
-      await subagents.cutAll("the parent chunk ended").catch(() => 0);
+      await subagents
+        .cutAll(stopRequested ? "the turn was stopped" : "the parent chunk ended")
+        .catch(() => 0);
     }
     let subagentCost = 0;
     for (const report of subagents.drainReports()) {
@@ -2657,7 +2669,12 @@ export async function executeAgentRun(
 
     // suspended, mais une interruption a été demandée pendant le chunk → REPOS
     // plutôt que re-queue (course : le drapeau est arrivé après le retour de boucle).
-    if (await readInterruptFlag(run.id)) {
+    //
+    // UNION des deux lectures, et pas la seule réutilisation de `stopRequested` : le
+    // drapeau peut être arrivé pendant le push WIP, c'est-à-dire entre les deux — et
+    // c'est précisément la fenêtre pour laquelle ce test existe. Le relire ne coûte
+    // une requête que si le premier était faux, soit ce que faisait déjà ce chemin.
+    if (stopRequested || (await readInterruptFlag(run.id))) {
       await clearInterrupt(run.id);
       await restStamp({ checkpoint });
       return "interrupted";

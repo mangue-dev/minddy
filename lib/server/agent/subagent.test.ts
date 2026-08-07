@@ -632,6 +632,44 @@ describe("suspension et reprise entre chunks", () => {
     expect(subagents.drainReports()).toHaveLength(1);
   }, 20_000);
 
+  it("cutAll coupe une fille SUSPENDUE : rien de reprenable ne survit au tour arrêté", async () => {
+    /**
+     * MIN-206/207. `suspended` est un état de PROMESSE : « je reprends au chunk
+     * suivant ». Sur un chemin de sortie où le tour s'arrête pour de bon — « Stop »
+     * cliqué pendant la finalisation, `ask_user`, interruption, erreur — il n'y a pas
+     * de chunk suivant pour cette tâche, et laisser le record `suspended` la faisait
+     * repartir des heures plus tard, sur une consigne périmée, en écrivant dans la
+     * sandbox et en brûlant du quota.
+     */
+    const { subagents, finish, aborted } = makeSubagents();
+    await subagents.spawn(IMPLEMENT);
+    const suspending = subagents.suspendAll();
+    await finish("sub-1", { status: "suspended", report: "", messages: HISTORY, rounds: 4 });
+    await suspending;
+    expect(subagents.suspendedCount()).toBe(1);
+
+    expect(await subagents.cutAll("the turn was stopped")).toBe(1);
+    expect(subagents.suspendedCount()).toBe(0);
+    expect(subagents.pending()).toBe(0);
+    // Une suspendue a déjà rendu la main : on ne la ré-abort pas (le seul abort du
+    // fil est celui de la suspension).
+    expect(aborted).toEqual(["sub-1"]);
+
+    // Son partiel part MAINTENANT, dans le checkpoint de CE chunk : le travail à
+    // moitié fait est dit une bonne fois, plutôt que promis à une reprise.
+    const [report] = subagents.drainReports();
+    expect(report.text).toContain("the turn was stopped");
+    const [record] = subagents.records();
+    expect(record.status).toBe("cut");
+    expect(record.messages).toBeUndefined();
+
+    // Et le chunk suivant ne peut plus la ressusciter : c'était le symptôme.
+    const next = makeSubagents();
+    next.subagents.restore(subagents.records());
+    expect(next.subagents.resumeSuspended()).toBe(0);
+    expect(next.subagents.pending()).toBe(0);
+  });
+
   it("un record `suspended` SANS historique n'est pas repris (checkpoint bricolé)", () => {
     const { subagents, started } = makeSubagents();
     subagents.restore([

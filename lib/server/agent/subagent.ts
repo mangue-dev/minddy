@@ -815,11 +815,22 @@ export class Subagents {
    * épuisé). Best-effort, ne lève jamais. Après cet appel, `drainReports()` livre
    * les rapports PARTIELS : c'est ce qui les met dans le checkpoint et donc dans le
    * chunk suivant, plutôt que de les perdre avec la fonction Vercel.
+   *
+   * « En vol » se lit `isLive()` — `running` ET `suspended` (MIN-207). Une fille
+   * AUTO-SUSPENDUE (elle a rendu son historique à la frontière d'un round, de son
+   * propre chef) n'est pas finie : ne pas la couper la laisserait `suspended` dans
+   * le checkpoint, c'est-à-dire REPRENABLE, sur tous les chemins de sortie où le
+   * tour s'arrête pour de bon — `ask_user`, interruption, erreur, budget. Elle
+   * ressuscitait alors des heures plus tard sur une tâche périmée, écrivait dans le
+   * dépôt, brûlait du quota, et le verrou d'écriture du parent la croyait vivante.
    */
   async cutAll(reason: string): Promise<number> {
-    const live = [...this.jobs.values()].filter((j) => j.record.status === "running");
+    const live = [...this.jobs.values()].filter((j) => this.isLive(j.record));
     if (live.length === 0) return 0;
     for (const job of live) {
+      // Rien à annuler sur une suspendue : sa boucle a déjà rendu la main, son
+      // `AbortController` n'écoute plus personne.
+      if (job.record.status !== "running") continue;
       try {
         job.controller.abort();
       } catch {
@@ -841,11 +852,16 @@ export class Subagents {
     }
     // Une fille qui n'a pas rendu la main dans le délai de grâce est déclarée
     // coupée quand même : le chunk ne peut pas l'attendre, et son record doit dire
-    // la vérité plutôt que « running » pour l'éternité.
+    // la vérité plutôt que « running » pour l'éternité. Une suspendue passe par ici
+    // aussi : c'est ce `cut` qui la rend indélivrable à `resumeSuspended()` et
+    // livrable, une bonne fois, à `drainReports()`.
     for (const job of live) {
-      if (job.record.status !== "running") continue;
+      if (!this.isLive(job.record)) continue;
       job.record.status = "cut";
       job.record.report = job.record.report ?? `Stopped before producing a report (${reason}).`;
+      // L'historique ne sert QU'À reprendre : le garder n'ouvrirait aucune reprise
+      // (`restore` ne relance que les `suspended`) et pèserait sur le checkpoint.
+      delete job.record.messages;
     }
     return live.length;
   }
