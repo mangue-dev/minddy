@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,6 +16,9 @@ import {
   DropdownMenuTrigger,
   Skeleton,
   Switch,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -63,6 +66,7 @@ import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { calendarDaysBetween } from "@/lib/due-date";
 import {
   describeSchedule,
   nextRunAt,
@@ -163,19 +167,13 @@ export function RoutineDetail({
   const openRun: AgentRunSummary | null =
     runs.find((r) => r.id === openRunId) ?? null;
 
-  const nextAt = routine.next_run_at
-    ? format.dateTime(new Date(routine.next_run_at), {
-        dateStyle: "medium",
-        timeStyle: "short",
-      })
-    : null;
   /**
    * Le prochain passage se lit dans la LISTE des exécutions, en tête — c'est
    * une date de la même série que celles d'en dessous, simplement pas encore
    * arrivée. Une routine en pause n'en a pas : son échéance est désarmée
    * (`next_run_at` null), et en annoncer une serait un mensonge à l'écran.
    */
-  const showNextRun = !!nextAt && routine.enabled;
+  const nextRunAtIso = routine.enabled ? routine.next_run_at : null;
 
   const patch = async (fields: Parameters<typeof updateRoutineApi>[1]) => {
     setBusy(true);
@@ -531,19 +529,9 @@ export function RoutineDetail({
               {/* Rien à encadrer quand il n'y a ni passage à venir ni passage
                   passé : la liste disparaît entièrement plutôt que de laisser
                   son filet du haut tout seul au-dessus de l'écran vide. */}
-              {showNextRun || runs.length > 0 ? (
+              {nextRunAtIso || runs.length > 0 ? (
                 <ul className="flex flex-col divide-y divide-border border-t border-border">
-                  {showNextRun ? (
-                    /* Le passage à VENIR. Tout est en `text-muted-foreground` :
-                       c'est ce qui le distingue d'un passage qui a eu lieu, sans
-                       lui donner ni icône ni badge à part. Aucun geste — la ligne
-                       n'est pas cliquable, il n'y a encore rien à lire. */
-                    <li className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground">
-                      <span className="min-w-0 flex-1 truncate">
-                        {t("nextRunAt", { date: nextAt as string })}
-                      </span>
-                    </li>
-                  ) : null}
+                  {nextRunAtIso ? <NextRunRow at={nextRunAtIso} /> : null}
                   {runs.map((run) => (
                     /* La ligne entière ouvre le passage — sauf le badge de pull
                      request, qui mène à la PR. D'où le bouton ÉTENDU sous la
@@ -709,6 +697,67 @@ function RoutinePrompt({ prompt }: { prompt: string }) {
         </Button>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Le passage à VENIR, en tête de la liste des exécutions. Tout est en
+ * `text-muted-foreground` : c'est ce qui le distingue d'un passage qui a eu
+ * lieu, sans lui donner ni icône ni badge à part. Aucun geste — la ligne n'est
+ * pas cliquable, il n'y a encore rien à lire.
+ *
+ * **Il se dit en RELATIF** — « aujourd'hui à 09:00 », « dans 3 jours à 11:00 ».
+ * C'est la question qu'on se pose en le lisant : pas *quand* dans l'absolu,
+ * mais *dans combien de temps*. La date exacte n'a pas disparu, elle est passée
+ * derrière, au survol, dans l'infobulle.
+ *
+ * Le déclencheur de l'infobulle, c'est le TEXTE — pas la ligne. D'où l'absence
+ * de `flex-1` sur le `span` : étiré, il ferait de toute la largeur une zone de
+ * survol, et l'infobulle sortirait en passant à côté de ce qu'elle explique.
+ *
+ * L'écart se compte en jours CALENDAIRES et non en durée : à 22 h, un passage
+ * demain à 9 h est « demain », pas « dans 11 heures ». Ce qui change d'un
+ * passage à l'autre, c'est le nom du jour, pas un nombre d'heures.
+ *
+ * `useNow` vit ICI plutôt que dans le volet : une horloge qui bat à la minute
+ * ne doit re-rendre que la ligne qui la lit.
+ *
+ * Un passage en retard d'un jour PLEIN — le cron est mort — retombe sur la date
+ * absolue : « aujourd'hui » y serait faux, et un retard pareil doit se voir.
+ */
+function NextRunRow({ at }: { at: string }) {
+  const t = useTranslations("Routines");
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
+
+  const date = new Date(at);
+  const exact = format.dateTime(date, { dateStyle: "full", timeStyle: "short" });
+  const time = format.dateTime(date, { hour: "2-digit", minute: "2-digit" });
+  const days = calendarDaysBetween(now, date);
+
+  const label =
+    days < 0
+      ? t("nextRunAt", {
+          date: format.dateTime(date, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        })
+      : days === 0
+        ? t("nextRunToday", { time })
+        : days === 1
+          ? t("nextRunTomorrow", { time })
+          : t("nextRunInDays", { days, time });
+
+  return (
+    <li className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="min-w-0 truncate">{label}</span>
+        </TooltipTrigger>
+        <TooltipContent>{exact}</TooltipContent>
+      </Tooltip>
+    </li>
   );
 }
 
