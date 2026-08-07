@@ -893,6 +893,12 @@ export interface Integration {
 }
 
 export interface CreateIssueInput {
+  /** L'id que le client a DÉJÀ donné à sa carte optimiste (lib/optimistic-issue.ts).
+      La ligne naît avec : c'est ce qui permet au pont temps réel de reconnaître
+      la diffusion de NOTRE création et de ne pas la recopier à côté de la carte.
+      Absent (annulation d'une suppression, MCP, intégrations) = le serveur tire
+      l'id lui-même. */
+  id?: string;
   title: string;
   description?: string | null;
   plan?: string | null;

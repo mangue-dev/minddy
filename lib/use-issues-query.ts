@@ -16,7 +16,6 @@ import {
   mergeServerIssue,
   patchIssueEverywhere,
   removeIssueEverywhere,
-  replaceIssueEverywhere,
 } from "./optimistic/issue-writes";
 import { trackEvent } from "./analytics";
 import { buildOptimisticIssue } from "./optimistic-issue";
@@ -119,10 +118,13 @@ export function useIssuesQuery(projectId: string | null) {
       // carte jusqu'à son prochain refetch (l'écho temps réel de notre propre
       // création ne l'invalide plus — MIN-156).
       insertIssueEverywhere(queryClient, pid, optimistic);
-      void createIssueApi(pid, input).then(
+      // L'id de la carte part avec la création : la ligne naît avec, et l'écho
+      // temps réel de notre propre insert est reconnu au lieu d'être adopté à
+      // côté d'elle (le doublon d'une seconde — voir lib/optimistic-issue.ts).
+      void createIssueApi(pid, { ...input, id: optimistic.id }).then(
         (issue) => {
-          replaceIssueEverywhere(queryClient, pid, optimistic.id, issue);
           insertIssueEverywhere(queryClient, pid, issue);
+          mergeServerIssue(queryClient, pid, issue);
           issueWrites.settle(handle, issue);
           record({
             kind: "create",

@@ -5,10 +5,22 @@ import type { CreateIssueInput, Issue } from "./types";
  * dans le cache immédiatement pour que la carte apparaisse sans attendre le POST
  * (MIN-40). Réconciliée avec la ligne serveur au succès, retirée à l'échec.
  *
- * L'id porte le préfixe `temp-` (voir {@link isOptimisticIssueId}) : les autres
- * clients ne le voient jamais, et le realtime remplace la carte par la vraie
- * ligne. Le `number` est une estimation (max + 1) recalée au succès — la valeur
- * définitive vient du compteur atomique côté serveur.
+ * **C'est le client qui NOMME la ligne** : l'id tiré ici part avec la création
+ * (`CreateIssueInput.id`) et devient la clé primaire en base. Sans ça la carte
+ * s'affichait en double une seconde : le trigger diffuse l'INSERT au commit,
+ * bien avant que le POST ne réponde (il lui reste les pièces jointes, les
+ * catégories et Smart Assign à faire), et le pont temps réel ne pouvait pas
+ * reconnaître cette diffusion comme la nôtre — le registre d'écritures en
+ * attente ne connaissait que l'id optimiste, la ligne diffusée en portait un
+ * autre. Il l'adoptait donc comme la ligne d'un tiers, à côté de la carte
+ * optimiste ; puis le retour du POST posait la ligne serveur SUR la carte, deux
+ * entrées de même id que seul un refetch recollait (rapide sur le board d'un
+ * projet, plusieurs secondes sur `/all`, d'où le doublon qui « restait »).
+ * Même id des deux côtés, `issueWrites.wasJustWritten` reconnaît l'écho et le
+ * pont le laisse passer, exactement comme pour une édition.
+ *
+ * Le `number`, lui, reste une estimation (max + 1 **dans ce projet**) recalée au
+ * succès — la valeur définitive vient du compteur atomique côté serveur.
  */
 export function buildOptimisticIssue(
   input: CreateIssueInput,
@@ -17,10 +29,14 @@ export function buildOptimisticIssue(
   existing: Issue[]
 ): Issue {
   const now = new Date().toISOString();
-  const nextNumber = existing.reduce((m, i) => Math.max(m, i.number), 0) + 1;
+  const nextNumber =
+    existing.reduce(
+      (m, i) => (i.project_id === projectId ? Math.max(m, i.number) : m),
+      0
+    ) + 1;
   const status = input.status ?? "backlog"; // même défaut que la colonne DB
   return {
-    id: `temp-${crypto.randomUUID()}`,
+    id: crypto.randomUUID(),
     project_id: projectId,
     number: nextNumber,
     title: input.title,
@@ -46,10 +62,11 @@ export function buildOptimisticIssue(
     completed_at: status === "done" ? now : null,
     cycle_id: null,
     category_ids: input.category_ids ?? [],
+    // Le compte de pièces jointes est un AGRÉGAT : ni la réponse du POST ni la
+    // ligne diffusée ne le portent, seul le GET du board le calcule. On le pose
+    // donc ici — à la création, les ressources du ticket sont exactement celles
+    // qu'on envoie —, sans quoi la pastille manquerait jusqu'au prochain refetch.
+    resource_count:
+      (input.resources?.length ?? 0) + (input.copy_resources?.length ?? 0),
   };
-}
-
-/** Une issue encore en attente de confirmation serveur (id `temp-…`). */
-export function isOptimisticIssueId(id: string): boolean {
-  return id.startsWith("temp-");
 }

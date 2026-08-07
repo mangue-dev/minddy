@@ -52,8 +52,8 @@ import { createIssueApi } from "@/lib/issues-api";
 import {
   insertIssueEverywhere,
   issueWrites,
+  mergeServerIssue,
   removeIssueEverywhere,
-  replaceIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
@@ -205,10 +205,12 @@ function ProjectBoard() {
       // partie plus tôt ne peut plus faire disparaître la carte à peine créée.
       const handle = issueWrites.begin({ kind: "insert", row: optimistic });
       insertIssueEverywhere(queryClient, targetProjectId, optimistic);
-      void createIssueApi(targetProjectId, input).then(
+      // La carte nomme sa ligne : l'écho temps réel de notre création est
+      // reconnu, pas adopté à côté d'elle (lib/optimistic-issue.ts).
+      void createIssueApi(targetProjectId, { ...input, id: optimistic.id }).then(
         (issue) => {
-          replaceIssueEverywhere(queryClient, targetProjectId, optimistic.id, issue);
           insertIssueEverywhere(queryClient, targetProjectId, issue);
+          mergeServerIssue(queryClient, targetProjectId, issue);
           issueWrites.settle(handle, issue);
           record({
             kind: "create",

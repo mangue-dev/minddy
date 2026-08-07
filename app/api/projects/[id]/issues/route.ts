@@ -78,11 +78,17 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
 
+  const payload = (body ?? {}) as Record<string, unknown>;
   const result = await createIssueForProject({
     projectId: id,
     projectName: access.project.name,
     actorId: auth.user.id,
-    input: (body ?? {}) as Record<string, unknown>,
+    input: payload,
+    // L'id que la carte optimiste porte déjà côté navigateur : la ligne naît
+    // avec, sinon le direct rapporte une création que le client ne reconnaît pas
+    // comme la sienne et la carte apparaît en double (lib/optimistic-issue.ts).
+    // Validé comme UUID par le cœur, qui l'ignore sinon.
+    rowId: typeof payload.id === "string" ? payload.id : null,
   });
   if (!result.ok) {
     const message =

@@ -17,7 +17,6 @@ import {
   mergeServerIssue,
   patchIssueEverywhere,
   removeIssueEverywhere,
-  replaceIssueEverywhere,
 } from "./optimistic/issue-writes";
 import { trackEvent } from "./analytics";
 import {
@@ -303,10 +302,14 @@ export function useGlobalBoardQuery() {
       );
       const handle = issueWrites.begin({ kind: "insert", row: optimistic });
       insertIssueEverywhere(queryClient, projectId, optimistic);
-      void createIssueApi(projectId, input).then(
+      // Même contrat que sur le board d'un projet : la carte nomme sa ligne, le
+      // direct reconnaît l'écho de notre création et ne l'ajoute pas une seconde
+      // fois — ici le doublon ne se résorbait même pas, `/api/me/board` étant
+      // trop lourd pour être rejoué dans la seconde (lib/optimistic-issue.ts).
+      void createIssueApi(projectId, { ...input, id: optimistic.id }).then(
         (issue) => {
-          replaceIssueEverywhere(queryClient, projectId, optimistic.id, issue);
           insertIssueEverywhere(queryClient, projectId, issue);
+          mergeServerIssue(queryClient, projectId, issue);
           issueWrites.settle(handle, issue);
           record({
             kind: "create",

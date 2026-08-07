@@ -19,6 +19,7 @@ import {
   stampMcpKey,
   type EventRow,
 } from "@/lib/server/issue-events";
+import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { insertNotifications } from "@/lib/server/notifications";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
@@ -101,6 +102,8 @@ const MAX_TITLE_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 65_536;
 const MAX_CATEGORY_REFS = 100;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function createIssueForProject({
   projectId,
   projectName = null,
@@ -111,6 +114,7 @@ export async function createIssueForProject({
   integrationId = null,
   remote = null,
   recurrenceSeriesId = null,
+  rowId = null,
 }: {
   projectId: string;
   /** Project name snapshot for the stats ledger (survives project deletion). */
@@ -131,6 +135,15 @@ export async function createIssueForProject({
       lib/server/recurrence.ts sur l'occurrence qu'il crée, jamais par un
       payload client. Null = ce ticket ouvre sa propre série (voir seriesIdOf). */
   recurrenceSeriesId?: string | null;
+  /** Id que le client a DÉJÀ donné à sa carte optimiste : la ligne naît avec,
+      pour que la diffusion temps réel de cette création soit reconnue comme la
+      sienne plutôt qu'adoptée en double (lib/optimistic-issue.ts). Posé par la
+      seule route web, JAMAIS lu dans `input` — les dix autres appelants (MCP,
+      Numo, webhooks de forge, import, récurrence, promotion d'un retour)
+      transmettent des charges qu'ils n'ont pas écrites, et un `id` égaré n'y
+      désignerait pas la ligne à créer. Ignoré s'il n'est pas un UUID, comme les
+      enums invalides. */
+  rowId?: string | null;
 }): Promise<CreateIssueResult> {
   const title =
     typeof input.title === "string" ? input.title.trim().slice(0, MAX_TITLE_LENGTH) : "";
@@ -176,12 +189,15 @@ export async function createIssueForProject({
     return { ok: false, status: 400, errorKey: "resourceInvalid" };
   }
 
+  const clientRowId = typeof rowId === "string" && UUID_RE.test(rowId) ? rowId : null;
+
   const row: Record<string, unknown> = {
     project_id: projectId,
     title,
     created_by: actorId,
     position: Date.now(),
   };
+  if (clientRowId) row.id = clientRowId;
   if (integrationId) row.integration_id = integrationId;
   if (remote) {
     row.remote_provider = remote.provider;
@@ -284,6 +300,21 @@ export async function createIssueForProject({
     // le distingue pour que l'appelant l'avale sans bruit (MIN-97).
     if (error.code === "23505" && remote) {
       return { ok: false, status: 409, errorKey: "remoteIssueAlreadyImported" };
+    }
+    // 23505 sur la CLÉ PRIMAIRE alors que c'est le client qui l'a choisie : la
+    // même création rejouée (double soumission, renvoi après une réponse
+    // perdue). Le ticket d'avant EST le résultat attendu — le rendre tel quel
+    // plutôt qu'un second ticket ou une erreur. Les effets de bord, eux, ont
+    // déjà eu lieu au premier passage.
+    if (error.code === "23505" && clientRowId) {
+      const { data: existing } = await service
+        .from("issues")
+        .select(ISSUE_SELECT)
+        .eq("id", clientRowId)
+        .eq("project_id", projectId)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (existing) return { ok: true, issue: mapIssueRow(existing) };
     }
     console.error("[create-issue] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };

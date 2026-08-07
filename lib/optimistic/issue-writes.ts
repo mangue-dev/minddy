@@ -169,20 +169,6 @@ export function insertIssueEverywhere(
   );
 }
 
-/** Remplace la carte optimiste par la ligne serveur (l'id change). */
-export function replaceIssueEverywhere(
-  queryClient: QueryClient,
-  projectId: string,
-  optimisticId: string,
-  issue: Issue
-): void {
-  const swap = (i: Issue) => (i.id === optimisticId ? issue : i);
-  queryClient.setQueryData<Issue[]>(issuesKey(projectId), (old) => old?.map(swap));
-  queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
-    old ? { ...old, issues: old.issues.map(swap) } : old
-  );
-}
-
 /** Retire une carte des deux caches (création refusée, suppression). */
 export function removeIssueEverywhere(
   queryClient: QueryClient,
@@ -201,6 +187,12 @@ export function removeIssueEverywhere(
  * invalider. C'est le pendant du patch optimiste au retour du PATCH : les effets
  * de bord serveur (auto-attribution, completed_at, sortie de cycle) arrivent
  * sans coûter un refetch d'une route agrégée à plusieurs secondes.
+ *
+ * Au retour du POST de création aussi, et pour la même raison : la carte porte
+ * déjà l'id de la ligne (lib/optimistic-issue.ts), il n'y a donc rien à
+ * remplacer — le numéro définitif, la position et l'assigné que Smart Assign a
+ * choisi se posent dessus champ par champ, et ce que la ligne serveur ne porte
+ * pas (`resource_count`) survit.
  */
 export function mergeServerIssue(
   queryClient: QueryClient,

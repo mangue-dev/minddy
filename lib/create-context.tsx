@@ -24,8 +24,8 @@ import {
   insertIssueEverywhere,
   insertObjectiveEverywhere,
   issueWrites,
+  mergeServerIssue,
   removeIssueEverywhere,
-  replaceIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
@@ -152,10 +152,12 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       // partie plus tôt ne peut plus faire disparaître la carte à peine créée.
       const handle = issueWrites.begin({ kind: "insert", row: optimistic });
       insertIssueEverywhere(queryClient, projectId, optimistic);
-      void createIssueApi(projectId, input).then(
+      // La carte nomme sa ligne : l'écho temps réel de notre création est
+      // reconnu, pas adopté à côté d'elle (lib/optimistic-issue.ts).
+      void createIssueApi(projectId, { ...input, id: optimistic.id }).then(
         (issue) => {
-          replaceIssueEverywhere(queryClient, projectId, optimistic.id, issue);
           insertIssueEverywhere(queryClient, projectId, issue);
+          mergeServerIssue(queryClient, projectId, issue);
           issueWrites.settle(handle, issue);
           record({
             kind: "create",
