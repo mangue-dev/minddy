@@ -579,7 +579,7 @@ describe("bande de seq ai_usage", () => {
 
 /**
  * REPRISE ENTRE CHUNKS (MIN-112, second temps). Ce que la fonction Vercel tue au
- * bout de 300 s, ce n'est PAS la microVM — elle a une session de 45 min et un
+ * bout de 300 s, ce n'est PAS la microVM — elle a une session de 24 h et un
  * snapshot persistant — mais l'état EN MÉMOIRE de la boucle fille. En le posant
  * dans le checkpoint, une fille peut travailler bien au-delà d'un chunk.
  *

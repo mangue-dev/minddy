@@ -42,8 +42,8 @@ export const MAX_RETRY_WAIT_MS = 30_000;
  *
  * Les paliers : de quoi traverser un incident ordinaire (quelques dizaines de
  * secondes) sans y penser, et ~17,5 min de patience au total avant d'abandonner
- * proprement. La microVM vit 45 min (`SANDBOX_TIMEOUT_MS`) et le tour 60
- * (`MAX_WALL_CLOCK_MS`) : les deux filets restent devant. Au-delà, le repos est
+ * proprement. Le tour vit 60 min (`MAX_WALL_CLOCK_MS`) et la microVM bien plus
+ * (`SANDBOX_TIMEOUT_MS`) : les deux filets restent devant. Au-delà, le repos est
  * un meilleur service qu'une attente — le checkpoint est gardé, un message
  * suffit à repartir.
  *

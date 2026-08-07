@@ -24,9 +24,12 @@ import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
  * (`agent-<run.id>`, persisté dans agent_runs.sandbox_id). `getOrCreateAgentSandbox`
  * est idempotent : si la microVM (ou son SNAPSHOT persistant) existe encore, elle
  * est RÉVEILLÉE avec son filesystem restauré (reprise rapide, pas de re-clone) ;
- * sinon `onCreate` clone la branche de travail sur une VM neuve. On active donc
- * `persistent: true` (restauration automatique du FS entre sessions via snapshots)
- * + `snapshotExpiration`. Le git (branche WIP poussée à chaque pause) reste le
+ * sinon `onCreate` clone la branche de travail sur une VM neuve. `persistent: true`
+ * (restauration automatique du FS entre sessions via snapshots) est le DÉFAUT du SDK
+ * depuis sa v2 — on le pose quand même, explicitement : c'est de lui que dépend toute
+ * la reprise, il n'a pas à disparaître dans un défaut. `snapshotExpiration` et
+ * `keepLastSnapshots`, eux, ne redisent pas un défaut : ils en RESSERRENT deux qui
+ * coûtent (voir plus bas). Le git (branche WIP poussée à chaque pause) reste le
  * filet durable au-delà de l'expiration du snapshot. AUTH : réutilise
  * VERCEL_TOKEN/TEAM_ID/PROJECT_ID (comme les domaines custom, MIN-36) ; sur Vercel
  * l'OIDC suffit.
@@ -34,11 +37,26 @@ import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 
 /** Runtime de la microVM. */
 const SANDBOX_RUNTIME = "node24";
-/** Durée de vie max d'une session de la microVM (survit au gap entre deux chunks).
- *  Backstop : l'inactivité réelle est gérée par le reaper (coupe après ~5 min). */
-const SANDBOX_TIMEOUT_MS = 45 * 60_000;
-/** Rétention des snapshots persistants (reprise rapide). Au-delà, on retombe sur
- *  le re-clone de la branche git (durable pour toujours). */
+/**
+ * Durée de vie max d'une SESSION de la microVM (elle survit au gap entre deux chunks).
+ * C'est le plafond du PLAN — 24 h sur Pro ; les 45 min qu'on portait ici étaient le
+ * palier Hobby, donc notre plafond et pas celui de la plateforme. L'API le fait
+ * respecter : 24 h passe, 25 h repart en 400.
+ *
+ * Ce n'est PAS le gouverneur de la dépense. Une VM au repos est coupée après ~5 min
+ * par le reaper d'inactivité (`drain.ts`), et ce chiffre ne se lit que dans deux cas :
+ * un tour qui travaille plus longtemps que ça sans jamais se reposer (il perdait sa VM
+ * chaude en plein travail et repayait un démarrage à froid), et une microVM que le
+ * reaper n'a pas su couper (`stopSandboxByName` avale ses erreurs après avoir posé
+ * `sandbox_stopped_at`, donc il ne repassera pas) — celle-là vivra désormais bien plus
+ * longtemps avant de s'éteindre seule. Fuite rare, coût borné, et c'est le prérequis
+ * matériel d'un orchestrateur qui vit DANS la VM : la VM doit tenir aussi longtemps
+ * que le tour.
+ */
+const SANDBOX_TIMEOUT_MS = 24 * 60 * 60_000;
+/** Rétention des snapshots persistants (reprise rapide) : resserre le défaut du SDK,
+ *  qui est de 30 JOURS. Au-delà, on retombe sur le re-clone de la branche git
+ *  (durable pour toujours). */
 const SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 * 24 * 60 * 60_000;
 /** Où le dépôt est cloné dans la microVM. */
 export const REPO_DIR = "/vercel/sandbox/repo";
@@ -98,6 +116,12 @@ export async function getOrCreateAgentSandbox(opts: {
     timeout: SANDBOX_TIMEOUT_MS,
     persistent: true,
     snapshotExpiration: SANDBOX_SNAPSHOT_EXPIRATION_MS,
+    // Chaque arrêt de session crée un snapshot DE PLUS, tous vivants 7 jours, alors
+    // qu'un seul sert jamais à la reprise : le stockage facturé suivait le nombre de
+    // pauses du run, pas sa taille. On ne garde que le dernier — les évincés partent
+    // tout de suite (`deleteEvicted` est vrai par défaut), et rien ici ne revient
+    // jamais sur un snapshot antérieur (aucun `currentSnapshotId` dans le dépôt).
+    keepLastSnapshots: { count: 1 },
     resume: true,
     onCreate: opts.onCreate,
   };

@@ -94,7 +94,7 @@ export interface SubagentRecord {
    * Historique de la boucle FILLE, persisté UNIQUEMENT quand elle est `suspended`.
    *
    * C'est toute l'astuce de la reprise : la microVM, elle, survit déjà au chunk
-   * (session de 45 min, snapshot persistant de 7 jours) — ce qui meurt à la fin
+   * (session de 24 h, snapshot persistant de 7 jours) — ce qui meurt à la fin
    * d'une fonction Vercel, c'est l'état EN MÉMOIRE de la boucle. En le posant dans
    * le checkpoint, on donne à la fille exactement ce que le parent a depuis
    * toujours, et elle peut alors dépasser les 300 s.

@@ -69,10 +69,15 @@ elles n'y sont pas stockées durablement. Les journaux de requêtes (URL, code d
 réponse, durée, adresse IP) y sont conservés selon la rétention du plan.
 
 - **Transfert hors UE** : oui — CCT et adhésion au *Data Privacy Framework*.
-- **Bacs à sable de l'agent** : micro-VM éphémère par run, détruite à la fin. Le
-  code du dépôt y est cloné le temps du run uniquement.
-- **À surveiller** : la région d'exécution des fonctions. Les fixer sur une
-  région européenne (`fra1`, `cdg1`) réduit le transit ; le point est ouvert.
+- **Bacs à sable de l'agent** : une micro-VM par run, où le code du dépôt relié
+  est cloné. Elle n'est pas éphémère au sens strict : la session est coupée après
+  ~5 min d'inactivité, mais son **filesystem est conservé en snapshot pendant
+  7 jours** (`SANDBOX_SNAPSHOT_EXPIRATION_MS`), pour qu'une conversation reprenne
+  à chaud. Passé ce délai, le snapshot est effacé et le dépôt re-cloné au besoin.
+- **À surveiller** : la région d'exécution. Les fonctions peuvent être fixées sur
+  une région européenne (`fra1`, `cdg1`) ; les bacs à sable, **non** — Vercel
+  Sandbox n'existe qu'en `iad1` (États-Unis). Le point est ouvert pour les
+  fonctions, fermé pour les bacs à sable tant que l'offre ne change pas.
 
 ### Stripe
 

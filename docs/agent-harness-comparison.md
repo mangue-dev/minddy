@@ -122,7 +122,8 @@ Puis la demande du lanceur en dernier message.
 Sandbox par run, nommée `agent-<run.id>` :
 
 - runtime `node24`, `persistent: true`, `resume: true`,
-  `SANDBOX_TIMEOUT_MS = 45 min`, `SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 jours`.
+  `SANDBOX_TIMEOUT_MS = 24 h` (le plafond du plan Pro ; le reaper d'inactivité coupe
+  bien avant), `SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 jours` + `keepLastSnapshots: 1`.
   Un run repris réveille sa VM avec son filesystem restauré ; passé l'expiration du
   snapshot, on re-clone (git est le filet durable).
 - `REPO_DIR = /vercel/sandbox/repo`, clone `--depth 1` sur la branche de base puis
