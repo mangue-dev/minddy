@@ -155,6 +155,7 @@ function job(over: Partial<VmJob> = {}): VmJob {
     workBranch: WORK_BRANCH,
     authUrl: "https://x-access-token:tok@github.com/org/repo.git",
     commitRef: "MIN-42",
+    bootstrapMs: 0,
     filesFromSha: "",
     locale: "fr",
     feature: "agent_code",
@@ -281,6 +282,21 @@ describe("la sauvegarde périodique porte le compteur de seq COURANT", () => {
     }
     const saved = vi.mocked(client.saveCheckpointQuietly).mock.calls[0]?.[0];
     expect(saved?.usageSeq).toBe(8);
+  });
+});
+
+describe("le wall-clock facturé comprend l'amorçage", () => {
+  it("ajoute `bootstrapMs` à son propre chrono — la microVM tournait déjà", async () => {
+    // L'horloge de la boucle ne démarre qu'au lancement du process node. Avant
+    // lui, la fonction a réveillé la microVM et cloné le dépôt (~22 s à froid) :
+    // du compute que la plateforme nous facture et que personne n'imputait.
+    const report = await runVmTurn(job({ bootstrapMs: 21_500 }), cp(), host());
+    expect(report.sandboxMs).toBeGreaterThanOrEqual(21_500);
+  });
+
+  it("ne facture QUE son chrono quand l'amorçage n'a rien coûté", async () => {
+    const report = await runVmTurn(job({ bootstrapMs: 0 }), cp(), host());
+    expect(report.sandboxMs).toBeLessThan(21_500);
   });
 });
 

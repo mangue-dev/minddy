@@ -60,7 +60,9 @@ async function main(): Promise<void> {
       checkpointBytes: 0,
       pushed: null,
       workBranch: job.workBranch,
-      sandboxMs: Date.now() - startedAt,
+      // Même règle que la sortie saine : l'amorçage a coûté de la microVM, et un
+      // tour qui lève ne doit pas être l'occasion de ne pas le facturer.
+      sandboxMs: job.bootstrapMs + (Date.now() - startedAt),
     };
   }
 

@@ -703,6 +703,9 @@ export async function runVmTurn(
     workBranch: job.workBranch,
     ...(pushError ? { pushError } : {}),
     ...(changed && changed.files.length > 0 ? { changed } : {}),
-    sandboxMs: Date.now() - startedAt,
+    // L'amorçage COMPRIS : la microVM tournait déjà pendant que la fonction la
+    // réveillait et clonait le dépôt, et cette tranche-là ne tombait dans aucun
+    // compteur (cf. `VmJob.bootstrapMs`).
+    sandboxMs: job.bootstrapMs + (Date.now() - startedAt),
   };
 }

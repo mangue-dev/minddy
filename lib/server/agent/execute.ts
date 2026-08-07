@@ -600,6 +600,14 @@ export async function executeAgentRun(
   // continuerait d'appeler un modèle et d'écrire dans la sandbox après le retour de
   // la fonction — au nom d'un tour qui n'existe plus.
   let subagentRegistry: Subagents | null = null;
+  /**
+   * La boucle a-t-elle VRAIMENT été lancée dans la microVM (MIN-224) ? C'est ce
+   * qui décide qui facture le compute de ce passage, et il n'y a pas de troisième
+   * réponse : soit la boucle tourne et c'est elle qui rendra la note (amorçage
+   * compris), soit elle n'a jamais démarré et la fonction est la seule à savoir
+   * qu'une microVM a été réveillée pour rien. Voir le `finally`.
+   */
+  let vmLoopLaunched = false;
 
   try {
     /**
@@ -1450,7 +1458,9 @@ export async function executeAgentRun(
      * constaté la mort de son process (`reapDeadVmRuns`, drain.ts).
      */
     if (run.loop_in_vm) {
-      const job: VmJob = {
+      // `bootstrapMs` manque exprès : c'est `startVmLoop` qui le pose, parce que
+      // c'est lui qui sait quand l'amorçage se termine (cf. `VmJob.bootstrapMs`).
+      const job: Omit<VmJob, "bootstrapMs"> = {
         runId: run.id,
         ledgerRunId: run.run_id ?? run.id,
         projectId: run.project_id,
@@ -1500,11 +1510,22 @@ export async function executeAgentRun(
         // la conversation perdue en silence à la fin d'un tour de deux heures.
         checkpointMaxBytes: VM_MAX_CHECKPOINT_BYTES,
       };
-      const cmdId = await startVmLoop(sb, job);
+      const cmdId = await startVmLoop(sb, job, callStart);
       await stampRun(run.id, {
         loop_command_id: cmdId,
         last_activity_at: new Date().toISOString(),
       });
+      /**
+       * À PARTIR D'ICI, LE COMPUTE APPARTIENT À LA BOUCLE. Elle facturera le tour
+       * entier — amorçage compris, qu'on vient de lui passer. Le `finally` ne doit
+       * donc plus rien écrire, sous peine de compter deux fois la même microVM.
+       *
+       * Posé APRÈS le stamp, et pas avant : si celui-ci échoue, le tour part sans
+       * que son `loop_command_id` soit en base — le rapport de fin sera refusé en
+       * 409 et le chien de garde n'aura rien à interroger. Personne ne facturera
+       * cette microVM-là si ce n'est pas nous.
+       */
+      vmLoopLaunched = true;
       return "detached";
     }
 
@@ -2577,11 +2598,22 @@ export async function executeAgentRun(
     // microVM a été réveillée est facturée en wall-clock — y compris les tours
     // en échec. Bande de seq dédiée pour ne pas croiser celle des appels LLM
     // (continuations × 1000 + rounds).
-    // PAS pour un run `loop_in_vm` (MIN-224) : le tour n'est pas fini quand cette
-    // fonction rend la main, et son wall-clock est tenu par la boucle elle-même,
-    // du début à la fin du tour (`vm-rest.ts`). Facturer ici en plus compterait
-    // deux fois l'amorçage, et sur un run relancé souvent ce n'est pas anodin.
-    if (sandbox && !run.loop_in_vm) {
+    /**
+     * PAS quand la boucle est PARTIE dans la microVM (MIN-224) : le tour n'est
+     * pas fini quand cette fonction rend la main, et son wall-clock est tenu par
+     * la boucle elle-même — amorçage compris, qu'on lui a passé dans son job
+     * (`VmJob.bootstrapMs`). Facturer ici en plus compterait deux fois la même
+     * microVM.
+     *
+     * MAIS ON FACTURE QUAND ELLE N'EST PAS PARTIE, et c'est le trou qui manquait.
+     * Un amorçage qui LÈVE — clone en échec, `writeFiles` refusé, politique
+     * réseau invalide — a quand même réveillé une machine, parfois cloné un dépôt
+     * entier, et tombe dans le `catch` sans qu'aucun rapport ne vienne jamais. Le
+     * chien de garde ne le rattrape pas non plus : il ne balaie que les runs
+     * `running`, et celui-ci vient d'être mis au repos. La fonction est donc le
+     * seul témoin de ce compute-là.
+     */
+    if (sandbox && !vmLoopLaunched) {
       await recordSandboxUsage({
         runId: run.run_id ?? run.id,
         seq: SANDBOX_USAGE_SEQ_BASE + run.continuations,

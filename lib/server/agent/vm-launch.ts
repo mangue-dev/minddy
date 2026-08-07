@@ -65,16 +65,42 @@ function bundleSource(): Promise<string> {
  * croirait lancé alors que rien ne tourne serait bien pire — il resterait
  * `running` jusqu'à ce que quelqu'un s'en aperçoive.
  */
-export async function startVmLoop(sandbox: Sandbox, job: VmJob): Promise<string> {
+export async function startVmLoop(
+  sandbox: Sandbox,
+  /**
+   * Le job SANS `bootstrapMs` : ce champ appartient à cette fonction, et à elle
+   * seule. L'appelant ne peut donc ni l'oublier ni en inventer un — c'est ici
+   * qu'on sait ce que l'amorçage a duré, parce que c'est ici qu'il se termine.
+   */
+  job: Omit<VmJob, "bootstrapMs">,
+  /**
+   * Quand la fonction a commencé à travailler sur ce tour (`callStart`). Sert à
+   * mesurer l'amorçage, que la boucle ajoutera à son propre wall-clock : la
+   * microVM tournait déjà pendant qu'on la réveillait (cf. `VmJob.bootstrapMs`).
+   */
+  callStartMs: number,
+): Promise<string> {
   const bundle = await bundleSource();
 
   await sandbox.mkDir(HARNESS_DIR).catch(() => {});
-  await sandbox.writeFiles([
-    { path: VM_BUNDLE_PATH, content: bundle },
-    // Le job porte l'historique de la conversation : c'est le plus gros des deux,
-    // et c'est pour lui que `HARNESS_DIR` est hors du dépôt.
-    { path: VM_JOB_PATH, content: JSON.stringify(job) },
-  ]);
+  await sandbox.writeFiles([{ path: VM_BUNDLE_PATH, content: bundle }]);
+
+  /**
+   * DEUX ÉCRITURES ET PAS UNE, et c'est le prix de la mesure. Le job doit porter
+   * la durée de l'amorçage, donc il ne peut être sérialisé qu'APRÈS ce qui la
+   * compose — le réveil de la microVM, le clone, et les 280 Ko de bundle
+   * ci-dessus. Un seul `writeFiles` obligerait à figer le chiffre avant sa plus
+   * grosse part.
+   *
+   * L'aller-retour de plus coûte ~200 ms sur un amorçage qui se compte en
+   * secondes (~22 s à froid). Ce qui reste hors de la mesure — cette écriture-ci
+   * et le lancement — se compte en centaines de millisecondes, et on le
+   * SOUS-facture : c'est le bon sens de l'erreur.
+   */
+  const withBootstrap: VmJob = { ...job, bootstrapMs: Date.now() - callStartMs };
+  // Le job porte l'historique de la conversation : c'est le plus gros des deux,
+  // et c'est pour lui que `HARNESS_DIR` est hors du dépôt.
+  await sandbox.writeFiles([{ path: VM_JOB_PATH, content: JSON.stringify(withBootstrap) }]);
 
   const command = await sandbox.runCommand({
     cmd: "node",

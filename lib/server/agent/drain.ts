@@ -218,6 +218,14 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
      * en silence. C'est la moitié compute de la facture, sur le seul chemin où
      * l'on ne s'en apercevrait pas.
      *
+     * PAS DE DOUBLE COMPTE AVEC LE RAPPORT DE FIN DE TOUR, et c'est l'ORDRE des
+     * deux gestes qui le garantit, pas la chance. Ici on stampe PUIS on facture
+     * (`if (!stamped) continue`, juste au-dessus) ; `landVmTurn` fait l'inverse.
+     * Un tour qui rend son rapport pendant qu'on le croit mort fait donc échouer
+     * notre garde (`status in ('running')`) et on n'écrit rien. Et le cas
+     * symétrique ne se pose pas : notre verdict EST « le process a rendu », or un
+     * process qui a rendu ne poste plus.
+     *
      * De `started_at` à MAINTENANT, et c'est un MINORANT malgré les apparences :
      * la SESSION de microVM survit à son process de boucle, et ne sera coupée que
      * par le reaper d'inactivité — ~5 min après ce stamp, qui vient tout juste de

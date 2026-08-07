@@ -144,6 +144,25 @@ export interface VmJob {
   authUrl: string;
   /** Référence lisible du run dans les messages de commit (`wip(...)`). */
   commitRef: string;
+  /**
+   * CE QUE L'AMORÇAGE A COÛTÉ EN MICROVM, et pourquoi il voyage.
+   *
+   * Le wall-clock facturé au ledger est tenu par la boucle, du début à la fin du
+   * tour (MIN-221 §3) — mais son horloge ne démarre qu'au lancement du process
+   * node. Avant lui, la fonction a réveillé ou CRÉÉ la microVM, posé la politique
+   * réseau, cloné le dépôt sur un tour froid (~22 s mesurées, MIN-222) et écrit
+   * 280 Ko de bundle. Cette tranche-là est du compute que la plateforme nous
+   * facture, et qui ne tombait dans aucun compteur : la fonction ne facture plus
+   * rien pour ces runs, et la VM ne pouvait pas connaître une durée d'avant sa
+   * propre naissance.
+   *
+   * Une DURÉE, jamais un horodatage : deux horloges (celle de la fonction, celle
+   * de la microVM) n'ont aucune raison d'être d'accord à la milliseconde près, et
+   * un écart de sens inverse rendrait une durée négative. La mesure est prise
+   * dans la fonction, de bout en bout, et ne traverse le réseau que comme un
+   * nombre de millisecondes.
+   */
+  bootstrapMs: number;
   /** Le point depuis lequel la fin de tour diffe : le dernier sha émis au fil
    *  (`checkpoint.lastFilesSha`), ou le HEAD d'entrée au tout premier tour. */
   filesFromSha: string;
@@ -211,8 +230,15 @@ export interface VmTurnReport {
    * tour qui le termine, qui le racontera d'un seul tenant.
    */
   changed?: { files: ChangedFile[]; truncated: boolean };
-  /** Wall-clock de la microVM sur ce tour (début → fin) — la moitié compute de
-   *  la facture, que plus personne ne tiendrait sans la boucle (MIN-221 §3). */
+  /**
+   * Wall-clock de la microVM sur ce tour — la moitié compute de la facture, que
+   * plus personne ne tiendrait sans la boucle (MIN-221 §3).
+   *
+   * `job.bootstrapMs` COMPRIS : la machine tournait déjà pendant que la fonction
+   * la réveillait et clonait le dépôt. C'est UNE ligne de ledger pour le tour
+   * entier, et c'est voulu — la bande de seq du compute
+   * (`SANDBOX_USAGE_SEQ_BASE + continuations`) n'en distingue pas deux.
+   */
   sandboxMs: number;
 }
 
