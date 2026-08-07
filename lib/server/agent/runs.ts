@@ -113,6 +113,25 @@ export interface AgentCheckpoint {
    * seul état du run qui traverse les deux.
    */
   prInlineComments?: number;
+  /**
+   * Fichiers édités et pas encore type-checkés (MIN-210) — capés à
+   * `CHECKPOINT_EDITED_PATHS_MAX` (execute.ts) pour ne rien peser sur
+   * `MAX_CHECKPOINT_BYTES`. C'est de l'état de TOUR, comme `lastFilesSha` et
+   * `instructions` : sans lui, un tour qui déborde d'un chunk conclut avec un
+   * `Set` vide, et ni `tsc` ni l'auto-relecture ne tournent sur le travail du
+   * chunk précédent — la PR part sans qu'aucune vérification n'ait eu lieu.
+   */
+  editedPaths?: string[];
+  /**
+   * Le tour a édité le dépôt (MIN-210) — le verrou qui ouvre l'auto-relecture, là
+   * où `editedPaths` se vide à chaque type-check.
+   *
+   * Ces deux champs sont écrits par TOUTES les mises au repos sauf `completed` :
+   * là, le tour est fini (type-check et relecture ont parlé, `lastFilesSha` a
+   * avancé jusqu'à la tête poussée), et les faire fuiter sur le tour suivant y
+   * déclencherait une auto-relecture qui n'a rien à relire.
+   */
+  repoTouched?: boolean;
 }
 
 export interface AgentRun {

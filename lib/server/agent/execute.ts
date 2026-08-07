@@ -207,6 +207,14 @@ const MAX_WALL_CLOCK_MS = 60 * 60_000;
 /** Taille max du checkpoint sérialisé. */
 const MAX_CHECKPOINT_BYTES = 8_000_000;
 /**
+ * Chemins édités qu'un tour emporte au chunk suivant (MIN-210) — les PLUS RÉCENTS
+ * au-delà. Le cap tient `MAX_CHECKPOINT_BYTES` à l'abri d'une refonte à mille
+ * fichiers, et il coûte peu : `formatTypeErrors` ne fait que remonter les chemins
+ * touchés en tête du bloc, il ne filtre rien — un chemin tombé sous le cap voit
+ * quand même ses erreurs servies, plus bas.
+ */
+const CHECKPOINT_EDITED_PATHS_MAX = 200;
+/**
  * Images montrées au modèle par TOUR (MIN-111) — même esprit que
  * `MAX_WEB_SEARCHES_PER_TURN` : une maquette ou deux états d'un même écran, c'est
  * ce dont un tour a besoin. Au-delà, `read_resource` répond sans image.
@@ -1914,7 +1922,12 @@ export async function executeAgentRun(
     // un tour qui ne touche à rien après coup n'en relance pas un second. PARTAGÉ
     // avec les sous-agents (MIN-112) : c'est ce que le type-check lit, et une fille
     // qui casse un type doit le faire dire avant que le parent ne réponde.
-    const editedPaths = new Set<string>();
+    //
+    // SEMÉ depuis le checkpoint (MIN-210), comme `instructions` et `lastFilesSha` :
+    // c'est de l'état de TOUR, et un tour qui déborde d'un chunk doit type-checker
+    // ce qu'il a édité AVANT la soft-deadline. Le chemin `completed` ne l'écrit pas
+    // (le tour y est fini), donc le semis reste vide au premier chunk d'un tour.
+    const editedPaths = new Set<string>(run.checkpoint?.editedPaths ?? []);
 
     // Budget d'usage RESTANT à l'entrée du chunk. Snapshoté une fois ici : la
     // boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
@@ -2224,10 +2237,13 @@ export async function executeAgentRun(
 
     /** Le tour a-t-il édité le dépôt ? Verrou LATCHÉ, là où `editedPaths` se vide
      *  à chaque type-check : après une relance, le tour a toujours édité, même si
-     *  le modèle n'a plus rien touché depuis. */
-    let repoTouched = false;
+     *  le modèle n'a plus rien touché depuis. Semé depuis le checkpoint (MIN-210) :
+     *  le verrou porte sur le TOUR, pas sur le chunk qui l'exécute. */
+    let repoTouched = run.checkpoint?.repoTouched === true;
     /** L'auto-relecture ne passe qu'UNE fois par chunk : elle sert à faire relire
-     *  le tour avant la réponse, pas à commenter chaque correctif qui suit. */
+     *  le tour avant la réponse, pas à commenter chaque correctif qui suit. Celui-ci
+     *  reste bien PAR CHUNK, et ne voyage pas : le faire traverser priverait de
+     *  relecture le travail ajouté APRÈS une première passe. */
     let selfReviewed = false;
 
     /**
@@ -2445,7 +2461,10 @@ export async function executeAgentRun(
     // par les chemins WIP/interruption/erreur/budget) : sur le 1er chunk on fixe la
     // baseline, jamais avancée en cours de tour — seule une fin de tour la fait
     // progresser (plus bas). Un chunk ultérieur ne la réinitialise donc pas.
-    const checkpoint: AgentCheckpoint = {
+    //
+    // Ce qui vaut pour le RUN, quelle que soit la sortie. L'état de TOUR, lui, est
+    // ajouté juste en dessous — et c'est ce qui sépare les deux objets (MIN-210).
+    const baseCheckpoint: AgentCheckpoint = {
       messages: result.messages,
       usageSeq: result.usageSeqEnd,
       lastFilesSha: run.checkpoint?.lastFilesSha ?? baselineHead,
@@ -2460,6 +2479,30 @@ export async function executeAgentRun(
       // RUN, donc son compteur voyage avec le checkpoint (cf. `pr-tools.ts`).
       ...(prToolCtx ? { prInlineComments: prToolCtx.inline.used } : {}),
     };
+    /**
+     * Ce que le TOUR emporte au chunk suivant (MIN-210) : les fichiers édités que le
+     * type-check n'a pas encore vus, et le verrou qui ouvre l'auto-relecture. Sans
+     * eux, un tour éclaté sur plusieurs chunks conclut avec un `Set` vide — pas de
+     * `tsc`, pas de diff relu, pas d'event `type_check`, et rien qui le dise.
+     *
+     * Clés OMISES quand elles ne portent rien : un checkpoint ne grossit pas d'un
+     * tableau vide, et l'absence se relit comme « ce tour n'a rien touché ».
+     */
+    const turnState: Pick<AgentCheckpoint, "editedPaths" | "repoTouched"> = {
+      ...(editedPaths.size > 0
+        ? { editedPaths: [...editedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX) }
+        : {}),
+      ...(repoTouched ? { repoTouched: true } : {}),
+    };
+    /**
+     * Le checkpoint des mises au repos qui NE terminent PAS le tour — suspend et
+     * re-queue, interruption, erreur, budget épuisé, garde-fous anti-runaway. Sur
+     * chacune, `lastFilesSha` reste à sa baseline : ce que le chunk vient d'éditer
+     * n'a été ni type-checké ni relu, et le tour suivant doit s'en charger.
+     *
+     * La fin de tour NATURELLE, elle, repart de `baseCheckpoint` (plus bas).
+     */
+    const checkpoint: AgentCheckpoint = { ...baseCheckpoint, ...turnState };
     const nowIso = new Date().toISOString();
 
     // Champs communs à toute mise au REPOS (fin de tour / interruption / erreur /
@@ -2589,8 +2632,14 @@ export async function executeAgentRun(
 
       // `outcome` = la dernière réponse de la session : c'est elle qu'une future
       // session froide recevra comme résumé du travail précédent.
+      //
+      // `baseCheckpoint` et pas `checkpoint` : le tour est FINI (MIN-210). Son
+      // type-check et son auto-relecture ont parlé, et `lastFilesSha` avance
+      // jusqu'à la tête poussée. Emporter `repoTouched` ici ferait relire au tour
+      // suivant un diff désormais vide, et `editedPaths` relancerait un `tsc` sur
+      // des fichiers déjà checkés.
       const pending = await restStamp({
-        checkpoint: { ...checkpoint, lastFilesSha: filesToSha },
+        checkpoint: { ...baseCheckpoint, lastFilesSha: filesToSha },
         outcome: reply ? cap(reply, 4000) : null,
         // Tour terminé sur un ask_user → la session ATTEND la réponse : point
         // jaune sur les surfaces tant que l'utilisateur n'a pas répondu.
