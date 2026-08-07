@@ -1661,6 +1661,7 @@
     "aiProviderMinddyHint": "Runs on minddy's key, within your plan's monthly usage budget. No key to add.",
     "aiProviderGeneric": "Generic (OpenAI-compatible)",
     "aiKeysDesc": "With your own key the agent runs without limits, billed to you. One provider at a time.",
+    "aiKeyVmNote": "Your key never enters the agent's machine, but it can't be capped per run: your provider bills whatever the agent spends.",
     "aiKeyLabel": "API key",
     "aiKeyBaseUrlLabel": "Base URL",
     "aiKeyBaseUrlInvalid": "Enter a valid base URL (https://…).",

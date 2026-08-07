@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Sandbox } from "@vercel/sandbox";
+import { Sandbox, type NetworkPolicy } from "@vercel/sandbox";
 
 import {
   backgroundProbeScript,
@@ -103,13 +103,35 @@ function sandboxCredentials(): { token: string; teamId: string; projectId: strin
  * crée une neuve et appelle `onCreate` (qui clone la branche de travail). Un snapshot
  * expiré est traité comme « introuvable » → recrée + `onCreate`. Boot optionnel
  * depuis AGENT_SANDBOX_SNAPSHOT_ID (image pré-chauffée) pour la création fraîche.
+ *
+ * POLITIQUE RÉSEAU (MIN-223) — `networkPolicy` est posée à la création ET **reposée
+ * à chaque réveil**, et ce n'est pas de la ceinture-bretelles :
+ *
+ * - la politique SURVIT bien à une reprise de session — mesuré le 2026-08-07 : une
+ *   session reprise sans qu'on lui repasse quoi que ce soit rendait toujours 200
+ *   sur la complétion avec le placeholder, et forwardait toujours le plan de
+ *   contrôle. Ce n'était pas à supposer, c'est fait ;
+ * - mais elle survit avec **la clé d'hier dedans**. La clé de run est révoquée
+ *   quand la VM est mise au repos (`run-key.ts`), donc une session réveillée sans
+ *   nouvelle politique repartirait avec un `transform` qui injecte une clé morte —
+ *   des 401 à la première complétion, et rien pour le dire.
+ *
+ * D'où `updateNetworkPolicy` sur le chemin de réveil : il ne redit pas un défaut,
+ * il re-pose le secret du jour. On ne le fait PAS sur le chemin de création (la
+ * politique y est déjà passée en argument), et l'échec ne fait pas tomber le tour —
+ * il vaut mieux un tour qui démarre sur l'ancienne politique, et le dit, qu'un tour
+ * qui n'existe pas.
  */
 export async function getOrCreateAgentSandbox(opts: {
   name: string;
   onCreate: (sandbox: Sandbox) => Promise<void>;
-}): Promise<{ sandbox: Sandbox }> {
+  /** Politique de MIN-223. Absente = comportement d'avant (réseau ouvert, aucune
+   *  injection) — le temps que les appelants la câblent. */
+  networkPolicy?: NetworkPolicy;
+}): Promise<{ sandbox: Sandbox; created: boolean }> {
   const creds = sandboxCredentials();
   const snapshotId = process.env.AGENT_SANDBOX_SNAPSHOT_ID?.trim();
+  let created = false;
   const base = {
     ...creds,
     name: opts.name,
@@ -123,12 +145,22 @@ export async function getOrCreateAgentSandbox(opts: {
     // jamais sur un snapshot antérieur (aucun `currentSnapshotId` dans le dépôt).
     keepLastSnapshots: { count: 1 },
     resume: true,
-    onCreate: opts.onCreate,
+    ...(opts.networkPolicy ? { networkPolicy: opts.networkPolicy } : {}),
+    onCreate: async (fresh: Sandbox) => {
+      created = true;
+      await opts.onCreate(fresh);
+    },
   };
   const sandbox = snapshotId
     ? await Sandbox.getOrCreate({ ...base, source: { type: "snapshot", snapshotId } })
     : await Sandbox.getOrCreate({ ...base, runtime: SANDBOX_RUNTIME });
-  return { sandbox };
+
+  if (opts.networkPolicy && !created) {
+    await sandbox.updateNetworkPolicy(opts.networkPolicy).catch((err) => {
+      console.error("[agent-sandbox] network policy refresh failed:", (err as Error).message);
+    });
+  }
+  return { sandbox, created };
 }
 
 /** Nom stable de la microVM à persister dans agent_runs.sandbox_id. */

@@ -135,13 +135,41 @@ Côté serveur, la route de collecte fait ce que `appendEvent`
 ([runs.ts:1076](../lib/server/agent/runs.ts)) fait déjà — même calcul de `seq`,
 même retente sur collision, même `broadcastRunEvent` derrière.
 
-**Le point à mesurer AVANT de s'y engager, et il ne l'est pas** : `forwardURL`
-tient-il un flux SSE long, et à quelle latence ? Toute la boucle en dépend si on
-choisit de faire aussi passer le LLM par là (§ ci-dessous). C'est la première
-tâche de MIN-223, et elle est bloquante. **Repli si non** : `transform` sur le
-domaine Supabase, matcher sur `POST /rest/v1/agent_run_events` et
-`/realtime/v1/api/broadcast`, et on assume qu'une VM compromise peut écrire des
-events sur un autre run — dégât cosmétique, borné, mais réel.
+**Le point qui était à mesurer avant de s'y engager : mesuré, et il passe.**
+Sonde du 2026-08-07 (MIN-223) — microVM `node24` réelle, route `defineSandboxProxy`
+déployée en preview, `forwardURL` = l'origine nue du déploiement :
+
+| Ce qu'on a mesuré | Résultat |
+| --- | ---: |
+| Aller-retour JSON, connexion neuve (médiane de 20) | **62 ms** (min 49, max 130) |
+| Le même en réutilisant la connexion (médiane de 20) | **55 ms** |
+| Flux SSE de 60 s | **tenu** — 200, TTFB **54 ms**, 61 events, total 60,08 s |
+| Corps de requête accepté | **4 Mio oui, 4,3 Mio non** (413 `FUNCTION_PAYLOAD_TOO_LARGE`) |
+| `sandbox_name` reçu dans le handler | **exact**, l'identité du run est bien prouvée |
+| Politique après une reprise de session | **survit** — complétion 200 et forward 200 sans rien reposer |
+
+Le plan de contrôle coûte donc **~55 ms par appel** contre les ~211 ms d'un
+aller-retour `runCommand` (§5) : il n'est pas le point cher de la migration. Le
+repli (`transform` sur le domaine Supabase, en assumant qu'une VM compromise
+puisse écrire des events sur un autre run) **n'a pas lieu d'être** — on le laisse
+écrit pour mémoire, il n'est plus le chemin.
+
+**Deux résultats à ne pas perdre, parce qu'ils contraignent MIN-224.**
+
+1. **Le corps est plafonné à 4,5 Mo** — la limite des fonctions Vercel, que le
+   forward ne relève pas. Or `MAX_CHECKPOINT_BYTES` vaut **8 Mo**
+   ([checkpoint-fit.ts](../lib/server/agent/checkpoint-fit.ts)) : un checkpoint à
+   son plafond actuel **ne passe pas**. La route refuse elle-même au-delà de 4 Mo,
+   en JSON — sans ça la plateforme rend un 413 en HTML qu'une boucle lirait comme
+   un succès, et c'est le checkpoint qu'on perdrait. À trancher dans MIN-224 :
+   abaisser le plafond de `fitCheckpoint`, ou sortir le checkpoint de cette route.
+2. **Le domaine appelé doit RÉSOUDRE en DNS.** Un TLD fictif
+   (`minddy-control.invalid`) et un sous-domaine sans enregistrement
+   (`agent-vm.minddy.app`) échouent tous deux en `curl (6) could not resolve host`,
+   en http comme en https : le firewall n'intercepte pas une résolution qui n'a pas
+   lieu. D'où la forme retenue — la VM appelle **notre propre origine**, et le
+   `forwardURL` étant cette origine nue, l'URL qu'elle appelle et celle qui arrive
+   chez nous sont littéralement la même ; le firewall n'y ajoute que l'OIDC.
 
 **Transform ou forwardURL pour le LLM ?** Les deux marchent ; ils ne tiennent pas
 la même promesse.
@@ -152,7 +180,7 @@ la même promesse.
 | Qui compte la dépense ? | la boucle, **dans** la VM | notre handler, **hors** de la VM |
 | Une VM compromise peut-elle dépenser hors compteur ? | oui (borné par la clé à plafond) | non |
 | Invocations de fonction | zéro | une par round LLM |
-| Streaming SSE long | natif | **à prouver** |
+| Streaming SSE long | natif | **tenu** (mesuré : 60 s, TTFB 54 ms) |
 
 **Retenu : `transform` + clé par run à plafond dur.** C'est le seul des deux qui
 soit mesuré, il n'ajoute aucune invocation sur le chemin le plus chaud, et le
@@ -366,7 +394,9 @@ là où la région des *fonctions*, elle, reste un point ouvert.
 - **Le run de bout en bout dans la nouvelle forme n'a pas été joué.** Il demande le
   bundle VM et la route de collecte, c'est-à-dire le début de MIN-224. Il reste la
   première étape de vérification de ce ticket-là, avant le premier test.
-- **`forwardURL` n'est pas mesuré** — ni sa latence, ni sa tenue sur un flux long.
-  Bloquant pour §2, première tâche de MIN-223.
+- ~~**`forwardURL` n'est pas mesuré**~~ — **fait le 2026-08-07** (MIN-223), chiffres
+  en §2. Il tient : ~55 ms par aller-retour, SSE de 60 s tenu. Deux contraintes en
+  sont sorties (corps plafonné à 4,5 Mo, domaine devant résoudre en DNS), toutes
+  deux à charge de MIN-224.
 - **La latence RPC intra-région n'est pas mesurée** (§5), et le chiffre de MIN-224
   ne doit pas être resservi avant de l'être.

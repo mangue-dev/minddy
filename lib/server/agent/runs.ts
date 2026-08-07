@@ -232,6 +232,14 @@ export interface AgentRun {
   intent: AgentLaunchIntent | null;
   /** Verdict d'une étape de vérification (cf. `AgentRunVerdict`). */
   verdict: AgentRunVerdict | null;
+  /**
+   * Identifiant de RÉVOCATION de la clé LLM émise pour ce run (MIN-223) — le
+   * `hash` d'OpenRouter, jamais le secret. Il vit sur la ligne et pas dans la
+   * mémoire de la fonction qui l'a mintée, parce que ce n'est pas elle qui
+   * révoque : c'est le reaper d'inactivité, qui ne connaît du run que sa ligne.
+   * Null = pas de clé par run (BYOK, ou provisioning non configuré).
+   */
+  provider_key_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -681,6 +689,8 @@ export interface StampFields {
   awaiting_input?: boolean;
   /** Verdict d'une étape de vérification de chaîne (tool `report_verdict`). */
   verdict?: AgentRunVerdict | null;
+  /** Clé LLM du run à révoquer (MIN-223). */
+  provider_key_id?: string | null;
 }
 
 /**

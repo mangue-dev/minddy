@@ -177,25 +177,33 @@ export function ByokConnectPanel({
         <p className="text-xs text-muted-foreground">{t("aiProviderMinddyHint")}</p>
       ) : isConfigured && activeKey ? (
         // ── BYOK configuré : rappel de la clé + retrait ─────────────────────
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-          <ProviderLogo provider={activeKey.provider} size={20} />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="text-sm font-medium">
-              {selectedDef ? providerLabel(selectedDef) : activeKey.provider}
-            </span>
-            <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-              {activeKey.base_url ? `${activeKey.base_url} · ` : ""}
-              {activeKey.key_prefix ?? ""}
-            </span>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+            <ProviderLogo provider={activeKey.provider} size={20} />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="text-sm font-medium">
+                {selectedDef ? providerLabel(selectedDef) : activeKey.provider}
+              </span>
+              <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
+                {activeKey.base_url ? `${activeKey.base_url} · ` : ""}
+                {activeKey.key_prefix ?? ""}
+              </span>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => void removeKey()}>
+              {t("aiKeyRemove")}
+            </Button>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={() => void removeKey()}>
-            {t("aiKeyRemove")}
-          </Button>
+          {/* MIN-223 : dit ici parce que ça ne se corrige pas ailleurs — la clé
+              de minddy est plafonnée par run côté fournisseur, celle-ci ne peut
+              pas l'être : elle n'est pas sur notre compte. */}
+          <p className="text-xs text-muted-foreground">{t("aiKeyVmNote")}</p>
         </div>
       ) : selectedDef ? (
         // ── BYOK à configurer : clé (+ base URL pour le générique) ──────────
         <div className="flex flex-col gap-3">
-          <p className="text-xs text-muted-foreground">{t("aiKeysDesc")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("aiKeysDesc")} {t("aiKeyVmNote")}
+          </p>
 
           {selectedDef.requiresBaseUrl ? (
             <div className="flex flex-col gap-1.5">

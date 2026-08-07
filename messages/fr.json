@@ -1661,6 +1661,7 @@
     "aiProviderMinddyHint": "Tourne sur la clé de minddy, dans la limite du budget mensuel de votre plan. Aucune clé à ajouter.",
     "aiProviderGeneric": "Générique (OpenAI-compatible)",
     "aiKeysDesc": "Avec votre propre clé, l'agent tourne sans limite, à vos frais. Un seul provider à la fois.",
+    "aiKeyVmNote": "Votre clé n'entre jamais dans la machine de l'agent, mais elle ne peut pas être plafonnée par session : votre provider facture ce que l'agent dépense.",
     "aiKeyLabel": "Clé API",
     "aiKeyBaseUrlLabel": "Base URL",
     "aiKeyBaseUrlInvalid": "Entrez une base URL valide (https://…).",

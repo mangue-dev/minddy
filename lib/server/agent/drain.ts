@@ -10,6 +10,7 @@ import { claimRun, requeueStuckRuns } from "./runs";
 import { MIN_CHUNK_BUDGET_MS } from "./chunk-budget";
 import { executeAgentRun } from "./execute";
 import { stopSandboxByName } from "./sandbox";
+import { revokeRunKey } from "./run-key";
 import { currentDeploymentScope } from "./deployment";
 
 /**
@@ -41,6 +42,13 @@ const RESTING_STATUSES = ["completed"];
  * reprennable (réveil rapide au prochain message, sans re-clone complet). Ne touche
  * ni au statut, ni au checkpoint, ni à sandbox_id : marque juste sandbox_stopped_at
  * pour ne pas re-couper en boucle. Appelé en tête de chaque drain (~2 min via cron).
+ *
+ * IL RÉVOQUE AUSSI LA CLÉ DU RUN (MIN-223). C'est ici, et pas au bout du run,
+ * parce qu'une session au repos n'est pas finie : elle peut repartir sur un
+ * `steer`, et c'est ce redémarrage qui remintera. Tant que la VM tourne, sa clé
+ * doit vivre ; dès qu'elle est coupée, plus personne n'a de raison légitime de
+ * s'en servir — et la seule chose qui pourrait encore le faire serait quelque
+ * chose qu'on n'a pas voulu.
  */
 export async function reapIdleSandboxes(
   service: SupabaseClient,
@@ -48,14 +56,18 @@ export async function reapIdleSandboxes(
   const cutoff = new Date(Date.now() - SANDBOX_IDLE_REAP_MS).toISOString();
   const { data } = await service
     .from("agent_runs")
-    .select("id, sandbox_id")
+    .select("id, sandbox_id, provider_key_id")
     .in("status", RESTING_STATUSES)
     .not("sandbox_id", "is", null)
     .is("sandbox_stopped_at", null)
     .lt("last_activity_at", cutoff)
     .order("last_activity_at", { ascending: true }) // les plus inactifs d'abord
     .limit(50);
-  const rows = (data ?? []) as Array<{ id: string; sandbox_id: string | null }>;
+  const rows = (data ?? []) as Array<{
+    id: string;
+    sandbox_id: string | null;
+    provider_key_id: string | null;
+  }>;
   let reaped = 0;
   for (const row of rows) {
     if (!row.sandbox_id) continue;
@@ -73,6 +85,14 @@ export async function reapIdleSandboxes(
       .maybeSingle();
     if (!claimed) continue; // reprise/activité concurrente → on laisse la VM tranquille
     await stopSandboxByName(row.sandbox_id);
+    // La VM d'abord, la clé ensuite : dans cet ordre, une révocation qui échoue
+    // laisse une clé plafonnée sans machine pour s'en servir. L'ordre inverse
+    // ouvrirait une fenêtre où la VM tourne encore avec une clé morte, et le tour
+    // en cours de reprise mourrait sur des 401.
+    if (row.provider_key_id) {
+      await revokeRunKey(row.provider_key_id);
+      await service.from("agent_runs").update({ provider_key_id: null }).eq("id", row.id);
+    }
     reaped++;
   }
   return { reaped };

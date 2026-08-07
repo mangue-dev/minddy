@@ -134,6 +134,9 @@ import {
   type ReviewableFile,
 } from "./pr-tools";
 import { resolveAgentApiKey, getModelContextWindow, supportsImageInput } from "./model";
+import { agentSandboxName, buildAgentNetworkPolicy } from "./network-policy";
+import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
+import { agentControlOrigin } from "./origin";
 import { forgeFor, isForgeApiError, type Forge } from "./forge";
 import { prStateFromRef, upsertPullRequest } from "./pull-requests";
 import { notifyPullRequestOpened } from "./pr-opened-notify";
@@ -1287,11 +1290,82 @@ export async function executeAgentRun(
           ? `minddy/agent/${slugForBranch(issue.identifier)}-${run.id.slice(0, 8)}`
           : `minddy/agent/note-${run.id.slice(0, 8)}`);
 
+    /**
+     * Budget d'usage RESTANT à l'entrée du chunk. Snapshoté une fois ici : la
+     * boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
+     * round. En BYOK, `unlimited` → aucun plafond (l'utilisateur paie sa note).
+     *
+     * Deux lectures, une seule attente : la somme du ledger (cf. `runSpentUsd`)
+     * ne dépend pas du quota, elle part avec lui.
+     *
+     * LU AVANT LA MICROVM depuis MIN-223, et pas seulement pour la boucle : c'est
+     * ce restant qui donne son plafond à la clé LLM du run, et cette clé doit
+     * exister avant la politique réseau, donc avant la VM. Une seule lecture pour
+     * les deux usages — la stale de quelques secondes que ça introduit côté boucle
+     * est sans effet (le plafond a 1,5× de marge, et le ledger est relu à chaque
+     * chunk).
+     */
+    const [quotaNow, ledgerSpentUsd] = await Promise.all([
+      checkAgentQuota(run.created_by ?? "").catch(() => null),
+      spentFromLedger(run.run_id ?? run.id),
+    ]);
+
+    // Endpoint du run (BYOK de l'utilisateur, ou clé plateforme OpenRouter).
+    // Résolu AVANT l'amorce de l'historique : le prompt système ne décrit que les
+    // tools réellement offerts, et web_search en dépend. Et avant la microVM
+    // depuis MIN-223 : c'est cette clé (ou celle du run, ci-dessous) que le
+    // firewall injectera — la politique réseau ne peut pas se construire sans.
+    const { apiKey, baseUrl, provider, mode: keyMode } = await resolveAgentApiKey(run.created_by);
+
+    /**
+     * LA CLÉ QUE LE FIREWALL INJECTERA, et elle n'est pas forcément `apiKey`.
+     *
+     * En mode plateforme, on émet une clé POUR CE RUN, à plafond dur tenu par
+     * OpenRouter (`run-key.ts`) : la politique réseau empêche la VM de LIRE la
+     * clé, pas de l'UTILISER hors de la boucle — un `curl` sur la route créditée
+     * dépense sans passer par le ledger. Le plafond fournisseur est ce qui borne
+     * cette dépense-là, et il vit hors de la VM comme hors de notre code.
+     *
+     * En BYOK, aucun mint : c'est la clé de l'utilisateur, sur son compte à lui,
+     * et l'API de provisioning n'émet que sur le compte qui la détient. Elle est
+     * aussi inexfiltrable que la nôtre, mais non plafonnable — c'est dit dans
+     * l'écran BYOK, pas corrigé ici.
+     *
+     * Le mint échoue en silence (variable non posée, API en panne) → on retombe
+     * sur `apiKey`. Un garde-fou de dépense qui manque ne doit pas empêcher un
+     * run de tourner ; il doit se voir dans les logs.
+     */
+    let vmKeyHash: string | null = null;
+    let vmKey = apiKey;
+    if (keyMode === "platform") {
+      const minted = await mintRunKey({
+        runId: run.id,
+        capUsd: runKeyCapUsd({
+          runBudgetUsd: run.budget_usd,
+          runSpentUsd: Math.max(run.cost_usd, ledgerSpentUsd ?? 0),
+          accountRemainingUsd:
+            quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined,
+        }),
+      });
+      if (minted) {
+        vmKey = minted.key;
+        vmKeyHash = minted.hash;
+      }
+    }
+
     // Sandbox : réveille la microVM (filesystem restauré depuis le snapshot
     // persistant → reprise rapide) ; sinon `onCreate` clone la branche de travail.
     // Nom déterministe → même microVM/snapshot d'un tour à l'autre.
     const { sandbox: sb } = await getOrCreateAgentSandbox({
-      name: `agent-${run.id}`,
+      name: agentSandboxName(run.id),
+      // MIN-223 : la microVM ne détient aucun secret. Reposée à chaque réveil —
+      // la politique survit à la reprise, mais avec la clé d'HIER dedans, et
+      // celle-là est révoquée à la mise au repos.
+      networkPolicy: buildAgentNetworkPolicy({
+        baseUrl,
+        llmKey: vmKey,
+        appOrigin: agentControlOrigin(),
+      }),
       onCreate: async (fresh) => {
         if (prRun) {
           // Par la REF SERVEUR de la PR, pas par le nom de branche : sur un fork,
@@ -1326,7 +1400,21 @@ export async function executeAgentRun(
       sandbox_id: sandboxName(sandbox),
       sandbox_stopped_at: null,
       base_branch: baseBranch,
+      // MIN-223 : de quoi révoquer la clé du run quand la VM sera mise au repos.
+      // Écrit MÊME quand le mint a échoué (null) — sinon on garderait le hash
+      // d'une clé qui n'est plus celle que le firewall injecte, et le reaper
+      // révoquerait dans le vide en croyant avoir fermé le robinet.
+      provider_key_id: vmKeyHash,
     });
+
+    // La clé du chunk PRÉCÉDENT n'a plus personne pour l'utiliser : la politique
+    // qu'on vient de poser injecte la nouvelle. Révoquée tout de suite plutôt
+    // qu'attendue à son expiration — c'est un appel, une fois par chunk, sur un
+    // chunk qui dure des minutes, et l'oublier laisserait traîner autant de clés
+    // vivantes que de reprises.
+    if (run.provider_key_id && run.provider_key_id !== vmKeyHash) {
+      await revokeRunKey(run.provider_key_id);
+    }
 
     /**
      * AMORÇAGE TROP LONG (MIN-213) — le budget qu'il reste VRAIMENT, une fois la
@@ -1407,11 +1495,6 @@ export async function executeAgentRun(
     // baseline au tout premier chunk du run (« rien de changé encore »).
     const baselineHead = await revParseHead(sandbox);
     const filesFromSha = run.checkpoint?.lastFilesSha ?? baselineHead;
-
-    // Endpoint du run (BYOK de l'utilisateur, ou clé plateforme OpenRouter).
-    // Résolu AVANT l'amorce de l'historique : le prompt système ne décrit que les
-    // tools réellement offerts, et web_search en dépend.
-    const { apiKey, baseUrl, provider } = await resolveAgentApiKey(run.created_by);
 
     // Recherche web : réservée aux runs qui parlent à OpenRouter (quota minddy ou
     // BYOK OpenRouter — la recherche part alors sur la MÊME clé que le run, donc
@@ -2037,16 +2120,10 @@ export async function executeAgentRun(
     // (le tour y est fini), donc le semis reste vide au premier chunk d'un tour.
     const editedPaths = new Set<string>(run.checkpoint?.editedPaths ?? []);
 
-    // Budget d'usage RESTANT à l'entrée du chunk. Snapshoté une fois ici : la
-    // boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
-    // round. En BYOK, `unlimited` → aucun plafond (l'utilisateur paie sa note).
+    // `quotaNow` et `ledgerSpentUsd` sont lus plus haut, avant la microVM (MIN-223) :
+    // le plafond de la clé LLM du run en dépend, et cette clé précède la politique
+    // réseau, donc la VM.
     //
-    // Deux lectures, une seule attente : la somme du ledger (cf. `runSpentUsd`)
-    // ne dépend pas du quota, elle part avec lui.
-    const [quotaNow, ledgerSpentUsd] = await Promise.all([
-      checkAgentQuota(run.created_by ?? "").catch(() => null),
-      spentFromLedger(run.run_id ?? run.id),
-    ]);
     // Deux plafonds, le plus serré gagne : le QUOTA du compte, et celui que
     // l'appelant a éventuellement posé sur CE run. Une chaîne d'automatisation
     // n'en ajoute PAS un troisième (MIN-147) : la couper au milieu laisserait un
