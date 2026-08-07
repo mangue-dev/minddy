@@ -28,6 +28,7 @@ import { ReasoningBlock } from "./reasoning-block";
 import { SubagentBlock } from "./subagent-block";
 import { QuotaExhaustedCard } from "./quota-exhausted-card";
 import { coerceBillingPlanId, type BillingPlanId } from "@/lib/billing-plans";
+import type { MessageKey } from "@/lib/i18n-keys";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { unechoedMessages } from "@/lib/agent-pending";
 import { useAgentRunEventsQuery } from "@/lib/use-agent-runs";
@@ -81,6 +82,9 @@ type FeedItem =
       kind: "note";
       id: string;
       variant: "commit" | "error" | "reasoningUnsupported";
+      /** Motif NOMMÉ d'une erreur du harness (`turnTooLong`…), traduit à l'affichage.
+       *  Absent sur une erreur de modèle, qui n'a que son texte. */
+      code?: string;
       text: string;
       createdAt: string;
     }
@@ -522,8 +526,18 @@ function buildFeed(
       case "error": {
         current = null;
         const msg = str(p.message) || str(p.text);
-        if (msg.trim()) {
-          items.push({ kind: "note", id: e.id, variant: "error", text: msg, createdAt: e.created_at });
+        // Un CODE prime sur le texte : c'est le fil qui traduit. Le `message` du
+        // payload reste le repli — une erreur de modèle, elle, n'a que ça.
+        const code = str(p.code);
+        if (code || msg.trim()) {
+          items.push({
+            kind: "note",
+            id: e.id,
+            variant: "error",
+            ...(code ? { code } : {}),
+            text: msg,
+            createdAt: e.created_at,
+          });
         }
         break;
       }
@@ -747,13 +761,24 @@ function TurnGroup({
   );
 }
 
+/**
+ * Motifs d'arrêt NOMMÉS par le harness → la phrase que l'utilisateur lit. Tout
+ * ce qui n'est pas dans cette table garde son texte : une erreur de modèle vient
+ * du provider, on ne la traduit pas, on la montre.
+ */
+const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
+  turnTooLong: "errorTurnTooLong",
+  turnTooBig: "errorTurnTooBig",
+};
+
 function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
   const t = useTranslations("Agent");
   if (item.variant === "error") {
+    const key = item.code ? ERROR_CODE_KEYS[item.code] : undefined;
     return (
       <div className="flex items-start gap-2 text-sm text-destructive">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-        <span className="whitespace-pre-wrap">{item.text}</span>
+        <span className="whitespace-pre-wrap">{key ? t(key) : item.text}</span>
       </div>
     );
   }

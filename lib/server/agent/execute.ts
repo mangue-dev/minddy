@@ -58,6 +58,8 @@ import {
   makeSubagentModelResolver,
   scopeSubagentModels,
   maxParallelSubagents,
+  subagentRoundsLeft,
+  SUBAGENT_MAX_ROUNDS,
 } from "./subagent-config";
 import { getAgentModelsForUser } from "./models-catalog";
 import { pruneToolOutputs } from "./prune";
@@ -236,8 +238,9 @@ const SUBAGENT_MIN_MS = 30_000;
 /** Marge gardée pour couper les filles et livrer leur rapport partiel DANS le tour
  *  (avant le type-check, qui doit voir leurs fichiers). */
 const SUBAGENT_CUT_MARGIN_MS = 10_000;
-/** Plafond de rounds d'une boucle FILLE : elle n'a pas de reprise. */
-const SUBAGENT_MAX_ROUNDS = 15;
+// `SUBAGENT_MAX_ROUNDS` et `subagentRoundsLeft` vivent dans `subagent-config.ts` :
+// le plafond atteint doit COUPER la fille, et cette arithmétique-là mérite un test
+// à elle (cf. l'historique du zombie à un round par chunk).
 /**
  * Base des seq de fichiers de sortie d'un sous-agent, hors de la bande du parent
  * (`run.continuations * 1000`, soit au plus ~20 000 avec AGENT_MAX_CONTINUATIONS).
@@ -1961,6 +1964,35 @@ export async function executeAgentRun(
      */
     const subagentRunner: SubagentRunner = {
       run: async (job): Promise<SubagentRunResult> => {
+        /**
+         * PLUS DE ROUNDS : la fille a épuisé son plafond cumulé. On la COUPE ici,
+         * avec ce qu'elle a déjà écrit, plutôt que de la relancer.
+         *
+         * Sans ce retour, `maxRounds: Math.max(1, …)` lui rendait UN round à
+         * chaque reprise : elle en jouait un, la boucle suspendait aussitôt
+         * (`round >= maxRounds`), le parent se garait, le chunk se re-queuait —
+         * et ça recommençait. Un zombie à un round par chunk, chacun payant son
+         * réveil de microVM, jusqu'à ce que le garde-fou des 20 continuations
+         * tue le tour entier. Observé les 07/08 sur les deux passages de routine
+         * du projet minddy : dix-neuf chunks de 5 à 20 s pendant lesquels le
+         * parent n'a pas dit un mot, puis « tour trop long ».
+         *
+         * La coupure, elle, remonte au parent par `drainReports()` : il reprend
+         * la main dans le MÊME chunk, avec ce que sa fille avait trouvé.
+         */
+        const roundsLeft = subagentRoundsLeft(job.roundsSoFar);
+        if (roundsLeft <= 0) {
+          const partial = lastAssistantText(job.resumeMessages ?? []);
+          return {
+            report:
+              partial ||
+              `No report: the sub-agent hit its ${SUBAGENT_MAX_ROUNDS}-round limit before saying anything useful. Do the work yourself, or spawn one with a narrower task.`,
+            rounds: job.roundsSoFar ?? 0,
+            costUsd: job.costSoFar ?? 0,
+            status: "cut",
+          };
+        }
+
         // Soft-deadline : tout ce qui reste au chunk MOINS la réserve du parent,
         // plafonné. Une fille peut donc travailler ~3 min par chunk — et REPRENDRE
         // au chunk suivant si elle n'a pas fini (cf. `resumeMessages`), ce qui la
@@ -2038,7 +2070,9 @@ export async function executeAgentRun(
           contextWindow: job.model ? null : contextWindow,
           // Plafond CUMULATIF : une fille reprise ne repart pas avec quinze rounds
           // neufs à chaque chunk, sinon le garde-fou anti-runaway ne borne rien.
-          maxRounds: Math.max(1, SUBAGENT_MAX_ROUNDS - (job.roundsSoFar ?? 0)),
+          // Toujours ≥ 1 ici : le cas « plafond atteint » est sorti plus haut, en
+          // coupure — c'est ce qui rendait ce `max` dangereux.
+          maxRounds: roundsLeft,
           usageSeqStart: job.resumeUsageSeq ?? subagentUsageSeq(job.slot),
           signal: job.signal,
           emit: childEmit,
@@ -2610,8 +2644,27 @@ export async function executeAgentRun(
       wallClock > MAX_WALL_CLOCK_MS ||
       checkpointTooBig
     ) {
+      /**
+       * Un CODE, traduit par le fil — pas une phrase écrite ici.
+       *
+       * Celle d'avant (« Tour trop long (budget épuisé) — envoie un message pour
+       * continuer. ») était fausse deux fois : elle parlait de « budget épuisé »
+       * alors qu'aucun budget de dépense n'était en cause — ces trois garde-fous
+       * comptent des reprises, des minutes et des octets —, et elle sortait en
+       * français en dur, tutoyée, dans une app bilingue où tout le reste passe
+       * par next-intl.
+       *
+       * Deux codes plutôt qu'un : un tour qui a duré et un tour devenu trop
+       * volumineux ne se corrigent pas pareil.
+       */
       await emit("error", {
-        message: "Tour trop long (budget épuisé) — envoie un message pour continuer.",
+        code: checkpointTooBig ? "turnTooBig" : "turnTooLong",
+        // Repli pour un client qui ne connaîtrait pas le code (et trace lisible
+        // dans la table d'events) : en anglais, comme tout ce qui n'est pas de
+        // l'UI dans ce fichier.
+        message: checkpointTooBig
+          ? "This turn grew too large to carry on. Send a message to start a fresh one."
+          : "This turn reached its time limit. Send a message to carry on.",
       });
       const pending = await restStamp({ checkpoint });
       if (!pending) await notifyAgentRun(run, "agent_failed");

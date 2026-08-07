@@ -25,6 +25,32 @@ import type { AgentModelsCatalog } from "./models-catalog";
  * client/serveur : `lib/subagent-favorites.ts`.
  */
 
+/**
+ * Plafond de rounds d'une fille, CUMULÉ sur toutes ses reprises — et non par
+ * chunk : une fille reprise trois fois n'a pas droit à quarante-cinq rounds.
+ */
+export const SUBAGENT_MAX_ROUNDS = 15;
+
+/**
+ * Ce qu'il reste de rounds à une fille qu'on s'apprête à (re)lancer. **Zéro ou
+ * moins veut dire COUPER**, jamais « lui en rendre un ».
+ *
+ * Cette nuance a coûté deux passages de routine entiers (07/08/2026). Le
+ * lanceur bornait la fille reprise à `Math.max(1, MAX - déjà joués)` : une fois
+ * son plafond atteint, elle repartait avec UN round, le jouait, la boucle
+ * suspendait aussitôt (`round >= maxRounds`), le parent se garait, le chunk se
+ * re-queuait — et ça recommençait au chunk suivant. Dix-neuf chunks de 5 à 20 s
+ * pendant lesquels le parent n'a pas dit un mot, chacun payant son réveil de
+ * microVM, jusqu'à ce que le garde-fou des 20 continuations tue le tour.
+ *
+ * Le `max(1, …)` semblait prudent — « au moins un round, sinon la boucle
+ * refuserait de tourner ». C'est exactement l'inverse : une boucle qui ne peut
+ * pas tourner doit rendre la main, pas tourner à vide.
+ */
+export function subagentRoundsLeft(roundsSoFar: number | undefined): number {
+  return SUBAGENT_MAX_ROUNDS - (roundsSoFar ?? 0);
+}
+
 /** Clé `app_config` de la liste de favoris (JSON : tableau de FavoriteSubagentModel). */
 export const SUBAGENT_FAVORITES_CONFIG_KEY = "agent_subagent_favorites";
 /** Clé `app_config` du plafond de sous-agents simultanés (entier). */

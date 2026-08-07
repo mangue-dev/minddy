@@ -22,11 +22,33 @@ const {
   makeSubagentModelResolver,
   maxParallelSubagents,
   scopeSubagentModels,
+  subagentRoundsLeft,
   SUBAGENT_FAVORITES_CONFIG_KEY,
   SUBAGENT_MAX_PARALLEL_CONFIG_KEY,
+  SUBAGENT_MAX_ROUNDS,
 } = await import("./subagent-config");
 
 beforeEach(() => config.clear());
+
+describe("subagentRoundsLeft", () => {
+  it("rend le restant EXACT tant qu'il en reste", () => {
+    expect(subagentRoundsLeft(0)).toBe(SUBAGENT_MAX_ROUNDS);
+    expect(subagentRoundsLeft(undefined)).toBe(SUBAGENT_MAX_ROUNDS);
+    expect(subagentRoundsLeft(SUBAGENT_MAX_ROUNDS - 1)).toBe(1);
+  });
+
+  it("tombe à ZÉRO ou moins au plafond — jamais ramené à 1", () => {
+    // C'est TOUT le test. Le lanceur bornait la fille reprise à
+    // `Math.max(1, MAX - déjà joués)` : au plafond, elle repartait avec un round,
+    // le jouait, la boucle suspendait, le parent se garait, le chunk se
+    // re-queuait — dix-neuf fois, jusqu'à ce que le garde-fou des continuations
+    // tue le tour (deux passages de routine perdus le 07/08/2026). Une fille sans
+    // round doit être COUPÉE, avec son rapport partiel : zéro ou moins est le
+    // signal qui le dit, et le ramener à 1 le détruisait.
+    expect(subagentRoundsLeft(SUBAGENT_MAX_ROUNDS)).toBe(0);
+    expect(subagentRoundsLeft(SUBAGENT_MAX_ROUNDS + 7)).toBeLessThan(0);
+  });
+});
 
 describe("getSubagentFavorites", () => {
   it("sert le repli écrit en code, en anglais et avec un use-case par entrée", async () => {

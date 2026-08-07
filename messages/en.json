@@ -1772,6 +1772,8 @@
     "quotaResetsSoon": "Your budget refills at the start of your next billing period.",
     "quotaUpgrade": "Switch to {plan}",
     "quotaUseOwnKey": "Use my own API key",
+    "errorTurnTooLong": "This turn reached its time limit — its work is kept. Send a message to carry on.",
+    "errorTurnTooBig": "This turn grew too large to carry on — its work is kept. Send a message to start a fresh one.",
     "runCapTitle": "This run reached its spending cap",
     "runCapReached": "Its routine lets one run spend up to {percent}% of your monthly usage.",
     "runCapWorkKept": "The agent stopped here — its work is pushed, and you can raise the cap in the routine's settings.",

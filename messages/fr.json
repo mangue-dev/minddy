@@ -1772,6 +1772,8 @@
     "quotaResetsSoon": "Votre budget se recharge au début de votre prochaine période de facturation.",
     "quotaUpgrade": "Passer à {plan}",
     "quotaUseOwnKey": "Utiliser ma propre clé d'API",
+    "errorTurnTooLong": "Ce tour a atteint sa limite de durée — son travail est gardé. Envoyez un message pour le poursuivre.",
+    "errorTurnTooBig": "Ce tour est devenu trop volumineux pour être poursuivi — son travail est gardé. Envoyez un message pour en ouvrir un nouveau.",
     "runCapTitle": "Ce passage a atteint son plafond de dépense",
     "runCapReached": "Sa routine autorise {percent} % du budget mensuel par passage.",
     "runCapWorkKept": "L'agent s'est arrêté là — son travail est poussé, et le plafond se relève dans les réglages de la routine.",
