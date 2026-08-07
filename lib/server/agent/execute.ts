@@ -1644,6 +1644,19 @@ export async function executeAgentRun(
           : // Run carnet : la première ligne de la note fait office de titre.
             commitMessageFromReply(run.prompt ?? "", commitRef));
       const fresh = (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
+      // Les jobs de fond meurent AVANT de stager, comme aux deux autres `git add -A`
+      // du chunk (fin de tour, push WIP) : un serveur de dev ou un watcher encore
+      // vivant réécrirait des fichiers pendant l'indexation. C'est `backgroundJobs`
+      // et pas `background` — la closure est construite AVANT le registre, seul le
+      // `let` du haut est lisible d'ici. Et on le DIT au modèle sur chacune des
+      // sorties : un serveur tué en silence lui laisse croire qu'il tourne (MIN-209).
+      const stoppedJobs = (await backgroundJobs?.stopAll().catch(() => 0)) ?? 0;
+      const jobsNote =
+        stoppedJobs === 0
+          ? ""
+          : `${stoppedJobs === 1 ? "1 background job was" : `${stoppedJobs} background jobs were`} stopped ` +
+            `before staging — nothing may write to the repository while it is being committed. Restart what you still need.`;
+      const andJobs = (text: string) => (jobsNote ? `${text} ${jobsNote}` : text);
       let pushed: Awaited<ReturnType<typeof commitAndPush>>;
       try {
         pushed = await commitAndPush(sb, {
@@ -1653,7 +1666,10 @@ export async function executeAgentRun(
           message: prTitle,
         });
       } catch (err) {
-        return { result: { error: `push failed: ${(err as Error).message}` }, success: false };
+        return {
+          result: { error: andJobs(`push failed: ${(err as Error).message}`) },
+          success: false,
+        };
       }
       // Rien de commité par-dessus la base : on s'arrête AVANT de toucher au dépôt
       // (MIN-123). Pousser créerait une branche vide pour rien — et la forge
@@ -1661,8 +1677,9 @@ export async function executeAgentRun(
       if (!pushed.pushed) {
         return {
           result: {
-            error:
+            error: andJobs(
               "Nothing to open a pull request for: this session hasn't changed any file yet. Do the work first, then call create_pr.",
+            ),
           },
           success: false,
         };
@@ -1683,7 +1700,9 @@ export async function executeAgentRun(
         if (current?.merged) {
           return {
             result: {
-              error: `Pull request #${prState.number} is already merged — this branch's work is shipped. A new session on this ticket will start a fresh branch and pull request.`,
+              error: andJobs(
+                `Pull request #${prState.number} is already merged — this branch's work is shipped. A new session on this ticket will start a fresh branch and pull request.`,
+              ),
             },
             success: false,
           };
@@ -1693,7 +1712,9 @@ export async function executeAgentRun(
             result: {
               number: current.number,
               url: current.url,
-              note: "A pull request already exists for this branch — your pushes update it automatically; nothing was created.",
+              note: andJobs(
+                "A pull request already exists for this branch — your pushes update it automatically; nothing was created.",
+              ),
             },
             success: true,
           };
@@ -1715,7 +1736,7 @@ export async function executeAgentRun(
               result: {
                 number: reopened.number,
                 url: reopened.url,
-                note: "The rejected pull request was reopened with the new work.",
+                note: andJobs("The rejected pull request was reopened with the new work."),
               },
               success: true,
             };
@@ -1735,18 +1756,22 @@ export async function executeAgentRun(
           body: prBody,
         });
         await registerPr(pr, "opened");
-        return { result: { number: pr.number, url: pr.url }, success: true };
+        return {
+          result: { number: pr.number, url: pr.url, ...(jobsNote ? { note: jobsNote } : {}) },
+          success: true,
+        };
       } catch (err) {
         if (isForgeApiError(err) && err.status === 422) {
           return {
             result: {
-              error:
+              error: andJobs(
                 "The branch has no changes compared to the base branch — there is nothing to open a pull request for.",
+              ),
             },
             success: false,
           };
         }
-        return { result: { error: (err as Error).message }, success: false };
+        return { result: { error: andJobs((err as Error).message) }, success: false };
       }
     };
 

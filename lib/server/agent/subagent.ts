@@ -168,12 +168,20 @@ export function subagentUsageSeq(slot: number): number {
 }
 
 /**
- * Tools d'ÉDITION du parent, GELÉS tant qu'un sous-agent `implement` est en vol.
+ * Tools du parent qui TOUCHENT À L'ARBRE, GELÉS tant qu'un sous-agent `implement`
+ * est en vol.
  *
  * Ce n'est pas de la prudence en trop : le parent qui continue d'éditer pendant
  * qu'une fille écrit est exactement le même risque que deux filles simultanées, dans
  * un dépôt dont la fin de tour fait `git add -A`. La lecture et `run_command`
  * restent ouverts — le parent peut relire, chercher, lancer les tests.
+ *
+ * `create_pr` est dans la liste pour la RAISON INVERSE, et c'est ce qui la rend
+ * facile à oublier : il n'écrit rien, il fait son propre `git add -A`. Le parent
+ * dont les tools d'édition viennent d'être refusés se dit volontiers qu'il peut au
+ * moins ouvrir la PR — et commite la fille au milieu de son geste : le composant
+ * neuf sans ses clés i18n, un `move_file` à moitié fait. Le commit part, la branche
+ * est créée, la CI tourne sur cet arbre-là (MIN-209).
  */
 export const PARENT_WRITE_TOOLS: ReadonlySet<string> = new Set([
   "edit_file",
@@ -182,6 +190,7 @@ export const PARENT_WRITE_TOOLS: ReadonlySet<string> = new Set([
   "apply_patch",
   "move_file",
   "delete_file",
+  "create_pr",
 ]);
 
 /** Ce que le runner reçoit pour faire tourner UNE session fille. */
@@ -291,7 +300,7 @@ export function formatSubagentReport(
       : "";
   const writeLock =
     record.mode === "implement"
-      ? "\n\nYour own editing tools are available again."
+      ? "\n\nYour own editing tools are available again, and so is create_pr."
       : "";
 
   return `[sub-agent ${record.id}] Your ${record.mode} sub-agent ${state}.
@@ -408,9 +417,10 @@ export class Subagents {
     const busy = this.runningImplementId();
     if (!busy) return null;
     return fail(
-      `Sub-agent ${busy} is editing the repository right now, and this sandbox is SHARED — a second writer ` +
-        `would corrupt the turn's diff. Wait for its report: it is handed to you on its own, you have nothing ` +
-        `to call. Reading, searching and run_command stay available meanwhile.`,
+      `Sub-agent ${busy} is editing the repository right now, and this sandbox is SHARED — writing alongside it ` +
+        `would corrupt the turn's diff, and committing now would capture its work half-written (a new component ` +
+        `without its translations, a rename left in the middle). Wait for its report: it is handed to you on its ` +
+        `own, you have nothing to call. Reading, searching and run_command stay available meanwhile.`,
       SUBAGENT_WRITE_LOCKED_REASON,
     );
   }

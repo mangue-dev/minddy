@@ -156,6 +156,8 @@ describe("un seul écrivain dans la sandbox partagée", () => {
   it("gèle les tools d'ÉDITION du parent, jamais la lecture", () => {
     // Le parent qui édite pendant qu'une fille écrit est le MÊME risque que deux
     // filles simultanées, dans un dépôt dont la fin de tour fait `git add -A`.
+    // `create_pr` est là pour la raison INVERSE : il n'écrit rien, il fait son
+    // propre `git add -A` — et commiterait la fille au milieu de son geste.
     for (const tool of [
       "edit_file",
       "apply_edits",
@@ -163,6 +165,7 @@ describe("un seul écrivain dans la sandbox partagée", () => {
       "apply_patch",
       "move_file",
       "delete_file",
+      "create_pr",
     ]) {
       expect(PARENT_WRITE_TOOLS.has(tool)).toBe(true);
     }
@@ -193,6 +196,27 @@ describe("un seul écrivain dans la sandbox partagée", () => {
     await finish("sub-1");
     expect(subagents.writeLock("edit_file")).toBeNull();
     expect(subagents.drainReports()[0].text).toMatch(/editing tools are available again/);
+  });
+
+  it("refuse `create_pr` au PARENT pendant un implement, et le rend après le drain", async () => {
+    // Le piège précis (MIN-209) : le parent dont les tools d'édition viennent
+    // d'être refusés se rabat sur « au moins ouvrir la PR » — et `create_pr` fait
+    // son propre `git add -A`, donc commiterait la fille au milieu de son geste.
+    const { subagents, finish } = makeSubagents();
+    expect(subagents.writeLock("create_pr")).toBeNull();
+
+    await subagents.spawn(IMPLEMENT);
+    const refused = subagents.writeLock("create_pr");
+    expect(refused).not.toBeNull();
+    expect(refused!.success).toBe(false);
+    expect(refused!.reason).toBe(SUBAGENT_WRITE_LOCKED_REASON);
+    // Le refus dit les DEUX gestes gelés, sinon « éditer » seul laisse croire que
+    // commiter reste permis — c'est exactement l'erreur qu'on ferme.
+    expect(asRecord(refused!.result).error).toMatch(/committing now/);
+
+    await finish("sub-1");
+    expect(subagents.writeLock("create_pr")).toBeNull();
+    expect(subagents.drainReports()[0].text).toMatch(/so is create_pr/);
   });
 
   it("un explore en vol ne gèle rien : il ne peut rien écrire", async () => {
