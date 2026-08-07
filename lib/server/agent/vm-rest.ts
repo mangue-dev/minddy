@@ -153,7 +153,15 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
     attempts: 0,
     window_started_at: null,
     cost_usd: newCost,
-    checkpoint: report.checkpoint,
+    /**
+     * Le checkpoint n'est écrit que si le rapport en porte un. Un rapport de
+     * SECOURS (le tour a levé) n'en porte pas : celui qui est en base vient de la
+     * sauvegarde périodique, à une frontière de round sûre, et l'écraser par
+     * l'historique laissé au milieu d'un round donnerait au tour suivant un
+     * `tool_call` sans son `tool_result` — plus la perte de `lastFilesSha`, donc
+     * un diff de tour recalculé depuis la mauvaise base.
+     */
+    ...(report.checkpoint ? { checkpoint: report.checkpoint } : {}),
     // La microVM reste CHAUDE (le reaper la coupera après ~5 min d'inactivité) :
     // c'est ce qui rend la reprise à chaud instantanée sur le message suivant.
     sandbox_stopped_at: null,

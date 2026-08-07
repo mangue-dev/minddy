@@ -41,19 +41,21 @@ async function main(): Promise<void> {
     console.error("[agent-vm] turn crashed:", message);
     await cp.emit("error", { message }).catch(() => {});
     /**
-     * LE RAPPORT DE SECOURS. Il porte le checkpoint du DÉBUT du tour, pas celui
-     * d'un état qu'on ne sait plus décrire : `runVmTurn` a levé, donc son
-     * historique est dans un état qu'on n'a aucune raison de croire cohérent (un
-     * `tool_call` sans son `tool_result` casserait le tour suivant au round-trip).
+     * LE RAPPORT DE SECOURS, et il ne porte AUCUN checkpoint. `runVmTurn` a levé,
+     * donc son historique est dans un état qu'on n'a aucune raison de croire
+     * cohérent — un `tool_call` sans son `tool_result` casserait le tour suivant
+     * au round-trip. Et il n'y a pas de « checkpoint du début » à lui opposer :
+     * `job.messages` EST le tableau que la boucle mute en place, pas une copie.
+     *
      * Le dernier checkpoint PÉRIODIQUE, lui, a été écrit à une frontière de round
-     * sûre — et la fonction le garde : ce rapport-ci ne le remplace pas, il dit
-     * seulement que le tour est fini et pourquoi.
+     * sûre. La fonction le garde tel quel (cf. `VmTurnReport.checkpoint`) : ce
+     * rapport-ci ne le remplace pas, il dit seulement que le tour est fini et
+     * pourquoi.
      */
     report = {
       status: "error",
       errorMessage: message.slice(0, 1000),
       costUsd: 0,
-      checkpoint: { messages: job.messages },
       checkpointDropped: [],
       checkpointBytes: 0,
       pushed: null,

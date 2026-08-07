@@ -204,6 +204,20 @@ describe("les quatre sorties, et elles quittent toutes `running`", () => {
     expect(h.notifications).toEqual([]);
   });
 
+  it("crash de la boucle : on GARDE le checkpoint périodique, on n'écrit rien dessus", async () => {
+    // Un rapport de SECOURS n'en porte pas : `runVmTurn` a levé, son historique
+    // est resté au milieu d'un round (un `tool_call` sans son `tool_result`) et
+    // l'écrire par-dessus la sauvegarde périodique casserait le tour suivant —
+    // en perdant `lastFilesSha` au passage, donc la base du diff de tour.
+    const crash = report({ status: "error", errorMessage: "boom" });
+    delete crash.checkpoint;
+    await landVmTurn(run(), crash);
+    const rest = h.stamped.find((f) => f.status === "completed");
+    expect(rest).toBeDefined();
+    expect(rest).not.toHaveProperty("checkpoint");
+    expect(rest).toMatchObject({ error_message: "boom" });
+  });
+
   it("erreur : repos reprennable, message d'erreur sur la ligne", async () => {
     await landVmTurn(run(), report({ status: "error", errorMessage: "boom" }));
     expect(h.stamped.find((f) => f.status === "completed")).toMatchObject({

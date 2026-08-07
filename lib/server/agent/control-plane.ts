@@ -19,6 +19,7 @@ import { agentRunTopic, broadcastToTopic } from "./live";
 import {
   appendEvent,
   getRun,
+  hasPendingRunMessages,
   pullPendingMessages,
   readInterruptFlag,
   stampRun,
@@ -210,6 +211,14 @@ export async function handleControlPlaneRequest(opts: {
     // Draine ET consomme, comme la boucle le fait à la frontière de round : un run
     // n'a qu'UN écrivain à la fois (le claimer), donc pas de double lecture.
     return ok({ messages: await pullPendingMessages(runId) });
+  }
+
+  if (method === "GET" && surface === "/messages/pending") {
+    // La même question SANS consommer : c'est la sonde de l'attente d'un
+    // sous-agent (« l'utilisateur a-t-il écrit ? »), polée toutes les 3 s pendant
+    // qu'une fille travaille. Drainer ici avalerait le message — personne ne
+    // l'injecterait dans l'historique, et l'utilisateur n'obtiendrait rien.
+    return ok({ pending: await hasPendingRunMessages(runId) });
   }
 
   if (method === "GET" && surface === "/interrupt") {
@@ -416,6 +425,14 @@ async function runCreatePr(
   const { locale } = await runPrefsFor(run);
   const prState = { number: run.pr_number, url: run.pr_url, state: run.pr_state };
   const title = String(args.title ?? "").trim();
+  /**
+   * LA BRANCHE DE TÊTE, envoyée par la VM. `agent_runs.branch_name` ne vaut
+   * quelque chose qu'après un premier push RÉEL (MIN-123) — or `create_pr` EST
+   * ce premier push dans le cas normal. Le lire seul ici ouvrait la pull request
+   * sur une tête vide, et stampait `branch_name: ""` au passage.
+   */
+  const workBranch =
+    (typeof body.workBranch === "string" ? body.workBranch.trim() : "") || run.branch_name || "";
 
   const outcome = await openPullRequestAfterPush(
     {
@@ -423,7 +440,7 @@ async function runCreatePr(
       target,
       forge: forgeFor(target.provider),
       issue: identifier ? { identifier } : null,
-      workBranch: run.branch_name ?? "",
+      workBranch,
       baseBranch: run.base_branch ?? target.defaultBranch,
       locale,
       emit: (type, payload) => appendEvent(run.id, type, payload),
@@ -438,8 +455,8 @@ async function runCreatePr(
       // La branche existe sur le dépôt dès ce push : c'est ici qu'on
       // l'enregistre, comme l'ancienne forme le fait à son premier push réel.
       noteBranchPushed: async (p) => {
-        if (!p.pushed || run.branch_name) return;
-        await stampRun(run.id, { branch_name: run.branch_name ?? "" }).catch(() => null);
+        if (!p.pushed || run.branch_name || !workBranch) return;
+        await stampRun(run.id, { branch_name: workBranch }).catch(() => null);
       },
     },
   );

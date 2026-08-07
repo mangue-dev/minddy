@@ -1467,6 +1467,10 @@ export async function executeAgentRun(
         chain: !!run.chain_id,
         imageInput,
         webSearch: webSearchAllowed,
+        // Le plafond de recherches du tour part AVEC le job : la constante vit
+        // dans le module qui facture la recherche, et celui-là n'entre pas dans
+        // le bundle de la microVM (cf. `VmJob.webSearchMax`).
+        webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
         subagents: {
           models: subagentModels,
           favorites: subagentFavorites,

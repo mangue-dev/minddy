@@ -86,6 +86,12 @@ export interface ControlPlaneClient {
    */
   saveCheckpointQuietly(checkpoint: AgentCheckpoint): Promise<boolean>;
   pullSteering(): Promise<string[]>;
+  /**
+   * Reste-t-il un message NON CONSOMMÉ ? Sonde de l'attente d'un sous-agent : elle
+   * ne DRAINE pas, contrairement à `pullSteering` — le message doit rester en file
+   * pour que le round suivant l'injecte dans l'historique.
+   */
+  hasPendingMessages(): Promise<boolean>;
   checkInterrupt(): Promise<boolean>;
   syncPlan(steps: PlanStep[]): Promise<void>;
   /** Un tool de PLATEFORME (ticket, carnet, pull request, recherche web, PR). */
@@ -207,6 +213,18 @@ export function createControlPlaneClient(appOrigin: string): ControlPlaneClient 
       } catch (err) {
         console.error("[agent-vm] steering read failed:", (err as Error).message);
         return [];
+      }
+    },
+
+    hasPendingMessages: async () => {
+      try {
+        const body = (await request("GET", "/messages/pending")) as { pending?: unknown };
+        return body.pending === true;
+      } catch (err) {
+        // Même règle que les deux voisines : une panne passagère ne doit pas
+        // rompre une attente, seulement la laisser aller à son terme.
+        console.error("[agent-vm] pending steering read failed:", (err as Error).message);
+        return false;
       }
     },
 

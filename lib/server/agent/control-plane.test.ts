@@ -29,6 +29,8 @@ const h = vi.hoisted(() => ({
   prIssueId: null as string | null,
   stampReturnsNull: false,
   landed: 0,
+  /** Les contextes d'atterrissage passés à l'implémentation partagée. */
+  prLandings: [] as Array<{ workBranch: string; baseBranch: string }>,
   run: null as Record<string, unknown> | null,
 }));
 
@@ -66,6 +68,40 @@ vi.mock("./vm-rest", () => ({
   landVmTurn: vi.fn(async () => {
     h.landed++;
   }),
+}));
+
+vi.mock("./repo-access", () => ({
+  resolveRepoCloneTarget: vi.fn(async () => ({
+    provider: "github",
+    repoFullName: "org/repo",
+    token: "tok",
+    authUrl: "https://x-access-token:tok@github.com/org/repo.git",
+    defaultBranch: "main",
+  })),
+}));
+
+vi.mock("./forge", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./forge")>()),
+  forgeFor: vi.fn(() => ({})),
+}));
+
+// La moitié FORGE de `create_pr` est PARTAGÉE avec l'ancienne forme, et couverte
+// avec elle : ici on vérifie ce qu'on lui passe, pas ce qu'elle en fait.
+vi.mock("./pr-landing", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./pr-landing")>()),
+  openPullRequestAfterPush: vi.fn(
+    async (
+      ctx: { workBranch: string; baseBranch: string },
+      opts: {
+        pushed: { pushed: boolean };
+        noteBranchPushed: (p: { pushed: boolean }) => Promise<void>;
+      },
+    ) => {
+      h.prLandings.push({ workBranch: ctx.workBranch, baseBranch: ctx.baseBranch });
+      await opts.noteBranchPushed(opts.pushed);
+      return { result: { number: 12, url: "https://github.com/org/repo/pull/12" }, success: true };
+    },
+  ),
 }));
 
 vi.mock("./runs", async (importOriginal) => ({
@@ -122,9 +158,15 @@ beforeEach(() => {
   h.prIssueId = null;
   h.stampReturnsNull = false;
   h.landed = 0;
+  h.prLandings.length = 0;
   h.run = {
     id: RUN_ID,
     status: "running",
+    branch_name: null,
+    base_branch: "main",
+    pr_number: null,
+    pr_url: null,
+    pr_state: null,
     run_id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     project_id: "proj-1",
     issue_id: "issue-1",
@@ -249,6 +291,38 @@ describe("les tools de plateforme", () => {
     h.prIssueId = "issue-de-la-pr";
     await call("POST", "/tool/read_issue", { args: {} });
     expect(h.issueCalls[0].ctx.anchorIssueId).toBe("issue-de-la-pr");
+  });
+
+  it("ouvrent la pull request sur la branche que la VM vient de POUSSER", async () => {
+    // `agent_runs.branch_name` n'est stampé qu'après un premier push RÉEL
+    // (MIN-123) — or c'est `create_pr` qui vient de le faire. Le lire sur la ligne
+    // du run donnait une tête VIDE à la forge, et stampait `branch_name: ""`.
+    const branch = "minddy/agent/min-42-abcd1234";
+    const res = await call("POST", "/tool/create_pr", {
+      args: { title: "Ajoute le truc" },
+      pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
+      workBranch: branch,
+    });
+    expect(res.status).toBe(200);
+    expect(h.prLandings).toEqual([{ workBranch: branch, baseBranch: "main" }]);
+    // …et c'est CETTE branche-là qu'on enregistre sur la ligne du run.
+    expect(h.stamped.find((f) => "branch_name" in f)).toMatchObject({ branch_name: branch });
+  });
+
+  it("retombent sur la branche de la ligne quand la VM n'en envoie pas", async () => {
+    h.run = { ...h.run, branch_name: "minddy/agent/deja-poussee" };
+    await call("POST", "/tool/create_pr", {
+      args: { title: "Suite" },
+      pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
+    });
+    expect(h.prLandings[0].workBranch).toBe("minddy/agent/deja-poussee");
+    // Déjà enregistrée : on ne la re-stampe pas.
+    expect(h.stamped.some((f) => "branch_name" in f)).toBe(false);
+  });
+
+  it("refusent un `create_pr` sans résultat de push — la VM seule sait si elle a poussé", async () => {
+    expect((await call("POST", "/tool/create_pr", { args: { title: "x" } })).status).toBe(400);
+    expect(h.prLandings).toHaveLength(0);
   });
 
   it("ne servent PAS les tools de fichier — ils s'exécutent dans la VM", async () => {

@@ -99,6 +99,17 @@ export interface VmJob {
   chain: boolean;
   imageInput: boolean;
   webSearch: boolean;
+  /**
+   * Plafond de recherches web du TOUR, partagé par le parent et ses filles.
+   *
+   * Résolu côté fonction, et ce n'est pas un caprice : la constante
+   * (`MAX_WEB_SEARCHES_PER_TURN`) vit dans le module qui FACTURE la recherche,
+   * lequel tient un client Supabase en clé de service — l'importer depuis la
+   * boucle ferait entrer ce client dans le bundle de la microVM
+   * (`vm-bundle-secrets.test.ts`). Le chiffre voyage donc, comme les réglages de
+   * sous-agents, plutôt que d'être recopié à la main des deux côtés.
+   */
+  webSearchMax: number;
   subagents: VmSubagentConfig;
 
   // ── L'état du tour ────────────────────────────────────────────────────────
@@ -169,8 +180,16 @@ export interface VmTurnReport {
   errorMessage?: string;
   /** Coût du tour, filles comprises. S'ajoute à `agent_runs.cost_usd`. */
   costUsd: number;
-  /** Le checkpoint, DÉJÀ raboté au gabarit par la boucle. */
-  checkpoint: AgentCheckpoint;
+  /**
+   * Le checkpoint, DÉJÀ raboté au gabarit par la boucle.
+   *
+   * ABSENT quand le tour a LEVÉ, et c'est le seul cas. La boucle a alors laissé
+   * son historique dans un état qu'on n'a aucune raison de croire cohérent — un
+   * `tool_call` sans son `tool_result` casserait le tour suivant au premier
+   * aller-retour. Le dernier checkpoint PÉRIODIQUE, lui, a été écrit à une
+   * frontière de round sûre : la fonction le GARDE, et n'écrit rien par-dessus.
+   */
+  checkpoint?: AgentCheckpoint;
   /** Les paliers que `fitCheckpoint` a dû lâcher — `history` se dit au fil. */
   checkpointDropped: string[];
   /** Taille AVANT rabotage : c'est elle qui dit si le tour a explosé. */

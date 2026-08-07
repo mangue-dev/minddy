@@ -179,9 +179,30 @@ export async function runVmTurn(
     };
   };
 
+  /**
+   * Recherches web déjà payées par ce TOUR, parent et filles confondus — le même
+   * compteur partagé que la fonction tient (MIN-171). Il voyage avec la boucle :
+   * le plan de contrôle facture ce qu'on lui demande, il ne compte rien. Sans lui,
+   * un modèle qui cherche en rond dépense 0,005 $ par appel sans aucune borne, et
+   * le tour n'en dit rien.
+   *
+   * Il sert aussi de `seq` : deux recherches d'un même tour écrivent alors deux
+   * lignes de ledger distinctes, là où un `seq` absent les rangeait toutes sous le
+   * même numéro.
+   */
+  let webSearchesUsed = 0;
   const webSearch = job.webSearch
     ? async (query: string) => {
-        const res = await cp.callTool("web_search", { args: { query } });
+        if (webSearchesUsed >= job.webSearchMax) {
+          return {
+            result: {
+              error: `Web search limit reached for this turn (${job.webSearchMax} searches). Work with what you already found.`,
+            },
+            success: false,
+          };
+        }
+        const seq = webSearchesUsed++;
+        const res = await cp.callTool("web_search", { args: { query, seq } });
         return { result: res.result, success: res.success };
       }
     : null;
@@ -217,6 +238,14 @@ export async function runVmTurn(
           args: { title, body },
           pushed,
           jobsNote,
+          /**
+           * LA BRANCHE, remontée plutôt que relue — et c'est ce qui fait que le
+           * tool marche du premier coup. `agent_runs.branch_name` n'est stampé
+           * qu'APRÈS un push réel (MIN-123), or ce push-ci est justement le
+           * premier du run dans le cas normal : la fonction lirait alors une
+           * branche nulle et ouvrirait la pull request sur une tête vide.
+           */
+          workBranch: job.workBranch,
         });
         return { result: res.result, success: res.success };
       }
@@ -536,7 +565,14 @@ export async function runVmTurn(
      * le budget qu'on lui oppose se compte en heures.
      */
     awaitSubagents: async ({ budgetMs }) => {
-      const waited = await subagents.awaitReports(Math.max(0, budgetMs - SUBAGENT_CUT_MARGIN_MS));
+      const waited = await subagents.awaitReports(
+        Math.max(0, budgetMs - SUBAGENT_CUT_MARGIN_MS),
+        // L'utilisateur peut RÉVEILLER le parent pendant qu'il attend : son
+        // message rompt l'attente sans toucher aux filles, qui continuent. Sans
+        // cette sonde, un « où en es-tu ? » écrit pendant qu'une fille travaille
+        // ne serait lu qu'au retour de celle-ci — jusqu'à dix minutes plus tard.
+        () => cp.hasPendingMessages(),
+      );
       if (waited.reports.length > 0 || waited.interrupted || subagents.pending() === 0) {
         return waited;
       }
