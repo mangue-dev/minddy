@@ -36,6 +36,7 @@ import {
 } from "@/lib/server/git/repo-links";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { syncRepoPullRequests } from "@/lib/server/agent/pull-requests";
+import type { ProjectGitLink } from "@/lib/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -71,9 +72,51 @@ async function backfillRepoPullRequests(projectId: string): Promise<void> {
   }
 }
 
+/** La page GitHub où accorder une permission à une installation. */
+const permissionsUrlFor = (installationId: number | null): string | null =>
+  installationId != null
+    ? `https://github.com/settings/installations/${installationId}/permissions/update`
+    : null;
+
+/**
+ * L'URL où accorder « Issues (Write) », ou `null` si rien n'est à signaler.
+ *
+ * Interrogé à CHAQUE lecture plutôt que mémorisé à l'activation, pour les deux
+ * sens : l'avertissement survit à un rechargement (sans quoi celui qui n'a
+ * accordé que la lecture ne le revoit jamais, et le retour de statut échoue en
+ * silence dans les logs), et il DISPARAÎT tout seul dès que la permission est
+ * accordée sur GitHub, sans rien à rebasculer ici.
+ *
+ * Coût : un appel GitHub, et seulement dans le cas étroit qui l'exige — owner,
+ * GitHub, synchro active. Un panneau de réglages n'est pas un chemin chaud.
+ */
+async function issueSyncWriteMissingUrl(
+  projectId: string,
+  link: ProjectGitLink | null,
+  isOwner: boolean,
+): Promise<string | null> {
+  if (!isOwner || link?.provider !== "github" || !link.issue_sync_enabled) {
+    return null;
+  }
+  try {
+    const sync = await getIssueSyncLink(projectId);
+    if (sync?.installationId == null) return null;
+    const level = await getIssuesPermission(sync.installationId);
+    // `none` est un autre problème (aucun event ne serait livré) et il a déjà
+    // été dit à l'activation : ici on ne parle que du RETOUR, qui exige `write`.
+    return level === "write" ? null : permissionsUrlFor(sync.installationId);
+  } catch (err) {
+    // Un avertissement consultatif ne fait pas tomber la page de réglages — et
+    // comme la promesse est lancée AVANT d'être attendue, une rejection nue
+    // ressortirait en `unhandledRejection` plutôt qu'en 500 lisible.
+    console.error("[git-link] issues permission probe failed:", (err as Error).message);
+    return null;
+  }
+}
+
 /**
  * GET /api/projects/[id]/git-link
- *  - défaut : { link, isOwner, providers[] } (état de liaison + providers dispo).
+ *  - défaut : { link, isOwner, providers[], issueSyncWriteMissingUrl }.
  *  - ?candidates=<connectionId> : { candidates } (dépôts de la connexion, owner).
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -112,6 +155,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   const link = await getProjectLink(id);
+  // En parallèle des providers : c'est un appel GitHub, il n'a aucune raison
+  // d'attendre la fin des lookups de connexion.
+  const writeMissing = issueSyncWriteMissingUrl(id, link, access.isOwner);
 
   // Providers configurés + éventuelle connexion réutilisable (owner uniquement).
   const providers = await Promise.all(
@@ -125,7 +171,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }),
   );
 
-  return NextResponse.json({ link, isOwner: access.isOwner, providers });
+  return NextResponse.json({
+    link,
+    isOwner: access.isOwner,
+    providers,
+    writeMissingUrl: await writeMissing,
+  });
 }
 
 /**
@@ -256,10 +307,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       // l'installation doit accepter `Issues (Read)`. Sans ça, aucun event
       // `issues` ne serait livré — on le dit AVANT d'activer.
       if (enabled) {
-        permissionsUrl =
-          link.installationId != null
-            ? `https://github.com/settings/installations/${link.installationId}/permissions/update`
-            : null;
+        permissionsUrl = permissionsUrlFor(link.installationId);
         const level =
           link.installationId != null
             ? await getIssuesPermission(link.installationId)

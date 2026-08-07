@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
-import { resolveCategoryIdsByName } from "@/lib/server/categories";
+import { categoryKey, resolveCategoryIdsByName } from "@/lib/server/categories";
 import { insertAttachmentsFor } from "@/lib/server/attachments";
 import { insertEvents, stampForgeSync, type EventRow } from "@/lib/server/issue-events";
 import { normalizeToken } from "@/lib/import/normalize";
@@ -172,7 +172,7 @@ export async function importIssuesIntoProject({
   issues.forEach((issue, i) => {
     const seen = new Set<string>();
     for (const label of issue.labels) {
-      const categoryId = categoryIdByKey.get(label.toLowerCase());
+      const categoryId = categoryIdByKey.get(categoryKey(label));
       if (categoryId && !seen.has(categoryId)) {
         seen.add(categoryId);
         categoryRows.push({ issue_id: ids[i], category_id: categoryId });

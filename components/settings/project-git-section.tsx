@@ -50,7 +50,13 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { link, isOwner, providers, loading } = useProjectGitLinkQuery(projectId);
+  const {
+    link,
+    isOwner,
+    providers,
+    writeMissingUrl: fetchedWriteMissingUrl,
+    loading,
+  } = useProjectGitLinkQuery(projectId);
 
   const [connecting, setConnecting] = useState<RepoProviderId | null>(null);
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
@@ -63,13 +69,18 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
   // réconcilie sur la liaison refetchée (pattern smart-assign-section).
   const [issueSync, setIssueSync] = useState(false);
   const [savingIssueSync, setSavingIssueSync] = useState(false);
-  /** Posé par la réponse d'activation quand l'installation GitHub n'a accordé
-      que `Issues (Read)` : le retour de statut vers la forge a besoin de
-      `write`. Null = rien à signaler. */
+  /** L'installation GitHub n'a accordé que `Issues (Read)` : le retour de
+      statut vers la forge a besoin de `write`. Null = rien à signaler.
+      Même miroir que le toggle — la réponse d'activation le pose tout de
+      suite, la lecture suivante fait foi (et le fait DISPARAÎTRE dès que la
+      permission est accordée sur GitHub). */
   const [writeMissingUrl, setWriteMissingUrl] = useState<string | null>(null);
   useEffect(() => {
     setIssueSync(link?.issue_sync_enabled === true);
   }, [link?.issue_sync_enabled]);
+  useEffect(() => {
+    setWriteMissingUrl(fetchedWriteMissingUrl);
+  }, [fetchedWriteMissingUrl]);
 
   // Retour de callback OAuth : ?git=connected&connection=<id> (ou git=error).
   const handledCallback = useRef(false);
@@ -166,18 +177,14 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     setIssueSync(next); // optimiste — annulé en cas d'échec
     setSavingIssueSync(true);
     try {
-      const { writeMissingUrl } = await setGitIssueSyncApi(
-        projectId,
-        next,
-        link.provider,
-      );
+      const response = await setGitIssueSyncApi(projectId, next, link.provider);
       toast.success(
         t(next ? "gitIssueSyncEnabledToast" : "gitIssueSyncDisabledToast"),
       );
       // L'installation n'a accordé que la LECTURE des issues : l'import marche,
-      // mais refermer une issue depuis minddy demande `write`. On le dit une
-      // fois, au moment où c'est actionnable — pas un bandeau permanent.
-      setWriteMissingUrl(writeMissingUrl ?? null);
+      // mais refermer une issue depuis minddy demande `write`. Posé tout de
+      // suite pour ne pas attendre le refetch — qui le confirmera.
+      setWriteMissingUrl(response.writeMissingUrl ?? null);
       // Le backfill tourne côté serveur après la réponse : on relit un peu plus
       // tard pour afficher sa date, en plus du refetch immédiat.
       invalidate();

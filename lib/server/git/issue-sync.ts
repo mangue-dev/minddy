@@ -7,7 +7,7 @@ import { importIssuesIntoProject } from "@/lib/server/import-issues";
 import { ensureIssueLimit } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
-import { resolveCategoryIdsByName } from "@/lib/server/categories";
+import { categoryKey, resolveCategoryIdsByName } from "@/lib/server/categories";
 import { readForgeLabels } from "@/lib/import/forge-labels";
 import type { ImportedIssue } from "@/lib/import/types";
 import type { IssueStatusValue } from "@/lib/issue-validation";
@@ -322,9 +322,18 @@ async function applyRemoteLabels(
   if (!target.createdBy || labels.length === 0) return;
   const resolved = await resolveCategoryIdsByName(target.projectId, labels);
   if (!resolved) return;
-  const ids = labels
-    .map((label) => resolved.idByKey.get(label.trim().toLowerCase()))
-    .filter((id): id is string => !!id);
+  // DÉDOUBLONNÉ : `readForgeLabels` sépare deux labels que `categoryKey` peut
+  // ramener à la même catégorie (il rogne les accents, la clé non ; il garde
+  // entiers deux noms que la borne des 200 caractères confond). Un id répété
+  // ferait rater la comparaison ci-dessous, et le DELETE/INSERT repartirait à
+  // chaque webhook — précisément ce qu'elle est là pour éviter.
+  const ids = [
+    ...new Set(
+      labels
+        .map((label) => resolved.idByKey.get(categoryKey(label)))
+        .filter((id): id is string => !!id),
+    ),
+  ];
 
   const service = getServiceClient();
   const { data: current } = await service

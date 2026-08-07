@@ -49,6 +49,8 @@ export function useProjectGitLinkQuery(projectId: string | null) {
     link: data?.link ?? null,
     isOwner: !!data?.isOwner,
     providers: data?.providers ?? [],
+    /** Cf. `ProjectGitLinkResponse` — null quand il n'y a rien à signaler. */
+    writeMissingUrl: data?.writeMissingUrl ?? null,
     loading: enabled && isPending,
   };
 }

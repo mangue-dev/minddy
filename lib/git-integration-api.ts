@@ -41,6 +41,14 @@ export interface ProjectGitLinkResponse {
   link: ProjectGitLink | null;
   isOwner: boolean;
   providers: ProviderConnectInfo[];
+  /**
+   * URL où accorder « Issues (Write) » quand la synchro est active mais que
+   * l'installation GitHub n'a accepté que la lecture : l'import marche, le
+   * RETOUR (refermer l'issue distante) non. Recalculé à chaque lecture — il
+   * s'efface de lui-même dès que la permission est accordée. Null le reste du
+   * temps, et pour tout le monde sauf le owner.
+   */
+  writeMissingUrl: string | null;
 }
 
 export type StartConnectResponse =
