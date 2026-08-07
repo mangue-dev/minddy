@@ -119,6 +119,39 @@ export function newRunId(): string {
 }
 
 /**
+ * Ce qu'un run a dépensé, LU AU LEDGER (MIN-215) — toutes features confondues,
+ * `sandbox_compute` comprise.
+ *
+ * À préférer à `agent_runs.cost_usd` partout où la réponse doit être vraie même
+ * quand un chunk est mort : la colonne n'est écrite que par les chemins de sortie
+ * sains de `executeAgentRun`, donc un chunk qui lève au milieu — ou dont
+ * l'invocation est tuée à la limite de durée — n'y porte JAMAIS sa dépense. Les
+ * lignes du ledger, elles, sont écrites appel par appel, avant l'accident.
+ *
+ * Rend `null` quand la lecture échoue, jamais 0 : un zéro se confondrait avec
+ * « ce run n'a rien dépensé » et rechargerait le plafond qu'on cherche à tenir.
+ * L'appelant retombe alors sur ce qu'il a — au pire le comportement d'avant.
+ */
+export async function spentFromLedger(runId: string): Promise<number | null> {
+  try {
+    const service = getServiceClient();
+    // Somme faite EN BASE (`get_ai_run_spend`) : une lecture de lignes serait
+    // plafonnée par PostgREST (1 000 par défaut) et rendrait, sur un run bavard,
+    // une somme silencieusement basse.
+    const { data, error } = await service.rpc("get_ai_run_spend", { p_run_id: runId });
+    if (error) {
+      console.error("[ai-usage] get_ai_run_spend failed:", error.message);
+      return null;
+    }
+    const spent = Number(data ?? 0);
+    return Number.isFinite(spent) ? spent : null;
+  } catch (err) {
+    console.error("[ai-usage] get_ai_run_spend threw:", (err as Error).message);
+    return null;
+  }
+}
+
+/**
  * À QUI la ligne est imputée (MIN-131) — dit par l'appelant, jamais deviné.
  *
  * La règle produit : chacun paye son propre usage, pas celui des autres membres

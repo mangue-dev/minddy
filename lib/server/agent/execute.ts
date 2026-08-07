@@ -5,7 +5,7 @@ import { insertEvents } from "@/lib/server/issue-events";
 import { forgeActorValue } from "@/lib/pr-events";
 import { getAccountSettings } from "@/lib/server/account-settings";
 import { recordSandboxUsage } from "@/lib/server/usage";
-import type { AiUsageBillTo } from "@/lib/server/ai-usage";
+import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
 import { AGENT_MAX_CONTINUATIONS } from "@/lib/agent-models";
@@ -2034,7 +2034,13 @@ export async function executeAgentRun(
     // Budget d'usage RESTANT à l'entrée du chunk. Snapshoté une fois ici : la
     // boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
     // round. En BYOK, `unlimited` → aucun plafond (l'utilisateur paie sa note).
-    const quotaNow = await checkAgentQuota(run.created_by ?? "").catch(() => null);
+    //
+    // Deux lectures, une seule attente : la somme du ledger (cf. `runSpentUsd`)
+    // ne dépend pas du quota, elle part avec lui.
+    const [quotaNow, ledgerSpentUsd] = await Promise.all([
+      checkAgentQuota(run.created_by ?? "").catch(() => null),
+      spentFromLedger(run.run_id ?? run.id),
+    ]);
     // Deux plafonds, le plus serré gagne : le QUOTA du compte, et celui que
     // l'appelant a éventuellement posé sur CE run. Une chaîne d'automatisation
     // n'en ajoute PAS un troisième (MIN-147) : la couper au milieu laisserait un
@@ -2052,19 +2058,36 @@ export async function executeAgentRun(
     const accountRemainingUsd =
       quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined;
     /**
-     * Ce qu'il reste du plafond posé sur CE run — DÉDUCTION FAITE des chunks
-     * déjà joués (`run.cost_usd` est le cumul du run, pas du chunk).
+     * Ce que le run a déjà dépensé, tous chunks joués confondus — le montant que
+     * son plafond déduit.
      *
-     * Sans cette soustraction le plafond se rechargeait à chaque continuation :
-     * la boucle compare son coût de CHUNK au budget, et un run en cinq chunks
-     * aurait dépensé cinq fois son plafond. Le quota du compte, lui, ne souffre
-     * pas du problème — `checkAgentQuota` relit l'usage réel à chaque chunk,
-     * donc son restant descend tout seul.
+     * LU AU LEDGER (MIN-215), plus à la seule colonne `cost_usd` : celle-ci n'est
+     * écrite que par les chemins de sortie SAINS d'ici, donc un chunk qui lève au
+     * milieu (un `commitAndPush` qui échoue) ou dont l'invocation est tuée à la
+     * limite de durée n'y porte jamais sa dépense — et le plafond se rechargeait
+     * d'autant. Un passage à 0,75 $ dont le chunk 2 mourait après 0,40 $ repartait
+     * au chunk 3 avec un restant qui n'existait plus, et finissait au-dessus de
+     * son plafond. Le ledger, lui, est écrit APPEL PAR APPEL, avant l'accident :
+     * c'est déjà la doctrine du quota du compte, qui pour cette raison exacte ne
+     * souffrait pas du problème (`checkAgentQuota` relit l'usage réel à chaque
+     * chunk). La somme porte aussi les lignes `sandbox_compute` : le plafond voit
+     * enfin la moitié microVM de la facture.
+     *
+     * Le MAX des deux, et pas le ledger seul : `recordAiUsage` est best-effort
+     * (il avale ses erreurs), donc une insertion ratée laisserait au ledger moins
+     * que ce que la colonne porte. Les deux sont des MINORANTS de la dépense
+     * réelle — le plus grand est le plus vrai. Même raison pour le repli sur la
+     * colonne quand la lecture échoue : jamais pire qu'avant.
+     */
+    const runSpentUsd = Math.max(run.cost_usd, ledgerSpentUsd ?? 0);
+    /**
+     * Ce qu'il reste du plafond posé sur CE run — DÉDUCTION FAITE des chunks
+     * déjà joués. Sans cette soustraction le plafond se rechargeait à chaque
+     * continuation : la boucle compare son coût de CHUNK au budget, et un run en
+     * cinq chunks aurait dépensé cinq fois son plafond.
      */
     const runCapRemainingUsd =
-      run.budget_usd == null
-        ? undefined
-        : Math.max(0, Number(run.budget_usd) - run.cost_usd);
+      run.budget_usd == null ? undefined : Math.max(0, Number(run.budget_usd) - runSpentUsd);
     const budgetUsd = minDefined(accountRemainingUsd, runCapRemainingUsd);
     /**
      * Ce que le chunk a dépensé, TOUTES boucles confondues — le compteur que
@@ -2916,6 +2939,24 @@ export async function executeAgentRun(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await emit("error", { message });
+    /**
+     * La dépense du run RELUE AU LEDGER (MIN-215), à écrire sur les stamps de
+     * repos d'ici. Un chunk qui lève est sorti de sa boucle sans passer par le
+     * moindre `newCost` : sa dépense modèle est au ledger, mais `cost_usd` ne l'a
+     * jamais vue. Personne ne la retrouvait ensuite — le chunk suivant repart de
+     * la colonne, donc le trou est définitif : `recomputeChainSpend` sous-compte
+     * la chaîne, `medianCostByIntent` biaise ses estimations, et « Exécutions
+     * précédentes » affiche moins que ce qui a été payé.
+     *
+     * Écrit tel quel plutôt que cumulé : le catch ne sait pas ce que ce chunk-ci
+     * a dépensé (il n'a pas de `result`), et la somme du ledger est déjà le total
+     * du run. `Math.max` pour la même raison qu'à l'entrée du chunk — le ledger
+     * est best-effort, la colonne peut porter une ligne qu'il a ratée, et une
+     * dépense affichée ne doit jamais reculer.
+     */
+    const spentUsd = await spentFromLedger(run.run_id ?? run.id);
+    const costFromLedger =
+      spentUsd == null ? {} : { cost_usd: Math.max(run.cost_usd, spentUsd) };
     // Erreur d'AMORÇAGE (repo/modèle/clone : sandbox jamais acquise).
     if (!sandbox) {
       // Une CONVERSATION EXISTANTE (checkpoint) ne meurt jamais sur une erreur
@@ -2931,6 +2972,10 @@ export async function executeAgentRun(
           window_started_at: null,
           last_activity_at: new Date().toISOString(),
           interrupt_requested: false,
+          // Rien n'a été dépensé DANS ce chunk (l'amorçage n'appelle pas le
+          // modèle), mais un chunk précédent a pu mourir sans stamper : ce repos
+          // est l'occasion de recoller la colonne au ledger.
+          ...costFromLedger,
         });
         await notifyAgentRun(run, "agent_failed");
         return "completed";
@@ -2969,6 +3014,7 @@ export async function executeAgentRun(
       sandbox_stopped_at: null,
       last_activity_at: new Date().toISOString(),
       interrupt_requested: false,
+      ...costFromLedger,
     });
     if (!retryForPending) await notifyAgentRun(run, "agent_failed");
     return "completed";
