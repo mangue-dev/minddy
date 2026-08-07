@@ -50,6 +50,8 @@ import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
 import { SettingsRow } from "@/components/settings/settings-ui";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
+import { SpendCapCombobox } from "@/components/routines/spend-cap-combobox";
+import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
 import {
   deleteRoutineApi,
   runRoutineNowApi,
@@ -103,9 +105,11 @@ import type { AgentRunSummary } from "@/lib/agent-api";
  * La CADENCE sort de l'en-tête et vit avec les exécutions, là où elle répond à
  * la question qu'on se pose en lisant la liste des passages.
  *
- * **`last_error` se LIT.** C'est ce qui rend tenable l'absence de garde-fou de
- * dépense propre aux routines : un passage sauté faute de budget se dit ici,
- * avec le lien vers la facturation — pas seulement dans une colonne de la base.
+ * **`last_error` se LIT.** Un passage sauté faute de budget se dit ici, avec le
+ * lien vers la facturation — pas seulement dans une colonne de la base. Un
+ * passage qui, lui, est PARTI et s'est arrêté sur son plafond de dépense le dit
+ * dans sa conversation, à la fin de son fil : c'est un travail interrompu, pas
+ * un rendez-vous manqué, et il a des choses à montrer.
  */
 export function RoutineDetail({
   routine,
@@ -198,6 +202,7 @@ export function RoutineDetail({
       model: draft.model || null,
       reasoningLevel: draft.reasoning,
       baseBranch: draft.baseBranch || null,
+      maxSpendPercent: draft.spendCap,
       frequency: draft.schedule.frequency,
       hour: draft.schedule.hour,
       minute: draft.schedule.minute,
@@ -910,6 +915,8 @@ interface RoutineDraft {
   reasoning: ReasoningLevel;
   /** "" = la branche par défaut du dépôt. */
   baseBranch: string;
+  /** Part du budget mensuel qu'UN passage peut dépenser (1–100). */
+  spendCap: number;
   schedule: RoutineSchedule;
 }
 
@@ -920,6 +927,9 @@ function draftFrom(routine: Routine): RoutineDraft {
     model: routine.model ?? "",
     reasoning: routine.reasoning_level,
     baseBranch: routine.base_branch ?? "",
+    // Les routines posées avant le plafond n'en portent pas dans le cache déjà
+    // chargé : le défaut, celui-là même que la base leur a donné.
+    spendCap: routine.max_spend_percent ?? DEFAULT_MAX_SPEND_PERCENT,
     schedule: routineSchedule(routine),
   };
 }
@@ -1036,6 +1046,20 @@ function RoutineEditor({
                 placeholder={tAgent("branchSearchPlaceholder")}
                 emptyLabel={tAgent("branchSearchEmpty")}
                 loadingLabel={tAgent("branchSearchLoading")}
+                disabled={busy}
+              />
+            }
+          />
+          {/* CE QU'UN PASSAGE PEUT DÉPENSER. C'est ici qu'on vient le baisser
+              après avoir vu ce que la routine coûte vraiment — d'où sa place à
+              côté du modèle, l'autre réglage qui décide de la note. */}
+          <SettingsRow
+            label={t("spendCapLabel")}
+            help={t("spendCapHelp")}
+            control={
+              <SpendCapCombobox
+                value={draft.spendCap}
+                onChange={(value) => set("spendCap", value)}
                 disabled={busy}
               />
             }

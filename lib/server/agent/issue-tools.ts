@@ -843,6 +843,8 @@ async function createRoutineTool(
     model: typeof args.model === "string" ? args.model : null,
     reasoningLevel: typeof args.reasoning_level === "string" ? args.reasoning_level : null,
     baseBranch: typeof args.base_branch === "string" ? args.base_branch : null,
+    maxSpendPercent:
+      typeof args.max_spend_percent === "number" ? args.max_spend_percent : null,
     frequency: typeof args.frequency === "string" ? args.frequency : "",
     hour: typeof args.hour === "number" ? args.hour : 9,
     minute: typeof args.minute === "number" ? args.minute : 0,

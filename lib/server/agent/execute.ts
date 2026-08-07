@@ -1900,10 +1900,24 @@ export async function executeAgentRun(
     // mourait sur un `ReferenceError` (MIN-169). L'invariant — rien de ce que la
     // closure capture ne se déclare après elle — est tenu par
     // `subagent-runner-init.test.ts`.
-    const budgetUsd = minDefined(
-      quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined,
-      run.budget_usd == null ? undefined : Math.max(0, Number(run.budget_usd)),
-    );
+    /** Ce qu'il reste du budget d'usage du COMPTE. `undefined` en BYOK. */
+    const accountRemainingUsd =
+      quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined;
+    /**
+     * Ce qu'il reste du plafond posé sur CE run — DÉDUCTION FAITE des chunks
+     * déjà joués (`run.cost_usd` est le cumul du run, pas du chunk).
+     *
+     * Sans cette soustraction le plafond se rechargeait à chaque continuation :
+     * la boucle compare son coût de CHUNK au budget, et un run en cinq chunks
+     * aurait dépensé cinq fois son plafond. Le quota du compte, lui, ne souffre
+     * pas du problème — `checkAgentQuota` relit l'usage réel à chaque chunk,
+     * donc son restant descend tout seul.
+     */
+    const runCapRemainingUsd =
+      run.budget_usd == null
+        ? undefined
+        : Math.max(0, Number(run.budget_usd) - run.cost_usd);
+    const budgetUsd = minDefined(accountRemainingUsd, runCapRemainingUsd);
 
     // ── Sous-agents (MIN-112) ──────────────────────────────────────────────────
     /** Chrono de la boucle : le budget restant du chunk borne chaque sous-agent. */
@@ -2519,6 +2533,21 @@ export async function executeAgentRun(
     // en attente reste en file et sera drainé à la reprise.
     if (result.status === "budget_exhausted") {
       const quota = await checkAgentQuota(run.created_by ?? "").catch(() => null);
+      /**
+       * DEUX causes derrière la même frontière, et elles ne se disent pas
+       * pareil : le budget du COMPTE est à zéro (il faut attendre, monter de
+       * plan ou passer en BYOK), ou c'est le plafond posé sur CE run qui a
+       * mordu — le compte, lui, va très bien, et ce qui se règle est le plafond
+       * de la routine. Proposer un upgrade dans ce second cas ferait payer plus
+       * cher pour un budget dont il reste l'essentiel.
+       *
+       * On tranche par le plus SERRÉ des deux, à égalité l'account : un plafond
+       * qui vaut exactement le restant du compte veut dire que le compte est à
+       * zéro lui aussi.
+       */
+      const cappedByRun =
+        runCapRemainingUsd !== undefined &&
+        (accountRemainingUsd === undefined || runCapRemainingUsd < accountRemainingUsd);
       await emit("quota_exhausted", {
         spent: quota?.spent ?? null,
         cap: quota?.cap ?? null,
@@ -2527,6 +2556,14 @@ export async function executeAgentRun(
         // null = déjà au sommet de l'échelle : il ne reste qu'attendre, ou le BYOK.
         nextPlanId: quota?.nextPlanId ?? null,
         byok: quota?.mode === "byok",
+        cause: cappedByRun ? "run_cap" : "account",
+        // Le plafond, dans l'unité où il a été RÉGLÉ : un pourcentage du budget
+        // mensuel. Recalculé plutôt que relu sur la routine — c'est un affichage,
+        // il ne vaut pas une requête de plus.
+        capPercent:
+          cappedByRun && quota?.cap && run.budget_usd != null
+            ? Math.round((Number(run.budget_usd) / quota.cap) * 100)
+            : null,
       });
       await stampRun(run.id, { status: "completed", ...restFields, checkpoint });
       await notifyAgentRun(run, "agent_failed");

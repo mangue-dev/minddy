@@ -69,6 +69,9 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
     ...(body.baseBranch !== undefined
       ? { baseBranch: str(body.baseBranch, MAX_SHORT_FIELD) || null }
       : {}),
+    ...(body.maxSpendPercent !== undefined
+      ? { maxSpendPercent: num(body.maxSpendPercent) }
+      : {}),
     ...(body.frequency !== undefined ? { frequency: str(body.frequency, 32) } : {}),
     ...(body.hour !== undefined ? { hour: num(body.hour) } : {}),
     ...(body.minute !== undefined ? { minute: num(body.minute) } : {}),

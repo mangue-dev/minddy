@@ -44,7 +44,9 @@ export const CREATE_ROUTINE_DESCRIPTION =
   "Monday morning — a member gets a refusal, and there is no way around it. The " +
   "model is chosen PER ROUTINE and frozen on it: a security review deserves the " +
   "strongest model, a monthly inventory the cheapest. Its spend is billed under " +
-  "'Routines', separately from agent runs.";
+  "'Routines', separately from agent runs, and ONE run stops at 15% of the " +
+  "owner's monthly usage budget by default — it cannot silently take the whole " +
+  "month (`max_spend_percent`).";
 
 export const UPDATE_ROUTINE_DESCRIPTION =
   "Change an existing routine: turn it on or off (`enabled`), move its cadence, " +
@@ -55,10 +57,30 @@ export const UPDATE_ROUTINE_DESCRIPTION =
 export const LIST_ROUTINES_DESCRIPTION =
   "List the routines of a project: id, title (written by minddy from the " +
   "instruction), instruction, cadence in plain fields, " +
-  "model, whether it is enabled, when it last ran and when it runs next, and the " +
+  "model, the spending cap of one run, whether it is enabled, when it last ran " +
+  "and when it runs next, and the " +
   "code of the last missed run (an exhausted usage budget, an unlinked repository). " +
   "Call it before creating one, to reuse or adjust what is already scheduled instead " +
   "of stacking a second routine that does the same job.";
+
+/**
+ * Le PLAFOND DE DÉPENSE d'un passage — partagé par les deux tools, et écrit
+ * pour un modèle qui ne verra jamais l'écran : sans la phrase sur le défaut, un
+ * client le repose à 100 « pour ne pas gêner » et rouvre exactement le trou que
+ * le plafond bouche.
+ */
+const MAX_SPEND_PERCENT_PROPERTY = {
+  type: "number",
+  description:
+    "Cap on what ONE run of this routine may spend, as a percentage (1–100) of " +
+    "the owner's monthly usage budget. OMIT IT unless the user asks for a cap: " +
+    "the default (15) leaves room for a routine to run all month without eating " +
+    "the budget, and passing 100 removes the cap entirely. Raise it for a " +
+    "routine that runs rarely and must finish its job (a monthly security review " +
+    "at 50); lower it for one that runs every day (an inventory at 5). It is a " +
+    "share of the PLAN's budget, so it follows an upgrade on its own — and it " +
+    "does not apply to owners running on their own API key.",
+};
 
 /** Champs de cadence — partagés par `create_routine` et `update_routine`. */
 export const ROUTINE_SCHEDULE_PROPERTIES: Record<string, unknown> = {
@@ -135,6 +157,7 @@ export const CREATE_ROUTINE_PARAMETERS = {
       type: "string",
       description: "Branch the runs start from. Omit for the repository's default branch.",
     },
+    max_spend_percent: MAX_SPEND_PERCENT_PROPERTY,
   } as Record<string, unknown>,
   // `minute`, `weekdays` et `days_of_month` restent hors du requis : les deux
   // derniers dépendent de la cadence, et un champ requis mais interdit selon la
@@ -166,6 +189,7 @@ export const UPDATE_ROUTINE_PARAMETERS = {
     model: { type: "string", description: "New exact model id, or null to use the default." },
     reasoning_level: { type: "string", enum: [...REASONING_LEVELS] },
     base_branch: { type: "string", description: "New base branch." },
+    max_spend_percent: MAX_SPEND_PERCENT_PROPERTY,
   } as Record<string, unknown>,
   required: ["routine_id"],
 };

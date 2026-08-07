@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getRoutineForUser, stampRoutineLaunched } from "@/lib/server/routines";
+import {
+  getRoutineForUser,
+  routineRunBudgetUsd,
+  stampRoutineLaunched,
+} from "@/lib/server/routines";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 
 /**
@@ -69,6 +73,10 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     reasoningLevel: routine.reasoning_level,
     baseBranch: routine.base_branch,
     routineId: routine.id,
+    // Le même plafond qu'un passage du calendrier : c'est la routine qui
+    // travaille, et essayer la sienne ne doit pas coûter plus cher que la
+    // laisser partir toute seule.
+    budgetUsd: await routineRunBudgetUsd(routine),
   });
   if (!result.ok) return launchErrorResponse(result);
   // Le passage est parti : la routine retient qu'elle a tourné (et l'alerte du

@@ -105,6 +105,9 @@ export async function POST(request: NextRequest) {
     model: str(body.model, MAX_SHORT_FIELD) || null,
     reasoningLevel: str(body.reasoningLevel, 32) || null,
     baseBranch: str(body.baseBranch, MAX_SHORT_FIELD) || null,
+    // Absent = le défaut de la fabrique (90 %). La borne 1–100 est la sienne
+    // aussi : une seule règle pour les quatre portes.
+    maxSpendPercent: num(body.maxSpendPercent),
     frequency: str(body.frequency, 32),
     hour: num(body.hour) ?? 9,
     minute: num(body.minute) ?? 0,

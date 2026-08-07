@@ -26,6 +26,7 @@ interface RoutineRow extends Record<string, unknown> {
   model: string | null;
   reasoning_level: "off" | "low" | "medium" | "high";
   base_branch: string | null;
+  max_spend_percent: number;
   frequency: "daily" | "weekly" | "monthly";
   hour: number;
   minute: number;
@@ -46,6 +47,14 @@ const world = {
   hasRepo: true,
   /** Le modèle demandé dépasse-t-il le plafond du plan ? */
   modelAbovePlan: false,
+  /** Le quota du propriétaire — `cap` est le budget mensuel du plan (Go : 5 $). */
+  quota: {
+    allowed: true,
+    unlimited: false,
+    mode: "platform" as "platform" | "byok",
+    cap: 5 as number | undefined,
+    remaining: 5 as number | undefined,
+  },
 };
 
 function makeRoutine(over: Partial<RoutineRow> = {}): RoutineRow {
@@ -58,6 +67,7 @@ function makeRoutine(over: Partial<RoutineRow> = {}): RoutineRow {
     model: null,
     reasoning_level: "medium",
     base_branch: null,
+    max_spend_percent: 15,
     frequency: "weekly",
     hour: 9,
     minute: 0,
@@ -172,7 +182,7 @@ vi.mock("@/lib/server/git/repo-links", () => ({
 }));
 
 vi.mock("@/lib/server/agent/quota", () => ({
-  checkAgentQuota: async () => ({ allowed: true, unlimited: false, mode: "platform" }),
+  checkAgentQuota: async () => world.quota,
 }));
 
 // Le petit modèle qui NOMME la routine : on ne l'appelle pas pour de vrai, mais
@@ -205,6 +215,7 @@ const {
   createRoutine,
   deleteRoutine,
   listRoutinesForUser,
+  routineRunBudgetUsd,
   stampRoutineLaunched,
   updateRoutine,
 } = await import("./routines");
@@ -213,6 +224,13 @@ beforeEach(() => {
   world.routines = [];
   world.hasRepo = true;
   world.modelAbovePlan = false;
+  world.quota = {
+    allowed: true,
+    unlimited: false,
+    mode: "platform",
+    cap: 5,
+    remaining: 5,
+  };
   titleCalls.length = 0;
 });
 
@@ -405,6 +423,64 @@ describe("deleteRoutine", () => {
     const result = await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
     expect(result).toEqual({ ok: true });
     expect(world.routines).toHaveLength(0);
+  });
+});
+
+/**
+ * Le PLAFOND DE DÉPENSE d'un passage — le garde-fou qui manquait : une routine
+ * n'était bornée que par le quota du compte, donc un seul passage pouvait
+ * prendre tout le mois. Sur un plan à 5 $ d'usage, il ne restait rien.
+ */
+describe("plafond de dépense", () => {
+  it("pose 15 % par défaut, sans que personne ne le demande", async () => {
+    // Le défaut protège le MOIS, pas seulement le pire passage : une routine
+    // hebdomadaire doit tenir ses quatre passages et laisser l'essentiel au
+    // travail à la main.
+    const result = await createRoutine(validInput());
+    expect(result).toMatchObject({ ok: true });
+    expect(world.routines[0].max_spend_percent).toBe(15);
+  });
+
+  it("RAMÈNE un plafond absurde dans ses bornes plutôt que de refuser", async () => {
+    // Le CHECK de la base, lui, ne pardonnerait pas — et une routine ne doit
+    // pas se refuser sur un pourcentage mal écrit par une des quatre portes.
+    await createRoutine(validInput({ maxSpendPercent: 400 }));
+    expect(world.routines[0].max_spend_percent).toBe(100);
+    world.routines = [];
+    await createRoutine(validInput({ maxSpendPercent: 0 }));
+    expect(world.routines[0].max_spend_percent).toBe(1);
+  });
+
+  it("se change après coup, sans toucher au reste", async () => {
+    world.routines = [makeRoutine()];
+    const result = await updateRoutine({
+      routineId: ROUTINE_ID,
+      actorId: OWNER_ID,
+      maxSpendPercent: 25,
+    });
+    expect(result).toMatchObject({ ok: true });
+    expect(world.routines[0].max_spend_percent).toBe(25);
+    // Le titre n'a pas été repayé : seule l'instruction le refait.
+    expect(titleCalls).toHaveLength(0);
+  });
+
+  it("vaut une part du budget du PLAN, pas du restant du mois", async () => {
+    // Un plafond qui fondrait avec la consommation ferait travailler la routine
+    // de moins en moins loin à mesure que le mois avance, sans que son réglage
+    // ait bougé. Ce qui borne le restant, c'est le quota — l'autre moitié du
+    // `min()` de la boucle.
+    world.quota.remaining = 1;
+    const budget = await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 50 }));
+    expect(budget).toBeCloseTo(2.5, 6);
+  });
+
+  it("ne pose AUCUN plafond à 100 % ni en BYOK", async () => {
+    expect(await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 100 }))).toBeNull();
+    // En BYOK l'utilisateur paye ses tokens : le budget du plan ne borne plus
+    // rien, et un pourcentage de ce budget lui poserait un plafond qu'il n'a pas
+    // demandé. Même doctrine que le plafond de modèle.
+    world.quota = { allowed: true, unlimited: true, mode: "byok", cap: undefined, remaining: undefined };
+    expect(await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 50 }))).toBeNull();
   });
 });
 

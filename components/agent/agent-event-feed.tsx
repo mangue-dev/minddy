@@ -95,6 +95,10 @@ type FeedItem =
       resetsAt: string | null;
       nextPlanId: BillingPlanId | null;
       byok: boolean;
+      /** `run_cap` = c'est le plafond de CE passage qui a mordu, pas le compte. */
+      cause: "account" | "run_cap";
+      /** Ce plafond, en % du budget mensuel — null quand la cause est le compte. */
+      capPercent: number | null;
       createdAt: string;
     }
   /** Phase de réflexion du modèle (MIN-122) : ligne compacte + compteur, jamais
@@ -489,6 +493,10 @@ function buildFeed(
           resetsAt: typeof p.resetsAt === "string" ? p.resetsAt : null,
           nextPlanId: coerceBillingPlanId(p.nextPlanId),
           byok: p.byok === true,
+          // Les events d'avant le plafond par passage n'ont pas de `cause` : ils
+          // parlent tous du budget du compte, la seule frontière qui existait.
+          cause: p.cause === "run_cap" ? "run_cap" : "account",
+          capPercent: typeof p.capPercent === "number" ? p.capPercent : null,
           createdAt: e.created_at,
         });
         break;
@@ -697,6 +705,8 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
         resetsAt={it.resetsAt}
         nextPlanId={it.nextPlanId}
         byok={it.byok}
+        cause={it.cause}
+        capPercent={it.capPercent}
       />
     );
   }

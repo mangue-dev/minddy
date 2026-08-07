@@ -7,6 +7,11 @@ import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { isReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import {
+  DEFAULT_MAX_SPEND_PERCENT,
+  NO_SPEND_CAP_PERCENT,
+  clampSpendPercent,
+} from "@/lib/routine-budget";
 import { generateShortTitle } from "@/lib/server/short-title";
 import {
   RoutineScheduleError,
@@ -51,6 +56,11 @@ export interface Routine {
   model: string | null;
   reasoning_level: ReasoningLevel;
   base_branch: string | null;
+  /**
+   * Part du budget d'usage mensuel du plan qu'UN passage a le droit de dépenser
+   * (1–100, 15 par défaut). Cf. `routineRunBudgetUsd`.
+   */
+  max_spend_percent: number;
   frequency: RoutineFrequency;
   hour: number;
   minute: number;
@@ -104,6 +114,34 @@ const MAX_PROMPT_LENGTH = 20_000;
 const MAX_MODEL_LENGTH = 200;
 const MAX_BRANCH_LENGTH = 255;
 
+/**
+ * Ce qu'UN passage de cette routine a le droit de dépenser, en USD — le
+ * `budget_usd` posé sur son run, que la boucle rend exécutoire.
+ *
+ * `null` = pas de plafond propre, et c'est vrai dans deux cas :
+ *  - **100 %**, le réglage qui dit « seul mon quota me borne » (l'ancien
+ *    comportement, gardé accessible) ;
+ *  - **BYOK**, où le budget du plan ne borne plus rien : l'utilisateur paye ses
+ *    tokens, et un pourcentage d'un budget qui ne le concerne pas lui poserait
+ *    un plafond qu'il n'a pas demandé. Même doctrine que le plafond de modèle
+ *    (`ensureModelInPlan`), qui ne vaut lui aussi que sur le quota minddy.
+ *
+ * La base est le budget du PLAN et non le restant du mois : un plafond qui
+ * fondrait avec la consommation ferait travailler la routine de moins en moins
+ * loin à mesure que le mois avance, sans que son réglage ait bougé. Ce qui
+ * borne le restant, c'est le quota — l'autre moitié du `min()` de la boucle.
+ */
+export async function routineRunBudgetUsd(routine: {
+  owner_id: string;
+  max_spend_percent: number;
+}): Promise<number | null> {
+  const percent = clampSpendPercent(routine.max_spend_percent);
+  if (percent >= NO_SPEND_CAP_PERCENT) return null;
+  const quota = await checkAgentQuota(routine.owner_id);
+  if (quota.unlimited || quota.cap == null) return null;
+  return (quota.cap * percent) / 100;
+}
+
 export interface CreateRoutineInput {
   projectId: string;
   /** Qui demande. La garde owner porte sur LUI, quelle que soit la porte. */
@@ -118,6 +156,8 @@ export interface CreateRoutineInput {
   model?: string | null;
   reasoningLevel?: string | null;
   baseBranch?: string | null;
+  /** Plafond d'un passage, en % du budget mensuel (1–100). Absent → 15. */
+  maxSpendPercent?: number | null;
   frequency: string;
   hour: number;
   minute?: number | null;
@@ -278,6 +318,13 @@ export async function createRoutine(
       base_branch: input.baseBranch?.trim()
         ? input.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
         : null,
+      // Ramené dans ses bornes plutôt que refusé : un plafond mal écrit par une
+      // des quatre portes ne doit pas empêcher de poser la routine — le CHECK
+      // de la base, lui, ne pardonnerait pas.
+      max_spend_percent:
+        input.maxSpendPercent == null
+          ? DEFAULT_MAX_SPEND_PERCENT
+          : clampSpendPercent(input.maxSpendPercent),
       frequency: schedule.frequency,
       hour: schedule.hour,
       minute: schedule.minute,
@@ -306,6 +353,8 @@ export interface UpdateRoutineInput {
   model?: string | null;
   reasoningLevel?: string | null;
   baseBranch?: string | null;
+  /** Nouveau plafond d'un passage, en % du budget mensuel (1–100). */
+  maxSpendPercent?: number | null;
   frequency?: string;
   hour?: number;
   minute?: number | null;
@@ -363,6 +412,9 @@ export async function updateRoutine(
     updates.base_branch = input.baseBranch?.trim()
       ? input.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
       : null;
+  }
+  if (input.maxSpendPercent != null) {
+    updates.max_spend_percent = clampSpendPercent(input.maxSpendPercent);
   }
 
   // La cadence se relit ENTIÈRE, en fusionnant l'existant et ce qui change :

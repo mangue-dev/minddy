@@ -2,6 +2,7 @@ import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 import type { AgentRunSummary } from "./agent-api";
 import type { ReasoningLevel } from "./agent-reasoning";
+import { DEFAULT_MAX_SPEND_PERCENT } from "./routine-budget";
 import type { RoutineFrequency } from "./routine-schedule";
 
 /**
@@ -56,6 +57,9 @@ export interface Routine {
   model: string | null;
   reasoning_level: ReasoningLevel;
   base_branch: string | null;
+  /** Part du budget mensuel qu'UN passage peut dépenser (1–100 ; 100 = sans
+   *  plafond propre, seul le quota du compte borne). */
+  max_spend_percent: number;
   frequency: RoutineFrequency;
   hour: number;
   minute: number;
@@ -79,6 +83,8 @@ export interface RoutineInput {
   model?: string | null;
   reasoningLevel?: ReasoningLevel;
   baseBranch?: string | null;
+  /** Plafond d'un passage, en % du budget mensuel. Absent = le défaut (90 %). */
+  maxSpendPercent?: number;
   frequency: RoutineFrequency;
   hour: number;
   minute: number;
@@ -101,6 +107,10 @@ export async function createRoutineApi(
     model: input.model ?? "default",
     reasoning_level: input.reasoningLevel ?? "default",
     has_branch: !!input.baseBranch,
+    // Le plafond de dépense choisi : c'est le réglage dont on veut savoir s'il
+    // est TOUCHÉ, et dans quel sens — un défaut que personne ne bouge n'est pas
+    // le bon défaut.
+    spend_cap_percent: input.maxSpendPercent ?? DEFAULT_MAX_SPEND_PERCENT,
     prompt_length_bucket: lengthBucket(input.prompt),
   });
   return parseJson(

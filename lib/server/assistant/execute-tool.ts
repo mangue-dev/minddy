@@ -304,6 +304,7 @@ function routineForTool(routine: {
   title: string;
   prompt: string;
   model: string | null;
+  max_spend_percent: number;
   frequency: string;
   hour: number;
   minute: number;
@@ -320,6 +321,8 @@ function routineForTool(routine: {
     title: routine.title,
     prompt: routine.prompt,
     model: routine.model,
+    /** Ce qu'UN passage peut dépenser, en % du budget mensuel du propriétaire. */
+    max_spend_percent: routine.max_spend_percent,
     frequency: routine.frequency,
     hour: routine.hour,
     minute: routine.minute,
@@ -1294,6 +1297,8 @@ export async function executeTool(
           reasoningLevel:
             typeof args.reasoning_level === "string" ? args.reasoning_level : null,
           baseBranch: typeof args.base_branch === "string" ? args.base_branch : null,
+          maxSpendPercent:
+            typeof args.max_spend_percent === "number" ? args.max_spend_percent : null,
           frequency: typeof args.frequency === "string" ? args.frequency : "",
           hour: typeof args.hour === "number" ? args.hour : 9,
           minute: typeof args.minute === "number" ? args.minute : 0,
@@ -1327,6 +1332,9 @@ export async function executeTool(
             ? { reasoningLevel: args.reasoning_level }
             : {}),
           ...(typeof args.base_branch === "string" ? { baseBranch: args.base_branch } : {}),
+          ...(typeof args.max_spend_percent === "number"
+            ? { maxSpendPercent: args.max_spend_percent }
+            : {}),
           ...(typeof args.frequency === "string" ? { frequency: args.frequency } : {}),
           ...(typeof args.hour === "number" ? { hour: args.hour } : {}),
           ...(typeof args.minute === "number" ? { minute: args.minute } : {}),

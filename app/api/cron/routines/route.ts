@@ -4,6 +4,7 @@ import { verifyCronSecret } from "@/lib/server/cron-auth";
 import {
   claimRoutine,
   dueRoutines,
+  routineRunBudgetUsd,
   stampRoutineError,
   type Routine,
   type RoutineErrorCode,
@@ -30,9 +31,15 @@ import { launchAgentRun } from "@/lib/server/agent/launch";
  * budget déjà à sec.
  *
  * **Un échec se DIT** : `last_error` porte un CODE (jamais une phrase — c'est
- * l'UI qui traduit), lu dans l'en-tête de la routine. C'est ce qui rend tenable
- * l'absence de garde-fou de dépense propre aux routines : le budget épuisé se
- * voit à l'endroit où on va chercher pourquoi rien ne s'est passé.
+ * l'UI qui traduit), lu dans l'en-tête de la routine. Le budget épuisé se voit
+ * ainsi à l'endroit où on va chercher pourquoi rien ne s'est passé.
+ *
+ * **Chaque passage part avec un PLAFOND DE DÉPENSE** (`routineRunBudgetUsd`),
+ * une part du budget mensuel réglée sur la routine. Il n'y en avait pas : le
+ * quota du compte bornait seul, donc un passage pouvait légitimement prendre
+ * les 100 % du mois — et sur un plan à 5 $ d'usage, ne rien laisser au travail
+ * à la main. Ce n'est pas un refus de lancer : le passage part, et c'est la
+ * boucle qui s'arrête à la frontière, travail poussé et checkpoint gardé.
  */
 
 export const runtime = "nodejs";
@@ -79,6 +86,10 @@ async function runRoutine(routine: Routine): Promise<{ id: string; outcome: stri
     reasoningLevel: routine.reasoning_level,
     baseBranch: routine.base_branch,
     routineId: routine.id,
+    // Le plafond de CE passage (cf. `routineRunBudgetUsd`) : la boucle prend le
+    // plus serré entre lui et le quota du compte. C'est lui qui empêche un
+    // passage de prendre tout le mois.
+    budgetUsd: await routineRunBudgetUsd(routine),
   });
 
   if (!result.ok) {

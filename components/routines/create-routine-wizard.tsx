@@ -13,6 +13,8 @@ import { SettingsRow } from "@/components/settings/settings-ui";
 import { WizardDialog, type WizardStep } from "@/components/wizard/wizard-dialog";
 import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
+import { SpendCapCombobox } from "@/components/routines/spend-cap-combobox";
+import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
 import { useProjects } from "@/lib/projects-context";
 import { useAuth } from "@/lib/auth-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
@@ -100,6 +102,8 @@ export function CreateRoutineWizard({
   const [reasoning, setReasoning] = useState<ReasoningLevel | null>(null);
   /** "" = la branche par défaut du dépôt, ce qui est le cas courant. */
   const [baseBranch, setBaseBranch] = useState("");
+  /** Ce qu'un passage a le droit de dépenser, en % du budget mensuel. */
+  const [spendCap, setSpendCap] = useState(DEFAULT_MAX_SPEND_PERCENT);
   // La cadence tient dans UN état, celui-là même que le calcul et la phrase
   // lisible attendent : rien à recomposer entre l'écran et le serveur.
   const [schedule, setSchedule] = useState<RoutineSchedule>(() => ({
@@ -148,6 +152,7 @@ export function CreateRoutineWizard({
     setPrompt("");
     setModel("");
     setReasoning(null);
+    setSpendCap(DEFAULT_MAX_SPEND_PERCENT);
     setSchedule({
       frequency: "weekly",
       hour: 9,
@@ -214,6 +219,7 @@ export function CreateRoutineWizard({
         model: model || null,
         reasoningLevel: reasoning ?? defaultReasoningLevel,
         baseBranch: baseBranch || null,
+        maxSpendPercent: spendCap,
         frequency: schedule.frequency,
         hour: schedule.hour,
         minute: schedule.minute,
@@ -368,6 +374,21 @@ export function CreateRoutineWizard({
                 placeholder={tAgent("branchSearchPlaceholder")}
                 emptyLabel={tAgent("branchSearchEmpty")}
                 loadingLabel={tAgent("branchSearchLoading")}
+                disabled={creating}
+              />
+            }
+          />
+          {/* CE QU'ELLE PEUT DÉPENSER, à côté de ce qui le décide (le modèle, le
+              raisonnement) : une routine part seule, personne ne regarde sa
+              barre d'usage pendant qu'elle travaille. Sans ce plafond, un seul
+              passage pouvait prendre le mois entier. */}
+          <SettingsRow
+            label={t("spendCapLabel")}
+            help={t("spendCapHelp")}
+            control={
+              <SpendCapCombobox
+                value={spendCap}
+                onChange={setSpendCap}
                 disabled={creating}
               />
             }

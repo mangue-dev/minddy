@@ -325,6 +325,8 @@ function mcpRoutine(routine: Routine) {
     model: routine.model,
     reasoning_level: routine.reasoning_level,
     base_branch: routine.base_branch,
+    /** Ce qu'UN passage peut dépenser, en % du budget mensuel du propriétaire. */
+    max_spend_percent: routine.max_spend_percent,
     frequency: routine.frequency,
     hour: routine.hour,
     minute: routine.minute,
@@ -3567,7 +3569,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "what to look at, what counts as a finding, what to do with one. The model " +
         "is chosen per routine and frozen on it — the strongest one for a security " +
         "review, the cheapest for a monthly inventory — and its spend is billed " +
-        "under 'Routines', separately from agent runs. Requires a linked repository.",
+        "under 'Routines', separately from agent runs. ONE run stops at 15% of the " +
+        "owner's monthly usage budget by default, so a routine cannot silently " +
+        "take the whole month (`max_spend_percent`). Requires a linked repository.",
       inputSchema: {
         project_id: PROJECT_ID,
         prompt: z
@@ -3632,6 +3636,21 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .string()
           .optional()
           .describe("Branch the runs start from. Omit for the repository's default branch."),
+        max_spend_percent: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            "Cap on what ONE run of this routine may spend, as a percentage of the " +
+              "owner's monthly usage budget. OMIT unless the user asks for a cap: " +
+              "the default (15) lets a routine run all month without eating the " +
+              "budget, and 100 removes the cap. Raise it for a routine that runs " +
+              "rarely and must finish its job (a monthly security review at 50); " +
+              "lower it for one that runs every day (an inventory at 5). It " +
+              "does not apply to owners running on their own API key."
+          ),
       },
       annotations: WRITE,
     },
@@ -3645,6 +3664,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         model: args.model ?? null,
         reasoningLevel: args.reasoning_level ?? null,
         baseBranch: args.base_branch ?? null,
+        maxSpendPercent: args.max_spend_percent ?? null,
         frequency: args.frequency,
         hour: args.hour,
         minute: args.minute ?? 0,
@@ -3698,6 +3718,18 @@ export function registerMinddyTools(rawServer: McpServer): void {
         model: z.string().optional(),
         reasoning_level: z.enum(["off", "low", "medium", "high"]).optional(),
         base_branch: z.string().optional(),
+        max_spend_percent: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe(
+            "New cap on what ONE run may spend, as a percentage of the owner's " +
+              "monthly usage budget (100 = no cap of its own). This is what to " +
+              "change when a run stopped on its cap and the user wants it to go " +
+              "further — not the plan."
+          ),
       },
       annotations: WRITE_IDEMPOTENT,
     },
@@ -3714,6 +3746,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
           ? { reasoningLevel: args.reasoning_level }
           : {}),
         ...(args.base_branch !== undefined ? { baseBranch: args.base_branch } : {}),
+        ...(args.max_spend_percent !== undefined
+          ? { maxSpendPercent: args.max_spend_percent }
+          : {}),
         ...(args.frequency !== undefined ? { frequency: args.frequency } : {}),
         ...(args.hour !== undefined ? { hour: args.hour } : {}),
         ...(args.minute !== undefined ? { minute: args.minute } : {}),
