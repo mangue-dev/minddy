@@ -8,10 +8,8 @@ import { recordSandboxUsage } from "@/lib/server/usage";
 import type { AiUsageBillTo } from "@/lib/server/ai-usage";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
-import {
-  AGENT_SOFT_DEADLINE_MS,
-  AGENT_MAX_CONTINUATIONS,
-} from "@/lib/agent-models";
+import { AGENT_MAX_CONTINUATIONS } from "@/lib/agent-models";
+import { CHUNK_FLOOR_MS, chunkSoftDeadlineMs } from "./chunk-budget";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
@@ -202,10 +200,6 @@ async function resolveCommitterIdentity(
   return { name: "minddy agent", email: "agent@minddy.app" };
 }
 
-/** Marge (ms) réservée après la boucle pour commit+push+PR+stamp. */
-const COMMIT_MARGIN_MS = 25_000;
-/** Soft-deadline plancher d'un chunk (si le budget restant est très court). */
-const MIN_SOFT_DEADLINE_MS = 20_000;
 /** Wall-clock max d'UN TOUR (garde-fou anti-runaway ; réinitialisé à chaque tour). */
 const MAX_WALL_CLOCK_MS = 60 * 60_000;
 /** Taille max du checkpoint sérialisé. */
@@ -260,23 +254,6 @@ const SUBAGENT_RESUME_DEFER_MS = 30_000;
  * (cf. `toolOutputFileName`) et le second écraserait la sortie du premier.
  */
 const SUBAGENT_OUTPUT_SEQ_BASE = 500_000;
-
-/**
- * Soft-deadline d'un chunk : ce que le drain lui donne, moins l'amorçage déjà
- * consommé et la marge de fin de tour, borné par la config.
- *
- * UNE fonction pour deux appelants : l'ADMISSION la projette à l'entrée du chunk
- * (`elapsedMs` à zéro, l'amorçage n'a pas encore eu lieu), la boucle la calcule pour
- * de bon une fois la microVM réveillée. Deux copies de cette formule dériveraient,
- * et l'admission refuserait alors sur un autre chiffre que celui que le chunk
- * s'accorde vraiment.
- */
-function chunkSoftDeadlineMs(deadlineMs: number, elapsedMs: number): number {
-  return Math.max(
-    MIN_SOFT_DEADLINE_MS,
-    Math.min(deadlineMs - elapsedMs - COMMIT_MARGIN_MS, AGENT_SOFT_DEADLINE_MS),
-  );
-}
 
 export type ExecuteOutcome = "completed" | "suspended" | "interrupted" | "failed";
 
@@ -1334,6 +1311,49 @@ export async function executeAgentRun(
       sandbox_stopped_at: null,
       base_branch: baseBranch,
     });
+
+    /**
+     * AMORÇAGE TROP LONG (MIN-213) — le budget qu'il reste VRAIMENT, une fois la
+     * microVM debout, relu contre le plancher que le chunk s'accorde.
+     *
+     * `MIN_CHUNK_BUDGET_MS` réserve une indemnité d'amorçage à l'admission, mais un
+     * réveil n'est borné par rien (le clone a 180 s de timeout à lui seul) : c'est une
+     * moyenne, pas une garantie. Sans cette relecture, un amorçage qui déborde laisse
+     * la boucle prendre quand même son plancher, puis pousser — et la fonction est
+     * tuée en plein travail. Le run reste alors `running` vingt minutes
+     * (`STUCK_RUNNING_MS`) sans un event, et si la VM avait déjà édité six fichiers,
+     * le chunk suivant repart d'un historique qui les ignore.
+     *
+     * Le re-queue est IMMÉDIAT (`not_before` = maintenant) et il est sûr : la microVM
+     * est chaude et déjà persistée juste au-dessus, donc le chunk suivant repart
+     * dessus sans re-payer le clone. Et le drain qui vient de nous claim ne peut pas
+     * boucler dessus — son propre seuil est plus HAUT que ce plancher, il sortira de
+     * sa boucle au même tour.
+     *
+     * Mêmes invariants que le refus d'admission de MIN-212 : ni `continuations`
+     * (rien n'a été joué) ni `checkpoint` (rien n'a bougé) ne sont touchés, et
+     * `attempts` repart à zéro — le budget de reprise sur crash sert aux chunks qui
+     * MEURENT, pas à ceux qui rendent la main.
+     */
+    const afterSetupMs = opts.deadlineMs - (Date.now() - callStart);
+    if (afterSetupMs < CHUNK_FLOOR_MS) {
+      await stampRun(run.id, {
+        status: "queued",
+        not_before: new Date().toISOString(),
+        attempts: 0,
+        last_activity_at: new Date().toISOString(),
+      });
+      // Event `status` neutre, invisible dans le fil (pas de `sandbox_ready` émis :
+      // il ferait dire à la conversation que l'agent travaille alors qu'il rend la
+      // main). Comptable en base, comme `subagent_resume` : c'est lui qui dira
+      // combien d'amorçages débordent, et de combien.
+      await emit("status", {
+        phase: "chunk_deferred",
+        reason: "cold_setup",
+        budgetMs: afterSetupMs,
+      });
+      return "suspended";
+    }
 
     // La machine est là. C'est la seule chose que le fil ne pouvait pas deviner :
     // entre le `status: running` du haut de ce chunk et le premier pas de l'agent,

@@ -3,6 +3,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { claimRun, requeueStuckRuns } from "./runs";
+// Le seuil d'admission d'un chunk ne se pose pas ici : il DÉRIVE de ce que le chunk
+// s'accorde une fois démarré, plus son amorçage (MIN-213). Deux chiffres écrits à la
+// main de part et d'autre de cette frontière se contredisaient — le drain admettait
+// 40 s là où le chunk s'en garantissait 45, avant même le réveil de la microVM.
+import { MIN_CHUNK_BUDGET_MS } from "./chunk-budget";
 import { executeAgentRun } from "./execute";
 import { stopSandboxByName } from "./sandbox";
 import { currentDeploymentScope } from "./deployment";
@@ -23,8 +28,6 @@ import { currentDeploymentScope } from "./deployment";
  * plein chunk — checkpoint non écrit, tour perdu.
  */
 const DRAIN_TIME_BUDGET_MS = 270_000;
-/** On ne démarre pas un chunk s'il reste moins que ça. */
-const MIN_CHUNK_BUDGET_MS = 40_000;
 /** Inactivité au-delà de laquelle on coupe la microVM d'un run au repos. */
 const SANDBOX_IDLE_REAP_MS = 5 * 60_000;
 /** Runs au repos dont la microVM peut être coupée. `completed` = le seul repos du
