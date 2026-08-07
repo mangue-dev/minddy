@@ -7,8 +7,11 @@ import {
   COMMIT_MARGIN_MS,
   MIN_CHUNK_BUDGET_MS,
   MIN_SOFT_DEADLINE_MS,
+  RUN_COMMAND_MIN_TIMEOUT_MS,
   chunkSoftDeadlineMs,
+  runCommandTimeoutMs,
 } from "./chunk-budget";
+import { RUN_COMMAND_TIMEOUT_MS } from "./tools";
 
 /**
  * MIN-213 — le seuil d'admission d'un chunk et le plancher que ce chunk s'accorde
@@ -75,5 +78,43 @@ describe("chunkSoftDeadlineMs", () => {
 
   it("reste plafonné par la config du run", () => {
     expect(chunkSoftDeadlineMs(AGENT_SOFT_DEADLINE_MS * 3, 0)).toBe(AGENT_SOFT_DEADLINE_MS);
+  });
+});
+
+/**
+ * MIN-214 — la soft-deadline n'était qu'un guichet d'ENTRÉE : elle décidait si on
+ * entamait un round, jamais si on avait de quoi le finir. Un round entamé à
+ * t=219 s sur une fenêtre de 220 pouvait lancer un `run_command` qui allait au bout
+ * de ses 180 s : la fonction était tuée à 300 s, le checkpoint jamais écrit, et tout
+ * le travail du chunk perdu.
+ */
+describe("runCommandTimeoutMs", () => {
+  const clamp = (asked: number | null, remaining: number) =>
+    runCommandTimeoutMs(asked, remaining, RUN_COMMAND_TIMEOUT_MS);
+
+  it("rend le plafond du tool quand le chunk a le temps devant lui", () => {
+    expect(clamp(null, 600_000)).toBe(RUN_COMMAND_TIMEOUT_MS);
+  });
+
+  it("borne par le RESTANT du chunk — c'est le terme N × 180 s qui disparaît", () => {
+    expect(clamp(null, 40_000)).toBe(40_000);
+    expect(clamp(RUN_COMMAND_TIMEOUT_MS, 40_000)).toBe(40_000);
+  });
+
+  it("laisse le modèle RACCOURCIR, jamais allonger", () => {
+    expect(clamp(5_000, 600_000)).toBe(5_000);
+    expect(clamp(RUN_COMMAND_TIMEOUT_MS * 10, 600_000)).toBe(RUN_COMMAND_TIMEOUT_MS);
+    // Le plancher borne le plafond dérivé du temps, PAS la demande du modèle : une
+    // commande annoncée courte doit rester courte, même sur un chunk à sec.
+    expect(clamp(1_000, 0)).toBe(1_000);
+  });
+
+  it("garde un plancher : un chunk à sec ne rend pas un timeout de zéro", () => {
+    // Sans lui, la commande n'aurait pas le temps de démarrer et le modèle lirait un
+    // timeout là où il n'y a qu'un budget épuisé. Le débordement est borné par ce
+    // plancher, et absorbé par la marge de fin de tour.
+    expect(clamp(null, 0)).toBe(RUN_COMMAND_MIN_TIMEOUT_MS);
+    expect(clamp(null, -30_000)).toBe(RUN_COMMAND_MIN_TIMEOUT_MS);
+    expect(RUN_COMMAND_MIN_TIMEOUT_MS).toBeLessThan(COMMIT_MARGIN_MS);
   });
 });

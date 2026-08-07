@@ -51,6 +51,7 @@ import {
   sleep,
   MAX_STREAM_ATTEMPTS,
   MAX_RETRY_WAIT_MS,
+  MIN_STREAM_ATTEMPT_MS,
   STREAM_IDLE_TIMEOUT_MS,
 } from "./retry";
 
@@ -107,6 +108,16 @@ const TRUNCATED_NUDGE =
   "Your reply was cut off at the token limit before you finished — it was NOT delivered as a conclusion. Continue from exactly where you stopped, and keep it short enough to fit. If work remains, call the tools you need instead of writing a long summary.";
 const EMPTY_REPLY_NUDGE =
   "Your last round came back empty: no text, no tool call. Nothing was delivered. Either call the tool you need, or write your reply to the user.";
+/**
+ * Ce que lit le modèle d'un tool-call que la fin du chunk a laissé sur le carreau
+ * (MIN-214). Il doit distinguer « pas exécuté » de « exécuté et raté » : sans ça, un
+ * `run_command` sauté se lirait comme une commande en échec, et le round suivant
+ * partirait déboguer un problème qui n'existe pas.
+ */
+const TOOL_NOT_EXECUTED_NOTE =
+  "not executed: this turn ran out of time and was suspended right before this call. Nothing was run, nothing changed. The turn resumes with a fresh time budget — call this tool again if you still need it.";
+/** Tag mesurable sur agent_run_events, comme `forbidden_command` côté commandes. */
+const SUSPENDED_TOOL_REASON = "turn_suspended";
 /**
  * Garde-fou PROPRE aux sous-agents (MIN-112) : relances du tour pour livrer un
  * rapport arrivé après que le modèle a rendu la main. Indépendant de
@@ -1038,11 +1049,18 @@ async function streamCompletion(opts: {
       // Attente plafonnée (un Retry-After absurde ne doit pas nous faire dormir au-
       // delà de maxDuration) ET budget-aware : si dormir puis retenter dépasse la
       // deadline du chunk, on relève → l'appelant suspend (reprise, fonction fraîche).
+      //
+      // La garde porte sur la TENTATIVE, pas seulement sur le sommeil (MIN-214) : il
+      // faut de quoi la FINIR, pas seulement de quoi dormir avant de la lancer. Sans
+      // le terme `MIN_STREAM_ATTEMPT_MS`, on repartait avec 2 s de budget pour un
+      // appel qui peut en prendre 210 — la fonction était tuée avant le checkpoint,
+      // et tout le chunk partait avec. La phase modèle d'un round de fin de fenêtre
+      // se ramène ainsi à un seul appel.
       const wait = Math.min(
         (err instanceof StreamError ? err.retryAfterMs : undefined) ?? backoffMs(attempt),
         MAX_RETRY_WAIT_MS,
       );
-      if (opts.deadlineAt && Date.now() + wait >= opts.deadlineAt) throw err;
+      if (opts.deadlineAt && Date.now() + wait + MIN_STREAM_ATTEMPT_MS >= opts.deadlineAt) throw err;
       await sleep(wait);
     }
   }
@@ -1137,6 +1155,31 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       name: tc.function.name,
       success: false,
       preview: previewResult({ error }),
+    });
+  };
+
+  /**
+   * Tool-call NON EXÉCUTÉ (MIN-214) : la soft-deadline est tombée ENTRE deux appels
+   * du même round. Même geste que ci-dessus, et pour la même raison — on RÉPOND à
+   * l'appel. Le laisser sans réponse casserait l'appariement du checkpoint, et le
+   * chunk suivant repartirait sur un historique que le provider refuse.
+   *
+   * Le modèle relancera l'appel au chunk suivant : la réponse le lui dit, plutôt que
+   * de lui laisser croire que sa commande a échoué.
+   */
+  const skipForSuspend = async (tc: AssistantToolCall) => {
+    const error = TOOL_NOT_EXECUTED_NOTE;
+    // Les arguments servent au seul résumé du fil : illisibles, l'appel n'a de toute
+    // façon pas été joué — il n'a pas à passer par le refus de MIN-204.
+    const args = safeParse(tc.function.arguments) ?? {};
+    await emit("tool_call", { id: tc.id, name: tc.function.name, ...toolArgSummary(tc.function.name, args) });
+    messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ error }) });
+    await emit("tool_result", {
+      id: tc.id,
+      name: tc.function.name,
+      success: false,
+      preview: previewResult({ error }),
+      reason: SUSPENDED_TOOL_REASON,
     });
   };
 
@@ -1644,8 +1687,31 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // tour se termine après l'exécution de TOUS les tool-calls du round (chaque
     // appel garde sa réponse : l'appariement du checkpoint reste intact).
     let askedUser = false;
+    /**
+     * Frontière de suspension ENTRE deux tool-calls (MIN-214). La garde du sommet de
+     * round ne décide que d'ENTRER dans un round : un round entamé juste avant la
+     * soft-deadline pouvait enchaîner plusieurs appels, et la fonction mourait au
+     * milieu — checkpoint jamais écrit, chunk entier perdu.
+     *
+     * Ici, la sortie est PROPRE : les appels déjà joués ont leur réponse dans
+     * `messages`, les restants reçoivent une note « pas exécuté », l'appariement est
+     * donc intact et le chunk suivant reprend là.
+     *
+     * `executed > 0` est l'invariant qui compte : on ne suspend jamais AVANT d'avoir
+     * joué au moins un appel. Sinon un chunk court reviendrait indéfiniment poser sa
+     * question au modèle sans jamais rien exécuter — le zombie fermé par MIN-213,
+     * repeuplé sur l'axe des tool-calls.
+     */
+    let executed = 0;
+    let suspendAtBoundary = false;
 
     for (const tc of stream.toolCalls) {
+      if (suspendAtBoundary || (executed > 0 && elapsed() >= params.softDeadlineMs)) {
+        suspendAtBoundary = true;
+        await skipForSuspend(tc);
+        continue;
+      }
+      executed++;
       const name = tc.function.name;
       const args = safeParse(tc.function.arguments);
 
@@ -1746,6 +1812,13 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         usageSeqEnd: seq,
         rounds: round,
       };
+    }
+    // Deadline tombée au milieu du round (MIN-214) : tous les tool-calls ont leur
+    // réponse, donc c'est un point de reprise sûr. Testé APRÈS `ask_user` : un tour
+    // qui a posé sa question repose de toute façon, et la question est déjà partie.
+    if (suspendAtBoundary) {
+      clearLive();
+      return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
     }
     // on reboucle (le tour ne se termine que sur une réponse sans tool-call)
   }

@@ -9,7 +9,7 @@ import type { AiUsageBillTo } from "@/lib/server/ai-usage";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
 import { AGENT_MAX_CONTINUATIONS } from "@/lib/agent-models";
-import { CHUNK_FLOOR_MS, chunkSoftDeadlineMs } from "./chunk-budget";
+import { CHUNK_FLOOR_MS, chunkSoftDeadlineMs, runCommandTimeoutMs } from "./chunk-budget";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
@@ -397,6 +397,12 @@ interface ExecToolConfig {
   /** Registre des sous-agents du chunk (MIN-112). null = jeu d'un sous-agent (la
       hiérarchie est à un niveau) ou vieux checkpoint qui appelle encore ces tools. */
   subagents: Subagents | null;
+  /** Ce qu'il reste du budget TEMPS du chunk (MIN-214) — la même horloge que celle
+      qui borne un sous-agent. Elle borne aussi le timeout d'un `run_command` : sans
+      elle, une commande entamée juste avant la soft-deadline allait au bout de ses
+      180 s et la fonction mourait avant d'écrire le checkpoint. PARTAGÉE avec les
+      filles : c'est l'horloge du CHUNK, celle que la plateforme tue. */
+  chunkRemainingMs: () => number;
 }
 
 /** Les tools « métier » de l'agent : Sandbox (fichiers/commandes/jobs de fond),
@@ -417,6 +423,7 @@ function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     instructions,
     editedPaths,
     subagents,
+    chunkRemainingMs,
   } = cfg;
   let outputSeq = 0;
   /** Images déjà montrées au modèle sur ce chunk (plafond MAX_IMAGES_PER_TURN). */
@@ -822,13 +829,16 @@ function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
             };
           }
         }
-        // Le modèle peut RACCOURCIR le timeout, jamais l'allonger : au-delà, la
-        // commande mangerait la soft-deadline du chunk.
-        const asked = toNum(args.timeout_ms);
-        const timeoutMs =
-          asked != null && asked > 0
-            ? Math.min(Math.floor(asked), RUN_COMMAND_TIMEOUT_MS)
-            : RUN_COMMAND_TIMEOUT_MS;
+        // Le modèle peut RACCOURCIR le timeout, jamais l'allonger — et le RESTANT du
+        // chunk le raccourcit à son tour (MIN-214). Le plafond seul ne bornait que
+        // la commande, pas le round : une commande lancée juste avant la
+        // soft-deadline allait au bout de ses 180 s, la fonction était tuée avant
+        // d'écrire le checkpoint, et tout le chunk partait avec.
+        const timeoutMs = runCommandTimeoutMs(
+          toNum(args.timeout_ms),
+          chunkRemainingMs(),
+          RUN_COMMAND_TIMEOUT_MS,
+        );
         const r = await runShell(sandbox, command, { cwd, timeoutMs });
         // Sortie longue → la version COMPLÈTE est déposée dans la sandbox (hors
         // dépôt) et reste relisible via read_file/grep. Best-effort : si l'écriture
@@ -2246,6 +2256,10 @@ export async function executeAgentRun(
             instructions: { paths: [...REPO_INSTRUCTION_FILES], bytes: 0 },
             editedPaths,
             subagents: null,
+            // L'horloge du CHUNK, pas celle de la fille : ce qui tue la fonction
+            // est la fin du chunk, et une commande lancée par une fille la tue
+            // aussi sûrement qu'une commande du parent.
+            chunkRemainingMs,
           }),
         });
 
@@ -2453,6 +2467,7 @@ export async function executeAgentRun(
         instructions,
         editedPaths,
         subagents,
+        chunkRemainingMs,
       }),
       onTurnEnd,
       pullSteering: () => pullPendingMessages(run.id),

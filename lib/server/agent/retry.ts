@@ -9,6 +9,20 @@ export const MAX_STREAM_ATTEMPTS = 4;
 /** Timeout d'inactivité : aucun octet SSE reçu pendant ce délai → on avorte + retry. */
 export const STREAM_IDLE_TIMEOUT_MS = 60_000;
 
+/**
+ * Ce qu'une REPRISE d'appel modèle doit trouver devant elle pour être tentée
+ * (MIN-214). Dérivé du timeout d'inactivité, et pas posé à côté : un essai qui ne
+ * rend pas un octet est coupé là, donc c'est exactement ce qu'il faut avoir pour
+ * s'en offrir un et rester capable d'écrire son checkpoint après.
+ *
+ * La garde ne portait que sur le SOMMEIL : on dormait 500 ms, on repartait avec 2 s
+ * de budget pour un appel qui peut en prendre 210, et la fonction mourait avant le
+ * checkpoint — chunk entier perdu. Elle ne s'applique qu'au point de REPRISE : le
+ * premier essai part toujours, sinon un chunk court suspendrait sans rien faire et
+ * se re-queuerait indéfiniment (le zombie fermé par MIN-213).
+ */
+export const MIN_STREAM_ATTEMPT_MS = STREAM_IDLE_TIMEOUT_MS;
+
 const RETRY_BASE_MS = 500;
 const RETRY_CAP_MS = 8_000;
 /** Plafond DUR d'une attente de reprise (même si Retry-After demande beaucoup plus).

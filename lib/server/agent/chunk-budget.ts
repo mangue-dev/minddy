@@ -65,3 +65,37 @@ export function chunkSoftDeadlineMs(deadlineMs: number, elapsedMs: number): numb
     Math.min(deadlineMs - elapsedMs - COMMIT_MARGIN_MS, AGENT_SOFT_DEADLINE_MS),
   );
 }
+
+/**
+ * Ce qu'un `run_command` garde AU MINIMUM, même quand le chunk est à sec (MIN-214).
+ * Un plancher, pas une réserve : en dessous, la commande n'aurait même pas le temps
+ * de démarrer, et le modèle lirait un timeout là où il n'y a qu'un budget épuisé.
+ * Il déborde donc la soft-deadline d'au plus ça — absorbé par `COMMIT_MARGIN_MS`.
+ */
+export const RUN_COMMAND_MIN_TIMEOUT_MS = 5_000;
+
+/**
+ * Timeout effectif d'un `run_command` (MIN-214) : le plafond du tool, ce que le
+ * modèle a demandé, et ce qu'il RESTE au chunk — le plus petit des trois.
+ *
+ * La soft-deadline n'était qu'un guichet d'entrée : elle décidait si on entamait un
+ * round, jamais si on avait de quoi le finir. Un round entamé juste avant pouvait
+ * lancer une commande qui allait au bout de ses 180 s, et la fonction mourait avant
+ * d'écrire le checkpoint — le chunk entier perdu, le run figé sur `running` vingt
+ * minutes. Borner par le restant supprime le terme N × 180 s.
+ *
+ * Le modèle, lui, ne peut toujours que RACCOURCIR : le plancher ne s'applique qu'au
+ * plafond dérivé du temps, jamais à ce qu'il a demandé.
+ *
+ * `ceilingMs` est passé (c'est `RUN_COMMAND_TIMEOUT_MS`, que `tools.ts` annonce au
+ * modèle dans la description du tool) plutôt qu'importé : ce module ne dépend que de
+ * l'arithmétique du budget, et l'importer ferait entrer tout le schéma des tools ici.
+ */
+export function runCommandTimeoutMs(
+  askedMs: number | null | undefined,
+  remainingMs: number,
+  ceilingMs: number,
+): number {
+  const cap = Math.max(RUN_COMMAND_MIN_TIMEOUT_MS, Math.min(ceilingMs, remainingMs));
+  return askedMs != null && askedMs > 0 ? Math.min(Math.floor(askedMs), cap) : cap;
+}
