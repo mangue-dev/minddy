@@ -256,6 +256,21 @@ export interface RunAgentLoopParams {
    */
   budgetUsd?: number;
   /**
+   * Ce que le CHUNK a déjà dépensé, en dollars — le compteur que `budgetUsd`
+   * plafonne. PARTAGÉ (MIN-202) : l'appelant en crée UN par chunk et le passe à la
+   * boucle du parent comme à celle de chacune de ses filles, qui tournent toutes
+   * dans le même process — un objet mutable suffit, aucun verrou n'est nécessaire.
+   *
+   * Sans ce partage, `budgetUsd` était un scalaire COPIÉ : chaque fille comparait sa
+   * propre dépense au même plafond, et le parent n'apprenait la leur qu'au retour de
+   * leur rapport — donc après qu'elles l'avaient dépensée. Six filles en parallèle
+   * plus le parent, et une routine réglée à 0,75 $ pouvait en prendre 5,25 $ : le
+   * garde-fou était défait par le mécanisme même qu'il devait borner.
+   *
+   * Absent = compteur local, c'est-à-dire le comportement d'une boucle seule.
+   */
+  chunkSpend?: { usd: number };
+  /**
    * Fenêtre de contexte (tokens) du modèle, si connue → seuil de compaction =
    * 75 % de cette fenêtre. Absent = seuil par défaut `AGENT_COMPACT_TOKEN_THRESHOLD`.
    */
@@ -275,9 +290,10 @@ export interface RunAgentLoopParams {
    * prochaine frontière sûre, exactement comme un message de steering. Absent = pas
    * de délégation sur ce run.
    *
-   * `costUsd` est ajouté à l'accumulateur de la boucle : sans lui, `budgetUsd`
-   * sous-compte et un run dépasse le budget mensuel de l'utilisateur (c'est le trou
-   * de facturation le plus facile à laisser ouvert).
+   * `costUsd` est ajouté à l'accumulateur RENDU par la boucle : sans lui, la
+   * dépense des filles n'arriverait jamais jusqu'à `run.cost_usd` (c'est le trou de
+   * facturation le plus facile à laisser ouvert). Il n'entre PAS dans `spend` : la
+   * fille l'y a déjà porté en payant, et l'y remettre le compterait deux fois.
    */
   pullSubagentReports?: () => Promise<Array<{ id: string; text: string; costUsd: number }>>;
   /**
@@ -963,7 +979,19 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     params.emitLive?.({ text: "", tools: 0, reasoningActive: false, reasoningMs: 0 });
 
   let seq = params.usageSeqStart ?? 0;
+  /**
+   * Ce que CETTE boucle a dépensé — rapports de filles compris. C'est ce qu'elle
+   * REND, et ce que l'appelant impute au run. À ne pas confondre avec `spend`
+   * ci-dessous : les deux grandeurs se séparent, et c'est voulu.
+   */
   let costUsd = 0;
+  /**
+   * Ce que le CHUNK a dépensé, filles comprises (MIN-202). Partagé avec elles quand
+   * l'appelant le fournit ; c'est LUI que `budgetUsd` plafonne. On ne l'incrémente
+   * qu'aux deux endroits où cette boucle paie vraiment un appel — jamais au drain
+   * d'un rapport, dont la fille a déjà porté la dépense en la payant.
+   */
+  const spend = params.chunkSpend ?? { usd: 0 };
   let round = 0;
   let compactions = 0;
   // Relances de fin de tour déjà consommées (MIN-110) : la première sert à faire
@@ -1009,11 +1037,14 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     }
     // Budget d'usage épuisé (quota minddy) — MÊME frontière, même raison : on ne
     // paie pas un appel de plus. `budgetUsd` est le restant SNAPSHOTÉ à l'entrée du
-    // chunk, et `costUsd` ce que ce chunk a déjà dépensé : la comparaison est donc
-    // exacte sans relire l'usage à chaque round. Le round en cours peut dépasser
-    // légèrement (on ne coupe jamais un appel en vol) — c'est la politique assumée
-    // de lib/server/usage.ts, comme chez Claude/ChatGPT.
-    if (params.budgetUsd !== undefined && costUsd >= params.budgetUsd) {
+    // chunk, et `spend.usd` ce que ce chunk a déjà dépensé : la comparaison est donc
+    // exacte sans relire l'usage à chaque round. C'est bien `spend` et pas `costUsd`
+    // qu'on compare (MIN-202) : le compteur est PARTAGÉ avec les filles, sans quoi
+    // chacune opposerait sa seule dépense au plafond commun et le chunk entier
+    // pourrait le franchir autant de fois qu'il y a de boucles. Le round en cours
+    // peut dépasser légèrement (on ne coupe jamais un appel en vol) — c'est la
+    // politique assumée de lib/server/usage.ts, comme chez Claude/ChatGPT.
+    if (params.budgetUsd !== undefined && spend.usd >= params.budgetUsd) {
       clearLive();
       return { status: "budget_exhausted", messages, costUsd, usageSeqEnd: seq, rounds: round };
     }
@@ -1124,6 +1155,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             projectId: params.projectId ?? null,
           });
           costUsd += summaryStream.usage.cost ?? 0;
+          spend.usd += summaryStream.usage.cost ?? 0;
 
           const summaryText = summaryStream.content.trim();
           if (summaryText) {
@@ -1248,6 +1280,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       projectId: params.projectId ?? null,
     });
     costUsd += stream.usage.cost ?? 0;
+    spend.usd += stream.usage.cost ?? 0;
     // Taille de contexte réelle pour la décision de compaction du prochain round.
     lastPromptTokens = stream.usage.promptTokens ?? lastPromptTokens;
 

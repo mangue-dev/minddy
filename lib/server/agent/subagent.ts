@@ -77,7 +77,15 @@ export interface SubagentRecord {
   rounds: number;
   /** Rapport final, ou partiel si le sous-agent a été coupé. */
   report?: string;
+  /** Dépense CUMULÉE de la fille, tous chunks confondus (cf. `costSoFar`). */
   costUsd: number;
+  /**
+   * Part de `costUsd` DÉJÀ imputée à `run.cost_usd` (MIN-202). Voyage dans le
+   * checkpoint avec le reste du record : c'est ce qui permet d'imputer la dépense
+   * d'une fille suspendue au chunk où elle a lieu, sans la repayer à la livraison —
+   * `costUsd` étant cumulatif, l'ajouter tel quel double-compterait.
+   */
+  costBilled?: number;
   /** Epoch ms — sérialisable, contrairement à une Date. */
   startedAt: number;
   /** Le rapport a-t-il DÉJÀ été livré au parent ? (jamais deux fois). */
@@ -687,8 +695,12 @@ export class Subagents {
 
   /**
    * Rapports TERMINÉS pas encore livrés — une seule fois chacun, avec leur coût
-   * (que la boucle ajoute à son accumulateur : sans ça, `budgetUsd` sous-compte).
+   * (que la boucle ajoute à son accumulateur, d'où il rejoint `run.cost_usd`).
    * Drainé au sommet de chaque round, comme le steering : c'est le wakeup.
+   *
+   * Le coût livré est le DELTA restant à imputer, pas le cumul : une fille reprise a
+   * pu voir sa dépense des chunks précédents déjà portée au run par
+   * `settleUnbilled()` (MIN-202).
    */
   drainReports(): Array<{ id: string; text: string; costUsd: number }> {
     // `suspended` n'est PAS livrable : la fille n'a pas fini, elle reprend au chunk
@@ -701,12 +713,38 @@ export class Subagents {
     const stillRunning = this.pending();
     return ready.map((record) => {
       record.delivered = true;
+      const costUsd = Math.max(0, record.costUsd - (record.costBilled ?? 0));
+      record.costBilled = record.costUsd;
       return {
         id: record.id,
         text: formatSubagentReport(record, { stillRunning }),
-        costUsd: record.costUsd,
+        costUsd,
       };
     });
+  }
+
+  /**
+   * Impute au run tout ce que les filles ont dépensé et qui n'a encore été porté
+   * par personne, et rend ce total (MIN-202).
+   *
+   * Ce qu'il rattrape : une fille SUSPENDUE. `drainReports()` ne la livre pas — elle
+   * n'a pas fini — donc son chunk de dépense n'entrait dans aucun `newCost`, et le
+   * plafond du run se rechargeait d'autant à chaque continuation. Une fille dont le
+   * record est restauré `cut` et `delivered` (chunk mort brutalement) ne rendait, elle,
+   * jamais sa dépense du tout.
+   *
+   * Idempotent : chaque record ne rend que son delta, et sort marqué facturé. À
+   * appeler APRÈS le drain final, en fin de chunk.
+   */
+  settleUnbilled(): number {
+    let total = 0;
+    for (const record of this.allRecords()) {
+      const delta = record.costUsd - (record.costBilled ?? 0);
+      if (delta <= 0) continue;
+      total += delta;
+      record.costBilled = record.costUsd;
+    }
+    return total;
   }
 
   /**

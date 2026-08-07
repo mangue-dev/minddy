@@ -318,6 +318,52 @@ describe("livraison des rapports", () => {
   });
 });
 
+describe("imputation de la dépense des filles", () => {
+  it("impute une fille SUSPENDUE, qui n'est pourtant pas livrable, et ne la réimpute pas", async () => {
+    const { subagents, finish } = makeSubagents();
+    await subagents.spawn(EXPLORE);
+    await finish("sub-1", {
+      status: "suspended",
+      costUsd: 0.3,
+      messages: [{ role: "system", content: "…" }],
+    });
+
+    // Elle n'a pas fini : rien à livrer au parent. Sa dépense, elle, est bien réelle —
+    // sans `settleUnbilled`, elle n'entrait dans aucun `newCost` et le plafond du run
+    // se rechargeait d'autant à chaque continuation.
+    expect(subagents.drainReports()).toHaveLength(0);
+    expect(subagents.settleUnbilled()).toBeCloseTo(0.3, 6);
+    expect(subagents.settleUnbilled()).toBe(0);
+  });
+
+  it("ne facture qu'une fois la dépense d'une fille reprise d'un chunk à l'autre", async () => {
+    // Chunk 1 : 0,30 $ dépensés, puis suspension — imputés ici, et la marque part
+    // dans le checkpoint avec le record.
+    const first = makeSubagents();
+    await first.subagents.spawn(EXPLORE);
+    await first.finish("sub-1", {
+      status: "suspended",
+      costUsd: 0.3,
+      messages: [{ role: "system", content: "…" }],
+    });
+    expect(first.subagents.settleUnbilled()).toBeCloseTo(0.3, 6);
+    const checkpoint = first.subagents.records();
+
+    // Chunk 2 : elle repart avec son cumul et conclut à 0,50 $ CUMULÉS. Livrer ce
+    // cumul tel quel repaierait les 0,30 $ déjà imputés.
+    const second = makeSubagents();
+    second.subagents.restore(checkpoint);
+    expect(second.subagents.resumeSuspended()).toBe(1);
+    expect(second.started[0].costSoFar).toBeCloseTo(0.3, 6);
+    await second.finish("sub-1", { costUsd: 0.5, report: "42 call sites" });
+
+    const [report] = second.subagents.drainReports();
+    expect(report.costUsd).toBeCloseTo(0.2, 6);
+    // Et il ne reste rien derrière : sur les deux chunks, 0,50 $ imputés, pas 0,80 $.
+    expect(second.subagents.settleUnbilled()).toBe(0);
+  });
+});
+
 describe("cutAll — la fin du chunk", () => {
   it("abort, marque `cut` et laisse un rapport partiel livrable", async () => {
     const { subagents, aborted } = makeSubagents();

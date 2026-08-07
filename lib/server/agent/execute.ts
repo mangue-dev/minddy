@@ -1921,6 +1921,22 @@ export async function executeAgentRun(
         ? undefined
         : Math.max(0, Number(run.budget_usd) - run.cost_usd);
     const budgetUsd = minDefined(accountRemainingUsd, runCapRemainingUsd);
+    /**
+     * Ce que le chunk a dépensé, TOUTES boucles confondues — le compteur que
+     * `budgetUsd` plafonne (MIN-202). Un seul objet pour le parent et ses filles :
+     * elles tournent dans le même process, chacune l'incrémente en payant, et le
+     * plafond est donc opposé à la dépense RÉELLE du passage.
+     *
+     * Le scalaire seul ne bornait rien : recopié à chaque fille, il donnait à
+     * chacune le droit de dépenser le plafond entier. Six filles en parallèle plus
+     * le parent, et une routine réglée à 15 % d'un plan Go (0,75 $) pouvait en
+     * prendre 5,25 $ — tout le mois de l'utilisateur en un passage.
+     *
+     * Déclaré ICI, au-dessus de `subagentRunner`, pour la même raison que
+     * `budgetUsd` : la closure le lit et `resumeSuspended()` l'appelle
+     * synchronement (cf. `subagent-runner-init.test.ts`).
+     */
+    const chunkSpend = { usd: 0 };
 
     // ── Sous-agents (MIN-112) ──────────────────────────────────────────────────
     /** Chrono de la boucle : le budget restant du chunk borne chaque sous-agent. */
@@ -2063,10 +2079,12 @@ export async function executeAgentRun(
           feature: usageFeature,
           projectId: run.project_id,
           softDeadlineMs: Math.max(1_000, budget),
-          // Budget d'usage : le RESTANT snapshoté à l'entrée du chunk. Légèrement
-          // généreux (le parent a dépensé depuis), mais son coût REMONTE dans
-          // l'accumulateur de la boucle parente, qui s'arrête à sa frontière.
+          // Budget d'usage : le RESTANT snapshoté à l'entrée du chunk, opposé au
+          // compteur PARTAGÉ du chunk. C'est ce partage qui fait le plafond : sans
+          // lui, cette fille-ci comparerait sa seule dépense au plafond commun, et
+          // ses cinq sœurs feraient de même, chacune dans son coin.
           budgetUsd,
+          chunkSpend,
           contextWindow: job.model ? null : contextWindow,
           // Plafond CUMULATIF : une fille reprise ne repart pas avec quinze rounds
           // neufs à chaque chunk, sinon le garde-fou anti-runaway ne borne rien.
@@ -2281,6 +2299,7 @@ export async function executeAgentRun(
       projectId: run.project_id,
       softDeadlineMs,
       budgetUsd,
+      chunkSpend,
       contextWindow,
       execTool: makeExecTool({
         sandbox,
@@ -2370,8 +2389,16 @@ export async function executeAgentRun(
       await emit("status", { phase: "subagent_report", id: report.id, partial: true });
     }
 
+    // Ce que les filles ont dépensé sans que personne ne l'ait encore porté (MIN-202) :
+    // une SUSPENDUE n'est pas livrable, donc son chunk de dépense n'entrait dans aucun
+    // `newCost` et le plafond du run se rechargeait d'autant à chaque continuation.
+    // Appelé APRÈS le drain ci-dessus (idempotent : chaque record ne rend que son
+    // delta, `drainReports` ayant déjà marqué facturé ce qu'il a livré) mais AVANT
+    // `records()`, qui fige des COPIES — les marques posées après n'entreraient pas
+    // dans le checkpoint, et le chunk suivant repaierait ce qu'on vient d'imputer.
+    const unbilledSubagentCost = subagents.settleUnbilled();
     const subagentRecords = subagents.records();
-    const newCost = run.cost_usd + result.costUsd + subagentCost;
+    const newCost = run.cost_usd + result.costUsd + subagentCost + unbilledSubagentCost;
     // `lastFilesSha` amorcé pour TOUTES les mises au repos (ce checkpoint est réutilisé
     // par les chemins WIP/interruption/erreur/budget) : sur le 1er chunk on fixe la
     // baseline, jamais avancée en cours de tour — seule une fin de tour la fait
