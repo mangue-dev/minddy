@@ -7,6 +7,7 @@ import type {
   IssuePriorityValue,
   IssueStatusValue,
 } from "@/lib/issue-validation";
+import type { ResourceInput } from "@/lib/types";
 
 /** D'où vient le lot importé : un CSV téléversé (dont un export minddy relu par
  *  minddy), le backfill d'un dépôt lié à l'activation de la synchro d'issues
@@ -71,6 +72,13 @@ export interface ImportedIssue {
     number: number;
     url: string | null;
   };
+  /**
+   * Ressources à poser sur le ticket. Le backfill d'un dépôt lié y met le LIEN
+   * de l'issue distante ; un import CSV n'en a aucune (un fichier ne porte pas
+   * de pièce jointe). Ce sont des descripteurs DÉJÀ validés par l'appelant —
+   * l'import est un chemin serveur, il ne reçoit rien d'un navigateur.
+   */
+  resources?: ResourceInput[];
 }
 
 // ── Mapping : le plan de lecture d'un fichier ────────────────────────────────

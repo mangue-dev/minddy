@@ -1247,7 +1247,7 @@ export async function markPullRequestReadyForReview(opts: {
  *
  * Demande les permissions `checks: read` et `statuses: read` de la GitHub App.
  * Une App qui les gagne ne les obtient PAS rétroactivement — chaque installation
- * existante doit les accepter (même piège que `hasIssuesPermission`). Tant que ce
+ * existante doit les accepter (même piège que `getIssuesPermission`). Tant que ce
  * n'est pas fait, GitHub répond **403 « Resource not accessible by integration »**
  * (mesuré) : l'appelant dégrade en « checks indisponibles », il ne casse pas.
  */

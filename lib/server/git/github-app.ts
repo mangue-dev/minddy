@@ -259,6 +259,10 @@ export interface RemoteRepoIssue {
   title: string;
   body: string | null;
   htmlUrl: string | null;
+  /** Noms des labels — priorité, effort et catégories en sortent (MIN-97 suite). */
+  labels: string[];
+  /** Logins des assignés, dans l'ordre de GitHub. */
+  assigneeLogins: string[];
 }
 
 const REPO_ISSUES_PER_PAGE = 100;
@@ -291,6 +295,8 @@ export async function listRepoOpenIssues(
       title?: string;
       body?: string | null;
       html_url?: string | null;
+      labels?: Array<{ name?: string } | string> | null;
+      assignees?: Array<{ login?: string }> | null;
       pull_request?: unknown;
     }>;
     for (const row of rows) {
@@ -300,6 +306,12 @@ export async function listRepoOpenIssues(
         title: row.title ?? "",
         body: row.body ?? null,
         htmlUrl: row.html_url ?? null,
+        labels: (row.labels ?? [])
+          .map((l) => (typeof l === "string" ? l : (l?.name ?? "")).trim())
+          .filter(Boolean),
+        assigneeLogins: (row.assignees ?? [])
+          .map((a) => a?.login?.trim() ?? "")
+          .filter(Boolean),
       });
       if (issues.length >= limit) break;
     }
@@ -309,27 +321,32 @@ export async function listRepoOpenIssues(
 }
 
 /**
- * L'installation a-t-elle accepté la permission `Issues` (lecture) ? Une App
- * qui gagne une permission ne l'obtient PAS rétroactivement : chaque
- * installation existante doit l'accepter. Renvoie false si l'appel échoue —
- * l'activation de la synchro doit alors guider l'utilisateur, pas planter.
+ * Le niveau de la permission `Issues` accepté par CETTE installation.
+ *
+ * Une App qui gagne une permission ne l'obtient PAS rétroactivement : chaque
+ * installation existante doit l'accepter. Le niveau compte parce que les deux
+ * sens de la synchro n'en demandent pas le même — `read` suffit à importer les
+ * issues du dépôt, mais refermer une issue depuis minddy demande `write`.
+ *
+ * Renvoie `"none"` si l'appel échoue : l'activation de la synchro doit alors
+ * guider l'utilisateur, pas planter.
  */
-export async function hasIssuesPermission(
+export async function getIssuesPermission(
   installationId: number | string,
-): Promise<boolean> {
+): Promise<"none" | "read" | "write"> {
   try {
     const response = await fetch(
       `${GITHUB_API_BASE}/app/installations/${installationId}`,
       { headers: githubHeaders(mintAppJwt()) },
     );
-    if (!response.ok) return false;
+    if (!response.ok) return "none";
     const data = (await response.json()) as {
       permissions?: Record<string, string> | null;
     };
     const issues = data.permissions?.issues;
-    return issues === "read" || issues === "write";
+    return issues === "write" ? "write" : issues === "read" ? "read" : "none";
   } catch {
-    return false;
+    return "none";
   }
 }
 

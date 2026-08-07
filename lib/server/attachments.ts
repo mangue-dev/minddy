@@ -238,61 +238,85 @@ export async function copyResourcesToProject(
   return out;
 }
 
+/** The parent columns of an attachment row — exactly one of the four ids is
+    set (the attachments_parent_ck constraint). */
+interface AttachmentParent {
+  projectId: string;
+  issueId?: string | null;
+  objectiveId?: string | null;
+  feedbackPostId?: string | null;
+  commentId?: string | null;
+  createdBy: string | null;
+}
+
+/** One resource + its parent, as a row ready for `attachments`. Extracted so
+    the bulk importer can build a whole batch WITHOUT re-deriving the shape —
+    a second copy of it would drift the day a column moves. */
+function attachmentRow(parent: AttachmentParent, a: ResourceInput) {
+  const columns = {
+    project_id: parent.projectId,
+    issue_id: parent.issueId ?? null,
+    objective_id: parent.objectiveId ?? null,
+    feedback_post_id: parent.feedbackPostId ?? null,
+    comment_id: parent.commentId ?? null,
+    created_by: parent.createdBy,
+  };
+  // A link weighs nothing and isn't a file: the MIME says "an URL",
+  // which is what keeps the type-icon branch of the pill honest.
+  return isLinkResource(a)
+    ? {
+        ...columns,
+        kind: "link" as const,
+        url: a.url,
+        icon_data_url: a.icon_data_url ?? null,
+        storage_path: null,
+        file_name: a.file_name,
+        mime_type: "text/uri-list",
+        size_bytes: 0,
+      }
+    : {
+        ...columns,
+        kind: "file" as const,
+        storage_path: a.storage_path,
+        file_name: a.file_name,
+        mime_type: a.mime_type,
+        size_bytes: a.size_bytes,
+      };
+}
+
 /** Insert the rows for resources — files already uploaded to storage, links
     already resolved (service client — callers have checked project access).
     The parent is an issue OR an objective OR a feedback post (exactly one —
     the attachments_parent_ck constraint). */
 export async function insertAttachments(
   service: SupabaseClient,
-  args: {
-    projectId: string;
-    issueId?: string | null;
-    objectiveId?: string | null;
-    feedbackPostId?: string | null;
-    commentId?: string | null;
-    createdBy: string | null;
-    resources: ResourceInput[];
-  }
+  args: AttachmentParent & { resources: ResourceInput[] }
 ): Promise<Attachment[]> {
   if (args.resources.length === 0) return [];
   const { data, error } = await service
     .from("attachments")
-    .insert(
-      args.resources.map((a) => {
-        const parent = {
-          project_id: args.projectId,
-          issue_id: args.issueId ?? null,
-          objective_id: args.objectiveId ?? null,
-          feedback_post_id: args.feedbackPostId ?? null,
-          comment_id: args.commentId ?? null,
-          created_by: args.createdBy,
-        };
-        // A link weighs nothing and isn't a file: the MIME says "an URL",
-        // which is what keeps the type-icon branch of the pill honest.
-        return isLinkResource(a)
-          ? {
-              ...parent,
-              kind: "link" as const,
-              url: a.url,
-              icon_data_url: a.icon_data_url ?? null,
-              storage_path: null,
-              file_name: a.file_name,
-              mime_type: "text/uri-list",
-              size_bytes: 0,
-            }
-          : {
-              ...parent,
-              kind: "file" as const,
-              storage_path: a.storage_path,
-              file_name: a.file_name,
-              mime_type: a.mime_type,
-              size_bytes: a.size_bytes,
-            };
-      })
-    )
+    .insert(args.resources.map((a) => attachmentRow(args, a)))
     .select("*");
   if (error) throw new Error(`resources insert failed: ${error.message}`);
   return (data ?? []) as Attachment[];
+}
+
+/**
+ * Same insert, but for resources whose parents DIFFER — one link per imported
+ * issue (`importIssuesIntoProject`). `insertAttachments` pins a single parent
+ * for the whole call, so an import would have to call it once per ticket: 500
+ * round-trips where the rest of that module holds one per BATCH. Here the
+ * batching survives.
+ */
+export async function insertAttachmentsFor(
+  service: SupabaseClient,
+  entries: { parent: AttachmentParent; resource: ResourceInput }[]
+): Promise<void> {
+  if (entries.length === 0) return;
+  const { error } = await service
+    .from("attachments")
+    .insert(entries.map((e) => attachmentRow(e.parent, e.resource)));
+  if (error) throw new Error(`resources insert failed: ${error.message}`);
 }
 
 /** Short-lived signed URL on the private bucket (service role bypasses the

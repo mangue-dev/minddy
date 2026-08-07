@@ -4,10 +4,12 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import {
   insertEvents,
+  stampForgeSync,
   stampViaAssistant,
   stampMcpKey,
   type EventRow,
 } from "@/lib/server/issue-events";
+import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
  * Shared category-assignment core: replaces the issue's category set (full
@@ -36,6 +38,7 @@ export async function setIssueCategories({
   categoryIds,
   viaAssistant = false,
   mcpKeyId = null,
+  forgeSync = null,
 }: {
   issueId: string;
   actorId: string;
@@ -44,6 +47,11 @@ export async function setIssueCategories({
   viaAssistant?: boolean;
   /** Attributes the resulting activity events to an MCP API key (agent actor). */
   mcpKeyId?: string | null;
+  /** Attribue les événements à la forge quand les catégories viennent des
+      LABELS d'une issue distante (synchro d'un dépôt lié) : l'`actorId` reste
+      le owner qui porte techniquement l'écriture, la timeline affiche
+      GitHub/GitLab — même règle que `updateIssueFields`. */
+  forgeSync?: RepoProviderId | null;
 }): Promise<SetCategoriesResult> {
   const requested = categoryIds.filter((v): v is string => typeof v === "string");
 
@@ -119,7 +127,13 @@ export async function setIssueCategories({
       events.push({ issue_id: issueId, actor_id: actorId, type: "category_removed", from_value: cid });
     }
   }
-  await insertEvents(service, stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId));
+  await insertEvents(
+    service,
+    stampForgeSync(
+      stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId),
+      forgeSync
+    )
+  );
 
   return { ok: true, categoryIds: valid };
 }

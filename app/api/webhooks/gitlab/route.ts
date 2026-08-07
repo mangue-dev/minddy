@@ -469,9 +469,15 @@ async function handlePipeline(payload: PipelineEvent): Promise<void> {
   );
 }
 
-/** Actions `issue` synchronisées (MIN-97) — les éditions (`update`) et les
-    suppressions ne le sont pas (v1 : ouverture / fermeture / réouverture). */
-const SYNCED_ISSUE_ACTIONS = new Set(["open", "close", "reopen"]);
+/**
+ * Actions `issue` synchronisées. Le ticket minddy REFLÈTE l'issue distante,
+ * alors `update` en fait partie — c'est sous ce seul mot que GitLab range tout
+ * ce que GitHub détaille en `edited`/`labeled`/`assigned` : un hook `update`
+ * porte l'issue entière, et `changes` dit ce qui a bougé. On réconcilie sur
+ * l'état complet plutôt que de lire `changes`, ce qui rattrape au passage un
+ * hook perdu.
+ */
+const SYNCED_ISSUE_ACTIONS = new Set(["open", "close", "reopen", "update"]);
 
 async function handleIssue(payload: unknown): Promise<void> {
   const remote = normalizeGitlabIssueEvent(payload);

@@ -32,6 +32,7 @@ import { scheduleCycleCapture } from "@/lib/server/cycles";
 import { statusAllowsCycle } from "@/lib/cycle";
 import type { IssueStatus } from "@/lib/issue-constants";
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
+import { scheduleRemoteStatusPush } from "@/lib/server/git/issue-push";
 import { scheduleStatusAutomations } from "@/lib/server/automations/hooks";
 import { automationSourceOf, parseAutomationOverride } from "@/lib/automations";
 import { captureServerEvent } from "./posthog";
@@ -542,6 +543,24 @@ export async function updateIssueFields({
   // transition qui ne dise rien (cf. status-sync).
   if ("status" in updates && updates.status !== before.status) {
     scheduleFeedbackStatusSync(issueId, updates.status, actorId);
+
+    // Dépôt lié : le ticket referme (ou rouvre) l'issue dont il vient. La garde
+    // `!forgeSync` EST l'anti-boucle — un statut qui DESCEND du webhook de la
+    // forge ne doit pas y remonter aussitôt. No-op pour un ticket né dans
+    // minddy : `scheduleRemoteStatusPush` sort sur l'absence d'identité
+    // distante, sans requête.
+    if (!forgeSync) {
+      scheduleRemoteStatusPush({
+        issue: {
+          projectId: before.project_id as string,
+          provider: (before.remote_provider as string | null) ?? null,
+          repoId: (before.remote_repo_id as string | null) ?? null,
+          number: (before.remote_number as number | null) ?? null,
+        },
+        status: updates.status as IssueStatus,
+        actorId,
+      });
+    }
     // Automatisations (MIN-147) : le changement de statut est l'un des deux
     // seuls événements dont la boucle a besoin. Même contrat que ses voisins —
     // hors chemin critique, et no-op silencieux si le monde a bougé.

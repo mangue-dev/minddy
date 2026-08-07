@@ -584,9 +584,28 @@ async function handleStatus(payload: StatusEvent): Promise<void> {
   await broadcastChecksChanged(payload.repository?.full_name, payload.sha, []);
 }
 
-/** Actions `issues` synchronisées (MIN-97) — les éditions de titre/corps, les
-    labels et les suppressions distantes ne le sont pas (v1). */
-const SYNCED_ISSUE_ACTIONS = new Set(["opened", "closed", "reopened"]);
+/**
+ * Actions `issues` synchronisées. Le ticket minddy REFLÈTE désormais l'issue
+ * distante : les éditions de titre et de corps, les labels et les assignations
+ * comptent donc autant que l'ouverture et la fermeture — c'est exactement ce
+ * que la v1 de MIN-97 laissait tomber.
+ *
+ * La liste reste FERMÉE, elle n'est pas devenue « tout ce qui arrive » : GitHub
+ * envoie aussi `pinned`, `locked`, `transferred`, `deleted`, `milestoned`,
+ * `typed`… dont aucune ne change ce que minddy recopie. Les laisser passer
+ * ferait une réconciliation complète — donc plusieurs requêtes — pour un
+ * épinglage.
+ */
+const SYNCED_ISSUE_ACTIONS = new Set([
+  "opened",
+  "closed",
+  "reopened",
+  "edited",
+  "labeled",
+  "unlabeled",
+  "assigned",
+  "unassigned",
+]);
 
 async function handleIssues(payload: unknown): Promise<void> {
   const remote = normalizeGithubIssueEvent(payload);

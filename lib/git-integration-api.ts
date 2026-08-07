@@ -101,15 +101,20 @@ export async function bindGitRepoApi(
 }
 
 /**
- * Bascule la synchro unidirectionnelle des issues du dépôt lié (MIN-97).
- * Renvoie la liaison rafraîchie — le backfill, lui, tourne côté serveur après
- * la réponse et arrive par le realtime.
+ * Bascule la synchro des issues du dépôt lié (MIN-97). Renvoie la liaison
+ * rafraîchie — le backfill, lui, tourne côté serveur après la réponse et
+ * arrive par le realtime.
+ *
+ * `writeMissingUrl` n'est présent qu'à l'activation, et seulement quand
+ * l'installation GitHub n'a accepté que `Issues (Read)` : l'import marche, mais
+ * refermer une issue depuis minddy demande `write`. C'est l'URL de la page où
+ * l'accorder.
  */
 export async function setGitIssueSyncApi(
   projectId: string,
   enabled: boolean,
   provider: RepoProviderId,
-): Promise<{ link: ProjectGitLink | null }> {
+): Promise<{ link: ProjectGitLink | null; writeMissingUrl?: string | null }> {
   trackEvent("project_git_issue_sync_toggled", { provider, enabled });
   return parseJson(
     await fetch(`/api/projects/${projectId}/git-link`, {

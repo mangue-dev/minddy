@@ -10,7 +10,7 @@ import {
 import { signGitLinkState } from "@/lib/server/git/link-state";
 import {
   getGithubAppSlug,
-  hasIssuesPermission,
+  getIssuesPermission,
   isGithubAppConfigured,
 } from "@/lib/server/git/github-app";
 import {
@@ -246,26 +246,35 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     let hookId: string | null | undefined;
+    /** L'installation permet-elle d'ÉCRIRE chez la forge ? Renseigné pour
+        GitHub seulement : côté GitLab, le token OAuth de la connexion porte
+        déjà les droits de son propriétaire sur le dépôt. */
+    let permissionsUrl: string | null = null;
+    let canWrite = true;
     if (link.provider === "github") {
       // Une App qui gagne une permission ne l'obtient pas rétroactivement :
       // l'installation doit accepter `Issues (Read)`. Sans ça, aucun event
       // `issues` ne serait livré — on le dit AVANT d'activer.
       if (enabled) {
-        const granted =
-          link.installationId != null &&
-          (await hasIssuesPermission(link.installationId));
-        if (!granted) {
+        permissionsUrl =
+          link.installationId != null
+            ? `https://github.com/settings/installations/${link.installationId}/permissions/update`
+            : null;
+        const level =
+          link.installationId != null
+            ? await getIssuesPermission(link.installationId)
+            : "none";
+        if (level === "none") {
           return NextResponse.json(
-            {
-              error: t("gitIssuesPermissionMissing"),
-              url:
-                link.installationId != null
-                  ? `https://github.com/settings/installations/${link.installationId}/permissions/update`
-                  : null,
-            },
+            { error: t("gitIssuesPermissionMissing"), url: permissionsUrl },
             { status: 400 },
           );
         }
+        // `read` n'est PAS refusé : le sens descendant marche parfaitement avec,
+        // et durcir la porte couperait les liaisons qui tournent déjà. C'est le
+        // RETOUR (refermer l'issue distante) qui a besoin de `write` — on le dit
+        // sans l'imposer, plutôt que de le laisser échouer en 403 silencieux.
+        canWrite = level === "write";
       }
     } else {
       // GitLab : le hook vit sur le dépôt, on le provisionne/bascule ici.
@@ -302,7 +311,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    return NextResponse.json({ link: await getProjectLink(id) });
+    return NextResponse.json({
+      link: await getProjectLink(id),
+      // Le panneau s'en sert pour inviter à accepter « Issues (Write) » quand
+      // seule la lecture est accordée. Absent à la désactivation.
+      ...(enabled && !canWrite ? { writeMissingUrl: permissionsUrl } : {}),
+    });
   }
 
   return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });

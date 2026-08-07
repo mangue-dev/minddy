@@ -2,8 +2,15 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { DEFAULT_CATEGORY_COLOR, isValidColor } from "@/lib/category-colors";
+import {
+  CATEGORY_COLORS,
+  DEFAULT_CATEGORY_COLOR,
+  isValidColor,
+} from "@/lib/category-colors";
 import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
+
+// Borne de longueur du nom (MIN-118) — une étiquette reste courte, au-delà on tronque.
+const MAX_NAME_LENGTH = 200;
 
 /**
  * Pose le jeu de catégories par défaut sur un projet neuf, dans la langue de
@@ -50,6 +57,76 @@ export async function seedDefaultCategories({
 }
 
 /**
+ * Des NOMS d'étiquettes aux catégories du projet : celles qui existent sont
+ * retrouvées à la casse près, les autres sont créées. Rend l'index nom
+ * minuscule → id, ou `null` si la base a refusé (l'appelant décide alors s'il
+ * abandonne ou s'il continue sans catégories).
+ *
+ * Partagé par l'import en masse (`importIssuesIntoProject`) et par la synchro
+ * d'un dépôt lié, pour une raison qui n'est pas seulement la factorisation :
+ * les deux voient les MÊMES étiquettes du même dépôt, à des moments différents
+ * — le backfill à l'activation, puis un webhook `labeled` trois jours après. Un
+ * rapprochement qui divergerait entre les deux créerait une seconde catégorie
+ * « Bug » à côté de la première, et personne ne saurait pourquoi.
+ *
+ * Le rapprochement FIN (« Bugs » → la catégorie « Bug » du projet) a déjà eu
+ * lieu en amont — c'est le nom VOULU qui arrive ici. Il ne reste que l'égalité.
+ */
+export async function resolveCategoryIdsByName(
+  projectId: string,
+  names: string[]
+): Promise<{ idByKey: Map<string, string>; created: number } | null> {
+  const idByKey = new Map<string, string>();
+  // Première casse vue par nom minuscule : c'est elle qui sera écrite en base
+  // si la catégorie doit être créée.
+  const wanted = new Map<string, string>();
+  for (const name of names) {
+    const trimmed = name.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (!wanted.has(key)) wanted.set(key, trimmed);
+  }
+  if (wanted.size === 0) return { idByKey, created: 0 };
+
+  const service = getServiceClient();
+  const { data: existing, error } = await service
+    .from("categories")
+    .select("id, name")
+    .eq("project_id", projectId);
+  if (error) {
+    console.error("[categories] resolve lookup failed:", error.message);
+    return null;
+  }
+  for (const cat of existing ?? []) {
+    idByKey.set((cat.name as string).toLowerCase(), cat.id as string);
+  }
+
+  const missing = [...wanted].filter(([key]) => !idByKey.has(key));
+  if (missing.length === 0) return { idByKey, created: 0 };
+
+  // Continue the palette round-robin where the project's list left off.
+  const offset = (existing ?? []).length;
+  const { data: created, error: createError } = await service
+    .from("categories")
+    .insert(
+      missing.map(([, name], i) => ({
+        project_id: projectId,
+        name: name.slice(0, MAX_NAME_LENGTH),
+        color: CATEGORY_COLORS[(offset + i) % CATEGORY_COLORS.length],
+      }))
+    )
+    .select("id, name");
+  if (createError) {
+    console.error("[categories] resolve create failed:", createError.message);
+    return null;
+  }
+  for (const cat of created ?? []) {
+    idByKey.set((cat.name as string).toLowerCase(), cat.id as string);
+  }
+  return { idByKey, created: created?.length ?? 0 };
+}
+
+/**
  * Shared category-creation core, used by POST /api/projects/[id]/categories
  * and the assistant tools. An invalid or missing color silently falls back to
  * the default palette color (same as the route).
@@ -68,9 +145,6 @@ export type CategoryResult =
       /** Verbatim DB message already meant for the user. */
       rawMessage?: string;
     };
-
-// Borne de longueur du nom (MIN-118) — une étiquette reste courte, au-delà on tronque.
-const MAX_NAME_LENGTH = 200;
 
 export async function createCategory({
   projectId,

@@ -2,7 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
-import { CATEGORY_COLORS } from "@/lib/category-colors";
+import { resolveCategoryIdsByName } from "@/lib/server/categories";
+import { insertAttachmentsFor } from "@/lib/server/attachments";
 import { insertEvents, stampForgeSync, type EventRow } from "@/lib/server/issue-events";
 import { normalizeToken } from "@/lib/import/normalize";
 import type { ImportedIssue, ImportSource } from "@/lib/import/types";
@@ -78,49 +79,16 @@ export async function importIssuesIntoProject({
 
   // ── Categories: match existing labels case-insensitively, create the rest ──
   // Le rapprochement fin (« Bugs » → la catégorie « Bug » du projet) a déjà eu
-  // lieu au mapping : ce qui arrive ici est le nom VOULU. Il ne reste que
-  // l'égalité, et la création de ce qui manque.
-  const labelByKey = new Map<string, string>(); // lower name → first casing seen
-  for (const issue of issues) {
-    for (const label of issue.labels) {
-      const key = label.toLowerCase();
-      if (!labelByKey.has(key)) labelByKey.set(key, label);
-    }
-  }
-
-  const categoryIdByKey = new Map<string, string>();
-  let categoriesCreated = 0;
-  if (labelByKey.size > 0) {
-    const { data: existing, error } = await service
-      .from("categories")
-      .select("id, name")
-      .eq("project_id", projectId);
-    if (error) return dbError("categories fetch", error.message);
-    for (const cat of existing ?? []) {
-      categoryIdByKey.set((cat.name as string).toLowerCase(), cat.id as string);
-    }
-
-    const missing = [...labelByKey].filter(([key]) => !categoryIdByKey.has(key));
-    if (missing.length > 0) {
-      // Continue the palette round-robin where the project's list left off.
-      const offset = (existing ?? []).length;
-      const { data: created, error: createError } = await service
-        .from("categories")
-        .insert(
-          missing.map(([, name], i) => ({
-            project_id: projectId,
-            name,
-            color: CATEGORY_COLORS[(offset + i) % CATEGORY_COLORS.length],
-          }))
-        )
-        .select("id, name");
-      if (createError) return dbError("categories create", createError.message);
-      for (const cat of created ?? []) {
-        categoryIdByKey.set((cat.name as string).toLowerCase(), cat.id as string);
-      }
-      categoriesCreated = created?.length ?? 0;
-    }
-  }
+  // lieu au mapping : ce qui arrive ici est le nom VOULU. `resolveCategoryIdsByName`
+  // fait le reste — et c'est la MÊME passe que celle de la synchro d'un dépôt
+  // lié, pour que le backfill et les webhooks qui le suivent ne se fabriquent
+  // pas deux catégories « Bug ».
+  const resolved = await resolveCategoryIdsByName(
+    projectId,
+    issues.flatMap((issue) => issue.labels)
+  );
+  if (!resolved) return dbError("categories resolve", "see [categories] log");
+  const { idByKey: categoryIdByKey, created: categoriesCreated } = resolved;
 
   // ── Numbers: one RPC reserves the whole range, atomically. ──
   const { data: firstNumber, error: numberError } = await service.rpc(
@@ -216,6 +184,24 @@ export async function importIssuesIntoProject({
       .from("issue_categories")
       .insert(categoryRows.slice(i, i + LINK_CHUNK));
     if (error) console.error("[import-issues] categories attach failed:", error.message);
+  }
+
+  // ── Resources (best-effort, comme les catégories : les tickets existent) ──
+  // Le backfill d'un dépôt lié y pose le LIEN de l'issue distante — un lien,
+  // donc aucun objet de stockage à nettoyer si l'insert échoue. Par lot comme
+  // tout le reste du module : chaque ticket a son parent, mais un seul INSERT.
+  const resourceEntries = issues.flatMap((issue, i) =>
+    (issue.resources ?? []).map((resource) => ({
+      parent: { projectId, issueId: ids[i], createdBy: actorId },
+      resource,
+    }))
+  );
+  for (let i = 0; i < resourceEntries.length; i += LINK_CHUNK) {
+    try {
+      await insertAttachmentsFor(service, resourceEntries.slice(i, i + LINK_CHUNK));
+    } catch (e) {
+      console.error("[import-issues] resources attach failed:", (e as Error).message);
+    }
   }
 
   // ── Timeline: one `imported` event per issue (to_value = source) ──

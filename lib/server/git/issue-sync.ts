@@ -6,24 +6,35 @@ import { updateIssueFields } from "@/lib/server/update-issue";
 import { importIssuesIntoProject } from "@/lib/server/import-issues";
 import { ensureIssueLimit } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
+import { setIssueCategories } from "@/lib/server/set-issue-categories";
+import { resolveCategoryIdsByName } from "@/lib/server/categories";
+import { readForgeLabels } from "@/lib/import/forge-labels";
 import type { ImportedIssue } from "@/lib/import/types";
+import type { IssueStatusValue } from "@/lib/issue-validation";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { listRepoOpenIssues } from "./github-app";
 import { getGitlabAccessToken, listGitlabOpenIssues } from "./gitlab-app";
 import {
+  buildForgeAssigneeIndex,
+  matchForgeAssignee,
+  type ForgeAssigneeIndex,
+} from "./forge-members";
+import { forgeIssueResource } from "./forge-resource";
+import {
   REMOTE_LANDING_STATUS,
-  statusForRemoteAction,
+  statusForRemoteReconcile,
   type RemoteIssue,
 } from "./issue-sync-core";
 
 /**
- * Cœur de la synchronisation unidirectionnelle dépôt lié → minddy (MIN-97).
- * Appelé par les deux récepteurs webhook (issue ouverte / fermée / rouverte) et
- * par le backfill lancé à l'activation du toggle.
+ * Cœur du sens DESCENDANT de la synchro d'issues (dépôt lié → minddy, MIN-97).
+ * Appelé par les deux récepteurs webhook et par le backfill lancé à l'activation
+ * du toggle.
  *
- * Sens unique STRICT : rien ici n'écrit chez le provider. Créer un ticket dans
- * minddy ne crée pas d'issue GitHub/GitLab, et fermer un ticket ne ferme pas
- * l'issue distante.
+ * Rien ICI n'écrit chez le provider : le seul retour qui existe est celui de
+ * l'état ouvert/fermé, et il vit à part, dans `issue-push.ts`, appelé depuis
+ * `updateIssueFields`. Créer un ticket dans minddy ne crée toujours aucune issue
+ * GitHub/GitLab.
  *
  * Le dédoublonnage n'est pas fait en TS mais par l'index UNIQUE partiel
  * `idx_issues_remote_identity` : une redélivrance de webhook produit une
@@ -31,8 +42,10 @@ import {
  *
  * Acteur des écritures : `project_git_links.created_by`, le owner qui a lié le
  * dépôt (updateIssueFields exige un membre du projet). Les événements sont
- * estampillés `forge_sync` pour que la timeline crédite GitHub/GitLab et non
- * cette personne — même compromis que l'agent de code.
+ * estampillés `forge_sync` — ce qui crédite GitHub/GitLab dans la timeline
+ * plutôt que cette personne (même compromis que l'agent de code) ET, depuis le
+ * retour de statut, empêche la boucle : une écriture estampillée forge ne
+ * repart pas vers la forge.
  */
 
 /** Plafond dur du backfill : au-delà, on n'importe pas l'historique d'un dépôt. */
@@ -134,12 +147,24 @@ export async function setIssueSyncEnabled(params: {
 
 /**
  * Applique un événement d'issue distante à UNE liaison : crée le ticket s'il
- * n'existe pas encore, sinon aligne son statut sur l'état distant. Best-effort —
- * une cible qui échoue ne doit pas empêcher les autres d'être servies.
+ * n'existe pas encore, sinon RÉCONCILIE le ticket existant avec l'issue
+ * distante. Best-effort — une cible qui échoue ne doit pas empêcher les autres
+ * d'être servies.
+ *
+ * La réconciliation est un renversement assumé par rapport à MIN-97, qui
+ * n'alignait que le statut « pour ne pas écraser le travail fait dans minddy ».
+ * L'usage a tranché autrement : quand une équipe ouvre encore des issues sur le
+ * dépôt alors que le projet minddy existe, c'est que le dépôt reste l'endroit où
+ * cette issue-là vit. Le ticket en est le REFLET, et un reflet qui diverge de ce
+ * qu'il reflète ne sert plus à rien. Ce qui n'a pas d'équivalent distant — le
+ * plan, les commentaires minddy, l'objectif, le cycle — n'est jamais touché.
  */
 export async function applyRemoteIssue(
   target: IssueSyncTarget,
   remote: RemoteIssue,
+  /** Index login → membre, construit une fois par LOT quand il y en a un
+   *  (backfill). Absent = construit ici, pour un événement isolé. */
+  assignees?: ForgeAssigneeIndex,
 ): Promise<void> {
   if (!target.createdBy) {
     console.warn(
@@ -150,7 +175,7 @@ export async function applyRemoteIssue(
   const service = getServiceClient();
   const { data: existing, error } = await service
     .from("issues")
-    .select("id, status")
+    .select("id, status, title, description, assignee_id, priority, effort")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", remote.provider)
@@ -162,14 +187,31 @@ export async function applyRemoteIssue(
     return;
   }
 
-  const mappedStatus = statusForRemoteAction(remote.action);
+  const { priority, effort, labels } = readForgeLabels(remote.labels);
+  // L'index coûte deux requêtes : on ne le construit que si l'issue nomme
+  // effectivement quelqu'un. La plupart des webhooks (`labeled`, `edited`) ne
+  // parlent pas d'assignation, et beaucoup de dépôts n'assignent jamais rien.
+  const index =
+    remote.assigneeLogins.length === 0
+      ? null
+      : (assignees ??
+        (await buildForgeAssigneeIndex({
+          projectId: target.projectId,
+          provider: target.provider,
+        })));
+  const assigneeId = index ? matchForgeAssignee(remote.assigneeLogins, index) : null;
 
   if (!existing) {
-    // Jamais importée : elle entre TOUJOURS par le triage, quelle que soit
-    // l'action distante. Une fermeture peut tomber ici (issue au-delà du
-    // plafond de backfill) — la créer directement en `done` la ferait entrer
-    // dans le projet sans que personne ne l'ait jamais vue. Le mapping
-    // fermé → done / rouvert → backlog ne vaut que pour un ticket DÉJÀ importé.
+    // Jamais importée : elle entre TOUJOURS par le triage, quel que soit l'état
+    // distant. Une fermeture peut tomber ici (issue au-delà du plafond de
+    // backfill) — la créer directement en `done` la ferait entrer dans le projet
+    // sans que personne ne l'ait jamais vue.
+    const resource = forgeIssueResource({
+      provider: remote.provider,
+      repoFullName: remote.repoFullName,
+      number: remote.number,
+      url: remote.url,
+    });
     const result = await createIssueForProject({
       projectId: target.projectId,
       actorId: target.createdBy,
@@ -177,6 +219,10 @@ export async function applyRemoteIssue(
         title: remote.title || `#${remote.number}`,
         description: remote.body ?? undefined,
         status: REMOTE_LANDING_STATUS,
+        priority,
+        effort,
+        assignee_id: assigneeId,
+        resources: resource ? [resource] : undefined,
       },
       remote: {
         provider: remote.provider,
@@ -185,29 +231,124 @@ export async function applyRemoteIssue(
         url: remote.url,
       },
     });
-    if (!result.ok && result.errorKey !== "remoteIssueAlreadyImported") {
+    if (!result.ok) {
       // 409 = redélivrance du webhook, le chemin normal : silence.
-      console.error(
-        `[issue-sync] create failed for ${remote.repoFullName}#${remote.number}:`,
-        result.errorKey ?? result.rawMessage,
-      );
+      if (result.errorKey !== "remoteIssueAlreadyImported") {
+        console.error(
+          `[issue-sync] create failed for ${remote.repoFullName}#${remote.number}:`,
+          result.errorKey ?? result.rawMessage,
+        );
+      }
+      return;
     }
+    await applyRemoteLabels(target, result.issue.id as string, labels);
     return;
   }
 
-  // Déjà importée : seul le statut suit l'état distant. Ni le titre ni le corps
-  // ne sont réécrits — ça écraserait le travail fait dans minddy.
-  if (!mappedStatus || mappedStatus === existing.status) return;
-  const updated = await updateIssueFields({
-    issueId: existing.id as string,
+  // ── Déjà importée : on réaligne ce que la forge porte, et rien d'autre ──
+  //
+  // UNE règle gouverne tout ce bloc : **la forge n'écrase un champ que si elle
+  // a quelque chose à en dire.** Elle a toujours un titre, un corps et un état,
+  // donc ces trois-là suivent sans condition. Elle n'a pas forcément de
+  // priorité, de taille, d'assigné ni de labels — et prendre son silence pour
+  // une valeur serait ravageur : sur un dépôt qui n'assigne jamais ses issues,
+  // le moindre webhook `labeled` désassignerait le ticket que quelqu'un venait
+  // de prendre dans minddy, sans que rien ne l'ait demandé.
+  const issueId = existing.id as string;
+  const patch: Record<string, unknown> = {};
+
+  const title = remote.title || `#${remote.number}`;
+  if (title !== existing.title) patch.title = title;
+  const body = remote.body ?? null;
+  if (body !== (existing.description ?? null)) patch.description = body;
+  // L'assigné suit quand la forge NOMME quelqu'un qu'on reconnaît. Un assigné
+  // qu'on ne reconnaît pas (compte non connecté) ne vide pas la case non plus :
+  // on ne sait pas qui c'est, on ne sait donc rien de plus qu'avant.
+  if (assigneeId && assigneeId !== (existing.assignee_id ?? null)) {
+    patch.assignee_id = assigneeId;
+  }
+  if (priority !== "none" && priority !== existing.priority) patch.priority = priority;
+  if (effort && effort !== existing.effort) patch.effort = effort;
+
+  // Le statut suit l'ÉTAT distant, comparé à l'état que le statut courant
+  // représente — pas au statut lui-même : `canceled` et `done` sont tous deux
+  // « fermé », et une issue fermée qui reste fermée ne doit rien requalifier.
+  const mappedStatus = statusForRemoteReconcile(
+    remote,
+    existing.status as IssueStatusValue,
+  );
+  if (mappedStatus) patch.status = mappedStatus;
+
+  if (Object.keys(patch).length > 0) {
+    const updated = await updateIssueFields({
+      issueId,
+      actorId: target.createdBy,
+      input: patch,
+      // C'est ce drapeau qui empêche la BOUCLE : `updateIssueFields` ne
+      // repousse pas vers la forge un statut qui en vient (cf. issue-push.ts).
+      forgeSync: remote.provider,
+    });
+    if (!updated.ok) {
+      console.error(
+        `[issue-sync] update failed for ${remote.repoFullName}#${remote.number}:`,
+        updated.errorKey ?? updated.rawMessage,
+      );
+    }
+  }
+
+  await applyRemoteLabels(target, issueId, labels);
+}
+
+/**
+ * Les labels de l'issue distante, posés en catégories du projet — remplacement
+ * complet quand elle en porte : un label retiré chez elle retire la catégorie
+ * ici, c'est le sens du reflet.
+ *
+ * Une issue SANS aucun label ne touche à rien, par la même règle que le bloc
+ * ci-dessus : un dépôt qui n'étiquette pas ses issues ne doit pas balayer, à
+ * chaque webhook, les catégories rangées à la main dans minddy. Retirer le
+ * DERNIER label chez la forge ne vide donc pas les catégories ici — le prix,
+ * assumé, de ne pas confondre « rien à dire » et « rien ».
+ *
+ * Best-effort et à part de `updateIssueFields` : les catégories vivent dans une
+ * table de jointure, avec leur propre chemin d'écriture (`setIssueCategories`)
+ * et leurs propres événements de timeline.
+ */
+async function applyRemoteLabels(
+  target: IssueSyncTarget,
+  issueId: string,
+  labels: string[],
+): Promise<void> {
+  if (!target.createdBy || labels.length === 0) return;
+  const resolved = await resolveCategoryIdsByName(target.projectId, labels);
+  if (!resolved) return;
+  const ids = labels
+    .map((label) => resolved.idByKey.get(label.trim().toLowerCase()))
+    .filter((id): id is string => !!id);
+
+  const service = getServiceClient();
+  const { data: current } = await service
+    .from("issue_categories")
+    .select("category_id")
+    .eq("issue_id", issueId);
+  const before = new Set((current ?? []).map((r) => r.category_id as string));
+  // Rien n'a bougé : ne pas réécrire. `setIssueCategories` fait un DELETE puis
+  // un INSERT, et le rejouer à chaque webhook ferait clignoter les catégories
+  // sur tous les tableaux ouverts, par le temps réel, sans qu'il se passe rien.
+  if (before.size === ids.length && ids.every((id) => before.has(id))) return;
+
+  const result = await setIssueCategories({
+    issueId,
     actorId: target.createdBy,
-    input: { status: mappedStatus },
-    forgeSync: remote.provider,
+    categoryIds: ids,
+    // La timeline crédite la forge, pas le owner qui a activé la synchro : ce
+    // n'est pas lui qui a posé ce label.
+    forgeSync: target.provider,
   });
-  if (!updated.ok) {
+  if (!result.ok) {
     console.error(
-      `[issue-sync] status update failed for ${remote.repoFullName}#${remote.number}:`,
-      updated.errorKey ?? updated.rawMessage,
+      `[issue-sync] categories failed for issue ${issueId}:`,
+      result.errorKey ?? result.rawMessage,
     );
   }
 }
@@ -255,21 +396,41 @@ async function loadImportedNumbers(
   );
 }
 
+/** Une issue distante du backfill, telle que les deux forges la rendent. */
+interface BackfilledIssue {
+  number: number;
+  title: string;
+  body: string | null;
+  url: string | null;
+  labels: string[];
+  assigneeLogins: string[];
+}
+
 /** Une issue distante, ramenée à la forme attendue par l'import en masse. */
 function toImportedIssue(
   target: IssueSyncTarget,
-  issue: { number: number; title: string; body: string | null; url: string | null },
+  issue: BackfilledIssue,
+  assignees: ForgeAssigneeIndex,
 ): ImportedIssue {
+  // Les labels portent trois choses à la fois : la priorité, la taille, et le
+  // reste — qui devient des catégories du projet.
+  const { priority, effort, labels } = readForgeLabels(issue.labels);
+  const resource = forgeIssueResource({
+    provider: target.provider,
+    repoFullName: target.repoFullName,
+    number: issue.number,
+    url: issue.url,
+  });
   return {
     title: issue.title || `#${issue.number}`,
     description: issue.body,
     status: REMOTE_LANDING_STATUS,
-    priority: "none",
-    effort: null,
-    labels: [],
-    // Le backfill d'un dépôt lié ne rapproche personne : l'assigné GitHub est
-    // un compte de la forge, pas un membre du projet minddy.
-    assigneeId: null,
+    priority,
+    effort,
+    labels,
+    // Le compte de forge redevient un membre du projet quand cette personne a
+    // connecté le sien (MIN-144) — sinon `null`, et rien n'est deviné.
+    assigneeId: matchForgeAssignee(issue.assigneeLogins, assignees),
     dueDate: null,
     createdAt: null,
     completedAt: null,
@@ -281,6 +442,7 @@ function toImportedIssue(
       number: issue.number,
       url: issue.url,
     },
+    resources: resource ? [resource] : undefined,
   };
 }
 
@@ -312,12 +474,7 @@ export async function backfillRemoteIssues(
     throw err;
   }
 
-  let remoteIssues: Array<{
-    number: number;
-    title: string;
-    body: string | null;
-    url: string | null;
-  }>;
+  let remoteIssues: BackfilledIssue[];
   if (target.provider === "github") {
     if (target.installationId == null || !target.repoFullName) return 0;
     const issues = await listRepoOpenIssues(
@@ -330,6 +487,8 @@ export async function backfillRemoteIssues(
       title: i.title,
       body: i.body,
       url: i.htmlUrl,
+      labels: i.labels,
+      assigneeLogins: i.assigneeLogins,
     }));
   } else {
     const token = await getGitlabAccessToken(target.connectionId);
@@ -343,6 +502,8 @@ export async function backfillRemoteIssues(
       title: i.title,
       body: i.description,
       url: i.webUrl,
+      labels: i.labels,
+      assigneeLogins: i.assigneeLogins,
     }));
   }
 
@@ -351,10 +512,16 @@ export async function backfillRemoteIssues(
 
   let created = 0;
   if (fresh.length > 0) {
+    // Une seule construction d'index pour tout le lot : c'est deux requêtes,
+    // là où le faire par ticket en ferait deux par ticket.
+    const assignees = await buildForgeAssigneeIndex({
+      projectId: target.projectId,
+      provider: target.provider,
+    });
     const result = await importIssuesIntoProject({
       projectId: target.projectId,
       actorId: target.createdBy,
-      issues: fresh.map((i) => toImportedIssue(target, i)),
+      issues: fresh.map((i) => toImportedIssue(target, i, assignees)),
       source: target.provider,
     });
     if (!result.ok) {

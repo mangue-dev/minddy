@@ -63,6 +63,10 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
   // réconcilie sur la liaison refetchée (pattern smart-assign-section).
   const [issueSync, setIssueSync] = useState(false);
   const [savingIssueSync, setSavingIssueSync] = useState(false);
+  /** Posé par la réponse d'activation quand l'installation GitHub n'a accordé
+      que `Issues (Read)` : le retour de statut vers la forge a besoin de
+      `write`. Null = rien à signaler. */
+  const [writeMissingUrl, setWriteMissingUrl] = useState<string | null>(null);
   useEffect(() => {
     setIssueSync(link?.issue_sync_enabled === true);
   }, [link?.issue_sync_enabled]);
@@ -162,10 +166,18 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     setIssueSync(next); // optimiste — annulé en cas d'échec
     setSavingIssueSync(true);
     try {
-      await setGitIssueSyncApi(projectId, next, link.provider);
+      const { writeMissingUrl } = await setGitIssueSyncApi(
+        projectId,
+        next,
+        link.provider,
+      );
       toast.success(
         t(next ? "gitIssueSyncEnabledToast" : "gitIssueSyncDisabledToast"),
       );
+      // L'installation n'a accordé que la LECTURE des issues : l'import marche,
+      // mais refermer une issue depuis minddy demande `write`. On le dit une
+      // fois, au moment où c'est actionnable — pas un bandeau permanent.
+      setWriteMissingUrl(writeMissingUrl ?? null);
       // Le backfill tourne côté serveur après la réponse : on relit un peu plus
       // tard pour afficher sa date, en plus du refetch immédiat.
       invalidate();
@@ -318,7 +330,19 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
             >
               {issueSync && (
                 <p className="text-xs text-muted-foreground">
-                  {t("gitIssueSyncOneWayHint")}
+                  {t("gitIssueSyncScopeHint")}
+                </p>
+              )}
+              {issueSync && writeMissingUrl && (
+                <p className="text-xs text-amber-600 dark:text-amber-500">
+                  <a
+                    href={writeMissingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    {t("gitIssueSyncWriteMissing")}
+                  </a>
                 </p>
               )}
               {issueSync && link.issue_sync_backfilled_at && (

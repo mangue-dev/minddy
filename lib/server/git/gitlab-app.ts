@@ -361,6 +361,12 @@ export interface GitlabIssue {
   title: string;
   description: string | null;
   webUrl: string | null;
+  /** Noms des labels — priorité, effort et catégories en sortent (MIN-97 suite).
+   *  L'API REST de GitLab les rend en chaînes nues, là où le webhook les
+   *  enveloppe dans des objets `{title}`. */
+  labels: string[];
+  /** Logins des assignés, dans l'ordre de GitLab. */
+  assigneeLogins: string[];
 }
 
 const ISSUES_PER_PAGE = 100;
@@ -396,6 +402,8 @@ export async function listGitlabOpenIssues(
       title?: string;
       description?: string | null;
       web_url?: string | null;
+      labels?: string[] | null;
+      assignees?: Array<{ username?: string }> | null;
     }>;
     for (const r of rows) {
       if (typeof r.iid !== "number") continue;
@@ -404,6 +412,10 @@ export async function listGitlabOpenIssues(
         title: r.title ?? "",
         description: r.description ?? null,
         webUrl: r.web_url ?? null,
+        labels: (r.labels ?? []).map((l) => l?.trim() ?? "").filter(Boolean),
+        assigneeLogins: (r.assignees ?? [])
+          .map((a) => a?.username?.trim() ?? "")
+          .filter(Boolean),
       });
       if (issues.length >= limit) break;
     }
