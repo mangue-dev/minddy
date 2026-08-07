@@ -321,11 +321,15 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
               }
             />
 
-            {/* Synchro unidirectionnelle des issues du dépôt → minddy (MIN-97). */}
+            {/* Synchro des issues du dépôt ↔ minddy (MIN-97). La rangée dit ce
+                que fait l'interrupteur en une ligne ; le détail — ce qui est
+                repris, ce qui remonte, ce qui ne remonte pas — vit dans le ⓘ,
+                pour que la page reste lisible d'un coup d'œil. */}
             <SettingsRow
               htmlFor="git-issue-sync"
               label={t("gitIssueSyncLabel", { provider: providerName })}
               hint={isOwner ? t("gitIssueSyncHint") : t("gitIssueSyncOwnerOnlyHint")}
+              help={t("gitIssueSyncHelp")}
               control={
                 <Switch
                   id="git-issue-sync"
@@ -335,11 +339,6 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
                 />
               }
             >
-              {issueSync && (
-                <p className="text-xs text-muted-foreground">
-                  {t("gitIssueSyncScopeHint")}
-                </p>
-              )}
               {issueSync && writeMissingUrl && (
                 <p className="text-xs text-amber-600 dark:text-amber-500">
                   <a
