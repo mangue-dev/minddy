@@ -335,7 +335,7 @@ function issuesUsage(base: string): IntegrationUsage {
         request_body: {
           title: "Required, non-empty.",
           description: "Optional markdown.",
-          priority: "Optional: none | urgent | high | medium | low.",
+          priority: "Optional: none | low | medium | high | urgent.",
           effort: "Optional t-shirt size: xs | s | m | l | xl.",
           categories: "Optional array of category ids, from GET /api/v1/issues/options.",
         },

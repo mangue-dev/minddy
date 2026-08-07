@@ -13,7 +13,7 @@ export const MCP_SERVER_INSTRUCTIONS =
       "around a goal. Issue identifiers read '<PROJECT KEY>-<number>' (e.g. MIND-42): " +
       "tools accept them wherever an 'issue' parameter appears. Statuses: triage, " +
       "backlog, todo, in_progress, in_review, done, canceled, duplicate. Priorities: " +
-      "none, urgent, high, medium, low. Efforts (t-shirt): xs, s, m, l, xl. An issue " +
+      "none, low, medium, high, urgent. Efforts (t-shirt): xs, s, m, l, xl. An issue " +
       "can RECUR: field 'recurrence' (daily, weekly, monthly, yearly) riding on its " +
       "due date — 'every Monday' is the cadence plus the date, so a cadence without " +
       "a due_date is refused. Completing a recurring issue creates the next " +

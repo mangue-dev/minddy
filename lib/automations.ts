@@ -527,7 +527,7 @@ const STATUSES: readonly IssueStatus[] = [
   "canceled",
   "duplicate",
 ];
-const PRIORITIES: readonly IssuePriority[] = ["none", "urgent", "high", "medium", "low"];
+const PRIORITIES: readonly IssuePriority[] = ["none", "low", "medium", "high", "urgent"];
 const EFFORTS: readonly (IssueEffort | "none")[] = ["xs", "s", "m", "l", "xl", "none"];
 const INTENTS: readonly AgentLaunchIntent[] = ["implement", "plan", "verify", "custom"];
 const REASONING: readonly ReasoningLevel[] = ["off", "low", "medium", "high"];

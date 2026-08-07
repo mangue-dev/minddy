@@ -11,7 +11,11 @@ export const ISSUE_STATUSES = [
   "canceled",
   "duplicate",
 ] as const;
-export const ISSUE_PRIORITIES = ["none", "urgent", "high", "medium", "low"] as const;
+// Ordre croissant, comme `PRIORITIES` dans lib/issue-constants.ts : ces listes
+// ne servent pas qu'à valider, elles se RENDENT — le sélecteur de valeurs de
+// l'import (components/settings/import-mapping-editor.tsx) et la réponse de
+// /api/v1/issues/options les déroulent telles quelles.
+export const ISSUE_PRIORITIES = ["none", "low", "medium", "high", "urgent"] as const;
 export const ISSUE_EFFORTS = ["xs", "s", "m", "l", "xl"] as const;
 
 export type IssueStatusValue = (typeof ISSUE_STATUSES)[number];

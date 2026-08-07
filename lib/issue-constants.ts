@@ -90,12 +90,22 @@ export interface PriorityMeta {
   color: string;
 }
 
+// Ordre CROISSANT — première option = la plus basse, dernière = la plus haute.
+// C'est la convention de TOUS les sélecteurs de l'app (tickets, objectifs,
+// retours) : `EFFORTS` monte de xs à xl, les statuts montent de l'arrivée au
+// terminal, la priorité monte de « aucune » à « urgente ». Le sélecteur est une
+// échelle qu'on lit de haut en bas, et une échelle qui descend d'un axe à
+// l'autre force à relire l'ordre à chaque champ.
+//
+// C'est l'ordre d'AFFICHAGE, pas celui du tri : classer des tickets PAR
+// priorité met l'urgent en tête, et ces deux tris-là ont leurs propres tables
+// (`PRIORITY_ORDER` dans lib/view-filter.ts, `PRIORITY_RANK` dans lib/cycle.ts).
 export const PRIORITIES: PriorityMeta[] = [
   { value: "none", icon: Minus, color: "text-muted-foreground" },
-  { value: "urgent", icon: AlertTriangle, color: "text-red-500" },
-  { value: "high", icon: SignalHigh, color: "text-orange-500" },
-  { value: "medium", icon: SignalMedium, color: "text-yellow-500" },
   { value: "low", icon: SignalLow, color: "text-sky-500" },
+  { value: "medium", icon: SignalMedium, color: "text-yellow-500" },
+  { value: "high", icon: SignalHigh, color: "text-orange-500" },
+  { value: "urgent", icon: AlertTriangle, color: "text-red-500" },
 ];
 
 export const PRIORITY_MAP: Record<IssuePriority, PriorityMeta> = Object.fromEntries(

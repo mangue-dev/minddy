@@ -43,7 +43,7 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 - Statuses: triage, backlog, todo, in_progress, in_review, done, canceled, duplicate.
   The kanban board shows backlog → canceled only. 'triage' is the arrival zone where new
   assistant-created issues wait for human validation. 'duplicate' requires duplicate_of_id.
-- Priorities: none, urgent, high, medium, low.
+- Priorities: none, low, medium, high, urgent.
 - Efforts (t-shirt sizes): xs, s, m, l, xl — or null.
 - due_date: ISO 8601 timestamp.
 - Recurrence: an issue can repeat — field \`recurrence\`, cadences daily, weekly, monthly, yearly,

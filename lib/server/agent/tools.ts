@@ -809,7 +809,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           },
           priority: {
             type: "string",
-            enum: ["none", "urgent", "high", "medium", "low"],
+            enum: ["none", "low", "medium", "high", "urgent"],
             description: "Optional priority.",
           },
           effort: {

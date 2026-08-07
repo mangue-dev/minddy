@@ -123,7 +123,7 @@ const MCP_SERVER_MODEL = `- **Project**: the workspace. Everything else belongs 
 - **Objective**: groups a project's issues around a goal.
 - **Issue**: \`<PROJECT KEY>-<number>\`, e.g. \`MIND-42\`. Statuses: triage,
   backlog, todo, in_progress, in_review, done, canceled, duplicate. Priorities:
-  none, urgent, high, medium, low. Efforts: xs, s, m, l, xl.
+  none, low, medium, high, urgent. Efforts: xs, s, m, l, xl.
 - **Plan**: markdown on an issue. \`- [ ]\` pending, \`- [~]\` in progress,
   \`- [x]\` done, \`- [-]\` cancelled. Checkboxes under a \`## Questions\`
   heading are open questions, not work, and never count towards progress.

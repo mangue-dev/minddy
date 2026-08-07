@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     return publicApiError(
       422,
       "invalid_priority",
-      "priority must be one of: none, urgent, high, medium, low."
+      "priority must be one of: none, low, medium, high, urgent."
     );
   }
   if (body.effort !== undefined && !isEffort(body.effort)) {
