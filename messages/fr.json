@@ -1774,6 +1774,7 @@
     "quotaUseOwnKey": "Utiliser ma propre clé d'API",
     "errorTurnTooLong": "Ce tour a atteint sa limite de durée — son travail est gardé. Envoyez un message pour le poursuivre.",
     "errorTurnTooBig": "Ce tour est devenu trop volumineux pour être poursuivi — son travail est gardé. Envoyez un message pour en ouvrir un nouveau.",
+    "errorTurnHistoryReset": "Cette conversation est devenue trop volumineuse pour être reprise, elle a donc été réinitialisée — le travail est gardé. Le tour suivant repart du ticket : redites ce qu'il reste à faire.",
     "errorReplyIncomplete": "La réponse du modèle n'est jamais arrivée en entier — son travail est gardé, et rien n'a été commité. Envoyez un message pour poursuivre.",
     "runCapTitle": "Ce passage a atteint son plafond de dépense",
     "runCapReached": "Sa routine autorise {percent} % du budget mensuel par passage.",

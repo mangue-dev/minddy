@@ -88,6 +88,19 @@ function producedKeys(expr: ts.Expression, seen = new Set<string>()): Set<string
     const decl = decls.get(expr.text);
     return decl?.initializer ? producedKeys(decl.initializer, seen) : keys;
   }
+  /**
+   * `fitCheckpoint(x)` (MIN-217) et le `.checkpoint` qu'on en lit : le rabotage ne
+   * rend qu'un SOUS-ENSEMBLE des clés de son argument — il n'en invente aucune. La
+   * question que pose ce test étant « quelle clé atterrit dans quel objet », c'est
+   * donc `x` qu'il faut lire à travers lui. Sans cette traversée, `baseCheckpoint`
+   * se lirait comme un objet SANS clés et les assertions passeraient à vide.
+   */
+  if (ts.isPropertyAccessExpression(expr) && expr.name.text === "checkpoint") {
+    return producedKeys(expr.expression, seen);
+  }
+  if (ts.isCallExpression(expr) && expr.expression.getText() === "fitCheckpoint") {
+    return expr.arguments[0] ? producedKeys(expr.arguments[0], seen) : keys;
+  }
   if (ts.isObjectLiteralExpression(expr)) {
     for (const prop of expr.properties) {
       if (ts.isSpreadAssignment(prop)) {

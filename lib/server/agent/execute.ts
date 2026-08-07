@@ -65,6 +65,7 @@ import {
 } from "./subagent-config";
 import { getAgentModelsForUser } from "./models-catalog";
 import { pruneToolOutputs } from "./prune";
+import { fitCheckpoint, MAX_CHECKPOINT_BYTES } from "./checkpoint-fit";
 import { resolveWithin } from "./repo-path";
 import { typeErrorsForTurn, TYPECHECK_MIN_BUDGET_MS } from "./diagnostics";
 import { formatSelfReview, SELF_REVIEW_MIN_BUDGET_MS } from "./self-review";
@@ -202,8 +203,6 @@ async function resolveCommitterIdentity(
 
 /** Wall-clock max d'UN TOUR (garde-fou anti-runaway ; réinitialisé à chaque tour). */
 const MAX_WALL_CLOCK_MS = 60 * 60_000;
-/** Taille max du checkpoint sérialisé. */
-const MAX_CHECKPOINT_BYTES = 8_000_000;
 /**
  * Chemins édités qu'un tour emporte au chunk suivant (MIN-210) — les PLUS RÉCENTS
  * au-delà. Le cap tient `MAX_CHECKPOINT_BYTES` à l'abri d'une refonte à mille
@@ -279,6 +278,12 @@ const EDIT_DIFF_CAP = 4000;
  * checkpoint (MIN-112). Le checkpoint entier est plafonné à `MAX_CHECKPOINT_BYTES`
  * (8 Mo) et le dépassement fait ÉCHOUER le tour : une fille bavarde ne doit pas
  * pouvoir tuer la session de son parent pour s'offrir une reprise.
+ *
+ * Ce budget-ci est par FILLE, et rien ne borne leur nombre à l'échelle du
+ * checkpoint : six filles suspendues franchissent le plafond à elles seules. C'est
+ * le premier palier de `fitCheckpoint` (MIN-217) qui rattrape ce cas — il lâche
+ * ces historiques-là avant tout le reste, précisément parce qu'ils sont invisibles
+ * à l'élagage et à la compaction, qui ne regardent que `messages`.
  */
 const SUBAGENT_HISTORY_MAX_BYTES = 1_500_000;
 
@@ -2594,7 +2599,7 @@ export async function executeAgentRun(
     //
     // Ce qui vaut pour le RUN, quelle que soit la sortie. L'état de TOUR, lui, est
     // ajouté juste en dessous — et c'est ce qui sépare les deux objets (MIN-210).
-    const baseCheckpoint: AgentCheckpoint = {
+    const rawCheckpoint: AgentCheckpoint = {
       messages: result.messages,
       usageSeq: result.usageSeqEnd,
       lastFilesSha: run.checkpoint?.lastFilesSha ?? baselineHead,
@@ -2609,6 +2614,39 @@ export async function executeAgentRun(
       // RUN, donc son compteur voyage avec le checkpoint (cf. `pr-tools.ts`).
       ...(prToolCtx ? { prInlineComments: prToolCtx.inline.used } : {}),
     };
+    /**
+     * RABOTÉ AU GABARIT UNE FOIS POUR TOUTES (MIN-217), ici et pas sur un seul
+     * chemin : ce qui suit persiste cet objet sur SIX sorties (fin de tour, WIP,
+     * interruption, erreur LLM, budget épuisé, garde-fous anti-runaway), et un
+     * checkpoint hors gabarit est une impasse par quelque porte qu'il soit écrit —
+     * le tour suivant le rehydrate et rejoue la même fin. Seul le garde-fou le
+     * MESURAIT, et il le réécrivait quand même tel quel.
+     *
+     * No-op tant que le checkpoint tient (le cas normal) : `fitCheckpoint` rend
+     * alors l'objet d'entrée, sans copie. `fit.bytes` est la taille AVANT rabotage
+     * — c'est elle que le garde-fou juge, plus bas.
+     */
+    const fit = fitCheckpoint(rawCheckpoint);
+    const baseCheckpoint = fit.checkpoint;
+    /**
+     * Le rabotage est allé jusqu'au DERNIER palier : l'historique n'a pas pu
+     * traverser, le tour suivant repartira à froid. Dit ICI, une fois, plutôt que
+     * dans le seul garde-fou : n'importe laquelle des six sorties peut avoir eu à
+     * payer ce prix, et une conversation qui repart de zéro sans que rien ne le
+     * dise, c'est un agent qui semble avoir tout oublié sans raison.
+     *
+     * Les deux premiers paliers ne se disent pas : ils ne perdent que du
+     * re-demandable (une sortie de tool, une image) et laissent au modèle le
+     * marqueur qui explique comment y revenir.
+     */
+    if (fit.dropped.includes("history")) {
+      await emit("error", {
+        code: "turnHistoryReset",
+        message:
+          "This session's history grew too large to carry over and had to be reset. The work is kept; the next turn starts fresh.",
+        dropped: fit.dropped,
+      });
+    }
     /**
      * Ce que le TOUR emporte au chunk suivant (MIN-210) : les fichiers édités que le
      * type-check n'a pas encore vus, et le verrou qui ouvre l'auto-relecture. Sans
@@ -2890,7 +2928,10 @@ export async function executeAgentRun(
     const wallClock = run.window_started_at
       ? Date.now() - Date.parse(run.window_started_at)
       : Date.now() - callStart;
-    const checkpointTooBig = JSON.stringify(checkpoint).length > MAX_CHECKPOINT_BYTES;
+    // La taille AVANT rabotage (MIN-217) : un tour dont l'état a explosé reste un
+    // tour qu'on arrête, même si `fitCheckpoint` a su le ramener au gabarit — le
+    // rabotage sert au tour SUIVANT, pas à absoudre celui-ci.
+    const checkpointTooBig = fit.bytes > MAX_CHECKPOINT_BYTES;
 
     if (
       nextContinuations > AGENT_MAX_CONTINUATIONS ||
@@ -2909,6 +2950,11 @@ export async function executeAgentRun(
        *
        * Deux codes plutôt qu'un : un tour qui a duré et un tour devenu trop
        * volumineux ne se corrigent pas pareil.
+       *
+       * « Envoyez un message pour en ouvrir un nouveau » ne promet plus rien que
+       * le code ne tienne (MIN-217) : le checkpoint qu'on persiste juste en
+       * dessous a été raboté au gabarit, donc le tour suivant repart pour de bon.
+       * Ce qu'il a coûté, s'il a coûté, a été dit plus haut par `historyReset`.
        */
       await emit("error", {
         code: checkpointTooBig ? "turnTooBig" : "turnTooLong",

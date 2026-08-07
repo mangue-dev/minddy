@@ -9,6 +9,7 @@ import {
 } from "./content";
 import { estimateTokens, planCompaction, serializeForSummary, type CompactMessage } from "./compact";
 import { pruneToolOutputs, capHistoryImages, IMAGE_ELIDED_NOTE, PRUNE_STUB } from "./prune";
+import { MAX_CHECKPOINT_BYTES } from "./checkpoint-fit";
 import { markSystemPromptCache } from "./caching";
 
 /**
@@ -154,14 +155,13 @@ describe("un historique multimodal traverse tout le harness", () => {
 
 /**
  * L'historique EST le checkpoint, et il est sérialisé en JSON à chaque mise au
- * repos : au-delà de `MAX_CHECKPOINT_BYTES` (8 Mo, execute.ts), le run s'arrête sur
- * « budget épuisé ». Une data URL pèse lourd sans rien coûter en tokens — c'est le
- * seul endroit du harness où une maquette peut faire des dégâts. Ce test fixe la
- * borne : cap par image (750 Ko source, ~1 Mo en base64, issue-tools.ts) ×
+ * repos : au-delà de `MAX_CHECKPOINT_BYTES` (8 Mo, checkpoint-fit.ts), le tour
+ * s'arrête sur `turnTooBig`. Une data URL pèse lourd sans rien coûter en tokens —
+ * c'est le seul endroit du harness où une maquette peut faire des dégâts. Ce test
+ * fixe la borne : cap par image (750 Ko source, ~1 Mo en base64, issue-tools.ts) ×
  * `MAX_HISTORY_IMAGES` retenues.
  */
 describe("borne du checkpoint", () => {
-  const MAX_CHECKPOINT_BYTES = 8_000_000; // cf. execute.ts
   /** Une image au cap : 750 Ko source → base64 4/3. */
   const maxImage = (): AgentContentPart => ({
     type: "image_url",

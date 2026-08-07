@@ -769,6 +769,7 @@ function TurnGroup({
 const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   turnTooLong: "errorTurnTooLong",
   turnTooBig: "errorTurnTooBig",
+  turnHistoryReset: "errorTurnHistoryReset",
   replyIncomplete: "errorReplyIncomplete",
 };
 
