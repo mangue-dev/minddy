@@ -1165,6 +1165,17 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     }
     round++;
 
+    /**
+     * Matière neuve entrée dans l'historique à ce round, quelle qu'en soit la
+     * source — message de l'utilisateur OU rapport de fille. Unique lecteur : la
+     * garde du parking, plus bas. C'est pourquoi il se déclare AVANT le steering
+     * (MIN-205) : un message compté seulement à partir du bloc des rapports ne
+     * levait pas le parking, et le parent passait le chunk entier à attendre ses
+     * filles sans un seul appel au modèle — message accepté, affiché, puis
+     * silence de plusieurs dizaines de minutes.
+     */
+    let injectedThisRound = 0;
+
     // Steering : draine les messages user en attente et les injecte comme messages
     // `user` AVANT le prochain appel (frontière sûre, aucun appel en vol). Sert à
     // orienter un run en cours ET à répondre à un `ask_user` (reprise du run).
@@ -1173,6 +1184,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       for (const text of injected) {
         if (!text.trim()) continue;
         messages.push({ role: "user", content: text });
+        injectedThisRound++;
         await emit("user_message", { text: cap(text, 4000) });
       }
     }
@@ -1181,7 +1193,6 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // steering — les rapports terminés entrent comme messages `user` avant l'appel.
     // Pas de bulle par rapport : le bloc replié du sous-agent raconte déjà le détail
     // dans le fil, un event `status` suffit à le marquer.
-    let injectedThisRound = 0;
     if (params.pullSubagentReports) {
       const reports = await params.pullSubagentReports().catch(() => []);
       for (const report of reports) {
@@ -1195,9 +1206,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // Tour GARÉ repris (MIN-112) : le parent avait déjà répondu et attend ses
     // filles. On attend ICI, avant tout appel LLM — le faire parler pour qu'il
     // redise « j'attends » coûterait un aller-retour par chunk d'attente.
-    // `injectedThisRound` garde le parking : si un rapport attendait déjà, le parent
-    // a quelque chose à dire — le garer de nouveau lui ferait rater son tour de
-    // parole et retarderait la réponse d'un chunk entier.
+    // `injectedThisRound` garde le parking : si un rapport OU un message de
+    // l'utilisateur attendait déjà, le parent a quelque chose à dire — le garer de
+    // nouveau lui ferait rater son tour de parole et retarderait la réponse d'un
+    // chunk entier. Pour un message, l'attente ne pourrait même plus tomber :
+    // `hasPendingRunMessages` (la sonde qui la rompt) ne voit que les messages NON
+    // consommés, et le drain vient précisément de le marquer consommé.
     if (parked && injectedThisRound === 0 && params.awaitSubagents) {
       parked = false;
       const waited = await params
