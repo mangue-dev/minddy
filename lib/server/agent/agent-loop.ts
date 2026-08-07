@@ -93,6 +93,21 @@ const MAX_ROUNDS_PER_CHUNK = 150;
  */
 const MAX_TURN_END_REENTRIES = 2;
 /**
+ * Garde-fou : relances du tour sur une réponse INCOMPLÈTE (MIN-203) — coupée au
+ * plafond de tokens, ou vide. Deux, comme le hook de fin de tour : un modèle qui
+ * n'arrive pas à finir sa phrase en trois passages ne finira pas au quatrième, et
+ * chaque passage se paie. Au-delà, le tour s'arrête EN DISANT qu'il s'est arrêté.
+ */
+const MAX_INCOMPLETE_REENTRIES = 2;
+/**
+ * Ce qu'on injecte pour faire reprendre le modèle. En anglais, comme tout ce qui
+ * s'adresse au modèle dans ce fichier — ce n'est pas de l'UI.
+ */
+const TRUNCATED_NUDGE =
+  "Your reply was cut off at the token limit before you finished — it was NOT delivered as a conclusion. Continue from exactly where you stopped, and keep it short enough to fit. If work remains, call the tools you need instead of writing a long summary.";
+const EMPTY_REPLY_NUDGE =
+  "Your last round came back empty: no text, no tool call. Nothing was delivered. Either call the tool you need, or write your reply to the user.";
+/**
  * Garde-fou PROPRE aux sous-agents (MIN-112) : relances du tour pour livrer un
  * rapport arrivé après que le modèle a rendu la main. Indépendant de
  * `MAX_TURN_END_REENTRIES` — un tour qui délègue trois fois de suite est un tour
@@ -607,11 +622,25 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
   }
 }
 
+/** Erreur rendue DANS le flux (OpenRouter la pose en objet SSE), MIN-203. */
+interface StreamErrorPayload {
+  code?: number | string;
+  message?: string;
+}
+
 interface StreamChunk {
   id?: string;
   model?: string;
   usage?: OpenRouterUsage;
+  /** Le provider a lâché EN COURS de stream : le flux se termine sinon
+   *  « proprement » sur un round vide, que la boucle lisait comme une fin de tour. */
+  error?: StreamErrorPayload;
   choices?: Array<{
+    /** Motif d'arrêt du round. `length` = coupé au plafond de tokens (MIN-203). */
+    finish_reason?: string | null;
+    /** La forme du provider sous la couche compat (`max_tokens` chez Anthropic). */
+    native_finish_reason?: string | null;
+    error?: StreamErrorPayload;
     delta?: {
       content?: string;
       // Trace de raisonnement (selon provider). Affichée en live, jamais persistée.
@@ -637,6 +666,33 @@ interface StreamResult {
   generationId: string | null;
   modelUsed: string | null;
   usage: NormalizedUsage;
+  /** Motif d'arrêt rapporté par le provider, `null` s'il n'en a rendu aucun. */
+  finishReason: string | null;
+  /** Round COUPÉ au plafond de tokens (MIN-203) : ce n'est pas une fin de tour. */
+  truncated: boolean;
+}
+
+/** Motifs d'arrêt qui disent « coupé au plafond », toutes couches compat confondues. */
+const TRUNCATED_FINISH_REASONS = new Set(["length", "max_tokens"]);
+
+/**
+ * Erreur rendue au fil du stream → `StreamError`. Le code des passerelles
+ * OpenAI-compatibles reprend les statuts HTTP : on s'en sert pour décider de la
+ * reprise, et on reprend par défaut quand il est absent ou non numérique — un
+ * hoquet de provider ne doit pas tuer un run, et le wrapper borne les essais.
+ */
+function streamPayloadError(payload: StreamErrorPayload): StreamError {
+  const status = typeof payload.code === "number" ? payload.code : Number(payload.code);
+  const known = Number.isFinite(status);
+  return new StreamError(
+    `LLM stream error${payload.code != null ? ` (${payload.code})` : ""}: ${
+      payload.message ?? "no message"
+    }`,
+    {
+      retryable: known ? isRetryableStatus(status) : true,
+      ...(known ? { status } : {}),
+    },
+  );
 }
 
 /**
@@ -765,6 +821,8 @@ async function streamCompletionOnce(opts: {
     let generationId: string | null = null;
     let modelUsed: string | null = null;
     let usageRaw: OpenRouterUsage | null = null;
+    /** Dernier motif d'arrêt vu (MIN-203) — `null` si le provider n'en rend pas. */
+    let finishReason: string | null = null;
     const acc = new Map<number, { id: string; name: string; arguments: string }>();
 
     // Chrono de la phase de réflexion (MIN-122) : ouvert au premier delta de
@@ -835,7 +893,16 @@ async function streamCompletionOnce(opts: {
         if (parsed.id && !generationId) generationId = parsed.id;
         if (parsed.model) modelUsed = parsed.model;
         if (parsed.usage) usageRaw = parsed.usage;
-        const delta = parsed.choices?.[0]?.delta;
+        // Erreur DANS le flux (MIN-203) : sans ça le stream se termine sans rien
+        // dire, et un round vide se lisait comme une fin de tour.
+        const errorPayload = parsed.error ?? parsed.choices?.[0]?.error;
+        if (errorPayload) throw streamPayloadError(errorPayload);
+        // AVANT le garde sur `delta` : le chunk qui porte le motif d'arrêt n'a
+        // souvent pas de delta du tout, et le garde le sauterait.
+        const choice = parsed.choices?.[0];
+        const stop = choice?.finish_reason ?? choice?.native_finish_reason;
+        if (stop) finishReason = stop;
+        const delta = choice?.delta;
         if (!delta) continue;
         if (delta.content) {
           closeReasoning();
@@ -887,6 +954,8 @@ async function streamCompletionOnce(opts: {
       generationId,
       modelUsed,
       usage: parseOpenRouterUsage(usageRaw),
+      finishReason,
+      truncated: finishReason !== null && TRUNCATED_FINISH_REASONS.has(finishReason),
     };
   } finally {
     clearTimeout(hardTimer);
@@ -1020,6 +1089,9 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   // corriger, le check suivant vérifie le correctif — puis le tour se termine,
   // erreurs restantes ou non. Compté par CHUNK, comme les compactions.
   let turnEndReentries = 0;
+  // Relances du tour sur une réponse coupée ou vide (MIN-203). Compté par CHUNK,
+  // comme les deux au-dessus.
+  let incompleteReentries = 0;
   // Relances du tour pour livrer un rapport de sous-agent (MIN-112) — budget PROPRE,
   // cf. MAX_SUBAGENT_WAIT_REENTRIES.
   let subagentReentries = 0;
@@ -1352,8 +1424,64 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // Arrêt naturel sans tool-call → FIN DE TOUR : le texte du modèle est sa
     // réponse à l'utilisateur (le feed la rend comme bulle de clôture du tour).
     if (stream.toolCalls.length === 0) {
-      messages.push({ role: "assistant", content: stream.content || "" });
-      const reply = stream.content.trim() || "Done.";
+      /**
+       * …mais un arrêt n'est pas toujours naturel (MIN-203). Deux formes disent
+       * l'inverse, et toutes deux arrivaient ici comme une conclusion :
+       *
+       * - le round a été COUPÉ au plafond de tokens (`finish_reason: "length"`) ;
+       * - il est revenu VIDE, ni texte ni tool-call — ce que le repli « Done. »
+       *   masquait exactement.
+       *
+       * Les prendre pour une fin de tour coûtait cher : `commitAndPush` partait
+       * avec un commit intitulé « Done. », l'arbre à moitié écrit était poussé, et
+       * l'`outcome` stampé devenait le résumé qu'une session froide relira.
+       *
+       * Testé EN TÊTE de branche : un tour qui n'est pas fini n'a pas à réveiller
+       * ses filles ni à déclencher le type-check de fin de tour.
+       */
+      const incomplete = stream.truncated || !stream.content.trim();
+      if (incomplete && incompleteReentries < MAX_INCOMPLETE_REENTRIES) {
+        incompleteReentries++;
+        // Le fragment reste dans le contexte pour que le modèle le CONTINUE, et
+        // dans le fil comme étape (même convention que la relance `onTurnEnd`) —
+        // sans clore le tour à l'écran.
+        if (stream.content.trim()) {
+          messages.push({ role: "assistant", content: stream.content });
+          await emit("thinking", { text: cap(stream.content, 2000) });
+        }
+        messages.push({
+          role: "user",
+          content: stream.truncated ? TRUNCATED_NUDGE : EMPTY_REPLY_NUDGE,
+        });
+        await emit("status", { phase: "reply_incomplete", truncated: stream.truncated });
+        clearLive();
+        continue;
+      }
+      if (incomplete) {
+        // Plafond épuisé : le tour s'arrête EN LE DISANT. `status: "error"` prend
+        // le chemin de `turnTooLong` — repos reprenable, checkpoint gardé, ni
+        // commit ni push, et pas d'`outcome` mensonger. Surtout : pas de `summary`.
+        if (stream.content.trim()) messages.push({ role: "assistant", content: stream.content });
+        clearLive();
+        const message = stream.truncated
+          ? "The model's reply kept being cut off at the token limit."
+          : "The model kept returning an empty reply.";
+        await emit("error", { code: "replyIncomplete", message });
+        return {
+          status: "error",
+          messages,
+          errorMessage: message,
+          costUsd,
+          usageSeqEnd: seq,
+          rounds: round,
+        };
+      }
+
+      messages.push({ role: "assistant", content: stream.content });
+      // Non vide par construction : un contenu blanc est `incomplete`, traité
+      // au-dessus. C'est ce qui a retiré le repli « Done. » — il ne couvrait pas
+      // un cas rare, il maquillait un round raté en conclusion.
+      const reply = stream.content.trim();
 
       // Sous-agents encore en vol (MIN-112) : le tour ne se termine pas tant qu'une
       // fille peut encore rendre son rapport DANS ce chunk. Placé AVANT le
@@ -1397,8 +1525,8 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           .catch(() => null);
         if (followUp?.trim()) {
           turnEndReentries++;
-          // `reply` porte un « Done. » de repli quand le modèle n'a rien écrit :
-          // seul un vrai texte mérite de rester dans le fil comme étape.
+          // La réponse écrite reste dans le fil comme étape (elle est non vide :
+          // un round blanc n'arrive pas jusqu'ici, cf. le garde `incomplete`).
           if (stream.content.trim()) await emit("thinking", { text: cap(stream.content, 2000) });
           messages.push({ role: "user", content: followUp });
           clearLive();

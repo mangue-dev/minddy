@@ -769,6 +769,7 @@ function TurnGroup({
 const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   turnTooLong: "errorTurnTooLong",
   turnTooBig: "errorTurnTooBig",
+  replyIncomplete: "errorReplyIncomplete",
 };
 
 function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {

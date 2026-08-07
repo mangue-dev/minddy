@@ -1774,6 +1774,7 @@
     "quotaUseOwnKey": "Use my own API key",
     "errorTurnTooLong": "This turn reached its time limit — its work is kept. Send a message to carry on.",
     "errorTurnTooBig": "This turn grew too large to carry on — its work is kept. Send a message to start a fresh one.",
+    "errorReplyIncomplete": "The model's reply never came through in full — its work is kept, and nothing was committed. Send a message to carry on.",
     "runCapTitle": "This run reached its spending cap",
     "runCapReached": "Its routine lets one run spend up to {percent}% of your monthly usage.",
     "runCapWorkKept": "The agent stopped here — its work is pushed, and you can raise the cap in the routine's settings.",
