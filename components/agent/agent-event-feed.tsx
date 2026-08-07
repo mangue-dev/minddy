@@ -17,6 +17,7 @@ import {
   Circle,
   CircleDot,
   CircleSlash,
+  CloudOff,
   GitCommit,
   ListChecks,
 } from "lucide-react";
@@ -81,7 +82,7 @@ type FeedItem =
   | {
       kind: "note";
       id: string;
-      variant: "commit" | "error" | "reasoningUnsupported";
+      variant: "commit" | "error" | "reasoningUnsupported" | "providerRetry";
       /** Motif NOMMÉ d'une erreur du harness (`turnTooLong`…), traduit à l'affichage.
        *  Absent sur une erreur de modèle, qui n'a que son texte. */
       code?: string;
@@ -510,17 +511,30 @@ function buildFeed(
         // le chunk (cf. `sandboxReady`).
         if (p.phase === "sandbox_ready") sandboxSeq = e.seq;
         else if (p.status === "running") runningSeq = e.seq;
-        // Le seul `status` rendu : le provider a REFUSÉ le niveau de raisonnement
-        // demandé (MIN-122). Sans cette ligne, le niveau choisi resterait affiché
+        // Les deux `status` rendus. Le provider a REFUSÉ le niveau de raisonnement
+        // demandé (MIN-122) : sans cette ligne, le niveau choisi resterait affiché
         // dans le composer alors qu'il n'a plus aucun effet — silencieusement.
-        if (p.phase !== "reasoning_unsupported") break;
-        items.push({
-          kind: "note",
-          id: e.id,
-          variant: "reasoningUnsupported",
-          text: "",
-          createdAt: e.created_at,
-        });
+        if (p.phase === "reasoning_unsupported") {
+          items.push({
+            kind: "note",
+            id: e.id,
+            variant: "reasoningUnsupported",
+            text: "",
+            createdAt: e.created_at,
+          });
+        }
+        // Le fournisseur est tombé (MIN-219) : le tour attend avant de retenter,
+        // et l'attente peut durer plusieurs minutes. L'event existait déjà, il
+        // n'avait aucun lecteur — l'agent se taisait sans que rien ne dise pourquoi.
+        if (p.phase === "transient_error") {
+          items.push({
+            kind: "note",
+            id: e.id,
+            variant: "providerRetry",
+            text: "",
+            createdAt: e.created_at,
+          });
+        }
         break;
       }
       case "error": {
@@ -771,6 +785,7 @@ const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   turnTooBig: "errorTurnTooBig",
   turnHistoryReset: "errorTurnHistoryReset",
   replyIncomplete: "errorReplyIncomplete",
+  providerUnavailable: "errorProviderUnavailable",
 };
 
 function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
@@ -789,6 +804,14 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Brain className="size-3 shrink-0" />
         {t("reasoningUnsupported")}
+      </div>
+    );
+  }
+  if (item.variant === "providerRetry") {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <CloudOff className="size-3 shrink-0" />
+        {t("providerRetry")}
       </div>
     );
   }

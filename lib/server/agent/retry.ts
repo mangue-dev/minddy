@@ -29,6 +29,55 @@ const RETRY_CAP_MS = 8_000;
     Au-delà, mieux vaut suspendre le run que dormir et se faire tuer par maxDuration. */
 export const MAX_RETRY_WAIT_MS = 30_000;
 
+/**
+ * Reprise ENTRE CHUNKS d'une panne de fournisseur (MIN-219) — l'étage au-dessus
+ * du backoff ci-dessus, qui ne couvre qu'UN appel (4 essais, ≤ 3,5 s d'attente
+ * cumulée). Passé ça, la boucle suspend le chunk et l'exécuteur re-queue : c'est
+ * ce délai-là qui décide de la patience RÉELLE du tour face à une panne.
+ *
+ * Il valait zéro. Le re-queue était immédiat, le drain reclaimait dans le même
+ * process, et une panne de deux minutes brûlait les 20 continuations du tour en
+ * autant de chunks morts sur leur premier appel — puis le tour s'arrêtait sur
+ * « limite de durée », la seule phrase que ce plafond savait dire.
+ *
+ * Les paliers : de quoi traverser un incident ordinaire (quelques dizaines de
+ * secondes) sans y penser, et ~17,5 min de patience au total avant d'abandonner
+ * proprement. La microVM vit 45 min (`SANDBOX_TIMEOUT_MS`) et le tour 60
+ * (`MAX_WALL_CLOCK_MS`) : les deux filets restent devant. Au-delà, le repos est
+ * un meilleur service qu'une attente — le checkpoint est gardé, un message
+ * suffit à repartir.
+ *
+ * Le cron de drain passe toutes les 2 min : un délai plus fin que ça se lit
+ * comme « au prochain passage ». C'est voulu — le premier palier sert surtout à
+ * ne PAS retenter dans la foulée.
+ */
+const PROVIDER_REQUEUE_DELAYS_MS = [30_000, 120_000, 300_000, 600_000];
+
+/** Nombre de re-queues différés accordés à une panne avant le repos honnête. */
+export const MAX_PROVIDER_REQUEUES = PROVIDER_REQUEUE_DELAYS_MS.length;
+
+/** Ce qu'un chunk tombé sur une panne fait ensuite. `retries` est le compteur à
+ *  reporter dans le checkpoint re-queué — il ne repart de zéro que par le haut,
+ *  quand un chunk avance et repose un checkpoint sans lui. */
+export type ProviderStallPlan =
+  | { requeue: true; retries: number; delayMs: number }
+  | { requeue: false; retries: number };
+
+/**
+ * La décision, à partir du seul compteur porté par le checkpoint précédent.
+ * PURE — c'est ici que se teste la politique, pas dans `execute.ts` où elle
+ * n'était atteignable qu'avec une microVM, une base et un modèle.
+ *
+ * `Math.max(0, …)` sur l'entrée : le checkpoint vient de la base, et un compteur
+ * négatif (ligne bricolée à la main, migration) rendrait un délai indéfini —
+ * donc un `not_before` dans le passé, c'est-à-dire le défaut qu'on ferme.
+ */
+export function planProviderStall(previousRetries: number): ProviderStallPlan {
+  const retries = Math.max(0, Math.floor(previousRetries) || 0) + 1;
+  if (retries > MAX_PROVIDER_REQUEUES) return { requeue: false, retries };
+  return { requeue: true, retries, delayMs: PROVIDER_REQUEUE_DELAYS_MS[retries - 1]! };
+}
+
 /** Erreur de streaming portant l'info de reprise. */
 export class StreamError extends Error {
   readonly retryable: boolean;

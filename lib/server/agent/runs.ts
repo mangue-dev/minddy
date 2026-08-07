@@ -132,6 +132,19 @@ export interface AgentCheckpoint {
    * déclencherait une auto-relecture qui n'a rien à relire.
    */
   repoTouched?: boolean;
+  /**
+   * Re-queues CONSÉCUTIFS accordés à une panne de fournisseur (MIN-219), borné
+   * par `MAX_PROVIDER_REQUEUES`. Écrit par la seule sortie qui attend le
+   * fournisseur, donc remis à zéro de lui-même dès qu'un chunk avance : le
+   * checkpoint est reconstruit à neuf à chaque mise au repos, et aucune autre
+   * branche ne repose ce champ.
+   *
+   * Ici et pas dans une colonne : c'est un compteur d'ATTENTE, il n'a de sens
+   * que rattaché à l'état du tour qu'il fait patienter. `continuations` compte
+   * les chunks qui ont travaillé, `attempts` les claims d'un crash — un chunk
+   * mort sur son premier appel modèle n'est ni l'un ni l'autre.
+   */
+  providerRetries?: number;
 }
 
 export interface AgentRun {

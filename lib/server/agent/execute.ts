@@ -10,6 +10,7 @@ import { defaultLocale, type Locale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
 import { AGENT_MAX_CONTINUATIONS } from "@/lib/agent-models";
 import { CHUNK_FLOOR_MS, chunkSoftDeadlineMs, runCommandTimeoutMs } from "./chunk-budget";
+import { planProviderStall } from "./retry";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
@@ -2922,9 +2923,32 @@ export async function executeAgentRun(
       return "interrupted";
     }
 
+    /**
+     * Le chunk n'a pas travaillé : il a attendu un fournisseur en panne (MIN-219).
+     * Ce n'est pas une continuation, c'est une ATTENTE — elle a son propre budget,
+     * son propre délai, et elle ne touche pas à celui du tour.
+     *
+     * Compté sur le checkpoint PRÉCÉDENT : c'est le seul état qui traverse un
+     * chunk. Un chunk qui avance en repose un neuf, sans ce champ — le compteur
+     * ne mesure donc que des pannes CONSÉCUTIVES, ce qui est bien ce qu'on veut
+     * borner (un hoquet toutes les dix minutes ne doit rien épuiser).
+     */
+    const providerStalled =
+      result.status === "suspended" && result.suspendReason === "transient_error";
+    const stall = providerStalled
+      ? planProviderStall(run.checkpoint?.providerRetries ?? 0)
+      : null;
+    const providerGaveUp = stall?.requeue === false;
+
     // suspended — garde-fous anti-runaway PAR TOUR : au-delà, on REPOSE (avec un
     // event d'erreur) au lieu d'échouer — la session reste reprennable.
-    const nextContinuations = run.continuations + 1;
+    //
+    // Une attente ne consomme PAS de continuation : le compteur borne les chunks
+    // qui ont fait parler le modèle, et celui-ci n'y est jamais arrivé. Le
+    // garde-fou d'horloge, lui, continue de courir (`window_started_at` est
+    // conservé de part et d'autre) — c'est lui le filet ultime d'un tour qui
+    // n'avance plus, attentes comprises.
+    const nextContinuations = run.continuations + (providerStalled ? 0 : 1);
     const wallClock = run.window_started_at
       ? Date.now() - Date.parse(run.window_started_at)
       : Date.now() - callStart;
@@ -2934,6 +2958,7 @@ export async function executeAgentRun(
     const checkpointTooBig = fit.bytes > MAX_CHECKPOINT_BYTES;
 
     if (
+      providerGaveUp ||
       nextContinuations > AGENT_MAX_CONTINUATIONS ||
       wallClock > MAX_WALL_CLOCK_MS ||
       checkpointTooBig
@@ -2948,8 +2973,13 @@ export async function executeAgentRun(
        * français en dur, tutoyée, dans une app bilingue où tout le reste passe
        * par next-intl.
        *
-       * Deux codes plutôt qu'un : un tour qui a duré et un tour devenu trop
-       * volumineux ne se corrigent pas pareil.
+       * Trois codes plutôt qu'un : un tour qui a duré, un tour devenu trop
+       * volumineux et un fournisseur en panne ne se corrigent pas pareil — et le
+       * troisième ne se corrige pas du tout, il s'attend. Il passe DEVANT les
+       * deux autres : quand la patience du fournisseur s'épuise, c'est la panne
+       * qui arrête le tour, quoi qu'en disent les compteurs (MIN-219). Le tour
+       * mourait ici en annonçant une « limite de durée » qu'aucune horloge
+       * n'avait atteinte.
        *
        * « Envoyez un message pour en ouvrir un nouveau » ne promet plus rien que
        * le code ne tienne (MIN-217) : le checkpoint qu'on persiste juste en
@@ -2957,17 +2987,59 @@ export async function executeAgentRun(
        * Ce qu'il a coûté, s'il a coûté, a été dit plus haut par `historyReset`.
        */
       await emit("error", {
-        code: checkpointTooBig ? "turnTooBig" : "turnTooLong",
+        code: providerGaveUp
+          ? "providerUnavailable"
+          : checkpointTooBig
+            ? "turnTooBig"
+            : "turnTooLong",
         // Repli pour un client qui ne connaîtrait pas le code (et trace lisible
         // dans la table d'events) : en anglais, comme tout ce qui n'est pas de
         // l'UI dans ce fichier.
-        message: checkpointTooBig
-          ? "This turn grew too large to carry on. Send a message to start a fresh one."
-          : "This turn reached its time limit. Send a message to carry on.",
+        message: providerGaveUp
+          ? "The model provider kept failing, so this turn was paused. Send a message to carry on."
+          : checkpointTooBig
+            ? "This turn grew too large to carry on. Send a message to start a fresh one."
+            : "This turn reached its time limit. Send a message to carry on.",
       });
-      const pending = await restStamp({ checkpoint });
+      const pending = await restStamp({
+        checkpoint,
+        // Ce que le fournisseur a répondu en dernier, gardé sur la ligne du run :
+        // c'est la seule trace qui dise LAQUELLE des pannes (429, 502, réseau) a
+        // fini par arrêter le tour.
+        ...(providerGaveUp && result.errorMessage
+          ? { error_message: cap(result.errorMessage, 1000) }
+          : {}),
+      });
       if (!pending) await notifyAgentRun(run, "agent_failed");
       return "completed";
+    }
+
+    /**
+     * Panne du fournisseur : re-queue DIFFÉRÉ, et le compteur d'attente voyage
+     * avec le checkpoint (MIN-219). Le délai est la seule chose qui sépare une
+     * reprise d'un acharnement — le drain reclaim dans le même process, donc un
+     * `not_before` au présent renvoyait le chunk dans la même panne à la seconde
+     * près.
+     *
+     * SAUF si un message attend : l'utilisateur qui écrit pendant la panne est le
+     * seul signal qui vaille qu'on retente tout de suite, et le faire patienter
+     * dix minutes avant d'être seulement LU serait pire que le défaut d'origine.
+     * Le compteur, lui, monte quand même : la sortie de secours reste bornée.
+     */
+    if (stall?.requeue) {
+      const steering = await hasPendingRunMessages(run.id).catch(() => false);
+      const delayMs = steering ? 0 : stall.delayMs;
+      await stampRun(run.id, {
+        status: "queued",
+        checkpoint: { ...checkpoint, providerRetries: stall.retries },
+        sandbox_id: sandboxName(sandbox),
+        sandbox_stopped_at: null,
+        continuations: nextContinuations,
+        attempts: 0,
+        not_before: new Date(Date.now() + delayMs).toISOString(),
+        cost_usd: newCost,
+      });
+      return "suspended";
     }
 
     // Continuation du MÊME tour : re-queue immédiat (window_started_at conservé).

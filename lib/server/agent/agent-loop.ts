@@ -454,8 +454,23 @@ export interface AgentLoopResult {
   /** Le tour s'est terminé sur un ask_user : la session ATTEND la réponse de
    *  l'utilisateur (stampé `awaiting_input` → point jaune sur les surfaces). */
   askedUser?: boolean;
+  /**
+   * Pourquoi le chunk s'est suspendu, quand ce n'est PAS la frontière normale
+   * (soft-deadline, plafond de rounds, fille encore en vol) — MIN-219.
+   *
+   * `transient_error` : le fournisseur est tombé et les reprises internes n'ont
+   * rien pu y faire. Le chunk n'a pas avancé d'un round, et l'exécuteur doit le
+   * traiter comme une ATTENTE (re-queue différé, hors budget de continuations)
+   * plutôt que comme une continuation. Sans ce nom, les deux se ressemblaient
+   * trait pour trait au retour, et une panne de quelques minutes brûlait les 20
+   * continuations du tour en re-queues immédiats.
+   */
+  suspendReason?: "transient_error";
   /** Erreur LLM fatale (non reprenable) : renvoyée AVEC les messages pour que
-   *  l'exécuteur persiste le checkpoint (pas de perte de contexte/steering). */
+   *  l'exécuteur persiste le checkpoint (pas de perte de contexte/steering).
+   *  Portée aussi par une suspension `transient_error`, où elle dit ce que le
+   *  fournisseur a répondu en dernier — c'est ce texte que l'utilisateur lira si
+   *  la panne dure au-delà du budget d'attente. */
   errorMessage?: string;
   costUsd: number;
   usageSeqEnd: number;
@@ -1542,10 +1557,23 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         // Erreur transitoire épuisée (429/5xx/réseau) → SUSPENDRE le run (reprise au
         // chunk suivant, fonction fraîche) plutôt qu'échouer. Une erreur fatale (4xx,
         // requête invalide) remonte et échoue le run.
+        //
+        // Suspension NOMMÉE (MIN-219) : ce chunk n'a rien fait avancer, il a attendu
+        // un fournisseur qui n'a pas répondu. L'exécuteur en tire un re-queue DIFFÉRÉ
+        // et hors budget de continuations — rendue anonyme, cette sortie se re-queuait
+        // aussitôt, vingt fois, et le tour mourait sur un message parlant de durée.
         if (err instanceof StreamError && err.retryable) {
           clearLive();
           await emit("status", { phase: "transient_error", message: cap(err.message, 300) });
-          return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
+          return {
+            status: "suspended",
+            suspendReason: "transient_error",
+            messages,
+            errorMessage: cap(err.message, 1000),
+            costUsd,
+            usageSeqEnd: seq,
+            rounds: round,
+          };
         }
         // Interruption utilisateur pendant le stream → repos, round partiel jeté.
         if (err instanceof InterruptedError) {
