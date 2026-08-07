@@ -2,6 +2,7 @@ import "server-only";
 
 import { recordAiUsage, type AiUsageBillTo, type AiFeature } from "@/lib/server/ai-usage";
 import { getAccountSettings } from "@/lib/server/account-settings";
+import { afterOrNow } from "@/lib/server/after-safe";
 import { defaultLocale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 
@@ -11,7 +12,7 @@ import {
   SCRATCHPAD_TOOL_NAMES,
   type ScratchpadToolContext,
 } from "./scratchpad-tools";
-import { broadcastRunStream } from "./live";
+import { agentRunTopic, broadcastToTopic } from "./live";
 import {
   appendEvent,
   getRun,
@@ -134,13 +135,23 @@ export async function handleControlPlaneRequest(opts: {
   if (method === "POST" && surface === "/stream") {
     // LE TOPIC EST DÉRIVÉ DU RUN, jamais reçu. C'est la seule ligne de ce fichier
     // qui empêche une VM de diffuser sur le fil d'une autre.
-    broadcastRunStream(runId, {
-      text: typeof body.text === "string" ? body.text : "",
-      tools: num(body.tools) ?? 0,
-      reasoningActive: body.reasoningActive === true,
-      reasoningMs: num(body.reasoningMs) ?? 0,
-      at: Date.now(),
-    });
+    //
+    // `afterOrNow` et PAS `broadcastRunStream` : celui-ci DÉTACHE son fetch
+    // (`void broadcast(…)`, live.ts). Ça convient à la boucle, qui vit dans une
+    // invocation qui continue derrière — pas ici : la réponse part à la ligne
+    // suivante, la plateforme gèle la fonction, et la requête sortante meurt en
+    // vol (« TypeError: fetch failed », cf. lib/server/after-safe.ts). Le direct
+    // n'a AUCUN repli — rien n'est persisté, contrairement aux events que le fil
+    // rattrape en 2 s au poll : le perdre, c'est perdre le rendu streamé.
+    afterOrNow(() =>
+      broadcastToTopic(agentRunTopic(runId), "stream", {
+        text: typeof body.text === "string" ? body.text : "",
+        tools: num(body.tools) ?? 0,
+        reasoningActive: body.reasoningActive === true,
+        reasoningMs: num(body.reasoningMs) ?? 0,
+        at: Date.now(),
+      }),
+    );
     return ok();
   }
 
@@ -241,9 +252,13 @@ async function issueContextFor(
   run: AgentRun,
   body: Record<string, unknown>,
 ): Promise<IssueToolContext> {
-  const [projectKey, prefs] = await Promise.all([projectKeyFor(run), runPrefsFor(run)]);
+  const [projectKey, prefs, anchorIssueId] = await Promise.all([
+    projectKeyFor(run),
+    runPrefsFor(run),
+    anchorIssueIdFor(run),
+  ]);
   return {
-    anchorIssueId: run.issue_id ?? null,
+    anchorIssueId,
     projectId: run.project_id,
     projectKey,
     // L'ACTEUR des écritures, et c'est le lanceur du run — pas la VM, qui n'a
@@ -254,6 +269,27 @@ async function issueContextFor(
     runId: run.id,
     chainId: run.chain_id,
   };
+}
+
+/**
+ * Le ticket ANCRE — la cible par défaut des tools ticket, et la même que celle
+ * qu'`execute.ts` assemble.
+ *
+ * Sur une RELECTURE de pull request, `run.issue_id` est TOUJOURS nul (une session
+ * de review n'occupe pas un ticket) : le défaut est alors le ticket que la PR met
+ * en œuvre, quand elle en porte un (MIN-143). Sans ce repli, le tool annoncerait
+ * un défaut qui n'existe pas et le premier `read_issue` sans argument brûlerait un
+ * round — exactement ce que la ligne jumelle d'`execute.ts` existe pour éviter.
+ *
+ * La PR se relit par `loadPrRunContext`, le résolveur unique de l'ancrage PR : la
+ * relire à la main ici serait la cinquième lecture que ce module-là a été écrit
+ * pour supprimer.
+ */
+async function anchorIssueIdFor(run: AgentRun): Promise<string | null> {
+  if (run.issue_id) return run.issue_id;
+  if (!run.pull_request_id) return null;
+  const { loadPrRunContext } = await import("./pr-run");
+  return (await loadPrRunContext(run.pull_request_id))?.issueId ?? null;
 }
 
 /** Clé du projet du run (préfixe des identifiants de tickets). */

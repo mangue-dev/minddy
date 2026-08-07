@@ -19,10 +19,14 @@ import type { AiUsageInput } from "@/lib/server/ai-usage";
 
 const h = vi.hoisted(() => ({
   recorded: [] as AiUsageInput[],
-  streams: [] as Array<{ runId: string; text: string }>,
+  streams: [] as Array<{ topic: string; event: string; text: unknown }>,
   events: [] as Array<{ runId: string; type: string }>,
   stamped: [] as Array<Record<string, unknown>>,
   issueCalls: [] as Array<{ ctx: Record<string, unknown>; name: string }>,
+  /** Ce qui a été confié à `afterOrNow` — donc au canal qui maintient
+   *  l'invocation en vie après la réponse, et jamais détaché. */
+  afterWork: [] as Array<() => void | Promise<void>>,
+  prIssueId: null as string | null,
   stampReturnsNull: false,
   run: null as Record<string, unknown> | null,
 }));
@@ -34,10 +38,27 @@ vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   }),
 }));
 
-vi.mock("./live", () => ({
-  broadcastRunStream: vi.fn((runId: string, live: { text: string }) => {
-    h.streams.push({ runId, text: live.text });
-  }),
+vi.mock("./live", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./live")>()),
+  broadcastToTopic: vi.fn(
+    async (topic: string, event: string, payload: Record<string, unknown>) => {
+      h.streams.push({ topic, event, text: payload.text });
+    },
+  ),
+}));
+
+// `afterOrNow` n'exécute RIEN ici : les tests le déclenchent eux-mêmes. C'est ce
+// qui rend visible la différence entre « confié au canal de fond » et « détaché »
+// — un `void fetch(…)` posé avant la réponse n'apparaîtrait jamais dans cette
+// file, et il mourrait avec l'invocation en vrai.
+vi.mock("@/lib/server/after-safe", () => ({
+  afterOrNow: (work: () => void | Promise<void>) => {
+    h.afterWork.push(work);
+  },
+}));
+
+vi.mock("./pr-run", () => ({
+  loadPrRunContext: vi.fn(async () => ({ issueId: h.prIssueId })),
 }));
 
 vi.mock("./runs", async (importOriginal) => ({
@@ -90,12 +111,15 @@ beforeEach(() => {
   h.events.length = 0;
   h.stamped.length = 0;
   h.issueCalls.length = 0;
+  h.afterWork.length = 0;
+  h.prIssueId = null;
   h.stampReturnsNull = false;
   h.run = {
     id: RUN_ID,
     run_id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     project_id: "proj-1",
     issue_id: "issue-1",
+    pull_request_id: null,
     created_by: "user-owner",
     chain_id: null,
     model: "deepseek/deepseek-v4-flash",
@@ -114,7 +138,24 @@ describe("le direct — le topic vient du run, pas du corps", () => {
   it("diffuse sur le run de l'OIDC même quand le corps en désigne un autre", async () => {
     const res = await call("POST", "/stream", { text: "salut", runId: OTHER_RUN, topic: "x" });
     expect(res.status).toBe(200);
-    expect(h.streams).toEqual([{ runId: RUN_ID, text: "salut" }]);
+    await Promise.all(h.afterWork.map((w) => w()));
+    expect(h.streams).toEqual([{ topic: `agent-run:${RUN_ID}`, event: "stream", text: "salut" }]);
+  });
+
+  it("confie la diffusion au canal de fond, au lieu de la détacher", async () => {
+    // Le direct n'est écrit NULLE PART : contrairement aux events, aucun poll ne
+    // le rattrape. Détaché juste avant la réponse, son fetch meurt gelé avec
+    // l'invocation et le fil ne voit jamais l'agent écrire (cf. after-safe.ts).
+    await call("POST", "/stream", { text: "salut" });
+    // Rien n'est parti pendant la requête : la diffusion attend le crochet.
+    expect(h.streams).toHaveLength(0);
+    expect(h.afterWork).toHaveLength(1);
+    // Et le travail doit RENDRE sa promesse : la détacher à l'intérieur du
+    // crochet referait exactement la même panne, un cran plus bas.
+    const returned = h.afterWork[0]();
+    expect(returned).toBeInstanceOf(Promise);
+    await returned;
+    expect(h.streams).toHaveLength(1);
   });
 });
 
@@ -188,6 +229,17 @@ describe("les tools de plateforme", () => {
     expect(h.issueCalls).toHaveLength(1);
     expect(h.issueCalls[0].ctx.actorId).toBe("user-owner");
     expect(h.issueCalls[0].ctx.runId).toBe(RUN_ID);
+  });
+
+  it("ancrent une RELECTURE sur le ticket de sa pull request", async () => {
+    // `run.issue_id` est toujours nul sur une session de review, mais la PR porte
+    // souvent le ticket qu'elle met en œuvre : c'est LUI le défaut de `read_issue`
+    // (même règle qu'execute.ts). Sans ça le tool annonce un défaut qui n'existe
+    // pas, et le premier appel sans argument brûle un round.
+    h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
+    h.prIssueId = "issue-de-la-pr";
+    await call("POST", "/tool/read_issue", { args: {} });
+    expect(h.issueCalls[0].ctx.anchorIssueId).toBe("issue-de-la-pr");
   });
 
   it("ne servent PAS les tools de fichier — ils s'exécutent dans la VM", async () => {
