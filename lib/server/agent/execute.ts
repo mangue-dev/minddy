@@ -48,18 +48,22 @@ import {
 } from "./background";
 import {
   Subagents,
+  isResumableSubagent,
   subagentUsageSeq,
   MAX_SUBAGENTS_PER_CHUNK,
   type SubagentRunner,
   type SubagentRunResult,
 } from "./subagent";
 import {
+  chunkFitsSubagentResume,
   getSubagentFavorites,
   makeSubagentModelResolver,
   scopeSubagentModels,
   maxParallelSubagents,
   subagentRoundsLeft,
   SUBAGENT_MAX_ROUNDS,
+  SUBAGENT_MIN_MS,
+  SUBAGENT_PARENT_RESERVE_MS,
 } from "./subagent-config";
 import { getAgentModelsForUser } from "./models-catalog";
 import { pruneToolOutputs } from "./prune";
@@ -234,21 +238,21 @@ const MAX_ERROR_REQUEUE_ATTEMPTS = 2;
  * toute tâche déléguée un peu sérieuse.
  */
 const SUBAGENT_MAX_MS = 600_000;
-/**
- * Ce qu'on GARDE au parent quand une fille tourne : de quoi recevoir le rapport,
- * relancer un round ou deux, faire le type-check de fin de tour et pousser. En
- * dessous, le tour se terminerait sur un rapport que personne n'a eu le temps de lire.
- */
-const SUBAGENT_PARENT_RESERVE_MS = 120_000;
-/** En dessous, un `spawn_agent` est REFUSÉ : la fille n'aurait pas le temps de
- *  produire un rapport utile, et un round payé pour rien est un round perdu. */
-const SUBAGENT_MIN_MS = 30_000;
 /** Marge gardée pour couper les filles et livrer leur rapport partiel DANS le tour
  *  (avant le type-check, qui doit voir leurs fichiers). */
 const SUBAGENT_CUT_MARGIN_MS = 10_000;
-// `SUBAGENT_MAX_ROUNDS` et `subagentRoundsLeft` vivent dans `subagent-config.ts` :
-// le plafond atteint doit COUPER la fille, et cette arithmétique-là mérite un test
-// à elle (cf. l'historique du zombie à un round par chunk).
+/**
+ * Délai posé sur un chunk REFUSÉ à l'admission (MIN-212) : le temps que le drain
+ * affamé qui vient de le claim finisse sa fenêtre sans le reprendre. Le prochain
+ * drain — 270 s depuis un lancement, 760 s au cron — le reprendra à budget plein.
+ */
+const SUBAGENT_RESUME_DEFER_MS = 30_000;
+// `SUBAGENT_MAX_ROUNDS`/`subagentRoundsLeft` et les deux bornes de TEMPS d'une
+// fille (`SUBAGENT_PARENT_RESERVE_MS`, `SUBAGENT_MIN_MS`, d'où
+// `chunkFitsSubagentResume`) vivent dans `subagent-config.ts` : un plafond atteint
+// doit COUPER la fille ou REFUSER le chunk, jamais lui rendre un round ni une
+// seconde — et cette arithmétique-là mérite un test à elle (cf. l'historique du
+// zombie à un round par chunk, sur l'axe rounds puis sur l'axe temps).
 /**
  * Base des seq de fichiers de sortie d'un sous-agent, hors de la bande du parent
  * (`run.continuations * 1000`, soit au plus ~20 000 avec AGENT_MAX_CONTINUATIONS).
@@ -256,6 +260,23 @@ const SUBAGENT_CUT_MARGIN_MS = 10_000;
  * (cf. `toolOutputFileName`) et le second écraserait la sortie du premier.
  */
 const SUBAGENT_OUTPUT_SEQ_BASE = 500_000;
+
+/**
+ * Soft-deadline d'un chunk : ce que le drain lui donne, moins l'amorçage déjà
+ * consommé et la marge de fin de tour, borné par la config.
+ *
+ * UNE fonction pour deux appelants : l'ADMISSION la projette à l'entrée du chunk
+ * (`elapsedMs` à zéro, l'amorçage n'a pas encore eu lieu), la boucle la calcule pour
+ * de bon une fois la microVM réveillée. Deux copies de cette formule dériveraient,
+ * et l'admission refuserait alors sur un autre chiffre que celui que le chunk
+ * s'accorde vraiment.
+ */
+function chunkSoftDeadlineMs(deadlineMs: number, elapsedMs: number): number {
+  return Math.max(
+    MIN_SOFT_DEADLINE_MS,
+    Math.min(deadlineMs - elapsedMs - COMMIT_MARGIN_MS, AGENT_SOFT_DEADLINE_MS),
+  );
+}
 
 export type ExecuteOutcome = "completed" | "suspended" | "interrupted" | "failed";
 
@@ -1148,6 +1169,61 @@ export async function executeAgentRun(
   let subagentRegistry: Subagents | null = null;
 
   try {
+    /**
+     * ADMISSION (MIN-212) — un chunk trop court pour REPRENDRE une fille est refusé
+     * ici, avant l'event `running` et avant le réveil de la microVM : un chunk qui
+     * n'a rien à jouer ne doit rien coûter, ni en compute ni dans le fil.
+     *
+     * Ce qu'il évite. Le budget d'une fille reprise vaut `min(SUBAGENT_MAX_MS,
+     * restant du chunk − réserve du parent)`, planché à 1 s. Sur un chunk de fin de
+     * fenêtre de drain — 40 à 150 s, la NORME quand plusieurs runs se partagent les
+     * 270 s — elle repartait avec une seconde, jouait un round, se re-suspendait ;
+     * le parent, garé sur elle, rendait `suspended` sans dire un mot ; le chunk se
+     * re-queuait. Un round par chunk, chacun payant son réveil de microVM, jusqu'à
+     * ce que le garde-fou des 20 continuations tue le tour. C'est le jumeau
+     * TEMPOREL du zombie de l'axe rounds (cf. `subagentRoundsLeft`), et il se
+     * corrige du même côté : par le haut, en refusant, jamais en rendant « au moins
+     * un peu » à une boucle qui ne peut pas tourner.
+     */
+    if (!run.interrupt_requested && (run.checkpoint?.subagents ?? []).some(isResumableSubagent)) {
+      // Projection OPTIMISTE de quelques secondes : l'amorçage n'est pas encore
+      // consommé. L'écart ne joue que dans une bande étroite au-dessus du seuil, où
+      // la fille reçoit un peu moins que son minimum — dégradé, pas pathologique.
+      const projectedMs = chunkSoftDeadlineMs(opts.deadlineMs, 0);
+      // Un message utilisateur NON CONSOMMÉ passe devant : il DÉPARKE le parent, qui
+      // a donc du travail à jouer même sur un chunk court. Le faire attendre le
+      // prochain drain pour épargner un round de fille serait un mauvais échange —
+      // même arbitrage que le bloc `interrupt_requested` juste en dessous.
+      if (
+        !chunkFitsSubagentResume(projectedMs) &&
+        !(await hasPendingRunMessages(run.id).catch(() => true))
+      ) {
+        /**
+         * Re-queue TEL QUEL, et `continuations` n'est pas incrémenté : un chunk qui
+         * n'a rien joué n'est pas une continuation, et le compter comme telle
+         * recréerait exactement le zombie qu'on corrige — vingt refus et le
+         * garde-fou anti-runaway tuerait le tour. Le `checkpoint` n'est pas réécrit
+         * non plus (rien n'a bougé), et `attempts` repart à zéro : le budget de
+         * reprise sur crash sert aux chunks qui MEURENT, pas à ceux qui déclinent.
+         */
+        const deferStamp = {
+          status: "queued",
+          not_before: new Date(Date.now() + SUBAGENT_RESUME_DEFER_MS).toISOString(),
+          attempts: 0,
+        } satisfies Parameters<typeof stampRun>[1];
+        await stampRun(run.id, deferStamp);
+        // Event `status` neutre : invisible dans le fil (aucun `status: running`,
+        // donc rien à afficher), comptable en base — c'est lui qui répondra à
+        // « combien de chunks refuse-t-on, et avec quel budget ? ».
+        await emit("status", {
+          phase: "chunk_deferred",
+          reason: "subagent_resume",
+          budgetMs: projectedMs,
+        });
+        return "suspended";
+      }
+    }
+
     await emit("status", { status: "running", continuation: run.continuations });
 
     if (!run.created_by) throw new Error("Run has no owner");
@@ -1831,11 +1907,7 @@ export async function executeAgentRun(
     const contextWindow = await getModelContextWindow(run.model, provider, apiKey).catch(() => null);
 
     // Budget du chunk : temps restant du drain − marge, borné par la config.
-    const elapsedSetup = Date.now() - callStart;
-    const softDeadlineMs = Math.max(
-      MIN_SOFT_DEADLINE_MS,
-      Math.min(opts.deadlineMs - elapsedSetup - COMMIT_MARGIN_MS, AGENT_SOFT_DEADLINE_MS),
-    );
+    const softDeadlineMs = chunkSoftDeadlineMs(opts.deadlineMs, Date.now() - callStart);
 
     // Contextes des tools métier, construits côte à côte : les deux jeux sont
     // servis quel que soit l'ancrage (MIN-125). Ce que l'ancrage décide encore,

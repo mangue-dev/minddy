@@ -18,6 +18,7 @@ vi.mock("@/lib/server/app-config", () => ({
 }));
 
 const {
+  chunkFitsSubagentResume,
   getSubagentFavorites,
   makeSubagentModelResolver,
   maxParallelSubagents,
@@ -26,6 +27,9 @@ const {
   SUBAGENT_FAVORITES_CONFIG_KEY,
   SUBAGENT_MAX_PARALLEL_CONFIG_KEY,
   SUBAGENT_MAX_ROUNDS,
+  SUBAGENT_MIN_MS,
+  SUBAGENT_PARENT_RESERVE_MS,
+  SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS,
 } = await import("./subagent-config");
 
 beforeEach(() => config.clear());
@@ -47,6 +51,34 @@ describe("subagentRoundsLeft", () => {
     // signal qui le dit, et le ramener à 1 le détruisait.
     expect(subagentRoundsLeft(SUBAGENT_MAX_ROUNDS)).toBe(0);
     expect(subagentRoundsLeft(SUBAGENT_MAX_ROUNDS + 7)).toBeLessThan(0);
+  });
+});
+
+describe("chunkFitsSubagentResume", () => {
+  /** Le budget que le lanceur donne vraiment à une fille, cf. `execute.ts`. */
+  const budgetFor = (softDeadlineMs: number) => softDeadlineMs - SUBAGENT_PARENT_RESERVE_MS;
+
+  it("refuse un chunk trop court, accepte à partir de réserve + minimum", () => {
+    expect(chunkFitsSubagentResume(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS)).toBe(true);
+    expect(chunkFitsSubagentResume(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS - 1)).toBe(false);
+    // Ce que rend une fenêtre de drain de 270 s : plein au premier claim, court à
+    // la fin — et c'est ce cas-là, la norme, qui doit être refusé.
+    expect(chunkFitsSubagentResume(245_000)).toBe(true);
+    expect(chunkFitsSubagentResume(40_000)).toBe(false);
+    // Le plancher de 1 s qui a créé le bug, et le budget négatif qu'il masquait.
+    expect(chunkFitsSubagentResume(1_000)).toBe(false);
+    expect(chunkFitsSubagentResume(0)).toBe(false);
+    expect(chunkFitsSubagentResume(-50_000)).toBe(false);
+  });
+
+  it("admet EXACTEMENT ce que le `budgetGuard` de spawn_agent laisse déléguer", () => {
+    // L'invariant qui tient les deux bouts (MIN-212). L'admission décide « ce chunk
+    // peut-il reprendre une fille ? », `budgetGuard` décide « peut-on en lancer une
+    // maintenant ? » — et les deux doivent dire la même chose du même chunk. Si
+    // l'admission passait sous le compte, le chunk repartirait pour rendre une
+    // seconde à sa fille : un round par chunk, chacun payant son réveil de microVM.
+    expect(budgetFor(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS)).toBe(SUBAGENT_MIN_MS);
+    expect(budgetFor(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS - 1)).toBeLessThan(SUBAGENT_MIN_MS);
   });
 });
 

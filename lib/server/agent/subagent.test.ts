@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   Subagents,
+  isResumableSubagent,
   subagentUsageSeq,
   MAX_SUBAGENTS_PER_CHUNK,
   PARENT_WRITE_TOOLS,
@@ -754,5 +755,33 @@ describe("suspension et reprise entre chunks", () => {
     expect(subagents.resumeSuspended()).toBe(0);
     expect(started).toHaveLength(0);
     expect(subagents.pending()).toBe(0);
+  });
+});
+
+describe("isResumableSubagent", () => {
+  /**
+   * Le prédicat que se partagent `restore`, `resumeSuspended` et l'ADMISSION d'un
+   * chunk (MIN-212). Ce qu'il protège de : trois copies de la même condition, dont
+   * une côté `execute.ts` qui refuserait un chunk pour une fille que le registre,
+   * lui, ne reprendrait pas — le run resterait alors garé jusqu'au garde-fou.
+   */
+  const record = (over: Partial<SubagentRecord>): SubagentRecord => ({
+    id: "sub-1", task: "t", mode: "explore", model: null, thinkingEffort: null,
+    status: "suspended", rounds: 1, costUsd: 0, startedAt: 1, delivered: false,
+    ...over,
+  });
+
+  it("ne dit oui qu'à une fille suspendue AVEC son historique", () => {
+    expect(isResumableSubagent(record({ messages: [{ role: "user", content: "hi" }] }))).toBe(true);
+  });
+
+  it("dit non à tout le reste — un `suspended` sans historique n'a rien où reprendre", () => {
+    expect(isResumableSubagent(record({}))).toBe(false);
+    expect(isResumableSubagent(record({ messages: [] }))).toBe(false);
+    expect(isResumableSubagent(record({ status: "running", messages: [{ role: "user", content: "hi" }] }))).toBe(false);
+    expect(isResumableSubagent(record({ status: "cut", messages: [{ role: "user", content: "hi" }] }))).toBe(false);
+    expect(isResumableSubagent(record({ status: "done" }))).toBe(false);
+    expect(isResumableSubagent(null)).toBe(false);
+    expect(isResumableSubagent(undefined)).toBe(false);
   });
 });

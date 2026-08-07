@@ -111,6 +111,22 @@ export interface SubagentRecord {
   slot?: number;
 }
 
+/**
+ * Une fille du checkpoint est-elle REPRENABLE ? `suspended` ne suffit pas : sans
+ * historique il n'y a rien où reprendre (état trop gros pour le checkpoint, chunk
+ * mort brutalement, checkpoint bricolé) — un tel record doit être déclaré coupé.
+ *
+ * Un seul endroit pour la condition, TROIS lecteurs : `restore` (qui coupe ce qui
+ * n'est pas reprenable), `resumeSuspended` (qui relance le reste), et l'ADMISSION
+ * d'un chunk (MIN-212, `execute.ts`) — qui refuse un chunk trop court pour qu'une
+ * reprise vaille son réveil de microVM. Trois copies auraient dérivé.
+ */
+export function isResumableSubagent(
+  record: Pick<SubagentRecord, "status" | "messages"> | null | undefined,
+): boolean {
+  return record?.status === "suspended" && (record.messages?.length ?? 0) > 0;
+}
+
 /** Cap du rapport servi au parent dans un message. */
 export const SUBAGENT_REPORT_MAX_CHARS = 8_000;
 /** Cap du rapport PERSISTÉ dans le checkpoint (il y en a un par sous-agent). */
@@ -930,9 +946,7 @@ export class Subagents {
    * arriveront par le même wakeup que d'habitude.
    */
   resumeSuspended(): number {
-    const resumable = [...this.history.values()].filter(
-      (r) => r.status === "suspended" && (r.messages?.length ?? 0) > 0,
-    );
+    const resumable = [...this.history.values()].filter(isResumableSubagent);
     for (const record of resumable) {
       this.history.delete(record.id);
       record.status = "running";
@@ -1001,7 +1015,7 @@ export class Subagents {
       // vient d'un chunk mort BRUTALEMENT (crash) — aucun historique n'a été
       // sauvé, donc rien à reprendre : coupé, et son rapport partiel est déjà parti
       // dans les messages du chunk précédent, d'où `delivered`.
-      const resumable = raw.status === "suspended" && (raw.messages?.length ?? 0) > 0;
+      const resumable = isResumableSubagent(raw);
       // Un état « en vol » qu'on ne peut PAS reprendre doit devenir `cut`, jamais
       // rester `suspended` : `suspended` compte comme vivant (verrou d'écriture,
       // parking du parent), donc un record irréprenable laissé tel quel garerait le

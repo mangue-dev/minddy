@@ -51,6 +51,43 @@ export function subagentRoundsLeft(roundsSoFar: number | undefined): number {
   return SUBAGENT_MAX_ROUNDS - (roundsSoFar ?? 0);
 }
 
+/**
+ * Ce qu'on GARDE au parent quand une fille tourne : de quoi recevoir le rapport,
+ * relancer un round ou deux, faire le type-check de fin de tour et pousser. En
+ * dessous, le tour se terminerait sur un rapport que personne n'a eu le temps de lire.
+ */
+export const SUBAGENT_PARENT_RESERVE_MS = 120_000;
+
+/** En dessous, un `spawn_agent` est REFUSÉ : la fille n'aurait pas le temps de
+ *  produire un rapport utile, et un round payé pour rien est un round perdu. */
+export const SUBAGENT_MIN_MS = 30_000;
+
+/**
+ * Soft-deadline qu'un chunk doit avoir pour qu'y REPRENDRE une fille ait un sens :
+ * la réserve du parent PLUS le minimum vital de la fille. C'est le pendant TEMPS de
+ * `subagentRoundsLeft`, et il vient du même bug.
+ *
+ * Le budget d'une fille vaut `min(SUBAGENT_MAX_MS, restant du chunk − réserve)`, et
+ * le lanceur le plancherait à 1 s (`Math.max(1_000, budget)`). Sur un chunk repris
+ * en fin de fenêtre de drain — 40 à 150 s, la norme quand plusieurs runs se
+ * partagent les 270 s — la fille repartait donc avec UNE SECONDE : elle jouait un
+ * round, se re-suspendait, le parent garé rendait `suspended` sans dire un mot, le
+ * chunk se re-queuait. Un round par chunk, chacun payant son réveil de microVM,
+ * jusqu'à ce que le garde-fou des 20 continuations tue le tour (MIN-212).
+ *
+ * Baisser le plancher à 0 ne corrige rien : la fille rendrait la main sans jouer un
+ * seul round, ce qui est le zombie à l'état pur. Ce qui corrige, c'est de refuser
+ * l'ADMISSION du chunk — `executeAgentRun` re-queue le run tel quel, sans
+ * incrémenter `continuations`, et le prochain drain à budget plein le reprend.
+ */
+export const SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS =
+  SUBAGENT_PARENT_RESERVE_MS + SUBAGENT_MIN_MS;
+
+/** Ce chunk peut-il reprendre une fille pour de bon, plutôt qu'un round pour rien ? */
+export function chunkFitsSubagentResume(softDeadlineMs: number): boolean {
+  return softDeadlineMs >= SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS;
+}
+
 /** Clé `app_config` de la liste de favoris (JSON : tableau de FavoriteSubagentModel). */
 export const SUBAGENT_FAVORITES_CONFIG_KEY = "agent_subagent_favorites";
 /** Clé `app_config` du plafond de sous-agents simultanés (entier). */
