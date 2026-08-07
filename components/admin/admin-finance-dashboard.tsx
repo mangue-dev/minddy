@@ -141,6 +141,12 @@ interface RunCall {
   completion_tokens: number | null;
   total_tokens: number | null;
   cost: number | null;
+  /**
+   * Coût CALCULÉ, pas rapporté (MIN-216) : un essai de stream abandonné est
+   * facturé sans que l'objet `usage` n'arrive jamais. Affiché « ≈ » — la marge
+   * du mois ne doit pas se comparer à des dollars qu'on n'a jamais relevés.
+   */
+  estimated?: boolean;
   created_at: string;
 }
 
@@ -923,7 +929,10 @@ function RunRowItem({
                       <td className="py-1 pr-3 text-right tabular-nums text-muted-foreground">
                         {fmtInt(c.completion_tokens)}
                       </td>
-                      <td className="py-1 text-right tabular-nums">{fmtCost(c.cost)}</td>
+                      <td className="py-1 text-right tabular-nums">
+                        {c.estimated ? "≈ " : ""}
+                        {fmtCost(c.cost)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -44,11 +44,21 @@ function messageBytes(m: CompactMessage): number {
   return bytes;
 }
 
+/**
+ * Le MÊME proxy, appliqué à un nombre de caractères déjà compté (MIN-216 : le
+ * texte reçu d'un stream coupé). Exporté pour qu'il n'existe qu'un seul ratio
+ * caractères/token dans le dépôt — deux copies dériveraient, et la seconde
+ * servirait à estimer de l'argent.
+ */
+export function estimateTokensFromChars(chars: number): number {
+  return Math.ceil(Math.max(0, chars) / CHARS_PER_TOKEN);
+}
+
 /** Estimation du nombre de tokens de l'historique (proxy caractères). */
 export function estimateTokens(messages: ReadonlyArray<CompactMessage>): number {
   let chars = 0;
   for (const m of messages) chars += messageBytes(m);
-  return Math.ceil(chars / CHARS_PER_TOKEN);
+  return estimateTokensFromChars(chars);
 }
 
 export interface CompactionPlan<T extends CompactMessage> {

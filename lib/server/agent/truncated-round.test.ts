@@ -64,6 +64,12 @@ function sseError(code: number, message: string): string {
 }
 
 let responses: Array<() => Response>;
+/**
+ * Appels au PROVIDER (`/chat/completions`) — ce que ces tests comptent. La boucle
+ * touche aussi l'index de prix d'OpenRouter quand elle facture un essai abandonné
+ * (MIN-216) ; le mêler à ce compteur ferait dire à l'assertion « on n'a pas
+ * repassé le round au modèle » autre chose que ce qu'elle vérifie.
+ */
 let fetchCalls: number;
 
 beforeEach(() => {
@@ -71,7 +77,10 @@ beforeEach(() => {
   fetchCalls = 0;
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => {
+    vi.fn(async (url: string) => {
+      if (!String(url).includes("/chat/completions")) {
+        throw new Error("fetch hors provider non prévu par le test");
+      }
       fetchCalls++;
       const next = responses.shift();
       if (!next) throw new Error("fetch non prévu par le test");

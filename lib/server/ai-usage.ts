@@ -200,6 +200,14 @@ export interface AiUsageInput {
   completionTokens?: number | null;
   totalTokens?: number | null;
   cost?: number | null;
+  /**
+   * Le coût est CALCULÉ, pas rapporté par le fournisseur (MIN-216) — un essai de
+   * stream abandonné (interruption, coupure, reprise) est facturé sans que
+   * l'objet `usage` ne soit jamais arrivé. La ligne compte quand même : c'est le
+   * seul moyen que la dépense entre dans les compteurs. Mais elle se distingue,
+   * sinon l'admin finance comparerait sa marge à des dollars jamais relevés.
+   */
+  estimated?: boolean;
   projectId?: string | null;
   conversationId?: string | null;
 }
@@ -219,6 +227,11 @@ function toRow(input: AiUsageInput) {
     completion_tokens: input.completionTokens ?? null,
     total_tokens: input.totalTokens ?? null,
     cost: input.cost ?? null,
+    // Omise quand elle est fausse : la colonne a un défaut en base, et une ligne
+    // ordinaire ne doit RIEN devoir à une migration. Si le code partait en prod
+    // avant elle, seules les lignes estimées seraient refusées — pas le ledger
+    // entier, ce qu'un champ toujours présent aurait provoqué.
+    ...(input.estimated ? { estimated: true } : {}),
     user_id: null as string | null,
     billed_reason: "unattributed" as BilledReason,
     project_id: input.projectId ?? null,

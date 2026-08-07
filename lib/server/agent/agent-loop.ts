@@ -29,12 +29,18 @@ import { pruneToolOutputs, capHistoryImages, headTail, TOOL_RESULT_MAX_CHARS } f
 import { markSystemPromptCache } from "./caching";
 import {
   estimateTokens,
+  estimateTokensFromChars,
   planCompaction,
   serializeForSummary,
   dropOldestRound,
   SUMMARIZE_INSTRUCTION,
   COMPACT_SUMMARY_PREFIX,
 } from "./compact";
+import { abandonedSpend, type AbandonedStream } from "./abandoned-spend";
+// L'index OpenRouter directement, et pas les capacités de `model.ts` : celui-ci
+// tire le client Supabase et le déchiffrement BYOK, dont cette boucle n'a rien à
+// faire. Les prix ne servent qu'à estimer un essai abandonné (MIN-216).
+import { getOpenRouterModelInfo } from "./openrouter-index";
 import {
   AGENT_COMPACT_TOKEN_THRESHOLD,
   AGENT_COMPACT_ABSOLUTE_MAX_TOKENS,
@@ -729,6 +735,13 @@ async function streamCompletionOnce(opts: {
   onProgress?: EmitAgentLive;
   /** Niveau de raisonnement à demander (MIN-122). Absent/`off` = rien d'envoyé. */
   reasoningLevel?: ReasoningLevel;
+  /**
+   * Cet essai est JETÉ après que le fournisseur a répondu (MIN-216) : interruption,
+   * stream coupé, erreur en plein flux. Appelé avant que l'exception ne remonte,
+   * avec ce qui avait été accumulé — c'est la seule occasion d'en facturer la
+   * dépense, puisque l'appelant ne verra jamais de `StreamResult`.
+   */
+  onAbandoned?: (attempt: AbandonedStream) => Promise<void> | void;
 }): Promise<StreamResult> {
   const profile = getAgentProvider(opts.provider)?.requestProfile ?? {};
 
@@ -797,6 +810,22 @@ async function streamCompletionOnce(opts: {
       }, INTERRUPT_POLL_MS)
     : undefined;
 
+  /**
+   * L'état accumulé de l'essai, déclaré AU-DESSUS du try (MIN-216) : une sortie
+   * par exception doit pouvoir le rendre à `onAbandoned`. Un essai jeté —
+   * interruption, flux coupé, erreur en plein stream, ou simplement un essai que
+   * la boucle de reprise abandonne pour en relancer un autre — a été FACTURÉ, et
+   * c'est la seule occasion de l'écrire au ledger.
+   */
+  let content = "";
+  let reasoning = "";
+  let generationId: string | null = null;
+  let modelUsed: string | null = null;
+  let usageRaw: OpenRouterUsage | null = null;
+  /** Le fournisseur a-t-il répondu ? En deçà (4xx/5xx, abort avant les en-têtes),
+      rien n'a été produit : il n'y a rien à facturer et rien à écrire. */
+  let responded = false;
+
   try {
     let response: Response;
     try {
@@ -822,16 +851,16 @@ async function streamCompletionOnce(opts: {
       });
     }
 
+    // Le FOURNISSEUR A RÉPONDU (MIN-216) : le prompt lui est parvenu, donc il est
+    // facturé, et la génération existe chez lui — quoi qu'il advienne du flux
+    // ensuite. C'est le drapeau que lit le rattrapage de facturation, en bas.
+    responded = true;
+
     const reader = response.body?.getReader();
     if (!reader) throw new StreamError("No response body from LLM", { retryable: true });
 
     const decoder = new TextDecoder();
     let buffer = "";
-    let content = "";
-    let reasoning = "";
-    let generationId: string | null = null;
-    let modelUsed: string | null = null;
-    let usageRaw: OpenRouterUsage | null = null;
     /** Dernier motif d'arrêt vu (MIN-203) — `null` si le provider n'en rend pas. */
     let finishReason: string | null = null;
     const acc = new Map<number, { id: string; name: string; arguments: string }>();
@@ -968,6 +997,28 @@ async function streamCompletionOnce(opts: {
       finishReason,
       truncated: finishReason !== null && TRUNCATED_FINISH_REASONS.has(finishReason),
     };
+  } catch (err) {
+    // Essai ABANDONNÉ après réponse du fournisseur (MIN-216) : personne ne verra
+    // jamais ce qu'il a produit, mais il est facturé. On le rend à l'appelant
+    // pour qu'il l'écrive au ledger, PUIS on relève — l'erreur d'origine porte la
+    // décision de reprise, elle ne doit être ni avalée ni remplacée.
+    if (responded) {
+      try {
+        await opts.onAbandoned?.({
+          generationId,
+          modelUsed,
+          usage: parseOpenRouterUsage(usageRaw),
+          // Le prompt tel qu'il est PARTI : facturé en entier dès la réponse.
+          estimatedPromptTokens: estimateTokens(opts.messages),
+          // Ce qu'on a reçu avant la coupure. Minorant : chez un fournisseur qui
+          // ne sait pas annuler, la génération continue et sera facturée entière.
+          estimatedCompletionTokens: estimateTokensFromChars(content.length + reasoning.length),
+        });
+      } catch (recordErr) {
+        console.error("[agent-loop] onAbandoned failed:", (recordErr as Error).message);
+      }
+    }
+    throw err;
   } finally {
     clearTimeout(hardTimer);
     clearTimeout(idleTimer);
@@ -1018,6 +1069,13 @@ async function streamCompletion(opts: {
   onReasoningUnsupported?: () => void;
   /** Deadline absolue (Date.now() ms) du chunk : au-delà, on ne dort pas, on relève. */
   deadlineAt?: number;
+  /**
+   * Appelé pour CHAQUE essai jeté (MIN-216) — y compris ceux que la reprise
+   * remplace en silence. C'est le cas le plus fréquent : un 5xx en plein flux
+   * puis un essai qui réussit rendait UNE ligne au ledger là où le fournisseur
+   * en avait facturé deux.
+   */
+  onAbandoned?: (attempt: AbandonedStream) => Promise<void> | void;
 }): Promise<StreamResult> {
   // Endpoint déjà connu comme réfractaire : on n'y repasse pas par le 400.
   const endpointKey = `${opts.provider}:${opts.model}`;
@@ -1101,6 +1159,48 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
    * d'un rapport, dont la fille a déjà porté la dépense en la payant.
    */
   const spend = params.chunkSpend ?? { usd: 0 };
+
+  /**
+   * Un essai de stream JETÉ (MIN-216) — « Stop » de l'utilisateur, flux coupé,
+   * erreur en plein stream, ou essai remplacé par une reprise. Le fournisseur a
+   * répondu, donc il a facturé, et jusqu'ici cette dépense n'écrivait AUCUNE
+   * ligne : ni au quota du compte, ni au plafond du run (que MIN-215 lit au
+   * ledger), ni à la facture — sur un geste que l'utilisateur peut répéter à
+   * volonté.
+   *
+   * La ligne s'écrit donc ici, exactement comme sur le chemin sain : même `seq`,
+   * même `feature`, même imputation. Son coût vient du fournisseur s'il a eu le
+   * temps de le rendre, sinon du prix publié × les tokens observés — marqué
+   * `estimated` pour ne jamais se lire comme un chiffre relevé. Hors OpenRouter
+   * il n'y a pas d'index de prix : la ligne porte alors ses tokens et son id de
+   * génération, sans coût (un BYOK n'entre de toute façon dans aucun plafond).
+   */
+  const recordAbandonedAttempt = async (attempt: AbandonedStream) => {
+    const info =
+      provider === "openrouter"
+        ? await getOpenRouterModelInfo(attempt.modelUsed ?? model, apiKey).catch(() => null)
+        : null;
+    const spent = abandonedSpend(attempt, info?.pricing ?? null);
+    await recordAiUsage({
+      runId,
+      seq: seq++,
+      feature: usageFeature,
+      model: attempt.modelUsed ?? model,
+      generationId: attempt.generationId,
+      promptTokens: spent.promptTokens,
+      completionTokens: spent.completionTokens,
+      totalTokens: spent.totalTokens,
+      cost: spent.cost,
+      estimated: spent.estimated,
+      billTo: params.billTo,
+      projectId: params.projectId ?? null,
+    });
+    // Les DEUX compteurs, comme un appel abouti : `costUsd` est ce que l'appelant
+    // impute au run, `spend.usd` ce que le plafond du chunk oppose aux filles.
+    costUsd += spent.cost ?? 0;
+    spend.usd += spent.cost ?? 0;
+  };
+
   let round = 0;
   let compactions = 0;
   // Relances de fin de tour déjà consommées (MIN-110) : la première sert à faire
@@ -1323,6 +1423,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             tools: [],
             signal: params.signal,
             deadlineAt: startedAt + params.softDeadlineMs,
+            onAbandoned: recordAbandonedAttempt,
           });
           await recordAiUsage({
             runId,
@@ -1399,6 +1500,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             void emit("status", { phase: "reasoning_unsupported", model });
           },
           deadlineAt: startedAt + params.softDeadlineMs,
+          onAbandoned: recordAbandonedAttempt,
         });
         break;
       } catch (err) {
