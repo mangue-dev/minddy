@@ -302,6 +302,57 @@ describe("chemin complet de compaction", () => {
     expect(injected[0].role).toBe("user");
     expect(pairingValid(result.messages)).toBe(true);
   });
+
+  it("ne le répète pas au chunk suivant, sur le checkpoint repris", async () => {
+    // MIN-218 — le test ci-dessus ne couvrait qu'UN chunk. `runAgentLoop` tourne
+    // une fois PAR chunk : tout ce qui vit dans son corps repart à zéro à chaque
+    // reprise, alors que `messages` (le checkpoint) traverse. Un drapeau local
+    // disait donc « jamais prévenu » sur un historique qui portait déjà le préavis,
+    // et en poussait un deuxième — sur un message qui dit « finis ton étape et
+    // réponds ». Un tour lourd tient sur plusieurs chunks : le tour se faisait
+    // pousser vers la sortie une fois de plus à chaque reprise.
+    //
+    // On rejoue donc les DEUX chunks, comme l'exécuteur : deuxième appel sur les
+    // messages rendus par le premier.
+    const messages = syntheticHistory(6);
+    // Seuil au-dessus du contexte des deux chunks (il ne fait que croître) : 70 %
+    // franchi tout du long, 100 % jamais — la bande où le préavis se répétait.
+    const contextWindow = Math.ceil((estimateTokens(messages) * 1.2) / 0.75);
+
+    const events: Array<{ type: string; payload: Record<string, unknown> }> = [];
+    const emit = async (type: string, payload: Record<string, unknown>) => {
+      events.push({ type, payload });
+    };
+
+    responses = [() => new Response(sseText("chunk 1", estimateTokens(messages)))];
+    const first = await runAgentLoop({ ...baseParams, messages, contextWindow, emit });
+
+    responses = [() => new Response(sseText("chunk 2", estimateTokens(first.messages)))];
+    const second = await runAgentLoop({
+      ...baseParams,
+      messages: first.messages,
+      contextWindow,
+      emit,
+    });
+
+    // Le seuil est bien resté dans la bande visée sur les deux chunks : sans ça le
+    // test passerait pour la mauvaise raison (préavis jamais franchi, ou compacté).
+    const threshold = contextWindow * 0.75;
+    expect(estimateTokens(second.messages)).toBeGreaterThan(threshold * 0.7);
+    expect(estimateTokens(second.messages)).toBeLessThan(threshold);
+    expect(events.some((e) => e.type === "status" && e.payload.phase === "compacted")).toBe(false);
+
+    // UN préavis pour les deux chunks — l'event comme la copie dans l'historique.
+    const warnings = events.filter((e) => e.type === "status" && e.payload.phase === "context_warning");
+    expect(warnings).toHaveLength(1);
+    const injected = second.messages.filter((m) => textOf(m.content).includes("approaching the context limit"));
+    expect(injected).toHaveLength(1);
+
+    // Et ce que le modèle a VRAIMENT reçu au deuxième chunk : une seule copie.
+    const resumed = sent[1].messages.filter((m) => textOf(m.content).includes("approaching the context limit"));
+    expect(resumed).toHaveLength(1);
+    expect(pairingValid(second.messages)).toBe(true);
+  });
 });
 
 describe("élagage de dernier recours (400 « contexte trop long »)", () => {

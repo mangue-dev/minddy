@@ -24,7 +24,7 @@ import {
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
 import type { AgentToolDef } from "./tools";
-import type { AgentContentPart, AgentToolImage } from "./content";
+import { textOf, type AgentContentPart, type AgentToolImage } from "./content";
 import { pruneToolOutputs, capHistoryImages, headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
 import { markSystemPromptCache } from "./caching";
 import {
@@ -151,6 +151,27 @@ const CONTEXT_WARNING_RATIO = 0.7;
  */
 const CONTEXT_WARNING_MESSAGE =
   "You are approaching the context limit for this session. Finish the step you are on and reply — do not start new exploration.";
+/**
+ * Le préavis est-il DÉJÀ dans le contexte ? (MIN-218)
+ *
+ * « Déjà prévenu » n'est pas un état à tenir : c'est une propriété de
+ * l'historique, et l'historique EST le checkpoint. Un drapeau en RAM ne
+ * connaissait que son chunk — il repartait à faux à chaque reprise, alors que le
+ * préavis du chunk précédent, lui, était toujours là. Le message était donc
+ * réinjecté à chaque chunk, et il dit « finis ton étape et réponds » : de quoi
+ * faire conclure un tour qui n'avait aucune raison de conclure, chunk après chunk.
+ * La compaction ne rattrapait rien (elle mord à 100 % du seuil, le préavis part à
+ * 70 % : toute la bande entre les deux se répétait).
+ *
+ * Lu dans les messages, l'invariant devient « une seule copie VIVANTE », et il se
+ * répare tout seul dans les deux sens : tant que le modèle voit le message à
+ * chaque appel, le redire ne lui apprend rien ; le jour où la compaction,
+ * `dropOldestRound` ou le dernier palier de `fitCheckpoint` l'emporte, il l'a
+ * oublié et un nouveau préavis est légitime.
+ */
+function hasContextWarning(messages: ReadonlyArray<AgentChatMessage>): boolean {
+  return messages.some((m) => m.role === "user" && textOf(m.content) === CONTEXT_WARNING_MESSAGE);
+}
 /** Tools d'exploration sans effet de bord → parallélisables dans un même round. */
 const READ_ONLY_TOOLS = new Set([
   "read_file",
@@ -1233,9 +1254,6 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   // Taille de contexte réelle du dernier appel (prompt_tokens rapportés) — plus
   // fiable que l'estimation caractères/4 pour décider de compacter.
   let lastPromptTokens: number | null = null;
-  // Préavis de fin de contexte déjà donné sur ce chunk ? Une seule fois — répéter
-  // le message à chaque round harcèlerait le modèle sans rien lui apprendre.
-  let contextWarned = false;
 
   /**
    * Tool-call aux `arguments` illisibles (MIN-204) : on RÉPOND à l'appel — son
@@ -1468,9 +1486,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // une exploration qu'un résumé va trancher au milieu. Placé APRÈS la
     // compaction : si elle vient de tourner, le contexte est retombé et il n'y a
     // plus rien à annoncer.
+    //
+    // « Déjà prévenu ? » se lit dans l'historique et jamais dans une variable
+    // (MIN-218, cf. `hasContextWarning`) : le scan ne coûte que quand le seuil est
+    // franchi, et il est le seul à survivre au découpage en chunks.
     const contextNow = lastPromptTokens ?? estimateTokens(messages);
-    if (!contextWarned && contextNow >= compactThreshold * CONTEXT_WARNING_RATIO) {
-      contextWarned = true;
+    if (contextNow >= compactThreshold * CONTEXT_WARNING_RATIO && !hasContextWarning(messages)) {
       messages.push({ role: "user", content: CONTEXT_WARNING_MESSAGE });
       await emit("status", {
         phase: "context_warning",
