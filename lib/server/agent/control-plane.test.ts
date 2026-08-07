@@ -32,6 +32,9 @@ const h = vi.hoisted(() => ({
   /** Les contextes d'atterrissage passés à l'implémentation partagée. */
   prLandings: [] as Array<{ workBranch: string; baseBranch: string }>,
   run: null as Record<string, unknown> | null,
+  /** Combien de fois la ligne du run a été LUE EN BASE. Le direct doit rester à
+   *  zéro : c'est le seul appel chaud de la surface (~4/s pendant tout le tour). */
+  runReads: 0,
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
@@ -106,7 +109,10 @@ vi.mock("./pr-landing", async (importOriginal) => ({
 
 vi.mock("./runs", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./runs")>()),
-  getRun: vi.fn(async () => h.run),
+  getRun: vi.fn(async () => {
+    h.runReads++;
+    return h.run;
+  }),
   appendEvent: vi.fn(async (runId: string, type: string) => {
     h.events.push({ runId, type });
   }),
@@ -159,6 +165,7 @@ beforeEach(() => {
   h.stampReturnsNull = false;
   h.landed = 0;
   h.prLandings.length = 0;
+  h.runReads = 0;
   h.run = {
     id: RUN_ID,
     status: "running",
@@ -207,6 +214,22 @@ describe("le direct — le topic vient du run, pas du corps", () => {
     expect(returned).toBeInstanceOf(Promise);
     await returned;
     expect(h.streams).toHaveLength(1);
+  });
+
+  it("ne LIT PAS la ligne du run — c'est le seul appel chaud de la surface", async () => {
+    // `emitLive` diffuse ~4×/s pendant toute la durée du tour : une lecture de
+    // `agent_runs` par tick, c'est ~29 000 requêtes sur un tour de deux heures,
+    // pour une surface qui n'a besoin que du `runId` de l'OIDC. Les surfaces qui
+    // ÉCRIVENT, elles, gardent la lecture — la comparaison est le test.
+    await call("POST", "/stream", { text: "salut" });
+    expect(h.runReads).toBe(0);
+    await call("POST", "/events", { type: "status" });
+    expect(h.runReads).toBe(1);
+  });
+
+  it("diffuse même si la ligne du run a disparu — rien à perdre, personne à atteindre", async () => {
+    h.run = null;
+    expect((await call("POST", "/stream", { text: "salut" })).status).toBe(200);
   });
 });
 

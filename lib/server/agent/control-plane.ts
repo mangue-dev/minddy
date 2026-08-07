@@ -123,6 +123,43 @@ export async function handleControlPlaneRequest(opts: {
   const { runId, method, surface } = opts;
   const body = opts.body ?? {};
 
+  /**
+   * LE DIRECT PASSE AVANT LA LECTURE DU RUN, et c'est la seule surface qui y
+   * échappe. `emitLive` diffuse ~4×/s pendant toute la durée du tour — sur un
+   * tour de deux heures, une lecture de `agent_runs` par tick ferait ~29 000
+   * requêtes en base pour une surface qui n'a besoin que du `runId`, dont elle
+   * dérive son topic. C'était de la charge pure, sur le seul appel chaud du plan
+   * de contrôle.
+   *
+   * Ce qu'on renonce à vérifier ici : qu'il existe encore une ligne pour ce run.
+   * Sans conséquence — le direct n'est persisté nulle part, et diffuser sur le
+   * topic d'un run supprimé n'atteint personne. Les surfaces qui ÉCRIVENT, elles,
+   * gardent la lecture ci-dessous.
+   *
+   * LE TOPIC EST DÉRIVÉ DU RUN, jamais reçu. C'est la seule ligne de ce fichier
+   * qui empêche une VM de diffuser sur le fil d'une autre.
+   *
+   * `afterOrNow` et PAS `broadcastRunStream` : celui-ci DÉTACHE son fetch
+   * (`void broadcast(…)`, live.ts). Ça convient à la boucle, qui vit dans une
+   * invocation qui continue derrière — pas ici : la réponse part à la ligne
+   * suivante, la plateforme gèle la fonction, et la requête sortante meurt en vol
+   * (« TypeError: fetch failed », cf. lib/server/after-safe.ts). Le direct n'a
+   * AUCUN repli — rien n'est persisté, contrairement aux events que le fil
+   * rattrape en 2 s au poll : le perdre, c'est perdre le rendu streamé.
+   */
+  if (method === "POST" && surface === "/stream") {
+    afterOrNow(() =>
+      broadcastToTopic(agentRunTopic(runId), "stream", {
+        text: typeof body.text === "string" ? body.text : "",
+        tools: num(body.tools) ?? 0,
+        reasoningActive: body.reasoningActive === true,
+        reasoningMs: num(body.reasoningMs) ?? 0,
+        at: Date.now(),
+      }),
+    );
+    return ok();
+  }
+
   // La ligne du run est le CONTEXTE, et elle est relue à chaque appel : c'est ce
   // qui rend la surface sans état, donc sûre à appeler depuis une VM qui peut
   // mourir entre deux requêtes. Un run supprimé (rétention) ou un nom de sandbox
@@ -137,29 +174,6 @@ export async function handleControlPlaneRequest(opts: {
     // `appendEvent` calcule `seq`, retente sur collision et diffuse derrière —
     // exactement ce que fait la boucle aujourd'hui, au même endroit.
     await appendEvent(runId, type as AgentEventType, payload);
-    return ok();
-  }
-
-  if (method === "POST" && surface === "/stream") {
-    // LE TOPIC EST DÉRIVÉ DU RUN, jamais reçu. C'est la seule ligne de ce fichier
-    // qui empêche une VM de diffuser sur le fil d'une autre.
-    //
-    // `afterOrNow` et PAS `broadcastRunStream` : celui-ci DÉTACHE son fetch
-    // (`void broadcast(…)`, live.ts). Ça convient à la boucle, qui vit dans une
-    // invocation qui continue derrière — pas ici : la réponse part à la ligne
-    // suivante, la plateforme gèle la fonction, et la requête sortante meurt en
-    // vol (« TypeError: fetch failed », cf. lib/server/after-safe.ts). Le direct
-    // n'a AUCUN repli — rien n'est persisté, contrairement aux events que le fil
-    // rattrape en 2 s au poll : le perdre, c'est perdre le rendu streamé.
-    afterOrNow(() =>
-      broadcastToTopic(agentRunTopic(runId), "stream", {
-        text: typeof body.text === "string" ? body.text : "",
-        tools: num(body.tools) ?? 0,
-        reasoningActive: body.reasoningActive === true,
-        reasoningMs: num(body.reasoningMs) ?? 0,
-        at: Date.now(),
-      }),
-    );
     return ok();
   }
 

@@ -1,6 +1,7 @@
 import {
   runAgentLoop,
   type AgentChatMessage,
+  type AgentUsageLine,
   type EmitAgentEvent,
 } from "../agent-loop";
 import { agentToolsFor, subagentToolsFor } from "../tools";
@@ -429,6 +430,32 @@ export async function runVmTurn(
 
   // ── Sauvegarde périodique du checkpoint ────────────────────────────────────
   /**
+   * OÙ EN EST LE COMPTEUR DE `seq` DU LEDGER, et pourquoi il se suit à la main.
+   *
+   * `usageSeq` est la SEULE valeur du checkpoint que la boucle ne rende qu'à la
+   * fin (`usageSeqEnd`). La sauvegarde périodique, elle, écrit au milieu — et y
+   * poser `0` faisait repartir de zéro le tour qui reprend depuis elle
+   * (`usageSeqStart = run.checkpoint?.usageSeq ?? …`, execute.ts : `0` n'est pas
+   * nullish, donc c'est bien `0` qui gagne). Les lignes de ledger du tour repris
+   * retombaient alors sur les `seq` du tour mort : rien n'est perdu (aucune
+   * contrainte d'unicité, et la dépense se somme), mais l'ordre des appels d'un
+   * run devenait faux, et c'est exactement ce qu'un `seq` sert à dire.
+   *
+   * PARENT SEULEMENT : les filles écrivent dans leur propre bande
+   * (`subagentUsageSeq(slot)`), très au-dessus de celle du parent. Prendre le max
+   * des deux propulserait le compteur du parent dans la bande des filles, ce qui
+   * serait pire que le défaut qu'on corrige. D'où le wrapper posé sur le SEUL
+   * `recordUsage` du parent — les filles gardent `cp.recordUsage` nu.
+   */
+  let usageSeqNow = job.usageSeqStart;
+  const recordParentUsage = async (line: AgentUsageLine): Promise<void> => {
+    // `+ 1` : la boucle écrit `seq: seq++`, donc `usageSeqEnd` est le prochain
+    // numéro LIBRE. Le checkpoint porte cette même convention.
+    if (line.seq >= usageSeqNow) usageSeqNow = line.seq + 1;
+    await cp.recordUsage(line);
+  };
+
+  /**
    * ACCROCHÉE AU SOMMET D'UN ROUND, et pas à un timer, et c'est le point qui
    * compte. `messages` est muté PENDANT un round : un timer qui le sérialiserait
    * au mauvais moment écrirait un historique avec un `tool_call` sans son
@@ -448,7 +475,7 @@ export async function runVmTurn(
   const maybeSaveCheckpoint = async (): Promise<void> => {
     if (Date.now() - lastSaveAt < CHECKPOINT_SAVE_INTERVAL_MS) return;
     lastSaveAt = Date.now();
-    const fit = fitCheckpoint(buildCheckpoint(0), job.checkpointMaxBytes);
+    const fit = fitCheckpoint(buildCheckpoint(usageSeqNow), job.checkpointMaxBytes);
     if (!(await cp.saveCheckpointQuietly(fit.checkpoint))) runClosed = true;
   };
 
@@ -523,7 +550,9 @@ export async function runVmTurn(
     billTo: { unattributed: "resolved by the control plane" },
     feature: job.feature,
     projectId: job.projectId,
-    recordUsage: cp.recordUsage,
+    // Le wrapper, pas `cp.recordUsage` nu : c'est lui qui tient le compteur de
+    // `seq` que la sauvegarde périodique doit pouvoir écrire (cf. `usageSeqNow`).
+    recordUsage: recordParentUsage,
     // PAS de soft-deadline de chunk : le plafond mural du TOUR, qui se compte en
     // heures et n'existe que pour rester sous les 24 h de la session de microVM.
     softDeadlineMs: VM_TURN_SOFT_DEADLINE_MS,
@@ -616,10 +645,21 @@ export async function runVmTurn(
     }
   }
 
-  // Le diff du tour, calculé par git ICI — la fonction n'a plus le dépôt sous la
-  // main, et ne pourrait le demander qu'en RPC.
+  /**
+   * Le diff du tour, calculé par git ICI — la fonction n'a plus le dépôt sous la
+   * main, et ne pourrait le demander qu'en RPC.
+   *
+   * SUR LA FIN DE TOUR NATURELLE SEULEMENT, et c'est un invariant, pas une
+   * préférence : `lastFilesSha` est défini comme « le sha au dernier event
+   * `files_changed` émis » (runs.ts), et il n'avance qu'en `completed` — la
+   * baseline doit rester en place pour qu'un tour interrompu puis repris raconte
+   * son diff d'un seul tenant. Émettre l'event sans avancer la baseline cassait
+   * les deux moitiés du couple : le fil listait les fichiers à l'interruption,
+   * puis les relistait au tour suivant. L'ancienne forme ne l'émet que là
+   * (execute.ts), et le critère de bascule est que le fil raconte la même chose.
+   */
   const changed =
-    pushed?.headSha && pushed.headSha !== job.filesFromSha
+    result.status === "completed" && pushed?.headSha && pushed.headSha !== job.filesFromSha
       ? await changedFiles(host, job.filesFromSha, pushed.headSha).catch(() => null)
       : null;
 

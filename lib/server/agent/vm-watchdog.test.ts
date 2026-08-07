@@ -27,6 +27,15 @@ const h = vi.hoisted(() => ({
   revoked: [] as string[],
   rows: [] as Array<Record<string, unknown>>,
   updates: [] as Array<Record<string, unknown>>,
+  /** Les lignes de compute écrites — la moitié de la facture que personne
+   *  d'autre ne tient sur ce chemin. */
+  compute: [] as Array<Record<string, unknown>>,
+}));
+
+vi.mock("@/lib/server/usage", () => ({
+  recordSandboxUsage: vi.fn(async (params: Record<string, unknown>) => {
+    h.compute.push(params);
+  }),
 }));
 
 vi.mock("./sandbox", () => ({
@@ -79,6 +88,9 @@ function fakeService() {
   return { from: () => builder } as never;
 }
 
+/** Le tour a démarré il y a une heure — c'est ce que la microVM a coûté. */
+const STARTED_MS_AGO = 60 * 60_000;
+
 const ROW = {
   id: "run-1",
   sandbox_id: "agent-run-1",
@@ -87,6 +99,10 @@ const ROW = {
   project_id: "proj-1",
   issue_id: "issue-1",
   provider_key_id: "hash-1",
+  run_id: "ledger-run-1",
+  routine_id: null,
+  continuations: 0,
+  started_at: new Date(Date.now() - STARTED_MS_AGO).toISOString(),
 };
 
 beforeEach(() => {
@@ -97,6 +113,7 @@ beforeEach(() => {
   h.notifications.length = 0;
   h.revoked.length = 0;
   h.updates.length = 0;
+  h.compute.length = 0;
   h.rows = [{ ...ROW }];
 });
 
@@ -148,6 +165,49 @@ describe("reapDeadVmRuns", () => {
     await reapDeadVmRuns(fakeService());
     expect(h.revoked).toEqual(["hash-1"]);
     expect(h.updates).toContainEqual({ provider_key_id: null });
+  });
+
+  it("FACTURE le compute de la microVM — sinon il disparaît en silence", async () => {
+    // Dans la nouvelle forme, le wall-clock est tenu par la boucle et remonté
+    // dans son rapport de fin de tour ; la fonction ne facture plus rien de son
+    // côté. Un tour dont le process meurt ne rend jamais ce rapport : sans cette
+    // ligne, le réveil, le clone et les heures de VM sortent de tous les
+    // compteurs, et personne ne s'en apercevrait avant la facture Vercel.
+    h.alive = false;
+    await reapDeadVmRuns(fakeService());
+    expect(h.compute).toHaveLength(1);
+    expect(h.compute[0]).toMatchObject({
+      // L'identifiant du LEDGER, pas celui de la ligne — c'est sous lui que la
+      // dépense d'un run repris se compte.
+      runId: "ledger-run-1",
+      feature: "sandbox_compute",
+      projectId: "proj-1",
+      billTo: { userId: "user-1" },
+    });
+    expect(h.compute[0].durationMs as number).toBeGreaterThanOrEqual(STARTED_MS_AGO);
+  });
+
+  it("range le compute d'une ROUTINE avec elle, pas sous « Agents »", async () => {
+    h.alive = false;
+    h.rows = [{ ...ROW, routine_id: "routine-1" }];
+    await reapDeadVmRuns(fakeService());
+    expect(h.compute[0]).toMatchObject({ feature: "routine_compute" });
+  });
+
+  it("ne facture rien sans date de départ — mieux vaut zéro qu'un chiffre inventé", async () => {
+    h.alive = false;
+    h.rows = [{ ...ROW, started_at: null }];
+    const { reaped } = await reapDeadVmRuns(fakeService());
+    // Le run est bien mis au repos : le métrage est un à-côté, jamais un
+    // prérequis de la conclusion.
+    expect(reaped).toBe(1);
+    expect(h.compute).toHaveLength(0);
+  });
+
+  it("ne facture rien sur un process VIVANT", async () => {
+    h.alive = true;
+    await reapDeadVmRuns(fakeService());
+    expect(h.compute).toHaveLength(0);
   });
 
   it("ignore une ligne sans identifiant de commande — rien à interroger", async () => {

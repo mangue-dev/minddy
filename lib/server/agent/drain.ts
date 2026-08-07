@@ -2,7 +2,11 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { recordSandboxUsage } from "@/lib/server/usage";
+import type { AiUsageBillTo } from "@/lib/server/ai-usage";
+
 import { appendEvent, claimRun, notifyAgentRun, requeueStuckRuns, stampRun } from "./runs";
+import { SANDBOX_USAGE_SEQ_BASE } from "./pr-landing";
 // Le seuil d'admission d'un chunk ne se pose pas ici : il DÉRIVE de ce que le chunk
 // s'accorde une fois démarré, plus son amorçage (MIN-213). Deux chiffres écrits à la
 // main de part et d'autre de cette frontière se contredisaient — le drain admettait
@@ -126,7 +130,8 @@ const VM_LOOP_PROBE_AFTER_MS = 3 * 60_000;
  *   touche à rien non plus. Un chien de garde qui conclut sur un silence de l'API
  *   remettrait au repos des tours en pleine santé ;
  * - le process est MORT → la session repasse au repos sur son DERNIER CHECKPOINT
- *   (celui de la sauvegarde périodique), et **le fil le dit**. C'est ce qui
+ *   (celui de la sauvegarde périodique), **le fil le dit**, et le compute de la
+ *   microVM est facturé (cf. `recordSandboxUsage` plus bas). C'est ce qui
  *   distingue « l'agent s'est arrêté et voilà pourquoi » de « l'agent ne répond
  *   plus depuis vingt minutes ».
  */
@@ -134,7 +139,9 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
   const cutoff = new Date(Date.now() - VM_LOOP_PROBE_AFTER_MS).toISOString();
   const { data } = await service
     .from("agent_runs")
-    .select("id, sandbox_id, loop_command_id, created_by, project_id, issue_id, provider_key_id")
+    .select(
+      "id, sandbox_id, loop_command_id, created_by, project_id, issue_id, provider_key_id, run_id, routine_id, continuations, started_at",
+    )
     .eq("status", "running")
     .eq("loop_in_vm", true)
     .not("loop_command_id", "is", null)
@@ -148,6 +155,10 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     project_id: string;
     issue_id: string | null;
     provider_key_id: string | null;
+    run_id: string | null;
+    routine_id: string | null;
+    continuations: number;
+    started_at: string | null;
   }>;
 
   let reaped = 0;
@@ -178,6 +189,43 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
       loop_command_id: null,
     });
     if (!stamped) continue; // course : quelqu'un a conclu entre-temps.
+
+    /**
+     * LE COMPUTE DE LA MICROVM, ET C'EST ICI QUE PERSONNE NE LE FACTURERAIT.
+     *
+     * Dans la nouvelle forme, le wall-clock de la VM est tenu par la boucle et
+     * remonté dans son rapport de fin de tour (`vm-rest.ts`) — et la fonction ne
+     * facture plus rien de son côté (`execute.ts`, la garde `!run.loop_in_vm`).
+     * Un tour dont le process meurt ne rend jamais ce rapport : sans cette ligne,
+     * le réveil, le clone et les heures de microVM sortent de tous les compteurs
+     * en silence. C'est la moitié compute de la facture, sur le seul chemin où
+     * l'on ne s'en apercevrait pas.
+     *
+     * De `started_at` à MAINTENANT, et c'est un MINORANT malgré les apparences :
+     * la SESSION de microVM survit à son process de boucle, et ne sera coupée que
+     * par le reaper d'inactivité — ~5 min après ce stamp, qui vient tout juste de
+     * faire passer le run au repos. On facture donc moins que ce que la
+     * plateforme nous facture, ce qui est le bon sens de l'erreur.
+     */
+    const startedMs = row.started_at ? Date.parse(row.started_at) : NaN;
+    if (Number.isFinite(startedMs) && Date.now() > startedMs) {
+      const billTo: AiUsageBillTo = row.created_by
+        ? { userId: row.created_by }
+        : { unattributed: `run ${row.id} sans created_by` };
+      await recordSandboxUsage({
+        runId: row.run_id ?? row.id,
+        // Même bande de seq que les deux autres écrivains de compute : un run
+        // migré ne collisionne pas avec les lignes de son passé.
+        seq: SANDBOX_USAGE_SEQ_BASE + row.continuations,
+        billTo,
+        feature: row.routine_id ? "routine_compute" : "sandbox_compute",
+        projectId: row.project_id,
+        durationMs: Date.now() - startedMs,
+      }).catch((err) =>
+        console.error("[agent-drain] vm compute metering failed:", (err as Error).message),
+      );
+    }
+
     if (row.provider_key_id) {
       await revokeRunKey(row.provider_key_id);
       await service.from("agent_runs").update({ provider_key_id: null }).eq("id", row.id);

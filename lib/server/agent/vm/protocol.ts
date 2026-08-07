@@ -202,7 +202,14 @@ export interface VmTurnReport {
   workBranch: string;
   /** Message d'un push qui a ÉCHOUÉ — signal visible, pas un silence. */
   pushError?: string;
-  /** Le diff du tour, calculé par git dans la VM. */
+  /**
+   * Le diff du tour, calculé par git dans la VM.
+   *
+   * ABSENT hors fin de tour NATURELLE : `lastFilesSha` (la baseline du diff)
+   * n'avance qu'en `completed`, et l'event `files_changed` est défini comme le
+   * geste qui la fait avancer. Un tour interrompu garde donc son diff pour le
+   * tour qui le termine, qui le racontera d'un seul tenant.
+   */
   changed?: { files: ChangedFile[]; truncated: boolean };
   /** Wall-clock de la microVM sur ce tour (début → fin) — la moitié compute de
    *  la facture, que plus personne ne tiendrait sans la boucle (MIN-221 §3). */
