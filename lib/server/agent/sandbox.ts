@@ -194,12 +194,40 @@ export async function stopSandboxByName(name: string): Promise<void> {
 }
 
 /**
+ * Combien de temps on laisse `wait()` répondre avant de conclure « il vit ».
+ *
+ * MESURÉ (2026-08-07, vraie microVM) : sur un process déjà mort, `wait()` rend en
+ * **270 ms**. Cinq secondes sont donc très au-dessus du besoin — la marge est
+ * pour la latence transatlantique, pas pour le verdict. Sur un process vivant,
+ * `wait()` ne rend pas du tout : c'est le délai lui-même qui fait la réponse.
+ */
+const LOOP_COMMAND_WAIT_MS = 5_000;
+
+/**
  * Le process de boucle d'un run `loop_in_vm` (MIN-224) vit-il encore ?
  *
  * `null` = on ne sait pas — microVM introuvable, session expirée, API en panne.
  * L'appelant doit alors NE RIEN FAIRE : le chien de garde ne conclut que sur un
  * fait, jamais sur un silence. `false` = le process a rendu, et c'est un constat
- * de décès exact (la plateforme sait si la commande vit).
+ * de décès exact.
+ *
+ * IL FAUT `wait()`, ET C'EST TOUT LE FICHIER. Une commande lancée en
+ * `detached: true` ne voit **jamais** son `exitCode` réconcilié tant que personne
+ * ne l'attend : mesuré sur une vraie microVM, un process tué depuis huit minutes
+ * — absent de `ps`, plus un event dans le fil — rendait encore `exitCode: null`.
+ * Lire ce champ seul faisait donc répondre « vivant » à ce chien de garde sur
+ * TOUS les décès, et un run dont la boucle meurt restait `running` pour toujours :
+ * `requeueStuckRuns` l'exclut par construction, `reapIdleSandboxes` ne ramasse que
+ * les runs au repos, et la microVM tournait jusqu'aux 24 h de la session.
+ *
+ * `wait()` borné rend les trois réponses sans en inventer aucune :
+ *
+ * - il REND ⇒ le process a fini, quel que soit son code (137 pour un SIGKILL) ;
+ * - il n'a pas rendu dans le délai ⇒ le process travaille encore ;
+ * - il lève autre chose ⇒ on ne sait pas, et on se tait.
+ *
+ * Le drapeau `timedOut` plutôt que le nom de l'exception : c'est NOTRE horloge
+ * qui décide, pas la façon dont le SDK habille un abandon.
  *
  * `resume: false` DÉLIBÉRÉMENT : interroger l'état d'une commande ne doit jamais
  * réveiller une microVM que le reaper vient d'endormir — ça relancerait la
@@ -214,7 +242,24 @@ export async function isLoopCommandAlive(
     const sandbox = await Sandbox.get({ ...creds, name: sandboxId, resume: false });
     const command = await sandbox.getCommand(commandId);
     if (!command) return null;
-    return command.exitCode == null;
+    // Déjà réconcilié (commande non détachée, ou quelqu'un l'a attendue avant
+    // nous) : rien à demander de plus.
+    if (command.exitCode != null) return false;
+
+    const abort = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      abort.abort();
+    }, LOOP_COMMAND_WAIT_MS);
+    try {
+      await command.wait({ signal: abort.signal });
+      return false;
+    } catch {
+      return timedOut ? true : null;
+    } finally {
+      clearTimeout(timer);
+    }
   } catch {
     return null;
   }

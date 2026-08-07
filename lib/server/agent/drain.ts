@@ -161,10 +161,27 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     started_at: string | null;
   }>;
 
+  /**
+   * LES SONDES EN PARALLÈLE, les conduites en série.
+   *
+   * Constater qu'un process VIT coûte le délai entier de `isLoopCommandAlive`
+   * (5 s : c'est l'absence de réponse qui fait la réponse). En série, une file de
+   * vingt runs en bonne santé mangerait une minute et demie du budget du drain
+   * avant qu'il n'ait claim quoi que ce soit. Les sondes ne se touchent pas entre
+   * elles — les mettre de front ramène le coût à celui d'UNE.
+   */
+  const verdicts = await Promise.all(
+    rows.map(async (row) => ({
+      row,
+      alive:
+        row.sandbox_id && row.loop_command_id
+          ? await isLoopCommandAlive(row.sandbox_id, row.loop_command_id)
+          : null,
+    })),
+  );
+
   let reaped = 0;
-  for (const row of rows) {
-    if (!row.sandbox_id || !row.loop_command_id) continue;
-    const alive = await isLoopCommandAlive(row.sandbox_id, row.loop_command_id);
+  for (const { row, alive } of verdicts) {
     if (alive !== false) continue; // vivant, ou indéterminé : on ne conclut pas.
 
     // Le fil D'ABORD : si le stamp échoue derrière, l'utilisateur aura quand même
