@@ -242,6 +242,14 @@ export interface SubagentRunOptions {
   /** Appelé à chaque round de la fille : `agent_status` doit dire autre chose que 0. */
   onRound: () => void;
   /**
+   * Appelé à chaque appel PAYÉ par la fille, avec son coût (MIN-220) — c'est ce qui
+   * tient `record.costUsd` à jour EN VOL, au lieu de l'apprendre au retour de la
+   * promesse. Une fille coupée au délai de grâce (`cutAll`, `suspendAll`) ou dont le
+   * runner lève ne rend jamais ce retour : sans ce crochet, sa dépense du chunk
+   * n'était imputée au run par personne.
+   */
+  onSpend: (usd: number) => void;
+  /**
    * REPRISE : l'historique laissé par le chunk précédent. Présent = la fille
    * continue son travail au lieu de le recommencer, et le runner ne réamorce ni
    * son prompt système ni sa tâche (ils sont déjà dedans).
@@ -631,6 +639,15 @@ export class Subagents {
         onRound: () => {
           record.rounds++;
         },
+        // La dépense se pose sur le record AU FIL DE L'EAU (MIN-220), et pas
+        // seulement dans le `.then()` ci-dessous : celui-ci n'a pas toujours lieu à
+        // temps — `cutAll()` et `suspendAll()` rendent la main au bout de
+        // `CUT_GRACE_MS`, et la fille dont la promesse traîne était alors facturée
+        // ZÉRO au run. Cumulatif comme `record.costUsd` l'est : on repart de ce que
+        // les chunks précédents ont déjà mis dessus (`costSoFar`).
+        onSpend: (usd) => {
+          record.costUsd += usd;
+        },
         resumeMessages: opts.resumeMessages,
         resumeUsageSeq: opts.resumeUsageSeq,
         roundsSoFar: opts.roundsSoFar,
@@ -642,6 +659,11 @@ export class Subagents {
         // enveloppé voit est un tool-call) ; à l'arrivée, le compte de la boucle
         // fille est autoritaire.
         record.rounds = res.rounds > 0 ? res.rounds : record.rounds;
+        // Écrasé, pas cumulé : `res.costUsd` vaut `costSoFar + ce que la boucle a
+        // payé`, c'est-à-dire exactement ce que `onSpend` vient de poser round après
+        // round. La même valeur par l'autre bout — et le chemin qui fait foi quand
+        // les deux existent (une fille lancée par un runner qui n'appelle pas
+        // `onSpend`, comme un double de test, reste correcte).
         record.costUsd = res.costUsd;
         if (res.status === "suspended") {
           // Son état est SAUVÉ : pas de rapport (elle n'a pas fini), mais tout ce

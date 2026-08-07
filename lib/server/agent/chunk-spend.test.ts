@@ -143,6 +143,48 @@ describe("plafond de dépense du chunk", () => {
     expect(calls).toBe(2);
   });
 
+  it("dit sa dépense À CHAQUE appel payé, sans attendre de rendre la main (MIN-220)", async () => {
+    // Ce que le crochet sert : la boucle d'un sous-agent peut être abandonnée en
+    // vol (`cutAll` / `suspendAll` rendent la main au bout de 5 s), et son total de
+    // fin de course n'arrive alors jamais au registre. Ce qu'elle a dit en chemin,
+    // si — c'est là-dessus que repose la facturation de la fille coupée.
+    const paid: number[] = [];
+    responses = [
+      () => new Response(sseToolCall("call_1", 0.2)),
+      () => new Response(sseText("Done.", 0.05)),
+    ];
+
+    const result = await runAgentLoop({
+      ...baseParams,
+      messages: seed(),
+      onSpend: (usd) => paid.push(usd),
+    });
+
+    expect(result.status).toBe("completed");
+    // Un appel = une annonce, dans l'ordre, et la somme est le total rendu : rien
+    // n'est annoncé deux fois, rien n'est passé sous silence.
+    expect(paid).toEqual([0.2, 0.05]);
+    expect(paid.reduce((a, b) => a + b, 0)).toBeCloseTo(result.costUsd, 6);
+  });
+
+  it("n'annonce RIEN au drain d'un rapport de fille (elle l'a déjà annoncé en payant)", async () => {
+    // Le pendant du cas ci-dessous pour `chunkSpend` : une fille qui rend 5 $ les a
+    // déjà portés elle-même. Les réannoncer ferait imputer sa dépense deux fois au
+    // run — exactement le double compte que `costBilled` existe pour empêcher.
+    const paid: number[] = [];
+    responses = [() => new Response(sseText("Noted.", 0.01))];
+
+    const result = await runAgentLoop({
+      ...baseParams,
+      messages: seed(),
+      onSpend: (usd) => paid.push(usd),
+      pullSubagentReports: async () => [{ id: "sub-1", text: "I found 42 call sites.", costUsd: 5 }],
+    });
+
+    expect(result.costUsd).toBeCloseTo(5.01, 6);
+    expect(paid).toEqual([0.01]);
+  });
+
   it("un rapport de fille n'entre PAS dans le compteur du chunk (elle l'y a déjà porté)", async () => {
     const chunkSpend = { usd: 0 };
     responses = [() => new Response(sseText("Noted.", 0.01))];

@@ -2259,6 +2259,10 @@ export async function executeAgentRun(
           // ses cinq sœurs feraient de même, chacune dans son coin.
           budgetUsd,
           chunkSpend,
+          // Ce que la fille paie, dit au registre TOUT DE SUITE (MIN-220) : sa
+          // promesse peut ne pas rendre la main avant que le chunk ne la coupe, et
+          // sa dépense n'était alors imputée au run par personne.
+          onSpend: job.onSpend,
           contextWindow: job.model ? null : contextWindow,
           // Plafond CUMULATIF : une fille reprise ne repart pas avec quinze rounds
           // neufs à chaque chunk, sinon le garde-fou anti-runaway ne borne rien.

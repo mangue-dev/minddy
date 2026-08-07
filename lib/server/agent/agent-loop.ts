@@ -324,6 +324,24 @@ export interface RunAgentLoopParams {
    */
   chunkSpend?: { usd: number };
   /**
+   * Appelé à CHAQUE appel payé, avec ce qu'il vient de coûter (MIN-220). La boucle
+   * rend déjà son total en fin de course : ce crochet sert à qui ne peut pas
+   * attendre la fin.
+   *
+   * C'est le cas du registre des sous-agents. La dépense d'une fille n'atterrissait
+   * sur son record qu'au `.then()` de sa promesse — or `cutAll()` et `suspendAll()`
+   * ne l'attendent que `CUT_GRACE_MS`, et une fille abortée pendant un
+   * `run_command` (tests, build) ne rend la main qu'à la fin de la commande, bien
+   * après. Son record était alors déclaré `cut` avec le coût d'AVANT le chunk,
+   * `settleUnbilled()` n'avait rien à imputer, et tout ce qu'elle avait dépensé
+   * manquait à `agent_runs.cost_usd` — pendant que le ledger `ai_usage`, lui, avait
+   * bien reçu ses appels.
+   *
+   * Un crochet SYNCHRONE, et volontairement : il doit avoir couru avant que la
+   * boucle ne puisse être abandonnée en vol.
+   */
+  onSpend?: (usd: number) => void;
+  /**
    * Fenêtre de contexte (tokens) du modèle, si connue → seuil de compaction =
    * 75 % de cette fenêtre. Absent = seuil par défaut `AGENT_COMPACT_TOKEN_THRESHOLD`.
    */
@@ -1191,10 +1209,27 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   /**
    * Ce que le CHUNK a dépensé, filles comprises (MIN-202). Partagé avec elles quand
    * l'appelant le fournit ; c'est LUI que `budgetUsd` plafonne. On ne l'incrémente
-   * qu'aux deux endroits où cette boucle paie vraiment un appel — jamais au drain
-   * d'un rapport, dont la fille a déjà porté la dépense en la payant.
+   * qu'aux endroits où cette boucle paie vraiment un appel (cf. `bill`) — jamais au
+   * drain d'un rapport, dont la fille a déjà porté la dépense en la payant.
    */
   const spend = params.chunkSpend ?? { usd: 0 };
+  /**
+   * UN appel payé, porté aux trois endroits qui le comptent. Passer par ici plutôt
+   * que d'incrémenter à la main : les trois grandeurs ne se séparent jamais, et un
+   * quatrième site de paiement en oublierait forcément une.
+   *
+   * `costUsd` est ce que la boucle REND à l'appelant, `spend.usd` ce que le plafond
+   * du chunk oppose aux filles, et `onSpend` ce qui est dit TOUT DE SUITE à qui
+   * suit cette boucle de l'extérieur — le seul des trois qui n'attende pas qu'elle
+   * rende la main. C'est ce qui fait vivre la dépense d'un sous-agent : sa promesse
+   * peut ne jamais se résoudre à temps (cf. `onSpend` dans les params).
+   */
+  const bill = (cost: number | null | undefined) => {
+    const usd = cost ?? 0;
+    costUsd += usd;
+    spend.usd += usd;
+    params.onSpend?.(usd);
+  };
 
   /**
    * Un essai de stream JETÉ (MIN-216) — « Stop » de l'utilisateur, flux coupé,
@@ -1231,10 +1266,8 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       billTo: params.billTo,
       projectId: params.projectId ?? null,
     });
-    // Les DEUX compteurs, comme un appel abouti : `costUsd` est ce que l'appelant
-    // impute au run, `spend.usd` ce que le plafond du chunk oppose aux filles.
-    costUsd += spent.cost ?? 0;
-    spend.usd += spent.cost ?? 0;
+    // Facturé comme un appel abouti : le fournisseur a répondu, donc il a facturé.
+    bill(spent.cost);
   };
 
   let round = 0;
@@ -1471,8 +1504,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             billTo: params.billTo,
             projectId: params.projectId ?? null,
           });
-          costUsd += summaryStream.usage.cost ?? 0;
-          spend.usd += summaryStream.usage.cost ?? 0;
+          bill(summaryStream.usage.cost);
 
           const summaryText = summaryStream.content.trim();
           if (summaryText) {
@@ -1613,8 +1645,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       billTo: params.billTo,
       projectId: params.projectId ?? null,
     });
-    costUsd += stream.usage.cost ?? 0;
-    spend.usd += stream.usage.cost ?? 0;
+    bill(stream.usage.cost);
     // Taille de contexte réelle pour la décision de compaction du prochain round.
     lastPromptTokens = stream.usage.promptTokens ?? lastPromptTokens;
 

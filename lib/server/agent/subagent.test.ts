@@ -388,6 +388,56 @@ describe("imputation de la dépense des filles", () => {
     // Et il ne reste rien derrière : sur les deux chunks, 0,50 $ imputés, pas 0,80 $.
     expect(second.subagents.settleUnbilled()).toBe(0);
   });
+
+  it("impute une fille dont la promesse ne rend JAMAIS la main (MIN-220)", async () => {
+    // Le cas réel : la boucle ne passe son `signal` qu'aux appels de stream, jamais
+    // aux tools. Une fille abortée pendant un `run_command` (tests, build) ne rend
+    // la main qu'à la fin de la commande — bien après les 5 s du délai de grâce. Le
+    // `.then()` du registre, qui écrivait SEUL sa dépense sur son record, n'a donc
+    // pas lieu : elle était facturée ZÉRO au run, pendant que le ledger `ai_usage`,
+    // lui, avait bien reçu ses appels.
+    //
+    // Les deux sorties de fin de chunk portent le même défaut, et se vérifient donc
+    // ensemble — en parallèle, chacune attendant le même délai de grâce.
+    const cut = makeSubagents();
+    const suspend = makeSubagents();
+    await cut.subagents.spawn(EXPLORE);
+    await suspend.subagents.spawn(EXPLORE);
+    for (const { started } of [cut, suspend]) {
+      started[0].onSpend(0.12);
+      started[0].onSpend(0.08);
+    }
+
+    const [cutCount, suspendCount] = await Promise.all([
+      cut.subagents.cutAll("the turn was stopped"),
+      suspend.subagents.suspendAll(),
+    ]);
+    expect(cutCount).toBe(1);
+    expect(suspendCount).toBe(1);
+
+    for (const { subagents } of [cut, suspend]) {
+      // La somme que `execute.ts` impute au run : ce que le drain livre, plus ce que
+      // le règlement rattrape. 0,20 $ des deux côtés, et pas deux fois.
+      const drained = subagents.drainReports().reduce((total, r) => total + r.costUsd, 0);
+      expect(drained + subagents.settleUnbilled()).toBeCloseTo(0.2, 6);
+      expect(subagents.settleUnbilled()).toBe(0);
+    }
+  }, 20_000);
+
+  it("ne compte pas deux fois ce que la fille a annoncé en vol puis à l'arrivée", async () => {
+    // `onSpend` pose au fil de l'eau, le `.then()` écrase avec le total autoritaire
+    // de la boucle (`costSoFar` + ce qu'elle a payé) : la même valeur par l'autre
+    // bout. Un cumul des deux facturerait le double.
+    const { subagents, started, finish } = makeSubagents();
+    await subagents.spawn(EXPLORE);
+    started[0].onSpend(0.12);
+    started[0].onSpend(0.08);
+    await finish("sub-1", { costUsd: 0.2, report: "42 call sites" });
+
+    const [report] = subagents.drainReports();
+    expect(report.costUsd).toBeCloseTo(0.2, 6);
+    expect(subagents.settleUnbilled()).toBe(0);
+  });
 });
 
 describe("cutAll — la fin du chunk", () => {
