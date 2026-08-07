@@ -20,13 +20,6 @@ import type { AiUsageInput } from "@/lib/server/ai-usage";
 
 const { recorded } = vi.hoisted(() => ({ recorded: [] as AiUsageInput[] }));
 
-vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/server/ai-usage")>()),
-  recordAiUsage: vi.fn(async (input: AiUsageInput | AiUsageInput[]) => {
-    recorded.push(...(Array.isArray(input) ? input : [input]));
-  }),
-}));
-
 // Prix publiés du modèle : sans eux, un essai abandonné n'aurait que ses tokens.
 vi.mock("./openrouter-index", () => ({
   getOpenRouterModelInfo: vi.fn(async () => ({
@@ -39,7 +32,7 @@ vi.mock("./openrouter-index", () => ({
   })),
 }));
 
-import { runAgentLoop, type AgentChatMessage } from "./agent-loop";
+import { runAgentLoop, type AgentChatMessage, type AgentUsageLine } from "./agent-loop";
 
 const encoder = new TextEncoder();
 
@@ -138,6 +131,11 @@ const baseParams = {
   baseUrl: "https://example.invalid/v1",
   runId: "run_test",
   billTo: { userId: "user_test" } as const,
+  // Le ledger est INJECTÉ depuis MIN-224 : la boucle ne connaît plus le chemin de
+  // la base, elle écrit par où on lui dit. C'est donc ICI que le test l'observe.
+  recordUsage: async (line: AgentUsageLine) => {
+    recorded.push(line as AiUsageInput);
+  },
   execTool: async () => ({ result: { ok: true }, success: true }),
   emit: async () => {},
 };

@@ -1,6 +1,4 @@
-import "server-only";
-
-import { REPO_DIR, runShell, type Sandbox } from "./sandbox";
+import { REPO_DIR, type RepoHost } from "./repo-host";
 
 /**
  * Type-check de fin de tour (MIN-110) — le harness a le dernier mot avant que
@@ -70,10 +68,9 @@ export interface TypeChecker {
  * suffit pas — sans `node_modules`, `tsc` n'existe pas. Une seule commande (1 ms
  * dans la VM, le round-trip domine). Best-effort : tout échec → `null`.
  */
-export async function detectTypeChecker(sandbox: Sandbox): Promise<TypeChecker | null> {
+export async function detectTypeChecker(host: RepoHost): Promise<TypeChecker | null> {
   try {
-    const res = await runShell(
-      sandbox,
+    const res = await host.exec(
       `test -f tsconfig.json && test -x ./node_modules/.bin/tsc && ./node_modules/.bin/tsc --version`,
       { cwd: REPO_DIR, timeoutMs: 30_000 },
     );
@@ -92,10 +89,10 @@ export async function detectTypeChecker(sandbox: Sandbox): Promise<TypeChecker |
  * ticket cherche à rétablir), le reste du dépôt derrière.
  */
 export async function typeErrorsForTurn(
-  sandbox: Sandbox,
+  host: RepoHost,
   touched: readonly string[],
 ): Promise<string | null> {
-  const checker = await detectTypeChecker(sandbox);
+  const checker = await detectTypeChecker(host);
   if (!checker) return null;
 
   // `--incremental` explicite : le tsconfig du dépôt ne l'active pas forcément, et
@@ -104,8 +101,7 @@ export async function typeErrorsForTurn(
   const incremental =
     checker.major >= 5 ? ` --incremental --tsBuildInfoFile ${TSBUILDINFO}` : "";
   try {
-    const res = await runShell(
-      sandbox,
+    const res = await host.exec(
       `mkdir -p $(dirname ${TSBUILDINFO}); ./node_modules/.bin/tsc --noEmit --pretty false${incremental} 2>&1`,
       { cwd: REPO_DIR, timeoutMs: TYPECHECK_TIMEOUT_MS },
     );

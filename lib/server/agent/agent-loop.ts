@@ -1,16 +1,18 @@
-import "server-only";
-
 import type { AssistantToolCall } from "@/lib/assistant-types";
 import { parseAskUserQuestions } from "@/lib/ask-user";
+// Les FORMES d'usage, jamais l'écriture (MIN-224). `ai-usage.ts` tient le client
+// Supabase en clé de service : l'importer ici mettrait `SUPABASE_SERVICE_ROLE_KEY`
+// dans l'environnement du process où le modèle exécute du shell arbitraire, et un
+// `env` suffirait. L'écriture arrive donc par `params.recordUsage` — la fonction
+// passe `recordAiUsage`, la microVM passe un POST vers le plan de contrôle.
 import {
-  recordAiUsage,
   parseOpenRouterUsage,
   OPENROUTER_USAGE_INCLUDE,
   type OpenRouterUsage,
   type NormalizedUsage,
   type AiFeature,
   type AiUsageBillTo,
-} from "@/lib/server/ai-usage";
+} from "@/lib/server/ai-usage-shape";
 import {
   chatCompletionsUrl,
   getAgentProvider,
@@ -270,6 +272,36 @@ export interface AgentLiveProgress {
 export type EmitAgentLive = (progress: AgentLiveProgress) => void;
 
 
+/**
+ * Une ligne de ledger, telle que la boucle la produit — la MÊME forme
+ * qu'`AiUsageInput`, redite ici pour que ce module ne dépende pas de celui qui
+ * écrit (cf. l'import du haut).
+ */
+export interface AgentUsageLine {
+  runId: string;
+  seq: number;
+  feature: AiFeature;
+  billTo: AiUsageBillTo;
+  model?: string | null;
+  generationId?: string | null;
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  cost?: number | null;
+  estimated?: boolean;
+  projectId?: string | null;
+}
+
+/**
+ * Où part une ligne de ledger. Injecté, et OBLIGATOIRE : c'est ce qui fait que
+ * la boucle ne connaît plus le chemin de la base (MIN-224). Deux implémentations
+ * — `recordAiUsage` dans la fonction, `POST /api/agent-vm/usage` dans la microVM
+ * — et la boucle ne sait pas laquelle elle a.
+ *
+ * Best-effort des deux côtés : elle ne doit jamais faire échouer un round.
+ */
+export type RecordAgentUsage = (line: AgentUsageLine) => Promise<void>;
+
 export interface RunAgentLoopParams {
   /** Historique (system + user, ou rehydraté depuis le checkpoint). MUTÉ + renvoyé. */
   messages: AgentChatMessage[];
@@ -300,6 +332,8 @@ export interface RunAgentLoopParams {
    */
   feature?: Extract<AiFeature, "agent_code" | "routine_code">;
   projectId?: string | null;
+  /** Où partent les lignes `ai_usage` de cette boucle (cf. `RecordAgentUsage`). */
+  recordUsage: RecordAgentUsage;
   /** Budget du chunk courant, mesuré depuis l'entrée dans la boucle. */
   softDeadlineMs: number;
   /**
@@ -1185,7 +1219,7 @@ async function streamCompletion(opts: {
  * Renvoie le checkpoint (`messages`) à persister, le coût du chunk et l'issue.
  */
 export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoopResult> {
-  const { messages, tools, model, apiKey, baseUrl, runId, execTool, emit } = params;
+  const { messages, tools, model, apiKey, baseUrl, runId, execTool, emit, recordUsage } = params;
   const provider = params.provider ?? DEFAULT_AGENT_PROVIDER;
   // La ligne de facture de ce chunk, résolue UNE fois : `agent_code`, ou
   // `routine_code` quand le run est un passage de routine (MIN-185).
@@ -1252,7 +1286,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         ? await getOpenRouterModelInfo(attempt.modelUsed ?? model, apiKey).catch(() => null)
         : null;
     const spent = abandonedSpend(attempt, info?.pricing ?? null);
-    await recordAiUsage({
+    await recordUsage({
       runId,
       seq: seq++,
       feature: usageFeature,
@@ -1491,7 +1525,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             deadlineAt: startedAt + params.softDeadlineMs,
             onAbandoned: recordAbandonedAttempt,
           });
-          await recordAiUsage({
+          await recordUsage({
             runId,
             seq: seq++,
             feature: usageFeature,
@@ -1632,7 +1666,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       }
     }
 
-    await recordAiUsage({
+    await recordUsage({
       runId,
       seq: seq++,
       feature: usageFeature,

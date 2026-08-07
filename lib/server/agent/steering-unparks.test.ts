@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// `recordAiUsage` écrit en base (service client) : neutralisé, le reste est réel.
+// La BOUCLE écrit par `params.recordUsage` depuis MIN-224 (le puits ci-dessous) ;
+// ce mock-ci ne garde plus qu'elle : le reste du graphe, qui l'appelle encore.
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/server/ai-usage")>()),
   recordAiUsage: vi.fn(async () => {}),
@@ -80,6 +81,9 @@ const baseParams = {
   baseUrl: "https://example.invalid/v1",
   runId: "run_test",
   billTo: { userId: "user_test" } as const,
+  // Le ledger est INJECTÉ depuis MIN-224 : la boucle ne connaît plus le chemin de
+  // la base. Ici, un puits — ce test ne mesure pas la dépense.
+  recordUsage: async () => {},
   softDeadlineMs: 250_000,
   execTool: async () => ({ result: { ok: true }, success: true }),
   emit: async () => {},

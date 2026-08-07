@@ -19,18 +19,23 @@ vi.mock("@/lib/server/app-config", () => ({
 
 const {
   chunkFitsSubagentResume,
-  getSubagentFavorites,
   makeSubagentModelResolver,
-  maxParallelSubagents,
   scopeSubagentModels,
   subagentRoundsLeft,
-  SUBAGENT_FAVORITES_CONFIG_KEY,
-  SUBAGENT_MAX_PARALLEL_CONFIG_KEY,
   SUBAGENT_MAX_ROUNDS,
   SUBAGENT_MIN_MS,
   SUBAGENT_PARENT_RESERVE_MS,
   SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS,
 } = await import("./subagent-config");
+// Les deux lectures d'`app_config` vivent à part depuis MIN-224 (la boucle importe
+// `subagent-config.ts` dans la microVM, et ce qu'elle importe ne doit pas pouvoir
+// atteindre la base) ; ce test-ci les couvre toujours, il les prend d'où elles sont.
+const {
+  getSubagentFavorites,
+  maxParallelSubagents,
+  SUBAGENT_FAVORITES_CONFIG_KEY,
+  SUBAGENT_MAX_PARALLEL_CONFIG_KEY,
+} = await import("./subagent-app-config");
 
 beforeEach(() => config.clear());
 

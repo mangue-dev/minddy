@@ -77,6 +77,23 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["radix-ui"],
   },
+  /**
+   * Le bundle du harness de la microVM (MIN-224), embarqué dans les fonctions.
+   *
+   * Il est produit par `prebuild` (`scripts/build-agent-vm.mjs`) et LU au runtime
+   * par `fs` avant d'être écrit dans la VM : le traceur de Next, qui suit les
+   * imports, ne peut pas le voir passer — un fichier lu par chemin n'est pas une
+   * arête du graphe. Sans cette ligne, la fonction déploie sans lui et chaque run
+   * `loop_in_vm` échoue sur un ENOENT.
+   *
+   * Le motif couvre toutes les routes d'API : le harnais est écrit depuis le
+   * chemin de LANCEMENT comme depuis le CRON de drain, et lister les deux à la
+   * main ferait qu'un troisième appelant, un jour, découvrirait le problème en
+   * production.
+   */
+  outputFileTracingIncludes: {
+    "/api/**": [".agent-vm/**"],
+  },
   // Bridge Vercel's server-only VERCEL_ENV into a public var so client
   // components (e.g. the sidebar env badge) can tell prod/preview/local apart.
   // Unset locally → "development". Inlined at build time.

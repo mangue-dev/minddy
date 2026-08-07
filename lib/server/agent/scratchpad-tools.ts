@@ -38,13 +38,10 @@ export interface ScratchpadToolContext {
   userId: string | null;
 }
 
-/** Noms des tools carnet (routés vers ce module par execute.ts). */
-export const SCRATCHPAD_TOOL_NAMES = new Set([
-  "read_scratchpad",
-  "add_scratchpad_tasks",
-  "update_scratchpad_task",
-  "set_scratchpad",
-]);
+/** Noms des tools de ce module. Ils vivent dans `platform-tool-names.ts` depuis
+ *  MIN-224 — le ROUTAGE descend dans la microVM, l'EXÉCUTION reste ici — et sont
+ *  ré-exportés pour que rien n'ait à changer d'import. */
+export { SCRATCHPAD_TOOL_NAMES } from "./platform-tool-names";
 
 /** Nombre max de tâches par appel (aligné sur Numo chat et le MCP). */
 const MAX_TASKS_PER_CALL = 50;

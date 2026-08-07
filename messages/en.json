@@ -1779,6 +1779,7 @@
     "errorTurnHistoryReset": "This conversation grew too large to carry over, so it was reset — the work is kept. The next turn starts from the ticket, so say again what still needs doing.",
     "errorReplyIncomplete": "The model's reply never came through in full — its work is kept, and nothing was committed. Send a message to carry on.",
     "errorProviderUnavailable": "The model provider kept failing, so this turn was paused — its work is kept. Send a message to carry on.",
+    "errorTurnLost": "This turn's process stopped before it could finish — the session was restored from its last save. Send a message to carry on.",
     "runCapTitle": "This run reached its spending cap",
     "runCapReached": "Its routine lets one run spend up to {percent}% of your monthly usage.",
     "runCapWorkKept": "The agent stopped here — its work is pushed, and you can raise the cap in the routine's settings.",

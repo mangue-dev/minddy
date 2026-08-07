@@ -1,50 +1,39 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { insertEvents } from "@/lib/server/issue-events";
-import { forgeActorValue } from "@/lib/pr-events";
-import { getAccountSettings } from "@/lib/server/account-settings";
 import { recordSandboxUsage } from "@/lib/server/usage";
-import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
-import { defaultLocale, type Locale } from "@/i18n/config";
-import { DEFAULT_NUMO_STATUS, type NumoDefaultStatus } from "@/lib/numo-default-status";
+import {
+  recordAiUsage,
+  spentFromLedger,
+  type AiUsageBillTo,
+} from "@/lib/server/ai-usage";
 import { AGENT_MAX_CONTINUATIONS } from "@/lib/agent-models";
-import { CHUNK_FLOOR_MS, chunkSoftDeadlineMs, runCommandTimeoutMs } from "./chunk-budget";
+import {
+  CHUNK_FLOOR_MS,
+  chunkSoftDeadlineMs,
+} from "./chunk-budget";
 import { planProviderStall } from "./retry";
-import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
+import {
+  resolveRepoCloneTarget,
+  type RepoCloneTarget,
+} from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
 import {
   getOrCreateAgentSandbox,
+  sandboxHost,
+  sandboxName,
+  type Sandbox,
+} from "./sandbox";
+import {
   cloneRepo,
   clonePullRequest,
   commitAndPush,
   revParseHead,
   changedFiles,
-  runShell,
   turnDiff,
-  readWorkFile,
-  readWorkFileWindow,
-  writeWorkFile,
-  moveWorkFile,
-  deleteWorkFile,
-  listDir,
-  grepRepo,
-  globRepo,
-  sandboxName,
-  writeToolOutput,
-  startBackground,
-  readBackgroundSince,
-  stopBackground,
-  REPO_DIR,
-  type GrepOutputMode,
-  type Sandbox,
-} from "./sandbox";
-import {
-  BackgroundJobs,
-  BACKGROUND_FETCH_BYTES,
-  type BackgroundJobRunner,
-} from "./background";
+} from "./repo-host";
+import { BackgroundJobs } from "./background";
 import {
   Subagents,
   isResumableSubagent,
@@ -55,52 +44,56 @@ import {
 } from "./subagent";
 import {
   chunkFitsSubagentResume,
-  getSubagentFavorites,
   makeSubagentModelResolver,
   scopeSubagentModels,
-  maxParallelSubagents,
   subagentRoundsLeft,
   SUBAGENT_MAX_ROUNDS,
   SUBAGENT_PARENT_RESERVE_MS,
   SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS,
 } from "./subagent-config";
+import {
+  getSubagentFavorites,
+  maxParallelSubagents,
+} from "./subagent-app-config";
 import { getAgentModelsForUser } from "./models-catalog";
 import { pruneToolOutputs } from "./prune";
-import { fitCheckpoint, MAX_CHECKPOINT_BYTES } from "./checkpoint-fit";
-import { resolveWithin } from "./repo-path";
-import { typeErrorsForTurn, TYPECHECK_MIN_BUDGET_MS } from "./diagnostics";
-import { formatSelfReview, SELF_REVIEW_MIN_BUDGET_MS } from "./self-review";
-import { LITERAL_RETRY_NOTE } from "./grep-pattern";
 import {
-  formatRunCommandResult,
-  fullOutputDocument,
-  spillsToDisk,
-  toolOutputFileName,
-} from "./command-output";
-import { checkCommand, FORBIDDEN_COMMAND_REASON } from "./command-guard";
-import { applyEdit } from "./edit";
-import { applyPatchEdits, parsePatch, usesApplyPatch, type PatchOp } from "./patch";
+  fitCheckpoint,
+  MAX_CHECKPOINT_BYTES,
+} from "./checkpoint-fit";
+import {
+  typeErrorsForTurn,
+  TYPECHECK_MIN_BUDGET_MS,
+} from "./diagnostics";
+import {
+  formatSelfReview,
+  SELF_REVIEW_MIN_BUDGET_MS,
+} from "./self-review";
+import { toolOutputFileName } from "./command-output";
+import { usesApplyPatch } from "./patch";
 import {
   REPO_INSTRUCTION_FILES,
-  collectTouchedInstructions,
-  formatBootInstructions,
   type InstructionsState,
-  type RepoInstructionFile,
 } from "./repo-instructions";
 import {
   runAgentLoop,
   type AgentChatMessage,
   type EmitAgentEvent,
   type EmitAgentLive,
-  type ExecuteAgentTool,
 } from "./agent-loop";
-import type { AgentToolImage } from "./content";
+// Les 25 tools et leur routage vivent à part depuis MIN-224 : ce module-là
+// descend dans la microVM avec la boucle, celui-ci non.
+import {
+  makeExecTool,
+  readRepoInstructions,
+  repoBackgroundRunner,
+  type CreatePrHandler,
+  type WebSearchHandler,
+} from "./exec-tool";
 import { broadcastRunStream } from "./live";
 import {
   agentToolsFor,
   subagentToolsFor,
-  SUBAGENT_CONTROL_TOOLS,
-  RUN_COMMAND_TIMEOUT_MS,
 } from "./tools";
 import {
   isWebSearchEnabled,
@@ -129,30 +122,60 @@ import {
 } from "./pr-run";
 import {
   executePrTool,
-  PR_TOOL_NAMES,
   type PrToolContext,
   type ReviewableFile,
 } from "./pr-tools";
-import { resolveAgentApiKey, getModelContextWindow, supportsImageInput } from "./model";
-import { agentSandboxName, buildAgentNetworkPolicy } from "./network-policy";
-import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
+import {
+  resolveAgentApiKey,
+  getModelContextWindow,
+  supportsImageInput,
+} from "./model";
+import {
+  agentSandboxName,
+  buildAgentNetworkPolicy,
+  AGENT_LLM_PLACEHOLDER_KEY,
+} from "./network-policy";
+import { startVmLoop } from "./vm-launch";
+import {
+  VM_MAX_CHECKPOINT_BYTES,
+  type VmJob,
+} from "./vm/protocol";
+import {
+  mintRunKey,
+  revokeRunKey,
+  runKeyCapUsd,
+} from "./run-key";
 import { agentControlOrigin } from "./origin";
-import { forgeFor, isForgeApiError, type Forge } from "./forge";
-import { prStateFromRef, upsertPullRequest } from "./pull-requests";
-import { notifyPullRequestOpened } from "./pr-opened-notify";
+import {
+  forgeFor,
+  type Forge,
+} from "./forge";
+import { prStateFromRef } from "./pull-requests";
 import type { PullRequestRef } from "./pr";
-import type { RepoProviderId } from "@/lib/repo-providers";
-import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { syncIssuePlanStates } from "./plan-sync";
-import { executeIssueTool, ISSUE_TOOL_NAMES, type IssueToolContext } from "./issue-tools";
+import {
+  executeIssueTool,
+  type IssueToolContext,
+} from "./issue-tools";
 import {
   executeScratchpadTool,
-  SCRATCHPAD_TOOL_NAMES,
   type ScratchpadToolContext,
 } from "./scratchpad-tools";
 import {
+  notePrCommits as notePrCommitsOn,
+  registerPr as registerPrOn,
+  reopenIfRejectedWorkPushed as reopenIfRejectedWorkPushedOn,
+  openPullRequestAfterPush,
+  resolveRunPrefs,
+  prRef,
+  prTerm,
+  MERGED_DURING_TURN_STRINGS,
+  PUSH_FAILED_STRINGS,
+  SANDBOX_USAGE_SEQ_BASE,
+  type PrLandingContext,
+} from "./pr-landing";
+import {
   stampRun,
-  getRun,
   appendEvent,
   pullPendingMessages,
   previousRunSummaryForIssue,
@@ -215,12 +238,7 @@ const MAX_WALL_CLOCK_MS = 60 * 60_000;
  * quand même ses erreurs servies, plus bas.
  */
 const CHECKPOINT_EDITED_PATHS_MAX = 200;
-/**
- * Images montrées au modèle par TOUR (MIN-111) — même esprit que
- * `MAX_WEB_SEARCHES_PER_TURN` : une maquette ou deux états d'un même écran, c'est
- * ce dont un tour a besoin. Au-delà, `read_resource` répond sans image.
- */
-const MAX_IMAGES_PER_TURN = 2;
+
 /** Borne du re-queue « message en attente » sur erreur mid-turn (catch final) :
     `attempts` (incrémenté à chaque claim) n'est pas remis à zéro sur ce chemin,
     donc une erreur persistante s'arrête après ce nombre de claims. */
@@ -258,7 +276,20 @@ const SUBAGENT_RESUME_DEFER_MS = 30_000;
  */
 const SUBAGENT_OUTPUT_SEQ_BASE = 500_000;
 
-export type ExecuteOutcome = "completed" | "suspended" | "interrupted" | "failed";
+/**
+ * Ce qu'un appel d'exécuteur a fait du run.
+ *
+ * `detached` (MIN-224) est le cinquième, et il ne ressemble à aucun des autres :
+ * le tour n'est ni fini ni suspendu, il TOURNE — dans la microVM, hors de cette
+ * invocation. Le run reste `running` et personne ne l'attend. C'est le drain qui
+ * lit cette valeur, et ce qu'elle lui dit est « passe au suivant ».
+ */
+export type ExecuteOutcome =
+  | "completed"
+  | "suspended"
+  | "interrupted"
+  | "failed"
+  | "detached";
 
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
@@ -268,8 +299,7 @@ function slugForBranch(identifier: string): string {
   return identifier.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-/** Cap du diff renvoyé au modèle après une édition (le diff complet n'est pas utile). */
-const EDIT_DIFF_CAP = 4000;
+
 
 /**
  * Dernier texte écrit par l'assistant dans un historique. Sert au rapport PARTIEL
@@ -316,607 +346,14 @@ function lastAssistantText(messages: AgentChatMessage[]): string {
   return "";
 }
 
-function toNum(v: unknown): number | undefined {
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : undefined;
-}
 
-/** Exécuteur du tool `create_pr` (fourni par executeAgentRun, qui a le contexte git/PR). */
-type CreatePrHandler = (args: {
-  title: string;
-  body?: string;
-}) => Promise<{ result: unknown; success: boolean }>;
 
-/** Exécuteur du tool `web_search` (null quand le run n'a pas accès au web). */
-type WebSearchHandler =
-  | ((query: string) => Promise<{ result: unknown; success: boolean }>)
-  | null;
 
-/**
- * Refus d'un tool absent du jeu de l'appelant (MIN-112). Un sous-agent ne devrait
- * jamais y arriver (le tool n'est pas dans son schéma) mais un modèle en invente
- * parfois un qu'il a vu ailleurs, et un vieux checkpoint peut porter un système qui
- * le décrit : mieux vaut un refus qui DIT pourquoi qu'un « Unknown tool » qui laisse
- * le modèle retenter au round suivant.
- */
-function subagentDenied(name: string, why: string): { result: unknown; success: boolean } {
-  return {
-    result: {
-      error: `You do not have the ${name} tool: ${why}. Do the part you can, then report it.`,
-    },
-    success: false,
-  };
-}
 
-/**
- * Les mains de `run_background` (MIN-114) dans LA microVM de ce chunk : la
- * politique (plafond, garde-fou git, offsets, mise en forme) vit dans le module
- * pur `background.ts`, ce runner ne fait que la poser sur la sandbox. `workdir`
- * passe par `resolveWithin` — un `../..` revient au modèle en erreur de tool.
- */
-function sandboxBackgroundRunner(sandbox: Sandbox): BackgroundJobRunner {
-  return {
-    start: ({ jobId, command, workdir }) =>
-      startBackground(sandbox, {
-        jobId,
-        command,
-        cwd: workdir ? resolveWithin(REPO_DIR, workdir) : undefined,
-      }),
-    read: ({ jobId, pid, offset }) =>
-      readBackgroundSince(sandbox, { jobId, pid, offset, maxBytes: BACKGROUND_FETCH_BYTES }),
-    stop: ({ pid }) => stopBackground(sandbox, pid),
-  };
-}
 
-/**
- * Ce dont un exec-tool a besoin. Un objet plutôt qu'une liste de positions : depuis
- * les sous-agents (MIN-112) il y a DEUX exec-tools par chunk, celui du parent et
- * celui d'une fille, et ils ne diffèrent que par une poignée de champs — nullables
- * ici, structurellement absents là-bas.
- */
-interface ExecToolConfig {
-  sandbox: Sandbox;
-  /** null = pas de livraison (jeu d'un sous-agent : la PR appartient au parent). */
-  createPr: CreatePrHandler | null;
-  /** Écritures sur la pull request RELUE (MIN-168). null hors session de
-   *  relecture : ces trois tools ne sont alors ni offerts ni exécutables. */
-  prCtx: PrToolContext | null;
-  /** null = pas de tools ticket (idem : le ticket appartient au parent). */
-  issueCtx: IssueToolContext | null;
-  /** null = pas de tools carnet. */
-  scratchpadCtx: ScratchpadToolContext | null;
-  webSearch: WebSearchHandler;
-  /** Base des seq de fichiers de sortie déposés (tranchée par continuation, comme
-      les autres compteurs de run) : deux chunks n'écrasent pas leurs fichiers — et
-      deux exec-tools d'un même chunk non plus (cf. `toolOutputFileName`). */
-  outputSeqBase: number;
-  /** Registre des jobs de fond du chunk (MIN-114). Tenu par l'appelant : c'est lui
-      qui les tue avant chaque push et en fin de chunk. null = pas de jobs de fond. */
-  background: BackgroundJobs | null;
-  /** Instructions repo déjà servies (MIN-115) — muté ici, persisté par l'appelant.
-      PROPRE à chaque exec-tool : partager celui du parent marquerait un `AGENTS.md`
-      « déjà servi » alors qu'il ne l'a été qu'à une fille, dont le contexte meurt
-      avec elle — le parent ne le lirait jamais. */
-  instructions: InstructionsState;
-  /** Fichiers du dépôt édités depuis le dernier type-check (MIN-110). Muté ici,
-      lu et vidé par le hook de fin de tour de l'appelant. PARTAGÉ avec les
-      sous-agents : c'est ce que le type-check de fin de tour lit, et une fille qui
-      casse un type doit le faire dire. */
-  editedPaths: Set<string>;
-  /** Registre des sous-agents du chunk (MIN-112). null = jeu d'un sous-agent (la
-      hiérarchie est à un niveau) ou vieux checkpoint qui appelle encore ces tools. */
-  subagents: Subagents | null;
-  /** Ce qu'il reste du budget TEMPS du chunk (MIN-214) — la même horloge que celle
-      qui borne un sous-agent. Elle borne aussi le timeout d'un `run_command` : sans
-      elle, une commande entamée juste avant la soft-deadline allait au bout de ses
-      180 s et la fonction mourait avant d'écrire le checkpoint. PARTAGÉE avec les
-      filles : c'est l'horloge du CHUNK, celle que la plateforme tue. */
-  chunkRemainingMs: () => number;
-}
 
-/** Les tools « métier » de l'agent : Sandbox (fichiers/commandes/jobs de fond),
-    git/PR (`createPr`), tickets minddy (`issue-tools.ts`), carnet du lanceur
-    (`scratchpad-tools.ts`) et délégation (`subagent.ts`) — routés par nom. Les
-    tools minddy sont servis aux DEUX ancrages (MIN-125) : l'ancrage ne pilote plus
-    que la cible par défaut des tools ticket, portée par leur contexte. */
-function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
-  const {
-    sandbox,
-    createPr,
-    prCtx,
-    issueCtx,
-    scratchpadCtx,
-    webSearch,
-    outputSeqBase,
-    background,
-    instructions,
-    editedPaths,
-    subagents,
-    chunkRemainingMs,
-  } = cfg;
-  let outputSeq = 0;
-  /** Images déjà montrées au modèle sur ce chunk (plafond MAX_IMAGES_PER_TURN). */
-  let imagesUsed = 0;
 
-  /**
-   * Plafonne les images renvoyées par un tool (MIN-111), sur le modèle du plafond
-   * de `web_search` : au-delà, le résultat repart SANS image, avec une note qui dit
-   * pourquoi — un modèle qui rouvre la même maquette à chaque round remplirait le
-   * checkpoint sans rien apprendre de plus.
-   */
-  const capTurnImages = (out: {
-    result: unknown;
-    success: boolean;
-    reason?: string;
-    images?: AgentToolImage[];
-  }) => {
-    const images = out.images ?? [];
-    if (images.length === 0) return out;
-    const room = MAX_IMAGES_PER_TURN - imagesUsed;
-    if (room <= 0) {
-      const note = `Image limit reached for this turn (${MAX_IMAGES_PER_TURN} images). Work from the ones you already looked at — the metadata and download_url above still describe this file.`;
-      const result =
-        out.result && typeof out.result === "object"
-          ? { ...(out.result as object), image_omitted: note }
-          : { image_omitted: note };
-      return { ...out, images: undefined, result };
-    }
-    imagesUsed += Math.min(room, images.length);
-    return { ...out, images: images.slice(0, room) };
-  };
 
-  /**
-   * Colle au résultat d'un tool d'édition réussi les instructions des SOUS-DOSSIERS
-   * qu'il vient de toucher (MIN-115). Codex concatène tout l'arbre à l'amorce ; nous
-   * chargeons PARESSEUSEMENT, à la première édition sous un dossier — un monorepo
-   * remplirait sinon le budget de conventions de paquets jamais ouverts, au détriment
-   * de celles de la racine. Le bloc part dans le RÉSULTAT du tool : l'historique
-   * d'amorce, lui, est figé par le checkpoint. La règle (une lecture par chemin et
-   * par run, budget global) vit dans `repo-instructions.ts` ; ici il n'y a que la
-   * sandbox. Best-effort — un `AGENTS.md` illisible ne casse pas l'édition.
-   *
-   * Le bloc passe EN TÊTE de l'objet : le résultat entier traverse `headTail`, qui
-   * élide le MILIEU — la tête survit, et un gros diff en queue aussi.
-   */
-  const withTouchedInstructions = async (
-    res: { result: unknown; success: boolean },
-    paths: string[],
-  ): Promise<{ result: unknown; success: boolean }> => {
-    if (!res.success) return res;
-    // Entonnoir unique de TOUTE édition réussie (edit_file, write_file, move_file,
-    // apply_edits, apply_patch) : c'est ici qu'on note ce que le tour a touché,
-    // pour le type-check de fin de tour (MIN-110).
-    for (const path of paths) if (path) editedPaths.add(path);
-    const block = await collectTouchedInstructions(
-      paths.filter(Boolean),
-      instructions,
-      (path) => readWorkFile(sandbox, path).catch(() => null),
-    ).catch((err) => {
-      console.error("[agent-execute] subdir instructions failed:", (err as Error).message);
-      return null;
-    });
-    if (!block) return res;
-    if (typeof res.result === "string") {
-      return { ...res, result: `${block}\n\n${res.result}` };
-    }
-    return { ...res, result: { repo_instructions: block, ...(res.result as object) } };
-  };
-
-  return async (name, args, callId) => {
-    // Verrou d'écriture de la sandbox PARTAGÉE (MIN-112). Le parent qui continue
-    // d'éditer pendant qu'une fille écrit est exactement le même risque que deux
-    // filles simultanées, dans un dépôt dont la fin de tour fait `git add -A`. La
-    // décision vit dans `subagent.ts` (module de politique, testable) ; ici il n'y a
-    // que le branchement. La lecture et `run_command` restent ouverts.
-    const locked = subagents?.writeLock(name);
-    if (locked) return locked;
-    if (ISSUE_TOOL_NAMES.has(name)) {
-      if (!issueCtx) return subagentDenied(name, "minddy tickets belong to the parent session");
-      return capTurnImages(await executeIssueTool(issueCtx, name, args));
-    }
-    if (SCRATCHPAD_TOOL_NAMES.has(name)) {
-      if (!scratchpadCtx) {
-        return subagentDenied(name, "the user's notebook belongs to the parent session");
-      }
-      return await executeScratchpadTool(scratchpadCtx, name, args);
-    }
-    if (PR_TOOL_NAMES.has(name)) {
-      if (!prCtx) {
-        return {
-          result: {
-            error: `${name} is only available in a pull request review session.`,
-          },
-          success: false,
-        };
-      }
-      return await executePrTool(prCtx, name, args);
-    }
-    if (SUBAGENT_CONTROL_TOOLS.has(name)) {
-      if (!subagents) {
-        return subagentDenied(
-          name,
-          "the sub-agent hierarchy is one level deep, so a sub-agent cannot delegate further",
-        );
-      }
-      if (name === "agent_status") return subagents.status(args);
-      if (name === "list_agents") return subagents.list();
-      return await subagents.spawn(args, { parentCallId: callId });
-    }
-    switch (name) {
-      case "web_search": {
-        const query = String(args.query ?? "").trim();
-        if (!query) return { result: { error: "query is required" }, success: false };
-        if (!webSearch) {
-          return { result: { error: "Web search is not available on this run." }, success: false };
-        }
-        return await webSearch(query);
-      }
-      case "create_pr": {
-        if (!createPr) {
-          return subagentDenied(
-            "create_pr",
-            "the pull request belongs to the parent session, which decides when to open it",
-          );
-        }
-        return await createPr({
-          title: String(args.title ?? "").trim(),
-          body: typeof args.body === "string" ? args.body : undefined,
-        });
-      }
-      case "read_file": {
-        const win = await readWorkFileWindow(sandbox, String(args.path ?? ""), {
-          offset: toNum(args.offset),
-          limit: toNum(args.limit),
-        });
-        if (!win) return { result: "(file not found)", success: false };
-        const footer = win.truncated
-          ? `\n\n[Showing lines ${win.startLine}-${win.startLine + win.returnedLines - 1} of ${win.totalLines}. Use offset/limit to read more.]`
-          : "";
-        return { result: (win.content || "(empty file)") + footer, success: true };
-      }
-      case "list_dir": {
-        const content = await listDir(sandbox, args.path ? String(args.path) : ".");
-        return { result: content || "(empty)", success: true };
-      }
-      case "glob": {
-        const { files, truncated } = await globRepo(
-          sandbox,
-          String(args.pattern ?? ""),
-          args.path ? String(args.path) : undefined,
-        );
-        if (files.length === 0) return { result: "(no files matched)", success: true };
-        const note = truncated ? `\n… (capped at ${files.length} files)` : "";
-        return { result: files.join("\n") + note, success: true };
-      }
-      case "grep": {
-        const r = await grepRepo(sandbox, {
-          pattern: String(args.pattern ?? ""),
-          path: args.path ? String(args.path) : undefined,
-          glob: args.glob ? String(args.glob) : undefined,
-          outputMode: (args.output_mode as GrepOutputMode) ?? undefined,
-          ignoreCase: args.ignore_case === true,
-          fixedStrings: args.fixed_strings === true,
-          context: toNum(args.context),
-          headLimit: toNum(args.head_limit),
-        });
-        if (!r.ok) {
-          return { result: { error: `grep failed: ${r.error || "invalid pattern or options"}` }, success: false };
-        }
-        // Motif relancé en littéral : on le DIT, sinon le modèle ne saurait pas
-        // que ce qu'il croyait être une regex a été cherché tel quel (MIN-109).
-        const note = r.retriedAsLiteral ? `${LITERAL_RETRY_NOTE}\n` : "";
-        return { result: note + (r.output || "(no matches)"), success: true };
-      }
-      case "edit_file": {
-        const path = String(args.path ?? "");
-        const original = await readWorkFile(sandbox, path);
-        if (original === null) {
-          return {
-            result: { error: `File not found: ${path}. Use write_file to create a new file.` },
-            success: false,
-          };
-        }
-        try {
-          const edit = applyEdit(
-            path,
-            original,
-            String(args.old_string ?? ""),
-            String(args.new_string ?? ""),
-            args.replace_all === true,
-          );
-          await writeWorkFile(sandbox, path, edit.content);
-          return await withTouchedInstructions(
-            {
-              result: {
-                path,
-                additions: edit.additions,
-                deletions: edit.deletions,
-                diff: cap(edit.diff, EDIT_DIFF_CAP),
-              },
-              success: true,
-            },
-            [path],
-          );
-        } catch (err) {
-          return { result: { error: err instanceof Error ? err.message : String(err) }, success: false };
-        }
-      }
-      case "write_file": {
-        const path = String(args.path ?? "");
-        await writeWorkFile(sandbox, path, String(args.content ?? ""));
-        return await withTouchedInstructions({ result: `Wrote ${path}`, success: true }, [path]);
-      }
-      case "move_file": {
-        const to = String(args.to ?? "");
-        await moveWorkFile(sandbox, String(args.from ?? ""), to);
-        return await withTouchedInstructions(
-          { result: `Moved ${args.from} → ${to}`, success: true },
-          [to],
-        );
-      }
-      case "delete_file": {
-        const path = String(args.path ?? "");
-        await deleteWorkFile(sandbox, path);
-        // Supprimer un fichier casse des types tout aussi bien qu'en éditer un ;
-        // il ne passe pas par `withTouchedInstructions` (rien à charger pour un
-        // fichier qui n'est plus là), d'où la note ici.
-        if (path) editedPaths.add(path);
-        return { result: `Deleted ${args.path}`, success: true };
-      }
-      case "apply_edits": {
-        const changes = Array.isArray(args.changes) ? (args.changes as Array<Record<string, unknown>>) : [];
-        if (changes.length === 0) {
-          return { result: { error: "No changes provided." }, success: false };
-        }
-        const applied: Array<Record<string, unknown>> = [];
-        for (const ch of changes) {
-          const path = String(ch.path ?? "");
-          const op = String(ch.op ?? "update");
-          try {
-            if (op === "delete") {
-              await deleteWorkFile(sandbox, path);
-              applied.push({ path, op, ok: true });
-            } else if (op === "move") {
-              const to = String(ch.move_to ?? "");
-              await moveWorkFile(sandbox, path, to);
-              applied.push({ path, op, ok: true, move_to: to });
-            } else if (op === "add") {
-              await writeWorkFile(sandbox, path, String(ch.content ?? ""));
-              applied.push({ path, op, ok: true });
-            } else {
-              // update : applique tous les edits en mémoire, puis écrit une fois (atomique/fichier).
-              const original = await readWorkFile(sandbox, path);
-              if (original === null) throw new Error(`File not found: ${path}`);
-              const edits = Array.isArray(ch.edits) ? (ch.edits as Array<Record<string, unknown>>) : [];
-              let content = original;
-              let additions = 0;
-              let deletions = 0;
-              for (const e of edits) {
-                const r = applyEdit(
-                  path,
-                  content,
-                  String(e.old_string ?? ""),
-                  String(e.new_string ?? ""),
-                  e.replace_all === true,
-                );
-                content = r.content;
-                additions += r.additions;
-                deletions += r.deletions;
-              }
-              await writeWorkFile(sandbox, path, content);
-              applied.push({ path, op: "update", ok: true, additions, deletions });
-            }
-          } catch (err) {
-            applied.push({ path, op, ok: false, error: err instanceof Error ? err.message : String(err) });
-          }
-        }
-        // `success` = « au moins un changement est passé » (MIN-109). Avec `every`,
-        // un batch de 6 fichiers dont 5 réussissent était compté ÉCHEC — un taux
-        // d'échec de 42 % qui ne mesurait rien. Le détail par changement dit déjà
-        // quoi reprendre ; `counts` le rend lisible d'un coup d'œil.
-        const okCount = applied.filter((r) => r.ok === true).length;
-        return await withTouchedInstructions(
-          {
-            result: { applied, counts: { ok: okCount, failed: applied.length - okCount } },
-            success: okCount > 0,
-          },
-          applied.filter((r) => r.ok === true).map((r) => String(r.move_to ?? r.path ?? "")),
-        );
-      }
-      case "apply_patch": {
-        // Le format `apply_patch` de Codex/OpenCode (MIN-115), servi aux modèles
-        // `gpt-*` à la PLACE d'edit_file/apply_edits/write_file. `patch.ts` parse
-        // et traduit en substitutions ; l'application reste la cascade d'edit.ts.
-        // Un patch illisible revient en erreur de tool : le modèle lit pourquoi et
-        // corrige au round suivant, sans qu'aucun fichier n'ait été touché.
-        let ops: PatchOp[];
-        try {
-          ops = parsePatch(String(args.patch ?? args.patchText ?? ""));
-        } catch (err) {
-          return {
-            result: { error: err instanceof Error ? err.message : String(err) },
-            success: false,
-          };
-        }
-        const applied: Array<Record<string, unknown>> = [];
-        for (const op of ops) {
-          try {
-            if (op.op === "delete") {
-              await deleteWorkFile(sandbox, op.path);
-              applied.push({ path: op.path, op: "delete", ok: true });
-            } else if (op.op === "add") {
-              const existing = await readWorkFile(sandbox, op.path);
-              if (existing !== null) {
-                throw new Error(
-                  `File already exists: ${op.path}. Use '*** Update File: ${op.path}' to change it.`,
-                );
-              }
-              await writeWorkFile(sandbox, op.path, op.content);
-              applied.push({ path: op.path, op: "add", ok: true });
-            } else {
-              const original = await readWorkFile(sandbox, op.path);
-              if (original === null) {
-                throw new Error(
-                  `File not found: ${op.path}. Use '*** Add File: ${op.path}' to create it.`,
-                );
-              }
-              const edited = applyPatchEdits(op.path, original, op.edits);
-              if (op.moveTo) {
-                // Renommage d'abord (git mv, pour que la PR le capture), contenu ensuite.
-                await moveWorkFile(sandbox, op.path, op.moveTo);
-                await writeWorkFile(sandbox, op.moveTo, edited.content);
-                applied.push({
-                  path: op.path,
-                  op: "move",
-                  ok: true,
-                  move_to: op.moveTo,
-                  additions: edited.additions,
-                  deletions: edited.deletions,
-                });
-              } else {
-                await writeWorkFile(sandbox, op.path, edited.content);
-                applied.push({
-                  path: op.path,
-                  op: "update",
-                  ok: true,
-                  additions: edited.additions,
-                  deletions: edited.deletions,
-                });
-              }
-            }
-          } catch (err) {
-            applied.push({
-              path: op.path,
-              op: op.op,
-              ok: false,
-              error: err instanceof Error ? err.message : String(err),
-            });
-          }
-        }
-        // Même règle que `apply_edits` (MIN-109) : `success` = « au moins une
-        // section est passée ». Le détail par fichier dit quoi reprendre.
-        const okCount = applied.filter((r) => r.ok === true).length;
-        return await withTouchedInstructions(
-          {
-            result: { applied, counts: { ok: okCount, failed: applied.length - okCount } },
-            success: okCount > 0,
-          },
-          applied.filter((r) => r.ok === true).map((r) => String(r.move_to ?? r.path ?? "")),
-        );
-      }
-      case "run_command": {
-        const command = String(args.command ?? "");
-        // Commande vide (MIN-204) : `sh -c ""` rend exit 0 et une sortie vide,
-        // que le modèle lit comme « la suite de tests est passée ». Le refus est
-        // ici en second rideau — la boucle rejette déjà les arguments illisibles —
-        // et attrape aussi l'argument bien formé mais mal nommé.
-        if (!command.trim()) return { result: { error: "command is required" }, success: false };
-        // Garde-fou git (MIN-108) : la règle « le harness possède git » est
-        // EXÉCUTÉE ici, plus seulement dite dans le prompt. Refus = erreur de
-        // tool, sans toucher au Sandbox — le round continue et le modèle lit
-        // pourquoi. `reason` rend le refus mesurable sur agent_run_events.
-        const verdict = checkCommand(command);
-        if (!verdict.allowed) {
-          return {
-            result: { error: verdict.reason },
-            success: false,
-            reason: FORBIDDEN_COMMAND_REASON,
-          };
-        }
-        // `workdir` (MIN-109) : le modèle préfixait un `cd` dans 13 % des commandes,
-        // souvent vers le répertoire courant par défaut. Le chemin passe par
-        // resolveWithin — un `../..` sort du dépôt et revient en erreur de tool,
-        // pas en throw : le round continue et le modèle corrige.
-        let cwd: string | undefined;
-        if (args.workdir != null && String(args.workdir).trim() !== "") {
-          try {
-            cwd = resolveWithin(REPO_DIR, String(args.workdir));
-          } catch (err) {
-            return {
-              result: { error: err instanceof Error ? err.message : String(err) },
-              success: false,
-            };
-          }
-        }
-        // Le modèle peut RACCOURCIR le timeout, jamais l'allonger — et le RESTANT du
-        // chunk le raccourcit à son tour (MIN-214). Le plafond seul ne bornait que
-        // la commande, pas le round : une commande lancée juste avant la
-        // soft-deadline allait au bout de ses 180 s, la fonction était tuée avant
-        // d'écrire le checkpoint, et tout le chunk partait avec.
-        const timeoutMs = runCommandTimeoutMs(
-          toNum(args.timeout_ms),
-          chunkRemainingMs(),
-          RUN_COMMAND_TIMEOUT_MS,
-        );
-        const r = await runShell(sandbox, command, { cwd, timeoutMs });
-        // Sortie longue → la version COMPLÈTE est déposée dans la sandbox (hors
-        // dépôt) et reste relisible via read_file/grep. Best-effort : si l'écriture
-        // échoue, le modèle reçoit quand même tête ET queue (MIN-107).
-        let fullOutputPath: string | null = null;
-        if (spillsToDisk(r)) {
-          fullOutputPath = await writeToolOutput(
-            sandbox,
-            toolOutputFileName(command, outputSeqBase + outputSeq++),
-            fullOutputDocument(command, r),
-          ).catch((err) => {
-            console.error("[agent-execute] tool output spill failed:", (err as Error).message);
-            return null;
-          });
-        }
-        return {
-          result: formatRunCommandResult(r, fullOutputPath),
-          success: r.exitCode === 0,
-        };
-      }
-      case "run_background": {
-        // Le garde-fou git, le plafond de jobs et les offsets sont dans
-        // `background.ts` — y compris le refus des commandes interdites (MIN-108),
-        // sans quoi ce tool serait une porte dérobée sur `git push`.
-        if (!background) {
-          return subagentDenied(
-            "run_background",
-            "background jobs are held by the parent session, which kills them at the end of the turn — a job you left running would keep the machine awake with nobody watching it",
-          );
-        }
-        return await background.handle(args);
-      }
-      default:
-        return { result: `Unknown tool: ${name}`, success: false };
-    }
-  };
-}
-
-/** Lit un fichier d'instructions du dépôt, ou null (absent / illisible). */
-async function readInstructionFile(
-  sandbox: Sandbox,
-  path: string,
-): Promise<RepoInstructionFile | null> {
-  try {
-    const content = await readWorkFile(sandbox, path);
-    return content?.trim() ? { path, content } : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Lit les instructions du dépôt (AGENTS.md / CLAUDE.md à la racine) et les emballe
- * en un message délimité, ou null s'il n'y en a pas. Lu UNE fois à l'amorce (le
- * checkpoint le transporte ensuite). C'est là qu'un repo déclare ses commandes de
- * build/test, ses conventions et ses interdits — le carburant d'un diff correct.
- * Celles des SOUS-DOSSIERS arrivent plus tard, à la première édition dedans
- * (MIN-115) — cf. `makeExecTool`.
- */
-async function readRepoInstructions(
-  sandbox: Sandbox,
-): Promise<{ message: string; bytes: number } | null> {
-  const files: RepoInstructionFile[] = [];
-  for (const name of REPO_INSTRUCTION_FILES) {
-    const file = await readInstructionFile(sandbox, name);
-    if (file) files.push(file);
-  }
-  return formatBootInstructions(files);
-}
 
 interface IssueContext {
   identifier: string;
@@ -1181,7 +618,11 @@ export async function executeAgentRun(
      * corrige du même côté : par le haut, en refusant, jamais en rendant « au moins
      * un peu » à une boucle qui ne peut pas tourner.
      */
-    if (!run.interrupt_requested && (run.checkpoint?.subagents ?? []).some(isResumableSubagent)) {
+    if (
+      !run.loop_in_vm &&
+      !run.interrupt_requested &&
+      (run.checkpoint?.subagents ?? []).some(isResumableSubagent)
+    ) {
       // Projection OPTIMISTE de quelques secondes : l'amorçage n'est pas encore
       // consommé. L'écart ne joue que dans une bande étroite au-dessus du seuil, où
       // la fille reçoit un peu moins que son minimum — dégradé, pas pathologique.
@@ -1372,7 +813,7 @@ export async function executeAgentRun(
           // la branche de tête n'existe pas dans le dépôt de base (cf.
           // `clonePullRequest`). Aucune identité de committer à résoudre — rien
           // ne sera commité.
-          await clonePullRequest(fresh, {
+          await clonePullRequest(sandboxHost(fresh), {
             authUrl: target.authUrl,
             baseBranch,
             headRef: pullRequestHeadRef(prRun.provider, prRun.number),
@@ -1382,10 +823,22 @@ export async function executeAgentRun(
           return;
         }
         const committer = await resolveCommitterIdentity(target);
-        await cloneRepo(fresh, { authUrl: target.authUrl, baseBranch, workBranch, committer });
+        await cloneRepo(sandboxHost(fresh), {
+          authUrl: target.authUrl,
+          baseBranch,
+          workBranch,
+          committer,
+        });
       },
     });
     sandbox = sb;
+    /**
+     * Les mains sur le dépôt, par RPC (MIN-224). Dans l'ancienne forme c'est le
+     * seul chemin ; dans la nouvelle, la fonction n'en garde que l'amorçage (une
+     * lecture d'`AGENTS.md`, l'écriture du bundle) et c'est la boucle, dans la
+     * microVM, qui reprend les mêmes gestes sur le disque local.
+     */
+    const host = sandboxHost(sb);
 
     // Persiste l'identité du Sandbox + la base AVANT la boucle (reprise si crash).
     // sandbox_stopped_at:null → la microVM est de nouveau vivante (le reaper l'ignore).
@@ -1440,7 +893,10 @@ export async function executeAgentRun(
      * MEURENT, pas à ceux qui rendent la main.
      */
     const afterSetupMs = opts.deadlineMs - (Date.now() - callStart);
-    if (afterSetupMs < CHUNK_FLOOR_MS) {
+    // Sans objet pour un run `loop_in_vm` (MIN-224) : ce qui reste à la FONCTION
+    // n'a plus à couvrir un tour, seulement trois écritures et un lancement. Un
+    // amorçage qui déborde n'y met rien en danger.
+    if (!run.loop_in_vm && afterSetupMs < CHUNK_FLOOR_MS) {
       await stampRun(run.id, {
         status: "queued",
         not_before: new Date().toISOString(),
@@ -1493,7 +949,7 @@ export async function executeAgentRun(
     // du chunk. `filesFromSha` est le point depuis lequel la fin de tour diffe — le
     // dernier sha émis (persisté dans le checkpoint, survit aux chunks WIP), ou ce
     // baseline au tout premier chunk du run (« rien de changé encore »).
-    const baselineHead = await revParseHead(sandbox);
+    const baselineHead = await revParseHead(host);
     const filesFromSha = run.checkpoint?.lastFilesSha ?? baselineHead;
 
     // Recherche web : réservée aux runs qui parlent à OpenRouter (quota minddy ou
@@ -1688,7 +1144,7 @@ export async function executeAgentRun(
       // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après le contexte.
       // La racine est TOUJOURS marquée vue, trouvée ou non : ce qui suit ne recharge
       // que les sous-dossiers, à la première édition dedans (MIN-115).
-      const repoInstructions = await readRepoInstructions(sandbox);
+      const repoInstructions = await readRepoInstructions(host);
       instructions.paths.push(...REPO_INSTRUCTION_FILES);
       if (repoInstructions) {
         messages.push({ role: "user", content: repoInstructions.message });
@@ -1723,114 +1179,28 @@ export async function executeAgentRun(
     };
 
     /**
-     * Trace un geste de Numo sur la PR dans le journal d'activité du ticket.
-     *
-     * L'acteur en base est l'auteur du run (il faut un utilisateur réel), mais
-     * `via_assistant` fait dire NUMO à la timeline — c'est lui qui a agi, et la
-     * règle d'identité vaut dans les deux sens. `from_value` ne porte pas de
-     * login mais le PROVIDER (cf. `forgeActorValue`), sans quoi une merge request
-     * GitLab se raconterait en vocabulaire GitHub.
+     * L'atterrissage du tour sur la pull request et le ticket — ouvrir, rouvrir,
+     * enregistrer, commenter, tracer. Une IMPLÉMENTATION unique
+     * ([pr-landing.ts](pr-landing.ts)) depuis MIN-224 : la nouvelle forme, où la
+     * boucle vit dans la microVM, fait atterrir ses tours par le plan de contrôle
+     * et doit raconter exactement la même chose. Deux copies auraient divergé au
+     * premier correctif porté d'un seul côté.
      */
-    const recordAgentPrEvent = async (
-      type: "pr_opened" | "pr_reopened" | "pr_committed",
-      prNumber: number,
-    ): Promise<void> => {
-      if (!run.issue_id || !run.created_by) return;
-      await insertEvents(getServiceClient(), [
-        {
-          issue_id: run.issue_id,
-          actor_id: run.created_by,
-          type,
-          from_value: forgeActorValue(target.provider, null),
-          to_value: String(prNumber),
-          via_assistant: true,
-        },
-      ]);
+    const landing: PrLandingContext = {
+      run,
+      target,
+      forge,
+      issue: issue ? { identifier: issue.identifier } : null,
+      workBranch,
+      baseBranch,
+      locale: commentLocale,
+      emit,
+      prState,
     };
-
-    /**
-     * « Numo a commité sur la PR #12 » — un push qui a fait AVANCER la branche
-     * distante, et seulement quand une PR le porte : avant elle, les commits
-     * n'appartiennent à rien que le ticket puisse nommer.
-     *
-     * `remoteUpdated` et non `pushed` : un push qui ne pousse rien de neuf (le
-     * remote était déjà à jour) n'est pas un fait.
-     */
-    const notePrCommits = async (
-      pushed: { remoteUpdated: boolean } | null,
-    ): Promise<void> => {
-      if (!pushed?.remoteUpdated || prState.number == null) return;
-      await recordAgentPrEvent("pr_committed", prState.number);
-    };
-
-    /** Enregistre une PR ouverte/rouverte : état local + stamp + statut d'issue +
-     *  event live + commentaire d'issue (le SEUL commentaire du nouveau modèle). */
-    const registerPr = async (
-      pr: PullRequestRef,
-      kind: "opened" | "reopened",
-    ): Promise<void> => {
-      prState.number = pr.number;
-      prState.url = pr.url;
-      // Le MÊME calcul que celui qui alimente `pull_requests` dix lignes plus
-      // bas (MIN-164) : le run le refaisait à la main, sans lire `draft`, et les
-      // deux colonnes d'état divergeaient dès qu'une PR brouillon passait par
-      // ici — rouverte, ou déjà ouverte par un humain sur la branche du run.
-      prState.state = prStateFromRef(pr);
-      await emit("pr_opened", { number: pr.number, url: pr.url });
-      await stampRun(run.id, {
-        pr_number: pr.number,
-        pr_url: pr.url,
-        pr_state: prState.state,
-      });
-      // La PR est une ENTITÉ (MIN-143) : elle entre dans `pull_requests` ici,
-      // sans attendre l'écho du webhook — qui n'arrive jamais en dev, et que la
-      // page Pull Requests lit désormais au lieu d'`agent_runs`. Le run, lui, est
-      // la meilleure source du ticket : il le SAIT, là où l'ingestion webhook
-      // doit le déduire du nom de branche.
-      const prRow = await upsertPullRequest({
-        provider: target.provider,
-        repoFullName: target.repoFullName,
-        number: pr.number,
-        state: prStateFromRef(pr),
-        url: pr.url,
-        title: pr.title ?? null,
-        authorLogin: pr.user?.login ?? null,
-        authorAvatarUrl: pr.user?.avatar_url ?? null,
-        headBranch: pr.head ?? workBranch,
-        baseBranch: pr.base ?? baseBranch,
-        headSha: pr.headSha ?? null,
-        openedAt: pr.createdAt ?? null,
-        mergedAt: pr.mergedAt ?? null,
-        updatedAt: pr.updatedAt,
-        issueId: run.issue_id,
-      });
-      // Inbox : le projet apprend qu'une pull request attend des yeux. Ici et
-      // pas au webhook — celui-ci n'arrive jamais en dev, et l'ouverture faite
-      // par Numo porte le compte de l'App, que les récepteurs écartent comme
-      // écho. La réouverture, elle, ne s'annonce pas : la PR était déjà connue.
-      if (kind === "opened") await notifyPullRequestOpened(prRow);
-      // Run CARNET : aucun ticket à synchroniser ni à commenter — la PR vit dans
-      // la conversation de la session (et sur la page Pull requests).
-      if (issue && run.issue_id) {
-        if (run.created_by) {
-          await syncIssueStatusFromPr({
-            issueId: run.issue_id,
-            actorId: run.created_by,
-            prState: prState.state,
-          });
-        }
-        // « Numo a ouvert la pull request #12 » dans le journal d'activité. Émis
-        // ICI et pas par le webhook : la PR part du token de l'App (GitHub) ou du
-        // compte qui a lié le dépôt (GitLab), donc l'écho porte une identité de
-        // machine ou celle d'un tiers — or c'est Numo qui a ouvert. Les deux
-        // récepteurs écartent d'ailleurs leur propre écho.
-        // Ouvrir et ROUVRIR sont deux faits distincts (MIN-164) : la réouverture
-        // ne se racontait pas du tout, et le ticket repassait en revue sans que
-        // rien ne dise ce qui l'y avait remis.
-        await recordAgentPrEvent(kind === "opened" ? "pr_opened" : "pr_reopened", pr.number);
-        await postPrComment(run, issue.identifier, kind, pr.url, commentLocale, target.provider);
-      }
-    };
+    const notePrCommits = (pushed: { remoteUpdated: boolean } | null) =>
+      notePrCommitsOn(landing, pushed);
+    const registerPr = (pr: PullRequestRef, kind: "opened" | "reopened") =>
+      registerPrOn(landing, pr, kind);
 
     /**
      * Tool `create_pr` : la création de PR est une DÉCISION (de l'agent ou de
@@ -1862,7 +1232,7 @@ export async function executeAgentRun(
       const andJobs = (text: string) => (jobsNote ? `${text} ${jobsNote}` : text);
       let pushed: Awaited<ReturnType<typeof commitAndPush>>;
       try {
-        pushed = await commitAndPush(sb, {
+        pushed = await commitAndPush(host, {
           authUrl: fresh.authUrl,
           workBranch,
           baseBranch,
@@ -1874,153 +1244,24 @@ export async function executeAgentRun(
           success: false,
         };
       }
-      // Rien de commité par-dessus la base : on s'arrête AVANT de toucher au dépôt
-      // (MIN-123). Pousser créerait une branche vide pour rien — et la forge
-      // refuserait la PR (422) juste après, en la laissant derrière elle.
-      if (!pushed.pushed) {
-        return {
-          result: {
-            error: andJobs(
-              "Nothing to open a pull request for: this session hasn't changed any file yet. Do the work first, then call create_pr.",
-            ),
-          },
-          success: false,
-        };
-      }
-      await noteBranchPushed(pushed);
-      // `create_pr` sur une PR qui existe DÉJÀ : ce push l'alimente, il se trace
-      // comme les autres. Sur une PR encore à ouvrir, `prState.number` est nul et
-      // rien ne se trace — c'est `registerPr` qui dira « a ouvert la PR ».
-      await notePrCommits(pushed);
-      if (prState.number != null) {
-        const current = await forge
-          .getPullRequest({
-            token: fresh.token,
-            repoFullName: fresh.repoFullName,
-            number: prState.number,
-          })
-          .catch(() => null);
-        if (current?.merged) {
-          return {
-            result: {
-              error: andJobs(
-                `Pull request #${prState.number} is already merged — this branch's work is shipped. A new session on this ticket will start a fresh branch and pull request.`,
-              ),
-            },
-            success: false,
-          };
-        }
-        if (current && current.state !== "closed") {
-          return {
-            result: {
-              number: current.number,
-              url: current.url,
-              note: andJobs(
-                "A pull request already exists for this branch — your pushes update it automatically; nothing was created.",
-              ),
-            },
-            success: true,
-          };
-        }
-        if (current && current.state === "closed") {
-          const reopened = await forge
-            .reopenPullRequest({
-              token: fresh.token,
-              repoFullName: fresh.repoFullName,
-              number: prState.number,
-            })
-            .catch((err) => {
-              console.error("[agent-execute] PR reopen failed:", (err as Error).message);
-              return null;
-            });
-          if (reopened) {
-            await registerPr(reopened, "reopened");
-            return {
-              result: {
-                number: reopened.number,
-                url: reopened.url,
-                note: andJobs("The rejected pull request was reopened with the new work."),
-              },
-              success: true,
-            };
-          }
-        }
-        // PR illisible / réouverture impossible (branche tête supprimée puis
-        // recréée par notre push…) → on retombe sur une création propre.
-      }
-      const prBody = `${body?.trim() || prTitle}\n\n---\n🤖 Généré par l'agent numo (minddy) · ${issue ? `issue ${issue.identifier}` : "note du carnet"}`;
-      try {
-        const pr = await forge.ensurePullRequest({
-          token: fresh.token,
-          repoFullName: fresh.repoFullName,
-          head: workBranch,
-          base: baseBranch,
-          title: prTitle,
-          body: prBody,
-        });
-        await registerPr(pr, "opened");
-        return {
-          result: { number: pr.number, url: pr.url, ...(jobsNote ? { note: jobsNote } : {}) },
-          success: true,
-        };
-      } catch (err) {
-        if (isForgeApiError(err) && err.status === 422) {
-          return {
-            result: {
-              error: andJobs(
-                "The branch has no changes compared to the base branch — there is nothing to open a pull request for.",
-              ),
-            },
-            success: false,
-          };
-        }
-        return { result: { error: andJobs((err as Error).message) }, success: false };
-      }
+      // La moitié FORGE, partagée avec la nouvelle forme (MIN-224) : c'est là que
+      // vivent les quatre cas — rien à ouvrir, PR mergée, PR déjà vivante, PR
+      // refusée à rouvrir — et ils ne doivent pas exister en double.
+      return await openPullRequestAfterPush(landing, {
+        pushed,
+        prTitle,
+        body,
+        fresh,
+        jobsNote,
+        noteBranchPushed,
+      });
     };
 
-    /**
-     * Recale `prState` sur la BASE : les actions in-app (merge/reject pendant que
-     * l'agent tourne) et le webhook GitHub stampent `agent_runs.pr_state`, invisible
-     * du snapshot pris au claim. Sans ce recalage, un reject mid-turn ne serait
-     * jamais rouvert au push, et un merge mid-turn passerait inaperçu.
-     */
-    const refreshPrStateFromDb = async (): Promise<void> => {
-      const db = await getRun(run.id).catch(() => null);
-      if (!db) return;
-      prState.number = db.pr_number;
-      prState.url = db.pr_url;
-      prState.state = db.pr_state;
-    };
-
-    /**
-     * La session suit une PR REFUSÉE et un push vient de faire AVANCER le remote →
-     * on la ROUVRE (règle produit : on réitère toujours la dernière PR du ticket,
-     * jamais de doublon). Appelé après CHAQUE push — fin de tour ET push WIP de
-     * mi-tour : sur un tour multi-chunks, ce sont les WIP qui portent les commits.
-     * Décision sur `remoteUpdated` (le remote a bougé), pas `committed` : un commit
-     * posé à un appel précédent (push 5xx) part avec un arbre propre au suivant.
-     * Une PR mergée n'est jamais ressuscitée (le reopen échoue → on n'insiste pas).
-     * Best-effort.
-     */
-    const reopenIfRejectedWorkPushed = async (
+    /** Même implémentation partagée : la réouverture d'une PR refusée au push. */
+    const reopenIfRejectedWorkPushed = (
       pushed: { remoteUpdated: boolean } | null,
       token: string,
-    ): Promise<void> => {
-      if (!pushed?.remoteUpdated) return;
-      await refreshPrStateFromDb();
-      if (prState.number == null || prState.state !== "closed") return;
-      const reopened = await forge
-        .reopenPullRequest({
-          token,
-          repoFullName: target.repoFullName,
-          number: prState.number,
-        })
-        .catch((err) => {
-          console.error("[agent-execute] PR reopen on push failed:", (err as Error).message);
-          return null;
-        });
-      if (reopened && !reopened.merged) await registerPr(reopened, "reopened");
-    };
+    ) => reopenIfRejectedWorkPushedOn(landing, pushed, token);
 
     // Fenêtre de contexte du modèle (OpenRouter) → seuil de compaction adapté.
     const contextWindow = await getModelContextWindow(run.model, provider, apiKey).catch(() => null);
@@ -2104,7 +1345,7 @@ export async function executeAgentRun(
     // jusqu'au reaper, et serait encore là au tour suivant sans que le modèle le
     // sache. Le registre ne survit pas au chunk — c'est assumé, et le tool le dit.
     const background = new BackgroundJobs(
-      sandboxBackgroundRunner(sandbox),
+      repoBackgroundRunner(host),
       run.continuations * 1000,
     );
     backgroundJobs = background;
@@ -2189,6 +1430,80 @@ export async function executeAgentRun(
      */
     const chunkSpend = { usd: 0 };
 
+    /**
+     * ── LA BIFURCATION (MIN-224) ────────────────────────────────────────────
+     *
+     * Tout ce qui précède est l'AMORÇAGE, et il est commun aux deux moteurs :
+     * résoudre le dépôt, le modèle, la clé, le contexte du ticket, réveiller la
+     * microVM, poser la politique réseau, construire l'historique. Une seule
+     * implémentation, donc — un amorçage écrit deux fois aurait divergé, et la
+     * divergence se serait lue dans le premier message du système.
+     *
+     * Ce qui suit, en revanche, se joue ailleurs. La fonction écrit le harness
+     * dans la VM, lance la boucle en détaché, persiste l'identifiant de la
+     * commande, et REND LA MAIN. Plus de soft-deadline, plus de budget de chunk,
+     * plus d'attente : le tour vivra aussi longtemps qu'il lui faudra, et c'est
+     * lui qui appellera le plan de contrôle pour se mettre au repos.
+     *
+     * Le run reste `running` — c'est exact, il tourne. Ce qui le sortira de là,
+     * c'est son propre rapport de fin de tour, ou le chien de garde qui aura
+     * constaté la mort de son process (`reapDeadVmRuns`, drain.ts).
+     */
+    if (run.loop_in_vm) {
+      const job: VmJob = {
+        runId: run.id,
+        ledgerRunId: run.run_id ?? run.id,
+        projectId: run.project_id,
+        appOrigin: agentControlOrigin(),
+        model: run.model,
+        baseUrl,
+        provider,
+        llmPlaceholderKey: AGENT_LLM_PLACEHOLDER_KEY,
+        reasoningLevel: run.reasoning_level,
+        contextWindow,
+        anchor,
+        writesToRepo,
+        interactive: !run.routine_id,
+        chain: !!run.chain_id,
+        imageInput,
+        webSearch: webSearchAllowed,
+        subagents: {
+          models: subagentModels,
+          favorites: subagentFavorites,
+          maxParallel: subagentMaxParallel,
+          allowedIds: subagentScope.allowedIds,
+          abovePlanIds: subagentScope.abovePlanIds,
+          maxMultiplier: subagentScope.maxMultiplier,
+        },
+        messages,
+        instructions,
+        usageSeqStart,
+        ...(budgetUsd !== undefined ? { budgetUsd } : {}),
+        parkedForSubagents: false,
+        editedPaths: [...(run.checkpoint?.editedPaths ?? [])],
+        repoTouched: run.checkpoint?.repoTouched === true,
+        prInlineComments: run.checkpoint?.prInlineComments ?? 0,
+        baseBranch,
+        workBranch,
+        authUrl: target.authUrl,
+        commitRef,
+        filesFromSha,
+        locale: commentLocale,
+        feature: usageFeature,
+        // Le gabarit du checkpoint est PLUS SERRÉ ici : il devra remonter par le
+        // plan de contrôle, dont le corps est plafonné à 4,5 Mo par la plateforme
+        // (cf. `VM_MAX_CHECKPOINT_BYTES`). Un checkpoint qui ne remonte pas, c'est
+        // la conversation perdue en silence à la fin d'un tour de deux heures.
+        checkpointMaxBytes: VM_MAX_CHECKPOINT_BYTES,
+      };
+      const cmdId = await startVmLoop(sb, job);
+      await stampRun(run.id, {
+        loop_command_id: cmdId,
+        last_activity_at: new Date().toISOString(),
+      });
+      return "detached";
+    }
+
     // ── Sous-agents (MIN-112) ──────────────────────────────────────────────────
     /** Chrono de la boucle : le budget restant du chunk borne chaque sous-agent. */
     let loopStartedAt = Date.now();
@@ -2209,7 +1524,7 @@ export async function executeAgentRun(
     let repoInstructionsForSubagent: Promise<{ message: string; bytes: number } | null> | null =
       null;
     const subagentRepoInstructions = () => {
-      repoInstructionsForSubagent ??= readRepoInstructions(sb).catch(() => null);
+      repoInstructionsForSubagent ??= readRepoInstructions(host).catch(() => null);
       return repoInstructionsForSubagent;
     };
 
@@ -2329,6 +1644,8 @@ export async function executeAgentRun(
           // s'écrit `routine_code` comme elle. Sa dépense est celle du passage.
           feature: usageFeature,
           projectId: run.project_id,
+          // Le ledger passe par la fonction : elle est DANS la fonction (MIN-224).
+          recordUsage: recordAiUsage,
           softDeadlineMs: Math.max(1_000, budget),
           // Budget d'usage : le RESTANT snapshoté à l'entrée du chunk, opposé au
           // compteur PARTAGÉ du chunk. C'est ce partage qui fait le plafond : sans
@@ -2350,13 +1667,13 @@ export async function executeAgentRun(
           signal: job.signal,
           emit: childEmit,
           execTool: makeExecTool({
-            sandbox: sb,
+            host,
             createPr: null,
             // La pull request appartient au parent, comme le ticket et le carnet
             // (et une fille n'a de toute façon aucun de ces tools dans son schéma).
-            prCtx: null,
-            issueCtx: null,
-            scratchpadCtx: null,
+            prTool: null,
+            issueTool: null,
+            scratchpadTool: null,
             webSearch,
             outputSeqBase: SUBAGENT_OUTPUT_SEQ_BASE + job.slot * 1000,
             background: null,
@@ -2490,7 +1807,7 @@ export async function executeAgentRun(
       const touched = [...editedPaths];
       editedPaths.clear();
       const startedAt = Date.now();
-      const block = await typeErrorsForTurn(sb, touched).catch((err) => {
+      const block = await typeErrorsForTurn(host, touched).catch((err) => {
         console.error("[agent-execute] turn-end typecheck failed:", (err as Error).message);
         return null;
       });
@@ -2521,7 +1838,7 @@ export async function executeAgentRun(
       if (selfReviewed || !repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
       selfReviewed = true;
       const startedAt = Date.now();
-      const { diff, porcelain } = await turnDiff(sb, filesFromSha).catch(() => ({
+      const { diff, porcelain } = await turnDiff(host, filesFromSha).catch(() => ({
         diff: "",
         porcelain: "",
       }));
@@ -2573,18 +1890,25 @@ export async function executeAgentRun(
       // quand ce run est un passage de routine.
       feature: usageFeature,
       projectId: run.project_id,
+      // Ancienne forme : la boucle tourne ICI, elle écrit donc au ledger en
+      // direct. Dans la nouvelle, ce même paramètre porte un POST vers le plan
+      // de contrôle — et c'est tout ce que la boucle sait de la différence.
+      recordUsage: recordAiUsage,
       softDeadlineMs,
       budgetUsd,
       chunkSpend,
       contextWindow,
       execTool: makeExecTool({
-        sandbox,
+        host,
         // Une relecture n'ouvre pas de pull request : le tool n'est pas dans son
         // jeu, et le handler ne lui est pas non plus câblé (deux verrous, pas un).
         createPr: writesToRepo ? createPr : null,
-        prCtx: prToolCtx,
-        issueCtx: issueToolCtx,
-        scratchpadCtx: scratchpadToolCtx,
+        // Les tools de PLATEFORME sont INJECTÉS depuis MIN-224 (cf. `exec-tool.ts`) :
+        // ici les exécuteurs en direct, puisqu'on est dans la fonction ; dans la
+        // microVM, les mêmes noms partent au plan de contrôle.
+        prTool: prToolCtx ? (name, args) => executePrTool(prToolCtx, name, args) : null,
+        issueTool: (name, args) => executeIssueTool(issueToolCtx, name, args),
+        scratchpadTool: (name, args) => executeScratchpadTool(scratchpadToolCtx, name, args),
         webSearch,
         outputSeqBase: run.continuations * 1000,
         background,
@@ -2839,7 +2163,7 @@ export async function executeAgentRun(
       // « aucune écriture dans le dépôt » — l'autre est le jeu de tools.
       let pushError: string | null = null;
       const pushed = writesToRepo
-        ? await commitAndPush(sandbox, {
+        ? await commitAndPush(host, {
             authUrl,
             workBranch,
             baseBranch,
@@ -2887,7 +2211,7 @@ export async function executeAgentRun(
       // persistée dans le checkpoint pour que le tour suivant diffe depuis ici.
       let filesToSha = filesFromSha;
       if (pushed?.headSha && pushed.headSha !== filesFromSha) {
-        const changed = await changedFiles(sandbox, filesFromSha, pushed.headSha).catch(() => null);
+        const changed = await changedFiles(host, filesFromSha, pushed.headSha).catch(() => null);
         if (changed && changed.files.length > 0) {
           await emit("files_changed", { files: changed.files, truncated: changed.truncated });
         }
@@ -2924,7 +2248,7 @@ export async function executeAgentRun(
     // fin — son seul état durable est son checkpoint.
     await background.stopAll().catch(() => 0);
     const wipPushed = writesToRepo
-      ? await commitAndPush(sandbox, {
+      ? await commitAndPush(host, {
           authUrl: target.authUrl,
           workBranch,
           baseBranch,
@@ -3249,7 +2573,11 @@ export async function executeAgentRun(
     // microVM a été réveillée est facturée en wall-clock — y compris les tours
     // en échec. Bande de seq dédiée pour ne pas croiser celle des appels LLM
     // (continuations × 1000 + rounds).
-    if (sandbox) {
+    // PAS pour un run `loop_in_vm` (MIN-224) : le tour n'est pas fini quand cette
+    // fonction rend la main, et son wall-clock est tenu par la boucle elle-même,
+    // du début à la fin du tour (`vm-rest.ts`). Facturer ici en plus compterait
+    // deux fois l'amorçage, et sur un run relancé souvent ce n'est pas anodin.
+    if (sandbox && !run.loop_in_vm) {
       await recordSandboxUsage({
         runId: run.run_id ?? run.id,
         seq: SANDBOX_USAGE_SEQ_BASE + run.continuations,
@@ -3261,133 +2589,5 @@ export async function executeAgentRun(
         durationMs: Date.now() - callStart,
       }).catch(() => {});
     }
-  }
-}
-
-/** Base de seq des lignes `sandbox_compute` (hors de la bande des appels LLM). */
-const SANDBOX_USAGE_SEQ_BASE = 1_000_000_000;
-
-/** Note de fil quand le push de fin de tour échoue (visible dans la conversation). */
-const PUSH_FAILED_STRINGS: Record<Locale, (detail: string) => string> = {
-  fr: (detail) =>
-    `Le push de fin de tour a échoué — la branche distante n'a PAS reçu le travail de ce tour. Le travail reste dans la sandbox et sera re-poussé au prochain tour. Détail : ${detail}`,
-  en: (detail) =>
-    `The turn-end push failed — the remote branch did NOT receive this turn's work. The work is kept in the sandbox and will be pushed again next turn. Detail: ${detail}`,
-};
-
-/** Terme provider affiché dans les notes/commentaires (marques, non localisées). */
-function prTerm(provider: RepoProviderId): string {
-  return provider === "gitlab" ? "merge request" : "pull request";
-}
-
-/** Référence provider d'une PR/MR : `#12` sur GitHub, `!12` sur GitLab. */
-function prRef(provider: RepoProviderId, n: number): string {
-  return provider === "gitlab" ? `!${n}` : `#${n}`;
-}
-
-function capitalized(term: string): string {
-  return term.charAt(0).toUpperCase() + term.slice(1);
-}
-
-/** Note de fil quand la PR a été fusionnée PENDANT le tour (travail hors PR). */
-const MERGED_DURING_TURN_STRINGS: Record<Locale, (ref: string, term: string) => string> = {
-  fr: (ref, term) =>
-    `La ${term} ${ref} a été fusionnée pendant ce tour : le nouveau travail a été poussé sur la branche mais n'appartient plus à aucune ${term}. Lance une nouvelle session pour continuer — elle repartira d'une branche neuve.`,
-  en: (ref, term) =>
-    `${capitalized(term)} ${ref} was merged during this turn: the new work was pushed to the branch but no longer belongs to any ${term}. Start a new session to continue — it will begin from a fresh branch.`,
-};
-
-const COMMENT_STRINGS: Record<
-  Locale,
-  {
-    header: (id: string) => string;
-    opened: (term: string) => string;
-    reopened: (term: string) => string;
-    viewPr: (term: string) => string;
-  }
-> = {
-  fr: {
-    header: (id) => `Agent numo — ${id}`,
-    opened: (term) => `${capitalized(term)} ouverte.`,
-    reopened: (term) => `${capitalized(term)} rouverte avec le nouveau travail.`,
-    viewPr: (term) => `Voir la ${term}`,
-  },
-  en: {
-    header: (id) => `Numo agent — ${id}`,
-    opened: (term) => `${capitalized(term)} opened.`,
-    reopened: (term) => `${capitalized(term)} reopened with the new work.`,
-    viewPr: (term) => `View the ${term}`,
-  },
-};
-
-/**
- * Réglages de compte qui pilotent le run, lus en UN appel (`getAccountSettings`
- * porte déjà les deux) :
- *  - `locale` : langue du résumé de l'agent et du commentaire d'issue. Celle du
- *    lanceur, défaut owner du projet, puis défaut de l'app.
- *  - `numoDefaultStatus` : statut d'atterrissage d'un ticket créé par l'agent
- *    (Compte → Préférences). Il ne vient QUE du lanceur — c'est SON réglage ;
- *    sans lanceur, le défaut historique (`triage`), jamais celui de l'owner.
- */
-async function resolveRunPrefs(
-  run: AgentRun,
-): Promise<{ locale: Locale; numoDefaultStatus: NumoDefaultStatus }> {
-  if (run.created_by) {
-    const r = await getAccountSettings({ userId: run.created_by });
-    if (r.ok) {
-      return {
-        locale: r.settings.locale,
-        numoDefaultStatus: r.settings.numo_default_status,
-      };
-    }
-  }
-  try {
-    const service = getServiceClient();
-    const { data } = await service
-      .from("projects")
-      .select("owner_id")
-      .eq("id", run.project_id)
-      .maybeSingle();
-    const ownerId = (data as { owner_id?: string } | null)?.owner_id;
-    if (ownerId) {
-      const r = await getAccountSettings({ userId: ownerId });
-      if (r.ok) {
-        return { locale: r.settings.locale, numoDefaultStatus: DEFAULT_NUMO_STATUS };
-      }
-    }
-  } catch {
-    // ignore — on retombe sur le défaut
-  }
-  return { locale: defaultLocale, numoDefaultStatus: DEFAULT_NUMO_STATUS };
-}
-
-/**
- * Poste un commentaire d'issue sur ÉVÉNEMENT PR uniquement (création/réouverture),
- * attribué à Numo. Les tours de conversation ordinaires ne commentent plus le
- * ticket : tout vit dans la conversation de la session.
- */
-async function postPrComment(
-  run: AgentRun,
-  identifier: string,
-  kind: "opened" | "reopened",
-  prUrl: string,
-  locale: Locale,
-  provider: RepoProviderId,
-): Promise<void> {
-  if (!run.created_by || !run.issue_id) return;
-  try {
-    const service = getServiceClient();
-    const s = COMMENT_STRINGS[locale] ?? COMMENT_STRINGS.en;
-    const term = prTerm(provider);
-    const label = kind === "reopened" ? s.reopened(term) : s.opened(term);
-    const body = `**${s.header(identifier)}**\n\n${label}\n\n🔗 [${s.viewPr(term)}](${prUrl})`;
-    await service.from("comments").insert({
-      issue_id: run.issue_id,
-      author_id: run.created_by,
-      body,
-      via_assistant: true,
-    });
-  } catch (err) {
-    console.error("[agent-execute] PR comment failed:", (err as Error).message);
   }
 }

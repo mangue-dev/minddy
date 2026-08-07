@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run build:agent-vm",
     "build": "next build",
+    "build:agent-vm": "node scripts/build-agent-vm.mjs",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -33,7 +35,10 @@
           "shiki": "^3.19.0"
         }
       }
-    }
+    },
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "dependencies": {
     "@dicebear/core": "^9.4.3",
@@ -101,6 +106,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
+    "esbuild": "^0.28.1",
     "markdown-it": "^14.3.0",
     "playwright": "^1.62.0",
     "tailwindcss": "^4",

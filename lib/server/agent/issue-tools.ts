@@ -85,23 +85,10 @@ export interface IssueToolContext {
   chainId?: string | null;
 }
 
-/** Noms des tools ticket (routés vers ce module par execute.ts). */
-export const ISSUE_TOOL_NAMES = new Set([
-  "search_issues",
-  "read_issue",
-  "read_resource",
-  // Le nom d'avant MIN-184, gardé POUR L'EXÉCUTION seule : il n'est plus servi
-  // dans la liste des tools, mais un checkpoint repris rejoue l'ancien appel.
-  "read_attachment",
-  "read_feedback",
-  "update_issue",
-  "write_issue_plan",
-  "append_to_plan",
-  "edit_issue_text",
-  "create_issue",
-  "create_routine",
-  "report_verdict",
-]);
+/** Noms des tools de ce module. Ils vivent dans `platform-tool-names.ts` depuis
+ *  MIN-224 — le ROUTAGE descend dans la microVM, l'EXÉCUTION reste ici — et sont
+ *  ré-exportés pour que rien n'ait à changer d'import. */
+export { ISSUE_TOOL_NAMES } from "./platform-tool-names";
 
 /** Derniers commentaires renvoyés par défaut (le fil complet sur demande). */
 const COMMENTS_DEFAULT_LIMIT = 15;

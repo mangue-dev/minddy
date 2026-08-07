@@ -28,6 +28,7 @@ const h = vi.hoisted(() => ({
   afterWork: [] as Array<() => void | Promise<void>>,
   prIssueId: null as string | null,
   stampReturnsNull: false,
+  landed: 0,
   run: null as Record<string, unknown> | null,
 }));
 
@@ -59,6 +60,12 @@ vi.mock("@/lib/server/after-safe", () => ({
 
 vi.mock("./pr-run", () => ({
   loadPrRunContext: vi.fn(async () => ({ issueId: h.prIssueId })),
+}));
+
+vi.mock("./vm-rest", () => ({
+  landVmTurn: vi.fn(async () => {
+    h.landed++;
+  }),
 }));
 
 vi.mock("./runs", async (importOriginal) => ({
@@ -114,8 +121,10 @@ beforeEach(() => {
   h.afterWork.length = 0;
   h.prIssueId = null;
   h.stampReturnsNull = false;
+  h.landed = 0;
   h.run = {
     id: RUN_ID,
+    status: "running",
     run_id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     project_id: "proj-1",
     issue_id: "issue-1",
@@ -260,5 +269,45 @@ describe("la surface est fermée", () => {
   it("refuse un run qui n'existe pas", async () => {
     h.run = null;
     expect((await call("POST", "/events", { type: "status" })).status).toBe(404);
+  });
+});
+
+describe("la fin de tour n'atterrit qu'UNE fois", () => {
+  it("met la session au repos quand le run tourne encore", async () => {
+    const res = await call("POST", "/rest", { status: "completed", costUsd: 0.1 });
+    expect(res.status).toBe(200);
+    expect(h.landed).toBe(1);
+  });
+
+  it("refuse en 409 un second rapport — le client ne le retente pas", async () => {
+    // Le client du plan de contrôle retente sur 5xx : sans cette garde, un rapport
+    // dont la réponse s'est perdue en vol serait rejoué. Events en double dans le
+    // fil, et une SECONDE ligne de compute au ledger — la moitié microVM de la
+    // facture, comptée deux fois.
+    h.run = { ...h.run, status: "completed" };
+    const res = await call("POST", "/rest", { status: "completed", costUsd: 0.1 });
+    expect(res.status).toBe(409);
+    expect(h.landed).toBe(0);
+  });
+
+  it("refuse un rapport sans statut plutôt que d'en inventer un", async () => {
+    expect((await call("POST", "/rest", { costUsd: 1 })).status).toBe(400);
+    expect(h.landed).toBe(0);
+  });
+});
+
+describe("le checkpoint périodique fait aussi office de battement de cœur", () => {
+  it("horodate l'activité du run à chaque sauvegarde", async () => {
+    // C'est le seul signal régulier qu'un tour qui vit dans la VM produise, et
+    // c'est sur lui que le chien de garde décide d'aller interroger la plateforme.
+    // Sans lui, il la sonderait pour chaque run à chaque passage du cron.
+    await call("PUT", "/checkpoint", { checkpoint: { messages: [] } });
+    expect(h.stamped[0]).toHaveProperty("last_activity_at");
+  });
+
+  it("dit 409 quand le run n'est plus en cours — la VM doit s'arrêter", async () => {
+    h.stampReturnsNull = true;
+    const res = await call("PUT", "/checkpoint", { checkpoint: { messages: [] } });
+    expect(res.status).toBe(409);
   });
 });

@@ -1,5 +1,3 @@
-import "server-only";
-
 import { MAX_BACKGROUND_JOBS } from "./background";
 import { usesApplyPatch } from "./patch";
 import { SUBAGENT_TEMPLATE_IDS } from "./subagent-templates";

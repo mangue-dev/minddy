@@ -30,3 +30,6 @@ yarn-error.log*
 assets/figma
 # supabase CLI link artifacts
 supabase/.temp/
+
+# bundle du harness de la microVM (MIN-224) — reconstruit au prebuild
+/.agent-vm/

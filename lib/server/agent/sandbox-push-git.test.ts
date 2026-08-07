@@ -5,7 +5,11 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { commitAndPush, type Sandbox } from "./sandbox";
+import { commitAndPush } from "./repo-host";
+// Le fake reste une SANDBOX et passe par `sandboxHost` : depuis MIN-224 ce test
+// couvre donc aussi l'adaptateur RPC, c'est-à-dire le chemin réel de l'ancienne
+// forme — la logique de `commitAndPush`, elle, est désormais commune aux deux.
+import { sandboxHost, type Sandbox } from "./sandbox";
 
 /**
  * `commitAndPush` contre un VRAI dépôt git (MIN-123). Le seul test de ce dossier
@@ -84,7 +88,7 @@ afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 /** Un push de fin de tour, avec le message qu'aurait le harnais. */
 const push = (message: string) =>
-  commitAndPush(sandbox, {
+  commitAndPush(sandboxHost(sandbox), {
     authUrl: `file://${origin}`,
     workBranch: WORK_BRANCH,
     baseBranch: "main",

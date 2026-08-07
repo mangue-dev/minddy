@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { commitAndPush, type Sandbox } from "./sandbox";
+import { commitAndPush } from "./repo-host";
+// Le fake reste une SANDBOX et passe par `sandboxHost` : depuis MIN-224 ce test
+// couvre donc aussi l'adaptateur RPC, c'est-à-dire le chemin réel de l'ancienne
+// forme — la logique de `commitAndPush`, elle, est désormais commune aux deux.
+import { sandboxHost, type Sandbox } from "./sandbox";
 
 /**
  * Fin de tour côté git (MIN-123) : QUAND le harnais touche-t-il au dépôt ?
@@ -72,7 +76,7 @@ describe("commitAndPush", () => {
       "git rev-parse --verify": { stdout: `${BASE_SHA}\n` },
     });
 
-    const res = await commitAndPush(sandbox, OPTS);
+    const res = await commitAndPush(sandboxHost(sandbox), OPTS);
 
     expect(res).toEqual({
       committed: false,
@@ -97,7 +101,7 @@ describe("commitAndPush", () => {
       "git push": {},
     });
 
-    const res = await commitAndPush(sandbox, OPTS);
+    const res = await commitAndPush(sandboxHost(sandbox), OPTS);
 
     expect(res).toEqual({
       committed: true,
@@ -120,7 +124,7 @@ describe("commitAndPush", () => {
       "git push": {},
     });
 
-    const res = await commitAndPush(sandbox, OPTS);
+    const res = await commitAndPush(sandboxHost(sandbox), OPTS);
 
     expect(res.pushed).toBe(true);
     expect(res.committed).toBe(false);
@@ -138,7 +142,7 @@ describe("commitAndPush", () => {
       "git push": {},
     });
 
-    const res = await commitAndPush(sandbox, OPTS);
+    const res = await commitAndPush(sandboxHost(sandbox), OPTS);
 
     expect(res.pushed).toBe(true);
     expect(commands.some((c) => c.startsWith("git push"))).toBe(true);
@@ -155,6 +159,6 @@ describe("commitAndPush", () => {
       "git push": { exitCode: 1, stderr: "! [rejected] non-fast-forward" },
     });
 
-    await expect(commitAndPush(sandbox, OPTS)).rejects.toThrow(/non-fast-forward/);
+    await expect(commitAndPush(sandboxHost(sandbox), OPTS)).rejects.toThrow(/non-fast-forward/);
   });
 });

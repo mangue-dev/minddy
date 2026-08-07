@@ -37,45 +37,33 @@ import { describe, expect, it } from "vitest";
 const REPO = process.cwd();
 
 /**
- * L'ENTRÉE DU BUNDLE VM — la liste, écrite ici, de ce que MIN-224 descendra dans
- * la microVM (cf. docs/orchestrateur-process-long.md §3 : « tout ce qui n'est pas
- * dans la liste de ce qui reste dans la fonction part dans la VM »). Le graphe
- * est parcouru depuis ces racines ; ajouter un module au bundle, c'est l'ajouter
- * ici, et c'est le moment où le test a quelque chose à dire.
+ * L'ENTRÉE DU BUNDLE VM — UNE, désormais, et c'est celle qu'esbuild compile
+ * (`scripts/build-agent-vm.mjs`). Depuis MIN-224 la liste n'est plus écrite à la
+ * main : le graphe est parcouru depuis le vrai point d'entrée du harness, donc ce
+ * que le test regarde est EXACTEMENT ce qui part dans la microVM. Un module tiré
+ * par un nouvel import y entre sans que personne n'ait à penser à l'ajouter ici —
+ * et c'est précisément le moment où ce test a quelque chose à dire.
  */
-const VM_BUNDLE_ENTRIES = [
-  "lib/server/agent/agent-loop.ts",
-  "lib/server/agent/tools.ts",
-  "lib/server/agent/prompt.ts",
-  "lib/server/agent/subagent.ts",
-  "lib/server/agent/edit.ts",
-  "lib/server/agent/compact.ts",
-  "lib/server/agent/prune.ts",
-  "lib/server/agent/command-guard.ts",
-  "lib/server/agent/repo-path.ts",
-  "lib/server/agent/command-output.ts",
-  "lib/server/agent/background.ts",
-];
+const VM_BUNDLE_ENTRIES = ["lib/server/agent/vm/main.ts"];
 
 /** Ce qu'aucun module du bundle ne doit atteindre. */
 const FORBIDDEN_MODULES = ["@/lib/supabase-service", "@supabase/supabase-js"];
 const FORBIDDEN_ENV = ["OPENROUTER_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"];
 
 /**
- * LA SEULE BRÈCHE CONNUE, et elle est datée. `agent-loop.ts` importe
- * `recordAiUsage` pour écrire au ledger l'essai de stream abandonné (MIN-216) —
- * c'est un appel Supabase en clé de service, au beau milieu de ce qui doit
- * descendre dans la VM.
+ * AUCUNE BRÈCHE, et la liste est vide pour de bon depuis MIN-224.
  *
- * Elle est ici plutôt que corrigée parce que ce ticket ne déplace pas une ligne
- * de la boucle : la corriger, c'est faire passer cette écriture par
- * `POST /api/agent-vm/usage`, et c'est MIN-224. Ce que le test garde en
- * attendant : que la liste ne GRANDISSE pas. Une deuxième brèche serait une
- * régression ; celle-ci est une dette écrite.
+ * Celle qui restait — `agent-loop.ts` important `recordAiUsage` pour écrire au
+ * ledger l'essai de stream abandonné (MIN-216) — était une dette écrite en
+ * attendant que la boucle bouge. Elle a bougé : l'écriture passe maintenant par
+ * `params.recordUsage`, que la fonction câble sur `recordAiUsage` et que la
+ * microVM câble sur `POST /api/agent-vm/usage`. La boucle ne connaît plus le
+ * chemin de la base.
+ *
+ * Ce tableau reste — vide — parce que c'est LUI qui rend le test lisible en
+ * échec : une brèche qui apparaît se compare à « rien », pas à un `[]` anonyme.
  */
-const KNOWN_BREACHES = [
-  "lib/server/agent/agent-loop.ts → lib/server/ai-usage.ts → @/lib/supabase-service",
-];
+const KNOWN_BREACHES: string[] = [];
 
 /** Résout un spécificateur d'import vers un fichier du dépôt, ou null (paquet). */
 function resolveSpecifier(spec: string, from: string): string | null {
@@ -177,17 +165,26 @@ describe("le bundle VM n'atteint aucun secret", () => {
     expect(breaches()).toEqual([...KNOWN_BREACHES].sort());
   });
 
-  it("garde la dette bornée — une brèche, celle de MIN-216, et elle a un remplaçant", () => {
-    expect(KNOWN_BREACHES).toHaveLength(1);
-    // Le remplaçant existe déjà : la surface `POST /usage` du plan de contrôle.
+  it("n'a plus de dette du tout — la dernière est partie avec la boucle", () => {
+    expect(KNOWN_BREACHES).toHaveLength(0);
+    // Les deux moitiés de ce qui l'a remplacée : la surface côté fonction, et le
+    // fait que la boucle prenne son écriture en paramètre plutôt qu'en import.
     const controlPlane = readFileSync(join(REPO, "lib/server/agent/control-plane.ts"), "utf8");
     expect(controlPlane).toContain('surface === "/usage"');
+    const loop = readFileSync(join(REPO, "lib/server/agent/agent-loop.ts"), "utf8");
+    expect(loop).toContain("recordUsage: RecordAgentUsage");
+    expect(loop).not.toContain('from "@/lib/server/ai-usage"');
   });
 
-  it("compte les entrées du bundle, pour qu'un ajout se voie", () => {
+  it("part bien du point d'entrée que le build compile", () => {
     for (const entry of VM_BUNDLE_ENTRIES) {
       expect(existsSync(join(REPO, entry)), `${entry} n'existe plus`).toBe(true);
     }
+    // Le test et le build doivent regarder le MÊME fichier : deux chemins écrits
+    // à la main de part et d'autre finiraient par diverger, et le test garderait
+    // alors un bundle qui n'est plus celui qu'on livre.
+    const build = readFileSync(join(REPO, "scripts/build-agent-vm.mjs"), "utf8");
+    for (const entry of VM_BUNDLE_ENTRIES) expect(build).toContain(entry);
   });
 
   it("ne compte pas un import de TYPE comme une arête du bundle", () => {

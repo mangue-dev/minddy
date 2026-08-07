@@ -16,6 +16,7 @@ import { broadcastRunEvent } from "./live";
 import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
+import { loopInVmForProject } from "./vm-flag";
 import { notifyChainOfRunEnd } from "@/lib/server/automations/hooks";
 import { notifyRoutineOfRunEnd, stampRoutineRunEnd } from "@/lib/server/routine-hooks";
 import { afterOrNow } from "@/lib/server/after-safe";
@@ -240,6 +241,26 @@ export interface AgentRun {
    * Null = pas de clé par run (BYOK, ou provisioning non configuré).
    */
   provider_key_id: string | null;
+  /**
+   * La boucle de ce run tourne DANS la microVM (MIN-224), pas dans la fonction.
+   *
+   * FIGÉ AU LANCEMENT depuis `app_config` (cf. `vm-flag.ts`), comme `model` et
+   * `reasoning_level`. Le lire à chaque chunk ferait changer une conversation de
+   * moteur en cours de vie : un tour lancé avant la bascule et repris après
+   * repartirait sur une boucle qui n'a jamais vu son checkpoint.
+   */
+  loop_in_vm: boolean;
+  /**
+   * La commande Vercel Sandbox qui PORTE la boucle, lancée en `detached: true`
+   * (MIN-224). Null hors `loop_in_vm`.
+   *
+   * C'est le constat de vie du tour : la fonction rend la main tout de suite, et
+   * ce qui reste pour savoir si le process travaille encore, c'est cet id — que
+   * `Sandbox.getCommand()` sait interroger. Le chien de garde s'en sert à la
+   * place du vol de claim de `requeueStuckRuns` : plus une présomption après
+   * vingt minutes de silence, un constat, et il est exact.
+   */
+  loop_command_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -333,6 +354,14 @@ const PG_UNIQUE_VIOLATION = "23505";
 /** Crée un run en `queued`, prêt à être drainé. */
 export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const service = getServiceClient();
+  /**
+   * Le moteur du run (MIN-224), résolu ICI et pas chez les appelants : c'est le
+   * seul passage obligé de la création, donc le seul endroit où le drapeau ne
+   * peut pas être oublié sur un chemin de lancement. Il est lu une fois puis
+   * gelé sur la ligne — cf. `vm-flag.ts` pour pourquoi ce gel n'est pas un
+   * détail.
+   */
+  const loopInVm = await loopInVmForProject(input.projectId);
   const { data, error } = await service
     .from("agent_runs")
     .insert({
@@ -364,6 +393,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       // Affinité de déploiement (MIN-165) : posée UNE fois, à la création. Tous
       // les chunks d'un run lancé depuis un preview restent sur ce déploiement.
       deployment_url: currentDeploymentScope(),
+      loop_in_vm: loopInVm,
     })
     .select("*")
     .single();
@@ -691,6 +721,8 @@ export interface StampFields {
   verdict?: AgentRunVerdict | null;
   /** Clé LLM du run à révoquer (MIN-223). */
   provider_key_id?: string | null;
+  /** Commande qui porte la boucle dans la microVM (MIN-224). */
+  loop_command_id?: string | null;
 }
 
 /**
@@ -813,6 +845,15 @@ export async function notifyAgentRun(
  * Récupère les runs `running` bloqués (fonction morte : started_at trop vieux) :
  * requeue tant qu'il reste des tentatives, sinon échoue. À appeler en tête de
  * chaque drain (filet ultime, comme AutoKap).
+ *
+ * NE TOUCHE PAS AUX RUNS `loop_in_vm` (MIN-224), et pas par prudence : leur tour
+ * n'a PAS de plafond de durée. Une boucle qui vit dans la microVM peut travailler
+ * une heure sans écrire un event — un `npm test` qui dure, un modèle qui réfléchit
+ * — et ce balayeur-ci la déclarerait morte à vingt minutes, puis volerait son
+ * claim. Deux boucles tourneraient alors sur la même microVM, et le second
+ * checkpoint écraserait le premier. Pour ces runs-là, c'est `reapDeadVmRuns`
+ * ([drain.ts](drain.ts)) qui décide, et il ne présume rien : il DEMANDE à la
+ * plateforme si le process vit encore.
  */
 export async function requeueStuckRuns(service: SupabaseClient): Promise<void> {
   const cutoff = new Date(Date.now() - STUCK_RUNNING_MS).toISOString();
@@ -820,6 +861,7 @@ export async function requeueStuckRuns(service: SupabaseClient): Promise<void> {
     .from("agent_runs")
     .select("id, attempts, created_by, project_id, issue_id")
     .eq("status", "running")
+    .eq("loop_in_vm", false)
     .lt("started_at", cutoff);
   const rows = (data ?? []) as Array<{
     id: string;

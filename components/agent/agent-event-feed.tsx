@@ -786,6 +786,10 @@ const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   turnHistoryReset: "errorTurnHistoryReset",
   replyIncomplete: "errorReplyIncomplete",
   providerUnavailable: "errorProviderUnavailable",
+  // MIN-224 : le process de boucle de la microVM est mort avant d'avoir conclu.
+  // C'est le chien de garde qui l'a constaté (`reapDeadVmRuns`), et la session a
+  // repris sur sa dernière sauvegarde périodique — pas sur rien.
+  turnLost: "errorTurnLost",
 };
 
 function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {

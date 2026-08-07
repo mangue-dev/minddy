@@ -6,12 +6,15 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import { defaultLocale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 
-import { executeIssueTool, ISSUE_TOOL_NAMES, type IssueToolContext } from "./issue-tools";
+import { executeIssueTool, type IssueToolContext } from "./issue-tools";
 import {
-  executeScratchpadTool,
+  ISSUE_TOOL_NAMES,
+  PR_TOOL_NAMES,
   SCRATCHPAD_TOOL_NAMES,
-  type ScratchpadToolContext,
-} from "./scratchpad-tools";
+} from "./platform-tool-names";
+import { WEB_SEARCH_SEQ_BASE } from "@/lib/server/web-search";
+import type { VmTurnReport } from "./vm/protocol";
+import { executeScratchpadTool, type ScratchpadToolContext } from "./scratchpad-tools";
 import { agentRunTopic, broadcastToTopic } from "./live";
 import {
   appendEvent,
@@ -49,11 +52,15 @@ import type { AgentEventType } from "./agent-loop";
  * sans HTTP, et c'est ici que vivent les invariants qu'un test doit pouvoir
  * casser.
  *
- * CE QUI N'EST PAS ENCORE LÀ, et pourquoi. Les tools de PULL REQUEST et
- * `create_pr` ne sont pas servis : leur contexte n'est pas reconstructible sans
- * décider d'abord ce que la boucle de MIN-224 enverra (compteur d'ancres posées,
- * état de push du tour, sha de tête). Les inventer ici les ferait écrire deux
- * fois, et la seconde version gagnerait. Ils arrivent avec la boucle.
+ * CE QUI S'Y EST AJOUTÉ AVEC LA BOUCLE (MIN-224). Les tools de PULL REQUEST,
+ * `create_pr` et `web_search` sont désormais servis : ce qui manquait n'était pas
+ * la surface mais ce que la boucle enverrait — le compteur d'ancres posées,
+ * l'état de push du tour. Plus `/rest`, la fin de tour, et `/repo-auth`, qui rend
+ * un token de forge frais à une VM qui travaille depuis plus longtemps que le
+ * sien.
+ *
+ * LA COUPURE QUI GUIDE TOUT ÇA : la microVM a le DÉPÔT, la fonction a la FORGE et
+ * la BASE. `create_pr` est coupé exactement là — la VM pousse, la fonction ouvre.
  */
 
 /** Ce qu'une surface rend : un statut HTTP et un corps JSON. */
@@ -183,7 +190,14 @@ export async function handleControlPlaneRequest(opts: {
     if (method === "GET") return ok({ checkpoint: run.checkpoint ?? null });
     if (method === "PUT") {
       const checkpoint = (body.checkpoint ?? null) as AgentCheckpoint | null;
-      const stamped = await stampRun(runId, { checkpoint });
+      // La sauvegarde périodique fait aussi office de BATTEMENT DE CŒUR (MIN-224) :
+      // c'est le seul signal régulier qu'un tour qui vit dans la VM produise, et
+      // c'est sur ce champ que le chien de garde décide d'aller interroger la
+      // plateforme. Sans lui, il irait la sonder pour chaque run à chaque passage.
+      const stamped = await stampRun(runId, {
+        checkpoint,
+        last_activity_at: new Date().toISOString(),
+      });
       // La garde de `stampRun` (`status in ('running')`) n'a pas matché : le run a
       // été annulé, ou un autre exécuteur a conclu. Ça se DIT — une VM qui croit
       // avoir sauvegardé et continue travaille pour une conversation qui est finie.
@@ -200,6 +214,48 @@ export async function handleControlPlaneRequest(opts: {
 
   if (method === "GET" && surface === "/interrupt") {
     return ok({ interrupted: await readInterruptFlag(runId) });
+  }
+
+  if (method === "POST" && surface === "/plan-sync") {
+    // Miroir des états du checklist de l'agent vers le plan du ticket lié. Un run
+    // carnet n'a pas d'issue : rien à faire, et ce n'est pas une erreur.
+    if (run.issue_id) {
+      const { syncIssuePlanStates } = await import("./plan-sync");
+      const steps = Array.isArray(body.steps) ? body.steps : [];
+      await syncIssuePlanStates(run.issue_id, steps as Parameters<typeof syncIssuePlanStates>[1]);
+    }
+    return ok();
+  }
+
+  if (method === "POST" && surface === "/repo-auth") {
+    // Un token de forge FRAIS. C'est la seule raison d'être de cette surface : un
+    // tour qui vit dans la VM peut durer plus longtemps que le token
+    // d'installation qui a cloné le dépôt, et un push qui échoue en 401 à la
+    // troisième heure serait le travail du tour perdu jusqu'au tour suivant.
+    const { resolveRepoCloneTarget } = await import("./repo-access");
+    const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
+    if (!target) return { status: 404, body: { error: "no repository linked" } };
+    return ok({ authUrl: target.authUrl });
+  }
+
+  if (method === "POST" && surface === "/rest") {
+    // LA FIN DU TOUR. La VM a poussé son travail et rend la main ; tout ce qui
+    // suit demande la base et la forge, donc la fonction (cf. `vm-rest.ts`).
+    const report = body as unknown as VmTurnReport;
+    if (typeof report?.status !== "string") return bad("rest: missing status");
+    /**
+     * UNE SEULE FOIS. Le client du plan de contrôle retente sur 5xx : sans cette
+     * garde, un rapport dont la réponse s'est perdue en vol serait rejoué —
+     * events en double dans le fil, et une seconde ligne de compute au ledger.
+     * Le 409 n'est pas retenté (cf. `retryable`), donc la VM s'arrête là, ce qui
+     * est exactement ce qu'on veut : le tour EST conclu.
+     */
+    if (run.status !== "running") {
+      return { status: 409, body: { error: "run is no longer running" } };
+    }
+    const { landVmTurn } = await import("./vm-rest");
+    await landVmTurn(run, report);
+    return ok();
   }
 
   if (method === "POST" && surface.startsWith("/tool/")) {
@@ -235,7 +291,171 @@ async function runPlatformTool(
     return ok(await executeIssueTool(ctx, name, args));
   }
 
+  if (PR_TOOL_NAMES.has(name)) {
+    return await runPrTool(run, name, args, body);
+  }
+
+  if (name === "web_search") {
+    return await runWebSearch(run, args);
+  }
+
+  if (name === "create_pr") {
+    return await runCreatePr(run, args, body);
+  }
+
   return { status: 404, body: { error: `unknown platform tool: ${name}` } };
+}
+
+/**
+ * Les trois écritures sur la pull request RELUE (MIN-168), rejouées ici : elles
+ * ont besoin du client de forge et de son token, qui n'entrent pas dans la VM.
+ *
+ * LE COMPTEUR D'ANCRES fait l'aller-retour, et c'est ce qui rend son plafond
+ * juste. « 5 par run » se compte sur la vie du run, pas sur un tour : la VM
+ * l'envoie, la fonction l'oppose au plafond puis rend celui qu'elle a atteint.
+ * Le lire en base à chaque appel coûterait une requête par commentaire pour la
+ * même réponse ; le laisser dans la VM le remettrait à zéro à chaque tour.
+ */
+async function runPrTool(
+  run: AgentRun,
+  name: string,
+  args: Record<string, unknown>,
+  body: Record<string, unknown>,
+): Promise<ControlPlaneResult> {
+  const [{ executePrTool }, { loadPrRunContext }, { resolveRepoCloneTarget }, { forgeFor }] =
+    await Promise.all([
+      import("./pr-tools"),
+      import("./pr-run"),
+      import("./repo-access"),
+      import("./forge"),
+    ]);
+  if (!run.pull_request_id) {
+    return bad(`${name} is only available in a pull request review session`);
+  }
+  const [prRun, target] = await Promise.all([
+    loadPrRunContext(run.pull_request_id),
+    resolveRepoCloneTarget(run.project_id),
+  ]);
+  if (!prRun || !target) return bad(`${name}: the pull request is no longer reachable`);
+
+  const forge = forgeFor(target.provider);
+  const call = { token: target.token, repoFullName: target.repoFullName, number: prRun.number };
+  const inline = { used: num(body.prInlineComments) ?? 0 };
+  const { locale } = await runPrefsFor(run);
+  const outcome = await executePrTool(
+    {
+      forge,
+      call,
+      // Paresseux et payé une seule fois par appel : la validation d'ancre en a
+      // besoin, un commentaire de PR entier n'y touche jamais.
+      files: async () => (await forge.listPullRequestFiles(call)).files,
+      model: run.model ?? "",
+      locale,
+      inline,
+    },
+    name,
+    args,
+  );
+  return ok({ ...outcome, inlineUsed: inline.used });
+}
+
+/**
+ * `web_search` : la clé du run l'accompagne, et elle ne descend pas dans la VM.
+ * Le plafond par tour, lui, reste où il était — dans la boucle, qui compte ses
+ * appels. Ici on ne fait que payer et rendre.
+ */
+async function runWebSearch(
+  run: AgentRun,
+  args: Record<string, unknown>,
+): Promise<ControlPlaneResult> {
+  const query = String(args.query ?? "").trim();
+  if (!query) return bad("web_search: query is required");
+  const [{ runWebSearchTool }, { resolveAgentApiKey }] = await Promise.all([
+    import("@/lib/server/web-search"),
+    import("./model"),
+  ]);
+  // Le lanceur du run, et lui seul : c'est SA clé (BYOK) ou SON quota qui paie
+  // la recherche, exactement comme pour les appels du modèle.
+  if (!run.created_by) return bad("web_search: this run has no owner");
+  const { apiKey } = await resolveAgentApiKey(run.created_by);
+  const outcome = await runWebSearchTool({
+    query,
+    apiKey,
+    runId: run.run_id ?? run.id,
+    // La bande de seq des recherches est à elle ; le compteur repart du tour, et
+    // deux recherches d'un même tour ne se marchent pas dessus.
+    seq: WEB_SEARCH_SEQ_BASE + run.continuations * 100 + (num(args.seq) ?? 0),
+    billTo: billToFor(run),
+    projectId: run.project_id,
+  });
+  return ok(outcome);
+}
+
+/**
+ * `create_pr`, MOITIÉ FORGE. La VM a déjà poussé (elle a le dépôt) ; ce qui reste
+ * — PR mergée, PR déjà vivante, PR refusée à rouvrir, création — vit ici, dans
+ * l'implémentation partagée avec l'ancienne forme.
+ */
+async function runCreatePr(
+  run: AgentRun,
+  args: Record<string, unknown>,
+  body: Record<string, unknown>,
+): Promise<ControlPlaneResult> {
+  const [{ openPullRequestAfterPush }, { resolveRepoCloneTarget }, { forgeFor }] =
+    await Promise.all([import("./pr-landing"), import("./repo-access"), import("./forge")]);
+  const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
+  if (!target) return bad("create_pr: no repository linked to this project");
+
+  const pushed = body.pushed as
+    | { pushed: boolean; remoteUpdated: boolean; headSha: string }
+    | undefined;
+  if (!pushed) return bad("create_pr: missing push result");
+
+  const anchorId = await anchorIssueIdFor(run);
+  const identifier = anchorId ? await issueIdentifier(anchorId) : null;
+  const { locale } = await runPrefsFor(run);
+  const prState = { number: run.pr_number, url: run.pr_url, state: run.pr_state };
+  const title = String(args.title ?? "").trim();
+
+  const outcome = await openPullRequestAfterPush(
+    {
+      run,
+      target,
+      forge: forgeFor(target.provider),
+      issue: identifier ? { identifier } : null,
+      workBranch: run.branch_name ?? "",
+      baseBranch: run.base_branch ?? target.defaultBranch,
+      locale,
+      emit: (type, payload) => appendEvent(run.id, type, payload),
+      prState,
+    },
+    {
+      pushed,
+      prTitle: title || (identifier ? `${identifier}: agent work` : "Agent work"),
+      body: typeof args.body === "string" ? args.body : undefined,
+      fresh: target,
+      jobsNote: typeof body.jobsNote === "string" ? body.jobsNote : "",
+      // La branche existe sur le dépôt dès ce push : c'est ici qu'on
+      // l'enregistre, comme l'ancienne forme le fait à son premier push réel.
+      noteBranchPushed: async (p) => {
+        if (!p.pushed || run.branch_name) return;
+        await stampRun(run.id, { branch_name: run.branch_name ?? "" }).catch(() => null);
+      },
+    },
+  );
+  return ok(outcome);
+}
+
+/** `MIN-42` du ticket donné, ou null. */
+async function issueIdentifier(issueId: string): Promise<string | null> {
+  const { getServiceClient } = await import("@/lib/supabase-service");
+  const { data } = await getServiceClient()
+    .from("issues")
+    .select("number, projects(key)")
+    .eq("id", issueId)
+    .maybeSingle();
+  const row = data as { number?: number; projects?: { key?: string } | null } | null;
+  return row?.projects?.key && row.number ? `${row.projects.key}-${row.number}` : null;
 }
 
 /**

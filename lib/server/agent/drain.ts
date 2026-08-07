@@ -2,14 +2,14 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { claimRun, requeueStuckRuns } from "./runs";
+import { appendEvent, claimRun, notifyAgentRun, requeueStuckRuns, stampRun } from "./runs";
 // Le seuil d'admission d'un chunk ne se pose pas ici : il DÉRIVE de ce que le chunk
 // s'accorde une fois démarré, plus son amorçage (MIN-213). Deux chiffres écrits à la
 // main de part et d'autre de cette frontière se contredisaient — le drain admettait
 // 40 s là où le chunk s'en garantissait 45, avant même le réveil de la microVM.
 import { MIN_CHUNK_BUDGET_MS } from "./chunk-budget";
 import { executeAgentRun } from "./execute";
-import { stopSandboxByName } from "./sandbox";
+import { isLoopCommandAlive, stopSandboxByName } from "./sandbox";
 import { revokeRunKey } from "./run-key";
 import { currentDeploymentScope } from "./deployment";
 
@@ -99,6 +99,96 @@ export async function reapIdleSandboxes(
 }
 
 /**
+ * Silence toléré avant d'aller DEMANDER à la plateforme si un tour vit encore.
+ *
+ * Ce n'est pas un seuil de mort — c'est un seuil d'INTERROGATION. Un tour qui
+ * vient de démarrer ne vaut pas un appel à l'API Sandbox à chaque passage du
+ * cron ; passé quelques minutes sans un event, la question devient légitime. La
+ * réponse, elle, est un fait : `Command.exitCode` non nul ⇒ le process a rendu.
+ */
+const VM_LOOP_PROBE_AFTER_MS = 3 * 60_000;
+
+/**
+ * LE CHIEN DE GARDE des runs dont la boucle vit dans la microVM (MIN-224).
+ *
+ * IL REMPLACE `requeueStuckRuns` POUR CES RUNS-LÀ, et ce n'est pas le même geste.
+ * L'ancien présumait mort tout run `running` silencieux depuis vingt minutes,
+ * puis lui volait son claim — une heuristique acceptable quand un chunk durait
+ * cinq minutes, intenable quand un tour peut travailler des heures sans écrire un
+ * event (un `npm test` qui dure, un modèle qui réfléchit). Celui-ci ne présume
+ * rien : il DEMANDE à la plateforme si la commande vit encore, et la plateforme
+ * le sait.
+ *
+ * Trois réponses, trois conduites :
+ *
+ * - le process VIT → on ne touche à rien, quel que soit le silence ;
+ * - on ne SAIT PAS (microVM introuvable, session expirée, API en panne) → on ne
+ *   touche à rien non plus. Un chien de garde qui conclut sur un silence de l'API
+ *   remettrait au repos des tours en pleine santé ;
+ * - le process est MORT → la session repasse au repos sur son DERNIER CHECKPOINT
+ *   (celui de la sauvegarde périodique), et **le fil le dit**. C'est ce qui
+ *   distingue « l'agent s'est arrêté et voilà pourquoi » de « l'agent ne répond
+ *   plus depuis vingt minutes ».
+ */
+export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped: number }> {
+  const cutoff = new Date(Date.now() - VM_LOOP_PROBE_AFTER_MS).toISOString();
+  const { data } = await service
+    .from("agent_runs")
+    .select("id, sandbox_id, loop_command_id, created_by, project_id, issue_id, provider_key_id")
+    .eq("status", "running")
+    .eq("loop_in_vm", true)
+    .not("loop_command_id", "is", null)
+    .lt("last_activity_at", cutoff)
+    .limit(50);
+  const rows = (data ?? []) as Array<{
+    id: string;
+    sandbox_id: string | null;
+    loop_command_id: string | null;
+    created_by: string | null;
+    project_id: string;
+    issue_id: string | null;
+    provider_key_id: string | null;
+  }>;
+
+  let reaped = 0;
+  for (const row of rows) {
+    if (!row.sandbox_id || !row.loop_command_id) continue;
+    const alive = await isLoopCommandAlive(row.sandbox_id, row.loop_command_id);
+    if (alive !== false) continue; // vivant, ou indéterminé : on ne conclut pas.
+
+    // Le fil D'ABORD : si le stamp échoue derrière, l'utilisateur aura quand même
+    // lu pourquoi son tour s'est arrêté. L'inverse laisserait une conversation
+    // qui redevient silencieusement disponible, sans explication.
+    await appendEvent(row.id, "error", {
+      code: "turnLost",
+      message:
+        "This turn's process stopped before it could finish. The session was restored from its last save — send a message to carry on.",
+    }).catch(() => {});
+    // Le CHECKPOINT N'EST PAS TOUCHÉ : celui qui est en base est le dernier
+    // sauvegardé périodiquement par la boucle, à une frontière de round sûre.
+    // C'est exactement ce depuis quoi le tour suivant doit repartir.
+    const stamped = await stampRun(row.id, {
+      status: "completed",
+      error_message: "The agent process stopped unexpectedly",
+      continuations: 0,
+      attempts: 0,
+      window_started_at: null,
+      last_activity_at: new Date().toISOString(),
+      interrupt_requested: false,
+      loop_command_id: null,
+    });
+    if (!stamped) continue; // course : quelqu'un a conclu entre-temps.
+    if (row.provider_key_id) {
+      await revokeRunKey(row.provider_key_id);
+      await service.from("agent_runs").update({ provider_key_id: null }).eq("id", row.id);
+    }
+    await notifyAgentRun(row, "agent_failed").catch(() => {});
+    reaped++;
+  }
+  return { reaped };
+}
+
+/**
  * Restreint une requête de file au périmètre du déploiement courant (MIN-165).
  * Les DEUX requêtes de file passent par ici : si elles divergeaient, un drain
  * verrait du travail dû qu'il n'a pas le droit de claim et bouclerait à vide.
@@ -150,6 +240,13 @@ export async function drainAgentRuns(
   let claimed = 0;
 
   await requeueStuckRuns(service);
+  // Le chien de garde de la NOUVELLE forme (MIN-224), à côté de l'ancien
+  // balayeur et pas à sa place : les deux populations coexistent le temps de la
+  // migration, et chacune a le sien. Best-effort — un constat de décès raté se
+  // rattrape au passage suivant, une exception ici tuerait le drain entier.
+  await reapDeadVmRuns(service).catch((err) =>
+    console.error("[agent-drain] vm watchdog failed:", (err as Error).message),
+  );
   // Libère les microVM des sessions au repos inactives (garde le snapshot).
   await reapIdleSandboxes(service).catch((err) =>
     console.error("[agent-drain] reap failed:", (err as Error).message),

@@ -40,7 +40,10 @@ export { AI_REVIEW_MAX_INLINE_COMMENTS };
  */
 
 /** Noms des tools PR (routés vers ce module par execute.ts). */
-export const PR_TOOL_NAMES = new Set(["comment_pr_line", "comment_pr", "reply_pr_thread"]);
+/** Noms des tools de ce module. Ils vivent dans `platform-tool-names.ts` depuis
+ *  MIN-224 — le ROUTAGE descend dans la microVM, l'EXÉCUTION reste ici — et sont
+ *  ré-exportés pour que rien n'ait à changer d'import. */
+export { PR_TOOL_NAMES } from "./platform-tool-names";
 
 /** Un fichier du diff, réduit à ce que l'ancrage lit (`PullRequestFile` le satisfait). */
 export interface ReviewableFile {
