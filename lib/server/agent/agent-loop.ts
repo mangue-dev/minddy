@@ -1217,14 +1217,25 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       const waited = await params
         .awaitSubagents({ budgetMs: params.softDeadlineMs - elapsed() })
         .catch(() => null);
-      if (waited?.suspend) {
-        return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
-      }
+      // Les rapports d'ABORD, la décision de suspendre ENSUITE (MIN-208) : sur le
+      // chemin `suspend`, ceux-ci sont les rapports PARTIELS des filles qui n'ont pas
+      // su se sauver et qu'on vient de couper. `drainReports()` les a déjà marqués
+      // livrés ET facturés — retourner sans les jouer les perdait pour de bon, texte
+      // et coût compris, alors que la fille avait travaillé et que le run avait payé.
+      // Joués ici, ils partent dans `messages` (donc dans le checkpoint, livrés au
+      // chunk suivant) et leur coût dans `costUsd`.
       for (const report of waited?.reports ?? []) {
         messages.push({ role: "user", content: report.text });
         costUsd += report.costUsd;
         injectedThisRound++;
-        await emit("status", { phase: "subagent_report", id: report.id });
+        await emit("status", {
+          phase: "subagent_report",
+          id: report.id,
+          ...(waited?.suspend ? { partial: true } : {}),
+        });
+      }
+      if (waited?.suspend) {
+        return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
       }
     } else if (parked) {
       // Un rapport attendait : le tour n'est plus garé, il reprend la parole.
@@ -1509,7 +1520,19 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         // Plus de budget mais une fille travaille encore, son état sauvé : on
         // SUSPEND le tour au lieu de le terminer. L'appelant persiste et re-queue ;
         // la fille repart au chunk suivant, et le parent la retrouve garée.
+        //
+        // Mais on joue D'ABORD les rapports que l'attente vient de rendre (MIN-208) :
+        // sur ce chemin, ce sont les rapports PARTIELS des filles qui n'ont pas su se
+        // sauver et qu'on vient de couper. `drainReports()` les a déjà marqués livrés
+        // ET facturés — sortir sans les jouer les perdait pour de bon. Ils partent
+        // donc dans `messages` (checkpoint → chunk suivant) et leur coût dans
+        // `costUsd`. Pas de `subagentReentries++` ici : le tour ne repart pas, il sort.
         if (waited?.suspend) {
+          for (const report of waited.reports) {
+            messages.push({ role: "user", content: report.text });
+            costUsd += report.costUsd;
+            await emit("status", { phase: "subagent_report", id: report.id, partial: true });
+          }
           clearLive();
           return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
         }
