@@ -784,6 +784,11 @@ function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
       }
       case "run_command": {
         const command = String(args.command ?? "");
+        // Commande vide (MIN-204) : `sh -c ""` rend exit 0 et une sortie vide,
+        // que le modèle lit comme « la suite de tests est passée ». Le refus est
+        // ici en second rideau — la boucle rejette déjà les arguments illisibles —
+        // et attrape aussi l'argument bien formé mais mal nommé.
+        if (!command.trim()) return { result: { error: "command is required" }, success: false };
         // Garde-fou git (MIN-108) : la règle « le harness possède git » est
         // EXÉCUTÉE ici, plus seulement dite dans le prompt. Refus = erreur de
         // tool, sans toucher au Sandbox — le round continue et le modèle lit

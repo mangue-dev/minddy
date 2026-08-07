@@ -413,12 +413,34 @@ function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
 }
 
-function safeParse(json: string): Record<string, unknown> {
+/**
+ * Arguments d'un tool-call. `null` = ILLISIBLES (MIN-204), et c'est le seul
+ * point qui compte : rendre `{}` sur un JSON tronqué faisait exécuter
+ * `sh -c ""` — exit 0, sortie vide — et le modèle lisait un ✓ là où rien
+ * n'avait tourné. L'appelant court-circuite `execTool` et rend l'échec au
+ * modèle, qui réémet simplement l'appel au round suivant.
+ *
+ * Un `arguments` vide reste `{}` : c'est la forme légitime d'un tool sans
+ * paramètre. Un tableau, lui, est illisible — `args.command` y serait
+ * `undefined`, soit exactement le piège silencieux qu'on ferme.
+ */
+function safeParse(json: string): Record<string, unknown> | null {
+  if (!json.trim()) return {};
   try {
     const v = JSON.parse(json);
-    return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+    return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
   } catch {
-    return {};
+    return null;
+  }
+}
+
+/** Le détail rendu au modèle quand `safeParse` a rendu `null`. */
+function argsParseError(json: string): string {
+  try {
+    JSON.parse(json);
+    return "arguments must be a JSON object";
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
   }
 }
 
@@ -1025,6 +1047,27 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   // le message à chaque round harcèlerait le modèle sans rien lui apprendre.
   let contextWarned = false;
 
+  /**
+   * Tool-call aux `arguments` illisibles (MIN-204) : on RÉPOND à l'appel — son
+   * appariement dans le checkpoint doit rester intact — sans jamais atteindre
+   * `execTool`. Le fil montre un appel EN ÉCHEC au lieu d'un ✓ sans sortie, et
+   * le modèle réémet simplement l'appel au round suivant. Même geste que Codex
+   * (`FunctionCallError::RespondToModel`) et OpenCode (`Invalid tool input`).
+   */
+  const rejectUnparsableArgs = async (tc: AssistantToolCall) => {
+    const error = `failed to parse function arguments: ${argsParseError(tc.function.arguments)}`;
+    // Le `tool_call` d'abord : le feed rattache un `tool_result` à l'appel du
+    // même id, et sans lui l'échec ne s'afficherait nulle part.
+    await emit("tool_call", { id: tc.id, name: tc.function.name, ...toolArgSummary(tc.function.name, {}) });
+    messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ error }) });
+    await emit("tool_result", {
+      id: tc.id,
+      name: tc.function.name,
+      success: false,
+      preview: previewResult({ error }),
+    });
+  };
+
   for (;;) {
     // Interruption demandée entre deux rounds → repos, SANS round partiel (le
     // checkpoint reste au dernier round complet).
@@ -1385,23 +1428,28 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       stream.toolCalls.length > 1 &&
       stream.toolCalls.every((t) => READ_ONLY_TOOLS.has(t.function.name))
     ) {
-      for (const tc of stream.toolCalls) {
-        const args = safeParse(tc.function.arguments);
+      // Args parsés UNE fois pour les deux passes. Les illisibles sortent du
+      // `Promise.all` : ils ne touchent pas le Sandbox, et leur réponse est
+      // poussée dans l'ordre d'origine comme les autres.
+      const parsed = stream.toolCalls.map((tc) => ({ tc, args: safeParse(tc.function.arguments) }));
+      for (const { tc, args } of parsed) {
+        if (!args) continue;
         await emit("tool_call", { id: tc.id, name: tc.function.name, ...toolArgSummary(tc.function.name, args) });
       }
       const outcomes = await Promise.all(
-        stream.toolCalls.map(async (tc) => {
-          const args = safeParse(tc.function.arguments);
+        parsed.map(async ({ tc, args }) => {
+          if (!args) return { tc, args };
           try {
             const { result, success, reason, images } = await execTool(
               tc.function.name,
               args,
               tc.id,
             );
-            return { tc, result, success, reason, images };
+            return { tc, args, result, success, reason, images };
           } catch (err) {
             return {
               tc,
+              args,
               result: { error: err instanceof Error ? err.message : String(err) },
               success: false,
               reason: undefined,
@@ -1411,6 +1459,10 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         }),
       );
       for (const o of outcomes) {
+        if (!o.args) {
+          await rejectUnparsableArgs(o.tc);
+          continue;
+        }
         messages.push({ role: "tool", tool_call_id: o.tc.id, content: toolMessageContent(o.result, o.images) });
         await emit("tool_result", {
           id: o.tc.id,
@@ -1431,6 +1483,13 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     for (const tc of stream.toolCalls) {
       const name = tc.function.name;
       const args = safeParse(tc.function.arguments);
+
+      // Args illisibles (MIN-204) : AVANT tout le reste — un `update_plan` ou un
+      // `ask_user` aux arguments tronqués ne vaut pas mieux qu'un `run_command`.
+      if (!args) {
+        await rejectUnparsableArgs(tc);
+        continue;
+      }
 
       // update_plan : tool de contrôle légère — n'émet QUE l'event plan_update (le
       // feed le rend en checklist), répond au tool-call, et ne passe pas au Sandbox.
