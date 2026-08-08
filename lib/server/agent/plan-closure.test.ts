@@ -232,6 +232,39 @@ describe("watchPlanWrites", () => {
     expect(planNamesFile(sink.markdown, "components/objectives/objective-list.tsx")).toBe(true);
   });
 
+  it("rejoue une correction faite par edit_issue_text après la relecture", async () => {
+    const sink = newPlanWriteSink();
+    const watched = watchPlanWrites(ok, sink);
+    await watched("write_issue_plan", { plan: PLAN });
+    await watched("edit_issue_text", {
+      field: "plan",
+      old_string: "- [ ] app/objectives/page.tsx — retirer l'import et le rendu.",
+      new_string: "- [ ] app/objectives/page.tsx et `objective-list.tsx` — retirer l'import.",
+    });
+    // Sans le rejeu, la clôture rapporterait comme oublié un fichier que le modèle
+    // vient tout juste de nommer.
+    expect(planNamesFile(sink.markdown, "components/objectives/objective-list.tsx")).toBe(true);
+  });
+
+  it("ne touche à rien quand le passage n'est pas dans ce qu'on a noté", async () => {
+    const sink = newPlanWriteSink();
+    const watched = watchPlanWrites(ok, sink);
+    await watched("write_issue_plan", { plan: PLAN });
+    // Le serveur a pu appliquer le patch sur une version plus large que la nôtre.
+    await watched("edit_issue_text", {
+      field: "plan",
+      old_string: "une phrase écrite à un tour précédent",
+      new_string: "autre chose",
+    });
+    // Et une édition de la DESCRIPTION n'a rien à voir avec le plan.
+    await watched("edit_issue_text", {
+      field: "description",
+      old_string: "Supprimer",
+      new_string: "Garder",
+    });
+    expect(sink.markdown).toBe(PLAN);
+  });
+
   it("laisse passer les autres tools ticket sans y toucher", async () => {
     const sink = newPlanWriteSink();
     const out = await watchPlanWrites(ok, sink)("read_issue", { issue: "MIN-236" });

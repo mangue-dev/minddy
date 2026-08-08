@@ -317,7 +317,8 @@ export async function planClosureForTurn(host: RepoHost, plan: string): Promise<
   }
 }
 
-/** Le plan écrit pendant un tour, tel que le crochet de fin de tour le lit. */
+/** Le plan écrit pendant un tour, tel que les crochets de fin de tour le lisent
+ *  — la clôture d'ici, et la relecture de `plan-review.ts` (MIN-237). */
 export interface PlanWriteSink {
   /** Un `write_issue_plan` a RÉUSSI ce tour — sans ça, rien à vérifier. */
   wrote: boolean;
@@ -353,6 +354,14 @@ export function newPlanWriteSink(): PlanWriteSink {
  * `append_to_plan` ne DÉCLENCHE pas le contrôle (le plan qu'il complète n'est pas
  * dans ses arguments, donc on ne saurait pas ce qui est déjà nommé) mais il
  * COMPTE quand un `write_issue_plan` a eu lieu dans le même tour.
+ *
+ * `edit_issue_text` sur le plan est REJOUÉ sur le markdown noté (MIN-237) : c'est
+ * par lui que le modèle corrige son plan après la relecture, et la clôture tourne
+ * APRÈS elle. Sans ce rejeu, le grep rapporterait comme oublié un fichier que le
+ * modèle vient de nommer. La substitution est celle du tool (unique, ou globale
+ * avec `replace_all`), appliquée seulement si le passage est présent ici : notre
+ * copie ne couvre que ce que CE tour a écrit, celle du serveur peut être plus
+ * large, et un patch qui ne s'applique pas ne doit rien casser.
  */
 export function watchPlanWrites(
   handler: PlatformToolHandler,
@@ -366,6 +375,15 @@ export function watchPlanWrites(
       sink.markdown = args.plan;
     } else if (name === "append_to_plan" && typeof args.markdown === "string") {
       sink.markdown = `${sink.markdown}\n\n${args.markdown}`;
+    } else if (name === "edit_issue_text" && args.field === "plan") {
+      const from = typeof args.old_string === "string" ? args.old_string : "";
+      const to = typeof args.new_string === "string" ? args.new_string : null;
+      if (from && to != null && sink.markdown.includes(from)) {
+        sink.markdown =
+          args.replace_all === true
+            ? sink.markdown.split(from).join(to)
+            : sink.markdown.replace(from, to);
+      }
     }
     return out;
   };

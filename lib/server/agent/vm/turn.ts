@@ -28,6 +28,7 @@ import {
   watchPlanWrites,
   PLAN_CLOSURE_MIN_BUDGET_MS,
 } from "../plan-closure";
+import { planReviewForTurn, PLAN_REVIEW_MIN_BUDGET_MS } from "../plan-review";
 import { REPO_INSTRUCTION_FILES, type InstructionsState } from "../repo-instructions";
 import { commitAndPush, changedFiles, turnDiff, type RepoHost } from "../repo-host";
 import { BackgroundJobs } from "../background";
@@ -161,8 +162,10 @@ export async function runVmTurn(
   let repoTouched = job.repoTouched;
   let selfReviewed = false;
   /** Le plan écrit par ce tour, noté au passage des tools ticket (MIN-236) — c'est
-   *  ce que le contrôle de clôture grep avant de rendre la main. */
+   *  ce que la relecture rend au modèle (MIN-237) et que le contrôle de clôture grep
+   *  avant de rendre la main. */
   const planWrites = newPlanWriteSink();
+  let planReviewed = false;
   let planClosed = false;
 
   const background = new BackgroundJobs(repoBackgroundRunner(host), 0);
@@ -519,7 +522,7 @@ export async function runVmTurn(
     };
   }
 
-  // ── Fin de tour : type-check, auto-relecture, clôture du plan ──────────────
+  // ── Fin de tour : type-check, diff, relecture puis clôture du plan ─────────
   const typeCheckBlock = async (budgetMs: number): Promise<string | null> => {
     if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) return null;
     const touched = [...editedPaths];
@@ -549,6 +552,20 @@ export async function runVmTurn(
     const block = formatSelfReview({ diff, porcelain });
     await emit("status", {
       phase: "self_review",
+      durationMs: Date.now() - at,
+      chars: block?.length ?? 0,
+    });
+    return block;
+  };
+
+  /** Auto-relecture du plan écrit ce tour (MIN-237) — cf. `plan-review.ts`. */
+  const planReviewBlock = async (budgetMs: number): Promise<string | null> => {
+    if (planReviewed || !planWrites.wrote || budgetMs < PLAN_REVIEW_MIN_BUDGET_MS) return null;
+    planReviewed = true;
+    const at = Date.now();
+    const block = await planReviewForTurn(host, planWrites.markdown).catch(() => null);
+    await emit("status", {
+      phase: "plan_review",
       durationMs: Date.now() - at,
       chars: block?.length ?? 0,
     });
@@ -621,11 +638,15 @@ export async function runVmTurn(
       subagents,
       chunkRemainingMs: remainingMs,
     }),
+    // Même chaîne et même ORDRE que côté fonction (cf. execute.ts pour le pourquoi
+    // de chaque rang) : relecture du plan avant sa clôture, pour que le grep voie
+    // les corrections que la relecture a fait faire.
     onTurnEnd: async ({ budgetMs }) => {
       if (editedPaths.size > 0) repoTouched = true;
       return (
         (await typeCheckBlock(budgetMs)) ??
         (await selfReviewBlock(budgetMs)) ??
+        (await planReviewBlock(budgetMs)) ??
         (await planClosureBlock(budgetMs))
       );
     },

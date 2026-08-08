@@ -75,6 +75,10 @@ import {
   watchPlanWrites,
   PLAN_CLOSURE_MIN_BUDGET_MS,
 } from "./plan-closure";
+import {
+  planReviewForTurn,
+  PLAN_REVIEW_MIN_BUDGET_MS,
+} from "./plan-review";
 import { toolOutputFileName } from "./command-output";
 import { usesApplyPatch } from "./patch";
 import {
@@ -1889,9 +1893,14 @@ export async function executeAgentRun(
      *  relecture le travail ajouté APRÈS une première passe. */
     let selfReviewed = false;
     /** Le plan que ce chunk a écrit, noté au passage par `watchPlanWrites` : c'est
-     *  lui que le contrôle de clôture grep (MIN-236). Même découpage qu'`editedPaths`
-     *  pour le type-check — le tool mute, le crochet de fin de tour lit. */
+     *  lui que la relecture rend au modèle (MIN-237) et que le contrôle de clôture
+     *  grep (MIN-236). Même découpage qu'`editedPaths` pour le type-check — le tool
+     *  mute, les crochets de fin de tour lisent. */
     const planWrites = newPlanWriteSink();
+    /** La relecture du plan ne passe qu'UNE fois par chunk, comme l'auto-relecture
+     *  du diff : elle fait relire le document avant la réponse, pas commenter chaque
+     *  correctif qui suit. */
+    let planReviewed = false;
     /** Le contrôle de clôture ne passe qu'UNE fois par chunk, comme l'auto-relecture :
      *  il pose une question, il ne commente pas la réponse. */
     let planClosed = false;
@@ -1955,14 +1964,35 @@ export async function executeAgentRun(
     };
 
     /**
-     * Contrôle de CLÔTURE du plan écrit ce tour (MIN-236) : les identifiants du plan
-     * sont grepés pour de vrai, et les fichiers qui les contiennent sans être nommés
-     * reviennent au modèle. Muet tant qu'aucun `write_issue_plan` n'a réussi — donc
-     * sur l'écrasante majorité des tours, il ne coûte rien du tout.
+     * Auto-relecture du plan écrit ce tour (MIN-237) : le document revient au modèle
+     * comme son diff lui revient, avec les questions qu'un relecteur poserait — et
+     * avec la seule d'entre elles que le harness sait trancher, l'existence des
+     * commandes promises (cf. plan-review.ts). Muet tant qu'aucun `write_issue_plan`
+     * n'a réussi, donc gratuit sur l'écrasante majorité des tours.
      *
      * Le déclencheur est le TOOL, pas `run.intent === "plan"` : le cas courant est un
      * run ordinaire à qui l'utilisateur demande un plan en cours de route, et
      * l'intention posée au lancement ne le dit pas.
+     */
+    const planReviewBlock = async (budgetMs: number): Promise<string | null> => {
+      if (planReviewed || !planWrites.wrote || budgetMs < PLAN_REVIEW_MIN_BUDGET_MS) return null;
+      planReviewed = true;
+      const startedAt = Date.now();
+      const block = await planReviewForTurn(host, planWrites.markdown).catch(() => null);
+      await emit("status", {
+        phase: "plan_review",
+        durationMs: Date.now() - startedAt,
+        chars: block?.length ?? 0,
+      });
+      return block;
+    };
+
+    /**
+     * Contrôle de CLÔTURE du plan écrit ce tour (MIN-236) : les identifiants du plan
+     * sont grepés pour de vrai, et les fichiers qui les contiennent sans être nommés
+     * reviennent au modèle. Même déclencheur et même verrou que la relecture, qui
+     * passe AVANT lui — d'où le rejeu des `edit_issue_text` dans le sink : ce qui est
+     * grepé, c'est le plan tel que la relecture l'a laissé.
      */
     const planClosureBlock = async (budgetMs: number): Promise<string | null> => {
       if (planClosed || !planWrites.wrote || budgetMs < PLAN_CLOSURE_MIN_BUDGET_MS) return null;
@@ -1980,15 +2010,29 @@ export async function executeAgentRun(
     /**
      * Dernier mot du harness. Les erreurs de typage passent AVANT la relecture :
      * elles sont concrètes et bloquantes, et servir un diff par-dessus un dépôt qui
-     * ne compile pas noierait le seul signal qui compte. La clôture du plan ferme la
-     * marche — un tour qui écrit un plan n'édite en général rien, donc les deux
-     * premiers se taisent et c'est elle qui parle.
+     * ne compile pas noierait le seul signal qui compte. Les deux crochets de plan
+     * ferment la marche — un tour qui écrit un plan n'édite en général rien, donc les
+     * deux premiers se taisent et ce sont eux qui parlent.
+     *
+     * La RELECTURE avant la CLÔTURE, et l'ordre porte du sens : le modèle corrige son
+     * plan (`edit_issue_text`, `append_to_plan`), et le grep de clôture tourne ensuite
+     * sur le plan corrigé — il ne rapportera pas comme oublié un fichier que la
+     * relecture vient de faire nommer. L'inverse aurait posé deux fois la même
+     * question.
+     *
+     * Ces deux-là consomment les DEUX relances qu'un tour s'accorde
+     * (`MAX_TURN_END_REENTRIES`, agent-loop.ts), ce qui est exactement leur emploi
+     * sur un tour de plan : il n'y a rien d'autre à injecter. Sur un tour MIXTE
+     * (des éditions ET un plan), les deux premiers crochets les mangent et ceux-ci se
+     * taisent — assumé : un tour qui code a son propre filet, et c'est le tour de plan
+     * pur qui n'en avait aucun.
      */
     const onTurnEnd = async ({ budgetMs }: { budgetMs: number }): Promise<string | null> => {
       if (editedPaths.size > 0) repoTouched = true;
       return (
         (await typeCheckBlock(budgetMs)) ??
         (await selfReviewBlock(budgetMs)) ??
+        (await planReviewBlock(budgetMs)) ??
         (await planClosureBlock(budgetMs))
       );
     };
