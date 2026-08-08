@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
 import { SeedProposalCard } from "./seed-proposal-card";
+import type { MessageKey } from "@/lib/i18n-keys";
 import type { SeedProposal } from "@/lib/seed/types";
 import {
   Activity,
@@ -166,6 +167,19 @@ const SCRATCHPAD_TASKS_META: ToolMeta = {
 /** Référence du ticket visé quand le tool en portait une (sinon : celui du run). */
 function targetIssue(args: Record<string, unknown>): string | null {
   return typeof args.issue === "string" && args.issue.trim() ? args.issue.trim() : null;
+}
+
+/**
+ * Nombre de fichiers touchés par un batch (`apply_edits`, `apply_patch`).
+ * `changes` / `patch` n'existent que dans les arguments bruts du modèle ; ce que
+ * le fil d'un run relit est le résumé à plat de `toolArgSummary`
+ * (lib/server/agent/agent-loop.ts) : `{ count, paths }`. D'où les trois replis.
+ */
+function batchFileCount(args: Record<string, unknown>): number {
+  if (Array.isArray(args.changes)) return args.changes.length;
+  if (typeof args.count === "number") return args.count;
+  if (Array.isArray(args.paths)) return args.paths.length;
+  return 0;
 }
 
 const TOOL_META: Record<string, ToolMeta> = {
@@ -774,29 +788,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     // replis, tout batch multi-fichiers s'affichait « Édition de 0 fichier(s) »,
     // trois lignes au-dessus de son propre « 3 fichiers modifiés ».
     getLabel: (args, _r, _s, _st, t) =>
-      t("agentApplyEdits", {
-        count: Array.isArray(args.changes)
-          ? args.changes.length
-          : typeof args.count === "number"
-            ? args.count
-            : Array.isArray(args.paths)
-              ? args.paths.length
-              : 0,
-      }),
+      t("agentApplyEdits", { count: batchFileCount(args) }),
   },
   apply_patch: {
     icon: FileStack,
     // Même repli que `apply_edits` : `patch` est la chaîne brute du modèle, et ce
     // que le fil relit est le résumé à plat de `toolArgSummary` — `{ count, paths }`.
     getLabel: (args, _r, _s, _st, t) =>
-      t("agentApplyPatch", {
-        count:
-          typeof args.count === "number"
-            ? args.count
-            : Array.isArray(args.paths)
-              ? args.paths.length
-              : 0,
-      }),
+      t("agentApplyPatch", { count: batchFileCount(args) }),
   },
   move_file: {
     icon: FileSymlink,
@@ -920,6 +919,115 @@ function getToolView(item: ToolCallItem, t: TranslateFn) {
     ? meta.getLabel(parsedArgs, resultObj, item.success ?? true, item.status, t)
     : getDefaultLabel(item.status, t);
   return { Icon, label };
+}
+
+// ── Résumé d'une salve d'actions ────────────────────────────────────────────
+//
+// Une salve terminée ne se raconte pas par sa DERNIÈRE action : « Exécution de
+// npm test » ne dit rien des dix-sept qui précèdent. Elle se raconte par ce
+// qu'elle a fait, par famille — « Lecture de 4 fichiers, exécution de
+// 3 commandes, écriture de 2 fichiers ». Les familles sont volontairement
+// grossières : la ligne tient sur une ligne, et le détail est à un clic.
+
+type ActionKind =
+  | "read"
+  | "search"
+  | "edit"
+  | "write"
+  | "command"
+  | "delegate"
+  | "lookup"
+  | "update"
+  | "other";
+
+/** Ordre de lecture des familles dans la phrase (les échecs ferment la marche). */
+const ACTION_ORDER: readonly ActionKind[] = [
+  "read",
+  "search",
+  "edit",
+  "write",
+  "command",
+  "delegate",
+  "lookup",
+  "update",
+  "other",
+];
+
+/** Messages en MINUSCULE : ils s'enchaînent en une phrase dont seule la première
+ *  lettre est capitalisée (voir `summarizeActions`). */
+const SUMMARY_KEYS: Record<ActionKind, MessageKey<"ToolCall">> = {
+  read: "summaryRead",
+  search: "summarySearch",
+  edit: "summaryEdit",
+  write: "summaryWrite",
+  command: "summaryCommand",
+  delegate: "summaryDelegate",
+  lookup: "summaryLookup",
+  update: "summaryUpdate",
+  other: "summaryOther",
+};
+
+/** Les tools dont la famille ne se devine pas au nom. Tout le reste passe par la
+ *  règle de `actionKind` : un tool minddy qui LIT s'appelle `list_`/`get_`/
+ *  `read_`/`search_`, les autres écrivent. */
+const ACTION_KIND: Record<string, ActionKind> = {
+  read_file: "read",
+  grep: "search",
+  glob: "search",
+  list_dir: "search",
+  web_search: "search",
+  edit_file: "edit",
+  apply_edits: "edit",
+  apply_patch: "edit",
+  move_file: "edit",
+  delete_file: "edit",
+  write_file: "write",
+  run_command: "command",
+  run_background: "command",
+  spawn_agent: "delegate",
+  launch_code_agent: "delegate",
+  agent_status: "lookup",
+  // Une proposition d'amorce n'écrit rien : elle attend l'utilisateur.
+  propose_backlog: "other",
+  ask_user: "other",
+};
+
+function actionKind(name: string): ActionKind {
+  const known = ACTION_KIND[name];
+  if (known) return known;
+  if (/^(list|get|read|search)_/.test(name)) return "lookup";
+  // Un tool INCONNU du fil (ancien run, tool retiré depuis) ne se laisse pas
+  // ranger : on le compte sans prétendre savoir ce qu'il a fait.
+  return name in TOOL_META ? "update" : "other";
+}
+
+/** Ce que l'action pèse dans son compte : un batch multi-fichiers compte ses
+ *  fichiers, pas son appel — sinon « Édition de 5 fichiers » se résumerait en
+ *  « édition d'un fichier ». */
+function actionWeight(item: ToolCallItem): number {
+  if (item.name !== "apply_edits" && item.name !== "apply_patch") return 1;
+  return Math.max(1, batchFileCount(safeParseArgs(item.arguments)));
+}
+
+/** « Lecture de 4 fichiers, exécution de 3 commandes, 1 échec ». */
+function summarizeActions(items: ToolCallItem[], t: TranslateFn): string {
+  const counts = new Map<ActionKind, number>();
+  let failed = 0;
+  for (const item of items) {
+    const kind = actionKind(item.name);
+    counts.set(kind, (counts.get(kind) ?? 0) + actionWeight(item));
+    if (item.success === false) failed++;
+  }
+
+  const parts = ACTION_ORDER.filter((kind) => counts.get(kind)).map((kind) =>
+    t(SUMMARY_KEYS[kind], { count: counts.get(kind)! })
+  );
+  // Un échec ne se voit plus à la couleur de la ligne (le résumé porte sur tout
+  // le groupe, pas sur l'action fautive) : il se DIT, en fin de phrase.
+  if (failed > 0) parts.push(t("summaryFailed", { count: failed }));
+
+  const line = parts.join(", ");
+  return line.charAt(0).toLocaleUpperCase() + line.slice(1);
 }
 
 /**
@@ -1047,59 +1155,59 @@ export function ToolCallList({
     if (rowItems.length === 1) return <ToolCallRow item={rowItems[0]} t={t} />;
 
     const anyRunning = rowItems.some((i) => i.status === "running");
+    const lastItem = rowItems[rowItems.length - 1];
+    const lastError = lastItem.status === "complete" && lastItem.success === false;
 
-    if (expanded) {
-      // Ligne de résumé NEUTRE : plus de rouge global si une action a échoué —
-      // seules les lignes d'action fautives (ci-dessous) apparaissent en rouge.
-      return (
-        <div className="flex flex-col">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setExpanded(false)}
-            className="group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
-          >
-            <ChevronRight className="h-3 w-3 shrink-0 rotate-90 transition-transform" />
-            <span className={cn("flex-1 truncate", anyRunning && "text-shimmer")}>
-              {t("toolCallSummary", { count: rowItems.length })}
-            </span>
-          </Button>
+    // Salve TERMINÉE : la ligne d'en-tête ne montre plus la dernière action mais
+    // ce que la salve a fait EN ENTIER, et c'est la MÊME phrase pliée ou dépliée
+    // — le clic n'ouvre que le détail, il ne change pas ce qui est dit.
+    //
+    // Salve EN COURS : rien à résumer, un compte serait faux d'une ligne à
+    // l'autre. On garde le direct — la dernière action en date une fois pliée,
+    // le compte courant une fois dépliée — et le shimmer qui dit « ça tourne ».
+    const summary = anyRunning ? null : summarizeActions(rowItems, t);
+    const label =
+      summary ??
+      (expanded
+        ? t("toolCallSummary", { count: rowItems.length })
+        : getToolView(lastItem, t).label);
+    // Le rouge ne vaut que pour la ligne « dernière action » : un résumé de
+    // groupe reste NEUTRE (il DIT ses échecs), et seules les lignes d'action
+    // fautives, dépliées, apparaissent en rouge.
+    const headerError = !summary && !expanded && lastError;
+
+    return (
+      <div className="flex flex-col">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setExpanded((o) => !o)}
+          className={cn(
+            "group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal hover:bg-transparent",
+            headerError
+              ? "text-destructive"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <ChevronRight
+            className={cn(
+              "h-3 w-3 shrink-0 transition-transform",
+              expanded && "rotate-90"
+            )}
+          />
+          <span className={cn("flex-1 truncate", anyRunning && "text-shimmer")}>
+            {label}
+          </span>
+        </Button>
+        {expanded && (
           <div className="ml-5 flex flex-col">
             {rowItems.map((item) => (
               <ToolCallRow key={item.id} item={item} t={t} />
             ))}
           </div>
-        </div>
-      );
-    }
-
-    // Accordéon FERMÉ : on n'affiche que la DERNIÈRE action en date. Rouge UNIQUEMENT
-    // si CETTE action a échoué (pas si une autre action du groupe a échoué). Shimmer
-    // tant qu'une action du groupe tourne — c'est le groupe entier que la ligne
-    // repliée résume, pas seulement l'action affichée.
-    const lastItem = rowItems[rowItems.length - 1];
-    const lastLabel = getToolView(lastItem, t).label;
-    const lastError = lastItem.status === "complete" && lastItem.success === false;
-    return (
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => setExpanded(true)}
-        className={cn(
-          "group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal hover:bg-transparent",
-          lastError
-            ? "text-destructive"
-            : "text-muted-foreground hover:text-foreground"
         )}
-      >
-        <ChevronRight className="h-3 w-3 shrink-0 transition-transform" />
-        <span className={cn("flex-1 truncate", anyRunning && "text-shimmer")}>
-          {lastLabel}
-        </span>
-        {!anyRunning && lastError ? <X className="h-3 w-3 shrink-0" /> : null}
-      </Button>
+      </div>
     );
   };
 
