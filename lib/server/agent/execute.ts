@@ -69,6 +69,12 @@ import {
   formatSelfReview,
   SELF_REVIEW_MIN_BUDGET_MS,
 } from "./self-review";
+import {
+  newPlanWriteSink,
+  planClosureForTurn,
+  watchPlanWrites,
+  PLAN_CLOSURE_MIN_BUDGET_MS,
+} from "./plan-closure";
 import { toolOutputFileName } from "./command-output";
 import { usesApplyPatch } from "./patch";
 import {
@@ -1882,6 +1888,13 @@ export async function executeAgentRun(
      *  reste bien PAR CHUNK, et ne voyage pas : le faire traverser priverait de
      *  relecture le travail ajouté APRÈS une première passe. */
     let selfReviewed = false;
+    /** Le plan que ce chunk a écrit, noté au passage par `watchPlanWrites` : c'est
+     *  lui que le contrôle de clôture grep (MIN-236). Même découpage qu'`editedPaths`
+     *  pour le type-check — le tool mute, le crochet de fin de tour lit. */
+    const planWrites = newPlanWriteSink();
+    /** Le contrôle de clôture ne passe qu'UNE fois par chunk, comme l'auto-relecture :
+     *  il pose une question, il ne commente pas la réponse. */
+    let planClosed = false;
 
     /**
      * Type-check de fin de tour. Se tait — et coûte alors un aller-retour shell de
@@ -1942,13 +1955,42 @@ export async function executeAgentRun(
     };
 
     /**
+     * Contrôle de CLÔTURE du plan écrit ce tour (MIN-236) : les identifiants du plan
+     * sont grepés pour de vrai, et les fichiers qui les contiennent sans être nommés
+     * reviennent au modèle. Muet tant qu'aucun `write_issue_plan` n'a réussi — donc
+     * sur l'écrasante majorité des tours, il ne coûte rien du tout.
+     *
+     * Le déclencheur est le TOOL, pas `run.intent === "plan"` : le cas courant est un
+     * run ordinaire à qui l'utilisateur demande un plan en cours de route, et
+     * l'intention posée au lancement ne le dit pas.
+     */
+    const planClosureBlock = async (budgetMs: number): Promise<string | null> => {
+      if (planClosed || !planWrites.wrote || budgetMs < PLAN_CLOSURE_MIN_BUDGET_MS) return null;
+      planClosed = true;
+      const startedAt = Date.now();
+      const block = await planClosureForTurn(host, planWrites.markdown).catch(() => null);
+      await emit("status", {
+        phase: "plan_closure",
+        durationMs: Date.now() - startedAt,
+        chars: block?.length ?? 0,
+      });
+      return block;
+    };
+
+    /**
      * Dernier mot du harness. Les erreurs de typage passent AVANT la relecture :
      * elles sont concrètes et bloquantes, et servir un diff par-dessus un dépôt qui
-     * ne compile pas noierait le seul signal qui compte.
+     * ne compile pas noierait le seul signal qui compte. La clôture du plan ferme la
+     * marche — un tour qui écrit un plan n'édite en général rien, donc les deux
+     * premiers se taisent et c'est elle qui parle.
      */
     const onTurnEnd = async ({ budgetMs }: { budgetMs: number }): Promise<string | null> => {
       if (editedPaths.size > 0) repoTouched = true;
-      return (await typeCheckBlock(budgetMs)) ?? (await selfReviewBlock(budgetMs));
+      return (
+        (await typeCheckBlock(budgetMs)) ??
+        (await selfReviewBlock(budgetMs)) ??
+        (await planClosureBlock(budgetMs))
+      );
     };
 
     // Chrono de la boucle : c'est depuis ici que se mesure le budget restant d'un
@@ -2002,7 +2044,13 @@ export async function executeAgentRun(
         // ici les exécuteurs en direct, puisqu'on est dans la fonction ; dans la
         // microVM, les mêmes noms partent au plan de contrôle.
         prTool: prToolCtx ? (name, args) => executePrTool(prToolCtx, name, args) : null,
-        issueTool: (name, args) => executeIssueTool(issueToolCtx, name, args),
+        // Enveloppé pour que le plan écrit ce tour soit NOTÉ au passage (MIN-236) :
+        // le contrôle de clôture de fin de tour n'a pas d'autre moyen de savoir ce
+        // que le modèle vient d'écrire.
+        issueTool: watchPlanWrites(
+          (name, args) => executeIssueTool(issueToolCtx, name, args),
+          planWrites,
+        ),
         scratchpadTool: (name, args) => executeScratchpadTool(scratchpadToolCtx, name, args),
         webSearch,
         outputSeqBase: run.continuations * 1000,

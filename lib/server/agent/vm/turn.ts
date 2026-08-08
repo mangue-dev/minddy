@@ -22,6 +22,12 @@ import { usesApplyPatch } from "../patch";
 import { fitCheckpoint } from "../checkpoint-fit";
 import { typeErrorsForTurn, TYPECHECK_MIN_BUDGET_MS } from "../diagnostics";
 import { formatSelfReview, SELF_REVIEW_MIN_BUDGET_MS } from "../self-review";
+import {
+  newPlanWriteSink,
+  planClosureForTurn,
+  watchPlanWrites,
+  PLAN_CLOSURE_MIN_BUDGET_MS,
+} from "../plan-closure";
 import { REPO_INSTRUCTION_FILES, type InstructionsState } from "../repo-instructions";
 import { commitAndPush, changedFiles, turnDiff, type RepoHost } from "../repo-host";
 import { BackgroundJobs } from "../background";
@@ -154,6 +160,10 @@ export async function runVmTurn(
   let prInlineComments = job.prInlineComments;
   let repoTouched = job.repoTouched;
   let selfReviewed = false;
+  /** Le plan écrit par ce tour, noté au passage des tools ticket (MIN-236) — c'est
+   *  ce que le contrôle de clôture grep avant de rendre la main. */
+  const planWrites = newPlanWriteSink();
+  let planClosed = false;
 
   const background = new BackgroundJobs(repoBackgroundRunner(host), 0);
 
@@ -509,7 +519,7 @@ export async function runVmTurn(
     };
   }
 
-  // ── Fin de tour : type-check puis auto-relecture ────────────────────────────
+  // ── Fin de tour : type-check, auto-relecture, clôture du plan ──────────────
   const typeCheckBlock = async (budgetMs: number): Promise<string | null> => {
     if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) return null;
     const touched = [...editedPaths];
@@ -539,6 +549,21 @@ export async function runVmTurn(
     const block = formatSelfReview({ diff, porcelain });
     await emit("status", {
       phase: "self_review",
+      durationMs: Date.now() - at,
+      chars: block?.length ?? 0,
+    });
+    return block;
+  };
+
+  /** Contrôle de clôture du plan écrit ce tour (MIN-236) — cf. `plan-closure.ts`.
+   *  Le même que côté fonction : la garantie ne doit pas dépendre de `loop_in_vm`. */
+  const planClosureBlock = async (budgetMs: number): Promise<string | null> => {
+    if (planClosed || !planWrites.wrote || budgetMs < PLAN_CLOSURE_MIN_BUDGET_MS) return null;
+    planClosed = true;
+    const at = Date.now();
+    const block = await planClosureForTurn(host, planWrites.markdown).catch(() => null);
+    await emit("status", {
+      phase: "plan_closure",
       durationMs: Date.now() - at,
       chars: block?.length ?? 0,
     });
@@ -583,7 +608,10 @@ export async function runVmTurn(
       host,
       createPr,
       prTool: job.anchor === "pr" ? platformTool : null,
-      issueTool: platformTool,
+      // Enveloppé pour NOTER le plan écrit ce tour (MIN-236) : les tools ticket
+      // partent au plan de contrôle, donc c'est le seul endroit d'où la boucle voit
+      // passer le markdown.
+      issueTool: watchPlanWrites(platformTool, planWrites),
       scratchpadTool: platformTool,
       webSearch,
       outputSeqBase: 0,
@@ -595,7 +623,11 @@ export async function runVmTurn(
     }),
     onTurnEnd: async ({ budgetMs }) => {
       if (editedPaths.size > 0) repoTouched = true;
-      return (await typeCheckBlock(budgetMs)) ?? (await selfReviewBlock(budgetMs));
+      return (
+        (await typeCheckBlock(budgetMs)) ??
+        (await selfReviewBlock(budgetMs)) ??
+        (await planClosureBlock(budgetMs))
+      );
     },
     // Le sommet de chaque round : on en profite pour sauvegarder, à une frontière
     // d'historique sûre (cf. `maybeSaveCheckpoint`).
