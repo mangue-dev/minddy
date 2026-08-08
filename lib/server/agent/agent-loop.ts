@@ -26,6 +26,7 @@ import {
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
 import type { AgentToolDef } from "./tools";
+import type { EditTelemetry } from "./edit";
 import { textOf, type AgentContentPart, type AgentToolImage } from "./content";
 import { pruneToolOutputs, capHistoryImages, headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
 import { markSystemPromptCache } from "./caching";
@@ -274,6 +275,13 @@ export type ExecuteAgentTool = (
    *  `result` : celui-ci est sérialisé, capé et recopié dans l'event `tool_result`,
    *  où une data URL n'aurait rien à faire. */
   images?: AgentToolImage[];
+  /**
+   * Ce que la cascade d'édition a fait (MIN-246) : quel replacer a résolu, à quel
+   * rang, avec quelle similarité, et quels refus. Voyage À CÔTÉ du résultat —
+   * le modèle n'a rien à faire de ces chiffres, mais qui relit `agent_run_events`
+   * six mois plus tard, si. Recopié tel quel dans l'event `tool_result`.
+   */
+  edit?: EditTelemetry;
 }>;
 
 /** État du round EN COURS d'écriture, poussé au fil ouvert (jamais persisté). */
@@ -1993,12 +2001,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         parsed.map(async ({ tc, args }) => {
           if (!args) return { tc, args };
           try {
-            const { result, success, reason, images } = await execTool(
+            const { result, success, reason, images, edit } = await execTool(
               tc.function.name,
               args,
               tc.id,
             );
-            return { tc, args, result, success, reason, images };
+            return { tc, args, result, success, reason, images, edit };
           } catch (err) {
             return {
               tc,
@@ -2007,6 +2015,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
               success: false,
               reason: undefined,
               images: undefined,
+              edit: undefined,
             };
           }
         }),
@@ -2024,6 +2033,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           success: o.success,
           preview: preview(o.result),
           ...(o.reason ? { reason: o.reason } : {}),
+          ...(o.edit ? { edit: o.edit } : {}),
         });
         if (toolLoop.record(o.tc.function.name, o.args, o.result)) {
           loopingTool ??= o.tc.function.name;
@@ -2137,8 +2147,9 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       let success: boolean;
       let reason: string | undefined;
       let images: AgentToolImage[] | undefined;
+      let edit: EditTelemetry | undefined;
       try {
-        ({ result, success, reason, images } = await execTool(name, args, tc.id));
+        ({ result, success, reason, images, edit } = await execTool(name, args, tc.id));
       } catch (err) {
         result = { error: err instanceof Error ? err.message : String(err) };
         success = false;
@@ -2150,6 +2161,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         success,
         preview: preview(result),
         ...(reason ? { reason } : {}),
+        ...(edit ? { edit } : {}),
       });
       if (toolLoop.record(name, args, result)) loopingTool ??= name;
     }

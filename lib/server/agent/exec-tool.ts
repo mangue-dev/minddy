@@ -38,7 +38,15 @@ import {
   toolOutputFileName,
 } from "./command-output";
 import { checkCommand, FORBIDDEN_COMMAND_REASON } from "./command-guard";
-import { applyEdit, ReplaceError } from "./edit";
+import {
+  applyEdit,
+  diffFiles,
+  ReplaceError,
+  sealTelemetry,
+  telemetryFailure,
+  telemetryMatch,
+  type EditTelemetry,
+} from "./edit";
 import { applyPatchEdits, parsePatch, type PatchOp } from "./patch";
 import {
   REPO_INSTRUCTION_FILES,
@@ -87,6 +95,33 @@ export const MAX_IMAGES_PER_TURN = 2;
 
 /** Cap du diff renvoyé au modèle après une édition (le diff complet n'est pas utile). */
 const EDIT_DIFF_CAP = 4000;
+
+/**
+ * Budget de diff PARTAGÉ par un appel batch (`apply_edits`, `apply_patch`).
+ *
+ * Jusqu'à MIN-246, ces deux chemins ne rendaient qu'`additions`/`deletions` : le
+ * modèle éditait à l'aveugle là où il édite le plus (le batch, et la totalité des
+ * runs `gpt-*`, qui ne connaissent qu'`apply_patch`). Rendre un diff par fichier
+ * sans plafond global ferait l'excès inverse — un batch de quinze fichiers
+ * remplirait le contexte de diff. D'où un budget de tour : les premiers fichiers
+ * rendent leur diff, les suivants le disent au lieu de le taire.
+ */
+const BATCH_DIFF_BUDGET = 8000;
+
+/**
+ * Distributeur du budget ci-dessus, un par appel de tool. Rend le diff capé tant
+ * qu'il reste de la place, puis une note — jamais rien en silence.
+ */
+function diffBudget() {
+  let left = BATCH_DIFF_BUDGET;
+  return (path: string, before: string, after: string): Record<string, string> => {
+    if (before === after) return {};
+    if (left <= 0) return { diff_omitted: "diff budget for this call is exhausted; re-read the file if you need to see it" };
+    const diff = cap(diffFiles(path, before, after), Math.min(EDIT_DIFF_CAP, left));
+    left -= diff.length;
+    return { diff };
+  };
+}
 
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
@@ -254,10 +289,10 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
    * Le bloc passe EN TÊTE de l'objet : le résultat entier traverse `headTail`, qui
    * élide le MILIEU — la tête survit, et un gros diff en queue aussi.
    */
-  const withTouchedInstructions = async (
-    res: { result: unknown; success: boolean },
+  const withTouchedInstructions = async <T extends { result: unknown; success: boolean }>(
+    res: T,
     paths: string[],
-  ): Promise<{ result: unknown; success: boolean }> => {
+  ): Promise<T> => {
     if (!res.success) return res;
     // Entonnoir unique de TOUTE édition réussie (edit_file, write_file, move_file,
     // apply_edits, apply_patch) : c'est ici qu'on note ce que le tour a touché,
@@ -275,7 +310,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     if (typeof res.result === "string") {
       return { ...res, result: `${block}\n\n${res.result}` };
     }
-    return { ...res, result: { repo_instructions: block, ...(res.result as object) } };
+    return { ...res, result: { repo_instructions: block, ...(res.result as object) } } as T;
   };
 
   return async (name, args, callId) => {
@@ -441,11 +476,24 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
                 diff: cap(edit.diff, EDIT_DIFF_CAP),
               },
               success: true,
+              edit: sealTelemetry({
+                tool: "edit_file",
+                matched: [telemetryMatch(edit.trace)],
+                failed: [],
+              }),
             },
             [path],
           );
         } catch (err) {
-          return { result: { error: err instanceof Error ? err.message : String(err) }, success: false };
+          return {
+            result: { error: err instanceof Error ? err.message : String(err) },
+            success: false,
+            edit: sealTelemetry({
+              tool: "edit_file",
+              matched: [],
+              failed: [telemetryFailure(err)],
+            }),
+          };
         }
       }
       case "write_file": {
@@ -476,6 +524,8 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
           return { result: { error: "No changes provided." }, success: false };
         }
         const applied: Array<Record<string, unknown>> = [];
+        const telemetry: EditTelemetry = { tool: "apply_edits", matched: [], failed: [] };
+        const budget = diffBudget();
         for (const ch of changes) {
           const path = String(ch.path ?? "");
           const op = String(ch.op ?? "update");
@@ -519,7 +569,9 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
                   content = r.content;
                   additions += r.additions;
                   deletions += r.deletions;
+                  telemetry.matched.push(telemetryMatch(r.trace));
                 } catch (err) {
+                  telemetry.failed.push(telemetryFailure(err));
                   // Un edit dont `old_string` vaut `new_string` ne change RIEN : il ne
                   // peut donc rien corrompre, et il n'a pas à emporter les autres edits
                   // du fichier — mesuré 8 fois sur `agent_run_events`, dont 3 batches où
@@ -547,6 +599,10 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
                 ok: true,
                 additions,
                 deletions,
+                // Le diff du fichier une fois TOUS ses edits posés (MIN-246) : sans
+                // lui, le chemin batch — le majoritaire — rendait deux compteurs et
+                // rien de ce qui avait été écrit.
+                ...budget(path, original, content),
                 ...(skipped.length > 0
                   ? {
                       skipped_edits: skipped,
@@ -568,6 +624,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
           {
             result: { applied, counts: { ok: okCount, failed: applied.length - okCount } },
             success: okCount > 0,
+            edit: sealTelemetry(telemetry),
           },
           applied.filter((r) => r.ok === true).map((r) => String(r.move_to ?? r.path ?? "")),
         );
@@ -582,12 +639,25 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         try {
           ops = parsePatch(String(args.patch ?? args.patchText ?? ""));
         } catch (err) {
+          // Une enveloppe illisible est un échec de FORMAT, pas d'édition : c'est
+          // le chiffre qu'aider mesure sous le nom `percent_cases_well_formed`, et
+          // le nôtre se compte ici — sur le seul chemin qui serve un format
+          // TEXTUEL au modèle, donc le seul où il puisse le casser (MIN-246).
+          const message = err instanceof Error ? err.message : String(err);
           return {
-            result: { error: err instanceof Error ? err.message : String(err) },
+            result: { error: message },
             success: false,
+            edit: sealTelemetry({
+              tool: "apply_patch",
+              matched: [],
+              failed: [],
+              parse_error: cap(message, 200),
+            }),
           };
         }
         const applied: Array<Record<string, unknown>> = [];
+        const telemetry: EditTelemetry = { tool: "apply_patch", matched: [], failed: [] };
+        const budget = diffBudget();
         for (const op of ops) {
           try {
             if (op.op === "invalid") {
@@ -614,6 +684,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
                 );
               }
               const edited = applyPatchEdits(op.path, original, op.edits);
+              for (const trace of edited.traces) telemetry.matched.push(telemetryMatch(trace));
               if (op.moveTo) {
                 // Renommage d'abord (git mv, pour que la PR le capture), contenu ensuite.
                 await moveWorkFile(host, op.path, op.moveTo);
@@ -625,6 +696,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
                   move_to: op.moveTo,
                   additions: edited.additions,
                   deletions: edited.deletions,
+                  ...budget(op.moveTo, original, edited.content),
                 });
               } else {
                 await writeWorkFile(host, op.path, edited.content);
@@ -634,10 +706,17 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
                   ok: true,
                   additions: edited.additions,
                   deletions: edited.deletions,
+                  // Même raison qu'`apply_edits` : c'est le chemin de TOUS les runs
+                  // `gpt-*`, et il ne rendait rien de ce qui avait été écrit.
+                  ...budget(op.path, original, edited.content),
                 });
               }
             }
           } catch (err) {
+            // Une SECTION illisible dans une enveloppe lisible compte comme une
+            // rupture de format, au même titre qu'un patch entier illisible.
+            if (op.op === "invalid") telemetry.parse_error ??= cap(op.error, 200);
+            else if (op.op === "update") telemetry.failed.push(telemetryFailure(err));
             applied.push({
               path: op.path,
               op: op.op,
@@ -653,6 +732,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
           {
             result: { applied, counts: { ok: okCount, failed: applied.length - okCount } },
             success: okCount > 0,
+            edit: sealTelemetry(telemetry),
           },
           applied.filter((r) => r.ok === true).map((r) => String(r.move_to ?? r.path ?? "")),
         );

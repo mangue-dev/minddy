@@ -1,4 +1,13 @@
-import { applyEdit, countLineChanges } from "./edit";
+import { applyEdit, countLineChanges, type ReplaceTrace } from "./edit";
+
+/**
+ * La trace de la cascade (MIN-246), plus ce que ce format ajoute : le rang de la
+ * tentative qui a fini par passer. Un hunk peut être retenté depuis l'ancre,
+ * depuis le curseur, depuis le début du fichier, puis les trois en `firstMatch`
+ * — six tentatives, et savoir laquelle a marché est ce qui dit si le contexte
+ * `@@` porte quelque chose.
+ */
+export type PatchTrace = ReplaceTrace & { attempt: number };
 
 /**
  * Format `apply_patch` (MIN-115) — le dialecte d'édition de Codex, repris par
@@ -418,7 +427,7 @@ function applyOne(
   content: string,
   edit: PatchEdit,
   from: number,
-): { content: string; cursor: number } {
+): { content: string; cursor: number; trace?: PatchTrace } {
   let at = from;
   let anchored = false;
   for (const anchor of [...(edit.anchors ?? []), ...(edit.context ? [edit.context] : [])]) {
@@ -438,8 +447,11 @@ function applyOne(
 
   const starts = [...new Set([at, from, 0])];
   let last: unknown;
+  /** Tentatives (couples start × firstMatch) épuisées avant celle qui passe. */
+  let attempt = 0;
   for (const firstMatch of [false, true]) {
     for (const start of starts) {
+      attempt++;
       try {
         const tail = applyEdit(
           path,
@@ -450,7 +462,14 @@ function applyOne(
           firstMatch,
         );
         const next = content.slice(0, start) + tail.content;
-        return { content: next, cursor: changedEnd(content, next, from) };
+        return {
+          content: next,
+          cursor: changedEnd(content, next, from),
+          // `attempt: 1` = la passe stricte, depuis l'ancre, a suffi. Au-delà,
+          // l'ancre `@@` n'a pas servi (ou a mal servi) : c'est exactement ce
+          // qu'on cherche à savoir de ce format (MIN-246).
+          trace: { ...tail.trace, attempt },
+        };
       } catch (err) {
         last = err;
       }
@@ -467,13 +486,17 @@ export function applyPatchEdits(
   path: string,
   original: string,
   edits: PatchEdit[],
-): { content: string; additions: number; deletions: number } {
+): { content: string; additions: number; deletions: number; traces: PatchTrace[] } {
   let content = original;
   let cursor = 0;
+  // Une trace par hunk PASSÉ par la cascade : une insertion pure (`oldString`
+  // vide) n'en a pas, elle ne cherche rien.
+  const traces: PatchTrace[] = [];
   for (const edit of edits) {
     const applied = applyOne(path, content, edit, cursor);
     content = applied.content;
     cursor = applied.cursor;
+    if (applied.trace) traces.push(applied.trace);
   }
-  return { content, ...countLineChanges(original, content) };
+  return { content, traces, ...countLineChanges(original, content) };
 }

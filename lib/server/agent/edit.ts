@@ -30,12 +30,44 @@ export type ReplaceFailure =
   | "not_found"
   | "ambiguous";
 
+/**
+ * Ce que la cascade a fait pour arriver à ce résultat (MIN-246). On ne l'arbitre
+ * pas, on la MESURE : quel replacer a résolu, à quel rang de la cascade, avec
+ * quelle similarité quand il en calcule une, et combien de candidats ont été
+ * écartés en chemin. `exec-tool` l'agrège par appel de tool et `agent-loop` la
+ * persiste dans l'event `tool_result` — elle ne part JAMAIS au modèle.
+ *
+ * Sur un échec, elle voyage sur la `ReplaceError` : c'est le seul endroit où
+ * l'on sache qu'un `not_found` a vu passer douze candidats ou aucun.
+ */
+export interface ReplaceTrace {
+  /** Nom du replacer qui a résolu (absent : aucun n'a résolu). */
+  replacer?: string;
+  /** Rang 1-based dans la cascade (1 = match exact). */
+  rank?: number;
+  /** Similarité du bloc retenu, quand le replacer en calcule une (ancrage). */
+  similarity?: number;
+  /** Candidats examinés, tous replacers confondus. */
+  candidates: number;
+  /** Candidats écartés parce que leur étendue était disproportionnée. */
+  rejectedDisproportionate: number;
+  /** Candidats écartés parce qu'ils apparaissaient plusieurs fois. */
+  rejectedAmbiguous: number;
+}
+
+function emptyTrace(): ReplaceTrace {
+  return { candidates: 0, rejectedDisproportionate: 0, rejectedAmbiguous: 0 };
+}
+
 export class ReplaceError extends Error {
   readonly reason: ReplaceFailure;
-  constructor(reason: ReplaceFailure, message: string) {
+  /** Ce que la cascade avait vu au moment de renoncer (MIN-246). */
+  readonly trace: ReplaceTrace;
+  constructor(reason: ReplaceFailure, message: string, trace: ReplaceTrace = emptyTrace()) {
     super(message);
     this.name = "ReplaceError";
     this.reason = reason;
+    this.trace = trace;
   }
 }
 
@@ -79,7 +111,14 @@ function levenshtein(a: string, b: string): number {
 // Chaque replacer est un générateur qui yield des sous-chaînes CANDIDATES du
 // contenu (des matchs potentiels de `find`). `replace()` les essaie dans l'ordre.
 
-type Replacer = (content: string, find: string) => Generator<string, void, unknown>;
+/**
+ * Un candidat. La forme longue sert aux replacers qui CALCULENT une similarité
+ * pour décider (l'ancrage de bloc) : elle la fait remonter jusqu'à la trace, où
+ * elle est la seule mesure qui dise à quel point le modèle avait dérivé.
+ */
+type Candidate = string | { text: string; similarity: number };
+
+type Replacer = (content: string, find: string) => Generator<Candidate, void, unknown>;
 
 /** 1. Match exact. */
 const SimpleReplacer: Replacer = function* (_content, find) {
@@ -162,13 +201,18 @@ const BlockAnchorReplacer: Replacer = function* (content, find) {
         const searchLine = searchLines[j].trim();
         const maxLen = Math.max(originalLine.length, searchLine.length);
         if (maxLen === 0) continue;
+        // Le cumul ne fait que croître : sortir dès le seuil atteint (ce que
+        // faisait le code d'origine) donnait la même DÉCISION mais un chiffre
+        // tronqué. Depuis MIN-246 la similarité est mesurée, donc on la calcule
+        // en entier — le surcoût est borné par la taille du bloc.
         similarity += (1 - levenshtein(originalLine, searchLine) / maxLen) / linesToCheck;
-        if (similarity >= SINGLE_CANDIDATE_SIMILARITY_THRESHOLD) break;
       }
     } else {
       similarity = 1.0;
     }
-    if (similarity >= SINGLE_CANDIDATE_SIMILARITY_THRESHOLD) yield spanOf(startLine, endLine);
+    if (similarity >= SINGLE_CANDIDATE_SIMILARITY_THRESHOLD) {
+      yield { text: spanOf(startLine, endLine), similarity };
+    }
     return;
   }
 
@@ -197,7 +241,7 @@ const BlockAnchorReplacer: Replacer = function* (content, find) {
     }
   }
   if (maxSimilarity >= MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD && bestMatch) {
-    yield spanOf(bestMatch.startLine, bestMatch.endLine);
+    yield { text: spanOf(bestMatch.startLine, bestMatch.endLine), similarity: maxSimilarity };
   }
 };
 
@@ -376,17 +420,22 @@ const MultiOccurrenceReplacer: Replacer = function* (content, find) {
   }
 };
 
-const REPLACERS: Replacer[] = [
-  SimpleReplacer,
-  LineTrimmedReplacer,
-  BlockAnchorReplacer,
-  WhitespaceNormalizedReplacer,
-  IndentationFlexibleReplacer,
-  UnicodeNormalizedReplacer,
-  EscapeNormalizedReplacer,
-  TrimmedBoundaryReplacer,
-  ContextAwareReplacer,
-  MultiOccurrenceReplacer,
+/**
+ * La cascade, NOMMÉE (MIN-246) : le rang seul ne dit rien à qui lit un relevé
+ * six mois plus tard, et l'ordre a déjà bougé une fois (unicode inséré en 6ᵉ).
+ * Les noms sont ceux des replacers, et ce sont eux qui atterrissent en base.
+ */
+const REPLACERS: Array<{ name: string; run: Replacer }> = [
+  { name: "simple", run: SimpleReplacer },
+  { name: "line_trimmed", run: LineTrimmedReplacer },
+  { name: "block_anchor", run: BlockAnchorReplacer },
+  { name: "whitespace_normalized", run: WhitespaceNormalizedReplacer },
+  { name: "indentation_flexible", run: IndentationFlexibleReplacer },
+  { name: "unicode_normalized", run: UnicodeNormalizedReplacer },
+  { name: "escape_normalized", run: EscapeNormalizedReplacer },
+  { name: "trimmed_boundary", run: TrimmedBoundaryReplacer },
+  { name: "context_aware", run: ContextAwareReplacer },
+  { name: "multi_occurrence", run: MultiOccurrenceReplacer },
 ];
 
 /**
@@ -442,30 +491,60 @@ export function replace(
   replaceAll = false,
   firstMatch = false,
 ): string {
+  return replaceTraced(content, oldString, newString, replaceAll, firstMatch).content;
+}
+
+/**
+ * `replace()` qui rend AUSSI ce que la cascade a fait (MIN-246). C'est la vraie
+ * fonction ; `replace()` n'en est que la façade historique.
+ */
+export function replaceTraced(
+  content: string,
+  oldString: string,
+  newString: string,
+  replaceAll = false,
+  firstMatch = false,
+): { content: string; trace: ReplaceTrace } {
+  const trace = emptyTrace();
   if (oldString === newString) {
     throw new ReplaceError(
       "identical",
       "No changes to apply: oldString and newString are identical.",
+      trace,
     );
   }
   if (oldString === "") {
     throw new ReplaceError(
       "empty_old",
       "oldString cannot be empty when editing an existing file. Provide the exact text to replace, or use write_file for an intentional full-file replacement.",
+      trace,
     );
   }
 
+  const done = (next: string, name: string, rank: number, similarity?: number) => {
+    trace.replacer = name;
+    trace.rank = rank;
+    if (similarity !== undefined) trace.similarity = similarity;
+    return { content: next, trace };
+  };
+
   let notFound = true;
-  for (const replacer of REPLACERS) {
-    for (const search of replacer(content, oldString)) {
+  for (const [rank, replacer] of REPLACERS.entries()) {
+    for (const candidate of replacer.run(content, oldString)) {
+      const search = typeof candidate === "string" ? candidate : candidate.text;
+      const similarity = typeof candidate === "string" ? undefined : candidate.similarity;
       const index = content.indexOf(search);
       if (index === -1) continue;
       notFound = false;
+      trace.candidates++;
       if (isDisproportionateMatch(search, oldString)) {
-        throw new ReplaceError(
-          "disproportionate",
-          "Refusing replacement because the matched span is much larger than oldString. Re-read the file and provide the full exact oldString for the intended replacement.",
-        );
+        // On PASSE au candidat suivant (MIN-246). Lever ici tuait toute la
+        // cascade : un replacer tolérant qui capture un bloc trop grand faisait
+        // échouer une édition qu'un replacer plus bas résolvait proprement — pas
+        // de corruption, mais un round brûlé. L'échec reste bruyant si personne
+        // ne résout : le refus est rendu à la fin, avec le même message.
+        trace.rejectedDisproportionate++;
+        continue;
       }
       if (replaceAll) {
         // Remplace CHAQUE occurrence littérale de `search`, en réalignant le `\n`
@@ -480,11 +559,19 @@ export function replace(
           result += content.slice(pos, idx) + replacement;
           pos = idx + span.length;
         }
-        return result + content.slice(pos);
+        return done(result + content.slice(pos), replacer.name, rank + 1, similarity);
       }
-      if (!firstMatch && index !== content.lastIndexOf(search)) continue; // ambigu → replacer suivant
+      if (!firstMatch && index !== content.lastIndexOf(search)) {
+        trace.rejectedAmbiguous++;
+        continue; // ambigu → candidat suivant
+      }
       const { span, replacement } = realignBoundary(content, index, search, newString);
-      return content.substring(0, index) + replacement + content.substring(index + span.length);
+      return done(
+        content.substring(0, index) + replacement + content.substring(index + span.length),
+        replacer.name,
+        rank + 1,
+        similarity,
+      );
     }
   }
 
@@ -492,12 +579,113 @@ export function replace(
     throw new ReplaceError(
       "not_found",
       "Could not find oldString in the file. It must match exactly, including whitespace, indentation, and line endings.",
+      trace,
+    );
+  }
+  // Un candidat a bien été trouvé mais aucun n'a pu être appliqué. Le refus le
+  // plus actionnable prime : « ton oldString ne couvre pas ce que tu vises »
+  // avant « ton oldString n'est pas unique ».
+  if (trace.rejectedDisproportionate > 0) {
+    throw new ReplaceError(
+      "disproportionate",
+      "Refusing replacement because the matched span is much larger than oldString. Re-read the file and provide the full exact oldString for the intended replacement.",
+      trace,
     );
   }
   throw new ReplaceError(
     "ambiguous",
     "Found multiple matches for oldString. Provide more surrounding context to make the match unique.",
+    trace,
   );
+}
+
+// ── Télémétrie (MIN-246) ─────────────────────────────────────────────────────
+
+/** Une substitution qui a abouti, telle qu'elle part en base. */
+export interface EditTelemetryMatch {
+  replacer: string;
+  rank: number;
+  similarity?: number;
+  /** `apply_patch` seulement : rang de la tentative d'ancrage qui a passé. */
+  attempt?: number;
+  rejected_disproportionate?: number;
+  rejected_ambiguous?: number;
+}
+
+/** Une substitution refusée : le motif, et ce que la cascade avait vu. */
+export interface EditTelemetryFailure {
+  reason: string;
+  candidates: number;
+  rejected_disproportionate?: number;
+}
+
+/**
+ * Ce qu'UN appel d'un tool d'édition a fait passer par la cascade. Agrégé par
+ * `exec-tool`, persisté par `agent-loop` dans le payload de l'event
+ * `tool_result` — jamais rendu au modèle. Le modèle du run se lit à côté, sur
+ * `agent_runs.model` : c'est ce qui donne « par modèle et par chemin ».
+ */
+export interface EditTelemetry {
+  tool: "edit_file" | "apply_edits" | "apply_patch";
+  matched: EditTelemetryMatch[];
+  failed: EditTelemetryFailure[];
+  /** `apply_patch` : l'enveloppe elle-même était illisible (échec de FORMAT). */
+  parse_error?: string;
+  /** Présents SEULEMENT quand la liste a été capée : un relevé qui compte des
+   *  substitutions ne doit pas prendre un plafond pour un total. */
+  matched_total?: number;
+  failed_total?: number;
+}
+
+/** Entrées gardées par appel — un batch de 40 fichiers n'a pas à peser en base. */
+const TELEMETRY_CAP = 20;
+
+/** Arrondi : trois décimales suffisent à comparer une similarité à un seuil. */
+function round3(n: number): number {
+  return Math.round(n * 1000) / 1000;
+}
+
+export function telemetryMatch(trace: ReplaceTrace & { attempt?: number }): EditTelemetryMatch {
+  return {
+    replacer: trace.replacer ?? "unknown",
+    rank: trace.rank ?? 0,
+    ...(trace.similarity !== undefined ? { similarity: round3(trace.similarity) } : {}),
+    ...(trace.attempt !== undefined ? { attempt: trace.attempt } : {}),
+    ...(trace.rejectedDisproportionate > 0
+      ? { rejected_disproportionate: trace.rejectedDisproportionate }
+      : {}),
+    ...(trace.rejectedAmbiguous > 0 ? { rejected_ambiguous: trace.rejectedAmbiguous } : {}),
+  };
+}
+
+/**
+ * L'échec tel qu'il se compte. `reason` vient de `ReplaceError` quand c'est la
+ * cascade qui a refusé ; tout autre échec (fichier absent, hunk illisible)
+ * s'agrège sous un motif à part — ce n'est pas la même mesure.
+ */
+export function telemetryFailure(err: unknown): EditTelemetryFailure {
+  if (err instanceof ReplaceError) {
+    return {
+      reason: err.reason,
+      candidates: err.trace.candidates,
+      ...(err.trace.rejectedDisproportionate > 0
+        ? { rejected_disproportionate: err.trace.rejectedDisproportionate }
+        : {}),
+    };
+  }
+  return { reason: "other", candidates: 0 };
+}
+
+/** Cape les listes d'une télémétrie et la rend, ou `undefined` si elle est vide. */
+export function sealTelemetry(t: EditTelemetry): EditTelemetry | undefined {
+  if (t.matched.length === 0 && t.failed.length === 0 && !t.parse_error) return undefined;
+  return {
+    ...t,
+    matched: t.matched.slice(0, TELEMETRY_CAP),
+    failed: t.failed.slice(0, TELEMETRY_CAP),
+    ...(t.matched.length > TELEMETRY_CAP ? { matched_total: t.matched.length } : {}),
+    ...(t.failed.length > TELEMETRY_CAP ? { failed_total: t.failed.length } : {}),
+  };
 }
 
 /** Retire l'indentation commune des lignes de contenu d'un diff (lisibilité). */
@@ -530,6 +718,21 @@ export interface EditResult {
   diff: string;
   additions: number;
   deletions: number;
+  /** Ce que la cascade a fait pour y arriver (MIN-246). */
+  trace: ReplaceTrace;
+}
+
+/**
+ * Diff unifié entre deux contenus, mis en forme comme celui d'`applyEdit`. Les
+ * chemins qui appliquent PLUSIEURS substitutions dans un même fichier
+ * (`apply_edits`, `apply_patch`) en ont besoin sans repasser par `applyEdit` :
+ * ce qui vaut d'être rendu au modèle, c'est le diff du fichier une fois toutes
+ * les substitutions posées, pas un diff par substitution.
+ */
+export function diffFiles(path: string, before: string, after: string): string {
+  return trimDiff(
+    createTwoFilesPatch(path, path, normalizeLineEndings(before), normalizeLineEndings(after)),
+  );
 }
 
 /** Lignes ajoutées / supprimées entre deux contenus (fins de ligne neutralisées). */
@@ -562,10 +765,7 @@ export function applyEdit(
   const ending = detectLineEnding(original);
   const old = convertToLineEnding(normalizeLineEndings(oldString), ending);
   const replacement = convertToLineEnding(normalizeLineEndings(newString), ending);
-  const content = replace(original, old, replacement, replaceAll, firstMatch);
+  const { content, trace } = replaceTraced(original, old, replacement, replaceAll, firstMatch);
 
-  const diff = trimDiff(
-    createTwoFilesPatch(path, path, normalizeLineEndings(original), normalizeLineEndings(content)),
-  );
-  return { content, diff, ...countLineChanges(original, content) };
+  return { content, diff: diffFiles(path, original, content), trace, ...countLineChanges(original, content) };
 }

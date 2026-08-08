@@ -94,6 +94,7 @@ describe("parsePatch — les quatre opérations", () => {
       content: "const a = 1;\n",
       additions: 0,
       deletions: 0,
+      traces: [],
     });
   });
 });
@@ -434,6 +435,36 @@ describe("applyPatchEdits — la cascade d'edit.ts, pas un second applicateur", 
       expect(lines.indexOf("  } else {")).toBe(3); // restoreItem : intact
       expect(lines).toContain("  } else if (type === 'routine') {");
       expect(r).toMatchObject({ additions: 1, deletions: 1 });
+    });
+
+    /**
+     * MIN-246 — `attempt` dit LAQUELLE des tentatives d'ancrage a fini par
+     * passer : 1 = la passe stricte depuis l'ancre a suffi, au-delà l'ancre n'a
+     * pas servi. C'est la seule mesure qui dise si le contexte `@@` porte
+     * quelque chose sur les runs `gpt-*`.
+     */
+    it("mesure la tentative qui a résolu chaque hunk", () => {
+      const ops = parsePatch(
+        envelope(
+          "*** Update File: t.ts",
+          "@@",
+          " export async function purgeItem() {",
+          "@@",
+          "-  } else {",
+          "+  } else if (type === 'routine') {",
+        ),
+      );
+      const r = applyPatchEdits("t.ts", TWO_SITES, editsOf(ops[0]));
+      expect(r.traces).toHaveLength(1);
+      // Le hunk est ambigu sur le fichier entier : c'est l'ancre qui le résout,
+      // donc la passe STRICTE depuis l'ancre suffit — première tentative.
+      expect(r.traces[0]).toMatchObject({ replacer: "simple", rank: 1, attempt: 1 });
+    });
+
+    it("une insertion pure ne passe pas par la cascade, donc ne trace rien", () => {
+      const ops = parsePatch(envelope("*** Update File: f.ts", "+export const y = 2;"));
+      const r = applyPatchEdits("f.ts", "export const x = 1;\n", editsOf(ops[0]));
+      expect(r.traces).toEqual([]);
     });
 
     it("un hunk unique et ambigu prend la première occurrence, pas un refus", () => {
