@@ -534,6 +534,7 @@ function ProjectBoard() {
             {activeObjective ? (
               <ObjectiveBanner
                 objective={activeObjective}
+                objectives={objectives}
                 projectId={project.id}
                 progress={objectiveProgress(activeObjective.id, issues)}
                 lead={

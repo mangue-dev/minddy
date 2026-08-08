@@ -1459,6 +1459,7 @@
     "deletedToast": "Objectif déplacé vers la corbeille.",
     "completed": "{done}/{total} terminés",
     "targetDatePlaceholder": "Date cible",
+    "switchObjective": "Changer d'objectif",
     "closeFilter": "Fermer le filtre",
     "noColor": "Aucune couleur",
     "colorAria": "Couleur {color}",

@@ -1459,6 +1459,7 @@
     "deletedToast": "Objective moved to trash.",
     "completed": "{done}/{total} completed",
     "targetDatePlaceholder": "Target date",
+    "switchObjective": "Switch objective",
     "closeFilter": "Close filter",
     "noColor": "No color",
     "colorAria": "Color {color}",
