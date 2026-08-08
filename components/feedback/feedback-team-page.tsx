@@ -255,12 +255,16 @@ function FeedbackFilterMenu({
       align="end"
       tooltip={tooltip}
       trigger={
-        /* `-mr-2` compense le padding du bouton : l'icône s'aligne alors sur le
-           bord droit des lignes de la liste, pas 8 px en-deçà. */
+        /* PAS de `-mr-2` ici : cette compensation-là aligne l'icône sur le bord
+           droit des lignes de la liste, et elle ne revient donc qu'à la DERNIÈRE
+           action de la ligne de titre — le « + », juste après. Portée par le
+           filtre aussi, elle rognait les 8 px qui séparent les deux boutons et
+           les collait l'un à l'autre (la page Objectifs, écrite après, ne la met
+           que sur le « + »). */
         <Button
           variant="ghost"
           size="icon-sm"
-          className="-mr-2 text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground"
           aria-label={tooltip}
         >
           <span className="relative flex items-center justify-center">

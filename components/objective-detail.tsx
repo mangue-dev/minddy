@@ -9,11 +9,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Progress,
   cn,
   toast,
 } from "mangue-ui";
@@ -34,6 +34,7 @@ import {
   PropertyRow,
 } from "@/components/issue-property-fields";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
+import { ObjectiveProgressStat } from "@/components/objective-progress";
 import { ObjectiveResourcesSection } from "@/components/objective-resources-section";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import {
@@ -383,6 +384,13 @@ export function ObjectiveDetail({
             </>
           )}
 
+          {/* L'avancement, monté ici depuis la carte qu'il occupait au milieu du
+              flux. Il n'a jamais été une SECTION de l'objectif — c'est un
+              chiffre d'en-tête, et sa place est contre le lien vers les tickets
+              qu'il compte : « 3/12 » et « voir les 12 tickets » se lisent d'un
+              seul geste des yeux. */}
+          <ObjectiveProgressStat progress={progress} tooltip className="mr-1" />
+
           <Button asChild variant="outline" size="sm">
             <Link href={`/projects/${projectId}?objective=${objective.id}`}>
               <ListTodo />
@@ -421,6 +429,10 @@ export function ObjectiveDetail({
                 <Mic />
                 {t("dictateEditTooltip")}
               </DropdownMenuItem>
+              {/* Ce qui MODIFIE l'objectif d'un côté du trait, ce qui l'ENLÈVE de
+                  l'autre : sans lui, la corbeille est à un cran de la dictée,
+                  dans un menu qu'on ouvre sans regarder. */}
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
                 onSelect={() => setConfirmDelete(true)}
@@ -516,15 +528,6 @@ export function ObjectiveDetail({
               objectiveId={objective.id}
               projectId={projectId}
             />
-          </div>
-
-          {/* Avancement. Le lien vers le board filtré est monté dans l'en-tête,
-              avec les autres gestes : la carte ne porte plus que le chiffre. */}
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
-            <span className="text-sm font-medium">
-              {t("completed", { done: progress.done, total: progress.total })}
-            </span>
-            <Progress value={progress.percent} />
           </div>
 
           <IssueActivity

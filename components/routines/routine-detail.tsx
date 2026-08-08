@@ -449,7 +449,7 @@ export function RoutineDetail({
                   onSelect={() => setConfirmingDelete(true)}
                 >
                   <Trash2 className="size-4" />
-                  {tCommon("delete")}
+                  {tCommon("moveToTrash")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -628,7 +628,7 @@ export function RoutineDetail({
         onOpenChange={setConfirmingDelete}
         title={t("deleteTitle", { title: routine.title })}
         description={t("deleteDescription")}
-        confirmLabel={tCommon("delete")}
+        confirmLabel={tCommon("moveToTrash")}
         cancelLabel={tCommon("cancel")}
         onConfirm={() => void remove()}
       />

@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Button, Progress, cn } from "mangue-ui";
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  cn,
+} from "mangue-ui";
 import { Pencil, X, Target } from "lucide-react";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
+import { ProgressRing } from "@/components/progress-ring";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
@@ -63,15 +70,34 @@ export function ObjectiveBanner({
 
       {/* Indicators — progress · lead · target */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <div className="flex w-32 flex-col gap-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">
-              {t("completed", { done: progress.done, total: progress.total })}
-            </span>
-            <span className="font-semibold tabular-nums">{progress.percent}%</span>
-          </div>
-          <Progress value={progress.percent} />
-        </div>
+        {/* L'anneau prend la place — et la taille exacte — des pastilles rondes
+            du responsable et de la date cible : les trois indicateurs du bandeau
+            se lisent alors sur la même grille, un cercle puis deux lignes.
+            La barre horizontale d'avant réclamait sa propre largeur et cassait
+            cette rangée. Le pourcentage, lui, passe au survol : c'est de
+            l'EFFORT pondéré, quand le compte à côté est brut. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-2">
+              <ProgressRing
+                percent={progress.percent}
+                colorClass="text-emerald-500"
+                className="size-7"
+              />
+              <div className="flex flex-col leading-tight">
+                <span className="text-[11px] text-muted-foreground">
+                  {t("progressLabel")}
+                </span>
+                <span className="text-xs font-medium tabular-nums">
+                  {t("completed", { done: progress.done, total: progress.total })}
+                </span>
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            {t("progressTooltip", { percent: progress.percent })}
+          </TooltipContent>
+        </Tooltip>
 
         {lead && (
           <div className="flex items-center gap-2">
