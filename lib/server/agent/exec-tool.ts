@@ -52,6 +52,7 @@ import {
   REPO_INSTRUCTION_FILES,
   collectTouchedInstructions,
   formatBootInstructions,
+  type InstructionsReason,
   type InstructionsState,
   type RepoInstructionFile,
 } from "./repo-instructions";
@@ -136,7 +137,13 @@ function toNum(v: unknown): number | undefined {
 export type CreatePrHandler = (args: {
   title: string;
   body?: string;
-}) => Promise<{ result: unknown; success: boolean }>;
+}) => Promise<{
+  result: unknown;
+  success: boolean;
+  /** Le diff du tour, quand la porte de MIN-247 retient la livraison (`gateCreatePr`).
+   *  Sert au modèle en message `user` — un résultat de tool serait élidé au milieu. */
+  followUp?: string;
+}>;
 
 /** Exécuteur du tool `web_search` (null quand le run n'a pas accès au web). */
 export type WebSearchHandler =
@@ -289,19 +296,17 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
    * Le bloc passe EN TÊTE de l'objet : le résultat entier traverse `headTail`, qui
    * élide le MILIEU — la tête survit, et un gros diff en queue aussi.
    */
-  const withTouchedInstructions = async <T extends { result: unknown; success: boolean }>(
+  const withInstructionsFor = async <T extends { result: unknown; success: boolean }>(
     res: T,
     paths: string[],
+    reason: InstructionsReason,
   ): Promise<T> => {
     if (!res.success) return res;
-    // Entonnoir unique de TOUTE édition réussie (edit_file, write_file, move_file,
-    // apply_edits, apply_patch) : c'est ici qu'on note ce que le tour a touché,
-    // pour le type-check de fin de tour (MIN-110).
-    for (const path of paths) if (path) editedPaths.add(path);
     const block = await collectTouchedInstructions(
       paths.filter(Boolean),
       instructions,
       (path) => readWorkFile(host, path).catch(() => null),
+      reason,
     ).catch((err) => {
       console.error("[agent-execute] subdir instructions failed:", (err as Error).message);
       return null;
@@ -311,6 +316,19 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
       return { ...res, result: `${block}\n\n${res.result}` };
     }
     return { ...res, result: { repo_instructions: block, ...(res.result as object) } } as T;
+  };
+
+  const withTouchedInstructions = async <T extends { result: unknown; success: boolean }>(
+    res: T,
+    paths: string[],
+  ): Promise<T> => {
+    if (!res.success) return res;
+    // Entonnoir unique de TOUTE édition réussie (edit_file, write_file, move_file,
+    // apply_edits, apply_patch) : c'est ici qu'on note ce que le tour a touché,
+    // pour le type-check de fin de tour (MIN-110). Un fichier LU n'y entre pas —
+    // il n'a rien à faire vérifier.
+    for (const path of paths) if (path) editedPaths.add(path);
+    return withInstructionsFor(res, paths, "edited");
   };
 
   return async (name, args, callId) => {
@@ -375,7 +393,8 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         });
       }
       case "read_file": {
-        const win = await readWorkFileWindow(host, String(args.path ?? ""), {
+        const path = String(args.path ?? "");
+        const win = await readWorkFileWindow(host, path, {
           offset: toNum(args.offset),
           limit: toNum(args.limit),
         });
@@ -383,7 +402,15 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         const footer = win.truncated
           ? `\n\n[Showing lines ${win.startLine}-${win.startLine + win.returnedLines - 1} of ${win.totalLines}. Use offset/limit to read more.]`
           : "";
-        return { result: (win.content || "(empty file)") + footer, success: true };
+        // Les conventions du sous-dossier arrivent AVEC le fichier qu'on ouvre
+        // pour les comprendre, pas après la première édition (MIN-247). Même
+        // état, même budget et même « une fois par chemin » que côté édition :
+        // un dossier lu puis édité ne sert ses instructions qu'une seule fois.
+        return await withInstructionsFor(
+          { result: (win.content || "(empty file)") + footer, success: true },
+          [path],
+          "read",
+        );
       }
       case "list_dir": {
         const path = args.path ? String(args.path) : ".";

@@ -62,7 +62,7 @@ import {
   MAX_CHECKPOINT_BYTES,
 } from "./checkpoint-fit";
 import { newPlanWriteSink, watchPlanWrites } from "./plan-closure";
-import { makeTurnEndHook } from "./turn-end";
+import { gateCreatePr, makeTurnEndHook } from "./turn-end";
 import { toolOutputFileName } from "./command-output";
 import { usesApplyPatch } from "./patch";
 import {
@@ -1965,7 +1965,10 @@ export async function executeAgentRun(
         host,
         // Une relecture n'ouvre pas de pull request : le tool n'est pas dans son
         // jeu, et le handler ne lui est pas non plus câblé (deux verrous, pas un).
-        createPr: writesToRepo ? createPr : null,
+        // La PORTE (MIN-247) enveloppe le handler des DEUX moteurs, au même endroit
+        // et avec le même crochet : le premier appel rend le diff du tour au lieu
+        // d'ouvrir. Voir `gateCreatePr`.
+        createPr: writesToRepo ? gateCreatePr(createPr, turnEnd, chunkRemainingMs) : null,
         // Les tools de PLATEFORME sont INJECTÉS depuis MIN-224 (cf. `exec-tool.ts`) :
         // ici les exécuteurs en direct, puisqu'on est dans la fonction ; dans la
         // microVM, les mêmes noms partent au plan de contrôle.

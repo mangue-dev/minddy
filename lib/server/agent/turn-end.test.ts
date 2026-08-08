@@ -25,7 +25,7 @@ vi.mock("./plan-closure", async (importOriginal) => ({
   planClosureForTurn: vi.fn(async () => "PLAN_CLOSURE"),
 }));
 
-import { makeTurnEndHook, MAX_TYPE_CHECK_PASSES } from "./turn-end";
+import { gateCreatePr, makeTurnEndHook, MAX_TYPE_CHECK_PASSES } from "./turn-end";
 import { newPlanWriteSink } from "./plan-closure";
 import { runAgentLoop, type AgentChatMessage } from "./agent-loop";
 import type { RepoHost } from "./repo-host";
@@ -268,5 +268,143 @@ describe("le plafond de relances de la boucle", () => {
     // plafond ne doit jamais être ce qui choisit les blocs qui tournent.
     expect(called).toBeGreaterThan(5);
     expect(called).toBeLessThanOrEqual(9);
+  });
+});
+
+/**
+ * MIN-247 — LE PREMIER `create_pr` NE SOUMET PAS.
+ *
+ * Le harness faisait DÉJÀ relire son diff au modèle, mais en fin de tour — après
+ * que `create_pr` a poussé et ouvert la pull request. L'ordre réel était : PR
+ * ouverte, corps rédigé, relecteur notifié, puis relecture. Ce que la porte
+ * change n'est pas le nombre de rounds (le verrou est partagé, la fin de tour ne
+ * repose pas la question) : c'est le MOMENT.
+ */
+describe("la porte de create_pr", () => {
+  const opener = () => {
+    const calls: Array<{ title: string }> = [];
+    return {
+      calls,
+      handler: async (args: { title: string; body?: string }) => {
+        calls.push({ title: args.title });
+        return { result: { url: "https://forge/pr/1" }, success: true };
+      },
+    };
+  };
+
+  it("rend le diff au premier appel, ouvre au second", async () => {
+    const { hook } = hookFor({ repoTouched: true });
+    const { calls, handler } = opener();
+    const gated = gateCreatePr(handler, hook, () => ROOMY);
+
+    const first = await gated({ title: "MIN-1: faire la chose" });
+    expect(first.success).toBe(true);
+    // Le diff part en `followUp`, pas dans le résultat : celui-ci est capé à 6 000
+    // caractères avec le MILIEU élidé, ce qui d'un diff couperait ce qu'on donne
+    // à lire. Le résultat ne dit que le fait.
+    expect(first.followUp).toContain("DIFF");
+    expect(first.result).toMatchObject({ opened: false });
+    expect(String((first.result as { note: string }).note)).toContain("call create_pr again");
+    expect(calls).toEqual([]); // RIEN n'a été poussé.
+
+    const second = await gated({ title: "MIN-1: faire la chose" });
+    expect(second.result).toEqual({ url: "https://forge/pr/1" });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("ne repose pas la question en fin de tour — c'est le même verrou", async () => {
+    const { hook, phases } = hookFor({ edited: ["lib/x.ts"], repoTouched: true });
+    const { handler } = opener();
+    const gated = gateCreatePr(handler, hook, () => ROOMY);
+
+    expect((await gated({ title: "t" })).followUp).toContain("DIFF");
+    await gated({ title: "t" });
+
+    // La chaîne de fin de tour : le type-check parle, la relecture NON.
+    const said: Array<string | null> = [];
+    for (let i = 0; i < 3; i++) said.push(await hook.run({ budgetMs: ROOMY }));
+    expect(said).toEqual(["TYPES", null, null]);
+    // Et la mesure sait d'où venait la relecture : de la porte, pas de la fin de tour.
+    expect(phases).toEqual(["self_review", "type_check"]);
+  });
+
+  it("ouvre du premier coup quand le tour n'a rien touché", async () => {
+    // Une PR sur du travail poussé au tour précédent : il n'y a pas de diff de CE
+    // tour à relire, donc rien à faire attendre.
+    const { hook } = hookFor({ repoTouched: false });
+    const { calls, handler } = opener();
+    const gated = gateCreatePr(handler, hook, () => ROOMY);
+
+    expect((await gated({ title: "t" })).success).toBe(true);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("ouvre du premier coup quand il ne reste plus de budget pour relire", async () => {
+    const { hook } = hookFor({ repoTouched: true });
+    const { calls, handler } = opener();
+    const gated = gateCreatePr(handler, hook, () => 1_000);
+
+    expect((await gated({ title: "t" })).success).toBe(true);
+    expect(calls).toHaveLength(1);
+  });
+});
+
+/**
+ * Le canal par lequel la porte parle : un message `user`, pas un résultat de tool.
+ * Un résultat traverse `headTail(…, 6 000)`, qui élide le MILIEU — d'un diff, ça
+ * coupe exactement ce qu'on donne à lire.
+ */
+describe("le mot long d'un tool (followUp)", () => {
+  it("arrive au modèle en entier, APRÈS la réponse de tous les tool-calls du round", async () => {
+    const long = `LONG_${"x".repeat(20_000)}_END`;
+    let round = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        // Round 1 : DEUX tool-calls, dont un qui porte un mot long. Round 2 : la réponse.
+        if (round++ === 0) {
+          return new Response(
+            sse([
+              {
+                delta: {
+                  tool_calls: [
+                    { index: 0, id: "c1", type: "function", function: { name: "a", arguments: "{}" } },
+                    { index: 1, id: "c2", type: "function", function: { name: "b", arguments: "{}" } },
+                  ],
+                },
+              },
+              { delta: {}, finish_reason: "tool_calls" },
+            ]),
+          );
+        }
+        return new Response(sseText("Done."));
+      }),
+    );
+
+    const result = await runAgentLoop({
+      messages: seed(),
+      tools: [],
+      model: "test/model",
+      apiKey: "sk-test",
+      baseUrl: "https://example.invalid/v1",
+      runId: "run_test",
+      billTo: { userId: "user_test" },
+      recordUsage: async () => {},
+      softDeadlineMs: 250_000,
+      emit: async () => {},
+      execTool: async (name) =>
+        name === "a" ? { result: { ok: true }, success: true, followUp: long } : { result: {}, success: true },
+    });
+
+    expect(result.status).toBe("completed");
+    const injected = result.messages.find((m) => m.role === "user" && m.content === long);
+    // En ENTIER : rien n'a été capé ni élidé au passage.
+    expect(injected).toBeDefined();
+    // Et après les DEUX réponses de tool : un message `user` intercalé casserait
+    // l'appariement tool_call ↔ tool_result.
+    const at = result.messages.indexOf(injected!);
+    const toolMessages = result.messages.filter((m) => m.role === "tool");
+    expect(toolMessages).toHaveLength(2);
+    for (const m of toolMessages) expect(result.messages.indexOf(m)).toBeLessThan(at);
   });
 });

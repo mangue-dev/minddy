@@ -5,13 +5,23 @@
  *
  * Deux temps (MIN-115) :
  *  - à l'AMORCE, la racine du clone, en message dédié (`formatBootInstructions`) ;
- *  - PARESSEUSEMENT, à la première édition dans un sous-dossier, les fichiers
+ *  - PARESSEUSEMENT, à la première rencontre d'un sous-dossier, les fichiers
  *    rencontrés entre la racine et le fichier touché (`instructionFilesFor` →
- *    `formatTouchedInstructions`), collés au RÉSULTAT du tool d'édition.
+ *    `formatTouchedInstructions`), collés au RÉSULTAT du tool.
  *
  * Pourquoi paresseux plutôt que tout à l'amorce (la règle de Codex) : le cap
  * global reste 32 Ko, et remplir ce budget des conventions de paquets que l'agent
  * ne touchera jamais se ferait au détriment de celles de la racine.
+ *
+ * DEUX GESTES DÉCLENCHENT, PAS UN (MIN-247). L'édition, depuis l'origine — et
+ * la LECTURE, empruntée à OpenCode (`tool/read.ts` : `read` remonte du fichier lu
+ * vers la racine et colle ce qu'il trouve au résultat). Le geste qui déclenchait
+ * seul arrivait trop tard : un agent lit dix fichiers d'un paquet pour comprendre
+ * comment il est écrit, PUIS édite — les conventions de ce paquet ne lui étaient
+ * servies qu'une fois la première version écrite, c'est-à-dire au moment où elles
+ * ne coûtent plus rien à ignorer. Un seul état, un seul budget, une seule lecture
+ * par chemin et par run : les deux gestes se partagent tout, et ne diffèrent que
+ * par la PHRASE qui présente le bloc (`reason`).
  */
 
 /** Fichiers d'instructions reconnus, par ordre d'affichage. */
@@ -94,16 +104,24 @@ export interface InstructionsState {
 }
 
 /**
+ * Le geste qui a fait rencontrer le sous-dossier. Ne change QUE la phrase qui
+ * présente le bloc : un modèle à qui on annonce « le dossier que tu viens
+ * d'éditer » alors qu'il vient de lire ne sait plus ce que le harness a fait.
+ */
+export type InstructionsReason = "edited" | "read";
+
+/**
  * Instructions des sous-dossiers que l'agent vient de toucher, prêtes à coller au
- * résultat de son tool d'édition — ou null s'il n'y a rien de neuf. `read` est
- * fourni par l'appelant (la sandbox), pour que la règle reste testable ici : un
- * chemin n'est lu QU'UNE fois par run, trouvé ou non, et le budget global ne se
- * dépasse pas.
+ * résultat de son tool — ou null s'il n'y a rien de neuf. `read` est fourni par
+ * l'appelant (la sandbox), pour que la règle reste testable ici : un chemin n'est
+ * lu QU'UNE fois par run, trouvé ou non, quel que soit le geste qui l'a fait
+ * rencontrer, et le budget global ne se dépasse pas.
  */
 export async function collectTouchedInstructions(
   touchedPaths: string[],
   state: InstructionsState,
   read: (path: string) => Promise<string | null>,
+  reason: InstructionsReason = "edited",
 ): Promise<string | null> {
   const budget = REPO_INSTRUCTIONS_MAX_BYTES - state.bytes;
   if (budget <= 0) return null;
@@ -120,19 +138,28 @@ export async function collectTouchedInstructions(
     }
   }
   if (found.length === 0) return null;
-  const formatted = formatTouchedInstructions(found, budget);
+  const formatted = formatTouchedInstructions(found, budget, reason);
   if (!formatted) return null;
   state.bytes += formatted.bytes;
   return formatted.block;
 }
 
+/** Phrase d'ouverture du bloc, par geste. Le reste est identique — c'est bien le
+ *  même contenu et la même règle, seul le fait rapporté change. */
+const LEAD: Record<InstructionsReason, string> = {
+  edited:
+    "The directory you just edited ships its own instructions. Follow them for anything under it; they override the repository-wide ones on project-specific matters.",
+  read: "The file you just read sits under a directory that ships its own instructions. Follow them for anything under it; they override the repository-wide ones on project-specific matters.",
+};
+
 /**
- * Bloc collé au résultat d'un tool d'édition : les instructions du sous-dossier
- * que l'agent vient de toucher. Renvoie null si rien de neuf tient dans le budget.
+ * Bloc collé au résultat d'un tool : les instructions du sous-dossier que l'agent
+ * vient de toucher. Renvoie null si rien de neuf tient dans le budget.
  */
 function formatTouchedInstructions(
   files: RepoInstructionFile[],
   budgetBytes: number,
+  reason: InstructionsReason,
 ): { block: string; bytes: number } | null {
   const blocks: string[] = [];
   let spent = 0;
@@ -147,7 +174,7 @@ function formatTouchedInstructions(
   }
   if (blocks.length === 0) return null;
   return {
-    block: `The directory you just edited ships its own instructions. Follow them for anything under it; they override the repository-wide ones on project-specific matters.\n\n${blocks.join("\n\n")}`,
+    block: `${LEAD[reason]}\n\n${blocks.join("\n\n")}`,
     bytes: spent,
   };
 }

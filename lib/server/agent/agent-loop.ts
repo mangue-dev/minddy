@@ -282,6 +282,18 @@ export type ExecuteAgentTool = (
    * six mois plus tard, si. Recopié tel quel dans l'event `tool_result`.
    */
   edit?: EditTelemetry;
+  /**
+   * Ce que le harness a de LONG à dire sur cet appel (MIN-247) : servi au modèle
+   * en message `user`, après que tous les tool-calls du round ont leur réponse.
+   *
+   * Le `result` d'un tool traverse `headTail(…, TOOL_RESULT_MAX_CHARS)`, qui élide
+   * le MILIEU — parfait pour une sortie de commande dont le verdict est en queue,
+   * ruineux pour un document qu'on donne à LIRE EN ENTIER. Le seul usage à ce jour
+   * est la porte de `create_pr` (`gateCreatePr`), qui rend le diff du tour : un
+   * diff amputé de son milieu ne se relit pas, et c'est précisément la relecture
+   * qu'on essaie de faire avoir lieu.
+   */
+  followUp?: string;
 }>;
 
 /** État du round EN COURS d'écriture, poussé au fil ouvert (jamais persisté). */
@@ -2069,6 +2081,13 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     /** Tool dont la répétition a été confirmée dans ce round (MIN-243) : la
      *  coupure attend la fin du round, où chaque appel a sa réponse. */
     let loopingTool: string | null = null;
+    /** Ce que le harness a de LONG à dire sur un appel de ce round (MIN-247) : le
+     *  diff rendu par la porte de `create_pr`. Un résultat de tool est capé à
+     *  `TOOL_RESULT_MAX_CHARS` avec le MILIEU élidé — ce qui d'un diff de
+     *  relecture couperait précisément ce qu'on donne à lire. Ça part donc en
+     *  message `user`, comme la relance de fin de tour, et APRÈS le round : les
+     *  réponses aux tool-calls doivent rester contiguës. */
+    const followUps: string[] = [];
 
     for (const tc of stream.toolCalls) {
       if (suspendAtBoundary || (executed > 0 && elapsed() >= params.softDeadlineMs)) {
@@ -2148,13 +2167,15 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       let reason: string | undefined;
       let images: AgentToolImage[] | undefined;
       let edit: EditTelemetry | undefined;
+      let followUp: string | undefined;
       try {
-        ({ result, success, reason, images, edit } = await execTool(name, args, tc.id));
+        ({ result, success, reason, images, edit, followUp } = await execTool(name, args, tc.id));
       } catch (err) {
         result = { error: err instanceof Error ? err.message : String(err) };
         success = false;
       }
       messages.push({ role: "tool", tool_call_id: tc.id, content: toolContent(result, images) });
+      if (followUp?.trim()) followUps.push(followUp);
       await emit("tool_result", {
         id: tc.id,
         name,
@@ -2171,6 +2192,10 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // ces deux-là promettent une reprise, et reprendre est exactement ce qu'il ne
     // faut pas faire d'un tour qui tourne en rond.
     if (loopingTool) return await cutForToolLoop(loopingTool);
+
+    // Le mot long du harness, une fois TOUS les tool-calls du round répondus : un
+    // message `user` intercalé entre deux réponses casserait l'appariement.
+    for (const text of followUps) messages.push({ role: "user", content: text });
 
     // ask_user → FIN DE TOUR : les questions sont posées (event `question` émis),
     // tous les tool-calls du round ont leur réponse dans `messages` (frontière

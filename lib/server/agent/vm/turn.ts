@@ -21,7 +21,7 @@ import {
 import { usesApplyPatch } from "../patch";
 import { fitCheckpoint } from "../checkpoint-fit";
 import { newPlanWriteSink, watchPlanWrites } from "../plan-closure";
-import { makeTurnEndHook } from "../turn-end";
+import { gateCreatePr, makeTurnEndHook } from "../turn-end";
 import { REPO_INSTRUCTION_FILES, type InstructionsState } from "../repo-instructions";
 import { commitAndPush, changedFiles, type RepoHost } from "../repo-host";
 import { BackgroundJobs } from "../background";
@@ -581,7 +581,10 @@ export async function runVmTurn(
     redact: secrets.redact,
     execTool: makeExecTool({
       host,
-      createPr,
+      // La PORTE de MIN-247, câblée ICI AUSSI et avec le même crochet : le premier
+      // `create_pr` d'un tour qui a touché le dépôt rend le diff au lieu de pousser.
+      // La garantie ne doit pas dépendre de `loop_in_vm` — cf. `gateCreatePr`.
+      createPr: createPr ? gateCreatePr(createPr, turnEnd, remainingMs) : null,
       prTool: job.anchor === "pr" ? platformTool : null,
       // Enveloppé pour NOTER le plan écrit ce tour (MIN-236) : les tools ticket
       // partent au plan de contrôle, donc c'est le seul endroit d'où la boucle voit

@@ -154,3 +154,53 @@ describe("collectTouchedInstructions", () => {
     expect(await collectTouchedInstructions(["apps/web/a.tsx"], state, read)).toBeNull();
   });
 });
+
+/**
+ * MIN-247 — LA LECTURE DÉCLENCHE AUSSI, ET C'EST LE MÊME ÉTAT.
+ *
+ * L'édition arrivait trop tard : un agent lit dix fichiers d'un paquet pour
+ * comprendre comment il est écrit, PUIS édite. Les conventions du paquet ne lui
+ * étaient servies qu'après la première version. Ce qui compte ici, c'est que le
+ * deuxième geste n'ait RIEN dupliqué — un seul état, un seul budget, une seule
+ * lecture par chemin.
+ */
+describe("collectTouchedInstructions — la lecture", () => {
+  it("annonce le geste : « lu » ne dit pas « édité »", async () => {
+    const read = repo({ "apps/web/AGENTS.md": "Web rules." });
+    const edit = repo({ "apps/web/AGENTS.md": "Web rules." });
+    const lu = await collectTouchedInstructions(["apps/web/a.tsx"], read.state, read.read, "read");
+    const edite = await collectTouchedInstructions(["apps/web/a.tsx"], edit.state, edit.read, "edited");
+    expect(lu).toContain("The file you just read");
+    expect(edite).toContain("The directory you just edited");
+    // Même contenu, même chemin nommé : seule la phrase d'ouverture change.
+    expect(lu).toContain('<REPO_INSTRUCTIONS path="apps/web/AGENTS.md">');
+    expect(edite).toContain('<REPO_INSTRUCTIONS path="apps/web/AGENTS.md">');
+  });
+
+  it("un dossier LU puis ÉDITÉ ne sert ses instructions qu'une fois", async () => {
+    const { reads, state, read } = repo({ "apps/web/AGENTS.md": "Web rules." });
+    expect(
+      await collectTouchedInstructions(["apps/web/a.tsx"], state, read, "read"),
+    ).toContain("Web rules.");
+    const readsAfterFirst = reads.length;
+    // L'édition qui suit ne les re-sert pas : c'est le même `state`, donc le même
+    // « une fois par chemin et par run ». L'inverse tient aussi, par construction.
+    expect(
+      await collectTouchedInstructions(["apps/web/a.tsx"], state, read, "edited"),
+    ).toBeNull();
+    expect(reads.length).toBe(readsAfterFirst);
+  });
+
+  it("les deux gestes se partagent le budget global", async () => {
+    const { state, read } = repo({
+      "apps/AGENTS.md": "x".repeat(4_000),
+      "apps/web/AGENTS.md": "y".repeat(4_000),
+    });
+    state.bytes = REPO_INSTRUCTIONS_MAX_BYTES - 100;
+    const block = await collectTouchedInstructions(["apps/web/a.tsx"], state, read, "read");
+    // Ce qui reste du budget est servi, et pas un octet de plus : une lecture ne
+    // s'accorde pas une enveloppe à elle.
+    expect(block).not.toBeNull();
+    expect(state.bytes).toBeLessThanOrEqual(REPO_INSTRUCTIONS_MAX_BYTES);
+  });
+});

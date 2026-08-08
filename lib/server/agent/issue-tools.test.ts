@@ -506,3 +506,49 @@ describe("edit_issue_text — corriger un passage en place", () => {
     expect(updateIssueFields).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * MIN-247 — UNE PIÈCE JOINTE TEXTE NE PERD PLUS SA FIN.
+ *
+ * La coupe se faisait par la TÊTE : sur un log, une trace ou un export — ce
+ * qu'on dépose presque toujours sur un ticket — c'est la fin qui porte le
+ * verdict. C'est exactement le défaut que MIN-107 avait nommé pour `run_command`
+ * et qui n'avait jamais été porté ici.
+ */
+describe("read_resource sur un texte trop long", () => {
+  it("garde le DÉBUT et la FIN, et dit que c'est le milieu qui manque", async () => {
+    attachment = {
+      ...attachmentBase,
+      mime_type: "text/plain",
+      file_name: "run.log",
+      size_bytes: 50_000,
+    };
+    const body = `PREMIÈRE LIGNE\n${"remplissage\n".repeat(2_000)}DERNIÈRE LIGNE`;
+    downloaded = Buffer.from(body, "utf8");
+
+    const out = await executeIssueTool(ctx(), "read_resource", { resource_id: "att-1" });
+    const result = out.result as { content: string; content_note?: string };
+
+    expect(result.content).toContain("PREMIÈRE LIGNE");
+    expect(result.content).toContain("DERNIÈRE LIGNE");
+    expect(result.content).toContain("chars elided");
+    expect(result.content_note).toContain("MIDDLE");
+    // Et le chemin du fichier entier reste dit : l'URL signée, puis read_file.
+    expect(result.content_note).toContain("read_file");
+  });
+
+  it("ne touche pas à un texte qui tient en entier", async () => {
+    attachment = {
+      ...attachmentBase,
+      mime_type: "text/plain",
+      file_name: "note.txt",
+      size_bytes: 20,
+    };
+    downloaded = Buffer.from("court et complet", "utf8");
+
+    const out = await executeIssueTool(ctx(), "read_resource", { resource_id: "att-1" });
+    const result = out.result as { content: string; content_note?: string };
+    expect(result.content).toBe("court et complet");
+    expect(result.content_note).toBeUndefined();
+  });
+});

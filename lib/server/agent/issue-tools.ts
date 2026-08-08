@@ -26,6 +26,7 @@ import { displayName } from "@/lib/display-name";
 import { isEffort } from "@/lib/issue-validation";
 import type { NumoDefaultStatus } from "@/lib/numo-default-status";
 import { MAX_PLAN_LENGTH, appendToPlan, parsePlan } from "@/lib/plan";
+import { headTail } from "./prune";
 import type { AgentToolImage } from "./content";
 
 /**
@@ -460,11 +461,16 @@ async function readResource(
       return {
         result: {
           ...meta,
-          content: cap(text, ATTACHMENT_INLINE_MAX_CHARS),
+          // La coupe garde la TÊTE ET LA QUEUE (MIN-247). Elle coupait par la
+          // tête, ce qui est exactement le défaut que MIN-107 avait nommé pour
+          // `run_command` et jamais porté ici : sur un log, une trace, un
+          // export, la fin est la partie utile — et une pièce jointe déposée
+          // sur un ticket est presque toujours l'un des trois.
+          content: headTail(text, ATTACHMENT_INLINE_MAX_CHARS),
           ...(text.length > ATTACHMENT_INLINE_MAX_CHARS
             ? {
                 content_note:
-                  "Truncated — for the full file, download it in the sandbox: run_command `curl -sL '<download_url>' -o /tmp/…` then read_file it.",
+                  "Truncated in the MIDDLE — you have the beginning and the end of the file. For the part in between, download it in the sandbox: run_command `curl -sL '<download_url>' -o /tmp/…` then read_file it (offset/limit) or grep it.",
               }
             : {}),
         },

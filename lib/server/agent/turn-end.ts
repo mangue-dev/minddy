@@ -64,6 +64,12 @@ export interface TurnEndDeps {
 export interface TurnEndHook {
   /** Le crochet, tel que la boucle l'appelle (`params.onTurnEnd`). */
   run: (opts: { budgetMs: number }) => Promise<string | null>;
+  /**
+   * L'auto-relecture RÉCLAMÉE PAR AVANCE, pour `create_pr` (cf. `gateCreatePr`).
+   * Consomme le MÊME verrou que le bloc de fin de tour : ce qui est relu ici ne
+   * sera pas re-demandé après. `null` = rien à relire, ou déjà relu.
+   */
+  reviewBeforeSubmit: (budgetMs: number) => Promise<string | null>;
   /** `repoTouched` À JOUR — l'appelant l'écrit au checkpoint. */
   repoTouched: () => boolean;
   /**
@@ -135,7 +141,10 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
    * self-review.ts). Deux commandes git en LECTURE SEULE — l'index n'est jamais
    * touché, la fin de tour reste seule à stager.
    */
-  const selfReviewBlock = async (budgetMs: number): Promise<string | null> => {
+  const selfReviewBlock = async (
+    budgetMs: number,
+    at: "turn_end" | "create_pr" = "turn_end",
+  ): Promise<string | null> => {
     if (selfReviewed || !repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
     selfReviewed = true;
     const startedAt = Date.now();
@@ -144,8 +153,12 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
       porcelain: "",
     }));
     const block = formatSelfReview({ diff, porcelain });
+    // `at` distingue les deux moments où la MÊME relecture peut tomber (MIN-247).
+    // Sans lui, la mesure ne pourrait pas dire combien de PR sont passées par la
+    // porte plutôt que par la fin de tour — ni si la porte se déclenche.
     await emit("status", {
       phase: "self_review",
+      at,
       durationMs: Date.now() - startedAt,
       chars: block?.length ?? 0,
     });
@@ -194,6 +207,10 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
   return {
     repoTouched: () => repoTouched,
     noteEdits,
+    reviewBeforeSubmit: async (budgetMs: number) => {
+      noteEdits();
+      return await selfReviewBlock(budgetMs, "create_pr");
+    },
     /**
      * L'ORDRE PORTE DU SENS. Les erreurs de typage passent avant la relecture :
      * elles sont concrètes et bloquantes, et servir un diff par-dessus un dépôt qui
@@ -214,5 +231,50 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
         (await planClosureBlock(budgetMs))
       );
     },
+  };
+}
+
+/**
+ * LE PREMIER `create_pr` NE SOUMET PAS — il rend le diff (MIN-247, emprunté au
+ * `review_on_submit` de SWE-agent).
+ *
+ * Le harness fait DÉJÀ relire son diff au modèle : c'est `selfReviewBlock`, et le
+ * prompt l'annonce comme exécuté (« Self-review — the harness runs it, you don't »).
+ * Mais il le fait en FIN DE TOUR, c'est-à-dire une fois que le modèle a rendu la
+ * main — or `create_pr` pousse et ouvre la pull request AU MOMENT DE L'APPEL.
+ * L'ordre réel était donc : PR ouverte, corps de PR rédigé, relecteur notifié,
+ * *puis* relecture. Ce que la relecture attrape (l'erreur de JOINTURE entre deux
+ * fichiers, cf. self-review.ts) arrivait après la livraison, pas avant.
+ *
+ * La porte ne rajoute pas un round : elle DÉPLACE celui qu'on paie déjà. La
+ * relecture consomme le même verrou, donc la fin de tour ne repose pas la
+ * question, et le second `create_pr` ouvre pour de bon. Un tour qui n'a rien
+ * touché — une PR sur du travail poussé au tour précédent — passe du premier
+ * coup : il n'y a pas de diff de ce tour à relire.
+ */
+export function gateCreatePr<A, R extends { result: unknown; success: boolean }>(
+  handler: (args: A) => Promise<R>,
+  hook: Pick<TurnEndHook, "reviewBeforeSubmit">,
+  remainingMs: () => number,
+): (args: A) => Promise<{ result: unknown; success: boolean; followUp?: string }> {
+  return async (args) => {
+    const review = await hook.reviewBeforeSubmit(remainingMs()).catch(() => null);
+    if (!review) return await handler(args);
+    // Le diff part en `followUp`, PAS dans le résultat : un résultat de tool est
+    // capé à `TOOL_RESULT_MAX_CHARS` avec le milieu élidé, et un diff amputé de
+    // son milieu ne se relit pas — c'est exactement la relecture qu'on essaie de
+    // faire avoir lieu. Le résultat, lui, ne dit que le fait : rien n'est parti.
+    //
+    // `success: true` : rien n'a échoué. Le modèle a demandé une livraison, le
+    // harness lui rend d'abord ce qu'il livre — un refus le pousserait à
+    // reformuler ses arguments plutôt qu'à lire.
+    return {
+      result: {
+        opened: false,
+        note: "Nothing has been pushed and no pull request has been opened yet: the harness is handing you this turn's diff first. Read it, fix what you find, then call create_pr again — the next call goes through.",
+      },
+      success: true,
+      followUp: review,
+    };
   };
 }
