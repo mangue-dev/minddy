@@ -17,6 +17,13 @@
  *
  * Le parsing est textuel, pas un vrai shell : `g=git; $g reset --hard` passe. La
  * cible est un modèle distrait, pas un attaquant — l'attaquant a déjà `rm -rf`.
+ *
+ * Un cas méritait quand même d'être fermé (MIN-244) : `bash -lc "git reset --hard"`
+ * n'est pas une astuce d'attaquant mais une forme que le modèle écrit tout seul, et
+ * le shell y cachait git derrière son propre `-c`. On re-parse donc l'argument des
+ * shells. Le reste ne bouge pas : pas de rails de composition à la OpenHands
+ * (`curl … | bash`) — le réseau est ouvert par décision et la VM ne détient aucun
+ * secret depuis MIN-223, il n'y a rien à voler en aval.
  */
 
 /** Valeur du champ `reason` de l'event `tool_result` d'un refus (mesurable en base). */
@@ -128,15 +135,9 @@ function tokenize(segment: string): string[] {
   return tokens;
 }
 
-/** Options GLOBALES de git qui portent une valeur en mot suivant (`git -C dir …`). */
-const GIT_GLOBAL_WITH_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);
-
-/**
- * La sous-commande git d'un segment, et ses arguments — ou null si le segment ne
- * lance pas git. Saute les affectations d'environnement (`FOO=bar git …`), les
- * enveloppes (`sudo git …`) et les options globales de git.
- */
-function gitInvocation(tokens: string[]): { sub: string; args: string[] } | null {
+/** Index du premier mot qui est vraiment un binaire : saute les affectations
+ *  d'environnement (`FOO=bar git …`) et les enveloppes (`sudo git …`). */
+function skipPrefix(tokens: string[]): number {
   let i = 0;
   while (i < tokens.length) {
     const t = tokens[i];
@@ -146,6 +147,19 @@ function gitInvocation(tokens: string[]): { sub: string; args: string[] } | null
     }
     break;
   }
+  return i;
+}
+
+/** Options GLOBALES de git qui portent une valeur en mot suivant (`git -C dir …`). */
+const GIT_GLOBAL_WITH_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);
+
+/**
+ * La sous-commande git d'un segment, et ses arguments — ou null si le segment ne
+ * lance pas git. Saute les affectations d'environnement (`FOO=bar git …`), les
+ * enveloppes (`sudo git …`) et les options globales de git.
+ */
+function gitInvocation(tokens: string[]): { sub: string; args: string[] } | null {
+  let i = skipPrefix(tokens);
   const bin = tokens[i];
   if (!bin || !(bin === "git" || bin.endsWith("/git"))) return null;
   i++;
@@ -159,6 +173,32 @@ function gitInvocation(tokens: string[]): { sub: string; args: string[] } | null
   return { sub, args: tokens.slice(i + 1) };
 }
 
+/** Shells qui acceptent une commande en argument (`bash -lc "…"`). */
+const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh"]);
+
+/**
+ * La commande portée par un `sh -c` / `bash -lc` — ou null si le segment ne lance
+ * pas un shell avec une commande en argument. Seule la forme `-…c…` compte :
+ * `bash script.sh` exécute un fichier, qu'on ne lit pas.
+ */
+function shellCommandArg(tokens: string[]): string | null {
+  const i = skipPrefix(tokens);
+  const bin = tokens[i];
+  if (!bin) return null;
+  const name = bin.slice(bin.lastIndexOf("/") + 1);
+  if (!SHELLS.has(name)) return null;
+  let sawC = false;
+  for (let j = i + 1; j < tokens.length; j++) {
+    const t = tokens[j];
+    // Après `--`, ce qui suit est la commande de `-c` … ou un nom de script sinon.
+    if (t === "--") return sawC ? (tokens[j + 1] ?? null) : null;
+    if (!t.startsWith("-")) return sawC ? t : null; // sinon : un script, pas un `-c`
+    if (!t.startsWith("--") && t.includes("c")) sawC = true;
+    if (t === "-o" || t === "+o") j++; // `bash -o pipefail -c …` : `-o` porte une valeur
+  }
+  return null;
+}
+
 function refusal(what: string): CommandVerdict {
   return {
     allowed: false,
@@ -169,9 +209,24 @@ function refusal(what: string): CommandVerdict {
   };
 }
 
+/** Un drapeau court (`-fd`, `-xdf`) qui porte cette lettre. */
+const shortFlagWith = (letter: string) => (a: string) =>
+  a.startsWith("-") && !a.startsWith("--") && a.includes(letter);
+
 /** Ce segment lance-t-il une commande git interdite ? */
-function checkSegment(segment: string): CommandVerdict {
-  const git = gitInvocation(tokenize(segment));
+function checkSegment(segment: string, depth: number): CommandVerdict {
+  const tokens = tokenize(segment);
+
+  // `bash -lc "git reset --hard"` : le shell cache git derrière son propre `-c`.
+  // On re-parse son argument comme une commande à part entière. La profondeur
+  // borne `bash -c "bash -c …"`, qui n'a aucune raison d'exister.
+  const inner = shellCommandArg(tokens);
+  if (inner != null && depth < 3) {
+    const verdict = check(inner, depth + 1);
+    if (!verdict.allowed) return verdict;
+  }
+
+  const git = gitInvocation(tokens);
   if (!git) return { allowed: true };
   const { sub, args } = git;
 
@@ -188,6 +243,18 @@ function checkSegment(segment: string): CommandVerdict {
   if (sub === "stash" && (args[0] === "drop" || args[0] === "clear")) {
     return refusal(`git stash ${args[0]}`);
   }
+  // `git clean` sans `-f` ne fait rien ; avec, il supprime des fichiers non suivis
+  // — le travail non commité, exactement ce que ce module protège. `-n` reste libre.
+  if (sub === "clean") {
+    const forces = args.find((a) => a === "--force" || shortFlagWith("f")(a));
+    if (forces) return refusal(`git clean ${forces}`);
+  }
+  // `git switch` est l'équivalent moderne de `checkout` : changer de branche est
+  // inoffensif, jeter les modifications pour y arriver ne l'est pas.
+  if (sub === "switch") {
+    const discards = args.find((a) => a === "--discard-changes" || a === "--force" || a === "-f");
+    if (discards) return refusal(`git switch ${discards}`);
+  }
   return { allowed: true };
 }
 
@@ -197,8 +264,12 @@ function checkSegment(segment: string): CommandVerdict {
  * s'adapte — on ne casse jamais le tour.
  */
 export function checkCommand(command: string): CommandVerdict {
+  return check(command, 0);
+}
+
+function check(command: string, depth: number): CommandVerdict {
   for (const segment of splitSegments(command)) {
-    const verdict = checkSegment(segment);
+    const verdict = checkSegment(segment, depth);
     if (!verdict.allowed) return verdict;
   }
   return { allowed: true };

@@ -41,6 +41,14 @@ describe("checkCommand — ce qui détruit du travail ou écrit sur le remote", 
     "git checkout -f",
     "git stash drop",
     "git stash clear",
+    // MIN-244 : `clean -f` et `switch --discard-changes` détruisent exactement ce
+    // que le module dit protéger — le travail non commité de la branche.
+    "git clean -fd",
+    "git clean -f",
+    "git clean -xdf",
+    "git clean --force",
+    "git switch --discard-changes main",
+    "git switch -f main",
   ]) {
     it(`refuse \`${cmd}\``, () => {
       expect(allowed(cmd)).toBe(false);
@@ -60,6 +68,19 @@ describe("checkCommand — ce qui détruit du travail ou écrit sur le remote", 
     expect(allowed("/usr/bin/git reset --hard")).toBe(false);
     expect(allowed("GIT_AUTHOR_NAME=x git commit -m y")).toBe(false);
     expect(allowed("git -C /vercel/sandbox/repo checkout -- lib/plan.ts")).toBe(false);
+  });
+
+  // MIN-244 : le shell cachait git derrière son propre `-c`, et `gitInvocation`
+  // prenait `bash` pour le binaire. C'est une forme que le modèle écrit tout seul.
+  it("re-parse la commande portée par un shell", () => {
+    expect(allowed('bash -lc "git reset --hard"')).toBe(false);
+    expect(allowed("sh -c 'cd /vercel/sandbox/repo && git push'")).toBe(false);
+    expect(allowed('/bin/bash -c "git checkout -- lib/plan.ts"')).toBe(false);
+    expect(allowed('zsh -ec "git commit -m wip"')).toBe(false);
+    expect(allowed('sudo bash -c "git push --force"')).toBe(false);
+    expect(allowed('bash -c "bash -c \\"git push\\""')).toBe(false);
+    expect(allowed('sh -c -- "git reset --hard"')).toBe(false);
+    expect(allowed('bash -o pipefail -c "git push"')).toBe(false);
   });
 });
 
@@ -82,6 +103,17 @@ describe("checkCommand — les faux positifs à ne PAS attraper", () => {
     "grep -rn 'git reset --hard' docs/",
     "echo 'never run git push here' >> AGENTS.md",
     "cd /vercel/sandbox/repo && git diff --stat",
+    // MIN-244 : le shell n'est pas suspect en lui-même, seul son `-c` est relu.
+    'bash -lc "pnpm build"',
+    "bash scripts/setup.sh",
+    "sh -- scripts/git-reset.sh",
+    "sh -c 'git status --porcelain'",
+    'bash -lc "git log --oneline -5"',
+    "git clean -n",
+    "git clean --dry-run",
+    "git switch main",
+    "git switch -c feature/x",
+    "echo \"bash -c 'git push'\" >> notes.md",
   ]) {
     it(`laisse passer \`${cmd}\``, () => {
       expect(allowed(cmd)).toBe(true);

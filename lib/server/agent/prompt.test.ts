@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { checkCommand } from "./command-guard";
 import {
   buildAgentContextMessage,
   buildAgentSystemPrompt,
@@ -535,8 +536,17 @@ describe("buildAgentSystemPrompt — garde-fou git", () => {
       const prompt = buildAgentSystemPrompt({ anchor });
       expect(prompt).toContain("The harness owns git.");
       expect(prompt).toMatch(/`run_command` REFUSES/);
-      for (const cmd of ["git commit", "git push", "git reset", "git restore", "git checkout -- <file>"]) {
+      for (const cmd of [
+        "git commit",
+        "git push",
+        "git reset",
+        "git restore",
+        "git checkout -- <file>",
+        "git clean -f",
+      ]) {
         expect(prompt).toContain(cmd);
+        // L'accord avec le garde-fou n'est pas une intention : on le vérifie.
+        expect(checkCommand(cmd.replace("<file>", "lib/plan.ts")).allowed).toBe(false);
       }
       // Ce qui reste libre doit être dit aussi, sinon le modèle s'auto-censure
       // sur `git diff` et cesse de relire son propre travail.

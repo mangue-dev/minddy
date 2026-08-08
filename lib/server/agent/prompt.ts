@@ -280,7 +280,7 @@ ${input.subagents.templates ?? describeTemplates()}`
 `
       : "";
 
-  const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`--amend\` — and the call comes back as an error. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
+  const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapping it in \`bash -c\` included. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
 
   // Règle DURE, identique aux deux ancrages : la seule écriture de statut côté
   // agent est celle du harness (lancement, cycle de la PR) — jamais un tool.
