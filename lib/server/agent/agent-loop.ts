@@ -40,6 +40,7 @@ import {
   COMPACT_SUMMARY_PREFIX,
 } from "./compact";
 import { abandonedSpend, type AbandonedStream } from "./abandoned-spend";
+import { ToolLoopDetector } from "./tool-loop";
 // L'index OpenRouter directement, et pas les capacités de `model.ts` : celui-ci
 // tire le client Supabase et le déchiffrement BYOK, dont cette boucle n'a rien à
 // faire. Les prix ne servent qu'à estimer un essai abandonné (MIN-216).
@@ -1409,6 +1410,10 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   // Plafond de rounds de cette boucle : celui du chunk par défaut, plus serré pour
   // une boucle fille (MIN-112).
   const maxRounds = params.maxRounds ?? MAX_ROUNDS_PER_CHUNK;
+  // Détection de boucle (MIN-243) : fenêtre glissante sur `nom + args + RÉSULTAT`
+  // des appels joués. Propre à cette boucle, donc à ce chunk — et une fille a la
+  // sienne.
+  const toolLoop = new ToolLoopDetector();
   // Seuil de compaction : 75 % de la fenêtre du modèle si connue, sinon défaut —
   // mais TOUJOURS borné par le plafond absolu. Une fenêtre de 1 M donnerait sinon
   // un seuil de ~787 000 tokens, que nos runs n'atteignent jamais : c'est ce qui
@@ -1468,6 +1473,25 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       preview: preview({ error }),
       reason: SUSPENDED_TOOL_REASON,
     });
+  };
+
+  /**
+   * Le modèle tourne en rond (MIN-243) : le même appel, les mêmes arguments et le
+   * MÊME résultat, quatre fois dans les dix derniers appels. Le tour s'arrête EN
+   * LE DISANT, et il s'arrête franchement — Crush et OpenCode, eux, peuvent
+   * demander à l'humain « je continue ? » ; nous non, une routine tourne à 3 h du
+   * matin et une chaîne d'automatisation n'a personne au bout.
+   *
+   * `status: "error"` prend le chemin de `replyIncomplete` (MIN-203) : repos
+   * REPRENABLE, checkpoint gardé, ni commit ni push, et pas de `summary`
+   * mensonger. L'utilisateur peut relancer d'un message — ce qui est coupé, c'est
+   * la dépense, pas le travail déjà fait.
+   */
+  const cutForToolLoop = async (name: string): Promise<AgentLoopResult> => {
+    clearLive();
+    const message = `The model kept repeating the same ${name} call with the same result.`;
+    await emit("error", { code: "toolLoop", name, message });
+    return { status: "error", messages, errorMessage: message, costUsd, usageSeqEnd: seq, rounds: round };
   };
 
   for (;;) {
@@ -1987,6 +2011,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           }
         }),
       );
+      let loopingTool: string | null = null;
       for (const o of outcomes) {
         if (!o.args) {
           await rejectUnparsableArgs(o.tc);
@@ -2000,7 +2025,13 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           preview: preview(o.result),
           ...(o.reason ? { reason: o.reason } : {}),
         });
+        if (toolLoop.record(o.tc.function.name, o.args, o.result)) {
+          loopingTool ??= o.tc.function.name;
+        }
       }
+      // Coupure APRÈS la boucle : chaque tool-call du round a sa réponse, donc
+      // l'appariement du checkpoint reste intact (même invariant que MIN-214).
+      if (loopingTool) return await cutForToolLoop(loopingTool);
       continue;
     }
 
@@ -2025,6 +2056,9 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
      */
     let executed = 0;
     let suspendAtBoundary = false;
+    /** Tool dont la répétition a été confirmée dans ce round (MIN-243) : la
+     *  coupure attend la fin du round, où chaque appel a sa réponse. */
+    let loopingTool: string | null = null;
 
     for (const tc of stream.toolCalls) {
       if (suspendAtBoundary || (executed > 0 && elapsed() >= params.softDeadlineMs)) {
@@ -2117,7 +2151,14 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         preview: preview(result),
         ...(reason ? { reason } : {}),
       });
+      if (toolLoop.record(name, args, result)) loopingTool ??= name;
     }
+
+    // Boucle confirmée (MIN-243) : on coupe ici, à la frontière du round — tous
+    // les tool-calls ont leur réponse. AVANT `ask_user` et avant la suspension :
+    // ces deux-là promettent une reprise, et reprendre est exactement ce qu'il ne
+    // faut pas faire d'un tour qui tourne en rond.
+    if (loopingTool) return await cutForToolLoop(loopingTool);
 
     // ask_user → FIN DE TOUR : les questions sont posées (event `question` émis),
     // tous les tool-calls du round ont leur réponse dans `messages` (frontière

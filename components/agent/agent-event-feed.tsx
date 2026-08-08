@@ -852,6 +852,9 @@ const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   // C'est le chien de garde qui l'a constaté (`reapDeadVmRuns`), et la session a
   // repris sur sa dernière sauvegarde périodique — pas sur rien.
   turnLost: "errorTurnLost",
+  // MIN-243 : le même appel, les mêmes arguments et le même résultat, quatre fois
+  // dans les dix derniers. Le tour est coupé avant que le budget ne le fasse.
+  toolLoop: "errorToolLoop",
 };
 
 function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
