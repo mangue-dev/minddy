@@ -29,6 +29,14 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/** La base d'une URI de callback, comparable telle quelle.
+
+    Surtout PAS `origin` : sur un schéma privé d'app native (`cursor://…`), qui
+    n'est pas un « special scheme » au sens de l'URL Standard, `origin` vaut la
+    chaîne `"null"` — deux URI qui n'ont rien à voir se compareraient égales et
+    le contrôle ne contrôlerait plus rien. */
+const callbackBase = (url: URL) => `${url.protocol}//${url.host}${url.pathname}`;
+
 function continueMatchesClient(
   continueUrl: string,
   redirectUris: string[]
@@ -41,8 +49,7 @@ function continueMatchesClient(
   }
   return redirectUris.some((registered) => {
     try {
-      const base = new URL(registered);
-      return base.origin === parsed.origin && base.pathname === parsed.pathname;
+      return callbackBase(new URL(registered)) === callbackBase(parsed);
     } catch {
       return false;
     }

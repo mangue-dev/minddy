@@ -13,7 +13,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Copy, ExternalLink } from "lucide-react";
+import { Copy } from "lucide-react";
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
 import { BrandLogo } from "@/components/brand-logo";
 
@@ -111,13 +111,7 @@ function McpAgentInstall({ agent }: { agent: McpAgent }) {
   const endpoint = `${origin}/api/mcp`;
 
   const act = async () => {
-    const artifact = agent.build(endpoint);
-    if (agent.kind === "deeplink") {
-      window.location.href = artifact;
-      toast.success(t("openingAgent", { name: agent.label }));
-      return;
-    }
-    await navigator.clipboard.writeText(artifact);
+    await navigator.clipboard.writeText(agent.build(endpoint));
     toast.success(
       agent.kind === "config"
         ? t("configCopied")
@@ -128,40 +122,28 @@ function McpAgentInstall({ agent }: { agent: McpAgent }) {
   };
 
   const actionLabel =
-    agent.kind === "deeplink"
-      ? t("installIn", { name: agent.label })
-      : agent.kind === "config"
-        ? t("copyInstallConfig")
-        : agent.kind === "url"
-          ? t("copyServerUrl")
-          : t("copyInstallCommand");
-  const hint =
-    agent.kind === "deeplink"
-      ? t("mcpHintCursor")
-      : agent.kind === "config"
-        ? t("mcpHintWindsurf")
-        : agent.kind === "url"
-          ? t("mcpHintConnector")
-          : t("mcpHintCommand");
+    agent.kind === "config"
+      ? t("copyInstallConfig")
+      : agent.kind === "url"
+        ? t("copyServerUrl")
+        : t("copyInstallCommand");
 
   return (
     <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3">
-      {agent.kind !== "deeplink" && (
-        // `w-full min-w-0` : sans eux, `whitespace-pre` impose au bloc sa
-        // largeur min-content — celle de la commande entière, sur une ligne —
-        // et le dialog se fait élargir par son propre contenu au lieu de le
-        // laisser défiler.
-        <code className="max-h-40 w-full min-w-0 overflow-auto whitespace-pre rounded-md border border-border bg-background px-3 py-2 font-mono text-xs">
-          {agent.build(endpoint)}
-        </code>
-      )}
+      {/* `w-full min-w-0` : sans eux, `whitespace-pre` impose au bloc sa
+          largeur min-content — celle de la commande entière, sur une ligne —
+          et le dialog se fait élargir par son propre contenu au lieu de le
+          laisser défiler. */}
+      <code className="max-h-40 w-full min-w-0 overflow-auto whitespace-pre rounded-md border border-border bg-background px-3 py-2 font-mono text-xs">
+        {agent.build(endpoint)}
+      </code>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" onClick={() => void act()}>
-          {agent.kind === "deeplink" ? <ExternalLink /> : <Copy />}
+          <Copy />
           {actionLabel}
         </Button>
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <p className="text-xs text-muted-foreground">{t(agent.hint)}</p>
       </div>
     </div>
   );

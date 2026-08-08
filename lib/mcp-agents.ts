@@ -7,6 +7,8 @@
  * serveur (mapping client_name → agent pour les logos/attribution).
  */
 
+import type { MessageKey } from "@/lib/i18n-keys";
+
 export const MCP_SERVER_NAME = "minddy";
 
 export type McpAgentId =
@@ -24,9 +26,11 @@ export interface McpAgent {
   /** Comment l'artefact de build() s'utilise :
       command  → coller dans un terminal
       config   → coller dans un fichier de configuration
-      deeplink → URL ouverte directement (installation en un clic)
       url      → coller l'URL du serveur dans « Ajouter un connecteur » */
-  kind: "command" | "config" | "deeplink" | "url";
+  kind: "command" | "config" | "url";
+  /** Le geste exact, agent par agent (chemin du fichier, menu à ouvrir) :
+      deux agents de même `kind` ne se configurent pas au même endroit. */
+  hint: MessageKey<"Account">;
   /** Logo pour thème clair (public/) ; logoDark = variante thème sombre. */
   logo: string;
   logoDark?: string;
@@ -38,6 +42,7 @@ export const MCP_AGENTS: McpAgent[] = [
     id: "claude",
     label: "Claude Code",
     kind: "command",
+    hint: "mcpHintCommand",
     logo: "/agents/claude.svg",
     // --scope user : sans lui, le serveur est enregistré en scope LOCAL (lié
     // au dossier où la commande a été lancée) et n'apparaît ni dans
@@ -50,6 +55,7 @@ export const MCP_AGENTS: McpAgent[] = [
     id: "claude-desktop",
     label: "Claude Desktop",
     kind: "url",
+    hint: "mcpHintConnector",
     logo: "/agents/claude.svg",
     // Claude Desktop et claude.ai ne lisent PAS la config de Claude Code : le
     // serveur distant s'ajoute comme « connecteur personnalisé » (Réglages →
@@ -61,6 +67,7 @@ export const MCP_AGENTS: McpAgent[] = [
     id: "codex",
     label: "Codex",
     kind: "command",
+    hint: "mcpHintCommand",
     logo: "/agents/codex-light.svg",
     logoDark: "/agents/codex-dark.svg",
     // Serveur streamable HTTP natif + login OAuth dédié.
@@ -70,19 +77,36 @@ export const MCP_AGENTS: McpAgent[] = [
   {
     id: "cursor",
     label: "Cursor",
-    kind: "deeplink",
+    kind: "config",
+    hint: "mcpHintCursor",
     logo: "/agents/cursor-light.svg",
     logoDark: "/agents/cursor-dark.svg",
-    // Cursor gère l'OAuth nativement (bouton « Needs login » sur le serveur).
-    build: (endpoint) => {
-      const config = JSON.stringify({ url: endpoint });
-      return `cursor://anysphere.cursor-deeplink/mcp/install?name=${MCP_SERVER_NAME}&config=${btoa(config)}`;
-    },
+    // Bloc à coller dans ~/.cursor/mcp.json. Cursor gère l'OAuth nativement
+    // (bouton « Needs login » sur le serveur) et recharge le fichier à chaud.
+    //
+    // PAS de deeplink `cursor://anysphere.cursor-deeplink/mcp/install`, et pas
+    // de `cursor --add-mcp` : les deux sont morts, vérifié sur Cursor 3.14.7.
+    // Le deeplink est bien reçu, mais son handler fait
+    // `aiSettings.action.open("mcp")` puis `mcp.deeplinkInstall` — or l'onglet
+    // « Tools & MCPs » est masqué depuis la migration « Customize », donc
+    // Cursor retombe sur les réglages *General* et la carte de confirmation
+    // (le seul endroit où l'installation proposée s'accepte) n'existe nulle
+    // part. C'est exactement le symptôme observé : ça ouvre les paramètres, et
+    // rien. `cursor --add-mcp` est pire encore : hérité de VS Code, il écrit
+    // dans `mcp.servers` de settings.json, que le MCP de Cursor ne lit pas —
+    // il annonce « Added MCP servers » sans rien avoir installé.
+    build: (endpoint) =>
+      JSON.stringify(
+        { mcpServers: { [MCP_SERVER_NAME]: { url: endpoint } } },
+        null,
+        2
+      ),
   },
   {
     id: "gemini",
     label: "Gemini CLI",
     kind: "command",
+    hint: "mcpHintCommand",
     logo: "/agents/gemini.svg",
     // --scope user : le défaut (project) lie le serveur au dossier courant.
     // L'authentification OAuth se fait via /mcp auth.
@@ -93,6 +117,7 @@ export const MCP_AGENTS: McpAgent[] = [
     id: "vscode",
     label: "VS Code",
     kind: "command",
+    hint: "mcpHintCommand",
     logo: "/agents/vscode.svg",
     build: (endpoint) =>
       `code --add-mcp '${JSON.stringify({
@@ -105,6 +130,7 @@ export const MCP_AGENTS: McpAgent[] = [
     id: "windsurf",
     label: "Windsurf",
     kind: "config",
+    hint: "mcpHintWindsurf",
     logo: "/agents/windsurf-light.svg",
     logoDark: "/agents/windsurf-dark.svg",
     // Pas de CLI — bloc à coller dans ~/.codeium/windsurf/mcp_config.json.

@@ -78,7 +78,7 @@ export const PUBLIC_ROUTES = [
     en: "/mcp",
     fr: "/fr/mcp",
     namespace: "Mcp",
-    lastModified: "2026-07-27",
+    lastModified: "2026-08-09",
     priority: 0.9,
   },
   // Seule page dont le `lastModified` n'est PAS tenu à la main : ici,

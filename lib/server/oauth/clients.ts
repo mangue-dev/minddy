@@ -18,8 +18,33 @@ export interface OAuthClient {
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
-/** https obligatoire, sauf loopback http (clients CLI, RFC 8252 §7.3).
-    Fragment interdit (RFC 6749 §3.1.2). */
+/** Schémas qui exécutent du script ou lisent le disque là où le callback est
+    suivi — `Location:` du navigateur, `href` de l'interstitiel de succès. Un
+    client qui en enregistre un ne demande pas un callback, il demande une XSS
+    stockée : refus catégorique, avant même de regarder le reste. */
+const DANGEROUS_SCHEMES = new Set([
+  "javascript:",
+  "data:",
+  "vbscript:",
+  "file:",
+  "blob:",
+  "about:",
+  "filesystem:",
+]);
+
+/** Schéma privé d'application native (RFC 8252 §7.1) : `cursor:`, `vscode:`… */
+const PRIVATE_SCHEME = /^[a-z][a-z0-9+.-]*:$/;
+
+/** https obligatoire, sauf loopback http (clients CLI, RFC 8252 §7.3) et
+    schéma privé d'app native (RFC 8252 §7.1). Fragment interdit
+    (RFC 6749 §3.1.2).
+
+    Le schéma privé N'EST PAS une largesse : c'est le seul callback qu'une app
+    de bureau sait recevoir, et sans lui Cursor ne peut pas s'authentifier du
+    tout — il enregistre `cursor://anysphere.cursor-mcp/oauth/callback`, se
+    faisait refuser à l'inscription, et la connexion échouait sur
+    « Redirect URI must be https ». Ce qui protège ici, c'est PKCE plus la
+    validation stricte de l'URI enregistrée, pas le schéma. */
 export function isAllowedRedirectUri(uri: unknown): boolean {
   if (typeof uri !== "string" || uri.length > 2000) return false;
   let parsed: URL;
@@ -29,9 +54,10 @@ export function isAllowedRedirectUri(uri: unknown): boolean {
     return false;
   }
   if (parsed.hash) return false;
+  if (DANGEROUS_SCHEMES.has(parsed.protocol)) return false;
   if (parsed.protocol === "https:") return true;
-  if (parsed.protocol === "http:" && LOOPBACK_HOSTS.has(parsed.hostname)) return true;
-  return false;
+  if (parsed.protocol === "http:") return LOOPBACK_HOSTS.has(parsed.hostname);
+  return PRIVATE_SCHEME.test(parsed.protocol);
 }
 
 export async function registerClient({

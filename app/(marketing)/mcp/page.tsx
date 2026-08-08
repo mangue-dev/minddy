@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowRight, Check, ExternalLink, KeyRound, ShieldCheck, UserCheck } from "lucide-react";
+import { ArrowRight, Check, KeyRound, ShieldCheck, UserCheck } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { cn } from "mangue-ui/lib/utils";
 import { publicPageMetadata } from "@/lib/seo";
@@ -172,7 +172,6 @@ export default async function McpPage() {
                 copy={t("copy")}
                 copied={t("copied")}
                 hint={t(`kind_${agent.kind}`)}
-                install={t("install", { name: agent.label })}
               />
             ))}
           </RevealGroup>
@@ -363,26 +362,18 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-/**
- * Le bloc prêt à coller d'un agent.
- *
- * `deeplink` (Cursor) est le seul cas qui ne se copie pas : l'artefact est une
- * URL `cursor://` que le navigateur doit ouvrir. On rend donc un vrai lien —
- * et surtout pas un bloc de code contenant du base64, que personne ne collerait
- * nulle part.
- */
+/** Le bloc prêt à coller d'un agent : une commande, une config ou l'URL du
+    serveur, toujours copiable — aucun agent ne s'installe en un clic. */
 function AgentCard({
   agent,
   copy,
   copied,
   hint,
-  install,
 }: {
   agent: McpAgent;
   copy: string;
   copied: string;
   hint: string;
-  install: string;
 }) {
   const artifact = agent.build(MCP_ENDPOINT);
 
@@ -393,30 +384,18 @@ function AgentCard({
         <span className="text-sm font-medium">{agent.label}</span>
       </div>
 
-      {agent.kind === "deeplink" ? (
-        <a
-          href={artifact}
-          className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-          {install}
-        </a>
-      ) : (
-        <>
-          {/* `overflow-x-auto` sur le bloc et non `break-all` : une commande
-              coupée au milieu d'un mot se recolle mal quand on la sélectionne
-              à la main. */}
-          <pre
-            className={cn(
-              "overflow-x-auto rounded-lg border border-border bg-muted/40 px-3 py-2",
-              "font-mono text-xs leading-relaxed text-foreground",
-            )}
-          >
-            <code>{artifact}</code>
-          </pre>
-          <CopyButton text={artifact} label={copy} copiedLabel={copied} className="w-fit" />
-        </>
-      )}
+      {/* `overflow-x-auto` sur le bloc et non `break-all` : une commande
+          coupée au milieu d'un mot se recolle mal quand on la sélectionne
+          à la main. */}
+      <pre
+        className={cn(
+          "overflow-x-auto rounded-lg border border-border bg-muted/40 px-3 py-2",
+          "font-mono text-xs leading-relaxed text-foreground",
+        )}
+      >
+        <code>{artifact}</code>
+      </pre>
+      <CopyButton text={artifact} label={copy} copiedLabel={copied} className="w-fit" />
 
       <p className="mt-auto text-xs leading-relaxed text-muted-foreground">{hint}</p>
     </li>

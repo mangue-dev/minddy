@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     if (!isAllowedRedirectUri(uri)) {
       return registrationError(
         "invalid_redirect_uri",
-        `Redirect URI must be https, or http on localhost/127.0.0.1 (got: ${uri.slice(0, 100)}).`
+        `Redirect URI must be https, http on localhost/127.0.0.1, or a private-use scheme (got: ${uri.slice(0, 100)}).`
       );
     }
   }
