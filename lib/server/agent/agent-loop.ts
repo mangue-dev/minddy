@@ -310,6 +310,9 @@ export interface AgentUsageLine {
   promptTokens?: number | null;
   completionTokens?: number | null;
   totalTokens?: number | null;
+  /** Prompt caching (MIN-242) : tokens relus au cache, tokens écrits dedans. */
+  cachedTokens?: number | null;
+  cacheWriteTokens?: number | null;
   cost?: number | null;
   estimated?: boolean;
   projectId?: string | null;
@@ -1632,6 +1635,8 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             promptTokens: summaryStream.usage.promptTokens,
             completionTokens: summaryStream.usage.completionTokens,
             totalTokens: summaryStream.usage.totalTokens,
+            cachedTokens: summaryStream.usage.cachedTokens,
+            cacheWriteTokens: summaryStream.usage.cacheWriteTokens,
             cost: summaryStream.usage.cost,
             billTo: params.billTo,
             projectId: params.projectId ?? null,
@@ -1773,6 +1778,8 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       promptTokens: stream.usage.promptTokens,
       completionTokens: stream.usage.completionTokens,
       totalTokens: stream.usage.totalTokens,
+      cachedTokens: stream.usage.cachedTokens,
+      cacheWriteTokens: stream.usage.cacheWriteTokens,
       cost: stream.usage.cost,
       billTo: params.billTo,
       projectId: params.projectId ?? null,

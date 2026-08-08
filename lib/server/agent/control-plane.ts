@@ -234,6 +234,8 @@ export async function handleControlPlaneRequest(opts: {
       promptTokens: num(body.promptTokens),
       completionTokens: num(body.completionTokens),
       totalTokens: num(body.totalTokens),
+      cachedTokens: num(body.cachedTokens),
+      cacheWriteTokens: num(body.cacheWriteTokens),
       cost: num(body.cost),
       ...(body.estimated === true ? { estimated: true } : {}),
       projectId: run.project_id,

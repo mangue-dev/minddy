@@ -189,6 +189,8 @@ export function createControlPlaneClient(appOrigin: string): ControlPlaneClient 
         promptTokens: line.promptTokens,
         completionTokens: line.completionTokens,
         totalTokens: line.totalTokens,
+        cachedTokens: line.cachedTokens,
+        cacheWriteTokens: line.cacheWriteTokens,
         cost: line.cost,
         estimated: line.estimated,
         // `runId`, `billTo` et `projectId` ne sont PAS envoyés : le plan de

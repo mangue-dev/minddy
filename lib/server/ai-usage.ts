@@ -85,6 +85,13 @@ export interface AiUsageInput {
   promptTokens?: number | null;
   completionTokens?: number | null;
   totalTokens?: number | null;
+  /**
+   * Prompt caching (MIN-242) : tokens RELUS au cache du fournisseur, et tokens
+   * qu'il vient d'y écrire. `undefined`/`null` = le fournisseur n'en dit rien,
+   * ce qui ne se lit pas comme un cache qui n'a pas mordu.
+   */
+  cachedTokens?: number | null;
+  cacheWriteTokens?: number | null;
   cost?: number | null;
   /**
    * Le coût est CALCULÉ, pas rapporté par le fournisseur (MIN-216) — un essai de
@@ -112,6 +119,11 @@ function toRow(input: AiUsageInput) {
     prompt_tokens: input.promptTokens ?? null,
     completion_tokens: input.completionTokens ?? null,
     total_tokens: input.totalTokens ?? null,
+    // Omises quand le fournisseur n'en dit rien (MIN-242) : même précaution que
+    // `estimated` juste en dessous — un déploiement qui précéderait sa migration
+    // ne perdrait que le détail du cache, jamais la ligne.
+    ...(input.cachedTokens != null ? { cached_tokens: input.cachedTokens } : {}),
+    ...(input.cacheWriteTokens != null ? { cache_write_tokens: input.cacheWriteTokens } : {}),
     cost: input.cost ?? null,
     // Omise quand elle est fausse : la colonne a un défaut en base, et une ligne
     // ordinaire ne doit RIEN devoir à une migration. Si le code partait en prod

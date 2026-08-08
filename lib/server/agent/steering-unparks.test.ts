@@ -104,10 +104,19 @@ describe("parking du parent en attente de ses sous-agents", () => {
     // compteur déclaré sous le steering, l'ordre était inverse — le parent partait
     // attendre ses filles pour tout le chunk sans avoir lu le message.
     expect(order[0]).toBe("model");
-    // Et il l'a reçu dans l'historique de CE round, pas du suivant.
+    // Et il l'a reçu dans l'historique de CE round, pas du suivant. Le message
+    // part emballé dans une part texte : il est en QUEUE d'historique, donc il
+    // porte le cache breakpoint glissant (MIN-242). C'est le corps de la requête
+    // qu'on lit ici, pas l'historique-checkpoint, qui lui reste en string.
     expect(sentMessages[0]).toContainEqual({
       role: "user",
-      content: "Laisse tomber le sous-agent, dis-moi ce que tu as trouvé.",
+      content: [
+        {
+          type: "text",
+          text: "Laisse tomber le sous-agent, dis-moi ce que tu as trouvé.",
+          cache_control: { type: "ephemeral" },
+        },
+      ],
     });
   });
 

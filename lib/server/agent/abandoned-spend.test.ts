@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { abandonedSpend, type AbandonedStream } from "./abandoned-spend";
+import type { NormalizedUsage } from "@/lib/server/ai-usage-shape";
 
 /**
  * MIN-216 — ce qu'on écrit au ledger pour un essai de stream ABANDONNÉ.
@@ -11,10 +12,21 @@ import { abandonedSpend, type AbandonedStream } from "./abandoned-spend";
  * quota du compte, ni dans le plafond du run, ni dans la facture.
  */
 
+/** Un `usage` normalisé complet — les champs non dits restent à `null`. */
+const usage = (over: Partial<NormalizedUsage> = {}): NormalizedUsage => ({
+  promptTokens: null,
+  completionTokens: null,
+  totalTokens: null,
+  cost: null,
+  cachedTokens: null,
+  cacheWriteTokens: null,
+  ...over,
+});
+
 const attempt = (over: Partial<AbandonedStream> = {}): AbandonedStream => ({
   generationId: "gen_1",
   modelUsed: "test/model",
-  usage: { promptTokens: null, completionTokens: null, totalTokens: null, cost: null },
+  usage: usage(),
   estimatedPromptTokens: 20_000,
   estimatedCompletionTokens: 500,
   ...over,
@@ -38,7 +50,7 @@ describe("abandonedSpend", () => {
   it("préfère le coût RAPPORTÉ quand le dernier chunk est arrivé avant la coupure", () => {
     const spent = abandonedSpend(
       attempt({
-        usage: { promptTokens: 18_000, completionTokens: 400, totalTokens: 18_400, cost: 0.042 },
+        usage: usage({ promptTokens: 18_000, completionTokens: 400, totalTokens: 18_400, cost: 0.042 }),
       }),
       pricing,
     );
@@ -65,7 +77,7 @@ describe("abandonedSpend", () => {
     // OpenAI) : les tokens sont vrais, le coût reste à calculer.
     const spent = abandonedSpend(
       attempt({
-        usage: { promptTokens: 12_345, completionTokens: null, totalTokens: null, cost: null },
+        usage: usage({ promptTokens: 12_345 }),
       }),
       pricing,
     );

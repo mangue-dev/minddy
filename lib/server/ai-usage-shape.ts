@@ -77,6 +77,17 @@ export interface OpenRouterUsage {
   /** Endpoints audio (whisper) exposent parfois les tokens sous ces noms. */
   input_tokens?: number | null;
   output_tokens?: number | null;
+  /**
+   * Détail du prompt caching (MIN-242). `cached_tokens` = ce que le fournisseur a
+   * RELU dans son cache (facturé une fraction du prix d'entrée) ; `cache_write_tokens`
+   * = ce qu'il vient d'y ÉCRIRE (facturé une prime, 1,25× chez Anthropic). Les deux
+   * sont là sur le chemin streamé comme sur le chemin bloquant, et absents chez les
+   * fournisseurs sans caching — d'où l'optionnel jusqu'en bas.
+   */
+  prompt_tokens_details?: {
+    cached_tokens?: number | null;
+    cache_write_tokens?: number | null;
+  } | null;
 }
 
 /** Champs normalisés extraits d'un `usage` OpenRouter (tolérant aux absents). */
@@ -85,6 +96,15 @@ export interface NormalizedUsage {
   completionTokens: number | null;
   totalTokens: number | null;
   cost: number | null;
+  /**
+   * Tokens de prompt RELUS au cache du fournisseur, et tokens qu'il vient d'y
+   * écrire (MIN-242). `null` — jamais 0 — quand le fournisseur n'en dit rien :
+   * un zéro se lirait « le cache n'a pas mordu », alors qu'il n'y a pas de cache
+   * du tout. C'est cette distinction qui rend le taux de hit lisible au ledger
+   * sans repasser par l'API `generation` d'OpenRouter.
+   */
+  cachedTokens: number | null;
+  cacheWriteTokens: number | null;
 }
 
 /** À passer à chaque appel IA pour obtenir le coût inline dans la réponse. */
@@ -99,7 +119,14 @@ export function parseOpenRouterUsage(
   usage: OpenRouterUsage | null | undefined
 ): NormalizedUsage {
   if (!usage) {
-    return { promptTokens: null, completionTokens: null, totalTokens: null, cost: null };
+    return {
+      promptTokens: null,
+      completionTokens: null,
+      totalTokens: null,
+      cost: null,
+      cachedTokens: null,
+      cacheWriteTokens: null,
+    };
   }
   const prompt = usage.prompt_tokens ?? usage.input_tokens ?? null;
   const completion = usage.completion_tokens ?? usage.output_tokens ?? null;
@@ -111,6 +138,8 @@ export function parseOpenRouterUsage(
     completionTokens: completion,
     totalTokens: total,
     cost: usage.cost ?? null,
+    cachedTokens: usage.prompt_tokens_details?.cached_tokens ?? null,
+    cacheWriteTokens: usage.prompt_tokens_details?.cache_write_tokens ?? null,
   };
 }
 
