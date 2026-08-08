@@ -427,12 +427,20 @@ function realignBoundary(
  * Applique la substitution `oldString` → `newString` sur `content` via la
  * cascade. Lève si introuvable, ambigu (plusieurs matchs sans replaceAll), ou
  * si le match est disproportionné. Renvoie le nouveau contenu.
+ *
+ * `firstMatch` lève le refus d'ambiguïté et prend le PREMIER match : réservé à
+ * `apply_patch` (MIN-115), dont les hunks sont POSITIONNELS et ordonnés — deux
+ * hunks identiques y désignent deux occurrences successives, et
+ * [patch.ts](./patch.ts) n'appelle avec ce drapeau qu'après avoir avancé son
+ * curseur au-delà du hunk précédent. Sur `edit_file`/`apply_edits`, où
+ * `old_string` est censé être unique par lui-même, l'ambiguïté reste un refus.
  */
 export function replace(
   content: string,
   oldString: string,
   newString: string,
   replaceAll = false,
+  firstMatch = false,
 ): string {
   if (oldString === newString) {
     throw new ReplaceError(
@@ -474,7 +482,7 @@ export function replace(
         }
         return result + content.slice(pos);
       }
-      if (index !== content.lastIndexOf(search)) continue; // ambigu → replacer suivant
+      if (!firstMatch && index !== content.lastIndexOf(search)) continue; // ambigu → replacer suivant
       const { span, replacement } = realignBoundary(content, index, search, newString);
       return content.substring(0, index) + replacement + content.substring(index + span.length);
     }
@@ -549,11 +557,12 @@ export function applyEdit(
   oldString: string,
   newString: string,
   replaceAll = false,
+  firstMatch = false,
 ): EditResult {
   const ending = detectLineEnding(original);
   const old = convertToLineEnding(normalizeLineEndings(oldString), ending);
   const replacement = convertToLineEnding(normalizeLineEndings(newString), ending);
-  const content = replace(original, old, replacement, replaceAll);
+  const content = replace(original, old, replacement, replaceAll, firstMatch);
 
   const diff = trimDiff(
     createTwoFilesPatch(path, path, normalizeLineEndings(original), normalizeLineEndings(content)),

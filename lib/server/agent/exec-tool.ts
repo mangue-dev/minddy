@@ -38,7 +38,7 @@ import {
   toolOutputFileName,
 } from "./command-output";
 import { checkCommand, FORBIDDEN_COMMAND_REASON } from "./command-guard";
-import { applyEdit } from "./edit";
+import { applyEdit, ReplaceError } from "./edit";
 import { applyPatchEdits, parsePatch, type PatchOp } from "./patch";
 import {
   REPO_INSTRUCTION_FILES,
@@ -464,23 +464,65 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
               const original = await readWorkFile(host, path);
               if (original === null) throw new Error(`File not found: ${path}`);
               const edits = Array.isArray(ch.edits) ? (ch.edits as Array<Record<string, unknown>>) : [];
+              // Une mise à jour sans edit écrivait le fichier tel quel et repartait
+              // en `ok: true` : le modèle lisait un ✓ là où rien n'avait changé.
+              if (edits.length === 0) {
+                throw new Error(
+                  `No edits provided for ${path}. An update change needs at least one { old_string, new_string }.`,
+                );
+              }
               let content = original;
               let additions = 0;
               let deletions = 0;
-              for (const e of edits) {
-                const r = applyEdit(
-                  path,
-                  content,
-                  String(e.old_string ?? ""),
-                  String(e.new_string ?? ""),
-                  e.replace_all === true,
+              /** Rangs (1-based) des edits qui ne changeaient rien. */
+              const skipped: number[] = [];
+              for (const [i, e] of edits.entries()) {
+                try {
+                  const r = applyEdit(
+                    path,
+                    content,
+                    String(e.old_string ?? ""),
+                    String(e.new_string ?? ""),
+                    e.replace_all === true,
+                  );
+                  content = r.content;
+                  additions += r.additions;
+                  deletions += r.deletions;
+                } catch (err) {
+                  // Un edit dont `old_string` vaut `new_string` ne change RIEN : il ne
+                  // peut donc rien corrompre, et il n'a pas à emporter les autres edits
+                  // du fichier — mesuré 8 fois sur `agent_run_events`, dont 3 batches où
+                  // un no-op a jeté des edits parfaitement bons. On le saute et on le DIT
+                  // (le taire ferait croire au modèle que son edit a pris). Tout autre
+                  // échec garde l'atomicité du fichier : on ne l'écrit pas à moitié.
+                  if (err instanceof ReplaceError && err.reason === "identical") {
+                    skipped.push(i + 1);
+                    continue;
+                  }
+                  throw err;
+                }
+              }
+              // Sauter le seul edit d'un fichier, c'est ne rien faire du tout : l'échec
+              // doit rester lisible comme tel.
+              if (skipped.length === edits.length) {
+                throw new Error(
+                  `No changes to apply to ${path}: every edit has an identical old_string and new_string.`,
                 );
-                content = r.content;
-                additions += r.additions;
-                deletions += r.deletions;
               }
               await writeWorkFile(host, path, content);
-              applied.push({ path, op: "update", ok: true, additions, deletions });
+              applied.push({
+                path,
+                op: "update",
+                ok: true,
+                additions,
+                deletions,
+                ...(skipped.length > 0
+                  ? {
+                      skipped_edits: skipped,
+                      note: "these edits have an identical old_string and new_string — they changed nothing and were skipped; the others applied",
+                    }
+                  : {}),
+              });
             }
           } catch (err) {
             applied.push({ path, op, ok: false, error: err instanceof Error ? err.message : String(err) });
@@ -517,7 +559,11 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         const applied: Array<Record<string, unknown>> = [];
         for (const op of ops) {
           try {
-            if (op.op === "delete") {
+            if (op.op === "invalid") {
+              // Section illisible : elle échoue SEULE. Le modèle lit
+              // quoi refaire, et garde les fichiers que l'enveloppe a bien portés.
+              throw new Error(op.error);
+            } else if (op.op === "delete") {
               await deleteWorkFile(host, op.path);
               applied.push({ path: op.path, op: "delete", ok: true });
             } else if (op.op === "add") {

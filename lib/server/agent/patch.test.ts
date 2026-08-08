@@ -152,6 +152,60 @@ describe("parsePatch — hunks", () => {
   });
 });
 
+/**
+ * Les deux écritures par lesquelles le modèle dit OÙ, et qui étaient
+ * refusées comme « un hunk qui ne change rien ». Les cas sont repris tels quels
+ * du run qui a motivé le correctif (12 échecs sur 22 appels `apply_patch`).
+ */
+describe("parsePatch — un hunk sans changement est une ANCRE", () => {
+  it("lit une ligne de contexte sous un `@@` nu comme l'ancre du hunk suivant", () => {
+    const ops = parsePatch(
+      envelope(
+        "*** Update File: a.ts",
+        "@@",
+        " export async function restoreItem(",
+        "@@",
+        "-  } else {",
+        "+  } else if (type === 'routine') {",
+      ),
+    );
+    const edits = editsOf(ops[0]);
+    expect(edits).toHaveLength(1);
+    expect(edits[0].anchors).toEqual(["export async function restoreItem("]);
+  });
+
+  it("lit `-x` puis `+x` à l'identique comme une ancre, pas comme une faute", () => {
+    const ops = parsePatch(
+      envelope(
+        "*** Update File: a.ts",
+        "@@",
+        '-  if (type === "project") {',
+        '+  if (type === "project") {',
+        "@@",
+        "-  } else {",
+        "+  } else if (x) {",
+      ),
+    );
+    const edits = editsOf(ops[0]);
+    expect(edits).toHaveLength(1);
+    expect(edits[0].anchors).toEqual(['  if (type === "project") {']);
+  });
+
+  it("empile les `@@ label` successifs au lieu de n'en garder qu'un", () => {
+    const ops = parsePatch(
+      envelope("*** Update File: a.ts", "@@ class Foo", "@@   def bar():", "-a", "+A"),
+    );
+    const edit = editsOf(ops[0])[0];
+    expect(edit.anchors).toEqual(["class Foo"]);
+    expect(edit.context).toBe("def bar():");
+  });
+
+  it("refuse encore une section qui n'est QUE des ancres", () => {
+    const ops = parsePatch(envelope("*** Update File: a.ts", "@@", " unchanged"));
+    expect(ops[0]).toMatchObject({ op: "invalid", path: "a.ts" });
+  });
+});
+
 describe("parsePatch — patch multi-fichiers", () => {
   it("lit une enveloppe qui mélange les quatre opérations", () => {
     const ops = parsePatch(
@@ -213,28 +267,43 @@ describe("parsePatch — malformés", () => {
   });
 
   it("refuse une section Update sans hunk", () => {
-    expect(() => parsePatch(envelope("*** Update File: a.ts", "*** Delete File: b.ts"))).toThrow(
-      /carries no hunk/,
-    );
-  });
-
-  it("refuse un hunk qui ne change rien", () => {
-    expect(() => parsePatch(envelope("*** Update File: a.ts", "@@ foo", " unchanged"))).toThrow(
-      /changes nothing/,
-    );
-    expect(() => parsePatch(envelope("*** Update File: a.ts", "@@ foo", "-a", "+a"))).toThrow(
-      /changes nothing/,
-    );
+    const ops = parsePatch(envelope("*** Update File: a.ts", "*** Delete File: b.ts"));
+    expect(ops[0]).toMatchObject({ op: "invalid", path: "a.ts" });
+    expect((ops[0] as { error: string }).error).toMatch(/carries no hunk/);
   });
 
   it("refuse une ligne de hunk sans marqueur", () => {
-    expect(() => parsePatch(envelope("*** Update File: a.ts", "@@", "-a", "+b", "oops"))).toThrow(
-      /must start with/,
-    );
+    const ops = parsePatch(envelope("*** Update File: a.ts", "@@", "-a", "+b", "oops"));
+    expect(ops[0]).toMatchObject({ op: "invalid", path: "a.ts" });
+    expect((ops[0] as { error: string }).error).toMatch(/must start with/);
   });
 
   it("refuse une ligne non préfixée dans un fichier créé", () => {
-    expect(() => parsePatch(envelope("*** Add File: a.ts", "Hello"))).toThrow(/must start with '\+'/);
+    const ops = parsePatch(envelope("*** Add File: a.ts", "Hello"));
+    expect(ops[0]).toMatchObject({ op: "invalid", path: "a.ts" });
+    expect((ops[0] as { error: string }).error).toMatch(/must start with '\+'/);
+  });
+
+  /**
+   * Une section illisible ne fait plus tomber l'enveloppe. Sur le run
+   * qui a motivé le correctif, un patch de 7 fichiers dont UN hunk de trop est
+   * revenu en erreur nue — les 6 bons fichiers avec, et le modèle a tout rejoué.
+   */
+  it("isole la section fautive et garde les autres", () => {
+    const ops = parsePatch(
+      envelope(
+        "*** Add File: good.txt",
+        "+ok",
+        "*** Update File: bad.ts",
+        "@@",
+        "-a",
+        "+b",
+        "oops",
+        "*** Delete File: gone.txt",
+      ),
+    );
+    expect(ops.map((o) => o.op)).toEqual(["add", "invalid", "delete"]);
+    expect(ops[2]).toEqual({ op: "delete", path: "gone.txt" });
   });
 });
 
@@ -306,6 +375,75 @@ describe("applyPatchEdits — la cascade d'edit.ts, pas un second applicateur", 
     const ops = parsePatch(envelope("*** Update File: f.ts", "@@", "-const a = 1;", "+const a = 2;"));
     const r = applyPatchEdits("f.ts", "const a = 1;\r\nconst b = 3;\r\n", editsOf(ops[0]));
     expect(r.content).toBe("const a = 2;\r\nconst b = 3;\r\n");
+  });
+
+  /**
+   * Les hunks d'un patch sont ORDONNÉS : chacun repart d'où le précédent s'est
+   * arrêté. C'est ce qui donne son sens au même hunk écrit deux fois — et ce
+   * qui manquait quand ces patchs revenaient en « Found multiple matches ».
+   */
+  describe("l'ordre des hunks est une position", () => {
+    const TWO_SITES = [
+      "export async function restoreItem() {",
+      '  if (type === "project") {',
+      "    a();",
+      "  } else {",
+      "    b();",
+      "  }",
+      "}",
+      "export async function purgeItem() {",
+      '  if (type === "project") {',
+      "    a();",
+      "  } else {",
+      "    b();",
+      "  }",
+      "}",
+      "",
+    ].join("\n");
+
+    it("le même hunk répété vise deux occurrences successives", () => {
+      const ops = parsePatch(
+        envelope(
+          "*** Update File: t.ts",
+          "@@",
+          "-  } else {",
+          "+  } else if (type === 'routine') {",
+          "@@",
+          "-  } else {",
+          "+  } else if (type === 'routine') {",
+        ),
+      );
+      const r = applyPatchEdits("t.ts", TWO_SITES, editsOf(ops[0]));
+      expect(r.content.match(/else if \(type === 'routine'\)/g)).toHaveLength(2);
+      expect(r.content).not.toContain("  } else {");
+    });
+
+    it("une ancre de contexte porte le hunk sur le SECOND site", () => {
+      const ops = parsePatch(
+        envelope(
+          "*** Update File: t.ts",
+          "@@",
+          " export async function purgeItem() {",
+          "@@",
+          "-  } else {",
+          "+  } else if (type === 'routine') {",
+        ),
+      );
+      const r = applyPatchEdits("t.ts", TWO_SITES, editsOf(ops[0]));
+      const lines = r.content.split("\n");
+      expect(lines.indexOf("  } else {")).toBe(3); // restoreItem : intact
+      expect(lines).toContain("  } else if (type === 'routine') {");
+      expect(r).toMatchObject({ additions: 1, deletions: 1 });
+    });
+
+    it("un hunk unique et ambigu prend la première occurrence, pas un refus", () => {
+      const ops = parsePatch(
+        envelope("*** Update File: t.ts", "@@", "-    b();", "+    c();"),
+      );
+      const r = applyPatchEdits("t.ts", TWO_SITES, editsOf(ops[0]));
+      expect(r.content.split("\n").indexOf("    c();")).toBe(4);
+      expect(r).toMatchObject({ additions: 1, deletions: 1 });
+    });
   });
 
   it("lève, sans rien écrire, quand le hunk ne s'applique pas", () => {
