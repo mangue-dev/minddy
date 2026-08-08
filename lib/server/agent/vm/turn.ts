@@ -548,6 +548,7 @@ export async function runVmTurn(
     tools: agentToolsFor({
       anchor: job.anchor,
       webSearch: job.webSearch,
+      webSearchMax: job.webSearchMax,
       model: job.model,
       images: job.imageInput,
       subagentModels: job.subagents.models,

@@ -1094,10 +1094,20 @@ const PR_REVIEW_CORE_TOOL_NAMES: ReadonlySet<string> = new Set([
   "run_command",
 ]);
 
-/** Les lecteurs minddy d'une relecture : le ticket que la PR met en œuvre. */
+/**
+ * Les lecteurs minddy d'une relecture : le ticket que la PR met en œuvre.
+ *
+ * `read_feedback` en fait partie (MIN-245) parce que `read_issue` PROMET
+ * `linked_feedback` — « the user requests from the product's feedback board that
+ * this ticket implements ». Sans lui, une relecture lit des identifiants qu'elle
+ * n'a aucun moyen d'ouvrir, alors que c'est justement là que se trouve ce que la
+ * PR devait résoudre. Il ne lit rien du dépôt et n'écrit nulle part : il ne
+ * touche pas à la lecture seule de la session.
+ */
 const PR_REVIEW_MINDDY_TOOL_NAMES: ReadonlySet<string> = new Set([
   "search_issues",
   "read_issue",
+  "read_feedback",
   "read_resource",
 ]);
 
@@ -1170,6 +1180,15 @@ const TARGET_SUFFIX: Record<AgentAnchor, string> = {
     " `issue` defaults to the ticket this pull request implements, when it has one — your context says so at the top. MANY PULL REQUESTS HAVE NO TICKET: there, omitting `issue` is refused, and you must name the ticket you mean (find it with search_issues) or do without one — reviewing a pull request never requires a ticket.",
 };
 
+/** `issue` poussé dans `required`, sans perdre ceux que le tool porte déjà. */
+function withRequiredIssue(
+  parameters: AgentToolDef["function"]["parameters"],
+): AgentToolDef["function"]["parameters"] {
+  const required = parameters.required ?? [];
+  if (required.includes("issue")) return parameters;
+  return { ...parameters, required: [...required, "issue"] };
+}
+
 /**
  * Jeu de tools d'un run, selon son ancrage, son modèle et l'accès au web.
  *
@@ -1190,6 +1209,15 @@ const TARGET_SUFFIX: Record<AgentAnchor, string> = {
 export function agentToolsFor(opts: {
   anchor: AgentAnchor;
   webSearch: boolean;
+  /**
+   * Plafond de recherches du TOUR, quand le run en sert (MIN-245). Il voyage en
+   * option plutôt que d'être importé : la constante vit dans le module qui
+   * facture la recherche (`lib/server/web-search.ts`), et celui-là n'entre pas
+   * dans le bundle de la microVM — c'est le même chemin que `VmJob.webSearchMax`.
+   * Sans lui la description dit « each search costs real money » sans jamais
+   * dire combien, et le modèle apprend le plafond en heurtant le mur.
+   */
+  webSearchMax?: number;
   /** Modèle du run — décide de l'interface d'édition servie. */
   model?: string | null;
   /** Le modèle du run voit-il les images (MIN-111) ? Change ce que `read_resource`
@@ -1263,6 +1291,33 @@ export function agentToolsFor(opts: {
           function: {
             ...t.function,
             description: t.function.description + TARGET_SUFFIX[opts.anchor],
+            // Là où la prose dit « REQUIRED », le schéma doit le dire aussi
+            // (MIN-245). Sans ça, un appel sans `issue` est VALIDE au schéma et
+            // n'est refusé qu'à l'exécution (issue-tools.ts) : un round brûlé
+            // par occurrence, exactement ce qu'un schéma sert à éviter. Le
+            // remède se pose par tool et non globalement : `strict: true`
+            // forcerait TOUS les champs dans `required` et obligerait à des
+            // `null` explicites partout.
+            //
+            // Le CARNET seulement. L'ancrage PR a un défaut CONDITIONNEL — le
+            // ticket de la pull request, quand elle en porte un — qu'un schéma
+            // ne sait pas dire : l'y rendre obligatoire casserait le cas normal
+            // au lieu d'épargner un round.
+            ...(opts.anchor === "notebook"
+              ? { parameters: withRequiredIssue(t.function.parameters) }
+              : {}),
+          },
+        };
+      }
+      if (name === "web_search" && opts.webSearchMax != null) {
+        return {
+          ...t,
+          function: {
+            ...t.function,
+            description: t.function.description.replace(
+              "each search costs real money.",
+              `each search costs real money. You get ${opts.webSearchMax} searches for this turn, no more — past that every call comes back as an error, so spend them on what you cannot read in the repository.`,
+            ),
           },
         };
       }

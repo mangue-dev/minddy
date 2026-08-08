@@ -54,6 +54,22 @@ describe("agentToolsFor — web_search (inchangé)", () => {
       expect(names({ anchor: "issue", webSearch: true, model })).toContain("web_search");
     }
   });
+
+  /**
+   * MIN-245 : le plafond du tour est CHIFFRÉ dans la description. Sans ça, le
+   * modèle apprend la limite en heurtant le mur — un round brûlé, alors que la
+   * valeur voyage déjà jusqu'ici (`VmJob.webSearchMax`).
+   */
+  it("chiffre le plafond du tour quand on le lui donne", () => {
+    const description = (webSearchMax?: number) =>
+      agentToolsFor({ anchor: "issue", webSearch: true, webSearchMax }).find(
+        (t) => t.function.name === "web_search",
+      )!.function.description;
+    expect(description(5)).toContain("5 searches for this turn");
+    expect(description(5)).toMatch(/costs real money/);
+    // Sans plafond connu, on ne CHIFFRE rien plutôt que d'inventer un nombre.
+    expect(description()).not.toMatch(/searches for this turn/);
+  });
 });
 
 /**
@@ -108,6 +124,50 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
     for (const name of ["search_issues", "create_issue", "read_resource"]) {
       expect(describeTool("notebook", name)).not.toMatch(/`issue` is (OPTIONAL|REQUIRED)/);
     }
+  });
+
+  /**
+   * MIN-245 : là où la prose dit « REQUIRED », le SCHÉMA le dit aussi. Un appel
+   * vide était valide au schéma et n'était refusé qu'à l'exécution
+   * (`issue-tools.ts`) — un round brûlé par occurrence.
+   */
+  it("rend `issue` obligatoire AU SCHÉMA sur un run de carnet", () => {
+    const params = (anchor: "issue" | "notebook" | "pr", name: string) =>
+      agentToolsFor({ anchor, webSearch: true }).find((t) => t.function.name === name)!.function
+        .parameters;
+
+    for (const name of [
+      "read_issue",
+      "update_issue",
+      "write_issue_plan",
+      "append_to_plan",
+      "edit_issue_text",
+    ]) {
+      expect(params("notebook", name).required).toContain("issue");
+      // Ce que le tool exigeait déjà ne disparaît pas au passage.
+      const before = params("issue", name).required ?? [];
+      for (const field of before) expect(params("notebook", name).required).toContain(field);
+      // Ancrage ticket : `issue` est OPTIONNEL, et le schéma doit le rester.
+      expect(params("issue", name).required ?? []).not.toContain("issue");
+    }
+
+    // Ancrage PR : le défaut est CONDITIONNEL (le ticket de la PR, quand elle en
+    // porte un). Le rendre obligatoire casserait le cas normal.
+    expect(params("pr", "read_issue").required ?? []).not.toContain("issue");
+  });
+
+  /**
+   * MIN-245 : une relecture voit `linked_feedback` dans `read_issue` — elle doit
+   * pouvoir l'ouvrir. Exposer des identifiants sans le lecteur qui va avec est
+   * exactement le genre d'incohérence qui fait halluciner un appel.
+   */
+  it("donne `read_feedback` à une relecture, qui voit `linked_feedback`", () => {
+    const served = names({ anchor: "pr", webSearch: false });
+    expect(served).toContain("read_feedback");
+    const readIssue = agentToolsFor({ anchor: "pr", webSearch: false }).find(
+      (t) => t.function.name === "read_issue",
+    )!.function.description;
+    expect(readIssue).toContain("linked_feedback");
   });
 
   it("ne laisse pas `update_issue` promettre un changement de statut", () => {

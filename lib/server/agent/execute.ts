@@ -1118,6 +1118,10 @@ export async function executeAgentRun(
         // `ask_user`, que le jeu de tools ne sert pas, et dit le mandat de PR.
         interactive: !run.routine_id,
         webSearch: webSearchAllowed,
+        webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
+        // Une étape de CHAÎNE (MIN-147) : c'est le seul run qui sert
+        // `report_verdict`, donc le seul dont le prompt en parle (MIN-245).
+        chain: !!run.chain_id,
         applyPatch: usesApplyPatch(run.model),
         images: imageInput,
         // Une relecture ne délègue pas : le bloc ne doit pas exister, sans quoi
@@ -1921,6 +1925,7 @@ export async function executeAgentRun(
       tools: agentToolsFor({
         anchor,
         webSearch: webSearchAllowed,
+        webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
         model: run.model,
         images: imageInput,
         subagentModels,

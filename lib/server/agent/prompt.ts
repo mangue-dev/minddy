@@ -71,6 +71,23 @@ export function buildAgentSystemPrompt(input: {
   /** Le run a-t-il le tool `web_search` ? (runs OpenRouter uniquement — cf.
    *  agentToolsFor). Le prompt ne doit décrire que les tools réellement offerts. */
   webSearch?: boolean;
+  /** Plafond de recherches du tour (MIN-245). Passé en option — ce module entre
+   *  dans le bundle de la microVM et ne peut pas importer `web-search.ts`, où vit
+   *  la constante. Sans lui la ligne dit que ça coûte cher, jamais combien. */
+  webSearchMax?: number;
+  /**
+   * Le run est-il une étape d'une CHAÎNE d'automatisation (MIN-147) ? C'est le
+   * seul cas où `report_verdict` est servi (cf. `agentToolsFor`), et donc le seul
+   * où le prompt en parle — même règle que partout ici : jamais décrire un tool
+   * que le jeu ne sert pas.
+   *
+   * Sans ce bloc, la seule consigne sur `report_verdict` vivait dans le message
+   * de LANCEMENT (`Agent.launchPrompt.chainVerify*`) : un texte utilisateur, dans
+   * la langue du lanceur, qu'une chaîne lancée avec un `prompt` écrit à la main
+   * ne porte pas — le tool était alors servi sans qu'aucun texte n'en parle,
+   * alors que toute la bascule d'automatisation dépend de cet appel.
+   */
+  chain?: boolean;
   /** Le run édite-t-il via `apply_patch` (modèles `gpt-*`, MIN-115) au lieu
    *  d'`edit_file`/`apply_edits`/`write_file` ? Les deux jeux ne sont jamais
    *  servis ensemble : le prompt décrit celui que le modèle a vraiment. */
@@ -247,6 +264,22 @@ ${input.subagents.templates ?? describeTemplates()}`
 
 `;
 
+  /**
+   * La chaîne d'automatisation (MIN-147, MIN-245). Le bloc n'existe que sous
+   * `chain`, comme le tool : ailleurs, personne ne lit un verdict, et un tool
+   * décrit sans être servi se fait appeler et brûle un round.
+   */
+  const chainSection =
+    input.chain === true
+      ? `## This run is a step of an automated CHAIN
+- Something downstream is WAITING on your verdict: the chain reads it to decide what happens next (move to the next step, or stop and hand the work back to a human). Nothing moves until you give it.
+- **Call \`report_verdict\` EXACTLY ONCE, as the very last thing you do**, after the work of this run is finished and saved. \`ok\` is true when what you checked is sound and the chain can move on, false when it is not — and then \`blockers\` lists, one line each, what must change first. \`summary\` says in two or three sentences what you checked and what you concluded.
+- \`blockers\` is an empty array when \`ok\` is true. Never both: a verdict that passes with blockers cannot be acted on.
+- It is a REPORT, not an action: it changes no ticket, no status, no file. Your reply to the user still says what you did — the verdict is what the machine reads.
+
+`
+      : "";
+
   const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`--amend\` — and the call comes back as an error. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
 
   // Règle DURE, identique aux deux ancrages : la seule écriture de statut côté
@@ -332,7 +365,16 @@ ${editingTools}
 - \`run_background\` — start a long-lived command (dev server, watcher) and keep working: \`start\` gives you a \`job_id\`, \`check\` returns what it wrote since your last check plus whether it is still running, \`stop\` kills it. This is how you see your work actually RUN: start the server, give it a moment, \`curl\` it with \`run_command\` (\`curl -s --retry 5 --retry-connrefused http://localhost:3000/\`), read the answer, stop the job. It has NO stdin — pass the non-interactive flags (\`--yes\`, \`CI=1\`) — and it is not for commands that finish on their own (\`run_command\` gives you their exit code). Every background job is killed when the turn ends, so start it in the turn that uses it, and stop it yourself as soon as you're done.${
     input.webSearch
       ? `
-- \`web_search\` — look something up on the web (the sandbox has no other internet access). For a dependency's current API, a breaking change, an unfamiliar error from a library, a version, a spec. Read the repo first — package.json, the lockfile, the dependency's files, the repo's own docs — and search only when the answer isn't there and you don't know it reliably. Each search costs money: one focused query, never the same one twice.`
+- \`web_search\` — look something up on the web (the sandbox has no other internet access). For a dependency's current API, a breaking change, an unfamiliar error from a library, a version, a spec. Read the repo first — package.json, the lockfile, the dependency's files, the repo's own docs — and search only when the answer isn't there and you don't know it reliably. Each search costs money: one focused query, never the same one twice.${
+          input.webSearchMax != null
+            ? ` You get ${input.webSearchMax} searches for this turn, no more — past that every call comes back as an error.`
+            : ""
+        }`
+      : ""
+  }${
+    input.chain === true
+      ? `
+- \`report_verdict\` — close this run with its VERDICT, because it is a step of an automated chain (see below).`
       : ""
   }
 - \`update_plan\` — maintain a short ordered checklist of your steps for multi-step work (keep exactly one step \`in_progress\`; skip it for trivial or conversational turns).${
@@ -355,8 +397,7 @@ ${anchorSection}${delegationSection}
    - **The turn's \`git diff\`**, handed to you to read end to end before you reply. So do NOT run \`git diff\` yourself to review your work; read the one you are given. What it is there to catch is the mistake that no single file shows — a value produced in one file and consumed in another (i18n placeholders, props, payload fields, columns) where the two sides disagree, a new case added in one place and ignored in its counterpart, something changed halfway. Plus the obvious: diff minimal, no stray or debug files, nothing unrelated to the request.
 5. **Reply.** End the turn with a clear message: what you did or found, the concrete files touched (\`path:line\`), how you verified it, and the pull request link if you opened one. No raw file dumps.
 
-${askingSection}
-## Rules
+${askingSection}${chainSection}## Rules
 - Write your replies to the user in ${replyLanguage}. Keep code, identifiers, commit/PR titles and PR bodies in English.
 - Stay within this repository; do not touch unrelated files.
 - Follow the repository instructions given in the conversation; they override these general conventions on project-specific matters, but a genuine user request overrides them.

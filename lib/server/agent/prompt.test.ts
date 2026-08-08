@@ -467,6 +467,51 @@ describe("buildAgentSystemPrompt — clôture d'un plan", () => {
   }
 });
 
+/**
+ * MIN-245 : `report_verdict` était SERVI sans que le prompt en dise un mot — sa
+ * seule consigne vivait dans le message de lancement (`Agent.launchPrompt
+ * .chainVerify*`), c'est-à-dire un texte utilisateur qu'une chaîne lancée avec un
+ * `prompt` écrit à la main ne porte pas. Toute la bascule d'automatisation dépend
+ * pourtant de cet appel. Et l'inverse compte autant : décrire le tool hors chaîne
+ * le ferait appeler pour rien.
+ */
+describe("buildAgentSystemPrompt — le verdict d'une chaîne", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`dit comment et quand appeler report_verdict (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor, chain: true });
+      expect(prompt).toContain("`report_verdict`");
+      expect(prompt).toMatch(/EXACTLY ONCE, as the very last thing you do/);
+      for (const field of ["`ok`", "`summary`", "`blockers`"]) {
+        expect(prompt).toContain(field);
+      }
+      expect(prompt).toMatch(/chain reads it to decide what happens next/);
+    });
+
+    it(`n'en dit rien hors chaîne (ancrage ${anchor})`, () => {
+      for (const opts of [{ anchor }, { anchor, chain: false }]) {
+        expect(buildAgentSystemPrompt(opts)).not.toContain("report_verdict");
+      }
+    });
+  }
+});
+
+/**
+ * MIN-245 : le plafond de recherches est CHIFFRÉ, comme `run_command` chiffre sa
+ * troncature. Sinon le modèle l'apprend en heurtant le mur.
+ */
+describe("buildAgentSystemPrompt — plafond de recherche web", () => {
+  it("chiffre le plafond du tour quand le run a la recherche", () => {
+    const prompt = buildAgentSystemPrompt({ anchor: "issue", webSearch: true, webSearchMax: 5 });
+    expect(prompt).toContain("5 searches for this turn");
+  });
+
+  it("ne chiffre rien quand le run n'a pas la recherche", () => {
+    const prompt = buildAgentSystemPrompt({ anchor: "issue", webSearch: false, webSearchMax: 5 });
+    expect(prompt).not.toContain("`web_search`");
+    expect(prompt).not.toContain("searches for this turn");
+  });
+});
+
 describe("buildAgentSystemPrompt — sorties longues de run_command", () => {
   for (const anchor of ["issue", "notebook"] as const) {
     it(`dit où retrouver la sortie complète (ancrage ${anchor})`, () => {
