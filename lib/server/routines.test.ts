@@ -37,6 +37,8 @@ interface RoutineRow extends Record<string, unknown> {
   next_run_at: string | null;
   last_run_at: string | null;
   last_error: string | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -78,6 +80,8 @@ function makeRoutine(over: Partial<RoutineRow> = {}): RoutineRow {
     next_run_at: "2020-01-06T08:00:00.000Z",
     last_run_at: null,
     last_error: null,
+    deleted_at: null,
+    deleted_by: null,
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
     ...over,
@@ -214,11 +218,14 @@ const {
   claimRoutine,
   createRoutine,
   deleteRoutine,
+  dueRoutines,
+  getRoutineForUser,
   listRoutinesForUser,
   routineRunBudgetUsd,
   stampRoutineLaunched,
   updateRoutine,
 } = await import("./routines");
+const { restoreItem } = await import("./trash");
 
 beforeEach(() => {
   world.routines = [];
@@ -408,6 +415,17 @@ describe("updateRoutine", () => {
   });
 });
 
+/**
+ * La CORBEILLE des routines (MIN-201) — ce que la suppression ne détruit plus.
+ *
+ * C'était un `delete` sec : la ligne partait, et ses passages avec elle
+ * (`agent_runs.routine_id` cascade), donc les conversations, les diffs et les
+ * pull requests qui s'y lisent. Ce qui est testé ici, c'est exactement ce qui
+ * rend le retour possible : la ligne RESTE, marquée, avec tout ce qu'elle
+ * portait, et elle sort quand même de la liste ET du balayage du cron — une
+ * routine corbeillée qui repart le lundi matin dépenserait le budget de
+ * quelqu'un qui la croit supprimée.
+ */
 describe("deleteRoutine", () => {
   beforeEach(() => {
     world.routines = [makeRoutine()];
@@ -416,13 +434,60 @@ describe("deleteRoutine", () => {
   it("REFUSE un membre non-propriétaire", async () => {
     const result = await deleteRoutine({ routineId: ROUTINE_ID, actorId: MEMBER_ID });
     expect(result).toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
-    expect(world.routines).toHaveLength(1);
+    expect(world.routines[0].deleted_at).toBeNull();
   });
 
-  it("supprime pour le propriétaire", async () => {
+  it("ENVOIE À LA CORBEILLE au lieu de détruire", async () => {
     const result = await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
     expect(result).toEqual({ ok: true });
-    expect(world.routines).toHaveLength(0);
+    // La ligne est là, marquée : rien de ce que la routine portait n'a bougé,
+    // et ses `agent_runs` n'ont donc pas cascadé.
+    expect(world.routines).toHaveLength(1);
+    expect(world.routines[0].deleted_at).toBeTruthy();
+    expect(world.routines[0].deleted_by).toBe(OWNER_ID);
+    expect(world.routines[0].prompt).toBe(makeRoutine().prompt);
+    expect(world.routines[0].next_run_at).toBe(makeRoutine().next_run_at);
+  });
+
+  it("la fait disparaître de la liste, du détail et du balayage du cron", async () => {
+    await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
+    expect(await listRoutinesForUser(OWNER_ID)).toEqual([]);
+    expect(await getRoutineForUser(ROUTINE_ID, OWNER_ID)).toBeNull();
+    // L'échéance reste armée pour que la restauration la rende telle quelle :
+    // c'est le filtre de `dueRoutines`, et lui seul, qui l'empêche de partir.
+    expect(world.routines[0].next_run_at).toBeTruthy();
+    expect(await dueRoutines()).toEqual([]);
+  });
+
+  it("refuse de modifier une routine corbeillée — on la restaure d'abord", async () => {
+    await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
+    const result = await updateRoutine({
+      routineId: ROUTINE_ID,
+      actorId: OWNER_ID,
+      enabled: false,
+    });
+    expect(result).toMatchObject({ ok: false, status: 404, errorKey: "routineNotFound" });
+  });
+
+  it("se restaure À L'IDENTIQUE depuis la corbeille", async () => {
+    const before = { ...world.routines[0] };
+    await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
+    const restored = await restoreItem("routine", ROUTINE_ID, OWNER_ID);
+    expect(restored).toEqual({ ok: true });
+    // Cadence, instruction, modèle, échéance : la restauration ne remet que les
+    // deux marqueurs, il n'y a rien d'autre à reconstruire.
+    expect(world.routines[0]).toEqual({ ...before, deleted_at: null, deleted_by: null });
+    expect((await listRoutinesForUser(OWNER_ID)).map((r) => r.id)).toEqual([ROUTINE_ID]);
+    expect((await dueRoutines()).map((r) => r.id)).toEqual([ROUTINE_ID]);
+  });
+
+  it("REFUSE à un membre de restaurer la routine d'un autre", async () => {
+    // Même garde qu'à la suppression : la corbeille ne doit pas offrir un chemin
+    // de côté pour remettre en marche une dépense qui n'est pas la sienne.
+    await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
+    const result = await restoreItem("routine", ROUTINE_ID, MEMBER_ID);
+    expect(result).toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
+    expect(world.routines[0].deleted_at).toBeTruthy();
   });
 });
 

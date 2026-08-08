@@ -222,11 +222,12 @@ async function stripPayloads(service: Service, now: Date) {
   return count ?? 0;
 }
 
-/** Les quatre tables de la corbeille, et le type qui leur correspond. */
+/** Les cinq tables de la corbeille, et le type qui leur correspond. */
 const TRASH_TABLES: { table: string; type: TrashType }[] = [
   { table: "issues", type: "issue" },
   { table: "objectives", type: "objective" },
   { table: "feedback_posts", type: "feedback" },
+  { table: "agent_routines", type: "routine" },
   { table: "projects", type: "project" },
 ];
 
@@ -234,10 +235,13 @@ const TRASH_TABLES: { table: string; type: TrashType }[] = [
  * Corbeille : les éléments supprimés il y a plus de `trash` jours.
  *
  * L'ordre compte. Les projets passent en DERNIER : supprimer un projet cascade
- * sur ses tickets, ses objectifs et ses feedbacks, et purger un projet d'abord
- * emporterait des lignes qu'on n'aurait pas comptées — le total rapporté au cron
- * mentirait. Les objets du storage ne cascadent pas du tout : leurs chemins sont
- * relevés AVANT le delete, puis effacés une fois les lignes parties.
+ * sur ses tickets, ses objectifs, ses feedbacks et ses routines, et purger un
+ * projet d'abord emporterait des lignes qu'on n'aurait pas comptées — le total
+ * rapporté au cron mentirait. Les objets du storage ne cascadent pas du tout :
+ * leurs chemins sont relevés AVANT le delete, puis effacés une fois les lignes
+ * parties. Une routine, elle, n'a pas de fichier mais emporte ses passages
+ * (`agent_runs.routine_id` cascade) : c'est ici, et seulement ici, que
+ * l'historique d'une routine supprimée disparaît vraiment.
  *
  * Lot borné par table : le balayage du lendemain reprend le reste, là où une
  * purge illimitée sur un arriéré dépasserait la durée de la fonction.

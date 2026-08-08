@@ -10,10 +10,27 @@
 export const MCP_SERVER_INSTRUCTIONS =
 "minddy is a minimal issue tracker (Linear-like). Hierarchy: a project is the " +
       "workspace; issues belong to a project; an objective groups issues of a project " +
-      "around a goal. Issue identifiers read '<PROJECT KEY>-<number>' (e.g. MIND-42): " +
+      "around a goal — minddy_list_objectives lists them, minddy_get_objective " +
+      "opens one (description, its issues, its comment thread), " +
+      "minddy_create_objective / minddy_update_objective write it, and " +
+      "minddy_add_objective_comment posts on the goal itself (a note about one " +
+      "ticket goes on that ticket, with minddy_add_comment). " +
+      "Issue identifiers read '<PROJECT KEY>-<number>' (e.g. MIND-42): " +
       "tools accept them wherever an 'issue' parameter appears. Statuses: triage, " +
       "backlog, todo, in_progress, in_review, done, canceled, duplicate. Priorities: " +
-      "none, low, medium, high, urgent. Efforts (t-shirt): xs, s, m, l, xl. An issue " +
+      "none, low, medium, high, urgent. Efforts (t-shirt): xs, s, m, l, xl. " +
+      "FILL WHAT YOU CREATE. A ticket or an objective carrying only a title is " +
+      "one a human has to finish by hand. On every issue you create: a " +
+      "description (what and why), an estimated priority AND effort, the " +
+      "project's matching categories (pass them BY NAME via category_names — no " +
+      "lookup needed), the objective it belongs to, and an assignee when the " +
+      "human named one, or the owner on a single-member project. " +
+      "And its RELATIONS: an issue can block, be blocked_by, or be related to " +
+      "another — minddy_get_issue reads them, minddy_link_issues writes one, and " +
+      "minddy_create_issue takes them at creation, siblings of the same call " +
+      "included ('sub:N'). A dependency you noticed and did not record is one " +
+      "nobody else can see. minddy_list_members and minddy_list_categories " +
+      "resolve names to ids when you need them. An issue " +
       "can RECUR: field 'recurrence' (daily, weekly, monthly, yearly) riding on its " +
       "due date — 'every Monday' is the cadence plus the date, so a cadence without " +
       "a due_date is refused. Completing a recurring issue creates the next " +
@@ -107,8 +124,9 @@ export const MCP_SERVER_INSTRUCTIONS =
       "ITSELF on a cadence — a security review every Monday, a dependency sweep " +
       "on the 1st. minddy_create_routine schedules one (owner only), " +
       "minddy_list_routines shows what is already scheduled and when it last ran, " +
-      "minddy_update_routine pauses or re-times one, minddy_delete_routine removes " +
-      "it and its history. A routine is neither a recurring issue nor a project " +
+      "minddy_update_routine pauses or re-times one, minddy_delete_routine sends " +
+      "it to the trash — it stops at once and keeps its history, restorable from " +
+      "the app for a few weeks. A routine is neither a recurring issue nor a project " +
       "automation: nothing triggers it but the clock, it can open a pull request " +
       "unprompted, and it can never ask a question — so its instruction has to " +
       "stand on its own. " +

@@ -1206,7 +1206,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_trash",
       description:
-        "List what the user can still recover: the issues, objectives, feedback posts and projects deleted from their projects, newest first, with who deleted them and when. Deleted items stay here for a limited number of days (the result carries `retention_days`) and then go for good. Call it to answer 'what did I delete?' and to get the ids restore_from_trash takes.",
+        "List what the user can still recover: the issues, objectives, feedback posts, routines and projects deleted from their projects, newest first, with who deleted them and when. Deleted items stay here for a limited number of days (the result carries `retention_days`) and then go for good. Routines only show up for projects the user OWNS — nobody else can restore one. Call it to answer 'what did I delete?' and to get the ids restore_from_trash takes.",
       parameters: {
         type: "object",
         properties: {
@@ -1225,7 +1225,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "move_to_trash",
       description:
-        "Move an issue, objective, feedback post or project to the trash — the app's own delete. It is REVERSIBLE (restore_from_trash brings it back exactly as it was, comments, attachments, sub-issues and links included) but it takes the item out of every board and list, so confirm with ask_user first. Deleting is NOT the same as canceling: 'canceled' is a status that stays on the board and says the work was dropped, the trash says the item should not have existed. Do what the user actually asked for. A project can only be trashed by its owner; trashing one leaves its issues attached, so restoring it brings everything back. Nothing cascades and nothing is detached.",
+        "Move an issue, objective, feedback post, routine or project to the trash — the app's own delete. It is REVERSIBLE (restore_from_trash brings it back exactly as it was, comments, attachments, sub-issues, links and a routine's past runs included) but it takes the item out of every board and list, so confirm with ask_user first. Deleting is NOT the same as canceling: 'canceled' is a status that stays on the board and says the work was dropped, the trash says the item should not have existed. Do what the user actually asked for. A project and a routine can only be trashed by the project's OWNER; trashing a project leaves its issues attached, so restoring it brings everything back. A trashed routine stops running — to merely pause one, use update_routine with enabled: false. Nothing cascades and nothing is detached.",
       parameters: {
         type: "object",
         properties: {
@@ -1249,7 +1249,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "restore_from_trash",
       description:
-        "Bring an item back from the trash, exactly as it was. Get the type and id from list_trash. Restoring an issue, objective or feedback whose PROJECT is itself in the trash fails — restore the project first.",
+        "Bring an item back from the trash, exactly as it was — a routine comes back with its cadence, its instruction, its next occurrence and its past runs. Get the type and id from list_trash. Restoring an issue, objective, feedback or routine whose PROJECT is itself in the trash fails — restore the project first.",
       parameters: {
         type: "object",
         properties: {

@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { softDeleteItem } from "@/lib/server/trash";
 import { getProjectLink } from "@/lib/server/git/repo-links";
 import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
@@ -378,6 +379,8 @@ export async function updateRoutine(
   const { data: current } = await service
     .from("agent_routines")
     .select("*")
+    // Une routine à la corbeille ne se modifie pas : elle se restaure d'abord.
+    .is("deleted_at", null)
     .eq("id", input.routineId)
     .maybeSingle();
   if (!current) return { ok: false, status: 404, errorKey: "routineNotFound" };
@@ -477,35 +480,42 @@ export async function updateRoutine(
   return { ok: true, routine: data as Routine };
 }
 
-/** Supprime une routine. Owner seul. Ses runs partent avec elle (cascade). */
+/**
+ * Supprime une routine — à la CORBEILLE (MIN-201), pas pour de bon.
+ *
+ * C'était un `delete` sec, et il emportait tous ses passages avec elle
+ * (`agent_runs.routine_id` cascade) : les conversations, les diffs et les pull
+ * requests qui s'y lisent disparaissaient d'un clic, sans retour possible. La
+ * routine part donc là où partent déjà les tickets, les objectifs, les retours
+ * et les projets : marquée, sortie de l'app, restaurable 30 jours à l'identique
+ * — cadence, instruction, modèle, échéance et historique inchangés, puisque rien
+ * n'est détaché. C'est le balayage nocturne qui tranche ensuite.
+ *
+ * La garde owner ET l'écriture vivent dans `softDeleteItem` : deux
+ * implémentations de « corbeiller une routine » — une ici, une pour l'écran de
+ * corbeille et l'outil de Numo — finiraient par diverger.
+ */
 export async function deleteRoutine(input: {
   routineId: string;
   actorId: string;
 }): Promise<{ ok: true } | Extract<RoutineResult<never>, { ok: false }>> {
-  const service = getServiceClient();
-  const { data: current } = await service
-    .from("agent_routines")
-    .select("id, project_id")
-    .eq("id", input.routineId)
-    .maybeSingle();
-  if (!current) return { ok: false, status: 404, errorKey: "routineNotFound" };
-
-  const access = await getProjectAccess(
-    input.actorId,
-    (current as { project_id: string }).project_id,
-  );
-  if (!access) return { ok: false, status: 404, errorKey: "routineNotFound" };
-  if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
-
-  const { error } = await service.from("agent_routines").delete().eq("id", input.routineId);
-  if (error) {
-    console.error("[routines] delete failed:", error.message);
-    return { ok: false, status: 500, errorKey: "databaseError" };
-  }
-  return { ok: true };
+  const result = await softDeleteItem("routine", input.routineId, input.actorId);
+  if (result.ok) return { ok: true };
+  // La corbeille ne rend, pour une routine, que ces trois clés-là ; le repli
+  // couvre l'impossible plutôt que de laisser passer une clé que l'UI ne sait
+  // pas traduire.
+  const errorKey: RoutineErrorKey =
+    result.errorKey === "routineNotFound" || result.errorKey === "ownerOnly"
+      ? result.errorKey
+      : "databaseError";
+  return { ok: false, status: result.status, errorKey };
 }
 
-/** Une routine par son id, avec l'accès de l'appelant (lecture = membres). */
+/**
+ * Une routine par son id, avec l'accès de l'appelant (lecture = membres). Une
+ * routine à la corbeille n'existe plus pour personne (MIN-201) : elle se
+ * restaure depuis la corbeille, elle ne se relit pas par son ancienne URL.
+ */
 export async function getRoutineForUser(
   routineId: string,
   userId: string,
@@ -515,6 +525,7 @@ export async function getRoutineForUser(
     .from("agent_routines")
     .select("*")
     .eq("id", routineId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (!data) return null;
   const routine = data as Routine;
@@ -554,6 +565,8 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
     // `getProjectAccess` écarte les projets corbeillés.
     .select("*, projects!inner(deleted_at)")
     .is("projects.deleted_at", null)
+    // Et la routine elle-même, corbeillée à son tour (MIN-201).
+    .is("deleted_at", null)
     .in("project_id", [...ids])
     .order("created_at", { ascending: false });
   return ((data ?? []) as Array<Routine & { projects?: unknown }>).map(
@@ -572,6 +585,10 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
  * comme `getProjectAccess`). Même doctrine que le moteur d'automatisations,
  * qui écarte les projets corbeillés de son propre balayage.
  *
+ * **Une routine à la corbeille non plus** (MIN-201) : son échéance reste armée
+ * pour que la restauration la rende telle quelle, et sans ce filtre elle
+ * partirait pendant sa rétention comme si de rien n'était.
+ *
  * La jointure est INTERNE et le filtre est DANS la requête, jamais après :
  * écartée en JS, une routine de projet corbeillé garderait sa place en tête de
  * la fenêtre (son échéance ne bouge plus, donc elle trie toujours première) et
@@ -583,6 +600,7 @@ export async function dueRoutines(limit = 20): Promise<Routine[]> {
     .from("agent_routines")
     .select("*, projects!inner(deleted_at)")
     .is("projects.deleted_at", null)
+    .is("deleted_at", null)
     .eq("enabled", true)
     .not("next_run_at", "is", null)
     .lte("next_run_at", new Date().toISOString())

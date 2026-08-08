@@ -2,8 +2,8 @@
 
 import { trackEvent } from "./analytics";
 
-/** Les quatre types que la corbeille recueille (MIN-133). */
-export type TrashType = "issue" | "project" | "objective" | "feedback";
+/** Les cinq types que la corbeille recueille (MIN-133, routines : MIN-201). */
+export type TrashType = "issue" | "project" | "objective" | "feedback" | "routine";
 
 export interface TrashActor {
   user_id: string;

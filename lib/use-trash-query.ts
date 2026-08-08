@@ -49,7 +49,13 @@ export function useTrashQuery(): UseTrashResult {
 
   const invalidate = useCallback(
     async (item: TrashItem | null) => {
-      const keys: unknown[][] = [[...TRASH_KEY], ["projects"], ["me", "board"]];
+      const keys: unknown[][] = [
+        [...TRASH_KEY],
+        ["projects"],
+        ["me", "board"],
+        // Les routines vivent dans une liste à elles, hors projet (MIN-201).
+        ["routines"],
+      ];
       if (item?.project_id) {
         keys.push(
           ["issues", item.project_id],
@@ -114,5 +120,6 @@ export const TRASH_TYPE_ORDER: TrashType[] = [
   "issue",
   "objective",
   "feedback",
+  "routine",
   "project",
 ];

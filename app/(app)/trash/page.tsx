@@ -12,6 +12,7 @@ import {
   toast,
 } from "mangue-ui";
 import {
+  CalendarClock,
   CircleDashed,
   MessagesSquare,
   RotateCcw,
@@ -37,11 +38,11 @@ import { DocPageSkeleton } from "@/components/route-skeletons";
 /**
  * La corbeille (MIN-133).
  *
- * Un seul écran pour les quatre choses qu'on peut supprimer — tickets,
- * objectifs, retours, projets — parce que ce qu'on y cherche est toujours la
- * même chose : « je viens d'effacer quelque chose, où est-ce ». Les sections
- * suivent l'ordre du contenu vers le contenant, et chaque ligne dit le délai
- * qui lui reste : c'est l'information qui décide s'il faut agir maintenant.
+ * Un seul écran pour les cinq choses qu'on peut supprimer — tickets, objectifs,
+ * retours, routines (MIN-201), projets — parce que ce qu'on y cherche est
+ * toujours la même chose : « je viens d'effacer quelque chose, où est-ce ». Les
+ * sections suivent l'ordre du contenu vers le contenant, et chaque ligne dit le
+ * délai qui lui reste : c'est l'information qui décide s'il faut agir maintenant.
  *
  * Restaurer est le geste principal (bouton plein) ; supprimer définitivement
  * reste une icône discrète derrière une confirmation — la corbeille existe pour
@@ -52,13 +53,19 @@ const TYPE_ICON: Record<TrashType, LucideIcon> = {
   issue: CircleDashed,
   objective: Target,
   feedback: MessagesSquare,
+  // La même que la colonne Routines : c'est à elle qu'on renvoie l'œil.
+  routine: CalendarClock,
   project: Trash2,
 };
 
-const TYPE_HEADING: Record<TrashType, "issues" | "objectives" | "feedback" | "projects"> = {
+const TYPE_HEADING: Record<
+  TrashType,
+  "issues" | "objectives" | "feedback" | "routines" | "projects"
+> = {
   issue: "issues",
   objective: "objectives",
   feedback: "feedback",
+  routine: "routines",
   project: "projects",
 };
 

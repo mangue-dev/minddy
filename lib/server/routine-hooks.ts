@@ -45,6 +45,10 @@ export async function notifyRoutineOfRunEnd(run: {
     const { data } = await service
       .from("agent_routines")
       .select("id, owner_id")
+      // Corbeillée en cours de passage (MIN-201) : la ligne d'inbox mènerait à
+      // un écran qui répond 404, et annoncerait le travail d'une routine que son
+      // propriétaire vient de supprimer.
+      .is("deleted_at", null)
       .eq("id", run.routine_id)
       .maybeSingle();
     const owner = (data as { owner_id?: string } | null)?.owner_id;

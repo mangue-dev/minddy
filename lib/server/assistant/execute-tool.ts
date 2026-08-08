@@ -2086,8 +2086,9 @@ const TRASH_ERROR_MESSAGES: Record<string, string> = {
   issueNotFound: "Issue not found, or not in a project you can access.",
   objectiveNotFound: "Objective not found, or not in a project you can access.",
   feedbackNotFound: "Feedback post not found, or not in a project you can access.",
+  routineNotFound: "Routine not found, or not in a project you can access.",
   projectNotFound: "Project not found, or not accessible.",
-  ownerOnly: "Only the project owner can trash or restore a project.",
+  ownerOnly: "Only the project's owner can trash or restore a project or a routine.",
   projectKeyAlreadyUsed:
     "Its key is now used by another project — restoring it would collide. Rename that other project's key first.",
   databaseError: "A database error occurred.",

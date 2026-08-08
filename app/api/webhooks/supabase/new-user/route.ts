@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { notifyNewUser } from "@/lib/server/brrr";
-import type { AuthNameMeta } from "@/lib/display-name";
+import { authDisplayName, emailLocalPart, type AuthNameMeta } from "@/lib/display-name";
 
 /**
  * POST /api/webhooks/supabase/new-user — « quelqu'un vient de créer un compte »
@@ -47,6 +47,21 @@ const SECRET_HEADER = "x-minddy-webhook-secret";
  * l'adresse nue et toutes ses sous-adresses (`captures-demo+alice@…`).
  */
 const DEMO_EMAIL = /^captures-demo(\+[^@]*)?@minddy\.app$/i;
+
+/**
+ * Même raison, autre population : les comptes jetables que l'agent crée pour
+ * vérifier une implémentation (skill `/verify`) naissent CONFIRMÉS
+ * (`createUser({ email_confirm: true })`), donc ils passent la transition du
+ * premier coup et feraient vibrer le téléphone à chaque vérification.
+ *
+ * Le marqueur est le NOM, pas l'adresse : celle-ci est tirée au hasard à chaque
+ * run pour ne pas collisionner, tandis que le nom est fixé par le skill
+ * (`user_metadata: { display_name: "Verify Bot" }`). L'adresse est quand même
+ * testée, sur son seul intitulé, pour le cas où le compte serait créé sans
+ * metadata. Tolérant à la casse et au séparateur — « Verify Bot »,
+ * « verify-bot », « verify_bot 2 ».
+ */
+const VERIFY_BOT = /^verify[\s._-]*bot/i;
 
 /** Comparaison à temps constant, longueurs incluses. */
 function secretMatches(provided: string | null, expected: string): boolean {
@@ -125,10 +140,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "demo" });
     }
 
+    const metadata = sanitizeNameMeta(record?.raw_user_meta_data);
+    const name = authDisplayName(metadata, null, "");
+    if (VERIFY_BOT.test(name) || VERIFY_BOT.test(emailLocalPart(email) ?? "")) {
+      return NextResponse.json({ ok: true, skipped: "verify_bot" });
+    }
+
     const provider = record?.raw_app_meta_data?.provider;
     await notifyNewUser({
       email,
-      metadata: sanitizeNameMeta(record?.raw_user_meta_data),
+      metadata,
       provider: typeof provider === "string" ? provider.slice(0, 64) : "email",
     });
   } catch (err) {

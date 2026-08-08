@@ -108,7 +108,11 @@ describe("catalogue MCP — le feedback dit ce que l'app fait", () => {
  * adjectif seul ne borne rien.
  */
 describe("catalogue MCP — un commentaire est court", () => {
-  const bodyParam = { minddy_add_comment: "body", minddy_add_feedback_comment: "body" };
+  const bodyParam = {
+    minddy_add_comment: "body",
+    minddy_add_feedback_comment: "body",
+    minddy_add_objective_comment: "body",
+  };
 
   for (const [name, field] of Object.entries(bodyParam)) {
     it(`borne ${name} dans sa description et dans ${field}`, () => {
@@ -176,5 +180,133 @@ describe("catalogue MCP — ressources", () => {
       expect(description, `${name} ne parle pas de ressources`).toMatch(/resource/i);
       expect(description, `${name} ne nomme pas les liens`).toMatch(/link/i);
     }
+  });
+});
+
+/**
+ * Un agent remplit ce qu'on lui DEMANDE de remplir, et « only title is
+ * required » — ce que disait `minddy_create_issue` — se lit comme une
+ * autorisation à ne mettre qu'un titre. Les tickets arrivaient sans priorité,
+ * sans effort, sans catégorie, sans relation : le schéma n'a jamais été le
+ * problème, la consigne l'était.
+ *
+ * Ce qui doit tenir : l'ATTENTE est écrite là où un modèle la lit — la
+ * description du tool, la description de CHAQUE champ concerné, et le mode
+ * d'emploi du serveur —, et remplir ne coûte plus un aller-retour (catégories
+ * par nom, relations posées dans l'appel de création).
+ */
+describe("catalogue MCP — un ticket créé arrive rempli", () => {
+  it("demande le remplissage dans minddy_create_issue, pas seulement l'autorise", () => {
+    const description = tool("minddy_create_issue").description ?? "";
+    expect(description).toContain("FILL THE TICKET");
+    // Ce qui manquait dans les vrais tickets, nommé un par un.
+    for (const field of ["priority", "effort", "description", "categor", "relations"]) {
+      expect(description, `le champ "${field}" n'est pas réclamé`).toContain(field);
+    }
+    // La règle d'assignation est une DÉCISION (MIN-201) : la personne nommée,
+    // le owner sur un projet solo, personne sinon. Un agent qui assigne au
+    // hasard est pire qu'un ticket non assigné.
+    expect(param("minddy_create_issue", "assignee_id").description).toMatch(
+      /single-member project, the owner/i
+    );
+  });
+
+  it("réclame priority et effort dans LEURS champs, pas seulement dans la prose", () => {
+    for (const field of ["priority", "effort"]) {
+      expect(
+        param("minddy_create_issue", field).description,
+        `${field} ne dit pas qu'on en attend toujours un`
+      ).toMatch(/ALWAYS/);
+    }
+  });
+
+  it("rend le remplissage moins cher qu'un aller-retour : catégories par nom", () => {
+    for (const name of ["minddy_create_issue", "minddy_update_issues"]) {
+      expect(tool(name).description, `${name} ignore category_names`).toMatch(
+        /category_names/
+      );
+    }
+    expect(param("minddy_create_issue", "category_names").required).toBe(false);
+    // Un nom inventé ne doit pas disparaître en silence : il revient à l'agent.
+    expect(param("minddy_create_issue", "category_names").description).toMatch(
+      /categories_unmatched/
+    );
+  });
+
+  it("pose les relations DANS l'appel de création, siblings compris", () => {
+    expect(param("minddy_create_issue", "relations").required).toBe(false);
+    expect(param("minddy_create_issue", "relations").description).toMatch(/sub:N/);
+    expect(tool("minddy_create_issue").description).toMatch(/sub:N/);
+  });
+
+  it("nomme les relations dans la LECTURE d'un ticket", () => {
+    // Elles étaient déjà rendues par minddy_get_issue, et annoncées nulle part :
+    // un agent qui ne lit que la description ignore que le concept existe.
+    const description = tool("minddy_get_issue").description ?? "";
+    expect(description).toMatch(/relations/);
+    expect(description).toMatch(/blocked_by/);
+    expect(description).toContain("minddy_link_issues");
+  });
+
+  it("écrit la règle de remplissage dans le mode d'emploi du serveur", () => {
+    expect(MCP_SERVER_INSTRUCTIONS).toContain("FILL WHAT YOU CREATE");
+    expect(MCP_SERVER_INSTRUCTIONS).toContain("minddy_link_issues");
+    expect(MCP_SERVER_INSTRUCTIONS).toContain("category_names");
+  });
+
+  it("demande aussi le remplissage d'un objectif", () => {
+    const description = tool("minddy_create_objective").description ?? "";
+    expect(description).toContain("FILL IT");
+    expect(description).toMatch(/description/);
+    expect(description).toMatch(/lead_user_id/);
+    // Un objectif sans ticket a une barre de progression morte : le tool doit
+    // dire par où on les rattache.
+    expect(description).toContain("minddy_update_issues");
+  });
+});
+
+/**
+ * Les objectifs portaient depuis longtemps un fil de commentaires et une
+ * activité (20260728091000_objective_activity.sql, tables polymorphes), une
+ * description et des ressources — et la surface MCP n'en exposait rien : ni
+ * lecture unitaire, ni écriture de commentaire. Ce qui doit tenir : les deux
+ * moitiés existent, et la lecture précède l'écriture.
+ */
+describe("catalogue MCP — un objectif se lit et se commente", () => {
+  it("expose minddy_get_objective en lecture, par objective_id", () => {
+    expect(tool("minddy_get_objective").readOnly).toBe(true);
+    for (const required of ["project_id", "objective_id"]) {
+      expect(param("minddy_get_objective", required).required).toBe(true);
+    }
+    const description = tool("minddy_get_objective").description ?? "";
+    // Ce que la liste ne rendait pas, et qui justifie une lecture unitaire.
+    for (const carried of ["description", "COMMENT", "progress", "activity"]) {
+      expect(description, `${carried} absent de la description`).toMatch(
+        new RegExp(carried, "i")
+      );
+    }
+  });
+
+  it("expose minddy_add_objective_comment en écriture, et renvoie d'abord vers la lecture", () => {
+    expect(tool("minddy_add_objective_comment").readOnly).toBe(false);
+    for (const required of ["project_id", "objective_id", "body"]) {
+      expect(param("minddy_add_objective_comment", required).required).toBe(true);
+    }
+    const description = tool("minddy_add_objective_comment").description ?? "";
+    expect(description).toContain("minddy_get_objective");
+    // Le partage des rôles avec le commentaire de ticket, dit explicitement.
+    expect(description).toContain("minddy_add_comment");
+  });
+
+  it("nomme les deux dans le mode d'emploi du serveur", () => {
+    for (const name of ["minddy_get_objective", "minddy_add_objective_comment"]) {
+      expect(MCP_SERVER_INSTRUCTIONS).toContain(name);
+    }
+  });
+
+  it("annonce la description tronquée de la liste, et où lire la vraie", () => {
+    const description = tool("minddy_list_objectives").description ?? "";
+    expect(description).toMatch(/TRUNCATED/i);
+    expect(description).toContain("minddy_get_objective");
   });
 });

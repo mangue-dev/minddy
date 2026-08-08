@@ -23,6 +23,15 @@ admin.auth.admin.createUser({ email, password, email_confirm: true,
   user_metadata: { display_name: "Verify Bot" } })
 ```
 
+**Le nom « Verify Bot » n'est pas décoratif** : c'est lui qui coupe l'alerte
+push d'exploitation « nouvel utilisateur »
+([app/api/webhooks/supabase/new-user/route.ts](<../../../app/api/webhooks/supabase/new-user/route.ts>),
+constante `VERIFY_BOT`). `email_confirm: true` fait naître le compte déjà
+confirmé, donc il déclenche le webhook du premier coup. Un user jetable créé
+sans ce nom fait vibrer le téléphone. Plusieurs users dans la même vérification :
+« Verify Bot 2 », « Verify Bot 3 » — le préfixe suffit. À défaut de metadata, une
+adresse en `verify-bot…@…` fait le même office.
+
 Puis login via l'UI (`input[type=email]`, `input[type=password]`, submit).
 **Nettoyage obligatoire à la fin** : supprimer les issues puis les projets du
 user (`projects.owner_id`), puis `admin.auth.admin.deleteUser(id)`.

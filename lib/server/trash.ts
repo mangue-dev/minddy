@@ -11,13 +11,13 @@ import { removeStorageObjects } from "@/lib/server/attachments";
 /**
  * La corbeille (MIN-133).
  *
- * Supprimer un ticket, un objectif, un feedback ou un projet ne détruit plus
- * rien : la ligne est marquée (`deleted_at` / `deleted_by`) et sort de l'app par
- * la RLS pour les deux premiers, par un filtre explicite pour les deux autres.
- * Elle reste visible ici 30 jours, restaurable à l'identique — commentaires,
- * pièces jointes, sous-tickets et liens compris, puisque rien n'a été détaché.
- * Passé ce délai, le balayage nocturne (lib/server/retention.ts) fait la vraie
- * suppression, celle qui cascade.
+ * Supprimer un ticket, un objectif, un feedback, une routine ou un projet ne
+ * détruit plus rien : la ligne est marquée (`deleted_at` / `deleted_by`) et sort
+ * de l'app par la RLS pour les tickets et les objectifs, par un filtre explicite
+ * pour les autres. Elle reste visible ici 30 jours, restaurable à l'identique —
+ * commentaires, pièces jointes, sous-tickets, liens et passages d'agent compris,
+ * puisque rien n'a été détaché. Passé ce délai, le balayage nocturne
+ * (lib/server/retention.ts) fait la vraie suppression, celle qui cascade.
  *
  * TOUT passe par le client service, RLS contournée, et les contrôles d'accès
  * vivent donc ici : la liste ne sort pas des projets auxquels l'appelant a
@@ -33,9 +33,15 @@ export { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 /** Garde-fou de lecture : la corbeille d'un mois n'est jamais si longue. */
 const LIST_LIMIT = 200;
 
-export type TrashType = "issue" | "project" | "objective" | "feedback";
+export type TrashType = "issue" | "project" | "objective" | "feedback" | "routine";
 
-export const TRASH_TYPES: TrashType[] = ["issue", "project", "objective", "feedback"];
+export const TRASH_TYPES: TrashType[] = [
+  "issue",
+  "project",
+  "objective",
+  "feedback",
+  "routine",
+];
 
 export function isTrashType(value: string): value is TrashType {
   return (TRASH_TYPES as string[]).includes(value);
@@ -47,6 +53,7 @@ const TABLE: Record<TrashType, string> = {
   project: "projects",
   objective: "objectives",
   feedback: "feedback_posts",
+  routine: "agent_routines",
 };
 
 export interface TrashActor {
@@ -59,7 +66,7 @@ export interface TrashActor {
 export interface TrashItem {
   type: TrashType;
   id: string;
-  /** Titre du ticket / du feedback, nom du projet ou de l'objectif. */
+  /** Titre du ticket / du feedback / de la routine, nom du projet ou de l'objectif. */
   title: string;
   /** « MIN-42 » pour un ticket, sinon null. */
   identifier: string | null;
@@ -81,6 +88,7 @@ type TrashErrorKey =
   | "projectNotFound"
   | "objectiveNotFound"
   | "feedbackNotFound"
+  | "routineNotFound"
   | "ownerOnly"
   | "projectKeyAlreadyUsed"
   | "databaseError";
@@ -90,17 +98,59 @@ const NOT_FOUND: Record<TrashType, TrashErrorKey> = {
   project: "projectNotFound",
   objective: "objectiveNotFound",
   feedback: "feedbackNotFound",
+  routine: "routineNotFound",
 };
+
+/* ─── Contrôle d'accès ─────────────────────────────────────────────────────── */
+
+/**
+ * Qui a le droit de faire quoi, pour les TROIS gestes — supprimer, restaurer,
+ * purger. Un seul endroit : trois copies du même contrôle finissent par
+ * diverger, et c'est celle qu'on regarde le moins qui laisse passer.
+ *
+ * Un projet ne répond qu'à son propriétaire. Une ROUTINE non plus : elle engage
+ * un budget tous les lundis matin sans que personne ne clique, et c'est déjà la
+ * garde de la fabrique (`lib/server/routines.ts`) — la corbeille ne doit pas
+ * offrir un chemin de côté à un membre. Le reste (tickets, objectifs, retours)
+ * appartient à tout membre du projet : la corbeille étant partagée, l'erreur de
+ * l'un reste rattrapable par l'autre.
+ *
+ * `mustBeTrashed` : restaurer et purger ne portent que sur une ligne DÉJÀ à la
+ * corbeille, là où supprimer porte sur une ligne vivante — mais on ne le filtre
+ * pas pour un projet, dont le contrôle regarde le propriétaire, qui lui ne
+ * change pas : le filtrer ferait répondre « introuvable » à un second appel.
+ */
+async function authorize(
+  service: SupabaseClient,
+  type: TrashType,
+  id: string,
+  actorId: string,
+  mustBeTrashed: boolean
+): Promise<Extract<TrashResult, { ok: false }> | null> {
+  if (type === "project") {
+    const query = service.from("projects").select("owner_id").eq("id", id);
+    if (mustBeTrashed) query.not("deleted_at", "is", null);
+    const { data: project } = await query.maybeSingle();
+    if (!project) return { ok: false, status: 404, errorKey: "projectNotFound" };
+    if (project.owner_id !== actorId) {
+      return { ok: false, status: 403, errorKey: "ownerOnly" };
+    }
+    return null;
+  }
+
+  const projectId = await resolveProjectId(service, type, id);
+  if (!projectId) return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
+  const access = await getProjectAccess(actorId, projectId);
+  if (!access) return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
+  if (type === "routine" && !access.isOwner) {
+    return { ok: false, status: 403, errorKey: "ownerOnly" };
+  }
+  return null;
+}
 
 /* ─── Suppression ──────────────────────────────────────────────────────────── */
 
-/**
- * Marque un élément comme supprimé, après contrôle d'accès.
- *
- * Un projet n'est supprimable que par son propriétaire ; le reste, par tout
- * membre du projet — la corbeille étant partagée, l'erreur d'un membre reste
- * rattrapable par un autre.
- */
+/** Marque un élément comme supprimé, après contrôle d'accès (cf. `authorize`). */
 export async function softDeleteItem(
   type: TrashType,
   id: string,
@@ -108,26 +158,8 @@ export async function softDeleteItem(
 ): Promise<TrashResult> {
   const service = getServiceClient();
 
-  if (type === "project") {
-    // Pas de `.is("deleted_at", null)` ici : le contrôle porte sur le
-    // PROPRIÉTAIRE, qui ne change pas quand le projet passe à la corbeille.
-    // Le filtrer ferait répondre « projet introuvable » à un second appel.
-    const { data: project } = await service
-      .from("projects")
-      .select("owner_id")
-      .eq("id", id)
-      .maybeSingle();
-    if (!project) return { ok: false, status: 404, errorKey: "projectNotFound" };
-    if (project.owner_id !== actorId) {
-      return { ok: false, status: 403, errorKey: "ownerOnly" };
-    }
-  } else {
-    const owner = await resolveProjectId(service, type, id);
-    if (!owner) return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
-    if (!(await getProjectAccess(actorId, owner))) {
-      return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
-    }
-  }
+  const refusal = await authorize(service, type, id, actorId, false);
+  if (refusal) return refusal;
 
   const { error } = await service
     .from(TABLE[type])
@@ -174,6 +206,10 @@ async function resolveProjectId(
  * de ce qu'elle doit être — une liste courte de choses qu'on peut récupérer
  * d'un clic.
  *
+ * Les ROUTINES font exception au « tous mes projets » : seul le propriétaire du
+ * projet peut en restaurer une (`authorize`), donc seul lui les voit ici. Les
+ * montrer à un membre lui poserait un bouton « Restaurer » qui répond 403.
+ *
  * `userSupabase` (client de session) sert à décider quels projets sont les
  * miens : le périmètre vient de la RLS, jamais du rôle service.
  */
@@ -185,10 +221,13 @@ export async function listTrash(
 
   const { data: liveProjects } = await userSupabase
     .from("projects")
-    .select("id, name, key, color")
+    .select("id, name, key, color, owner_id")
     .is("deleted_at", null);
 
   const projectIds = (liveProjects ?? []).map((p) => p.id as string);
+  const ownedProjectIds = (liveProjects ?? [])
+    .filter((p) => p.owner_id === userId)
+    .map((p) => p.id as string);
   const projectById = new Map(
     (liveProjects ?? []).map((p) => [
       p.id as string,
@@ -200,37 +239,48 @@ export async function listTrash(
     ])
   );
 
-  /** Les trois types portés par un projet se lisent tous de la même façon. */
-  const inProjects = async (table: string, columns: string): Promise<TrashRow[]> => {
-    if (projectIds.length === 0) return [];
+  /** Les quatre types portés par un projet se lisent tous de la même façon. */
+  const inProjects = async (
+    table: string,
+    columns: string,
+    ids: string[] = projectIds
+  ): Promise<TrashRow[]> => {
+    if (ids.length === 0) return [];
     const { data } = await service
       .from(table)
       .select(columns)
-      .in("project_id", projectIds)
+      .in("project_id", ids)
       .not("deleted_at", "is", null)
       .order("deleted_at", { ascending: false })
       .limit(LIST_LIMIT);
     return (data ?? []) as unknown as TrashRow[];
   };
 
-  const [issueRows, objectiveRows, feedbackRows, projectRows] = await Promise.all([
-    inProjects("issues", "id, project_id, deleted_at, deleted_by, number, title"),
-    inProjects("objectives", "id, project_id, deleted_at, deleted_by, name"),
-    inProjects("feedback_posts", "id, project_id, deleted_at, deleted_by, title"),
-    service
-      .from("projects")
-      .select("id, name, key, color, deleted_at, deleted_by")
-      .eq("owner_id", userId)
-      .not("deleted_at", "is", null)
-      .order("deleted_at", { ascending: false })
-      .limit(LIST_LIMIT)
-      .then(({ data }) => (data ?? []) as unknown as TrashRow[]),
-  ]);
+  const [issueRows, objectiveRows, feedbackRows, routineRows, projectRows] =
+    await Promise.all([
+      inProjects("issues", "id, project_id, deleted_at, deleted_by, number, title"),
+      inProjects("objectives", "id, project_id, deleted_at, deleted_by, name"),
+      inProjects("feedback_posts", "id, project_id, deleted_at, deleted_by, title"),
+      inProjects(
+        "agent_routines",
+        "id, project_id, deleted_at, deleted_by, title",
+        ownedProjectIds
+      ),
+      service
+        .from("projects")
+        .select("id, name, key, color, deleted_at, deleted_by")
+        .eq("owner_id", userId)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false })
+        .limit(LIST_LIMIT)
+        .then(({ data }) => (data ?? []) as unknown as TrashRow[]),
+    ]);
 
   const actors = await resolveActors(service, [
     ...issueRows,
     ...objectiveRows,
     ...feedbackRows,
+    ...routineRows,
     ...projectRows,
   ]);
 
@@ -265,6 +315,12 @@ export async function listTrash(
     ...feedbackRows.map((row) => ({
       ...base(row),
       type: "feedback" as const,
+      title: row.title ?? "",
+      identifier: null,
+    })),
+    ...routineRows.map((row) => ({
+      ...base(row),
+      type: "routine" as const,
       title: row.title ?? "",
       identifier: null,
     })),
@@ -334,24 +390,8 @@ export async function restoreItem(
 ): Promise<TrashResult> {
   const service = getServiceClient();
 
-  if (type === "project") {
-    const { data: project } = await service
-      .from("projects")
-      .select("owner_id")
-      .eq("id", id)
-      .not("deleted_at", "is", null)
-      .maybeSingle();
-    if (!project) return { ok: false, status: 404, errorKey: "projectNotFound" };
-    if (project.owner_id !== actorId) {
-      return { ok: false, status: 403, errorKey: "ownerOnly" };
-    }
-  } else {
-    const projectId = await resolveProjectId(service, type, id);
-    if (!projectId) return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
-    if (!(await getProjectAccess(actorId, projectId))) {
-      return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
-    }
-  }
+  const refusal = await authorize(service, type, id, actorId, true);
+  if (refusal) return refusal;
 
   const { data, error } = await service
     .from(TABLE[type])
@@ -379,9 +419,10 @@ export async function restoreItem(
 
 /**
  * Supprime pour de bon. C'est le `delete` d'avant MIN-133 : il cascade sur les
- * commentaires, l'activité, les pièces jointes, les relations, et détache les
- * sous-tickets. Les objets du storage, eux, ne cascadent pas — ils sont relevés
- * avant, puis effacés une fois la ligne partie.
+ * commentaires, l'activité, les pièces jointes, les relations, les passages
+ * d'agent d'une routine, et détache les sous-tickets. Les objets du storage, eux,
+ * ne cascadent pas — ils sont relevés avant, puis effacés une fois la ligne
+ * partie.
  */
 export async function purgeItem(
   type: TrashType,
@@ -390,24 +431,8 @@ export async function purgeItem(
 ): Promise<TrashResult> {
   const service = getServiceClient();
 
-  if (type === "project") {
-    const { data: project } = await service
-      .from("projects")
-      .select("owner_id")
-      .eq("id", id)
-      .not("deleted_at", "is", null)
-      .maybeSingle();
-    if (!project) return { ok: false, status: 404, errorKey: "projectNotFound" };
-    if (project.owner_id !== actorId) {
-      return { ok: false, status: 403, errorKey: "ownerOnly" };
-    }
-  } else {
-    const projectId = await resolveProjectId(service, type, id);
-    if (!projectId) return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
-    if (!(await getProjectAccess(actorId, projectId))) {
-      return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
-    }
-  }
+  const refusal = await authorize(service, type, id, actorId, true);
+  if (refusal) return refusal;
 
   const paths = await attachmentPaths(service, type, [id]);
 
@@ -434,17 +459,22 @@ export async function purgeItem(
  * jointe pend d'EXACTEMENT un parent — `attachments_parent_ck` l'impose sur
  * `issue_id` / `objective_id` / `feedback_post_id` (20260731090000) — et porte
  * en plus le `project_id`, qui ramasse tout le projet d'un coup.
+ *
+ * `null` pour une ROUTINE : elle n'a aucune surface où déposer un fichier —
+ * pas de commentaires, pas de ressources —, et lui inventer une colonne ferait
+ * échouer la purge sur une colonne qui n'existe pas.
  */
-const ATTACHMENT_PARENT: Record<TrashType, string> = {
+const ATTACHMENT_PARENT: Record<TrashType, string | null> = {
   issue: "issue_id",
   objective: "objective_id",
   feedback: "feedback_post_id",
   project: "project_id",
+  routine: null,
 };
 
 /**
- * Chemins storage à effacer avec ces lignes. Les QUATRE types en portent : un
- * objectif et un feedback ont leurs propres fichiers depuis 20260728091000 et
+ * Chemins storage à effacer avec ces lignes. QUATRE des cinq types en portent :
+ * un objectif et un feedback ont leurs propres fichiers depuis 20260728091000 et
  * 20260731090000. Les oublier laisserait les objets orphelins dans le bucket,
  * la ligne `attachments` partie en cascade — invisibles, et impossibles à
  * rattraper ensuite. Les ressources de type LIEN n'ont pas d'objet : filtrées
@@ -455,11 +485,12 @@ export async function attachmentPaths(
   type: TrashType,
   ids: string[]
 ): Promise<string[]> {
-  if (ids.length === 0) return [];
+  const parent = ATTACHMENT_PARENT[type];
+  if (!parent || ids.length === 0) return [];
   const { data } = await service
     .from("attachments")
     .select("storage_path")
-    .in(ATTACHMENT_PARENT[type], ids)
+    .in(parent, ids)
     .not("storage_path", "is", null);
   return (data ?? []).map((a) => a.storage_path as string);
 }

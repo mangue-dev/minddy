@@ -13,10 +13,12 @@ import { attachmentPaths, TRASH_TYPES } from "./trash";
  * et impossibles à rattraper ensuite.
  *
  * Une ressource pend d'exactement un parent (`attachments_parent_ck`), et
- * les QUATRE types de la corbeille en portent : un objectif depuis
+ * QUATRE des cinq types de la corbeille en portent : un objectif depuis
  * 20260728091000, un retour depuis 20260731090000. Ce test épingle la
  * correspondance type → colonne, la seule chose qui décide si un fichier est
- * relevé ou oublié.
+ * relevé ou oublié — la routine (MIN-201) comprise, dont l'absence de colonne
+ * est un CHOIX (elle n'a aucune surface où déposer un fichier) et non un oubli :
+ * lui en inventer une ferait échouer la purge sur une colonne inexistante.
  *
  * Depuis MIN-184 une ressource peut être un LIEN, sans objet dans le bucket :
  * la requête doit donc écarter les `storage_path` nuls, sinon la liste rendue
@@ -77,11 +79,23 @@ describe("attachmentPaths", () => {
     expect(calls[0].notNullOn).toBe("storage_path is null");
   });
 
-  it("couvre les quatre types de la corbeille, sans exception muette", async () => {
+  it("n'interroge RIEN pour une routine — elle ne porte aucun fichier", async () => {
+    const { client, calls } = serviceSpy();
+    await expect(attachmentPaths(client, "routine", ["a"])).resolves.toEqual([]);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("couvre tous les types de la corbeille, sans exception muette", async () => {
+    // Un type ajouté à la corbeille sans passer ici serait purgé en laissant ses
+    // fichiers derrière lui : chaque type doit soit interroger `attachments`,
+    // soit avoir dit explicitement qu'il n'en porte pas (`routine`).
+    const withoutAttachments: string[] = ["routine"];
     for (const type of TRASH_TYPES) {
       const { client, calls } = serviceSpy();
       await attachmentPaths(client, type, ["a"]);
-      expect(calls, `${type} n'interroge pas attachments`).toHaveLength(1);
+      expect(calls, `${type} n'interroge pas attachments`).toHaveLength(
+        withoutAttachments.includes(type) ? 0 : 1
+      );
     }
   });
 

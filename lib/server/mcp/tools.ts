@@ -45,7 +45,11 @@ import {
   removeIssueRelation,
 } from "@/lib/server/issue-relations";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
-import { addCommentToIssue, addCommentToFeedbackPost } from "@/lib/server/add-comment";
+import {
+  addCommentToIssue,
+  addCommentToFeedbackPost,
+  addCommentToObjective,
+} from "@/lib/server/add-comment";
 import { getProjectFeedbackPost } from "@/lib/server/feedback/team-guard";
 import {
   listTeamFeedback,
@@ -169,6 +173,31 @@ const LINK_REFUSALS: Record<PrLinkRefusal, string> = {
   issue_outside_repo:
     "This issue belongs to a project that does not link the repository of that pull request.",
 };
+
+/** Description rendue par une LISTE : de quoi choisir, pas de quoi lire —
+    même plafond que la description tronquée de minddy_list_issues. Le document
+    entier se lit par la lecture unitaire (minddy_get_objective). */
+const MAX_LIST_DESCRIPTION_CHARS = 200;
+
+function truncate(text: string | null | undefined, max: number): string | null {
+  if (typeof text !== "string" || !text) return null;
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
+/** Métadonnées d'une ressource telles que les rendent les lectures MCP : un
+    lien porte son url, un fichier son nom/type/taille — ses octets restent
+    derrière minddy_get_resource. */
+function resourceMeta(row: Record<string, unknown>): Record<string, unknown> {
+  return row.kind === "link"
+    ? { id: row.id, kind: "link", url: row.url, title: row.file_name }
+    : {
+        id: row.id,
+        kind: "file",
+        file_name: row.file_name,
+        mime_type: row.mime_type,
+        size_bytes: row.size_bytes,
+      };
+}
 
 /** Text-ish MIME → return the file as readable text rather than a base64 blob. */
 function isTextMime(mime: string): boolean {
@@ -454,19 +483,27 @@ async function resolveFeedbackPost(
   return { post: { id: post.id, title: post.title, issue_id: post.issue_id } };
 }
 
-/** Les 20 derniers événements d'activité d'un ticket, acteurs résolus en
-    libellés lisibles (membre, « Numo », « clé (mcp) », intégration) — ordre
-    chronologique, pour répondre à « qu'est-ce qui s'est passé ici ? ». */
-async function recentActivity(issueId: string): Promise<Array<Record<string, unknown>>> {
+/** Les 20 derniers événements d'activité d'un ticket OU d'un objectif, acteurs
+    résolus en libellés lisibles (membre, « Numo », « clé (mcp) », intégration) —
+    ordre chronologique, pour répondre à « qu'est-ce qui s'est passé ici ? ».
+    `issue_events` est polymorphe depuis l'activité des objectifs
+    (20260728091000_objective_activity.sql) : une ligne pend d'un ticket ou d'un
+    objectif, jamais des deux. */
+async function recentActivity(
+  parent: { issue_id: string } | { objective_id: string }
+): Promise<Array<Record<string, unknown>>> {
   const service = getServiceClient();
-  const { data } = await service
+  const query = service
     .from("issue_events")
     .select(
       "type, field, from_value, to_value, actor_id, via_assistant, via_mcp, api_key_id, integration_id, created_at"
     )
-    .eq("issue_id", issueId)
     .order("created_at", { ascending: false })
     .limit(20);
+  const { data } =
+    "issue_id" in parent
+      ? await query.eq("issue_id", parent.issue_id)
+      : await query.eq("objective_id", parent.objective_id);
   const events = (data ?? []).reverse();
   if (events.length === 0) return [];
 
@@ -547,6 +584,157 @@ async function withNames(
       ? row.category_ids.map((id) => categoryNames.get(id as string) ?? id)
       : [],
   }));
+}
+
+/**
+ * Catégories demandées par NOM autant que par id.
+ *
+ * Un agent qui crée un ticket connaît « bug » ou « infra », pas
+ * `f3c1e2…`. Lui imposer un `minddy_list_categories` avant chaque création,
+ * c'est exactement l'aller-retour qu'il saute — et le ticket arrive sans
+ * catégorie. Les noms sont donc résolus ici, à la casse et aux espaces près.
+ *
+ * Ce qui ne correspond à RIEN est rendu à l'appelant (`categories_unmatched`)
+ * plutôt que jeté : le cœur, lui, filtre en silence
+ * ([create-issue.ts](../create-issue.ts) — un `in()` sur le projet), et un nom
+ * inventé qui disparaît sans un mot se lit « catégorie posée » côté agent.
+ */
+async function resolveCategoryRefs(
+  projectId: string,
+  ids: string[] | undefined,
+  names: string[] | undefined
+): Promise<{ ids: string[]; unmatched: string[] } | { error: ToolResult }> {
+  if (!ids?.length && !names?.length) return { ids: [], unmatched: [] };
+  const { data, error } = await getServiceClient()
+    .from("categories")
+    .select("id, name")
+    .eq("project_id", projectId);
+  if (error) return { error: fail("database_error", error.message) };
+  const rows = data ?? [];
+  const knownIds = new Set(rows.map((c) => c.id as string));
+  const byName = new Map(
+    rows.map((c) => [(c.name as string).trim().toLowerCase(), c.id as string])
+  );
+
+  const resolved = new Set<string>();
+  const unmatched: string[] = [];
+  for (const id of ids ?? []) {
+    if (knownIds.has(id)) resolved.add(id);
+    else unmatched.push(id);
+  }
+  for (const name of names ?? []) {
+    const hit = byName.get(name.trim().toLowerCase());
+    if (hit) resolved.add(hit);
+    else unmatched.push(name);
+  }
+  return { ids: [...resolved], unmatched };
+}
+
+/** Une relation demandée à la création d'un ticket : la cible peut être un
+    ticket qui existe déjà, ou `sub:N` — le Nième sous-ticket du MÊME appel. */
+const RELATION_INPUT = z.object({
+  relation: z
+    .enum(["blocks", "blocked_by", "related"])
+    .describe("Relation type, from THIS issue's point of view."),
+  target: z
+    .string()
+    .describe(
+      "The other issue: UUID, identifier ('MIND-42'), bare number, or 'sub:N' " +
+        "— the Nth sub-issue of this same call, 1-based. 'sub:N' is what lets a " +
+        "breakdown wire its own dependencies in one pass, before the sub-issues " +
+        "have identifiers."
+    ),
+});
+
+type RelationInput = z.infer<typeof RELATION_INPUT>;
+
+/**
+ * Les relations demandées à la création, posées APRÈS que tout existe.
+ *
+ * Deux raisons de ne pas les poser au fil de l'eau : un sous-ticket peut en
+ * bloquer un autre créé plus tard dans le même appel (`sub:3` depuis `sub:1`),
+ * et une relation qui échoue ne doit rien annuler — le ticket, lui, est écrit.
+ * D'où le contrat rendu : `relations` pour ce qui a été posé, `relations_failed`
+ * pour ce qui ne l'a pas été, jamais une erreur d'ensemble.
+ */
+async function applyCreatedRelations(
+  scope: { userId: string; keyId: string | null; access: ProjectAccess },
+  requests: Array<{ source: { id: string; identifier: string }; input: RelationInput }>,
+  subsByIndex: Map<number, { id: string; identifier: string }>
+): Promise<{
+  applied: Array<{ issue: string; relation: string; target: string }>;
+  failed: Array<{ issue: string; relation: string; target: string; error: string }>;
+}> {
+  const applied: Array<{ issue: string; relation: string; target: string }> = [];
+  const failed: Array<{
+    issue: string;
+    relation: string;
+    target: string;
+    error: string;
+  }> = [];
+
+  for (const { source, input } of requests) {
+    const subMatch = /^sub:(\d+)$/i.exec(input.target.trim());
+    let target: { id: string; identifier: string } | null = null;
+    if (subMatch) {
+      target = subsByIndex.get(Number(subMatch[1])) ?? null;
+      if (!target) {
+        failed.push({
+          issue: source.identifier,
+          relation: input.relation,
+          target: input.target,
+          error: `'${input.target}' does not name a sub-issue of this call (they are 1-based, and one may have failed to be created).`,
+        });
+        continue;
+      }
+    } else {
+      const resolved = await resolveIssueRef(scope.access, input.target);
+      if ("error" in resolved) {
+        failed.push({
+          issue: source.identifier,
+          relation: input.relation,
+          target: input.target,
+          error: `Issue '${input.target}' not found in this project.`,
+        });
+        continue;
+      }
+      target = { id: resolved.issue.id, identifier: resolved.issue.identifier };
+    }
+
+    if (target.id === source.id) {
+      failed.push({
+        issue: source.identifier,
+        relation: input.relation,
+        target: input.target,
+        error: "An issue can't be related to itself.",
+      });
+      continue;
+    }
+
+    const result = await addIssueRelation({
+      projectId: scope.access.project.id,
+      actorId: scope.userId,
+      sourceId: source.id,
+      targetId: target.id,
+      type: input.relation,
+      mcpKeyId: scope.keyId,
+    });
+    if (result.ok) {
+      applied.push({
+        issue: source.identifier,
+        relation: input.relation,
+        target: target.identifier,
+      });
+    } else {
+      failed.push({
+        issue: source.identifier,
+        relation: input.relation,
+        target: target.identifier,
+        error: coreMessage(result, "relation failed"),
+      });
+    }
+  }
+  return { applied, failed };
 }
 
 /**
@@ -763,6 +951,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "resource metadata — files AND links (id + kind, file name/type/size or " +
         "url, on the issue and on each comment; add one with " +
         "minddy_add_resource, read one with minddy_get_resource) —, sub-issues, " +
+        "its `relations` (the issues it blocks, is blocked_by, or is related to, " +
+        "each with identifier/title/status — that is the order of work; write " +
+        "them with minddy_link_issues), " +
         "and the last " +
         "activity events (status changes, reassignments…) with resolved actors: " +
         "'what happened on this issue?'. It also carries `linked_feedback` — the " +
@@ -783,7 +974,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const r = await getIssue(mcpReadCtx(scope.access), { issue_id: ref.issue.id });
       if ("error" in r) return fail("issue_not_found", r.error);
 
-      const activity = await recentActivity(ref.issue.id);
+      const activity = await recentActivity({ issue_id: ref.issue.id });
 
       const plan = r.issue.plan;
       const parsed = typeof plan === "string" && plan ? parsePlan(plan) : null;
@@ -1106,11 +1297,14 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "List objectives",
       description:
         "List a project's objectives (issue groups with a shared goal): id, name, " +
+        "a TRUNCATED description, " +
         "status (planned/in_progress/done/canceled), lead, target date, " +
         "progress: { done, total, percent } computed from linked issues " +
         "(status 'done' / all linked), same as the UI's progress bar. Plus, when " +
         "present, the objective's own resources — files AND links (id + kind, " +
-        "file name/type/size or url; read one with minddy_get_resource).",
+        "file name/type/size or url; read one with minddy_get_resource). " +
+        "minddy_get_objective opens ONE of them in full: the whole description, " +
+        "its issues, and its comment thread.",
       inputSchema: { project_id: PROJECT_ID },
       annotations: READ_ONLY,
     },
@@ -1125,7 +1319,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       ] = await Promise.all([
         service
           .from("objectives")
-          .select("id, name, status, lead_user_id, target_date, color")
+          .select("id, name, description, status, lead_user_id, target_date, color")
           .is("deleted_at", null)
           .eq("project_id", scope.access.project.id)
           .order("created_at", { ascending: true }),
@@ -1154,17 +1348,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       for (const row of attachmentRows ?? []) {
         const id = row.objective_id as string;
         const list = resourcesByObjective.get(id) ?? [];
-        list.push(
-          row.kind === "link"
-            ? { id: row.id, kind: "link", url: row.url, title: row.file_name }
-            : {
-                id: row.id,
-                kind: "file",
-                file_name: row.file_name,
-                mime_type: row.mime_type,
-                size_bytes: row.size_bytes,
-              }
-        );
+        list.push(resourceMeta(row));
         resourcesByObjective.set(id, list);
       }
 
@@ -1204,6 +1388,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
           const atts = resourcesByObjective.get(o.id as string);
           return {
             ...o,
+            // Tronquée : une liste sert à CHOISIR. Le document entier est dans
+            // minddy_get_objective, et vingt descriptions complètes noieraient
+            // la réponse pour la seule qui intéresse l'appelant.
+            description: truncate(o.description as string | null, MAX_LIST_DESCRIPTION_CHARS),
             lead_name: o.lead_user_id
               ? displayName(toNamed(leads.get(o.lead_user_id)), "User")
               : null,
@@ -1222,6 +1410,152 @@ export function registerMinddyTools(rawServer: McpServer): void {
     }
   );
 
+  server.registerTool(
+    "minddy_get_objective",
+    {
+      title: "Get objective",
+      description:
+        "Fetch ONE objective in full — the counterpart of minddy_get_issue: its " +
+        "whole description (the goal, not the truncated line " +
+        "minddy_list_objectives shows), status, lead, target date, weighted " +
+        "progress, the ISSUES it groups (identifier, title, status, priority, " +
+        "effort, assignee), its resources — files AND links —, its COMMENT " +
+        "THREAD with author names, and the last activity events with resolved " +
+        "actors. Read it before commenting on an objective or reporting on it: " +
+        "the thread is where the team already said what it thinks, and the " +
+        "issue list is what the progress bar is actually made of.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        objective_id: z
+          .string()
+          .uuid()
+          .describe("Objective UUID (from minddy_list_objectives)."),
+      },
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const service = getServiceClient();
+
+      const { data: objective, error } = await service
+        .from("objectives")
+        .select("*")
+        .is("deleted_at", null)
+        .eq("id", args.objective_id)
+        .eq("project_id", scope.access.project.id)
+        .maybeSingle();
+      if (error) return fail("database_error", error.message);
+      if (!objective) {
+        return fail("not_found", "Objective not found in this project.");
+      }
+
+      const [{ data: issues }, { data: comments }, { data: attachmentRows }, activity] =
+        await Promise.all([
+          service
+            .from("issues")
+            .select("id, number, title, status, priority, effort, assignee_id")
+            .is("deleted_at", null)
+            .eq("objective_id", objective.id)
+            .order("number", { ascending: true }),
+          service
+            .from("comments")
+            .select(
+              "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at"
+            )
+            .eq("objective_id", objective.id)
+            .order("created_at", { ascending: true }),
+          service
+            .from("attachments")
+            .select("id, comment_id, kind, url, file_name, mime_type, size_bytes")
+            .eq("objective_id", objective.id)
+            .order("created_at", { ascending: true }),
+          recentActivity({ objective_id: objective.id as string }),
+        ]);
+
+      // Ressources : `comment_id` null = portée par l'objectif lui-même, sinon
+      // par l'un de ses commentaires — même découpe que minddy_get_issue.
+      const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
+      for (const row of attachmentRows ?? []) {
+        const key = (row.comment_id as string | null) ?? null;
+        const list = resourcesByComment.get(key) ?? [];
+        list.push(resourceMeta(row));
+        resourcesByComment.set(key, list);
+      }
+
+      // Auteurs : un commentaire écrit par un agent est attribué à SA CLÉ, pas
+      // au propriétaire de la clé — même règle que sur un ticket.
+      const [users, keyActors] = await Promise.all([
+        fetchAuthUsersById(service, [
+          ...(comments ?? []).map((c) => c.author_id as string),
+          ...(issues ?? [])
+            .map((i) => i.assignee_id)
+            .filter((v): v is string => typeof v === "string"),
+          ...(typeof objective.lead_user_id === "string" ? [objective.lead_user_id] : []),
+        ]),
+        resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
+      ]);
+
+      // Progression : mêmes comptes et même pondération par effort que
+      // minddy_list_objectives (et que la barre de l'UI).
+      let done = 0;
+      let totalPoints = 0;
+      let earnedPoints = 0;
+      for (const issue of issues ?? []) {
+        if (isClosedStatus(issue.status as IssueStatus)) done += 1;
+        const points = effortToPoints(issue.effort as IssueEffort | null);
+        totalPoints += points;
+        earnedPoints += points * statusCompletionCredit(issue.status as IssueStatus);
+      }
+
+      return ok({
+        objective: {
+          ...objective,
+          lead_name:
+            typeof objective.lead_user_id === "string"
+              ? displayName(toNamed(users.get(objective.lead_user_id)), "User")
+              : null,
+          progress: {
+            done,
+            total: (issues ?? []).length,
+            percent:
+              totalPoints === 0 ? 0 : Math.round((earnedPoints / totalPoints) * 100),
+          },
+          resources: resourcesByComment.get(null) ?? [],
+        },
+        issues: (issues ?? []).map((i) => ({
+          id: i.id,
+          identifier: issueIdentifier(scope.access.project.key, i.number as number),
+          title: i.title,
+          status: i.status,
+          priority: i.priority,
+          effort: i.effort,
+          assignee_id: i.assignee_id,
+          assignee_name:
+            typeof i.assignee_id === "string"
+              ? displayName(toNamed(users.get(i.assignee_id)), "User")
+              : null,
+        })),
+        comments: (comments ?? []).map((c) => {
+          const commentResources = resourcesByComment.get(c.id as string);
+          return {
+            id: c.id,
+            author: c.via_assistant
+              ? "Numo"
+              : c.via_mcp
+                ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
+                : displayName(toNamed(users.get(c.author_id as string)), "User"),
+            body: c.body,
+            parent_id: c.parent_id,
+            created_at: c.created_at,
+            ...(commentResources ? { resources: commentResources } : {}),
+          };
+        }),
+        activity,
+      });
+    }
+  );
+
   // ── Écritures (pas de suppressions) ───────────────────────────────────
 
   server.registerTool(
@@ -1229,31 +1563,93 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Create issue",
       description:
-        "Create an issue in a project. Only title is required; status defaults to " +
-        "'backlog' (the issue lands directly on the board; the human is driving " +
-        "you). Set parent to make a sub-issue (one level max; it inherits the " +
+        "Create an issue in a project. Status defaults to 'backlog' (the issue " +
+        "lands directly on the board; the human is driving you). " +
+        "FILL THE TICKET. `title` is the only field the schema requires, and a " +
+        "ticket carrying nothing else is a ticket someone else has to finish by " +
+        "hand — which is the work you were asked to do. Every call: a " +
+        "`description` saying WHAT and WHY, an estimated `priority` AND `effort` " +
+        "(infer them from the work; 'none'/absent is not an estimate), and the " +
+        "project's categories that match — by name via `category_names`, no " +
+        "lookup needed. Attach `objective_id` when an objective covers this work " +
+        "(minddy_list_objectives), and set `due_date` when a date was named. " +
+        "ASSIGNEE: pass the person the human named; on a single-member project " +
+        "that person is the owner, always (minddy_list_members says so in one " +
+        "call). Otherwise leave it empty rather than picking a colleague nobody " +
+        "chose. " +
+        "RELATIONS: pass `relations` in this same call whenever the work depends " +
+        "on other work — 'blocks', 'blocked_by', 'related'. A backlog whose " +
+        "dependencies live only in your head is a backlog nobody can order. " +
+        "Set parent to make a sub-issue (one level max; it inherits the " +
         "parent's objective unless objective_id is set). description = WHAT/WHY " +
         "(the problem or feature); plan = HOW (the full implementation plan; see " +
         "the plan field spec). Pass sub_issues to split the work into sub-tickets " +
-        "in the same call (the 'plan a feature and break it down' workflow). " +
-        "Returns the created issue (and sub-issues) with identifiers.",
+        "in the same call (the 'plan a feature and break it down' workflow) — " +
+        "each carries its own fields and relations, and 'sub:N' targets a sibling " +
+        "of the same call. " +
+        "Returns the created issue (and sub-issues) with identifiers, plus " +
+        "`categories_unmatched` and `relations_failed` when something you asked " +
+        "for did not land.",
       inputSchema: {
         project_id: PROJECT_ID,
         title: z.string().min(1),
-        description: z.string().optional().describe("Markdown."),
+        description: z
+          .string()
+          .optional()
+          .describe("Markdown. WHAT and WHY — write one on every issue you create."),
         plan: PLAN_FIELD.optional(),
         status: z.enum(ISSUE_STATUSES).optional().describe("Default: backlog."),
-        priority: z.enum(ISSUE_PRIORITIES).optional().describe("Default: none."),
-        effort: z.enum(ISSUE_EFFORTS).optional(),
+        priority: z
+          .enum(ISSUE_PRIORITIES)
+          .optional()
+          .describe(
+            "ALWAYS pass one, estimated from the work when the human did not say. " +
+              "Default 'none' means 'nobody has judged this yet'."
+          ),
+        effort: z
+          .enum(ISSUE_EFFORTS)
+          .optional()
+          .describe(
+            "ALWAYS pass one, estimated from the work (t-shirt size). It is what " +
+              "weights the objective's progress bar and fills a cycle."
+          ),
         assignee_id: z
           .string()
           .optional()
-          .describe("Member user_id. See minddy_list_members."),
-        objective_id: z.string().uuid().optional(),
+          .describe(
+            "Member user_id (minddy_list_members). The person the human named; " +
+              "on a single-member project, the owner. Never a colleague nobody chose."
+          ),
+        objective_id: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            "The objective this work belongs to (minddy_list_objectives). Attach " +
+              "it whenever one covers the ticket."
+          ),
         parent: ISSUE_REF.optional().describe("Parent issue → creates a sub-issue."),
         due_date: z.string().optional().describe("ISO 8601 date or datetime."),
         recurrence: RECURRENCE_FIELD.optional(),
-        category_ids: z.array(z.string().uuid()).optional(),
+        category_ids: z
+          .array(z.string().uuid())
+          .optional()
+          .describe("Category UUIDs (minddy_list_categories). Combines with category_names."),
+        category_names: z
+          .array(z.string().min(1))
+          .optional()
+          .describe(
+            "Categories BY NAME, case-insensitive — the cheap way to label an " +
+              "issue without a lookup first. Names matching nothing come back in " +
+              "`categories_unmatched` (this tool never creates a category)."
+          ),
+        relations: RELATION_INPUT.array()
+          .max(50)
+          .optional()
+          .describe(
+            "Relations of the NEW issue, applied once everything exists. Targets " +
+              "are existing issues, or 'sub:N' for a sub-issue of this same call."
+          ),
         sub_issues: z
           .array(
             z.object({
@@ -1266,6 +1662,16 @@ export function registerMinddyTools(rawServer: McpServer): void {
               assignee_id: z.string().optional(),
               due_date: z.string().optional(),
               category_ids: z.array(z.string().uuid()).optional(),
+              category_names: z.array(z.string().min(1)).optional(),
+              relations: RELATION_INPUT.array()
+                .max(50)
+                .optional()
+                .describe(
+                  "Relations of THIS sub-issue. 'sub:N' targets a sibling of the " +
+                    "same call (1-based, in the order of this array), so a " +
+                    "breakdown states its own order of work: step 2 is " +
+                    "blocked_by 'sub:1'."
+                ),
             })
           )
           .min(1)
@@ -1273,7 +1679,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .optional()
           .describe(
             "Sub-issues created under the new issue, in order. They inherit its " +
-              "objective. Incompatible with parent (nesting is one level max)."
+              "objective. Fill them like the parent — priority, effort, " +
+              "categories, and the relations that order them. Incompatible with " +
+              "parent (nesting is one level max)."
           ),
       },
       annotations: WRITE,
@@ -1295,12 +1703,35 @@ export function registerMinddyTools(rawServer: McpServer): void {
         parentId = parent.issue.id;
       }
 
-      const { sub_issues: subInputs, ...issueArgs } = args;
+      const {
+        sub_issues: subInputs,
+        relations: relationInputs,
+        category_names: categoryNames,
+        category_ids: categoryIds,
+        ...issueArgs
+      } = args;
+
+      // Catégories résolues AVANT la création : les noms deviennent des ids, et
+      // ce qui ne correspond à rien est collecté pour être dit (le cœur, lui,
+      // filtrerait en silence).
+      const unmatchedCategories: string[] = [];
+      const cats = await resolveCategoryRefs(
+        scope.access.project.id,
+        categoryIds,
+        categoryNames
+      );
+      if ("error" in cats) return cats.error;
+      unmatchedCategories.push(...cats.unmatched);
+
       const result = await createIssueForProject({
         projectId: scope.access.project.id,
         projectName: scope.access.project.name,
         actorId: scope.userId,
-        input: { ...issueArgs, ...(parentId ? { parent_id: parentId } : {}) },
+        input: {
+          ...issueArgs,
+          ...(cats.ids.length ? { category_ids: cats.ids } : {}),
+          ...(parentId ? { parent_id: parentId } : {}),
+        },
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
@@ -1308,28 +1739,60 @@ export function registerMinddyTools(rawServer: McpServer): void {
         scope.access.project.key,
         result.issue.number as number
       );
+      const created = { id: result.issue.id as string, identifier };
 
       // Sous-tickets : créés dans l'ordre, échecs remontés individuellement —
       // le parent existe déjà, on ne le rollback pas.
       const subIssues: Array<Record<string, unknown>> = [];
       const subIssuesFailed: Array<{ title: string; error: string }> = [];
-      for (const sub of subInputs ?? []) {
+      // Index 1-based → sous-ticket réellement créé, pour résoudre les 'sub:N'.
+      // Un sous-ticket qui a échoué n'y entre pas : les relations qui le visaient
+      // ressortiront en `relations_failed` plutôt que de viser à côté.
+      const subsByIndex = new Map<number, { id: string; identifier: string }>();
+      const relationRequests: Array<{
+        source: { id: string; identifier: string };
+        input: RelationInput;
+      }> = (relationInputs ?? []).map((input) => ({ source: created, input }));
+
+      for (const [index, sub] of (subInputs ?? []).entries()) {
+        const {
+          relations: subRelations,
+          category_names: subCategoryNames,
+          category_ids: subCategoryIds,
+          ...subArgs
+        } = sub;
+        const subCats = await resolveCategoryRefs(
+          scope.access.project.id,
+          subCategoryIds,
+          subCategoryNames
+        );
+        if ("error" in subCats) return subCats.error;
+        unmatchedCategories.push(...subCats.unmatched);
+
         const subResult = await createIssueForProject({
           projectId: scope.access.project.id,
           projectName: scope.access.project.name,
           actorId: scope.userId,
-          input: { ...sub, parent_id: result.issue.id },
+          input: {
+            ...subArgs,
+            ...(subCats.ids.length ? { category_ids: subCats.ids } : {}),
+            parent_id: result.issue.id,
+          },
           mcpKeyId: scope.keyId,
         });
         if (subResult.ok) {
-          subIssues.push({
-            id: subResult.issue.id,
+          const subCreated = {
+            id: subResult.issue.id as string,
             identifier: issueIdentifier(
               scope.access.project.key,
               subResult.issue.number as number
             ),
-            title: subResult.issue.title,
-          });
+          };
+          subsByIndex.set(index + 1, subCreated);
+          subIssues.push({ ...subCreated, title: subResult.issue.title });
+          for (const input of subRelations ?? []) {
+            relationRequests.push({ source: subCreated, input });
+          }
         } else {
           subIssuesFailed.push({
             title: sub.title,
@@ -1338,10 +1801,24 @@ export function registerMinddyTools(rawServer: McpServer): void {
         }
       }
 
+      // Relations en DERNIER : un sous-ticket peut en bloquer un autre créé
+      // après lui dans le même appel ('sub:3' depuis 'sub:1').
+      const relations = await applyCreatedRelations(
+        scope,
+        relationRequests,
+        subsByIndex
+      );
+
       return ok({
         issue: { ...result.issue, identifier },
         ...(subInputs?.length
           ? { sub_issues: subIssues, sub_issues_failed: subIssuesFailed }
+          : {}),
+        ...(relationRequests.length
+          ? { relations: relations.applied, relations_failed: relations.failed }
+          : {}),
+        ...(unmatchedCategories.length
+          ? { categories_unmatched: [...new Set(unmatchedCategories)] }
           : {}),
       });
     }
@@ -1354,13 +1831,18 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Apply the same field changes to 1–50 issues of a project (single edits: " +
         "pass one issue). Only the fields you send change; null clears a nullable " +
-        "field. category_ids REPLACES the issue's full category set. So do " +
+        "field. category_ids (and category_names) REPLACE the issue's full " +
+        "category set. So do " +
         "description and plan: every field here is a full replacement, which on a " +
         "long text means re-emitting the whole document to change a line, and " +
         "silently dropping whatever another client wrote meanwhile. To change PART " +
         "of a plan or a description, patch it instead — minddy_edit_issue_text " +
         "(rewrite a passage), minddy_append_to_plan (add a block), " +
         "minddy_update_plan_task (flip a checkbox). " +
+        "This is also how you FINISH an under-filled ticket: when you touch one " +
+        "that has no priority, no effort or no category, set them in the same " +
+        "call — you already read it, nobody else will. Relations are not fields: " +
+        "wire them with minddy_link_issues. " +
         "Returns per-issue failures, so check `failed` in the result.",
       inputSchema: {
         project_id: PROJECT_ID,
@@ -1380,7 +1862,21 @@ export function registerMinddyTools(rawServer: McpServer): void {
               .describe("With status 'duplicate': the issue this one duplicates."),
             due_date: z.string().nullable().optional(),
             recurrence: RECURRENCE_FIELD.nullable().optional(),
-            category_ids: z.array(z.string().uuid()).optional(),
+            category_ids: z
+              .array(z.string().uuid())
+              .optional()
+              .describe(
+                "REPLACES the whole category set. Combines with category_names; " +
+                  "an empty array clears every category."
+              ),
+            category_names: z
+              .array(z.string().min(1))
+              .optional()
+              .describe(
+                "Same replacement, BY NAME (case-insensitive) — no " +
+                  "minddy_list_categories round trip. Names matching nothing come " +
+                  "back in `categories_unmatched`."
+              ),
           })
           .describe("At least one field."),
       },
@@ -1391,10 +1887,34 @@ export function registerMinddyTools(rawServer: McpServer): void {
       if ("error" in scope) return scope.error;
 
       // Résoudre les références d'issues des champs AVANT la boucle.
-      const { category_ids, parent, duplicate_of, ...fields } = args.fields as Record<
-        string,
-        unknown
-      > & { category_ids?: string[]; parent?: string | null; duplicate_of?: string | null };
+      const {
+        category_ids,
+        category_names,
+        parent,
+        duplicate_of,
+        ...fields
+      } = args.fields as Record<string, unknown> & {
+        category_ids?: string[];
+        category_names?: string[];
+        parent?: string | null;
+        duplicate_of?: string | null;
+      };
+      // Les deux clés sont un REMPLACEMENT du jeu de catégories : leur PRÉSENCE
+      // décide, pas leur contenu — `category_ids: []` efface tout.
+      const setsCategories =
+        "category_ids" in args.fields || "category_names" in args.fields;
+      let resolvedCategoryIds: string[] = [];
+      let unmatchedCategories: string[] = [];
+      if (setsCategories) {
+        const cats = await resolveCategoryRefs(
+          scope.access.project.id,
+          category_ids,
+          category_names
+        );
+        if ("error" in cats) return cats.error;
+        resolvedCategoryIds = cats.ids;
+        unmatchedCategories = cats.unmatched;
+      }
       if ("parent" in args.fields) {
         if (parent) {
           const r = await resolveIssueRef(scope.access, parent);
@@ -1409,7 +1929,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           fields.duplicate_of_id = r.issue.id;
         } else fields.duplicate_of_id = null;
       }
-      if (Object.keys(fields).length === 0 && !category_ids) {
+      if (Object.keys(fields).length === 0 && !setsCategories) {
         return fail("invalid_params", "fields must contain at least one field.");
       }
 
@@ -1436,11 +1956,11 @@ export function registerMinddyTools(rawServer: McpServer): void {
             continue;
           }
         }
-        if (category_ids) {
+        if (setsCategories) {
           const result = await setIssueCategories({
             issueId: resolved.issue.id,
             actorId: scope.userId,
-            categoryIds: category_ids,
+            categoryIds: resolvedCategoryIds,
             mcpKeyId: scope.keyId,
           });
           if (!result.ok) {
@@ -1454,7 +1974,13 @@ export function registerMinddyTools(rawServer: McpServer): void {
         updated.push(resolved.issue.identifier);
       }
 
-      return ok({ updated, failed });
+      return ok({
+        updated,
+        failed,
+        ...(unmatchedCategories.length
+          ? { categories_unmatched: unmatchedCategories }
+          : {}),
+      });
     }
   );
 
@@ -2061,7 +2587,11 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "point of view: 'blocks' (issue blocks target), 'blocked_by' (issue is " +
         "blocked by target), or 'related' (a soft link). Pass remove=true to delete " +
         "that relation instead. Idempotent: adding an existing relation, or " +
-        "removing an absent one, is a no-op.",
+        "removing an absent one, is a no-op. " +
+        "Use it every time you notice a dependency between two issues — it is " +
+        "what makes a backlog orderable, and nothing else records it. On issues " +
+        "you are CREATING, don't call this after the fact: minddy_create_issue " +
+        "takes `relations` in the same call, siblings included.",
       inputSchema: {
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
@@ -2135,14 +2665,39 @@ export function registerMinddyTools(rawServer: McpServer): void {
       title: "Create objective",
       description:
         "Create an objective (a named group of issues with a shared goal) in a " +
-        "project. Link issues to it afterwards via objective_id in " +
-        "minddy_create_issue / minddy_update_issues.",
+        "project. " +
+        "FILL IT, like a ticket. An objective is what the team reads to know " +
+        "where the work is going, and a bare name says nothing: write a " +
+        "`description` (the goal, what counts as done, what is out of scope), " +
+        "pass the `status` it is really in, and set `target_date` when a date " +
+        "was named. `lead_user_id` follows the same rule as an issue's " +
+        "assignee: the person the human named, the owner on a single-member " +
+        "project, nobody otherwise. " +
+        "Then LINK ITS ISSUES — an objective with no issue has a progress bar " +
+        "of zero forever: pass objective_id in minddy_create_issue, or " +
+        "minddy_update_issues { fields: { objective_id } } on issues that " +
+        "already exist.",
       inputSchema: {
         project_id: PROJECT_ID,
         name: z.string().min(1),
-        description: z.string().optional().describe("Markdown."),
-        status: z.enum(OBJECTIVE_STATUS_VALUES).optional(),
-        lead_user_id: z.string().optional().describe("Member user_id."),
+        description: z
+          .string()
+          .optional()
+          .describe(
+            "Markdown. The goal, what counts as done, what is out of scope — " +
+              "write one on every objective you create."
+          ),
+        status: z
+          .enum(OBJECTIVE_STATUS_VALUES)
+          .optional()
+          .describe("Default: planned. Pass 'in_progress' when the work is already under way."),
+        lead_user_id: z
+          .string()
+          .optional()
+          .describe(
+            "Member user_id (minddy_list_members). The person the human named; " +
+              "on a single-member project, the owner."
+          ),
         target_date: z.string().optional().describe("ISO 8601 date."),
         color: z.string().optional().describe("Hex color, e.g. '#6b7280'."),
       },
@@ -2203,6 +2758,69 @@ export function registerMinddyTools(rawServer: McpServer): void {
       });
       if (!result.ok) return coreFail(result);
       return ok({ objective: result.objective });
+    }
+  );
+
+  server.registerTool(
+    "minddy_add_objective_comment",
+    {
+      title: "Add objective comment",
+      description:
+        "Post a markdown comment on an OBJECTIVE — the twin of minddy_add_comment, " +
+        "one level up. This is where a note belongs when it is about the goal " +
+        "rather than about one ticket: where the objective stands, what was " +
+        "decided, what changed in its scope. A note about a single ticket goes " +
+        "on that ticket. " +
+        "KEEP IT SHORT — a message to a colleague, not a report: a few sentences, " +
+        "or a handful of one-line bullets, 1000 characters at most. NO HEADINGS " +
+        "— a comment that needs sections is a comment that is too long. Detail " +
+        "that IS the work belongs in the issues it groups: point at them by " +
+        "identifier, never copy them here. " +
+        "Read minddy_get_objective first: the thread carries what the team " +
+        "already said. " +
+        "The timeline shows the agent as the author (this API key's name with an " +
+        "'(mcp)' marker), not the key's owner. To attach a resource to the " +
+        "comment, call minddy_add_resource with the returned comment id.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        objective_id: z
+          .string()
+          .uuid()
+          .describe("Objective UUID (from minddy_list_objectives)."),
+        body: z
+          .string()
+          .min(1)
+          .describe(
+            "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
+              "at most, no headings."
+          ),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+
+      // Scope check : l'objectif doit appartenir au projet en question. Le cœur
+      // vérifie l'accès au PROJET de l'objectif, pas que c'est CE projet-là —
+      // sans ça, un objectif d'un autre projet accessible passerait.
+      const { data: obj } = await getServiceClient()
+        .from("objectives")
+        .select("id")
+        .is("deleted_at", null)
+        .eq("id", args.objective_id)
+        .eq("project_id", scope.access.project.id)
+        .maybeSingle();
+      if (!obj) return fail("not_found", "Objective not found in this project.");
+
+      const result = await addCommentToObjective({
+        objectiveId: args.objective_id,
+        actorId: scope.userId,
+        body: args.body,
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return coreFail(result);
+      return ok({ comment: result.comment });
     }
   );
 
@@ -3686,8 +4304,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "its cadence, swap its model, or rewrite its instruction. OWNER ONLY. " +
         "Touching the cadence — or re-enabling a paused routine — RECOMPUTES the " +
         "next occurrence, so a change takes effect at the next one, never at the " +
-        "one already scheduled. Pausing keeps the routine and its past runs; only " +
-        "minddy_delete_routine removes them. Get the id from minddy_list_routines.",
+        "one already scheduled. Pausing keeps the routine in the list, where the " +
+        "user still reads its past runs; minddy_delete_routine takes it out of the " +
+        "list altogether (to the trash). Get the id from minddy_list_routines.",
       inputSchema: {
         project_id: PROJECT_ID,
         routine_id: z.string().uuid().describe("From minddy_list_routines."),
@@ -3766,11 +4385,14 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Delete routine",
       description:
-        "Delete a routine and everything it ran. OWNER ONLY and IRREVERSIBLE: its " +
-        "past executions go with it. To simply stop it from running, pass " +
-        "enabled: false to minddy_update_routine instead — that keeps its history " +
-        "readable. Confirm with the user before deleting one they did not just " +
-        "create by mistake.",
+        "Move a routine to the TRASH. OWNER ONLY. It stops running at once and " +
+        "leaves the list, but nothing is destroyed: its past executions stay with " +
+        "it, and the user can restore it as it was — cadence, instruction, model, " +
+        "next occurrence and history — from Trash in the app, for a few weeks. " +
+        "After that the nightly sweep deletes it for good, executions included. " +
+        "To simply stop it from running while keeping it in the list, pass " +
+        "enabled: false to minddy_update_routine instead. Confirm with the user " +
+        "before deleting one they did not just create by mistake.",
       inputSchema: {
         project_id: PROJECT_ID,
         routine_id: z.string().uuid().describe("From minddy_list_routines."),

@@ -222,8 +222,8 @@ export function buildSharedRules(
   sentence that it is ready to review, and wait for them.
 - **Deleting vs canceling — two different gestures, do the one asked for.** 'canceled' is a
   STATUS: the issue stays on the board and says the work was dropped. The TRASH takes the item
-  out of every board and list (move_to_trash, for issues, objectives, feedback posts and
-  projects), and it is reversible for a limited number of days — restore_from_trash brings it
+  out of every board and list (move_to_trash, for issues, objectives, feedback posts, routines
+  and projects), and it is reversible for a limited number of days — restore_from_trash brings it
   back exactly as it was, and list_trash says what is still recoverable. "Supprime ce ticket"
   means the trash, "annule-le" means the status. Confirm with ask_user before trashing, and
   never trash something on your own initiative. You cannot purge for good — that only happens
