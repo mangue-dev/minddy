@@ -29,6 +29,7 @@ import type { AgentToolDef } from "./tools";
 import { textOf, type AgentContentPart, type AgentToolImage } from "./content";
 import { pruneToolOutputs, capHistoryImages, headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
 import { markSystemPromptCache } from "./caching";
+import type { RedactText } from "./redact";
 import {
   estimateTokens,
   estimateTokensFromChars,
@@ -417,6 +418,22 @@ export interface RunAgentLoopParams {
   contextWindow?: number | null;
   execTool: ExecuteAgentTool;
   /**
+   * Substitue les secrets du run (le token de forge) dans les sorties de tools,
+   * AVANT qu'elles ne quittent la boucle (MIN-239).
+   *
+   * Le token est dans `.git/config` — `git clone` l'y écrit — et trois tools l'en
+   * sortent. Sans ce crochet il part dans l'event `tool_result` (`agent_run_events`,
+   * persisté 30 jours) ET dans le message `role:"tool"` de l'historique, donc dans
+   * le checkpoint. Les deux sont des tables que des humains lisent, longtemps après.
+   *
+   * Posé ici plutôt qu'au ras des tools parce que c'est le seul endroit par lequel
+   * les DEUX sorties du même résultat passent — et parce que le modèle non plus ne
+   * doit pas voir le token : ce qu'il ne voit pas, il ne peut pas le recommettre.
+   *
+   * Absent = pas de secret à substituer (tests, boucle sans dépôt).
+   */
+  redact?: RedactText;
+  /**
    * Draine les messages de steering en attente (file `agent_run_messages`).
    * Appelé au SOMMET de chaque round : les messages renvoyés sont injectés comme
    * messages `user` avant le prochain appel LLM → orientation à chaud + reprise
@@ -599,8 +616,15 @@ function argsParseError(json: string): string {
   }
 }
 
-function previewResult(result: unknown): string {
-  return cap(typeof result === "string" ? result : JSON.stringify(result), 400);
+/**
+ * L'aperçu persisté dans l'event `tool_result`. La substitution des secrets passe
+ * AVANT le cap (MIN-239) : couper à 400 caractères ne protège rien — l'URL de clone
+ * token comprise tient largement dessous, c'est bien pour ça qu'elle atterrissait
+ * entière dans `agent_run_events`.
+ */
+function previewResult(result: unknown, redact?: RedactText): string {
+  const text = typeof result === "string" ? result : JSON.stringify(result);
+  return cap(redact ? redact(text) : text, 400);
 }
 
 /**
@@ -613,8 +637,10 @@ function previewResult(result: unknown): string {
 function toolMessageContent(
   result: unknown,
   images?: AgentToolImage[],
+  redact?: RedactText,
 ): string | AgentContentPart[] {
-  const text = headTail(JSON.stringify(result), TOOL_RESULT_MAX_CHARS);
+  const json = JSON.stringify(result);
+  const text = headTail(redact ? redact(json) : json, TOOL_RESULT_MAX_CHARS);
   if (!images?.length) return text;
   return [
     { type: "text", text },
@@ -1255,6 +1281,14 @@ async function streamCompletion(opts: {
  */
 export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoopResult> {
   const { messages, tools, model, apiKey, baseUrl, runId, execTool, emit, recordUsage } = params;
+  /**
+   * Les DEUX sorties d'un résultat de tool, secrets substitués (MIN-239) — l'aperçu
+   * de l'event et le message rendu au modèle. Toutes les émissions passent par ici :
+   * un `previewResult` appelé en direct rouvrirait la fuite sans rien dire.
+   */
+  const preview = (result: unknown) => previewResult(result, params.redact);
+  const toolContent = (result: unknown, images?: AgentToolImage[]) =>
+    toolMessageContent(result, images, params.redact);
   const provider = params.provider ?? DEFAULT_AGENT_PROVIDER;
   // La ligne de facture de ce chunk, résolue UNE fois : `agent_code`, ou
   // `routine_code` quand le run est un passage de routine (MIN-185).
@@ -1395,7 +1429,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       id: tc.id,
       name: tc.function.name,
       success: false,
-      preview: previewResult({ error }),
+      preview: preview({ error }),
     });
   };
 
@@ -1419,7 +1453,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       id: tc.id,
       name: tc.function.name,
       success: false,
-      preview: previewResult({ error }),
+      preview: preview({ error }),
       reason: SUSPENDED_TOOL_REASON,
     });
   };
@@ -1942,12 +1976,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           await rejectUnparsableArgs(o.tc);
           continue;
         }
-        messages.push({ role: "tool", tool_call_id: o.tc.id, content: toolMessageContent(o.result, o.images) });
+        messages.push({ role: "tool", tool_call_id: o.tc.id, content: toolContent(o.result, o.images) });
         await emit("tool_result", {
           id: o.tc.id,
           name: o.tc.function.name,
           success: o.success,
-          preview: previewResult(o.result),
+          preview: preview(o.result),
           ...(o.reason ? { reason: o.reason } : {}),
         });
       }
@@ -2059,12 +2093,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
         result = { error: err instanceof Error ? err.message : String(err) };
         success = false;
       }
-      messages.push({ role: "tool", tool_call_id: tc.id, content: toolMessageContent(result, images) });
+      messages.push({ role: "tool", tool_call_id: tc.id, content: toolContent(result, images) });
       await emit("tool_result", {
         id: tc.id,
         name,
         success,
-        preview: previewResult(result),
+        preview: preview(result),
         ...(reason ? { reason } : {}),
       });
     }

@@ -57,6 +57,7 @@ import {
 } from "./subagent-app-config";
 import { getAgentModelsForUser } from "./models-catalog";
 import { pruneToolOutputs } from "./prune";
+import { SecretRedactor } from "./redact";
 import {
   fitCheckpoint,
   MAX_CHECKPOINT_BYTES,
@@ -604,6 +605,18 @@ export async function executeAgentRun(
   const usageFeature = run.routine_id ? "routine_code" : "agent_code";
   const sandboxUsageFeature = run.routine_id ? "routine_compute" : "sandbox_compute";
   let sandbox: Sandbox | null = null;
+  /**
+   * Les secrets de ce chunk (MIN-239) — le token de forge, sous toutes les formes
+   * qu'il aura prises. Déclaré AVANT le `try` parce que le `catch` en a besoin : un
+   * `git clone` qui échoue recopie l'URL de clone ENTIÈRE dans son stderr, et ce
+   * message-là finit en `agent_runs.error_message`, affiché dans l'UI.
+   *
+   * Nourri à chaque résolution de cible : le token est re-minté avant chaque push
+   * (un tour dure des heures, un token d'installation une heure), et un `.git/config`
+   * lu au round 3 porte celui du clone, pas celui du dernier push. Le registre les
+   * garde tous.
+   */
+  const secrets = new SecretRedactor();
   // Jobs de fond du chunk (MIN-114), visibles du `finally` : quel que soit le
   // chemin de sortie (fin de tour, erreur, interruption), rien ne survit au chunk.
   let backgroundJobs: BackgroundJobs | null = null;
@@ -746,6 +759,8 @@ export async function executeAgentRun(
     // Cible de clone (token frais pour ce chunk) + client PR/MR du provider.
     const target = await resolveRepoCloneTarget(run.project_id);
     if (!target) throw new Error("No repository linked to this project");
+    secrets.addAuthUrl(target.authUrl);
+    secrets.add(target.token);
     const forge = forgeFor(target.provider);
 
     // Ancrage du run, à TROIS valeurs : ticket minddy, CARNET (MIN-84, la note du
@@ -1271,6 +1286,8 @@ export async function executeAgentRun(
           : // Run carnet : la première ligne de la note fait office de titre.
             commitMessageFromReply(run.prompt ?? "", commitRef));
       const fresh = (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
+      secrets.addAuthUrl(fresh.authUrl);
+      secrets.add(fresh.token);
       // Les jobs de fond meurent AVANT de stager, comme aux deux autres `git add -A`
       // du chunk (fin de tour, push WIP) : un serveur de dev ou un watcher encore
       // vivant réécrirait des fichiers pendant l'indexation. C'est `backgroundJobs`
@@ -1376,6 +1393,8 @@ export async function executeAgentRun(
             prFilesCache ??= (async () => {
               const fresh =
                 (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
+              secrets.addAuthUrl(fresh.authUrl);
+              secrets.add(fresh.token);
               const { files } = await forge.listPullRequestFiles({
                 token: fresh.token,
                 repoFullName: fresh.repoFullName,
@@ -1766,6 +1785,8 @@ export async function executeAgentRun(
           usageSeqStart: job.resumeUsageSeq ?? subagentUsageSeq(job.slot),
           signal: job.signal,
           emit: childEmit,
+          // Une fille lit le même `.git/config` que sa mère (MIN-239).
+          redact: secrets.redact,
           execTool: makeExecTool({
             host,
             createPr: null,
@@ -2079,6 +2100,8 @@ export async function executeAgentRun(
       refreshBudgetUsd: maybeRefreshBudget,
       chunkSpend,
       contextWindow,
+      // Le token de forge ne sort ni dans un event ni dans le checkpoint (MIN-239).
+      redact: secrets.redact,
       execTool: makeExecTool({
         host,
         // Une relecture n'ouvre pas de pull request : le tool n'est pas dans son
@@ -2361,6 +2384,8 @@ export async function executeAgentRun(
         : null;
       const authUrl = freshTarget?.authUrl ?? target.authUrl;
       const token = freshTarget?.token ?? target.token;
+      secrets.addAuthUrl(authUrl);
+      secrets.add(token);
 
       // Les jobs de fond meurent AVANT de stager : un serveur de dev ou un watcher
       // encore vivant réécrirait des fichiers pendant le `git add -A`.
@@ -2383,7 +2408,9 @@ export async function executeAgentRun(
             baseBranch,
             message: commitMessageFromReply(reply, commitRef),
           }).catch((err) => {
-            pushError = (err as Error).message;
+            // Un rejet de push recopie l'URL de push, token compris (MIN-239) — et
+            // ce message-ci part dans un event ET dans `error_message`.
+            pushError = secrets.redact((err as Error).message);
             console.error("[agent-execute] turn-end push failed:", pushError);
             return null;
           })
@@ -2688,7 +2715,10 @@ export async function executeAgentRun(
     });
     return "suspended";
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    // Substitué AVANT tout usage (MIN-239) : un `git clone` refusé recopie l'URL de
+    // clone entière — token compris — dans son stderr, et ce message part dans
+    // l'event `error` puis dans `agent_runs.error_message`, lu dans l'UI.
+    const message = secrets.redact(err instanceof Error ? err.message : String(err));
     await emit("error", { message });
     /**
      * La dépense du run RELUE AU LEDGER (MIN-215), à écrire sur les stamps de

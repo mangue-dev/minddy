@@ -33,6 +33,7 @@ import { REPO_INSTRUCTION_FILES, type InstructionsState } from "../repo-instruct
 import { commitAndPush, changedFiles, turnDiff, type RepoHost } from "../repo-host";
 import { BackgroundJobs } from "../background";
 import { makeExecTool, readRepoInstructions, repoBackgroundRunner } from "../exec-tool";
+import { SecretRedactor } from "../redact";
 import type { AgentCheckpoint } from "../runs";
 import type { AgentToolImage } from "../content";
 import type { ControlPlaneClient } from "./control-plane-client";
@@ -270,8 +271,19 @@ export async function runVmTurn(
   /** Le dernier `authUrl` connu. Re-résolu avant chaque push : un tour dure des
    *  heures, un token d'installation de forge une heure. */
   let authUrl = job.authUrl;
+  /**
+   * Les secrets du tour (MIN-239) : chaque token de forge que cette microVM a vu.
+   * `git clone` a écrit l'URL de clone dans `.git/config`, et trois tools l'en
+   * sortent — la substitution est ce qui l'empêche d'aller se poser dans
+   * `agent_run_events` et dans le checkpoint. Le registre est cumulatif : le token
+   * du clone reste lisible dans `.git/config` longtemps après avoir été remplacé
+   * ici par un frais.
+   */
+  const secrets = new SecretRedactor();
+  secrets.addAuthUrl(authUrl);
   async function pushWork(message: string): Promise<VmPushResult> {
     authUrl = (await cp.repoAuthUrl()) ?? authUrl;
+    secrets.addAuthUrl(authUrl);
     return await commitAndPush(host, {
       authUrl,
       workBranch: job.workBranch,
@@ -374,6 +386,8 @@ export async function runVmTurn(
         usageSeqStart: jobOpts.resumeUsageSeq ?? subagentUsageSeq(jobOpts.slot),
         signal: jobOpts.signal,
         emit: childEmit,
+        // Une fille lit le même `.git/config` que sa mère (MIN-239).
+        redact: secrets.redact,
         execTool: makeExecTool({
           host,
           createPr: null,
@@ -621,6 +635,8 @@ export async function runVmTurn(
     refreshBudgetUsd: maybeRefreshBudget,
     chunkSpend: turnSpend,
     contextWindow: job.contextWindow,
+    // Le token de forge ne sort ni dans un event ni dans le checkpoint (MIN-239).
+    redact: secrets.redact,
     execTool: makeExecTool({
       host,
       createPr,
@@ -712,7 +728,9 @@ export async function runVmTurn(
     try {
       pushed = await pushWork(commitMessageFromReply(reply, job.commitRef));
     } catch (err) {
-      pushError = (err as Error).message;
+      // Un rejet de push recopie l'URL de push, token compris (MIN-239) — et ce
+      // message remonte au plan de contrôle, qui l'écrit en `error_message`.
+      pushError = secrets.redact((err as Error).message);
       console.error("[agent-vm] turn-end push failed:", pushError);
     }
   }
