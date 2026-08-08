@@ -243,6 +243,77 @@ describe("plafond de run et stamps d'erreur (execute.ts)", () => {
     expect(spent.getText()).toContain("run.cost_usd");
   });
 
+  /**
+   * MIN-224 — `agent_runs.cost_usd` doit vouloir dire LA MÊME CHOSE sur les deux
+   * moteurs tant qu'ils coexistent.
+   *
+   * Mesuré sur le même ticket : le moteur en microVM y écrit la somme du ledger,
+   * `sandbox_compute` compris (0,074913 $) ; celui-ci n'écrivait que le modèle, et
+   * en perdait (0,165908 $ portés pour 0,236836 $ dépensés). La cause tient à
+   * l'ORDRE des gestes — le compute était facturé depuis le `finally`, donc APRÈS
+   * les stamps, si bien qu'aucune relecture du ledger ne pouvait le voir.
+   *
+   * Trois lecteurs mélangeraient sinon deux populations : `recomputeChainSpend`,
+   * `medianCostByIntent` et le coût exposé par l'API du run.
+   */
+  it("le repos facture le compute AVANT de relire le ledger — sinon les deux moteurs divergent", () => {
+    const cost = initializerOf("restCostUsd");
+    const text = cost.getText();
+    expect(text, "`restCostUsd` doit facturer le compute du chunk").toContain(
+      "billSandboxCompute",
+    );
+    expect(text, "`restCostUsd` doit relire le ledger").toContain("spentFromLedger");
+
+    // L'ORDRE, et c'est tout le ticket : facturer après la relecture ne mettrait
+    // jamais le compute dans la colonne.
+    const positions = new Map<string, number>();
+    const visit = (node: ts.Node) => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+        const name = node.expression.text;
+        if (!positions.has(name)) positions.set(name, node.getStart());
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(cost);
+    expect(positions.get("billSandboxCompute")!).toBeLessThan(positions.get("spentFromLedger")!);
+
+    // Et le résultat est le MAX des deux minorants : le ledger est best-effort, la
+    // colonne peut porter une ligne qu'il a ratée, et une dépense ne recule pas.
+    expect(text).toContain("Math.max");
+    expect([...valueReads(cost)]).toContain("newCost");
+  });
+
+  it("plus aucun stamp n'écrit le cumul NU — c'est lui qui ignorait le compute", () => {
+    const raw: string[] = [];
+    const visit = (node: ts.Node) => {
+      if (
+        ts.isPropertyAssignment(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === "cost_usd" &&
+        node.initializer.getText().trim() === "newCost"
+      ) {
+        raw.push(node.getText());
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    expect(
+      raw,
+      "`cost_usd: newCost` n'écrit que le modèle, et repart d'une colonne qu'un " +
+        "chunk mort n'a pas écrite. Passer par `restCostUsd()`.",
+    ).toEqual([]);
+  });
+
+  it("le `finally` n'est plus qu'un FILET — la facturation est idempotente", () => {
+    // Deux écritures de compute pour un même chunk partageraient la bande de seq
+    // (`SANDBOX_USAGE_SEQ_BASE + continuations`) et se marcheraient dessus.
+    const bill = initializerOf("billSandboxCompute").getText();
+    expect(bill, "la garde d'idempotence a disparu").toContain("sandboxComputeBilled");
+    expect(bill, "un tour parti dans la microVM facture LUI-MÊME son compute").toContain(
+      "vmLoopLaunched",
+    );
+  });
+
   it("les repos stampés depuis un catch portent le coût, seul `failed` en est dispensé", () => {
     const stamps = stampsInCatchClauses();
     // Deux repos (amorçage avec checkpoint, erreur mi-tour) + l'échec d'un run vierge.

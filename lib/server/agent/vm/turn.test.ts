@@ -41,7 +41,11 @@ const h = vi.hoisted(() => ({
   /** L'`execTool` du parent, capturé au passage de `runAgentLoop`. */
   execTool: null as ExecuteAgentTool | null,
   /** Comment le tour se termine. Le défaut est la fin naturelle. */
-  status: "completed" as "completed" | "interrupted" | "error",
+  status: "completed" as "completed" | "interrupted" | "error" | "suspended",
+  /** La cause d'un `suspended`, telle que la boucle la nomme (MIN-219). */
+  suspendReason: undefined as undefined | "transient_error",
+  /** Ce que la boucle a retenu de la panne — le message du fournisseur. */
+  errorMessage: undefined as undefined | string,
   /**
    * Ce que la boucle moquée FAIT avant de rendre — pour exercer les crochets que
    * le vrai moteur appelle au fil des rounds (`recordUsage`, `pullSteering`).
@@ -56,6 +60,8 @@ vi.mock("../agent-loop", async (importOriginal) => ({
     await h.duringLoop?.(params);
     return {
       status: h.status,
+      ...(h.suspendReason ? { suspendReason: h.suspendReason } : {}),
+      ...(h.errorMessage ? { errorMessage: h.errorMessage } : {}),
       messages: params.messages,
       reply: "fait",
       costUsd: 0,
@@ -175,7 +181,45 @@ beforeEach(() => {
   h.toolCalls.length = 0;
   h.execTool = null;
   h.status = "completed";
+  h.suspendReason = undefined;
+  h.errorMessage = undefined;
   h.duringLoop = null;
+});
+
+describe("un tour `suspended` remonte sa CAUSE, pas une phrase fixe", () => {
+  it("nomme la panne de fournisseur — sans elle, MIN-219 est perdu sur ce chemin", async () => {
+    // `runAgentLoop` rend `suspended` + `suspendReason: "transient_error"` quand
+    // le fournisseur a épuisé ses reprises. Écrasé en « ce tour a atteint sa
+    // limite », le tour mourait en annonçant une durée qu'aucune horloge n'avait
+    // atteinte — et la fonction n'avait plus de quoi décider d'un re-queue.
+    h.status = "suspended";
+    h.suspendReason = "transient_error";
+    h.errorMessage = "429 Too Many Requests";
+    const report = await runVmTurn(job(), cp(), host());
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBe("providerUnavailable");
+    // Le message du fournisseur SURVIT : c'est la seule trace qui dise laquelle
+    // des pannes (429, 502, réseau) a arrêté le tour.
+    expect(report.errorMessage).toBe("429 Too Many Requests");
+  });
+
+  it("nomme le plafond du tour quand aucune panne n'est en cause", async () => {
+    h.status = "suspended";
+    const report = await runVmTurn(job(), cp(), host());
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBe("turnTooLong");
+    // Rien à raconter de plus : la phrase que l'utilisateur lit vient du code.
+    expect(report.errorMessage).toBeUndefined();
+  });
+
+  it("laisse une erreur ORDINAIRE sans code — elle est déjà racontée au fil", async () => {
+    h.status = "error";
+    h.errorMessage = "402 Payment Required";
+    const report = await runVmTurn(job(), cp(), host());
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBeUndefined();
+    expect(report.errorMessage).toBe("402 Payment Required");
+  });
 });
 
 describe("le plafond de recherches web voyage avec la boucle", () => {

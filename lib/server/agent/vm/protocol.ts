@@ -192,10 +192,36 @@ export interface VmPushResult {
  */
 export interface VmTurnReport {
   /** Les mêmes états que `AgentLoopResult`, moins `suspended` : un tour qui vit
-   *  dans la VM ne se découpe plus, donc il ne suspend plus. */
+   *  dans la VM ne se découpe plus, donc il ne suspend plus. Ce que la boucle
+   *  appelle `suspended` arrive ici en `error`, et sa CAUSE voyage dans
+   *  `errorCode` — sans quoi les trois causes seraient indiscernables. */
   status: "completed" | "interrupted" | "error" | "budget_exhausted";
   reply?: string;
   askedUser?: boolean;
+  /**
+   * POURQUOI le tour s'est arrêté, quand ce n'est pas une erreur quelconque.
+   *
+   * Les MÊMES codes que l'ancienne forme ([execute.ts](../execute.ts), le
+   * garde-fou anti-runaway) — délibérément, et c'est ce qui rend ce champ bon
+   * marché : `ERROR_CODE_KEYS`
+   * ([agent-event-feed.tsx](../../../../components/agent/agent-event-feed.tsx))
+   * et les deux catalogues `messages/*.json` les connaissent déjà, donc le fil
+   * raconte la même chose des deux côtés sans une clé de plus.
+   *
+   * `turnTooBig` n'a PAS d'équivalent ici, et ce n'est pas un oubli : ce chemin
+   * rabote son checkpoint par `fitCheckpoint` et dit `turnHistoryReset` quand il
+   * a dû lâcher la conversation. Un tour ne meurt donc jamais de son volume.
+   *
+   * ABSENT = une erreur ordinaire, déjà racontée au fil par celui qui l'a levée
+   * (la boucle sur une erreur LLM fatale, `main.ts` sur un tour qui lève).
+   */
+  errorCode?: "turnTooLong" | "providerUnavailable";
+  /**
+   * Ce que le fournisseur a répondu en dernier, sur un `providerUnavailable` —
+   * la seule trace qui dise LAQUELLE des pannes (429, 502, réseau) a arrêté le
+   * tour. À ne pas jeter au profit d'une phrase fixe : elle est tout ce qui
+   * reste pour comprendre, et la phrase, elle, se déduit du code.
+   */
   errorMessage?: string;
   /** Coût du tour, filles comprises. S'ajoute à `agent_runs.cost_usd`. */
   costUsd: number;

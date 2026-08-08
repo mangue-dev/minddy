@@ -609,6 +609,41 @@ export async function executeAgentRun(
    */
   let vmLoopLaunched = false;
 
+  /**
+   * LE MÉTRAGE COMPUTE DU CHUNK, appelable AVANT la mise au repos (MIN-224).
+   *
+   * Il vivait dans le seul `finally`, donc APRÈS les stamps — et c'est ce qui
+   * faisait diverger le sens d'`agent_runs.cost_usd` entre les deux moteurs. La
+   * nouvelle forme facture le compute puis relit le ledger ([vm-rest.ts](vm-rest.ts)),
+   * si bien que sa colonne vaut la somme du ledger, compute compris ; ici la
+   * colonne ne portait que le modèle, ET en perdait — un chunk mort sans stamper
+   * n'a jamais porté sa part.
+   *
+   * IDEMPOTENT, et il faut qu'il le soit : le `finally` reste le filet de tout ce
+   * qui ne passe pas par un repos (un throw, un amorçage raté). Deux écritures
+   * partageraient la bande de seq (`SANDBOX_USAGE_SEQ_BASE + continuations`) et se
+   * marcheraient dessus.
+   *
+   * `Date.now() - callStart` À L'APPEL : facturé depuis le repos plutôt que depuis
+   * le `finally`, il perd les quelques centaines de millisecondes du stamp — un
+   * minorant, dans le bon sens de l'erreur.
+   */
+  let sandboxComputeBilled = false;
+  const billSandboxCompute = async (): Promise<void> => {
+    if (sandboxComputeBilled || !sandbox || vmLoopLaunched) return;
+    sandboxComputeBilled = true;
+    await recordSandboxUsage({
+      runId: run.run_id ?? run.id,
+      seq: SANDBOX_USAGE_SEQ_BASE + run.continuations,
+      billTo: runBillTo,
+      // Les minutes de microVM d'une routine se rangent avec elle : sans ça,
+      // la moitié compute de sa dépense resterait sous « Agents ».
+      feature: sandboxUsageFeature,
+      projectId: run.project_id,
+      durationMs: Date.now() - callStart,
+    }).catch(() => {});
+  };
+
   try {
     /**
      * ADMISSION (MIN-212) — un chunk trop court pour REPRENDRE une fille est refusé
@@ -2037,6 +2072,31 @@ export async function executeAgentRun(
     const unbilledSubagentCost = subagents.settleUnbilled();
     const subagentRecords = subagents.records();
     const newCost = run.cost_usd + result.costUsd + subagentCost + unbilledSubagentCost;
+    /**
+     * CE QUE LA COLONNE VAUT AU REPOS, et c'est le MÊME sens que sur le moteur en
+     * microVM (MIN-224) : la dépense du run relue au LEDGER, compute compris.
+     *
+     * Le cumul ci-dessus est un minorant à deux titres. Il ne connaît que le
+     * MODÈLE — la moitié compute de la facture était écrite après les stamps,
+     * depuis le `finally`, donc jamais dans la colonne. Et il repart de
+     * `run.cost_usd`, que le chunk PRÉCÉDENT n'a pas forcément écrite : un chunk
+     * mort sans stamper laisse sa part au ledger et nulle part ailleurs (le trou
+     * de MIN-215, mesuré à 0,165908 $ portés pour 0,236836 $ dépensés).
+     *
+     * D'où l'ordre : on FACTURE le compute de ce chunk, PUIS on relit. Le ledger
+     * est alors complet, et le `Math.max` ne sert plus qu'au cas où une insertion
+     * best-effort s'est perdue — deux minorants, le plus grand est le plus vrai,
+     * et une dépense affichée ne recule jamais.
+     *
+     * Ce que ça change ailleurs : `recomputeChainSpend` et `medianCostByIntent`
+     * lisent enfin la même population des deux côtés. Le PLAFOND de dépense, lui,
+     * ne bouge pas — il s'oppose au ledger depuis MIN-215 (`runSpentUsd`).
+     */
+    const restCostUsd = async (): Promise<number> => {
+      await billSandboxCompute();
+      const ledger = await spentFromLedger(run.run_id ?? run.id).catch(() => null);
+      return Math.max(newCost, ledger ?? 0);
+    };
     // `lastFilesSha` amorcé pour TOUTES les mises au repos (ce checkpoint est réutilisé
     // par les chemins WIP/interruption/erreur/budget) : sur le 1er chunk on fixe la
     // baseline, jamais avancée en cours de tour — seule une fin de tour la fait
@@ -2132,7 +2192,6 @@ export async function executeAgentRun(
       // repos est un tour SAIN : son successeur repart avec son budget entier.
       attempts: 0,
       window_started_at: null,
-      cost_usd: newCost,
       sandbox_id: sandboxName(sandbox),
       sandbox_stopped_at: null,
       last_activity_at: nowIso,
@@ -2158,6 +2217,9 @@ export async function executeAgentRun(
       await stampRun(run.id, {
         status: pending ? "queued" : "completed",
         ...restFields,
+        // Facturé puis relu ICI, à la dernière milliseconde : le compute de ce
+        // chunk comprend le commit et le push qui viennent de se jouer.
+        cost_usd: await restCostUsd(),
         ...(pending ? { not_before: new Date().toISOString() } : {}),
         ...extra,
       });
@@ -2481,7 +2543,7 @@ export async function executeAgentRun(
         continuations: nextContinuations,
         attempts: 0,
         not_before: new Date(Date.now() + delayMs).toISOString(),
-        cost_usd: newCost,
+        cost_usd: await restCostUsd(),
       });
       return "suspended";
     }
@@ -2495,7 +2557,7 @@ export async function executeAgentRun(
       continuations: nextContinuations,
       attempts: 0,
       not_before: nowIso,
-      cost_usd: newCost,
+      cost_usd: await restCostUsd(),
     });
     return "suspended";
   } catch (err) {
@@ -2515,7 +2577,13 @@ export async function executeAgentRun(
      * du run. `Math.max` pour la même raison qu'à l'entrée du chunk — le ledger
      * est best-effort, la colonne peut porter une ligne qu'il a ratée, et une
      * dépense affichée ne doit jamais reculer.
+     *
+     * Le compute de ce chunk est facturé AVANT la relecture (MIN-224), comme sur
+     * les repos sains : sinon la colonne d'un chunk mort porterait le modèle mais
+     * pas la microVM qu'il a bel et bien réveillée, et les deux moteurs
+     * n'écriraient toujours pas la même chose.
      */
+    await billSandboxCompute();
     const spentUsd = await spentFromLedger(run.run_id ?? run.id);
     const costFromLedger =
       spentUsd == null ? {} : { cost_usd: Math.max(run.cost_usd, spentUsd) };
@@ -2599,11 +2667,17 @@ export async function executeAgentRun(
     // en échec. Bande de seq dédiée pour ne pas croiser celle des appels LLM
     // (continuations × 1000 + rounds).
     /**
-     * PAS quand la boucle est PARTIE dans la microVM (MIN-224) : le tour n'est
-     * pas fini quand cette fonction rend la main, et son wall-clock est tenu par
-     * la boucle elle-même — amorçage compris, qu'on lui a passé dans son job
+     * LE FILET, et plus le chemin normal (MIN-224). Les mises au repos facturent
+     * désormais AVANT de relire le ledger, pour que `cost_usd` veuille dire la
+     * même chose sur les deux moteurs ; `billSandboxCompute` est idempotent, donc
+     * ce qui passe ici est ce qui n'est passé par aucun repos — un throw hors
+     * `catch`, une sortie que personne n'a prévue.
+     *
+     * PAS quand la boucle est PARTIE dans la microVM : le tour n'est pas fini
+     * quand cette fonction rend la main, et son wall-clock est tenu par la boucle
+     * elle-même — amorçage compris, qu'on lui a passé dans son job
      * (`VmJob.bootstrapMs`). Facturer ici en plus compterait deux fois la même
-     * microVM.
+     * microVM. La garde vit dans `billSandboxCompute`.
      *
      * MAIS ON FACTURE QUAND ELLE N'EST PAS PARTIE, et c'est le trou qui manquait.
      * Un amorçage qui LÈVE — clone en échec, `writeFiles` refusé, politique
@@ -2613,17 +2687,6 @@ export async function executeAgentRun(
      * `running`, et celui-ci vient d'être mis au repos. La fonction est donc le
      * seul témoin de ce compute-là.
      */
-    if (sandbox && !vmLoopLaunched) {
-      await recordSandboxUsage({
-        runId: run.run_id ?? run.id,
-        seq: SANDBOX_USAGE_SEQ_BASE + run.continuations,
-        billTo: runBillTo,
-        // Les minutes de microVM d'une routine se rangent avec elle : sans ça,
-        // la moitié compute de sa dépense resterait sous « Agents ».
-        feature: sandboxUsageFeature,
-        projectId: run.project_id,
-        durationMs: Date.now() - callStart,
-      }).catch(() => {});
-    }
+    await billSandboxCompute();
   }
 }

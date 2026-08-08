@@ -4,6 +4,7 @@ import { recordSandboxUsage } from "@/lib/server/usage";
 import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 
 import { checkAgentQuota } from "./quota";
+import { planProviderStall } from "./retry";
 import { resolveRepoCloneTarget } from "./repo-access";
 import { forgeFor } from "./forge";
 import { revokeRunKey } from "./run-key";
@@ -208,6 +209,74 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   }
 
   if (report.status === "error") {
+    /**
+     * LE FOURNISSEUR EN PANNE N'EST PAS UNE FIN DE TOUR (MIN-219), et c'est ce
+     * que ce chemin avait perdu.
+     *
+     * La boucle a épuisé ses reprises d'appel (4 essais, ≤ 3,5 s cumulées) : ce
+     * tour n'a rien fait avancer, il a ATTENDU. Il ne se repose donc pas — il
+     * repart en file avec un délai devant lui, et le compteur d'attente voyage
+     * sur le checkpoint, seul état qui traverse deux tours. Sans ce délai, le
+     * drain reclaimerait dans la foulée et retomberait dans la même panne à la
+     * seconde près.
+     *
+     * Le compteur se lit sur la LIGNE, et le checkpoint à écrire vient du
+     * RAPPORT : les deux ne sont pas le même objet, et les confondre suffit à
+     * rendre l'attente infinie. Celui du rapport est reconstruit à neuf par
+     * `buildCheckpoint` ([vm/turn.ts](vm/turn.ts)), qui ne connaît pas ce
+     * champ — le lire là repartirait de 1 à chaque panne, et `MAX_PROVIDER_REQUEUES`
+     * ne bornerait plus rien.
+     *
+     * C'est aussi ce qui rend le compte CONSÉCUTIF sans rien coder pour : toute
+     * mise au repos écrit un checkpoint qui ne porte pas le champ, donc un tour
+     * qui avance remet le compteur à zéro de lui-même.
+     *
+     * SAUF si un message attend : l'utilisateur qui écrit pendant la panne est le
+     * seul signal qui vaille qu'on retente tout de suite. Le compteur monte quand
+     * même — la sortie de secours reste bornée.
+     */
+    const stallCheckpoint =
+      report.errorCode === "providerUnavailable" ? (report.checkpoint ?? run.checkpoint) : null;
+    // Pas de checkpoint du tout ⇒ pas de re-queue : le compteur n'aurait nulle
+    // part où voyager, et une attente non bornée est pire qu'un repos honnête.
+    const stall = stallCheckpoint
+      ? planProviderStall(run.checkpoint?.providerRetries ?? 0)
+      : null;
+    if (stallCheckpoint && stall?.requeue) {
+      const steering = await hasPendingRunMessages(run.id).catch(() => false);
+      await stampRun(run.id, {
+        ...restFields,
+        status: "queued",
+        checkpoint: { ...stallCheckpoint, providerRetries: stall.retries },
+        not_before: new Date(Date.now() + (steering ? 0 : stall.delayMs)).toISOString(),
+      });
+      // Aucun event ici : le fil porte déjà la note « le fournisseur a hoqueté »
+      // que la boucle vient d'émettre (`status: transient_error`), et elle dit
+      // vrai — le tour repart. Un `error` par-dessus annoncerait un arrêt qui
+      // n'a pas lieu. C'est mot pour mot ce que fait l'ancienne forme.
+      await revokeKey(run);
+      return;
+    }
+
+    /**
+     * Un CODE, traduit par le fil — les MÊMES que l'ancienne forme
+     * ([execute.ts](execute.ts)), pour que le tour se raconte pareil des deux
+     * côtés. Sans cet event, la fin de tour était MUETTE : `error_message` n'est
+     * lu par rien dans `components/agent/`, il n'est qu'exposé par l'API.
+     *
+     * Le repli en anglais est celui d'un client qui ne connaîtrait pas le code
+     * (et la trace lisible dans la table d'events) — la phrase que l'utilisateur
+     * lit vient, elle, de `ERROR_CODE_KEYS` et des deux catalogues.
+     */
+    if (report.errorCode) {
+      await emit("error", {
+        code: report.errorCode,
+        message:
+          report.errorCode === "providerUnavailable"
+            ? "The model provider kept failing, so this turn was paused. Send a message to carry on."
+            : "This turn reached its time limit. Send a message to carry on.",
+      });
+    }
     const pending = await restStamp({
       error_message: report.errorMessage ? cap(report.errorMessage, 1000) : null,
     });

@@ -121,23 +121,48 @@ const source = ts.createSourceFile(
   true,
 );
 
-/** Le `if` qui garde l'appel à `recordSandboxUsage` du `finally`. */
-function sandboxUsageGuard(): ts.Expression {
-  let guard: ts.Expression | undefined;
+/**
+ * La condition qui décide si la FONCTION facture la microVM de ce passage.
+ *
+ * Elle a déménagé sans changer de sens : le métrage vit maintenant dans
+ * `billSandboxCompute`, appelé par les mises au repos (pour que `cost_usd` puisse
+ * relire un ledger complet) et par le `finally` en filet. La garde y est une
+ * sortie anticipée plutôt qu'un `if` autour de l'appel — ce qu'on vérifie est la
+ * CONDITION, pas sa forme.
+ */
+function sandboxUsageGuard(): string {
+  let decl: ts.VariableDeclaration | undefined;
   const visit = (node: ts.Node) => {
-    if (ts.isIfStatement(node) && node.thenStatement.getText().includes("recordSandboxUsage")) {
-      guard ??= node.expression;
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "billSandboxCompute"
+    ) {
+      decl ??= node;
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
-  expect(guard, "le métrage compute a disparu du `finally` d'execute.ts").toBeDefined();
-  return guard!;
+  expect(decl, "le métrage compute a disparu d'execute.ts").toBeDefined();
+  expect(
+    decl!.getText(),
+    "`billSandboxCompute` ne facture plus rien",
+  ).toContain("recordSandboxUsage");
+
+  let guard: ts.Expression | undefined;
+  const firstIf = (node: ts.Node) => {
+    if (guard) return;
+    if (ts.isIfStatement(node)) guard = node.expression;
+    else ts.forEachChild(node, firstIf);
+  };
+  ts.forEachChild(decl!, firstIf);
+  expect(guard, "`billSandboxCompute` ne garde plus rien").toBeDefined();
+  return guard!.getText();
 }
 
 describe("execute.ts facture la microVM quand la boucle n'est PAS partie", () => {
   it("garde le métrage sur `vmLoopLaunched`, pas sur `run.loop_in_vm`", () => {
-    const guard = sandboxUsageGuard().getText();
+    const guard = sandboxUsageGuard();
     // La différence entre les deux tient tout le défaut : un amorçage qui LÈVE
     // est bien un run `loop_in_vm`, mais aucune boucle n'en rendra jamais compte.
     // Le chien de garde ne le rattrape pas non plus — il ne balaie que les runs

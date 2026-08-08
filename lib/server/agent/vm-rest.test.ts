@@ -276,6 +276,103 @@ describe("ce que le fil doit dire", () => {
   });
 });
 
+/**
+ * MIN-219, RENDU À CE CHEMIN-CI. Un tour que la boucle a `suspended` arrive ici
+ * en `error` avec sa cause dans `errorCode` — et les deux causes ne se règlent
+ * pas pareil : un plafond de tour se raconte et se repose, une panne de
+ * fournisseur s'ATTEND.
+ */
+describe("un tour arrêté se raconte, et une panne de fournisseur se re-queue", () => {
+  const stalled = (over: Partial<VmTurnReport> = {}) =>
+    report({
+      status: "error",
+      errorCode: "providerUnavailable",
+      errorMessage: "429 Too Many Requests",
+      ...over,
+    });
+
+  it("repart en file avec un DÉLAI devant lui, et le compteur sur le checkpoint", async () => {
+    await landVmTurn(run(), stalled());
+    const requeue = h.stamped.find((f) => f.status === "queued");
+    expect(requeue).toBeDefined();
+    // Le premier palier de `PROVIDER_REQUEUE_DELAYS_MS` : 30 s. Sans délai, le
+    // drain reclaime dans la foulée et retombe dans la même panne.
+    const delayMs = Date.parse(String(requeue?.not_before)) - Date.now();
+    expect(delayMs).toBeGreaterThan(20_000);
+    expect(requeue?.checkpoint).toMatchObject({ providerRetries: 1 });
+    // Ni repos, ni notification d'échec : le tour n'est pas fini.
+    expect(h.stamped.some((f) => f.status === "completed")).toBe(false);
+    expect(h.notifications).toEqual([]);
+  });
+
+  it("ne remet PAS d'event par-dessus la note du fil — le tour repart", async () => {
+    await landVmTurn(run(), stalled());
+    expect(h.events.some((e) => e.type === "error")).toBe(false);
+  });
+
+  it("nulle `loop_command_id` — sinon le chien de garde constate un décès sur un run en attente", async () => {
+    await landVmTurn(run(), stalled());
+    expect(h.stamped.find((f) => f.status === "queued")).toMatchObject({ loop_command_id: null });
+  });
+
+  it("retente TOUT DE SUITE quand l'utilisateur a écrit, mais compte quand même", async () => {
+    // Le faire patienter dix minutes avant d'être seulement LU serait pire que le
+    // défaut d'origine. La sortie de secours, elle, reste bornée.
+    h.pendingMessages = true;
+    await landVmTurn(run(), stalled());
+    const requeue = h.stamped.find((f) => f.status === "queued");
+    expect(Date.parse(String(requeue?.not_before)) - Date.now()).toBeLessThan(1_000);
+    expect(requeue?.checkpoint).toMatchObject({ providerRetries: 1 });
+  });
+
+  it("compte des pannes CONSÉCUTIVES : il repart du compteur porté par la ligne", async () => {
+    h.run = { ...RUN, checkpoint: { messages: [], providerRetries: 2 } };
+    await landVmTurn(run(), stalled());
+    expect(h.stamped.find((f) => f.status === "queued")?.checkpoint).toMatchObject({
+      providerRetries: 3,
+    });
+    // Et le checkpoint du tour SAIN ne le repose pas : `buildCheckpoint` ne
+    // connaît pas ce champ, donc la prochaine panne repartira de zéro.
+    h.stamped.length = 0;
+    await landVmTurn(run(), report());
+    expect(h.stamped.find((f) => f.status === "completed")?.checkpoint).not.toHaveProperty(
+      "providerRetries",
+    );
+  });
+
+  it("à bout de patience : le repos honnête, avec le CODE que le fil traduit", async () => {
+    // `MAX_PROVIDER_REQUEUES` vaut 4 : au cinquième, on ne re-queue plus.
+    h.run = { ...RUN, checkpoint: { messages: [], providerRetries: 4 } };
+    await landVmTurn(run(), stalled());
+    expect(h.stamped.some((f) => f.status === "queued")).toBe(false);
+    expect(h.events.find((e) => e.type === "error")?.payload).toMatchObject({
+      code: "providerUnavailable",
+    });
+    // Le message du fournisseur reste sur la ligne : la seule trace qui dise
+    // LAQUELLE des pannes a fini par arrêter le tour.
+    expect(h.stamped.find((f) => f.status === "completed")).toMatchObject({
+      error_message: "429 Too Many Requests",
+    });
+    expect(h.notifications).toEqual(["agent_failed"]);
+  });
+
+  it("le plafond du tour se raconte par un CODE, pas par du silence", async () => {
+    // Rien dans `components/agent/` ne lit `error_message` : sans event, la fin
+    // de tour était MUETTE dans le fil.
+    await landVmTurn(run(), report({ status: "error", errorCode: "turnTooLong" }));
+    expect(h.events.find((e) => e.type === "error")?.payload).toMatchObject({
+      code: "turnTooLong",
+    });
+    expect(h.stamped.some((f) => f.status === "queued")).toBe(false);
+    expect(h.notifications).toEqual(["agent_failed"]);
+  });
+
+  it("une erreur ORDINAIRE n'invente pas de code — la boucle l'a déjà dite", async () => {
+    await landVmTurn(run(), report({ status: "error", errorMessage: "402 Payment Required" }));
+    expect(h.events.some((e) => e.type === "error")).toBe(false);
+  });
+});
+
 describe("la branche vient du RAPPORT, pas d'une reconstruction", () => {
   it("enregistre la branche au premier push réel", async () => {
     h.target = { provider: "github", repoFullName: "org/repo", token: "t", authUrl: "u", defaultBranch: "main" };

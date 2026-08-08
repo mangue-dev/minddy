@@ -680,21 +680,42 @@ export async function runVmTurn(
     job.checkpointMaxBytes,
   );
 
+  /**
+   * LA CAUSE D'UN `suspended`, ET ELLE EST DE TROIS SORTES — ce que cette forme
+   * a d'abord écrasé en une.
+   *
+   * `suspended` n'a plus d'objet côté VM : il n'y a pas de chunk suivant où
+   * reprendre, donc le tour s'arrête. Mais il s'arrête pour une raison, et les
+   * trois ne se règlent pas pareil :
+   *
+   * - le plafond MURAL (12 h) ou le plafond de ROUNDS → `turnTooLong`. Rien à
+   *   faire qu'un message de plus ;
+   * - le FOURNISSEUR EN PANNE (`suspendReason: "transient_error"`, MIN-219) →
+   *   `providerUnavailable`. Celui-là ne se corrige pas, il s'ATTEND : la
+   *   fonction en tire un re-queue différé (cf. `vm-rest.ts`). Rendu anonyme, il
+   *   faisait mourir le tour en annonçant une limite de durée qu'aucune horloge
+   *   n'avait atteinte — la phrase exacte que MIN-219 existait pour supprimer.
+   *
+   * Le message du fournisseur voyage AVEC : la phrase qui se lit à l'écran vient
+   * du code (`ERROR_CODE_KEYS`), donc l'écraser par une phrase fixe ne gagnait
+   * rien et perdait le seul indice de ce qui est tombé.
+   */
+  const errorCode: VmTurnReport["errorCode"] =
+    result.status === "suspended"
+      ? result.suspendReason === "transient_error"
+        ? "providerUnavailable"
+        : "turnTooLong"
+      : undefined;
+
   return {
-    // `suspended` n'a plus d'objet : la boucle ne peut y arriver que par son
-    // plafond mural ou son plafond de rounds, et les deux se racontent comme un
-    // tour qui s'est arrêté — pas comme un tour qui continue ailleurs.
     status:
       result.status === "suspended"
         ? "error"
         : (result.status as VmTurnReport["status"]),
     ...(reply ? { reply } : {}),
     ...(result.askedUser ? { askedUser: true } : {}),
-    ...(result.status === "suspended"
-      ? { errorMessage: "This turn reached its limit. Send a message to carry on." }
-      : result.errorMessage
-        ? { errorMessage: cap(result.errorMessage, 1000) }
-        : {}),
+    ...(errorCode ? { errorCode } : {}),
+    ...(result.errorMessage ? { errorMessage: cap(result.errorMessage, 1000) } : {}),
     costUsd: result.costUsd + subagentCost + unbilledSubagentCost,
     checkpoint: fit.checkpoint,
     checkpointDropped: fit.dropped,
