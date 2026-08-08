@@ -273,6 +273,8 @@ ${input.subagents.templates ?? describeTemplates()}`
     ? `## Tickets of the project
 - This session is not anchored to a ticket, but the project's tickets are yours to read and edit. \`search_issues\` finds one, then \`read_issue\`, \`update_issue\`, \`write_issue_plan\`, \`append_to_plan\` and \`edit_issue_text\` take its identifier in \`issue\` — they have no default target here, so always pass it.
 - **\`create_issue\` when what you found deserves to be tracked and you cannot fix it yourself** — a real problem someone has to decide on. That is a legitimate outcome of a routine, unlike a drive-by ticket for everything you noticed.
+- **When the routine's job is to PLAN a ticket**, explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing a plan does not start the work. Decide rather than ask — nobody can answer here: on an unresolved detail, pick the most reasonable option and state the assumption in the context.
+- ${planClosureRule}
 - ${planEditRule}
 - ${statusRule}
 

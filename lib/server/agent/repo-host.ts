@@ -683,9 +683,16 @@ export async function deleteWorkFile(host: RepoHost, relPath: string): Promise<v
 
 /** Liste le contenu d'un dossier du dépôt — ou de TOOL_OUTPUT_DIR, pour retrouver
     les sorties déposées (noms, dossiers suffixés `/`). */
-export async function listDir(host: RepoHost, relPath = "."): Promise<string> {
+/**
+ * Contenu d'un dossier, ou `null` s'il n'a pas pu être LU (chemin absent, pas un
+ * dossier, droits) — MIN-226, même règle que `grep` : un échec ne se rend pas
+ * comme un résultat vide. « (empty) » sur un dossier qui n'existe pas affirme
+ * qu'il existe et qu'il est vide, ce qui est deux fois faux, et le modèle en tire
+ * la conclusion qu'il n'y a rien à y chercher.
+ */
+export async function listDir(host: RepoHost, relPath = "."): Promise<string | null> {
   const res = await host.exec(`ls -1Ap ${sq(readablePath(relPath))}`);
-  return res.stdout;
+  return res.exitCode === 0 ? res.stdout : null;
 }
 
 export type GrepOutputMode = "content" | "files_with_matches" | "count";
@@ -876,6 +883,13 @@ async function grepOutside(
 export interface GlobResult {
   files: string[];
   truncated: boolean;
+  /**
+   * false → `git ls-files` a ÉCHOUÉ (pathspec malformé, magie non fermée) —
+   * pas « aucun fichier » (MIN-226). L'échec sortait par la liste vide, donc un
+   * motif mal écrit répondait « ce dépôt ne contient aucun fichier de ce genre ».
+   * Même mensonge que le `grep`, dans le tool d'à côté.
+   */
+  ok: boolean;
 }
 
 /**
@@ -892,12 +906,18 @@ export async function globRepo(
   const specs = globPathspecs(pattern, path).map(sq).join(" ");
   const cmd = `git ls-files --cached --others --exclude-standard -- ${specs}`;
   const res = await host.exec(cmd);
-  if (res.exitCode !== 0) return { files: [], truncated: false }; // pathspec invalide, etc.
+  // Pathspec malformé : une ERREUR, et elle se dit. Un motif que git refuse et un
+  // motif qui ne matche rien ne sont pas la même nouvelle.
+  if (res.exitCode !== 0) return { files: [], truncated: false, ok: false };
 
   const all = res.stdout
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean)
     .sort();
-  return { files: all.slice(0, GLOB_MAX_FILES), truncated: all.length > GLOB_MAX_FILES };
+  return {
+    files: all.slice(0, GLOB_MAX_FILES),
+    truncated: all.length > GLOB_MAX_FILES,
+    ok: true,
+  };
 }

@@ -437,6 +437,36 @@ describe("buildInheritedBranchMessage", () => {
  * que la queue survit et que la sortie complète est déposée dans la sandbox, le
  * prompt doit le dire — et l'interdire.
  */
+/**
+ * MIN-226 — la règle de CLÔTURE d'un plan, et le fait qu'elle atteigne TOUS les
+ * jeux de tools qui servent `write_issue_plan`.
+ *
+ * Le plan de MIN-226 nommait deux des trois appelants du composant qu'il
+ * supprimait, et se lisait comme complet. Trois surfaces écrivent des plans —
+ * une session ancrée sur un ticket, une session carnet, un passage de routine —
+ * et la routine offrait le tool sans un mot de doctrine : c'est le trou que ce
+ * test tient fermé, plus que la formulation elle-même.
+ */
+describe("buildAgentSystemPrompt — clôture d'un plan", () => {
+  const anchors = [
+    { label: "ticket", opts: { anchor: "issue" as const, interactive: true } },
+    { label: "carnet", opts: { anchor: "notebook" as const, interactive: true } },
+    { label: "routine", opts: { anchor: "notebook" as const, interactive: false } },
+  ];
+
+  for (const { label, opts } of anchors) {
+    it(`demande de nommer TOUS les appelants (${label})`, () => {
+      const prompt = buildAgentSystemPrompt(opts);
+      expect(prompt).toContain("A plan is only as good as what it does NOT forget");
+      expect(prompt).toMatch(/name EVERY site the change reaches/);
+    });
+
+    it(`dit d'explorer avant d'écrire un plan (${label})`, () => {
+      expect(buildAgentSystemPrompt(opts)).toMatch(/explore the code first/i);
+    });
+  }
+});
+
 describe("buildAgentSystemPrompt — sorties longues de run_command", () => {
   for (const anchor of ["issue", "notebook"] as const) {
     it(`dit où retrouver la sortie complète (ancrage ${anchor})`, () => {

@@ -351,15 +351,31 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         return { result: (win.content || "(empty file)") + footer, success: true };
       }
       case "list_dir": {
-        const content = await listDir(host, args.path ? String(args.path) : ".");
+        const path = args.path ? String(args.path) : ".";
+        const content = await listDir(host, path);
+        // Illisible ≠ vide (MIN-226) : « (empty) » sur un chemin qui n'existe pas
+        // affirmerait deux choses fausses à la fois.
+        if (content === null) {
+          return {
+            result: { error: `Cannot list ${path}: no such directory (or not a directory).` },
+            success: false,
+          };
+        }
         return { result: content || "(empty)", success: true };
       }
       case "glob": {
-        const { files, truncated } = await globRepo(
+        const { files, truncated, ok } = await globRepo(
           host,
           String(args.pattern ?? ""),
           args.path ? String(args.path) : undefined,
         );
+        // Motif refusé par git ≠ dépôt sans fichier correspondant (MIN-226).
+        if (!ok) {
+          return {
+            result: { error: "glob failed: git rejected the 'pattern'/'path' — check their syntax." },
+            success: false,
+          };
+        }
         if (files.length === 0) return { result: "(no files matched)", success: true };
         const note = truncated ? `\n… (capped at ${files.length} files)` : "";
         return { result: files.join("\n") + note, success: true };

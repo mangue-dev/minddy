@@ -134,3 +134,55 @@ describe("tool grep — ce que le modèle LIT", () => {
     expect(out.success).toBe(true);
   });
 });
+
+/**
+ * Les DEUX tools voisins portaient le même mensonge, et pour la même raison : un
+ * échec de commande sortait par le chemin du résultat vide. Les corriger avec
+ * `grep` est le point de la manœuvre — une classe de défaut ne se répare pas à
+ * un seul de ses endroits.
+ */
+describe("tools voisins — échec ≠ résultat vide", () => {
+  const tool = (h: RepoHost, name: string, args: Record<string, unknown>) =>
+    makeExecTool({
+      host: h,
+      createPr: null,
+      prTool: null,
+      issueTool: null,
+      scratchpadTool: null,
+      webSearch: null,
+      outputSeqBase: 0,
+      background: null,
+      instructions: { paths: [], bytes: 0 },
+      editedPaths: new Set<string>(),
+      subagents: null,
+      chunkRemainingMs: () => 60_000,
+    })(name, args);
+
+  it("list_dir sur un chemin illisible : une erreur, pas « (empty) »", async () => {
+    const h = host([{ match: /^ls -1Ap /, exitCode: 1 }]);
+    const out = await tool(h.host, "list_dir", { path: "app/nowhere" });
+    expect(out.success).toBe(false);
+    expect(JSON.stringify(out.result)).toContain("no such directory");
+  });
+
+  it("list_dir sur un dossier vraiment vide : « (empty) », et c'est vrai", async () => {
+    const h = host([{ match: /^ls -1Ap /, exitCode: 0, stdout: "" }]);
+    const out = await tool(h.host, "list_dir", { path: "app/empty" });
+    expect(out.result).toBe("(empty)");
+    expect(out.success).toBe(true);
+  });
+
+  it("glob dont le pathspec est refusé : une erreur, pas « (no files matched) »", async () => {
+    const h = host([{ match: /^git ls-files /, exitCode: 128 }]);
+    const out = await tool(h.host, "glob", { pattern: ":(broken" });
+    expect(out.success).toBe(false);
+    expect(JSON.stringify(out.result)).toContain("glob failed");
+  });
+
+  it("glob qui ne matche rien : « (no files matched) », et c'est vrai", async () => {
+    const h = host([{ match: /^git ls-files /, exitCode: 0, stdout: "" }]);
+    const out = await tool(h.host, "glob", { pattern: "**/*.rs" });
+    expect(out.result).toBe("(no files matched)");
+    expect(out.success).toBe(true);
+  });
+});
