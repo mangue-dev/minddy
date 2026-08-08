@@ -133,6 +133,46 @@ describe("tool grep — ce que le modèle LIT", () => {
     expect(out.result).toBe("(no matches)");
     expect(out.success).toBe(true);
   });
+
+  /**
+   * MIN-238 — la même classe que ci-dessus, par l'autre porte : la recherche a
+   * bien tourné, mais pas sur ce que le modèle croyait. Ici c'est `-F` qui a
+   * cherché la barre au pied de la lettre.
+   */
+  it("alternation en fixed_strings : relancée en regex, et la note le dit", async () => {
+    const h = host([
+      { match: /^git grep .*-F /, exitCode: 1 },
+      { match: /^git grep .*-E /, exitCode: 0, stdout: "lib/server/agent/runs.ts:435:claimRun\n" },
+    ]);
+    const out = await run(h.host, {
+      pattern: "claimRun|requeueStuckRuns",
+      fixed_strings: true,
+      path: "lib",
+    });
+    expect(out.success).toBe(true);
+    expect(String(out.result)).toContain("runs.ts:435");
+    expect(String(out.result)).toContain("retried as a regex");
+    // Le littéral d'abord, la regex ensuite : l'ordre EST le correctif.
+    expect(h.commands[0]).toContain(" -F ");
+    expect(h.commands[1]).toContain(" -E ");
+  });
+
+  it("le littéral qui TROUVE n'est jamais relancé — la réponse était juste", async () => {
+    const h = host([{ match: /^git grep .*-F /, exitCode: 0, stdout: "docs/a.md:3:a|b\n" }]);
+    const out = await run(h.host, { pattern: "a|b", fixed_strings: true });
+    expect(String(out.result)).not.toContain("retried as a regex");
+    expect(h.commands).toHaveLength(1);
+  });
+
+  it("regex refusée à la relance : on garde « (no matches) », pas une erreur", async () => {
+    const h = host([
+      { match: /^git grep .*-F /, exitCode: 1 },
+      { match: /^git grep .*-E /, exitCode: 2 },
+    ]);
+    const out = await run(h.host, { pattern: "a(|b(", fixed_strings: true });
+    expect(out.success).toBe(true);
+    expect(out.result).toBe("(no matches)");
+  });
 });
 
 /**

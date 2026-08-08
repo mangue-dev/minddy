@@ -15,6 +15,43 @@ export const LITERAL_RETRY_NOTE =
   "(pattern retried as a literal string — it was not a valid POSIX regex)";
 
 /**
+ * Note quand le motif a été relancé en REGEX, `fixed_strings` ayant cherché la
+ * barre verticale au pied de la lettre (MIN-238).
+ */
+export const REGEX_RETRY_NOTE =
+  "(pattern retried as a regex — 'fixed_strings' had matched the '|' literally, so the alternatives were never searched. These are the regex results.)";
+
+/**
+ * Le motif est-il une ALTERNATION que `fixed_strings` a prise au mot ?
+ *
+ * Le jumeau exact de `isInvalidRegexError`, et il vient du même endroit : le
+ * modèle ne SAIT pas dans quel mode il cherche. Là, il a suivi la description du
+ * tool — qui listait `|` parmi les caractères justifiant `fixed_strings` — et a
+ * demandé `claimRun|requeueStuckRuns` en littéral. `git grep -F` a cherché ces
+ * vingt-quatre caractères d'affilée, n'a rien trouvé, et a répondu « (no
+ * matches) » : un fait vérifié, sur du code qui existait aux deux endroits.
+ * Quinze appels de cette forme dans le run qui a écrit le plan de MIN-225,
+ * quinze faux négatifs, zéro vrai — et un plan bâti sur l'absence de symboles
+ * bien présents.
+ *
+ * STRICT, parce qu'une relance en regex sur un motif qu'on voulait vraiment
+ * littéral rendrait autre chose que ce qui a été demandé. Trois conditions, qui
+ * ensemble ne laissent passer que l'intention d'alterner :
+ *
+ * - une barre non échappée (`\|` est un pipe voulu) ;
+ * - aucune alternative vide — ce qui écarte `a || b` et la ligne de tableau
+ *   markdown `| --- |`, dont le split rend des bouts vides ;
+ * - aucune barre bordée d'espace — ce qui écarte le tube shell `cmd | grep`,
+ *   là où une liste de symboles s'écrit toujours collée.
+ */
+export function looksLikeIntendedAlternation(pattern: string): boolean {
+  if (!pattern.includes("|")) return false;
+  if (/\\\|/.test(pattern)) return false;
+  if (/\s\||\|\s/.test(pattern)) return false;
+  return pattern.split("|").every((part) => part.length > 0);
+}
+
+/**
  * Réponse quand `path`/`glob` n'ont sélectionné AUCUN fichier (MIN-226).
  *
  * Elle ne dit surtout pas « aucune correspondance » : la recherche n'a rien lu,

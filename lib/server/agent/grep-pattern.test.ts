@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isInvalidRegexError, LITERAL_RETRY_NOTE } from "./grep-pattern";
+import {
+  isInvalidRegexError,
+  looksLikeIntendedAlternation,
+  LITERAL_RETRY_NOTE,
+  REGEX_RETRY_NOTE,
+} from "./grep-pattern";
 
 /**
  * MIN-109 : les 3 seuls échecs de `grep` mesurés en 60 jours sont la MÊME chose —
@@ -73,5 +78,51 @@ describe("LITERAL_RETRY_NOTE", () => {
     // résultats qui ne correspondent pas à ce qu'il a demandé.
     expect(LITERAL_RETRY_NOTE).toMatch(/literal/i);
     expect(LITERAL_RETRY_NOTE).toMatch(/not a valid POSIX regex/i);
+  });
+});
+
+/**
+ * MIN-238 — le miroir de MIN-109, et il a coûté un plan entier.
+ *
+ * Les motifs ci-dessous sont ceux du run qui a écrit le plan de MIN-225 : quinze
+ * `grep` en `fixed_strings` sur des listes de symboles séparées par `|`, quinze
+ * « (no matches) » sur du code présent aux deux endroits, et un plan bâti sur
+ * l'absence de `claimRun`, `requeueStuckRuns` et `planProviderStall`.
+ */
+describe("looksLikeIntendedAlternation", () => {
+  it("reconnaît les motifs EXACTS qui ont menti dans le run de MIN-225", () => {
+    const patterns = [
+      "claimRun|requeueStuckRuns",
+      "drainAgentRuns|claimRun|requeueStuckRuns",
+      "drainAgentRuns|claimRun|requeueStuckRuns|hasDueAgentWork|reapIdleSandboxes",
+      "hasDueAgentWork|drainAgentRuns|executeAgentRun",
+      // Des espaces DANS une alternative ne gênent pas : ce qui compte est que la
+      // barre soit collée. Celui-ci est le 13e du run.
+      "export async function drainAgentRuns|drainAgentRuns",
+    ];
+    for (const p of patterns) expect(looksLikeIntendedAlternation(p)).toBe(true);
+  });
+
+  it("laisse tranquille ce qu'on cherche VRAIMENT au pied de la lettre", () => {
+    const patterns = [
+      "useState(", // pas de barre du tout
+      "a || b", // alternative vide au milieu → un OU de code, pas une alternation
+      "| --- |", // ligne de tableau markdown : alternatives vides aux deux bouts
+      "cmd | grep foo", // tube shell : barre bordée d'espaces
+      "value |> pipe", // idem
+      "a\\|b", // barre échappée = barre voulue
+      "|leading", // alternative vide en tête
+      "trailing|", // et en queue
+    ];
+    for (const p of patterns) expect(looksLikeIntendedAlternation(p)).toBe(false);
+  });
+});
+
+describe("REGEX_RETRY_NOTE", () => {
+  it("dit que les alternatives n'avaient jamais été cherchées", () => {
+    // Sans ça, le modèle lit les résultats de la RELANCE comme ceux de sa
+    // demande — et n'apprend pas que `fixed_strings` ne fait pas ce qu'il croit.
+    expect(REGEX_RETRY_NOTE).toMatch(/regex/i);
+    expect(REGEX_RETRY_NOTE).toMatch(/never searched/i);
   });
 });

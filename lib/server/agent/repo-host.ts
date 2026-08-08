@@ -7,7 +7,7 @@ import {
   type BackgroundPaths,
 } from "./background";
 import { grepPathspecs, globPathspecs, expandBraces } from "./git-pathspec";
-import { isInvalidRegexError } from "./grep-pattern";
+import { isInvalidRegexError, looksLikeIntendedAlternation } from "./grep-pattern";
 import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 
 /**
@@ -725,6 +725,16 @@ export interface GrepResult {
   /** Le motif n'était pas une regex valide : relancé en littéral (MIN-109). */
   retriedAsLiteral?: boolean;
   /**
+   * L'inverse (MIN-238) : `fixed_strings` posé sur une ALTERNATION, donc un `|`
+   * cherché comme un caractère et des alternatives jamais cherchées du tout.
+   * Relancé en regex — ce sont ces résultats-là qui sont rendus.
+   *
+   * Même famille que `noFilesInScope` : la recherche a bien tourné, elle n'a
+   * simplement pas cherché ce que le modèle croyait. La différence est qu'ici on
+   * peut la refaire correctement, comme MIN-109 le fait dans l'autre sens.
+   */
+  retriedAsRegex?: boolean;
+  /**
    * Aucun match ET aucun fichier dans le périmètre : `path`/`glob` n'ont
    * sélectionné AUCUN fichier, donc la recherche n'a rien lu (MIN-226).
    *
@@ -768,7 +778,11 @@ export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepR
     ];
     return `git grep ${flags.join(" ")} -e ${sq(opts.pattern)}${pathspecPart}`;
   };
-  const { res, retriedAsLiteral } = await runGrepWithLiteralFallback(host, build, opts);
+  const { res, retriedAsLiteral, retriedAsRegex } = await runGrepWithLiteralFallback(
+    host,
+    build,
+    opts,
+  );
 
   // git grep : 0 = matchs, 1 = aucun match, ≥2 = ERREUR (regex/option invalide…).
   if (res.exitCode >= 2) {
@@ -781,10 +795,15 @@ export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepR
       `git ls-files --cached --others --exclude-standard -- ${specs.join(" ")}`,
     );
     if (listed.exitCode === 0 && listed.stdout.trim() === "") {
-      return { output: "", ok: true, retriedAsLiteral, noFilesInScope: true };
+      return { output: "", ok: true, retriedAsLiteral, retriedAsRegex, noFilesInScope: true };
     }
   }
-  return { output: capGrepLines(res.stdout, opts.headLimit), ok: true, retriedAsLiteral };
+  return {
+    output: capGrepLines(res.stdout, opts.headLimit),
+    ok: true,
+    retriedAsLiteral,
+    retriedAsRegex,
+  };
 }
 
 /**
@@ -797,10 +816,24 @@ async function runGrepWithLiteralFallback(
   host: RepoHost,
   build: (literal: boolean) => string,
   opts: GrepOptions,
-): Promise<{ res: ShellResult; retriedAsLiteral: boolean }> {
+): Promise<{ res: ShellResult; retriedAsLiteral: boolean; retriedAsRegex?: boolean }> {
   const literal = opts.fixedStrings === true;
   const res = await host.exec(build(literal));
-  if (literal || res.exitCode < 2 || !isInvalidRegexError(res.stderr || res.stdout)) {
+  if (literal) {
+    // Le repli SYMÉTRIQUE (MIN-238) : `fixed_strings` sur une alternation a
+    // cherché la barre au pied de la lettre, donc les alternatives n'ont jamais
+    // été cherchées. Rien trouvé ici ne veut rien dire — on relance en regex.
+    // Conditionné à l'absence de match : un littéral qui TROUVE est ce qu'on
+    // voulait, et le relancer changerait une réponse juste.
+    if (res.exitCode === 1 && looksLikeIntendedAlternation(opts.pattern)) {
+      const retry = await host.exec(build(false));
+      // Une regex refusée ne vaut pas mieux que le littéral : on garde le
+      // premier résultat plutôt que d'échanger « rien trouvé » contre une erreur.
+      if (retry.exitCode < 2) return { res: retry, retriedAsLiteral: false, retriedAsRegex: true };
+    }
+    return { res, retriedAsLiteral: false };
+  }
+  if (res.exitCode < 2 || !isInvalidRegexError(res.stderr || res.stdout)) {
     return { res, retriedAsLiteral: false };
   }
   return { res: await host.exec(build(true)), retriedAsLiteral: true };
@@ -862,7 +895,11 @@ async function grepOutside(
     ];
     return `grep ${flags.join(" ")} -e ${sq(opts.pattern)} -- ${sq(absPath)}`;
   };
-  const { res, retriedAsLiteral } = await runGrepWithLiteralFallback(host, build, opts);
+  const { res, retriedAsLiteral, retriedAsRegex } = await runGrepWithLiteralFallback(
+    host,
+    build,
+    opts,
+  );
   if (res.exitCode >= 2) {
     return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
   }
@@ -874,10 +911,15 @@ async function grepOutside(
       `grep --color=never -I -r -l -E ${includes.join(" ")} -e ${sq(".")} -- ${sq(absPath)}`,
     );
     if (probe.stdout.trim() === "") {
-      return { output: "", ok: true, retriedAsLiteral, noFilesInScope: true };
+      return { output: "", ok: true, retriedAsLiteral, retriedAsRegex, noFilesInScope: true };
     }
   }
-  return { output: capGrepLines(res.stdout, opts.headLimit), ok: true, retriedAsLiteral };
+  return {
+    output: capGrepLines(res.stdout, opts.headLimit),
+    ok: true,
+    retriedAsLiteral,
+    retriedAsRegex,
+  };
 }
 
 export interface GlobResult {

@@ -30,7 +30,7 @@ import {
 import { Subagents } from "./subagent";
 import { pruneToolOutputs } from "./prune";
 import { resolveWithin } from "./repo-path";
-import { LITERAL_RETRY_NOTE, NO_FILES_IN_SCOPE_NOTE } from "./grep-pattern";
+import { LITERAL_RETRY_NOTE, NO_FILES_IN_SCOPE_NOTE, REGEX_RETRY_NOTE } from "./grep-pattern";
 import {
   formatRunCommandResult,
   fullOutputDocument,
@@ -396,7 +396,15 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         }
         // Motif relancé en littéral : on le DIT, sinon le modèle ne saurait pas
         // que ce qu'il croyait être une regex a été cherché tel quel (MIN-109).
-        const note = r.retriedAsLiteral ? `${LITERAL_RETRY_NOTE}\n` : "";
+        // Et l'inverse (MIN-238) : une alternation cherchée au pied de la lettre
+        // n'a jamais cherché ses alternatives — sans la note, le modèle lirait le
+        // résultat de la relance comme celui de sa demande, et ne saurait pas que
+        // `fixed_strings` ne fait pas ce qu'il croit.
+        const note = r.retriedAsLiteral
+          ? `${LITERAL_RETRY_NOTE}\n`
+          : r.retriedAsRegex
+            ? `${REGEX_RETRY_NOTE}\n`
+            : "";
         // Périmètre vide ≠ absence (MIN-226) : rien n'a été LU, et le dire est
         // la moitié utile de la réponse. `success: false` en plus du mot — une
         // recherche qui n'a rien ouvert n'a pas abouti, et l'échec se voit dans

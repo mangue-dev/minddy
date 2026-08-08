@@ -149,7 +149,7 @@ const CORE_TOOLS: AgentToolDef[] = [
     function: {
       name: "grep",
       description:
-        "Search file contents with git grep (POSIX extended regex; gitignore-aware, binary files skipped). By default returns matching 'file:line:content' rows. Use to locate symbols, usages, imports, or config. Narrow with 'path' (a DIRECTORY) and/or 'glob' (a FILENAME pattern) — they intersect, so never pass the same value to both — and cap noisy searches with 'head_limit'. To search ONE file, pass it as 'path' and leave 'glob' empty. To search a literal snippet of code — anything containing { } ( ) [ ] * + ? | . \\ — set 'fixed_strings' rather than escaping it by hand.",
+        "Search file contents with git grep (POSIX extended regex; gitignore-aware, binary files skipped). By default returns matching 'file:line:content' rows. Use to locate symbols, usages, imports, or config. Narrow with 'path' (a DIRECTORY) and/or 'glob' (a FILENAME pattern) — they intersect, so never pass the same value to both — and cap noisy searches with 'head_limit'. To search ONE file, pass it as 'path' and leave 'glob' empty. To search a literal snippet of code — anything containing { } ( ) [ ] * + ? . \\ — set 'fixed_strings' rather than escaping it by hand. Do NOT set it to look up several symbols at once: 'foo|bar' is regex alternation and needs the default regex mode.",
       parameters: {
         type: "object",
         properties: {
@@ -177,7 +177,7 @@ const CORE_TOOLS: AgentToolDef[] = [
           fixed_strings: {
             type: "boolean",
             description:
-              "Treat 'pattern' as a literal string instead of a regex. Use it whenever you are searching for a verbatim snippet of code, e.g. 'onUpdateIssue={' or 'useState('.",
+              "Treat 'pattern' as a literal string instead of a regex. Use it whenever you are searching for a verbatim snippet of code, e.g. 'onUpdateIssue={' or 'useState('. Never use it with '|' to search several symbols at once — that is regex alternation, and as a literal it searches for the bar itself and finds nothing.",
           },
           context: {
             type: "number",
