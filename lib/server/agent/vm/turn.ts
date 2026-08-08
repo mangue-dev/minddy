@@ -20,17 +20,10 @@ import {
 } from "../subagent-config";
 import { usesApplyPatch } from "../patch";
 import { fitCheckpoint } from "../checkpoint-fit";
-import { typeErrorsForTurn, TYPECHECK_MIN_BUDGET_MS } from "../diagnostics";
-import { formatSelfReview, SELF_REVIEW_MIN_BUDGET_MS } from "../self-review";
-import {
-  newPlanWriteSink,
-  planClosureForTurn,
-  watchPlanWrites,
-  PLAN_CLOSURE_MIN_BUDGET_MS,
-} from "../plan-closure";
-import { planReviewForTurn, PLAN_REVIEW_MIN_BUDGET_MS } from "../plan-review";
+import { newPlanWriteSink, watchPlanWrites } from "../plan-closure";
+import { makeTurnEndHook } from "../turn-end";
 import { REPO_INSTRUCTION_FILES, type InstructionsState } from "../repo-instructions";
-import { commitAndPush, changedFiles, turnDiff, type RepoHost } from "../repo-host";
+import { commitAndPush, changedFiles, type RepoHost } from "../repo-host";
 import { BackgroundJobs } from "../background";
 import { makeExecTool, readRepoInstructions, repoBackgroundRunner } from "../exec-tool";
 import { SecretRedactor } from "../redact";
@@ -160,14 +153,27 @@ export async function runVmTurn(
   /** Ancres de review posées par ce run — le plafond des 5 vit côté fonction, qui
    *  rend le compteur à jour à chaque appel. */
   let prInlineComments = job.prInlineComments;
-  let repoTouched = job.repoTouched;
-  let selfReviewed = false;
   /** Le plan écrit par ce tour, noté au passage des tools ticket (MIN-236) — c'est
    *  ce que la relecture rend au modèle (MIN-237) et que le contrôle de clôture grep
    *  avant de rendre la main. */
   const planWrites = newPlanWriteSink();
-  let planReviewed = false;
-  let planClosed = false;
+  /**
+   * Le dernier mot du harness : les quatre contrôles de fin de tour et le budget de
+   * chacun, dans un module PARTAGÉ avec la fonction (MIN-240). Les deux moteurs
+   * doivent rendre la même garantie — la tenir par copier-coller est ce qui a laissé
+   * les deux crochets de plan mourir des deux côtés à la fois.
+   *
+   * Construit ICI, tôt : `buildCheckpoint` lui demande `repoTouched`.
+   */
+  const turnEnd = makeTurnEndHook({
+    host,
+    emit,
+    editedPaths,
+    planWrites,
+    filesFromSha: job.filesFromSha,
+    repoTouched: job.repoTouched,
+    logPrefix: "[agent-vm]",
+  });
 
   const background = new BackgroundJobs(repoBackgroundRunner(host), 0);
 
@@ -531,75 +537,10 @@ export async function runVmTurn(
       ...(editedPaths.size > 0
         ? { editedPaths: [...editedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX) }
         : {}),
-      ...(repoTouched ? { repoTouched: true } : {}),
+      ...(turnEnd.repoTouched() ? { repoTouched: true } : {}),
       ...(prInlineComments > 0 ? { prInlineComments } : {}),
     };
   }
-
-  // ── Fin de tour : type-check, diff, relecture puis clôture du plan ─────────
-  const typeCheckBlock = async (budgetMs: number): Promise<string | null> => {
-    if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) return null;
-    const touched = [...editedPaths];
-    editedPaths.clear();
-    const at = Date.now();
-    const block = await typeErrorsForTurn(host, touched).catch((err) => {
-      console.error("[agent-vm] turn-end typecheck failed:", (err as Error).message);
-      return null;
-    });
-    await emit("status", {
-      phase: "type_check",
-      durationMs: Date.now() - at,
-      files: touched.length,
-      errorsShown: block ? block.split("\n").filter((l) => /error TS\d+/.test(l)).length : 0,
-    });
-    return block;
-  };
-
-  const selfReviewBlock = async (budgetMs: number): Promise<string | null> => {
-    if (selfReviewed || !repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
-    selfReviewed = true;
-    const at = Date.now();
-    const { diff, porcelain } = await turnDiff(host, job.filesFromSha).catch(() => ({
-      diff: "",
-      porcelain: "",
-    }));
-    const block = formatSelfReview({ diff, porcelain });
-    await emit("status", {
-      phase: "self_review",
-      durationMs: Date.now() - at,
-      chars: block?.length ?? 0,
-    });
-    return block;
-  };
-
-  /** Auto-relecture du plan écrit ce tour (MIN-237) — cf. `plan-review.ts`. */
-  const planReviewBlock = async (budgetMs: number): Promise<string | null> => {
-    if (planReviewed || !planWrites.wrote || budgetMs < PLAN_REVIEW_MIN_BUDGET_MS) return null;
-    planReviewed = true;
-    const at = Date.now();
-    const block = await planReviewForTurn(host, planWrites.markdown).catch(() => null);
-    await emit("status", {
-      phase: "plan_review",
-      durationMs: Date.now() - at,
-      chars: block?.length ?? 0,
-    });
-    return block;
-  };
-
-  /** Contrôle de clôture du plan écrit ce tour (MIN-236) — cf. `plan-closure.ts`.
-   *  Le même que côté fonction : la garantie ne doit pas dépendre de `loop_in_vm`. */
-  const planClosureBlock = async (budgetMs: number): Promise<string | null> => {
-    if (planClosed || !planWrites.wrote || budgetMs < PLAN_CLOSURE_MIN_BUDGET_MS) return null;
-    planClosed = true;
-    const at = Date.now();
-    const block = await planClosureForTurn(host, planWrites.markdown).catch(() => null);
-    await emit("status", {
-      phase: "plan_closure",
-      durationMs: Date.now() - at,
-      chars: block?.length ?? 0,
-    });
-    return block;
-  };
 
   // ── La boucle ──────────────────────────────────────────────────────────────
   const result = await runAgentLoop({
@@ -654,18 +595,9 @@ export async function runVmTurn(
       subagents,
       chunkRemainingMs: remainingMs,
     }),
-    // Même chaîne et même ORDRE que côté fonction (cf. execute.ts pour le pourquoi
-    // de chaque rang) : relecture du plan avant sa clôture, pour que le grep voie
-    // les corrections que la relecture a fait faire.
-    onTurnEnd: async ({ budgetMs }) => {
-      if (editedPaths.size > 0) repoTouched = true;
-      return (
-        (await typeCheckBlock(budgetMs)) ??
-        (await selfReviewBlock(budgetMs)) ??
-        (await planReviewBlock(budgetMs)) ??
-        (await planClosureBlock(budgetMs))
-      );
-    },
+    // Le MÊME crochet que côté fonction, littéralement (MIN-240) : même chaîne,
+    // même ordre, mêmes budgets par bloc — cf. `turn-end.ts`.
+    onTurnEnd: turnEnd.run,
     // Le sommet de chaque round : on en profite pour sauvegarder, à une frontière
     // d'historique sûre (cf. `maybeSaveCheckpoint`).
     pullSteering: async () => {
@@ -717,7 +649,9 @@ export async function runVmTurn(
   const unbilledSubagentCost = subagents.settleUnbilled();
   await background.stopAll().catch(() => 0);
 
-  if (editedPaths.size > 0) repoTouched = true;
+  // Dernier relevé hors crochet : un tour sorti sans passer par la fin de tour
+  // (interruption, suspension) a quand même édité le dépôt.
+  turnEnd.noteEdits();
 
   // Le PUSH. Un échec ne perd pas le tour : il se dit, et le travail reste dans
   // la microVM (le tour suivant le re-poussera).

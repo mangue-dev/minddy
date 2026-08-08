@@ -31,7 +31,6 @@ import {
   commitAndPush,
   revParseHead,
   changedFiles,
-  turnDiff,
 } from "./repo-host";
 import { BackgroundJobs } from "./background";
 import {
@@ -62,24 +61,8 @@ import {
   fitCheckpoint,
   MAX_CHECKPOINT_BYTES,
 } from "./checkpoint-fit";
-import {
-  typeErrorsForTurn,
-  TYPECHECK_MIN_BUDGET_MS,
-} from "./diagnostics";
-import {
-  formatSelfReview,
-  SELF_REVIEW_MIN_BUDGET_MS,
-} from "./self-review";
-import {
-  newPlanWriteSink,
-  planClosureForTurn,
-  watchPlanWrites,
-  PLAN_CLOSURE_MIN_BUDGET_MS,
-} from "./plan-closure";
-import {
-  planReviewForTurn,
-  PLAN_REVIEW_MIN_BUDGET_MS,
-} from "./plan-review";
+import { newPlanWriteSink, watchPlanWrites } from "./plan-closure";
+import { makeTurnEndHook } from "./turn-end";
 import { toolOutputFileName } from "./command-output";
 import { usesApplyPatch } from "./patch";
 import {
@@ -1903,160 +1886,31 @@ export async function executeAgentRun(
     const resumed = subagents.resumeSuspended();
     if (resumed > 0) await emit("status", { phase: "subagent_resumed", count: resumed });
 
-    /** Le tour a-t-il édité le dépôt ? Verrou LATCHÉ, là où `editedPaths` se vide
-     *  à chaque type-check : après une relance, le tour a toujours édité, même si
-     *  le modèle n'a plus rien touché depuis. Semé depuis le checkpoint (MIN-210) :
-     *  le verrou porte sur le TOUR, pas sur le chunk qui l'exécute. */
-    let repoTouched = run.checkpoint?.repoTouched === true;
-    /** L'auto-relecture ne passe qu'UNE fois par chunk : elle sert à faire relire
-     *  le tour avant la réponse, pas à commenter chaque correctif qui suit. Celui-ci
-     *  reste bien PAR CHUNK, et ne voyage pas : le faire traverser priverait de
-     *  relecture le travail ajouté APRÈS une première passe. */
-    let selfReviewed = false;
     /** Le plan que ce chunk a écrit, noté au passage par `watchPlanWrites` : c'est
      *  lui que la relecture rend au modèle (MIN-237) et que le contrôle de clôture
      *  grep (MIN-236). Même découpage qu'`editedPaths` pour le type-check — le tool
      *  mute, les crochets de fin de tour lisent. */
     const planWrites = newPlanWriteSink();
-    /** La relecture du plan ne passe qu'UNE fois par chunk, comme l'auto-relecture
-     *  du diff : elle fait relire le document avant la réponse, pas commenter chaque
-     *  correctif qui suit. */
-    let planReviewed = false;
-    /** Le contrôle de clôture ne passe qu'UNE fois par chunk, comme l'auto-relecture :
-     *  il pose une question, il ne commente pas la réponse. */
-    let planClosed = false;
-
     /**
-     * Type-check de fin de tour. Se tait — et coûte alors un aller-retour shell de
-     * ~1 ms — dès que l'une des conditions manque : rien d'édité, pas de
-     * `tsconfig.json`, pas de `node_modules/.bin/tsc`, ou pas assez de budget mural
-     * pour absorber un check à froid (mesuré 22 s, cf. §3.3 du comparatif). Sinon,
-     * les erreurs partent au modèle et le tour repart (plafond tenu par la boucle).
-     * Best-effort de bout en bout : une panne du checker ne doit jamais empêcher un
-     * tour de se terminer.
-     */
-    const typeCheckBlock = async (budgetMs: number): Promise<string | null> => {
-      if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) return null;
-      const touched = [...editedPaths];
-      editedPaths.clear();
-      const startedAt = Date.now();
-      const block = await typeErrorsForTurn(host, touched).catch((err) => {
-        console.error("[agent-execute] turn-end typecheck failed:", (err as Error).message);
-        return null;
-      });
-      // Event `status` (neutre : invisible dans le fil, comptable en base) — c'est
-      // lui qui répond à « combien de tours se terminent avec des erreurs de typage
-      // introduites par l'agent ? », la mesure que R4 réclamait. `errorsShown` est
-      // le compte des erreurs SERVIES (le bloc est capé) : ce que le modèle a lu,
-      // pas ce que tsc a trouvé.
-      await emit("status", {
-        phase: "type_check",
-        durationMs: Date.now() - startedAt,
-        files: touched.length,
-        errorsShown: block ? block.split("\n").filter((l) => /error TS\d+/.test(l)).length : 0,
-      });
-      return block;
-    };
-
-    /**
-     * Auto-relecture de fin de tour : le diff du tour, injecté avant que l'agent ne
-     * réponde (cf. self-review.ts pour le pourquoi). Deux commandes git en lecture
-     * seule — l'index n'est jamais touché, la fin de tour reste seule à stager.
+     * Le dernier mot du harness : les quatre contrôles de fin de tour, leurs verrous
+     * et le budget de chacun, dans un module PARTAGÉ avec la microVM (MIN-240).
      *
-     * `filesFromSha` est la même baseline que le diff par tour émis au feed : elle
-     * couvre le travail poussé en WIP au milieu du chunk aussi bien que ce qui
-     * dort encore dans l'arbre de travail.
+     * Ils vivaient recopiés des deux côtés, ce qui rendait la garantie dépendante de
+     * `loop_in_vm` en pratique sinon en intention — et c'est comme ça que le même
+     * défaut de budget a affamé les deux crochets de plan dans les deux moteurs à la
+     * fois. Un seul exemplaire, un seul test.
      */
-    const selfReviewBlock = async (budgetMs: number): Promise<string | null> => {
-      if (selfReviewed || !repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
-      selfReviewed = true;
-      const startedAt = Date.now();
-      const { diff, porcelain } = await turnDiff(host, filesFromSha).catch(() => ({
-        diff: "",
-        porcelain: "",
-      }));
-      const block = formatSelfReview({ diff, porcelain });
-      await emit("status", {
-        phase: "self_review",
-        durationMs: Date.now() - startedAt,
-        chars: block?.length ?? 0,
-      });
-      return block;
-    };
-
-    /**
-     * Auto-relecture du plan écrit ce tour (MIN-237) : le document revient au modèle
-     * comme son diff lui revient, avec les questions qu'un relecteur poserait — et
-     * avec la seule d'entre elles que le harness sait trancher, l'existence des
-     * commandes promises (cf. plan-review.ts). Muet tant qu'aucun `write_issue_plan`
-     * n'a réussi, donc gratuit sur l'écrasante majorité des tours.
-     *
-     * Le déclencheur est le TOOL, pas `run.intent === "plan"` : le cas courant est un
-     * run ordinaire à qui l'utilisateur demande un plan en cours de route, et
-     * l'intention posée au lancement ne le dit pas.
-     */
-    const planReviewBlock = async (budgetMs: number): Promise<string | null> => {
-      if (planReviewed || !planWrites.wrote || budgetMs < PLAN_REVIEW_MIN_BUDGET_MS) return null;
-      planReviewed = true;
-      const startedAt = Date.now();
-      const block = await planReviewForTurn(host, planWrites.markdown).catch(() => null);
-      await emit("status", {
-        phase: "plan_review",
-        durationMs: Date.now() - startedAt,
-        chars: block?.length ?? 0,
-      });
-      return block;
-    };
-
-    /**
-     * Contrôle de CLÔTURE du plan écrit ce tour (MIN-236) : les identifiants du plan
-     * sont grepés pour de vrai, et les fichiers qui les contiennent sans être nommés
-     * reviennent au modèle. Même déclencheur et même verrou que la relecture, qui
-     * passe AVANT lui — d'où le rejeu des `edit_issue_text` dans le sink : ce qui est
-     * grepé, c'est le plan tel que la relecture l'a laissé.
-     */
-    const planClosureBlock = async (budgetMs: number): Promise<string | null> => {
-      if (planClosed || !planWrites.wrote || budgetMs < PLAN_CLOSURE_MIN_BUDGET_MS) return null;
-      planClosed = true;
-      const startedAt = Date.now();
-      const block = await planClosureForTurn(host, planWrites.markdown).catch(() => null);
-      await emit("status", {
-        phase: "plan_closure",
-        durationMs: Date.now() - startedAt,
-        chars: block?.length ?? 0,
-      });
-      return block;
-    };
-
-    /**
-     * Dernier mot du harness. Les erreurs de typage passent AVANT la relecture :
-     * elles sont concrètes et bloquantes, et servir un diff par-dessus un dépôt qui
-     * ne compile pas noierait le seul signal qui compte. Les deux crochets de plan
-     * ferment la marche — un tour qui écrit un plan n'édite en général rien, donc les
-     * deux premiers se taisent et ce sont eux qui parlent.
-     *
-     * La RELECTURE avant la CLÔTURE, et l'ordre porte du sens : le modèle corrige son
-     * plan (`edit_issue_text`, `append_to_plan`), et le grep de clôture tourne ensuite
-     * sur le plan corrigé — il ne rapportera pas comme oublié un fichier que la
-     * relecture vient de faire nommer. L'inverse aurait posé deux fois la même
-     * question.
-     *
-     * Ces deux-là consomment les DEUX relances qu'un tour s'accorde
-     * (`MAX_TURN_END_REENTRIES`, agent-loop.ts), ce qui est exactement leur emploi
-     * sur un tour de plan : il n'y a rien d'autre à injecter. Sur un tour MIXTE
-     * (des éditions ET un plan), les deux premiers crochets les mangent et ceux-ci se
-     * taisent — assumé : un tour qui code a son propre filet, et c'est le tour de plan
-     * pur qui n'en avait aucun.
-     */
-    const onTurnEnd = async ({ budgetMs }: { budgetMs: number }): Promise<string | null> => {
-      if (editedPaths.size > 0) repoTouched = true;
-      return (
-        (await typeCheckBlock(budgetMs)) ??
-        (await selfReviewBlock(budgetMs)) ??
-        (await planReviewBlock(budgetMs)) ??
-        (await planClosureBlock(budgetMs))
-      );
-    };
+    const turnEnd = makeTurnEndHook({
+      host,
+      emit,
+      editedPaths,
+      planWrites,
+      filesFromSha,
+      // Le verrou porte sur le TOUR, pas sur le chunk qui l'exécute : semé depuis le
+      // checkpoint (MIN-210), rendu à lui à la sortie.
+      repoTouched: run.checkpoint?.repoTouched === true,
+      logPrefix: "[agent-execute]",
+    });
 
     // Chrono de la boucle : c'est depuis ici que se mesure le budget restant d'un
     // sous-agent (`chunkRemainingMs`).
@@ -2127,7 +1981,7 @@ export async function executeAgentRun(
         subagents,
         chunkRemainingMs,
       }),
-      onTurnEnd,
+      onTurnEnd: turnEnd.run,
       pullSteering: () => pullPendingMessages(run.id),
       // Wakeup des sous-agents (MIN-112) : drainé au sommet de chaque round, comme
       // le steering. Le parent n'a jamais attendu — le rapport arrive tout seul.
@@ -2315,7 +2169,7 @@ export async function executeAgentRun(
       ...(editedPaths.size > 0
         ? { editedPaths: [...editedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX) }
         : {}),
-      ...(repoTouched ? { repoTouched: true } : {}),
+      ...(turnEnd.repoTouched() ? { repoTouched: true } : {}),
     };
     /**
      * Le checkpoint des mises au repos qui NE terminent PAS le tour — suspend et

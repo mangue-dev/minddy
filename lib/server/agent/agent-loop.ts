@@ -95,13 +95,22 @@ import {
  */
 const MAX_ROUNDS_PER_CHUNK = 150;
 /**
- * Garde-fou : relances du tour par le hook de fin de tour. DEUX, parce que le
- * hook porte maintenant deux préoccupations distinctes, chacune tirant au plus
- * une fois : les erreurs de typage (MIN-110) puis l'auto-relecture du diff
- * (self-review.ts). Le pire cas est donc « réponse → types → correction →
- * réponse → relecture → réponse », et le tour se termine quoi qu'il arrive.
+ * Garde-fou : relances du tour par le hook de fin de tour. UN GARDE-FOU, et rien
+ * d'autre — c'est tout le sens de MIN-240.
+ *
+ * Il valait DEUX, à l'époque où le hook portait deux préoccupations. Il en porte
+ * quatre depuis (types, diff, relecture de plan, clôture de plan) et la constante
+ * n'avait pas bougé : sur un tour qui édite du code ET écrit un plan, les deux
+ * premières mangeaient les deux relances et les deux crochets de plan n'étaient
+ * jamais appelés une seule fois. Le plafond comptait des relances, la chaîne compte
+ * des blocs — et c'est le plafond qui décidait, en silence, lesquels tournaient.
+ *
+ * Le budget de chaque bloc appartient désormais au hook ([turn-end.ts](turn-end.ts)),
+ * qui est le seul à savoir ce qu'il enchaîne : son pire cas est 2 type-checks + 3
+ * contrôles à passage unique, soit cinq. Ce plafond-ci est donc au-dessus, et
+ * délibérément — il ne borne plus qu'un hook qui bouclerait pour de bon.
  */
-const MAX_TURN_END_REENTRIES = 2;
+const MAX_TURN_END_REENTRIES = 8;
 /**
  * Garde-fou : relances du tour sur une réponse INCOMPLÈTE (MIN-203) — coupée au
  * plafond de tokens, ou vide. Deux, comme le hook de fin de tour : un modèle qui
@@ -1381,9 +1390,9 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
 
   let round = 0;
   let compactions = 0;
-  // Relances de fin de tour déjà consommées (MIN-110) : la première sert à faire
-  // corriger, le check suivant vérifie le correctif — puis le tour se termine,
-  // erreurs restantes ou non. Compté par CHUNK, comme les compactions.
+  // Relances de fin de tour déjà consommées (MIN-110), comptées par CHUNK comme les
+  // compactions. Ce compteur ne CHOISIT rien : quel contrôle tourne et combien de
+  // fois est la décision du hook (MIN-240) — ici, seul un hook qui boucle est arrêté.
   let turnEndReentries = 0;
   // Relances du tour sur une réponse coupée ou vide (MIN-203). Compté par CHUNK,
   // comme les deux au-dessus.

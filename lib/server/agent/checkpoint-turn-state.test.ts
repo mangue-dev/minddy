@@ -159,6 +159,45 @@ function valueReads(root: ts.Node): Set<string> {
   return names;
 }
 
+/**
+ * L'argument nommé `prop` passé à l'appel de `callee`. C'est ainsi que `repoTouched`
+ * est semé depuis MIN-240 : le verrou appartient au crochet de fin de tour
+ * (`makeTurnEndHook`, partagé avec la microVM) et non plus à une `let` du fichier.
+ *
+ * ANCRÉ SUR L'APPEL, et pas sur « un `repoTouched:` quelque part » : `execute.ts` en
+ * porte trois — la graine du crochet, celle du payload de la microVM, et la clé
+ * ÉCRITE au checkpoint (`{ repoTouched: true }`). Une recherche par nom seul se
+ * serait satisfaite de n'importe laquelle, et ce test aurait continué de passer
+ * pendant que la graine du crochet disparaissait. Vérifié : sans l'ancre, il passe
+ * en effet.
+ */
+function argOf(callee: string, prop: string): string | undefined {
+  let found: string | undefined;
+  const visit = (node: ts.Node) => {
+    if (!found && ts.isCallExpression(node) && node.expression.getText() === callee) {
+      const arg = node.arguments[0];
+      if (arg && ts.isObjectLiteralExpression(arg)) {
+        for (const p of arg.properties) {
+          if (ts.isPropertyAssignment(p) && ts.isIdentifier(p.name) && p.name.text === prop) {
+            found = p.initializer.getText();
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
+/** Où chaque moitié de l'état de tour est semée, dans la forme qui est la sienne. */
+const TURN_STATE_SEEDS: Record<(typeof TURN_STATE)[number], () => string | undefined> = {
+  // Une liaison locale : `const editedPaths = new Set(run.checkpoint?.editedPaths ?? [])`.
+  editedPaths: () => decls.get("editedPaths")?.initializer?.getText(),
+  // Un argument du crochet de fin de tour, qui possède le verrou depuis MIN-240.
+  repoTouched: () => argOf("makeTurnEndHook", "repoTouched"),
+};
+
 const TURN_STATE = ["editedPaths", "repoTouched"] as const;
 
 describe("état de tour dans le checkpoint (execute.ts)", () => {
@@ -202,10 +241,10 @@ describe("état de tour dans le checkpoint (execute.ts)", () => {
 
   it("les deux liaisons du chunk sont SEMÉES depuis le checkpoint", () => {
     for (const name of TURN_STATE) {
-      const decl = decls.get(name);
-      expect(decl, `\`${name}\` introuvable dans execute.ts`).toBeDefined();
+      const seed = TURN_STATE_SEEDS[name]();
+      expect(seed, `\`${name}\` n'est semé nulle part dans execute.ts`).toBeDefined();
       expect(
-        decl!.initializer!.getText(),
+        seed,
         `\`${name}\` doit repartir de \`run.checkpoint\` — sinon l'état de tour est écrit ` +
           "dans le checkpoint mais jamais relu, et le bug reste entier.",
       ).toContain("run.checkpoint");
