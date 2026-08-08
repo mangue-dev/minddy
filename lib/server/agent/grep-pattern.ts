@@ -15,6 +15,17 @@ export const LITERAL_RETRY_NOTE =
   "(pattern retried as a literal string — it was not a valid POSIX regex)";
 
 /**
+ * Réponse quand `path`/`glob` n'ont sélectionné AUCUN fichier (MIN-226).
+ *
+ * Elle ne dit surtout pas « aucune correspondance » : la recherche n'a rien lu,
+ * donc elle ne sait rien du code. Le mot compte plus que le mécanisme — c'est
+ * cette phrase-là que le modèle relit dans son contexte au moment de conclure,
+ * et « no matches » l'autorisait à conclure sur du code jamais ouvert.
+ */
+export const NO_FILES_IN_SCOPE_NOTE =
+  "(no file matched the 'path'/'glob' filter — nothing was searched, so this says NOTHING about whether the pattern exists. Re-run without the filter, or check it: 'path' is a DIRECTORY, and to search a single file you pass it as 'path' and leave 'glob' empty.)";
+
+/**
  * Le stderr dit-il « ton MOTIF n'est pas une regex valide » ?
  *
  * Volontairement STRICT : on ne retente qu'un motif refusé, jamais une option

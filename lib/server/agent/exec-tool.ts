@@ -30,7 +30,7 @@ import {
 import { Subagents } from "./subagent";
 import { pruneToolOutputs } from "./prune";
 import { resolveWithin } from "./repo-path";
-import { LITERAL_RETRY_NOTE } from "./grep-pattern";
+import { LITERAL_RETRY_NOTE, NO_FILES_IN_SCOPE_NOTE } from "./grep-pattern";
 import {
   formatRunCommandResult,
   fullOutputDocument,
@@ -381,6 +381,13 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         // Motif relancé en littéral : on le DIT, sinon le modèle ne saurait pas
         // que ce qu'il croyait être une regex a été cherché tel quel (MIN-109).
         const note = r.retriedAsLiteral ? `${LITERAL_RETRY_NOTE}\n` : "";
+        // Périmètre vide ≠ absence (MIN-226) : rien n'a été LU, et le dire est
+        // la moitié utile de la réponse. `success: false` en plus du mot — une
+        // recherche qui n'a rien ouvert n'a pas abouti, et l'échec se voit dans
+        // le fil comme dans les mesures.
+        if (r.noFilesInScope) {
+          return { result: note + NO_FILES_IN_SCOPE_NOTE, success: false };
+        }
         return { result: note + (r.output || "(no matches)"), success: true };
       }
       case "edit_file": {

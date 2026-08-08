@@ -1472,14 +1472,16 @@
     "createInProject": "Créer dans {project}",
     "createInOtherProject": "Créer dans un autre projet",
     "createdInProjectToast": "Objectif créé dans {project}.",
-    "entity": "Objectif",
     "leadFieldLabel": "Responsable",
     "viewLinkedIssues": "Voir les {issues}",
     "dictateFailed": "Numo n'a pas pu traiter la dictée.",
     "numoWorking": "Numo remplit l'objectif…",
     "numoUpdating": "Numo met à jour l'objectif…",
     "dictationInFlight": "Dictée en cours — un instant.",
-    "dictateEditTooltip": "Modifier l'objectif à la voix"
+    "dictateEditTooltip": "Modifier l'objectif à la voix",
+    "filterPlaceholder": "Filtrer {count, plural, =0 {les objectifs} one {l'objectif} other {les # objectifs}}…",
+    "noSelection": "Sélectionnez un objectif.",
+    "backToList": "Retour à la liste"
   },
   "Drafts": {
     "recent": "Brouillons récents",
@@ -1832,7 +1834,7 @@
       "s": "C'est une petite tâche (S). Esquisse d'abord un plan léger seulement si le changement le justifie, puis implémente-le et vérifie ton travail.",
       "xl": "C'est une grosse tâche (XL). Commence par écrire un plan d'implémentation complet sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Puis ARRÊTE-TOI et demande s'il faut commencer l'implémentation maintenant ; ne code rien tant que je n'ai pas confirmé.",
       "default": "Commence par écrire un plan d'implémentation clair sur le ticket — un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers/fonctions exacts à toucher, et une étape de vérification. Une fois le plan en place, implémente-le et vérifie ton travail.",
-      "writePlan": "Ton seul travail ici est d'écrire le plan d'implémentation de ce ticket. Explore le code, puis rédige un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers et fonctions exacts à toucher, et une étape de vérification. Enregistre le plan sur le ticket, puis ARRÊTE-TOI : n'implémente rien tant que je ne te l'ai pas demandé.",
+      "writePlan": "Ton seul travail ici est d'écrire le plan d'implémentation de ce ticket. Explore le code, puis rédige un court contexte (objectif, approche), des tâches ordonnées à cocher nommant les fichiers et fonctions exacts à toucher, et une étape de vérification. Grep tout ce que tu supprimes ou renommes et nomme chaque appelant : un plan qui en oublie un se lit exactement comme un plan complet. Enregistre le plan sur le ticket, puis ARRÊTE-TOI : n'implémente rien tant que je ne te l'ai pas demandé.",
       "reviewPlan": "Ce ticket a déjà un plan d'implémentation : ton seul travail ici est de le VÉRIFIER, pas d'en écrire un nouveau ni de l'implémenter. Lis-le, puis reprends-le tâche par tâche face au code réel — chacune est-elle toujours juste (bons fichiers, bonne approche), toujours nécessaire, et dans le bon ordre ? Manque-t-il une étape ? Corrige ce qui a dérivé, retire ce que le code ne justifie plus, ajoute ce qui manque, et laisse les tâches déjà terminées et leur avancée intactes. Enregistre le plan corrigé sur le ticket, puis ARRÊTE-TOI en me disant ce que tu as changé.",
       "verifyImplementation": "Le travail sur ce ticket a déjà été fait, au moins en partie : ton seul travail ici est de VÉRIFIER cette implémentation, pas d'en écrire une nouvelle. Commence par ce qui avait été demandé — le ticket, son plan et ses commentaires, où les écarts au plan se sont discutés — puis confronte-les au code réel : chaque tâche cochée est-elle vraiment faite, et faite comme prévu ? Signale les écarts, en me disant lequel des deux a raison (le code est parfois la meilleure réponse, le plan n'est pas sacré). Cherche ensuite les bugs : cas limites cassés, états faux ou oubliés, appels que le changement n'a pas mis à jour, ce que le plan demandait et que le code a silencieusement sauté. Corrige ceux que tu peux prouver en lisant le code, et vérifie chaque correction (tests, typecheck, lint du dépôt) ; ce que tu soupçonnes sans pouvoir le prouver, signale-le au lieu de le « corriger » — une correction spéculative sur du code qui marche coûte plus cher que le bug imaginé. Ne refactore rien qui fonctionne, reste dans le périmètre du ticket, et termine en me disant ce que tu as vérifié, corrigé et laissé tel quel.",
       "chainVerifyPlan": "Ce ticket a déjà un plan d'implémentation : ton seul travail ici est de le VÉRIFIER, pas d'en écrire un nouveau ni de l'implémenter. Lis-le, puis reprends-le tâche par tâche face au code réel — chacune est-elle toujours juste (bons fichiers, bonne approche), toujours nécessaire, et dans le bon ordre ? Manque-t-il une étape ? Corrige ce qui a dérivé, retire ce que le code ne justifie plus, ajoute ce qui manque, et laisse les tâches déjà terminées et leur avancée intactes. Enregistre le plan corrigé sur le ticket, puis ARRÊTE-TOI en me disant ce que tu as changé. Appelle ensuite report_verdict UNE SEULE FOIS, en toute dernière action : `ok` à vrai si le plan est solide et implémentable tel quel, à faux sinon — et dans ce cas, mets dans `blockers` ce qui doit changer d'abord. Une chaîne automatisée lit ce verdict pour décider de la suite ; sans lui, rien n'avance.",

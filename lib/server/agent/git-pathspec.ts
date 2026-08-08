@@ -16,6 +16,20 @@
  * ça, jusqu'à `grep "Issue"` qui répondait qu'il n'y avait rien. On développe donc
  * les accolades NOUS-MÊMES : une alternative = un pathspec, et l'union OR de git
  * (le piège du dessus) donne ici exactement la bonne sémantique.
+ *
+ * TROISIÈME PIÈGE, même famille, mesuré sur MIN-226 : `path` désigne un SOUS-ARBRE,
+ * et l'intersection le suppose. Quand le modèle veut chercher dans UN fichier, il
+ * remplit les deux champs du même chemin (`path` = `glob` = `components/foo.tsx`)
+ * — la lecture naturelle de « où chercher » + « quoi chercher ». On fabriquait
+ * alors `:(glob)components/foo.tsx/components/foo.tsx`, qui ne matche rien : git
+ * sort en 1, le tool répond « (no matches) », et le modèle enregistre que ce
+ * fichier ne contient pas ce qu'il y cherchait. Sur le run qui a écrit le plan de
+ * MIN-226, les 5 sondes de cette forme ont menti — dont celle qui aurait trouvé
+ * le troisième appelant du composant qu'on supprimait.
+ *
+ * Un `path` de FICHIER ne s'intersecte donc plus : il gagne, et le glob tombe.
+ * C'est la seule direction sûre — au pire on cherche plus large que demandé, et
+ * jamais on ne répond « rien » sur du code qui existe.
  */
 
 /** Combine un sous-arbre et un glob en un chemin unique (glob dans le sous-arbre). */
@@ -130,6 +144,47 @@ function globAlternatives(glob: string): string[] {
 }
 
 /**
+ * Métacaractères de glob : leur présence dit qu'on parle d'un MOTIF, pas d'un chemin.
+ *
+ * `[` et `]` en sont volontairement ABSENTS. Ce sont bien des métacaractères de
+ * glob (une classe de caractères), mais dans un dépôt Next.js ils écrivent
+ * d'abord un segment de route — `app/(app)/projects/[id]/page.tsx` — et les
+ * compter comme motif rendait la garde aveugle au chemin même derrière lequel le
+ * bug s'était caché. Un `path` qui serait une vraie classe de caractères sans
+ * aucun `*`/`?`/`{}` est un cas de laboratoire ; une route dynamique est le cas
+ * courant.
+ */
+const GLOB_META = /[*?{}]/;
+
+/**
+ * `path` désigne-t-il un fichier précis plutôt qu'un sous-arbre ? Question posée
+ * SANS toucher au disque (ce module est pur), donc tranchée sur la forme : aucun
+ * métacaractère, et un dernier segment qui porte une extension.
+ *
+ * Se tromper ici est sans gravité, et c'est voulu : un faux positif (un dossier
+ * nommé `app/v1.2`) fait tomber le glob et cherche dans tout le sous-arbre —
+ * plus large que demandé, jamais moins. C'est l'inverse exact du défaut qu'on
+ * répare, et il n'y a pas de symétrie à chercher entre les deux.
+ */
+function looksLikeFile(path: string): boolean {
+  if (GLOB_META.test(path)) return false;
+  const last = path.replace(/\/+$/, "").split("/").pop() ?? "";
+  return /[^.]\.[A-Za-z0-9]+$/.test(last);
+}
+
+/**
+ * Le glob doit-il être ABANDONNÉ au profit du seul `path` ? Deux cas, et tous
+ * deux veulent dire « cherche là-dedans » :
+ *
+ *  - `path` nomme un fichier — il n'y a rien à filtrer sous un fichier ;
+ *  - les deux champs portent le même chemin — l'imbriquer sous lui-même ne
+ *    matcherait rien, que ce chemin soit un fichier ou un dossier.
+ */
+function globIsMoot(path: string, glob: string): boolean {
+  return path === glob || looksLikeFile(path);
+}
+
+/**
  * Pathspecs (NON quotés) pour `git grep`. Intersecte `path` et `glob` quand les
  * deux sont fournis, et rend UN pathspec par alternative d'accolade (union OR de
  * git). Tableau à quoter par l'appelant.
@@ -137,7 +192,7 @@ function globAlternatives(glob: string): string[] {
 export function grepPathspecs(path?: string | null, glob?: string | null): string[] {
   const p = path?.trim();
   const g = glob?.trim();
-  if (g) {
+  if (g && !(p && globIsMoot(p, g))) {
     return globAlternatives(g).map((alt) => `:(glob)${p ? joinWithin(p, alt) : alt}`);
   }
   if (p) return [p];
@@ -147,5 +202,8 @@ export function grepPathspecs(path?: string | null, glob?: string | null): strin
 /** Pathspecs (NON quotés) pour `git ls-files` (tool `glob`) — au moins un. */
 export function globPathspecs(pattern: string, path?: string | null): string[] {
   const p = path?.trim();
+  // Même garde qu'au-dessus : `glob(pattern, path)` où `path` est un fichier
+  // (ou le motif lui-même) ne peut désigner que ce fichier.
+  if (p && globIsMoot(p, pattern.trim())) return [p];
   return globAlternatives(pattern).map((alt) => `:(glob)${p ? joinWithin(p, alt) : alt}`);
 }

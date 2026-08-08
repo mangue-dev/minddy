@@ -59,6 +59,51 @@ describe("grepPathspecs", () => {
       ":(glob)**/*.md",
     ]);
   });
+
+  /**
+   * MIN-226 — la forme que le modèle écrit quand il veut chercher DANS UN
+   * FICHIER : les deux champs portent le chemin, lecture naturelle de « où
+   * chercher » + « quoi chercher ». Imbriqué, ça donnait
+   * `:(glob)components/foo.tsx/components/foo.tsx` — aucun match, git en code 1,
+   * et « (no matches) » sur du code qui existe. Cinq sondes de cette forme ont
+   * menti sur le run qui a écrit le plan de MIN-226.
+   */
+  it("path de FICHIER : le glob tombe, on cherche dans ce fichier", () => {
+    expect(
+      grepPathspecs("components/objective-side-panel.tsx", "components/objective-side-panel.tsx"),
+    ).toEqual(["components/objective-side-panel.tsx"]);
+  });
+
+  /**
+   * Le cas EXACT du run de MIN-226 : la sonde sur la page board. Les crochets
+   * d'une route dynamique sont des métacaractères de glob, et les compter comme
+   * tels rendait la garde aveugle au seul chemin qui comptait.
+   */
+  it("path de fichier + glob quelconque : le fichier gagne, crochets de route compris", () => {
+    expect(grepPathspecs("app/(app)/projects/[id]/page.tsx", "**/*.{ts,tsx}")).toEqual([
+      "app/(app)/projects/[id]/page.tsx",
+    ]);
+  });
+
+  it("path == glob sur un DOSSIER : même piège, même garde", () => {
+    expect(grepPathspecs("components", "components")).toEqual(["components"]);
+  });
+
+  it("un dossier reste un dossier : l'intersection normale ne bouge pas", () => {
+    expect(grepPathspecs("lib/server/agent", "**/*.ts")).toEqual([
+      ":(glob)lib/server/agent/**/*.ts",
+    ]);
+  });
+
+  // Le point de la garde n'est PAS de deviner juste, c'est de ne jamais rétrécir :
+  // un `path` porteur de métacaractères reste un motif, et s'intersecte.
+  it("un path qui contient un métacaractère n'est pas pris pour un fichier", () => {
+    expect(grepPathspecs("app/**/api", "*.ts")).toEqual([":(glob)app/**/api/**/*.ts"]);
+  });
+
+  it("un dossier sans extension n'est pas pris pour un fichier", () => {
+    expect(grepPathspecs("lib/v2", "*.ts")).toEqual([":(glob)lib/v2/**/*.ts"]);
+  });
 });
 
 describe("globPathspecs", () => {
@@ -79,6 +124,12 @@ describe("globPathspecs", () => {
       ":(glob)**/*.ts",
       ":(glob)**/*.tsx",
       ":(glob)**/*.md",
+    ]);
+  });
+
+  it("path de FICHIER : ce fichier, et pas un pathspec imbriqué (MIN-226)", () => {
+    expect(globPathspecs("**/*.tsx", "components/secondary-sidebar.tsx")).toEqual([
+      "components/secondary-sidebar.tsx",
     ]);
   });
 });

@@ -2,7 +2,15 @@
 
 import { Mic, Square } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import {
   Popover,
   PopoverContent,
@@ -35,7 +43,14 @@ const SPEECH_PEAK_THRESHOLD = 20;
 
 type DictateStatus = "idle" | "starting" | "recording" | "processing";
 
+/** La commande du bouton, pour qui l'a rangé ailleurs (voir `hideWhenIdle`). */
+export interface DictateButtonHandle {
+  /** Démarre la prise, ou l'arrête si elle tourne — exactement le clic. */
+  toggle: () => void;
+}
+
 export interface DictateButtonProps {
+  ref?: Ref<DictateButtonHandle>;
   /** Called with the transcribed text when recording completes. */
   onTranscription: (text: string) => void;
   /**
@@ -76,6 +91,14 @@ export interface DictateButtonProps {
    * closing here throws the take away.
    */
   onProcessingChange?: (processing: boolean) => void;
+  /**
+   * Le bouton n'est plus la porte d'entrée du geste — une entrée de menu l'est
+   * (page Objectifs, MIN-226). Il reste MONTÉ au repos, simplement invisible :
+   * le magnétophone, le chrono, la garde de silence et l'ancre du popover
+   * vivent ici, et le démonter perdrait la prise en cours. Il reparaît de
+   * lui-même dès qu'il enregistre — c'est alors le bouton d'arrêt.
+   */
+  hideWhenIdle?: boolean;
   className?: string;
 }
 
@@ -139,6 +162,7 @@ function pickRecorderMimeType(): string | undefined {
 }
 
 export function DictateButton({
+  ref,
   onTranscription,
   uploadAudio,
   floating = false,
@@ -146,6 +170,7 @@ export function DictateButton({
   tooltipLabel,
   shortcutKey,
   onProcessingChange,
+  hideWhenIdle = false,
   className,
 }: DictateButtonProps) {
   const t = useTranslations("Dictate");
@@ -409,6 +434,8 @@ export function DictateButton({
     }
   }, [disabled, startRecording, status, stopRecording]);
 
+  useImperativeHandle(ref, () => ({ toggle: handleClick }), [handleClick]);
+
   // Keyboard shortcut: toggle recording on `shortcutKey`. Modifiers must match
   // EXACTLY (so ⌘⇧D never fires on ⌘D), and no key-repeat. A bare key stands
   // down while the user is typing — it would type instead; a combo carries its
@@ -483,6 +510,10 @@ export function DictateButton({
                   "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
                   isRecording && "text-brand",
                   floating && "absolute bottom-2 right-2 z-10",
+                  // `display:none` et non un démontage : l'élément reste l'ancre
+                  // du popover, et il redevient visible dans le même rendu que
+                  // celui qui l'ouvre (le statut a déjà quitté « idle »).
+                  hideWhenIdle && !isBusy && "hidden",
                   className,
                 )}
               >

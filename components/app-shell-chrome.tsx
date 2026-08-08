@@ -41,7 +41,6 @@ import { issuesQueryFn } from "@/lib/issues-api";
 import { useSearchIndex } from "@/lib/use-search-index";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import { useMembersQuery } from "@/lib/use-members-query";
 import { useAllPullRequestsQuery, useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-query";
@@ -121,16 +120,9 @@ function capForMobile<T extends { project_id: string }>(
   return capped.length === rows.length ? rows : capped;
 }
 
-// The objective side panel is heavy (markdown editor + activity timeline), so
-// it's deferred like the create dialogs — the chunk loads the first time an
-// objective is opened from the palette, not in every route's initial bundle.
-const ObjectiveSidePanel = dynamic(
-  () => import("@/components/objective-side-panel").then((m) => m.ObjectiveSidePanel),
-  { ssr: false }
-);
-
-// Même parti pris pour l'export CSV : un dialogue qu'on ouvre depuis ⌘K quelques
-// fois dans la vie d'un compte n'a rien à faire dans le bundle de chaque page.
+// L'export CSV est différé comme les dialogues de création : un dialogue qu'on
+// ouvre depuis ⌘K quelques fois dans la vie d'un compte n'a rien à faire dans le
+// bundle de chaque page.
 const ExportIssuesDialog = dynamic(
   () => import("@/components/export-issues-dialog").then((m) => m.ExportIssuesDialog),
   { ssr: false }
@@ -357,19 +349,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     enabled: !!currentProjectId,
   });
 
-  // Objectives feed both the palette list and the in-place side panel below.
-  // useObjectivesQuery shares the ["objectives", projectId] cache (kept fresh by
-  // realtime) and hands us the update/delete mutations the panel needs.
-  const {
-    objectives: projectObjectives,
-    loading: objectivesLoading,
-    updateObjective,
-    deleteObjective,
-  } = useObjectivesQuery(currentProjectId);
-  const { members: projectMembers } = useMembersQuery(
-    currentProjectId,
-    !!currentProjectId
-  );
+  // Objectives feed the palette list. useObjectivesQuery shares the
+  // ["objectives", projectId] cache, kept fresh by realtime — les lignes du
+  // projet courant sont donc exactes, là où l'index de recherche est un
+  // instantané.
+  const { objectives: projectObjectives, loading: objectivesLoading } =
+    useObjectivesQuery(currentProjectId);
 
   // Cross-project search (MIN-91): every ticket and objective of every project,
   // so ⌘K finds them from any page. Loaded once per tab on browser idle (or on
@@ -399,16 +384,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ),
     [searchIndex, currentProjectId, projectObjectives, objectivesLoading]
   );
-
-  // Objective whose side panel is open, driven by the palette. Opening it here
-  // (rather than navigating to /objectives?open=) keeps the user on the current
-  // page — the panel just slides over it. `panelMounted` latches on first open
-  // so the deferred chunk loads lazily yet the slide-out animation still plays.
-  const [panelObjectiveId, setPanelObjectiveId] = useState<string | null>(null);
-  const [panelMounted, setPanelMounted] = useState(false);
-  const panelObjective = panelObjectiveId
-    ? projectObjectives.find((o) => o.id === panelObjectiveId) ?? null
-    : null;
 
   // Triage is a hidden issue status — the sidebar counter derives from the
   // same issues cache the board and search already keep fresh.
@@ -942,11 +917,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         });
       }
 
-      // Un objectif du projet courant ouvre son panneau latéral en place —
-      // l'utilisateur reste sur sa page (ObjectiveSidePanel est monté plus bas
-      // et ne porte que les données du projet courant). Un objectif d'ailleurs
-      // navigue vers la page objectifs de SON projet, sur le deep-link des
-      // notifications.
+      // Un objectif s'ouvre sur SA page (MIN-226) : c'est un objet qu'on vient
+      // voir, plus un panneau qui se posait par-dessus la page courante. Même
+      // lien que les notifications, quel que soit le projet.
       if (objectives.length > 0) {
         groups.push({
           key: "objectives",
@@ -963,14 +936,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 meta: projectChip(project),
                 metaText: project.name,
                 contextId: o.project_id,
-                onSelect: () => {
-                  if (o.project_id === currentProjectId) {
-                    setPanelObjectiveId(o.id);
-                    setPanelMounted(true);
-                    return;
-                  }
-                  router.push(`/projects/${o.project_id}/objectives?open=${o.id}`);
-                },
+                onSelect: () =>
+                  router.push(`/projects/${o.project_id}/objectives?open=${o.id}`),
               },
             ];
           }),
@@ -979,7 +946,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
       return groups;
     },
-    [projectById, currentProjectId, router, t, ti]
+    [projectById, router, t, ti]
   );
 
   // Desktop: the full list, built only while the palette is open — closed, it
@@ -1358,22 +1325,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           open={exportOpen}
           onOpenChange={setExportOpen}
           defaultProjectId={currentProjectId}
-        />
-      )}
-      {/* Objective side panel opened from the command palette — overlays the
-          current page (Radix portals to body, so placement here is layout-safe). */}
-      {currentProject && panelMounted && (
-        <ObjectiveSidePanel
-          objective={panelObjective}
-          open={!!panelObjective}
-          onOpenChange={(next) => {
-            if (!next) setPanelObjectiveId(null);
-          }}
-          projectId={currentProject.id}
-          members={projectMembers}
-          issues={projectIssues ?? []}
-          onUpdate={updateObjective}
-          onDelete={deleteObjective}
         />
       )}
     </AppShell>

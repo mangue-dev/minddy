@@ -717,6 +717,20 @@ export interface GrepResult {
   error?: string;
   /** Le motif n'était pas une regex valide : relancé en littéral (MIN-109). */
   retriedAsLiteral?: boolean;
+  /**
+   * Aucun match ET aucun fichier dans le périmètre : `path`/`glob` n'ont
+   * sélectionné AUCUN fichier, donc la recherche n'a rien lu (MIN-226).
+   *
+   * C'est la distinction qui manquait. « Aucune correspondance » se lit comme un
+   * fait vérifié sur le code — le modèle en tire une conclusion et passe à la
+   * suite — alors qu'un périmètre vide ne dit rien du tout, sinon que le filtre
+   * était faux. Les deux sortaient par la même phrase, et un filtre malformé
+   * mentait donc en silence, indiscernable d'une vraie absence : c'est comme ça
+   * que le plan de MIN-226 a « vérifié » qu'un fichier n'appelait pas ce qu'il
+   * appelait. Une correction de forme (accolades en MIN-116, `path` de fichier
+   * en MIN-226) referme UNE porte ; celle-ci referme la classe.
+   */
+  noFilesInScope?: boolean;
 }
 
 /**
@@ -752,6 +766,16 @@ export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepR
   // git grep : 0 = matchs, 1 = aucun match, ≥2 = ERREUR (regex/option invalide…).
   if (res.exitCode >= 2) {
     return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
+  }
+  if (res.exitCode === 1 && specs.length > 0) {
+    // Rien trouvé SOUS UN FILTRE : le filtre a-t-il seulement retenu un fichier ?
+    // Une seule commande, sur le seul chemin où la question se pose.
+    const listed = await host.exec(
+      `git ls-files --cached --others --exclude-standard -- ${specs.join(" ")}`,
+    );
+    if (listed.exitCode === 0 && listed.stdout.trim() === "") {
+      return { output: "", ok: true, retriedAsLiteral, noFilesInScope: true };
+    }
   }
   return { output: capGrepLines(res.stdout, opts.headLimit), ok: true, retriedAsLiteral };
 }
@@ -814,6 +838,11 @@ async function grepOutside(
   opts: GrepOptions,
   absPath: string,
 ): Promise<GrepResult> {
+  // `--include` de GNU grep ne développe pas les accolades non plus : une
+  // alternative = un `--include` (ils s'unissent), comme les pathspecs git.
+  const includes = opts.glob
+    ? expandBraces(opts.glob).map((alt) => `--include=${sq(alt)}`)
+    : [];
   const build = (literal: boolean) => {
     const flags = [
       "--color=never",
@@ -822,17 +851,24 @@ async function grepOutside(
       "-r",
       "-H",
       ...grepModeFlags(opts),
+      ...includes,
     ];
-    // `--include` de GNU grep ne développe pas les accolades non plus : une
-    // alternative = un `--include` (ils s'unissent), comme les pathspecs git.
-    if (opts.glob) {
-      for (const alt of expandBraces(opts.glob)) flags.push(`--include=${sq(alt)}`);
-    }
     return `grep ${flags.join(" ")} -e ${sq(opts.pattern)} -- ${sq(absPath)}`;
   };
   const { res, retriedAsLiteral } = await runGrepWithLiteralFallback(host, build, opts);
   if (res.exitCode >= 2) {
     return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
+  }
+  if (res.exitCode === 1 && includes.length > 0) {
+    // Même question que côté dépôt, posée avec le MÊME filtre : un motif qui
+    // matche n'importe quelle ligne non vide. Ce qui reste est exactement le
+    // périmètre, sans avoir à réinventer la sémantique de `--include`.
+    const probe = await host.exec(
+      `grep --color=never -I -r -l -E ${includes.join(" ")} -e ${sq(".")} -- ${sq(absPath)}`,
+    );
+    if (probe.stdout.trim() === "") {
+      return { output: "", ok: true, retriedAsLiteral, noFilesInScope: true };
+    }
   }
   return { output: capGrepLines(res.stdout, opts.headLimit), ok: true, retriedAsLiteral };
 }

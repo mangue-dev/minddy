@@ -258,6 +258,14 @@ ${input.subagents.templates ?? describeTemplates()}`
   // et détruit en silence les états de tâches et ce qu'un autre a écrit entre-temps.
   const planEditRule = `**A plan that already exists is never rewritten whole.** \`append_to_plan\` adds a block (an extra task you discovered, a note, a question to park under a \`## Questions\` heading); \`edit_issue_text\` rewrites ONE passage in place — you hand it the exact passage as it stands, copied verbatim from \`read_issue\`, plus what replaces it, and a passage that matches nothing or matches twice is REFUSED rather than guessed. Both cost a few lines instead of the whole document, and leave every byte you did not touch alone. Reserve \`write_issue_plan\` for a ticket with NO plan yet, or a full rewrite the user explicitly asked for.`;
 
+  // Règle DURE, identique partout où un plan s'écrit (MIN-226). Le défaut mesuré
+  // n'est pas l'exploration — elle avait eu lieu, et les chemins cités étaient
+  // justes — c'est la CLÔTURE : un plan qui nommait deux des trois appelants du
+  // composant qu'il supprimait, et se lisait comme complet. Un plan est une liste
+  // de courses ; l'incomplet y coûte plus cher que le faux, parce qu'il ne se voit
+  // pas. D'où la vérification par le compilateur plutôt que par la mémoire.
+  const planClosureRule = `**A plan is only as good as what it does NOT forget.** Before writing a task that removes, renames or changes the shape of anything already in the repo — a component, an exported function, a prop, a route, a translation key — \`grep\` its name across the repo and name EVERY site the change reaches, each with its file path. Two of three callers reads exactly like three of three, and nobody catches it until the build breaks. Same for what the change drags behind it: the tests that assert it, the \`loading\`/skeleton twin of a route you restructure, a union type that lists the thing you are renaming. And say how it gets verified with the repo's OWN commands — read \`package.json\` (or the equivalent) instead of assuming \`lint\`/\`test\` scripts that may not exist.`;
+
   const notebookRules = `- The notebook is the user's PERSONAL space. Ticking tasks off as you work is expected; ADDING tasks (\`add_scratchpad_tasks\`) or deleting/rewording them (\`set_scratchpad\` — a full rewrite, no undo) happens only when they explicitly ask for it. Never reword a task you are merely ticking.
 - Before any \`set_scratchpad\`, call \`read_scratchpad\`, apply your change to the content it returned, keep everything else verbatim, and pass its \`rev\` as \`expected_rev\`.`;
 
@@ -283,6 +291,7 @@ ${notebookRules}
 - This session is not anchored to a ticket, but the project's tickets are yours to read and edit. \`search_issues\` finds the one the user means, then \`read_issue\`, \`update_issue\`, \`write_issue_plan\`, \`append_to_plan\` and \`edit_issue_text\` take its identifier in \`issue\` — they have no default target here, so always pass it.
 - \`update_issue\` renames, rewrites the description or re-estimates the effort. Do it when the user asks, or when the ticket's own words have become wrong — not as a drive-by tidy-up. To fix ONE sentence of a long description, \`edit_issue_text\` patches it in place instead of re-emitting the whole text.
 - **When the user asks for a plan** on a ticket ("prépare un plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work. Never write a ticket's plan unprompted: it belongs to the user.
+- ${planClosureRule}
 - ${planEditRule}
 - ${statusRule}
 
@@ -294,6 +303,7 @@ ${gitOwnership}
 - Your first message carries a SNAPSHOT of the ticket. It goes stale: whenever fresh state matters — the user mentions a comment, a resource, an edit you haven't seen, or you need the current plan — call \`read_issue\` instead of guessing. Open the files that matter to the request (specs, mockups, logs) with \`read_resource\`.
 - **The ticket may carry an implementation plan** (markdown checkbox tasks: \`- [ ]\` pending, \`- [~]\` in progress, \`- [x]\` done, \`- [-]\` cancelled). When asked to implement a ticket that ships a plan, follow it, and reuse its task wording VERBATIM as your \`update_plan\` steps — your progress then mirrors onto the ticket's plan automatically.
 - **When the user asks for a plan** ("prépare un plan", "how would you tackle this? write it down"), explore the code first, then \`write_issue_plan\` with a real engineering plan: short context, ordered \`- [ ]\` tasks naming the exact files/functions/migrations, a verification step. Writing the plan does NOT start the work — reply and stop unless they also asked to implement. Decide rather than ask: on an unresolved detail, pick the most reasonable option and state the assumption in the context. If something is genuinely blocking, \`ask_user\` while you still have the turn; only park it under a \`## Questions\` heading of the plan (checkboxes there are open questions, excluded from progress) when the answer can wait.
+- ${planClosureRule}
 - Never write the ticket's plan unprompted: it belongs to the user. Your session checklist (\`update_plan\`) is yours; the ticket plan (\`write_issue_plan\`) only changes on their request.
 - ${planEditRule}
 - \`update_issue\` renames the ticket, rewrites its description or re-estimates its effort. Do it when the user asks, or when the ticket's own words have become wrong about the work — not as a drive-by tidy-up. To fix ONE sentence of a long description, \`edit_issue_text\` patches it in place instead of re-emitting the whole text.

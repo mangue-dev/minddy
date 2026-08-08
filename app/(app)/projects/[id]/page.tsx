@@ -45,7 +45,6 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBanner } from "@/components/objective-banner";
-import { ObjectiveSidePanel } from "@/components/objective-side-panel";
 import { ProjectImportDialog } from "@/components/project-seed/project-import-dialog";
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
 import { createIssueApi } from "@/lib/issues-api";
@@ -95,7 +94,7 @@ function ProjectBoard() {
     useIssueRelationsQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
-  const { objectives, updateObjective, deleteObjective } = useObjectivesQuery(projectId);
+  const { objectives } = useObjectivesQuery(projectId);
   const { integrations } = useIntegrationsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
@@ -157,7 +156,6 @@ function ProjectBoard() {
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
     "description"
   );
-  const [objectiveEditOpen, setObjectiveEditOpen] = useState(false);
   // L'amorce par import (MIN-171) : `?setup=import` ouvre le panneau d'import
   // avec le CSV déposé dans le wizard.
   const [importOpen, setImportOpen] = useState(false);
@@ -544,7 +542,6 @@ function ProjectBoard() {
                       null
                     : null
                 }
-                onEdit={() => setObjectiveEditOpen(true)}
               />
             ) : (
               <BoardToolbar
@@ -686,17 +683,6 @@ function ProjectBoard() {
         onOpenChange={setImportOpen}
         projectId={projectId}
         initialFile={handoff?.kind === "import" ? handoff.file : null}
-      />
-
-      <ObjectiveSidePanel
-        objective={activeObjective}
-        open={objectiveEditOpen && !!activeObjective}
-        onOpenChange={setObjectiveEditOpen}
-        projectId={project.id}
-        members={members}
-        issues={issues}
-        onUpdate={updateObjective}
-        onDelete={deleteObjective}
       />
     </div>
   );

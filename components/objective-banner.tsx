@@ -16,13 +16,11 @@ export function ObjectiveBanner({
   projectId,
   progress,
   lead,
-  onEdit,
 }: {
   objective: Objective;
   projectId: string;
   progress: { done: number; total: number; percent: number };
   lead: Member | null;
-  onEdit: () => void;
 }) {
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
@@ -124,9 +122,14 @@ export function ObjectiveBanner({
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Pencil />
-          {tCommon("edit")}
+        {/* Modifier, c'est ALLER à l'objectif (MIN-226) : il a sa page, et le
+            panneau qui se posait ici par-dessus le board n'existe plus. Un vrai
+            lien, donc — ouvrable dans un onglet comme n'importe quel autre. */}
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/projects/${projectId}/objectives?open=${objective.id}`}>
+            <Pencil />
+            {tCommon("edit")}
+          </Link>
         </Button>
         <Button asChild variant="ghost" size="sm">
           <Link href={`/projects/${projectId}`} title={t("closeFilter")}>

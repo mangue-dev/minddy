@@ -136,7 +136,8 @@ const CORE_TOOLS: AgentToolDef[] = [
           },
           path: {
             type: "string",
-            description: "Optional subtree to search within (repo-relative).",
+            description:
+              "Optional DIRECTORY to search within (repo-relative). It is combined with 'pattern' as 'pattern inside that directory', so it is never the same value as 'pattern'.",
           },
         },
         required: ["pattern"],
@@ -148,7 +149,7 @@ const CORE_TOOLS: AgentToolDef[] = [
     function: {
       name: "grep",
       description:
-        "Search file contents with git grep (POSIX extended regex; gitignore-aware, binary files skipped). By default returns matching 'file:line:content' rows. Use to locate symbols, usages, imports, or config. Narrow with 'glob'/'path' and cap noisy searches with 'head_limit'. To search a literal snippet of code — anything containing { } ( ) [ ] * + ? | . \\ — set 'fixed_strings' rather than escaping it by hand.",
+        "Search file contents with git grep (POSIX extended regex; gitignore-aware, binary files skipped). By default returns matching 'file:line:content' rows. Use to locate symbols, usages, imports, or config. Narrow with 'path' (a DIRECTORY) and/or 'glob' (a FILENAME pattern) — they intersect, so never pass the same value to both — and cap noisy searches with 'head_limit'. To search ONE file, pass it as 'path' and leave 'glob' empty. To search a literal snippet of code — anything containing { } ( ) [ ] * + ? | . \\ — set 'fixed_strings' rather than escaping it by hand.",
       parameters: {
         type: "object",
         properties: {
@@ -159,12 +160,12 @@ const CORE_TOOLS: AgentToolDef[] = [
           path: {
             type: "string",
             description:
-              "Optional subtree (repo-relative) to limit the search to. Also accepts the absolute 'full_output_path' returned by run_command, to search a long command output.",
+              "Optional DIRECTORY (repo-relative) to limit the search to — or a single FILE to search only that one, in which case leave 'glob' empty. Also accepts the absolute 'full_output_path' returned by run_command, to search a long command output.",
           },
           glob: {
             type: "string",
             description:
-              "Optional file glob to limit the search, e.g. '**/*.ts' or '**/*.{ts,tsx}'.",
+              "Optional FILENAME pattern to limit the search, e.g. '**/*.ts' or '**/*.{ts,tsx}'. Combined with 'path' it means 'this pattern INSIDE that directory', so it is never the same value as 'path'.",
           },
           output_mode: {
             type: "string",
@@ -718,7 +719,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "write_issue_plan",
       description:
-        "Write a ticket's implementation PLAN — the persistent markdown plan stored on the minddy ticket, visible to the whole team. Call it ONLY when the user asks for a plan (e.g. 'prépare un plan', 'plan this ticket', 'how would you do it? write it down') — never spontaneously. Full replacement: send the complete plan. Format: a short context (goal, approach), then ordered checkbox tasks — '- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' cancelled — each naming the exact files/components/functions/migrations to touch, and a final verification step. Explore the code FIRST so tasks reference real paths. Writing the plan does NOT start the work: after writing it, reply and stop unless the user also asked to implement. Distinct from update_plan, which is only your live session checklist.",
+        "Write a ticket's implementation PLAN — the persistent markdown plan stored on the minddy ticket, visible to the whole team. Call it ONLY when the user asks for a plan (e.g. 'prépare un plan', 'plan this ticket', 'how would you do it? write it down') — never spontaneously. Full replacement: send the complete plan. Format: a short context (goal, approach), then ordered checkbox tasks — '- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' cancelled — each naming the exact files/components/functions/migrations to touch, and a final verification step. Explore the code FIRST so tasks reference real paths — and grep whatever you are removing or renaming so the plan names EVERY call site, not a sample of them: a plan that lists two of three callers reads exactly like one that lists three. Writing the plan does NOT start the work: after writing it, reply and stop unless the user also asked to implement. Distinct from update_plan, which is only your live session checklist.",
       parameters: {
         type: "object",
         properties: {

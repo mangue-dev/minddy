@@ -1,5 +1,5 @@
-import { ScrollPageSkeleton } from "@/components/route-skeletons";
+import { ListDetailSkeleton } from "@/components/route-skeletons";
 
 export default function ObjectivesLoading() {
-  return <ScrollPageSkeleton rows={4} />;
+  return <ListDetailSkeleton />;
 }

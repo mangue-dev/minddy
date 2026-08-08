@@ -454,7 +454,9 @@ export interface AnalyticsEventProps {
   objective_opened: NoProps;
   objective_updated: { field: string };
   objective_deleted: NoProps;
-  objective_dictation_used: { surface: "create_dialog" | "side_panel" };
+  // « page » depuis MIN-226 : le panneau latéral d'objectif a disparu au profit
+  // de la page Objectifs, et c'est elle qui porte désormais la dictée d'édition.
+  objective_dictation_used: { surface: "create_dialog" | "page" };
   admin_dashboard_viewed: { tab: string };
   external_link_clicked: { destination: string };
 }
