@@ -32,6 +32,10 @@ import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
+import {
+  MarqueeOverlay,
+  useMarqueeSelection,
+} from "@/components/marquee-selection";
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import { IssueCardBody } from "@/components/issue-card";
 import type { ChipRelation } from "@/components/relation-chips";
@@ -202,6 +206,15 @@ export function GlobalKanbanBoard({
     selectedIssues.forEach((issue) => onUpdateIssue(issue.id, patch, issue.project_id));
   }, [onUpdateIssue, selectedIssues]);
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  // Lasso sur le fond du board — même hook, même sélection que le board de projet.
+  const {
+    ref: marqueeRef,
+    onPointerDown: onMarqueePointerDown,
+    overlayRef: marqueeOverlayRef,
+  } = useMarqueeSelection<HTMLDivElement>({
+    selected: selectedIds,
+    onChange: setSelectedIds,
+  });
   // Objectifs et relations sont propres à un projet : les actions groupées qui
   // en dépendent n'existent que si TOUTE la sélection tient dans le même.
   const selectionProjectId = useMemo(() => {
@@ -259,6 +272,16 @@ export function GlobalKanbanBoard({
   // Fade the left/right edges of the board while more columns lie off-screen
   // — same affordance as the project board.
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>("x");
+
+  // Le fondu des bords et le lasso veulent le même nœud. Fusion mémoïsée : une
+  // nouvelle identité à chaque rendu les ferait détacher puis rattacher.
+  const setScrollerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      fadeRef(node);
+      marqueeRef(node);
+    },
+    [fadeRef, marqueeRef]
+  );
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(String(event.active.id));
@@ -340,8 +363,9 @@ export function GlobalKanbanBoard({
         />
       )}
       <div
-        ref={fadeRef}
+        ref={setScrollerRef}
         onScroll={scrollProps.onScroll}
+        onPointerDown={onMarqueePointerDown}
         style={scrollProps.style}
         className="flex h-full min-h-0 gap-3 overflow-x-auto px-4 snap-x snap-mandatory desktop:snap-none desktop:px-6"
       >
@@ -372,6 +396,8 @@ export function GlobalKanbanBoard({
           />
         ))}
       </div>
+
+      <MarqueeOverlay overlayRef={marqueeOverlayRef} />
 
       <DragOverlay dropAnimation={null}>
         {activeIssue ? (

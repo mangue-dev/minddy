@@ -33,6 +33,10 @@ import { IssueCardBody } from "@/components/issue-card";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
+import {
+  MarqueeOverlay,
+  useMarqueeSelection,
+} from "@/components/marquee-selection";
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -181,6 +185,17 @@ export function KanbanBoard({
     [onUpdateIssue, selectedIssues]
   );
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  // Lasso sur le fond du board : même sélection, un geste de moins que trente
+  // ⇧-clics. Le conteneur de colonnes lui sert à la fois de surface de départ,
+  // de limite et de défilement automatique.
+  const {
+    ref: marqueeRef,
+    onPointerDown: onMarqueePointerDown,
+    overlayRef: marqueeOverlayRef,
+  } = useMarqueeSelection<HTMLDivElement>({
+    selected: selectedIds,
+    onChange: setSelectedIds,
+  });
   // Déplacements de cycle sur la sélection : un ticket déjà dedans peut en
   // sortir, un ticket vivant peut y entrer — une sélection mixte offre les deux.
   const bulkCycle = useMemo(() => {
@@ -227,8 +242,9 @@ export function KanbanBoard({
     (node: HTMLDivElement | null) => {
       scrollerRef.current = node;
       fadeRef(node);
+      marqueeRef(node);
     },
-    [fadeRef]
+    [fadeRef, marqueeRef]
   );
   const [activeColumn, setActiveColumn] = useState(0);
   const columnCount = columns.length;
@@ -351,6 +367,7 @@ export function KanbanBoard({
             scrollProps.onScroll();
             updateActiveColumn(e.currentTarget);
           }}
+          onPointerDown={onMarqueePointerDown}
           style={scrollProps.style}
           className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 snap-x snap-mandatory desktop:snap-none desktop:px-6"
         >
@@ -383,6 +400,8 @@ export function KanbanBoard({
           ))}
         </div>
       </div>
+
+      <MarqueeOverlay overlayRef={marqueeOverlayRef} />
 
       {/* dropAnimation={null}: the move is optimistic (moveIssue patches the cache
           synchronously), so the real card is already at its destination on drop.

@@ -1353,6 +1353,9 @@ export function IssueCard({
   return (
     <div
       ref={setCardRef}
+      // Ce que le lasso du board cherche dans le DOM, et ce qu'il évite comme
+      // point de départ — une carte n'est pas du fond (cf. marquee-selection).
+      data-issue-id={issue.id}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
