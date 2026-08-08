@@ -77,6 +77,7 @@ import {
 } from "./repo-instructions";
 import {
   runAgentLoop,
+  BUDGET_REFRESH_INTERVAL_MS,
   type AgentChatMessage,
   type EmitAgentEvent,
   type EmitAgentLive,
@@ -1457,6 +1458,35 @@ export async function executeAgentRun(
       run.budget_usd == null ? undefined : Math.max(0, Number(run.budget_usd) - runSpentUsd);
     const budgetUsd = minDefined(accountRemainingUsd, runCapRemainingUsd);
     /**
+     * LE MÊME CALCUL, RELU EN COURS DE CHUNK (MIN-224).
+     *
+     * `budgetUsd` ci-dessus est un snapshot, et rien ne réserve de budget : deux
+     * runs lancés à la même seconde lisent le même restant et le prennent chacun
+     * pour plafond, donc ils peuvent dépenser le double. Ce chunk relit déjà à son
+     * entrée — au pire toutes les cinq minutes ; ce crochet resserre à une.
+     *
+     * Throttlé ici plutôt que dans la boucle : la lecture coûte deux requêtes
+     * (facturation + somme du ledger) et un round peut durer trois secondes.
+     * `null` = pas encore l'heure, ou lecture en panne — la boucle garde alors son
+     * plafond, une facturation injoignable n'arrête pas un run.
+     */
+    let lastBudgetAt = Date.now();
+    const maybeRefreshBudget = async (): Promise<number | null> => {
+      if (Date.now() - lastBudgetAt < BUDGET_REFRESH_INTERVAL_MS) return null;
+      lastBudgetAt = Date.now();
+      const [quota, spent] = await Promise.all([
+        checkAgentQuota(run.created_by ?? "").catch(() => null),
+        spentFromLedger(run.run_id ?? run.id).catch(() => null),
+      ]);
+      if (!quota) return null;
+      const account = quota.unlimited ? undefined : Math.max(0, quota.remaining ?? 0);
+      const fromRun =
+        run.budget_usd == null
+          ? undefined
+          : Math.max(0, Number(run.budget_usd) - Math.max(run.cost_usd, spent ?? 0));
+      return minDefined(account, fromRun) ?? null;
+    };
+    /**
      * Ce que le chunk a dépensé, TOUTES boucles confondues — le compteur que
      * `budgetUsd` plafonne (MIN-202). Un seul objet pour le parent et ses filles :
      * elles tournent dans le même process, chacune l'incrémente en payant, et le
@@ -1956,6 +1986,11 @@ export async function executeAgentRun(
       recordUsage: recordAiUsage,
       softDeadlineMs,
       budgetUsd,
+      // Ce chunk relit déjà le quota à son entrée, donc au pire toutes les cinq
+      // minutes ; le crochet resserre à une. Le même dans les deux moteurs — c'est
+      // la nouvelle forme qui en avait le plus besoin (un tour dure des heures),
+      // mais un plafond qui ne se relit pas est le même défaut des deux côtés.
+      refreshBudgetUsd: maybeRefreshBudget,
       chunkSpend,
       contextWindow,
       execTool: makeExecTool({

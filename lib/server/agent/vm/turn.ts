@@ -1,5 +1,6 @@
 import {
   runAgentLoop,
+  BUDGET_REFRESH_INTERVAL_MS,
   type AgentChatMessage,
   type AgentUsageLine,
   type EmitAgentEvent,
@@ -463,6 +464,21 @@ export async function runVmTurn(
    * fournisseur. Au sommet d'un round, l'historique est toujours à une frontière
    * complète — et `pullSteering` est justement appelé là.
    */
+  /**
+   * Le plafond de dépense se relit en cours de tour (cf. `BUDGET_REFRESH_INTERVAL_MS`).
+   * Throttlé ICI et pas dans la boucle : c'est l'appelant qui sait ce que la
+   * lecture coûte, la boucle ne fait qu'obéir — même partage que `recordUsage`.
+   *
+   * `null` = rien de neuf à dire (pas encore l'heure), ou lecture en panne : la
+   * boucle garde alors son plafond courant.
+   */
+  let lastBudgetAt = Date.now();
+  const maybeRefreshBudget = async (): Promise<number | null> => {
+    if (Date.now() - lastBudgetAt < BUDGET_REFRESH_INTERVAL_MS) return null;
+    lastBudgetAt = Date.now();
+    return await cp.budgetRemaining();
+  };
+
   let lastSaveAt = Date.now();
   /**
    * La conversation a été FERMÉE sous nous — annulée, ou conclue par quelqu'un
@@ -558,6 +574,9 @@ export async function runVmTurn(
     softDeadlineMs: VM_TURN_SOFT_DEADLINE_MS,
     maxRounds: VM_MAX_ROUNDS_PER_TURN,
     budgetUsd,
+    // Le plafond d'entrée ne sait rien de ce que les AUTRES runs dépensent
+    // pendant les heures que ce tour peut durer. Il se relit.
+    refreshBudgetUsd: maybeRefreshBudget,
     chunkSpend: turnSpend,
     contextWindow: job.contextWindow,
     execTool: makeExecTool({

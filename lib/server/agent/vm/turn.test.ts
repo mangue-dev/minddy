@@ -12,6 +12,7 @@ interface LoopParams {
   usageSeqStart: number;
   recordUsage: (line: AgentUsageLine) => Promise<void>;
   pullSteering?: () => Promise<string[]>;
+  refreshBudgetUsd?: () => Promise<number | null>;
 }
 
 /**
@@ -112,6 +113,7 @@ const cp = (): ControlPlaneClient => ({
   pullSteering: vi.fn(async () => []),
   hasPendingMessages: vi.fn(async () => false),
   checkInterrupt: vi.fn(async () => false),
+  budgetRemaining: vi.fn(async () => 4.2),
   syncPlan: vi.fn(async () => {}),
   callTool: vi.fn(async (name: string, body: Record<string, unknown>) => {
     h.toolCalls.push({ name, body });
@@ -184,6 +186,51 @@ beforeEach(() => {
   h.suspendReason = undefined;
   h.errorMessage = undefined;
   h.duringLoop = null;
+});
+
+describe("le plafond de dépense se relit pendant le tour", () => {
+  /**
+   * Un tour de microVM dure des heures et son plafond était figé à son lancement.
+   * Or rien ne réserve de budget : deux runs lancés à la même seconde lisent le
+   * même restant et le prennent chacun pour plafond. La relecture est ce qui borne
+   * la casse — et le throttle ce qui la rend abordable, la lecture coûtant deux
+   * requêtes là où un round peut durer trois secondes.
+   */
+  async function refreshesDuring(
+    hits: number[],
+  ): Promise<{ reads: number; values: Array<number | null> }> {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-08T12:00:00Z"));
+    const client = cp();
+    const values: Array<number | null> = [];
+    h.duringLoop = async (params) => {
+      for (const afterMs of hits) {
+        vi.setSystemTime(new Date(Date.parse("2026-08-08T12:00:00Z") + afterMs));
+        values.push((await params.refreshBudgetUsd?.()) ?? null);
+      }
+    };
+    try {
+      await runVmTurn(job(), client, host());
+    } finally {
+      vi.useRealTimers();
+    }
+    return { reads: vi.mocked(client.budgetRemaining).mock.calls.length, values };
+  }
+
+  it("ne relit pas à chaque round — une minute, pas trois secondes", async () => {
+    // Trois passages en dix secondes : la cadence n'est pas franchie, personne
+    // n'appelle le plan de contrôle et la boucle garde son plafond (`null`).
+    const { reads, values } = await refreshesDuring([2_000, 5_000, 10_000]);
+    expect(reads).toBe(0);
+    expect(values).toEqual([null, null, null]);
+  });
+
+  it("relit une fois la cadence franchie, et rend ce que le compte a encore", async () => {
+    const { reads, values } = await refreshesDuring([2_000, 61_000, 65_000, 130_000]);
+    // Deux lectures : à 61 s et à 130 s. Celle de 65 s retombe dans la fenêtre.
+    expect(reads).toBe(2);
+    expect(values).toEqual([null, 4.2, null, 4.2]);
+  });
 });
 
 describe("un tour `suspended` remonte sa CAUSE, pas une phrase fixe", () => {

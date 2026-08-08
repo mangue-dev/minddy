@@ -36,18 +36,32 @@ const KEYS_URL = "https://openrouter.ai/api/v1/keys";
 
 /**
  * Plancher du plafond, en dollars. Un run dont il ne reste presque rien à
- * dépenser recevrait sinon une clé à 0 $, donc morte à la première complétion —
- * et le tour échouerait sur un 402 illisible au lieu de s'arrêter proprement sur
- * son budget (ce que la boucle sait déjà faire, et dire).
+ * dépenser sur SON budget recevrait sinon une clé à 0 $, donc morte à la première
+ * complétion — et le tour échouerait sur un 402 illisible au lieu de s'arrêter
+ * proprement sur son budget (ce que la boucle sait déjà faire, et dire).
+ *
+ * Il ne franchit JAMAIS le restant du COMPTE : c'est un plancher sous un plafond,
+ * pas un droit de dépenser un quart de dollar de plus que ce que l'utilisateur a.
  */
 const MIN_CAP_USD = 0.25;
 /**
- * Marge au-dessus du budget restant. Le plafond fournisseur est un FILET, pas le
- * gouverneur : c'est la boucle qui arrête le run sur son budget, avec un message.
- * Le serrer à l'euro près ferait gagner la course au fournisseur, et l'utilisateur
- * lirait une erreur d'API là où il devait lire « budget atteint ».
+ * Marge au-dessus du budget restant DU RUN. Ce plafond-là est un FILET derrière un
+ * gouverneur qui marche : c'est la boucle qui arrête le run sur `budget_usd`, avec
+ * un message. Le serrer à l'euro près ferait gagner la course au fournisseur, et
+ * l'utilisateur lirait une erreur d'API là où il devait lire « budget atteint ».
+ *
+ * Elle ne s'applique QU'À ce budget-là. Le restant du compte, lui, ne se multiplie
+ * pas : c'est de l'argent qui n'existe pas.
  */
 const CAP_HEADROOM = 1.5;
+/**
+ * Ce qu'on accorde quand le restant du compte est INCONNU — `checkAgentQuota` en
+ * panne, donc facturation injoignable. La boucle est alors sans plafond elle
+ * aussi (`budgetUsd` vaut `undefined`), ce qui fait de cette clé le seul garde-fou
+ * du passage : trop bas il casse un run ordinaire (0,07 à 0,24 $ mesurés), trop
+ * haut il ne borne plus rien.
+ */
+const UNKNOWN_REMAINING_CAP_USD = 1.5;
 /** Durée de vie d'une clé de run. Large devant un tour, court devant l'oubli. */
 const KEY_TTL_MS = 24 * 60 * 60_000;
 
@@ -66,26 +80,54 @@ export function runKeyMintingEnabled(): boolean {
 }
 
 /**
- * Le plafond à poser sur la clé d'un run : ce qu'il reste à dépenser, plancher
- * et marge compris. `null` en usage illimité (BYOK) — mais on n'y mint pas.
+ * Le plafond à poser sur la clé d'un run.
+ *
+ * DEUX BUDGETS, ET ILS N'ONT PAS LE MÊME STATUT — c'est tout ce que cette
+ * fonction dit.
+ *
+ * - le budget du RUN (`agent_runs.budget_usd`, une routine réglée à « 15 % de mon
+ *   plan ») est un GOUVERNEUR : la boucle l'oppose à sa dépense à chaque round et
+ *   s'arrête dessus en le disant. La clé le double d'une marge, pour que ce soit
+ *   toujours notre message que l'utilisateur lise, jamais un 402 ;
+ * - le restant du COMPTE (budget mensuel inclus du plan, moins ce qui a été
+ *   consommé) est un PLAFOND DUR. Il ne se multiplie pas et ne se relève pas :
+ *   au-delà, on ferait dépenser à l'utilisateur un argent qu'il n'a pas.
+ *
+ * L'ancienne version prenait le `min` des deux PUIS multipliait le tout par la
+ * marge, plancher compris. Sur le cas COURANT — un run sans budget propre, donc
+ * le seul restant du compte — un utilisateur à 3 $ de reste recevait une clé à
+ * 4,50 $, et un utilisateur à 0,10 $ une clé à 0,25 $. Le garde-fou accordait
+ * jusqu'à 50 % de plus que le budget qu'il était censé tenir.
+ *
+ * Les deux entrées sont du RÉEL, pas des colonnes : `runSpentUsd` est le max de
+ * la colonne et de la somme du ledger (MIN-215), et le restant du compte descend
+ * de `getUserUsage`, qui somme l'usage de la fenêtre de facturation, toutes
+ * features comprises — compute de microVM inclus.
  */
 export function runKeyCapUsd(opts: {
   /** Plafond posé sur le run lui-même (`agent_runs.budget_usd`), s'il y en a un. */
   runBudgetUsd?: number | null;
-  /** Ce que le run a déjà dépensé, tous chunks confondus. */
+  /** Ce que le run a déjà dépensé, tous chunks confondus (ledger compris). */
   runSpentUsd?: number;
-  /** Ce qu'il reste du budget mensuel du COMPTE. `undefined` = illimité. */
+  /** Ce qu'il reste du budget mensuel du COMPTE. `undefined` = inconnu ou
+   *  illimité — mais en BYOK (le seul cas illimité) on ne mint pas. */
   accountRemainingUsd?: number;
 }): number {
+  const ceiling =
+    typeof opts.accountRemainingUsd === "number" && Number.isFinite(opts.accountRemainingUsd)
+      ? Math.max(0, opts.accountRemainingUsd)
+      : undefined;
   const fromRun =
     opts.runBudgetUsd == null
       ? undefined
-      : Math.max(0, Number(opts.runBudgetUsd) - (opts.runSpentUsd ?? 0));
-  const candidates = [fromRun, opts.accountRemainingUsd].filter(
-    (v): v is number => typeof v === "number" && Number.isFinite(v),
-  );
-  const remaining = candidates.length ? Math.min(...candidates) : MIN_CAP_USD * 4;
-  return Math.max(MIN_CAP_USD, Math.round(remaining * CAP_HEADROOM * 100) / 100);
+      : Math.max(0, Number(opts.runBudgetUsd) - (opts.runSpentUsd ?? 0)) * CAP_HEADROOM;
+
+  // Sans budget de run, ce qu'on demande EST le restant du compte — donc, une fois
+  // le plafond dur appliqué, exactement lui.
+  const asked = fromRun ?? ceiling ?? UNKNOWN_REMAINING_CAP_USD;
+  const floored = Math.max(asked, MIN_CAP_USD);
+  const capped = ceiling === undefined ? floored : Math.min(floored, ceiling);
+  return Math.round(capped * 100) / 100;
 }
 
 /**

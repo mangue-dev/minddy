@@ -93,6 +93,17 @@ export interface ControlPlaneClient {
    */
   hasPendingMessages(): Promise<boolean>;
   checkInterrupt(): Promise<boolean>;
+  /**
+   * Ce que ce tour a ENCORE le droit de dépenser, relu maintenant — le plus serré
+   * du restant mensuel du compte et du plafond du run. `null` = inconnu (lecture
+   * en panne) ou illimité (BYOK) : l'appelant garde alors son plafond courant.
+   *
+   * Existe parce que rien ne réserve de budget : deux runs concurrents lisent le
+   * même restant et le prennent chacun pour plafond. L'ancienne forme relisait à
+   * chaque chunk, donc au pire toutes les cinq minutes ; un tour de microVM dure
+   * des heures, et sans cette surface son plafond serait aveugle du début à la fin.
+   */
+  budgetRemaining(): Promise<number | null>;
   syncPlan(steps: PlanStep[]): Promise<void>;
   /** Un tool de PLATEFORME (ticket, carnet, pull request, recherche web, PR). */
   callTool(name: string, body: Record<string, unknown>): Promise<VmToolResponse>;
@@ -235,6 +246,21 @@ export function createControlPlaneClient(appOrigin: string): ControlPlaneClient 
       } catch (err) {
         console.error("[agent-vm] interrupt read failed:", (err as Error).message);
         return false;
+      }
+    },
+
+    budgetRemaining: async () => {
+      try {
+        const body = (await request("GET", "/budget")) as { remainingUsd?: unknown };
+        return typeof body.remainingUsd === "number" && Number.isFinite(body.remainingUsd)
+          ? body.remainingUsd
+          : null;
+      } catch (err) {
+        // `null` et pas 0 : une facturation injoignable ne doit pas arrêter un
+        // tour en cours. C'est le pire cas assumé — on garde le plafond d'entrée,
+        // qui est celui de l'ancienne forme.
+        console.error("[agent-vm] budget read failed:", (err as Error).message);
+        return null;
       }
     },
 

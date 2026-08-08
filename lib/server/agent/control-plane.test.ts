@@ -35,12 +35,24 @@ const h = vi.hoisted(() => ({
   /** Combien de fois la ligne du run a été LUE EN BASE. Le direct doit rester à
    *  zéro : c'est le seul appel chaud de la surface (~4/s pendant tout le tour). */
   runReads: 0,
+  /** Ce que `checkAgentQuota` répond — `null` = lecture en panne (elle lève). */
+  quota: null as Record<string, unknown> | null,
+  /** La somme du ledger pour ce run. */
+  ledgerSpent: 0 as number | null,
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/server/ai-usage")>()),
   recordAiUsage: vi.fn(async (input: AiUsageInput | AiUsageInput[]) => {
     h.recorded.push(...(Array.isArray(input) ? input : [input]));
+  }),
+  spentFromLedger: vi.fn(async () => h.ledgerSpent),
+}));
+
+vi.mock("./quota", () => ({
+  checkAgentQuota: vi.fn(async () => {
+    if (!h.quota) throw new Error("facturation injoignable");
+    return h.quota;
   }),
 }));
 
@@ -166,9 +178,13 @@ beforeEach(() => {
   h.landed = 0;
   h.prLandings.length = 0;
   h.runReads = 0;
+  h.quota = { unlimited: false, remaining: 3, allowed: true, mode: "platform" };
+  h.ledgerSpent = 0;
   h.run = {
     id: RUN_ID,
     status: "running",
+    cost_usd: 0,
+    budget_usd: null,
     branch_name: null,
     base_branch: "main",
     pr_number: null,
@@ -191,6 +207,51 @@ const call = (
   body: Record<string, unknown> | null = null,
   runId = RUN_ID,
 ) => handleControlPlaneRequest({ runId, method, surface, body });
+
+/**
+ * MIN-224 — le plafond de dépense d'un tour se RELIT en cours de route.
+ *
+ * Un tour de microVM dure des heures et son plafond était figé à son lancement.
+ * Or rien ne réserve de budget : deux runs lancés à la même seconde lisent le même
+ * restant et le prennent chacun pour plafond, donc ils peuvent dépenser le double.
+ */
+describe("le budget restant du tour", () => {
+  it("rend le restant du COMPTE quand le run n'a pas de plafond propre", async () => {
+    // Le cas courant : seules les routines posent un `budget_usd`.
+    const res = await call("GET", "/budget");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ remainingUsd: 3 });
+  });
+
+  it("prend le plus serré des deux, et déduit au LEDGER ce que le run a dépensé", async () => {
+    // Une routine à 2 $, qui en a déjà brûlé 1,20 — dont une part qu'un chunk mort
+    // n'a jamais stampée sur la colonne. C'est le ledger qui la porte.
+    h.run = { ...h.run!, budget_usd: 2, cost_usd: 0.4 };
+    h.ledgerSpent = 1.2;
+    const res = await call("GET", "/budget");
+    expect((res.body as { remainingUsd: number }).remainingUsd).toBeCloseTo(0.8, 6);
+  });
+
+  it("laisse le compte gagner quand c'est lui qui borne", async () => {
+    h.run = { ...h.run!, budget_usd: 10 };
+    h.quota = { unlimited: false, remaining: 0.5, allowed: true, mode: "platform" };
+    expect(await call("GET", "/budget").then((r) => r.body)).toEqual({ remainingUsd: 0.5 });
+  });
+
+  it("rend `null` en illimité (BYOK) — il n'y a rien à plafonner", async () => {
+    h.quota = { unlimited: true, allowed: true, mode: "byok" };
+    expect(await call("GET", "/budget").then((r) => r.body)).toEqual({ remainingUsd: null });
+  });
+
+  it("rend `null` quand la facturation est injoignable, jamais 0", async () => {
+    // Un 0 arrêterait le tour sur une panne de lecture. La VM garde alors son
+    // plafond d'entrée : le pire cas est le comportement d'avant, pas pire.
+    h.quota = null;
+    const res = await call("GET", "/budget");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ remainingUsd: null });
+  });
+});
 
 describe("le direct — le topic vient du run, pas du corps", () => {
   it("diffuse sur le run de l'OIDC même quand le corps en désigne un autre", async () => {

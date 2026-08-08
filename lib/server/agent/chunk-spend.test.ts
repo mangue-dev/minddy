@@ -212,3 +212,77 @@ describe("plafond de dépense du chunk", () => {
     expect(chunkSpend.usd).toBeCloseTo(0.01, 6);
   });
 });
+
+/**
+ * MIN-224 — le plafond de dépense se RELIT en cours de route.
+ *
+ * Rien ne réserve de budget : deux runs lancés à la même seconde lisent le même
+ * restant et le prennent chacun pour plafond, donc ils peuvent dépenser le double.
+ * Ce qui borne la casse, c'est la fréquence de relecture — l'ancienne forme
+ * relisait entre ses chunks (cinq minutes au pire), un tour de microVM dure des
+ * heures et ne relisait pas du tout.
+ */
+describe("le plafond se relit en cours de route (runs concurrents)", () => {
+  it("s'arrête dès que le restant relu est épuisé, sans payer un round de plus", async () => {
+    // Le tour part avec 10 $ devant lui. Pendant qu'il travaille, un AUTRE run vide
+    // le budget du compte. Sans relecture, celui-ci continuerait jusqu'à 10 $.
+    responses = [
+      () => new Response(sseToolCall("call_1", 0.2)),
+      () => new Response(sseText("ce round ne doit jamais être payé", 5)),
+    ];
+    let reads = 0;
+    const out = await runAgentLoop({
+      ...baseParams,
+      messages: seed(),
+      budgetUsd: 10,
+      // Première frontière : rien de neuf (pas encore l'heure). Deuxième : le
+      // compte est à sec.
+      refreshBudgetUsd: async () => (++reads === 1 ? null : 0),
+    });
+
+    expect(out.status).toBe("budget_exhausted");
+    // UN seul appel payé : la coupure tombe à la frontière de round, avant le
+    // second. C'est tout l'objet du crochet — ce round-là aurait coûté 5 $.
+    expect(calls).toBe(1);
+    expect(out.costUsd).toBeCloseTo(0.2, 6);
+  });
+
+  it("garde son plafond quand la lecture ne dit rien — une panne de facturation n'arrête pas un run", async () => {
+    // `null` = pas encore l'heure, ou lecture en échec. Le pire cas assumé est le
+    // comportement d'avant : le snapshot d'entrée continue de gouverner.
+    responses = [
+      () => new Response(sseToolCall("call_1", 0.2)),
+      () => new Response(sseText("fini", 0.2)),
+    ];
+    const out = await runAgentLoop({
+      ...baseParams,
+      messages: seed(),
+      budgetUsd: 10,
+      refreshBudgetUsd: async () => null,
+    });
+
+    expect(out.status).toBe("completed");
+    expect(calls).toBe(2);
+  });
+
+  it("compte le restant À PARTIR DE MAINTENANT, pas depuis le début du tour", async () => {
+    // Le crochet rend ce qu'il reste à dépenser, pas un total : la boucle en refait
+    // un plafond par `dépense du tour + restant`. Confondre les deux couperait un
+    // tour qui a déjà dépensé plus que ce qui lui reste — c'est-à-dire presque tous.
+    responses = [
+      () => new Response(sseToolCall("call_1", 0.6)),
+      () => new Response(sseText("fini", 0.2)),
+    ];
+    const out = await runAgentLoop({
+      ...baseParams,
+      messages: seed(),
+      budgetUsd: 1,
+      // Le tour a déjà dépensé 0,60 $ quand on relit, et il reste 0,30 $ au compte :
+      // il a donc encore le droit de jouer son round.
+      refreshBudgetUsd: async () => 0.3,
+    });
+
+    expect(out.status).toBe("completed");
+    expect(calls).toBe(2);
+  });
+});

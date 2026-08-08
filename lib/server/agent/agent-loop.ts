@@ -135,6 +135,19 @@ const SUSPENDED_TOOL_REASON = "turn_suspended";
  * par construction) ou un rapport qui ne se drainerait jamais retiendrait le tour.
  */
 const MAX_SUBAGENT_WAIT_REENTRIES = 8;
+/**
+ * Cadence à laquelle les DEUX moteurs relisent le plafond de dépense
+ * (`refreshBudgetUsd`). Ici plutôt que chez chacun d'eux : une fenêtre de perte
+ * qui différerait entre les deux formes serait exactement le genre d'écart que
+ * MIN-224 s'attache à ne pas créer.
+ *
+ * Une minute, et pas à chaque round : la lecture coûte deux requêtes (facturation
+ * + somme du ledger) et un round peut durer trois secondes. Ce qui peut se perdre
+ * entre deux lectures est donc borné par ce que les AUTRES runs dépensent en une
+ * minute — contre cinq pour l'ancienne forme, qui ne relisait qu'entre ses chunks,
+ * et contre un tour entier (des heures) pour la nouvelle, qui ne relisait pas.
+ */
+export const BUDGET_REFRESH_INTERVAL_MS = 60_000;
 /** Garde-fou : nombre max de compactions par chunk (convergence normalement immédiate). */
 const MAX_COMPACTIONS_PER_CHUNK = 3;
 /** Garde-fou : nombre max d'élagages de round sur un 400 « contexte trop long » (par appel). */
@@ -342,6 +355,28 @@ export interface RunAgentLoopParams {
    * pas de plafond (BYOK : l'utilisateur paie sa propre note).
    */
   budgetUsd?: number;
+  /**
+   * RELIT le restant, en cours de route — parce qu'un plafond snapshoté à l'entrée
+   * ne sait rien de ce que les AUTRES runs dépensent pendant ce temps.
+   *
+   * Rien ne réserve de budget : deux runs lancés à la même seconde lisent le même
+   * restant `R` et le prennent chacun pour plafond, donc ils peuvent dépenser `2R`.
+   * Ce qui rattrape, c'est la fréquence à laquelle on relit — l'ancienne forme
+   * relisait à chaque chunk (cinq minutes au pire) ; un tour de microVM, lui, dure
+   * des heures, ce qui ferait de ce snapshot un plafond aveugle du début à la fin.
+   *
+   * Rend ce que le TOUR a encore le droit de dépenser À PARTIR DE MAINTENANT — pas
+   * un total : la boucle en refait un plafond par `dépense du tour + restant`, ce
+   * qui laisse la comparaison intacte et corrige au passage le retard du ledger.
+   * `null` = inconnu (lecture en panne) ou illimité : on garde le plafond courant,
+   * une panne de facturation ne doit pas arrêter un run.
+   *
+   * L'appelant décide de la CADENCE (une lecture par minute, pas par round : elle
+   * coûte deux requêtes) et calcule le `min` avec le plafond du run s'il y en a un.
+   * La boucle ne fait qu'obéir, comme pour `recordUsage`.
+   */
+  refreshBudgetUsd?: () => Promise<number | null>;
+  // (cadence recommandée : `BUDGET_REFRESH_INTERVAL_MS`, ci-dessous)
   /**
    * Ce que le CHUNK a déjà dépensé, en dollars — le compteur que `budgetUsd`
    * plafonne. PARTAGÉ (MIN-202) : l'appelant en crée UN par chunk et le passe à la
@@ -1248,6 +1283,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
    */
   const spend = params.chunkSpend ?? { usd: 0 };
   /**
+   * Le plafond COURANT, et il n'est pas constant : `refreshBudgetUsd` le recale en
+   * cours de route sur ce que le compte a encore (cf. la garde de la boucle). Le
+   * snapshot d'entrée n'en est que la première valeur.
+   */
+  let budgetUsd = params.budgetUsd;
+  /**
    * UN appel payé, porté aux trois endroits qui le comptent. Passer par ici plutôt
    * que d'incrémenter à la main : les trois grandeurs ne se séparent jamais, et un
    * quatrième site de paiement en oublierait forcément une.
@@ -1393,16 +1434,30 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     if (elapsed() >= params.softDeadlineMs || round >= maxRounds) {
       return { status: "suspended", messages, costUsd, usageSeqEnd: seq, rounds: round };
     }
-    // Budget d'usage épuisé (quota minddy) — MÊME frontière, même raison : on ne
-    // paie pas un appel de plus. `budgetUsd` est le restant SNAPSHOTÉ à l'entrée du
-    // chunk, et `spend.usd` ce que ce chunk a déjà dépensé : la comparaison est donc
-    // exacte sans relire l'usage à chaque round. C'est bien `spend` et pas `costUsd`
-    // qu'on compare (MIN-202) : le compteur est PARTAGÉ avec les filles, sans quoi
-    // chacune opposerait sa seule dépense au plafond commun et le chunk entier
-    // pourrait le franchir autant de fois qu'il y a de boucles. Le round en cours
-    // peut dépasser légèrement (on ne coupe jamais un appel en vol) — c'est la
-    // politique assumée de lib/server/usage.ts, comme chez Claude/ChatGPT.
-    if (params.budgetUsd !== undefined && spend.usd >= params.budgetUsd) {
+    /**
+     * LE PLAFOND SE RELIT, il n'est pas seulement snapshoté (MIN-224).
+     *
+     * Rien ne réserve de budget : deux runs concurrents lisent le même restant et
+     * le prennent chacun pour plafond. Ce qui borne la casse, c'est la fréquence
+     * de relecture — d'où ce crochet, appelé à la frontière de round, avant la
+     * garde ci-dessous pour que le restant frais morde DÈS ce round-ci.
+     *
+     * `spend.usd + restant` : le crochet rend ce qu'on a encore le droit de
+     * dépenser, la garde compare des dépenses de tour. Ça recale aussi le retard
+     * du ledger — le restant relu tient compte de ce que ce tour a déjà écrit.
+     */
+    if (params.refreshBudgetUsd) {
+      const fresh = await params.refreshBudgetUsd();
+      if (fresh !== null) budgetUsd = spend.usd + Math.max(0, fresh);
+    }
+    // Budget d'usage épuisé (quota minddy) — MÊME frontière que la soft-deadline,
+    // même raison : on ne paie pas un appel de plus. C'est bien `spend` et pas
+    // `costUsd` qu'on compare (MIN-202) : le compteur est PARTAGÉ avec les filles,
+    // sans quoi chacune opposerait sa seule dépense au plafond commun et le chunk
+    // entier pourrait le franchir autant de fois qu'il y a de boucles. Le round en
+    // cours peut dépasser légèrement (on ne coupe jamais un appel en vol) — c'est
+    // la politique assumée de lib/server/usage.ts, comme chez Claude/ChatGPT.
+    if (budgetUsd !== undefined && spend.usd >= budgetUsd) {
       clearLive();
       return { status: "budget_exhausted", messages, costUsd, usageSeqEnd: seq, rounds: round };
     }

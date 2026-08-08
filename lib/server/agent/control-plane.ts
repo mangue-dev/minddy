@@ -110,6 +110,46 @@ function num(v: unknown): number | null {
 }
 
 /**
+ * CE QUE CE TOUR A ENCORE LE DROIT DE DÉPENSER, relu MAINTENANT.
+ *
+ * Le plafond d'un tour est snapshoté à son lancement, et rien ne réserve de
+ * budget : deux runs lancés à la même seconde lisent le même restant et le
+ * prennent chacun pour plafond — donc ils peuvent dépenser le double. L'ancienne
+ * forme s'en tirait par sa forme même, en relisant le quota à chaque chunk (cinq
+ * minutes au pire) ; un tour de microVM dure des heures, et son plafond serait
+ * aveugle du début à la fin sans cette surface.
+ *
+ * Le plus SERRÉ des deux plafonds, comme au lancement : le restant mensuel du
+ * compte, et ce qu'il reste du budget posé sur le run (les routines). Les deux
+ * partent du LEDGER, pas d'une colonne — c'est ce qui rend la relecture utile,
+ * puisque le ledger est écrit appel par appel, y compris par les autres runs.
+ *
+ * `null` = illimité (BYOK) ou lecture en panne. La VM garde alors son plafond
+ * d'entrée : une facturation injoignable ne doit pas arrêter un tour en cours.
+ */
+async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
+  try {
+    const [{ checkAgentQuota }, { spentFromLedger }] = await Promise.all([
+      import("./quota"),
+      import("@/lib/server/ai-usage"),
+    ]);
+    const [quota, spent] = await Promise.all([
+      checkAgentQuota(run.created_by ?? ""),
+      spentFromLedger(run.run_id ?? run.id),
+    ]);
+    const account = quota.unlimited ? null : Math.max(0, quota.remaining ?? 0);
+    const runSpent = Math.max(run.cost_usd, spent ?? 0);
+    const fromRun =
+      run.budget_usd == null ? null : Math.max(0, Number(run.budget_usd) - runSpent);
+    const both = [account, fromRun].filter((v): v is number => v !== null);
+    return both.length ? Math.min(...both) : null;
+  } catch (err) {
+    console.error("[agent-control-plane] budget read failed:", (err as Error).message);
+    return null;
+  }
+}
+
+/**
  * Une requête du plan de contrôle. `runId` vient de l'OIDC ; `surface` est le
  * chemin sous `/api/agent-vm` (`/events`, `/tool/read_issue`…).
  */
@@ -237,6 +277,10 @@ export async function handleControlPlaneRequest(opts: {
 
   if (method === "GET" && surface === "/interrupt") {
     return ok({ interrupted: await readInterruptFlag(runId) });
+  }
+
+  if (method === "GET" && surface === "/budget") {
+    return ok({ remainingUsd: await turnBudgetRemainingUsd(run) });
   }
 
   if (method === "POST" && surface === "/plan-sync") {
