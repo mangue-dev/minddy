@@ -1805,6 +1805,9 @@
     "subagentForSeconds": "{seconds} s",
     "subagentForMinutes": "{minutes} min {seconds} s",
     "subagentSteps": "{count, plural, =0 {aucune étape} one {# étape} other {# étapes}}",
+    "subagentsWorking": "{count, plural, one {# sous-agent au travail} other {# sous-agents au travail}}",
+    "subagentExploreName": "Agent d'exploration",
+    "subagentImplementName": "Agent d'implémentation",
     "subagentReportLabel": "Rapport",
     "subagentNoReport": "Ce sous-agent n'a pas produit de rapport.",
     "filesChanged": "{count, plural, one {# fichier modifié} other {# fichiers modifiés}}",
@@ -1819,6 +1822,7 @@
     "workedForSeconds": "A travaillé pendant {seconds, plural, one {# seconde} other {# secondes}}",
     "workingSinceMinutes": "Travaille depuis {minutes, plural, one {# minute} other {# minutes}} et {seconds, plural, one {# seconde} other {# secondes}}",
     "workingSinceSeconds": "Travaille depuis {seconds, plural, one {# seconde} other {# secondes}}",
+    "turnInterrupted": "Tour interrompu",
     "composePlaceholder": "Que doit faire l'agent ?",
     "launchPrompt": {
       "head": "Travaille sur {identifier} : {title}.",

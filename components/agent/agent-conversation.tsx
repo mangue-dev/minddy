@@ -59,6 +59,8 @@ import { ReasoningCombobox } from "./reasoning-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentRunHistory } from "./agent-run-history";
 import { AgentDiffSheet } from "./agent-diff-sheet";
+import { SubagentActivityBar } from "./subagent-activity-bar";
+import { turnSubagents } from "@/lib/agent-subagents";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 
 /**
@@ -258,7 +260,18 @@ export function AgentConversation({
     : selectedId
       ? knownRuns.find((r) => r.id === selectedId) ?? null
       : activeRun ?? knownRuns.find((r) => r.status !== "failed") ?? null;
-  const working = liveRun ? isAgentRunWorking(liveRun.status) : false;
+  /**
+   * Ce que le SERVEUR fait — la vérité des requêtes (polling du fil, du diff,
+   * décision d'interrompre). À distinguer de `working`, qui est ce que
+   * l'INTERFACE raconte : « stopper » ne fait que poser un drapeau, que la boucle
+   * ne lit qu'à la frontière de son round, soit plusieurs secondes plus tard
+   * (parfois bien plus, si elle est en plein appel au modèle). Pendant ce temps,
+   * rien ne bougeait à l'écran : le bouton restait « stopper », le tour continuait
+   * de compter, et on recliquait en croyant que ça n'avait pas marché.
+   */
+  const serverWorking = liveRun ? isAgentRunWorking(liveRun.status) : false;
+  const [stopping, setStopping] = useState(false);
+  const working = serverWorking && !stopping;
   // `runs` arrive trié du plus récent au plus ancien : runs[0] est la dernière run.
   // La run qu'on vient de lancer compte AUSSI comme la dernière : entre le POST et
   // l'arrivée du refetch, `runs` est encore la liste d'AVANT, et la comparer à
@@ -285,7 +298,7 @@ export function AgentConversation({
   // le feed (clé partagée) → aucune requête supplémentaire.
   const { events: liveEvents } = useAgentRunEventsQuery(
     liveRun?.id ?? null,
-    working
+    serverWorking
   );
 
   /**
@@ -302,6 +315,16 @@ export function AgentConversation({
     [liveEvents],
   );
   const sessionTotals = useMemo(() => changeTotals(sessionFiles), [sessionFiles]);
+  /**
+   * Les sous-agents du tour en cours (MIN-112) → carte au-dessus du composer.
+   * Lus sur les MÊMES events que le fil (clé react-query partagée) : aucune
+   * requête de plus. Vide dès que l'agent est au repos — plus rien ne tourne, et
+   * une carte qui resterait affichée dirait le contraire.
+   */
+  const subagents = useMemo(
+    () => (working ? turnSubagents(liveEvents) : []),
+    [liveEvents, working],
+  );
   const activeQuestion = useMemo((): {
     eventId: string;
     questions: AskUserQuestion[];
@@ -354,9 +377,18 @@ export function AgentConversation({
     setPendingMessages([]);
     setLaunchText(null);
     setRequestingPr(false);
+    // L'arrêt demandé vaut pour la session qu'on quitte, pas pour celle qu'on ouvre.
+    setStopping(false);
     // La vue diff appartient à la session qu'on quitte.
     setDiffOpen(false);
   }, [liveRun?.id]);
+
+  // Le serveur a rattrapé l'arrêt — ou le tour s'est terminé de lui-même juste
+  // après le clic : l'état optimiste n'a plus rien à couvrir. Il doit repartir,
+  // sinon le tour SUIVANT (relancé par un message) s'afficherait au repos.
+  useEffect(() => {
+    if (!serverWorking) setStopping(false);
+  }, [serverWorking]);
 
   // La demande de PR a « pris » dès que l'agent repart (working) ou que la PR existe :
   // on réactive le bouton (il disparaîtra de lui-même via `canCreatePr`).
@@ -370,15 +402,19 @@ export function AgentConversation({
   // travail → repos pour que le bloc de fichiers settled et le bouton PR arrivent sans
   // attendre un remontage. Même raison pour le diff de la session : le push final du
   // tour arrive à cet instant, une vue diff ouverte doit le refléter sans re-poll.
-  const wasWorkingRef = useRef(working);
+  //
+  // Sur le SERVEUR, et pas sur ce que l'interface affiche : un arrêt optimiste
+  // fait passer `working` à faux des secondes avant que le tour ne rende ses
+  // derniers events, et c'est justement eux qu'on vient chercher ici.
+  const wasWorkingRef = useRef(serverWorking);
   useEffect(() => {
     const runId = liveRun?.id;
-    if (wasWorkingRef.current && !working && runId) {
+    if (wasWorkingRef.current && !serverWorking && runId) {
       void queryClient.invalidateQueries({ queryKey: ["agent-run-events", runId] });
       void queryClient.invalidateQueries({ queryKey: agentRunDiffQueryKey(runId) });
     }
-    wasWorkingRef.current = working;
-  }, [working, liveRun?.id, queryClient]);
+    wasWorkingRef.current = serverWorking;
+  }, [serverWorking, liveRun?.id, queryClient]);
 
   // Heartbeat tant que le composant est actif sur une session : garde la sandbox
   // vivante pendant qu'on lit / écrit (le reaper ne coupe que les runs inactifs).
@@ -477,12 +513,22 @@ export function AgentConversation({
   };
 
   // Interrompt la réponse en cours du modèle ; la session revient au repos.
+  //
+  // L'interface s'arrête AU CLIC (`stopping`), sans attendre que le serveur ait
+  // pris le drapeau : le bouton redevient « envoyer », le tour se replie sur sa
+  // durée. Ce n'est pas un mensonge sur ce qui se passe côté machine — le tour
+  // s'arrêtera bel et bien, et s'il conclut entre-temps son résumé prend la place
+  // de tout ça — c'est un accusé de réception, la seule chose qui manquait.
   const interrupt = async () => {
     if (!liveRun) return;
+    setStopping(true);
     try {
       await interruptAgentRunApi(liveRun.id);
       await refreshRuns();
     } catch (err) {
+      // Refusé (réseau, session disparue) : le tour continue → on rend la main au
+      // bouton plutôt que de laisser l'interface prétendre qu'il s'est arrêté.
+      setStopping(false);
       toast.error((err as Error).message);
     }
   };
@@ -494,7 +540,10 @@ export function AgentConversation({
     const text = message.trim();
     if (!text) return;
     await steer(text);
-    if (working) await interrupt();
+    // Sur ce que fait le SERVEUR, pas sur ce que l'interface montre : un arrêt
+    // déjà demandé mais pas encore pris laisse le tour tourner, et le message
+    // doit quand même le couper.
+    if (serverWorking) await interrupt();
   };
 
   // « Créer une pull request » (note MIN-46) : on n'ouvre PAS la PR nous-mêmes — on
@@ -639,6 +688,7 @@ export function AgentConversation({
           <AgentEventFeed
             runId={liveRun.id}
             status={liveRun.status}
+            stopping={stopping}
             prompt={liveRun.prompt}
             pendingUserMessages={pendingMessages}
             onOpenFile={openDiff}
@@ -689,12 +739,20 @@ export function AgentConversation({
       {phase !== "loading" && (
         <div className="dock-above-nav shrink-0">
           <div className="mx-auto w-full max-w-[800px]">
-          {/* Rien ne s'intercale plus entre le fil et le composer. La barre
-              « fichiers changés » vivait ici : elle grandissait d'une ligne à chaque
-              fichier touché et faisait descendre l'input pendant qu'on écrivait. Ce
-              qu'elle disait est passé dans l'EN-TÊTE (les deux nombres du diff, et
-              la demande de pull request), où rien ne bouge. Le détail par tour, lui,
-              est resté dans le fil, sous la réponse qui l'a produit. */}
+          {/* Une seule chose s'intercale entre le fil et le composer, et elle tient
+              sur UNE ligne, de hauteur fixe. La barre « fichiers changés » vivait
+              ici : elle grandissait d'une ligne à chaque fichier touché et faisait
+              descendre l'input pendant qu'on écrivait. Ce qu'elle disait est passé
+              dans l'EN-TÊTE (les deux nombres du diff, et la demande de pull
+              request), où rien ne bouge. Le détail par tour, lui, est resté dans le
+              fil, sous la réponse qui l'a produit.
+              Ce qui reprend la place, c'est le seul moment où le fil ne peut RIEN
+              dire : pendant qu'un sous-agent travaille, le parent l'attend et
+              n'émet plus rien. La barre ne pousse l'input qu'à ce moment-là, et
+              d'exactement une ligne. */}
+          {liveRun && subagents.some((s) => !s.endedAt) ? (
+            <SubagentActivityBar subagents={subagents} />
+          ) : null}
           {/* Question active : la carte prend la PLACE du composer (pattern
               Claude Code/Codex). Le ChatInput reste MONTÉ, masqué en CSS — le
               brouillon de l'utilisateur survit et réapparaît après la réponse. */}
@@ -846,7 +904,9 @@ export function AgentConversation({
           runId={liveRun.id}
           open={diffOpen}
           onOpenChange={setDiffOpen}
-          working={working}
+          // Le vrai statut : c'est lui qui cadence le rafraîchissement du diff, et
+          // le tour pousse encore pendant les secondes qui suivent l'arrêt demandé.
+          working={serverWorking}
           baseBranch={liveRun.base_branch}
           branchName={liveRun.branch_name}
         />

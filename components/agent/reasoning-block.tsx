@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, cn } from "mangue-ui";
 import { Brain } from "lucide-react";
+import { Markdown } from "@/components/markdown";
 
 /**
  * Le modèle RÉFLÉCHIT (MIN-122). Ligne compacte calquée sur `ToolCallRow`
@@ -67,7 +68,13 @@ export function ReasoningBlock({
         {row}
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <p className="ml-5 whitespace-pre-wrap py-1 text-xs text-muted-foreground">{trace}</p>
+        {/* La trace est du MARKDOWN, comme le rapport d'un sous-agent : un modèle
+            qui raisonne écrit des titres, des listes et des chemins en `code`.
+            Rendue en texte brut, on lisait « **Étape 1** » et des « --- » à
+            l'écran. */}
+        <div className="ml-5 py-1 text-muted-foreground">
+          <Markdown className="text-xs">{trace}</Markdown>
+        </div>
       </CollapsibleContent>
     </Collapsible>
   );

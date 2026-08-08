@@ -342,15 +342,17 @@ export function IssueSidePanel({
 
   const startNewAgentSession = useCallback(() => {
     if (!issue) return;
-    // « Nouvelle session » sur un ticket DÉJÀ pourvu (branche/PR/contexte hérités) →
-    // composer VIERGE : l'utilisateur dicte lui-même la consigne. Premier lancement à
-    // froid → prompt d'amorçage (contexte du ticket, adapté à son plan / effort).
+    // « Implémenter le ticket » arrive TOUJOURS avec sa consigne pré-écrite
+    // (contexte du ticket, adaptée à son plan / effort) — comme les trois autres
+    // façons de travailler du même sous-menu. Elle partait vide quand le ticket
+    // avait déjà une session, au motif que le contexte était hérité : de la place
+    // de l'utilisateur, la même entrée de menu remplissait le composer une fois
+    // sur deux, sans que rien n'annonce la différence.
     const identifier = issueIdentifier(projectKey, issue.number);
-    const prompt = hasAgentSession
-      ? ""
-      : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
-    composeAgentSession(prompt);
-  }, [issue, hasAgentSession, projectKey, composeAgentSession, tAgent]);
+    composeAgentSession(
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`,
+    );
+  }, [issue, projectKey, composeAgentSession, tAgent]);
 
   // « Écrire avec Numo » / « Vérifier le plan avec Numo » (onglet Plan) :
   // session neuve dont la consigne est de CADRER le ticket — écrire le plan

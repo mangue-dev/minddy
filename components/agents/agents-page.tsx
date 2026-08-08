@@ -488,6 +488,14 @@ export function AgentsPage() {
   // la conversation vierge (kind "free" — aucune run, donc aucune clé réelle).
   const draftKey = issueDraft ? issueDraft.issueId : freeDraft ? FREE_COMPOSE_PARAM : null;
 
+  // Le projet RÉEL du brouillon, retrouvé dans le contexte : le brouillon ne
+  // porte que l'id et la clé du projet, or l'en-tête de la conversation peint son
+  // ORBE — sans `icon_url`, elle affichait l'orbe générée là où le projet a une
+  // vraie icône, puis basculait sur la bonne au premier message envoyé.
+  const draftProject = issueDraft
+    ? projects.find((p) => p.id === issueDraft.projectId) ?? null
+    : null;
+
   // Entrée synthétique du brouillon ISSUE, façonnée comme une vraie session pour
   // traverser le même volet de détail (`AgentSessionDetail`). Aucune run réelle :
   // `runId` est un marqueur, le volet s'ouvre en compose et la conversation gère le
@@ -510,14 +518,14 @@ export function AgentsPage() {
           number: issueDraft.issueNumber,
           title: issueDraft.issueTitle,
         },
-        // `icon_url` null : le brouillon ne paraît pas dans la liste (aucune orbe
-        // à peindre), seuls son id et sa clé servent — au contexte de Numo et à
-        // l'identifiant du ticket.
+        // Le brouillon ne paraît pas dans la liste, mais son volet de détail, lui,
+        // porte l'orbe du projet : elle vient donc du projet RÉEL (nom et icône),
+        // et non des seules bribes que le brouillon transporte.
         project: {
           id: issueDraft.projectId,
           key: issueDraft.projectKey,
-          name: issueDraft.projectKey,
-          icon_url: null,
+          name: draftProject?.name ?? issueDraft.projectKey,
+          icon_url: draftProject?.icon_url ?? null,
         },
         working: false,
         runCount: 0,

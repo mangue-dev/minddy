@@ -1021,13 +1021,15 @@ export function IssueCard({
     router.push(`/agents?compose=${issue.id}`);
   };
   const startNewAgentSession = () => {
-    // « Nouvelle session » sur un ticket DÉJÀ pourvu (branche/PR/contexte hérités) →
-    // composer VIERGE : l'utilisateur dicte lui-même la consigne. Premier lancement à
-    // froid → prompt d'amorçage (contexte du ticket, adapté à son plan / effort).
-    const prompt = agentHasSession
-      ? ""
-      : `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`;
-    composeAgentSession(prompt);
+    // « Implémenter le ticket » arrive TOUJOURS avec sa consigne pré-écrite
+    // (contexte du ticket, adaptée à son plan / effort) — comme les trois autres
+    // façons de travailler du même sous-menu. Elle partait vide quand le ticket
+    // avait déjà une session, au motif que le contexte était hérité : de la place
+    // de l'utilisateur, la même entrée de menu remplissait le composer une fois
+    // sur deux, sans que rien n'annonce la différence.
+    composeAgentSession(
+      `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`
+    );
   };
   // Un plan existe déjà → les entrées « plan » (menu ⋯, prompt copié, agent)
   // basculent de « générer » à « vérifier ».

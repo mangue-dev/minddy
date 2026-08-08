@@ -173,6 +173,10 @@ type Block =
       startedAt: string;
       endedAt: string | null;
       active: boolean;
+      /** Le tour s'est arrêté SANS conclure (stop de l'utilisateur) → une ligne
+       *  le dit sous le déroulé. Absent quand une erreur, juste en dessous, dit
+       *  déjà pourquoi il s'est arrêté. */
+      interrupted?: boolean;
     }
   | { type: "loose"; item: FeedItem };
 
@@ -580,6 +584,15 @@ function closesTurn(it: FeedItem): it is TurnCloser {
   return it.kind === "quota" || (it.kind === "message" && !!it.isSummary);
 }
 
+/**
+ * Items qu'un tour ARRÊTÉ garde SOUS son déroulé replié, jamais dedans : ce qu'il
+ * a poussé (fichiers changés) et ce qui explique son arrêt (erreur du harnais).
+ * Ce sont les deux seules choses qu'on veut lire sans avoir à déplier.
+ */
+function staysBelowTurn(it: FeedItem): boolean {
+  return it.kind === "files" || (it.kind === "note" && it.variant === "error");
+}
+
 function buildBlocks(items: FeedItem[], active: boolean): Block[] {
   const blocks: Block[] = [];
   let work: FeedItem[] = [];
@@ -634,8 +647,8 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
     }
     work.push(it);
   }
-  // Travail restant sans réponse finale : si l'agent TRAVAILLE → tour ACTIF
-  // (accordéon ouvert, chrono live) ; sinon (interruption, erreur) → déplié tel quel.
+  // Travail restant sans réponse finale. L'agent TRAVAILLE → tour ACTIF (accordéon
+  // ouvert, chrono live).
   if (active && work.length > 0) {
     // Réponse en train de s'écrire : elle prend la place du résumé, sous
     // l'accordéon, exactement là où le message final se posera.
@@ -652,6 +665,37 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
       active: true,
     });
     work = [];
+  } else if (work.length > 0) {
+    // AU REPOS avec un tour qui n'a jamais conclu : il a été arrêté — « stopper »
+    // de l'utilisateur, le plus souvent. C'est un tour comme un autre, et il garde
+    // donc son accordéon, replié sur « A travaillé pendant X ». Il se déversait
+    // jusqu'ici déplié dans le fil, chrono compris : cliquer « stopper » effaçait
+    // la seule ligne qui disait depuis combien de temps l'agent travaillait, et
+    // étalait tout son déroulé à la place.
+    const endedAt = work[work.length - 1].createdAt || null;
+    const below: FeedItem[] = [];
+    while (work.length > 0 && staysBelowTurn(work[work.length - 1])) {
+      below.unshift(work.pop()!);
+    }
+    if (work.length > 0) {
+      blocks.push({
+        type: "turn",
+        key: itemKey(work[0]),
+        work,
+        summary: null,
+        files: below,
+        startedAt: work[0].createdAt,
+        endedAt,
+        active: false,
+        // Une erreur DIT déjà pourquoi le tour s'arrête là ; « interrompu »
+        // sous elle ne ferait que la répéter, moins bien.
+        interrupted: !below.some((it) => it.kind === "note" && it.variant === "error"),
+      });
+      work = [];
+    } else {
+      // Rien à replier (le tour n'est qu'une erreur d'amorçage) → tel quel.
+      work = below;
+    }
   }
   flush();
   return blocks;
@@ -753,6 +797,7 @@ function TurnGroup({
   startedAt,
   endedAt,
   active,
+  interrupted,
   ctx,
 }: {
   work: FeedItem[];
@@ -761,6 +806,7 @@ function TurnGroup({
   startedAt: string;
   endedAt: string | null;
   active: boolean;
+  interrupted?: boolean;
   ctx: RenderContext;
 }) {
   return (
@@ -771,6 +817,22 @@ function TurnGroup({
       {summary ? renderItem(summary, ctx) : null}
       {/* Fichiers changés du tour : sous la réponse, hors de l'accordéon de travail. */}
       {files.map((it) => renderItem(it, ctx))}
+      {interrupted ? <InterruptedRow /> : null}
+    </div>
+  );
+}
+
+/**
+ * Le tour s'est arrêté sans répondre. Sans cette ligne, un tour interrompu se
+ * replie exactement comme un tour qui a conclu, et rien ne dit que la réponse
+ * manque parce qu'on l'a coupée — on la cherche sous l'accordéon.
+ */
+function InterruptedRow() {
+  const t = useTranslations("Agent");
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <CircleSlash className="size-3 shrink-0" />
+      {t("turnInterrupted")}
     </div>
   );
 }
@@ -877,6 +939,7 @@ function PlanRow({ item }: { item: Extract<FeedItem, { kind: "plan" }> }) {
 export function AgentEventFeed({
   runId,
   status,
+  stopping = false,
   prompt,
   className,
   pendingUserMessages = [],
@@ -891,6 +954,13 @@ export function AgentEventFeed({
    */
   runId: string | null;
   status: AgentRunStatus;
+  /**
+   * L'utilisateur vient de demander l'arrêt. Le serveur, lui, ne rend la main
+   * qu'à la frontière du round : le fil s'arrête donc TOUT DE SUITE — le tour en
+   * cours se replie sur sa durée — alors que le POLLING, lui, continue sur le
+   * vrai statut, puisque les derniers events du tour doivent encore arriver.
+   */
+  stopping?: boolean;
   /** Prompt de lancement, affiché en tête comme 1re bulle utilisateur. */
   prompt?: string | null;
   className?: string;
@@ -911,13 +981,19 @@ export function AgentEventFeed({
 }) {
   const t = useTranslations("Agent");
   const tc = useTranslations("Common");
-  // On ne poll les events (et n'affiche l'indicateur « travaille ») que tant que
-  // l'agent TRAVAILLE ; au repos le fil est figé jusqu'au prochain message.
-  const active = isAgentRunWorking(status);
-  const { events, loading } = useAgentRunEventsQuery(runId, active);
+  // Deux vérités, et elles ne coïncident que hors interruption :
+  //  • `polling` — ce que le SERVEUR fait : tant qu'il travaille, on interroge le
+  //    fil et on reste abonné au direct. Un arrêt demandé n'y change rien, c'est
+  //    même là que les derniers events du tour arrivent.
+  //  • `active`  — ce que l'INTERFACE raconte : au clic sur « stopper », elle
+  //    s'arrête sans attendre le serveur (le tour se replie, l'indicateur
+  //    « travaille » s'efface).
+  const polling = isAgentRunWorking(status);
+  const active = polling && !stopping;
+  const { events, loading } = useAgentRunEventsQuery(runId, polling);
   // Direct : le texte du round pendant que le modèle l'écrit, plus les events
   // poussés dans le cache du fil dès leur insertion (lib/use-agent-run-live).
-  const live = useAgentRunLive(runId, active);
+  const live = useAgentRunLive(runId, polling);
   const feedRef = useRef<HTMLDivElement>(null);
   // Fade doux en haut/bas du fil (même pattern que les colonnes Kanban) → on voit
   // qu'il reste du contenu au-dessus / en dessous. On fusionne son ref avec le nôtre.
@@ -970,7 +1046,10 @@ export function AgentEventFeed({
   // poseront (réflexion d'abord, réponse ensuite) — la bascule du provisoire au
   // définitif ne déplace donc rien à l'écran.
   const liveItems = useMemo((): FeedItem[] => {
-    if (!live) return [];
+    // Arrêt demandé : la queue vivante disparaît avec le reste des signes de
+    // travail. Elle continuerait sinon d'écrire pendant deux ou trois secondes
+    // sous un tour qui se dit terminé.
+    if (!live || stopping) return [];
     const out: FeedItem[] = [];
     if (live.reasoningActive) {
       // Ligne compacte + compteur, PAS le texte du raisonnement : il n'est pas
@@ -995,7 +1074,7 @@ export function AgentEventFeed({
       });
     }
     return out;
-  }, [live]);
+  }, [live, stopping]);
 
   const blocks = useMemo(
     () => buildBlocks(liveItems.length ? [...displayItems, ...liveItems] : displayItems, active),
@@ -1106,6 +1185,7 @@ export function AgentEventFeed({
               startedAt={block.startedAt}
               endedAt={block.endedAt}
               active={block.active}
+              interrupted={block.interrupted}
               ctx={ctx}
             />
           ) : (
