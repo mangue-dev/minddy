@@ -84,7 +84,7 @@ Check especially what is only visible ACROSS files, because each file alone look
 - anything you changed halfway and did not finish.
 Then the usual: no stray debug or scratch file, no leftover commented-out code, nothing unrelated to what was asked.
 
-If it is all correct, just reply — do not restate the diff.`;
+If it is all correct, carry on — do not restate the diff, and do not announce that you re-read it.`;
 
 /** Un fichier non suivi, tel que `git status --porcelain` le rend. */
 export function parseUntracked(porcelain: string): string[] {

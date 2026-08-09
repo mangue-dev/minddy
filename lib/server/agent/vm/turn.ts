@@ -21,7 +21,7 @@ import {
 import { usesApplyPatch } from "../patch";
 import { fitCheckpoint } from "../checkpoint-fit";
 import { newPlanWriteSink, watchPlanWrites } from "../plan-closure";
-import { gateCreatePr, makeTurnEndHook } from "../turn-end";
+import { gateCreatePr, gateWritePlan, makeTurnEndHook } from "../turn-end";
 import { REPO_INSTRUCTION_FILES, type InstructionsState } from "../repo-instructions";
 import { commitAndPush, changedFiles, type RepoHost } from "../repo-host";
 import { BackgroundJobs } from "../background";
@@ -590,8 +590,9 @@ export async function runVmTurn(
       prTool: job.anchor === "pr" ? platformTool : null,
       // Enveloppé pour NOTER le plan écrit ce tour (MIN-236) : les tools ticket
       // partent au plan de contrôle, donc c'est le seul endroit d'où la boucle voit
-      // passer le markdown.
-      issueTool: watchPlanWrites(platformTool, planWrites),
+      // passer le markdown. Puis la porte de MIN-256, câblée ICI AUSSI et avec le
+      // même crochet — la garantie ne doit pas dépendre de `loop_in_vm`.
+      issueTool: gateWritePlan(watchPlanWrites(platformTool, planWrites), turnEnd, remainingMs),
       scratchpadTool: platformTool,
       webSearch,
       outputSeqBase: 0,

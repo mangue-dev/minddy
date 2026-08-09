@@ -154,7 +154,7 @@ const QUESTIONS = `Read it as its reader will — with your plan and none of you
 - does the verification step name commands that exist in this repo?
 - did you open a file this turn that no task mentions? Decide which it is: it belongs in the plan, or it does not.`;
 
-const FOOTER = `Fix what needs fixing IN PLACE: \`edit_issue_text\` rewrites one passage (old_string → new_string), \`append_to_plan\` adds a task or a note. Do NOT call \`write_issue_plan\` again — it re-emits the whole document and would drop anything changed meanwhile. If the plan holds up, just reply: do not restate it.`;
+const FOOTER = `Fix what needs fixing IN PLACE: \`edit_issue_text\` rewrites one passage (old_string → new_string), \`append_to_plan\` adds a task or a note. Do NOT call \`write_issue_plan\` again — it re-emits the whole document and would drop anything changed meanwhile. If the plan holds up, carry on — do not restate it, and do not announce that you re-read it.`;
 
 /** `\`a\`, \`b\`, \`c\`.` — la liste des scripts, capée. */
 function scriptList(names: readonly string[]): string {

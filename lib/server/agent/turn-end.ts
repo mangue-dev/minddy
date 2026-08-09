@@ -13,13 +13,14 @@ import { planReviewForTurn, PLAN_REVIEW_MIN_BUDGET_MS } from "./plan-review";
 import { planClosureForTurn, PLAN_CLOSURE_MIN_BUDGET_MS } from "./plan-closure";
 import { turnDiff, type RepoHost } from "./repo-host";
 import type { PlanWriteSink } from "./plan-closure";
+import type { PlatformToolHandler } from "./exec-tool";
 import type { EmitAgentEvent } from "./agent-loop";
 
 /**
- * LE DERNIER MOT DU HARNESS — les cinq contrôles de fin de tour, et le budget de
- * chacun (MIN-240, puis MIN-251 pour le cinquième).
+ * LE DERNIER MOT DU HARNESS — les contrôles de fin de tour, et le budget de
+ * chacun (MIN-240, puis MIN-251 pour la suite de tests).
  *
- * CE QUE CE MODULE CORRIGE. Les quatre blocs sont chaînés au `??` : le premier qui
+ * CE QUE CE MODULE CORRIGE. Les blocs sont chaînés au `??` : le premier qui
  * a quelque chose à dire rend son message, la boucle le ré-injecte et rappelle le
  * crochet. Mais la boucle ne rappelait que `MAX_TURN_END_REENTRIES` fois, et cette
  * constante valait DEUX. Sur un tour qui édite du code ET écrit un plan, le
@@ -45,7 +46,25 @@ import type { EmitAgentEvent } from "./agent-loop";
  * tenu par copier-coller est un invariant qui dérive — et un bug de budget comme
  * celui-ci se serait corrigé d'un seul côté.
  *
- * LE CINQUIÈME BLOC, ET CE QU'IL RÉPARE (MIN-251). Le harness lançait `tsc` tout
+ * OÙ CHAQUE CONTRÔLE TOMBE, ET POURQUOI ÇA COMPTE (MIN-256). Un bloc de FIN DE
+ * TOUR arrive après que le modèle a écrit sa réponse : le tour repart, il répond
+ * une seconde fois, et c'est cette réponse-là que l'utilisateur lit. D'où deux
+ * règles qui gouvernent tout ce module.
+ *
+ * La première : un contrôle qui peut s'accrocher à un GESTE s'y accroche, parce
+ * qu'il ne coûte alors aucune réponse de plus — le modèle le traite en cours de
+ * route et écrit un seul message final, celui qui raconte le tour. C'est
+ * `gateCreatePr` (le diff sur `create_pr`) et `gateWritePlan` (le plan sur
+ * `write_issue_plan`). Ne restent en fin de tour que les contrôles qui ont besoin
+ * de savoir qu'aucune édition ne vient plus : type-check, tests, relecture du diff.
+ *
+ * La seconde : ce qui sort quand même par la fin de tour part avec
+ * `REENTRY_REPLY_RULE`, qui dit au modèle que sa prochaine réponse REMPLACE la
+ * précédente aux yeux de l'utilisateur. Sans elle il répondait au contrôle
+ * (« j'ai vérifié, le plan tient »), et le vrai résumé du tour restait enterré
+ * dans la trace.
+ *
+ * LA SUITE DE TESTS, ET CE QU'ELLE RÉPARE (MIN-251). Le harness lançait `tsc` tout
  * seul et ne lançait jamais les tests. Ce qu'il FAIT enseigne plus fort que ce que
  * le prompt DIT : la seule vérification que l'agent voyait s'exécuter à sa place,
  * tour après tour, portait sur les types — il en a tiré la conclusion logique
@@ -63,6 +82,28 @@ import type { EmitAgentEvent } from "./agent-loop";
  * appel modèle.
  */
 export const MAX_TYPE_CHECK_PASSES = 2;
+
+/**
+ * LA RÈGLE QUI ACCOMPAGNE TOUTE RÉINJECTION DE FIN DE TOUR (MIN-256).
+ *
+ * Un bloc de fin de tour arrive APRÈS que le modèle a écrit sa réponse. Le tour
+ * repart, il répond une seconde fois — et c'est cette seconde réponse que
+ * l'utilisateur lit, la première étant redescendue au rang d'étape dans le fil.
+ * Or les blocs demandaient « if it is all correct, just reply », c'est-à-dire de
+ * répondre AU CONTRÔLE. Le message visible d'un run de plan devenait « j'ai
+ * vérifié, le plan tient, je l'ai mis à jour » : l'utilisateur ne comprend pas
+ * de quoi on lui parle, et doit remonter la trace pour retrouver le vrai résumé.
+ *
+ * Le harness ne peut pas fabriquer ce résumé à la place du modèle — mais il peut
+ * dire ce qu'il attend, et c'est la même phrase pour tous les blocs. Elle est
+ * donc posée ICI, une fois, sur le chemin de la réinjection, plutôt que recopiée
+ * dans chaque formateur : un bloc de plus l'héritera sans qu'on y pense.
+ *
+ * Elle ne va PAS sur le chemin des tools (`gateCreatePr`, `gateWritePlan`), et
+ * c'est tout l'intérêt de ce chemin-là : le modèle n'y a pas encore répondu, sa
+ * réponse à venir est déjà la seule.
+ */
+export const REENTRY_REPLY_RULE = `One last thing about the reply itself: it is the ONLY message the user will see — the one you wrote a moment ago has become a step in the trace. So do not reply about this check. Reply about the TURN: what you did, the files you touched, how you verified it. If this check changed nothing, say what you did anyway, exactly as you would have.`;
 
 export interface TurnEndDeps {
   host: RepoHost;
@@ -88,6 +129,12 @@ export interface TurnEndHook {
    * sera pas re-demandé après. `null` = rien à relire, ou déjà relu.
    */
   reviewBeforeSubmit: (budgetMs: number) => Promise<string | null>;
+  /**
+   * Le contrôle du plan RÉCLAMÉ SUR LE GESTE, pour `write_issue_plan` (cf.
+   * `gateWritePlan`). Même verrou partagé que le bloc de fin de tour, donc la
+   * question n'est jamais posée deux fois. `null` = rien à dire, ou déjà dit.
+   */
+  checkPlanAfterWrite: (budgetMs: number) => Promise<string | null>;
   /** `repoTouched` À JOUR — l'appelant l'écrit au checkpoint. */
   repoTouched: () => boolean;
   /**
@@ -118,11 +165,10 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
    *  les yeux du modèle — c'est tout ce que ce bloc doit garantir. */
   let tested = false;
   /** L'auto-relecture ne passe qu'UNE fois : elle fait relire le tour avant la
-   *  réponse, pas commenter chaque correctif qui suit. Idem pour les deux crochets
-   *  de plan — ils posent une question, ils ne commentent pas la réponse. */
+   *  réponse, pas commenter chaque correctif qui suit. Idem pour le contrôle de
+   *  plan — il pose une question, il ne commente pas la réponse. */
   let selfReviewed = false;
-  let planReviewed = false;
-  let planClosed = false;
+  let planChecked = false;
 
   const noteEdits = () => {
     if (editedPaths.size > 0) repoTouched = true;
@@ -227,38 +273,46 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
   };
 
   /**
-   * Auto-relecture du plan écrit ce tour (MIN-237) : le document revient au modèle
-   * comme son diff lui revient, avec les questions qu'un relecteur poserait. Muet
-   * tant qu'aucun `write_issue_plan` n'a réussi, donc gratuit sur l'écrasante
+   * LE CONTRÔLE DU PLAN, EN UN SEUL BLOC ET SUR LE GESTE (MIN-236, MIN-237, puis
+   * MIN-256 pour la fusion et le déplacement).
+   *
+   * Deux choses, indissociables et posées ensemble parce que le modèle y répond
+   * d'un seul geste : le plan qu'il vient d'écrire, relu (`planReviewForTurn`), et
+   * les fichiers que ses identifiants touchent sans qu'il les nomme
+   * (`planClosureForTurn`). La relecture parle toujours, la clôture seulement
+   * quand elle a trouvé quelque chose.
+   *
+   * POURQUOI FUSIONNÉS. Séparés, ils coûtaient DEUX réinjections de fin de tour,
+   * donc deux réponses de plus — et sur un run de plan, la dernière, celle que
+   * l'utilisateur lit, ne parlait plus que du contrôle. Le prix de la fusion est
+   * connu et assumé : la clôture grep le plan tel qu'il a été ÉCRIT, plus tel que
+   * la relecture l'a laissé, donc elle peut nommer un fichier que le modèle
+   * s'apprêtait à ajouter. Un faux « oublié » de plus dans un bloc qui s'annonce
+   * déjà comme une observation, contre une réponse finale qui redevient lisible.
+   *
+   * Muet tant qu'aucun `write_issue_plan` n'a réussi, donc gratuit sur l'écrasante
    * majorité des tours. Le déclencheur est le TOOL, pas `run.intent === "plan"` : le
    * cas courant est un run ordinaire à qui on demande un plan en cours de route.
    */
-  const planReviewBlock = async (budgetMs: number): Promise<string | null> => {
-    if (planReviewed || !planWrites.wrote || budgetMs < PLAN_REVIEW_MIN_BUDGET_MS) return null;
-    planReviewed = true;
+  const planBlock = async (
+    budgetMs: number,
+    at: "turn_end" | "write_plan" = "turn_end",
+  ): Promise<string | null> => {
+    const floor = Math.max(PLAN_REVIEW_MIN_BUDGET_MS, PLAN_CLOSURE_MIN_BUDGET_MS);
+    if (planChecked || !planWrites.wrote || budgetMs < floor) return null;
+    planChecked = true;
     const startedAt = Date.now();
-    const block = await planReviewForTurn(host, planWrites.markdown).catch(() => null);
+    const [review, closure] = await Promise.all([
+      planReviewForTurn(host, planWrites.markdown).catch(() => null),
+      planClosureForTurn(host, planWrites.markdown).catch(() => null),
+    ]);
+    const block = [review, closure].filter(Boolean).join("\n\n---\n\n") || null;
+    // `at` distingue les deux moments, comme pour l'auto-relecture : sans lui, la
+    // mesure ne dirait pas si le contrôle tombe bien sur le geste — donc si le
+    // tour a cessé de payer une réponse de plus pour lui.
     await emit("status", {
-      phase: "plan_review",
-      durationMs: Date.now() - startedAt,
-      chars: block?.length ?? 0,
-    });
-    return block;
-  };
-
-  /**
-   * Contrôle de CLÔTURE du plan (MIN-236) : les identifiants du plan sont grepés
-   * pour de vrai, et les fichiers qui les contiennent sans être nommés reviennent au
-   * modèle. Passe APRÈS la relecture, d'où le rejeu des `edit_issue_text` dans le
-   * sink : ce qui est grepé, c'est le plan tel que la relecture l'a laissé.
-   */
-  const planClosureBlock = async (budgetMs: number): Promise<string | null> => {
-    if (planClosed || !planWrites.wrote || budgetMs < PLAN_CLOSURE_MIN_BUDGET_MS) return null;
-    planClosed = true;
-    const startedAt = Date.now();
-    const block = await planClosureForTurn(host, planWrites.markdown).catch(() => null);
-    await emit("status", {
-      phase: "plan_closure",
+      phase: "plan_check",
+      at,
       durationMs: Date.now() - startedAt,
       chars: block?.length ?? 0,
     });
@@ -272,30 +326,63 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
       noteEdits();
       return await selfReviewBlock(budgetMs, "create_pr");
     },
+    checkPlanAfterWrite: async (budgetMs: number) => await planBlock(budgetMs, "write_plan"),
     /**
      * L'ORDRE PORTE DU SENS. Les erreurs de typage passent avant tout le reste :
      * elles sont concrètes et bloquantes, et servir quoi que ce soit par-dessus un
      * dépôt qui ne compile pas noierait le seul signal qui compte — des échecs de
      * test sur un dépôt qui ne compile pas ne se lisent même pas. Les tests passent
      * ensuite, avant la relecture : un échec est un fait, un diff est une question.
-     * La relecture du plan passe
-     * avant sa clôture : le modèle corrige son plan, et le grep tourne ensuite sur
-     * le plan corrigé — il ne rapportera pas comme oublié un fichier que la
-     * relecture vient de faire nommer. L'inverse poserait deux fois la même question.
+     * Le contrôle du plan ferme la marche, et il n'arrive normalement JAMAIS
+     * jusqu'ici : `gateWritePlan` l'a déjà servi sur le geste. Il reste en dernier
+     * recours, pour le tour qui écrit un plan sans budget à ce moment-là.
      *
      * Chaque bloc a son propre budget, donc un tour MIXTE (des éditions ET un plan)
-     * les voit tous les cinq. C'est ce qui n'arrivait jamais avant MIN-240.
+     * les voit tous. C'est ce qui n'arrivait jamais avant MIN-240.
+     *
+     * `REENTRY_REPLY_RULE` est collée au bloc qui sort, quel qu'il soit : ce qui
+     * suit une réinjection est la réponse que l'utilisateur lira (MIN-256).
      */
     run: async ({ budgetMs }) => {
       noteEdits();
-      return (
+      const block =
         (await typeCheckBlock(budgetMs)) ??
         (await testBlock(budgetMs)) ??
         (await selfReviewBlock(budgetMs)) ??
-        (await planReviewBlock(budgetMs)) ??
-        (await planClosureBlock(budgetMs))
-      );
+        (await planBlock(budgetMs));
+      return block ? `${block}\n\n${REENTRY_REPLY_RULE}` : null;
     },
+  };
+}
+
+/**
+ * LE CONTRÔLE DU PLAN SUR LE GESTE, PAS APRÈS LA RÉPONSE (MIN-256).
+ *
+ * Même patron que `gateCreatePr`, et pour une raison de plus. Servi en fin de
+ * tour, le contrôle arrivait après que le modèle avait écrit sa réponse : le tour
+ * repartait, il répondait une seconde fois, et c'est cette réponse-là — « j'ai
+ * vérifié, le plan tient » — que l'utilisateur lisait, le vrai résumé étant
+ * redescendu au rang d'étape dans le fil. Accroché au `write_issue_plan`, le même
+ * contrôle arrive AVANT toute réponse : le modèle corrige, puis écrit son unique
+ * message final, qui raconte le tour.
+ *
+ * À la différence de `gateCreatePr`, la porte ne RETIENT rien — le plan est bel et
+ * bien écrit, et il doit l'être : c'est le document qu'on relit. Seul le retour
+ * s'ajoute, en `followUp`, parce qu'un résultat de tool est élidé par le milieu et
+ * qu'un plan amputé de son milieu ne se relit pas.
+ *
+ * Best-effort : une panne du contrôle ne doit jamais empêcher un plan d'être écrit.
+ */
+export function gateWritePlan(
+  handler: PlatformToolHandler,
+  hook: Pick<TurnEndHook, "checkPlanAfterWrite">,
+  remainingMs: () => number,
+): PlatformToolHandler {
+  return async (name, args) => {
+    const out = await handler(name, args);
+    if (name !== "write_issue_plan" || !out.success) return out;
+    const followUp = await hook.checkPlanAfterWrite(remainingMs()).catch(() => null);
+    return followUp ? { ...out, followUp } : out;
   };
 }
 

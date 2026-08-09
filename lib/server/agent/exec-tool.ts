@@ -88,7 +88,15 @@ import type { AgentToolImage } from "./content";
 export type PlatformToolHandler = (
   name: string,
   args: Record<string, unknown>,
-) => Promise<{ result: unknown; success: boolean; images?: AgentToolImage[] }>;
+) => Promise<{
+  result: unknown;
+  success: boolean;
+  images?: AgentToolImage[];
+  /** Ce que le harness a de LONG à dire sur cet appel — servi en message `user`
+   *  après le round, là où un `result` serait élidé par le milieu. Aujourd'hui :
+   *  le contrôle du plan accroché à `write_issue_plan` (`gateWritePlan`). */
+  followUp?: string;
+}>;
 
 
 /**
@@ -340,6 +348,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     success: boolean;
     reason?: string;
     images?: AgentToolImage[];
+    followUp?: string;
   }) => {
     const images = out.images ?? [];
     if (images.length === 0) return out;

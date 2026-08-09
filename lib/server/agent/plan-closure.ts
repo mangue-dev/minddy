@@ -237,7 +237,7 @@ export function planNamesFile(plan: string, file: string): boolean {
 
 const HEADER = `Before you reply: the harness grepped the identifiers your plan names, and found files that contain them and that the plan never mentions.`;
 
-const FOOTER = `This is an observation, not a verdict — the harness cannot tell a call site you forgot from one you left out on purpose. Open the ones that matter. If a file belongs in the plan, add it with \`append_to_plan\` (never rewrite the plan). If it does not, just reply: no need to justify the omission.`;
+const FOOTER = `This is an observation, not a verdict — the harness cannot tell a call site you forgot from one you left out on purpose. Open the ones that matter. If a file belongs in the plan, add it with \`append_to_plan\` (never rewrite the plan). If it does not, carry on: no need to justify the omission.`;
 
 /**
  * Le bloc de clôture, ou `null` s'il n'y a rien à dire — le cas NORMAL, et celui

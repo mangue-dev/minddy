@@ -63,7 +63,7 @@ import {
   MAX_CHECKPOINT_BYTES,
 } from "./checkpoint-fit";
 import { newPlanWriteSink, watchPlanWrites } from "./plan-closure";
-import { gateCreatePr, makeTurnEndHook } from "./turn-end";
+import { gateCreatePr, gateWritePlan, makeTurnEndHook } from "./turn-end";
 import { toolOutputFileName } from "./command-output";
 import { usesApplyPatch } from "./patch";
 import {
@@ -2017,12 +2017,16 @@ export async function executeAgentRun(
         // ici les exécuteurs en direct, puisqu'on est dans la fonction ; dans la
         // microVM, les mêmes noms partent au plan de contrôle.
         prTool: prToolCtx ? (name, args) => executePrTool(prToolCtx, name, args) : null,
-        // Enveloppé pour que le plan écrit ce tour soit NOTÉ au passage (MIN-236) :
-        // le contrôle de clôture de fin de tour n'a pas d'autre moyen de savoir ce
-        // que le modèle vient d'écrire.
-        issueTool: watchPlanWrites(
-          (name, args) => executeIssueTool(issueToolCtx, name, args),
-          planWrites,
+        // Deux enveloppes, et l'ORDRE compte : `watchPlanWrites` note le plan écrit
+        // (MIN-236), puis `gateWritePlan` le relit — il lit le sink que la première
+        // vient de remplir. L'inverse contrôlerait le plan du tour précédent.
+        issueTool: gateWritePlan(
+          watchPlanWrites(
+            (name, args) => executeIssueTool(issueToolCtx, name, args),
+            planWrites,
+          ),
+          turnEnd,
+          chunkRemainingMs,
         ),
         scratchpadTool: (name, args) => executeScratchpadTool(scratchpadToolCtx, name, args),
         webSearch,
