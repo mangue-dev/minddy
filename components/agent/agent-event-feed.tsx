@@ -122,6 +122,8 @@ type FeedItem =
       files: AgentFileChange[];
       truncated: boolean;
       createdAt: string;
+      /** Liste PROVISOIRE du tour en cours (direct), pas la liste de git. */
+      live?: boolean;
     }
   /**
    * UN sous-agent (MIN-112), replié. Tous les events qui portent son `subagent_id`
@@ -612,7 +614,11 @@ function buildBlocks(items: FeedItem[], active: boolean): Block[] {
     // Bloc « fichiers changés » : rattaché au tour qu'il clôt (rendu sous sa réponse).
     // Sans tour immédiatement avant (résumé lâche, ou tour actif) → item libre.
     if (it.kind === "files") {
-      const turn = work.length === 0 ? lastTurn() : null;
+      // Jamais la liste du tour EN COURS sous le tour PRÉCÉDENT : le direct
+      // devance les events (il ne passe pas par la base), donc `work` peut être
+      // encore vide quand la première édition arrive — et le bloc se serait rangé
+      // sous la réponse d'avant.
+      const turn = work.length === 0 && !it.live ? lastTurn() : null;
       if (turn) turn.files.push(it);
       else work.push(it);
       continue;
@@ -1074,6 +1080,20 @@ export function AgentEventFeed({
         // Un outil déjà amorcé dans ce round ⇒ ce texte est de la narration, il
         // reste dans le déroulé. Sinon il vise la place de la réponse finale.
         isLiveAnswer: live.tools === 0,
+      });
+    }
+    // Fichiers du tour EN COURS, tels que les tools les ont touchés — provisoires
+    // jusqu'au `files_changed` de fin de tour, qui les remplace avec les compteurs
+    // de git. Le serveur retire la liste au moment du relais : les deux blocs ne se
+    // superposent pas.
+    if (live.files.length > 0) {
+      out.push({
+        kind: "files",
+        id: "live-files",
+        files: live.files,
+        truncated: live.filesTruncated,
+        createdAt: live.startedAt,
+        live: true,
       });
     }
     return out;

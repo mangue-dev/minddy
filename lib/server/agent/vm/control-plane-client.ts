@@ -1,6 +1,6 @@
 import { agentVmUrl } from "../network-policy";
 import type { AgentCheckpoint } from "../runs";
-import type { AgentEventType, AgentUsageLine, PlanStep } from "../agent-loop";
+import type { AgentEventType, AgentLiveProgress, AgentUsageLine, PlanStep } from "../agent-loop";
 import type { VmToolResponse, VmTurnReport } from "./protocol";
 
 /**
@@ -71,12 +71,10 @@ function retryable(status: number): boolean {
 
 export interface ControlPlaneClient {
   emit(type: AgentEventType, payload: Record<string, unknown>): Promise<void>;
-  emitLive(progress: {
-    text: string;
-    tools: number;
-    reasoningActive: boolean;
-    reasoningMs: number;
-  }): void;
+  /** Le type de la BOUCLE, pas une copie : la charge est sérialisée telle quelle
+   *  (`JSON.stringify(progress)`), donc tout champ absent d'ici passerait quand
+   *  même — jusqu'au jour où quelqu'un ajoute une liste blanche et le perd. */
+  emitLive(progress: AgentLiveProgress): void;
   recordUsage: (line: AgentUsageLine) => Promise<void>;
   /**
    * Sauvegarde périodique. Ne lève pas — mais rend `false` quand le plan de

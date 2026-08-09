@@ -20,6 +20,8 @@ import type { AiUsageInput } from "@/lib/server/ai-usage";
 const h = vi.hoisted(() => ({
   recorded: [] as AiUsageInput[],
   streams: [] as Array<{ topic: string; event: string; text: unknown }>,
+  /** La charge de direct ENTIÈRE — `streams` n'en garde que le texte. */
+  streamPayloads: [] as Array<Record<string, unknown>>,
   events: [] as Array<{ runId: string; type: string }>,
   stamped: [] as Array<Record<string, unknown>>,
   issueCalls: [] as Array<{ ctx: Record<string, unknown>; name: string }>,
@@ -61,6 +63,7 @@ vi.mock("./live", async (importOriginal) => ({
   broadcastToTopic: vi.fn(
     async (topic: string, event: string, payload: Record<string, unknown>) => {
       h.streams.push({ topic, event, text: payload.text });
+      h.streamPayloads.push(payload);
     },
   ),
 }));
@@ -162,6 +165,7 @@ vi.mock("@/lib/supabase-service", () => ({
 }));
 
 import { handleControlPlaneRequest } from "./control-plane";
+import { CHANGED_FILES_CAP } from "./repo-host";
 
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
 const OTHER_RUN = "99999999-8888-4777-8666-555555555555";
@@ -169,6 +173,7 @@ const OTHER_RUN = "99999999-8888-4777-8666-555555555555";
 beforeEach(() => {
   h.recorded.length = 0;
   h.streams.length = 0;
+  h.streamPayloads.length = 0;
   h.events.length = 0;
   h.stamped.length = 0;
   h.issueCalls.length = 0;
@@ -291,6 +296,53 @@ describe("le direct — le topic vient du run, pas du corps", () => {
   it("diffuse même si la ligne du run a disparu — rien à perdre, personne à atteindre", async () => {
     h.run = null;
     expect((await call("POST", "/stream", { text: "salut" })).status).toBe(200);
+  });
+
+  it("ne rediffuse pas la liste de fichiers telle quelle : chemins vides, statuts inventés et surplus tombent", async () => {
+    // La VM est notre code, mais elle reste de l'autre côté d'un POST : ce qui
+    // part sur le topic est ce que le fil sait lire, pas ce qu'elle a envoyé.
+    await call("POST", "/stream", {
+      text: "",
+      files: [
+        { path: "a.ts", status: "deleted" },
+        { path: "b.ts", status: "cosmique" }, // statut inconnu → modified
+        { path: "", status: "added" }, // chemin vide → ignoré
+        "pas un objet",
+        { path: "c.ts", status: "renamed", previousPath: "old.ts", vole: "des octets" },
+      ],
+    });
+    await Promise.all(h.afterWork.map((w) => w()));
+    expect(h.streamPayloads[0].files).toEqual([
+      { path: "a.ts", status: "deleted" },
+      { path: "b.ts", status: "modified" },
+      { path: "c.ts", status: "renamed", previousPath: "old.ts" },
+    ]);
+    // Deux entrées écartées : la liste diffusée est plus courte que celle reçue.
+    expect(h.streamPayloads[0].filesTruncated).toBe(true);
+  });
+
+  it("borne la liste, et le DIT", async () => {
+    // Sans plafond, un tour qui touche 500 fichiers les diffuse tous, quatre fois
+    // par seconde, à tous les abonnés du topic.
+    await call("POST", "/stream", {
+      text: "",
+      files: Array.from({ length: CHANGED_FILES_CAP + 20 }, (_, i) => ({
+        path: `f${i}.ts`,
+        status: "modified",
+      })),
+    });
+    await Promise.all(h.afterWork.map((w) => w()));
+    expect((h.streamPayloads[0].files as unknown[]).length).toBe(CHANGED_FILES_CAP);
+    expect(h.streamPayloads[0].filesTruncated).toBe(true);
+  });
+
+  it("ne parle pas de fichiers quand il n'y en a pas", async () => {
+    // `clearLive` passe par ici : une liste vide ne doit pas devenir un `files: []`
+    // que le fil lirait comme « le tour n'a rien touché ».
+    await call("POST", "/stream", { text: "salut" });
+    await Promise.all(h.afterWork.map((w) => w()));
+    expect(h.streamPayloads[0]).not.toHaveProperty("files");
+    expect(h.streamPayloads[0]).not.toHaveProperty("filesTruncated");
   });
 });
 

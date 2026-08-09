@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { AgentLiveEdit } from "./exec-tool";
+
 /**
  * Diffusion EN DIRECT d'une session de l'agent de code, sur le topic privé
  * `agent-run:{runId}` (migration 20260908090000_agent_live_stream).
@@ -43,6 +45,11 @@ export interface AgentLiveStream {
    *  Un compteur ne conviendrait pas : un run repris repart d'une autre
    *  invocation, donc d'un compteur remis à zéro. */
   at: number;
+  /** Fichiers touchés jusqu'ici par le tour, provisoires : portés par CHAQUE
+   *  charge, sans quoi le fil les efface dès la charge suivante. */
+  files?: AgentLiveEdit[];
+  /** La liste a été bornée à `CHANGED_FILES_CAP`. */
+  filesTruncated?: boolean;
 }
 
 /**

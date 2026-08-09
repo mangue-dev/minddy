@@ -30,6 +30,9 @@ import {
 import { Subagents } from "./subagent";
 import { pruneToolOutputs, TOOL_RESULT_MAX_CHARS } from "./prune";
 import type { ReadWindow } from "./repo-host";
+// Type SEUL : `agent-api` est un module client, mais un `import type` est effacé à
+// la compilation — rien de client ne traverse la frontière.
+import type { AgentFileChangeStatus } from "@/lib/agent-api";
 import { resolveWithin } from "./repo-path";
 import { LITERAL_RETRY_NOTE, NO_FILES_IN_SCOPE_NOTE, REGEX_RETRY_NOTE } from "./grep-pattern";
 import {
@@ -184,6 +187,22 @@ export function fitReadResult(body: string, win: ReadWindow): string {
   return lines.slice(0, Math.max(1, lo)).join("\n") + cutFooter(Math.max(1, lo));
 }
 
+/**
+ * Un fichier touché, dit AU FIL sans attendre la fin du tour.
+ *
+ * Le `status` n'est CERTAIN que là où le tool le porte : une suppression supprime,
+ * un renommage renomme. Ailleurs, distinguer « créé » de « modifié » demanderait un
+ * appel git par édition — on annonce donc `modified`, et l'event `files_changed` de
+ * fin de tour, lui dérivé de `git diff --name-status`, rectifie. Le fil montre du
+ * PROVISOIRE en attendant l'autorité, et jamais un compteur de lignes inventé
+ * (`additions`/`deletions` restent à 0, que `hideEmpty` tait).
+ */
+export type AgentLiveEdit = {
+  path: string;
+  status: AgentFileChangeStatus;
+  previousPath?: string;
+};
+
 /** Exécuteur du tool `create_pr` (fourni par executeAgentRun, qui a le contexte git/PR). */
 export type CreatePrHandler = (args: {
   title: string;
@@ -281,6 +300,8 @@ export interface ExecToolConfig {
       180 s et la fonction mourait avant d'écrire le checkpoint. PARTAGÉE avec les
       filles : c'est l'horloge du CHUNK, celle que la plateforme tue. */
   chunkRemainingMs: () => number;
+  /** Notifie le fil dès qu'un tool a écrit un fichier, avant la fin du tour. */
+  onEdit?: (edits: AgentLiveEdit[]) => void;
 }
 
 /** Les tools « métier » de l'agent : Sandbox (fichiers/commandes/jobs de fond),
@@ -302,6 +323,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     editedPaths,
     subagents,
     chunkRemainingMs,
+    onEdit,
   } = cfg;
   let outputSeq = 0;
   /** Images déjà montrées au modèle sur ce chunk (plafond MAX_IMAGES_PER_TURN). */
@@ -372,6 +394,8 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
   const withTouchedInstructions = async <T extends { result: unknown; success: boolean }>(
     res: T,
     paths: string[],
+    /** Ce que le fil doit montrer, quand le tool en sait plus que « modifié ». */
+    live?: AgentLiveEdit[],
   ): Promise<T> => {
     if (!res.success) return res;
     // Entonnoir unique de TOUTE édition réussie (edit_file, write_file, move_file,
@@ -379,7 +403,13 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     // pour le type-check de fin de tour (MIN-110). Un fichier LU n'y entre pas —
     // il n'a rien à faire vérifier.
     for (const path of paths) if (path) editedPaths.add(path);
+    notifyEdit(live ?? paths.filter(Boolean).map((path) => ({ path, status: "modified" as const })));
     return withInstructionsFor(res, paths, "edited");
+  };
+
+  /** Le fil, prévenu — jamais avec une liste vide (ce serait un bruit sans objet). */
+  const notifyEdit = (edits: AgentLiveEdit[]) => {
+    if (edits.length > 0) onEdit?.(edits);
   };
 
   return async (name, args, callId) => {
@@ -581,10 +611,12 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
       }
       case "move_file": {
         const to = String(args.to ?? "");
-        await moveWorkFile(host, String(args.from ?? ""), to);
+        const from = String(args.from ?? "");
+        await moveWorkFile(host, from, to);
         return await withTouchedInstructions(
           { result: `Moved ${args.from} → ${to}`, success: true },
           [to],
+          [{ path: to, status: "renamed", previousPath: from }],
         );
       }
       case "delete_file": {
@@ -592,8 +624,10 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         await deleteWorkFile(host, path);
         // Supprimer un fichier casse des types tout aussi bien qu'en éditer un ;
         // il ne passe pas par `withTouchedInstructions` (rien à charger pour un
-        // fichier qui n'est plus là), d'où la note ici.
+        // fichier qui n'est plus là), d'où la note ici. Le fil, lui, doit le voir
+        // partir : sans cet appel, une suppression n'apparaissait qu'au commit.
         if (path) editedPaths.add(path);
+        notifyEdit(path ? [{ path, status: "deleted" }] : []);
         return { result: `Deleted ${args.path}`, success: true };
       }
       case "apply_edits": {

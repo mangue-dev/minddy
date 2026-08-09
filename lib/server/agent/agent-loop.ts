@@ -29,6 +29,7 @@ import type { AgentToolDef } from "./tools";
 import type { EditTelemetry } from "./edit";
 import { textOf, type AgentContentPart, type AgentToolImage } from "./content";
 import { pruneToolOutputs, capHistoryImages, headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
+import type { AgentLiveEdit } from "./exec-tool";
 import { markSystemPromptCache } from "./caching";
 import type { RedactText } from "./redact";
 import {
@@ -311,6 +312,16 @@ export interface AgentLiveProgress {
   reasoningActive: boolean;
   /** Millisecondes de réflexion accumulées dans ce round (0 si pas de raisonnement). */
   reasoningMs: number;
+  /**
+   * Fichiers touchés jusqu'ici par le tour, PROVISOIRES (MIN-248 bis) : ils sont
+   * portés par chaque charge du direct, pas seulement par celle de l'édition —
+   * une charge est un instantané complet, et ce qu'elle tait, le fil l'efface.
+   * L'event `files_changed` de fin de tour, dérivé de git, prend le relais.
+   */
+  files?: AgentLiveEdit[];
+  /** La liste a été bornée (`CHANGED_FILES_CAP`) : le fil le dit plutôt que de
+   *  laisser lire une liste tronquée comme une liste complète. */
+  filesTruncated?: boolean;
 }
 
 export type EmitAgentLive = (progress: AgentLiveProgress) => void;

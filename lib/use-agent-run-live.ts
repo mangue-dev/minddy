@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
-import type { AgentRunEvent } from "./agent-api";
+import { parseFilesChangedPayload, type AgentFileChange, type AgentRunEvent } from "./agent-api";
 
 /**
  * Le fil d'une session de l'agent de code EN DIRECT (topic privé
@@ -39,6 +39,15 @@ export interface AgentRunLive {
   reasoningMs: number;
   /** ISO — premier instant où ce round a écrit quelque chose (chrono du tour). */
   startedAt: string;
+  /**
+   * Fichiers touchés jusqu'ici par le tour, PROVISOIRES : le serveur en renvoie la
+   * liste ENTIÈRE à chaque charge, donc celle-ci fait foi sans qu'on ait à fusionner.
+   * `additions`/`deletions` y valent 0 — git n'a encore rien compté, et un compteur
+   * à zéro se tait (`hideEmpty`) plutôt que de se lire comme une mesure.
+   */
+  files: AgentFileChange[];
+  /** La liste a été bornée côté serveur (gros tour). */
+  filesTruncated: boolean;
 }
 
 interface StreamPayload {
@@ -47,6 +56,8 @@ interface StreamPayload {
   reasoningActive?: unknown;
   reasoningMs?: unknown;
   at?: unknown;
+  files?: unknown;
+  filesTruncated?: unknown;
 }
 
 interface Listener {
@@ -139,11 +150,19 @@ export function useAgentRunLive(
         const tools = typeof p.tools === "number" ? p.tools : 0;
         const reasoningActive = p.reasoningActive === true;
         const reasoningMs = typeof p.reasoningMs === "number" ? p.reasoningMs : 0;
+        // La MÊME lecture que celle de l'event `files_changed` (`agent-api`) : deux
+        // parseurs pour un même payload finissent toujours par diverger, et le
+        // second perdait déjà les statuts et les compteurs du premier.
+        const { files, truncated } = parseFilesChangedPayload({
+          files: p.files,
+          truncated: p.filesTruncated,
+        });
         // Envoi À VIDE : les vrais events du round sont posés, ils prennent le
         // relais à l'écran. Une phase de PURE réflexion n'écrit ni texte ni outil —
         // sans `reasoningActive` dans ce test, l'indicateur disparaîtrait au lieu
-        // de s'afficher.
-        if (!text && !tools && !reasoningActive) {
+        // de s'afficher. Les fichiers comptent comme un signe de vie : la charge
+        // qui les porte est justement celle d'un round au repos.
+        if (!text && !tools && !reasoningActive && files.length === 0) {
           setLive(null);
           return;
         }
@@ -152,6 +171,10 @@ export function useAgentRunLive(
           tools,
           reasoningActive,
           reasoningMs,
+          // Pas de fusion avec `prev` : le serveur renvoie la liste entière à chaque
+          // charge, y compris vide au passage de relais vers `files_changed`.
+          files,
+          filesTruncated: truncated,
           // Le chrono du tour date du PREMIER signe de vie du round, pas du dernier.
           startedAt: prev?.startedAt ?? new Date().toISOString(),
         }));
@@ -160,7 +183,16 @@ export function useAgentRunLive(
         // Un event posé clôt la phase d'écriture du round : le vrai message
         // arrive, le provisoire s'efface. Sans ça, les deux se superposeraient
         // le temps que le serveur envoie sa purge (un insert plus tard).
-        setLive(null);
+        //
+        // Les FICHIERS, eux, restent : aucun event posé ne les remplace avant le
+        // `files_changed` de fin de tour. Les effacer ici les faisait disparaître à
+        // chaque `tool_call` — donc pendant toute la phase d'outils, celle-là même
+        // où l'agent édite et où on veut les voir.
+        setLive((prev) =>
+          prev && prev.files.length > 0
+            ? { ...prev, text: "", tools: 0, reasoningActive: false }
+            : null,
+        );
         // Le cache n'est patché QUE s'il existe déjà : le créer ici ferait passer
         // la requête pour fraîche et sauterait son chargement initial.
         queryClient.setQueryData<{ events: AgentRunEvent[] }>(

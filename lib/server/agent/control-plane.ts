@@ -7,6 +7,8 @@ import { defaultLocale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 
 import { executeIssueTool, type IssueToolContext } from "./issue-tools";
+import type { AgentLiveEdit } from "./exec-tool";
+import { CHANGED_FILES_CAP } from "./repo-host";
 import {
   ISSUE_TOOL_NAMES,
   PR_TOOL_NAMES,
@@ -109,6 +111,33 @@ function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
+const LIVE_FILE_STATUSES = new Set(["added", "modified", "deleted", "renamed"]);
+
+/**
+ * La liste de fichiers d'une charge de direct, ramenée à ce qu'elle prétend être :
+ * des chemins non vides, un statut connu, et pas plus que le plafond de la liste
+ * autoritaire. Rien de ce que la VM invente ne traverse.
+ */
+function liveFiles(raw: unknown): { files?: AgentLiveEdit[]; filesTruncated?: boolean } {
+  if (!Array.isArray(raw)) return {};
+  const files: AgentLiveEdit[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const r = item as Record<string, unknown>;
+    if (typeof r.path !== "string" || !r.path) continue;
+    files.push({
+      path: r.path,
+      status: (typeof r.status === "string" && LIVE_FILE_STATUSES.has(r.status)
+        ? r.status
+        : "modified") as AgentLiveEdit["status"],
+      ...(typeof r.previousPath === "string" ? { previousPath: r.previousPath } : {}),
+    });
+    if (files.length === CHANGED_FILES_CAP) break;
+  }
+  if (files.length === 0) return {};
+  return { files, filesTruncated: raw.length > files.length };
+}
+
 /**
  * CE QUE CE TOUR A ENCORE LE DROIT DE DÉPENSER, relu MAINTENANT.
  *
@@ -194,6 +223,11 @@ export async function handleControlPlaneRequest(opts: {
         tools: num(body.tools) ?? 0,
         reasoningActive: body.reasoningActive === true,
         reasoningMs: num(body.reasoningMs) ?? 0,
+        // La VM est du CODE À NOUS, mais elle reste de l'autre côté d'un POST : on
+        // ne rediffuse pas sa liste telle quelle. Bornée comme celle de fin de tour,
+        // et réduite aux deux champs que le fil lit — sinon un payload malformé (ou
+        // simplement gros) partirait tel quel sur le topic de tous les abonnés.
+        ...liveFiles(body.files),
         at: Date.now(),
       }),
     );
