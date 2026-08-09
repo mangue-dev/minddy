@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchesModCombo } from "@/lib/keyboard/mod-combo";
+import { matchesModCombo, matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 
 type Ev = Parameters<typeof matchesModCombo>[0];
 
@@ -45,5 +45,35 @@ describe("matchesModCombo", () => {
   it("survit à un keydown synthétique sans `key`", () => {
     const bare = { repeat: false, metaKey: true, ctrlKey: false, shiftKey: false, altKey: false } as Ev;
     expect(matchesModCombo(bare, "o")).toBe(false);
+  });
+});
+
+describe("matchesModShiftCombo", () => {
+  it("accepte ⌘⇧D comme Ctrl⇧D — la même combinaison des deux côtés", () => {
+    expect(matchesModShiftCombo(ev({ metaKey: true, shiftKey: true, key: "d" }), "d")).toBe(true);
+    expect(matchesModShiftCombo(ev({ ctrlKey: true, shiftKey: true, key: "D" }), "d")).toBe(true);
+  });
+
+  it("EXIGE ⇧ : ⌘D est le signet du navigateur, pas la dictée", () => {
+    expect(matchesModShiftCombo(ev({ metaKey: true, key: "d" }), "d")).toBe(false);
+  });
+
+  it("refuse ⌥ en plus, et la lettre nue", () => {
+    expect(
+      matchesModShiftCombo(ev({ metaKey: true, shiftKey: true, altKey: true, key: "d" }), "d")
+    ).toBe(false);
+    expect(matchesModShiftCombo(ev({ shiftKey: true, key: "d" }), "d")).toBe(false);
+  });
+
+  it("refuse une autre lettre et la répétition", () => {
+    expect(matchesModShiftCombo(ev({ metaKey: true, shiftKey: true, key: "p" }), "d")).toBe(false);
+    expect(
+      matchesModShiftCombo(ev({ metaKey: true, shiftKey: true, repeat: true, key: "d" }), "d")
+    ).toBe(false);
+  });
+
+  it("survit à un keydown synthétique sans `key`", () => {
+    const bare = { repeat: false, metaKey: true, ctrlKey: false, shiftKey: true, altKey: false } as Ev;
+    expect(matchesModShiftCombo(bare, "d")).toBe(false);
   });
 });

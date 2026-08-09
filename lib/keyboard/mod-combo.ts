@@ -19,3 +19,20 @@ export function matchesModCombo(
   if (!(e.metaKey || e.ctrlKey)) return false;
   return eventKey(e) === key;
 }
+
+/**
+ * Le frappé est-il EXACTEMENT « ⌘/Ctrl + ⇧ + `key` » ?
+ *
+ * Même exigence que {@link matchesModCombo}, décalée d'un cran : ⇧ est ici
+ * REQUIS, ⌥ toujours refusé. C'est la forme du raccourci de dictée (⌘⇧D), que
+ * le bouton de dictée porte partout où il est monté et que le raccourci global
+ * de création vocale reprend là où personne ne l'a pris.
+ */
+export function matchesModShiftCombo(
+  e: Pick<KeyboardEvent, "key" | "repeat" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">,
+  key: string
+): boolean {
+  if (e.repeat || !e.shiftKey || e.altKey) return false;
+  if (!(e.metaKey || e.ctrlKey)) return false;
+  return eventKey(e) === key;
+}

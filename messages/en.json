@@ -1399,6 +1399,7 @@
       "redo": "Redo last action",
       "cheatsheet": "Show keyboard shortcuts",
       "createIssue": "New issue",
+      "createIssueDictate": "New issue, dictated",
       "createObjective": "New objective",
       "openIssue": "Open issue",
       "status": "Change status",

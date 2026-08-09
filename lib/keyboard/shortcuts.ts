@@ -95,6 +95,14 @@ export const CHEATSHEET: CheatsheetSection[] = [
     titleKey: "create",
     shortcuts: [
       { id: "create.issue", labelKey: "createIssue", keys: [["C"]] },
+      // Le même raccourci que la dictée, là où il n'y avait rien à dicter : le
+      // formulaire s'ouvre micro ouvert. Les surfaces qui portent DÉJÀ ⌘⇧D
+      // (panneau du ticket, page Objectifs) le gardent pour elles.
+      {
+        id: "create.issueDictate",
+        labelKey: "createIssueDictate",
+        keys: [["mod", "⇧", "D"]],
+      },
       { id: "create.objective", labelKey: "createObjective", keys: [["O"]] },
     ],
   },

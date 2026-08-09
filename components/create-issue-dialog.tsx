@@ -96,6 +96,7 @@ export function CreateIssueDialog({
   initialTitle,
   initialDescription,
   initialCategoryIds,
+  autoDictate = false,
   analyticsSource = "dialog",
 }: {
   open: boolean;
@@ -132,6 +133,13 @@ export function CreateIssueDialog({
   initialTitle?: string;
   initialDescription?: string;
   initialCategoryIds?: string[];
+  /**
+   * Ouvre le formulaire micro déjà ouvert : le raccourci global ⌘⇧D n'ouvre
+   * pas un dialog qu'il faudrait ensuite mettre en dictée, il ouvre une prise
+   * de parole. Simplement transmis au bouton de dictée — c'est LUI qui
+   * déclenche, à son montage (voir `autoStart`).
+   */
+  autoDictate?: boolean;
   /** Surface d'où vient la création — analytics uniquement (MIN-78). */
   analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
 }) {
@@ -233,6 +241,16 @@ export function CreateIssueDialog({
     }
     if (initialCategoryIds?.length) setCategoryIds(initialCategoryIds);
   }, [open, initialTitle, initialDescription, initialCategoryIds]);
+
+  // Ouverture à la voix : armé à l'ouverture, DÉSARMÉ dès que la prise part.
+  // Le désarmement n'est pas une précaution en l'air — pendant que Numo reprend
+  // la dictée, le bouton cède sa place à l'icône « thinking » et se démonte ;
+  // il remonte quand Numo a fini, et un drapeau resté levé le ferait
+  // réenregistrer dans la foulée du ticket qu'on vient de dicter.
+  const [dictateArmed, setDictateArmed] = useState(false);
+  useEffect(() => {
+    setDictateArmed(open && autoDictate);
+  }, [open, autoDictate]);
 
   // Ouverture du dialog (MIN-78) : le dénominateur du taux d'abandon — combien
   // de dialogs ouverts finissent en ticket réellement créé. `useTrackView`
@@ -694,6 +712,8 @@ export function CreateIssueDialog({
                     onTranscript(text);
                   }}
                   disabled={submitting}
+                  autoStart={dictateArmed}
+                  onAutoStart={() => setDictateArmed(false)}
                   shortcutKey="mod+shift+d"
                   onProcessingChange={setTranscribing}
                   className="-ml-2"

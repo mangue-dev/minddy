@@ -36,6 +36,7 @@ import {
   lastCreateProjectId,
 } from "@/lib/last-create-project";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type {
   CreateIssueInput,
@@ -63,6 +64,8 @@ interface OpenIssueOptions {
   status?: IssueStatus;
   objectiveId?: string | null;
   assigneeId?: string | null;
+  /** Ouvre le dialog micro déjà ouvert (raccourci global ⌘⇧D). */
+  dictate?: boolean;
 }
 
 interface OpenObjectiveOptions {
@@ -120,6 +123,9 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   // first open and left in place (dialogs stay mounted for reuse).
   const [target, setTarget] = useState<string | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
+  // Le dialog s'ouvre-t-il en dictée ? Reposé à CHAQUE ouverture, jamais
+  // laissé traîner : sinon un `C` tapé après un ⌘⇧D rallumerait le micro.
+  const [issueDictate, setIssueDictate] = useState(false);
   const [issuePresets, setIssuePresets] = useState<{
     status?: IssueStatus;
     objectiveId: string | null;
@@ -237,6 +243,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
         objectiveId,
         assigneeId: opts?.assigneeId ?? null,
       });
+      setIssueDictate(opts?.dictate === true);
       setIssueOpen(true);
     },
     [resolveTarget, pathname]
@@ -285,6 +292,31 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [projects.length, openCreateIssue, openCreateObjective]);
 
+  // ⌘⇧D partout : « nouveau ticket, à la voix ». C'est le raccourci de dictée,
+  // étendu aux écrans qui n'avaient rien à dicter — au lieu de ne rien faire,
+  // il ouvre le formulaire de création avec le micro déjà ouvert.
+  //
+  // Il ne PREND jamais la combinaison à qui la porte déjà : chaque bouton de
+  // dictée (panneau du ticket, page Objectifs, dialog d'objectif, retour,
+  // dialog de création lui-même) l'écoute en phase de CAPTURE et fait
+  // `preventDefault`. Ce listener-ci est en phase de bulle, sur la fenêtre :
+  // il passe donc APRÈS eux, et `defaultPrevented` lui dit qu'un micro plus
+  // proche a répondu. Rien à recenser, rien à tenir à jour.
+  useEffect(() => {
+    if (projects.length === 0) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!matchesModShiftCombo(e, "d")) return;
+      if (e.defaultPrevented) return;
+      // Un dialog / panneau latéral ouvert tient le clavier (même garde que
+      // `C` et `O` juste au-dessus) : on ne lui empile pas un formulaire.
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      e.preventDefault();
+      openCreateIssue({ dictate: true });
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [projects.length, openCreateIssue]);
+
   return (
     <CreateContext.Provider
       value={{ openCreateIssue, openCreateObjective, canCreate: projects.length > 0 }}
@@ -305,6 +337,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
             initialStatus={issuePresets.status}
             initialObjectiveId={issuePresets.objectiveId}
             initialAssigneeId={issuePresets.assigneeId}
+            autoDictate={issueDictate}
           />
           <ObjectiveDialog
             open={objectiveOpen}

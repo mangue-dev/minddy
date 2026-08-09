@@ -99,6 +99,28 @@ export interface DictateButtonProps {
    * lui-même dès qu'il enregistre — c'est alors le bouton d'arrêt.
    */
   hideWhenIdle?: boolean;
+  /**
+   * Enregistre dès son apparition, sans clic ni raccourci — l'hôte s'ouvre
+   * déjà en train d'écouter (le dialog « nouveau ticket » ouvert par ⌘⇧D).
+   *
+   * C'est ICI que ça se décide et pas chez l'hôte, une question de timing : un
+   * effet du parent qui appellerait `toggle()` par la ref tirerait à blanc,
+   * car le contenu d'un dialog Radix ne se monte qu'au SECOND rendu (son
+   * `Presence` envoie MOUNT depuis un effet de layout) — la ref est encore
+   * nulle quand l'effet du parent passe. Monté ici, le déclenchement suit le
+   * montage du bouton, qui est justement l'instant où tout est prêt.
+   *
+   * Le passage à `true` déclenche UNE prise. C'est à l'hôte de DÉSARMER le
+   * drapeau depuis {@link DictateButtonProps.onAutoStart} : le garde-fou
+   * interne ne vaut que tant que le bouton reste monté, et il est des hôtes
+   * qui le démontent entre deux (le dialog « nouveau ticket » le remplace par
+   * l'icône de Numo pendant que celui-ci reprend la dictée). Un drapeau resté
+   * levé rallumerait le micro au remontage.
+   */
+  autoStart?: boolean;
+  /** Rappelé quand {@link DictateButtonProps.autoStart} vient de lancer une
+   *  prise — le signal pour désarmer le drapeau côté hôte. */
+  onAutoStart?: () => void;
   className?: string;
 }
 
@@ -171,6 +193,8 @@ export function DictateButton({
   shortcutKey,
   onProcessingChange,
   hideWhenIdle = false,
+  autoStart = false,
+  onAutoStart,
   className,
 }: DictateButtonProps) {
   const t = useTranslations("Dictate");
@@ -435,6 +459,27 @@ export function DictateButton({
   }, [disabled, startRecording, status, stopRecording]);
 
   useImperativeHandle(ref, () => ({ toggle: handleClick }), [handleClick]);
+
+  // Prise ouverte d'office (voir `autoStart`). Le garde-fou est un ref, pas la
+  // seule liste de dépendances : `startRecording` change d'identité à chaque
+  // changement de statut, et sans lui la FIN d'une prise — le retour à
+  // « idle » — en relancerait immédiatement une autre. Un hôte encore occupé
+  // (`disabled`) fait attendre la prise plutôt que de la perdre.
+  const autoStartedRef = useRef(false);
+  const onAutoStartRef = useRef(onAutoStart);
+  useEffect(() => {
+    onAutoStartRef.current = onAutoStart;
+  });
+  useEffect(() => {
+    if (!autoStart) {
+      autoStartedRef.current = false;
+      return;
+    }
+    if (disabled || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    onAutoStartRef.current?.();
+    void startRecording();
+  }, [autoStart, disabled, startRecording]);
 
   // Keyboard shortcut: toggle recording on `shortcutKey`. Modifiers must match
   // EXACTLY (so ⌘⇧D never fires on ⌘D), and no key-repeat. A bare key stands
