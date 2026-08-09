@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildScratchpadPrompt,
+  isScratchpadPrompt,
   sectionHeadingChain,
   splitTaskSection,
 } from "@/lib/scratchpad-prompt";
@@ -172,6 +173,31 @@ describe("buildScratchpadPrompt", () => {
     expect(buildScratchpadPrompt("- [ ] a\n- [ ] b")).toContain(
       "Work through my working notes below."
     );
+  });
+
+  // Le composer du carnet est pré-rempli avec le prompt COMPLET, et le serveur
+  // emballe toute demande d'un run carnet : sans idempotence, une tâche lancée
+  // depuis le carnet arriverait à l'agent emballée deux fois.
+  it("leaves an already-built prompt alone, whatever the scope", () => {
+    for (const notes of [
+      "## Deploy\n\n- [~] restart the cron",
+      "## Deploy\n- [ ] a\n- [ ] b",
+      "- [ ] a\n\n## Deploy\n- [ ] b",
+    ]) {
+      const built = buildScratchpadPrompt(notes, { section: true, mcp: false });
+      expect(buildScratchpadPrompt(built, { mcp: false })).toBe(built);
+      // Et l'emballage serveur (mêmes options qu'execute.ts) ne l'imbrique pas.
+      expect(built.match(/<notes>/g)).toHaveLength(1);
+    }
+  });
+
+  it("still wraps a free instruction that only looks like prose", () => {
+    const typed = "Work through the backlog, please";
+    expect(buildScratchpadPrompt(typed)).toContain(
+      `<notes>\n${typed}\n</notes>`
+    );
+    expect(isScratchpadPrompt(typed)).toBe(false);
+    expect(isScratchpadPrompt(buildScratchpadPrompt(typed))).toBe(true);
   });
 
   it("drops the editor's invisible spacers before splitting", () => {

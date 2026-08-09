@@ -194,9 +194,10 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   };
 
   // « Lancer un agent » (MIN-84) : la ligne part en markdown de carnet (marqueur
-  // et titre de section compris — la note est le SEUL canal jusqu'à l'agent)
-  // comme instruction d'un run carnet ; le composer de la page Agents fait
-  // choisir le projet avant l'envoi.
+  // et titre de section compris — la note est le SEUL canal jusqu'à l'agent),
+  // emballée dans le MÊME prompt que « copier le prompt » ci-dessus ; le
+  // composer de la page Agents le montre tel quel, éditable, et fait choisir le
+  // projet avant l'envoi.
   //
   // Le démarrage a lieu ICI, au geste, et pas à l'envoi réel : le run carnet
   // n'est rattaché à aucune tâche (sa note est un simple texte, cf.
@@ -211,7 +212,7 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
     // l'autosave (scratchpad-editor.tsx) — l'état doit donc être posé pour
     // partir avec, sinon il se perdrait avec l'éditeur.
     if (startOnLaunch) set("in_progress");
-    launchNote(md);
+    launchNote(md, { section: true });
   };
 
   // The ⋯ menu is a searchable cmdk palette (SearchMenu), opened from the button

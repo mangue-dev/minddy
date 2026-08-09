@@ -4,7 +4,7 @@ import {
   cleanDictatedTaskLine,
   containsMarkdownTaskLine,
   mergeScratchpad,
-  removeCompletedTasks,
+  removeSettledTasks,
   scratchpadPreview,
   scratchpadSectionSubtree,
   splitScratchpadSections,
@@ -279,55 +279,63 @@ describe("containsMarkdownTaskLine", () => {
   });
 });
 
-describe("removeCompletedTasks", () => {
-  it("drops only completed task lines, keeping prose and other states", () => {
+describe("removeSettledTasks", () => {
+  it("drops completed AND cancelled task lines, keeping the live ones", () => {
     const note = "## Section\n- [ ] a\n- [x] b\n- [~] c\n- [-] d\n- [x] e";
-    const { content, removed } = removeCompletedTasks(note);
-    expect(removed).toBe(2);
-    expect(content).toBe("## Section\n- [ ] a\n- [~] c\n- [-] d");
+    const { content, removed } = removeSettledTasks(note);
+    expect(removed).toBe(3);
+    expect(content).toBe("## Section\n- [ ] a\n- [~] c");
   });
 
-  it("returns the content unchanged when there is nothing completed", () => {
+  it("returns the content unchanged when nothing is settled", () => {
     const note = "- [ ] a\n- [~] b";
-    const result = removeCompletedTasks(note);
+    const result = removeSettledTasks(note);
     expect(result.removed).toBe(0);
     expect(result.content).toBe(note);
   });
 
   it("drops a section title when all of its tasks were completed", () => {
     const note = "## Done\n- [x] a\n- [x] b\n\n## Live\n- [ ] c";
-    const { content, removed } = removeCompletedTasks(note);
+    const { content, removed } = removeSettledTasks(note);
     expect(removed).toBe(2);
     expect(content).toBe("## Live\n- [ ] c");
   });
 
   it("also removes the emptied section's '---' separator and blanks", () => {
     const note = "## à faire\n- [x] Configurer stripe\n\n---\n\n# Carnet\n- [ ] c";
-    const { content } = removeCompletedTasks(note);
+    const { content } = removeSettledTasks(note);
     expect(content).toBe("# Carnet\n- [ ] c");
   });
 
   it("keeps the title when the section still has prose", () => {
     const note = "## Notes\nkeep this line\n- [x] a";
-    const { content } = removeCompletedTasks(note);
+    const { content } = removeSettledTasks(note);
     expect(content).toBe("## Notes\nkeep this line");
   });
 
-  it("keeps a cancelled task (a section of [-] is not 'all completed')", () => {
-    const note = "## Section\n- [x] a\n- [-] b";
-    const { content } = removeCompletedTasks(note);
-    expect(content).toBe("## Section\n- [-] b");
+  it("drops a section made only of completed and cancelled tasks", () => {
+    const note = "## Section\n- [x] a\n- [-] b\n\n## Live\n- [~] c";
+    const { content, removed } = removeSettledTasks(note);
+    expect(removed).toBe(2);
+    expect(content).toBe("## Live\n- [~] c");
+  });
+
+  it("keeps a section whose only survivor is an in-progress task", () => {
+    const note = "## Section\n- [-] a\n- [~] b";
+    const { content, removed } = removeSettledTasks(note);
+    expect(removed).toBe(1);
+    expect(content).toBe("## Section\n- [~] b");
   });
 
   it("keeps a parent whose subsection survives, but drops the empty subsection", () => {
     const note = "# Parent\n## A\n- [x] a\n## B\n- [ ] b";
-    const { content } = removeCompletedTasks(note);
+    const { content } = removeSettledTasks(note);
     expect(content).toBe("# Parent\n## B\n- [ ] b");
   });
 
   it("empties the note when every section is fully completed", () => {
     const note = "# A\n- [x] a\n## B\n- [x] b";
-    const { content, removed } = removeCompletedTasks(note);
+    const { content, removed } = removeSettledTasks(note);
     expect(removed).toBe(2);
     expect(content).toBe("");
   });

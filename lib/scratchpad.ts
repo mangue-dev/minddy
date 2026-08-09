@@ -167,7 +167,7 @@ export function splitScratchpadSections(content: string): ScratchpadSection[] {
  * connues du MCP), mais pas pour les gestes qui prennent « cette section » —
  * copier en prompt, lancer un agent. Un `# Pull requests` qui n'a que des
  * `## …` en dessous en ressortait vide, et le geste ne portait alors sur rien.
- * Ici la section est un SOUS-ARBRE, comme dans `removeCompletedTasks`.
+ * Ici la section est un SOUS-ARBRE, comme dans `removeSettledTasks`.
  *
  * Null si le carnet n'a pas autant de titres.
  */
@@ -354,33 +354,34 @@ export function appendScratchpadTasks(
 }
 
 /**
- * Drop every completed ('- [x]') task line, AND collapse any heading section
- * that clearing those tasks leaves empty — so completing every task under a
- * title removes the title too, instead of stranding a bare heading.
+ * Drop every SETTLED task line — completed ('- [x]') and cancelled ('- [-]'),
+ * les deux façons d'en avoir fini avec une tâche — AND collapse any heading
+ * section that clearing those tasks leaves empty, so vider une section retire
+ * son titre au lieu d'y laisser un intertitre orphelin.
  *
  * A heading is dropped whole (heading + its emptied sub-headings + their blank
  * lines and '---' separators) only when its ENTIRE subtree — down to the next
  * heading of the same or a shallower level — has nothing left worth keeping: no
- * surviving task (incomplete or cancelled), no prose, no code. So a parent with
+ * surviving task (pending or in progress), no prose, no code. So a parent with
  * a still-live subsection stays, an emptied subsection goes, and a section with
  * notes under it keeps its title. Fence-aware (a '#' inside a code block is not
- * a heading). `removed` counts the completed TASKS (0 → content unchanged).
+ * a heading). `removed` counts the settled TASKS (0 → content unchanged).
  */
-export function removeCompletedTasks(content: string): {
+export function removeSettledTasks(content: string): {
   content: string;
   removed: number;
 } {
   const parsed = parsePlan(content);
-  const completedLines = new Set(
+  const settledLines = new Set(
     parsed.tasks
-      .filter((task) => task.state === "completed")
+      .filter((task) => task.state === "completed" || task.state === "cancelled")
       .map((task) => task.line)
   );
-  if (completedLines.size === 0) return { content, removed: 0 };
+  if (settledLines.size === 0) return { content, removed: 0 };
 
   const lines = content.split("\n");
   const taskLines = new Set(parsed.tasks.map((task) => task.line));
-  const toRemove = new Set<number>(completedLines);
+  const toRemove = new Set<number>(settledLines);
 
   // Classify each line: is it a heading (and at what level), and does it "keep
   // a section alive" (a surviving task, prose, or code — not a heading, blank,
@@ -415,7 +416,7 @@ export function removeCompletedTasks(content: string): {
     }
     isHeading[i] = false;
     level[i] = 0;
-    if (taskLines.has(i)) survives[i] = !completedLines.has(i);
+    if (taskLines.has(i)) survives[i] = !settledLines.has(i);
     else survives[i] = line.trim() !== "" && !THEMATIC_BREAK.test(line);
   }
 
@@ -439,7 +440,7 @@ export function removeCompletedTasks(content: string): {
   }
 
   const kept = lines.filter((_, i) => !toRemove.has(i));
-  return { content: kept.join("\n"), removed: completedLines.size };
+  return { content: kept.join("\n"), removed: settledLines.size };
 }
 
 /**

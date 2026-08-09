@@ -1245,12 +1245,16 @@ export async function executeAgentRun(
         instructions.bytes += repoInstructions.bytes;
       }
       // La demande du lanceur, en dernier : c'est À ELLE que l'agent répond.
-      // Run CARNET : la note part emballée dans la MÊME structure que « copier
+      // Run CARNET : la demande part emballée dans la MÊME structure que « copier
       // le prompt » du carnet (balises <notes>, sémantique des cases, « ce sont
       // des notes personnelles, pas une spec — demande avant de deviner »), SANS
-      // le bloc MCP : ses tools natifs (read_scratchpad…) le remplacent. La bulle
-      // de la conversation affiche `run.prompt` (la note brute) — le wrapper est
-      // de la plomberie, pas du contenu utilisateur.
+      // le bloc MCP : ses tools natifs (read_scratchpad…) le remplacent.
+      //
+      // Lancé DEPUIS le carnet, le prompt arrive déjà emballé (le composer le
+      // montre en clair, cf. use-launch-agent-note.ts) et `buildScratchpadPrompt`
+      // le laisse passer tel quel. L'emballage ici sert donc les runs carnet
+      // partis d'ailleurs — une consigne libre tapée dans le composer, une
+      // routine — qui, eux, n'ont que du texte nu.
       // Une relecture n'a PAS de message final : sa demande est déjà en tête de
       // son contexte (« What you were asked »), et la répéter ici la ferait lire
       // deux fois.

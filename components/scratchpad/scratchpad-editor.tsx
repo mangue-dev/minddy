@@ -14,7 +14,7 @@ import { useTranslations } from "next-intl";
 import { Spinner, cn } from "mangue-ui";
 import { Heading1, Heading2, Heading3, List, ListTodo, Mic } from "lucide-react";
 import {
-  removeCompletedTasks,
+  removeSettledTasks,
   scratchpadSectionSubtree,
   stripScratchpadSpacers,
 } from "@/lib/scratchpad";
@@ -199,7 +199,7 @@ export function ScratchpadEditor({
   launchSectionLabel,
   markdownRef,
   applyExternalRef,
-  removeCompletedRef,
+  removeSettledRef,
   startAllRef,
 }: {
   initialValue: string;
@@ -227,7 +227,7 @@ export function ScratchpadEditor({
   >;
   /** Populated with an action that drops completed tasks from the live editor
       (returns how many were removed) — driven by the modal's toolbar button. */
-  removeCompletedRef?: MutableRefObject<(() => number) | null>;
+  removeSettledRef?: MutableRefObject<(() => number) | null>;
   /** Populated with an action qui passe « en cours » toutes les tâches encore à
       faire du carnet (retourne combien) — les gestes d'en-tête, qui portent sur
       la note entière. */
@@ -367,17 +367,17 @@ export function ScratchpadEditor({
 
   // Drop completed tasks from the LIVE editor (the source of truth while open),
   // then save. Returns how many were removed so the caller can confirm.
-  const removeCompleted = () => {
+  const removeSettled = () => {
     const ed = editorRef.current;
     if (!ed || ed.isDestroyed) return 0;
-    const { content: next, removed } = removeCompletedTasks(getMarkdown(ed));
+    const { content: next, removed } = removeSettledTasks(getMarkdown(ed));
     if (removed === 0) return 0;
     ed.commands.setContent(next); // tiptap-markdown re-parses the markdown
     onChangeRef.current(next);
     return removed;
   };
-  const removeCompletedFnRef = useRef(removeCompleted);
-  removeCompletedFnRef.current = removeCompleted;
+  const removeSettledFnRef = useRef(removeSettled);
+  removeSettledFnRef.current = removeSettled;
 
   // Passer tout le carnet « en cours » — la portée des boutons d'en-tête.
   const startAll = () => {
@@ -497,8 +497,8 @@ export function ScratchpadEditor({
             emitUpdate: opts?.emitUpdate ?? false,
           });
         };
-      if (removeCompletedRef)
-        removeCompletedRef.current = () => removeCompletedFnRef.current();
+      if (removeSettledRef)
+        removeSettledRef.current = () => removeSettledFnRef.current();
       if (startAllRef) startAllRef.current = () => startAllFnRef.current();
     },
     onUpdate: ({ editor }) => {
@@ -514,7 +514,7 @@ export function ScratchpadEditor({
       flush();
       if (markdownRef) markdownRef.current = null;
       if (applyExternalRef) applyExternalRef.current = null;
-      if (removeCompletedRef) removeCompletedRef.current = null;
+      if (removeSettledRef) removeSettledRef.current = null;
       if (startAllRef) startAllRef.current = null;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -90,7 +90,7 @@ function ScratchpadBody() {
   const applyRef = useRef<
     ((content: string, opts?: { emitUpdate?: boolean }) => void) | null
   >(null);
-  const removeCompletedRef = useRef<(() => number) | null>(null);
+  const removeSettledRef = useRef<(() => number) | null>(null);
   const startAllRef = useRef<(() => number) | null>(null);
 
   const { content, updatedAt, isLoading, isSaving, save } = useScratchpadDoc({
@@ -103,10 +103,10 @@ function ScratchpadBody() {
   // agent feed) so it's clear the notes continue past the top/bottom.
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
 
-  const removeCompleted = () => {
-    const removed = removeCompletedRef.current?.() ?? 0;
-    if (removed > 0) toast.success(t("removedCompleted"));
-    else toast(t("noCompleted"));
+  const removeSettled = () => {
+    const removed = removeSettledRef.current?.() ?? 0;
+    if (removed > 0) toast.success(t("removedSettled"));
+    else toast(t("noSettled"));
   };
 
   // Confier du travail à un agent, c'est le commencer — à la ligne (MIN-20/46,
@@ -139,10 +139,14 @@ function ScratchpadBody() {
     );
   };
 
-  // « Lancer un agent » (MIN-84) : la note part BRUTE (pas le wrapper de copie —
-  // le serveur pose son propre contexte carnet) vers le composer de la page
-  // Agents, qui fait choisir projet / modèle / branche avant l'envoi.
+  // « Lancer un agent » (MIN-84) : la note part emballée dans le MÊME prompt que
+  // la copie (le hook s'en charge, cf. use-launch-agent-note.ts) vers le
+  // composer de la page Agents, qui fait choisir projet / modèle / branche avant
+  // l'envoi.
   const launchNote = useLaunchAgentNote();
+  // Une SECTION se nomme comme telle dans le prompt (« the following section of
+  // my working notes »), exactement comme sa copie juste au-dessus.
+  const launchSection = (markdown: string) => launchNote(markdown, { section: true });
   const launchAll = () => {
     if (!liveMarkdown()) {
       toast(t("emptyCopyToast"));
@@ -189,14 +193,14 @@ function ScratchpadBody() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={t("removeCompleted")}
-                  onClick={removeCompleted}
+                  aria-label={t("removeSettled")}
+                  onClick={removeSettled}
                   className="rounded-full text-muted-foreground hover:text-foreground"
                 >
                   <ListX className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{t("removeCompleted")}</TooltipContent>
+              <TooltipContent>{t("removeSettled")}</TooltipContent>
             </Tooltip>
             {/* Lancer + copier côte à côte, dans cet ordre : parité avec les
                 boutons de section (robot à gauche du copy). */}
@@ -261,14 +265,14 @@ function ScratchpadBody() {
               initialValue={content}
               onChange={save}
               onCopySection={copySection}
-              onLaunchSection={launchNote}
+              onLaunchSection={launchSection}
               startOnCopy={startOnCopy}
               placeholder={t("placeholder")}
               copySectionLabel={t("copySection")}
               launchSectionLabel={t("launchAgentSection")}
               markdownRef={markdownRef}
               applyExternalRef={applyRef}
-              removeCompletedRef={removeCompletedRef}
+              removeSettledRef={removeSettledRef}
               startAllRef={startAllRef}
             />
           )}

@@ -106,10 +106,33 @@ export function splitTaskSection(notes: string): {
   };
 }
 
+/**
+ * L'ouverture que produit `buildScratchpadPrompt` : « Work through … » suivi du
+ * bloc <notes>. Elle sert de SIGNATURE — voir l'idempotence ci-dessous.
+ */
+const BUILT_PROMPT_OPENING = /^Work through [^\n]*\n\n<notes>\n/;
+
+/**
+ * Ce texte est-il DÉJÀ un prompt de carnet emballé ? Depuis MIN-84 le composer
+ * de la page Agents est pré-rempli avec le prompt COMPLET (et non plus la note
+ * brute) : ce qu'on lit avant d'envoyer est exactement ce que l'agent reçoit.
+ * Le serveur, lui, emballe toujours la demande d'un run carnet — il doit donc
+ * laisser passer ce qui l'est déjà, sinon le prompt se retrouverait emboîté
+ * deux fois.
+ */
+export function isScratchpadPrompt(text: string): boolean {
+  return BUILT_PROMPT_OPENING.test(text.trim());
+}
+
 export function buildScratchpadPrompt(
   notes: string,
   opts?: { section?: boolean; mcp?: boolean }
 ): string {
+  // Emballer un prompt déjà emballé n'ajoute rien et brouille tout : on rend le
+  // texte tel quel. C'est ce qui rend la fonction sûre à appeler des deux côtés
+  // (composer client ET lib/server/agent/execute.ts) sans se coordonner.
+  if (isScratchpadPrompt(notes)) return notes.trim();
+
   const isSection = opts?.section === true;
   const withMcp = opts?.mcp !== false;
   const { section, body, isTask } = splitTaskSection(
