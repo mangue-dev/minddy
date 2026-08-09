@@ -23,14 +23,10 @@ import { Kbd } from "@/components/ui/kbd";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 
 /** Vrai si l'événement clavier est le raccourci d'envoi. Un seul endroit décide
-    de ce qu'« envoyer au clavier » veut dire, côté touche comme côté légende. */
-export function isSendShortcut(e: {
-  key: string;
-  metaKey: boolean;
-  ctrlKey: boolean;
-}): boolean {
-  return e.key === "Enter" && (e.metaKey || e.ctrlKey);
-}
+    de ce qu'« envoyer au clavier » veut dire, côté touche comme côté légende —
+    cet endroit est [lib/keyboard/send-shortcut.ts], réexporté ici pour que les
+    surfaces qui rendent la légende n'aient qu'un import à faire. */
+export { isSendShortcut } from "@/lib/keyboard/send-shortcut";
 
 /** Les deux touches, telles que les porte le clavier de la plateforme. */
 export function SendShortcutKeys({ size = "sm" }: { size?: "sm" | "default" }) {

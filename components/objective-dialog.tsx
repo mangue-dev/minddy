@@ -35,12 +35,14 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { NumoIcon } from "@/components/numo-icon";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useObjectiveDictation } from "@/lib/use-objective-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useDrafts } from "@/lib/use-drafts";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
+import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import {
   OBJECTIVE_STATUSES,
   OBJECTIVE_STATUS_MAP,
@@ -224,6 +226,9 @@ export function ObjectiveDialog({
   // Une prise en cours de transcription (l'audio est parti, le texte n'est pas
   // revenu) : avec la suite Numo, c'est la fenêtre où fermer perd la dictée.
   const [transcribing, setTranscribing] = useState(false);
+  // ⌘/Ctrl + Entrée valide l'objectif, d'où qu'on soit dans le formulaire — y
+  // compris depuis la description, que le champ de nom ne couvre pas.
+  const submitShortcut = useSubmitShortcut();
 
   // Drafts, resources and voice dictation share the same two conditions: each
   // is project-scoped (the draft store, the storage prefix, the dictation route)
@@ -463,6 +468,7 @@ export function ObjectiveDialog({
           </DialogTitle>
 
           <form
+            {...submitShortcut}
             onSubmit={handleSubmit}
             className="relative flex flex-col rounded-lg"
             {...(composerEnabled
@@ -595,44 +601,55 @@ export function ObjectiveDialog({
               )}
               <div className="ml-auto flex items-center justify-end max-sm:w-full">
                 {showSplit ? (
-                  <SplitButton
-                    type="submit"
-                    disabled={
-                      submitting ||
-                      numoBusy ||
-                      !form.name.trim() ||
-                      uploads.uploading
-                    }
-                    className="max-sm:w-full"
-                    actionClassName="rounded-l-full pl-4 max-sm:flex-1"
-                    triggerClassName="rounded-r-full"
-                    menuLabel={t("createInOtherProject")}
-                    menu={otherProjects.map((p) => (
-                      <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
-                        <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4" />
-                        <span className="truncate">{p.name}</span>
-                      </DropdownMenuItem>
-                    ))}
+                  /* L'infobulle s'accroche à l'action, pas au chevron : ses
+                     props traversent `SplitButton` jusqu'au bouton de gauche,
+                     le seul que ⌘↵ actionne. */
+                  <SendShortcutTooltip
+                    label={t("createInProject", { project: currentProject!.name })}
                   >
-                    {submitting && <Spinner />}
-                    <span className="max-w-[14rem] truncate">
-                      {t("createInProject", { project: currentProject!.name })}
-                    </span>
-                  </SplitButton>
+                    <SplitButton
+                      type="submit"
+                      disabled={
+                        submitting ||
+                        numoBusy ||
+                        !form.name.trim() ||
+                        uploads.uploading
+                      }
+                      className="max-sm:w-full"
+                      actionClassName="rounded-l-full pl-4 max-sm:flex-1"
+                      triggerClassName="rounded-r-full"
+                      menuLabel={t("createInOtherProject")}
+                      menu={otherProjects.map((p) => (
+                        <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
+                          <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4" />
+                          <span className="truncate">{p.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    >
+                      {submitting && <Spinner />}
+                      <span className="max-w-[14rem] truncate">
+                        {t("createInProject", { project: currentProject!.name })}
+                      </span>
+                    </SplitButton>
+                  </SendShortcutTooltip>
                 ) : (
-                  <Button
-                    type="submit"
-                    className="rounded-full px-4 max-sm:w-full"
-                    disabled={
-                      submitting ||
-                      numoBusy ||
-                      !form.name.trim() ||
-                      uploads.uploading
-                    }
+                  <SendShortcutTooltip
+                    label={objective ? tCommon("save") : tCommon("create")}
                   >
-                    {submitting && <Spinner />}
-                    {objective ? tCommon("save") : tCommon("create")}
-                  </Button>
+                    <Button
+                      type="submit"
+                      className="rounded-full px-4 max-sm:w-full"
+                      disabled={
+                        submitting ||
+                        numoBusy ||
+                        !form.name.trim() ||
+                        uploads.uploading
+                      }
+                    >
+                      {submitting && <Spinner />}
+                      {objective ? tCommon("save") : tCommon("create")}
+                    </Button>
+                  </SendShortcutTooltip>
                 )}
               </div>
             </div>

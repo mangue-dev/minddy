@@ -74,6 +74,7 @@ import {
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { ShareViewDialog } from "@/components/share-view-dialog";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
 import {
   STATUSES,
   PRIORITIES,
@@ -86,6 +87,7 @@ import { ME_ASSIGNEE, activeFilterCount } from "@/lib/view-filter";
 import { CYCLE_TAB_KEY, mergeTabOrder } from "@/lib/tab-order";
 import { useTabOrderQuery } from "@/lib/use-tab-order-query";
 import { displayName } from "@/lib/display-name";
+import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import type {
   Category,
   Member,
@@ -546,6 +548,9 @@ function ViewNameDialog({
   const [busy, setBusy] = useState(false);
   const tc = useTranslations("Common");
   const t = useTranslations("Board");
+  // ⌘/Ctrl + Entrée valide la vue — depuis le nom comme depuis la consigne
+  // à Numo, où Entrée seule passe à la ligne.
+  const submitShortcut = useSubmitShortcut();
 
   // Repartir de `initialName` à chaque ouverture. `open` est piloté depuis le
   // parent (poser `renameTarget` suffit à ouvrir) : Radix n'appelle alors PAS
@@ -563,6 +568,7 @@ function ViewNameDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form
+          {...submitShortcut}
           onSubmit={async (e) => {
             e.preventDefault();
             const trimmed = name.trim();
@@ -604,9 +610,11 @@ function ViewNameDialog({
             </div>
           )}
           <DialogFooter>
-            <Button type="submit" disabled={busy || !name.trim()}>
-              {submitLabel ?? tc("save")}
-            </Button>
+            <SendShortcutTooltip label={submitLabel ?? tc("save")}>
+              <Button type="submit" disabled={busy || !name.trim()}>
+                {submitLabel ?? tc("save")}
+              </Button>
+            </SendShortcutTooltip>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -15,6 +15,8 @@ import {
 } from "mangue-ui";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 
 /**
  * La modale d'un wizard — la forme, une fois pour toutes.
@@ -120,6 +122,12 @@ export function WizardDialog<Id extends string>({
 }) {
   const tCommon = useTranslations("Common");
   const [confirmingDismiss, setConfirmingDismiss] = useState(false);
+  // ⌘/Ctrl + Entrée actionne le CTA de l'étape — le même geste que le clic,
+  // donc rien sur une étape qui avance d'elle-même (`hideSubmit`) ou dont le
+  // bouton est encore grisé. Le CTA se désigne par son attribut : le corps de
+  // l'étape vient du dehors, et un bouton qui y oublierait son `type` serait
+  // sinon pris pour lui.
+  const submitShortcut = useSubmitShortcut({ selector: "[data-wizard-cta]" });
 
   // Une étape peut disparaître de la liste sous l'index (l'utilisateur change
   // une réponse en amont) : on borne plutôt que de rendre du vide.
@@ -200,6 +208,7 @@ export function WizardDialog<Id extends string>({
             entier. */}
         <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 pt-4 pb-12">
           <form
+            {...submitShortcut}
             onSubmit={(e) => {
               e.preventDefault();
               onSubmit(step.id);
@@ -248,17 +257,22 @@ export function WizardDialog<Id extends string>({
 
             <div className="flex w-full flex-col items-center gap-3">
               {!step.hideSubmit && (
-                <Button
-                  type="submit"
-                  className="h-10 w-full"
-                  disabled={submitting || step.submitDisabled}
+                <SendShortcutTooltip
+                  label={step.submitLabel ?? tCommon("continue")}
                 >
-                  {submitting && <Spinner />}
-                  {step.submitLabel ?? tCommon("continue")}
-                  {!submitting && !isLast && (
-                    <ArrowRight className="ml-1 h-4 w-4" />
-                  )}
-                </Button>
+                  <Button
+                    type="submit"
+                    data-wizard-cta
+                    className="h-10 w-full"
+                    disabled={submitting || step.submitDisabled}
+                  >
+                    {submitting && <Spinner />}
+                    {step.submitLabel ?? tCommon("continue")}
+                    {!submitting && !isLast && (
+                      <ArrowRight className="ml-1 h-4 w-4" />
+                    )}
+                  </Button>
+                </SendShortcutTooltip>
               )}
               {index > 0 && !step.lockBack && (
                 <Button

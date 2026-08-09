@@ -28,6 +28,7 @@ import {
 } from "@/components/resources";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { NumoIcon } from "@/components/numo-icon";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { ProjectOrb } from "@/components/project-orb";
 import {
@@ -53,6 +54,7 @@ import { useTrackView } from "@/lib/use-track-view";
 import { lengthBucket } from "@/lib/analytics-sanitize";
 import type { AnalyticsPropsFor } from "@/lib/analytics-events";
 import { eventKey } from "@/lib/keyboard/event-key";
+import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import type {
   IssueStatus,
   IssuePriority,
@@ -170,6 +172,9 @@ export function CreateIssueDialog({
   // depuis le picker) doit garder ses touches pour lui.
   const contentRef = useRef<HTMLDivElement>(null);
   const createMoreId = useId();
+  // ⌘/Ctrl + Entrée crée le ticket, d'où qu'on soit dans le formulaire — y
+  // compris depuis la description, que le champ de titre ne couvre pas.
+  const submitShortcut = useSubmitShortcut();
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   const drop = useFileDrop(uploads.addFiles);
   const drafts = useDrafts("issue", projectId, open);
@@ -541,6 +546,7 @@ export function CreateIssueDialog({
           <DialogTitle className="sr-only">{t("newIssueTitle")}</DialogTitle>
 
           <form
+            {...submitShortcut}
             onSubmit={(e) => {
               e.preventDefault();
               void submit(createMore);
@@ -720,37 +726,46 @@ export function CreateIssueDialog({
                 ligne à lui, pleine largeur, quand la barre passe à la ligne. */}
               <div className="flex items-center justify-end max-sm:w-full sm:ml-1">
                 {otherProjects.length > 0 && currentProject ? (
-                  <SplitButton
-                    type="submit"
-                    disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
-                    className="max-sm:w-full"
-                    actionClassName="rounded-l-full pl-4 max-sm:flex-1"
-                    triggerClassName="rounded-r-full"
-                    menuLabel={t("createInOtherProject")}
-                    menu={otherProjects.map((p) => (
-                      <DropdownMenuItem
-                        key={p.id}
-                        onSelect={() => void submit(createMore, p)}
-                      >
-                        <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4" />
-                        <span className="truncate">{p.name}</span>
-                      </DropdownMenuItem>
-                    ))}
+                  /* L'infobulle s'accroche à l'action, pas au chevron : ses
+                     props traversent `SplitButton` jusqu'au bouton de gauche,
+                     le seul que ⌘↵ actionne. */
+                  <SendShortcutTooltip
+                    label={t("createInProject", { project: currentProject.name })}
                   >
-                    {submitting && <Spinner />}
-                    <span className="max-w-[14rem] truncate">
-                      {t("createInProject", { project: currentProject.name })}
-                    </span>
-                  </SplitButton>
+                    <SplitButton
+                      type="submit"
+                      disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
+                      className="max-sm:w-full"
+                      actionClassName="rounded-l-full pl-4 max-sm:flex-1"
+                      triggerClassName="rounded-r-full"
+                      menuLabel={t("createInOtherProject")}
+                      menu={otherProjects.map((p) => (
+                        <DropdownMenuItem
+                          key={p.id}
+                          onSelect={() => void submit(createMore, p)}
+                        >
+                          <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4" />
+                          <span className="truncate">{p.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    >
+                      {submitting && <Spinner />}
+                      <span className="max-w-[14rem] truncate">
+                        {t("createInProject", { project: currentProject.name })}
+                      </span>
+                    </SplitButton>
+                  </SendShortcutTooltip>
                 ) : (
-                  <Button
-                    type="submit"
-                    className="rounded-full px-4 max-sm:w-full"
-                    disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
-                  >
-                    {submitting && <Spinner />}
-                    {t("createTicket")}
-                  </Button>
+                  <SendShortcutTooltip label={t("createTicket")}>
+                    <Button
+                      type="submit"
+                      className="rounded-full px-4 max-sm:w-full"
+                      disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
+                    >
+                      {submitting && <Spinner />}
+                      {t("createTicket")}
+                    </Button>
+                  </SendShortcutTooltip>
                 )}
               </div>
             </div>
