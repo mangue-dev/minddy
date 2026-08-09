@@ -96,6 +96,10 @@ export const CHEATSHEET: CheatsheetSection[] = [
     shortcuts: [
       { id: "create.issue", labelKey: "createIssue", keys: [["C"]] },
       { id: "create.objective", labelKey: "createObjective", keys: [["O"]] },
+      // Le texte fantôme du formulaire de ticket. Il n'a rien de global — c'est
+      // Tab, dans le champ, quand un gris est à l'écran — mais il n'existe que
+      // s'il se voit : personne ne devine une touche qu'on n'a jamais annoncée.
+      { id: "create.completion", labelKey: "acceptCompletion", keys: [["⇥"]] },
     ],
   },
   {

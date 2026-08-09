@@ -1400,6 +1400,7 @@
       "cheatsheet": "Afficher les raccourcis clavier",
       "createIssue": "Nouveau ticket",
       "createObjective": "Nouvel objectif",
+      "acceptCompletion": "Accepter le texte suggéré (nouveau ticket)",
       "openIssue": "Ouvrir le ticket",
       "status": "Changer le statut",
       "priority": "Changer la priorité",
@@ -3079,6 +3080,14 @@
       "pr_review_model": {
         "label": "Review d'une PR par Numo",
         "desc": "Relit le diff d'une pull request au clic, dépose une synthèse et jusqu'à cinq commentaires de ligne. À garder différent du modèle de l'agent : relire du code avec le modèle qui vient de l'écrire ne donne qu'un second avis identique."
+      },
+      "complete_issue_enabled": {
+        "label": "Suggestions à la frappe dans le formulaire de ticket",
+        "desc": "Affiche la suite de la phrase en gris pendant qu'on écrit un titre ou une description, acceptée par Tab. Quelques appels minuscules par ticket écrit. Coupé, le gris disparaît et le formulaire ne change pas."
+      },
+      "complete_issue_model": {
+        "label": "Modèle des suggestions à la frappe",
+        "desc": "Lit ce qui précède le caret et les titres récents du projet, et rend quelques mots. C'est la seule surface IA appelée pendant la frappe : à choisir pour sa vitesse, jamais pour son raisonnement."
       },
       "import_map_enabled": {
         "label": "Correspondance des imports CSV",

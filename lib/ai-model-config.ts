@@ -61,6 +61,13 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // l'amorce d'un projet neuf retombe alors sur l'import et la saisie à la main.
   { key: "brief_enabled", kind: "flag", fallback: "true", group: "assistant" },
   { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  // Texte fantôme du formulaire de ticket (app/api/projects/[id]/complete-issue) :
+  // la SEULE surface IA appelée pendant la frappe, quelques appels par ticket
+  // écrit. Elle se juge en millisecondes, pas en qualité de raisonnement — d'où
+  // un modèle de la classe la plus rapide, jamais un gros. Le drapeau la coupe
+  // partout d'un coup : le gris disparaît, le formulaire ne change pas d'un pixel.
+  { key: "complete_issue_enabled", kind: "flag", fallback: "true", group: "assistant" },
+  { key: "complete_issue_model", kind: "model", fallback: "google/gemini-3.1-flash-lite", group: "assistant" },
   // Recherche web (tool `web_search` de Numo et des agents) : le modèle qui lit
   // les résultats du plugin OpenRouter. Le drapeau la coupe partout d'un coup.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
