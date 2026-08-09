@@ -49,7 +49,6 @@ import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useAuth } from "@/lib/auth-context";
 import { useDrafts } from "@/lib/use-drafts";
 import { useIssueDictation } from "@/lib/use-issue-dictation";
-import { useInlineCompletion } from "@/lib/use-inline-completion";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import { lengthBucket } from "@/lib/analytics-sanitize";
@@ -280,10 +279,6 @@ export function CreateIssueDialog({
     setDescription("");
     setEditorKey((k) => k + 1);
     uploads.clear();
-    // Le texte a été remplacé sous les doigts : un fantôme calculé pour
-    // l'ancien n'a plus rien à voir avec le nouveau.
-    titleCompletion.reset();
-    descriptionCompletion.reset();
   };
 
   const reset = () => {
@@ -387,8 +382,6 @@ export function CreateIssueDialog({
     const draft = drafts.find(id);
     if (!draft) return;
     track("issue_draft_recovered", {});
-    titleCompletion.reset();
-    descriptionCompletion.reset();
     setTitle(draft.title);
     setDescription(draft.description);
     setEditorKey((k) => k + 1); // remount the editor with the draft's content
@@ -494,9 +487,6 @@ export function CreateIssueDialog({
   const otherProjects = projects.filter((p) => p.id !== projectId);
 
   const applyPatch = (patch: IssueDraftPatch) => {
-    // Numo vient de réécrire le brouillon : mêmes raisons qu'à `clearContent`.
-    titleCompletion.reset();
-    descriptionCompletion.reset();
     if (typeof patch.title === "string") setTitle(patch.title);
     if (typeof patch.description === "string") {
       setDescription(patch.description);
@@ -536,38 +526,6 @@ export function CreateIssueDialog({
     }),
     applyPatch,
   });
-
-  // TEXTE FANTÔME (Tab pour accepter) — sur le titre et sur la description, avec
-  // leur propre appel chacun : ce ne sont pas les mêmes phrases, ni le même
-  // souffle. Coupé pendant que Numo travaille : deux mains sur le même
-  // formulaire écriraient l'une par-dessus l'autre.
-  const completionEnabled = open && !submitting && !numoBusy && !transcribing;
-  const draftContext = () => ({
-    categories: categories.filter((c) => categoryIds.includes(c.id)).map((c) => c.name),
-    objective:
-      objectives.find((o) => o.id === fields.objective_id)?.name ?? undefined,
-  });
-  const titleCompletion = useInlineCompletion({
-    projectId,
-    field: "title",
-    enabled: completionEnabled,
-    getContext: draftContext,
-  });
-  const descriptionCompletion = useInlineCompletion({
-    projectId,
-    field: "description",
-    enabled: completionEnabled,
-    getContext: () => ({ ...draftContext(), title }),
-  });
-
-  // Ce que le titre a le droit de compléter : le caret en bout de champ, rien
-  // de sélectionné. Au milieu d'une ligne, un gris proposerait une suite à un
-  // texte qui en a déjà une.
-  const reportTitleCaret = (el: HTMLTextAreaElement) => {
-    const atEnd =
-      el.selectionStart === el.selectionEnd && el.selectionStart === el.value.length;
-    titleCompletion.setPrefix(atEnd ? el.value : null);
-  };
 
   return (
     <>
@@ -629,30 +587,8 @@ export function CreateIssueDialog({
               autoFocus
               required
               value={title}
-              suggestion={titleCompletion.suggestion}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                reportTitleCaret(e.target);
-              }}
-              // Le caret bouge sans que le texte change (flèches, clic, sélection).
-              onSelect={(e) => reportTitleCaret(e.currentTarget)}
-              onBlur={() => titleCompletion.setPrefix(null)}
+              onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Tab" && titleCompletion.suggestion) {
-                  // Tab n'accepte QUE s'il y a un gris à accepter : sans
-                  // suggestion, elle reste la tabulation qui sort du champ.
-                  e.preventDefault();
-                  setTitle((current) => current + titleCompletion.accept());
-                  return;
-                }
-                if (e.key === "Escape" && titleCompletion.suggestion) {
-                  // Sinon l'Échap remonterait au dialog : refuser une
-                  // suggestion fermerait le formulaire.
-                  e.preventDefault();
-                  e.stopPropagation();
-                  titleCompletion.dismiss();
-                  return;
-                }
                 if (e.key !== "Enter") return;
                 e.preventDefault();
                 void submit(e.shiftKey || createMore);
@@ -662,14 +598,6 @@ export function CreateIssueDialog({
             />
             <MarkdownEditor
               mentions={mentions}
-              completion={{
-                suggestion: descriptionCompletion.suggestion,
-                onPrefixChange: descriptionCompletion.setPrefix,
-                // L'insertion, c'est l'extension qui la fait dans le document ;
-                // il ne reste ici qu'à en tenir le hook informé.
-                onAccept: () => descriptionCompletion.accept(),
-                onDismiss: descriptionCompletion.dismiss,
-              }}
               key={editorKey}
               value={description}
               onCommit={setDescription}

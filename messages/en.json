@@ -1400,7 +1400,6 @@
       "cheatsheet": "Show keyboard shortcuts",
       "createIssue": "New issue",
       "createObjective": "New objective",
-      "acceptCompletion": "Accept the suggested text (new issue)",
       "openIssue": "Open issue",
       "status": "Change status",
       "priority": "Change priority",
@@ -3080,14 +3079,6 @@
       "pr_review_model": {
         "label": "Numo's PR review",
         "desc": "Reads a pull request's diff on demand, then posts a summary and up to five line comments. Keep it different from the agent model: reviewing code with the model that just wrote it only yields the same opinion twice."
-      },
-      "complete_issue_enabled": {
-        "label": "Inline suggestions in the new-issue form",
-        "desc": "Shows the rest of the sentence in grey as the user types a title or a description, accepted with Tab. A few tiny calls per issue written. Off, the grey disappears and the form is unchanged."
-      },
-      "complete_issue_model": {
-        "label": "Inline suggestion model",
-        "desc": "Reads what precedes the caret and the project's recent titles, and returns a few words. The only AI surface called while typing: pick it for speed, never for reasoning."
       },
       "import_map_enabled": {
         "label": "CSV import mapping",

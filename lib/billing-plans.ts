@@ -192,8 +192,6 @@ export const BILLABLE_FEATURES = [
   "sandbox_compute",
   "web_search",
   "pr_review",
-  // Le texte fantôme du formulaire de ticket : cf. le segment `numo` plus bas.
-  "issue_autocomplete",
   // Une ROUTINE (MIN-185) : le même run que `agent_code`/`sandbox_compute`, sur
   // une autre ligne de facture. Cf. le segment `routines` plus bas.
   "routine_code",
@@ -250,15 +248,9 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
   // d'ajouter une couleur à la barre pour quelques centimes. (Les routines, à
   // l'inverse, ont mérité la leur : une dépense récurrente qu'on veut pouvoir
   // regarder seule, pas quelques centimes noyés.)
-  // Le texte fantôme du formulaire de ticket rejoint Numo, et pas la dictée :
-  // c'est Numo qui écrit à côté de nous, exactement comme dans le chat. Lui
-  // donner sa propre couleur ferait une ligne à quelques centimes dans une
-  // barre qui n'en compte que six — mais il garde sa feature en base, parce que
-  // c'est la seule dépense déclenchée par la frappe et qu'on veut pouvoir la
-  // lire seule si elle dérive.
   {
     id: "numo",
-    features: ["numo_chat", "numo_comment", "web_search", "issue_autocomplete"],
+    features: ["numo_chat", "numo_comment", "web_search"],
     barClass: "bg-blue-500",
   },
   { id: "dictation", features: ["dictation", "transcription"], barClass: "bg-amber-500" },

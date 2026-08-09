@@ -32,13 +32,6 @@ export type AiFeature =
   | "pr_review"
   | "import_map"
   /**
-   * Texte fantôme du formulaire de ticket : quelques appels minuscules
-   * pendant qu'on écrit un ticket. Sa propre feature parce que c'est la seule
-   * dépense IA déclenchée par la FRAPPE et non par un geste — si elle dérive un
-   * jour, c'est ici qu'on le verra, et pas noyée dans le chat de Numo.
-   */
-  | "issue_autocomplete"
-  /**
    * Découpe d'un brief en objectifs + tickets (MIN-172) : un appel par brief
    * collé. Sa propre feature, comme `import_map` : c'est le coût de l'amorce
    * d'un projet, et on veut pouvoir le lire seul.
