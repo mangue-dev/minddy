@@ -8,21 +8,24 @@ import { AgentConversation } from "@/components/agent/agent-conversation";
 import { ProjectOrb } from "@/components/project-orb";
 import { PR_STATE_STYLES, PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { agentSessionTitle } from "@/lib/agent-session-title";
 import { ChainStatusBar } from "@/components/automations/chain-status-bar";
 import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
 import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 
 /**
- * Panneau de détail d'une session d'agent (page Agents) : un en-tête épuré (retour
- * mobile · titre cliquable · bouton « Ouvrir la pull request ») au-dessus de la MÊME
- * conversation que la modal (`AgentConversation`, inline ici). Cliquer le titre ouvre
- * la sidebar du ticket EN INLINE sur la page (pas de navigation vers le Kanban).
- * Cliquer un ticket ouvre sa session la plus ACTIVE (résolution par défaut de la
- * conversation), et donne accès à ses runs précédentes (MIN-68).
+ * Panneau de détail d'une conversation d'agent (page Agents) : un en-tête épuré
+ * (retour mobile · titre cliquable · bouton « Ouvrir la pull request ») au-dessus
+ * de la MÊME conversation que la modal (`AgentConversation`, inline ici).
  *
- * Session SANS TICKET (MIN-84, `issue` null) : le run EST la session — l'en-tête
- * montre le sujet de la conversation (non cliquable, résumé de son premier
- * message), et la conversation s'ancre sur `noteRunId`.
+ * Le volet ouvre LE run de la ligne choisie, et lui seul — un run est une
+ * conversation. L'en-tête porte son titre, précédé de l'identifiant du ticket
+ * quand il y en a un (`agentSessionTitle`, le même nom que dans la colonne) ;
+ * cliquer dessus ouvre la sidebar du ticket EN INLINE sur la page (pas de
+ * navigation vers le Kanban).
+ *
+ * Conversation SANS TICKET (MIN-84, `issue` null) : même volet, titre non
+ * cliquable (résumé de son premier message), ancrée sur `noteRunId`.
  */
 export function AgentSessionDetail({
   item,
@@ -32,7 +35,6 @@ export function AgentSessionDetail({
   composeInitialText,
   composeIntent,
   onLaunched,
-  showUnread = false,
 }: {
   item: AgentSessionListItem;
   onBack: () => void;
@@ -53,8 +55,6 @@ export function AgentSessionDetail({
   composeIntent?: AgentComposeIntent;
   /** Relayé à la conversation : une run neuve vient d'être lancée depuis le compose. */
   onLaunched?: (run: AgentRunSummary) => void;
-  /** Affiche les bulles bleues « terminé, non lu » sur le sélecteur de runs (page Agents). */
-  showUnread?: boolean;
 }) {
   const t = useTranslations("Agents");
   const router = useRouter();
@@ -147,7 +147,6 @@ export function AgentSessionDetail({
           key={item.runId}
           noteRunId={item.runId}
           active
-          showUnread={false}
           headerTitle={
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {backButton}
@@ -185,13 +184,12 @@ export function AgentSessionDetail({
           key={item.runId}
           noteRunId={item.runId}
           active
-          showUnread={false}
           headerTitle={
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {backButton}
               {projectOrb}
               <span className="truncate text-sm font-medium">
-                {item.noteTitle || t("freeSessionTitle")}
+                {agentSessionTitle(item, t("freeSessionTitle"))}
               </span>
             </div>
           }
@@ -207,13 +205,14 @@ export function AgentSessionDetail({
     <div className="flex min-w-0 flex-1 items-center gap-2">
       {backButton}
       {projectOrb}
-      {/* Titre cliquable → ouvre la sidebar du ticket en inline sur la page. */}
+      {/* Le MÊME nom que dans la colonne — « MIN-42: Corriger la redirection ».
+          Cliquable → ouvre la sidebar du ticket en inline sur la page. */}
       <button
         type="button"
         onClick={() => onOpenIssue(issue.id, project.id)}
         className="truncate text-left text-sm font-medium outline-none hover:underline focus-visible:underline"
       >
-        {issue.title}
+        {agentSessionTitle(item, t("freeSessionTitle"))}
       </button>
     </div>
   );
@@ -227,23 +226,23 @@ export function AgentSessionDetail({
         <ChainStatusBar issueId={issue.id} />
       </div>
       <AgentConversation
-        key={issue.id}
+        key={item.runId}
         issueId={issue.id}
         issueIdentifier={identifier}
-        // Cliquer un ticket ouvre sa session la plus ACTIVE — la run au travail,
-        // sinon la dernière run non `failed` : c'est la résolution PAR DÉFAUT de la
-        // conversation (`initialRunId=null`). On ne force PLUS le représentant
-        // `item.runId` (la dernière run CRÉÉE) : quand celle-ci a échoué à l'amorçage,
-        // c'est un tronçon mort (ni fil ni composer) et l'ouvrir de force masquait la
-        // vraie session vivante du ticket. Une session terminée (non `failed`) rouvre
-        // quand même — la résolution la retient. En COMPOSE (brouillon de lancement),
-        // `initialCompose` force le composer vierge quoi qu'il arrive.
-        initialRunId={null}
+        // LE run de la ligne, et rien d'autre : c'est lui la conversation qu'on a
+        // choisie. Auparavant on laissait la conversation résoudre elle-même « la
+        // plus active du ticket » (`initialRunId=null`), parce que la ligne
+        // désignait un TICKET et non un échange ; ouvrir aujourd'hui autre chose
+        // que la ligne cliquée serait un mensonge. L'ancrage `issueId` reste, lui :
+        // c'est de lui que viennent la lignée (une run passée n'est pas
+        // reprennable), les branches et le lancement d'une run neuve.
+        // En COMPOSE (brouillon de lancement), `initialCompose` force le composer
+        // vierge quoi qu'il arrive — le run n'existe pas encore.
+        initialRunId={compose ? null : item.runId}
         initialCompose={compose}
         initialComposeText={compose ? composeInitialText : undefined}
         composeIntent={compose ? composeIntent : undefined}
         onLaunched={onLaunched}
-        showUnread={showUnread}
         active
         headerTitle={headerTitle}
         headerActions={prActions}

@@ -32,7 +32,6 @@ import {
   interruptAgentRunApi,
   isAgentRunActive,
   isAgentRunResumable,
-  isAgentRunUnread,
   isAgentRunWorking,
   launchAgentRunApi,
   steerAgentRunApi,
@@ -48,7 +47,6 @@ import {
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
-import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
@@ -57,7 +55,6 @@ import { ModelCombobox } from "./model-combobox";
 import { BranchCombobox } from "./branch-combobox";
 import { ReasoningCombobox } from "./reasoning-combobox";
 import { AgentEventFeed } from "./agent-event-feed";
-import { AgentRunHistory } from "./agent-run-history";
 import { AgentDiffSheet } from "./agent-diff-sheet";
 import { SubagentActivityBar } from "./subagent-activity-bar";
 import { PlanActivityBar } from "./plan-activity-bar";
@@ -70,18 +67,22 @@ import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
  * de la modal pour être hébergé aussi bien dans le `Sheet` flottant (AgentChatModal)
  * que DIRECTEMENT dans la page Agents (liste/détail, sans modal).
  *
- * Une issue porte une SUITE de sessions, dont une seule peut TRAVAILLER à la fois.
- * Ce composant tient les deux modes, qui se distinguent par le POINT D'ENTRÉE :
+ * Ce composant montre UN run — la conversation, c'est lui. Une issue en porte
+ * plusieurs, successifs, dont un seul peut TRAVAILLER à la fois ; ils ne se
+ * choisissent plus ici (le sélecteur du milieu de l'en-tête a disparu) mais dans
+ * la LISTE de la page Agents, où chacun a sa ligne et son titre. L'hôte désigne
+ * donc celui qu'on ouvre, et deux modes se distinguent par le POINT D'ENTRÉE :
  *
- *  • CHAUD (`live`) — LE MODE PAR DÉFAUT dès qu'une session existe : on ouvre la
- *    dernière session de l'issue (ou celle choisie dans le sélecteur) ; le fil est
- *    son flux d'événements et le composer lui parle DIRECTEMENT (`/steer`), dans
- *    son contexte. Au repos, la conversation se POURSUIT ainsi, naturellement —
- *    comme un chat.
- *  • FROID (`compose`) — aucune session sur l'issue, ou « Lancer un nouvel agent »
- *    explicitement demandé : composer VIERGE (l'utilisateur dit ce qu'il veut, pas
- *    de but pré-écrit) + picker de modèle. Envoyer lance une session NEUVE, qui
- *    héritera côté serveur de la branche/PR de l'issue.
+ *  • CHAUD (`live`) — le run désigné (`initialRunId` / `noteRunId`), ou à défaut
+ *    celui qui travaille, sinon le dernier de l'issue : le fil est son flux
+ *    d'événements et le composer lui parle DIRECTEMENT (`/steer`), dans son
+ *    contexte. Au repos, la conversation se POURSUIT ainsi, naturellement — comme
+ *    un chat. Seul le DERNIER run de l'issue est reprennable ; les précédents se
+ *    consultent (le serveur applique la même règle).
+ *  • FROID (`compose`) — aucun run sur l'issue, ou brouillon de lancement :
+ *    composer VIERGE (l'utilisateur dit ce qu'il veut, pas de but pré-écrit) +
+ *    picker de modèle. Envoyer lance un run NEUF, qui héritera côté serveur de la
+ *    branche/PR de l'issue.
  *
  * Tant que le composant est `active`, un heartbeat rafraîchit l'horloge d'inactivité
  * du run pour que la sandbox ne soit pas coupée pendant qu'on lit ou écrit.
@@ -103,7 +104,6 @@ export function AgentConversation({
   onLaunched,
   initialComposeText,
   composeIntent = "implement",
-  showUnread = false,
 }: {
   /** Issue d'ancrage — null pour une session CARNET (passer `noteRunId`). */
   issueId?: string | null;
@@ -116,14 +116,14 @@ export function AgentConversation({
    */
   noteRunId?: string | null;
   /**
-   * Ouvre CETTE run (le panneau d'issue et la page Agents désignent la dernière).
-   * Absent → on ouvre la session qui TRAVAILLE, à défaut la DERNIÈRE session de
-   * l'issue (la conversation se poursuit), et sans aucune session on compose.
+   * Ouvre CE run — celui de la ligne cliquée sur la page Agents, celui que le
+   * panneau d'issue rouvre. Absent → le run qui TRAVAILLE, à défaut le DERNIER
+   * run non `failed` de l'issue, et sans aucun run on compose.
    */
   initialRunId?: string | null;
   /**
-   * Force la phase compose à l'ouverture (« Lancer un NOUVEL agent ») même si
-   * l'issue a déjà des sessions au repos.
+   * Force la phase compose à l'ouverture (brouillon de lancement) même si l'issue
+   * a déjà des runs au repos.
    */
   initialCompose?: boolean;
   /** Le composant est-il visible/vivant ? Gate la query et le heartbeat. */
@@ -151,11 +151,6 @@ export function AgentConversation({
    * l'utilisateur reste libre de réécrire la consigne.
    */
   composeIntent?: AgentComposeIntent;
-  /**
-   * Marque les runs terminées non consultées d'une bulle bleue dans le sélecteur de
-   * sessions (page Agents). Hors /agents (ex. modal de reprise), laissé à false.
-   */
-  showUnread?: boolean;
 }) {
   const t = useTranslations("Agent");
   const tToolCall = useTranslations("ToolCall");
@@ -214,14 +209,10 @@ export function AgentConversation({
   // Vue diff de la session (Sheet par-dessus la conversation) : ouverte en
   // cliquant un fichier des blocs « fichiers changés », PR ou pas.
   const [diffOpen, setDiffOpen] = useState(false);
-  // L'utilisateur a explicitement choisi une session ou ouvert le composer : les
-  // props ne reprennent plus la main. Sans ce garde, un changement d'`initialRunId`
-  // (le représentant de l'issue bouge — ex. un coéquipier lance une run, le poll la
-  // fait remonter) écraserait sa sélection ou jetterait le brouillon en cours de
-  // frappe dans le composer.
-  const userOverrodeRef = useRef(false);
+  // La conversation suit ce que l'hôte désigne. Il n'y a plus de sélecteur de
+  // runs ici pour lui disputer la main : ce que l'utilisateur choisit, il le
+  // choisit dans la LISTE, et l'hôte nous le passe en prop.
   useEffect(() => {
-    if (userOverrodeRef.current) return;
     setSelectedId(initialRunId);
     setComposing(initialCompose);
   }, [initialRunId, initialCompose]);
@@ -240,23 +231,14 @@ export function AgentConversation({
   const knownRuns =
     launched && !runs.some((r) => r.id === launched.id) ? [launched, ...runs] : runs;
 
-  // Bulles bleues du sélecteur de sessions (page Agents) : runs terminées après la
-  // dernière consultation de la session. Réactif — le mark-read différé de la page
-  // les efface. Hors /agents (`showUnread=false`), aucun suivi.
-  const { reads } = useAgentReads();
-  const unreadRunIds =
-    showUnread && issueId
-      ? new Set(
-          knownRuns.filter((r) => isAgentRunUnread(r, reads[issueId])).map((r) => r.id),
-        )
-      : undefined;
   const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
-  // Résolution de la session affichée : celle désignée, sinon celle qui travaille,
-  // sinon la DERNIÈRE session NON `failed` de l'issue — une conversation au repos
-  // se POURSUIT (modèle conversationnel), elle ne retombe plus sur un composer
-  // vierge. Une run `failed` (morte à l'amorçage) n'a ni fil ni composer : la
-  // prendre par défaut ouvrirait une conversation morte sans action visible — on
-  // compose à la place (elle reste consultable via le sélecteur de sessions).
+  // Résolution de la run affichée : celle désignée, sinon celle qui travaille,
+  // sinon la DERNIÈRE run NON `failed` de l'issue — une conversation au repos se
+  // POURSUIT (modèle conversationnel), elle ne retombe pas sur un composer vierge.
+  // Une run `failed` (morte à l'amorçage) n'a ni fil ni composer : la prendre par
+  // défaut ouvrirait une conversation morte sans action visible — on compose à la
+  // place. Le repli ne sert plus qu'aux appelants SANS run désignée (la modal de
+  // reprise) : la page Agents, elle, ouvre toujours le run de la ligne cliquée.
   const liveRun = composing
     ? null
     : selectedId
@@ -569,11 +551,14 @@ export function AgentConversation({
     await steer(t("createPrPrompt"));
   };
 
-  // Session carnet introuvable / pas encore chargée → spinner, jamais de compose
-  // (le run existe forcément : la session est née d'un lancement).
+  // Run introuvable / pas encore chargé → spinner, jamais de compose : le run
+  // existe forcément (une conversation naît d'un lancement), il n'est pas encore
+  // arrivé. Vaut pour un run carnet comme pour un run DÉSIGNÉ par l'appelant
+  // (`initialRunId`) — sans ce cas, la conversation qu'on vient d'ouvrir depuis la
+  // liste clignotait en composer vierge le temps que la requête réponde.
   const phase: "live" | "loading" | "compose" = liveRun
     ? "live"
-    : loading || noteRunId
+    : loading || noteRunId || (selectedId && !composing)
       ? "loading"
       : "compose";
 
@@ -666,34 +651,6 @@ export function AgentConversation({
           </div>
         ) : null}
       </div>
-
-      {/* Historique : navigation entre les runs successives de l'issue. « Lancer un
-          nouvel agent » n'y figure que si aucune run n'est active. La barre se
-          décolle de l'en-tête (`pt-3`) — sans quoi elle touche sa bordure sur la
-          page Agents et se lit comme une partie de l'en-tête plutôt que du fil.
-          Session CARNET : un seul run, pas de lignée — aucune barre. */}
-      {phase !== "loading" && !noteRunId ? (
-        <AgentRunHistory
-          runs={knownRuns}
-          selectedId={liveRun?.id ?? null}
-          unreadRunIds={unreadRunIds}
-          onSelect={(picked) => {
-            userOverrodeRef.current = true;
-            setComposing(false);
-            setSelectedId(picked.id);
-          }}
-          onNewRun={
-            activeRun || phase === "compose"
-              ? undefined
-              : () => {
-                  userOverrodeRef.current = true;
-                  setSelectedId(null);
-                  setComposing(true);
-                }
-          }
-          className="shrink-0 pt-3 pb-1"
-        />
-      ) : null}
 
       {/* Fil : flux d'événements (live), lancement en vol, spinner ou intro. */}
       <div className="min-h-0 flex-1">

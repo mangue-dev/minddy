@@ -1079,43 +1079,38 @@ export async function replyPrReviewCommentApi(
 // ── Page Agents (liste globale des sessions) ─────────────────────────────────
 
 /**
- * Une SESSION de l'agent = une issue, et une issue peut avoir plusieurs runs
- * successives (MIN-68). L'endpoint global dédoublonne par issue et renvoie comme
- * REPRÉSENTANT la DERNIÈRE run en date — le badge de la sidebar reflète l'état de
- * la dernière session / dernière PR. Le « titre » de la session est dérivé du
- * titre de l'issue liée (aucun champ propre).
+ * Une CONVERSATION de l'agent = UN run, ticket ou pas : les runs successifs d'un
+ * même ticket sont des conversations distinctes, listées côte à côte (il n'y a
+ * plus de session qui les regroupe, ni de sélecteur pour passer de l'une à
+ * l'autre). Leur titre vient du titreur, écrit au lancement.
  */
 export interface AgentSessionListItem {
   runId: string;
   status: AgentRunStatus;
   model: string | null;
   triggered_by: "button" | "chat" | "mention";
-  /** Titre d'une session CARNET (`issue` null) : le résumé écrit au lancement,
-   *  à défaut l'excerpt de la note. Cf. la route pour la cascade. */
-  noteTitle: string | null;
+  /** Titre écrit au lancement (titre de la PR pour une relecture). `null` quand
+   *  il manque — cf. `agentSessionTitle` pour les replis. */
+  title: string | null;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;
   created_at: string;
   updated_at: string;
-  /** Null = session CARNET (MIN-84) ou session de RELECTURE (MIN-168) : le run
-   *  est alors sa propre session. */
+  /** Null = conversation CARNET (MIN-84) ou de RELECTURE (MIN-168). */
   issue: { id: string; number: number; title: string } | null;
-  /** La pull request que cette session RELIT (MIN-168) — badge « Analyse de PR ».
-   *  Distinct de `pr_number`, qui est la PR qu'un run de code a OUVERTE. */
+  /** La pull request que cette conversation RELIT (MIN-168) — badge « Analyse de
+   *  PR ». Distinct de `pr_number`, qui est la PR qu'un run de code a OUVERTE. */
   pullRequest: { id: string; number: number; title: string | null; url: string | null } | null;
   project: { id: string; key: string; name: string; icon_url: string | null } | null;
-  /** Un run de l'issue TRAVAILLE (queued/running) → spinner « Numo travaille ». */
+  /** CE run TRAVAILLE (queued/running) → spinner « Numo travaille ». */
   working: boolean;
-  /** Nombre total de runs de l'issue (≥ 1) → accès à l'historique. */
-  runCount: number;
   /**
-   * Dernière fin d'agent de la session (max `completed_at` de ses runs), ou `null`
-   * si aucune run n'a jamais terminé. Comparé au `last_read_at` de l'utilisateur →
-   * bulle bleue « terminé, non lu ».
+   * Fin d'agent de ce run, ou `null` s'il n'a jamais terminé. Comparé au
+   * `last_read_at` de l'utilisateur → bulle bleue « terminé, non lu ».
    */
   lastCompletedAt: string | null;
-  /** La DERNIÈRE run de la session attend une réponse (ask_user) → point JAUNE. */
+  /** Ce run attend une réponse (ask_user) → point JAUNE. */
   awaitingInput: boolean;
 }
 

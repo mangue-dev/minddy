@@ -35,6 +35,7 @@ import { chainAgentDrain } from "./drain-chain";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
+import { agentRunTitleSource } from "./run-title";
 
 /**
  * Point d'entrée UNIQUE pour démarrer un run FROID (MIN-46 + MIN-68). Appelé par
@@ -187,15 +188,19 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 
   const issueId = input.issueId ?? null;
   let projectId: string;
+  // Titre du TICKET : la moitié durable de ce que le titreur résume (l'autre est
+  // la consigne). Cf. `agentRunTitleSource`.
+  let issueTitle: string | null = null;
   if (issueId) {
     const { data: issue } = await service
       .from("issues")
-      .select("id, project_id")
+      .select("id, project_id, title")
       .is("deleted_at", null)
       .eq("id", issueId)
       .maybeSingle();
     if (!issue) return { ok: false, error: "issueNotFound" };
     projectId = (issue as { project_id: string }).project_id;
+    issueTitle = (issue as { title: string | null }).title;
   } else {
     // Run CARNET : sans ticket, la note EST la mission — un run carnet sans
     // instruction n'aurait rien à faire (un run d'issue, si : le ticket).
@@ -230,21 +235,27 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   const quota = await checkAgentQuota(input.userId);
   if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
 
-  // Titre d'une session CARNET : sans ticket, la page Agents affichait la note
-  // brute sur deux lignes. Le résumé part MAINTENANT, en parallèle des résolutions
-  // qui suivent, et se pose sur le run à sa création — ainsi la session n'existe
-  // jamais sans son titre, et l'attente ne s'ajoute pas au lancement.
-  // Un run d'issue n'en a pas besoin : son titre est celui du ticket.
+  // Titre de la conversation. TOUTE conversation en a un désormais, ticket
+  // compris : la page Agents ne groupe plus les runs d'un ticket sous une
+  // session unique, si bien que trois conversations du même ticket portaient
+  // trois fois son titre, à la lettre près. Ce qui les distingue, c'est ce qu'on
+  // a demandé — d'où le résumé du ticket ET de la consigne
+  // (`agentRunTitleSource`), rendu à l'écran précédé de l'identifiant du ticket.
   //
-  // Un passage de ROUTINE non plus (MIN-185), et pour une raison qui coûte
+  // Le résumé part MAINTENANT, en parallèle des résolutions qui suivent, et se
+  // pose sur le run à sa création — ainsi la conversation n'existe jamais sans
+  // son titre, et l'attente ne s'ajoute pas au lancement.
+  //
+  // Un passage de ROUTINE fait exception (MIN-185), et pour une raison qui coûte
   // cher : son titre est celui de la routine, écrit UNE fois à la création.
   // Le laisser passer ici ferait payer un appel de résumé à CHAQUE échéance —
   // tous les matins pour une routine quotidienne — afin de réécrire un titre
   // qu'on a déjà.
+  const titleSource = agentRunTitleSource({ issueTitle, prompt: input.prompt });
   const titlePromise =
-    !issueId && !input.routineId && input.prompt?.trim()
+    !input.routineId && titleSource
       ? generateShortTitle({
-          text: input.prompt,
+          text: titleSource,
           kind: "note",
           // La note est écrite dans la langue de la personne, sans qu'on la
           // connaisse ici : le modèle la reprend telle quelle.

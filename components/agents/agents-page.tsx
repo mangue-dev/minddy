@@ -41,6 +41,7 @@ import {
   useAgentComposeDraft,
 } from "@/lib/agent-compose-draft";
 import { isAgentSessionUnread, type AgentRunSummary, type AgentSessionListItem } from "@/lib/agent-api";
+import { agentSessionTitle } from "@/lib/agent-session-title";
 
 /**
  * Vrai dès que le volet détail est rendu par le layout (breakpoint md = 768px, le
@@ -62,14 +63,13 @@ function useIsWideViewport(): boolean {
 }
 
 /**
- * Clé STABLE d'une session dans la liste : l'issue pour une session de ticket
- * (ses runs successives partagent la clé), le run lui-même pour une session
- * SANS TICKET (MIN-84) ou de RELECTURE (MIN-168) — là, le run EST la session :
- * pas de lignée, et deux relectures de la même PR sont deux conversations
- * distinctes.
+ * Clé d'une conversation dans la liste : SON RUN, toujours. Les runs successifs
+ * d'un ticket partageaient autrefois la clé de l'issue et se rangeaient sous une
+ * même ligne, derrière un sélecteur ; ce sont maintenant des conversations à part
+ * entière, distinguées à l'écran par leur titre et l'identifiant du ticket.
  */
 function sessionKey(s: AgentSessionListItem): string {
-  return s.issue?.id ?? s.runId;
+  return s.runId;
 }
 
 type SessionGroup = ProjectGroup<AgentSessionListItem>;
@@ -101,19 +101,18 @@ function SessionRow({
   onSelect: () => void;
 }) {
   const t = useTranslations("Agents");
-  const title =
-    session.issue?.title ??
-    session.noteTitle ??
-    session.pullRequest?.title ??
-    t("freeSessionTitle");
-  // De quoi la conversation parle : l'identifiant du ticket, « Sujet libre » ou
-  // « Analyse de PR » — la même question, trois réponses possibles.
-  const anchor =
-    session.issue && session.project
-      ? issueIdentifier(session.project.key, session.issue.number)
-      : session.pullRequest
-        ? t("prBadge")
-        : t("freeBadge");
+  // « MIN-42: Corriger la redirection » pour une conversation de ticket, le seul
+  // titre pour les autres. Cf. `agentSessionTitle`.
+  const title = agentSessionTitle(session, t("freeSessionTitle"));
+  // De quoi la conversation parle : le TICKET, « Sujet libre » ou « Analyse de
+  // PR » — la même question, trois réponses possibles. Le ticket se dit ici par
+  // son titre entier, et non plus par son identifiant : celui-ci est passé
+  // devant le titre de la ligne, et le répéter au survol n'apprendrait rien.
+  const anchor = session.issue
+    ? session.issue.title
+    : session.pullRequest
+      ? t("prBadge")
+      : t("freeBadge");
 
   return (
     <Tooltip>
@@ -363,13 +362,17 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
 }
 
 /**
- * Page Agents — vue liste/détail : à gauche TOUTES les sessions de l'agent Numo
- * (tous projets accessibles, sans filtre), à droite la conversation inline
- * (`AgentSessionDetail` → `AgentConversation`, le même cœur que la modal). Une
- * SESSION = une issue (titre dérivé du ticket) OU un run SANS ticket (MIN-84, titre
- * résumé du prompt). Alimentée par /api/agent-runs (dédoublonné par issue ; un run
- * sans ticket est sa propre session). La session sélectionnée est publiée dans le
- * contexte de Numo quand elle a une issue.
+ * Page Agents — vue liste/détail : à gauche TOUTES les conversations de l'agent
+ * Numo (tous projets accessibles, sans filtre), à droite la conversation inline
+ * (`AgentSessionDetail` → `AgentConversation`, le même cœur que la modal).
+ *
+ * **UNE CONVERSATION = UN RUN**, ticket ou pas. Les runs successifs d'un ticket
+ * étaient réunis sous une seule ligne, les précédents rangés derrière un sélecteur
+ * au milieu de l'en-tête : on ne voyait qu'une conversation par ticket, et les
+ * autres n'existaient que pour qui pensait à déplier ce menu. Chacune a maintenant
+ * sa ligne, sous son propre titre — celui que le titreur écrit au lancement,
+ * précédé de l'identifiant du ticket (`agentSessionTitle`). La conversation
+ * sélectionnée est publiée dans le contexte de Numo quand elle a une issue.
  *
  * La colonne est un ACCORDÉON par projet (`ProjectGroup`), cinq conversations par
  * projet puis « Afficher plus », et chaque ligne se réduit à son titre
@@ -412,10 +415,10 @@ export function AgentsPage() {
   const { reads, markRead } = useAgentReads();
   const isWide = useIsWideViewport();
 
-  // Deep-link (« Ouvrir l'agent » depuis ailleurs) : ?issue=<issueId> présélectionne
-  // la session de cette issue ; ?run=<runId> celle d'un run précis (une relecture
-  // de PR, MIN-168 — sa clé de session EST son run) ; ?compose=<issueId> l'ouvre
-  // en brouillon de lancement ; ?compose=new ouvre le brouillon SANS ticket.
+  // Deep-link (« Ouvrir l'agent » depuis ailleurs) : ?run=<runId> ouvre CETTE
+  // conversation ; ?issue=<issueId> ouvre la plus récente du ticket (il n'est plus
+  // la clé d'aucune conversation — cf. `sessionForKey`) ; ?compose=<issueId>
+  // l'ouvre en brouillon de lancement ; ?compose=new le brouillon SANS ticket.
   const searchParams = useSearchParams();
   const issueParam = searchParams.get("issue");
   const runParam = searchParams.get("run");
@@ -506,7 +509,10 @@ export function AgentsPage() {
         status: "queued",
         model: null,
         triggered_by: "button",
-        noteTitle: null,
+        // Aucun titre : le brouillon n'a pas encore de run, donc rien de généré.
+        // Son volet se nomme donc « MIN-42: <titre du ticket> », le temps que le
+        // premier message parte.
+        title: null,
         pullRequest: null,
         pr_number: null,
         pr_url: null,
@@ -528,7 +534,6 @@ export function AgentsPage() {
           icon_url: draftProject?.icon_url ?? null,
         },
         working: false,
-        runCount: 0,
         lastCompletedAt: null,
         awaitingInput: false,
       }
@@ -613,12 +618,26 @@ export function AgentsPage() {
     if (composeParam || issueParam || runParam) router.replace("/agents");
   }, [launchedItem?.runId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * La conversation que désigne une clé de sélection. C'est un run (le cas
+   * courant : une ligne de la liste, `?run=`) — mais un deep-link peut aussi
+   * désigner un TICKET (`?issue=`, depuis une carte ou une pull request), qui
+   * n'est plus la clé d'aucune conversation depuis qu'un run vaut une
+   * conversation. On ouvre alors la plus RÉCENTE du ticket : la liste arrive
+   * triée par date de création décroissante, c'est donc la première trouvée.
+   */
+  const sessionForKey = (key: string | null): AgentSessionListItem | null =>
+    key
+      ? sessions.find((s) => s.runId === key) ??
+        sessions.find((s) => s.issue?.id === key) ??
+        null
+      : null;
+
   // Élément affiché à droite. La run tout juste lancée passe DEVANT la sélection :
   // elle vient d'être rattrapée par la liste et l'effet ci-dessus n'a pas encore
   // déplacé `selectedKey` — sans ça, le volet clignoterait « aucune sélection » le
   // temps d'une image, juste après l'envoi du premier message.
-  const realSelected =
-    launchedItem ?? sessions.find((s) => sessionKey(s) === selectedKey) ?? null;
+  const realSelected = launchedItem ?? sessionForKey(selectedKey);
   const activeItem = issueComposeSelected ? draftItem : realSelected;
 
   // La conversation AFFICHÉE n'a jamais de bulle : on la marque lue à son ouverture ET
@@ -669,9 +688,15 @@ export function AgentsPage() {
   useEffect(() => {
     if (composeSelected || launchedRunId) return;
     if (sessions.length === 0) return;
-    if (!selectedKey || !sessions.some((s) => sessionKey(s) === selectedKey)) {
+    const resolved = sessionForKey(selectedKey);
+    if (!resolved) {
       setSelectedKey(FREE_COMPOSE_PARAM);
+      return;
     }
+    // Deep-link par TICKET (`?issue=`) : la sélection retient la CONVERSATION
+    // qu'il a ouverte, pas le ticket — sinon aucune ligne ne se surligne, et le
+    // volet suivrait un ticket dont les conversations ne sont plus une.
+    if (resolved.runId !== selectedKey) setSelectedKey(resolved.runId);
   }, [sessions, selectedKey, composeSelected, launchedRunId]);
 
   // Sélectionne une VRAIE session : abandonne le brouillon en cours (jamais envoyé →
@@ -716,8 +741,8 @@ export function AgentsPage() {
     if (!query.trim()) return sessions;
     return sessions.filter((s) =>
       matchesFilter(query, [
+        s.title,
         s.issue?.title,
-        s.noteTitle,
         s.project?.name,
         s.pullRequest?.title,
         s.issue && s.project ? issueIdentifier(s.project.key, s.issue.number) : null,
@@ -877,7 +902,7 @@ export function AgentsPage() {
           />
         ) : activeItem ? (
           <AgentSessionDetail
-            key={activeItem.issue?.id ?? activeItem.runId}
+            key={activeItem.runId}
             item={activeItem}
             compose={issueComposeSelected}
             composeInitialText={issueComposeSelected ? issueDraft?.prompt : undefined}
@@ -891,7 +916,6 @@ export function AgentsPage() {
             onLaunched={(run: AgentRunSummary) => setLaunchedRunId(run.id)}
             onBack={() => setMobileDetail(false)}
             onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}
-            showUnread
           />
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">

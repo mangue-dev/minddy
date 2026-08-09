@@ -10,8 +10,10 @@ import type { AiFeature } from "@/lib/server/ai-usage";
  * de ce que l'utilisateur a écrit. Deux sidebars s'en servent, pour le même défaut —
  * afficher le texte d'entrée tronqué à la place d'un titre :
  *   • une conversation de chat (`conversations.title`, premier message) ;
- *   • une session d'agent CARNET (`agent_runs.title`, la note lancée), qui n'a
- *     pas de ticket dont hériter le titre.
+ *   • une conversation d'agent (`agent_runs.title`) — la note lancée, et pour une
+ *     conversation de ticket le titre du ticket suivi de la consigne : un run vaut
+ *     une conversation, si bien que le seul titre du ticket les nommerait toutes
+ *     pareil.
  *
  * Un PETIT modèle suffit, et il est réglable sans redéploiement par la clé admin
  * `conversation_title_model`. L'appel ne lève jamais : au moindre échec il rend
@@ -136,7 +138,7 @@ const SUBJECT: Record<ShortTitleKind, string> = {
   conversation:
     "the first message a user sent to Numo, the in-app assistant. Call set_title with a title for that conversation",
   note:
-    "a note a user just handed to Numo's coding agent as its mission. Call set_title with a title for that work session",
+    "what a user just handed to Numo's coding agent as its mission: the title of the issue it works on, the instruction the user wrote, or both one after the other. Call set_title with a title for that conversation — what makes it different from the other conversations on the same issue is what was ASKED",
 };
 
 /**
