@@ -50,6 +50,7 @@ export function GlobalKanbanColumn({
   onUpdateIssue,
   onSetCategories,
   selectedIds,
+  draggingIds,
   onSelect,
   onCreateIssue,
   onAddRelation,
@@ -77,6 +78,8 @@ export function GlobalKanbanColumn({
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
   selectedIds: Set<string>;
+  /** Les tickets embarqués par le glisser en cours — estompés avec la carte saisie. */
+  draggingIds?: Set<string>;
   onSelect: (issueId: string) => void;
   /** Absent → no "new issue" footer (cycle mode — a create wouldn't join the cycle). */
   onCreateIssue?: (status: IssueStatus) => void;
@@ -163,6 +166,7 @@ export function GlobalKanbanColumn({
                   onDeleteIssue ? () => onDeleteIssue(issue.id, pid) : undefined
                 }
                 selected={selectedIds.has(issue.id)}
+                dragging={draggingIds?.has(issue.id)}
                 onSelect={onSelect}
                 extraActions={buildMenuActions?.(issue)}
                 inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}

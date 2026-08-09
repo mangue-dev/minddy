@@ -27,6 +27,7 @@ import type {
 } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
 import { resolveRelations } from "@/lib/relation-constants";
+import { displayRank, dragBundle, planBoardMove } from "@/lib/board-drag";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
@@ -45,16 +46,6 @@ const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
 const EMPTY_MEMBERS: Map<string, Member> = new Map();
 const EMPTY_CATEGORIES: Map<string, Category> = new Map();
 const EMPTY_OBJECTIVES: Map<string, Objective> = new Map();
-
-/** Insert position = midpoint of the two neighbours at `index` (active excluded). */
-function computePosition(items: Issue[], index: number): number {
-  const before = items[index - 1];
-  const after = items[index];
-  if (!before && !after) return 0;
-  if (!before) return after.position - 1;
-  if (!after) return before.position + 1;
-  return (before.position + after.position) / 2;
-}
 
 /**
  * The cross-project kanban's drag-and-drop surface (MIN-29) — the same DnD model
@@ -191,7 +182,12 @@ export function GlobalKanbanBoard({
     }));
   }, [issues, statuses, sort, comparator]);
 
+  // L'ordre de lecture du board — l'ordre dans lequel un paquet glissé atterrit.
+  const rank = useMemo(() => displayRank(columns), [columns]);
+
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Les tickets embarqués par le glisser en cours (cf. KanbanBoard).
+  const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSelection = useCallback((issueId: string) => {
     setSelectedIds((current) => {
@@ -283,17 +279,27 @@ export function GlobalKanbanBoard({
     [fadeRef, marqueeRef]
   );
 
+  const endDrag = useCallback(() => {
+    setActiveId(null);
+    setDraggingIds(new Set());
+  }, []);
+
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(String(event.active.id));
+    const id = String(event.active.id);
+    setActiveId(id);
+    setDraggingIds(
+      new Set(dragBundle(id, selectedIds, issueMap, rank).map((i) => i.id))
+    );
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    setActiveId(null);
+    endDrag();
     const { active, over } = event;
     if (!over || over.id === active.id) return;
 
-    const dragged = issueMap.get(String(active.id));
-    if (!dragged) return;
+    // Toute la sélection suit dès que la carte saisie en fait partie (MIN-75).
+    const bundle = dragBundle(String(active.id), selectedIds, issueMap, rank);
+    if (bundle.length === 0) return;
 
     let targetStatus: IssueStatus;
     let overIssue: Issue | null = null;
@@ -305,31 +311,25 @@ export function GlobalKanbanBoard({
       targetStatus = overIssue.status;
     }
 
-    const sameColumn = targetStatus === dragged.status;
-    // The reco comparator is the only order in cycle mode — no manual reorder.
-    if (sameColumn && (comparator || sort !== "manual")) return;
+    const moves = planBoardMove({
+      // The reco comparator is the only order in cycle mode — no manual reorder,
+      // donc un ticket déjà dans la colonne cible n'y bouge pas.
+      bundle: comparator
+        ? bundle.filter((issue) => issue.status !== targetStatus)
+        : bundle,
+      targetStatus,
+      overIssueId: overIssue?.id ?? null,
+      columnItems: issues
+        .filter((i) => i.status === targetStatus)
+        .sort((a, b) => a.position - b.position),
+      manual: sort === "manual",
+      now: Date.now(),
+    });
+    if (moves.length === 0) return;
 
-    const patch: { status?: IssueStatus; position: number } = {
-      position: dragged.position,
-    };
-    if (!sameColumn) patch.status = targetStatus;
-
-    if (sort === "manual") {
-      const targetItems = issues
-        .filter((i) => i.status === targetStatus && i.id !== dragged.id)
-        .sort((a, b) => a.position - b.position);
-      let index = overIssue
-        ? targetItems.findIndex((i) => i.id === overIssue!.id)
-        : targetItems.length;
-      if (index < 0) index = targetItems.length;
-      patch.position = computePosition(targetItems, index);
-    } else {
-      patch.position = Date.now();
-    }
-
-    void onMove(dragged.id, patch, dragged.project_id).catch((err) =>
-      toast.error((err as Error).message)
-    );
+    void Promise.all(
+      moves.map((m) => onMove(m.issue.id, m.patch, m.issue.project_id))
+    ).catch((err) => toast.error((err as Error).message));
   };
 
   return (
@@ -344,7 +344,7 @@ export function GlobalKanbanBoard({
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveId(null)}
+      onDragCancel={endDrag}
     >
       {selectedIssues.length > 0 && (
         <BulkIssueActions
@@ -392,6 +392,7 @@ export function GlobalKanbanBoard({
             buildMenuActions={buildMenuActions}
             currentCycleId={currentCycleId}
             selectedIds={selectedIds}
+            draggingIds={draggingIds}
             onSelect={toggleSelection}
           />
         ))}
@@ -401,7 +402,13 @@ export function GlobalKanbanBoard({
 
       <DragOverlay dropAnimation={null}>
         {activeIssue ? (
-          <div className="w-[21rem]">
+          <div className="relative w-[21rem]">
+            {/* Le paquet ne se voit pas au curseur : le compte le dit. */}
+            {draggingIds.size > 1 && (
+              <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
+                {draggingIds.size}
+              </span>
+            )}
             <IssueCardBody
               issue={activeIssue}
               projectKey={activeProject?.key ?? ""}

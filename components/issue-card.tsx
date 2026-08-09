@@ -893,6 +893,7 @@ export function IssueCard({
   extraActions,
   inCurrentCycle,
   selected,
+  dragging,
   onSelect,
 }: {
   issue: Issue;
@@ -929,6 +930,9 @@ export function IssueCard({
   /** The issue belongs to MY current cycle — forwarded to the card body. */
   inCurrentCycle?: boolean;
   selected?: boolean;
+  /** La carte part avec le glisser en cours sans être celle qu'on tient : c'est
+      le cas des autres tickets sélectionnés, qui s'estompent avec elle. */
+  dragging?: boolean;
   onSelect?: (issueId: string) => void;
 }) {
   const t = useTranslations("IssueUI");
@@ -1380,7 +1384,7 @@ export function IssueCard({
       // touch is free to scroll the board/columns natively.
       className={cn(
         "relative cursor-pointer rounded-xl",
-        isDragging && "opacity-40",
+        (isDragging || dragging) && "opacity-40",
       )}
     >
       <DropOverlay

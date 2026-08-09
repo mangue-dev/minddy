@@ -43,6 +43,7 @@ export function KanbanColumn({
   buildMenuActions,
   currentCycleId,
   selectedIds,
+  draggingIds,
   onSelect,
 }: {
   status: StatusMeta;
@@ -76,6 +77,9 @@ export function KanbanColumn({
   /** My current cycle's id — its cards show the blue cycle icon. */
   currentCycleId?: string | null;
   selectedIds: Set<string>;
+  /** Les tickets embarqués par le glisser en cours — estompés comme la carte
+      saisie, pour qu'on voie ce que le paquet contient. */
+  draggingIds?: Set<string>;
   onSelect: (issueId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
@@ -140,6 +144,7 @@ export function KanbanColumn({
                   onDeleteIssue ? () => onDeleteIssue(issue.id) : undefined
                 }
                 selected={selectedIds.has(issue.id)}
+                dragging={draggingIds?.has(issue.id)}
                 onSelect={onSelect}
                 extraActions={buildMenuActions?.(issue)}
                 inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}

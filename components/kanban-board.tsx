@@ -27,6 +27,7 @@ import type {
 } from "@/lib/types";
 import { resolveRelations } from "@/lib/relation-constants";
 import { issueComparator } from "@/lib/view-filter";
+import { displayRank, dragBundle, planBoardMove } from "@/lib/board-drag";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
@@ -42,16 +43,6 @@ import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
-
-/** Insert position = midpoint of the two neighbours at `index` (active excluded). */
-function computePosition(items: Issue[], index: number): number {
-  const before = items[index - 1];
-  const after = items[index];
-  if (!before && !after) return 0;
-  if (!before) return after.position - 1;
-  if (!after) return before.position + 1;
-  return (before.position + after.position) / 2;
-}
 
 export function KanbanBoard({
   issues,
@@ -164,7 +155,13 @@ export function KanbanBoard({
     }));
   }, [issues, statuses, sort]);
 
+  // L'ordre de lecture du board — l'ordre dans lequel un paquet glissé atterrit.
+  const rank = useMemo(() => displayRank(columns), [columns]);
+
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Les tickets que le glisser en cours embarque (la carte saisie, ou toute la
+  // sélection quand elle en fait partie) — ils s'estompent tous, pas juste elle.
+  const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSelection = useCallback((issueId: string) => {
     setSelectedIds((current) => {
@@ -273,17 +270,27 @@ export function KanbanBoard({
     el.scrollTo({ left: index * stride, behavior: "smooth" });
   }, []);
 
+  const endDrag = useCallback(() => {
+    setActiveId(null);
+    setDraggingIds(new Set());
+  }, []);
+
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(String(event.active.id));
+    const id = String(event.active.id);
+    setActiveId(id);
+    setDraggingIds(
+      new Set(dragBundle(id, selectedIds, issueMap, rank).map((i) => i.id))
+    );
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    setActiveId(null);
+    endDrag();
     const { active, over } = event;
     if (!over || over.id === active.id) return;
 
-    const dragged = issues.find((i) => i.id === active.id);
-    if (!dragged) return;
+    // Toute la sélection suit dès que la carte saisie en fait partie (MIN-75).
+    const bundle = dragBundle(String(active.id), selectedIds, issueMap, rank);
+    if (bundle.length === 0) return;
 
     // Target status: dropping on a column area vs. onto a card.
     let targetStatus: IssueStatus;
@@ -291,35 +298,24 @@ export function KanbanBoard({
     if (STATUS_VALUES.has(String(over.id))) {
       targetStatus = String(over.id) as IssueStatus;
     } else {
-      overIssue = issues.find((i) => i.id === over.id) ?? null;
+      overIssue = issueMap.get(String(over.id)) ?? null;
       if (!overIssue) return;
       targetStatus = overIssue.status;
     }
 
-    const sameColumn = targetStatus === dragged.status;
-    // With a non-manual sort the column order is field-derived — no reordering.
-    if (sameColumn && sort !== "manual") return;
+    const moves = planBoardMove({
+      bundle,
+      targetStatus,
+      overIssueId: overIssue?.id ?? null,
+      columnItems: issues
+        .filter((i) => i.status === targetStatus)
+        .sort((a, b) => a.position - b.position),
+      manual: sort === "manual",
+      now: Date.now(),
+    });
+    if (moves.length === 0) return;
 
-    const patch: { status?: IssueStatus; position: number } = {
-      position: dragged.position,
-    };
-    if (!sameColumn) patch.status = targetStatus;
-
-    if (sort === "manual") {
-      const targetItems = issues
-        .filter((i) => i.status === targetStatus && i.id !== dragged.id)
-        .sort((a, b) => a.position - b.position);
-      let index = overIssue
-        ? targetItems.findIndex((i) => i.id === overIssue!.id)
-        : targetItems.length;
-      if (index < 0) index = targetItems.length;
-      patch.position = computePosition(targetItems, index);
-    } else {
-      // Field-sorted cross-column move: position is cosmetic — land at the end.
-      patch.position = Date.now();
-    }
-
-    void onMove(dragged.id, patch).catch((err) =>
+    void Promise.all(moves.map((m) => onMove(m.issue.id, m.patch))).catch((err) =>
       toast.error((err as Error).message)
     );
   };
@@ -334,7 +330,7 @@ export function KanbanBoard({
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveId(null)}
+      onDragCancel={endDrag}
     >
       <div className="flex h-full flex-col">
         {/* Mobile: dots reflect / control the snapped column (one status per swipe). */}
@@ -395,6 +391,7 @@ export function KanbanBoard({
               buildMenuActions={buildMenuActions}
               currentCycleId={currentCycleId}
               selectedIds={selectedIds}
+              draggingIds={draggingIds}
               onSelect={toggleSelection}
             />
           ))}
@@ -410,7 +407,13 @@ export function KanbanBoard({
           jump" on cross-column moves. Disabling it makes the card snap into place. */}
       <DragOverlay dropAnimation={null}>
         {activeIssue ? (
-          <div className="w-[21rem]">
+          <div className="relative w-[21rem]">
+            {/* Le paquet ne se voit pas au curseur : le compte le dit. */}
+            {draggingIds.size > 1 && (
+              <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
+                {draggingIds.size}
+              </span>
+            )}
             <IssueCardBody
               issue={activeIssue}
               projectKey={projectKey}
