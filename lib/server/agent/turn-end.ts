@@ -4,7 +4,11 @@ import {
   testFailuresForTurn,
   TEST_MIN_BUDGET_MS,
 } from "./diagnostics";
-import { formatSelfReview, SELF_REVIEW_MIN_BUDGET_MS } from "./self-review";
+import {
+  formatSelfReview,
+  overwriteSitesForTurn,
+  SELF_REVIEW_MIN_BUDGET_MS,
+} from "./self-review";
 import { planReviewForTurn, PLAN_REVIEW_MIN_BUDGET_MS } from "./plan-review";
 import { planClosureForTurn, PLAN_CLOSURE_MIN_BUDGET_MS } from "./plan-closure";
 import { turnDiff, type RepoHost } from "./repo-host";
@@ -187,8 +191,12 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
 
   /**
    * Auto-relecture : le diff du tour, injecté avant que l'agent ne réponde (cf.
-   * self-review.ts). Deux commandes git en LECTURE SEULE — l'index n'est jamais
+   * self-review.ts). Commandes git en LECTURE SEULE — l'index n'est jamais
    * touché, la fin de tour reste seule à stager.
+   *
+   * Le diff est suivi, depuis MIN-252, des autres écritures des états qu'il
+   * écrit — des `git grep`, donc toujours en lecture seule, et toujours
+   * best-effort : leur panne coûte le second bloc, jamais la relecture.
    */
   const selfReviewBlock = async (
     budgetMs: number,
@@ -201,15 +209,19 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
       diff: "",
       porcelain: "",
     }));
-    const block = formatSelfReview({ diff, porcelain });
+    const overwrites = await overwriteSitesForTurn(host, diff).catch(() => []);
+    const block = formatSelfReview({ diff, porcelain, overwrites });
     // `at` distingue les deux moments où la MÊME relecture peut tomber (MIN-247).
     // Sans lui, la mesure ne pourrait pas dire combien de PR sont passées par la
     // porte plutôt que par la fin de tour — ni si la porte se déclenche.
+    // `overwrites` compte les SYMBOLES rapportés : c'est lui qui dira si le bloc
+    // de MIN-252 parle, et à quelle fréquence.
     await emit("status", {
       phase: "self_review",
       at,
       durationMs: Date.now() - startedAt,
       chars: block?.length ?? 0,
+      overwrites: overwrites.length,
     });
     return block;
   };

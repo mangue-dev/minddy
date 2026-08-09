@@ -138,9 +138,10 @@ describe("la chaîne de fin de tour", () => {
   });
 
   it("laisse passer la chaîne quand un bloc n'a pas le budget de tourner", async () => {
-    // 50 s : sous le plancher du type-check (60 s) et sous celui de la suite de
-    // tests (150 s), au-dessus de celui des autres (45 s). Les blocs empêchés ne
-    // doivent pas retenir les suivants.
+    // 50 s : sous le plancher du type-check (60 s), de la suite de tests (180 s)
+    // et de l'auto-relecture (75 s depuis MIN-252, elle grep en plus de son
+    // diff) — au-dessus de celui des deux crochets de plan (45 s). Les trois
+    // blocs empêchés ne doivent pas retenir les deux qui suivent.
     const { hook, phases } = hookFor({ edited: ["lib/x.ts"], wrotePlan: true });
 
     const said = [
@@ -149,9 +150,10 @@ describe("la chaîne de fin de tour", () => {
       await hook.run({ budgetMs: 50_000 }),
     ];
 
-    expect(said).toEqual(["DIFF", "PLAN_REVIEW", "PLAN_CLOSURE"]);
+    expect(said).toEqual(["PLAN_REVIEW", "PLAN_CLOSURE", null]);
     expect(phases).not.toContain("type_check");
     expect(phases).not.toContain("tests");
+    expect(phases).not.toContain("self_review");
   });
 
   it("latche `repoTouched` : le tour a édité, même quand le type-check a vidé la liste", async () => {
