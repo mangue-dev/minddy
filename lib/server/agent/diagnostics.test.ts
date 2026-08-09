@@ -178,6 +178,88 @@ Test Suites: 1 failed, 1 total
 Tests:       1 failed, 2 passed, 3 total
 `;
 
+/**
+ * MIN-257 — le cas du ticket, capturé tel quel : `vitest run` (4.1.10 du dépôt) sur
+ * deux fichiers sondes, l'un avec une assertion rouge, l'autre avec un import qui
+ * n'existe plus. Vitest ouvre alors une section « Failed Suites » dont l'en-tête
+ * `FAIL  <fichier> [ <fichier> ]` ne porte AUCUN `>` — la forme que le parseur ne
+ * savait pas lire, et dont il jetait tout le corps.
+ */
+const VITEST_COLLECT_OUT = `
+ RUN  v4.1.10 /Users/clementguerin/Projets/minddy-ticketing/minddy
+
+ ❯ lib/zz-probe-b.test.ts (0 test)
+ ❯ lib/zz-probe-a.test.ts (1 test | 1 failed) 3ms
+     × adds 3ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  lib/zz-probe-b.test.ts [ lib/zz-probe-b.test.ts ]
+Error: Cannot find module './zz-gone-module' imported from /Users/clementguerin/Projets/minddy-ticketing/minddy/lib/zz-probe-b.test.ts
+ ❯ lib/zz-probe-b.test.ts:2:1
+      1| import { describe, expect, it } from "vitest";
+      2| import { renamed } from "./zz-gone-module";
+       | ^
+      3|
+      4| describe("probe b", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  lib/zz-probe-a.test.ts > probe a > adds
+AssertionError: expected 2 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 2
+
+ ❯ lib/zz-probe-a.test.ts:5:19
+      3| describe("probe a", () => {
+      4|   it("adds", () => {
+      5|     expect(1 + 1).toBe(3);
+       |                   ^
+      6|   });
+      7| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  1 failed (1)
+   Start at  15:35:37
+   Duration  90ms (transform 19ms, setup 0ms, import 15ms, tests 3ms, environment 0ms)
+`;
+
+/** La même exécution, sonde à l'import SEULE : aucun test n'a même été collecté. */
+const VITEST_COLLECT_ONLY_OUT = `
+ RUN  v4.1.10 /Users/clementguerin/Projets/minddy-ticketing/minddy
+
+ ❯ lib/zz-probe-b.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  lib/zz-probe-b.test.ts [ lib/zz-probe-b.test.ts ]
+Error: Cannot find module './zz-gone-module' imported from /Users/clementguerin/Projets/minddy-ticketing/minddy/lib/zz-probe-b.test.ts
+ ❯ lib/zz-probe-b.test.ts:2:1
+      1| import { describe, expect, it } from "vitest";
+      2| import { renamed } from "./zz-gone-module";
+       | ^
+      3|
+      4| describe("probe b", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  15:35:45
+   Duration  72ms (transform 7ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+`;
+
 describe("testRunnerBin", () => {
   it("lit le binaire, affectations d'environnement comprises", () => {
     expect(testRunnerBin("vitest run")).toBe("vitest");
@@ -259,6 +341,41 @@ describe("parseTestFailures", () => {
     expect(entries[1].text).not.toContain("2 failed");
   });
 
+  it("lit un fichier qui n'a pas CHARGÉ — la forme sans `>` de « Failed Suites »", () => {
+    const entries = parseTestFailures(VITEST_COLLECT_ONLY_OUT);
+    expect(entries).toHaveLength(1);
+    // Ni suite ni cas à nommer : le titre vaut le fichier.
+    expect(entries[0].title).toBe("lib/zz-probe-b.test.ts");
+    expect(entries[0].kind).toBe("suite");
+    // Et surtout le CORPS, qui partait entièrement à la poubelle.
+    expect(entries[0].text).toContain("Cannot find module './zz-gone-module'");
+    expect(entries[0].text).toContain("lib/zz-probe-b.test.ts:2:1");
+    expect(entries[0].text).not.toContain("describe(");
+  });
+
+  it("lit les DEUX : le fichier tombé à l'import ET l'assertion rouge d'ailleurs", () => {
+    // Le cas du ticket. Une seule assertion parsée suffisait à désarmer le repli,
+    // et l'échec le plus directement causé par l'édition du modèle disparaissait.
+    const entries = parseTestFailures(VITEST_COLLECT_OUT);
+    expect(entries.map((e) => e.title)).toEqual([
+      "lib/zz-probe-b.test.ts",
+      "lib/zz-probe-a.test.ts > probe a > adds",
+    ]);
+    expect(entries[0].kind).toBe("suite");
+    expect(entries[1].kind).toBeUndefined();
+  });
+
+  it("n'ouvre pas un contexte de fichier jest sur un échec de collecte", () => {
+    // `FAIL <fichier>` seul, chez jest, NOMME les `●` qui suivent. La forme
+    // `FAIL <fichier> [ <fichier> ]` est un échec à part entière : elle ne doit pas
+    // se faire prendre pour cet en-tête-là, ni renommer l'échec suivant.
+    const raw = `${VITEST_COLLECT_ONLY_OUT}
+  ● sum › adds numbers
+    Expected: 3`;
+    const entries = parseTestFailures(raw);
+    expect(entries.map((e) => e.title)).toEqual(["lib/zz-probe-b.test.ts", "sum › adds numbers"]);
+  });
+
   it("ignore les couleurs du terminal", () => {
     // Le runner colorise dès qu'il croit parler à un terminal. Sans `NO_COLOR`, ou
     // avec un runner qui l'ignore, la sortie arrive habillée : elle doit se lire
@@ -297,6 +414,43 @@ describe("formatTestFailures", () => {
     const block = formatTestFailures(raw) ?? "";
     expect(block).toContain("Tests are failing after your changes");
     expect(block).toContain("Cannot find module './missing'");
+  });
+
+  it("sert le fichier tombé à l'import EN TÊTE, sans perdre l'assertion rouge", () => {
+    const block = formatTestFailures(VITEST_COLLECT_OUT) ?? "";
+    expect(block).toContain("FAIL lib/zz-probe-b.test.ts");
+    expect(block).toContain("Cannot find module './zz-gone-module'");
+    expect(block).toContain("FAIL lib/zz-probe-a.test.ts > probe a > adds");
+    expect(block).toContain("AssertionError: expected 2 to be 3");
+    // Un fichier entier à zéro pèse plus qu'un cas : il passe devant le cap.
+    expect(block.indexOf("FAIL lib/zz-probe-b.test.ts")).toBeLessThan(
+      block.indexOf("FAIL lib/zz-probe-a.test.ts"),
+    );
+  });
+
+  it("ne laisse pas le cap manger l'échec de collecte", () => {
+    // 200 assertions rouges devant, un fichier non chargé derrière : c'est LUI qui
+    // doit rester dans le bloc, pas être poussé dehors par le volume.
+    const many = Array.from(
+      { length: 200 },
+      (_, i) => ` FAIL  lib/f${i}.test.ts > groupe > cas ${i}\nAssertionError: expected 2 to be 3`,
+    ).join("\n");
+    const block = formatTestFailures(`${many}\n${VITEST_COLLECT_ONLY_OUT}`) ?? "";
+    expect(block).toContain("FAIL lib/zz-probe-b.test.ts");
+    expect(block).toContain("Cannot find module './zz-gone-module'");
+  });
+
+  it("sert la QUEUE quand la sortie annonce des « Failed Suites » qu'on n'a pas su lire", () => {
+    // Le repli ne doit pas se désarmer sur une seule assertion parsée ailleurs : si
+    // vitest change la forme de cet en-tête, on sert la queue brute plutôt que de
+    // rendre un bloc qui tait le fichier tombé.
+    const raw = VITEST_COLLECT_OUT.replace(
+      " FAIL  lib/zz-probe-b.test.ts [ lib/zz-probe-b.test.ts ]",
+      " FORME-INCONNUE  lib/zz-probe-b.test.ts",
+    );
+    const block = formatTestFailures(raw) ?? "";
+    expect(block).toContain("Tests are failing after your changes");
+    expect(block).toContain("Cannot find module './zz-gone-module'");
   });
 
   it("se tait quand il n'y a pas de test à lancer, ou rien à dire", () => {

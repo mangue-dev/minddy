@@ -339,11 +339,28 @@ export interface TestFailureEntry {
   title: string;
   /** Le bloc complet, titre `FAIL …` en tête. */
   text: string;
+  /**
+   * `"suite"` quand le fichier n'a pas pu être CHARGÉ (section « Failed Suites »
+   * de vitest) : il n'y a alors ni suite ni cas, le titre vaut le fichier, et
+   * l'échec pèse un fichier de test entier, pas une assertion.
+   */
+  kind?: "suite";
 }
 
 /** ` FAIL  lib/a.test.ts > groupe > cas` — la forme de vitest. Le `>` est ce qui
  *  la distingue du `FAIL <fichier>` de jest, qui n'est qu'un en-tête de fichier. */
 const VITEST_FAIL = /^\s*(?:❯\s*)?FAIL\s+(\S.*>.*\S)\s*$/;
+/**
+ * ` FAIL  lib/b.test.ts [ lib/b.test.ts ]` — la forme de vitest quand le fichier
+ * ne se CHARGE pas (import manquant, erreur au niveau module) : il n'a ni suite
+ * ni cas à nommer, donc pas de `>`, et il ne ressemble pas non plus au
+ * `FAIL <fichier>` de jest à cause du `[ … ]` qui suit. Sans ce motif, la ligne
+ * ne matchait rien et tout le corps de l'erreur d'import partait à la poubelle —
+ * le modèle ne voyait pas le défaut que son édition venait de causer.
+ */
+const VITEST_SUITE_FAIL = /^\s*(?:❯\s*)?FAIL\s+(\S+)\s+\[\s*\S+\s*\]\s*$/;
+/** L'en-tête de la section des fichiers non chargeables (`⎯⎯ Failed Suites 1 ⎯⎯`). */
+const VITEST_SUITES_HEADER = /^[\s⎯─=-]*Failed Suites\b/m;
 /** `● groupe › cas` — la forme de jest. `● Console` n'est pas un échec. */
 const JEST_FAIL = /^\s*●\s+(?!Console\b)(\S.*\S|\S)\s*$/;
 /** `FAIL src/a.test.js` seul : contexte de fichier pour les `●` qui suivent. */
@@ -372,8 +389,8 @@ export function parseTestFailures(raw: string): TestFailureEntry[] {
   let file = "";
   let stopped = false;
 
-  const push = (title: string) => {
-    entries.push({ title, text: `FAIL ${title}` });
+  const push = (title: string, kind?: "suite") => {
+    entries.push({ title, text: `FAIL ${title}`, ...(kind ? { kind } : {}) });
     body = [];
   };
 
@@ -386,6 +403,14 @@ export function parseTestFailures(raw: string): TestFailureEntry[] {
     if (vitest) {
       stopped = false;
       push(vitest[1]);
+      continue;
+    }
+    const suite = VITEST_SUITE_FAIL.exec(line);
+    if (suite) {
+      stopped = false;
+      // On ne touche PAS à `file` : ce titre nomme un fichier qui n'a pas chargé,
+      // il n'ouvre pas un contexte pour des `●` de jest qui suivraient.
+      push(suite[1], "suite");
       continue;
     }
     const jest = JEST_FAIL.exec(line);
@@ -423,17 +448,29 @@ export function formatTestFailures(raw: string): string | null {
   const clean = raw.replace(ANSI, "");
   const entries = parseTestFailures(clean);
 
-  if (entries.length === 0) {
+  // Le repli ne se contente pas de `entries.length === 0` : une sortie qui annonce
+  // des « Failed Suites » dont on n'a su tirer AUCUNE entrée est le cas où l'on
+  // cache un vrai échec — un seul échec d'assertion lu ailleurs suffirait sinon à
+  // le désarmer, et le fichier tombé à l'import ne serait dit nulle part.
+  const suitesUnread = VITEST_SUITES_HEADER.test(clean) && !entries.some((e) => e.kind === "suite");
+
+  if (entries.length === 0 || suitesUnread) {
     if (/No test files found|no tests found/i.test(clean)) return null;
     const tail = clean.trimEnd().slice(-TEST_FAILURES_MAX_CHARS).trimStart();
     if (tail.trim() === "") return null;
     return `${TEST_HEADER}\n${tail}\n${TEST_FOOTER}`;
   }
 
+  // Les fichiers qui n'ont pas chargé d'abord : ils pèsent un fichier de test
+  // ENTIER mis à zéro, là où une assertion rouge ne pèse qu'un cas. Vitest les
+  // imprime déjà en tête, mais le cap ne doit dépendre ni de cet ordre ni du
+  // nombre d'assertions rouges qui les précéderaient chez un autre runner.
+  const ordered = [...entries.filter((e) => e.kind === "suite"), ...entries.filter((e) => !e.kind)];
+
   const lines: string[] = [];
   let used = 0;
   let shown = 0;
-  for (const entry of entries) {
+  for (const entry of ordered) {
     // On s'arrête AVANT de dépasser : un échec coupé au milieu ferait lire au
     // modèle un chemin ou un message tronqué.
     if (used + entry.text.length + 1 > TEST_FAILURES_MAX_CHARS) break;
@@ -444,7 +481,7 @@ export function formatTestFailures(raw: string): string | null {
   // Cap atteint dès le premier échec : on le sert quand même, tronqué — mieux
   // qu'un bloc vide qui dirait « tout va bien ».
   if (lines.length === 0) {
-    lines.push(entries[0].text.slice(0, TEST_FAILURES_MAX_CHARS));
+    lines.push(ordered[0].text.slice(0, TEST_FAILURES_MAX_CHARS));
     shown = 1;
   }
 
