@@ -15,6 +15,7 @@ import { Check, Copy, ExternalLink, ShieldCheck } from "lucide-react";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
 import type { PullRequestCommit } from "@/lib/agent-api";
+import { newestFirstPullRequestCommits } from "@/lib/pull-request-commits";
 import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
@@ -64,7 +65,7 @@ interface CommitDay {
   commits: PullRequestCommit[];
 }
 
-/** Groupe consécutif par jour — la liste arrive déjà triée du plus ancien. */
+/** Groupe consécutif par jour — la liste arrive déjà triée du plus récent. */
 function groupByDay(commits: PullRequestCommit[]): CommitDay[] {
   const days: CommitDay[] = [];
   for (const commit of commits) {
@@ -314,7 +315,10 @@ export function PrCommits({
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
-  const days = useMemo(() => groupByDay(commits), [commits]);
+  const days = useMemo(
+    () => groupByDay(newestFirstPullRequestCommits(commits)),
+    [commits],
+  );
   // Le commit dont on regarde le diff, et l'ouverture du panneau — deux états
   // et non un : le sha doit SURVIVRE à la fermeture, que Radix anime.
   const [diffSha, setDiffSha] = useState<string | null>(null);

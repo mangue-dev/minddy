@@ -867,8 +867,9 @@ export interface PullRequestCommit {
 }
 
 /**
- * Les commits qui composent la PR, du plus ancien au plus récent — l'onglet
- * Commits. `truncated` : la PR en a plus que ce que minddy liste d'un coup.
+ * Les commits qui composent la PR, du plus ancien au plus récent côté forge —
+ * l'onglet Commits les affiche ensuite du plus récent au plus ancien.
+ * `truncated` : la PR en a plus que ce que minddy liste d'un coup.
  */
 export async function fetchPullRequestCommitsApi(
   prId: string,
