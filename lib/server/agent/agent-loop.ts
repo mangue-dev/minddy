@@ -161,8 +161,25 @@ const MAX_SUBAGENT_WAIT_REENTRIES = 8;
  * et contre un tour entier (des heures) pour la nouvelle, qui ne relisait pas.
  */
 export const BUDGET_REFRESH_INTERVAL_MS = 60_000;
-/** Garde-fou : nombre max de compactions par chunk (convergence normalement immédiate). */
-const MAX_COMPACTIONS_PER_CHUNK = 3;
+/**
+ * Garde-fou de compaction : au plus `MAX_COMPACTIONS_PER_WINDOW` compactions par
+ * FENÊTRE DE ROUNDS (convergence normalement immédiate — le quota n'existe que
+ * pour qu'un résumé qui ne réduit rien ne relance pas un sous-appel payant à
+ * chaque round).
+ *
+ * Le compteur était « par chunk » (MIN-259), c'est-à-dire par appel de
+ * `runAgentLoop`. Le nom disait vrai tant qu'un appel valait un chunk de ~700 s :
+ * il repartait toutes les douze minutes. Le moteur microVM, lui, appelle la
+ * boucle UNE FOIS pour le tour entier (12 h de soft-deadline, 2 000 rounds) — le
+ * même « 3 » bornait donc des heures de travail, et une fois épuisé le bloc était
+ * sauté en silence jusqu'à la fin du tour.
+ *
+ * La fenêtre vaut `MAX_ROUNDS_PER_CHUNK` : sur l'ancienne forme, un appel de
+ * boucle tient dans UNE fenêtre et le comportement est inchangé, au round près.
+ * Sur un tour long, le quota se recharge tous les 150 rounds.
+ */
+const MAX_COMPACTIONS_PER_WINDOW = 3;
+const COMPACTION_WINDOW_ROUNDS = MAX_ROUNDS_PER_CHUNK;
 /** Garde-fou : nombre max d'élagages de round sur un 400 « contexte trop long » (par appel). */
 const MAX_CONTEXT_TRIMS = 4;
 /** Fraction du seuil de compaction à partir de laquelle on PRÉVIENT le modèle (MIN-113). */
@@ -1497,13 +1514,18 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   };
 
   let round = 0;
+  // Compactions consommées dans la FENÊTRE de rounds courante, et l'index de cette
+  // fenêtre (cf. MAX_COMPACTIONS_PER_WINDOW). Le troisième drapeau ne borne rien :
+  // il fait juste parler le franchissement une seule fois par fenêtre.
   let compactions = 0;
-  // Relances de fin de tour déjà consommées (MIN-110), comptées par CHUNK comme les
-  // compactions. Ce compteur ne CHOISIT rien : quel contrôle tourne et combien de
+  let compactionWindow = 0;
+  let compactionQuotaReported = false;
+  // Relances de fin de tour déjà consommées (MIN-110), comptées par CHUNK. Ce
+  // compteur ne CHOISIT rien : quel contrôle tourne et combien de
   // fois est la décision du hook (MIN-240) — ici, seul un hook qui boucle est arrêté.
   let turnEndReentries = 0;
   // Relances du tour sur une réponse coupée ou vide (MIN-203). Compté par CHUNK,
-  // comme les deux au-dessus.
+  // comme celui au-dessus.
   let incompleteReentries = 0;
   // Relances du tour pour livrer un rapport de sous-agent (MIN-112) — budget PROPRE,
   // cf. MAX_SUBAGENT_WAIT_REENTRIES.
@@ -1737,11 +1759,33 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // Compaction : si l'historique reste énorme après élagage et qu'il reste du
     // budget, résume le milieu périmé en un message unique (préserve système +
     // queue récente). Rare — ne se déclenche que sur les runs très longs.
-    if (
-      compactions < MAX_COMPACTIONS_PER_CHUNK &&
+    //
+    // Le quota se recharge par fenêtre de rounds (MIN-259) : le round vient d'être
+    // incrémenté, il est donc 1-based.
+    const windowNow = Math.floor((round - 1) / COMPACTION_WINDOW_ROUNDS);
+    if (windowNow !== compactionWindow) {
+      compactionWindow = windowNow;
+      compactions = 0;
+      compactionQuotaReported = false;
+    }
+    const wantsCompaction =
       params.softDeadlineMs - elapsed() > AGENT_COMPACT_MIN_BUDGET_MS &&
-      (lastPromptTokens ?? estimateTokens(messages)) >= compactThreshold
-    ) {
+      (lastPromptTokens ?? estimateTokens(messages)) >= compactThreshold;
+    if (wantsCompaction && compactions >= MAX_COMPACTIONS_PER_WINDOW && !compactionQuotaReported) {
+      // Le franchissement était SILENCIEUX : le bloc était sauté sans rien dire, et
+      // la seule question qui compte — « est-ce que ce quota mord ? » — n'avait pas
+      // de réponse en base. Une fois par fenêtre suffit à la donner.
+      compactionQuotaReported = true;
+      await emit("status", {
+        phase: "compact_quota_exhausted",
+        round,
+        window: compactionWindow,
+        max: MAX_COMPACTIONS_PER_WINDOW,
+        tokens: lastPromptTokens ?? estimateTokens(messages),
+        threshold: compactThreshold,
+      });
+    }
+    if (wantsCompaction && compactions < MAX_COMPACTIONS_PER_WINDOW) {
       const plan = planCompaction(messages, { keepRecentBytes: AGENT_COMPACT_KEEP_RECENT_BYTES });
       if (plan) {
         // Compte la TENTATIVE (pas seulement le succès) : un résumé vide ne doit pas
@@ -1811,6 +1855,12 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // « Déjà prévenu ? » se lit dans l'historique et jamais dans une variable
     // (MIN-218, cf. `hasContextWarning`) : le scan ne coûte que quand le seuil est
     // franchi, et il est le seul à survivre au découpage en chunks.
+    //
+    // Et il reste muet quand le quota de compaction est épuisé, DÉLIBÉRÉMENT
+    // (MIN-259) : le préavis est déjà dans le contexte, sous les yeux du modèle à
+    // chaque appel — le redire ne lui apprend rien et pousse un tour à conclure. Ce
+    // qui rend le quota visible, c'est l'event `compact_quota_exhausted` ci-dessus,
+    // pas un message de plus au modèle.
     const contextNow = lastPromptTokens ?? estimateTokens(messages);
     if (contextNow >= compactThreshold * CONTEXT_WARNING_RATIO && !hasContextWarning(messages)) {
       messages.push({ role: "user", content: CONTEXT_WARNING_MESSAGE });

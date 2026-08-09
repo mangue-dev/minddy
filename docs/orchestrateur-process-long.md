@@ -357,7 +357,7 @@ code, pas de mémoire :
 | [subagent.ts](../lib/server/agent/subagent.ts) | `suspendAll`, `resumeSuspended`, `restore`, `SubagentRecord` sérialisé, `SUBAGENT_RECORDS_KEPT`, `isResumableSubagent`. Les filles redeviennent des promesses |
 | [subagent-config.ts](../lib/server/agent/subagent-config.ts) | `SUBAGENT_PARENT_RESERVE_MS`, `SUBAGENT_MIN_MS`, `SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS`, `chunkFitsSubagentResume`, `SUBAGENT_MAX_MS`, `SUBAGENT_CUT_MARGIN_MS` |
 | [retry.ts](../lib/server/agent/retry.ts) | `planProviderStall` (MIN-219) : un process long **attend**, il ne se re-queue plus. Le backoff reste, la comptabilité de reprises disparaît |
-| [agent-loop.ts](../lib/server/agent/agent-loop.ts) | `MAX_ROUNDS_PER_CHUNK`, la soft-deadline et sa sortie `suspend`, `MAX_COMPACTIONS_PER_CHUNK`, `AGENT_COMPACT_MIN_BUDGET_MS` |
+| [agent-loop.ts](../lib/server/agent/agent-loop.ts) | `MAX_ROUNDS_PER_CHUNK`, la soft-deadline et sa sortie `suspend`, `MAX_COMPACTIONS_PER_WINDOW`, `AGENT_COMPACT_MIN_BUDGET_MS` |
 
 **Ce qui NE se supprime pas et qu'on croirait jetable.** Le **lot 1** de l'audit
 voyage avec la boucle : le plafond de dépense partagé entre les filles, la lecture

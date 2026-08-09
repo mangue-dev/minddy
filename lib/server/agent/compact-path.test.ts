@@ -369,6 +369,149 @@ describe("chemin complet de compaction", () => {
   });
 });
 
+/**
+ * Le QUOTA de compaction (MIN-259) : il se comptait par appel de `runAgentLoop`,
+ * sous un nom qui disait « par chunk ». Vrai tant qu'un appel valait douze
+ * minutes ; faux depuis le moteur microVM, qui appelle la boucle une seule fois
+ * pour un tour de 12 h et 2 000 rounds — trois compactions pour tout le tour, puis
+ * le bloc sauté en silence jusqu'au bout.
+ *
+ * Ces tests exercent la boucle sur PLUS d'une fenêtre, ce qu'aucun test ne faisait :
+ * la panne n'était visible que là.
+ */
+describe("quota de compaction : par fenêtre de rounds, et il le dit", () => {
+  /** Un tool-call (le tour continue), avec les `prompt_tokens` qu'on veut. */
+  function sseToolCall(id: string, promptTokens: number): Response {
+    return new Response(
+      [
+        {
+          id: "g",
+          model: "test/model",
+          // Un chemin DIFFÉRENT à chaque round : sinon c'est le détecteur de boucle
+          // (MIN-243) qui coupe le tour, et le quota ne serait jamais atteint.
+          choices: [
+            { delta: { tool_calls: [{ index: 0, id, function: { name: "read_file", arguments: JSON.stringify({ path: `src/${id}.ts` }) } }] } },
+          ],
+        },
+        {
+          id: "g",
+          model: "test/model",
+          choices: [{ delta: {} }],
+          usage: { prompt_tokens: promptTokens, completion_tokens: 5, cost: 0.001 },
+        },
+      ]
+        .map((c) => `data: ${JSON.stringify(c)}\n\n`)
+        .join("") + "data: [DONE]\n\n",
+    );
+  }
+
+  /**
+   * Contexte TOUJOURS au-dessus du seuil : chaque round veut compacter. Le fournisseur
+   * répond un tool-call à chaque round réel et un résumé (vide, pour ne rien changer
+   * à l'historique) à chaque sous-appel — seul le QUOTA décide alors du nombre de
+   * sous-appels, et c'est exactement ce qu'on mesure.
+   */
+  function alwaysOverThreshold(rounds: number) {
+    let served = 0;
+    responses = Array.from({ length: rounds * 2 }, () => () => {
+      // Le résumé se reconnaît au prompt système du sous-appel, déjà poussé dans `sent`.
+      const last = sent[sent.length - 1];
+      served++;
+      return last?.isSummaryCall ? new Response(sseText("", 200_000)) : sseToolCall(`c${served}`, 200_000);
+    });
+  }
+
+  it("le quota se RECHARGE à la fenêtre suivante", async () => {
+    // 151 rounds : une fenêtre pleine (150) plus un round. Sans recharge, le tour
+    // entier n'a droit qu'à 3 compactions — c'est la panne.
+    const messages = syntheticHistory(100);
+    alwaysOverThreshold(200);
+
+    const events: Array<{ type: string; payload: Record<string, unknown> }> = [];
+    await runAgentLoop({
+      ...baseParams,
+      messages,
+      contextWindow: 1_000_000, // seuil absolu 120 k, contexte rapporté 200 k
+      maxRounds: 151,
+      emit: async (type, payload) => {
+        events.push({ type, payload });
+      },
+    });
+
+    // 3 sous-appels dans la première fenêtre, 1 dans la seconde (round 151).
+    const summaryCalls = sent.filter((s) => s.isSummaryCall);
+    expect(summaryCalls).toHaveLength(4);
+
+    // Et le franchissement est dit UNE fois par fenêtre, pas à chaque round.
+    const exhausted = events.filter((e) => e.type === "status" && e.payload.phase === "compact_quota_exhausted");
+    expect(exhausted).toHaveLength(1);
+    expect(exhausted[0].payload.window).toBe(0);
+    expect(exhausted[0].payload.max).toBe(3);
+    // Le round 1 juge sur l'ESTIMATION (aucun `prompt_tokens` rapporté encore) et
+    // passe sous le seuil : les compactions tombent aux rounds 2, 3 et 4.
+    expect(exhausted[0].payload.round).toBe(5); // le premier round sauté
+  });
+
+  it("un quota épuisé ne parle qu'une fois, et ne parle pas du tout s'il n'est pas atteint", async () => {
+    const messages = syntheticHistory(100);
+    alwaysOverThreshold(20);
+
+    const events: Array<{ type: string; payload: Record<string, unknown> }> = [];
+    await runAgentLoop({
+      ...baseParams,
+      messages,
+      contextWindow: 1_000_000,
+      maxRounds: 20,
+      emit: async (type, payload) => {
+        events.push({ type, payload });
+      },
+    });
+
+    // 17 rounds sautés après les 3 compactions, un seul event.
+    expect(sent.filter((s) => s.isSummaryCall)).toHaveLength(3);
+    expect(events.filter((e) => e.type === "status" && e.payload.phase === "compact_quota_exhausted")).toHaveLength(1);
+  });
+
+  it("ancienne forme (un chunk = une fenêtre) : comportement inchangé", async () => {
+    // Le chunk s'arrête à `MAX_ROUNDS_PER_CHUNK` (150) : il tient dans la fenêtre 0,
+    // donc le quota ne se recharge jamais et rien ne bouge par rapport à avant.
+    const messages = syntheticHistory(100);
+    alwaysOverThreshold(200);
+
+    const events: Array<{ type: string; payload: Record<string, unknown> }> = [];
+    const result = await runAgentLoop({
+      ...baseParams,
+      messages,
+      contextWindow: 1_000_000,
+      emit: async (type, payload) => {
+        events.push({ type, payload });
+      },
+    });
+
+    expect(result.status).toBe("suspended"); // plafond de rounds du chunk
+    expect(result.rounds).toBe(150);
+    expect(sent.filter((s) => s.isSummaryCall)).toHaveLength(3);
+    expect(
+      events.filter((e) => e.type === "status" && e.payload.phase === "compact_quota_exhausted").map((e) => e.payload.window),
+    ).toEqual([0]);
+  });
+
+  it("sous le seuil, aucun quota consommé et aucun event", async () => {
+    const messages = syntheticHistory(6);
+    responses = [() => new Response(sseText("done", 500))];
+    const events: Array<{ type: string; payload: Record<string, unknown> }> = [];
+    await runAgentLoop({
+      ...baseParams,
+      messages,
+      contextWindow: 1_000_000,
+      emit: async (type, payload) => {
+        events.push({ type, payload });
+      },
+    });
+    expect(events.some((e) => e.type === "status" && e.payload.phase === "compact_quota_exhausted")).toBe(false);
+  });
+});
+
 describe("élagage de dernier recours (400 « contexte trop long »)", () => {
   it("converge en ≤ 4 essais sans casser l'appariement", async () => {
     const messages = syntheticHistory(20);

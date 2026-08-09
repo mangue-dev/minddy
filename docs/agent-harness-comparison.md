@@ -178,7 +178,8 @@ Sandbox par run, nommée `agent-<run.id>` :
   (`SUMMARIZE_INSTRUCTION`, 5 points), en préservant le préfixe de seed verbatim et
   `AGENT_COMPACT_KEEP_RECENT_BYTES = 48_000` de queue. Point de rupture sûr : la
   queue ne commence jamais sur un message `tool`. Plafonné à
-  `MAX_COMPACTIONS_PER_CHUNK = 3`, jamais lancé s'il reste moins de
+  `MAX_COMPACTIONS_PER_WINDOW = 3` par fenêtre de `MAX_ROUNDS_PER_CHUNK` rounds
+  (MIN-259), jamais lancé s'il reste moins de
   `AGENT_COMPACT_MIN_BUDGET_MS = 60_000`.
 - Le raisonnement streamé est **affiché mais jamais persisté** dans `messages`.
 
