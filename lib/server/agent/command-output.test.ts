@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  RUN_COMMAND_SPILL_THRESHOLD,
+  RUN_COMMAND_STDOUT_CAP,
+  RUN_COMMAND_STDERR_CAP,
   formatRunCommandResult,
   fullOutputDocument,
   spillsToDisk,
@@ -35,7 +36,7 @@ describe("formatRunCommandResult — la queue survit", () => {
 
   it("garde le verdict final et le nom du test raté", () => {
     const r = formatRunCommandResult({ exitCode: 1, stdout, stderr: "" }, null);
-    expect(stdout.length).toBeGreaterThan(RUN_COMMAND_SPILL_THRESHOLD);
+    expect(stdout.length).toBeGreaterThan(RUN_COMMAND_STDOUT_CAP);
     expect(r.stdout).toContain("Test Files  1 failed");
     expect(r.stdout).toContain("parsePlan > compte les tâches sous ## Questions");
     expect(r.stdout).toContain("expected 4 to be 3");
@@ -72,16 +73,37 @@ describe("formatRunCommandResult — la queue survit", () => {
 });
 
 describe("dépôt de la sortie complète", () => {
-  it("déclenche au-delà du seuil, pas en deçà", () => {
+  it("déclenche dès qu'un flux dépasse SON cap", () => {
     expect(spillsToDisk({ stdout: "a".repeat(100), stderr: "" })).toBe(false);
-    expect(spillsToDisk({ stdout: "a".repeat(RUN_COMMAND_SPILL_THRESHOLD), stderr: "" })).toBe(false);
-    // Le seuil porte sur le CUMUL des deux flux.
-    expect(
-      spillsToDisk({
-        stdout: "a".repeat(RUN_COMMAND_SPILL_THRESHOLD),
-        stderr: "b".repeat(10),
-      }),
-    ).toBe(true);
+    expect(spillsToDisk({ stdout: "a".repeat(RUN_COMMAND_STDOUT_CAP), stderr: "" })).toBe(false);
+    expect(spillsToDisk({ stdout: "a".repeat(RUN_COMMAND_STDOUT_CAP + 1), stderr: "" })).toBe(true);
+    // stderr a son propre cap, plus bas : il déclenche tout seul.
+    expect(spillsToDisk({ stdout: "", stderr: "b".repeat(RUN_COMMAND_STDERR_CAP + 1) })).toBe(true);
+  });
+
+  /**
+   * LE TROU DE L'AUDIT. Le dépôt avait son propre seuil (8 000 cumulés), plus haut
+   * que la somme des caps (4 000 + 2 000) : entre les deux, le milieu de la sortie
+   * était élidé sans `full_output_path` NI `note`, alors que le prompt interdit par
+   * ailleurs de relancer la commande filtrée. Un `typecheck` à 7 000 caractères y
+   * perdait ses erreurs du milieu, définitivement.
+   */
+  it("ne laisse plus de bande où l'on tronque sans rien déposer", () => {
+    const o = { exitCode: 1, stdout: "a".repeat(7000), stderr: "b".repeat(500) };
+    expect(spillsToDisk(o)).toBe(true);
+
+    const r = formatRunCommandResult(o, "/vercel/sandbox/tool-output/typecheck-1.log");
+    expect(r.stdout).toContain("chars elided");
+    expect(r.full_output_path).toBe("/vercel/sandbox/tool-output/typecheck-1.log");
+  });
+
+  it("dit que le milieu est perdu quand il n'a rien pu déposer", () => {
+    // Écriture du fichier en échec (best-effort) : le harness ne peut plus rendre
+    // le milieu, il doit au moins cesser de faire comme s'il l'avait gardé.
+    const r = formatRunCommandResult({ exitCode: 1, stdout: "a".repeat(7000), stderr: "" }, null);
+    expect(r.full_output_path).toBeUndefined();
+    expect(r.note).toMatch(/no full copy was saved/i);
+    expect(r.note).toMatch(/re-run the command scoped/i);
   });
 
   it("renvoie le chemin et la consigne de relecture quand la sortie est tronquée", () => {

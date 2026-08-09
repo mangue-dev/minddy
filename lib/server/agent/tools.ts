@@ -1,4 +1,5 @@
 import { MAX_BACKGROUND_JOBS } from "./background";
+import { RUN_COMMAND_MIN_TIMEOUT_MS } from "./chunk-budget";
 import { usesApplyPatch } from "./patch";
 import { SUBAGENT_TEMPLATE_IDS } from "./subagent-templates";
 import {
@@ -353,7 +354,7 @@ const CORE_TOOLS: AgentToolDef[] = [
           },
           timeout_ms: {
             type: "number",
-            description: `Optional timeout in milliseconds, capped at ${RUN_COMMAND_TIMEOUT_MS} (also the default). Only lower it — for a command you expect to be quick and that would otherwise hang (a watcher, a prompt), so you get the turn back fast.`,
+            description: `Optional timeout in milliseconds. The kill timeout that actually applies is the SMALLEST of three: this value, the ${RUN_COMMAND_TIMEOUT_MS} ms ceiling (also the default), and the wall-clock left on the turn — which near the end can be as low as ${RUN_COMMAND_MIN_TIMEOUT_MS} ms. So a command killed far below the ceiling was bounded by the remaining budget: that is not a command hanging, and there is no deadlock to go hunting for. Lower this value for a command you expect to be quick and that would otherwise hang (a watcher, a prompt), so you get the turn back fast.`,
           },
         },
         required: ["command"],

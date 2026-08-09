@@ -404,6 +404,9 @@ const KIND_LABEL: Record<AssignedKind, string> = {
  * PUR, comme tout le reste du module : le grep est fait par l'appelant.
  */
 export function formatOverwrites(hits: readonly OverwriteHit[]): string {
+  // Le tri par volume appartient à `overwriteSitesForTurn`, qui l'applique sur le
+  // grep BRUT — seul endroit où le compte réel est connu. Le cap reste ici en
+  // filet pour un appelant qui construirait ses `hits` autrement.
   const kept = hits.filter((hit) => hit.sites.length > 0 && hit.sites.length <= MAX_SITES_SCANNED);
   if (kept.length === 0) return "";
 
@@ -459,7 +462,15 @@ export async function overwriteSitesForTurn(
         headLimit: MAX_SITES_SCANNED + 1,
       }).catch(() => null);
       if (!res?.ok) return null;
-      return { symbol, sites: selectSites(parseGrepSites(res.output), { inDiff, touched }) };
+      const raw = parseGrepSites(res.output);
+      // LE CAP SE JUGE SUR LE GREP BRUT, AVANT `selectSites`. Le symbole est
+      // extrait du diff, donc ses PROPRES lignes sont dans ce grep : les retirer
+      // d'abord fait redescendre sous le seuil un symbole omniprésent, qui
+      // s'annonce ensuite « 12 other writes » alors qu'il en a deux cents. C'est
+      // l'ordre que `plan-closure.ts` applique déjà (il filtre sur `hit.files`
+      // brut avant de retirer les fichiers nommés par le plan).
+      if (raw.length > MAX_SITES_SCANNED) return null;
+      return { symbol, sites: selectSites(raw, { inDiff, touched }) };
     }),
   );
   return hits.filter((hit): hit is OverwriteHit => hit != null && hit.sites.length > 0);

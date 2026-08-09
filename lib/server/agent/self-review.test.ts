@@ -253,6 +253,41 @@ describe("overwriteSitesForTurn", () => {
     expect(await overwriteSitesForTurn(hostReturning("a.ts:12:setLive(next);"), diff)).toEqual([]);
   });
 
+  /**
+   * LE CAP SE JUGE AVANT L'EXCLUSION DU DIFF (trouvaille d'audit).
+   *
+   * `git grep` est capé à `MAX_SITES_SCANNED + 1` lignes précisément pour SAVOIR
+   * qu'un symbole est trop répandu et le jeter. Mais l'exclusion des lignes du
+   * diff passait avant le comptage — et comme le symbole est EXTRAIT du diff, ses
+   * propres lignes sont dans ce grep. Il suffisait donc qu'une seule d'entre elles
+   * tombe dans les 13 premières pour que le compte redescende à 12 et que le
+   * symbole survive, en s'annonçant « 12 other writes » avec deux cents derrière.
+   */
+  it("jette un symbole trop répandu même quand une de ses lignes est dans le diff", async () => {
+    const diff = hunk(["+  setOpen(true);"], 7, "app/board/page.tsx");
+    // 13 lignes = le cap dépassé. La 3e est celle du diff : avant le correctif,
+    // `selectSites` la retirait et le compte redescendait à 12, sous le seuil.
+    const grep = [
+      "components/c1.tsx:4:setOpen(false);",
+      "components/c2.tsx:9:setOpen(true);",
+      "app/board/page.tsx:7:setOpen(true);",
+      ...Array.from({ length: 10 }, (_, i) => `components/d${i}.tsx:${i + 2}:setOpen(false);`),
+    ].join("\n");
+
+    expect(await overwriteSitesForTurn(hostReturning(grep), diff)).toEqual([]);
+  });
+
+  it("garde un symbole qui reste sous le cap une fois le diff retiré ET avant", async () => {
+    const diff = hunk(["+  setOpen(true);"], 7, "app/board/page.tsx");
+    const grep = [
+      "app/board/page.tsx:7:setOpen(true);",
+      "components/c1.tsx:4:setOpen(false);",
+    ].join("\n");
+
+    const hits = await overwriteSitesForTurn(hostReturning(grep), diff);
+    expect(hits.flatMap((h) => h.sites.map((s) => s.file))).toEqual(["components/c1.tsx"]);
+  });
+
   it("ne fait pas échouer un tour quand le grep tombe", async () => {
     const host: RepoHost = {
       exec: async () => {
