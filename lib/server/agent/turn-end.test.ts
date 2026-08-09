@@ -5,12 +5,13 @@ vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   recordAiUsage: vi.fn(async () => {}),
 }));
 
-// Les quatre contrôles sont moqués : ce fichier ne teste pas ce qu'ils DISENT
+// Les cinq contrôles sont moqués : ce fichier ne teste pas ce qu'ils DISENT
 // (chacun a son test), il teste QUI PARLE et COMBIEN DE FOIS — c'est là qu'était
 // le bug, et c'est la seule chose que la chaîne décide.
 vi.mock("./diagnostics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./diagnostics")>()),
   typeErrorsForTurn: vi.fn(async () => "TYPES"),
+  testFailuresForTurn: vi.fn(async () => "TESTS"),
 }));
 vi.mock("./self-review", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./self-review")>()),
@@ -26,6 +27,7 @@ vi.mock("./plan-closure", async (importOriginal) => ({
 }));
 
 import { gateCreatePr, makeTurnEndHook, MAX_TYPE_CHECK_PASSES } from "./turn-end";
+import { testFailuresForTurn } from "./diagnostics";
 import { newPlanWriteSink } from "./plan-closure";
 import { runAgentLoop, type AgentChatMessage } from "./agent-loop";
 import type { RepoHost } from "./repo-host";
@@ -87,50 +89,58 @@ function hookFor(opts: HookOpts = {}) {
 const ROOMY = 600_000;
 
 describe("la chaîne de fin de tour", () => {
-  it("fait parler les QUATRE blocs sur un tour qui édite du code ET écrit un plan", async () => {
+  it("fait parler les CINQ blocs sur un tour qui édite du code ET écrit un plan", async () => {
     // LE TEST DU TICKET. Avant le correctif, la boucle coupait après le deuxième :
     // `PLAN_REVIEW` et `PLAN_CLOSURE` n'étaient jamais rendus.
     const { hook, phases } = hookFor({ edited: ["lib/x.ts"], wrotePlan: true });
 
     const said: Array<string | null> = [];
-    for (let i = 0; i < 5; i++) said.push(await hook.run({ budgetMs: ROOMY }));
+    for (let i = 0; i < 6; i++) said.push(await hook.run({ budgetMs: ROOMY }));
 
-    expect(said).toEqual(["TYPES", "DIFF", "PLAN_REVIEW", "PLAN_CLOSURE", null]);
-    // L'ordre porte du sens : les types avant le diff (servir un diff par-dessus un
-    // dépôt qui ne compile pas noierait le signal), la relecture du plan avant sa
-    // clôture (le grep tourne sur le plan corrigé).
-    expect(phases).toEqual(["type_check", "self_review", "plan_review", "plan_closure"]);
+    expect(said).toEqual(["TYPES", "TESTS", "DIFF", "PLAN_REVIEW", "PLAN_CLOSURE", null]);
+    // L'ordre porte du sens : les types d'abord (servir quoi que ce soit par-dessus
+    // un dépôt qui ne compile pas noierait le signal), les tests ensuite — un échec
+    // est un fait, un diff est une question —, la relecture du plan avant sa clôture
+    // (le grep tourne sur le plan corrigé).
+    expect(phases).toEqual([
+      "type_check",
+      "tests",
+      "self_review",
+      "plan_review",
+      "plan_closure",
+    ]);
   });
 
   it("borne le type-check à ses deux passages, même si les éditions continuent", async () => {
-    // C'est LUI que le plafond de la boucle bornait en réalité — le seul des quatre
+    // C'est LUI que le plafond de la boucle bornait en réalité — le seul des cinq
     // qui n'avait pas de verrou. Sans budget propre, un dépôt qui ne compile pas
-    // affamerait de nouveau les trois autres.
+    // affamerait de nouveau les quatre autres.
     const { hook, editedPaths } = hookFor({ wrotePlan: true });
 
     const said: Array<string | null> = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       editedPaths.add(`lib/fix-${i}.ts`); // le modèle réédite à chaque relance
       said.push(await hook.run({ budgetMs: ROOMY }));
     }
 
     expect(said.filter((s) => s === "TYPES")).toHaveLength(MAX_TYPE_CHECK_PASSES);
     // Et la suite de la chaîne passe quand même : c'est tout l'objet du ticket.
-    expect(said).toEqual(["TYPES", "TYPES", "DIFF", "PLAN_REVIEW", "PLAN_CLOSURE"]);
+    expect(said).toEqual(["TYPES", "TYPES", "TESTS", "DIFF", "PLAN_REVIEW", "PLAN_CLOSURE"]);
   });
 
-  it("ne fait parler qu'une fois chacun des trois contrôles à verrou", async () => {
+  it("ne fait parler qu'une fois chacun des quatre contrôles à verrou", async () => {
     const { hook } = hookFor({ repoTouched: true, wrotePlan: true });
 
     const said: Array<string | null> = [];
-    for (let i = 0; i < 4; i++) said.push(await hook.run({ budgetMs: ROOMY }));
+    for (let i = 0; i < 5; i++) said.push(await hook.run({ budgetMs: ROOMY }));
 
-    expect(said).toEqual(["DIFF", "PLAN_REVIEW", "PLAN_CLOSURE", null]);
+    expect(said).toEqual(["TESTS", "DIFF", "PLAN_REVIEW", "PLAN_CLOSURE", null]);
   });
 
   it("laisse passer la chaîne quand un bloc n'a pas le budget de tourner", async () => {
-    // 50 s : sous le plancher du type-check (60 s), au-dessus de celui des autres
-    // (45 s). Le bloc empêché ne doit pas retenir les suivants.
+    // 50 s : sous le plancher du type-check (60 s) et sous celui de la suite de
+    // tests (150 s), au-dessus de celui des autres (45 s). Les blocs empêchés ne
+    // doivent pas retenir les suivants.
     const { hook, phases } = hookFor({ edited: ["lib/x.ts"], wrotePlan: true });
 
     const said = [
@@ -141,6 +151,7 @@ describe("la chaîne de fin de tour", () => {
 
     expect(said).toEqual(["DIFF", "PLAN_REVIEW", "PLAN_CLOSURE"]);
     expect(phases).not.toContain("type_check");
+    expect(phases).not.toContain("tests");
   });
 
   it("latche `repoTouched` : le tour a édité, même quand le type-check a vidé la liste", async () => {
@@ -150,8 +161,35 @@ describe("la chaîne de fin de tour", () => {
     await hook.run({ budgetMs: ROOMY }); // type-check : vide `editedPaths`
     expect(editedPaths.size).toBe(0);
     expect(hook.repoTouched()).toBe(true);
-    // Le verrou tient : l'auto-relecture parle bien au passage suivant.
+    // Le verrou tient : les deux blocs qui en dépendent parlent bien ensuite. C'est
+    // exactement pourquoi la suite de tests se garde sur `repoTouched` et non sur
+    // `editedPaths`, que le type-check vient de vider.
+    expect(await hook.run({ budgetMs: ROOMY })).toBe("TESTS");
     expect(await hook.run({ budgetMs: ROOMY })).toBe("DIFF");
+  });
+
+  it("ne lance pas la suite de tests sur un tour qui n'a rien édité", async () => {
+    const { hook, phases } = hookFor({ wrotePlan: true });
+
+    const said: Array<string | null> = [];
+    for (let i = 0; i < 3; i++) said.push(await hook.run({ budgetMs: ROOMY }));
+
+    expect(said).toEqual(["PLAN_REVIEW", "PLAN_CLOSURE", null]);
+    expect(phases).not.toContain("tests");
+  });
+
+  it("se tait quand la suite est verte — et laisse passer la chaîne", async () => {
+    // Le silence est le bon retour : un « tout va bien » injecté à chaque tour
+    // coûterait un aller-retour modèle pour ne rien dire.
+    vi.mocked(testFailuresForTurn).mockResolvedValueOnce(null);
+    const { hook, phases } = hookFor({ edited: ["lib/x.ts"] });
+
+    const said = [await hook.run({ budgetMs: ROOMY }), await hook.run({ budgetMs: ROOMY })];
+
+    expect(said).toEqual(["TYPES", "DIFF"]);
+    // Mais le passage est bien compté : c'est lui qui dira combien de tours
+    // se terminent en rouge.
+    expect(phases).toEqual(["type_check", "tests", "self_review"]);
   });
 
   it("note les éditions hors crochet — un tour sorti sans fin de tour a quand même édité", async () => {
@@ -320,12 +358,12 @@ describe("la porte de create_pr", () => {
     expect((await gated({ title: "t" })).followUp).toContain("DIFF");
     await gated({ title: "t" });
 
-    // La chaîne de fin de tour : le type-check parle, la relecture NON.
+    // La chaîne de fin de tour : le type-check et les tests parlent, la relecture NON.
     const said: Array<string | null> = [];
     for (let i = 0; i < 3; i++) said.push(await hook.run({ budgetMs: ROOMY }));
-    expect(said).toEqual(["TYPES", null, null]);
+    expect(said).toEqual(["TYPES", "TESTS", null]);
     // Et la mesure sait d'où venait la relecture : de la porte, pas de la fin de tour.
-    expect(phases).toEqual(["self_review", "type_check"]);
+    expect(phases).toEqual(["self_review", "type_check", "tests"]);
   });
 
   it("ouvre du premier coup quand le tour n'a rien touché", async () => {

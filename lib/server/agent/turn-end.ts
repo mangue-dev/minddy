@@ -1,4 +1,9 @@
-import { typeErrorsForTurn, TYPECHECK_MIN_BUDGET_MS } from "./diagnostics";
+import {
+  typeErrorsForTurn,
+  TYPECHECK_MIN_BUDGET_MS,
+  testFailuresForTurn,
+  TEST_MIN_BUDGET_MS,
+} from "./diagnostics";
 import { formatSelfReview, SELF_REVIEW_MIN_BUDGET_MS } from "./self-review";
 import { planReviewForTurn, PLAN_REVIEW_MIN_BUDGET_MS } from "./plan-review";
 import { planClosureForTurn, PLAN_CLOSURE_MIN_BUDGET_MS } from "./plan-closure";
@@ -7,8 +12,8 @@ import type { PlanWriteSink } from "./plan-closure";
 import type { EmitAgentEvent } from "./agent-loop";
 
 /**
- * LE DERNIER MOT DU HARNESS — les quatre contrôles de fin de tour, et le budget de
- * chacun (MIN-240).
+ * LE DERNIER MOT DU HARNESS — les cinq contrôles de fin de tour, et le budget de
+ * chacun (MIN-240, puis MIN-251 pour le cinquième).
  *
  * CE QUE CE MODULE CORRIGE. Les quatre blocs sont chaînés au `??` : le premier qui
  * a quelque chose à dire rend son message, la boucle le ré-injecte et rappelle le
@@ -35,6 +40,15 @@ import type { EmitAgentEvent } from "./agent-loop";
  * lui-même que « la garantie ne doit pas dépendre de `loop_in_vm` ». Un invariant
  * tenu par copier-coller est un invariant qui dérive — et un bug de budget comme
  * celui-ci se serait corrigé d'un seul côté.
+ *
+ * LE CINQUIÈME BLOC, ET CE QU'IL RÉPARE (MIN-251). Le harness lançait `tsc` tout
+ * seul et ne lançait jamais les tests. Ce qu'il FAIT enseigne plus fort que ce que
+ * le prompt DIT : la seule vérification que l'agent voyait s'exécuter à sa place,
+ * tour après tour, portait sur les types — il en a tiré la conclusion logique
+ * (« *that's working as expected since type checks are passing* », sur une feature
+ * qui ne marchait pas). `testBlock` applique à la suite de tests exactement le
+ * geste du type-check, et aligne enfin ce que le harness récompense sur ce que le
+ * prompt demande.
  */
 
 /**
@@ -94,6 +108,11 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
   let repoTouched = deps.repoTouched;
   /** Passages de type-check consommés (cf. `MAX_TYPE_CHECK_PASSES`). */
   let typeChecks = 0;
+  /** La suite de tests ne passe qu'UNE fois par tour : à ~60 s le passage, un
+   *  second tuerait le budget du chunk, et un tour qui boucle sur ses tests est un
+   *  tour qui ne répond jamais. Le premier passage suffit à mettre l'échec sous
+   *  les yeux du modèle — c'est tout ce que ce bloc doit garantir. */
+  let tested = false;
   /** L'auto-relecture ne passe qu'UNE fois : elle fait relire le tour avant la
    *  réponse, pas commenter chaque correctif qui suit. Idem pour les deux crochets
    *  de plan — ils posent une question, ils ne commentent pas la réponse. */
@@ -132,6 +151,36 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
       durationMs: Date.now() - startedAt,
       files: touched.length,
       errorsShown: block ? block.split("\n").filter((l) => /error TS\d+/.test(l)).length : 0,
+    });
+    return block;
+  };
+
+  /**
+   * Suite de tests de fin de tour (MIN-251). Même geste que le type-check, mêmes
+   * gardes : un seul passage, rien sans édition, rien sans budget — et le même
+   * best-effort de bout en bout (pas de script `test`, pas de binaire installé,
+   * runner en panne → silence, jamais un tour bloqué).
+   *
+   * Le verrou est `repoTouched`, pas `editedPaths` : le type-check vide cette liste
+   * en passant, et il passe AVANT. Un tour qui a édité doit voir ses tests, même
+   * quand le modèle n'a plus rien touché depuis le check.
+   */
+  const testBlock = async (budgetMs: number): Promise<string | null> => {
+    if (tested || !repoTouched || budgetMs < TEST_MIN_BUDGET_MS) return null;
+    tested = true;
+    const startedAt = Date.now();
+    const block = await testFailuresForTurn(host).catch((err) => {
+      console.error(`${logPrefix} turn-end tests failed:`, (err as Error).message);
+      return null;
+    });
+    // Event `status` (neutre : invisible dans le fil, comptable en base) — c'est lui
+    // qui répondra à « combien de tours se terminent en rouge ? ». `failuresShown`
+    // compte les échecs SERVIS (le bloc est capé) : ce que le modèle a lu, pas ce
+    // que le runner a trouvé.
+    await emit("status", {
+      phase: "tests",
+      durationMs: Date.now() - startedAt,
+      failuresShown: block ? block.split("\n").filter((l) => l.startsWith("FAIL ")).length : 0,
     });
     return block;
   };
@@ -212,20 +261,24 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
       return await selfReviewBlock(budgetMs, "create_pr");
     },
     /**
-     * L'ORDRE PORTE DU SENS. Les erreurs de typage passent avant la relecture :
-     * elles sont concrètes et bloquantes, et servir un diff par-dessus un dépôt qui
-     * ne compile pas noierait le seul signal qui compte. La relecture du plan passe
+     * L'ORDRE PORTE DU SENS. Les erreurs de typage passent avant tout le reste :
+     * elles sont concrètes et bloquantes, et servir quoi que ce soit par-dessus un
+     * dépôt qui ne compile pas noierait le seul signal qui compte — des échecs de
+     * test sur un dépôt qui ne compile pas ne se lisent même pas. Les tests passent
+     * ensuite, avant la relecture : un échec est un fait, un diff est une question.
+     * La relecture du plan passe
      * avant sa clôture : le modèle corrige son plan, et le grep tourne ensuite sur
      * le plan corrigé — il ne rapportera pas comme oublié un fichier que la
      * relecture vient de faire nommer. L'inverse poserait deux fois la même question.
      *
      * Chaque bloc a son propre budget, donc un tour MIXTE (des éditions ET un plan)
-     * les voit tous les quatre. C'est ce qui n'arrivait jamais avant MIN-240.
+     * les voit tous les cinq. C'est ce qui n'arrivait jamais avant MIN-240.
      */
     run: async ({ budgetMs }) => {
       noteEdits();
       return (
         (await typeCheckBlock(budgetMs)) ??
+        (await testBlock(budgetMs)) ??
         (await selfReviewBlock(budgetMs)) ??
         (await planReviewBlock(budgetMs)) ??
         (await planClosureBlock(budgetMs))

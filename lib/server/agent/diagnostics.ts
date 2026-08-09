@@ -185,3 +185,270 @@ export function formatTypeErrors(raw: string, touched: readonly string[]): strin
 function normalizePath(path: string): string {
   return path.replace(/^\.\//, "").replace(/^\/+/, "");
 }
+
+// ── La suite de tests, même geste que le type-check (MIN-251) ────────────────
+
+/**
+ * CE QUE LE HARNESS FAIT ENSEIGNE PLUS FORT QUE CE QUE LE PROMPT DIT.
+ *
+ * Le prompt demande depuis toujours de « lancer le linter / type-check / build /
+ * tests du projet ». Le harness, lui, ne lançait QUE `tsc`. Sur le run de la PR 48,
+ * un tour de 13,6 minutes qui a livré une feature en sept fichiers n'a exécuté
+ * DEUX commandes en tout — un install et un `npm run typecheck` — sans ouvrir un
+ * seul des 209 fichiers de test du dépôt. Et la feature ne marchait pas. Le modèle
+ * avait vu le défaut dans son propre thinking, puis l'avait classé : « *that's
+ * working as expected since type checks are passing* ». C'est la conclusion
+ * logique de ce qu'il voyait s'exécuter à sa place, tour après tour.
+ *
+ * D'où ce bloc, calqué trait pour trait sur le type-check : détecté, lancé en fin
+ * de tour quand le dépôt a été touché, ses échecs mis dans le contexte AVANT que
+ * le modèle ne réponde. Un seul passage par tour — le tour doit se terminer, pas
+ * partir en boucle de correction.
+ *
+ * Mêmes règles de silence, et pour la même raison : pas de script `test`, pas de
+ * binaire installé, sortie illisible, panne → `null`. Un harness qui transformerait
+ * un environnement pas installé en mur d'échecs serait pire que silencieux.
+ */
+
+/**
+ * Budget mural de la suite. MESURÉ dans la microVM (2 vCPU / 4,2 Go) sur les 2 760
+ * tests de minddy : **80,5 s**, et — contrairement à `tsc` — le second passage coûte
+ * exactement le même prix (80,5 s aussi, 81,2 s avec un test rouge). Il n'y a pas
+ * de dividende « à chaud » à espérer ici : le chiffre à budgéter est celui-là.
+ *
+ * Le local ment de 4,4× (18,4 s sur douze cœurs) : c'est la mesure dans la VM qui
+ * fait foi, jamais celle du poste.
+ */
+export const TEST_TIMEOUT_MS = 240_000;
+/**
+ * Budget minimum restant sur le chunk pour lancer la suite (sinon on se tait). Même
+ * marge que le type-check sur sa propre mesure (60 s pour 22 s, ~2,7×) : ici 180 s
+ * pour 80 s. Un chunk complet vaut 700 s, et le pire tour paie les deux contrôles —
+ * deux type-checks et une suite, soit ~125 s, un sixième du chunk. C'est le prix
+ * qu'on accepte pour qu'un tour ne puisse pas se terminer en rouge sans le dire.
+ */
+export const TEST_MIN_BUDGET_MS = 180_000;
+/** Cap du bloc d'échecs renvoyé au modèle. Au-delà, il ne lit plus, il subit. */
+export const TEST_FAILURES_MAX_CHARS = 3000;
+/**
+ * Lignes gardées par échec. Un échec de vitest ou de jest, c'est un titre, un
+ * message, un diff attendu/reçu et une position — puis un extrait de code source
+ * que le modèle peut relire lui-même. On garde le premier, on jette le second.
+ */
+const TEST_FAILURE_MAX_LINES = 8;
+
+const TEST_HEADER = "Tests are failing after your changes, please fix:";
+/** Même rappel anti-boucle que le type-check : un dépôt déjà rouge ne doit pas
+ *  devenir le sujet du tour. */
+const TEST_FOOTER =
+  "If a failure is unrelated to what you changed (it was already there), do not fix it — say so in your reply.";
+
+/** La suite de tests du dépôt, si elle est lançable ICI ET MAINTENANT. */
+export interface TestRunner {
+  /** Le script `test` du package.json, tel quel (on le lance via `npm run`). */
+  script: string;
+  /** Le binaire qu'il appelle, vérifié présent dans `node_modules/.bin`. */
+  bin: string;
+}
+
+/**
+ * Le binaire qu'un script npm lance, ou `null` si on ne peut pas le dire. Pur, et
+ * exporté pour les tests : c'est ici que se décide ce qu'on refuse de deviner.
+ *
+ * On saute les affectations d'environnement en tête (`NODE_ENV=test jest`), et on
+ * REFUSE les enveloppes (`npm run test:unit`, `bash scripts/test.sh`, `node --test`) :
+ * derrière, il n'y a pas de binaire à vérifier, donc pas de moyen de savoir si
+ * l'environnement est installé — et un `command not found` servi comme un échec de
+ * test enverrait le modèle chercher un bug qui n'existe pas.
+ */
+export function testRunnerBin(script: string): string | null {
+  // Le script par défaut de `npm init`. Il sort en 1 sans avoir rien testé.
+  if (/no test specified/i.test(script)) return null;
+  const tokens = script.trim().split(/\s+/);
+  while (tokens.length > 0 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0])) tokens.shift();
+  const bin = tokens[0];
+  if (!bin || !/^[\w.@/-]+$/.test(bin)) return null;
+  const WRAPPERS = new Set([
+    "npm", "pnpm", "yarn", "npx", "pnpx", "bun", "bunx", "deno",
+    "node", "sh", "bash", "zsh", "make", "echo", "true", "exit",
+  ]);
+  return WRAPPERS.has(bin) ? null : bin;
+}
+
+/**
+ * Le dépôt a-t-il une suite de tests RÉELLEMENT exécutable ? Un script `test` dans
+ * `package.json` ne suffit pas — sans `node_modules`, son binaire n'existe pas.
+ * Best-effort : tout échec, tout doute → `null`, et rien ne sera lancé.
+ */
+export async function detectTestRunner(host: RepoHost): Promise<TestRunner | null> {
+  try {
+    const raw = await host.readFile(`${REPO_DIR}/package.json`);
+    if (!raw) return null;
+    const script = (JSON.parse(raw) as { scripts?: Record<string, unknown> }).scripts?.test;
+    if (typeof script !== "string" || script.trim() === "") return null;
+    const bin = testRunnerBin(script);
+    if (!bin) return null;
+    const res = await host.exec(`test -x ./node_modules/.bin/${bin}`, {
+      cwd: REPO_DIR,
+      timeoutMs: 30_000,
+    });
+    return res.exitCode === 0 ? { script, bin } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lance la suite ENTIÈRE et renvoie le bloc à servir au modèle, ou `null` s'il n'y
+ * a rien à dire. La suite entière, pas une sélection par fichier touché : un test
+ * qui casse AILLEURS est précisément ce qu'on cherche à voir — c'est la ligne non
+ * modifiée qui défait le changement, le défaut même du run de la PR 48.
+ *
+ * `CI=1` n'est pas décoratif : sans lui, un script `vitest` (sans `run`) partirait
+ * en mode watch et occuperait le budget jusqu'au timeout sans jamais rendre la main.
+ */
+export async function testFailuresForTurn(host: RepoHost): Promise<string | null> {
+  const runner = await detectTestRunner(host);
+  if (!runner) return null;
+  try {
+    // `npm run` plutôt que le binaire : ce qui tourne est le script DU PROJET,
+    // arguments compris. `--silent` coupe l'écho de npm et son propre rapport
+    // d'erreur — le seul texte rendu est celui du runner.
+    //
+    // Et la sortie n'est PAS filtrée ici (pas de `| tail`) : sur le chemin RPC,
+    // une commande qui reste muette une minute voit sa socket fermée par l'autre
+    // bout (`UND_ERR_SOCKET: other side closed`, mesuré en calant ces constantes —
+    // un `| tail` avait suffi à faire taire un run de suite de 2 760 tests). Un
+    // runner qui écrit sa progression tient la socket ouverte ; on le laisse.
+    const res = await host.exec(`npm run test --silent 2>&1`, {
+      cwd: REPO_DIR,
+      timeoutMs: TEST_TIMEOUT_MS,
+      env: { CI: "1", NO_COLOR: "1", FORCE_COLOR: "0" },
+    });
+    // exitCode 0 = suite verte : le silence est le bon retour.
+    if (res.exitCode === 0) return null;
+    return formatTestFailures(res.stdout + res.stderr);
+  } catch {
+    return null;
+  }
+}
+
+/** Un échec, tel qu'on le sert : un titre normalisé et son corps. */
+export interface TestFailureEntry {
+  /** `fichier > suite > test` (vitest) ou le nom du test (jest). */
+  title: string;
+  /** Le bloc complet, titre `FAIL …` en tête. */
+  text: string;
+}
+
+/** ` FAIL  lib/a.test.ts > groupe > cas` — la forme de vitest. Le `>` est ce qui
+ *  la distingue du `FAIL <fichier>` de jest, qui n'est qu'un en-tête de fichier. */
+const VITEST_FAIL = /^\s*(?:❯\s*)?FAIL\s+(\S.*>.*\S)\s*$/;
+/** `● groupe › cas` — la forme de jest. `● Console` n'est pas un échec. */
+const JEST_FAIL = /^\s*●\s+(?!Console\b)(\S.*\S|\S)\s*$/;
+/** `FAIL src/a.test.js` seul : contexte de fichier pour les `●` qui suivent. */
+const JEST_FILE = /^\s*FAIL\s+(\S+)\s*$/;
+/** Le récapitulatif de fin : au-delà, plus rien n'appartient à un échec. */
+const SUMMARY = /^\s*(Test Files|Tests|Test Suites:|Snapshots:|Duration|Start at)\b/;
+/** Extrait de code source (` 4|   expect(…)`, `  |     ^`) : le modèle sait relire
+ *  le fichier, et ces lignes-là noieraient le message. */
+const CODE_FRAME = /^\s*(\d+\s*\||\|\s*\^)/;
+/** Les traits de séparation de vitest (`⎯⎯⎯[1/2]⎯⎯⎯`). */
+const RULE = /^[\s⎯─=-]*(\[\d+\/\d+\])?[\s⎯─=-]*$/;
+
+/** Les couleurs des runners, quand la sortie n'est pas un terminal mais le reste. */
+// eslint-disable-next-line no-control-regex
+const ANSI = /\[[0-9;]*m/g;
+
+/**
+ * Découpe une sortie de runner en échecs. Vitest et jest sont les deux formes
+ * traitées ; toute autre retombe sur la queue de sortie (cf. `formatTestFailures`),
+ * jamais sur le silence : une suite rouge qu'on ne sait pas lire reste une suite
+ * rouge, et c'est exactement la chose que ce ticket refuse de laisser passer.
+ */
+export function parseTestFailures(raw: string): TestFailureEntry[] {
+  const entries: TestFailureEntry[] = [];
+  let body: string[] = [];
+  let file = "";
+  let stopped = false;
+
+  const push = (title: string) => {
+    entries.push({ title, text: `FAIL ${title}` });
+    body = [];
+  };
+
+  for (const line of raw.replace(ANSI, "").split("\n")) {
+    if (SUMMARY.test(line)) {
+      stopped = true;
+      continue;
+    }
+    const vitest = VITEST_FAIL.exec(line);
+    if (vitest) {
+      stopped = false;
+      push(vitest[1]);
+      continue;
+    }
+    const jest = JEST_FAIL.exec(line);
+    if (jest) {
+      stopped = false;
+      push(file ? `${file} > ${jest[1]}` : jest[1]);
+      continue;
+    }
+    const jestFile = JEST_FILE.exec(line);
+    if (jestFile) {
+      // En-tête de fichier : il nomme les `●` suivants, il n'est pas un échec.
+      file = jestFile[1];
+      continue;
+    }
+    if (stopped || entries.length === 0) continue;
+    const text = line.replace(/\s+$/, "");
+    if (text.trim() === "" || CODE_FRAME.test(text) || RULE.test(text)) continue;
+    if (body.length >= TEST_FAILURE_MAX_LINES) continue;
+    body.push(text.trim());
+    entries[entries.length - 1].text += `\n${text.trim()}`;
+  }
+  return entries;
+}
+
+/**
+ * Rend le bloc servi au modèle : en-tête, échecs, cap à `TEST_FAILURES_MAX_CHARS`.
+ *
+ * Quand rien n'est analysable, on ne se tait PAS — on sert la queue de la sortie.
+ * Une suite qui tombe à l'import, un runner qu'on ne connaît pas, une config
+ * cassée : le verdict vit toujours à la fin, et un « rouge sans détail » vaut
+ * infiniment mieux qu'un tour qui se termine en croyant la suite verte. Seule
+ * exception, l'absence de test, qui n'est pas un échec.
+ */
+export function formatTestFailures(raw: string): string | null {
+  const clean = raw.replace(ANSI, "");
+  const entries = parseTestFailures(clean);
+
+  if (entries.length === 0) {
+    if (/No test files found|no tests found/i.test(clean)) return null;
+    const tail = clean.trimEnd().slice(-TEST_FAILURES_MAX_CHARS).trimStart();
+    if (tail.trim() === "") return null;
+    return `${TEST_HEADER}\n${tail}\n${TEST_FOOTER}`;
+  }
+
+  const lines: string[] = [];
+  let used = 0;
+  let shown = 0;
+  for (const entry of entries) {
+    // On s'arrête AVANT de dépasser : un échec coupé au milieu ferait lire au
+    // modèle un chemin ou un message tronqué.
+    if (used + entry.text.length + 1 > TEST_FAILURES_MAX_CHARS) break;
+    lines.push(entry.text);
+    used += entry.text.length + 1;
+    shown++;
+  }
+  // Cap atteint dès le premier échec : on le sert quand même, tronqué — mieux
+  // qu'un bloc vide qui dirait « tout va bien ».
+  if (lines.length === 0) {
+    lines.push(entries[0].text.slice(0, TEST_FAILURES_MAX_CHARS));
+    shown = 1;
+  }
+
+  const hidden = entries.length - shown;
+  const more = hidden > 0 ? `\n… and ${hidden} more failing test${hidden > 1 ? "s" : ""}.` : "";
+  return `${TEST_HEADER}\n${lines.join("\n")}${more}\n${TEST_FOOTER}`;
+}
