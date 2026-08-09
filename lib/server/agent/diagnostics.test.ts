@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   detectTestRunner,
   formatTestFailures,
+  looksLikeTestCommand,
+  newVerificationSink,
+  noteVerificationCommand,
+  noteVerificationStale,
+  relatedTestCommand,
   formatTypeErrors,
   parseTestFailures,
   parseTypeErrors,
@@ -457,5 +462,131 @@ describe("formatTestFailures", () => {
     expect(formatTestFailures("No test files found, exiting with code 1")).toBeNull();
     expect(formatTestFailures("")).toBeNull();
     expect(formatTestFailures("   \n  ")).toBeNull();
+  });
+});
+
+/**
+ * MIN-262 — CE QUE LE MODÈLE A VÉRIFIÉ LUI-MÊME.
+ *
+ * La reconnaissance de commande est le point sensible de tout le ticket : un faux
+ * positif fait TAIRE le harness, c'est-à-dire qu'il rend le silence à un tour que
+ * personne n'a vérifié. D'où une batterie qui teste surtout ce qu'on REFUSE.
+ */
+describe("looksLikeTestCommand", () => {
+  it("reconnaît le script du projet et les runners appelés par leur nom", () => {
+    for (const cmd of [
+      "npm test",
+      "npm t",
+      "npm run test",
+      "npm run test --silent",
+      "npm run test:unit",
+      "pnpm test",
+      "pnpm run test",
+      "yarn test",
+      "bun run test",
+      "npx vitest run lib/x.test.ts",
+      "vitest run",
+      "./node_modules/.bin/vitest related --run lib/x.ts",
+      "jest --findRelatedTests lib/x.ts",
+      "pnpm exec jest",
+      "CI=1 NODE_ENV=test npm test",
+      "npm install && npm test",
+      "go test ./...",
+      "cargo test",
+      "python -m pytest tests/",
+      "pytest -q",
+    ]) {
+      expect(looksLikeTestCommand(cmd), cmd).toBe(true);
+    }
+  });
+
+  it("refuse tout ce qui rend le code de sortie menteur", () => {
+    // `|| true` et `; echo` sortent en 0 quoi qu'il arrive ; un pipe rend le code
+    // du DERNIER maillon. Les trois transformeraient une suite rouge en silence.
+    for (const cmd of [
+      "npm test || true",
+      "npm test; echo done",
+      "npm test | tail -5",
+      "npm test &",
+      "echo $(npm test)",
+      "npm test `date`",
+    ]) {
+      expect(looksLikeTestCommand(cmd), cmd).toBe(false);
+    }
+  });
+
+  it("refuse le mode watch, qui ne conclut jamais", () => {
+    expect(looksLikeTestCommand("vitest --watch")).toBe(false);
+    expect(looksLikeTestCommand("npm run test -- --watch")).toBe(false);
+    expect(looksLikeTestCommand("vitest --ui")).toBe(false);
+  });
+
+  it("refuse ce qui n'est pas une vérification, et les enveloppes illisibles", () => {
+    for (const cmd of [
+      "npm run typecheck",
+      "npm run build",
+      "npm run lint",
+      "npm install",
+      "git status",
+      "bash scripts/test.sh",
+      "make test",
+      "node --test",
+      "",
+      "   ",
+    ]) {
+      expect(looksLikeTestCommand(cmd), cmd).toBe(false);
+    }
+  });
+
+  it("ne lit que le DERNIER maillon d'une chaîne `&&`", () => {
+    // `&&` propage l'échec, donc le code de sortie est celui du dernier — mais un
+    // `npm test && npm run build` sorti en 0 ne dit rien de plus que « le build
+    // passe » si le build est ce qui a fini : la reconnaissance suit ce maillon-là.
+    expect(looksLikeTestCommand("npm test && npm run build")).toBe(false);
+    expect(looksLikeTestCommand("npm run build && npm test")).toBe(true);
+  });
+});
+
+describe("le registre de vérification", () => {
+  it("se remplit sur un vert, se vide sur un rouge, ignore le reste", () => {
+    const sink = newVerificationSink();
+    expect(sink.greenCommand).toBeNull();
+
+    noteVerificationCommand(sink, "npm run typecheck", 0);
+    expect(sink.greenCommand).toBeNull(); // pas une commande de test
+
+    noteVerificationCommand(sink, "npm test", 0);
+    expect(sink.greenCommand).toBe("npm test");
+
+    // Rouge : le modèle a vu l'échec. S'il ne le corrige pas, le harness doit
+    // reparler — donc le registre se vide.
+    noteVerificationCommand(sink, "npm test", 1);
+    expect(sink.greenCommand).toBeNull();
+  });
+
+  it("est périmé par toute édition — c'est l'invariant du ticket", () => {
+    const sink = newVerificationSink();
+    noteVerificationCommand(sink, "npm test", 0);
+    noteVerificationStale(sink);
+    expect(sink.greenCommand).toBeNull();
+  });
+});
+
+describe("relatedTestCommand", () => {
+  it("bâtit le passage ciblé de vitest et de jest, chemins échappés", () => {
+    expect(relatedTestCommand({ script: "vitest run", bin: "vitest" }, ["lib/a b.ts"])).toBe(
+      "./node_modules/.bin/vitest related --run --passWithNoTests 'lib/a b.ts' 2>&1",
+    );
+    expect(relatedTestCommand({ script: "jest", bin: "jest" }, ["lib/a.ts"])).toBe(
+      "./node_modules/.bin/jest --findRelatedTests --passWithNoTests 'lib/a.ts' 2>&1",
+    );
+  });
+
+  it("rend null quand il n'y a pas de mode ciblé, ou rien à cibler", () => {
+    // Un runner qu'on ne connaît pas : l'appelant retombe sur la suite entière
+    // plutôt que d'inventer un drapeau qui ne veut rien dire.
+    expect(relatedTestCommand({ script: "mocha", bin: "mocha" }, ["lib/a.ts"])).toBeNull();
+    expect(relatedTestCommand({ script: "vitest run", bin: "vitest" }, [])).toBeNull();
+    expect(relatedTestCommand({ script: "vitest run", bin: "vitest" }, ["  "])).toBeNull();
   });
 });

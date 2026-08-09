@@ -98,25 +98,32 @@ import {
  */
 const MAX_ROUNDS_PER_CHUNK = 150;
 /**
- * Garde-fou : relances du tour par le hook de fin de tour. UN GARDE-FOU, et rien
- * d'autre — c'est tout le sens de MIN-240.
+ * LE HARNESS NE ROUVRE PLUS UN TOUR TERMINÉ (MIN-263).
  *
- * Il valait DEUX, à l'époque où le hook portait deux préoccupations. Il en porte
- * quatre depuis (types, diff, relecture de plan, clôture de plan) et la constante
- * n'avait pas bougé : sur un tour qui édite du code ET écrit un plan, les deux
- * premières mangeaient les deux relances et les deux crochets de plan n'étaient
- * jamais appelés une seule fois. Le plafond comptait des relances, la chaîne compte
- * des blocs — et c'est le plafond qui décidait, en silence, lesquels tournaient.
+ * Il y avait ici un plafond de relances, et au bout un crochet qui rendait la parole
+ * au harness après que le modèle avait écrit sa réponse : type-check, tests,
+ * relecture. Le tour repartait, le modèle répondait une seconde fois, et c'est cette
+ * seconde réponse que l'utilisateur lisait.
  *
- * Le budget de chaque bloc appartient désormais au hook ([turn-end.ts](turn-end.ts)),
- * qui est le seul à savoir ce qu'il enchaîne : son pire cas est 2 type-checks + 3
- * contrôles à passage unique, soit cinq. Ce plafond-ci est donc au-dessus, et
- * délibérément — il ne borne plus qu'un hook qui bouclerait pour de bon.
+ * Ce mécanisme a coûté trois correctifs successifs, tous du même défaut : la
+ * réponse visible parlait du CONTRÔLE et plus du travail (MIN-256), puis la règle
+ * qui l'interdisait ne suffisait pas et il a fallu rendre au modèle son brouillon
+ * (MIN-249 bis). On ne rattrapait pas des bugs, on rattrapait la conséquence
+ * inévitable d'avoir rouvert un tour fini.
+ *
+ * Ni Codex ni OpenCode n'ont ça. Chez eux, tout retour du harness arrive **dans le
+ * résultat d'un tool** : OpenCode recolle les diagnostics LSP au résultat de
+ * l'édition, Codex ne rend rien du tout et confie la vérification au prompt. Un
+ * retour attaché à un geste ne coûte aucune réponse et ne déclasse aucun message.
+ *
+ * D'où la règle, qui est maintenant un invariant de ce fichier : **quand le modèle
+ * répond sans tool-call, le tour se termine.** Les contrôles du harness vivent sur
+ * les portes de tools (`gateCreatePr`, `gateWritePlan`, cf. delivery-gate.ts) et sur
+ * le prompt, jamais ici.
  */
-const MAX_TURN_END_REENTRIES = 8;
 /**
  * Garde-fou : relances du tour sur une réponse INCOMPLÈTE (MIN-203) — coupée au
- * plafond de tokens, ou vide. Deux, comme le hook de fin de tour : un modèle qui
+ * plafond de tokens, ou vide. Deux : un modèle qui
  * n'arrive pas à finir sa phrase en trois passages ne finira pas au quatrième, et
  * chaque passage se paie. Au-delà, le tour s'arrête EN DISANT qu'il s'est arrêté.
  */
@@ -142,8 +149,8 @@ const SUSPENDED_TOOL_REASON = "turn_suspended";
 /**
  * Garde-fou PROPRE aux sous-agents (MIN-112) : relances du tour pour livrer un
  * rapport arrivé après que le modèle a rendu la main. Indépendant de
- * `MAX_TURN_END_REENTRIES` — un tour qui délègue trois fois de suite est un tour
- * normal, là où trois passages de type-check signalent un dépôt inréparable. Le
+ * les autres relances — un tour qui délègue trois fois de suite est un tour
+ * normal. Le
  * plafond existe quand même : sans lui, une fille qui relance une fille (impossible
  * par construction) ou un rapport qui ne se drainerait jamais retiendrait le tour.
  */
@@ -522,7 +529,7 @@ export interface RunAgentLoopParams {
   pullSubagentReports?: () => Promise<Array<{ id: string; text: string; costUsd: number }>>;
   /**
    * Dernière chance de livrer un rapport avant que le tour ne se termine (MIN-112) :
-   * appelé quand le modèle répond SANS tool-call, AVANT `onTurnEnd`, avec le budget
+   * appelé quand le modèle répond SANS tool-call, avec le budget
    * mural restant. Tant qu'il rend des rapports, le tour REPART (plafond
    * `MAX_SUBAGENT_WAIT_REENTRIES`). C'est ce qui fait tenir le contrat annoncé dans
    * la description de `spawn_agent` — « tu n'attends pas, le rapport te revient » —
@@ -586,21 +593,6 @@ export interface RunAgentLoopParams {
    * round complet). L'exécuteur repasse alors la session au repos.
    */
   checkInterrupt?: () => Promise<boolean>;
-  /**
-   * Dernier mot du harness avant que le tour ne se termine (MIN-110). Appelé quand
-   * le modèle répond SANS tool-call, avec le budget mural qui reste sur le chunk.
-   * Renvoie un texte → il est injecté comme message `user` et le tour REPART ;
-   * renvoie null → le tour se termine normalement. Sert au type-check de fin de
-   * tour (`typeErrorsForTurn`) : une édition qui casse un type le dit avant que
-   * l'agent ne dise « c'est fait ». Plafonné à `MAX_TURN_END_REENTRIES` relances
-   * par chunk — un dépôt inréparable ne doit pas retenir le tour indéfiniment.
-   *
-   * `previousReply` est la réponse que le modèle venait d'écrire, et que cette
-   * relance s'apprête à déclasser en étape du fil. Le crochet la lui REND (cf.
-   * `reentryReplyRule`) : sans elle, le message final du tour finit par parler du
-   * contrôle plutôt que du travail, et c'est le seul que l'utilisateur lit.
-   */
-  onTurnEnd?: (opts: { budgetMs: number; previousReply?: string }) => Promise<string | null>;
 }
 
 /** Interruption utilisateur de la réponse en cours — distincte d'une StreamError
@@ -1520,10 +1512,6 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   let compactions = 0;
   let compactionWindow = 0;
   let compactionQuotaReported = false;
-  // Relances de fin de tour déjà consommées (MIN-110), comptées par CHUNK. Ce
-  // compteur ne CHOISIT rien : quel contrôle tourne et combien de
-  // fois est la décision du hook (MIN-240) — ici, seul un hook qui boucle est arrêté.
-  let turnEndReentries = 0;
   // Relances du tour sur une réponse coupée ou vide (MIN-203). Compté par CHUNK,
   // comme celui au-dessus.
   let incompleteReentries = 0;
@@ -2019,7 +2007,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       if (incomplete && incompleteReentries < MAX_INCOMPLETE_REENTRIES) {
         incompleteReentries++;
         // Le fragment reste dans le contexte pour que le modèle le CONTINUE, et
-        // dans le fil comme étape (même convention que la relance `onTurnEnd`) —
+        // dans le fil comme étape (même convention que les autres relances) —
         // sans clore le tour à l'écran.
         if (stream.content.trim()) {
           messages.push({ role: "assistant", content: stream.content });
@@ -2097,26 +2085,6 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
             costUsd += report.costUsd;
             await emit("status", { phase: "subagent_report", id: report.id });
           }
-          clearLive();
-          continue;
-        }
-      }
-
-      // Dernier mot du harness (MIN-110) : le type-check de fin de tour. S'il a
-      // quelque chose à dire, ce n'était pas la fin du tour — on injecte et on
-      // reboucle. La réponse écrite part en `thinking` (même convention qu'un
-      // round texte + tool-calls) : elle reste dans le fil comme étape, sans
-      // clore le tour à l'écran.
-      if (params.onTurnEnd && turnEndReentries < MAX_TURN_END_REENTRIES) {
-        const followUp = await params
-          .onTurnEnd({ budgetMs: params.softDeadlineMs - elapsed(), previousReply: reply })
-          .catch(() => null);
-        if (followUp?.trim()) {
-          turnEndReentries++;
-          // La réponse écrite reste dans le fil comme étape (elle est non vide :
-          // un round blanc n'arrive pas jusqu'ici, cf. le garde `incomplete`).
-          if (stream.content.trim()) await emit("thinking", { text: cap(stream.content, 2000) });
-          messages.push({ role: "user", content: followUp });
           clearLive();
           continue;
         }

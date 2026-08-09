@@ -701,54 +701,124 @@ describe("buildAgentSystemPrompt — interface d'édition selon le modèle", () 
   }
 });
 
-describe("buildAgentSystemPrompt — erreurs de typage rendues par le harness", () => {
+describe("buildAgentSystemPrompt — la porte de livraison, annoncée", () => {
   for (const anchor of ["issue", "notebook"] as const) {
-    it(`annonce le type-check de fin de tour et sa portée (ancrage ${anchor})`, () => {
+    it(`dit ce que le premier create_pr rend, et ce qu'il ne rend pas (ancrage ${anchor})`, () => {
       const prompt = buildAgentSystemPrompt({ anchor });
-      // La formulation exacte que le harness injecte (diagnostics.ts) : le modèle
-      // doit reconnaître le bloc quand il arrive.
-      expect(prompt).toContain("Type errors detected after your changes");
-      expect(prompt).toMatch(/fix them before replying/i);
-      // Et la porte de sortie : un dépôt déjà cassé ne devient pas son sujet.
-      expect(prompt).toMatch(/already broken before you touched anything/i);
+      expect(prompt).toMatch(/FIRST `create_pr`/);
+      expect(prompt).toMatch(/pushes nothing and opens nothing/i);
+      expect(prompt).toMatch(/type errors, the failing tests and the diff/i);
+      // La porte de sortie : un dépôt déjà cassé ne devient pas son sujet.
+      expect(prompt).toMatch(/already red before you touched anything/i);
+      // Et la contrepartie, qui est le vrai enjeu du régime : la plupart des tours
+      // ne franchissent jamais cette porte.
+      expect(prompt).toMatch(/checked by nobody but you/i);
     });
   }
 });
 
 /**
- * L'auto-relecture est EXÉCUTÉE par le harness (self-review.ts), plus demandée en
- * prose. Ce test verrouille l'accord entre les deux : le prompt a longtemps promis
- * une relecture que rien ne lançait, et c'est exactement cet écart — une consigne
- * prise pour un mécanisme — qui laissait passer les erreurs de jointure.
+ * MIN-262 — L'AUTO-RELECTURE CHANGE DE MAIN.
+ *
+ * Elle était le SEUL contrôle de fin de tour qui parlait à tous les coups : les
+ * autres se taisent quand tout va bien, elle rendait le diff dès que le dépôt était
+ * touché — donc une réponse entière de plus sur chaque tour qui édite, y compris
+ * pour retirer une ligne. Elle sort du harness et devient un geste du modèle, dosé
+ * sur ce qu'il vient de faire. Ce qui reste EXÉCUTÉ, c'est la porte de `create_pr`.
+ *
+ * Le prompt doit donc dire trois choses, et l'inverse de deux d'entre elles était
+ * vrai avant : que le diff se relit soi-même, à quel moment ça se justifie, et que
+ * la classe d'erreur visée est celle qu'aucun fichier seul ne montre.
  */
-describe("buildAgentSystemPrompt — auto-relecture rendue par le harness", () => {
+describe("buildAgentSystemPrompt — auto-relecture, geste du modèle", () => {
   for (const anchor of ["issue", "notebook"] as const) {
-    it(`annonce le diff de fin de tour, et dissuade de le relancer (ancrage ${anchor})`, () => {
+    it(`demande de relire son diff, et laisse le dosage au modèle (ancrage ${anchor})`, () => {
       const prompt = buildAgentSystemPrompt({ anchor });
-      expect(prompt).toMatch(/the harness runs it, you don't/i);
-      expect(prompt).toMatch(/do NOT run `git diff` yourself/i);
-      // La classe d'erreur visée, nommée : c'est elle qui justifie l'injection.
+      expect(prompt).toMatch(/Re-read your own diff/i);
+      expect(prompt).toMatch(/how carefully is your call/i);
+      // Le dosage est ancré sur des cas, pas laissé à l'intuition : sans eux, « à
+      // toi de voir » se lit comme « ne le fais pas ».
+      expect(prompt).toMatch(/several files, a shared type or contract/i);
+      expect(prompt).toMatch(/Skip it for a change you can hold in your head/i);
+      // La classe d'erreur visée, nommée : c'est elle qui justifie la relecture.
       expect(prompt).toMatch(/no single file shows/i);
       expect(prompt).toContain("i18n placeholders");
     });
 
     /**
-     * L'INTERDIT EST BORNÉ, ET LE PROMPT DOIT LE DIRE. Non borné, il se lit comme
-     * « je n'ai pas le droit de lancer `git diff` », et le modèle attend alors du
-     * harness un diff qui n'arrive qu'en fin de tour — mesuré sur le run f80dca09
-     * (« *The instructions say the harness should provide it, but that isn't
-     * available yet* », puis un round entier passé à relire à la main les fichiers
-     * qu'il venait d'écrire). Le message d'héritage de branche, lui, ORDONNE un
-     * `git diff <base>` : sans la borne, les deux consignes se contredisent dans
-     * le même contexte.
+     * Et le harness ne PROMET plus ce diff en fin de tour. Le promettre sans le
+     * servir est le pire des trois états : le modèle attend, ne relit rien, et
+     * répond sur un travail que personne n'a regardé.
      */
-    it(`borne l'interdit à la relecture de fin de tour (ancrage ${anchor})`, () => {
+    it(`ne promet plus rien en fin de tour (ancrage ${anchor})`, () => {
       const prompt = buildAgentSystemPrompt({ anchor });
-      expect(prompt).toMatch(/at the end of a turn/i);
-      expect(prompt).toMatch(/only thing this forbids/i);
-      expect(prompt).toMatch(/Read-only git remains yours to run/i);
+      expect(prompt).not.toMatch(/the harness runs it, you don't/i);
+      expect(prompt).not.toMatch(/do NOT run `git diff` yourself/i);
+      // Le seul moment où le harness vérifie encore, lui, reste annoncé.
+      expect(prompt).toMatch(/FIRST `create_pr`/);
     });
   }
+});
+
+/**
+ * MIN-263 — LA VÉRIFICATION EST AU MODÈLE, ET LE PROMPT EST LE SEUL À LE DIRE.
+ *
+ * Le harness n'exécute plus rien pendant le tour. Ce test est donc plus qu'un test
+ * de formulation : c'est le seul endroit du dépôt qui vérifie que la doctrine existe
+ * encore quelque part. La retirer du prompt ne casserait rien d'autre — et c'est
+ * exactement pour ça qu'elle a besoin d'un test.
+ */
+describe("buildAgentSystemPrompt — doctrine de vérification", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`dit du plus spécifique au plus large, et qui paie le silence (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toMatch(/nothing runs on your behalf while you work/i);
+      expect(prompt).toMatch(/Start as specific as you can/i);
+      expect(prompt).toMatch(/widen as the change earns it/i);
+      expect(prompt).toMatch(/a check you did not run is a check nobody ran/i);
+    });
+  }
+});
+
+/**
+ * QUAND OUVRIR UNE PULL REQUEST : UN DÉFAUT, PAS UNE INTERDICTION.
+ *
+ * Le prompt disait « *Never open a PR for trivial or exploratory turns* », en
+ * absolu. Un utilisateur qui demande « à chaque modif, ouvre une PR sans me
+ * consulter » mettait donc sa consigne en concurrence avec une règle du système,
+ * sans que rien ne dise laquelle gagne — et le modèle tranche alors au hasard, ce
+ * qui est la pire des trois issues. Le défaut reste prudent ; la consigne de
+ * l'utilisateur le remplace, et pour toute la session (elle a pu être donnée trois
+ * tours plus tôt : c'est justement le cas qu'on veut faire tenir).
+ *
+ * Rien de ceci n'est exécuté par le harness. Ce test vérifie que la règle est DITE.
+ */
+describe("buildAgentSystemPrompt — qui décide d'ouvrir une pull request", () => {
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`pose un défaut prudent, qui cède à la consigne de l'utilisateur (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toMatch(/Left to your own judgement, do not open one/i);
+      expect(prompt).toMatch(/that judgement yields to theirs/i);
+      expect(prompt).toMatch(/open one for every change without asking/i);
+      // La durée est le point : une consigne donnée une fois vaut pour la suite.
+      expect(prompt).toMatch(/for the rest of the session, and you do not ask again/i);
+      expect(prompt).toMatch(/said it three turns ago/i);
+      // Et l'absolu a disparu — c'est lui qui mettait les deux consignes en
+      // concurrence.
+      expect(prompt).not.toMatch(/Never open a PR for trivial/i);
+    });
+  }
+
+  /**
+   * Une ROUTINE porte déjà le mandat inverse par défaut (personne n'est là pour
+   * l'accorder) : la nouvelle règle ne doit pas l'avoir dilué au passage.
+   */
+  it("laisse à la routine son mandat d'ouvrir sans demander", () => {
+    // Une routine se reconnaît à `interactive: false` : personne n'est devant
+    // l'écran, donc ni `ask_user` ni permission à demander.
+    const prompt = buildAgentSystemPrompt({ anchor: "issue", interactive: false });
+    expect(prompt).toMatch(/may open a pull request without being asked/i);
+  });
 });
 
 /**

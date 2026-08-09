@@ -403,6 +403,53 @@ export async function turnDiff(
 }
 
 /**
+ * LA TAILLE DU TOUR, POUR DIMENSIONNER SES CONTRÔLES (MIN-262) — pas son contenu :
+ * on ne rend ici ni patch ni statut, juste de quoi répondre à « ce tour est-il
+ * assez petit pour qu'un passage de tests CIBLÉ suffise ? ».
+ *
+ * `files` ne porte QUE les fichiers qui existent encore (`--diff-filter=d`) : c'est
+ * la liste qu'on passe à `vitest related`, et un chemin supprimé n'y a pas de sens.
+ * `lines` compte tout, suppressions comprises — c'est le poids du changement.
+ *
+ * `untracked` est rendu à part et pèse lourd chez l'appelant : un fichier NEUF est
+ * du comportement neuf, celui-là même dont aucun test existant ne parle (MIN-251).
+ * Un tour qui en crée n'est jamais « petit », quelle que soit sa taille en lignes.
+ *
+ * Best-effort comme `turnDiff` : toute erreur rend un tour de taille INCONNUE
+ * (`null`), et l'appelant retombe alors sur le contrôle complet.
+ */
+export async function turnDiffStat(
+  host: RepoHost,
+  fromSha: string,
+): Promise<{ files: string[]; lines: number; untracked: number } | null> {
+  if (!fromSha) return null;
+  try {
+    const [numstat, names, porcelain] = await Promise.all([
+      host.exec(`git diff --numstat ${sq(fromSha)}`, { timeoutMs: 30_000 }),
+      host.exec(`git diff --name-only --diff-filter=d ${sq(fromSha)}`, { timeoutMs: 30_000 }),
+      host.exec(`git status --porcelain`, { timeoutMs: 30_000 }),
+    ]);
+    if (numstat.exitCode !== 0 || names.exitCode !== 0) return null;
+    let lines = 0;
+    for (const line of numstat.stdout.split("\n")) {
+      const m = /^(\d+|-)\t(\d+|-)\t/.exec(line);
+      if (!m) continue;
+      // `-` : fichier binaire. Il ne se compte pas en lignes, mais il compte comme
+      // un changement — un `0` le rendrait invisible.
+      lines += m[1] === "-" || m[2] === "-" ? 1 : Number(m[1]) + Number(m[2]);
+    }
+    const files = names.stdout.split("\n").map((l) => l.trim()).filter(Boolean);
+    const untracked =
+      porcelain.exitCode === 0
+        ? porcelain.stdout.split("\n").filter((l) => l.startsWith("??")).length
+        : 0;
+    return { files, lines, untracked };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fichiers changés entre deux shas (le « diff par tour »). Deux passes git :
  * `--name-status` (statut + chemins propres, renommages compris) pour la liste, et
  * `--numstat` pour les compteurs +/− (fichier binaire → 0/0). Forme deux-points

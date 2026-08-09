@@ -3,6 +3,10 @@ import {
   TYPECHECK_MIN_BUDGET_MS,
   testFailuresForTurn,
   TEST_MIN_BUDGET_MS,
+  TEST_RELATED_MIN_BUDGET_MS,
+  newVerificationSink,
+  type TestScope,
+  type VerificationSink,
 } from "./diagnostics";
 import {
   formatSelfReview,
@@ -11,148 +15,82 @@ import {
 } from "./self-review";
 import { planReviewForTurn, PLAN_REVIEW_MIN_BUDGET_MS } from "./plan-review";
 import { planClosureForTurn, PLAN_CLOSURE_MIN_BUDGET_MS } from "./plan-closure";
-import { headTail } from "./prune";
-import { turnDiff, type RepoHost } from "./repo-host";
+import { turnDiff, turnDiffStat, type RepoHost } from "./repo-host";
 import type { PlanWriteSink } from "./plan-closure";
 import type { PlatformToolHandler } from "./exec-tool";
 import type { EmitAgentEvent } from "./agent-loop";
 
 /**
- * LE DERNIER MOT DU HARNESS — les contrôles de fin de tour, et le budget de
- * chacun (MIN-240, puis MIN-251 pour la suite de tests).
+ * LA PORTE DE LIVRAISON — le seul endroit où le harness vérifie quoi que ce soit
+ * (MIN-263).
  *
- * CE QUE CE MODULE CORRIGE. Les blocs sont chaînés au `??` : le premier qui
- * a quelque chose à dire rend son message, la boucle le ré-injecte et rappelle le
- * crochet. Mais la boucle ne rappelait que `MAX_TURN_END_REENTRIES` fois, et cette
- * constante valait DEUX. Sur un tour qui édite du code ET écrit un plan, le
- * type-check prenait la première relance, l'auto-relecture la seconde, et les deux
- * crochets de plan n'étaient **jamais appelés une seule fois** — morts exactement
- * sur les tours où ils servent.
+ * CE QUE CE MODULE ÉTAIT, ET POURQUOI IL A CHANGÉ DE NATURE. Il tenait les contrôles
+ * de FIN DE TOUR : le modèle écrivait sa réponse, le harness reprenait la parole
+ * (type-check, tests, relecture du diff), le tour repartait, et le modèle répondait
+ * une seconde fois. Trois tickets successifs ont tenté de rendre ce mécanisme
+ * vivable — la règle qui interdit de répondre au contrôle (MIN-256), puis le
+ * brouillon rendu au modèle parce que la règle seule ne suffisait pas (MIN-249 bis),
+ * puis l'allègement des contrôles eux-mêmes (MIN-262). Aucun n'attaquait la cause :
+ * **on rouvrait un tour terminé**, et tout le reste en découlait.
  *
- * Le plafond comptait des RELANCES, la chaîne compte des BLOCS. Porter la constante
- * à quatre n'aurait pas suffi : un tour qui édite, corrige, réédite consomme quatre
- * relances en type-checks et affame les mêmes crochets. Ce qui manquait est plus
- * simple — **la politique appartient au crochet**, pas à un compteur de la boucle
- * qui ne sait pas ce qu'il compte. Chaque bloc porte donc son propre budget ici, et
- * le plafond de la boucle redevient ce que son commentaire dit : un garde-fou
- * anti-runaway, jamais la contrainte qui mord.
+ * CE QUE FONT LES DEUX AUTRES. Codex n'exécute rien : sa section « Validating your
+ * work » est du PROMPT, et elle dit même de repousser les tests au moment de
+ * finaliser, parce qu'ils coûtent du temps et ralentissent l'itération. OpenCode
+ * exécute, mais toujours DANS le résultat d'un tool (les diagnostics LSP recollés
+ * au résultat de l'édition). Ni l'un ni l'autre ne rouvre un tour.
  *
- * Trois des quatre blocs étaient déjà bornés à un passage par leur verrou. Le seul
- * qui ne l'était pas est le type-check — c'est LUI que `MAX_TURN_END_REENTRIES`
- * bornait en réalité, et c'est pour ça qu'il faut le lui rendre explicitement.
+ * D'OÙ LA FORME D'AUJOURD'HUI, qui prend à chacun ce qu'il a de juste :
  *
- * UN SEUL EXEMPLAIRE, ET C'EST LE POINT. Ces quatre blocs vivaient copiés à
- * l'identique dans `execute.ts` et dans `vm/turn.ts`, alors que le code affirmait
- * lui-même que « la garantie ne doit pas dépendre de `loop_in_vm` ». Un invariant
- * tenu par copier-coller est un invariant qui dérive — et un bug de budget comme
- * celui-ci se serait corrigé d'un seul côté.
+ * - **Pendant le travail, le harness n'exécute RIEN.** Pas de type-check, pas de
+ *   tests, pas de relecture. Le modèle itère sans impôt, et la doctrine de
+ *   vérification vit dans le prompt (« du plus spécifique au plus large »).
+ * - **À la livraison, il exécute tout, d'un coup.** Le premier `create_pr` d'un tour
+ *   qui a édité ne pousse rien : il rend les erreurs de typage, les échecs de tests
+ *   et le diff, dans le `followUp` d'un résultat de tool. Zéro réponse de plus, zéro
+ *   message déclassé — c'est la forme OpenCode appliquée au geste qui compte chez
+ *   nous, et le moment que Codex désigne lui-même.
+ * - **Le plan garde sa porte** (`gateWritePlan`), pour la même raison : un retour
+ *   attaché au geste ne coûte rien.
  *
- * OÙ CHAQUE CONTRÔLE TOMBE, ET POURQUOI ÇA COMPTE (MIN-256). Un bloc de FIN DE
- * TOUR arrive après que le modèle a écrit sa réponse : le tour repart, il répond
- * une seconde fois, et c'est cette réponse-là que l'utilisateur lit. D'où deux
- * règles qui gouvernent tout ce module.
+ * LA RÈGLE À TENIR, si un contrôle s'ajoute un jour : **il s'accroche à un geste ou
+ * il n'existe pas.** Un contrôle qui a besoin de rouvrir un tour pour parler est un
+ * contrôle qu'on paie en réponse modèle, et l'histoire de ce fichier dit ce que ça
+ * coûte.
  *
- * La première : un contrôle qui peut s'accrocher à un GESTE s'y accroche, parce
- * qu'il ne coûte alors aucune réponse de plus — le modèle le traite en cours de
- * route et écrit un seul message final, celui qui raconte le tour. C'est
- * `gateCreatePr` (le diff sur `create_pr`) et `gateWritePlan` (le plan sur
- * `write_issue_plan`). Ne restent en fin de tour que les contrôles qui ont besoin
- * de savoir qu'aucune édition ne vient plus : type-check, tests, relecture du diff.
- *
- * La seconde : ce qui sort quand même par la fin de tour part avec
- * `REENTRY_REPLY_RULE`, qui dit au modèle que sa prochaine réponse REMPLACE la
- * précédente aux yeux de l'utilisateur. Sans elle il répondait au contrôle
- * (« j'ai vérifié, le plan tient »), et le vrai résumé du tour restait enterré
- * dans la trace.
- *
- * LA SUITE DE TESTS, ET CE QU'ELLE RÉPARE (MIN-251). Le harness lançait `tsc` tout
- * seul et ne lançait jamais les tests. Ce qu'il FAIT enseigne plus fort que ce que
- * le prompt DIT : la seule vérification que l'agent voyait s'exécuter à sa place,
- * tour après tour, portait sur les types — il en a tiré la conclusion logique
- * (« *that's working as expected since type checks are passing* », sur une feature
- * qui ne marchait pas). `testBlock` applique à la suite de tests exactement le
- * geste du type-check, et aligne enfin ce que le harness récompense sur ce que le
- * prompt demande.
+ * CE QU'ON ASSUME. Un tour qui n'ouvre pas de pull request ne voit plus aucun
+ * contrôle du harness — c'est le prix de la stabilité, et c'est exactement le régime
+ * de Codex. La garantie de MIN-251 (le modèle concluait « *that's working as expected
+ * since type checks are passing* » sur une feature cassée) ne tient donc plus par le
+ * harness pendant l'itération : elle tient par le prompt, et elle est REPRISE en dur
+ * au moment où le code part vers un humain.
  */
 
 /**
- * Passages de type-check qu'un tour s'accorde. DEUX, et c'est l'intention d'origine
- * (MIN-110) : le premier fait corriger, le second vérifie le correctif — puis le
- * tour se termine, erreurs restantes ou non. Un dépôt qui ne compile toujours pas
- * au troisième passage ne compilera pas au huitième, et chaque passage se paie en
- * appel modèle.
+ * CE QUI FAIT UN « PETIT » TOUR (MIN-262) — celui qui n'a pas à payer la suite
+ * entière quand le modèle n'a rien lancé lui-même.
+ *
+ * Volontairement bas, et pas calé sur une théorie : le cas qui a ouvert le ticket
+ * est « une ligne à retirer » payée quatre minutes. Trois fichiers et quarante
+ * lignes couvrent une correction ciblée et son test, pas une feature. Au-dessus,
+ * la suite entière reprend la main sans discussion — et le fichier NEUF sort du
+ * lot quelle que soit sa taille (`untracked`, cf. `turnDiffStat`).
  */
-export const MAX_TYPE_CHECK_PASSES = 2;
+export const SMALL_TURN_MAX_FILES = 3;
+export const SMALL_TURN_MAX_LINES = 40;
 
-/**
- * LA RÈGLE QUI ACCOMPAGNE TOUTE RÉINJECTION DE FIN DE TOUR (MIN-256).
- *
- * Un bloc de fin de tour arrive APRÈS que le modèle a écrit sa réponse. Le tour
- * repart, il répond une seconde fois — et c'est cette seconde réponse que
- * l'utilisateur lit, la première étant redescendue au rang d'étape dans le fil.
- * Or les blocs demandaient « if it is all correct, just reply », c'est-à-dire de
- * répondre AU CONTRÔLE. Le message visible d'un run de plan devenait « j'ai
- * vérifié, le plan tient, je l'ai mis à jour » : l'utilisateur ne comprend pas
- * de quoi on lui parle, et doit remonter la trace pour retrouver le vrai résumé.
- *
- * Le harness ne peut pas fabriquer ce résumé à la place du modèle — mais il peut
- * dire ce qu'il attend, et c'est la même phrase pour tous les blocs. Elle est
- * donc posée ICI, une fois, sur le chemin de la réinjection, plutôt que recopiée
- * dans chaque formateur : un bloc de plus l'héritera sans qu'on y pense.
- *
- * Elle ne va PAS sur le chemin des tools (`gateCreatePr`, `gateWritePlan`), et
- * c'est tout l'intérêt de ce chemin-là : le modèle n'y a pas encore répondu, sa
- * réponse à venir est déjà la seule.
- */
-/** Cap du brouillon rendu au modèle. Même ordre de grandeur que le `summary`
- *  émis par la boucle (8 000) : ce qu'on lui rend doit être ce qu'il a écrit,
- *  pas un extrait qu'il devrait compléter de mémoire. */
-export const REENTRY_REPLY_MAX_CHARS = 6000;
-
-/**
- * Repli quand on n'a pas de brouillon à rendre — un appelant qui n'en passe pas
- * (les tests, un chemin futur). C'est l'ancienne formulation, celle qui demandait
- * au modèle de se souvenir : gardée comme filet, plus comme mécanisme.
- */
-const REENTRY_REPLY_RULE_NO_DRAFT = `One last thing about the reply itself: it is the ONLY message the user will see — the one you wrote a moment ago has become a step in the trace. So do not reply about this check. Reply about the TURN: what you did, the files you touched, how you verified it. If this check changed nothing, say what you did anyway, exactly as you would have.`;
-
-/**
- * LA RÈGLE REND LE BROUILLON, ELLE NE DEMANDE PLUS DE S'EN SOUVENIR (MIN-249 bis).
- *
- * La version d'avant (`REENTRY_REPLY_RULE_NO_DRAFT`) disait la bonne chose et ne
- * marchait pas : « réponds sur le TOUR, pas sur ce contrôle » demande au modèle de
- * REFAIRE, de mémoire, un message qu'il vient d'écrire — et la chose la plus
- * saillante de son contexte, à ce moment-là, est le contrôle qu'on vient de lui
- * servir. Mesuré sur le run f80dca09 : la règle était présente, en dernière
- * position, et le seul message que l'utilisateur a lu du tour était
- * « La revue est terminée : aucun problème n'a été trouvé » — le résumé réel
- * (l'inversion, le helper, le test, les vérifications) restait deux étapes plus
- * haut dans la trace, invisible.
- *
- * Le geste : lui RENDRE son brouillon, tel qu'il l'a écrit, et lui demander de le
- * renvoyer amendé. La consigne cesse d'être un effort de mémoire pour devenir une
- * édition — un travail qu'un modèle rate beaucoup moins souvent. Même doctrine que
- * le reste du module : le harness FAIT (il rend le texte) au lieu d'ESPÉRER.
- */
-export function reentryReplyRule(previousReply?: string): string {
-  const draft = previousReply?.trim();
-  if (!draft) return REENTRY_REPLY_RULE_NO_DRAFT;
-  return `One last thing about the reply itself. You had already written the message below, and **the user has not seen it** — the moment this check arrived, it became a step in the trace:
-
-<your_draft_reply>
-${headTail(draft, REENTRY_REPLY_MAX_CHARS)}
-</your_draft_reply>
-
-Your next reply REPLACES that draft, and it is the ONLY message the user gets for this turn. So do not reply about this check: **send the draft above again, in full**, amended by whatever this check made you change (a verification that now passes, a file you touched since, a claim that is no longer true). If the check changed nothing, send it again unchanged. A reply that reports on the check instead is a turn the user never gets to read.`;
-}
-
-export interface TurnEndDeps {
+export interface DeliveryGateDeps {
   host: RepoHost;
   emit: EmitAgentEvent;
   /** Fichiers édités depuis le dernier type-check. VIDÉ par le type-check. */
   editedPaths: Set<string>;
   /** Le plan écrit ce tour, noté au passage des tools ticket (`watchPlanWrites`). */
   planWrites: PlanWriteSink;
+  /**
+   * Ce que le MODÈLE a vérifié lui-même ce tour, noté au passage de `run_command`
+   * (MIN-262). Optionnel : un appelant qui ne le câble pas retrouve le crochet
+   * d'avant, qui relance tout — le défaut est le comportement prudent.
+   */
+  verification?: VerificationSink;
   /** Baseline du diff du tour (`lastFilesSha` du checkpoint, ou la tête d'origine). */
   filesFromSha: string;
   /** Graine du verrou « le dépôt a été touché » — vient du checkpoint. */
@@ -161,56 +99,49 @@ export interface TurnEndDeps {
   logPrefix: string;
 }
 
-export interface TurnEndHook {
-  /** Le crochet, tel que la boucle l'appelle (`params.onTurnEnd`). `previousReply`
-   *  est le message que le modèle venait d'écrire et que la réinjection va
-   *  déclasser en étape : il lui est RENDU (cf. `reentryReplyRule`). */
-  run: (opts: { budgetMs: number; previousReply?: string }) => Promise<string | null>;
+export interface DeliveryGate {
   /**
-   * L'auto-relecture RÉCLAMÉE PAR AVANCE, pour `create_pr` (cf. `gateCreatePr`).
-   * Consomme le MÊME verrou que le bloc de fin de tour : ce qui est relu ici ne
-   * sera pas re-demandé après. `null` = rien à relire, ou déjà relu.
+   * LES CONTRÔLES DE LIVRAISON, réclamés par la porte de `create_pr` : erreurs de
+   * typage, échecs de tests et diff du tour, en UN SEUL bloc. Un seul passage par
+   * tour — le second `create_pr` ouvre pour de bon. `null` = rien à dire, ou déjà dit.
    */
-  reviewBeforeSubmit: (budgetMs: number) => Promise<string | null>;
+  checkBeforeSubmit: (budgetMs: number) => Promise<string | null>;
   /**
    * Le contrôle du plan RÉCLAMÉ SUR LE GESTE, pour `write_issue_plan` (cf.
-   * `gateWritePlan`). Même verrou partagé que le bloc de fin de tour, donc la
-   * question n'est jamais posée deux fois. `null` = rien à dire, ou déjà dit.
+   * `gateWritePlan`). Un seul passage, donc la question n'est jamais posée deux
+   * fois. `null` = rien à dire, ou déjà dit.
    */
   checkPlanAfterWrite: (budgetMs: number) => Promise<string | null>;
   /** `repoTouched` À JOUR — l'appelant l'écrit au checkpoint. */
   repoTouched: () => boolean;
   /**
-   * Note les éditions en attente comme « dépôt touché », HORS crochet : l'appelant
-   * le fait une dernière fois avant le push, là où le crochet peut n'avoir jamais
-   * été atteint (tour interrompu, suspendu).
+   * Note les éditions en attente comme « dépôt touché » : l'appelant le fait une
+   * dernière fois avant le push, là où la porte peut n'avoir jamais été franchie
+   * (tour sans pull request, interrompu, suspendu).
    */
   noteEdits: () => void;
 }
 
 /**
- * Le crochet de fin de tour d'un chunk (fonction) ou d'un tour (microVM). Tout son
- * état est PAR CHUNK et ne voyage pas dans le checkpoint — sauf `repoTouched`, qui
- * porte sur le TOUR et arrive donc semé.
+ * La porte de livraison d'un chunk (fonction) ou d'un tour (microVM). Tout son état
+ * est PAR CHUNK et ne voyage pas dans le checkpoint — sauf `repoTouched`, qui porte
+ * sur le TOUR et arrive donc semé.
  */
-export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
+export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   const { host, emit, editedPaths, planWrites, filesFromSha, logPrefix } = deps;
+  const verification = deps.verification ?? newVerificationSink();
 
   /** Le tour a-t-il édité le dépôt ? Verrou LATCHÉ, là où `editedPaths` se vide à
    *  chaque type-check : après une relance, le tour a toujours édité, même si le
    *  modèle n'a plus rien touché depuis. */
   let repoTouched = deps.repoTouched;
-  /** Passages de type-check consommés (cf. `MAX_TYPE_CHECK_PASSES`). */
-  let typeChecks = 0;
-  /** La suite de tests ne passe qu'UNE fois par tour : à ~60 s le passage, un
-   *  second tuerait le budget du chunk, et un tour qui boucle sur ses tests est un
-   *  tour qui ne répond jamais. Le premier passage suffit à mettre l'échec sous
-   *  les yeux du modèle — c'est tout ce que ce bloc doit garantir. */
-  let tested = false;
-  /** L'auto-relecture ne passe qu'UNE fois : elle fait relire le tour avant la
-   *  réponse, pas commenter chaque correctif qui suit. Idem pour le contrôle de
-   *  plan — il pose une question, il ne commente pas la réponse. */
-  let selfReviewed = false;
+  /**
+   * LES DEUX SEULS VERROUS QUI RESTENT (MIN-263). Chaque contrôle portait le sien,
+   * du temps où la fin de tour pouvait les rappeler indéfiniment ; ils sont
+   * maintenant réclamés par une porte qui ne s'ouvre qu'une fois, et trois verrous
+   * de plus ne borneraient rien que celui-ci ne borne déjà.
+   */
+  let submitChecked = false;
   let planChecked = false;
 
   const noteEdits = () => {
@@ -225,9 +156,7 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
    * en bout : une panne du checker n'empêche jamais un tour de se terminer.
    */
   const typeCheckBlock = async (budgetMs: number): Promise<string | null> => {
-    if (typeChecks >= MAX_TYPE_CHECK_PASSES) return null;
     if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) return null;
-    typeChecks++;
     const touched = [...editedPaths];
     editedPaths.clear();
     const startedAt = Date.now();
@@ -249,29 +178,61 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
   };
 
   /**
-   * Suite de tests de fin de tour (MIN-251). Même geste que le type-check, mêmes
-   * gardes : un seul passage, rien sans édition, rien sans budget — et le même
-   * best-effort de bout en bout (pas de script `test`, pas de binaire installé,
-   * runner en panne → silence, jamais un tour bloqué).
+   * Tests de fin de tour (MIN-251), à la portée que le TOUR justifie (MIN-262).
+   * Mêmes gardes que le type-check : un seul passage, rien sans édition, rien sans
+   * budget — et le même best-effort de bout en bout (pas de script `test`, pas de
+   * binaire installé, runner en panne → silence, jamais un tour bloqué).
    *
    * Le verrou est `repoTouched`, pas `editedPaths` : le type-check vide cette liste
    * en passant, et il passe AVANT. Un tour qui a édité doit voir ses tests, même
    * quand le modèle n'a plus rien touché depuis le check.
+   *
+   * TROIS ISSUES, ET L'ORDRE EST LE POINT.
+   *
+   * 1. **Le modèle l'a déjà fait.** S'il a lancé lui-même les tests du dépôt et
+   *    qu'ils sont sortis verts sans qu'il ait réédité derrière, le harness se tait.
+   *    Ce n'est pas de la confiance : c'est un fait qu'il a lu (`VerificationSink`).
+   *    Relancer par-dessus coûterait 80 s de mur et une réponse entière pour
+   *    apprendre ce qu'on sait déjà — c'est exactement l'impôt que ce ticket lève.
+   * 2. **Petit tour, passage ciblé.** Quelques lignes sur deux ou trois fichiers,
+   *    rien de neuf : le mode `related` du runner remonte le graphe d'imports et
+   *    couvre le « ça casse ailleurs » partout où il est traçable, en quelques
+   *    secondes au lieu de 80.
+   * 3. **Sinon, la suite entière**, inchangée. C'est le cas d'un fichier neuf, d'un
+   *    gros diff, d'un tour dont on n'a pas su mesurer la taille : le doute paie
+   *    plein tarif, il ne se solde pas en silence.
    */
   const testBlock = async (budgetMs: number): Promise<string | null> => {
-    if (tested || !repoTouched || budgetMs < TEST_MIN_BUDGET_MS) return null;
-    tested = true;
+    if (!repoTouched) return null;
+
+    // (1) Le geste du modèle fait foi. Aucun budget requis : on ne lance rien.
+    if (verification.greenCommand) {
+      await emit("status", {
+        phase: "tests",
+        scope: "model",
+        durationMs: 0,
+        command: verification.greenCommand,
+        failuresShown: 0,
+      });
+      return null;
+    }
+
+    if (budgetMs < TEST_RELATED_MIN_BUDGET_MS) return null;
+    const scope = await testScopeForTurn(budgetMs);
+    if (!scope) return null;
     const startedAt = Date.now();
-    const block = await testFailuresForTurn(host).catch((err) => {
+    const out = await testFailuresForTurn(host, scope).catch((err) => {
       console.error(`${logPrefix} turn-end tests failed:`, (err as Error).message);
       return null;
     });
+    const block = out?.block ?? null;
     // Event `status` (neutre : invisible dans le fil, comptable en base) — c'est lui
-    // qui répondra à « combien de tours se terminent en rouge ? ». `failuresShown`
-    // compte les échecs SERVIS (le bloc est capé) : ce que le modèle a lu, pas ce
-    // que le runner a trouvé.
+    // qui répondra à « combien de tours se terminent en rouge ? », et depuis MIN-262
+    // à « lesquels ont payé la suite entière ». `failuresShown` compte les échecs
+    // SERVIS (le bloc est capé) : ce que le modèle a lu, pas ce que le runner a trouvé.
     await emit("status", {
       phase: "tests",
+      scope: out?.scope ?? "none",
       durationMs: Date.now() - startedAt,
       failuresShown: block ? block.split("\n").filter((l) => l.startsWith("FAIL ")).length : 0,
     });
@@ -279,20 +240,54 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
   };
 
   /**
-   * Auto-relecture : le diff du tour, injecté avant que l'agent ne réponde (cf.
-   * self-review.ts). Commandes git en LECTURE SEULE — l'index n'est jamais
-   * touché, la fin de tour reste seule à stager.
+   * La portée que ce tour justifie, ou `null` s'il n'y a pas le budget de la payer.
+   *
+   * Un tour de taille INCONNUE (git muet, baseline hors de l'historique shallow) est
+   * traité comme un gros tour : la mesure sert à s'épargner du travail, pas à s'en
+   * dispenser sur un doute.
+   */
+  const testScopeForTurn = async (budgetMs: number): Promise<TestScope | null> => {
+    const stat = await turnDiffStat(host, filesFromSha).catch(() => null);
+    const small =
+      stat !== null &&
+      stat.untracked === 0 &&
+      stat.files.length > 0 &&
+      stat.files.length <= SMALL_TURN_MAX_FILES &&
+      stat.lines <= SMALL_TURN_MAX_LINES;
+    if (small) {
+      // `allowFullFallback` : un runner sans mode ciblé fait payer la suite entière,
+      // mais seulement si le budget la couvre. Sinon on ne lance rien — déclencher
+      // 80 s de tests avec 90 s au compteur ferait mourir le chunk sur le contrôle
+      // censé l'alléger.
+      return {
+        related: stat.files,
+        allowFullFallback: budgetMs >= TEST_MIN_BUDGET_MS,
+      };
+    }
+    return budgetMs >= TEST_MIN_BUDGET_MS ? "full" : null;
+  };
+
+  /**
+   * Auto-relecture : le diff du tour, servi avant la livraison (cf. self-review.ts).
+   *
+   * C'est le SEUL des trois qui parle même quand tout va bien — un diff est une
+   * question, pas un verdict. C'est aussi pour ça qu'il ne peut vivre QU'ICI : en
+   * fin de tour, il coûtait une réponse entière à chaque tour qui édite, y compris
+   * pour trois lignes que le modèle venait d'écrire (MIN-262). Sur la porte, il ne
+   * coûte rien — le modèle le lit, corrige, et rappelle `create_pr`.
+   *
+   * Pendant l'itération, la relecture est un geste du modèle, dosé par le prompt
+   * selon ce qu'il vient de faire (`git diff`, il l'a).
+   *
+   * Commandes git en LECTURE SEULE — l'index n'est jamais touché, la fin de tour
+   * reste seule à stager.
    *
    * Le diff est suivi, depuis MIN-252, des autres écritures des états qu'il
    * écrit — des `git grep`, donc toujours en lecture seule, et toujours
    * best-effort : leur panne coûte le second bloc, jamais la relecture.
    */
-  const selfReviewBlock = async (
-    budgetMs: number,
-    at: "turn_end" | "create_pr" = "turn_end",
-  ): Promise<string | null> => {
-    if (selfReviewed || !repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
-    selfReviewed = true;
+  const selfReviewBlock = async (budgetMs: number): Promise<string | null> => {
+    if (!repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
     const startedAt = Date.now();
     const { diff, porcelain } = await turnDiff(host, filesFromSha).catch(() => ({
       diff: "",
@@ -300,14 +295,11 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
     }));
     const overwrites = await overwriteSitesForTurn(host, diff).catch(() => []);
     const block = formatSelfReview({ diff, porcelain, overwrites });
-    // `at` distingue les deux moments où la MÊME relecture peut tomber (MIN-247).
-    // Sans lui, la mesure ne pourrait pas dire combien de PR sont passées par la
-    // porte plutôt que par la fin de tour — ni si la porte se déclenche.
     // `overwrites` compte les SYMBOLES rapportés : c'est lui qui dira si le bloc
     // de MIN-252 parle, et à quelle fréquence.
     await emit("status", {
       phase: "self_review",
-      at,
+      at: "create_pr",
       durationMs: Date.now() - startedAt,
       chars: block?.length ?? 0,
       overwrites: overwrites.length,
@@ -337,10 +329,7 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
    * majorité des tours. Le déclencheur est le TOOL, pas `run.intent === "plan"` : le
    * cas courant est un run ordinaire à qui on demande un plan en cours de route.
    */
-  const planBlock = async (
-    budgetMs: number,
-    at: "turn_end" | "write_plan" = "turn_end",
-  ): Promise<string | null> => {
+  const planBlock = async (budgetMs: number): Promise<string | null> => {
     const floor = Math.max(PLAN_REVIEW_MIN_BUDGET_MS, PLAN_CLOSURE_MIN_BUDGET_MS);
     if (planChecked || !planWrites.wrote || budgetMs < floor) return null;
     planChecked = true;
@@ -350,52 +339,50 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
       planClosureForTurn(host, planWrites.markdown).catch(() => null),
     ]);
     const block = [review, closure].filter(Boolean).join("\n\n---\n\n") || null;
-    // `at` distingue les deux moments, comme pour l'auto-relecture : sans lui, la
-    // mesure ne dirait pas si le contrôle tombe bien sur le geste — donc si le
-    // tour a cessé de payer une réponse de plus pour lui.
     await emit("status", {
       phase: "plan_check",
-      at,
+      at: "write_plan",
       durationMs: Date.now() - startedAt,
       chars: block?.length ?? 0,
     });
     return block;
   };
 
+  /**
+   * LES TROIS CONTRÔLES, SERVIS ENSEMBLE, AU MOMENT DE LIVRER (MIN-263).
+   *
+   * L'ORDRE PORTE DU SENS, et c'est le même qu'avant : les erreurs de typage
+   * d'abord — elles sont concrètes et bloquantes, et des échecs de test sur un dépôt
+   * qui ne compile pas ne se lisent même pas. Les échecs de test ensuite : un échec
+   * est un fait, un diff est une question. Le diff ferme la marche.
+   *
+   * Ils partent en UN SEUL bloc, là où la fin de tour les servait un par un : elle
+   * n'avait pas le choix (chaque bloc coûtait une réponse, donc il fallait les
+   * étaler), la porte l'a — un `followUp` de tool ne coûte rien, et le modèle traite
+   * les trois d'un même geste avant de rappeler `create_pr`.
+   *
+   * UN SEUL PASSAGE PAR TOUR : le second `create_pr` ouvre pour de bon, même si le
+   * modèle n'a rien corrigé. C'est délibéré — une porte qui re-vérifie à chaque
+   * tentative est une porte qui peut refuser de s'ouvrir, et un agent qui ne peut
+   * plus livrer est pire qu'un agent qui livre du rouge en le disant.
+   */
+  const submitChecks = async (budgetMs: number): Promise<string | null> => {
+    noteEdits();
+    if (submitChecked || !repoTouched) return null;
+    submitChecked = true;
+    const blocks = [
+      await typeCheckBlock(budgetMs),
+      await testBlock(budgetMs),
+      await selfReviewBlock(budgetMs),
+    ].filter(Boolean);
+    return blocks.length > 0 ? blocks.join("\n\n---\n\n") : null;
+  };
+
   return {
     repoTouched: () => repoTouched,
     noteEdits,
-    reviewBeforeSubmit: async (budgetMs: number) => {
-      noteEdits();
-      return await selfReviewBlock(budgetMs, "create_pr");
-    },
-    checkPlanAfterWrite: async (budgetMs: number) => await planBlock(budgetMs, "write_plan"),
-    /**
-     * L'ORDRE PORTE DU SENS. Les erreurs de typage passent avant tout le reste :
-     * elles sont concrètes et bloquantes, et servir quoi que ce soit par-dessus un
-     * dépôt qui ne compile pas noierait le seul signal qui compte — des échecs de
-     * test sur un dépôt qui ne compile pas ne se lisent même pas. Les tests passent
-     * ensuite, avant la relecture : un échec est un fait, un diff est une question.
-     * Le contrôle du plan ferme la marche, et il n'arrive normalement JAMAIS
-     * jusqu'ici : `gateWritePlan` l'a déjà servi sur le geste. Il reste en dernier
-     * recours, pour le tour qui écrit un plan sans budget à ce moment-là.
-     *
-     * Chaque bloc a son propre budget, donc un tour MIXTE (des éditions ET un plan)
-     * les voit tous. C'est ce qui n'arrivait jamais avant MIN-240.
-     *
-     * `reentryReplyRule` est collée au bloc qui sort, quel qu'il soit : ce qui
-     * suit une réinjection est la réponse que l'utilisateur lira (MIN-256), et
-     * elle porte le brouillon que cette réinjection vient de déclasser.
-     */
-    run: async ({ budgetMs, previousReply }) => {
-      noteEdits();
-      const block =
-        (await typeCheckBlock(budgetMs)) ??
-        (await testBlock(budgetMs)) ??
-        (await selfReviewBlock(budgetMs)) ??
-        (await planBlock(budgetMs));
-      return block ? `${block}\n\n${reentryReplyRule(previousReply)}` : null;
-    },
+    checkBeforeSubmit: submitChecks,
+    checkPlanAfterWrite: async (budgetMs: number) => await planBlock(budgetMs),
   };
 }
 
@@ -419,7 +406,7 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
  */
 export function gateWritePlan(
   handler: PlatformToolHandler,
-  hook: Pick<TurnEndHook, "checkPlanAfterWrite">,
+  hook: Pick<DeliveryGate, "checkPlanAfterWrite">,
   remainingMs: () => number,
 ): PlatformToolHandler {
   return async (name, args) => {
@@ -431,35 +418,33 @@ export function gateWritePlan(
 }
 
 /**
- * LE PREMIER `create_pr` NE SOUMET PAS — il rend le diff (MIN-247, emprunté au
- * `review_on_submit` de SWE-agent).
+ * LE PREMIER `create_pr` NE SOUMET PAS — il rend les contrôles (MIN-247 pour le
+ * diff, emprunté au `review_on_submit` de SWE-agent ; MIN-263 pour les deux autres).
  *
- * Le harness fait DÉJÀ relire son diff au modèle : c'est `selfReviewBlock`, et le
- * prompt l'annonce comme exécuté (« Self-review — the harness runs it, you don't »).
- * Mais il le fait en FIN DE TOUR, c'est-à-dire une fois que le modèle a rendu la
- * main — or `create_pr` pousse et ouvre la pull request AU MOMENT DE L'APPEL.
- * L'ordre réel était donc : PR ouverte, corps de PR rédigé, relecteur notifié,
- * *puis* relecture. Ce que la relecture attrape (l'erreur de JOINTURE entre deux
- * fichiers, cf. self-review.ts) arrivait après la livraison, pas avant.
+ * `create_pr` pousse et ouvre la pull request AU MOMENT DE L'APPEL. Sans porte,
+ * l'ordre réel serait : PR ouverte, corps rédigé, relecteur notifié, *puis*
+ * vérification — ce que la relecture attrape (l'erreur de JOINTURE entre deux
+ * fichiers, cf. self-review.ts) arriverait après la livraison.
  *
- * La porte ne rajoute pas un round : elle DÉPLACE celui qu'on paie déjà. La
- * relecture consomme le même verrou, donc la fin de tour ne repose pas la
- * question, et le second `create_pr` ouvre pour de bon. Un tour qui n'a rien
- * touché — une PR sur du travail poussé au tour précédent — passe du premier
- * coup : il n'y a pas de diff de ce tour à relire.
+ * La porte ne rajoute pas un round : elle DÉPLACE celui qu'on paie déjà, et depuis
+ * que la fin de tour n'exécute plus rien, c'est le SEUL endroit où le harness
+ * vérifie le code. Le second `create_pr` ouvre pour de bon, même si le modèle n'a
+ * rien corrigé : une porte qui peut refuser indéfiniment est une porte qui empêche
+ * de livrer. Un tour qui n'a rien touché — une PR sur du travail poussé au tour
+ * précédent — passe du premier coup : il n'y a rien de ce tour à vérifier.
  */
 export function gateCreatePr<A, R extends { result: unknown; success: boolean }>(
   handler: (args: A) => Promise<R>,
-  hook: Pick<TurnEndHook, "reviewBeforeSubmit">,
+  hook: Pick<DeliveryGate, "checkBeforeSubmit">,
   remainingMs: () => number,
 ): (args: A) => Promise<{ result: unknown; success: boolean; followUp?: string }> {
   return async (args) => {
-    const review = await hook.reviewBeforeSubmit(remainingMs()).catch(() => null);
-    if (!review) return await handler(args);
-    // Le diff part en `followUp`, PAS dans le résultat : un résultat de tool est
-    // capé à `TOOL_RESULT_MAX_CHARS` avec le milieu élidé, et un diff amputé de
-    // son milieu ne se relit pas — c'est exactement la relecture qu'on essaie de
-    // faire avoir lieu. Le résultat, lui, ne dit que le fait : rien n'est parti.
+    const checks = await hook.checkBeforeSubmit(remainingMs()).catch(() => null);
+    if (!checks) return await handler(args);
+    // Les contrôles partent en `followUp`, PAS dans le résultat : un résultat de
+    // tool est capé à `TOOL_RESULT_MAX_CHARS` avec le milieu élidé, et un diff
+    // amputé de son milieu ne se relit pas — c'est exactement la relecture qu'on
+    // essaie de faire avoir lieu. Le résultat, lui, ne dit que le fait.
     //
     // `success: true` : rien n'a échoué. Le modèle a demandé une livraison, le
     // harness lui rend d'abord ce qu'il livre — un refus le pousserait à
@@ -467,10 +452,10 @@ export function gateCreatePr<A, R extends { result: unknown; success: boolean }>
     return {
       result: {
         opened: false,
-        note: "Nothing has been pushed and no pull request has been opened yet: the harness is handing you this turn's diff first. Read it, fix what you find, then call create_pr again — the next call goes through.",
+        note: "Nothing has been pushed and no pull request has been opened yet: the harness is handing you this turn's checks first — type errors, failing tests and the diff. Read them, fix what you find, then call create_pr again — the next call goes through.",
       },
       success: true,
-      followUp: review,
+      followUp: checks,
     };
   };
 }

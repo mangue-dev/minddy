@@ -63,7 +63,8 @@ import {
   MAX_CHECKPOINT_BYTES,
 } from "./checkpoint-fit";
 import { newPlanWriteSink, watchPlanWrites } from "./plan-closure";
-import { gateCreatePr, gateWritePlan, makeTurnEndHook } from "./turn-end";
+import { newVerificationSink } from "./diagnostics";
+import { gateCreatePr, gateWritePlan, makeDeliveryGate } from "./delivery-gate";
 import { toolOutputFileName } from "./command-output";
 import { usesApplyPatch } from "./patch";
 import {
@@ -1467,6 +1468,11 @@ export async function executeAgentRun(
     // ce qu'il a édité AVANT la soft-deadline. Le chemin `completed` ne l'écrit pas
     // (le tour y est fini), donc le semis reste vide au premier chunk d'un tour.
     const editedPaths = new Set<string>(run.checkpoint?.editedPaths ?? []);
+    /** Ce que le modèle a vérifié lui-même sur ce chunk (MIN-262) — rempli par
+     *  `run_command`, périmé par toute édition, lu par la porte de livraison.
+     *  PARTAGÉ avec les filles, comme `editedPaths`. Il ne voyage PAS dans le
+     *  checkpoint : un chunk qui reprend n'a rien vu passer vert lui-même. */
+    const verification = newVerificationSink();
 
     // `quotaNow` et `ledgerSpentUsd` sont lus plus haut, avant la microVM (MIN-223) :
     // le plafond de la clé LLM du run en dépend, et cette clé précède la politique
@@ -1839,6 +1845,7 @@ export async function executeAgentRun(
             // instructions des sous-dossiers qu'elle édite, comme le parent.
             instructions: { paths: [...REPO_INSTRUCTION_FILES], bytes: 0 },
             editedPaths,
+            verification,
             subagents: null,
             // L'horloge du CHUNK, pas celle de la fille : ce qui tue la fonction
             // est la fin du chunk, et une commande lancée par une fille la tue
@@ -1959,11 +1966,12 @@ export async function executeAgentRun(
      * défaut de budget a affamé les deux crochets de plan dans les deux moteurs à la
      * fois. Un seul exemplaire, un seul test.
      */
-    const turnEnd = makeTurnEndHook({
+    const deliveryGate = makeDeliveryGate({
       host,
       emit,
       editedPaths,
       planWrites,
+      verification,
       filesFromSha,
       // Le verrou porte sur le TOUR, pas sur le chunk qui l'exécute : semé depuis le
       // checkpoint (MIN-210), rendu à lui à la sortie.
@@ -2024,7 +2032,7 @@ export async function executeAgentRun(
         // La PORTE (MIN-247) enveloppe le handler des DEUX moteurs, au même endroit
         // et avec le même crochet : le premier appel rend le diff du tour au lieu
         // d'ouvrir. Voir `gateCreatePr`.
-        createPr: writesToRepo ? gateCreatePr(createPr, turnEnd, chunkRemainingMs) : null,
+        createPr: writesToRepo ? gateCreatePr(createPr, deliveryGate, chunkRemainingMs) : null,
         // Les tools de PLATEFORME sont INJECTÉS depuis MIN-224 (cf. `exec-tool.ts`) :
         // ici les exécuteurs en direct, puisqu'on est dans la fonction ; dans la
         // microVM, les mêmes noms partent au plan de contrôle.
@@ -2037,7 +2045,7 @@ export async function executeAgentRun(
             (name, args) => executeIssueTool(issueToolCtx, name, args),
             planWrites,
           ),
-          turnEnd,
+          deliveryGate,
           chunkRemainingMs,
         ),
         scratchpadTool: (name, args) => executeScratchpadTool(scratchpadToolCtx, name, args),
@@ -2046,11 +2054,11 @@ export async function executeAgentRun(
         background,
         instructions,
         editedPaths,
+        verification,
         subagents,
         chunkRemainingMs,
         onEdit: liveEditHook(liveEdits, emitLive),
       }),
-      onTurnEnd: turnEnd.run,
       pullSteering: () => pullPendingMessages(run.id),
       // Wakeup des sous-agents (MIN-112) : drainé au sommet de chaque round, comme
       // le steering. Le parent n'a jamais attendu — le rapport arrive tout seul.
@@ -2059,8 +2067,8 @@ export async function executeAgentRun(
        * Dernière chance de livrer AVANT que le tour ne se termine. Si le budget
        * tombe alors qu'une fille tourne encore, on la COUPE ICI plutôt qu'après la
        * boucle : ses fichiers doivent être dans `editedPaths` et dans le diff avant
-       * que le type-check et l'auto-relecture ne parlent — sinon un sous-agent
-       * casse les types en silence et le tour dit « c'est fait ».
+       * que la porte de livraison ne parle — sinon un sous-agent casse les types en
+       * silence et le tour dit « c'est fait ».
        */
       awaitSubagents: async ({ budgetMs }) => {
         const waited = await subagents.awaitReports(
@@ -2238,7 +2246,7 @@ export async function executeAgentRun(
       ...(editedPaths.size > 0
         ? { editedPaths: [...editedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX) }
         : {}),
-      ...(turnEnd.repoTouched() ? { repoTouched: true } : {}),
+      ...(deliveryGate.repoTouched() ? { repoTouched: true } : {}),
     };
     /**
      * Le checkpoint des mises au repos qui NE terminent PAS le tour — suspend et

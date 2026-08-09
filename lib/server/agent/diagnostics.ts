@@ -1,8 +1,10 @@
-import { REPO_DIR, type RepoHost } from "./repo-host";
+import { REPO_DIR, sq, type RepoHost } from "./repo-host";
 
 /**
- * Type-check de fin de tour (MIN-110) — le harness a le dernier mot avant que
- * l'agent ne rende la main.
+ * Type-check du dépôt (MIN-110). Depuis MIN-263 il ne tourne plus en fin de tour :
+ * il est réclamé par la porte de livraison (`delivery-gate.ts`), au premier
+ * `create_pr` d'un tour qui a édité. Le reste du raisonnement ci-dessous — un check
+ * par TOUR et non par édition — vaut inchangé.
  *
  * OpenCode referme la boucle DANS le tool d'édition : chaque `edit` touche le
  * fichier côté LSP et recolle les diagnostics au résultat. On ne peut pas copier
@@ -15,10 +17,10 @@ import { REPO_DIR, type RepoHost } from "./repo-host";
  * deux moitiés d'un même changement remonte des erreurs que l'édition suivante
  * efface.
  *
- * D'où : UN check par tour, au moment où le modèle s'apprête à répondre, et
- * seulement si le tour a touché des fichiers. S'il reste des erreurs, elles sont
- * injectées comme message `user` et le tour REPART (une seule fois — le second
- * check vérifie le correctif, puis le tour se termine quoi qu'il arrive).
+ * D'où : UN check par tour, et seulement si le tour a touché des fichiers. Il tombe
+ * au moment de LIVRER (le premier `create_pr`, MIN-263), pas après la réponse du
+ * modèle : les erreurs partent alors dans le `followUp` du tool, le modèle corrige,
+ * puis rappelle `create_pr` — et rien n'a rouvert un tour déjà terminé.
  *
  * TOUT ici est best-effort et SILENCIEUX en cas de doute : pas de `tsconfig.json`,
  * pas de `node_modules/.bin/tsc` (notre échec de production le plus fréquent :
@@ -221,6 +223,14 @@ function normalizePath(path: string): string {
  */
 export const TEST_TIMEOUT_MS = 240_000;
 /**
+ * Budget mural d'un passage CIBLÉ (`vitest related` / `jest --findRelatedTests`).
+ * Le runner démarre pareil et ne charge que le sous-graphe des fichiers touchés :
+ * c'est le démarrage qui domine, pas les cas. Borné bien plus court que la suite
+ * entière — un passage ciblé qui prend deux minutes n'est plus un passage ciblé,
+ * et le laisser courir reviendrait à payer la suite sans l'avoir demandée.
+ */
+export const TEST_RELATED_TIMEOUT_MS = 120_000;
+/**
  * Budget minimum restant sur le chunk pour lancer la suite (sinon on se tait). Même
  * marge que le type-check sur sa propre mesure (60 s pour 22 s, ~2,7×) : ici 180 s
  * pour 80 s. Un chunk complet vaut 700 s, et le pire tour paie les deux contrôles —
@@ -228,6 +238,8 @@ export const TEST_TIMEOUT_MS = 240_000;
  * qu'on accepte pour qu'un tour ne puisse pas se terminer en rouge sans le dire.
  */
 export const TEST_MIN_BUDGET_MS = 180_000;
+/** Même marge, sur le budget d'un passage ciblé (~30 s mesurés au pire). */
+export const TEST_RELATED_MIN_BUDGET_MS = 90_000;
 /** Cap du bloc d'échecs renvoyé au modèle. Au-delà, il ne lit plus, il subit. */
 export const TEST_FAILURES_MAX_CHARS = 3000;
 /**
@@ -299,38 +311,206 @@ export async function detectTestRunner(host: RepoHost): Promise<TestRunner | nul
 }
 
 /**
- * Lance la suite ENTIÈRE et renvoie le bloc à servir au modèle, ou `null` s'il n'y
- * a rien à dire. La suite entière, pas une sélection par fichier touché : un test
- * qui casse AILLEURS est précisément ce qu'on cherche à voir — c'est la ligne non
- * modifiée qui défait le changement, le défaut même du run de la PR 48.
+ * LA PORTÉE DU PASSAGE, ET POURQUOI ELLE N'EST PLUS TOUJOURS « TOUT » (MIN-262).
+ *
+ * `"full"` lance la suite entière — c'est la garantie de MIN-251, et elle reste la
+ * règle dès que le changement pèse : un test qui casse AILLEURS est précisément ce
+ * qu'on cherche à voir, c'est la ligne non modifiée qui défait le changement.
+ *
+ * `{ related }` lance le passage CIBLÉ du runner sur les fichiers du tour. Ce n'est
+ * pas « les tests de ces fichiers » : `vitest related` comme `jest
+ * --findRelatedTests` remontent le GRAPHE D'IMPORTS et lancent tout test qui touche
+ * ces modules, transitivement. Le « casse ailleurs » reste donc couvert partout où
+ * il est traçable ; ce qu'on perd est le test qui atteint le code par un chemin que
+ * l'analyse statique ne voit pas (un fixture, un fichier lu à l'exécution) — pour
+ * une ligne retirée, c'est un prix qu'on paie contre 80 s de mur à chaque tour.
+ *
+ * `allowFullFallback` tranche le cas du runner sans mode ciblé : `true`, on paie la
+ * suite entière ; `false`, on ne lance rien. L'appelant met `false` quand il n'a
+ * PAS le budget d'une suite entière — sinon un tour minuscule déclencherait, par la
+ * bande, exactement le passage qu'il essayait d'éviter, et sans budget pour lui.
+ */
+export type TestScope =
+  | "full"
+  | { related: readonly string[]; allowFullFallback: boolean };
+
+/** Ce qu'un passage de tests a produit — le bloc, et ce qui a réellement tourné. */
+export interface TestRunOutcome {
+  /** Le bloc à servir au modèle, ou `null` si la suite est verte / illisible. */
+  block: string | null;
+  /** Ce qui a tourné POUR DE BON : la mesure ne doit pas lire l'intention. */
+  scope: "full" | "related";
+}
+
+/**
+ * La commande d'un passage CIBLÉ, ou `null` si ce runner n'en a pas.
+ *
+ * On sort ici du `npm run test` du projet — délibérément, et c'est la seule
+ * exception : le mode ciblé est un DRAPEAU du runner, et il n'y a aucun moyen sûr
+ * de le glisser dans un script qu'on ne connaît pas (`npm run test -- related`
+ * donnerait `vitest run related`, qui cherche un fichier nommé « related »). On
+ * appelle donc le binaire, celui-là même que `detectTestRunner` a vérifié exécutable.
+ *
+ * `--passWithNoTests` / `--passWithNoTests` : un tour qui touche un fichier que rien
+ * ne teste doit rendre VERT, pas rouge — l'absence de test n'est pas un échec, et la
+ * servir comme tel enverrait le modèle chercher un bug qui n'existe pas.
+ */
+export function relatedTestCommand(runner: TestRunner, files: readonly string[]): string | null {
+  const paths = files.filter((f) => f.trim() !== "").map(sq);
+  if (paths.length === 0) return null;
+  const bin = `./node_modules/.bin/${runner.bin}`;
+  if (runner.bin === "vitest") {
+    return `${bin} related --run --passWithNoTests ${paths.join(" ")} 2>&1`;
+  }
+  if (runner.bin === "jest") {
+    return `${bin} --findRelatedTests --passWithNoTests ${paths.join(" ")} 2>&1`;
+  }
+  return null;
+}
+
+/**
+ * Lance les tests du dépôt à la portée demandée et rend ce qui en sort, ou `null`
+ * s'il n'y a rien de lançable ici et maintenant.
  *
  * `CI=1` n'est pas décoratif : sans lui, un script `vitest` (sans `run`) partirait
  * en mode watch et occuperait le budget jusqu'au timeout sans jamais rendre la main.
  */
-export async function testFailuresForTurn(host: RepoHost): Promise<string | null> {
+export async function testFailuresForTurn(
+  host: RepoHost,
+  scope: TestScope = "full",
+): Promise<TestRunOutcome | null> {
   const runner = await detectTestRunner(host);
   if (!runner) return null;
+
+  const related = scope === "full" ? null : relatedTestCommand(runner, scope.related);
+  if (!related && scope !== "full" && !scope.allowFullFallback) return null;
+
   try {
-    // `npm run` plutôt que le binaire : ce qui tourne est le script DU PROJET,
-    // arguments compris. `--silent` coupe l'écho de npm et son propre rapport
-    // d'erreur — le seul texte rendu est celui du runner.
+    // Suite entière : `npm run` plutôt que le binaire — ce qui tourne est le script
+    // DU PROJET, arguments compris. `--silent` coupe l'écho de npm et son propre
+    // rapport d'erreur — le seul texte rendu est celui du runner.
     //
     // Et la sortie n'est PAS filtrée ici (pas de `| tail`) : sur le chemin RPC,
     // une commande qui reste muette une minute voit sa socket fermée par l'autre
     // bout (`UND_ERR_SOCKET: other side closed`, mesuré en calant ces constantes —
     // un `| tail` avait suffi à faire taire un run de suite de 2 760 tests). Un
     // runner qui écrit sa progression tient la socket ouverte ; on le laisse.
-    const res = await host.exec(`npm run test --silent 2>&1`, {
+    const res = await host.exec(related ?? `npm run test --silent 2>&1`, {
       cwd: REPO_DIR,
-      timeoutMs: TEST_TIMEOUT_MS,
+      timeoutMs: related ? TEST_RELATED_TIMEOUT_MS : TEST_TIMEOUT_MS,
       env: { CI: "1", NO_COLOR: "1", FORCE_COLOR: "0" },
     });
-    // exitCode 0 = suite verte : le silence est le bon retour.
-    if (res.exitCode === 0) return null;
-    return formatTestFailures(res.stdout + res.stderr);
+    const ran = related ? ("related" as const) : ("full" as const);
+    // exitCode 0 = vert : le silence est le bon retour.
+    if (res.exitCode === 0) return { block: null, scope: ran };
+    return { block: formatTestFailures(res.stdout + res.stderr), scope: ran };
   } catch {
     return null;
   }
+}
+
+// ── Ce que le MODÈLE a vérifié lui-même (MIN-262) ────────────────────────────
+
+/**
+ * LE GESTE FAIT FOI.
+ *
+ * MIN-251 a mis la suite dans le harness parce que *ce que le harness fait enseigne
+ * plus fort que ce que le prompt dit* : le modèle ne lançait jamais les tests, et
+ * concluait « *that's working as expected since type checks are passing* » sur une
+ * feature cassée. La leçon a porté — et le crochet est devenu un impôt : 80 s de
+ * mur plus une réponse entière, sur un tour qui retire une ligne.
+ *
+ * Ce registre rend la décision au modèle sans rien lui faire PROMETTRE. Il ne
+ * déclare pas ce qu'il compte vérifier : il vérifie, et le harness ne relance pas
+ * ce qu'il vient de voir passer vert. Une déclaration serait invérifiable ; un
+ * `npm test` qui sort en 0 est un fait, daté, et le harness le lit tout seul.
+ *
+ * L'invariant, et il tient en une phrase : **vert APRÈS la dernière édition**.
+ * Toute édition périme le registre — un tour qui teste puis réédite retrouve le
+ * crochet, exactement comme avant.
+ */
+export interface VerificationSink {
+  /**
+   * La dernière commande de test du dépôt que le MODÈLE a lancée et qui est sortie
+   * en 0, si rien n'a été édité depuis. `null` sinon — et c'est l'état par défaut.
+   */
+  greenCommand: string | null;
+}
+
+export function newVerificationSink(): VerificationSink {
+  return { greenCommand: null };
+}
+
+/** Toute édition périme la vérification : ce qui était vert ne l'est plus. */
+export function noteVerificationStale(sink: VerificationSink): void {
+  sink.greenCommand = null;
+}
+
+/**
+ * Note le verdict d'une commande du modèle. Seule une commande de test RECONNUE et
+ * VERTE remplit le registre ; une commande rouge le vide (le modèle a vu son échec,
+ * s'il ne le corrige pas le crochet doit reparler).
+ */
+export function noteVerificationCommand(
+  sink: VerificationSink,
+  command: string,
+  exitCode: number,
+): void {
+  if (!looksLikeTestCommand(command)) return;
+  sink.greenCommand = exitCode === 0 ? command.trim() : null;
+}
+
+/** Runners qu'on reconnaît à leur nom, appelés directement ou via `npx`. */
+const TEST_BINS = new Set([
+  "vitest", "jest", "mocha", "ava", "tap", "playwright", "cypress",
+  "pytest", "phpunit", "rspec", "gotestsum",
+]);
+
+/**
+ * Cette commande lance-t-elle les tests du dépôt ? PUR, et volontairement AVARE :
+ * un faux positif fait TAIRE le harness, c'est-à-dire qu'il rend le silence à un
+ * tour qui n'a rien vérifié. Dans le doute, on ne reconnaît pas — le pire coût
+ * d'un faux négatif est un passage de tests qu'on aurait pu s'épargner.
+ *
+ * D'où trois refus nets :
+ * - tout ce qui rend le code de sortie MENTEUR : `||`, `;`, un pipe, un `&`. Seul
+ *   le `&&` passe, parce qu'il propage l'échec — et on n'y regarde alors que le
+ *   DERNIER segment, le seul dont le code de sortie soit celui de la commande.
+ * - le mode watch : il ne rend jamais la main, donc il ne conclut rien.
+ * - les enveloppes qu'on ne sait pas lire (`bash script.sh`, `make test`) : on ne
+ *   peut pas dire ce qu'il y a derrière.
+ */
+export function looksLikeTestCommand(command: string): boolean {
+  const raw = command.trim();
+  if (raw === "") return false;
+  // Un pipe rend le code du dernier maillon, `;` ne propage rien, `&` détache, une
+  // substitution masque tout. Seul le `&&` survit — il propage l'échec.
+  if (/[|;`]|\$\(|(?<!&)&(?!&)/.test(raw)) return false;
+  if (/(^|\s)(--watch|-w)(\s|$)|--watch=|--ui(\s|$)/.test(raw)) return false;
+
+  const last = raw.split("&&").pop()!.trim();
+  const tokens = last.split(/\s+/);
+  while (tokens.length > 0 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0])) tokens.shift();
+  if (tokens.length === 0) return false;
+
+  // `npx` / `pnpm exec` / `pnpm dlx` : ce qui compte est ce qui suit.
+  if (["npx", "pnpx", "bunx"].includes(tokens[0])) tokens.shift();
+  else if (["pnpm", "yarn", "bun", "npm"].includes(tokens[0]) &&
+           ["exec", "dlx"].includes(tokens[1] ?? "")) tokens.splice(0, 2);
+
+  const head = tokens[0] ?? "";
+  const next = (tokens[1] ?? "").replace(/^--$/, "");
+
+  // Le script du projet : `npm test`, `npm t`, `pnpm run test:unit`, `yarn test`.
+  if (["npm", "pnpm", "yarn", "bun"].includes(head)) {
+    const script = next === "run" ? (tokens[2] ?? "") : next;
+    return /^(test|t)(:[\w:-]+)?$/.test(script);
+  }
+  // `go test ./…`, `cargo test`, `python -m pytest`, `dotnet test`.
+  if (["go", "cargo", "dotnet", "swift", "mix"].includes(head)) return next === "test";
+  if (["python", "python3"].includes(head)) return tokens.includes("pytest");
+  // Le runner appelé par son nom, avec ou sans chemin (`./node_modules/.bin/vitest`).
+  return TEST_BINS.has(head.split("/").pop() ?? "");
 }
 
 /** Un échec, tel qu'on le sert : un titre normalisé et son corps. */

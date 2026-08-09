@@ -194,8 +194,10 @@ function argOf(callee: string, prop: string): string | undefined {
 const TURN_STATE_SEEDS: Record<(typeof TURN_STATE)[number], () => string | undefined> = {
   // Une liaison locale : `const editedPaths = new Set(run.checkpoint?.editedPaths ?? [])`.
   editedPaths: () => decls.get("editedPaths")?.initializer?.getText(),
-  // Un argument du crochet de fin de tour, qui possède le verrou depuis MIN-240.
-  repoTouched: () => argOf("makeTurnEndHook", "repoTouched"),
+  // Un argument de la porte de livraison, qui possède le verrou depuis MIN-240
+  // (et qui s'appelait `makeTurnEndHook` jusqu'à MIN-263, quand les contrôles ont
+  // quitté la fin de tour pour le geste `create_pr`).
+  repoTouched: () => argOf("makeDeliveryGate", "repoTouched"),
 };
 
 const TURN_STATE = ["editedPaths", "repoTouched"] as const;

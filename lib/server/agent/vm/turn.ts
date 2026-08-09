@@ -22,7 +22,8 @@ import {
 import { usesApplyPatch } from "../patch";
 import { fitCheckpoint } from "../checkpoint-fit";
 import { newPlanWriteSink, watchPlanWrites } from "../plan-closure";
-import { gateCreatePr, gateWritePlan, makeTurnEndHook } from "../turn-end";
+import { newVerificationSink } from "../diagnostics";
+import { gateCreatePr, gateWritePlan, makeDeliveryGate } from "../delivery-gate";
 import { REPO_INSTRUCTION_FILES, type InstructionsState } from "../repo-instructions";
 import { commitAndPush, changedFiles, type RepoHost } from "../repo-host";
 import { BackgroundJobs } from "../background";
@@ -174,6 +175,10 @@ export async function runVmTurn(
    *  ce que la relecture rend au modèle (MIN-237) et que le contrôle de clôture grep
    *  avant de rendre la main. */
   const planWrites = newPlanWriteSink();
+  /** Ce que le modèle a vérifié lui-même sur ce tour (MIN-262) — rempli par
+   *  `run_command`, périmé par toute édition, lu par la porte de livraison.
+   *  PARTAGÉ avec les filles, comme `editedPaths`. */
+  const verification = newVerificationSink();
   /**
    * Le dernier mot du harness : les quatre contrôles de fin de tour et le budget de
    * chacun, dans un module PARTAGÉ avec la fonction (MIN-240). Les deux moteurs
@@ -182,11 +187,12 @@ export async function runVmTurn(
    *
    * Construit ICI, tôt : `buildCheckpoint` lui demande `repoTouched`.
    */
-  const turnEnd = makeTurnEndHook({
+  const deliveryGate = makeDeliveryGate({
     host,
     emit,
     editedPaths,
     planWrites,
+    verification,
     filesFromSha: job.filesFromSha,
     repoTouched: job.repoTouched,
     logPrefix: "[agent-vm]",
@@ -423,6 +429,7 @@ export async function runVmTurn(
           background: null,
           instructions: { paths: [...REPO_INSTRUCTION_FILES], bytes: 0 },
           editedPaths,
+          verification,
           subagents: null,
           // Le temps restant du TOUR : c'est lui qui borne un `run_command`
           // maintenant, et il se compte en heures. Une commande n'est plus jamais
@@ -560,7 +567,7 @@ export async function runVmTurn(
       ...(editedPaths.size > 0
         ? { editedPaths: [...editedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX) }
         : {}),
-      ...(turnEnd.repoTouched() ? { repoTouched: true } : {}),
+      ...(deliveryGate.repoTouched() ? { repoTouched: true } : {}),
       ...(prInlineComments > 0 ? { prInlineComments } : {}),
     };
   }
@@ -608,26 +615,26 @@ export async function runVmTurn(
       // La PORTE de MIN-247, câblée ICI AUSSI et avec le même crochet : le premier
       // `create_pr` d'un tour qui a touché le dépôt rend le diff au lieu de pousser.
       // La garantie ne doit pas dépendre de `loop_in_vm` — cf. `gateCreatePr`.
-      createPr: createPr ? gateCreatePr(createPr, turnEnd, remainingMs) : null,
+      createPr: createPr ? gateCreatePr(createPr, deliveryGate, remainingMs) : null,
       prTool: job.anchor === "pr" ? platformTool : null,
       // Enveloppé pour NOTER le plan écrit ce tour (MIN-236) : les tools ticket
       // partent au plan de contrôle, donc c'est le seul endroit d'où la boucle voit
       // passer le markdown. Puis la porte de MIN-256, câblée ICI AUSSI et avec le
       // même crochet — la garantie ne doit pas dépendre de `loop_in_vm`.
-      issueTool: gateWritePlan(watchPlanWrites(platformTool, planWrites), turnEnd, remainingMs),
+      issueTool: gateWritePlan(watchPlanWrites(platformTool, planWrites), deliveryGate, remainingMs),
       scratchpadTool: platformTool,
       webSearch,
       outputSeqBase: 0,
       background,
       instructions,
       editedPaths,
+      verification,
       subagents,
       chunkRemainingMs: remainingMs,
       onEdit: liveEditHook(liveEdits, emitLive),
     }),
     // Le MÊME crochet que côté fonction, littéralement (MIN-240) : même chaîne,
     // même ordre, mêmes budgets par bloc — cf. `turn-end.ts`.
-    onTurnEnd: turnEnd.run,
     // Le sommet de chaque round : on en profite pour sauvegarder, à une frontière
     // d'historique sûre (cf. `maybeSaveCheckpoint`).
     pullSteering: async () => {
@@ -681,7 +688,7 @@ export async function runVmTurn(
 
   // Dernier relevé hors crochet : un tour sorti sans passer par la fin de tour
   // (interruption, suspension) a quand même édité le dépôt.
-  turnEnd.noteEdits();
+  deliveryGate.noteEdits();
 
   // Le PUSH. Un échec ne perd pas le tour : il se dit, et le travail reste dans
   // la microVM (le tour suivant le re-poussera).

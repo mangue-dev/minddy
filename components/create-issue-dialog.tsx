@@ -558,7 +558,6 @@ export function CreateIssueDialog({
         <DialogContent
           ref={contentRef}
           className="p-8 max-sm:p-5 data-vaul-drawer:p-0 sm:max-w-2xl"
-          showCloseButton={false}
           onInteractOutside={keepOverlayOpenForPopper}
         >
           <DialogTitle className="sr-only">{t("newIssueTitle")}</DialogTitle>

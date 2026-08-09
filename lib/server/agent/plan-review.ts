@@ -29,7 +29,7 @@ import { REPO_DIR, sq, type RepoHost } from "./repo-host";
  * Jumeau de `plan-closure.ts` (MIN-236), qui attaque le même trou par la
  * complétude plutôt que par la relecture. Les deux sont utiles séparément, et sur
  * un tour de plan ils se servent l'un après l'autre — cf. l'ordre de la chaîne
- * `onTurnEnd` dans execute.ts.
+ * la porte `gateWritePlan` (delivery-gate.ts).
  */
 
 /** Budget mural minimum restant pour servir la relecture. Même seuil que la

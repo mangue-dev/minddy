@@ -43,6 +43,12 @@ import {
 } from "./command-output";
 import { checkCommand, FORBIDDEN_COMMAND_REASON } from "./command-guard";
 import {
+  newVerificationSink,
+  noteVerificationCommand,
+  noteVerificationStale,
+  type VerificationSink,
+} from "./diagnostics";
+import {
   applyEdit,
   diffFiles,
   ReplaceError,
@@ -299,6 +305,13 @@ export interface ExecToolConfig {
       sous-agents : c'est ce que le type-check de fin de tour lit, et une fille qui
       casse un type doit le faire dire. */
   editedPaths: Set<string>;
+  /** Ce que le MODÈLE a vérifié lui-même (MIN-262) : rempli par un `run_command` de
+      tests sorti en 0, périmé par toute édition. Le crochet de fin de tour le lit et
+      ne relance pas ce qui vient de passer vert. PARTAGÉ avec les sous-agents, pour
+      la même raison qu'`editedPaths` : une fille qui édite périme la vérification du
+      parent, sans quoi le harness se tairait sur un dépôt qu'elle vient de changer.
+      Optionnel — sans lui, le crochet relance tout, comme avant. */
+  verification?: VerificationSink;
   /** Registre des sous-agents du chunk (MIN-112). null = jeu d'un sous-agent (la
       hiérarchie est à un niveau) ou vieux checkpoint qui appelle encore ces tools. */
   subagents: Subagents | null;
@@ -333,6 +346,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     chunkRemainingMs,
     onEdit,
   } = cfg;
+  const verification = cfg.verification ?? newVerificationSink();
   let outputSeq = 0;
   /** Images déjà montrées au modèle sur ce chunk (plafond MAX_IMAGES_PER_TURN). */
   let imagesUsed = 0;
@@ -411,9 +425,25 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     // apply_edits, apply_patch) : c'est ici qu'on note ce que le tour a touché,
     // pour le type-check de fin de tour (MIN-110). Un fichier LU n'y entre pas —
     // il n'a rien à faire vérifier.
-    for (const path of paths) if (path) editedPaths.add(path);
+    noteEdited(paths);
     notifyEdit(live ?? paths.filter(Boolean).map((path) => ({ path, status: "modified" as const })));
     return withInstructionsFor(res, paths, "edited");
+  };
+
+  /**
+   * Ce que le tour a touché, noté aux DEUX endroits qui éditent (l'entonnoir
+   * ci-dessus et `delete_file`, qui ne passe pas par lui). Une édition périme la
+   * vérification du modèle (MIN-262) : un `npm test` vert d'il y a trois rounds ne
+   * dit plus rien du fichier qu'on vient de réécrire.
+   */
+  const noteEdited = (paths: readonly string[]) => {
+    let edited = false;
+    for (const path of paths) {
+      if (!path) continue;
+      editedPaths.add(path);
+      edited = true;
+    }
+    if (edited) noteVerificationStale(verification);
   };
 
   /** Le fil, prévenu — jamais avec une liste vide (ce serait un bruit sans objet). */
@@ -635,7 +665,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         // il ne passe pas par `withTouchedInstructions` (rien à charger pour un
         // fichier qui n'est plus là), d'où la note ici. Le fil, lui, doit le voir
         // partir : sans cet appel, une suppression n'apparaissait qu'au commit.
-        if (path) editedPaths.add(path);
+        noteEdited([path]);
         notifyEdit(path ? [{ path, status: "deleted" }] : []);
         return { result: `Deleted ${args.path}`, success: true };
       }
@@ -903,6 +933,11 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
           RUN_COMMAND_TIMEOUT_MS,
         );
         const r = await host.exec(command, { cwd, timeoutMs });
+        // LE GESTE FAIT FOI (MIN-262). Si cette commande est la suite de tests du
+        // dépôt et qu'elle sort en 0, la fin de tour ne la relancera pas : le modèle
+        // décide de la profondeur de sa vérification en la FAISANT, pas en la
+        // promettant. Toute édition qui suit périme la note (cf. `noteEdited`).
+        noteVerificationCommand(verification, command, r.exitCode);
         // Sortie longue → la version COMPLÈTE est déposée dans la sandbox (hors
         // dépôt) et reste relisible via read_file/grep. Best-effort : si l'écriture
         // échoue, le modèle reçoit quand même tête ET queue (MIN-107).

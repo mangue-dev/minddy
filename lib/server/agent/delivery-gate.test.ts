@@ -5,13 +5,12 @@ vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   recordAiUsage: vi.fn(async () => {}),
 }));
 
-// Les cinq contrôles sont moqués : ce fichier ne teste pas ce qu'ils DISENT
-// (chacun a son test), il teste QUI PARLE et COMBIEN DE FOIS — c'est là qu'était
-// le bug, et c'est la seule chose que la chaîne décide.
+// Les contrôles sont moqués : ce fichier ne teste pas ce qu'ils DISENT (chacun a
+// son test), il teste QUI PARLE, QUAND, et COMBIEN DE FOIS.
 vi.mock("./diagnostics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./diagnostics")>()),
   typeErrorsForTurn: vi.fn(async () => "TYPES"),
-  testFailuresForTurn: vi.fn(async () => "TESTS"),
+  testFailuresForTurn: vi.fn(async () => ({ block: "TESTS", scope: "full" as const })),
 }));
 vi.mock("./self-review", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./self-review")>()),
@@ -21,37 +20,41 @@ vi.mock("./plan-review", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./plan-review")>()),
   planReviewForTurn: vi.fn(async () => "PLAN_REVIEW"),
 }));
+// `turnDiffStat` mesure la TAILLE du tour, et c'est elle qui choisit la portée du
+// passage de tests (MIN-262). Moquée ici pour que chaque test dise sa taille ; le
+// défaut est un GROS tour, celui qui paie la suite entière.
+vi.mock("./repo-host", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./repo-host")>()),
+  turnDiffStat: vi.fn(async () => ({
+    files: ["lib/a.ts", "lib/b.ts", "lib/c.ts", "lib/d.ts"],
+    lines: 400,
+    untracked: 0,
+  })),
+}));
 vi.mock("./plan-closure", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./plan-closure")>()),
   planClosureForTurn: vi.fn(async () => "PLAN_CLOSURE"),
 }));
 
-import {
-  gateCreatePr,
-  gateWritePlan,
-  makeTurnEndHook,
-  MAX_TYPE_CHECK_PASSES,
-  reentryReplyRule,
-  REENTRY_REPLY_MAX_CHARS,
-} from "./turn-end";
-import { testFailuresForTurn } from "./diagnostics";
+import { gateCreatePr, gateWritePlan, makeDeliveryGate } from "./delivery-gate";
+import { testFailuresForTurn, typeErrorsForTurn } from "./diagnostics";
+import { turnDiffStat } from "./repo-host";
 import { newPlanWriteSink } from "./plan-closure";
 import { runAgentLoop, type AgentChatMessage } from "./agent-loop";
 import type { RepoHost } from "./repo-host";
 
 /**
- * MIN-240 — LES DEUX CROCHETS DE PLAN NE TOURNAIENT JAMAIS.
+ * MIN-263 — LE HARNESS NE VÉRIFIE PLUS QU'À LA LIVRAISON.
  *
- * Le crochet de fin de tour chaîne quatre blocs au `??` : le premier qui parle rend
- * son message, la boucle le ré-injecte et rappelle le crochet. Mais la boucle ne
- * rappelait que `MAX_TURN_END_REENTRIES` fois, et cette constante valait DEUX. Sur
- * un tour qui édite du code ET écrit un plan — exactement les tours où ils servent —
- * le type-check et l'auto-relecture mangeaient les deux relances, et la relecture de
- * plan comme sa clôture n'étaient jamais appelées une seule fois.
+ * Il n'y a plus de contrôle de fin de tour : quand le modèle répond sans tool-call,
+ * le tour se termine, point. Tout ce que le harness exécute est réclamé par une
+ * PORTE de tool — `create_pr` pour les trois contrôles de code, `write_issue_plan`
+ * pour le plan — donc dans un `followUp`, sans jamais rouvrir un tour terminé ni
+ * coûter une réponse de plus.
  *
- * Deux niveaux, deux tests. Ici la POLITIQUE (le crochet : qui parle, combien de
- * fois), plus bas le GARDE-FOU (la boucle : combien de relances elle accorde). Le
- * bug vivait dans le fait que le second décidait à la place du premier.
+ * Ce fichier teste les deux niveaux : la porte (qui parle, quand, une seule fois) et
+ * la boucle (qu'elle ne rouvre plus rien, ce qui est le seul invariant qui protège
+ * tout le reste).
  */
 
 /** Host inerte : les quatre contrôles sont moqués, `turnDiff` peut rendre du vide. */
@@ -68,9 +71,11 @@ interface HookOpts {
   edited?: string[];
   wrotePlan?: boolean;
   repoTouched?: boolean;
+  /** Ce que le modèle a lancé lui-même et vu passer vert (MIN-262). */
+  greenCommand?: string;
 }
 
-function hookFor(opts: HookOpts = {}) {
+function gateFor(opts: HookOpts = {}) {
   const editedPaths = new Set<string>(opts.edited ?? []);
   const planWrites = newPlanWriteSink();
   if (opts.wrotePlan) {
@@ -78,150 +83,178 @@ function hookFor(opts: HookOpts = {}) {
     planWrites.markdown = "- [ ] Faire la chose dans `lib/x.ts`";
   }
   const phases: string[] = [];
-  const hook = makeTurnEndHook({
+  const verification = { greenCommand: opts.greenCommand ?? null };
+  const gate = makeDeliveryGate({
     host: fakeHost(),
     emit: async (_type, payload) => {
       if (typeof payload.phase === "string") phases.push(payload.phase);
     },
     editedPaths,
     planWrites,
+    verification,
     filesFromSha: "abc123",
     repoTouched: opts.repoTouched ?? false,
     logPrefix: "[test]",
   });
-  return { hook, editedPaths, phases };
+  return { gate, editedPaths, phases, verification };
 }
 
 /** Budget large : aucun bloc n'est empêché par le temps restant. */
 const ROOMY = 600_000;
 
-/** Le bloc SEUL, sans la règle de réponse que `run` colle à tout ce qui sort
- *  (MIN-256). Ce qu'on teste ici est qui parle, pas ce qui accompagne. */
-function block(said: string | null): string | null {
-  return said == null ? null : said.replace(`\n\n${reentryReplyRule()}`, "");
-}
-
 /** Les deux contrôles du plan sont FUSIONNÉS en un bloc depuis MIN-256 : le
  *  modèle y répond d'un seul geste, et ça coûte une réponse de moins. */
 const PLAN = "PLAN_REVIEW\n\n---\n\nPLAN_CLOSURE";
 
-describe("la chaîne de fin de tour", () => {
-  it("fait parler tous les blocs sur un tour qui édite du code ET écrit un plan", async () => {
-    // LE TEST DU TICKET (MIN-240). Avant le correctif, la boucle coupait après le
-    // deuxième : les contrôles de plan n'étaient jamais rendus.
-    const { hook, phases } = hookFor({ edited: ["lib/x.ts"], wrotePlan: true });
-
-    const said: Array<string | null> = [];
-    for (let i = 0; i < 5; i++) said.push(block(await hook.run({ budgetMs: ROOMY })));
-
-    expect(said).toEqual(["TYPES", "TESTS", "DIFF", PLAN, null]);
-    // L'ordre porte du sens : les types d'abord (servir quoi que ce soit par-dessus
-    // un dépôt qui ne compile pas noierait le signal), les tests ensuite — un échec
-    // est un fait, un diff est une question —, le plan en dernier recours.
-    expect(phases).toEqual(["type_check", "tests", "self_review", "plan_check"]);
+describe("la porte de livraison", () => {
+  // Les compteurs d'appels sont l'assertion de plusieurs tests (« le harness n'a
+  // RIEN lancé ») : sans ça, ils liraient les appels du test précédent.
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("borne le type-check à ses deux passages, même si les éditions continuent", async () => {
-    // C'est LUI que le plafond de la boucle bornait en réalité — le seul des cinq
-    // qui n'avait pas de verrou. Sans budget propre, un dépôt qui ne compile pas
-    // affamerait de nouveau les quatre autres.
-    const { hook, editedPaths } = hookFor({ wrotePlan: true });
+  it("sert les trois contrôles en UN bloc, dans l'ordre", async () => {
+    // L'ordre porte du sens : les types d'abord — des échecs de test sur un dépôt
+    // qui ne compile pas ne se lisent même pas —, les échecs ensuite (un échec est
+    // un fait), le diff en dernier (c'est une question).
+    const { gate, phases } = gateFor({ edited: ["lib/x.ts"] });
 
-    const said: Array<string | null> = [];
-    for (let i = 0; i < 6; i++) {
-      editedPaths.add(`lib/fix-${i}.ts`); // le modèle réédite à chaque relance
-      said.push(block(await hook.run({ budgetMs: ROOMY })));
-    }
+    const said = await gate.checkBeforeSubmit(ROOMY);
 
-    expect(said.filter((s) => s === "TYPES")).toHaveLength(MAX_TYPE_CHECK_PASSES);
-    // Et la suite de la chaîne passe quand même : c'est tout l'objet du ticket.
-    expect(said).toEqual(["TYPES", "TYPES", "TESTS", "DIFF", PLAN, null]);
-  });
-
-  it("ne fait parler qu'une fois chacun des contrôles à verrou", async () => {
-    const { hook } = hookFor({ repoTouched: true, wrotePlan: true });
-
-    const said: Array<string | null> = [];
-    for (let i = 0; i < 4; i++) said.push(block(await hook.run({ budgetMs: ROOMY })));
-
-    expect(said).toEqual(["TESTS", "DIFF", PLAN, null]);
-  });
-
-  it("laisse passer la chaîne quand un bloc n'a pas le budget de tourner", async () => {
-    // 50 s : sous le plancher du type-check (60 s), de la suite de tests (180 s)
-    // et de l'auto-relecture (75 s depuis MIN-252, elle grep en plus de son
-    // diff) — au-dessus de celui du contrôle de plan (45 s). Les trois blocs
-    // empêchés ne doivent pas retenir celui qui suit.
-    const { hook, phases } = hookFor({ edited: ["lib/x.ts"], wrotePlan: true });
-
-    const said = [
-      block(await hook.run({ budgetMs: 50_000 })),
-      block(await hook.run({ budgetMs: 50_000 })),
-    ];
-
-    expect(said).toEqual([PLAN, null]);
-    expect(phases).not.toContain("type_check");
-    expect(phases).not.toContain("tests");
-    expect(phases).not.toContain("self_review");
-  });
-
-  it("latche `repoTouched` : le tour a édité, même quand le type-check a vidé la liste", async () => {
-    const { hook, editedPaths } = hookFor({ edited: ["lib/x.ts"] });
-    expect(hook.repoTouched()).toBe(false);
-
-    await hook.run({ budgetMs: ROOMY }); // type-check : vide `editedPaths`
-    expect(editedPaths.size).toBe(0);
-    expect(hook.repoTouched()).toBe(true);
-    // Le verrou tient : les deux blocs qui en dépendent parlent bien ensuite. C'est
-    // exactement pourquoi la suite de tests se garde sur `repoTouched` et non sur
-    // `editedPaths`, que le type-check vient de vider.
-    expect(block(await hook.run({ budgetMs: ROOMY }))).toBe("TESTS");
-    expect(block(await hook.run({ budgetMs: ROOMY }))).toBe("DIFF");
-  });
-
-  it("ne lance pas la suite de tests sur un tour qui n'a rien édité", async () => {
-    const { hook, phases } = hookFor({ wrotePlan: true });
-
-    const said: Array<string | null> = [];
-    for (let i = 0; i < 2; i++) said.push(block(await hook.run({ budgetMs: ROOMY })));
-
-    expect(said).toEqual([PLAN, null]);
-    expect(phases).not.toContain("tests");
-  });
-
-  it("se tait quand la suite est verte — et laisse passer la chaîne", async () => {
-    // Le silence est le bon retour : un « tout va bien » injecté à chaque tour
-    // coûterait un aller-retour modèle pour ne rien dire.
-    vi.mocked(testFailuresForTurn).mockResolvedValueOnce(null);
-    const { hook, phases } = hookFor({ edited: ["lib/x.ts"] });
-
-    const said = [
-      block(await hook.run({ budgetMs: ROOMY })),
-      block(await hook.run({ budgetMs: ROOMY })),
-    ];
-
-    expect(said).toEqual(["TYPES", "DIFF"]);
-    // Mais le passage est bien compté : c'est lui qui dira combien de tours
-    // se terminent en rouge.
+    expect(said).toBe("TYPES\n\n---\n\nTESTS\n\n---\n\nDIFF");
     expect(phases).toEqual(["type_check", "tests", "self_review"]);
   });
 
-  it("note les éditions hors crochet — un tour sorti sans fin de tour a quand même édité", async () => {
-    const { hook, editedPaths } = hookFor();
-    editedPaths.add("lib/x.ts");
-    expect(hook.repoTouched()).toBe(false);
-    hook.noteEdits();
-    expect(hook.repoTouched()).toBe(true);
+  it("ne s'ouvre qu'UNE fois : le second create_pr livre", async () => {
+    // Une porte qui re-vérifie à chaque tentative est une porte qui peut refuser de
+    // s'ouvrir — et un agent qui ne peut plus livrer est pire qu'un agent qui livre
+    // du rouge en le disant.
+    const { gate } = gateFor({ edited: ["lib/x.ts"] });
+
+    expect(await gate.checkBeforeSubmit(ROOMY)).toContain("TYPES");
+    expect(await gate.checkBeforeSubmit(ROOMY)).toBeNull();
   });
 
-  it("se tait entièrement sur un tour qui n'a ni édité ni écrit de plan", async () => {
-    const { hook, phases } = hookFor();
-    expect(await hook.run({ budgetMs: ROOMY })).toBeNull();
+  it("se tait sur un tour qui n'a rien touché", async () => {
+    const { gate, phases } = gateFor();
+    expect(await gate.checkBeforeSubmit(ROOMY)).toBeNull();
     expect(phases).toEqual([]);
+  });
+
+  it("ne rend que le diff quand types et tests sont verts", async () => {
+    // Le silence des deux premiers est le bon retour ; le diff, lui, parle toujours
+    // — c'est une question posée avant la livraison, pas un verdict.
+    vi.mocked(typeErrorsForTurn).mockResolvedValueOnce(null);
+    vi.mocked(testFailuresForTurn).mockResolvedValueOnce({ block: null, scope: "full" });
+    const { gate } = gateFor({ edited: ["lib/x.ts"] });
+
+    expect(await gate.checkBeforeSubmit(ROOMY)).toBe("DIFF");
+  });
+
+  it("laisse passer les contrôles qui n'ont pas le budget de tourner", async () => {
+    // 50 s : sous le plancher du type-check (60 s), d'un passage de tests même
+    // ciblé (90 s) et de l'auto-relecture (75 s). La porte ne doit pas pour autant
+    // retenir la livraison.
+    const { gate, phases } = gateFor({ edited: ["lib/x.ts"] });
+
+    expect(await gate.checkBeforeSubmit(50_000)).toBeNull();
+    expect(phases).toEqual([]);
+  });
+
+  it("latche `repoTouched`, y compris hors de la porte", async () => {
+    // Un tour qui n'ouvre pas de pull request ne franchit jamais la porte : c'est
+    // `noteEdits` qui doit alors dire au checkpoint que le dépôt a bougé.
+    const { gate, editedPaths } = gateFor();
+    expect(gate.repoTouched()).toBe(false);
+    editedPaths.add("lib/x.ts");
+    gate.noteEdits();
+    expect(gate.repoTouched()).toBe(true);
+  });
+
+  /**
+   * MIN-262 — LE GESTE DU MODÈLE FAIT FOI, et il vaut aussi à la livraison : ce
+   * qu'il a vu passer vert sans réédition derrière n'est pas relancé.
+   */
+  it("ne relance pas les tests que le modèle a lancés verts lui-même", async () => {
+    const { gate, phases } = gateFor({
+      edited: ["lib/x.ts"],
+      greenCommand: "npx vitest run lib/x.test.ts",
+    });
+
+    const said = await gate.checkBeforeSubmit(ROOMY);
+
+    expect(said).toBe("TYPES\n\n---\n\nDIFF");
+    expect(testFailuresForTurn).not.toHaveBeenCalled();
+    // Compté quand même : c'est ce qui dira combien de livraisons le modèle vérifie
+    // lui-même, donc si la doctrine du prompt porte.
+    expect(phases).toEqual(["type_check", "tests", "self_review"]);
+  });
+
+  it("lance la suite entière quand le modèle n'a rien lancé", async () => {
+    const { gate } = gateFor({ edited: ["lib/x.ts"] });
+    await gate.checkBeforeSubmit(ROOMY);
+    expect(testFailuresForTurn).toHaveBeenCalledWith(expect.anything(), "full");
+  });
+
+  it("paie un passage CIBLÉ sur un petit tour", async () => {
+    vi.mocked(turnDiffStat).mockResolvedValueOnce({
+      files: ["lib/x.ts"],
+      lines: 1,
+      untracked: 0,
+    });
+    const { gate } = gateFor({ repoTouched: true });
+
+    await gate.checkBeforeSubmit(ROOMY);
+    expect(testFailuresForTurn).toHaveBeenCalledWith(expect.anything(), {
+      related: ["lib/x.ts"],
+      allowFullFallback: true,
+    });
+  });
+
+  it("fait payer la suite entière dès qu'un fichier NEUF apparaît", async () => {
+    // Un fichier neuf est du comportement neuf : c'est exactement ce dont aucun
+    // test existant ne parle (MIN-251), quelle que soit sa taille en lignes.
+    vi.mocked(turnDiffStat).mockResolvedValueOnce({
+      files: ["lib/x.ts"],
+      lines: 2,
+      untracked: 1,
+    });
+    const { gate } = gateFor({ repoTouched: true });
+
+    await gate.checkBeforeSubmit(ROOMY);
+    expect(testFailuresForTurn).toHaveBeenCalledWith(expect.anything(), "full");
+  });
+
+  it("traite un tour de taille INCONNUE comme un gros tour", async () => {
+    // git muet, baseline hors de l'historique shallow : la mesure sert à s'épargner
+    // du travail, pas à s'en dispenser sur un doute.
+    vi.mocked(turnDiffStat).mockResolvedValueOnce(null);
+    const { gate } = gateFor({ repoTouched: true });
+
+    await gate.checkBeforeSubmit(ROOMY);
+    expect(testFailuresForTurn).toHaveBeenCalledWith(expect.anything(), "full");
+  });
+
+  it("ne retombe PAS sur la suite entière quand le budget ne la couvre pas", async () => {
+    // Petit tour, 100 s au compteur : au-dessus du plancher d'un passage ciblé
+    // (90 s), sous celui de la suite entière (180 s). Un runner sans mode ciblé ne
+    // doit pas déclencher, par la bande, les 80 s qu'on essayait d'éviter.
+    vi.mocked(turnDiffStat).mockResolvedValueOnce({
+      files: ["lib/x.ts"],
+      lines: 1,
+      untracked: 0,
+    });
+    const { gate } = gateFor({ repoTouched: true });
+
+    await gate.checkBeforeSubmit(100_000);
+    expect(testFailuresForTurn).toHaveBeenCalledWith(expect.anything(), {
+      related: ["lib/x.ts"],
+      allowFullFallback: false,
+    });
   });
 });
 
-// ── Le garde-fou de la boucle ────────────────────────────────────────────────
+// ── La boucle ne rouvre plus un tour terminé ────────────────────────────────────────────────
 
 interface Choice {
   delta?: Record<string, unknown>;
@@ -265,48 +298,19 @@ function seed(): AgentChatMessage[] {
   ];
 }
 
-describe("le plafond de relances de la boucle", () => {
-  it("ré-injecte les quatre messages d'une chaîne à quatre blocs", async () => {
-    // Le crochet synthétique tient exactement la forme de la vraie chaîne. À
-    // `MAX_TURN_END_REENTRIES = 2`, la boucle s'arrêtait après « TYPES » et
-    // « DIFF » — les deux derniers n'étaient jamais demandés.
-    const blocks = ["TYPES", "DIFF", "PLAN_REVIEW", "PLAN_CLOSURE"];
-    let called = 0;
-    const onTurnEnd = async () => blocks[called++] ?? null;
-
-    const result = await runAgentLoop({
-      messages: seed(),
-      tools: [],
-      model: "test/model",
-      apiKey: "sk-test",
-      baseUrl: "https://example.invalid/v1",
-      runId: "run_test",
-      billTo: { userId: "user_test" },
-      recordUsage: async () => {},
-      softDeadlineMs: 250_000,
-      emit: async () => {},
-      execTool: async () => ({ result: {}, success: true }),
-      onTurnEnd,
-    });
-
-    expect(result.status).toBe("completed");
-    const injected = result.messages.filter((m) => m.role === "user").map((m) => m.content);
-    for (const block of blocks) expect(injected).toContain(block);
-  });
-
+describe("la fin d'un tour", () => {
   /**
-   * LE CÂBLAGE DU BROUILLON. Le crochet ne peut rendre au modèle la réponse qu'il
-   * vient d'écrire que si la boucle la lui passe — et c'est le maillon qui casserait
-   * en silence : sans lui, `reentryReplyRule` retombe sur sa consigne de mémoire,
-   * c'est-à-dire exactement le comportement qu'on corrige.
+   * L'INVARIANT QUI PROTÈGE TOUT LE RESTE (MIN-263). La boucle avait un crochet de
+   * fin de tour : le modèle répondait, le harness reprenait la parole, le tour
+   * repartait, et le modèle répondait une SECONDE fois — c'est cette réponse-là que
+   * l'utilisateur lisait. Trois tickets ont tenté de rendre ça vivable (la règle qui
+   * interdit de répondre au contrôle, puis le brouillon rendu au modèle) avant qu'on
+   * ne retire la cause. Le crochet n'existe plus ; ce test est ce qui empêche de le
+   * réintroduire sans s'en rendre compte.
    */
-  it("passe au crochet la réponse que la relance va déclasser", async () => {
-    const seen: Array<string | undefined> = [];
-    let called = 0;
-    const onTurnEnd = async (opts: { previousReply?: string }) => {
-      seen.push(opts.previousReply);
-      return called++ === 0 ? "TYPES" : null;
-    };
+  it("se termine sur la réponse du modèle — le harness ne la rouvre pas", async () => {
+    const fetchMock = vi.fn(async () => new Response(sseText("Done.")));
+    vi.stubGlobal("fetch", fetchMock);
 
     const result = await runAgentLoop({
       messages: seed(),
@@ -320,51 +324,26 @@ describe("le plafond de relances de la boucle", () => {
       softDeadlineMs: 250_000,
       emit: async () => {},
       execTool: async () => ({ result: {}, success: true }),
-      onTurnEnd,
     });
 
     expect(result.status).toBe("completed");
-    // `sseText` fait répondre « Done. » à chaque round : c'est le brouillon.
-    expect(seen).toEqual(["Done.", "Done."]);
-  });
-
-  it("arrête un crochet qui ne se tait jamais", async () => {
-    // Le plafond reste un garde-fou : un crochet qui rendrait un message à chaque
-    // appel retiendrait le tour indéfiniment.
-    let called = 0;
-    const onTurnEnd = async () => `AGAIN ${called++}`;
-
-    const result = await runAgentLoop({
-      messages: seed(),
-      tools: [],
-      model: "test/model",
-      apiKey: "sk-test",
-      baseUrl: "https://example.invalid/v1",
-      runId: "run_test",
-      billTo: { userId: "user_test" },
-      recordUsage: async () => {},
-      softDeadlineMs: 250_000,
-      emit: async () => {},
-      execTool: async () => ({ result: {}, success: true }),
-      onTurnEnd,
-    });
-
-    expect(result.status).toBe("completed");
-    // Borné, et au-dessus du pire cas réel de la chaîne (2 + 1 + 1 + 1 = 5) : le
-    // plafond ne doit jamais être ce qui choisit les blocs qui tournent.
-    expect(called).toBeGreaterThan(5);
-    expect(called).toBeLessThanOrEqual(9);
+    expect(result.reply).toBe("Done.");
+    // UN SEUL appel modèle : rien n'a été réinjecté derrière la réponse.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Et rien n'a été poussé dans le fil après le message `user` d'origine.
+    expect(result.messages.filter((m) => m.role === "user")).toHaveLength(1);
   });
 });
 
 /**
- * MIN-247 — LE PREMIER `create_pr` NE SOUMET PAS.
+ * MIN-247, puis MIN-263 — LE PREMIER `create_pr` NE SOUMET PAS, ET C'EST LÀ QUE TOUT
+ * SE VÉRIFIE.
  *
- * Le harness faisait DÉJÀ relire son diff au modèle, mais en fin de tour — après
- * que `create_pr` a poussé et ouvert la pull request. L'ordre réel était : PR
- * ouverte, corps rédigé, relecteur notifié, puis relecture. Ce que la porte
- * change n'est pas le nombre de rounds (le verrou est partagé, la fin de tour ne
- * repose pas la question) : c'est le MOMENT.
+ * `create_pr` pousse et ouvre la pull request AU MOMENT DE L'APPEL : sans porte,
+ * l'ordre réel serait PR ouverte, corps rédigé, relecteur notifié, puis vérification.
+ * La porte déplace le contrôle juste avant la livraison — et depuis qu'il n'y a plus
+ * rien en fin de tour, c'est le seul endroit où le harness exécute quoi que ce soit
+ * sur le code.
  */
 describe("la porte de create_pr", () => {
   const opener = () => {
@@ -378,16 +357,18 @@ describe("la porte de create_pr", () => {
     };
   };
 
-  it("rend le diff au premier appel, ouvre au second", async () => {
-    const { hook } = hookFor({ repoTouched: true });
+  it("rend les contrôles au premier appel, ouvre au second", async () => {
+    const { gate } = gateFor({ edited: ["lib/x.ts"], repoTouched: true });
     const { calls, handler } = opener();
-    const gated = gateCreatePr(handler, hook, () => ROOMY);
+    const gated = gateCreatePr(handler, gate, () => ROOMY);
 
     const first = await gated({ title: "MIN-1: faire la chose" });
     expect(first.success).toBe(true);
-    // Le diff part en `followUp`, pas dans le résultat : celui-ci est capé à 6 000
-    // caractères avec le MILIEU élidé, ce qui d'un diff couperait ce qu'on donne
-    // à lire. Le résultat ne dit que le fait.
+    // Les trois d'un coup, dans le `followUp` et pas dans le résultat : celui-ci est
+    // capé à 6 000 caractères avec le MILIEU élidé, ce qui d'un diff couperait ce
+    // qu'on donne à lire. Le résultat ne dit que le fait.
+    expect(first.followUp).toContain("TYPES");
+    expect(first.followUp).toContain("TESTS");
     expect(first.followUp).toContain("DIFF");
     expect(first.result).toMatchObject({ opened: false });
     expect(String((first.result as { note: string }).note)).toContain("call create_pr again");
@@ -398,37 +379,36 @@ describe("la porte de create_pr", () => {
     expect(calls).toHaveLength(1);
   });
 
-  it("ne repose pas la question en fin de tour — c'est le même verrou", async () => {
-    const { hook, phases } = hookFor({ edited: ["lib/x.ts"], repoTouched: true });
-    const { handler } = opener();
-    const gated = gateCreatePr(handler, hook, () => ROOMY);
+  it("ne vérifie qu'une fois, même si le modèle enchaîne les tentatives", async () => {
+    const { gate, phases } = gateFor({ edited: ["lib/x.ts"], repoTouched: true });
+    const { calls, handler } = opener();
+    const gated = gateCreatePr(handler, gate, () => ROOMY);
 
-    expect((await gated({ title: "t" })).followUp).toContain("DIFF");
+    expect((await gated({ title: "t" })).followUp).toContain("TYPES");
+    await gated({ title: "t" });
     await gated({ title: "t" });
 
-    // La chaîne de fin de tour : le type-check et les tests parlent, la relecture NON.
-    const said: Array<string | null> = [];
-    for (let i = 0; i < 3; i++) said.push(block(await hook.run({ budgetMs: ROOMY })));
-    expect(said).toEqual(["TYPES", "TESTS", null]);
-    // Et la mesure sait d'où venait la relecture : de la porte, pas de la fin de tour.
-    expect(phases).toEqual(["self_review", "type_check", "tests"]);
+    // Deux ouvertures pour trois appels : le premier a servi les contrôles, les
+    // suivants livrent. Et les contrôles n'ont tourné qu'UNE fois.
+    expect(calls).toHaveLength(2);
+    expect(phases).toEqual(["type_check", "tests", "self_review"]);
   });
 
   it("ouvre du premier coup quand le tour n'a rien touché", async () => {
     // Une PR sur du travail poussé au tour précédent : il n'y a pas de diff de CE
     // tour à relire, donc rien à faire attendre.
-    const { hook } = hookFor({ repoTouched: false });
+    const { gate } = gateFor({ repoTouched: false });
     const { calls, handler } = opener();
-    const gated = gateCreatePr(handler, hook, () => ROOMY);
+    const gated = gateCreatePr(handler, gate, () => ROOMY);
 
     expect((await gated({ title: "t" })).success).toBe(true);
     expect(calls).toHaveLength(1);
   });
 
   it("ouvre du premier coup quand il ne reste plus de budget pour relire", async () => {
-    const { hook } = hookFor({ repoTouched: true });
+    const { gate } = gateFor({ edited: ["lib/x.ts"], repoTouched: true });
     const { calls, handler } = opener();
-    const gated = gateCreatePr(handler, hook, () => 1_000);
+    const gated = gateCreatePr(handler, gate, () => 1_000);
 
     expect((await gated({ title: "t" })).success).toBe(true);
     expect(calls).toHaveLength(1);
@@ -495,90 +475,6 @@ describe("le mot long d'un tool (followUp)", () => {
   });
 });
 
-/**
- * MIN-256 — LE HARNESS PARLAIT APRÈS LA RÉPONSE, DONC LA RÉPONSE PARLAIT DE LUI.
- *
- * Un bloc de fin de tour arrive une fois le message écrit. Le tour repart, le
- * modèle répond une seconde fois — et c'est celle-là que l'utilisateur lit, la
- * première étant redescendue au rang d'étape dans le fil. Sur un run de plan, le
- * message visible devenait « j'ai vérifié, le plan tient », et il fallait remonter
- * la trace pour retrouver ce que le tour avait fait.
- *
- * Trois leviers, testés ici : la RÈGLE collée à toute réinjection, le contrôle du
- * plan déplacé sur le GESTE (donc plus aucune réponse de plus), et la FUSION des
- * deux contrôles de plan en un seul bloc.
- */
-describe("la règle de réponse des réinjections", () => {
-  it("accompagne tout bloc de fin de tour, quel qu'il soit", async () => {
-    const { hook } = hookFor({ edited: ["lib/x.ts"], wrotePlan: true });
-    const said: Array<string | null> = [];
-    for (let i = 0; i < 5; i++) said.push(await hook.run({ budgetMs: ROOMY }));
-
-    for (const s of said.filter(Boolean)) expect(s).toContain(reentryReplyRule());
-    // Elle est collée SOUS le bloc : ce que le modèle doit lire d'abord, c'est le
-    // contrôle. Et elle ne s'invente pas un bloc quand il n'y en a pas.
-    expect(said[0]!.indexOf("TYPES")).toBeLessThan(said[0]!.indexOf(reentryReplyRule()));
-    expect(said[4]).toBeNull();
-  });
-
-  it("dit au modèle que sa prochaine réponse est la SEULE que l'utilisateur verra", () => {
-    // La formulation est le correctif : sans elle, le bloc demande implicitement
-    // de répondre AU CONTRÔLE, et c'est ce que le modèle faisait.
-    expect(reentryReplyRule()).toContain("ONLY message the user will see");
-    expect(reentryReplyRule()).toContain("do not reply about this check");
-  });
-
-  /**
-   * LE CORRECTIF DE MIN-249 bis. La règle ci-dessus était DÉJÀ là, en dernière
-   * position du bloc, sur le run f80dca09 — et le seul message que l'utilisateur a
-   * lu de ce tour fut « La revue est terminée : aucun problème n'a été trouvé ».
-   * Demander au modèle de refaire son résumé de mémoire ne suffit pas ; on lui rend
-   * donc son brouillon et on lui demande de le RENVOYER amendé.
-   */
-  it("rend au modèle le brouillon que la réinjection vient de déclasser", async () => {
-    const { hook } = hookFor({ edited: ["lib/x.ts"] });
-    const draft = "Fait : inversion de l'ordre des commits, avec son test.";
-    const said = await hook.run({ budgetMs: ROOMY, previousReply: draft });
-
-    expect(said).toContain(draft);
-    expect(said).toContain("<your_draft_reply>");
-    expect(said).toMatch(/send the draft above again, in full/i);
-    // Le bloc de contrôle reste au-dessus : le brouillon accompagne, il ne noie pas.
-    expect(said!.indexOf("TYPES")).toBeLessThan(said!.indexOf("<your_draft_reply>"));
-  });
-
-  it("retombe sur la consigne de mémoire quand il n'y a pas de brouillon", async () => {
-    const { hook } = hookFor({ edited: ["lib/x.ts"] });
-    const said = await hook.run({ budgetMs: ROOMY, previousReply: "   " });
-
-    expect(said).not.toContain("<your_draft_reply>");
-    expect(said).toContain("do not reply about this check");
-  });
-
-  it("cape le brouillon rendu, par le MILIEU", async () => {
-    const { hook } = hookFor({ edited: ["lib/x.ts"] });
-    const draft = `DEBUT${"x".repeat(REENTRY_REPLY_MAX_CHARS * 2)}FIN`;
-    const said = await hook.run({ budgetMs: ROOMY, previousReply: draft });
-
-    expect(said).not.toContain(draft);
-    // Ce qui porte le sens d'un résumé est à ses deux bouts, pas au milieu.
-    expect(said).toContain("DEBUT");
-    expect(said).toContain("FIN");
-  });
-
-  it("ne va PAS sur le chemin des tools — là, le modèle n'a pas encore répondu", async () => {
-    const { hook } = hookFor({ repoTouched: true });
-    const gated = gateCreatePr(
-      async () => ({ result: {}, success: true }),
-      hook,
-      () => ROOMY,
-    );
-    const out = await gated({ title: "t" });
-    expect(out.followUp).toContain("DIFF");
-    expect(out.followUp).not.toContain(reentryReplyRule());
-  });
-});
-
 describe("la porte de write_issue_plan", () => {
   const writer = () => {
     const calls: string[] = [];
@@ -592,9 +488,9 @@ describe("la porte de write_issue_plan", () => {
   };
 
   it("rend le contrôle du plan en followUp, sans retenir l'écriture", async () => {
-    const { hook } = hookFor({ wrotePlan: true });
+    const { gate } = gateFor({ wrotePlan: true });
     const { calls, handler } = writer();
-    const gated = gateWritePlan(handler, hook, () => ROOMY);
+    const gated = gateWritePlan(handler, gate, () => ROOMY);
 
     const out = await gated("write_issue_plan", { plan: "- [ ] faire" });
     // À la différence de `create_pr`, la porte ne retient RIEN : le plan est écrit,
@@ -604,39 +500,45 @@ describe("la porte de write_issue_plan", () => {
     expect(out.followUp).toBe(PLAN);
   });
 
-  it("ne repose pas la question en fin de tour — c'est le même verrou", async () => {
-    const { hook, phases } = hookFor({ wrotePlan: true });
-    const gated = gateWritePlan(writer().handler, hook, () => ROOMY);
+  it("ne pose la question qu'une fois", async () => {
+    const { gate, phases } = gateFor({ wrotePlan: true });
+    const gated = gateWritePlan(writer().handler, gate, () => ROOMY);
 
     expect((await gated("write_issue_plan", {})).followUp).toBe(PLAN);
-    // ZÉRO réinjection de fin de tour : c'est tout l'objet du ticket — le tour ne
-    // paie plus une réponse de plus pour ce contrôle.
-    expect(await hook.run({ budgetMs: ROOMY })).toBeNull();
+    // Un second write ne redemande rien : le contrôle relit un plan, il ne commente
+    // pas la correction qui suit.
+    expect((await gated("write_issue_plan", {})).followUp).toBeUndefined();
     expect(phases).toEqual(["plan_check"]);
   });
 
   it("laisse passer les autres tools ticket, et un write raté", async () => {
-    const { hook } = hookFor({ wrotePlan: true });
-    const gated = gateWritePlan(
+    const { gate } = gateFor({ wrotePlan: true });
+    const failing = gateWritePlan(
       async (name) => ({ result: {}, success: name !== "write_issue_plan" }),
-      hook,
+      gate,
       () => ROOMY,
     );
 
-    expect((await gated("append_to_plan", {})).followUp).toBeUndefined();
+    expect((await failing("append_to_plan", {})).followUp).toBeUndefined();
     // Un `write_issue_plan` refusé n'a rien écrit : relire son plan ferait parler
     // le harness d'un document qui n'existe pas.
-    expect((await gated("write_issue_plan", {})).followUp).toBeUndefined();
-    // Et le verrou n'a pas été consommé : la fin de tour garde sa dernière chance.
-    expect(block(await hook.run({ budgetMs: ROOMY }))).toBe(PLAN);
+    expect((await failing("write_issue_plan", {})).followUp).toBeUndefined();
+    // Et le verrou n'a pas été consommé : le prochain write réussi sera relu.
+    const ok = gateWritePlan(writer().handler, gate, () => ROOMY);
+    expect((await ok("write_issue_plan", {})).followUp).toBe(PLAN);
   });
 
-  it("retombe sur la fin de tour quand le budget manquait au moment du geste", async () => {
-    const { hook, phases } = hookFor({ wrotePlan: true });
-    const gated = gateWritePlan(writer().handler, hook, () => 1_000);
+  it("se tait quand le budget manque, sans consommer le verrou", async () => {
+    // Il n'y a plus de fin de tour pour rattraper : ce contrôle-là est simplement
+    // sauté. Mais le verrou reste libre, donc un second write, plus tard dans le
+    // tour, sera relu.
+    const { gate, phases } = gateFor({ wrotePlan: true });
+    const poor = gateWritePlan(writer().handler, gate, () => 1_000);
 
-    expect((await gated("write_issue_plan", {})).followUp).toBeUndefined();
-    expect(block(await hook.run({ budgetMs: ROOMY }))).toBe(PLAN);
-    expect(phases).toEqual(["plan_check"]);
+    expect((await poor("write_issue_plan", {})).followUp).toBeUndefined();
+    expect(phases).toEqual([]);
+
+    const rich = gateWritePlan(writer().handler, gate, () => ROOMY);
+    expect((await rich("write_issue_plan", {})).followUp).toBe(PLAN);
   });
 });
