@@ -67,7 +67,9 @@ export const AGENT_MAX_CONTINUATIONS = 20;
     à large fenêtre (DeepSeek, Claude…). */
 export const AGENT_COMPACT_TOKEN_THRESHOLD = 70_000;
 /**
- * PLAFOND ABSOLU du seuil de compaction, quelle que soit la fenêtre du modèle.
+ * VALEUR CALIBRÉE du seuil de compaction : ce qu'il vaut au prix de référence, et
+ * le PLANCHER sous lequel il ne descend jamais (cf. `agentCompactThreshold`, qui
+ * le transpose au prix du modèle du run — c'était un plafond fixe jusqu'à MIN-248).
  *
  * Fenêtre ≠ budget. Le seuil valait 75 % de la fenêtre, et les modèles qu'on
  * utilise ont des fenêtres de 1 M à 1,05 M → seuil effectif ~787 000 tokens, soit
@@ -87,7 +89,72 @@ export const AGENT_COMPACT_TOKEN_THRESHOLD = 70_000;
  *     harceler les sessions courtes) qui fixe le plancher, pas la rentabilité.
  * À revoir si la distribution des contextes bouge — pas à l'aveugle.
  */
-export const AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000;
+export const AGENT_COMPACT_BASELINE_TOKENS = 120_000;
+/**
+ * Prix d'entrée AUQUEL les 120 000 ci-dessus ont été calibrés : celui du modèle
+ * par défaut de minddy au moment de la mesure (`deepseek/deepseek-v4-flash`,
+ * 0,14 $/Mtok). C'est ce qui rend le plafond TRANSPOSABLE : à ce prix, le prompt
+ * d'un round coûte 0,0168 $, et c'est ce COÛT PAR ROUND — pas le nombre de
+ * tokens — que le plafond borne réellement.
+ */
+export const AGENT_COMPACT_REFERENCE_INPUT_USD_PER_MTOK = 0.14;
+/**
+ * Jusqu'où le plafond peut MONTER pour un modèle bon marché. Deux fois la valeur
+ * calibrée, et la raison est celle de MIN-113 : le plus gros contexte jamais
+ * observé sur l'agent est 158 301 tokens. Un seuil au-delà de 240 000 ne se
+ * déclencherait donc jamais — c'est-à-dire n'existerait pas.
+ */
+export const AGENT_COMPACT_MAX_TOKENS_CEILING = 240_000;
+
+/**
+ * SEUIL DE COMPACTION du run, dérivé du modèle plutôt qu'écrit en dur.
+ *
+ * Le plafond de 120 000 disait une vraie chose — « un round ne doit pas coûter
+ * plus que ça à renvoyer » — mais il la disait en TOKENS, ce qui ne veut dire la
+ * même chose que pour un modèle au même prix. Entre `deepseek-v4-flash`
+ * (0,14 $/Mtok) et `claude-opus-4.8` (5 $/Mtok), le même historique de 120 000
+ * tokens coûte 0,017 $ ou 0,60 $ par round : trente-six fois l'écart, pour un
+ * garde-fou censé borner une dépense.
+ *
+ * Le seuil se lit donc en dollars et se convertit en tokens au prix du modèle.
+ * Trois bornes, et chacune répare une panne connue :
+ *
+ *  - **plancher à `AGENT_COMPACT_BASELINE_TOKENS`** — on ne DESCEND jamais
+ *    sous la valeur calibrée, même pour un modèle très cher. Compacter plus tôt
+ *    n'économise rien : le modèle rachète en relectures ce qu'on lui retire, et
+ *    c'est exactement MIN-248. Un modèle cher garde donc le comportement
+ *    d'aujourd'hui, à l'octet près.
+ *  - **plafond à `AGENT_COMPACT_MAX_TOKENS_CEILING`** — un seuil que les runs
+ *    n'atteignent jamais ne s'est jamais déclenché (MIN-113).
+ *  - **et toujours ≤ 75 % de la fenêtre** : le budget ne peut pas dépasser ce que
+ *    le modèle sait lire.
+ *
+ * `inputUsdPerMTok` inconnu (provider BYOK hors catalogue OpenRouter) ou nul
+ * (modèle gratuit) → on retombe sur la valeur calibrée. Ignorer le prix n'est pas
+ * une licence de monter : c'est une raison de ne pas bouger.
+ */
+export function agentCompactThreshold(opts: {
+  contextWindow?: number | null;
+  inputUsdPerMTok?: number | null;
+}): number {
+  const fromWindow = opts.contextWindow
+    ? Math.floor(opts.contextWindow * 0.75)
+    : AGENT_COMPACT_TOKEN_THRESHOLD;
+
+  const price = opts.inputUsdPerMTok;
+  const affordable =
+    typeof price === "number" && Number.isFinite(price) && price > 0
+      ? Math.floor(
+          (AGENT_COMPACT_BASELINE_TOKENS * AGENT_COMPACT_REFERENCE_INPUT_USD_PER_MTOK) / price,
+        )
+      : AGENT_COMPACT_BASELINE_TOKENS;
+
+  const budget = Math.min(
+    Math.max(affordable, AGENT_COMPACT_BASELINE_TOKENS),
+    AGENT_COMPACT_MAX_TOKENS_CEILING,
+  );
+  return Math.min(fromWindow, budget);
+}
 /** Taille (octets) de la queue récente préservée verbatim lors d'une compaction. */
 export const AGENT_COMPACT_KEEP_RECENT_BYTES = 48_000;
 /** On ne lance pas de compaction (appel LLM en plus) s'il reste moins que ça de budget. */

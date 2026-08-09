@@ -31,7 +31,7 @@ export const TOOL_RESULT_MAX_CHARS = 6000;
 /**
  * Octets de sortie de tools (les plus récents) protégés de l'élagage.
  *
- * 400 Ko ≈ 100 k tokens, du même ordre que `AGENT_COMPACT_ABSOLUTE_MAX_TOKENS`
+ * 400 Ko ≈ 100 k tokens, du même ordre que `AGENT_COMPACT_BASELINE_TOKENS`
  * (120 k) : élaguer est le geste qui PRÉCÈDE la compaction, pas celui qui la
  * remplace. Les 40 Ko d'origine (MIN-46) valaient ~7 fenêtres de `read_file` —
  * un ordre de grandeur sous le seuil de compaction, donc le seul des deux

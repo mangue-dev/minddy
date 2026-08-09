@@ -286,6 +286,23 @@ export async function getModelContextWindow(
 }
 
 /**
+ * Prix d'ENTRÉE du modèle (USD par million de tokens), pour dimensionner le seuil
+ * de compaction : ce que le seuil borne est le coût de renvoyer l'historique à
+ * chaque round, et ce coût-là n'a de sens qu'au prix du modèle
+ * (`agentCompactThreshold`). Même source et mêmes limites que la fenêtre —
+ * OpenRouter seulement ; `null` hors de là, et l'appelant retombe sur la valeur
+ * calibrée plutôt que d'extrapoler sur une ignorance.
+ */
+export async function getModelInputPrice(
+  model: string,
+  provider: AgentProviderId,
+  apiKey: string,
+): Promise<number | null> {
+  if (provider !== "openrouter") return null;
+  return (await getOpenRouterModelInfo(model, apiKey))?.pricing?.inputUsdPerMTok ?? null;
+}
+
+/**
  * Le modèle du run accepte-t-il une image en entrée ? Décide si `read_resource`
  * RENVOIE la maquette au lieu d'en décrire les métadonnées (MIN-111), et si le
  * prompt annonce la capacité. Même source que la fenêtre de contexte : l'index

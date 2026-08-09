@@ -125,6 +125,7 @@ import {
 import {
   resolveAgentApiKey,
   getModelContextWindow,
+  getModelInputPrice,
   supportsImageInput,
 } from "./model";
 import {
@@ -1356,8 +1357,13 @@ export async function executeAgentRun(
       token: string,
     ) => reopenIfRejectedWorkPushedOn(landing, pushed, token);
 
-    // Fenêtre de contexte du modèle (OpenRouter) → seuil de compaction adapté.
-    const contextWindow = await getModelContextWindow(run.model, provider, apiKey).catch(() => null);
+    // Fenêtre de contexte ET prix d'entrée du modèle (OpenRouter) : le seuil de
+    // compaction se dérive des deux — la fenêtre le BORNE, le prix le DIMENSIONNE.
+    // Une seule lecture d'index sert les deux (cache de process).
+    const [contextWindow, inputUsdPerMTok] = await Promise.all([
+      getModelContextWindow(run.model, provider, apiKey).catch(() => null),
+      getModelInputPrice(run.model, provider, apiKey).catch(() => null),
+    ]);
 
     // Budget du chunk : temps restant du drain − marge, borné par la config.
     const softDeadlineMs = chunkSoftDeadlineMs(opts.deadlineMs, Date.now() - callStart);
@@ -1587,6 +1593,7 @@ export async function executeAgentRun(
         llmPlaceholderKey: AGENT_LLM_PLACEHOLDER_KEY,
         reasoningLevel: run.reasoning_level,
         contextWindow,
+        inputUsdPerMTok,
         anchor,
         writesToRepo,
         interactive: !run.routine_id,
@@ -1799,6 +1806,7 @@ export async function executeAgentRun(
           // sa dépense n'était alors imputée au run par personne.
           onSpend: job.onSpend,
           contextWindow: job.model ? null : contextWindow,
+          inputUsdPerMTok: job.model ? null : inputUsdPerMTok,
           // Plafond CUMULATIF : une fille reprise ne repart pas avec quinze rounds
           // neufs à chaque chunk, sinon le garde-fou anti-runaway ne borne rien.
           // Toujours ≥ 1 ici : le cas « plafond atteint » est sorti plus haut, en
@@ -1994,6 +2002,7 @@ export async function executeAgentRun(
       refreshBudgetUsd: maybeRefreshBudget,
       chunkSpend,
       contextWindow,
+      inputUsdPerMTok,
       // Le token de forge ne sort ni dans un event ni dans le checkpoint (MIN-239).
       redact: secrets.redact,
       execTool: makeExecTool({

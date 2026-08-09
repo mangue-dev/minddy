@@ -388,6 +388,7 @@ export async function runVmTurn(
         chunkSpend: turnSpend,
         onSpend: jobOpts.onSpend,
         contextWindow: jobOpts.model ? null : job.contextWindow,
+        inputUsdPerMTok: jobOpts.model ? null : job.inputUsdPerMTok,
         maxRounds: roundsLeft,
         usageSeqStart: jobOpts.resumeUsageSeq ?? subagentUsageSeq(jobOpts.slot),
         signal: jobOpts.signal,
@@ -577,6 +578,7 @@ export async function runVmTurn(
     refreshBudgetUsd: maybeRefreshBudget,
     chunkSpend: turnSpend,
     contextWindow: job.contextWindow,
+    inputUsdPerMTok: job.inputUsdPerMTok,
     // Le token de forge ne sort ni dans un event ni dans le checkpoint (MIN-239).
     redact: secrets.redact,
     execTool: makeExecTool({

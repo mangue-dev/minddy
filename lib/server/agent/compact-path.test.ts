@@ -19,7 +19,7 @@ vi.mock("./prune", async (importOriginal) => {
 import { runAgentLoop, type AgentChatMessage } from "./agent-loop";
 import { pruneToolOutputs, PRUNE_STUB } from "./prune";
 import { COMPACT_SUMMARY_PREFIX, SUMMARIZE_INSTRUCTION, estimateTokens } from "./compact";
-import { AGENT_COMPACT_ABSOLUTE_MAX_TOKENS } from "@/lib/agent-models";
+import { AGENT_COMPACT_BASELINE_TOKENS } from "@/lib/agent-models";
 
 /**
  * Le CHEMIN COMPLET de la gestion de contexte, exercé pour de vrai (MIN-113).
@@ -246,7 +246,7 @@ describe("chemin complet de compaction", () => {
     expect(estimateTokens(messages)).toBeGreaterThan(200_000);
     expect(estimateTokens(messages)).toBeLessThan(700_000);
     // La propriété défendue : le plafond mord AVANT les 75 % d'une fenêtre de 1 M.
-    expect(AGENT_COMPACT_ABSOLUTE_MAX_TOKENS).toBeLessThan(200_000);
+    expect(AGENT_COMPACT_BASELINE_TOKENS).toBeLessThan(200_000);
 
     responses = [
       () => new Response(sseText("summary", 100_000)),

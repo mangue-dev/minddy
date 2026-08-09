@@ -88,6 +88,9 @@ export interface VmJob {
   llmPlaceholderKey: string;
   reasoningLevel: ReasoningLevel;
   contextWindow: number | null;
+  /** Prix d'entrée du modèle (USD/Mtok) — dimensionne le seuil de compaction, qui
+   *  borne un COÛT par round et non un nombre de tokens. `null` = inconnu. */
+  inputUsdPerMTok: number | null;
 
   // ── Ce que le tour a le droit de faire ────────────────────────────────────
   anchor: AgentAnchor;

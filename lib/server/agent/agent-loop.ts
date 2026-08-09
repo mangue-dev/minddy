@@ -49,7 +49,7 @@ import { ToolLoopDetector } from "./tool-loop";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 import {
   AGENT_COMPACT_TOKEN_THRESHOLD,
-  AGENT_COMPACT_ABSOLUTE_MAX_TOKENS,
+  agentCompactThreshold,
   AGENT_COMPACT_KEEP_RECENT_BYTES,
   AGENT_COMPACT_MIN_BUDGET_MS,
   AGENT_RUN_TIMEOUT_MS,
@@ -456,10 +456,16 @@ export interface RunAgentLoopParams {
    */
   onSpend?: (usd: number) => void;
   /**
-   * Fenêtre de contexte (tokens) du modèle, si connue → seuil de compaction =
-   * 75 % de cette fenêtre. Absent = seuil par défaut `AGENT_COMPACT_TOKEN_THRESHOLD`.
+   * Fenêtre de contexte (tokens) du modèle, si connue → borne haute du seuil de
+   * compaction (75 % de cette fenêtre). Absent = `AGENT_COMPACT_TOKEN_THRESHOLD`.
    */
   contextWindow?: number | null;
+  /**
+   * Prix d'ENTRÉE du modèle (USD/Mtok), si connu. C'est lui qui dimensionne le
+   * seuil de compaction : le plafond borne un coût par round, pas un nombre de
+   * tokens (cf. `agentCompactThreshold`). Absent → valeur calibrée.
+   */
+  inputUsdPerMTok?: number | null;
   execTool: ExecuteAgentTool;
   /**
    * Substitue les secrets du run (le token de forge) dans les sorties de tools,
@@ -1507,17 +1513,14 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
   // des appels joués. Propre à cette boucle, donc à ce chunk — et une fille a la
   // sienne.
   const toolLoop = new ToolLoopDetector();
-  // Seuil de compaction : 75 % de la fenêtre du modèle si connue, sinon défaut —
-  // mais TOUJOURS borné par le plafond absolu. Une fenêtre de 1 M donnerait sinon
-  // un seuil de ~787 000 tokens, que nos runs n'atteignent jamais : c'est ce qui
-  // a fait que la compaction n'a jamais tourné (MIN-113). Ce qui plafonne une
-  // session longue est le coût par round, pas la fenêtre.
-  const compactThreshold = Math.min(
-    params.contextWindow
-      ? Math.floor(params.contextWindow * 0.75)
-      : AGENT_COMPACT_TOKEN_THRESHOLD,
-    AGENT_COMPACT_ABSOLUTE_MAX_TOKENS,
-  );
+  // Seuil de compaction, dérivé du MODÈLE : ce qui plafonne une session longue est
+  // le coût de renvoyer l'historique à chaque round, pas la fenêtre (MIN-113) — et
+  // ce coût-là dépend du prix d'entrée. L'arithmétique et ses trois bornes vivent
+  // dans `agentCompactThreshold`, pure et testée.
+  const compactThreshold = agentCompactThreshold({
+    contextWindow: params.contextWindow,
+    inputUsdPerMTok: params.inputUsdPerMTok,
+  });
   // Taille de contexte réelle du dernier appel (prompt_tokens rapportés) — plus
   // fiable que l'estimation caractères/4 pour décider de compacter.
   let lastPromptTokens: number | null = null;

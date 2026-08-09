@@ -137,6 +137,7 @@ function job(over: Partial<VmJob> = {}): VmJob {
     llmPlaceholderKey: "minddy-placeholder",
     reasoningLevel: "medium",
     contextWindow: null,
+    inputUsdPerMTok: null,
     anchor: "issue",
     writesToRepo: true,
     interactive: true,
