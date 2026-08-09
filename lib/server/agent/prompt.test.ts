@@ -588,6 +588,48 @@ describe("buildAgentSystemPrompt — jobs de fond", () => {
 });
 
 /**
+ * MIN-253 : l'étape 3 disait de LANCER les tests du dépôt, jamais d'en ÉCRIRE un —
+ * une consigne satisfaite à vide pour un comportement neuf, qui n'en a par
+ * définition aucun. Le run de la PR 48 a livré sept fichiers sans ouvrir un seul
+ * des 209 fichiers de test du dépôt. Les trois ancrages sont testés parce que le
+ * prompt se construit par branches : ticket, carnet, et routine (un carnet
+ * `interactive: false`, dont le préfixe diffère vraiment).
+ */
+describe("buildAgentSystemPrompt — écrire le test, pas seulement le lancer", () => {
+  const anchors = [
+    { label: "issue", opts: { anchor: "issue" } as const },
+    { label: "notebook", opts: { anchor: "notebook" } as const },
+    { label: "routine", opts: { anchor: "notebook", interactive: false } as const },
+  ];
+
+  for (const { label, opts } of anchors) {
+    it(`exige le test du comportement ajouté, dans le même tour (ancrage ${label})`, () => {
+      const prompt = buildAgentSystemPrompt(opts);
+      expect(prompt).toMatch(/comes WITH ITS TEST, in the same turn/);
+      // Pourquoi la suite existante ne suffit pas : elle ne couvre que le passé.
+      expect(prompt).toMatch(/for new behaviour it passes empty/i);
+      // Et la porte de sortie, dite plutôt que prise en silence.
+      expect(prompt).toMatch(/genuinely has no test suite/i);
+    });
+
+    it(`envoie LIRE un test voisin avant d'en écrire un (ancrage ${label})`, () => {
+      const prompt = buildAgentSystemPrompt(opts);
+      expect(prompt).toMatch(/`read_file` a test that already covers something close/);
+      expect(prompt).toMatch(/runner, the file naming, the fixtures/i);
+    });
+
+    it(`prescrit autre chose que \`curl\` quand il n'y a rien à curl (ancrage ${label})`, () => {
+      const prompt = buildAgentSystemPrompt(opts);
+      expect(prompt).toMatch(/only shows at RUNTIME/);
+      expect(prompt).toMatch(/start the dev server with `run_background`/);
+      // Le cas de la PR 48 : un hook sur un canal temps réel, que `curl` n'atteint pas.
+      expect(prompt).toMatch(/When there is nothing to `curl`/);
+      expect(prompt).toMatch(/throwaway script or a test/i);
+    });
+  }
+});
+
+/**
  * MIN-109 : trois frottements mesurés sur `agent_run_events`. Le prompt porte les
  * deux qui se disent (le troisième, `apply_edits`, est un drapeau côté harness) —
  * le modèle préfixait un `cd` dans 13 % des commandes, souvent vers le répertoire

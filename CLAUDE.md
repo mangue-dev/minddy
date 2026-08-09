@@ -124,6 +124,36 @@ Deux réflexes qui vont avec :
   avec `npm install --package-lock-only --legacy-peer-deps` (le dépôt porte un
   conflit de peers tiptap préexistant qui bloque npm sans ce drapeau).
 
+## Tests : un comportement neuf vient avec le sien
+
+```bash
+npx vitest run                       # 211 fichiers, 2 785 cas, 18 s
+npx vitest run lib/server/agent      # un dossier, quand on itère
+```
+
+**Le lancer avant de répondre, sur tout ce qui touche au comportement.**
+`npm run typecheck` ne le remplace pas : il dit que les types s'accordent, pas
+que le code fait ce qu'on croit. La feature de la PR 48 compilait — elle
+s'abonnait à un canal temps réel et n'en redescendait jamais. Un type-check vert
+ne dit rien d'un cycle de vie, et la suite ne dit rien d'un comportement que
+personne n'a écrit : **ce qu'on ajoute vient avec son test, dans le même geste.**
+
+Ces 211 fichiers sont la meilleure documentation du dépôt, et la plus invisible :
+on ne tombe pas dessus, il faut aller les ouvrir. **Avant d'écrire un test, en
+lire un qui ressemble** — il donne la forme, les mocks et la frontière, et il
+évite d'inventer un décor que le voisin a déjà construit :
+
+| Ce qu'on teste | L'exemple à ouvrir |
+| --- | --- |
+| Logique pure (pas d'IO) | [prune.test.ts](lib/server/agent/prune.test.ts) — on appelle, on assert, rien à monter |
+| Une boucle qui parle à une API | [compact-path.test.ts](lib/server/agent/compact-path.test.ts) — faux `fetch`, et espion sur le vrai module pour voir ce qui n'est PAS appelé |
+| Un tool de l'agent | [apply-edits-noop.test.ts](lib/server/agent/apply-edits-noop.test.ts) — `RepoHost` en mémoire, le vrai tool par-dessus |
+| Une surface serveur | [control-plane.test.ts](lib/server/agent/control-plane.test.ts) — on ne moque que ce qui SORT du process (base, direct, ledger) |
+
+Cas particulier déjà traité plus haut : le contrat i18n, dont
+`lib/i18n-contract.test.ts` est le garde-fou — à lancer dès qu'on touche à
+`messages/*.json` ou qu'on ajoute un `t(...)`.
+
 ## Travail de fond : une promesse détachée meurt avec la réponse
 
 Dans une requête, tout travail hors chemin critique — horodatage d'usage, purge
