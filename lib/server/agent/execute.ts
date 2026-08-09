@@ -901,12 +901,32 @@ export async function executeAgentRun(
           // la branche de tête n'existe pas dans le dépôt de base (cf.
           // `clonePullRequest`). Aucune identité de committer à résoudre — rien
           // ne sera commité.
+          //
+          // La base du diff est demandée à la FORGE (MIN-258), pas déduite du
+          // clone : `origin/<base>` est un tip vivant, et differ contre lui
+          // ferait passer pour une suppression de la PR tout commit fusionné dans
+          // la base depuis son ouverture. Best-effort des deux côtés — un merge
+          // base illisible dégrade la relecture, il ne l'annule pas. La tête est
+          // donnée par son SHA : sur un fork, son nom de branche n'existe pas ici.
+          const baseSha = await forge
+            .getMergeBaseSha({
+              token: target.token,
+              repoFullName: target.repoFullName,
+              number: prRun.number,
+              base: baseBranch,
+              head: prRun.headSha ?? prRun.headBranch ?? "",
+            })
+            .catch((err: unknown) => {
+              console.error(`[agent] merge base unreadable for PR #${prRun.number}:`, err);
+              return null;
+            });
           await clonePullRequest(sandboxHost(fresh), {
             authUrl: target.authUrl,
             baseBranch,
             headRef: pullRequestHeadRef(prRun.provider, prRun.number),
             headBranch: prRun.headBranch,
             localBranch: workBranch,
+            baseSha,
           });
           return;
         }

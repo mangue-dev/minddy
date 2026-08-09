@@ -1134,6 +1134,24 @@ describe("buildAgentSystemPrompt — ancrage pull request", () => {
     }
   });
 
+  /**
+   * MIN-258, côté prompt système. Il PROMETTAIT que `git diff origin/<base>`
+   * était « the change, in full ». Deux exigences ici, et la seconde compte
+   * autant : nommer la bonne ancre, et dire ce que vaut le repli — un agent qui
+   * ne trouve pas `pr-base` retombera de lui-même sur `origin/<base>`, et doit
+   * savoir à ce moment-là que la liste de la forge fait autorité sur le périmètre.
+   */
+  it("ancre le diff sur la base de la forge, et dit ce que vaut le repli", () => {
+    expect(prompt).toContain("git diff pr-base");
+    expect(prompt).not.toMatch(/that is the change, in full/);
+    expect(prompt).toMatch(/LIVE tip of the base branch/);
+    expect(prompt).toMatch(/inverted/);
+    // Le repli, et de quoi trancher un fichier douteux sans deviner.
+    expect(prompt).toContain("git rev-parse -q --verify pr-base");
+    expect(prompt).toContain('"Files changed" list');
+    expect(prompt).toContain("git log origin/<base> -1 -- <file>");
+  });
+
   it("impose l'exploration hors diff, puis UNE synthèse après les ancres", () => {
     expect(prompt).toMatch(/OPEN the code the diff does not show/);
     expect(prompt).toMatch(/follow|other callers/i);
@@ -1207,8 +1225,26 @@ describe("buildPrReviewContextMessage", () => {
     const msg = buildPrReviewContextMessage(base);
     expect(msg).toContain("acme/app");
     expect(msg).toContain("feat/search");
-    expect(msg).toContain("git diff origin/main");
+    expect(msg).toContain("git diff pr-base");
     expect(msg).not.toContain("```diff");
+  });
+
+  /**
+   * MIN-258. L'amorce disait « start with `git diff origin/main` », et se
+   * contredisait avec la liste « Files changed » juste en dessous : celle-là
+   * vient de la forge (diff à trois points), celui-ci comparait au tip VIVANT de
+   * la base. Une PR ouverte il y a trois jours, un commit fusionné dans `main`
+   * entre-temps, et ces fichiers apparaissaient INVERSÉS — la relecture les
+   * commentait publiquement comme des suppressions de la PR.
+   */
+  it("ancre le diff sur la base de la forge, pas sur le tip vivant", () => {
+    const msg = buildPrReviewContextMessage(base);
+    expect(msg).toContain("`pr-base`");
+    expect(msg).not.toMatch(/Start with `git diff origin\/main`/);
+    // Et `origin/main` reste NOMMÉ, pour ce qu'il est : le piège doit être dit,
+    // pas seulement évité — le modèle connaît la commande et la tenterait seul.
+    expect(msg).toMatch(/live tip of the base branch/);
+    expect(msg).toMatch(/not part of this pull request/);
   });
 
   // Le corps, le fil et la demande viennent de l'extérieur : chacun arrive

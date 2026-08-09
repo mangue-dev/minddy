@@ -152,7 +152,25 @@ export async function cloneRepo(
  * Le clone reste shallow : `git diff <base>` marche (c'est un diff d'arbres), les
  * diffs à trois points et un `git log` profond n'ont pas d'historique commun à
  * parcourir — le prompt le dit à l'agent.
+ *
+ * D'où `baseSha` (MIN-258), et c'est ce qui rend le diff JUSTE. Sans lui il ne
+ * reste que `git diff origin/<base>`, qui compare au tip VIVANT de la base : un
+ * commit fusionné dans la base depuis l'ouverture de la PR y apparaît INVERSÉ,
+ * comme si la pull request l'avait annulé — et une relecture pose alors des
+ * remarques publiques sur du code que la PR ne touche pas. `baseSha` est la base
+ * du diff que la FORGE sert (`getMergeBaseSha` : merge base vivant chez GitHub,
+ * `diff_refs.base_sha` chez GitLab) : on l'amène dans le clone à profondeur 1 —
+ * un commit, moins d'une seconde — et on le marque du tag `PR_BASE_TAG`. À partir
+ * de là `git diff pr-base` EST le changement de la pull request, et il compte
+ * exactement les mêmes fichiers que la liste « Files changed » de l'amorce.
+ *
+ * Best-effort, délibérément : ce fetch n'est pas une condition du clone. S'il
+ * échoue (sha injoignable, instance qui refuse un `want` par sha), la session
+ * tourne quand même — le prompt décrit alors le repli `origin/<base>` et ce qu'il
+ * vaut. Une relecture qui ne démarre pas coûte plus qu'une relecture prudente.
  */
+/** Tag qui marque, dans le clone de relecture, la base du diff servi par la forge. */
+export const PR_BASE_TAG = "pr-base";
 export async function clonePullRequest(
   host: RepoHost,
   opts: {
@@ -164,6 +182,8 @@ export async function clonePullRequest(
     headBranch: string | null;
     /** Nom local sous lequel la tête est checkoutée. */
     localBranch: string;
+    /** Base du diff servi par la forge, à marquer `pr-base` (cf. en-tête). */
+    baseSha?: string | null;
   },
 ): Promise<void> {
   const wipe = await host.exec(`rm -rf ${sq(REPO_DIR)}`, { cwd: SANDBOX_HOME });
@@ -197,6 +217,27 @@ export async function clonePullRequest(
   const head = await host.exec(setup, { timeoutMs: 120_000 });
   if (head.exitCode !== 0) {
     throw new Error(`pull request checkout failed: ${head.stderr || head.stdout}`);
+  }
+
+  // Sha VALIDÉ avant de partir dans un shell : il vient d'une API de forge, et
+  // `sq` seul suffirait, mais un ref qui n'est pas un sha n'a de toute façon rien
+  // à faire ici — un nom de branche donnerait un tag qui bouge sous l'agent.
+  const baseSha = opts.baseSha?.trim() ?? "";
+  if (!/^[0-9a-f]{7,64}$/i.test(baseSha)) return;
+  const anchor = await host.exec(
+    [
+      `set -e`,
+      `git fetch --depth 1 ${sq(opts.authUrl)} ${sq(baseSha)}`,
+      `git tag -f ${sq(PR_BASE_TAG)} ${sq(baseSha)}`,
+    ].join("\n"),
+    { timeoutMs: 120_000 },
+  );
+  if (anchor.exitCode !== 0) {
+    // Pas une panne de session : le prompt sait décrire le repli. Mais ça se dit,
+    // sinon une relecture dégradée est indiscernable d'une relecture exacte.
+    console.error(
+      `[agent] pr base anchor unavailable (${baseSha}): ${anchor.stderr || anchor.stdout}`,
+    );
   }
 }
 

@@ -7,6 +7,10 @@ import {
   type ReviewCommentLike,
   type ReviewThreadState,
 } from "@/lib/pr-review-threads";
+// Le tag vit avec le clone qui le pose (`clonePullRequest`) : une seule source
+// pour le geste et pour la phrase qui le nomme. `repo-host` est lui aussi sans DB
+// ni import server-only — il part dans le bundle de la microVM.
+import { PR_BASE_TAG } from "./repo-host";
 import { describeTemplates } from "./subagent-templates";
 import type { FavoriteSubagentModel, SubagentMode } from "./subagent";
 
@@ -430,6 +434,15 @@ ${askingSection}${chainSection}## Rules
  * hors diff — c'est-à-dire d'abandonner précisément l'erreur qu'une relecture
  * attrape le mieux, celle de JOINTURE. Ici l'agent a le dépôt : il ouvre les
  * fichiers que le diff ne montre pas, suit les appelants, et vérifie.
+ *
+ * Ce que MIN-258 y a corrigé : ce prompt appelait `git diff origin/<base>` « the
+ * change, in full ». Ce n'en était pas un — `origin/<base>` est le tip VIVANT de
+ * la base, et tout commit fusionné dedans depuis l'ouverture de la PR s'y montre
+ * inversé, comme une suppression de la pull request. Il contredisait au passage
+ * la liste « Files changed » servie juste au-dessus, qui vient de la forge et
+ * n'en dit rien. La base à comparer est donc AMENÉE dans le clone (tag `pr-base`,
+ * cf. `clonePullRequest`), et ce qui reste ici est le repli, dit pour ce qu'il
+ * vaut : un diff qui peut porter des commits qui ne sont pas de la PR.
  */
 function buildPrReviewSystemPrompt(input: {
   locale?: string | null;
@@ -454,8 +467,9 @@ This is a CONVERSATION, not a one-shot pass. You read, you comment on the pull r
 - \`search_issues\` / \`read_issue\` — the ticket this pull request implements, and any other ticket of the project. \`read_resource\` — open a resource of the ticket; a link comes back as its url and title, a file as text inline (${attachments} via a signed URL you can curl).
 
 ## How to read the diff
-The repository is checked out on the pull request's head, and the base branch is at \`origin/<base>\`. So:
-1. **Start with \`git diff origin/<base>\`** — that is the change, in full, and you read it end to end. (The clone is shallow: this diff works, but three-dot diffs and deep \`git log\` have no common history to walk.)
+The repository is checked out on the pull request's head. The tag \`${PR_BASE_TAG}\` marks the commit the FORGE diffed from — so \`git diff ${PR_BASE_TAG}\` is this pull request's change, and it lists exactly the files the "Files changed" section of your context lists. So:
+1. **Start with \`git diff ${PR_BASE_TAG}\`** and read it end to end. (The clone is shallow: this diff works, but three-dot diffs and deep \`git log\` have no common history to walk.)
+   \`origin/<base>\` is NOT that anchor: it is the LIVE tip of the base branch, which may have moved since this pull request opened. A commit merged into the base since then shows up in \`git diff origin/<base>\` **inverted**, as if this pull request had reverted it — comment on that and you are blaming an author, publicly, for a change they did not make. Use \`origin/<base>\` only if \`git rev-parse -q --verify ${PR_BASE_TAG}\` comes back empty (the anchor could not be fetched); then the "Files changed" list is what defines the scope, a file in the diff but absent from that list comes from the base and not from this pull request (\`git log origin/<base> -1 -- <file>\` confirms it), and you leave it alone.
 2. **Then OPEN the code the diff does not show.** This is the part the diff cannot give you: the definition of a function whose call changed, the other callers of a signature that moved, the counterpart of a contract (the message catalogue behind a key, the consumer of a payload field, the migration behind a column). \`grep\` for the symbols the diff touches and read what comes back.
 3. **Verify rather than assume.** When a claim would be a blocker if true, check it: read the file, run the type-check, run the one test that covers it. A finding you verified is worth ten you suspected.
 
@@ -955,7 +969,7 @@ function renderPrFiles(files: PrReviewFileStat[], truncated: boolean): string {
   const notes = [
     over > 0 ? `- … and ${over} more files, not listed here.` : "",
     truncated
-      ? `**The forge's own listing was cut off**, so even this count may be short. \`git diff origin/<base> --stat\` in the repository is the complete answer — use it.`
+      ? `**The forge's own listing was cut off**, so even this count may be short. \`git diff ${PR_BASE_TAG} --stat\` in the repository is the complete answer — use it.`
       : "",
   ].filter(Boolean);
 
@@ -1055,7 +1069,7 @@ export function buildPrReviewContextMessage(input: {
   parts.push(
     `# ${term === "merge request" ? "Merge" : "Pull"} request #${pr.number} — ${pr.title?.trim() || "(untitled)"}\n\n` +
       `Repository **${repo.fullName}**, merging **${pr.headBranch ?? "(unknown head)"}** into **${pr.baseBranch}**.${stateNote}\n\n` +
-      `The repository in your sandbox is checked out on this ${term}'s head, and the base is at \`origin/${pr.baseBranch}\`. Start with \`git diff origin/${pr.baseBranch}\`, then open what the diff does not show.`,
+      `The repository in your sandbox is checked out on this ${term}'s head, and the tag \`${PR_BASE_TAG}\` marks the commit the forge diffed from. Start with \`git diff ${PR_BASE_TAG}\` — that, and not \`git diff origin/${pr.baseBranch}\`, is this ${term}'s change: \`origin/${pr.baseBranch}\` is the live tip of the base branch and can carry commits that are not part of this ${term}. Then open what the diff does not show.`,
   );
 
   const body = pr.body?.trim();
