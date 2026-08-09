@@ -61,6 +61,13 @@ export const CHEATSHEET: CheatsheetSection[] = [
         labelKey: "navProjectSettings",
         keys: [["G"], ["S"]],
       },
+      // Le seul de la section qui ne soit pas un chord : il ne vaut que sur la
+      // page Objectifs, un objectif ouvert, et le bouton le porte déjà en clair.
+      {
+        id: "nav.objectiveIssues",
+        labelKey: "navObjectiveIssues",
+        keys: [["mod", "O"]],
+      },
     ],
   },
   {

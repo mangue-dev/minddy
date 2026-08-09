@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -42,6 +43,9 @@ import {
   type DictateButtonHandle,
 } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
+import { Kbd } from "@/components/ui/kbd";
+import { matchesModCombo } from "@/lib/keyboard/mod-combo";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { useAuth } from "@/lib/auth-context";
 import { useObjectiveTimeline } from "@/lib/use-objective-timeline";
 import { useObjectiveDictation } from "@/lib/use-objective-dictation";
@@ -209,6 +213,7 @@ export function ObjectiveDetail({
   onBusyChange: (busy: boolean) => void;
 }) {
   const { user } = useAuth();
+  const router = useRouter();
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
@@ -230,6 +235,9 @@ export function ObjectiveDetail({
   const fade = useScrollFade<HTMLDivElement>();
   /** Le micro, rangé dans le menu : c'est par là qu'on l'allume. */
   const dictateRef = useRef<DictateButtonHandle>(null);
+  const mod = useModKey();
+  /** Le board du projet, filtré sur cet objectif — le bouton et ⌘O y mènent. */
+  const issuesHref = `/projects/${projectId}?objective=${objective.id}`;
 
   const { items, addComment, updateComment, deleteComment, deleteAttachment } =
     useObjectiveTimeline(objective.id);
@@ -240,6 +248,24 @@ export function ObjectiveDetail({
     descriptionEdited.current = false;
     setEditorKey((k) => k + 1);
   }, [objective.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ⌘O / Ctrl+O : le bouton « voir les tickets » sans la souris. Il porte un
+  // modificateur parce que la page est PLEINE de champs — nom, description,
+  // commentaire : un « O » nu s'écrirait dans l'un d'eux au lieu de naviguer.
+  // Du coup il part aussi depuis un champ, comme la dictée, et `preventDefault`
+  // avale au passage le « ouvrir un fichier » du navigateur.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!matchesModCombo(e, "o")) return;
+      // Un dialog ouvert (la confirmation de suppression) tient l'écran : on ne
+      // l'emporte pas ailleurs sous les doigts de l'utilisateur.
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      e.preventDefault();
+      router.push(issuesHref);
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [router, issuesHref]);
 
   // La dictée réécrit la description sous l'éditeur, qui ne relit pas `value` :
   // l'adopter, c'est le remonter. Jamais pendant qu'on y écrit — une version
@@ -392,11 +418,17 @@ export function ObjectiveDetail({
           <ObjectiveProgressStat progress={progress} tooltip className="mr-1" />
 
           <Button asChild variant="outline" size="sm">
-            <Link href={`/projects/${projectId}?objective=${objective.id}`}>
+            <Link href={issuesHref}>
               <ListTodo />
               {t("viewLinkedIssues", {
                 issues: tIssue("entityPlural").toLowerCase(),
               })}
+              {/* Deux pastilles, comme partout ailleurs : « ⌘O » dans une seule
+                  se lirait comme une touche unique. */}
+              <span className="ml-0.5 inline-flex items-center gap-0.5 opacity-60">
+                <Kbd size="sm">{mod}</Kbd>
+                <Kbd size="sm">O</Kbd>
+              </span>
             </Link>
           </Button>
 
