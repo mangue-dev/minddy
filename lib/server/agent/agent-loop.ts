@@ -821,6 +821,68 @@ function toolArgSummary(name: string, args: Record<string, unknown>): Record<str
   }
 }
 
+/**
+ * Ce qu'un appel de tool a REGARDÉ, réduit à une clé — ou `null` s'il n'a rien
+ * regardé de re-lisible (MIN-248). Deux appels de même clé disent la même chose du
+ * même objet : `pruneToolOutputs` ne garde que le plus récent, et le garde quel que
+ * soit son âge.
+ *
+ * La clé ignore délibérément `offset`/`limit` : c'est exactement par là que
+ * l'amnésie passait. Le modèle relisait le même fichier à des fenêtres différentes,
+ * ce qui n'a jamais valu quatre signatures identiques pour `ToolLoopDetector` et ne
+ * doit pas valoir non plus deux mémoires distinctes ici — un chemin, une lecture.
+ *
+ * Seuls les tools de LECTURE ont une clé. Un `run_command` n'en a pas : son
+ * résultat dépend de l'état du dépôt à l'instant où il a tourné, donc le rejouer
+ * n'est pas le même geste que relire un fichier — et le garder indéfiniment
+ * mentirait sur un état qui a bougé depuis.
+ */
+export function toolMemoryKey(name: string, args: Record<string, unknown>): string | null {
+  switch (name) {
+    case "read_file":
+    case "list_dir":
+      return `${name}:${String(args.path ?? "")}`;
+    case "grep":
+      return `grep:${String(args.pattern ?? "")} ${String(args.path ?? "")} ${String(args.glob ?? "")}`;
+    case "glob":
+      return `glob:${String(args.pattern ?? "")} ${String(args.path ?? "")}`;
+    case "read_resource":
+    case "read_attachment":
+      return `read_resource:${String(args.resource_id ?? args.attachment_id ?? "")}`;
+    case "read_issue":
+      return `read_issue:${String(args.issue ?? "")}`;
+    case "read_feedback":
+      return `read_feedback:${String(args.feedback_post_id ?? "")}`;
+    case "read_scratchpad":
+      return "read_scratchpad";
+    default:
+      return null;
+  }
+}
+
+/**
+ * Table `tool_call_id → clé de mémoire`, lue de l'HISTORIQUE lui-même : les
+ * `tool_calls` des messages assistant portent le nom du tool et ses arguments.
+ *
+ * Le lire plutôt que le mémoriser au fil des rounds est ce qui le fait survivre au
+ * découpage en chunks : un checkpoint rehydraté n'a pas de `Map` en mémoire, mais
+ * il a toujours ses `tool_calls`. Un historique repris garderait sinon zéro lecture
+ * — précisément le cas des runs longs, ceux que MIN-248 répare.
+ */
+function toolMemoryKeys(messages: ReadonlyArray<AgentChatMessage>): Map<string, string> {
+  const keys = new Map<string, string>();
+  for (const m of messages) {
+    if (m.role !== "assistant" || !m.tool_calls?.length) continue;
+    for (const tc of m.tool_calls) {
+      const args = safeParse(tc.function.arguments);
+      if (!args) continue;
+      const key = toolMemoryKey(tc.function.name, args);
+      if (key) keys.set(tc.id, key);
+    }
+  }
+  return keys;
+}
+
 /** Erreur rendue DANS le flux (OpenRouter la pose en objet SSE), MIN-203. */
 interface StreamErrorPayload {
   code?: number | string;
@@ -1630,10 +1692,22 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       parked = false;
     }
 
-    // Durcissement : élague les sorties de tools périmées (protège les ~40 Ko
-    // récents). Réduit le coût par appel et la taille du checkpoint. No-op tant
-    // qu'il n'y a pas ≥20 Ko à récupérer → sans effet sur les runs courts.
-    pruneToolOutputs(messages);
+    // Durcissement : élague les sorties de tools périmées (protège les ~400 Ko
+    // récents, plus la dernière lecture de chaque chemin). Réduit le coût par appel
+    // et la taille du checkpoint.
+    //
+    // SOUS PRESSION SEULEMENT (MIN-248). Élaguer à chaque round, inconditionnellement,
+    // faisait de l'hygiène une panne : le harness bornait la mémoire d'outils à
+    // ~10 k tokens pendant que la compaction attendait 120 k, et c'est le plus serré
+    // des deux qui gouvernait — sans jamais laisser l'autre entrer en jeu. Le seuil
+    // est celui du préavis de contexte : trois paliers dans l'ordre (élagage,
+    // préavis, compaction) au lieu de deux qui se marchent dessus.
+    if ((lastPromptTokens ?? estimateTokens(messages)) >= compactThreshold * CONTEXT_WARNING_RATIO) {
+      const keys = toolMemoryKeys(messages);
+      pruneToolOutputs(messages, {
+        keepLastPerKey: (m) => (m.tool_call_id ? (keys.get(m.tool_call_id) ?? null) : null),
+      });
+    }
 
     // Même hygiène pour les IMAGES (MIN-111) : on garde les plus récentes et on
     // remplace les plus anciennes par une note re-demandable. Une maquette pèse en

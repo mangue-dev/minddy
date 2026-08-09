@@ -28,7 +28,8 @@ import {
   type BackgroundJobRunner,
 } from "./background";
 import { Subagents } from "./subagent";
-import { pruneToolOutputs } from "./prune";
+import { pruneToolOutputs, TOOL_RESULT_MAX_CHARS } from "./prune";
+import type { ReadWindow } from "./repo-host";
 import { resolveWithin } from "./repo-path";
 import { LITERAL_RETRY_NOTE, NO_FILES_IN_SCOPE_NOTE, REGEX_RETRY_NOTE } from "./grep-pattern";
 import {
@@ -131,6 +132,56 @@ function cap(str: string, max: number): string {
 function toNum(v: unknown): number | undefined {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
   return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Ce qu'un `read_file` rend VRAIMENT, pied de page compris (MIN-248).
+ *
+ * Le résultat d'un tool traverse `JSON.stringify` puis `headTail(…,
+ * TOOL_RESULT_MAX_CHARS)`, qui élide le MILIEU. Une lecture de fichier entier de
+ * 45 Ko en ressortait donc à ~6 Ko trouée en son centre — et annoncée COMPLÈTE,
+ * parce que le pied de page ne parlait que de la fenêtre demandée (`win.truncated`),
+ * jamais de cette coupe-là. Le modèle croyait avoir tout lu, ne trouvait pas ce
+ * qu'il cherchait, et relisait.
+ *
+ * On coupe donc ici, par LIGNES ENTIÈRES et par la queue, en mesurant sur le JSON
+ * (c'est lui qui est capé, et l'échappement d'un `\n` ou d'un `\t` y coûte deux
+ * caractères). Le pied de page dit alors la dernière ligne réellement rendue.
+ */
+export function fitReadResult(body: string, win: ReadWindow): string {
+  const fits = (s: string) => JSON.stringify(s).length <= TOOL_RESULT_MAX_CHARS;
+
+  const windowFooter = win.truncated
+    ? `\n\n[Showing lines ${win.startLine}-${win.startLine + win.returnedLines - 1} of ${win.totalLines}. Use offset/limit to read more.]`
+    : "";
+  if (fits(body + windowFooter)) return body + windowFooter;
+
+  // Le corps peut porter un bloc de conventions en tête (MIN-247), qui n'est pas
+  // numéroté : les lignes du fichier sont les `win.returnedLines` DERNIÈRES.
+  const lines = body.split("\n");
+  const prefixLines = Math.max(0, lines.length - win.returnedLines);
+  const cutFooter = (kept: number) => {
+    const shown = Math.max(0, kept - prefixLines);
+    const last = win.startLine + shown - 1;
+    const range =
+      shown > 0
+        ? `showing lines ${win.startLine}-${last} of ${win.totalLines}`
+        : `no file content fit (${win.totalLines} lines)`;
+    return `\n\n[Output truncated to fit the tool result limit: ${range}. Read on with offset=${win.startLine + shown}, or narrow the window with offset/limit.]`;
+  };
+
+  // Recherche dichotomique du nombre de lignes qui tient : une mesure coûte un
+  // `JSON.stringify` du corps, donc on en fait ~log₂(n) et non n.
+  let lo = 0;
+  let hi = lines.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (fits(lines.slice(0, mid).join("\n") + cutFooter(mid))) lo = mid;
+    else hi = mid - 1;
+  }
+  // Même une seule ligne peut déborder (ligne monstrueuse) : `headTail` reste le
+  // filet de la boucle, et le pied de page ne mentirait plus qu'à la marge.
+  return lines.slice(0, Math.max(1, lo)).join("\n") + cutFooter(Math.max(1, lo));
 }
 
 /** Exécuteur du tool `create_pr` (fourni par executeAgentRun, qui a le contexte git/PR). */
@@ -399,18 +450,18 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
           limit: toNum(args.limit),
         });
         if (!win) return { result: "(file not found)", success: false };
-        const footer = win.truncated
-          ? `\n\n[Showing lines ${win.startLine}-${win.startLine + win.returnedLines - 1} of ${win.totalLines}. Use offset/limit to read more.]`
-          : "";
         // Les conventions du sous-dossier arrivent AVEC le fichier qu'on ouvre
         // pour les comprendre, pas après la première édition (MIN-247). Même
         // état, même budget et même « une fois par chemin » que côté édition :
         // un dossier lu puis édité ne sert ses instructions qu'une seule fois.
-        return await withInstructionsFor(
-          { result: (win.content || "(empty file)") + footer, success: true },
+        const withBlock = await withInstructionsFor(
+          { result: win.content || "(empty file)", success: true },
           [path],
           "read",
         );
+        // Le pied de page se décide EN DERNIER, sur le texte réellement rendu —
+        // bloc de conventions compris (MIN-248).
+        return { ...withBlock, result: fitReadResult(String(withBlock.result), win) };
       }
       case "list_dir": {
         const path = args.path ? String(args.path) : ".";

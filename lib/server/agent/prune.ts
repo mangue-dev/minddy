@@ -4,12 +4,14 @@
  *
  * Sur un run long, les plus gros consommateurs de contexte sont les résultats de
  * `read_file`/`grep`/`list_dir`/`glob` lus il y a de nombreux tours : volumineux
- * et périmés (l'agent a déjà agi dessus). On protège les DERNIERS ~40 Ko de sortie
+ * et périmés (l'agent a déjà agi dessus). On protège les DERNIERS ~400 Ko de sortie
  * de tools (contexte récent, encore utile) et on remplace les plus anciens par un
- * marqueur — MAIS seulement si l'on récupère au moins ~20 Ko (sinon on ne touche à
- * rien : pas de churn sur les petits runs). Logique PURE, testable ; appelée à la
- * frontière de round dans agent-loop.ts. Élaguer réduit le coût par appel ET la
- * taille du checkpoint (l'historique EST le checkpoint).
+ * marqueur — MAIS seulement si l'on récupère au moins ~100 Ko (sinon on ne touche à
+ * rien : pas de churn sur les petits runs), et jamais la DERNIÈRE lecture d'un
+ * chemin donné (`keepLastPerKey`, MIN-248). Logique PURE, testable ; appelée à la
+ * frontière de round dans agent-loop.ts, et seulement sous pression de contexte.
+ * Élaguer réduit le coût par appel ET la taille du checkpoint (l'historique EST le
+ * checkpoint).
  *
  * Sûreté : on ne modifie QUE le `content` des messages `role:"tool"` (leur
  * `tool_call_id` et l'appariement tool_call ↔ résultat restent intacts). Les
@@ -26,10 +28,20 @@ import { contentChars, imageCount, stripImages, type AgentContentPart } from "./
  */
 export const TOOL_RESULT_MAX_CHARS = 6000;
 
-/** Octets de sortie de tools (les plus récents) protégés de l'élagage. */
-export const PRUNE_PROTECT_BYTES = 40_000;
+/**
+ * Octets de sortie de tools (les plus récents) protégés de l'élagage.
+ *
+ * 400 Ko ≈ 100 k tokens, du même ordre que `AGENT_COMPACT_ABSOLUTE_MAX_TOKENS`
+ * (120 k) : élaguer est le geste qui PRÉCÈDE la compaction, pas celui qui la
+ * remplace. Les 40 Ko d'origine (MIN-46) valaient ~7 fenêtres de `read_file` —
+ * un ordre de grandeur sous le seuil de compaction, donc le seul des deux
+ * garde-fous à jamais entrer en jeu. Le modèle y perdait ses lectures au bout de
+ * quelques rounds et les rachetait une par une : 83 lectures du même fichier en
+ * 44 minutes, zéro édition (MIN-248).
+ */
+export const PRUNE_PROTECT_BYTES = 400_000;
 /** On n'élague que si l'on récupère au moins autant (évite le churn). */
-export const PRUNE_MINIMUM_BYTES = 20_000;
+export const PRUNE_MINIMUM_BYTES = 100_000;
 /** Marqueur qui remplace une sortie de tool élaguée. */
 export const PRUNE_STUB =
   "[Tool output elided to save context. Re-read the file or re-run the search if you still need it.]";
@@ -51,6 +63,18 @@ interface PrunableMessage {
   role: string;
   content?: string | AgentContentPart[] | null;
 }
+
+/**
+ * Clé de MÉMOIRE d'un résultat de tool : deux résultats de même clé disent la
+ * même chose du même objet (le même fichier lu deux fois, à deux fenêtres près),
+ * et seul le plus récent vaut d'être gardé. Rendre `null` = ce résultat n'a rien
+ * de re-lisible à protéger, il s'élague comme avant.
+ *
+ * La fonction vient de l'APPELANT : `prune.ts` ne connaît ni les noms de tools ni
+ * la forme de leurs arguments (cf. `toolMemoryKeys` dans agent-loop.ts). C'est ce
+ * qui garde ce module pur — et testable sans microVM.
+ */
+export type ToolMemoryKey<T> = (msg: T, index: number) => string | null;
 
 /**
  * Parties image gardées dans TOUT l'historique (MIN-111). L'historique EST le
@@ -102,17 +126,28 @@ export function capHistoryImages<T extends PrunableMessage>(
  * `protectBytes`, on protège ; au-delà, on marque à élaguer. Ne modifie rien si
  * le total récupérable est sous `minimumBytes`. Renvoie le nombre d'octets
  * récupérés (0 si aucun élagage).
+ *
+ * `keepLastPerKey` ajoute une seconde protection, indépendante de l'âge : le
+ * DERNIER résultat de chaque clé survit, aussi vieux soit-il. Un fichier lu vingt
+ * fois n'en garde qu'une lecture ; il n'en garde jamais zéro. Sans elle, le stub
+ * (« relis le fichier si tu en as encore besoin ») se referme en tapis roulant —
+ * le modèle relit, la relecture sort de la fenêtre au round suivant, il relit
+ * encore (MIN-248). Le chemin de SAUVETAGE (`checkpoint-fit.ts`) ne la passe pas :
+ * quand le checkpoint déborde, tout doit pouvoir partir.
  */
 export function pruneToolOutputs<T extends PrunableMessage>(
   messages: T[],
-  opts?: { protectBytes?: number; minimumBytes?: number },
+  opts?: { protectBytes?: number; minimumBytes?: number; keepLastPerKey?: ToolMemoryKey<T> },
 ): number {
   const protectBytes = opts?.protectBytes ?? PRUNE_PROTECT_BYTES;
   const minimumBytes = opts?.minimumBytes ?? PRUNE_MINIMUM_BYTES;
+  const keyOf = opts?.keepLastPerKey;
 
   let remainingProtect = protectBytes;
   let reclaimable = 0;
   const toPrune: number[] = [];
+  /** Clés dont on a déjà croisé le résultat le plus récent (on remonte le temps). */
+  const seenKeys = new Set<string>();
 
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
@@ -124,12 +159,22 @@ export function pruneToolOutputs<T extends PrunableMessage>(
       // `contentChars`, pas aux octets de la base64) ; c'est `capHistoryImages`
       // qui borne son accumulation.
       remainingProtect -= contentChars(m.content);
+      markSeen(keyOf?.(m, i), seenKeys);
       continue;
     }
     if (m.content === PRUNE_STUB) continue; // déjà élagué
     const size = m.content.length;
     if (remainingProtect > 0) {
       remainingProtect -= size; // dans la fenêtre protégée récente
+      // Même dans la fenêtre : la clé est vue, donc les lectures PLUS ANCIENNES du
+      // même fichier s'élaguent normalement. On garde une lecture par clé, pas une
+      // de plus.
+      markSeen(keyOf?.(m, i), seenKeys);
+      continue;
+    }
+    const key = keyOf?.(m, i) ?? null;
+    if (key !== null && !seenKeys.has(key)) {
+      seenKeys.add(key); // dernière lecture de ce chemin : elle reste
       continue;
     }
     reclaimable += size;
@@ -141,4 +186,8 @@ export function pruneToolOutputs<T extends PrunableMessage>(
     messages[i] = { ...messages[i], content: PRUNE_STUB };
   }
   return reclaimable;
+}
+
+function markSeen(key: string | null | undefined, seen: Set<string>): void {
+  if (key) seen.add(key);
 }

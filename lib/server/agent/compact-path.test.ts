@@ -8,7 +8,16 @@ vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   recordAiUsage: vi.fn(async () => {}),
 }));
 
+// Espion SUR le vrai élagage (MIN-248) : ce qu'on veut voir, c'est qu'il ne soit
+// PAS appelé sous le seuil de pression — un no-op interne ne se distingue pas d'un
+// appel évité par l'extérieur, et c'est pourtant tout le sujet du ticket.
+vi.mock("./prune", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./prune")>();
+  return { ...actual, pruneToolOutputs: vi.fn(actual.pruneToolOutputs) };
+});
+
 import { runAgentLoop, type AgentChatMessage } from "./agent-loop";
+import { pruneToolOutputs, PRUNE_STUB } from "./prune";
 import { COMPACT_SUMMARY_PREFIX, SUMMARIZE_INSTRUCTION, estimateTokens } from "./compact";
 import { AGENT_COMPACT_ABSOLUTE_MAX_TOKENS } from "@/lib/agent-models";
 
@@ -110,6 +119,7 @@ let responses: Array<() => Response>;
 beforeEach(() => {
   sent = [];
   responses = [];
+  vi.mocked(pruneToolOutputs).mockClear();
   vi.stubGlobal(
     "fetch",
     vi.fn(async (_url: string, init: { body: string }) => {
@@ -423,5 +433,79 @@ describe("élagage de dernier recours (400 « contexte trop long »)", () => {
     expect(result.status).toBe("error");
     expect(events.some((e) => e.type === "status" && e.payload.phase === "context_trim")).toBe(false);
     expect(result.messages).toHaveLength(before); // rien n'a été élagué
+  });
+});
+
+/**
+ * L'élagage sous PRESSION seulement, et jamais la dernière lecture d'un chemin
+ * (MIN-248). Ces deux propriétés se vérifient au niveau de la BOUCLE : l'unité
+ * `pruneToolOutputs` était déjà juste prise seule — la panne était dans la
+ * cadence de son appel et dans ce qu'on lui laissait ignorer.
+ */
+describe("élagage : soupape de pression, pas rituel de round", () => {
+  /** Un historique LOURD : les sorties de tools y pèsent, comme en production. */
+  function heavyHistory(rounds: number, bytes: number): AgentChatMessage[] {
+    const messages: AgentChatMessage[] = [
+      { role: "system", content: SYSTEM },
+      { role: "user", content: TASK },
+    ];
+    for (let i = 0; i < rounds; i++) {
+      // Le round 0 lit un fichier que PLUS AUCUN round ne relira : sa lecture sort
+      // de la fenêtre protégée dès le premier élagage. C'est exactement celle que
+      // le modèle rachetait, et exactement celle que `keepLastPerKey` garde.
+      const path = i === 0 ? "src/rare.ts" : `src/mod-${i % 2}.ts`;
+      messages.push({
+        role: "assistant",
+        content: `Step ${i}.`,
+        tool_calls: [
+          {
+            id: `call_${i}`,
+            type: "function",
+            function: { name: "read_file", arguments: JSON.stringify({ path, offset: i }) },
+          },
+        ],
+      });
+      messages.push({ role: "tool", tool_call_id: `call_${i}`, content: "y".repeat(bytes) });
+    }
+    return messages;
+  }
+
+  const resultOf = (msgs: AgentChatMessage[], id: string) =>
+    msgs.find((m) => m.role === "tool" && m.tool_call_id === id);
+
+  it("ne tourne PAS du tout sous le seuil de pression", async () => {
+    // LA régression : `pruneToolOutputs(messages)` était appelé à chaque round,
+    // inconditionnellement, sur des runs qui ne montaient jamais.
+    const messages = syntheticHistory(6);
+    responses = [() => new Response(sseText("done", 500))];
+    await runAgentLoop({
+      ...baseParams,
+      messages,
+      contextWindow: 1_000_000, // seuil à 120 k, contexte à ~2 k
+      emit: async () => {},
+    });
+    expect(pruneToolOutputs).not.toHaveBeenCalled();
+  });
+
+  it("tourne sous pression et garde la dernière lecture de CHAQUE chemin", async () => {
+    const messages = heavyHistory(120, 6_000); // ~720 Ko de sorties de tools
+    responses = [() => new Response(sseText("done", 100_000))];
+    const result = await runAgentLoop({
+      ...baseParams,
+      messages,
+      contextWindow: 1_000_000, // seuil absolu de 120 k → élagage dès 84 k
+      emit: async () => {},
+    });
+
+    expect(pruneToolOutputs).toHaveBeenCalled();
+    // Il a bien élagué : sinon le test passerait pour la mauvaise raison.
+    const stubs = result.messages.filter((m) => m.content === PRUNE_STUB);
+    expect(stubs.length).toBeGreaterThan(20);
+
+    // La lecture solitaire du round 0 survit, malgré 119 rounds d'écart.
+    expect(resultOf(result.messages, "call_0")?.content).not.toBe(PRUNE_STUB);
+    // Et une lecture d'un chemin relu plus tard, elle, part.
+    expect(resultOf(result.messages, "call_1")?.content).toBe(PRUNE_STUB);
+    expect(pairingValid(result.messages)).toBe(true);
   });
 });

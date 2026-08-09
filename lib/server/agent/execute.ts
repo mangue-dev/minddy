@@ -323,11 +323,17 @@ const SUBAGENT_HISTORY_MAX_BYTES = 1_500_000;
  * reste au-dessus du budget n'est pas tronqué au hasard : un historique coupé au
  * milieu casse l'appariement tool_call ↔ tool_result et le round-trip échouerait
  * au provider. Mieux vaut renoncer à la reprise et livrer un rapport partiel.
+ *
+ * Les seuils sont ÉCRITS ICI, serrés, et pas ceux de la boucle : ce budget-ci se
+ * compte en OCTETS de checkpoint, pas en fenêtre de modèle. Les défauts de
+ * `prune.ts` ont été desserrés d'un ordre de grandeur (MIN-248) parce qu'ils
+ * gouvernaient la mémoire du modèle ; les appliquer ici ferait renoncer à des
+ * reprises qu'un élagage un peu plus franc sauve.
  */
 function capSubagentHistory(messages: AgentChatMessage[]): AgentChatMessage[] | null {
   if (!messages.length) return null;
   const trimmed = [...messages];
-  pruneToolOutputs(trimmed);
+  pruneToolOutputs(trimmed, { protectBytes: 40_000, minimumBytes: 20_000 });
   return JSON.stringify(trimmed).length <= SUBAGENT_HISTORY_MAX_BYTES ? trimmed : null;
 }
 

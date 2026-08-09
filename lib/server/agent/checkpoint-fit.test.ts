@@ -31,6 +31,11 @@ function toolText(id: string, size: number): AgentChatMessage {
   return { role: "tool", tool_call_id: id, content: "x".repeat(size) };
 }
 
+/** Le `tool_call` d'un `read_file` — ce qui donne sa clé de mémoire au résultat. */
+function readCall(id: string, path: string) {
+  return { id, type: "function" as const, function: { name: "read_file", arguments: JSON.stringify({ path }) } };
+}
+
 /** Un message `tool` porteur d'une image de `size` octets de base64. */
 function toolImage(id: string, size: number): AgentChatMessage {
   return {
@@ -135,6 +140,30 @@ describe("fitCheckpoint", () => {
     // La conversation, elle, tient debout : le tour suivant continue.
     expect(fit.checkpoint.messages).toHaveLength(4);
     expect(fit.checkpoint.messages[3].content).toBe("done");
+  });
+
+  it("rase TOUTES les lectures, même la dernière de chaque chemin", () => {
+    // MIN-248 a donné à l'élagage une mémoire par chemin : la dernière lecture d'un
+    // fichier survit à la boucle, quel que soit son âge. Le chemin de SAUVETAGE, lui,
+    // ne la passe pas — et ne doit jamais la passer. Ici on n'optimise plus le
+    // contexte, on sauve un checkpoint qui déborde des 8 Mo : une lecture épargnée
+    // par principe, c'est le palier suivant (la conversation entière) qui saute.
+    const messages: AgentChatMessage[] = [
+      { role: "system", content: "you are an agent" },
+      { role: "assistant", content: null, tool_calls: [readCall("t1", "src/a.ts")] },
+      toolText("t1", 3_000_000),
+      { role: "assistant", content: null, tool_calls: [readCall("t2", "src/b.ts")] },
+      toolText("t2", 3_000_000),
+      { role: "assistant", content: null, tool_calls: [readCall("t3", "src/c.ts")] },
+      toolText("t3", 3_000_000),
+    ];
+    const fit = fitCheckpoint(checkpoint({ messages }));
+
+    expect(fit.dropped).toEqual(["toolOutputs"]);
+    expect(JSON.stringify(fit.checkpoint).length).toBeLessThanOrEqual(MAX_CHECKPOINT_BYTES);
+    const outputs = fit.checkpoint.messages.filter((m) => m.role === "tool");
+    expect(outputs).toHaveLength(3);
+    expect(outputs.every((m) => m.content === PRUNE_STUB)).toBe(true);
   });
 
   it("ne mute pas l'historique qu'on lui passe", () => {

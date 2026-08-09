@@ -122,11 +122,12 @@ describe("un historique multimodal traverse tout le harness", () => {
   });
 
   it("pruneToolOutputs ne touche PAS un résultat multipart", () => {
-    // Assez de texte ailleurs pour que l'élagage se déclenche vraiment.
+    // Assez de texte ailleurs pour que l'élagage se déclenche vraiment — donc
+    // au-delà des 400 Ko protégés par défaut depuis MIN-248.
     const messages: CompactMessage[] = [
       ...history(),
-      { role: "tool", tool_call_id: "a2", content: "y".repeat(30_000) },
-      { role: "tool", tool_call_id: "a3", content: "z".repeat(60_000) },
+      { role: "tool", tool_call_id: "a2", content: "y".repeat(300_000) },
+      { role: "tool", tool_call_id: "a3", content: "z".repeat(600_000) },
     ];
     const reclaimed = pruneToolOutputs(messages);
     expect(reclaimed).toBeGreaterThan(0);

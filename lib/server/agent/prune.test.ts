@@ -21,7 +21,7 @@ describe("headTail", () => {
  * des messages non-tool, idempotence.
  */
 
-type Msg = { role: string; content?: string | null; tool_call_id?: string };
+type Msg = { role: string; content?: string | null; tool_call_id?: string; path?: string };
 
 const tool = (id: string, bytes: number): Msg => ({
   role: "tool",
@@ -78,6 +78,57 @@ describe("pruneToolOutputs", () => {
     pruneToolOutputs(messages, { protectBytes: 10, minimumBytes: 10 });
     expect(messages[0].content).toBe("y".repeat(500));
     expect(messages[1].content).toBe("z".repeat(500));
+  });
+
+  it("garde la DERNIÈRE lecture de chaque chemin, quel que soit son âge", () => {
+    // 60 lectures réparties sur 3 chemins, aucune dans la fenêtre protégée.
+    const paths = ["a.tsx", "b.tsx", "c.tsx"];
+    const messages: Msg[] = [];
+    for (let i = 0; i < 60; i++) {
+      messages.push({ role: "assistant", content: null });
+      messages.push({ ...tool(`call_${i}`, 100), path: paths[i % 3] });
+    }
+    const reclaimed = pruneToolOutputs(messages, {
+      protectBytes: 0,
+      minimumBytes: 1,
+      keepLastPerKey: (m) => m.path ?? null,
+    });
+
+    // 60 lectures, 3 gardées → 57 élaguées.
+    expect(reclaimed).toBe(57 * 100);
+    const kept = messages.filter((m) => m.role === "tool" && m.content !== PRUNE_STUB);
+    expect(kept.map((m) => m.path).sort()).toEqual(["a.tsx", "b.tsx", "c.tsx"]);
+    // Et ce sont bien les PLUS RÉCENTES : les indices 57, 58, 59.
+    expect(kept.map((m) => m.tool_call_id).sort()).toEqual(["call_57", "call_58", "call_59"]);
+  });
+
+  it("ne garde qu'UNE lecture par chemin, même si la plus récente est déjà protégée", () => {
+    const messages: Msg[] = [
+      { ...tool("old", 100), path: "a.tsx" },
+      { ...tool("mid", 100), path: "a.tsx" },
+      { ...tool("recent", 100), path: "a.tsx" }, // dans la fenêtre protégée
+    ];
+    const reclaimed = pruneToolOutputs(messages, {
+      protectBytes: 100,
+      minimumBytes: 1,
+      keepLastPerKey: (m) => m.path ?? null,
+    });
+    expect(reclaimed).toBe(200);
+    expect(messages[0].content).toBe(PRUNE_STUB);
+    expect(messages[1].content).toBe(PRUNE_STUB);
+    expect(messages[2].content).toBe("x".repeat(100));
+  });
+
+  it("sans clé (chemin de sauvetage du checkpoint), tout part", () => {
+    // `checkpoint-fit.ts` appelle SANS `keepLastPerKey` : quand le checkpoint
+    // déborde des 8 Mo, aucune lecture n'est sacrée.
+    const messages: Msg[] = [
+      { ...tool("a", 100), path: "a.tsx" },
+      { ...tool("b", 100), path: "b.tsx" },
+    ];
+    const reclaimed = pruneToolOutputs(messages, { protectBytes: 0, minimumBytes: 1 });
+    expect(reclaimed).toBe(200);
+    expect(messages.every((m) => m.content === PRUNE_STUB)).toBe(true);
   });
 
   it("est idempotent (les stubs ne sont pas ré-comptés)", () => {
