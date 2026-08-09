@@ -118,7 +118,10 @@ const LIVE_FILE_STATUSES = new Set(["added", "modified", "deleted", "renamed"]);
  * des chemins non vides, un statut connu, et pas plus que le plafond de la liste
  * autoritaire. Rien de ce que la VM invente ne traverse.
  */
-function liveFiles(raw: unknown): { files?: AgentLiveEdit[]; filesTruncated?: boolean } {
+function liveFiles(
+  raw: unknown,
+  claimedTruncated: unknown,
+): { files?: AgentLiveEdit[]; filesTruncated?: boolean } {
   if (!Array.isArray(raw)) return {};
   const files: AgentLiveEdit[] = [];
   for (const item of raw) {
@@ -135,7 +138,12 @@ function liveFiles(raw: unknown): { files?: AgentLiveEdit[]; filesTruncated?: bo
     if (files.length === CHANGED_FILES_CAP) break;
   }
   if (files.length === 0) return {};
-  return { files, filesTruncated: raw.length > files.length };
+  // L'aveu de troncature est celui des DEUX bornes : celle d'ici (ce que le relais
+  // a coupé) et celle de la VM, qui borne déjà au même plafond avant d'envoyer.
+  // Sans le second terme, une liste coupée EN AMONT arrivait avec `raw.length ===
+  // files.length` — donc sans troncature à déclarer, et le fil lisait une liste
+  // bornée comme une liste complète.
+  return { files, filesTruncated: raw.length > files.length || claimedTruncated === true };
 }
 
 /**
@@ -227,7 +235,7 @@ export async function handleControlPlaneRequest(opts: {
         // ne rediffuse pas sa liste telle quelle. Bornée comme celle de fin de tour,
         // et réduite aux deux champs que le fil lit — sinon un payload malformé (ou
         // simplement gros) partirait tel quel sur le topic de tous les abonnés.
-        ...liveFiles(body.files),
+        ...liveFiles(body.files, body.filesTruncated),
         at: Date.now(),
       }),
     );

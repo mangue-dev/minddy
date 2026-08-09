@@ -31,8 +31,8 @@ import {
   commitAndPush,
   revParseHead,
   changedFiles,
-  CHANGED_FILES_CAP,
 } from "./repo-host";
+import { liveEditHook, newLiveEditLog } from "./live-edits";
 import { BackgroundJobs } from "./background";
 import {
   Subagents,
@@ -83,7 +83,6 @@ import {
   makeExecTool,
   readRepoInstructions,
   repoBackgroundRunner,
-  type AgentLiveEdit,
   type CreatePrHandler,
   type WebSearchHandler,
 } from "./exec-tool";
@@ -571,36 +570,19 @@ export async function executeAgentRun(
     return emitChain;
   };
   /**
-   * Fichiers touchés par le CHUNK, dits au fil avant le commit qui les arrête.
-   *
-   * Porté par CHAQUE charge du direct, et pas seulement par celle de l'édition :
-   * une charge de direct est un INSTANTANÉ complet du round (`flushProgress` en
-   * republie l'état entier), et le fil met à `null` ce qu'une charge ne dit pas.
-   * Émis à part, le bloc « fichiers changés » disparaissait donc au premier
-   * `clearLive` — c'est-à-dire à la fin du round suivant, pour ne revenir qu'à
-   * l'édition d'après.
-   *
-   * Une `Map` par chemin : un fichier édité six fois n'apparaît qu'une fois, et la
-   * dernière nouvelle l'emporte (un fichier supprimé après avoir été écrit est
-   * supprimé).
+   * Fichiers touchés par le CHUNK, dits au fil avant le commit qui les arrête —
+   * le même registre que celui de la microVM ([live-edits.ts](live-edits.ts)),
+   * qui porte les règles (une entrée par chemin, la liste sur chaque charge).
    */
-  const liveEdits = new Map<string, AgentLiveEdit>();
+  const liveEdits = newLiveEditLog();
   // Direct du fil : le texte du round pendant qu'il s'écrit, diffusé sur le topic
   // du run. Rien en base — le fil ouvert l'affiche, les autres n'en savent rien.
-  const emitLive: EmitAgentLive = (progress) => {
-    const all = [...liveEdits.values()];
-    // Même plafond que la liste autoritaire de fin de tour, et le même aveu : un
-    // tour qui touche 200 fichiers ne doit pas en diffuser 200 quatre fois par
-    // seconde, et une liste bornée sans le dire se lit comme une liste complète.
-    const filesTruncated = all.length > CHANGED_FILES_CAP;
+  const emitLive: EmitAgentLive = (progress) =>
     broadcastRunStream(run.id, {
       ...progress,
-      ...(all.length > 0
-        ? { files: filesTruncated ? all.slice(0, CHANGED_FILES_CAP) : all, filesTruncated }
-        : {}),
+      ...liveEdits.payload(),
       at: Date.now(),
     });
-  };
   /**
    * Qui paye ce run (MIN-131) : son CRÉATEUR, pas le owner du projet — un membre
    * qui lance un agent chez quelqu'un d'autre consomme son propre budget, et
@@ -1858,6 +1840,12 @@ export async function executeAgentRun(
             // est la fin du chunk, et une commande lancée par une fille la tue
             // aussi sûrement qu'une commande du parent.
             chunkRemainingMs,
+            // Le MÊME registre que le parent, comme `editedPaths` juste au-dessus :
+            // la sandbox est PARTAGÉE (MIN-112), donc un fichier édité par une fille
+            // est un fichier édité par le tour — le `files_changed` de fin de tour
+            // ne les distingue pas non plus. Sans ça, une délégation d'une demi-heure
+            // ne montrait rien au fil, alors que c'est là qu'on regarde le plus.
+            onEdit: liveEditHook(liveEdits, emitLive),
           }),
         });
 
@@ -2056,14 +2044,7 @@ export async function executeAgentRun(
         editedPaths,
         subagents,
         chunkRemainingMs,
-        // Une édition ne fait pas AVANCER le round (ni texte, ni réflexion, ni
-        // tool-call de plus) : la charge est celle d'un round au repos, et c'est
-        // `emitLive` qui y accroche les fichiers. Annoncer `tools: 1` ici mentirait
-        // sur un compteur que le fil lit pour décider si un texte est une réponse.
-        onEdit: (edits) => {
-          for (const edit of edits) liveEdits.set(edit.path, edit);
-          emitLive({ text: "", tools: 0, reasoningActive: false, reasoningMs: 0 });
-        },
+        onEdit: liveEditHook(liveEdits, emitLive),
       }),
       onTurnEnd: turnEnd.run,
       pullSteering: () => pullPendingMessages(run.id),
@@ -2401,8 +2382,7 @@ export async function executeAgentRun(
       // deux se superposeraient dans le fil — la même liste deux fois, l'une sans
       // ses compteurs de lignes. L'ordre compte : effacer AVANT d'émettre laisserait
       // un trou, effacer après ne laisse qu'un remplacement.
-      if (liveEdits.size > 0) {
-        liveEdits.clear();
+      if (liveEdits.clear()) {
         emitLive({ text: "", tools: 0, reasoningActive: false, reasoningMs: 0 });
       }
 

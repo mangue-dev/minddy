@@ -13,6 +13,12 @@ interface LoopParams {
   recordUsage: (line: AgentUsageLine) => Promise<void>;
   pullSteering?: () => Promise<string[]>;
   refreshBudgetUsd?: () => Promise<number | null>;
+  emitLive: (progress: {
+    text: string;
+    tools: number;
+    reasoningActive: boolean;
+    reasoningMs: number;
+  }) => void;
 }
 
 /**
@@ -267,6 +273,98 @@ describe("un tour `suspended` remonte sa CAUSE, pas une phrase fixe", () => {
     expect(report.status).toBe("error");
     expect(report.errorCode).toBeUndefined();
     expect(report.errorMessage).toBe("402 Payment Required");
+  });
+});
+
+/**
+ * MIN-248 bis — le fil voit les fichiers PENDANT le tour, sur ce moteur aussi.
+ *
+ * Le crochet n'existait que côté fonction : sur un projet basculé en `loop_in_vm`
+ * — c'est-à-dire sur celui où on regardait — la liste provisoire n'était jamais
+ * envoyée, et le plan de contrôle lisait un champ `files` que personne ne
+ * remplissait. Rien ne le disait : les deux moteurs type-checkaient, et le test
+ * du crochet exerçait l'exec-tool sans jamais passer par un moteur.
+ */
+describe("les fichiers du tour en cours partent au fil (microVM)", () => {
+  /** Les charges de direct reçues par le plan de contrôle, dans l'ordre. */
+  async function liveOf(
+    during: (params: LoopParams) => Promise<void>,
+  ): Promise<Array<Record<string, unknown>>> {
+    const client = cp();
+    h.duringLoop = during;
+    await runVmTurn(job(), client, host());
+    return vi.mocked(client.emitLive).mock.calls.map(([p]) => p as unknown as Record<string, unknown>);
+  }
+
+  it("annonce une édition dès qu'elle a réussi, sur une charge de round au repos", async () => {
+    const charges = await liveOf(async (params) => {
+      await params.execTool("write_file", { path: "lib/a.ts", content: "const a = 1;\n" }, "c1");
+    });
+    expect(charges).toEqual([
+      {
+        text: "",
+        tools: 0,
+        reasoningActive: false,
+        reasoningMs: 0,
+        files: [{ path: "lib/a.ts", status: "modified" }],
+        filesTruncated: false,
+      },
+    ]);
+  });
+
+  it("reporte la liste sur les charges SUIVANTES — une charge tait, le fil efface", async () => {
+    const charges = await liveOf(async (params) => {
+      await params.execTool("write_file", { path: "lib/a.ts", content: "const a = 1;\n" }, "c1");
+      params.emitLive({ text: "je continue", tools: 1, reasoningActive: false, reasoningMs: 0 });
+    });
+    expect(charges).toHaveLength(2);
+    expect(charges[1]).toMatchObject({
+      text: "je continue",
+      tools: 1,
+      files: [{ path: "lib/a.ts", status: "modified" }],
+    });
+  });
+
+  it("compte AUSSI les éditions d'une fille : la sandbox est partagée", async () => {
+    // Une délégation d'une demi-heure ne montrait rien au fil, alors que c'est là
+    // qu'on regarde le plus. Le `files_changed` de fin de tour, lui, ne distingue
+    // pas non plus la main qui a écrit : c'est le même dépôt.
+    const client = cp();
+    let childTool: ExecuteAgentTool | null = null;
+    h.duringLoop = async (params) => {
+      // La fille tourne sur la MÊME boucle moquée : sans ce garde, son
+      // `duringLoop` relancerait une fille, et ainsi de suite.
+      if (childTool) return;
+      const spawned = await params.execTool(
+        "spawn_agent",
+        { task: "range la cuisine", mode: "implement", expected_output: "un rapport" },
+        "call-spawn",
+      );
+      expect(spawned.success).toBe(true);
+      // `spawn_agent` ne s'attend pas : la fille est lancée en fond, et c'est son
+      // passage dans la boucle moquée qui nous rend son exec-tool.
+      await vi.waitFor(() => expect(h.execTool).not.toBe(params.execTool));
+      childTool = h.execTool;
+    };
+    await runVmTurn(job(), client, host());
+    await childTool!("write_file", { path: "lib/fille.ts", content: "const f = 1;\n" }, "c1");
+    const charges = vi
+      .mocked(client.emitLive)
+      .mock.calls.map(([p]) => p as unknown as Record<string, unknown>);
+    expect(charges.at(-1)).toMatchObject({
+      files: [{ path: "lib/fille.ts", status: "modified" }],
+    });
+  });
+
+  it("ne met AUCUNE clé `files` sur une charge d'un tour qui n'a rien touché", async () => {
+    // `files: []` se lirait comme un signe de vie : le fil garderait sa queue
+    // vivante à l'écran sur un round au repos.
+    const charges = await liveOf(async (params) => {
+      params.emitLive({ text: "je réfléchis", tools: 0, reasoningActive: true, reasoningMs: 120 });
+    });
+    expect(charges).toEqual([
+      { text: "je réfléchis", tools: 0, reasoningActive: true, reasoningMs: 120 },
+    ]);
   });
 });
 

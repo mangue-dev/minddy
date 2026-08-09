@@ -60,7 +60,9 @@ import { AgentEventFeed } from "./agent-event-feed";
 import { AgentRunHistory } from "./agent-run-history";
 import { AgentDiffSheet } from "./agent-diff-sheet";
 import { SubagentActivityBar } from "./subagent-activity-bar";
+import { PlanActivityBar } from "./plan-activity-bar";
 import { turnSubagents } from "@/lib/agent-subagents";
+import { livePlan } from "@/lib/agent-plan";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 
 /**
@@ -323,6 +325,17 @@ export function AgentConversation({
    */
   const subagents = useMemo(
     () => (working ? turnSubagents(liveEvents) : []),
+    [liveEvents, working],
+  );
+  /**
+   * La checklist du tour en cours (`update_plan`) → carte au-dessus du composer.
+   * Mêmes events que le fil, aucune requête de plus. Vide dès que l'agent est au
+   * repos, comme la carte des sous-agents : un plan qui reste affiché après la
+   * réponse décrit un travail déjà rendu, juste au-dessus de l'input où l'on tape
+   * la question suivante. Il revient dès que le nouveau tour en repose un.
+   */
+  const planSteps = useMemo(
+    () => (working ? livePlan(liveEvents) : []),
     [liveEvents, working],
   );
   const activeQuestion = useMemo((): {
@@ -739,17 +752,20 @@ export function AgentConversation({
       {phase !== "loading" && (
         <div className="dock-above-nav shrink-0">
           <div className="mx-auto w-full max-w-[800px]">
-          {/* Une seule chose s'intercale entre le fil et le composer, et elle tient
-              sur UNE ligne, de hauteur fixe. La barre « fichiers changés » vivait
-              ici : elle grandissait d'une ligne à chaque fichier touché et faisait
+          {/* Ce qui s'intercale entre le fil et le composer tient sur UNE ligne,
+              de hauteur fixe, repliée. La barre « fichiers changés » vivait ici :
+              elle grandissait d'une ligne à chaque fichier touché et faisait
               descendre l'input pendant qu'on écrivait. Ce qu'elle disait est passé
               dans l'EN-TÊTE (les deux nombres du diff, et la demande de pull
               request), où rien ne bouge. Le détail par tour, lui, est resté dans le
               fil, sous la réponse qui l'a produit.
-              Ce qui reprend la place, c'est le seul moment où le fil ne peut RIEN
-              dire : pendant qu'un sous-agent travaille, le parent l'attend et
-              n'émet plus rien. La barre ne pousse l'input qu'à ce moment-là, et
-              d'exactement une ligne. */}
+              Ce qui reprend la place, ce sont les deux choses que le fil dit MAL :
+              le plan, qu'il pose une fois et laisse remonter hors de l'écran alors
+              qu'on le consulte tout du long ; et les sous-agents, pendant lesquels
+              le parent attend et n'émet plus rien du tout. Le plan d'abord, les
+              sous-agents ensuite : du plus durable au plus fugace, l'éphémère au
+              contact de l'input. */}
+          {liveRun ? <PlanActivityBar steps={planSteps} /> : null}
           {liveRun && subagents.some((s) => !s.endedAt) ? (
             <SubagentActivityBar subagents={subagents} />
           ) : null}

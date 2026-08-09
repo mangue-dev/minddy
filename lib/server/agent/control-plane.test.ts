@@ -336,6 +336,19 @@ describe("le direct — le topic vient du run, pas du corps", () => {
     expect(h.streamPayloads[0].filesTruncated).toBe(true);
   });
 
+  it("garde l'aveu de troncature de la VM, qui borne DÉJÀ avant d'envoyer", async () => {
+    // La VM coupe au même plafond : sa liste arrive donc entière du point de vue
+    // du relais (`raw.length === files.length`), et sans ce report la troncature
+    // se perdait ici — le fil lisait une liste bornée comme une liste complète.
+    await call("POST", "/stream", {
+      text: "",
+      files: [{ path: "a.ts", status: "modified" }],
+      filesTruncated: true,
+    });
+    await Promise.all(h.afterWork.map((w) => w()));
+    expect(h.streamPayloads[0].filesTruncated).toBe(true);
+  });
+
   it("ne parle pas de fichiers quand il n'y en a pas", async () => {
     // `clearLive` passe par ici : une liste vide ne doit pas devenir un `files: []`
     // que le fil lirait comme « le tour n'a rien touché ».

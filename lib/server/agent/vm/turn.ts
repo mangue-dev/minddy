@@ -4,6 +4,7 @@ import {
   type AgentChatMessage,
   type AgentUsageLine,
   type EmitAgentEvent,
+  type EmitAgentLive,
 } from "../agent-loop";
 import { agentToolsFor, subagentToolsFor } from "../tools";
 import { buildSubagentSystemPrompt } from "../prompt";
@@ -26,6 +27,7 @@ import { REPO_INSTRUCTION_FILES, type InstructionsState } from "../repo-instruct
 import { commitAndPush, changedFiles, type RepoHost } from "../repo-host";
 import { BackgroundJobs } from "../background";
 import { makeExecTool, readRepoInstructions, repoBackgroundRunner } from "../exec-tool";
+import { liveEditHook, newLiveEditLog } from "../live-edits";
 import { SecretRedactor } from "../redact";
 import type { AgentCheckpoint } from "../runs";
 import type { AgentToolImage } from "../content";
@@ -143,6 +145,21 @@ export async function runVmTurn(
 ): Promise<VmTurnReport> {
   const startedAt = Date.now();
   const emit: EmitAgentEvent = (type, payload) => cp.emit(type, payload);
+
+  /**
+   * Les fichiers du tour EN COURS, dits au fil avant le commit — le MÊME registre
+   * que côté fonction ([live-edits.ts](../live-edits.ts)).
+   *
+   * Câblé ICI AUSSI, et c'est tout l'objet de ce passage : la première version ne
+   * l'avait que côté fonction, donc la liste provisoire n'existait sur AUCUN projet
+   * basculé en `loop_in_vm` — le plan de contrôle savait déjà lire un champ `files`
+   * que personne ne lui envoyait jamais.
+   */
+  const liveEdits = newLiveEditLog();
+  /** La charge du direct porte la liste des fichiers, comme le texte du round :
+   *  une charge est un instantané complet, et le fil efface ce qu'elle tait. */
+  const emitLive: EmitAgentLive = (progress) =>
+    cp.emitLive({ ...progress, ...liveEdits.payload() });
 
   /** Fichiers édités depuis le dernier type-check — PARTAGÉ avec les filles. */
   const editedPaths = new Set<string>(job.editedPaths);
@@ -411,6 +428,11 @@ export async function runVmTurn(
           // maintenant, et il se compte en heures. Une commande n'est plus jamais
           // raccourcie parce qu'un chunk se termine.
           chunkRemainingMs: remainingMs,
+          // Le MÊME registre que le parent, comme `editedPaths` juste au-dessus : la
+          // sandbox est PARTAGÉE (MIN-112), donc un fichier édité par une fille est
+          // un fichier édité par le tour — et le `files_changed` de fin de tour ne
+          // les distingue pas davantage.
+          onEdit: liveEditHook(liveEdits, emitLive),
         }),
       });
 
@@ -601,6 +623,7 @@ export async function runVmTurn(
       editedPaths,
       subagents,
       chunkRemainingMs: remainingMs,
+      onEdit: liveEditHook(liveEdits, emitLive),
     }),
     // Le MÊME crochet que côté fonction, littéralement (MIN-240) : même chaîne,
     // même ordre, mêmes budgets par bloc — cf. `turn-end.ts`.
@@ -639,7 +662,7 @@ export async function runVmTurn(
     checkInterrupt: async () => runClosed || (await cp.checkInterrupt()),
     syncPlan: (steps) => cp.syncPlan(steps),
     emit,
-    emitLive: (progress) => cp.emitLive(progress),
+    emitLive,
     usageSeqStart: job.usageSeqStart,
   });
 

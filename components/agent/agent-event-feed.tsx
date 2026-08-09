@@ -13,13 +13,9 @@ import {
   AlertTriangle,
   ArrowDown,
   Brain,
-  CheckCircle2,
-  Circle,
-  CircleDot,
   CircleSlash,
   CloudOff,
   GitCommit,
-  ListChecks,
 } from "lucide-react";
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
@@ -57,8 +53,6 @@ import type { AssistantMessage, AssistantToolCall } from "@/lib/assistant-types"
 
 type ToolResult = { status: "running" | "complete"; result?: unknown; success?: boolean };
 
-type PlanStep = { step: string; status: string };
-
 type MessageItem = {
   kind: "message";
   message: AssistantMessage;
@@ -89,7 +83,6 @@ type FeedItem =
       text: string;
       createdAt: string;
     }
-  | { kind: "plan"; id: string; steps: PlanStep[]; createdAt: string }
   /** Budget d'usage épuisé en cours de run : carte de CLÔTURE du tour (le travail
    *  est poussé, la session reprendra quand le budget revient). */
   | {
@@ -486,12 +479,10 @@ function buildFeed(
         break;
       }
       case "plan_update": {
-        const steps = (Array.isArray(p.plan) ? p.plan : []) as PlanStep[];
-        // Une seule checklist affichée : on remplace la précédente par la plus récente.
-        const prev = items.findIndex((it) => it.kind === "plan");
-        if (prev !== -1) items.splice(prev, 1);
-        current = null;
-        if (steps.length > 0) items.push({ kind: "plan", id: e.id, steps, createdAt: e.created_at });
+        // Rien à rendre ICI : la checklist vit au-dessus du composer
+        // ([plan-activity-bar](./plan-activity-bar.tsx)), où elle reste sous les
+        // yeux au lieu de remonter avec le fil. Elle ne coupe pas le tour non
+        // plus — cocher une étape n'est pas une prise de parole.
         break;
       }
       case "quota_exhausted": {
@@ -751,7 +742,6 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
       />
     );
   }
-  if (it.kind === "plan") return <PlanRow key={it.id} item={it} />;
   if (it.kind === "files") return <FilesRow key={it.id} item={it} onOpenFile={ctx.onOpenFile} />;
   // Avant le repli en note : `renderItem` se termine par un NoteRow fourre-tout,
   // sans cette branche une ligne de réflexion s'y rendrait.
@@ -895,52 +885,6 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
       <GitCommit className="size-4 shrink-0" />
       {t("commitLabel")}
-    </div>
-  );
-}
-
-function PlanRow({ item }: { item: Extract<FeedItem, { kind: "plan" }> }) {
-  const t = useTranslations("Agent");
-  const done = item.steps.filter((s) => s.status === "completed").length;
-  return (
-    <div className="rounded-xl border border-border bg-muted/30 p-3 text-sm">
-      <div className="mb-2 flex items-center gap-2 font-medium text-muted-foreground">
-        <ListChecks className="size-4 shrink-0" />
-        <span>{t("plan")}</span>
-        <span className="text-xs tabular-nums">
-          {done}/{item.steps.length}
-        </span>
-      </div>
-      <ul className="flex flex-col gap-1.5">
-        {item.steps.map((s, i) => {
-          const Icon =
-            s.status === "completed"
-              ? CheckCircle2
-              : s.status === "in_progress"
-                ? CircleDot
-                : s.status === "cancelled"
-                  ? CircleSlash
-                  : Circle;
-          return (
-            <li
-              key={i}
-              className={cn(
-                "flex items-start gap-2",
-                s.status === "completed" && "text-muted-foreground",
-                s.status === "cancelled" && "text-muted-foreground line-through",
-              )}
-            >
-              <Icon
-                className={cn(
-                  "mt-0.5 size-4 shrink-0",
-                  (s.status === "in_progress" || s.status === "completed") && "text-brand",
-                )}
-              />
-              <span>{s.step}</span>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }

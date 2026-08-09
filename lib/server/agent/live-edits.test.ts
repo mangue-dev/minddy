@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { makeExecTool, type AgentLiveEdit } from "./exec-tool";
-import { REPO_DIR, type RepoHost } from "./repo-host";
+import { liveEditHook, newLiveEditLog } from "./live-edits";
+import { CHANGED_FILES_CAP, REPO_DIR, type RepoHost } from "./repo-host";
 
 /**
  * `onEdit` — ce que le fil apprend d'une édition AVANT la fin du tour.
@@ -103,5 +104,73 @@ describe("onEdit — le fil prévenu à l'édition, pas au commit", () => {
       { path: "a.ts", status: "modified" },
       { path: "b.ts", status: "modified" },
     ]);
+  });
+});
+
+/**
+ * Le REGISTRE, celui que la fonction et la microVM tiennent tous les deux. Ce que
+ * ces cas gardent, c'est la règle qui a coûté le plus cher à trouver : la liste
+ * part avec CHAQUE charge, parce qu'une charge est un instantané complet et que le
+ * fil efface ce qu'elle tait.
+ */
+describe("newLiveEditLog", () => {
+  it("ne dit RIEN tant que rien n'a été touché — pas même une liste vide", () => {
+    // Une clé `files: []` en trop suffirait à faire passer un round au repos pour
+    // un signe de vie : le fil ne saurait plus quand effacer la queue vivante.
+    expect(newLiveEditLog().payload()).toEqual({});
+  });
+
+  it("rend la liste ENTIÈRE à chaque charge, pas seulement à celle de l'édition", () => {
+    const log = newLiveEditLog();
+    log.note([{ path: "a.ts", status: "modified" }]);
+    log.note([{ path: "b.ts", status: "added" }]);
+    expect(log.payload()).toEqual(log.payload());
+    expect(log.payload().files?.map((f) => f.path)).toEqual(["a.ts", "b.ts"]);
+  });
+
+  it("une entrée par chemin, et la dernière nouvelle l'emporte", () => {
+    const log = newLiveEditLog();
+    log.note([{ path: "a.ts", status: "modified" }]);
+    log.note([{ path: "a.ts", status: "deleted" }]);
+    expect(log.payload().files).toEqual([{ path: "a.ts", status: "deleted" }]);
+  });
+
+  it("borne la liste et le DIT", () => {
+    const log = newLiveEditLog();
+    log.note(
+      Array.from({ length: CHANGED_FILES_CAP + 5 }, (_, i) => ({
+        path: `f${i}.ts`,
+        status: "modified" as const,
+      })),
+    );
+    expect(log.payload().files).toHaveLength(CHANGED_FILES_CAP);
+    expect(log.payload().filesTruncated).toBe(true);
+  });
+
+  it("`clear` ne rend `true` qu'une fois : rien à rediffuser sur un registre vide", () => {
+    const log = newLiveEditLog();
+    expect(log.clear()).toBe(false);
+    log.note([{ path: "a.ts", status: "modified" }]);
+    expect(log.clear()).toBe(true);
+    expect(log.clear()).toBe(false);
+    expect(log.payload()).toEqual({});
+  });
+});
+
+describe("liveEditHook", () => {
+  it("rediffuse AUSSITÔT, sur une charge de round au repos", () => {
+    // Sans la rediffusion, le fil attendrait la prochaine charge de texte — donc le
+    // prochain round. Et `tools: 1` mentirait : le fil s'en sert pour décider si un
+    // texte est la réponse du tour ou de la narration.
+    const log = newLiveEditLog();
+    const emitLive = vi.fn();
+    liveEditHook(log, emitLive)([{ path: "a.ts", status: "modified" }]);
+    expect(emitLive).toHaveBeenCalledWith({
+      text: "",
+      tools: 0,
+      reasoningActive: false,
+      reasoningMs: 0,
+    });
+    expect(log.payload().files).toEqual([{ path: "a.ts", status: "modified" }]);
   });
 });
