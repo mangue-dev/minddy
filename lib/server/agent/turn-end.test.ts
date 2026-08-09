@@ -31,7 +31,8 @@ import {
   gateWritePlan,
   makeTurnEndHook,
   MAX_TYPE_CHECK_PASSES,
-  REENTRY_REPLY_RULE,
+  reentryReplyRule,
+  REENTRY_REPLY_MAX_CHARS,
 } from "./turn-end";
 import { testFailuresForTurn } from "./diagnostics";
 import { newPlanWriteSink } from "./plan-closure";
@@ -97,7 +98,7 @@ const ROOMY = 600_000;
 /** Le bloc SEUL, sans la règle de réponse que `run` colle à tout ce qui sort
  *  (MIN-256). Ce qu'on teste ici est qui parle, pas ce qui accompagne. */
 function block(said: string | null): string | null {
-  return said == null ? null : said.replace(`\n\n${REENTRY_REPLY_RULE}`, "");
+  return said == null ? null : said.replace(`\n\n${reentryReplyRule()}`, "");
 }
 
 /** Les deux contrôles du plan sont FUSIONNÉS en un bloc depuis MIN-256 : le
@@ -293,6 +294,40 @@ describe("le plafond de relances de la boucle", () => {
     for (const block of blocks) expect(injected).toContain(block);
   });
 
+  /**
+   * LE CÂBLAGE DU BROUILLON. Le crochet ne peut rendre au modèle la réponse qu'il
+   * vient d'écrire que si la boucle la lui passe — et c'est le maillon qui casserait
+   * en silence : sans lui, `reentryReplyRule` retombe sur sa consigne de mémoire,
+   * c'est-à-dire exactement le comportement qu'on corrige.
+   */
+  it("passe au crochet la réponse que la relance va déclasser", async () => {
+    const seen: Array<string | undefined> = [];
+    let called = 0;
+    const onTurnEnd = async (opts: { previousReply?: string }) => {
+      seen.push(opts.previousReply);
+      return called++ === 0 ? "TYPES" : null;
+    };
+
+    const result = await runAgentLoop({
+      messages: seed(),
+      tools: [],
+      model: "test/model",
+      apiKey: "sk-test",
+      baseUrl: "https://example.invalid/v1",
+      runId: "run_test",
+      billTo: { userId: "user_test" },
+      recordUsage: async () => {},
+      softDeadlineMs: 250_000,
+      emit: async () => {},
+      execTool: async () => ({ result: {}, success: true }),
+      onTurnEnd,
+    });
+
+    expect(result.status).toBe("completed");
+    // `sseText` fait répondre « Done. » à chaque round : c'est le brouillon.
+    expect(seen).toEqual(["Done.", "Done."]);
+  });
+
   it("arrête un crochet qui ne se tait jamais", async () => {
     // Le plafond reste un garde-fou : un crochet qui rendrait un message à chaque
     // appel retiendrait le tour indéfiniment.
@@ -479,18 +514,56 @@ describe("la règle de réponse des réinjections", () => {
     const said: Array<string | null> = [];
     for (let i = 0; i < 5; i++) said.push(await hook.run({ budgetMs: ROOMY }));
 
-    for (const s of said.filter(Boolean)) expect(s).toContain(REENTRY_REPLY_RULE);
+    for (const s of said.filter(Boolean)) expect(s).toContain(reentryReplyRule());
     // Elle est collée SOUS le bloc : ce que le modèle doit lire d'abord, c'est le
     // contrôle. Et elle ne s'invente pas un bloc quand il n'y en a pas.
-    expect(said[0]!.indexOf("TYPES")).toBeLessThan(said[0]!.indexOf(REENTRY_REPLY_RULE));
+    expect(said[0]!.indexOf("TYPES")).toBeLessThan(said[0]!.indexOf(reentryReplyRule()));
     expect(said[4]).toBeNull();
   });
 
   it("dit au modèle que sa prochaine réponse est la SEULE que l'utilisateur verra", () => {
     // La formulation est le correctif : sans elle, le bloc demande implicitement
     // de répondre AU CONTRÔLE, et c'est ce que le modèle faisait.
-    expect(REENTRY_REPLY_RULE).toContain("ONLY message the user will see");
-    expect(REENTRY_REPLY_RULE).toContain("do not reply about this check");
+    expect(reentryReplyRule()).toContain("ONLY message the user will see");
+    expect(reentryReplyRule()).toContain("do not reply about this check");
+  });
+
+  /**
+   * LE CORRECTIF DE MIN-249 bis. La règle ci-dessus était DÉJÀ là, en dernière
+   * position du bloc, sur le run f80dca09 — et le seul message que l'utilisateur a
+   * lu de ce tour fut « La revue est terminée : aucun problème n'a été trouvé ».
+   * Demander au modèle de refaire son résumé de mémoire ne suffit pas ; on lui rend
+   * donc son brouillon et on lui demande de le RENVOYER amendé.
+   */
+  it("rend au modèle le brouillon que la réinjection vient de déclasser", async () => {
+    const { hook } = hookFor({ edited: ["lib/x.ts"] });
+    const draft = "Fait : inversion de l'ordre des commits, avec son test.";
+    const said = await hook.run({ budgetMs: ROOMY, previousReply: draft });
+
+    expect(said).toContain(draft);
+    expect(said).toContain("<your_draft_reply>");
+    expect(said).toMatch(/send the draft above again, in full/i);
+    // Le bloc de contrôle reste au-dessus : le brouillon accompagne, il ne noie pas.
+    expect(said!.indexOf("TYPES")).toBeLessThan(said!.indexOf("<your_draft_reply>"));
+  });
+
+  it("retombe sur la consigne de mémoire quand il n'y a pas de brouillon", async () => {
+    const { hook } = hookFor({ edited: ["lib/x.ts"] });
+    const said = await hook.run({ budgetMs: ROOMY, previousReply: "   " });
+
+    expect(said).not.toContain("<your_draft_reply>");
+    expect(said).toContain("do not reply about this check");
+  });
+
+  it("cape le brouillon rendu, par le MILIEU", async () => {
+    const { hook } = hookFor({ edited: ["lib/x.ts"] });
+    const draft = `DEBUT${"x".repeat(REENTRY_REPLY_MAX_CHARS * 2)}FIN`;
+    const said = await hook.run({ budgetMs: ROOMY, previousReply: draft });
+
+    expect(said).not.toContain(draft);
+    // Ce qui porte le sens d'un résumé est à ses deux bouts, pas au milieu.
+    expect(said).toContain("DEBUT");
+    expect(said).toContain("FIN");
   });
 
   it("ne va PAS sur le chemin des tools — là, le modèle n'a pas encore répondu", async () => {
@@ -502,7 +575,7 @@ describe("la règle de réponse des réinjections", () => {
     );
     const out = await gated({ title: "t" });
     expect(out.followUp).toContain("DIFF");
-    expect(out.followUp).not.toContain(REENTRY_REPLY_RULE);
+    expect(out.followUp).not.toContain(reentryReplyRule());
   });
 });
 

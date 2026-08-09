@@ -11,6 +11,7 @@ import {
 } from "./self-review";
 import { planReviewForTurn, PLAN_REVIEW_MIN_BUDGET_MS } from "./plan-review";
 import { planClosureForTurn, PLAN_CLOSURE_MIN_BUDGET_MS } from "./plan-closure";
+import { headTail } from "./prune";
 import { turnDiff, type RepoHost } from "./repo-host";
 import type { PlanWriteSink } from "./plan-closure";
 import type { PlatformToolHandler } from "./exec-tool";
@@ -103,7 +104,47 @@ export const MAX_TYPE_CHECK_PASSES = 2;
  * c'est tout l'intérêt de ce chemin-là : le modèle n'y a pas encore répondu, sa
  * réponse à venir est déjà la seule.
  */
-export const REENTRY_REPLY_RULE = `One last thing about the reply itself: it is the ONLY message the user will see — the one you wrote a moment ago has become a step in the trace. So do not reply about this check. Reply about the TURN: what you did, the files you touched, how you verified it. If this check changed nothing, say what you did anyway, exactly as you would have.`;
+/** Cap du brouillon rendu au modèle. Même ordre de grandeur que le `summary`
+ *  émis par la boucle (8 000) : ce qu'on lui rend doit être ce qu'il a écrit,
+ *  pas un extrait qu'il devrait compléter de mémoire. */
+export const REENTRY_REPLY_MAX_CHARS = 6000;
+
+/**
+ * Repli quand on n'a pas de brouillon à rendre — un appelant qui n'en passe pas
+ * (les tests, un chemin futur). C'est l'ancienne formulation, celle qui demandait
+ * au modèle de se souvenir : gardée comme filet, plus comme mécanisme.
+ */
+const REENTRY_REPLY_RULE_NO_DRAFT = `One last thing about the reply itself: it is the ONLY message the user will see — the one you wrote a moment ago has become a step in the trace. So do not reply about this check. Reply about the TURN: what you did, the files you touched, how you verified it. If this check changed nothing, say what you did anyway, exactly as you would have.`;
+
+/**
+ * LA RÈGLE REND LE BROUILLON, ELLE NE DEMANDE PLUS DE S'EN SOUVENIR (MIN-249 bis).
+ *
+ * La version d'avant (`REENTRY_REPLY_RULE_NO_DRAFT`) disait la bonne chose et ne
+ * marchait pas : « réponds sur le TOUR, pas sur ce contrôle » demande au modèle de
+ * REFAIRE, de mémoire, un message qu'il vient d'écrire — et la chose la plus
+ * saillante de son contexte, à ce moment-là, est le contrôle qu'on vient de lui
+ * servir. Mesuré sur le run f80dca09 : la règle était présente, en dernière
+ * position, et le seul message que l'utilisateur a lu du tour était
+ * « La revue est terminée : aucun problème n'a été trouvé » — le résumé réel
+ * (l'inversion, le helper, le test, les vérifications) restait deux étapes plus
+ * haut dans la trace, invisible.
+ *
+ * Le geste : lui RENDRE son brouillon, tel qu'il l'a écrit, et lui demander de le
+ * renvoyer amendé. La consigne cesse d'être un effort de mémoire pour devenir une
+ * édition — un travail qu'un modèle rate beaucoup moins souvent. Même doctrine que
+ * le reste du module : le harness FAIT (il rend le texte) au lieu d'ESPÉRER.
+ */
+export function reentryReplyRule(previousReply?: string): string {
+  const draft = previousReply?.trim();
+  if (!draft) return REENTRY_REPLY_RULE_NO_DRAFT;
+  return `One last thing about the reply itself. You had already written the message below, and **the user has not seen it** — the moment this check arrived, it became a step in the trace:
+
+<your_draft_reply>
+${headTail(draft, REENTRY_REPLY_MAX_CHARS)}
+</your_draft_reply>
+
+Your next reply REPLACES that draft, and it is the ONLY message the user gets for this turn. So do not reply about this check: **send the draft above again, in full**, amended by whatever this check made you change (a verification that now passes, a file you touched since, a claim that is no longer true). If the check changed nothing, send it again unchanged. A reply that reports on the check instead is a turn the user never gets to read.`;
+}
 
 export interface TurnEndDeps {
   host: RepoHost;
@@ -121,8 +162,10 @@ export interface TurnEndDeps {
 }
 
 export interface TurnEndHook {
-  /** Le crochet, tel que la boucle l'appelle (`params.onTurnEnd`). */
-  run: (opts: { budgetMs: number }) => Promise<string | null>;
+  /** Le crochet, tel que la boucle l'appelle (`params.onTurnEnd`). `previousReply`
+   *  est le message que le modèle venait d'écrire et que la réinjection va
+   *  déclasser en étape : il lui est RENDU (cf. `reentryReplyRule`). */
+  run: (opts: { budgetMs: number; previousReply?: string }) => Promise<string | null>;
   /**
    * L'auto-relecture RÉCLAMÉE PAR AVANCE, pour `create_pr` (cf. `gateCreatePr`).
    * Consomme le MÊME verrou que le bloc de fin de tour : ce qui est relu ici ne
@@ -340,17 +383,18 @@ export function makeTurnEndHook(deps: TurnEndDeps): TurnEndHook {
      * Chaque bloc a son propre budget, donc un tour MIXTE (des éditions ET un plan)
      * les voit tous. C'est ce qui n'arrivait jamais avant MIN-240.
      *
-     * `REENTRY_REPLY_RULE` est collée au bloc qui sort, quel qu'il soit : ce qui
-     * suit une réinjection est la réponse que l'utilisateur lira (MIN-256).
+     * `reentryReplyRule` est collée au bloc qui sort, quel qu'il soit : ce qui
+     * suit une réinjection est la réponse que l'utilisateur lira (MIN-256), et
+     * elle porte le brouillon que cette réinjection vient de déclasser.
      */
-    run: async ({ budgetMs }) => {
+    run: async ({ budgetMs, previousReply }) => {
       noteEdits();
       const block =
         (await typeCheckBlock(budgetMs)) ??
         (await testBlock(budgetMs)) ??
         (await selfReviewBlock(budgetMs)) ??
         (await planBlock(budgetMs));
-      return block ? `${block}\n\n${REENTRY_REPLY_RULE}` : null;
+      return block ? `${block}\n\n${reentryReplyRule(previousReply)}` : null;
     },
   };
 }

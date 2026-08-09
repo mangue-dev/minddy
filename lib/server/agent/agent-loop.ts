@@ -577,8 +577,13 @@ export interface RunAgentLoopParams {
    * tour (`typeErrorsForTurn`) : une édition qui casse un type le dit avant que
    * l'agent ne dise « c'est fait ». Plafonné à `MAX_TURN_END_REENTRIES` relances
    * par chunk — un dépôt inréparable ne doit pas retenir le tour indéfiniment.
+   *
+   * `previousReply` est la réponse que le modèle venait d'écrire, et que cette
+   * relance s'apprête à déclasser en étape du fil. Le crochet la lui REND (cf.
+   * `reentryReplyRule`) : sans elle, le message final du tour finit par parler du
+   * contrôle plutôt que du travail, et c'est le seul que l'utilisateur lit.
    */
-  onTurnEnd?: (opts: { budgetMs: number }) => Promise<string | null>;
+  onTurnEnd?: (opts: { budgetMs: number; previousReply?: string }) => Promise<string | null>;
 }
 
 /** Interruption utilisateur de la réponse en cours — distincte d'une StreamError
@@ -2054,7 +2059,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       // clore le tour à l'écran.
       if (params.onTurnEnd && turnEndReentries < MAX_TURN_END_REENTRIES) {
         const followUp = await params
-          .onTurnEnd({ budgetMs: params.softDeadlineMs - elapsed() })
+          .onTurnEnd({ budgetMs: params.softDeadlineMs - elapsed(), previousReply: reply })
           .catch(() => null);
         if (followUp?.trim()) {
           turnEndReentries++;

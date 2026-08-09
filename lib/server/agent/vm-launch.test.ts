@@ -5,7 +5,7 @@ import { join } from "node:path";
 // depuis MIN-180 le dépôt vérifie avec `typescript@7`, qui ne livre plus l'API du
 // compilateur. Un test structurel a besoin d'un TypeScript en JS pour lire un arbre.
 import ts from "typescript-api";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { VM_BUNDLE_PATH, VM_JOB_PATH, type VmJob } from "./vm/protocol";
 
@@ -35,6 +35,17 @@ const h = vi.hoisted(() => ({
   ranCommand: null as null | { cmd: string; args: string[] },
   /** Combien de temps le SDK met à écrire le bundle — le gros de l'amorçage. */
   bundleWriteMs: 0,
+  /**
+   * L'HORLOGE EST PILOTÉE, ELLE NE TOURNE PAS. Ces tests mesurent une durée : la
+   * première version faisait dormir `writeFiles` de 120 ms et attendait
+   * `bootstrapMs >= 120`. `setTimeout(n)` rend la main à `n - 1` ms d'horloge
+   * murale environ trois fois sur mille au repos, bien plus souvent sous les
+   * 2 800 tests de la suite — le test échouait donc au hasard, et le harness
+   * servait cet échec à l'agent comme une régression de son propre changement
+   * (run f80dca09, MIN-249 : un aller-retour de modèle brûlé sur un test vert).
+   * Une horloge à la main rend la mesure EXACTE, donc l'assertion aussi.
+   */
+  nowMs: 1_700_000_000_000,
 }));
 
 // Le bundle est lu PAR CHEMIN dans `.agent-vm/`, un artefact que seul `prebuild`
@@ -50,9 +61,9 @@ const sandbox = () =>
     mkDir: vi.fn(async () => {}),
     writeFiles: vi.fn(async (files: Array<{ path: string; content: string }>) => {
       h.writes.push(files);
-      if (files.some((f) => f.path === VM_BUNDLE_PATH) && h.bundleWriteMs > 0) {
-        await new Promise((r) => setTimeout(r, h.bundleWriteMs));
-      }
+      // L'écriture du bundle ne DORT pas, elle AVANCE l'horloge : même effet sur
+      // ce que `startVmLoop` mesure, sans dépendre de l'ordonnanceur.
+      if (files.some((f) => f.path === VM_BUNDLE_PATH)) h.nowMs += h.bundleWriteMs;
     }),
     runCommand: vi.fn(async (params: { cmd: string; args: string[] }) => {
       h.ranCommand = params;
@@ -76,10 +87,18 @@ const jobInput = (): Omit<VmJob, "bootstrapMs"> =>
     messages: [],
   }) as unknown as Omit<VmJob, "bootstrapMs">;
 
+let nowSpy: ReturnType<typeof vi.spyOn>;
+
 beforeEach(() => {
   h.writes.length = 0;
   h.ranCommand = null;
   h.bundleWriteMs = 0;
+  h.nowMs = 1_700_000_000_000;
+  nowSpy = vi.spyOn(Date, "now").mockImplementation(() => h.nowMs);
+});
+
+afterEach(() => {
+  nowSpy.mockRestore();
 });
 
 describe("startVmLoop pose la durée de l'amorçage dans le job", () => {
@@ -88,7 +107,7 @@ describe("startVmLoop pose la durée de l'amorçage dans le job", () => {
     // politique réseau, clone. C'est le gros du chiffre, et il est derrière nous.
     const callStart = Date.now() - 400;
     await startVmLoop(sandbox(), jobInput(), callStart);
-    expect(writtenJob().bootstrapMs).toBeGreaterThanOrEqual(400);
+    expect(writtenJob().bootstrapMs).toBe(400);
   });
 
   it("compte l'écriture du bundle — c'est pour elle qu'il y a deux écritures", async () => {
@@ -96,7 +115,7 @@ describe("startVmLoop pose la durée de l'amorçage dans le job", () => {
     // `writeFiles` obligerait à figer le chiffre avant ses 280 Ko.
     h.bundleWriteMs = 120;
     await startVmLoop(sandbox(), jobInput(), Date.now());
-    expect(writtenJob().bootstrapMs).toBeGreaterThanOrEqual(120);
+    expect(writtenJob().bootstrapMs).toBe(120);
   });
 
   it("écrit le bundle D'ABORD, le job ENSUITE", async () => {

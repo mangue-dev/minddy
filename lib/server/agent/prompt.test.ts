@@ -731,6 +731,23 @@ describe("buildAgentSystemPrompt — auto-relecture rendue par le harness", () =
       expect(prompt).toMatch(/no single file shows/i);
       expect(prompt).toContain("i18n placeholders");
     });
+
+    /**
+     * L'INTERDIT EST BORNÉ, ET LE PROMPT DOIT LE DIRE. Non borné, il se lit comme
+     * « je n'ai pas le droit de lancer `git diff` », et le modèle attend alors du
+     * harness un diff qui n'arrive qu'en fin de tour — mesuré sur le run f80dca09
+     * (« *The instructions say the harness should provide it, but that isn't
+     * available yet* », puis un round entier passé à relire à la main les fichiers
+     * qu'il venait d'écrire). Le message d'héritage de branche, lui, ORDONNE un
+     * `git diff <base>` : sans la borne, les deux consignes se contredisent dans
+     * le même contexte.
+     */
+    it(`borne l'interdit à la relecture de fin de tour (ancrage ${anchor})`, () => {
+      const prompt = buildAgentSystemPrompt({ anchor });
+      expect(prompt).toMatch(/at the end of a turn/i);
+      expect(prompt).toMatch(/only thing this forbids/i);
+      expect(prompt).toMatch(/Read-only git remains yours to run/i);
+    });
   }
 });
 
