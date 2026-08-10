@@ -27,7 +27,6 @@ import {
   type Extensions,
   type JSONContent,
 } from "@tiptap/react";
-import { Placeholder } from "@tiptap/extensions";
 import { NodeRange } from "@tiptap/extension-node-range";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
@@ -37,6 +36,11 @@ import {
   type MentionSuggestOptions,
 } from "@/components/markdown-mention";
 import { pageExtensions } from "@/components/pages/page-extensions";
+import { setDetailsLabels } from "@/components/pages/blocks/details";
+import {
+  BlockPlaceholder,
+  pagePlaceholder,
+} from "@/components/pages/block-placeholder";
 import { BlockGutter } from "@/components/pages/block-gutter";
 import {
   PageSlashCommand,
@@ -67,8 +71,11 @@ const PROSE = cn(
   "[&_h2]:mt-5 [&_h2]:mb-1.5 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight",
   "[&_h3]:mt-4 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-semibold",
   "[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground",
-  "[&_hr]:my-4 [&_hr]:border-border",
-  "[&_details]:my-2 [&_details_summary]:cursor-pointer [&_details_summary]:font-medium"
+  "[&_hr]:my-4 [&_hr]:border-border"
+  // Le dépliant n'est PAS ici : son node view ne rend pas de `<details>` mais
+  // trois `div[data-type]`, que ces sélecteurs ne touchaient donc jamais. Sa
+  // mise en page vit dans app/globals.css, avec le reste de ce qui doit viser
+  // des attributs plutôt que des balises.
 );
 
 /** Figées au niveau du module : tiptap relit les options à chaque rendu et
@@ -106,6 +113,14 @@ export function PageEditor({
 
   const slashItems = useMemo(() => pageSlashItems(t), [t]);
 
+  // Mémoïsé : tiptap réapplique tout ce qui change d'identité entre deux
+  // rendus, et une fonction refabriquée à chaque fois remonterait le plugin.
+  const placeholderFor = useMemo(() => pagePlaceholder(t), [t]);
+
+  // Le bouton de repli du dépliant est rendu par un node view sans React : il
+  // ne peut pas lire le catalogue lui-même, on le lui pose ici (cf. details.ts).
+  setDetailsLabels({ expand: t("toggleExpand"), collapse: t("toggleCollapse") });
+
   const extensions = useMemo(
     () =>
       [
@@ -115,13 +130,13 @@ export function PageEditor({
         ...pageExtensions({ mention: MentionNode }),
         ...(mentions ? [MentionSuggest.configure(mentions)] : []),
         NodeRange,
-        Placeholder.configure({
-          placeholder: t("placeholder"),
-          showOnlyCurrent: true,
-        }),
+        // Le placeholder est à NOUS et pas à @tiptap/extensions : le pourquoi
+        // est écrit dans block-placeholder.ts, et il tient en deux mots — les
+        // blocs imbriqués, et le curseur lu en retard d'une frappe.
+        BlockPlaceholder.configure({ text: placeholderFor }),
         PageSlashCommand.configure({ items: slashItems }),
       ] as unknown as Extensions,
-    [t, slashItems, mentions]
+    [placeholderFor, slashItems, mentions]
   );
 
   const initialRef = useRef(initialContent);
@@ -151,12 +166,13 @@ export function PageEditor({
   }, [editor, pages]);
 
   const body = (
-    // La MARGE du bloc, réservée : la poignée et le `+` se placent à gauche du
-    // bloc survolé, donc hors du texte — sans cette réserve (54 px de boutons)
-    // ils débordent du conteneur, et le premier panneau qui défile les coupe.
-    // Rien à réserver sur mobile : la marge n'apparaît qu'au SURVOL, et il n'y
-    // en a pas sur une surface tactile.
-    <div className={cn("page-editor relative pl-2 md:pl-14", className)}>
+    // Ni `relative` ni retrait ici, et c'est le point : la GOUTTIÈRE du chrome
+    // (poignée + `+`) se place à gauche du bloc survolé, donc en dehors de la
+    // colonne de texte. C'est l'appelant qui tient la colonne — un conteneur
+    // positionné, avec la réserve de gouttière à gauche —, et le TITRE de la
+    // page y est dedans lui aussi. Sans ça, les deux ne partagent pas le même
+    // bord gauche et le corps a l'air imbriqué sous son titre.
+    <div className={cn("page-editor", className)}>
       {editor && <BlockGutter editor={editor} />}
       <EditorContent editor={editor} />
     </div>

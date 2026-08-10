@@ -121,6 +121,30 @@ export async function updatePageApi(
   );
 }
 
+/**
+ * L'écriture de la DERNIÈRE CHANCE, quand l'onglet s'en va.
+ *
+ * Un `fetch` ordinaire lancé depuis `pagehide` est annulé avec le document : la
+ * seconde de frappe qui n'était pas encore partie était perdue à chaque
+ * rafraîchissement, et la page rouvrait sur la version d'avant. `keepalive` dit
+ * au navigateur de mener la requête à son terme même une fois la page détruite.
+ *
+ * Ni promesse ni erreur à récupérer : il n'y a plus personne pour les lire.
+ * `sendBeacon` ne convient pas — il ne sait pas faire un PATCH.
+ */
+export function updatePageOnUnload(
+  projectId: string,
+  pageId: string,
+  input: UpdatePageInput
+): void {
+  void fetch(`/api/projects/${projectId}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    keepalive: true,
+  }).catch(() => {});
+}
+
 /** Corbeille — récursive : la page ET ses sous-pages. Rien n'est détruit. */
 export async function trashPageApi(
   projectId: string,

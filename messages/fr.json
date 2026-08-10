@@ -858,8 +858,7 @@
     "notFoundTitle": "Cette page n'existe pas",
     "notFoundBody": "Le lien est faux, ou la page a bougé. Tout le reste est resté à sa place.",
     "notFoundCta": "Revenir à l'accueil",
-    "botAccount": "Bot",
-    "undo": "Annuler"
+    "botAccount": "Bot"
   },
   "DatePicker": {
     "placeholder": "Choisir une date",
@@ -1579,7 +1578,6 @@
     "taskCompleted": "Terminé",
     "taskCancelled": "Annulé",
     "subpageUntitled": "Page sans titre",
-    "dragHandle": "Glisser pour déplacer",
     "insertBlock": "Insérer un bloc en dessous",
     "blockMenu": "Options du bloc",
     "turnInto": "Transformer en",
@@ -1619,9 +1617,15 @@
     "moveCycle": "Une page ne peut pas aller dans une de ses propres sous-pages.",
     "trashed": "« {title} » est à la corbeille.",
     "trashedWithChildren": "{count, plural, one {# page} other {# pages}} à la corbeille.",
-    "trashTitle": "Corbeille",
-    "trashSubtitle": "Les pages supprimées sont gardées {days} jours, puis effacées.",
-    "trashEmpty": "Aucune page supprimée"
+    "insertBlockHint": "Cliquer pour insérer un bloc en dessous · ⌥ au-dessus",
+    "dragHandleHint": "Glisser pour déplacer · cliquer pour ouvrir le menu",
+    "placeholderNested": "Écrire…",
+    "saved": "Enregistré",
+    "savedJustNow": "Enregistré à l'instant",
+    "savedAgo": "Enregistré {time}",
+    "slashHint": "Tapez pour filtrer les blocs, ou choisissez ci-dessous",
+    "toggleExpand": "Déplier",
+    "toggleCollapse": "Replier"
   },
   "Picker": {
     "createNamed": "Créer « {name} »",

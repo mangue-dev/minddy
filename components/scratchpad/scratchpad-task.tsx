@@ -36,6 +36,11 @@ import {
   sectionHeadingChain,
 } from "@/lib/scratchpad-prompt";
 import { isPlanTaskState, type PlanTaskState } from "@/lib/plan";
+import {
+  TASK_LINE,
+  TaskCheckbox,
+  taskStruck,
+} from "@/components/scratchpad/task-checkbox";
 import { taskLinesMarkdown } from "@/lib/scratchpad";
 import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
 import {
@@ -137,7 +142,7 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
 
   const raw = node.attrs.state;
   const state: PlanTaskState = isPlanTaskState(raw) ? raw : "pending";
-  const struck = state === "completed" || state === "cancelled";
+  const struck = taskStruck(state);
   const toggled: PlanTaskState = struck ? "pending" : "completed";
 
   const set = (next: PlanTaskState) => updateAttributes({ state: next });
@@ -320,30 +325,12 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
     >
       {/* Wrappers a full text-line tall (text-sm × leading-relaxed) so the box
           and the ⋯ center on the first line, whatever the text wraps to. */}
-      <span
-        contentEditable={false}
-        className="flex h-[1.625rem] shrink-0 items-center"
-      >
-        <button
-          type="button"
-          aria-label={t("taskCheckboxAria", { text: taskOwnText(node) })}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => set(toggled)}
-          className={cn(
-            "flex size-4 items-center justify-center rounded-[4px] border transition-colors",
-            state === "pending" && "border-input hover:border-muted-foreground/60",
-            state === "in_progress" && "border-primary",
-            state === "completed" &&
-              "border-primary bg-primary text-primary-foreground",
-            state === "cancelled" && "border-input bg-muted text-muted-foreground"
-          )}
-        >
-          {state === "in_progress" && (
-            <span className="size-2 rounded-[2px] bg-primary" />
-          )}
-          {state === "completed" && <Check className="size-3" />}
-          {state === "cancelled" && <Minus className="size-3" />}
-        </button>
+      <span contentEditable={false} className={TASK_LINE}>
+        <TaskCheckbox
+          state={state}
+          label={t("taskCheckboxAria", { text: taskOwnText(node) })}
+          onToggle={() => set(toggled)}
+        />
       </span>
 
       <NodeViewContent
@@ -356,10 +343,7 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
         )}
       />
 
-      <span
-        contentEditable={false}
-        className="flex h-[1.625rem] shrink-0 items-center"
-      >
+      <span contentEditable={false} className={TASK_LINE}>
         <SearchMenu
           open={menuOpen}
           onOpenChange={(next) => {

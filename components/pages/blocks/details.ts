@@ -53,9 +53,55 @@ const contentMarkdown = {
   parse: {},
 };
 
+/**
+ * Les deux libellés du bouton de repli, posés par l'éditeur au montage.
+ *
+ * Le registre de blocs n'a pas de traducteur — il est monté headless par la
+ * projection markdown et par les outils MCP, où aucun libellé n'a de sens. Les
+ * valeurs par défaut ne sont donc là que pour ces surfaces-là ; dès qu'un
+ * navigateur est en jeu, components/pages/page-editor.tsx appelle
+ * `setDetailsLabels` avec les chaînes du catalogue.
+ */
+const labels = { expand: "Expand", collapse: "Collapse" };
+
+export function setDetailsLabels(next: {
+  expand: string;
+  collapse: string;
+}): void {
+  labels.expand = next.expand;
+  labels.collapse = next.collapse;
+}
+
+/** Le chevron du bouton, en SVG inline — même tracé que `ChevronRight`. */
+const CHEVRON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+
 const PageDetails = Details.extend({
   addStorage() {
     return { ...this.parent?.(), markdown: detailsMarkdown };
+  },
+}).configure({
+  /**
+   * `persist` : l'état plié / déplié entre dans le DOCUMENT.
+   *
+   * Sans lui, tiptap ne garde l'ouverture que dans la classe CSS du node view —
+   * toute la page rouvre donc repliée au rechargement, y compris les dépliants
+   * qu'on venait d'ouvrir. Un dépliant est un choix de rédaction (« ceci est
+   * secondaire »), pas un état d'affichage : il se range avec le texte.
+   */
+  persist: true,
+  /**
+   * Le bouton que rend tiptap est VIDE — pas d'icône, pas de dimension, aucun
+   * style. Laissé tel quel, le dépliant n'a rien de cliquable à l'écran : on
+   * voit deux paragraphes empilés, dont l'un disparaît parfois. C'est ici qu'on
+   * lui donne son chevron, et dans app/globals.css qu'il prend sa place.
+   */
+  renderToggleButton: ({ element, isOpen }: { element: HTMLElement; isOpen: boolean }) => {
+    element.className = "page-details-toggle";
+    element.setAttribute("aria-expanded", String(isOpen));
+    element.setAttribute("aria-label", isOpen ? labels.collapse : labels.expand);
+    element.setAttribute("title", isOpen ? labels.collapse : labels.expand);
+    if (!element.firstChild) element.innerHTML = CHEVRON;
   },
 });
 

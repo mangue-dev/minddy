@@ -945,6 +945,94 @@ nav[aria-label="Navigation"]
   background-color: color-mix(in oklab, var(--page-tint) 24%, transparent);
 }
 
+/* Le paragraphe d'une tâche hérite sinon du `[&_p]:my-2` du corps de page, ce
+   qui pousse le TEXTE vers le bas et laisse la case à cocher toute seule en
+   haut. Le carnet a la même règle, pour la même raison. */
+.page-editor .ProseMirror li[data-type="taskItem"] p {
+  margin: 0;
+}
+
+/* ─── Le DÉPLIANT (MIN-270) ───────────────────────────────────────────────
+   Ce bloc n'a AUCUN style par défaut, et c'est ce qui le rendait
+   incompréhensible : `@tiptap/extension-details` ne rend pas un `<details>`
+   HTML mais trois `div[data-type]`, et son bouton de repli arrive vide, sans
+   dimension. À l'écran : deux paragraphes empilés dont l'un disparaît parfois,
+   sans rien à cliquer. Les règles Tailwind du corps de page visaient, elles,
+   les vraies balises `<details>`/`<summary>` — elles ne s'appliquaient donc à
+   rien.
+
+   La forme retenue est celle de Notion : un chevron dans la marge, le résumé en
+   gras à côté, le corps en retrait sous les deux et aligné sur le résumé. */
+.page-editor [data-type="details"] {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  align-items: start;
+  column-gap: 0.25rem;
+  margin: 0.5rem 0;
+}
+
+/* Le bouton vit dans la première colonne, le reste du bloc dans la seconde. */
+.page-editor .page-details-toggle {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  /* La hauteur d'une ligne de texte : le chevron se centre sur le résumé, pas
+     sur le haut du bloc. */
+  height: 1.75rem;
+  border-radius: 0.25rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color 0.12s, transform 0.15s;
+}
+.page-editor .page-details-toggle:hover {
+  background-color: var(--muted);
+  color: var(--foreground);
+}
+.page-editor .page-details-toggle svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.page-editor [data-type="details"].is-open > .page-details-toggle {
+  transform: rotate(90deg);
+}
+
+.page-editor [data-type="details"] > div:not(.page-details-toggle) {
+  grid-column: 2;
+  min-width: 0;
+}
+.page-editor [data-type="detailsSummary"] {
+  font-weight: 500;
+  line-height: 1.75rem;
+}
+/* Le corps replié est masqué par l'attribut `hidden` que pose le node view ;
+   déplié, il respire un peu sous son résumé. */
+.page-editor [data-type="detailsContent"] > :first-child {
+  margin-top: 0.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-editor .page-details-toggle {
+    transition: none;
+  }
+}
+
+/* Le placeholder d'un bloc vide (MIN-270). Le plugin
+   (components/pages/block-placeholder.ts) pose `data-placeholder` et la classe
+   `is-empty` sur le bloc du curseur — il ne peint rien lui-même. Le carnet a sa
+   règle jumelle quelques centaines de lignes plus haut ; les deux surfaces sont
+   scopées séparément pour que la typographie de l'une ne déborde pas sur
+   l'autre. */
+.page-editor .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+}
+
 /* ─── L'ancre d'un bloc (MIN-270) ─────────────────────────────────────────
    Ouvrir un lien « copier le lien du bloc » défile jusqu'au bloc visé et le
    désigne deux secondes. C'est un CLIGNEMENT, pas une sélection : il s'efface

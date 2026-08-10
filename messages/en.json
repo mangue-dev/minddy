@@ -858,8 +858,7 @@
     "notFoundTitle": "This page does not exist",
     "notFoundBody": "The link is wrong, or the page has moved. Everything else is still where you left it.",
     "notFoundCta": "Back to home",
-    "botAccount": "Bot",
-    "undo": "Undo"
+    "botAccount": "Bot"
   },
   "DatePicker": {
     "placeholder": "Pick a date",
@@ -1579,7 +1578,6 @@
     "taskCompleted": "Done",
     "taskCancelled": "Cancelled",
     "subpageUntitled": "Untitled page",
-    "dragHandle": "Drag to move",
     "insertBlock": "Insert a block below",
     "blockMenu": "Block options",
     "turnInto": "Turn into",
@@ -1619,9 +1617,15 @@
     "moveCycle": "A page can't go inside one of its own sub-pages.",
     "trashed": "“{title}” moved to trash.",
     "trashedWithChildren": "{count, plural, one {# page} other {# pages}} moved to trash.",
-    "trashTitle": "Trash",
-    "trashSubtitle": "Deleted pages are kept {days} days, then gone for good.",
-    "trashEmpty": "No deleted page"
+    "insertBlockHint": "Click to insert a block below · ⌥ above",
+    "dragHandleHint": "Drag to move · click to open the menu",
+    "placeholderNested": "Write something…",
+    "saved": "Saved",
+    "savedJustNow": "Saved just now",
+    "savedAgo": "Saved {time}",
+    "slashHint": "Type to filter blocks, or pick one below",
+    "toggleExpand": "Expand",
+    "toggleCollapse": "Collapse"
   },
   "Picker": {
     "createNamed": "Create “{name}”",

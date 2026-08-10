@@ -53,7 +53,14 @@ export function EmojiPicker({
           </Button>
         )}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[320px] p-0">
+      {/* `overflow-hidden` : le sélecteur peint son propre fond sur toute sa
+          hauteur (barre de recherche, liste virtualisée). Sans découpe, ses
+          angles carrés recouvrent ceux du panneau et le tout paraît sans rayon
+          — le rayon est bien là, c'est le contenu qui passe par-dessus. */}
+      <PopoverContent
+        align="start"
+        className="w-[320px] overflow-hidden p-0"
+      >
         <Frimousse.Root
           // La langue de l'app pilote celle de la recherche : chercher
           // « fusée » doit trouver 🚀 en français comme « rocket » en anglais.

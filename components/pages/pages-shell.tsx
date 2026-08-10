@@ -7,20 +7,24 @@
 // d'ouverture, position de défilement, requête), et la barre secondaire ne
 // disparaît donc jamais le temps d'une navigation — c'est elle qui tient la
 // sidebar primaire au rail.
+//
+// Ce qu'il n'y a PAS au bas de l'arbre : une entrée « Corbeille ». Le plan en
+// prévoyait une ; c'était un doublon. La corbeille de l'application (/trash)
+// recueille déjà les pages supprimées, avec leur projet et leur délai de purge,
+// à côté des tickets et des objectifs — un second chemin vers la même liste
+// oblige surtout à se demander lequel des deux dit vrai.
 
 import { useCallback, useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Skeleton, Tooltip, TooltipContent, TooltipTrigger, cn, toast } from "mangue-ui";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError, type PageSummary } from "@/lib/pages-api";
-import { useTrashQuery } from "@/lib/use-trash-query";
 
 export function PagesShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Pages");
@@ -37,17 +41,9 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
     return segment && segment !== "trash" ? segment : null;
   }, [pathname, base]);
 
-  const { pages, tree, loading, createPage, updatePage, trashPage, restorePage } =
+  const { pages, tree, loading, createPage, updatePage, trashPage } =
     usePagesQuery(projectId);
   const [query, setQuery] = useState("");
-
-  // La corbeille du projet ne s'affiche que si elle a quelque chose : une entrée
-  // permanente en bas de l'arbre serait, la plupart du temps, un lien vers une
-  // page vide.
-  const { items: trashItems } = useTrashQuery();
-  const trashedPages = trashItems.filter(
-    (item) => item.type === "page" && item.project_id === projectId
-  ).length;
 
   const create = useCallback(
     async (parentId: string | null) => {
@@ -92,23 +88,23 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
           // Ouvert sur une page qui vient de partir à la corbeille : on remonte
           // à la liste plutôt que de laisser un document fantôme à l'écran.
           if (activePageId === page.id) router.push(base);
+          // Un toast NU, comme partout ailleurs dans l'app. Il portait un
+          // bouton « Annuler » — le seul du dépôt, et sonner l'habille de son
+          // bouton par défaut : au milieu des autres notifications, il ne
+          // ressemblait à rien de connu. Le retour en arrière n'est pas perdu
+          // pour autant : la Corbeille apparaît au bas de l'arbre à la seconde
+          // où la page en part, et restaurer y tient en un clic.
           toast.success(
             trashed > 1
               ? t("trashedWithChildren", { count: trashed })
-              : t("trashed", { title: page.title || t("untitled") }),
-            {
-              action: {
-                label: tCommon("undo"),
-                onClick: () => void restorePage(page.id),
-              },
-            }
+              : t("trashed", { title: page.title || t("untitled") })
           );
         } catch (err) {
           toast.error(err instanceof Error ? err.message : t("deleteFailed"));
         }
       })();
     },
-    [trashPage, restorePage, activePageId, router, base, t, tCommon]
+    [trashPage, activePageId, router, base, t]
   );
 
   return (
@@ -161,24 +157,6 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
             onTrash={trash}
           />
         )}
-
-        {trashedPages > 0 && !query ? (
-          <div className="mt-auto border-t border-border px-2 py-2">
-            <Link
-              href={`${base}/trash`}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                pathname === `${base}/trash`
-                  ? "bg-muted font-medium"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-              )}
-            >
-              <Trash2 className="size-3.5 shrink-0" />
-              <span className="min-w-0 flex-1 truncate">{t("trashTitle")}</span>
-              <span className="shrink-0 text-xs tabular-nums">{trashedPages}</span>
-            </Link>
-          </div>
-        ) : null}
       </SecondarySidebar>
 
       <div

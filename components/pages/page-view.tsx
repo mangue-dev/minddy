@@ -15,11 +15,24 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
-import { Spinner, toast } from "mangue-ui";
+import { useFormatter, useTranslations } from "next-intl";
+import {
+  Spinner,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  toast,
+} from "mangue-ui";
+import { Check } from "lucide-react";
 import type { Editor, JSONContent } from "@tiptap/react";
 
-import { fetchPageApi, type UpdatePageInput } from "@/lib/pages-api";
+import { eventKey } from "@/lib/keyboard/event-key";
+
+import {
+  fetchPageApi,
+  updatePageOnUnload,
+  type UpdatePageInput,
+} from "@/lib/pages-api";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
@@ -29,6 +42,59 @@ import type { PagesLookup } from "@/components/pages/pages-lookup";
 
 /** Délai avant écriture, à compter de la dernière frappe. */
 const SAVE_DELAY_MS = 1_000;
+
+/**
+ * L'état d'enregistrement, en bout de la ligne d'icône — même grammaire que le
+ * carnet : une roue pendant l'écriture, une coche le reste du temps, et le
+ * « quand » réservé à l'infobulle.
+ *
+ * Une icône plutôt qu'un mot, parce que c'est une information qu'on cherche
+ * (« est-ce parti ? ») et non une qu'on doit lire : un texte qui apparaît et
+ * disparaît en haut d'un document attire l'œil à chaque frappe, exactement au
+ * moment où on écrit.
+ */
+function PageSaveState({
+  saving,
+  updatedAt,
+}: {
+  saving: boolean;
+  updatedAt: string | null;
+}) {
+  const t = useTranslations("Pages");
+  const format = useFormatter();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const at = updatedAt ? new Date(updatedAt).getTime() : NaN;
+  // Sous la minute, le formateur relatif compte les secondes à voix haute
+  // (« enregistré il y a 4 secondes »), ce qui est plus bavard que le silence.
+  const when =
+    !Number.isFinite(at) || now - at < 60_000
+      ? t("savedJustNow")
+      : t("savedAgo", { time: format.relativeTime(at, now) });
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          role="status"
+          aria-label={saving ? t("saving") : t("saved")}
+          className="flex text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+        >
+          {saving ? (
+            <Spinner className="size-3.5" />
+          ) : (
+            <Check className="size-3.5" />
+          )}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{saving ? t("saving") : when}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function PageView({
   projectId,
@@ -76,13 +142,19 @@ export function PageView({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const flush = useCallback(async () => {
+  /** Le brouillon en attente, retiré de la file — annule aussi le minuteur. */
+  const takePending = useCallback((): UpdatePageInput | null => {
     if (timer.current) {
       clearTimeout(timer.current);
       timer.current = null;
     }
     const patch = pending.current;
     pending.current = null;
+    return patch;
+  }, []);
+
+  const flush = useCallback(async () => {
+    const patch = takePending();
     if (!patch) return;
     setSaving(true);
     try {
@@ -92,7 +164,7 @@ export function PageView({
     } finally {
       setSaving(false);
     }
-  }, [pageId, updatePage, t]);
+  }, [pageId, updatePage, takePending, t]);
 
   const schedule = useCallback(
     (patch: UpdatePageInput) => {
@@ -108,6 +180,53 @@ export function PageView({
   const flushRef = useRef(flush);
   flushRef.current = flush;
   useEffect(() => () => void flushRef.current(), [pageId]);
+
+  // L'onglet qui s'en va (rafraîchissement, fermeture, navigation externe).
+  //
+  // `pagehide` est le seul événement sur lequel on puisse compter — `beforeunload`
+  // ne se déclenche pas toujours sur mobile, et à ce moment-là un `fetch`
+  // ordinaire meurt avec le document. D'où l'écriture `keepalive`, qui part
+  // sans qu'on l'attende : sans elle, la dernière seconde de frappe était
+  // perdue et la page rouvrait sur sa version d'avant.
+  //
+  // `visibilitychange` complète le tableau : passer sur un autre onglet écrit
+  // tout de suite, par un PATCH normal, plutôt que de laisser le brouillon
+  // attendre un retour qui peut ne jamais venir.
+  useEffect(() => {
+    const onHide = () => {
+      const patch = takePending();
+      if (patch) updatePageOnUnload(projectId, pageId, patch);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") void flushRef.current();
+    };
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [projectId, pageId, takePending]);
+
+  // ⌘S / Ctrl+S écrit maintenant, comme dans le carnet. L'enregistrement est
+  // déjà automatique : ce que le geste apporte n'est pas la sauvegarde, c'est
+  // de la VOIR — le réflexe est trop ancré pour qu'on laisse le navigateur
+  // répondre à sa place par sa boîte « enregistrer la page ».
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        eventKey(event) === "s"
+      ) {
+        event.preventDefault();
+        void flushRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
 
   /* ── Les sous-pages du corps (MIN-272) ───────────────────────────────── */
   const lookup = useMemo<PagesLookup>(
@@ -170,8 +289,27 @@ export function PageView({
   }
 
   return (
-    <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-3xl px-6 py-10 md:px-10">
+    <div className="relative min-h-0 flex-1">
+      {/* L'état d'enregistrement est épinglé au COIN de la surface, hors du
+          flux et hors du défilement : il reste au même endroit quand on
+          descend dans le document, et ne pousse rien. Même place que dans le
+          carnet, à ceci près qu'il est à droite — la gauche est occupée par la
+          barre secondaire. */}
+      <div className="absolute top-3 right-3.5 z-10">
+        <PageSaveState
+          saving={saving}
+          updatedAt={summary?.updated_at ?? page.updated_at}
+        />
+      </div>
+
+      <div className="scrollbar-quiet h-full overflow-y-auto">
+      {/* La COLONNE du document. Elle porte deux choses, et elle est la seule à
+          pouvoir les porter ensemble : la réserve de GOUTTIÈRE à gauche (56 px,
+          la largeur exacte de la poignée et du `+`) et le positionnement dont
+          le chrome se sert pour s'y placer. Titre et blocs partagent donc le
+          même bord gauche, et la marge du survol tombe dans la réserve au lieu
+          de décaler le corps sous le titre. */}
+      <div className="relative mx-auto w-full max-w-3xl px-6 py-10 md:pl-24 md:pr-10">
         <PageHeader
           title={title}
           icon={icon}
@@ -195,14 +333,7 @@ export function PageView({
             editorRef={editorRef}
           />
         </div>
-        {/* Un état d'écriture discret, en bas du document : il rassure sans
-            réclamer l'attention, et disparaît dès que c'est écrit. */}
-        <p
-          aria-live="polite"
-          className="mt-8 h-4 text-xs text-muted-foreground/70"
-        >
-          {saving ? t("saving") : ""}
-        </p>
+      </div>
       </div>
     </div>
   );

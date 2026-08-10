@@ -14,6 +14,7 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -21,6 +22,7 @@ import { Extension, type Editor, type Range } from "@tiptap/core";
 import { ReactRenderer } from "@tiptap/react";
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
 import { PluginKey } from "@tiptap/pm/state";
+import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import {
   SLASH_GROUPS,
@@ -81,8 +83,40 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   props,
   ref
 ) {
+  const t = useTranslations("Pages");
   const [selected, setSelected] = useState(0);
   useEffect(() => setSelected(0), [props.items]);
+
+  /**
+   * Le clavier PREND LA MAIN sur la souris.
+   *
+   * Les deux se battaient : les flèches font défiler la liste, le défilement
+   * fait passer une ligne sous le pointeur immobile, `mouseenter` se déclenche
+   * et la sélection saute là où est la souris — la flèche suivante repart de
+   * cette ligne-là, et on ne descend plus. Dès qu'on navigue au clavier, la
+   * liste devient donc insensible au pointeur (et sans survol peint, qui
+   * désignerait une seconde ligne), jusqu'au prochain VRAI mouvement de souris.
+   */
+  const [keyboard, setKeyboard] = useState(false);
+  useEffect(() => {
+    if (!keyboard) return;
+    const wake = () => setKeyboard(false);
+    // `mousemove` et pas `mouseover` : c'est le mouvement qui rend la main à la
+    // souris, pas le fait qu'une ligne soit passée dessous toute seule.
+    window.addEventListener("mousemove", wake, { once: true });
+    return () => window.removeEventListener("mousemove", wake);
+  }, [keyboard]);
+
+  // Le menu DÉFILE avec les flèches. Sans ça la ligne active sortait du cadre
+  // dès le quatrième ↓ : le clavier continuait de fonctionner, mais on ne
+  // voyait plus ce qu'on choisissait. `nearest` : on ne recentre pas une ligne
+  // déjà visible, ce qui ferait sauter la liste à chaque pression.
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-slash-index="${selected}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selected]);
 
   const choose = (index: number) => {
     const item = props.items[index];
@@ -94,10 +128,12 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
       const n = props.items.length;
       if (n === 0) return false;
       if (event.key === "ArrowUp") {
+        setKeyboard(true);
         setSelected((s) => (s - 1 + n) % n);
         return true;
       }
       if (event.key === "ArrowDown") {
+        setKeyboard(true);
         setSelected((s) => (s + 1) % n);
         return true;
       }
@@ -122,7 +158,7 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
       rows.push(
         <div
           key={`group:${item.groupLabel}`}
-          className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground first:pt-1"
+          className="px-2.5 pb-1.5 pt-3 text-xs font-medium text-muted-foreground first:pt-1.5"
         >
           {item.groupLabel}
         </div>
@@ -133,12 +169,18 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
       <button
         type="button"
         key={item.block.id}
+        data-slash-index={index}
         onMouseDown={(e) => e.preventDefault()}
-        onMouseEnter={() => setSelected(index)}
+        onMouseEnter={() => {
+          if (!keyboard) setSelected(index);
+        }}
         onClick={() => choose(index)}
         className={cn(
-          "flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors",
-          index === selected ? "bg-muted text-foreground" : "text-foreground/90"
+          "flex w-full items-start gap-2.5 scroll-my-1.5 rounded-lg px-2.5 py-2 text-left transition-colors",
+          index === selected ? "bg-muted text-foreground" : "text-foreground/90",
+          // Pendant la navigation au clavier, la souris ne peint plus rien :
+          // deux lignes allumées, ce serait deux réponses à « Entrée ».
+          keyboard && "pointer-events-none"
         )}
       >
         <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -153,8 +195,23 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   });
 
   return (
-    <div className="max-h-80 w-72 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg">
-      {rows}
+    <div className="w-72 overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
+      {/* Tant que rien n'est tapé, le menu DIT ce qu'il attend. Un « / » suivi
+          d'une liste de blocs se lit comme un menu à cliquer ; c'est aussi un
+          champ de recherche, et rien à l'écran ne le disait. La ligne
+          disparaît dès la première lettre — elle a fini son travail, et la
+          place revient aux blocs. */}
+      {props.query.length === 0 ? (
+        <p className="border-b border-border px-3 py-2 text-xs text-muted-foreground">
+          {t("slashHint")}
+        </p>
+      ) : null}
+      <div
+        ref={listRef}
+        className="scrollbar-quiet max-h-80 overflow-y-auto overscroll-contain p-1.5"
+      >
+        {rows}
+      </div>
     </div>
   );
 });
