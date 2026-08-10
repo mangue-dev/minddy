@@ -123,6 +123,10 @@ import {
   type ReviewableFile,
 } from "./pr-tools";
 import {
+  executeProjectPrTool,
+  type ProjectPrToolContext,
+} from "./project-pr-tools";
+import {
   resolveAgentApiKey,
   getModelContextWindow,
   getModelInputPrice,
@@ -1416,6 +1420,14 @@ export async function executeAgentRun(
     let prFilesCache: Promise<ReviewableFile[]> | null = prBoot
       ? Promise.resolve(prBoot.files)
       : null;
+    /**
+     * Ancres posées par CE RUN, semées depuis le checkpoint. UN SEUL objet pour
+     * les deux familles de tools PR (MIN-267) : le plafond des 5 se compte par
+     * run, et une session qui relit une pull request et une routine qui en
+     * commente cinq ne doivent pas avoir chacune son compteur — sinon « 5 par
+     * run » devient « 5 par famille », ce que rien ne justifie.
+     */
+    const prInline = { used: run.checkpoint?.prInlineComments ?? 0 };
     const prToolCtx: PrToolContext | null = prRun
       ? {
           forge,
@@ -1443,9 +1455,39 @@ export async function executeAgentRun(
           locale: commentLocale,
           // Compteur d'ancres du RUN, semé depuis le checkpoint : c'est ce qui rend
           // le plafond de 5 insensible à la reprise et au tour suivant.
-          inline: { used: run.checkpoint?.prInlineComments ?? 0 },
+          inline: prInline,
         }
       : null;
+
+    /**
+     * Les pull requests DU PROJET (MIN-267), câblées comme les précédentes : la
+     * forge du provider et un token re-résolu À CHAQUE APPEL — un tour de microVM
+     * dure des heures, le token d'installation non.
+     *
+     * `null` sur une RELECTURE : elle a `prToolCtx` sur la pull request qu'elle
+     * relit, et sa lecture seule est une propriété du jeu de tools. Deux verrous,
+     * comme pour `create_pr` : le tool n'est pas dans son jeu, et le handler ne
+     * lui est pas câblé.
+     */
+    const projectPrToolCtx: ProjectPrToolContext | null = prRun
+      ? null
+      : {
+          projectId: run.project_id,
+          repo: async () => {
+            const fresh = await resolveRepoCloneTarget(run.project_id).catch(() => null);
+            if (!fresh) return null;
+            secrets.addAuthUrl(fresh.authUrl);
+            secrets.add(fresh.token);
+            return {
+              token: fresh.token,
+              repoFullName: fresh.repoFullName,
+              provider: fresh.provider,
+            };
+          },
+          model: run.model,
+          locale: commentLocale,
+          inline: prInline,
+        };
 
     // Jobs de fond du chunk (MIN-114). Ils meurent AVANT chaque push (un watcher
     // qui écrit pendant le `git add -A` commiterait n'importe quoi) et de toute
@@ -1835,6 +1877,7 @@ export async function executeAgentRun(
             // La pull request appartient au parent, comme le ticket et le carnet
             // (et une fille n'a de toute façon aucun de ces tools dans son schéma).
             prTool: null,
+            projectPrTool: null,
             issueTool: null,
             scratchpadTool: null,
             webSearch,
@@ -2037,6 +2080,9 @@ export async function executeAgentRun(
         // ici les exécuteurs en direct, puisqu'on est dans la fonction ; dans la
         // microVM, les mêmes noms partent au plan de contrôle.
         prTool: prToolCtx ? (name, args) => executePrTool(prToolCtx, name, args) : null,
+        projectPrTool: projectPrToolCtx
+          ? (name, args) => executeProjectPrTool(projectPrToolCtx, name, args)
+          : null,
         // Deux enveloppes, et l'ORDRE compte : `watchPlanWrites` note le plan écrit
         // (MIN-236), puis `gateWritePlan` le relit — il lit le sink que la première
         // vient de remplir. L'inverse contrôlerait le plan du tour précédent.
@@ -2196,9 +2242,10 @@ export async function executeAgentRun(
       ...(result.status === "suspended" && subagents.suspendedCount() > 0
         ? { parkedForSubagents: true }
         : {}),
-      // Ancres déjà posées par la session de relecture : le plafond des 5 est par
-      // RUN, donc son compteur voyage avec le checkpoint (cf. `pr-tools.ts`).
-      ...(prToolCtx ? { prInlineComments: prToolCtx.inline.used } : {}),
+      // Ancres déjà posées — par la relecture comme par les tools PR du projet :
+      // le plafond des 5 est par RUN, donc son compteur voyage avec le checkpoint
+      // (cf. `pr-tools.ts`). Les deux familles partagent l'objet `prInline`.
+      ...(prInline.used > 0 ? { prInlineComments: prInline.used } : {}),
     };
     /**
      * RABOTÉ AU GABARIT UNE FOIS POUR TOUTES (MIN-217), ici et pas sur un seul

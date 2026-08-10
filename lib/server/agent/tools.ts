@@ -38,6 +38,13 @@ import type { AgentAnchor } from "./prompt";
  *                  lib/server/agent/issue-tools.ts.
  *  - carnet      : read_scratchpad, add_scratchpad_tasks, update_scratchpad_task,
  *                  set_scratchpad — exécutés par lib/server/agent/scratchpad-tools.ts.
+ *  - pull requests du PROJET (MIN-267) : list_pull_requests, read_pull_request,
+ *                  comment_pull_request, comment_pull_request_line,
+ *                  reply_pull_request_thread, review_pull_request,
+ *                  set_pull_request_state — exécutés par
+ *                  lib/server/agent/project-pr-tools.ts. À ne pas confondre avec
+ *                  `PR_TOOLS` plus bas, qui sont les trois écritures d'une
+ *                  session de RELECTURE sur LA pull request qu'elle relit.
  *
  * Les tools minddy sont servis aux DEUX ancrages (MIN-125) : l'ancrage du run
  * ne décide plus que de la CIBLE PAR DÉFAUT des tools ticket (le ticket du run,
@@ -1048,6 +1055,191 @@ const PR_TOOLS: AgentToolDef[] = [
   },
 ];
 
+/**
+ * LES PULL REQUESTS DU PROJET (MIN-267) — servies aux ancrages TICKET et CARNET,
+ * jamais à la relecture (qui a `PR_TOOLS` ci-dessus, sur SA pull request).
+ * Exécutées par `lib/server/agent/project-pr-tools.ts`.
+ *
+ * Ce jeu-ci VA JUSQU'AU BOUT : verdict de review et fusion comprises. C'est une
+ * décision explicite du propriétaire du produit, contraire à la doctrine de
+ * MIN-141 qui vaut encore pour la relecture — le pourquoi et ce que ça coûte
+ * sont dans l'en-tête de `project-pr-tools.ts`.
+ */
+const PROJECT_PR_TOOLS: AgentToolDef[] = [
+  {
+    type: "function",
+    function: {
+      name: "list_pull_requests",
+      description:
+        "List the pull requests of this project's repository, most recently updated first — the inventory you need before saying anything about 'the pull requests of this week'. Returns one compact row per pull request: number, title, state (draft/open/merged/closed), author, head and base branches, url, when it was opened/merged/last updated, and the minddy ticket it implements when it has one. Filter with 'state', 'author' and 'updated_since'; the result says whether it was cut at your 'limit'. This reads minddy's own copy of the list (refreshed from the forge when it has gone stale), so listing thirty pull requests costs one call, not thirty. Then read_pull_request opens the ones that matter.",
+      parameters: {
+        type: "object",
+        properties: {
+          state: {
+            type: "array",
+            items: { type: "string", enum: ["draft", "open", "merged", "closed"] },
+            description:
+              "Keep only these states. Omit for all of them. 'draft' and 'open' are both alive; a merged pull request is never 'closed' here.",
+          },
+          author: {
+            type: "string",
+            description: "Keep only the pull requests opened by this forge login (exact, case-insensitive).",
+          },
+          updated_since: {
+            type: "string",
+            description:
+              "Keep only what moved since this date — '2026-08-03' or a full ISO timestamp. This is the filter for a weekly report.",
+          },
+          limit: {
+            type: "number",
+            description: "Max rows (default 30, max 100).",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_pull_request",
+      description:
+        "Open ONE pull request of this project by its number: title, description, state, draft, author, branches, dates, its CI checks (aggregate state, how many pass, the failing ones by name), its approval counts, the files it touches with their +/− counts, its review threads (each with file, line, side, whether it is resolved or outdated, and every message) and its conversation. 'checks: null' means they could not be read, not that they pass; 'mergeable: null' means the forge has not computed it yet, not 'no'.\n\nThe DIFF is not included by default — pass include_diff: true to get each file's patch. Reading fifteen pull requests to report on the week does not need fifteen diffs; reviewing one does.",
+      parameters: {
+        type: "object",
+        properties: {
+          pull_request: {
+            type: "number",
+            description: "Number of the pull request, as list_pull_requests returns it.",
+          },
+          include_diff: {
+            type: "boolean",
+            description: "Include each file's patch (truncated past ~4000 characters). Default false.",
+          },
+        },
+        required: ["pull_request"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "comment_pull_request",
+      description:
+        "Post a message in a pull request's conversation — a summary of what you found, an answer to a question asked there, a note about what changed. The signature naming you and your model is appended for you: do not write one. To point at a precise line, comment_pull_request_line; to give a formal verdict the forge records, review_pull_request.",
+      parameters: {
+        type: "object",
+        properties: {
+          pull_request: { type: "number", description: "Number of the pull request." },
+          body: { type: "string", description: "The message, in markdown." },
+        },
+        required: ["pull_request", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "comment_pull_request_line",
+      description:
+        `Post a remark ANCHORED to one line of a pull request's diff. The line must be a line the DIFF shows: 'line' is numbered in the NEW file for side 'RIGHT' (an added or unchanged line of the diff) and in the OLD file for side 'LEFT' (a removed line). If the anchor does not resolve, the call comes back with that file's commentable ranges and nothing is posted — pick one of them, or make the point in comment_pull_request.\n\nAt most ${AI_REVIEW_MAX_INLINE_COMMENTS} anchored remarks per run, ACROSS EVERY pull request: the result tells you how many are left. Spend them on what matters most.`,
+      parameters: {
+        type: "object",
+        properties: {
+          pull_request: { type: "number", description: "Number of the pull request." },
+          path: {
+            type: "string",
+            description: "Repo-relative path, exactly as the diff names it (for a renamed file, either name works).",
+          },
+          line: {
+            type: "number",
+            description: "The line to anchor to, numbered in the NEW file for 'RIGHT' and the OLD file for 'LEFT'.",
+          },
+          side: {
+            type: "string",
+            enum: ["LEFT", "RIGHT"],
+            description: "'RIGHT' for a line the pull request adds or leaves unchanged, 'LEFT' for one it removes. Defaults to 'RIGHT'.",
+          },
+          body: {
+            type: "string",
+            description: "One or two sentences in markdown: what is wrong and what to do instead. Address the code, not the author.",
+          },
+        },
+        required: ["pull_request", "path", "line", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reply_pull_request_thread",
+      description:
+        "Reply inside an existing review thread of a pull request — to answer a question someone asked there, or to say a point has been addressed. 'comment_id' is the id read_pull_request gives for that thread. To open a NEW point use comment_pull_request_line; to talk to the pull request as a whole, comment_pull_request.",
+      parameters: {
+        type: "object",
+        properties: {
+          pull_request: { type: "number", description: "Number of the pull request." },
+          comment_id: {
+            type: "number",
+            description: "Numeric id of a review comment of the thread you are replying to.",
+          },
+          body: { type: "string", description: "The reply, in markdown." },
+        },
+        required: ["pull_request", "comment_id", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "review_pull_request",
+      description:
+        "Submit a FORMAL review verdict on a pull request, recorded by the forge: 'approve', 'request_changes' or 'comment', with the reasons in 'body'. This is not a comment — an approval can satisfy a branch protection rule and a change request can block the pull request until someone lifts it, so use it when you have actually read the change, and prefer comment_pull_request when you only have an opinion to share.\n\nIt is posted under minddy's account, never under a person's. A forge refuses to let an account review its own pull request: on a pull request YOU opened, the verdict is published as a comment instead — the result says so ('published: comment'), and you must report it as such rather than claiming an approval that did not happen.",
+      parameters: {
+        type: "object",
+        properties: {
+          pull_request: { type: "number", description: "Number of the pull request." },
+          verdict: {
+            type: "string",
+            enum: ["approve", "request_changes", "comment"],
+            description: "The verdict to record.",
+          },
+          body: {
+            type: "string",
+            description: "Why, in markdown. Required — a verdict without its reasons is not a review.",
+          },
+        },
+        required: ["pull_request", "verdict", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_pull_request_state",
+      description:
+        "Change a pull request's state: 'merged' (merge it), 'closed' (close it without merging), 'open' (reopen a closed one), or 'ready_for_review' (take a draft out of draft). MERGING IS IRREVERSIBLE and ships code to the base branch — do it when you were asked to, or when the rule you are executing plainly says to, never as a tidy-up. Read the pull request first: 'mergeable_state' says whether the forge will even accept it (protected branch, red checks, missing approvals, conflicts all refuse the merge, and the error tells you which).",
+      parameters: {
+        type: "object",
+        properties: {
+          pull_request: { type: "number", description: "Number of the pull request." },
+          state: {
+            type: "string",
+            enum: ["merged", "closed", "open", "ready_for_review"],
+            description: "The state to move it to.",
+          },
+          merge_method: {
+            type: "string",
+            enum: ["merge", "squash", "rebase"],
+            description:
+              "For 'merged' only: how to merge. Omit for the repository's default. A method the forge does not offer is refused, and the error lists the ones it does.",
+          },
+        },
+        required: ["pull_request", "state"],
+      },
+    },
+  },
+];
+
 /** `create_pr` — même tool, formulé selon l'ancrage (le carnet n'a pas de ticket). */
 const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
   type: "function",
@@ -1076,6 +1268,7 @@ const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
 export const AGENT_TOOLS: AgentToolDef[] = [
   ...CORE_TOOLS,
   ...MINDDY_TOOLS,
+  ...PROJECT_PR_TOOLS,
   CREATE_PR_TOOL("issue"),
 ];
 
@@ -1083,6 +1276,7 @@ export const AGENT_TOOLS: AgentToolDef[] = [
 export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [
   ...CORE_TOOLS,
   ...MINDDY_TOOLS,
+  ...PROJECT_PR_TOOLS,
   CREATE_PR_TOOL("notebook"),
 ];
 
@@ -1371,6 +1565,10 @@ const SUBAGENT_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
   "update_plan",
   "run_background",
   ...MINDDY_TOOLS.map((t) => t.function.name),
+  // Les pull requests du projet appartiennent au parent, pour la même raison que
+  // `create_pr` : une fille qui fusionne ou qui commente agirait au nom d'une
+  // conversation qu'elle n'a pas lue. Elle rapporte, le parent décide.
+  ...PROJECT_PR_TOOLS.map((t) => t.function.name),
 ]);
 
 /** Les quatre lecteurs : tout ce qu'un sous-agent `explore` a le droit de faire. */

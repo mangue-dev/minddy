@@ -40,3 +40,23 @@ export const SCRATCHPAD_TOOL_NAMES = new Set([
 
 /** Écritures sur la pull request relue (routées vers `pr-tools.ts`). */
 export const PR_TOOL_NAMES = new Set(["comment_pr_line", "comment_pr", "reply_pr_thread"]);
+
+/**
+ * Pull requests DU PROJET (routées vers `project-pr-tools.ts`) — l'inventaire et
+ * ce qu'un run ordinaire peut y faire, celle du run relue mise à part.
+ *
+ * Deux familles et pas une, alors qu'elles se recouvrent en partie : ces
+ * tools-là prennent un `pull_request` (aucune session n'est ancrée pour eux),
+ * et surtout ils ne sont JAMAIS servis ensemble — la relecture a les trois
+ * ci-dessus, tout le reste a ceux-ci. Des noms distincts sont ce qui rend le
+ * routage lisible des deux côtés (`control-plane.ts`, `exec-tool.ts`).
+ */
+export const PROJECT_PR_TOOL_NAMES = new Set([
+  "list_pull_requests",
+  "read_pull_request",
+  "comment_pull_request",
+  "comment_pull_request_line",
+  "reply_pull_request_thread",
+  "review_pull_request",
+  "set_pull_request_state",
+]);

@@ -422,6 +422,7 @@ export async function runVmTurn(
           host,
           createPr: null,
           prTool: null,
+          projectPrTool: null,
           issueTool: null,
           scratchpadTool: null,
           webSearch,
@@ -617,6 +618,9 @@ export async function runVmTurn(
       // La garantie ne doit pas dépendre de `loop_in_vm` — cf. `gateCreatePr`.
       createPr: createPr ? gateCreatePr(createPr, deliveryGate, remainingMs) : null,
       prTool: job.anchor === "pr" ? platformTool : null,
+      // Le miroir exact : la relecture a SA pull request, tout le reste a celles
+      // du PROJET (MIN-267). Les deux jeux ne se servent jamais ensemble.
+      projectPrTool: job.anchor === "pr" ? null : platformTool,
       // Enveloppé pour NOTER le plan écrit ce tour (MIN-236) : les tools ticket
       // partent au plan de contrôle, donc c'est le seul endroit d'où la boucle voit
       // passer le markdown. Puis la porte de MIN-256, câblée ICI AUSSI et avec le

@@ -33,6 +33,7 @@ function execToolFor(host: RepoHost, verification: VerificationSink) {
     host,
     createPr: null,
     prTool: null,
+    projectPrTool: null,
     issueTool: null,
     scratchpadTool: null,
     webSearch: null,

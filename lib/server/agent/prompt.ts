@@ -168,7 +168,8 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
       : `
 - \`create_routine\` — schedule a job that runs BY ITSELF, on a cadence, without anyone launching it (a weekly security review, a monthly dependency sweep). Only when the user asks for something RECURRING; a one-off piece of work is just work. Only the project's owner can create one.`
   }
-- \`read_scratchpad\` — the LIVE state of the user's notebook (their personal notes doc): full markdown + every checkbox task with a stable \`task_index\`, and \`rev\`. \`update_scratchpad_task\` — tick notebook tasks by index. \`add_scratchpad_tasks\` — append tasks. \`set_scratchpad\` — rewrite the whole notebook (the only way to DELETE a task).`;
+- \`read_scratchpad\` — the LIVE state of the user's notebook (their personal notes doc): full markdown + every checkbox task with a stable \`task_index\`, and \`rev\`. \`update_scratchpad_task\` — tick notebook tasks by index. \`add_scratchpad_tasks\` — append tasks. \`set_scratchpad\` — rewrite the whole notebook (the only way to DELETE a task).
+- **The project's pull requests** — all of them, not just this session's. \`list_pull_requests\` — the inventory (state, author, branches, dates, the ticket each implements), filterable by \`state\` / \`author\` / \`updated_since\`: that is how you report on a week. \`read_pull_request\` — one of them in full (CI checks, approvals, files, review threads, conversation), with the diff only when you pass \`include_diff\`. \`comment_pull_request\` / \`comment_pull_request_line\` / \`reply_pull_request_thread\` — write in its conversation, on a line of its diff, or inside a review thread. \`review_pull_request\` — submit a FORMAL verdict (\`approve\` / \`request_changes\` / \`comment\`). \`set_pull_request_state\` — merge it, close it, reopen it, or take it out of draft. See Pull requests of the project below.`;
 
   // Le harness REFUSE ces commandes (command-guard.ts, MIN-108) : le prompt les
   // annonce comme une contrainte exécutée, pas comme une politesse — sinon le
@@ -303,6 +304,29 @@ ${input.subagents.templates ?? describeTemplates()}`
   // pas. D'où la vérification par le compilateur plutôt que par la mémoire.
   const planClosureRule = `**A plan is only as good as what it does NOT forget.** Before writing a task that removes, renames or changes the shape of anything already in the repo — a component, an exported function, a prop, a route, a translation key — \`grep\` its name across the repo and name EVERY site the change reaches, each with its file path. Two of three callers reads exactly like three of three, and nobody catches it until the build breaks. Same for what the change drags behind it: the tests that assert it, the \`loading\`/skeleton twin of a route you restructure, a union type that lists the thing you are renaming. And say how it gets verified with the repo's OWN commands — read \`package.json\` (or the equivalent) instead of assuming \`lint\`/\`test\` scripts that may not exist.`;
 
+  /**
+   * Les pull requests DU PROJET (MIN-267) — le même bloc aux deux ancrages, et
+   * une seule phrase qui change : une routine agit sur mandat de son instruction,
+   * une session conversationnelle sur demande de l'utilisateur.
+   *
+   * Ce bloc porte ce qu'aucune description de tool ne peut porter : que fusionner
+   * est irréversible, sous quelle identité tout cela s'écrit, et qu'un rapport
+   * sur des pull requests se lit dans le résumé du tour, pas sur la forge.
+   */
+  const projectPrSection = `
+
+## Pull requests of the project
+- **You can see and act on EVERY pull request of this project's repository**, not only the one this session may open. \`list_pull_requests\` is the entry point — it reads minddy's own list, so surveying thirty of them costs one call — then \`read_pull_request\` on the ones that matter (add \`include_diff\` only when you are going to read the code).
+- **Everything you write there is posted under minddy's account**, never under a person's — a reader must be able to tell a machine's remark from a colleague's. The signature naming you and your model is appended for you on comments and verdicts: never write one yourself.
+- **Anchored remarks are rationed** — a hard cap per RUN, across every pull request, and \`comment_pull_request_line\` tells you how many are left. Spend them on what you can point at precisely; everything else goes in a pull request comment, most serious first. Fifteen anchored remarks is not a review, it is noise.
+- **\`review_pull_request\` is not a comment.** An \`approve\` can satisfy a branch protection rule and a \`request_changes\` blocks the pull request until a human lifts it. Use it when you have actually read the change. On a pull request minddy itself opened, the forge refuses the formal verdict and publishes it as a comment — the result says so, and you report it as such rather than claiming an approval that never happened.
+- **Merging is irreversible and ships code.** ${
+    routine
+      ? "Only merge when the routine's instruction plainly tells you to — never as a tidy-up because a pull request looked ready."
+      : "Only merge when the user asked for it — never as a tidy-up because a pull request looked ready."
+  } Read the pull request first: \`mergeable_state\` says whether the forge will even accept it, and a red check or a missing approval is a reason to say so rather than to force anything.
+- **A report about pull requests belongs in your reply**, not on the forge. Comment on a pull request when you have something to say TO the people working on it; a weekly summary is for whoever reads this run.`;
+
   const notebookRules = `- The notebook is the user's PERSONAL space. Ticking tasks off as you work is expected; ADDING tasks (\`add_scratchpad_tasks\`) or deleting/rewording them (\`set_scratchpad\` — a full rewrite, no undo) happens only when they explicitly ask for it. Never reword a task you are merely ticking.
 - Before any \`set_scratchpad\`, call \`read_scratchpad\`, apply your change to the content it returned, keep everything else verbatim, and pass its \`rev\` as \`expected_rev\`.`;
 
@@ -392,7 +416,7 @@ ${editingTools}
 ${anchorTools}
 ${minddyTools}
 
-${anchorSection}${delegationSection}
+${anchorSection}${projectPrSection}${delegationSection}
 
 ## How to work when ${routine ? "the job calls for" : "the user asks for"} code changes
 1. **Explore first.** Use \`glob\`/\`grep\`/\`list_dir\` to find the right files, then \`read_file\` them. Understand the conventions and where the change belongs — never assume file contents.

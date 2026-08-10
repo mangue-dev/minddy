@@ -32,6 +32,7 @@ function execToolFor(host: RepoHost) {
     host,
     createPr: null,
     prTool: null,
+    projectPrTool: null,
     issueTool: null,
     scratchpadTool: null,
     webSearch: null,

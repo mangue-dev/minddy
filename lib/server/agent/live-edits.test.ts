@@ -33,6 +33,7 @@ function execToolFor(files: Record<string, string>) {
     host: fakeHost(files),
     createPr: null,
     prTool: null,
+    projectPrTool: null,
     issueTool: null,
     scratchpadTool: null,
     webSearch: null,

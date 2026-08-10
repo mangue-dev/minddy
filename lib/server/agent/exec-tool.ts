@@ -3,6 +3,7 @@ import { runCommandTimeoutMs } from "./chunk-budget";
 import {
   ISSUE_TOOL_NAMES,
   PR_TOOL_NAMES,
+  PROJECT_PR_TOOL_NAMES,
   SCRATCHPAD_TOOL_NAMES,
 } from "./platform-tool-names";
 import {
@@ -283,6 +284,10 @@ export interface ExecToolConfig {
   /** Écritures sur la pull request RELUE (MIN-168). null hors session de
    *  relecture : ces trois tools ne sont alors ni offerts ni exécutables. */
   prTool: PlatformToolHandler | null;
+  /** Pull requests DU PROJET (MIN-267) — l'inventaire et ce qu'on y fait. null
+   *  sur une session de RELECTURE (elle a `prTool`, sur sa seule pull request) et
+   *  chez un sous-agent, à qui les pull requests n'appartiennent pas. */
+  projectPrTool: PlatformToolHandler | null;
   /** null = pas de tools ticket (idem : le ticket appartient au parent). */
   issueTool: PlatformToolHandler | null;
   /** null = pas de tools carnet. */
@@ -335,6 +340,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     host,
     createPr,
     prTool,
+    projectPrTool,
     issueTool,
     scratchpadTool,
     webSearch,
@@ -479,6 +485,15 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
         };
       }
       return await prTool(name, args);
+    }
+    if (PROJECT_PR_TOOL_NAMES.has(name)) {
+      if (!projectPrTool) {
+        return subagentDenied(
+          name,
+          "the project's pull requests belong to the parent session, which decides what happens to them",
+        );
+      }
+      return await projectPrTool(name, args);
     }
     if (SUBAGENT_CONTROL_TOOLS.has(name)) {
       if (!subagents) {

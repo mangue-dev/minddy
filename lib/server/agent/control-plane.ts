@@ -12,6 +12,7 @@ import { CHANGED_FILES_CAP } from "./repo-host";
 import {
   ISSUE_TOOL_NAMES,
   PR_TOOL_NAMES,
+  PROJECT_PR_TOOL_NAMES,
   SCRATCHPAD_TOOL_NAMES,
 } from "./platform-tool-names";
 import { WEB_SEARCH_SEQ_BASE } from "@/lib/server/web-search";
@@ -406,6 +407,10 @@ async function runPlatformTool(
     return await runPrTool(run, name, args, body);
   }
 
+  if (PROJECT_PR_TOOL_NAMES.has(name)) {
+    return await runProjectPrTool(run, name, args, body);
+  }
+
   if (name === "web_search") {
     return await runWebSearch(run, args);
   }
@@ -460,6 +465,58 @@ async function runPrTool(
       // Paresseux et payé une seule fois par appel : la validation d'ancre en a
       // besoin, un commentaire de PR entier n'y touche jamais.
       files: async () => (await forge.listPullRequestFiles(call)).files,
+      model: run.model ?? "",
+      locale,
+      inline,
+    },
+    name,
+    args,
+  );
+  return ok({ ...outcome, inlineUsed: inline.used });
+}
+
+/**
+ * Les pull requests DU PROJET (MIN-267), rejouées ici pour la même raison que
+ * celles de la relecture : la forge et son token n'entrent pas dans la VM, et la
+ * liste se lit en base.
+ *
+ * `pull_request_id` non nul = session de RELECTURE : ces tools ne lui sont ni
+ * offerts (`agentToolsFor`) ni câblés (`vm/turn.ts`), et le refus ici est le
+ * troisième verrou — celui qui tient même si un checkpoint d'avant rejoue un
+ * appel.
+ *
+ * Le compteur d'ancres fait le même aller-retour que là-haut, et c'est le MÊME
+ * plafond : « 5 par run », toutes pull requests confondues.
+ */
+async function runProjectPrTool(
+  run: AgentRun,
+  name: string,
+  args: Record<string, unknown>,
+  body: Record<string, unknown>,
+): Promise<ControlPlaneResult> {
+  if (run.pull_request_id) {
+    return bad(`${name} is not available in a pull request review session`);
+  }
+  const [{ executeProjectPrTool }, { resolveRepoCloneTarget }] = await Promise.all([
+    import("./project-pr-tools"),
+    import("./repo-access"),
+  ]);
+  const { locale } = await runPrefsFor(run);
+  const inline = { used: num(body.prInlineComments) ?? 0 };
+  const outcome = await executeProjectPrTool(
+    {
+      projectId: run.project_id,
+      // Un token FRAIS par appel : un tour de VM dure plus longtemps que celui
+      // qui a cloné le dépôt.
+      repo: async () => {
+        const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
+        if (!target) return null;
+        return {
+          token: target.token,
+          repoFullName: target.repoFullName,
+          provider: target.provider,
+        };
+      },
       model: run.model ?? "",
       locale,
       inline,
