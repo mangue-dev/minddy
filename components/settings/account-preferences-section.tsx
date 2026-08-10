@@ -35,6 +35,7 @@ import {
   AUTO_ASSIGN_ON_START_META_KEY,
   resolveAutoAssignOnStart,
 } from "@/lib/auto-assign-on-start";
+import { resolveSmartFill, SMART_FILL_META_KEY } from "@/lib/smart-fill";
 
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
@@ -103,6 +104,25 @@ export function AccountPreferencesSection() {
       await updateUserMetadata({ [AUTO_ASSIGN_ON_START_META_KEY]: next });
     } catch (e) {
       setAutoAssignStart(!next);
+      toast.error((e as Error).message);
+    }
+  };
+
+  // Smart-fill (MIN-260) : le formulaire de création remplit seul priorité,
+  // effort, catégories et objectif. Activée par défaut, comme les deux
+  // au-dessus — d'où le passage par `resolveSmartFill` plutôt qu'un `=== true`.
+  const [smartFill, setSmartFill] = useState(resolveSmartFill(user?.user_metadata));
+  useEffect(() => {
+    setSmartFill(resolveSmartFill(user?.user_metadata));
+  }, [user]);
+
+  const toggleSmartFill = async (next: boolean) => {
+    if (!user) return;
+    setSmartFill(next);
+    try {
+      await updateUserMetadata({ [SMART_FILL_META_KEY]: next });
+    } catch (e) {
+      setSmartFill(!next);
       toast.error((e as Error).message);
     }
   };
@@ -243,6 +263,20 @@ export function AccountPreferencesSection() {
               id="account-auto-assign-start"
               checked={autoAssignStart}
               onCheckedChange={(v) => void toggleAutoAssignStart(v)}
+              disabled={!user}
+            />
+          }
+        />
+
+        <SettingsRow
+          htmlFor="account-smart-fill"
+          label={ta("smartFillLabel")}
+          hint={ta("smartFillDesc")}
+          control={
+            <Switch
+              id="account-smart-fill"
+              checked={smartFill}
+              onCheckedChange={(v) => void toggleSmartFill(v)}
               disabled={!user}
             />
           }

@@ -184,6 +184,7 @@ export const BILLABLE_FEATURES = [
   "dictation",
   "transcription",
   "smart_assign",
+  "smart_fill",
   "feedback_classify",
   "feedback_analyze",
   "feedback_voice",
@@ -206,7 +207,7 @@ export type UsageSegmentId =
   | "numo"
   | "dictation"
   | "feedback"
-  | "smart_assign";
+  | "automations";
 
 export interface UsageSegment {
   id: UsageSegmentId;
@@ -264,13 +265,23 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
     features: ["feedback_classify", "feedback_analyze", "feedback_voice", "embedding"],
     barClass: "bg-emerald-500",
   },
-  // Smart Assign a SA ligne, et non une moitié muette de « retours &
-  // automatisations » : deux features qu'on n'arme pas ensemble, dont on ne se
-  // demande pas le coût ensemble. Elle porte son nom de produit — le nom
-  // « automatisations » désigne déjà les chaînes de règles (MIN-147), qui ne
-  // dépensent rien en propre et se lisent dans la ligne agents, celle des runs
-  // qu'elles lancent.
-  { id: "smart_assign", features: ["smart_assign"], barClass: "bg-fuchsia-500" },
+  // LES AUTOMATISATIONS DU FORMULAIRE : ce que minddy remplit à votre place au
+  // moment où le ticket naît — qui le prend (Smart Assign, MIN-31) et ce qu'il
+  // est (Smart-fill, MIN-260). Deux features, une ligne : on ne les arme pas
+  // ensemble, mais on se demande leur coût ensemble, parce que c'est la même
+  // question — « qu'est-ce que ça me coûte de ne plus remplir mes tickets ? ».
+  //
+  // La ligne s'appelait « Smart Assign », et le commentaire d'alors écartait
+  // exprès le mot « automatisations », qui désigne déjà les chaînes de règles
+  // (MIN-147). Il le désigne toujours — mais ces chaînes ne dépensent rien en
+  // propre : leur coût est celui des runs qu'elles lancent, et il se lit dans la
+  // ligne des agents. Le mot était donc libre, et à deux features le nom d'un
+  // seul produit cachait l'autre moitié de la ligne.
+  {
+    id: "automations",
+    features: ["smart_assign", "smart_fill"],
+    barClass: "bg-fuchsia-500",
+  },
 ];
 
 /** Multiple d'usage d'un plan vs Free (« 10× plus d'usage ») — pour l'UI, qui

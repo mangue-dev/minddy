@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import { toast } from "mangue-ui";
+import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import {
   createIssueApi,
   deleteIssueApi,
@@ -104,6 +105,13 @@ export function useIssuesQuery(projectId: string | null) {
     async (input: CreateIssueInput) => {
       const pid = projectId as string;
       const key = issuesKey(pid);
+      // Smart-fill (MIN-260) : le serveur remplit le ticket AVANT d'insérer la
+      // ligne, donc pas de carte optimiste — elle serait vide le temps du
+      // remplissage. Cf. [create-issue-deferred](create-issue-deferred.ts).
+      if (input.smart_fill) {
+        createIssueDeferred({ queryClient, projectId: pid, input, record });
+        return null;
+      }
       const optimistic = buildOptimisticIssue(
         input,
         pid,

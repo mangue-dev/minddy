@@ -310,7 +310,7 @@
     "segmentNumo": "Numo",
     "segmentDictation": "Dictée vocale",
     "segmentFeedback": "Retours",
-    "segmentSmartAssign": "Smart Assign",
+    "segmentAutomations": "Automatisations",
     "resetsAt": "Réinitialisation le {date}",
     "upgradeTo": "Passer à {plan}",
     "viewBilling": "Voir la facturation",
@@ -1130,6 +1130,10 @@
     "changeDueDateAria": "Changer l'échéance",
     "changeObjectiveAria": "Changer l'objectif",
     "issueCreatedToast": "Ticket créé.",
+    "smartFillChip": "Smart-fill",
+    "smartFillOffHint": "Coupé pour ce ticket — ses propriétés sont à vous.",
+    "smartFillOnHint": "Priorité, effort, catégories et objectif sont remplis à la création.",
+    "smartFillPendingToast": "Smart-fill remplit le ticket, il apparaîtra dans quelques secondes.",
     "newIssueTitle": "Nouveau ticket",
     "createDescriptionPlaceholder": "Description du ticket",
     "createMore": "En créer un autre",
@@ -1613,6 +1617,8 @@
     "autoAssignLabel": "M'assigner les tickets que je crée",
     "autoAssignStartDesc": "Ne s'applique qu'aux tickets sans assigné.",
     "autoAssignStartLabel": "M'assigner le ticket quand je le démarre",
+    "smartFillDesc": "Priorité, effort, catégories et objectif, lus dans le titre et la description. Statut, assigné et échéance restent à vous.",
+    "smartFillLabel": "Laisser Smart-fill remplir les nouveaux tickets",
     "numoStatusTitle": "Statut des tickets créés par Numo",
     "numoStatusDesc": "« Triage » ajoute une étape de validation manuelle ; « Backlog » et « À faire » la sautent.",
     "promptAutoStartDesc": "Ne s'applique qu'aux tickets et aux tâches du carnet pas encore démarrés.",
@@ -3038,6 +3044,14 @@
         "label": "Assignation intelligente",
         "desc": "Assigne un ticket qui sort du triage sans personne dessus."
       },
+      "smart_fill_enabled": {
+        "label": "Smart-fill",
+        "desc": "Laisse le formulaire de création remplir seul priorité, effort, catégories et objectif. Coupé ici, la bascule disparaît de tous les comptes."
+      },
+      "smart_fill_model": {
+        "label": "Modèle Smart-fill",
+        "desc": "Lit le titre et la description d'un ticket neuf et remplit ses champs. Quelqu'un l'attend : prendre un modèle rapide."
+      },
       "conversation_title_model": {
         "label": "Titres des conversations",
         "desc": "Nomme une conversation de Numo en quelques mots, d'après son premier message. Un petit modèle suffit."
@@ -3163,6 +3177,7 @@
         "dictation": "Dictée → ticket",
         "transcription": "Transcription vocale",
         "smart_assign": "Assignation intelligente",
+        "smart_fill": "Smart-fill",
         "feedback_classify": "Classification des retours",
         "feedback_analyze": "Analyse des retours",
         "feedback_voice": "Retour dicté",

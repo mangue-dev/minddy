@@ -27,6 +27,7 @@ import {
   mergeServerIssue,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
+import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
@@ -148,6 +149,13 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   // au succès, retiré + toast à l'échec. Le realtime propage aux autres clients.
   const createIssueGlobal = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
+      // Smart-fill (MIN-260) : le serveur remplit le ticket AVANT d'insérer la
+      // ligne, donc pas de carte optimiste — elle serait vide le temps du
+      // remplissage. Cf. [create-issue-deferred](create-issue-deferred.ts).
+      if (input.smart_fill) {
+        createIssueDeferred({ queryClient, projectId, input, record });
+        return null;
+      }
       const optimistic = buildOptimisticIssue(
         input,
         projectId,

@@ -23,6 +23,15 @@ export type AiFeature =
   | "dictation"
   | "transcription"
   | "smart_assign"
+  /**
+   * Smart-fill (MIN-260) : un appel à la création d'un ticket, qui lit son titre
+   * et sa description et pose priorité, effort, catégories et objectif. Sa
+   * propre feature à côté de `smart_assign` — l'une choisit QUI prend le ticket,
+   * l'autre dit ce qu'il EST, on les arme séparément et leurs coûts se lisent
+   * séparément. Elles se rejoignent une ligne plus haut, dans le segment
+   * « Automatisations » montré à l'utilisateur (`USAGE_SEGMENTS`).
+   */
+  | "smart_fill"
   | "feedback_classify"
   | "feedback_analyze"
   | "embedding"

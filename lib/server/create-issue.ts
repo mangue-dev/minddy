@@ -20,6 +20,7 @@ import {
   type EventRow,
 } from "@/lib/server/issue-events";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import { runSmartFill } from "@/lib/server/smart-fill";
 import { insertNotifications } from "@/lib/server/notifications";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
@@ -276,6 +277,40 @@ export async function createIssueForProject({
     if (!("objective_id" in input)) row.objective_id = parent.objective_id;
   }
 
+  /**
+   * SMART-FILL (MIN-260) — juste AVANT que la ligne existe, et c'est tout le
+   * dessin de la feature : le ticket naît complet, donc il n'y a jamais de
+   * ticket à moitié rempli à masquer dans le board.
+   *
+   * Ici et pas plus haut : toutes les validations sont passées (parent, membre,
+   * récurrence), donc on ne paye pas un appel de modèle pour une création qui
+   * va être refusée. Et pas plus bas : après l'insert, il faudrait un UPDATE et
+   * une seconde diffusion temps réel, c'est-à-dire exactement la carte vide
+   * qu'on ne veut pas montrer.
+   *
+   * IL NE COMPLÈTE QUE CE QUE L'HUMAIN A LAISSÉ VIDE. Un champ posé à la main
+   * gagne toujours — y compris l'objectif hérité d'un ticket parent juste
+   * au-dessus. C'est une aide à la saisie, pas un correcteur.
+   */
+  let smartFillCategoryIds: string[] = [];
+  if (input.smart_fill === true) {
+    const patch = await runSmartFill({
+      projectId,
+      projectName: projectName ?? "this project",
+      actorId,
+      title: row.title as string,
+      description: (row.description as string | null) ?? null,
+    });
+    // « none » est le défaut du formulaire, pas un choix : un ticket qui arrive
+    // sans priorité n'en a pas refusé une.
+    if (patch.priority && (row.priority == null || row.priority === "none")) {
+      row.priority = patch.priority;
+    }
+    if (patch.effort !== undefined && row.effort == null) row.effort = patch.effort;
+    if (patch.objective_id && row.objective_id == null) row.objective_id = patch.objective_id;
+    if (patch.category_ids?.length) smartFillCategoryIds = patch.category_ids;
+  }
+
   const { data: number, error: counterError } = await service.rpc("next_issue_number", {
     p_project_id: projectId,
   });
@@ -346,7 +381,7 @@ export async function createIssueForProject({
   // category ID is scoped to one project). The DB filter on project_id keeps
   // foreign values out either way.
   let categoryIds: string[] = [];
-  const requestedIds = Array.isArray(input.category_ids)
+  const pickedIds = Array.isArray(input.category_ids)
     ? input.category_ids
         .filter((v): v is string => typeof v === "string")
         .slice(0, MAX_CATEGORY_REFS)
@@ -356,6 +391,11 @@ export async function createIssueForProject({
         .filter((v): v is string => typeof v === "string")
         .slice(0, MAX_CATEGORY_REFS)
     : [];
+  // Smart-fill ne range le ticket que si PERSONNE ne l'a rangé — ni par id ni
+  // par nom. Des catégories choisies à la main sont un choix, et s'y ajouter le
+  // déferait à moitié.
+  const requestedIds =
+    pickedIds.length === 0 && requestedNames.length === 0 ? smartFillCategoryIds : pickedIds;
   if (requestedIds.length > 0 || requestedNames.length > 0) {
     const resolved = new Set<string>();
     if (requestedIds.length > 0) {

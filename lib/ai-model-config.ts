@@ -43,6 +43,14 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   { key: "assistant_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "fallback_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  // Smart-fill (lib/server/smart-fill.ts, MIN-260) : UN appel par ticket créé à
+  // la main, sur son seul titre + sa description, et qui rend priorité, effort,
+  // catégories et objectif. Il tient la personne devant son écran (la ligne
+  // n'est insérée qu'une fois remplie) : il lui faut donc un modèle RAPIDE, pas
+  // un modèle malin — la tâche est un rangement, pas un raisonnement. Le drapeau
+  // le coupe partout d'un coup, et le formulaire retombe sur la saisie à la main.
+  { key: "smart_fill_enabled", kind: "flag", fallback: "true", group: "assistant" },
+  { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   // Titre d'une conversation Numo (lib/server/assistant/title.ts) : un appel de
   // quelques dizaines de tokens par conversation neuve — un petit modèle suffit,
   // et c'est exactement le genre d'appel où un gros ne se justifie pas.

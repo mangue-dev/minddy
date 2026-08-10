@@ -59,7 +59,7 @@ export const SEGMENT_UI: Record<
       | "segmentNumo"
       | "segmentDictation"
       | "segmentFeedback"
-      | "segmentSmartAssign";
+      | "segmentAutomations";
   }
 > = {
   agents: { icon: Bot, text: "text-violet-600 dark:text-violet-400", labelKey: "segmentAgents" },
@@ -69,8 +69,11 @@ export const SEGMENT_UI: Record<
   numo: { icon: NumoRowIcon, text: "text-blue-600 dark:text-blue-400", labelKey: "segmentNumo" },
   dictation: { icon: Mic, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
   feedback: { icon: Megaphone, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
-  // WandSparkles : l'icône de Smart Assign dans les réglages de projet.
-  smart_assign: { icon: WandSparkles, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentSmartAssign" },
+  // Ce que minddy remplit à votre place quand le ticket naît : qui le prend
+  // (Smart Assign) et ce qu'il est (Smart-fill). WandSparkles — l'icône de Smart
+  // Assign dans les réglages de projet, et celle de Smart-fill dans le
+  // formulaire de création.
+  automations: { icon: WandSparkles, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentAutomations" },
 };
 
 const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {

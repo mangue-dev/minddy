@@ -310,7 +310,7 @@
     "segmentNumo": "Numo",
     "segmentDictation": "Voice dictation",
     "segmentFeedback": "Feedback",
-    "segmentSmartAssign": "Smart Assign",
+    "segmentAutomations": "Automations",
     "resetsAt": "Resets on {date}",
     "upgradeTo": "Upgrade to {plan}",
     "viewBilling": "View billing",
@@ -1130,6 +1130,10 @@
     "changeDueDateAria": "Change due date",
     "changeObjectiveAria": "Change objective",
     "issueCreatedToast": "Issue created.",
+    "smartFillChip": "Smart-fill",
+    "smartFillOffHint": "Off for this issue — fill its properties yourself.",
+    "smartFillOnHint": "Priority, effort, categories and objective are filled in on creation.",
+    "smartFillPendingToast": "Smart-fill is filling the issue in, it will show up in a few seconds.",
     "newIssueTitle": "New issue",
     "createDescriptionPlaceholder": "Issue description",
     "createMore": "Create more",
@@ -1613,6 +1617,8 @@
     "autoAssignLabel": "Assign issues I create to me",
     "autoAssignStartDesc": "Only applies to issues that have no assignee.",
     "autoAssignStartLabel": "Assign the issue to me when I start it",
+    "smartFillDesc": "Priority, effort, categories and objective, read off the title and description. Status, assignee and due date stay yours.",
+    "smartFillLabel": "Let Smart-fill fill in new issues",
     "numoStatusTitle": "Status for issues Numo creates",
     "numoStatusDesc": "Triage adds a manual review step; Backlog and Todo skip it.",
     "promptAutoStartDesc": "Only applies to issues and notebook tasks that haven't started yet.",
@@ -3038,6 +3044,14 @@
         "label": "Smart assignment",
         "desc": "Assigns an issue that leaves triage with nobody on it."
       },
+      "smart_fill_enabled": {
+        "label": "Smart-fill",
+        "desc": "Lets the create-issue form fill priority, effort, categories and objective on its own. Off here, the toggle disappears from every account."
+      },
+      "smart_fill_model": {
+        "label": "Smart-fill model",
+        "desc": "Reads a new issue's title and description and fills its fields. Someone is waiting on it — pick a fast model."
+      },
       "conversation_title_model": {
         "label": "Conversation titles",
         "desc": "Names a Numo conversation in a few words, from its first message. A small model is enough."
@@ -3163,6 +3177,7 @@
         "dictation": "Dictation → issue",
         "transcription": "Speech-to-text",
         "smart_assign": "Smart assignment",
+        "smart_fill": "Smart-fill",
         "feedback_classify": "Feedback classification",
         "feedback_analyze": "Feedback analysis",
         "feedback_voice": "Dictated feedback",

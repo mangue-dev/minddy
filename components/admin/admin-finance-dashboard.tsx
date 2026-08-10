@@ -58,6 +58,10 @@ const FEATURES = [
   "dictation",
   "transcription",
   "smart_assign",
+  // Smart-fill (MIN-260) : l'autre moitié de la ligne « Automatisations » côté
+  // utilisateur, mais sa propre feature ici — c'est la finance, on lit les
+  // coûts un par un.
+  "smart_fill",
   "feedback_classify",
   "feedback_analyze",
   // Retour dicté (board public + dashboard) : l'écoute ET le rangement par Numo

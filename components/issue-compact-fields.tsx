@@ -7,7 +7,8 @@
 // contracts as the side-panel fields in issue-property-fields.tsx.
 
 import { useTranslations } from "next-intl";
-import { Tag, Target, Triangle, UserCircle2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { Tag, Target, Triangle, UserCircle2, WandSparkles } from "lucide-react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
   SearchSelect,
@@ -376,5 +377,53 @@ export function ObjectiveCompact({
         </button>
       }
     />
+  );
+}
+
+/**
+ * SMART-FILL (MIN-260) — la bascule, dans la rangée d'options.
+ *
+ * Elle n'y apparaît QUE si le compte a la préférence armée : coupée dans les
+ * réglages, la feature n'existe pas et sa bascule non plus (c'est l'appelant qui
+ * décide de la rendre). Ici, elle ne sert qu'à la couper POUR CE TICKET-LÀ —
+ * quand on sait déjà ce qu'on veut, ou qu'on préfère ne pas dépenser un appel.
+ *
+ * Elle est allumée par défaut, donc elle se dessine à l'envers des autres : un
+ * chip PLEIN quand la chose est active (l'état normal), et vidé quand on l'a
+ * coupée. Les six autres pickers, eux, sont vides tant qu'on n'a rien choisi.
+ *
+ * `aria-pressed` et pas un `Switch` : c'est un bouton de rangée d'outils, au
+ * même dessin que ses voisins, pas une ligne de réglages.
+ */
+export function SmartFillCompact({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  const t = useTranslations("IssueUI");
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-pressed={value}
+          onClick={() => onChange(!value)}
+          className={cn(
+            PILL,
+            value
+              ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+              : "text-muted-foreground",
+          )}
+        >
+          <WandSparkles className="size-4 shrink-0" />
+          <span>{t("smartFillChip")}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {value ? t("smartFillOnHint") : t("smartFillOffHint")}
+      </TooltipContent>
+    </Tooltip>
   );
 }

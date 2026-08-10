@@ -37,6 +37,7 @@ import {
   DueDateCompact,
   EffortCompact,
   ObjectiveCompact,
+  SmartFillCompact,
   PriorityCompact,
   StatusCompact,
 } from "@/components/issue-compact-fields";
@@ -60,6 +61,7 @@ import type {
   IssuePriority,
   IssueEffort,
 } from "@/lib/issue-constants";
+import { resolveSmartFill } from "@/lib/smart-fill";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type {
   Category,
@@ -187,6 +189,26 @@ export function CreateIssueDialog({
   const drop = useFileDrop(uploads.addFiles);
   const drafts = useDrafts("issue", projectId, open);
   const mentions = useDescriptionMentions(projectId, members);
+
+  /**
+   * SMART-FILL (MIN-260) — armé par le compte, coupable par ticket.
+   *
+   * `smartFillAvailable` décide si la bascule EXISTE : préférence coupée dans
+   * les réglages, elle ne paraît nulle part et la rangée d'options reste
+   * entière. `smartFill` est son état pour CE ticket, reposé à chaque ouverture
+   * — couper Smart-fill sur un ticket ne le coupe pas pour le suivant, c'est un
+   * geste ponctuel, pas un réglage déguisé.
+   *
+   * Quand il est actif, la rangée ne garde que les trois propriétés que
+   * Smart-fill ne touche pas — statut, assigné, échéance. Les quatre autres ne
+   * sont pas grisées mais RETIRÉES : un champ visible et vide, sur un formulaire
+   * où quelque chose va le remplir, se lit comme un oubli.
+   */
+  const smartFillAvailable = resolveSmartFill(user?.user_metadata);
+  const [smartFill, setSmartFill] = useState(smartFillAvailable);
+  useEffect(() => {
+    if (open) setSmartFill(smartFillAvailable);
+  }, [open, smartFillAvailable]);
 
   // Account preference (Préférences → auto-attribution): pre-fill the assignee
   // with the creator. Guarded on membership — the assignee picker only lists
@@ -447,8 +469,13 @@ export function CreateIssueDialog({
           assignee_id: fields.assignee_id,
           category_names: categoryNames,
           copy_resources: uploads.inputs,
+          smart_fill: smartFill,
         });
-        toast.success(t("issueCreatedInProjectToast", { project: other.name }));
+        toast.success(
+          smartFill
+            ? t("smartFillPendingToast")
+            : t("issueCreatedInProjectToast", { project: other.name }),
+        );
       } else {
         await onCreate({
           title: trimmed,
@@ -456,8 +483,12 @@ export function CreateIssueDialog({
           ...fields,
           category_ids: categoryIds,
           resources: uploads.inputs,
+          smart_fill: smartFill,
         });
-        toast.success(t("issueCreatedToast"));
+        // Smart-fill : la carte n'est pas encore là (le serveur remplit avant
+        // d'insérer), et le toast est la seule chose qui dit qu'elle arrive.
+        // Sans lui, on referme un formulaire sur un board qui n'a pas bougé.
+        toast.success(smartFill ? t("smartFillPendingToast") : t("issueCreatedToast"));
       }
       // Analytics (MIN-78) : métadonnées seulement — jamais le titre ni la
       // description, seulement leur présence et la tranche de longueur.
@@ -473,6 +504,7 @@ export function CreateIssueDialog({
         resource_count: uploads.inputs.length,
         description_length_bucket: lengthBucket(description),
         created_from_draft: activeDraftId !== null,
+        smart_fill: smartFill,
       });
       // The draft became a real issue — drop it from the local store (MIN-41).
       if (activeDraftId) {
@@ -505,6 +537,22 @@ export function CreateIssueDialog({
   const otherProjects = projects.filter((p) => p.id !== projectId);
 
   const applyPatch = (patch: IssueDraftPatch) => {
+    // DICTER UNE DE CES QUATRE PROPRIÉTÉS COUPE SMART-FILL (MIN-260).
+    //
+    // « Bug urgent sur le login, petit » nomme une priorité et un effort : les
+    // poser dans un formulaire dont les pickers sont masqués les rendrait
+    // invisibles, et l'utilisateur n'aurait aucun moyen de voir que ce qu'il a
+    // dit a bien été entendu. Le serveur les respecterait — il ne remplit que
+    // les champs vides — mais « ça a marché » ne se déduit pas d'un écran muet.
+    // Dire une propriété est une intention : elle reprend la main sur l'aide.
+    if (
+      patch.priority !== undefined ||
+      patch.effort !== undefined ||
+      patch.objective_id !== undefined ||
+      Array.isArray(patch.category_ids)
+    ) {
+      setSmartFill(false);
+    }
     if (typeof patch.title === "string") setTitle(patch.title);
     if (typeof patch.description === "string") {
       setDescription(patch.description);
@@ -634,29 +682,35 @@ export function CreateIssueDialog({
                 onOpenChange={(o) => setOpenPicker(o ? "status" : null)}
                 shortcutHint={KEY_FOR_FIELD.status}
               />
-              <PriorityCompact
-                value={fields.priority}
-                onChange={(priority) => setFields((f) => ({ ...f, priority }))}
-                open={openPicker === "priority"}
-                onOpenChange={(o) => setOpenPicker(o ? "priority" : null)}
-                shortcutHint={KEY_FOR_FIELD.priority}
-              />
-              <EffortCompact
-                value={fields.effort}
-                onChange={(effort) => setFields((f) => ({ ...f, effort }))}
-                open={openPicker === "effort"}
-                onOpenChange={(o) => setOpenPicker(o ? "effort" : null)}
-                shortcutHint={KEY_FOR_FIELD.effort}
-              />
-              <CategoriesCompact
-                categories={categories}
-                projectId={projectId}
-                value={categoryIds}
-                onChange={setCategoryIds}
-                open={openPicker === "category"}
-                onOpenChange={(o) => setOpenPicker(o ? "category" : null)}
-                shortcutHint={KEY_FOR_FIELD.category}
-              />
+              {/* Priorité, effort et catégories : ce que Smart-fill pose
+                  lui-même. Retirés — pas grisés — quand il est armé. */}
+              {!smartFill && (
+                <>
+                <PriorityCompact
+                  value={fields.priority}
+                  onChange={(priority) => setFields((f) => ({ ...f, priority }))}
+                  open={openPicker === "priority"}
+                  onOpenChange={(o) => setOpenPicker(o ? "priority" : null)}
+                  shortcutHint={KEY_FOR_FIELD.priority}
+                />
+                <EffortCompact
+                  value={fields.effort}
+                  onChange={(effort) => setFields((f) => ({ ...f, effort }))}
+                  open={openPicker === "effort"}
+                  onOpenChange={(o) => setOpenPicker(o ? "effort" : null)}
+                  shortcutHint={KEY_FOR_FIELD.effort}
+                />
+                <CategoriesCompact
+                  categories={categories}
+                  projectId={projectId}
+                  value={categoryIds}
+                  onChange={setCategoryIds}
+                  open={openPicker === "category"}
+                  onOpenChange={(o) => setOpenPicker(o ? "category" : null)}
+                  shortcutHint={KEY_FOR_FIELD.category}
+                />
+                </>
+              )}
               <AssigneeCompact
                 value={fields.assignee_id}
                 onChange={(assignee_id) =>
@@ -676,17 +730,24 @@ export function CreateIssueDialog({
                 onOpenChange={(o) => setOpenPicker(o ? "dueDate" : null)}
                 shortcutHint={KEY_FOR_FIELD.dueDate}
               />
-              <ObjectiveCompact
-                value={fields.objective_id}
-                onChange={(objective_id) =>
-                  setFields((f) => ({ ...f, objective_id }))
-                }
-                objectives={objectives}
-                projectId={projectId}
-                open={openPicker === "objective"}
-                onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
-                shortcutHint={KEY_FOR_FIELD.objective}
-              />
+              {/* L'objectif aussi vient de Smart-fill — il ferme la liste des
+                  quatre, et la bascule prend leur place au bout de la rangée. */}
+              {!smartFill && (
+                <ObjectiveCompact
+                  value={fields.objective_id}
+                  onChange={(objective_id) =>
+                    setFields((f) => ({ ...f, objective_id }))
+                  }
+                  objectives={objectives}
+                  projectId={projectId}
+                  open={openPicker === "objective"}
+                  onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
+                  shortcutHint={KEY_FOR_FIELD.objective}
+                />
+              )}
+              {smartFillAvailable && (
+                <SmartFillCompact value={smartFill} onChange={setSmartFill} />
+              )}
             </div>
 
             {/* Bottom bar — voice dictation at left, create controls at right.

@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "mangue-ui";
 import { globalBoardQueryFn } from "./global-board-api";
+import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import {
   createIssueApi,
   deleteIssueApi,
@@ -294,6 +295,13 @@ export function useGlobalBoardQuery() {
   // toast à l'échec. Le realtime réconcilie ; pas de refetch local.
   const createIssue = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
+      // Smart-fill (MIN-260) : le serveur remplit le ticket AVANT d'insérer la
+      // ligne, donc pas de carte optimiste — elle serait vide le temps du
+      // remplissage. Cf. [create-issue-deferred](create-issue-deferred.ts).
+      if (input.smart_fill) {
+        createIssueDeferred({ queryClient, projectId, input, record });
+        return null;
+      }
       const optimistic = buildOptimisticIssue(
         input,
         projectId,

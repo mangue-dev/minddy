@@ -912,6 +912,18 @@ export interface CreateIssueInput {
   /** Cadence de répétition (MIN-136) — exige une `due_date`, qui porte alors la
       première occurrence. */
   recurrence?: RecurrenceCadence | null;
+  /**
+   * Smart-fill (MIN-260) : le serveur lit le titre et la description et remplit
+   * lui-même priorité, effort, catégories et objectif AVANT d'insérer la ligne
+   * — ce qu'on a posé à la main gagne toujours. Envoyé par la seule modal de
+   * création, quand la bascule du compte est armée et que l'auteur ne l'a pas
+   * coupée pour ce ticket.
+   *
+   * Il change aussi la façon dont la carte arrive à l'écran : pas de carte
+   * optimiste (elle serait vide le temps du remplissage), un toast à la place.
+   * Cf. `createIssue` dans [use-issues-query](use-issues-query.ts).
+   */
+  smart_fill?: boolean;
   category_ids?: string[];
   /** Cross-project creation carries category NAMES, not IDs (a category ID is
       scoped to one project). The server matches them against the target

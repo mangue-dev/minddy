@@ -272,6 +272,9 @@ export function useSettingsSections(): SettingsSection[] {
           "tickets", "issues", "assignation", "assign", "auto-assign",
           "statut", "status", "prompt", "démarrer", "demarrer", "start",
           "préférences", "preferences",
+          "smart-fill", "smart fill", "smartfill", "remplissage", "remplir",
+          "priorité", "priorite", "priority", "effort", "catégories",
+          "categories", "objectif", "objective",
         ],
       }),
       account({

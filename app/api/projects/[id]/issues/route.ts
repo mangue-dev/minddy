@@ -7,7 +7,10 @@ import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Headroom for the Smart Assign after() run (one AI call post-response).
+// De quoi couvrir les deux automatisations de la création : Smart-fill, qui
+// tourne DANS la requête et retarde donc la réponse (un appel de modèle, borné à
+// 20 s — c'est le prix d'une ligne qui naît complète, cf. lib/server/smart-fill.ts),
+// et l'appel de Smart Assign, qui repart en `after()` une fois la réponse rendue.
 export const maxDuration = 60;
 
 /** GET /api/projects/[id]/issues — all issues of an accessible project. */

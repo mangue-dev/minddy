@@ -54,6 +54,7 @@ import {
   mergeServerIssue,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
+import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
@@ -193,6 +194,13 @@ function ProjectBoard() {
   // remplacée par la ligne serveur au succès, retirée + toast à l'échec.
   const createIssueInProject = useCallback(
     async (targetProjectId: string, input: CreateIssueInput) => {
+      // Smart-fill (MIN-260) : le serveur remplit le ticket AVANT d'insérer la
+      // ligne, donc pas de carte optimiste — elle serait vide le temps du
+      // remplissage. Cf. [create-issue-deferred](../../../../lib/create-issue-deferred.ts).
+      if (input.smart_fill) {
+        createIssueDeferred({ queryClient, projectId: targetProjectId, input, record });
+        return null;
+      }
       const optimistic = buildOptimisticIssue(
         input,
         targetProjectId,

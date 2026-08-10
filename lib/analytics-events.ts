@@ -134,6 +134,12 @@ export interface AnalyticsEventProps {
     description_length_bucket?: string;
     /** Le ticket vient d'un brouillon local récupéré (MIN-41). */
     created_from_draft?: boolean;
+    /** Smart-fill était armé sur ce ticket (MIN-260) : ses propriétés viennent
+        du modèle, pas de la personne. Les autres propriétés de cet événement
+        (priority, effort, has_categories) décrivent alors ce que le FORMULAIRE
+        portait au moment de l'envoi, c'est-à-dire les défauts — le remplissage
+        se fait côté serveur, après. À lire avec ce drapeau, jamais sans. */
+    smart_fill?: boolean;
   };
   issue_create_dialog_opened: { source: string };
   issue_dictation_used: { surface: "create_dialog" | "side_panel" };
