@@ -201,11 +201,19 @@ export function FeedbackBoardClient({
         )}
       </div>
 
-      <aside className="hidden w-64 shrink-0 pt-1 desktop:block">
-        <Button className="w-full" onClick={() => setComposerOpen(true)}>
-          <Megaphone />
-          {t("composerTitle")}
-        </Button>
+      <aside className="hidden w-64 shrink-0 desktop:block">
+        {/* Le bouton se CENTRE sur la bande du header, comme les déclencheurs de
+            filtre s'y centrent — pas sur le haut de la colonne, ni sur le filet.
+            La bande fait 24 px (`h-6`, la même que celle de FilterBar) ; le
+            bouton en fait 36 (`h-9`) et déborde donc de 6 px de part et d'autre,
+            symétriquement. Hauteur FIXE, sinon la boîte s'étire à la taille du
+            bouton et « centrer » ne veut plus rien dire (MIN-255). */}
+        <div className="flex h-6 items-center">
+          <Button className="w-full" onClick={() => setComposerOpen(true)}>
+            <Megaphone />
+            {t("composerTitle")}
+          </Button>
+        </div>
       </aside>
 
       <ComposerDialog
@@ -373,7 +381,10 @@ function FilterBar({
   const t = useTranslations("PublicFeedback");
   const router = useRouter();
   return (
-    <div className="flex items-center gap-3 border-b border-border/60 pb-3">
+    // `min-h-6` fige la hauteur de la bande à 24 px — celle des déclencheurs de
+    // filtre. C'est sur cette bande, et non sur le filet, que se centre le
+    // bouton « Partager un retour » de la colonne de droite.
+    <div className="flex min-h-6 items-center gap-3 border-b border-border/60 pb-3">
       {searchable ? (
         <SidebarFilterField
           value={search}

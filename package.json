@@ -3,7 +3,7 @@
   "version": "0.8.9",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS=--max-http-header-size=32768 next dev",
     "prebuild": "npm run build:agent-vm",
     "build": "next build",
     "build:agent-vm": "node scripts/build-agent-vm.mjs",
