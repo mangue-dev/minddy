@@ -10,6 +10,7 @@ import {
   PROMPT_COPY_AUTO_START_META_KEY,
   resolvePromptCopyAutoStart,
 } from "@/lib/prompt-copy-auto-start";
+import { SMART_FILL_META_KEY, resolveSmartFill } from "@/lib/smart-fill";
 import {
   AUTO_ASSIGN_ON_START_META_KEY,
   resolveAutoAssignOnStart,
@@ -62,6 +63,7 @@ export interface AccountSettings {
   auto_assign_created: boolean;
   auto_assign_on_start: boolean;
   prompt_copy_auto_start: boolean;
+  smart_fill: boolean;
   /** Cycles (MIN-32) — Account → Cycles, one key per knob in user_metadata. */
   cycles: CyclePrefs;
   /** Préréglage d'automatisation (MIN-147) : la boucle Numo appliquée à TOUS les
@@ -149,6 +151,7 @@ function toSettings(
     auto_assign_created: meta.auto_assign_created === true,
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
+    smart_fill: resolveSmartFill(meta),
     cycles: resolveCyclePrefs(meta),
     automation_preset: resolveAutomationPreset(meta),
     notifications: resolveNotificationPrefs(meta),
@@ -235,6 +238,12 @@ export async function updateAccountSettings({
       return { ok: false, error: "prompt_copy_auto_start must be a boolean." };
     }
     next[PROMPT_COPY_AUTO_START_META_KEY] = input.prompt_copy_auto_start;
+  }
+  if (SMART_FILL_META_KEY in input) {
+    if (typeof input[SMART_FILL_META_KEY] !== "boolean") {
+      return { ok: false, error: "smart_fill must be a boolean." };
+    }
+    next[SMART_FILL_META_KEY] = input[SMART_FILL_META_KEY];
   }
 
   // Préréglage d'automatisation (MIN-147). `null` l'efface — c'est la façon de
@@ -353,6 +362,7 @@ export async function updateAccountSettings({
     "auto_assign_created",
     "auto_assign_on_start",
     "prompt_copy_auto_start",
+    SMART_FILL_META_KEY,
     // Sans lui, un appel ne portant QUE le préréglage sortait ici en « rien à
     // changer » — alors que le bloc qui l'écrit venait juste de le poser.
     AUTOMATION_PRESET_META_KEY,

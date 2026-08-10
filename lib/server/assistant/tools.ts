@@ -101,6 +101,11 @@ const ISSUE_FIELD_PROPERTIES = {
     description:
       "Recurrence cadence — the issue comes back at this rhythm ('every Monday', 'every 4th of the month', 'every year'). It NEEDS a due_date: pass one in the same call unless the issue already has one, otherwise the write is refused. That due date carries the FIRST occurrence and gives the rhythm its day (weekly + a Monday = every Monday, monthly + the 4th = every 4th); a date already past is moved forward to the next occurrence, so a recurring issue never starts overdue. It then runs on its own: setting the issue to 'done' creates the next occurrence in 'backlog' with the due date shifted by one cadence and moves the recurrence onto it — never create that next occurrence yourself. null stops the series (so do clearing the due_date and canceling the issue).",
   },
+  smart_fill: {
+    type: "boolean",
+    description:
+      "Let Smart-fill infer priority, effort, categories and objective from the title and description when creating this issue.",
+  },
 } as const;
 
 // The saved-view filter schema, shared by create_view and update_view so both
@@ -311,7 +316,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_issue",
       description:
-        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — the issue then lands in 'triage' for human validation. Fill every other field you can: ALWAYS pass an estimated priority and effort (inferred from the description when not stated), and the matching category_ids. Resolve assignee/objective/category ids via the list_* tools first.",
+        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — the issue then lands in 'triage' for human validation. Fill every other field you can: pass an estimated priority and effort (inferred from the description when not stated) unless smart_fill is true, and pass matching category_ids unless smart_fill is true. Resolve assignee/objective/category ids via the list_* tools first.",
       parameters: {
         type: "object",
         properties: {
@@ -874,7 +879,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_project",
       description:
-        "Update the project's own settings — every switch of its Settings page: identity (name, key, accent color), auto-assign on create, Smart Assign and its per-member rules, the automations switch (the agent loop), and the AI review of incoming feedback. OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign and automations are plan-gated: turning one ON can be refused for the owner's plan — relay that refusal, don't retry.",
+        "Update the project's own settings — every switch of its Settings page: identity (name, key, accent color), auto-assign on create, Smart Assign and its per-member rules, the automations switch (the agent loop), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign and automations are plan-gated: turning one ON can be refused for the owner's plan — relay that refusal, don't retry.",
       parameters: {
         type: "object",
         properties: {
@@ -917,6 +922,19 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "boolean",
             description:
               "Skip that AI review when the account is over its usage budget, instead of letting it consume.",
+          },
+          feedback_translate_enabled: {
+            type: "boolean",
+            description: "Translate incoming feedback into the team's language when needed.",
+          },
+          feedback_team_language: {
+            type: ["string", "null"],
+            description: "The team's target language for feedback translation, or null to use the app default.",
+          },
+          feedback_no_translate_languages: {
+            type: "array",
+            items: { type: "string" },
+            description: "Languages whose feedback should not be translated. Replaces the whole list.",
           },
         },
       },
@@ -1113,6 +1131,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "boolean",
             description:
               "When copying an issue's prompt, move that issue to in_progress.",
+          },
+          smart_fill: {
+            type: "boolean",
+            description:
+              "When creating an issue, let Smart-fill infer its priority, effort, categories and objective from the title and description.",
           },
           cycles_enabled: {
             type: "boolean",

@@ -170,8 +170,8 @@ Beyond issues, you can edit project settings and the user's OWN account settings
 - Account settings apply ONLY to the current user's own account (never anyone else):
   read them with get_account_settings, then update_account_settings for the display
   name, interface language, the status Numo-created issues land in, the two auto-assign
-  preferences, prompt-copy-auto-start, the cycle knobs, the Inbox notification toggles
-  (assigned / mention / comment / agent / feedback), the code agent's default model and
+  preferences, prompt-copy-auto-start, Smart-fill, the cycle knobs, the Inbox notification toggles
+  (assigned / mention / comment / agent / routine / pull request / feedback), the code agent's default model and
   reasoning level, and the automation preset — the loop applied to every project this
   account owns (null = none). Always read current values before changing one.
   Theme is a device-local setting and cannot be changed with a tool.`;
