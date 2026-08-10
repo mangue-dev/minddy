@@ -2,6 +2,7 @@ import type {
   BillingPlanId,
   UsageSegmentId,
 } from "@/lib/billing-plans";
+import type { UsageHistoryFeature } from "@/lib/usage-features";
 
 /**
  * Formes de réponse des routes billing (MIN-72), partagées serveur/client.
@@ -22,8 +23,14 @@ export interface BillingStatusResponse {
 
 export interface UsageHistoryEntry {
   runId: string;
-  /** Segment d'affichage (agents = LLM + sandbox fusionnés). */
+  /** Segment d'affichage (agents = LLM + sandbox fusionnés) — icône et couleur. */
   segmentId: UsageSegmentId;
+  /**
+   * La feature exacte du run, quand on sait la nommer : c'est ELLE que la ligne
+   * affiche (« Smart-fill », pas « Automatisations »). `null` sur une feature
+   * que l'UI ne connaît pas — l'affichage retombe alors sur le nom du segment.
+   */
+  feature: UsageHistoryFeature | null;
   at: string;
   projectName: string | null;
   /** Coût brut USD du run — l'UI le convertit en % du budget, jamais affiché tel quel. */

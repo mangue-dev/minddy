@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { getUsagePeriod } from "@/lib/server/usage";
 import { USAGE_SEGMENTS, type UsageSegmentId } from "@/lib/billing-plans";
+import { toUsageHistoryFeature } from "@/lib/usage-features";
 import type { UsageHistoryEntry, UsageHistoryResponse } from "@/lib/billing-types";
 
 const PAGE_SIZE = 25;
@@ -61,6 +62,11 @@ export async function GET(request: NextRequest) {
       (entry): UsageHistoryEntry => ({
         runId: entry.run_id,
         segmentId: segmentForFeature(entry.feature),
+        // La feature telle quelle, pour que la ligne dise le geste et pas la
+        // famille. La RPC garde `min(feature)` par run : dans un run mixte,
+        // c'est celle que l'utilisateur reconnaît (`agent_code` avant
+        // `sandbox_compute`, `routine_code` avant `routine_compute`).
+        feature: toUsageHistoryFeature(entry.feature),
         at: entry.first_at,
         projectName: entry.project_name,
         usd: Number(entry.cost) || 0,

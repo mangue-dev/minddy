@@ -18,6 +18,7 @@ import {
 import { USAGE_SEGMENTS, type UsageSegmentId } from "@/lib/billing-plans";
 import { fetchUsageHistoryApi } from "@/lib/billing-api";
 import { formatBudgetPercent, useBillingSummary } from "@/lib/use-billing-query";
+import { FEATURE_LABEL_KEYS } from "@/lib/usage-features";
 import { SEGMENT_UI } from "@/components/usage-indicator";
 import { EmptyState } from "@/components/empty-state";
 import type { UsageHistoryEntry } from "@/lib/billing-types";
@@ -158,7 +159,10 @@ export function UsageHistorySection() {
                           strokeWidth={2}
                         />
                         <span className="truncate text-sm text-foreground">
-                          {t(ui.labelKey)}
+                          {/* Le geste, pas la famille : « Smart-fill », pas
+                              « Automatisations ». La famille reste lisible —
+                              c'est l'icône et sa couleur. */}
+                          {t(entry.feature ? FEATURE_LABEL_KEYS[entry.feature] : ui.labelKey)}
                         </span>
                         {entry.projectName && (
                           <span className="truncate text-xs text-muted-foreground">
