@@ -208,6 +208,41 @@ export function ancestorsOf<T extends { id: string; parent_id: string | null }>(
   return out;
 }
 
+/**
+ * Au-delà de ce nombre de niveaux, le fil d'Ariane replie son MILIEU.
+ *
+ * Trois, parce que c'est le point où replier fait gagner de la place : à trois
+ * niveaux, un « … » remplacerait un seul élément par un autre de largeur
+ * comparable, en coûtant un clic.
+ */
+const MAX_PATH_LEVELS = 3;
+
+/**
+ * Découpe un chemin en ce qu'on montre et ce qu'on replie (MIN-272).
+ *
+ * Ce sont les niveaux du MILIEU qui s'effacent, jamais les deux bouts : la
+ * racine dit dans quel document on est, le dernier dit d'où l'on vient, et ce
+ * sont les deux seuls qu'on lit sans réfléchir. Replier par la fin ferait
+ * disparaître le parent direct, c'est-à-dire le seul lien dont on se sert
+ * vraiment.
+ *
+ * `trail` va de la RACINE vers le parent direct — l'inverse d'`ancestorsOf`.
+ */
+export function foldPath<T>(
+  trail: readonly T[],
+  max: number = MAX_PATH_LEVELS
+): { lead: T | null; hidden: T[]; tail: T[] } {
+  if (trail.length === 0) return { lead: null, hidden: [], tail: [] };
+  if (trail.length <= max) {
+    return { lead: trail[0], hidden: [], tail: [...trail.slice(1)] };
+  }
+  return {
+    lead: trail[0],
+    hidden: [...trail.slice(1, -1)],
+    tail: [trail[trail.length - 1]],
+  };
+}
+
 /* ─── La garde ─────────────────────────────────────────────────────────────── */
 
 /**

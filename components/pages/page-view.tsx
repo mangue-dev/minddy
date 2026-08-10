@@ -41,13 +41,14 @@ import type { Editor, JSONContent } from "@tiptap/react";
 import { eventKey } from "@/lib/keyboard/event-key";
 
 import { fetchPageApi, updatePageOnUnload } from "@/lib/pages-api";
-import { descendantIds } from "@/lib/pages";
+import { ancestorsOf, descendantIds } from "@/lib/pages";
 import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { BLOCK_ID_ATTRIBUTE, PageEditor } from "@/components/pages/page-editor";
 import { PageHeader } from "@/components/pages/page-header";
+import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
 import {
@@ -402,6 +403,16 @@ export function PageView({
     })();
   }, [pendingTrash, trashPage, t]);
 
+  /* ── Le chemin jusqu'ici ─────────────────────────────────────────────── */
+  //
+  // `ancestorsOf` remonte du plus proche à la racine ; le fil d'Ariane se lit
+  // dans l'autre sens. Il est vide sur une page racine, et le composant ne rend
+  // alors rien du tout.
+  const trail = useMemo(
+    () => ancestorsOf(pages, pageId).reverse(),
+    [pages, pageId]
+  );
+
   /* ── L'ancre d'un bloc ───────────────────────────────────────────────── */
   const bodyRef = useRef<HTMLDivElement>(null);
   const loaded = !!page;
@@ -461,6 +472,13 @@ export function PageView({
       {/* Les avatars des autres lecteurs voisinent l'état d'enregistrement, et
           c'est le bon endroit : les deux répondent à la même question — « où en
           est ce document, et suis-je seul dessus ? ». */}
+      {/* Le CHEMIN, à l'opposé de l'état d'enregistrement : les deux sont
+          épinglés hors du flux et hors du défilement, et se partagent la même
+          ligne. Il ne paraît que sur une sous-page — voir page-breadcrumb.tsx. */}
+      <div className="absolute top-3 left-3.5 z-10 flex min-w-0 max-w-[calc(100%-9rem)] items-center">
+        <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
+      </div>
+
       <div className="absolute top-3 right-3.5 z-10 flex items-center gap-2.5">
         <PagePresence
           userIds={present}

@@ -1649,7 +1649,9 @@
     "restoreFailed": "Could not restore the page.",
     "addIcon": "Add icon",
     "duplicated": "Page duplicated.",
-    "duplicateFailed": "Could not duplicate the page."
+    "duplicateFailed": "Could not duplicate the page.",
+    "breadcrumb": "Parent pages",
+    "breadcrumbMore": "{count, plural, one {# hidden level} other {# hidden levels}}"
   },
   "Picker": {
     "createNamed": "Create “{name}”",

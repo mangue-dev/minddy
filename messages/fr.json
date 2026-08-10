@@ -1649,7 +1649,9 @@
     "restoreFailed": "Impossible de restaurer la page.",
     "addIcon": "Ajouter une icône",
     "duplicated": "Page dupliquée.",
-    "duplicateFailed": "Impossible de dupliquer la page."
+    "duplicateFailed": "Impossible de dupliquer la page.",
+    "breadcrumb": "Pages parentes",
+    "breadcrumbMore": "{count, plural, one {# niveau masqué} other {# niveaux masqués}}"
   },
   "Picker": {
     "createNamed": "Créer « {name} »",

@@ -5,6 +5,7 @@ import {
   buildPageTree,
   descendantIds,
   flattenPageTree,
+  foldPath,
   positionAtEnd,
   positionBetween,
   wouldCreateCycle,
@@ -211,5 +212,45 @@ describe("positionAtEnd", () => {
 
     expect(positionAtEnd(siblings) > "c").toBe(true);
     expect(positionAtEnd([])).toBeTruthy();
+  });
+});
+
+/**
+ * MIN-272 — le repli du fil d'Ariane d'une sous-page.
+ *
+ * Ce qui compte n'est pas « ça tient sur une ligne » mais QUELS niveaux
+ * survivent : ce sont ceux du MILIEU qui s'effacent, jamais les deux bouts. La
+ * racine dit dans quel document on est, le dernier dit d'où l'on vient. Replier
+ * par la fin ferait disparaître le parent direct — le seul lien dont on se sert
+ * vraiment.
+ */
+describe("foldPath", () => {
+  const path = (n: number) => Array.from({ length: n }, (_, i) => `n${i + 1}`);
+
+  it("ne replie rien tant que le chemin est court", () => {
+    expect(foldPath(path(1))).toEqual({ lead: "n1", hidden: [], tail: [] });
+    expect(foldPath(path(3))).toEqual({
+      lead: "n1",
+      hidden: [],
+      tail: ["n2", "n3"],
+    });
+  });
+
+  it("replie le MILIEU, et garde les deux bouts", () => {
+    expect(foldPath(path(6))).toEqual({
+      lead: "n1",
+      hidden: ["n2", "n3", "n4", "n5"],
+      tail: ["n6"],
+    });
+  });
+
+  it("ne rend aucune tête sur un chemin vide — une page racine n'a pas de fil", () => {
+    expect(foldPath([])).toEqual({ lead: null, hidden: [], tail: [] });
+  });
+
+  it("ne modifie pas le tableau qu'on lui donne", () => {
+    const trail = path(6);
+    foldPath(trail);
+    expect(trail).toEqual(path(6));
   });
 });
