@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -17,6 +18,8 @@ import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
 import type { Project } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
+import { usePagesQuery } from "@/lib/use-pages-query";
+import { ancestorsOf } from "@/lib/pages";
 
 /** The section translation key for the current project route (drives the last crumb). */
 function sectionKeyFor(pathname: string): string | null {
@@ -24,8 +27,22 @@ function sectionKeyFor(pathname: string): string | null {
   if (pathname.includes("/objectives")) return "objectives";
   if (pathname.includes("/settings")) return "settings";
   if (pathname.includes("/triage")) return "triage";
+  if (pathname.includes("/pages")) return "pages";
   if (pathname.includes("/feedback")) return "feedback";
   return "tickets";
+}
+
+/**
+ * L'id de la page du wiki ouverte, s'il y en a une (MIN-270).
+ *
+ * `trash` est un segment frère, pas un id : la corbeille du projet vit sous
+ * `…/pages/trash` pour rester à un clic de l'arbre, et elle n'a pas de chaîne
+ * de parents à remonter.
+ */
+function wikiPageIdFrom(pathname: string): string | null {
+  const match = /^\/projects\/[^/]+\/pages\/([^/]+)/.exec(pathname);
+  const id = match?.[1] ?? null;
+  return id === "trash" ? null : id;
 }
 
 function ProjectChip({ project, className }: { project: Project; className?: string }) {
@@ -154,10 +171,17 @@ function MobileBreadcrumb({
   isAllGlobal,
   isPullRequests,
   isAgents,
+  wikiPage,
 }: {
   project: Project | null;
   section: string | null;
   sectionKey: string | null;
+  /**
+   * Une page du wiki ouverte (MIN-270) : c'est son titre qui est le « temps »
+   * courant, pas le nom de la section, et le retour vise son parent — remonter
+   * d'un cran dans l'arbre, pas sortir de l'onglet.
+   */
+  wikiPage?: { label: string; backHref: string } | null;
   isInbox: boolean;
   isAccountSettings: boolean;
   isStatistics: boolean;
@@ -214,6 +238,10 @@ function MobileBreadcrumb({
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("agents")}</CurrentLabel>;
+  } else if (project && wikiPage) {
+    backHref = wikiPage.backHref;
+    backIcon = <ProjectChip project={project} className="size-[18px]" />;
+    current = <CurrentLabel>{wikiPage.label}</CurrentLabel>;
   } else if (project) {
     // The board root ("tickets") is the project root — show the switcher and
     // go back up to Home. Nested sections go back to the project root.
@@ -268,12 +296,28 @@ function CurrentLabel({ children }: { children: React.ReactNode }) {
 
 export function AppBreadcrumb() {
   const t = useTranslations("Nav");
+  const tPages = useTranslations("Pages");
   const pathname = usePathname();
   const { projects } = useProjects();
 
   const currentProjectId = projectIdFromPath(pathname);
   const project = projects.find((p) => p.id === currentProjectId) ?? null;
   const sectionKey = sectionKeyFor(pathname);
+
+  /* ── Le fil d'une page du wiki (MIN-270) ─────────────────────────────────
+     Une page imbriquée n'a pas de nom hors de sa chaîne : « Rituels » ne veut
+     rien dire, « Équipe / Process / Rituels » le situe. On lit la même liste à
+     plat que l'arbre — la requête est partagée, l'onglet Pages l'a déjà faite. */
+  const wikiPageId = wikiPageIdFrom(pathname);
+  const { pages: wikiPages } = usePagesQuery(
+    wikiPageId ? currentProjectId : null
+  );
+  const wikiTrail = useMemo(() => {
+    if (!wikiPageId) return [];
+    const page = wikiPages.find((p) => p.id === wikiPageId);
+    if (!page) return [];
+    return [...ancestorsOf(wikiPages, wikiPageId).reverse(), page];
+  }, [wikiPages, wikiPageId]);
   const section = sectionKey ? t(sectionKey as Parameters<typeof t>[0]) : null;
   const isHome = pathname.startsWith("/home");
   const isInbox = pathname.startsWith("/inbox");
@@ -360,10 +404,50 @@ export function AppBreadcrumb() {
           show={!!(project && section)}
           levelKey={`section-${sectionKey ?? ""}`}
         >
-          <span className="truncate text-sm font-medium text-foreground">
-            {section}
-          </span>
+          {/* La section devient CLIQUABLE dès qu'il y a quelque chose après
+              elle : c'est le seul retour vers la racine du wiki depuis une
+              sous-page profonde. */}
+          {project && wikiTrail.length > 0 ? (
+            <Link
+              href={`/projects/${project.id}/pages`}
+              className="truncate text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {section}
+            </Link>
+          ) : (
+            <span className="truncate text-sm font-medium text-foreground">
+              {section}
+            </span>
+          )}
         </BreadcrumbLevel>
+
+        {/* La chaîne de parents d'une page du wiki. Les ancêtres sont des liens
+            et sont estompés ; seule la page ouverte est écrite en plein. */}
+        {project &&
+          wikiTrail.map((page, index) => {
+            const last = index === wikiTrail.length - 1;
+            const label = page.title || tPages("untitled");
+            return (
+              <BreadcrumbLevel
+                key={page.id}
+                show
+                levelKey={`wiki-${page.id}`}
+              >
+                {last ? (
+                  <span className="max-w-[220px] truncate text-sm font-medium text-foreground">
+                    {label}
+                  </span>
+                ) : (
+                  <Link
+                    href={`/projects/${project.id}/pages/${page.id}`}
+                    className="max-w-[160px] truncate text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {label}
+                  </Link>
+                )}
+              </BreadcrumbLevel>
+            );
+          })}
       </nav>
 
       {/* Mobile (<1200px): two-stage back + current level. */}
@@ -380,6 +464,18 @@ export function AppBreadcrumb() {
         isAllGlobal={isAllGlobal}
         isPullRequests={isPullRequests}
         isAgents={isAgents}
+        wikiPage={
+          project && wikiTrail.length > 0
+            ? {
+                label:
+                  wikiTrail[wikiTrail.length - 1].title || tPages("untitled"),
+                backHref:
+                  wikiTrail.length > 1
+                    ? `/projects/${project.id}/pages/${wikiTrail[wikiTrail.length - 2].id}`
+                    : `/projects/${project.id}/pages`,
+              }
+            : null
+        }
       />
     </>
   );

@@ -35,6 +35,7 @@ export type MetaPageKey =
   | "admin"
   | "project"
   | "triage"
+  | "pages"
   | "objectives"
   | "projectSettings"
   | "feedback"

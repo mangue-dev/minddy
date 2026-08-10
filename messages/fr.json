@@ -858,7 +858,8 @@
     "notFoundTitle": "Cette page n'existe pas",
     "notFoundBody": "Le lien est faux, ou la page a bougé. Tout le reste est resté à sa place.",
     "notFoundCta": "Revenir à l'accueil",
-    "botAccount": "Bot"
+    "botAccount": "Bot",
+    "undo": "Annuler"
   },
   "DatePicker": {
     "placeholder": "Choisir une date",
@@ -1257,7 +1258,9 @@
     "oauthSuccessDescription": "L'application est connectée à votre compte minddy.",
     "emailConfirmed": "E-mail confirmé",
     "emailConfirmedDescription": "Votre adresse e-mail est confirmée. Vous pouvez vous connecter à minddy.",
-    "signIn": "Connexion"
+    "signIn": "Connexion",
+    "pages": "Pages",
+    "pagesDescription": "Le wiki du projet : notes, comptes-rendus et process, en arbre."
   },
   "Stats": {
     "title": "Statistiques",
@@ -1588,7 +1591,37 @@
     "colorText": "Texte",
     "colorBackground": "Fond",
     "colorNone": "Par défaut",
-    "blocksSelected": "{count} blocs sélectionnés"
+    "blocksSelected": "{count} blocs sélectionnés",
+    "title": "Pages",
+    "untitled": "Sans titre",
+    "newPage": "Nouvelle page",
+    "newSubpage": "Ajouter une sous-page",
+    "deletePage": "Mettre à la corbeille",
+    "pageOptions": "Options de la page",
+    "toggleChildren": "Afficher les sous-pages",
+    "filterPlaceholder": "Filtrer {count, plural, =0 {les pages} one {# page} other {# pages}}…",
+    "sidebarEmpty": "Aucune page pour l'instant.",
+    "emptyTitle": "Aucune page dans ce projet",
+    "pickTitle": "Choisissez une page à gauche",
+    "titlePlaceholder": "Sans titre",
+    "titleLabel": "Titre de la page",
+    "changeIcon": "Changer l'icône",
+    "removeIcon": "Retirer",
+    "searchEmoji": "Chercher un emoji…",
+    "loadingEmoji": "Chargement des emojis…",
+    "noEmoji": "Aucun emoji correspondant",
+    "saving": "Enregistrement…",
+    "saveFailed": "Impossible d'enregistrer la page.",
+    "createFailed": "Impossible de créer la page.",
+    "deleteFailed": "Impossible de supprimer la page.",
+    "loadFailed": "Impossible d'ouvrir la page.",
+    "moveFailed": "Impossible de déplacer la page.",
+    "moveCycle": "Une page ne peut pas aller dans une de ses propres sous-pages.",
+    "trashed": "« {title} » est à la corbeille.",
+    "trashedWithChildren": "{count, plural, one {# page} other {# pages}} à la corbeille.",
+    "trashTitle": "Corbeille",
+    "trashSubtitle": "Les pages supprimées sont gardées {days} jours, puis effacées.",
+    "trashEmpty": "Aucune page supprimée"
   },
   "Picker": {
     "createNamed": "Créer « {name} »",

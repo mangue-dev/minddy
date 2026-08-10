@@ -20,6 +20,7 @@ import {
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { ReactRenderer } from "@tiptap/react";
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
+import { PluginKey } from "@tiptap/pm/state";
 import { cn } from "mangue-ui";
 import {
   SLASH_GROUPS,
@@ -243,6 +244,13 @@ export const PageSlashCommand = Extension.create<{ items: PageSlashItem[] }>({
         // Extension n'a pas la même identité que celui de @tiptap/suggestion.
         // Sans effet à l'exécution, comme dans le carnet.
         editor: this.editor as never,
+        // Une CLÉ à soi. `Suggestion` en pose une par défaut, la même pour
+        // tout le monde (`suggestion$`) : monter le menu « / » et la
+        // suggestion « @ » sur le même éditeur faisait alors lever ProseMirror
+        // au montage (« Adding different instances of a keyed plugin »). Les
+        // deux ne se sont croisés qu'à l'ouverture d'une page, seule surface à
+        // porter les deux.
+        pluginKey: new PluginKey("pageSlashCommand"),
         char: "/",
         allowSpaces: false,
         items: ({ query }) => filterSlashItems(items(), query),

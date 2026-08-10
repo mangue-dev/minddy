@@ -944,3 +944,32 @@ nav[aria-label="Navigation"]
 .dark [data-page-back] {
   background-color: color-mix(in oklab, var(--page-tint) 24%, transparent);
 }
+
+/* ─── L'ancre d'un bloc (MIN-270) ─────────────────────────────────────────
+   Ouvrir un lien « copier le lien du bloc » défile jusqu'au bloc visé et le
+   désigne deux secondes. C'est un CLIGNEMENT, pas une sélection : il s'efface
+   tout seul, sinon on croirait le bloc mis en surbrillance pour de bon, et il
+   déborde du texte (`inset`) pour désigner le bloc entier, pas ses mots. */
+.page-block-target {
+  position: relative;
+  animation: page-block-target 2s ease-out forwards;
+  border-radius: 0.375rem;
+}
+
+@keyframes page-block-target {
+  0%,
+  60% {
+    background-color: color-mix(in oklab, var(--primary) 14%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 14%, transparent);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-block-target {
+    animation-duration: 0.01ms;
+  }
+}

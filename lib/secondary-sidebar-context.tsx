@@ -93,5 +93,7 @@ export function routeHasSecondaryNav(pathname: string): boolean {
   if (pathname.startsWith("/agents")) return true;
   if (pathname.startsWith("/settings")) return true;
   if (pathname.startsWith("/admin")) return true;
-  return /^\/projects\/[^/]+\/(triage|feedback|objectives|settings)/.test(pathname);
+  return /^\/projects\/[^/]+\/(triage|feedback|objectives|settings|pages)/.test(
+    pathname,
+  );
 }

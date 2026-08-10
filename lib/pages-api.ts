@@ -14,10 +14,36 @@ import type { Page } from "./pages";
 /** Une page sans son corps — ce que rend la liste. */
 export type PageSummary = Omit<Page, "content">;
 
+/**
+ * Une erreur qui garde son CODE.
+ *
+ * Le refus de cycle (409) ne se distingue pas d'une autre panne par son
+ * message — il est traduit côté serveur, donc illisible pour du code. L'arbre a
+ * pourtant besoin de faire la différence : un 409 se rattrape (on remet la page
+ * où elle était et on le dit), une panne réseau non.
+ */
+export class PageApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+    this.name = "PageApiError";
+  }
+}
+
+/** Le déplacement refusé parce qu'il fermerait une boucle (lib/server/pages.ts). */
+export function isPageCycleError(error: unknown): boolean {
+  return error instanceof PageApiError && error.status === 409;
+}
+
 async function ok(response: Response, fallback: string): Promise<void> {
   if (response.ok) return;
   const data = await response.json().catch(() => null);
-  throw new Error((data as { error?: string } | null)?.error || fallback);
+  throw new PageApiError(
+    (data as { error?: string } | null)?.error || fallback,
+    response.status
+  );
 }
 
 async function json<T>(response: Response, fallback: string): Promise<T> {

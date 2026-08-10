@@ -10,6 +10,7 @@ import {
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { ReactRenderer } from "@tiptap/react";
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
+import { PluginKey } from "@tiptap/pm/state";
 import { cn } from "mangue-ui";
 
 /** One entry of the `/` menu. `run` receives the editor and the range of the
@@ -190,6 +191,13 @@ export const SlashCommand = Extension.create<{ items: SlashItem[] }>({
         // pnpm dual @tiptap/core (same 3.27.4) — Extension's editor reads as a
         // different identity than @tiptap/suggestion's. Runtime is fine.
         editor: this.editor as never,
+        // Une CLÉ à soi. `Suggestion` en pose une par défaut, la même pour
+        // tout le monde : deux suggestions sur un même éditeur (un menu « / »
+        // et un « @ ») font lever ProseMirror au montage. Le carnet n'a pas
+        // encore de mentions — la clé est là pour que le jour où on lui en
+        // ajoute ne soit pas un écran d'erreur (c'est ce qui est arrivé à la
+        // page, MIN-270).
+        pluginKey: new PluginKey("scratchpadSlashCommand"),
         char: "/",
         allowSpaces: false,
         command: ({ editor, range, props }) =>

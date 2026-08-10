@@ -26,6 +26,7 @@ const META_PAGE_KEYS = [
   "admin",
   "project",
   "triage",
+  "pages",
   "objectives",
   "projectSettings",
   "feedback",

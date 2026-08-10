@@ -29,6 +29,7 @@ import {
   PanelsTopLeft,
   Download,
   FileClock,
+  FileText,
   Trash2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -41,6 +42,7 @@ import { issuesQueryFn } from "@/lib/issues-api";
 import { useSearchIndex } from "@/lib/use-search-index";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
+import { usePagesQuery } from "@/lib/use-pages-query";
 import { useAllPullRequestsQuery, useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-query";
@@ -161,6 +163,27 @@ function objectiveDotIcon(color: string | null): ComponentType<{ className?: str
   return Icon;
 }
 
+// L'emoji d'une page du wiki, dans la fente à icône de la palette (MIN-270).
+// Mis en cache par emoji pour la même raison que le point d'objectif : le slot
+// reçoit un COMPOSANT, et en fabriquer un neuf à chaque rendu le remonterait.
+const emojiIconCache = new Map<string, ComponentType<{ className?: string }>>();
+
+function emojiIcon(emoji: string): ComponentType<{ className?: string }> {
+  const cached = emojiIconCache.get(emoji);
+  if (cached) return cached;
+  const Icon = ({ className }: { className?: string }) => (
+    <span
+      className={cn("flex items-center justify-center text-sm leading-none", className)}
+      aria-hidden
+    >
+      {emoji}
+    </span>
+  );
+  Icon.displayName = `EmojiIcon(${emoji})`;
+  emojiIconCache.set(emoji, Icon);
+  return Icon;
+}
+
 /** Visage de Numo en icône statique de nav/palette (pas de clignement perpétuel,
     comme les icônes de liste). Slotté là où les tabs lucide passent un `className`. */
 const NumoNavIcon = ({ className }: { className?: string }) => (
@@ -265,6 +288,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tExport = useTranslations("Export");
   const tBilling = useTranslations("Billing");
   const tProjects = useTranslations("Projects");
+  const tPages = useTranslations("Pages");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
   const router = useRouter();
@@ -355,6 +379,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // instantané.
   const { objectives: projectObjectives, loading: objectivesLoading } =
     useObjectivesQuery(currentProjectId);
+
+  // Les pages du wiki du projet courant, pour ⌘K (MIN-270). Même cache que
+  // l'arbre de l'onglet Pages : ouvrir l'onglet ne redemande rien, et une page
+  // renommée là-bas change de nom dans la palette sans aller-retour.
+  const { pages: wikiPages } = usePagesQuery(currentProjectId);
 
   // Cross-project search (MIN-91): every ticket and objective of every project,
   // so ⌘K finds them from any page. Loaded once per tab on browser idle (or on
@@ -806,11 +835,38 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         });
       }
 
-      groups.push({ key: "pages", heading: t("pages"), items: pageItems });
+      // « Aller à » et non « Pages » : depuis MIN-270, une Page est un objet du
+      // produit (le wiki d'un projet). Garder ce mot pour le groupe des ÉCRANS
+      // mettrait deux choses différentes sous le même titre, dans la même liste.
+      groups.push({ key: "pages", heading: t("goTo"), items: pageItems });
+    }
+
+    // ── Le wiki du projet COURANT (MIN-270) ─────────────────────────────
+    // Restreint au projet ouvert, contrairement aux tickets et aux objectifs :
+    // ceux-là viennent d'un index cross-projet chargé une fois par onglet, les
+    // pages n'en ont pas. Chercher une page depuis un autre projet demanderait
+    // d'en fabriquer un — c'est un ticket à part, pas un effet de bord de
+    // celui-ci. Chaque ligne porte son emoji, comme dans l'arbre.
+    if (currentProject && wikiPages.length > 0) {
+      groups.push({
+        key: "wiki-pages",
+        heading: t("pages"),
+        items: wikiPages.map((page) => ({
+          key: `wiki-${page.id}`,
+          label: page.title || tPages("untitled"),
+          icon: page.icon ? emojiIcon(page.icon) : FileText,
+          keywords: [currentProject.name, currentProject.key],
+          meta: projectChip(currentProject),
+          metaText: currentProject.name,
+          contextId: currentProject.id,
+          onSelect: () =>
+            router.push(`/projects/${currentProject.id}/pages/${page.id}`),
+        })),
+      });
     }
 
     return groups;
-  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, wikiPages, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Réglages : une ligne par CARTE, pas par onglet ───────────────────────
   // Un onglet de réglages est une colonne de cartes ; « Cadence », « Zone
@@ -1072,6 +1128,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 triageCount,
                 t("triageBadge", { count: triageCount })
               ),
+            },
+            // Entre Triage et Retours (MIN-270) : le wiki du projet est du
+            // contenu qu'on tient, pas une file qu'on vide — il se range donc
+            // après ce qui réclame une action, avant ce qui vient de dehors.
+            {
+              key: "pages",
+              label: t("pages"),
+              icon: FileText,
+              href: `${base}/pages`,
+              active: pathname.startsWith(`${base}/pages`),
+              shortcut: "W",
             },
             {
               key: "feedback",

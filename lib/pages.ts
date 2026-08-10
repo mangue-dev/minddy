@@ -37,12 +37,31 @@ export interface Page {
   deleted_root_id: string | null;
 }
 
+/**
+ * Ce que l'ARBRE lit d'une page, et rien de plus.
+ *
+ * La liste à plat que rend le serveur ne porte pas le corps des documents : ses
+ * lignes ne sont donc PAS des `Page`. Tout ce module travaille sur ce minimum
+ * commun et reste générique sur le reste — c'est ce qui permet à la sidebar de
+ * bâtir son arbre avec des lignes sans corps, et aux tests de le bâtir avec des
+ * pages entières, sans deux jeux de fonctions.
+ */
+export interface PageRow {
+  id: string;
+  parent_id: string | null;
+  title: string;
+  position: string;
+}
+
 /** La même page, une fois l'arbre reconstruit. */
-export interface PageNode extends Page {
-  children: PageNode[];
+export type PageTreeNode<T extends PageRow> = T & {
+  children: PageTreeNode<T>[];
   /** 0 pour une page racine. */
   depth: number;
-}
+};
+
+/** L'arbre d'une page entière — le cas courant côté serveur et dans les tests. */
+export type PageNode = PageTreeNode<Page>;
 
 /* ─── L'arbre ──────────────────────────────────────────────────────────────── */
 
@@ -56,13 +75,15 @@ export interface PageNode extends Page {
  * présent en base (garde contournée, écriture directe) est rompu ici, ses
  * membres traités comme des racines, pour qu'un rendu reste possible.
  */
-export function buildPageTree(pages: readonly Page[]): PageNode[] {
-  const byId = new Map<string, PageNode>();
+export function buildPageTree<T extends PageRow>(
+  pages: readonly T[]
+): PageTreeNode<T>[] {
+  const byId = new Map<string, PageTreeNode<T>>();
   for (const page of pages) {
     byId.set(page.id, { ...page, children: [], depth: 0 });
   }
 
-  const roots: PageNode[] = [];
+  const roots: PageTreeNode<T>[] = [];
   for (const node of byId.values()) {
     const parent = node.parent_id ? byId.get(node.parent_id) : undefined;
     if (parent && parent.id !== node.id && !descends(byId, parent, node.id)) {
@@ -72,7 +93,7 @@ export function buildPageTree(pages: readonly Page[]): PageNode[] {
     }
   }
 
-  const sort = (nodes: PageNode[], depth: number) => {
+  const sort = (nodes: PageTreeNode<T>[], depth: number) => {
     nodes.sort(byPosition);
     for (const node of nodes) {
       node.depth = depth;
@@ -85,13 +106,13 @@ export function buildPageTree(pages: readonly Page[]): PageNode[] {
 }
 
 /** `a` descend-il de `ancestorId` ? Borné par le nombre de pages. */
-function descends(
-  byId: Map<string, PageNode>,
-  from: PageNode,
+function descends<T extends PageRow>(
+  byId: Map<string, PageTreeNode<T>>,
+  from: PageTreeNode<T>,
   ancestorId: string
 ): boolean {
   const seen = new Set<string>();
-  let current: PageNode | undefined = from;
+  let current: PageTreeNode<T> | undefined = from;
   while (current) {
     if (current.id === ancestorId) return true;
     if (seen.has(current.id)) return false; // cycle déjà présent : on s'arrête
@@ -107,16 +128,18 @@ function descends(
  * possible après un import ou une écriture concurrente —, et l'id en dernier
  * recours pour que l'ordre soit total et donc stable d'un rendu à l'autre.
  */
-function byPosition(a: Page, b: Page): number {
+export function byPosition(a: PageRow, b: PageRow): number {
   if (a.position !== b.position) return a.position < b.position ? -1 : 1;
   if (a.title !== b.title) return a.title < b.title ? -1 : 1;
   return a.id < b.id ? -1 : 1;
 }
 
 /** Aplatit un arbre dans l'ordre d'affichage (parent, puis ses descendants). */
-export function flattenPageTree(nodes: readonly PageNode[]): PageNode[] {
-  const out: PageNode[] = [];
-  const walk = (list: readonly PageNode[]) => {
+export function flattenPageTree<T extends PageRow>(
+  nodes: readonly PageTreeNode<T>[]
+): PageTreeNode<T>[] {
+  const out: PageTreeNode<T>[] = [];
+  const walk = (list: readonly PageTreeNode<T>[]) => {
     for (const node of list) {
       out.push(node);
       walk(node.children);
@@ -133,7 +156,7 @@ export function flattenPageTree(nodes: readonly PageNode[]): PageNode[] {
  * récursive), et ce que la purge finit par effacer.
  */
 export function descendantIds(
-  pages: readonly Page[],
+  pages: readonly { id: string; parent_id: string | null }[],
   pageId: string
 ): string[] {
   const childrenOf = new Map<string, string[]>();
@@ -160,9 +183,12 @@ export function descendantIds(
 }
 
 /** Les ancêtres d'une page, du plus proche à la racine (fil d'Ariane inversé). */
-export function ancestorsOf(pages: readonly Page[], pageId: string): Page[] {
+export function ancestorsOf<T extends { id: string; parent_id: string | null }>(
+  pages: readonly T[],
+  pageId: string
+): T[] {
   const byId = new Map(pages.map((p) => [p.id, p]));
-  const out: Page[] = [];
+  const out: T[] = [];
   const seen = new Set<string>([pageId]);
   let parentId = byId.get(pageId)?.parent_id ?? null;
   while (parentId) {
@@ -190,7 +216,7 @@ export function ancestorsOf(pages: readonly Page[], pageId: string): Page[] {
  * validation de l'existence du parent est un autre contrôle, ailleurs.
  */
 export function wouldCreateCycle(
-  pages: readonly Page[],
+  pages: readonly { id: string; parent_id: string | null }[],
   pageId: string,
   nextParentId: string | null
 ): boolean {
@@ -293,7 +319,9 @@ export function positionBetween(
 }
 
 /** La position d'une nouvelle page, en fin de la fratrie donnée. */
-export function positionAtEnd(siblings: readonly Page[]): string {
+export function positionAtEnd(
+  siblings: readonly { position: string }[]
+): string {
   let last: string | null = null;
   for (const sibling of siblings) {
     if (last === null || sibling.position > last) last = sibling.position;

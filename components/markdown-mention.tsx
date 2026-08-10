@@ -29,6 +29,7 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
+import { PluginKey } from "@tiptap/pm/state";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import {
   MentionOptionRow,
@@ -326,6 +327,10 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
         // la même identité que celui de @tiptap/suggestion. Sans effet à
         // l'exécution (même remarque que pour le menu « / »).
         editor: this.editor as never,
+        // Une CLÉ à soi. `Suggestion` en pose une par défaut, la même pour tout
+        // le monde : le « @ » et le menu « / » d'une page se retrouvaient sur
+        // la même, et ProseMirror levait au montage (MIN-270).
+        pluginKey: new PluginKey("mentionSuggest"),
         char: "@",
         // Comme partout ailleurs : le libellé se cherche par son DÉBUT de mot,
         // et c'est le choix dans la liste qui pose « @Jean Dupont » en entier.

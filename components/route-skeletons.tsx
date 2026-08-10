@@ -92,6 +92,49 @@ export function ListDetailSkeleton({
   );
 }
 
+/**
+ * L'onglet Pages (MIN-270) : un ARBRE à gauche, un document à droite.
+ *
+ * Il ne réutilise pas `ListDetailSkeleton` parce que les deux moitiés diffèrent
+ * des deux côtés — une ligne d'arbre fait 28 px là où une carte de triage en
+ * fait 56, et le panneau de droite est un document (titre puis paragraphes),
+ * pas une pile de cartes. Un squelette qui ne tombe pas au bon endroit produit
+ * un saut à l'arrivée de l'écran, ce qui est pire que rien.
+ *
+ * Les largeurs décroissantes des lignes imitent des titres de longueurs
+ * différentes : six barres identiques se lisent comme un tableau, pas comme un
+ * arbre.
+ */
+export function PageTreeSkeleton({ rows = 7 }: { rows?: number }) {
+  const indents = [0, 16, 16, 0, 16, 32, 0];
+  return (
+    <div className="flex h-full min-h-0">
+      <SecondarySidebar>
+        <div className="flex flex-col gap-1.5 px-2 pt-2 pb-4">
+          {Array.from({ length: rows }).map((_, i) => (
+            <div key={i} className="flex items-center">
+              <div style={{ width: indents[i % indents.length] }} />
+              <Skeleton className="h-6 flex-1 rounded-md" />
+            </div>
+          ))}
+        </div>
+      </SecondarySidebar>
+      <div className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
+        <div className="mx-auto w-full max-w-3xl px-6 py-10 md:px-10">
+          <Skeleton className="size-12 rounded-lg" />
+          <Skeleton className="mt-2 h-10 w-2/3" />
+          <div className="mt-8 flex flex-col gap-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-11/12" />
+            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Réglages (MIN-167) : le gabarit ci-dessus, avec des lignes d'onglets. */
 export function SettingsPageSkeleton({ rows = 3 }: { rows?: number }) {
   return <ListDetailSkeleton rows={6} rowClassName="h-10" cards={rows} />;

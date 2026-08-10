@@ -858,7 +858,8 @@
     "notFoundTitle": "This page does not exist",
     "notFoundBody": "The link is wrong, or the page has moved. Everything else is still where you left it.",
     "notFoundCta": "Back to home",
-    "botAccount": "Bot"
+    "botAccount": "Bot",
+    "undo": "Undo"
   },
   "DatePicker": {
     "placeholder": "Pick a date",
@@ -1257,7 +1258,9 @@
     "oauthSuccessDescription": "The app is connected to your minddy account.",
     "emailConfirmed": "Email confirmed",
     "emailConfirmedDescription": "Your email address is confirmed. You can now sign in to minddy.",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "pages": "Pages",
+    "pagesDescription": "The project wiki: notes, write-ups and process docs, in a tree."
   },
   "Stats": {
     "title": "Statistics",
@@ -1588,7 +1591,37 @@
     "colorText": "Text",
     "colorBackground": "Background",
     "colorNone": "Default",
-    "blocksSelected": "{count} blocks selected"
+    "blocksSelected": "{count} blocks selected",
+    "title": "Pages",
+    "untitled": "Untitled",
+    "newPage": "New page",
+    "newSubpage": "Add a sub-page",
+    "deletePage": "Move to trash",
+    "pageOptions": "Page options",
+    "toggleChildren": "Show sub-pages",
+    "filterPlaceholder": "Filter {count, plural, =0 {pages} one {# page} other {# pages}}…",
+    "sidebarEmpty": "No page yet.",
+    "emptyTitle": "No page in this project yet",
+    "pickTitle": "Pick a page on the left",
+    "titlePlaceholder": "Untitled",
+    "titleLabel": "Page title",
+    "changeIcon": "Change icon",
+    "removeIcon": "Remove",
+    "searchEmoji": "Search an emoji…",
+    "loadingEmoji": "Loading emojis…",
+    "noEmoji": "No matching emoji",
+    "saving": "Saving…",
+    "saveFailed": "Could not save the page.",
+    "createFailed": "Could not create the page.",
+    "deleteFailed": "Could not delete the page.",
+    "loadFailed": "Could not load the page.",
+    "moveFailed": "Could not move the page.",
+    "moveCycle": "A page can't go inside one of its own sub-pages.",
+    "trashed": "“{title}” moved to trash.",
+    "trashedWithChildren": "{count, plural, one {# page} other {# pages}} moved to trash.",
+    "trashTitle": "Trash",
+    "trashSubtitle": "Deleted pages are kept {days} days, then gone for good.",
+    "trashEmpty": "No deleted page"
   },
   "Picker": {
     "createNamed": "Create “{name}”",
