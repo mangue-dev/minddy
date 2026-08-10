@@ -35,6 +35,7 @@ import {
   McpAvatar,
   NumoAvatar,
   SmartAssignAvatar,
+  SmartFillAvatar,
 } from "@/components/actor-avatars";
 import { isForgePrEvent, forgePrActor, type ForgeProvider } from "@/lib/pr-events";
 import { getRepoProvider, parseForgeLogin } from "@/lib/repo-providers";
@@ -253,16 +254,24 @@ function EventRow({
   const t = useTranslations("Timeline");
   const tr = useEventTranslators();
   const viaSmartAssign = !!item.event.via_smart_assign;
+  // Smart-fill (MIN-260) : mêmes règles que Smart Assign — la fonctionnalité
+  // tient lieu d'acteur. Testé AVANT `via_assistant` et compagnie pour la même
+  // raison qu'elle : l'écriture porte l'id de l'auteur du ticket, qui n'a rien
+  // fait de ces quatre propriétés.
+  const viaSmartFill = !viaSmartAssign && !!item.event.via_smart_fill;
   // Automatisation de projet (MIN-147) : le run part sous le compte de l'assigné
   // — c'est de lui que viennent la clé, le quota et la langue — mais PERSONNE
   // n'a cliqué. Sans ce drapeau la timeline écrivait « <assigné> a lancé l'agent
   // Numo », un geste que cette personne n'a pas fait. Acteur à part et non
   // « Numo » : la phrase nomme déjà l'agent lancé, c'est la RÈGLE qui l'a lancé.
-  const viaAutomation = !viaSmartAssign && !!item.event.via_automation;
-  const viaNumo = !viaSmartAssign && !viaAutomation && !!item.event.via_assistant;
-  const viaMcp = !viaSmartAssign && !viaAutomation && !viaNumo && !!item.event.via_mcp;
+  const viaAutomation = !viaSmartAssign && !viaSmartFill && !!item.event.via_automation;
+  const viaNumo =
+    !viaSmartAssign && !viaSmartFill && !viaAutomation && !!item.event.via_assistant;
+  const viaMcp =
+    !viaSmartAssign && !viaSmartFill && !viaAutomation && !viaNumo && !!item.event.via_mcp;
   const viaIntegration =
     !viaSmartAssign &&
+    !viaSmartFill &&
     !viaAutomation &&
     !viaNumo &&
     !viaMcp &&
@@ -297,6 +306,8 @@ function EventRow({
     ? forgeSync.displayName
     : viaSmartAssign
     ? "Smart Assign"
+    : viaSmartFill
+    ? "Smart-fill"
     : viaAutomation
       ? t("automationActor")
       : viaNumo
@@ -324,6 +335,8 @@ function EventRow({
         <ForgeAvatar provider={forgeSync.id} />
       ) : viaSmartAssign ? (
         <SmartAssignAvatar />
+      ) : viaSmartFill ? (
+        <SmartFillAvatar />
       ) : viaAutomation ? (
         <AutomationAvatar />
       ) : viaNumo ? (

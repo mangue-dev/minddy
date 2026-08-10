@@ -45,12 +45,20 @@ export function useIssueDictation({
   mode,
   getDraft,
   applyPatch,
+  smartFill = false,
 }: {
   projectId: string;
   /** "create" fills the new-issue form; "edit" edits an existing issue. */
   mode: "create" | "edit";
   getDraft: () => DictationDraft;
   applyPatch: (patch: IssueDraftPatch) => void;
+  /**
+   * Smart-fill est armé sur le formulaire (MIN-260) : la route retire alors
+   * priorité, effort, catégories et objectif du tool, donc la dictée ne les
+   * pose plus — c'est Smart-fill qui les posera à la création. Lu à CHAQUE
+   * envoi et pas figé à l'ouverture : la bascule peut changer entre deux prises.
+   */
+  smartFill?: boolean;
 }) {
   const t = useTranslations("IssueUI");
   const [busy, setBusy] = useState(false);
@@ -71,6 +79,7 @@ export function useIssueDictation({
           transcript,
           mode,
           draft: getDraft(),
+          smartFill,
           history: historyRef.current,
           // Numo returns naive local datetimes; normalizeDueDate interprets
           // them in the browser's timezone.

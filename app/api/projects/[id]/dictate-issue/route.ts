@@ -74,6 +74,19 @@ type Draft = {
   category_ids: string[];
 };
 
+/**
+ * LES QUATRE CHAMPS QUE SMART-FILL POSE, retirés du tool quand il est armé
+ * (MIN-260). Dicter « bug urgent sur le login » ne doit alors PAS poser la
+ * priorité : le formulaire ne montre plus ces pickers, et un champ posé là
+ * serait invisible — pire, il gagnerait sur Smart-fill (qui ne complète que le
+ * vide), donc l'automatisation qu'on croit armée ne ferait plus rien.
+ *
+ * Ils sont retirés du SCHÉMA, pas filtrés après coup : un modèle à qui on ne
+ * propose pas un argument ne le remplit pas, ne le raisonne pas, et ne le
+ * facture pas. Filtrer la réponse aurait payé pour la jeter.
+ */
+const SMART_FILLED_FIELDS = ["priority", "effort", "objective_id", "category_ids"] as const;
+
 const UPDATE_DRAFT_TOOL = {
   type: "function" as const,
   function: {
@@ -120,6 +133,26 @@ const UPDATE_DRAFT_TOOL = {
     },
   },
 };
+
+/** Le tool tel qu'il part au modèle : entier, ou amputé des champs que
+ *  Smart-fill pose lui-même (cf. `SMART_FILLED_FIELDS`). Exporté pour son test :
+ *  ce qu'on retire du schéma ne se voit nulle part à l'écran, et une régression
+ *  ici rendrait juste la dictée « bizarrement bavarde » sans rien casser. */
+export function updateDraftTool(smartFill: boolean) {
+  if (!smartFill) return UPDATE_DRAFT_TOOL;
+  const properties = { ...UPDATE_DRAFT_TOOL.function.parameters.properties } as Record<
+    string,
+    unknown
+  >;
+  for (const field of SMART_FILLED_FIELDS) delete properties[field];
+  return {
+    ...UPDATE_DRAFT_TOOL,
+    function: {
+      ...UPDATE_DRAFT_TOOL.function,
+      parameters: { ...UPDATE_DRAFT_TOOL.function.parameters, properties },
+    },
+  };
+}
 
 /** Whitelist a raw tool-call patch against the project's real ids and the field
  *  enums. Returns the safe patch + the reasons anything was dropped (fed back
@@ -214,12 +247,16 @@ function buildDictatePrompt({
   locale,
   userId,
   timeZone,
+  smartFill,
 }: {
   ctx: PromptProjectContext;
   draft: Draft;
   mode: "create" | "edit";
   locale: string;
   userId: string;
+  /** Smart-fill est armé sur ce formulaire : priorité, effort, catégories et
+   *  objectif ne sont pas à la dictée (MIN-260). */
+  smartFill: boolean;
   timeZone: string;
 }): string {
   const me = ctx.members.find((m) => m.user_id === userId);
@@ -243,7 +280,7 @@ Every change you emit is saved to the issue IMMEDIATELY — be conservative: cha
 
   const modeRules =
     mode === "create"
-      ? `- FIRST dictation describing a problem or idea (draft mostly empty): fill as much as the words reasonably support — a concise title (≤ 80 chars, imperative, Linear-style), a clean markdown description faithful to what was said (structure it; NEVER invent facts, steps or details that were not said), and every field the words imply: "je m'en occupe" / "assigne-moi" → assignee = current user, a person's name → that member, deadlines → due_date, category/objective names → their ids. On a first dictation ALWAYS set priority AND effort, even when not stated: estimate priority from the urgency/impact wording and effort (t-shirt size) from the apparent scope and complexity of the work — a reasoned estimate beats leaving the defaults. Leave the other unstated fields untouched.
+      ? `- FIRST dictation describing a problem or idea (draft mostly empty): fill as much as the words reasonably support — a concise title (≤ 80 chars, imperative, Linear-style), a clean markdown description faithful to what was said (structure it; NEVER invent facts, steps or details that were not said), and every field the words imply: "je m'en occupe" / "assigne-moi" → assignee = current user, a person's name → that member, deadlines → due_date${smartFill ? "" : ", category/objective names → their ids"}. ${smartFill ? "Priority, effort, categories and objective are NOT yours on this form: Smart-fill sets them itself when the issue is created, and the form does not even show them. You have no argument for them — do not mention them, do not ask about them, do not say they are missing. Say what you did with the fields you DO have." : "On a first dictation ALWAYS set priority AND effort, even when not stated: estimate priority from the urgency/impact wording and effort (t-shirt size) from the apparent scope and complexity of the work — a reasoned estimate beats leaving the defaults."} Leave the other unstated fields untouched.
 - FOLLOW-UP commands ("passe-la en urgent", "attribue-moi le ticket", "enlève l'échéance"): apply EXACTLY the requested change(s), nothing else. Do not rewrite title or description unless asked.
 - Additional context dictated later ("ajoute que…") extends the description without losing what's there.
 - Title and description are written in the language the user dictates in.`
@@ -325,6 +362,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     draft?: unknown;
     history?: unknown;
     timeZone?: unknown;
+    smartFill?: unknown;
   };
   try {
     body = await request.json();
@@ -337,6 +375,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const mode = body.mode === "edit" ? ("edit" as const) : ("create" as const);
+  // Smart-fill n'existe que dans le formulaire de CRÉATION : en édition, le
+  // panneau montre tous les champs et la dictée les pose tous.
+  const smartFill = mode === "create" && body.smartFill === true;
 
   const transcript =
     typeof body.transcript === "string"
@@ -417,6 +458,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         locale,
         userId: auth.user.id,
         timeZone,
+        smartFill,
       }),
     },
     ...history,
@@ -443,7 +485,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         body: JSON.stringify({
           model,
           messages,
-          tools: [UPDATE_DRAFT_TOOL],
+          tools: [updateDraftTool(smartFill)],
           usage: { include: true },
           max_tokens: 4096,
         }),

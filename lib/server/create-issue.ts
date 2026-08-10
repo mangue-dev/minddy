@@ -293,6 +293,11 @@ export async function createIssueForProject({
    * au-dessus. C'est une aide à la saisie, pas un correcteur.
    */
   let smartFillCategoryIds: string[] = [];
+  // Les champs que Smart-fill a RÉELLEMENT posés — pas ceux qu'il a proposés.
+  // C'est cette liste qui part dans l'activité : dire « a rempli la priorité »
+  // d'un ticket dont l'auteur avait déjà mis « urgent » serait un mensonge, et
+  // c'est précisément le genre de ligne qui fait cesser de croire la timeline.
+  const smartFilled: string[] = [];
   if (input.smart_fill === true) {
     const patch = await runSmartFill({
       projectId,
@@ -305,9 +310,18 @@ export async function createIssueForProject({
     // sans priorité n'en a pas refusé une.
     if (patch.priority && (row.priority == null || row.priority === "none")) {
       row.priority = patch.priority;
+      smartFilled.push("priority");
     }
-    if (patch.effort !== undefined && row.effort == null) row.effort = patch.effort;
-    if (patch.objective_id && row.objective_id == null) row.objective_id = patch.objective_id;
+    // `effort: null` est une VRAIE réponse (« rien d'estimable ») — mais elle ne
+    // change rien à un champ déjà nul, et l'annoncer dirait un geste invisible.
+    if (patch.effort != null && row.effort == null) {
+      row.effort = patch.effort;
+      smartFilled.push("effort");
+    }
+    if (patch.objective_id && row.objective_id == null) {
+      row.objective_id = patch.objective_id;
+      smartFilled.push("objective_id");
+    }
     if (patch.category_ids?.length) smartFillCategoryIds = patch.category_ids;
   }
 
@@ -437,6 +451,31 @@ export async function createIssueForProject({
         actor_id: actorId,
         type: "sub_issue_added",
         to_value: data.id,
+      });
+    }
+    /**
+     * SMART-FILL DANS L'ACTIVITÉ (MIN-260) — un seul événement, après « a créé
+     * le ticket », et attribué à Smart-fill plutôt qu'à l'auteur : ces
+     * propriétés-là, il ne les a pas posées.
+     *
+     * `actor_id` reste celui de l'auteur, comme pour Smart Assign : c'est bien
+     * sous son compte que l'écriture a eu lieu, et le drapeau suffit à ce que la
+     * timeline nomme l'automatisation. `to_value` porte la liste des champs, et
+     * la phrase se compose à l'affichage — dans la langue du lecteur.
+     *
+     * Rien de rempli, rien à dire : un événement « Smart-fill n'a rien trouvé »
+     * n'apprend rien et se répéterait sur tous les tickets d'une ligne.
+     */
+    if (smartFilled.length > 0 || smartFillCategoryIds.length > 0) {
+      const filled = [...smartFilled];
+      if (smartFillCategoryIds.length > 0) filled.push("category_ids");
+      events.push({
+        issue_id: data.id,
+        actor_id: actorId,
+        type: "updated",
+        field: "smart_fill",
+        to_value: filled.join(","),
+        via_smart_fill: true,
       });
     }
     await insertEvents(

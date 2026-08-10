@@ -39,6 +39,32 @@ export interface EventTranslators {
   formatDue: (value: string | null) => string;
 }
 
+/**
+ * Les champs remplis par Smart-fill, tels que la timeline les nomme. La liste
+ * arrive en clair de la base (« priority,effort,category_ids ») et se traduit
+ * ici : un libellé figé à l'écriture aurait gelé la langue de l'auteur dans le
+ * ticket, et un lecteur anglophone lirait « priorité » six mois plus tard.
+ *
+ * Jointes à la virgule, sans « et » final : la conjonction n'a pas la même place
+ * selon la langue, et une ligne de timeline n'est pas une phrase de dialogue.
+ * Un champ inconnu (nom retiré depuis) est sauté plutôt que rendu tel quel.
+ */
+const SMART_FILL_LABELS: Record<string, string> = {
+  priority: "smartFillPriority",
+  effort: "smartFillEffort",
+  category_ids: "smartFillCategories",
+  objective_id: "smartFillObjective",
+};
+
+function smartFilledFields(value: string | null, t: ActivityT): string {
+  const labels = (value ?? "")
+    .split(",")
+    .map((f) => SMART_FILL_LABELS[f.trim()])
+    .filter(Boolean)
+    .map((key) => t(key));
+  return labels.length > 0 ? labels.join(", ") : t("smartFillProperties");
+}
+
 function memberName(ctx: EventContext, tr: EventTranslators, id: string | null): string {
   if (!id) return tr.t("memberNobody");
   const m = ctx.members.find((x) => x.user_id === id);
@@ -218,6 +244,12 @@ export function describeEvent(
           from: memberName(ctx, tr, e.from_value),
           to: memberName(ctx, tr, e.to_value),
         });
+      // Smart-fill (MIN-260) : UN événement pour les quatre champs, posés d'un
+      // même geste à la création. La ligne d'acteur dit déjà « Smart-fill », la
+      // phrase dit donc CE qu'il a rempli — et seulement ce qu'il a vraiment
+      // rempli (le serveur n'y met pas les champs que l'auteur avait déjà posés).
+      case "smart_fill":
+        return t("smartFilled", { fields: smartFilledFields(e.to_value, t) });
       case "objective_id":
         return t("objectiveChanged", {
           from: objectiveName(ctx, tr, e.from_value),

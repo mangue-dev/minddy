@@ -354,6 +354,11 @@ export interface IssueEvent {
       quand Smart Assign a tranché sans IA (projet solo, aucune règle écrite,
       appel en échec) : la timeline ne dit pas la même phrase. */
   smart_assign_ai?: boolean;
+  /** Smart-fill (MIN-260) a rempli le ticket à sa création — la timeline
+      affiche « Smart-fill » comme acteur, pas la personne qui a écrit le
+      ticket : elle n'a pas posé ces propriétés-là. `to_value` porte la liste
+      des champs remplis, séparés par des virgules. */
+  via_smart_fill?: boolean;
   /** L'événement a été produit par une automatisation de projet (MIN-147) — la
       timeline affiche l'automatisation comme acteur, pas l'utilisateur dont
       l'id sert techniquement d'auteur de l'écriture. */

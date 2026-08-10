@@ -537,22 +537,6 @@ export function CreateIssueDialog({
   const otherProjects = projects.filter((p) => p.id !== projectId);
 
   const applyPatch = (patch: IssueDraftPatch) => {
-    // DICTER UNE DE CES QUATRE PROPRIÉTÉS COUPE SMART-FILL (MIN-260).
-    //
-    // « Bug urgent sur le login, petit » nomme une priorité et un effort : les
-    // poser dans un formulaire dont les pickers sont masqués les rendrait
-    // invisibles, et l'utilisateur n'aurait aucun moyen de voir que ce qu'il a
-    // dit a bien été entendu. Le serveur les respecterait — il ne remplit que
-    // les champs vides — mais « ça a marché » ne se déduit pas d'un écran muet.
-    // Dire une propriété est une intention : elle reprend la main sur l'aide.
-    if (
-      patch.priority !== undefined ||
-      patch.effort !== undefined ||
-      patch.objective_id !== undefined ||
-      Array.isArray(patch.category_ids)
-    ) {
-      setSmartFill(false);
-    }
     if (typeof patch.title === "string") setTitle(patch.title);
     if (typeof patch.description === "string") {
       setDescription(patch.description);
@@ -584,6 +568,12 @@ export function CreateIssueDialog({
   } = useIssueDictation({
     projectId,
     mode: "create",
+    // Smart-fill armé : la dictée ne pose plus priorité, effort, catégories ni
+    // objectif — la route retire ces arguments de son tool, et c'est Smart-fill
+    // qui les posera à la création (MIN-260). Sans ça, une dictée remplissait
+    // des champs que le formulaire ne montre plus, et qui gagnaient sur
+    // l'automatisation qu'on croyait armée.
+    smartFill,
     getDraft: () => ({
       title,
       description,

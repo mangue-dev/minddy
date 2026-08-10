@@ -1,5 +1,5 @@
 import { cn } from "mangue-ui";
-import { Bot, WandSparkles, Workflow } from "lucide-react";
+import { Bot, Sparkles, WandSparkles, Workflow } from "lucide-react";
 import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 import { NumoFace } from "@/components/numo-face";
 
@@ -96,6 +96,25 @@ export function AutomationAvatar({
   return (
     <span aria-hidden className={disc(className)}>
       <Workflow className={cn("size-3", iconClassName)} />
+    </span>
+  );
+}
+
+/** Ticket rempli par Smart-fill (MIN-260) — la fonctionnalité tient lieu
+    d'acteur, jamais la personne qui a écrit le ticket : elle n'a pas posé ces
+    propriétés-là. `Sparkles` et non `WandSparkles` : Smart Assign est juste
+    en dessous avec la baguette, et les deux se croisent dans la même timeline —
+    deux automatisations voisines doivent rester distinguables d'un coup d'œil. */
+export function SmartFillAvatar({
+  className,
+  iconClassName,
+}: {
+  className?: string;
+  iconClassName?: string;
+}) {
+  return (
+    <span aria-hidden className={disc(className)}>
+      <Sparkles className={cn("size-3", iconClassName)} />
     </span>
   );
 }

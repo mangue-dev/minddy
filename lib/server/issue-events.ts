@@ -35,6 +35,10 @@ export interface EventRow {
       per-member rules. False on the deterministic paths (solo project, no rule
       written, model call failed) — the timeline words the two differently. */
   smart_assign_ai?: boolean;
+  /** True when Smart-fill (MIN-260) filled the issue's properties as it was
+      created; the timeline then shows "Smart-fill" as the actor, and
+      `to_value` lists the fields it set. */
+  via_smart_fill?: boolean;
   /** True when the write came from a project AUTOMATION (MIN-147); the timeline
       then names the automation instead of the account whose id technically
       signs the write (the issue's assignee, or the project owner). */
