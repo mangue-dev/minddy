@@ -19,5 +19,6 @@ export const paragraphBlock: PageBlock = {
   },
   turnInto: (editor) => editor.chain().focus().setParagraph().run(),
   isActive: (editor) => editor.isActive("paragraph"),
+  shortcut: { keys: "Mod-Alt-0", display: "⌘⌥0" },
   markdown: { sample: "Some text" },
 };

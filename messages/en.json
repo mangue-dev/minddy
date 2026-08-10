@@ -1576,7 +1576,19 @@
     "taskCompleted": "Done",
     "taskCancelled": "Cancelled",
     "subpageUntitled": "Untitled page",
-    "dragHandle": "Drag to move"
+    "dragHandle": "Drag to move",
+    "insertBlock": "Insert a block below",
+    "blockMenu": "Block options",
+    "turnInto": "Turn into",
+    "duplicateBlock": "Duplicate",
+    "copyBlockLink": "Copy link to block",
+    "blockLinkCopied": "Link copied",
+    "deleteBlock": "Delete",
+    "color": "Color",
+    "colorText": "Text",
+    "colorBackground": "Background",
+    "colorNone": "Default",
+    "blocksSelected": "{count} blocks selected"
   },
   "Picker": {
     "createNamed": "Create “{name}”",

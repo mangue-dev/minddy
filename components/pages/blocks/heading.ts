@@ -39,6 +39,7 @@ function headingBlock(level: (typeof LEVELS)[number]): PageBlock {
     },
     turnInto: (editor) => editor.chain().focus().setNode("heading", { level }).run(),
     isActive: (editor) => editor.isActive("heading", { level }),
+    shortcut: { keys: `Mod-Alt-${level}`, display: `⌘⌥${level}` },
     markdown: { sample: `${"#".repeat(level)} A heading` },
   };
 }

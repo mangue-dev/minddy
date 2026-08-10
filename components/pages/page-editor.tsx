@@ -11,16 +11,17 @@
 //    refaire, liens) — StarterKit avec les nœuds de bloc coupés, puisque le
 //    registre les apporte tous ;
 //  - `UniqueID` sur tous les nœuds de bloc du catalogue : c'est lui qui donne
-//    à la poignée sa cible, à la sauvegarde sa fusion par bloc (MIN-271) et aux
-//    futurs commentaires leur ancre ;
-//  - `NodeRange` + la poignée de glissement ;
+//    à la poignée sa cible, au lien de bloc son ancre, à la sauvegarde sa
+//    fusion par bloc (MIN-271) et aux futurs commentaires la leur ;
+//  - `NodeRange` : la sélection de plusieurs blocs d'un glissé ou d'un ⇧-clic,
+//    sur laquelle opèrent toutes les actions du menu ⋯ ;
+//  - les marks de couleur, et les raccourcis de conversion du registre ;
 //  - les mentions, reprises telles quelles de components/markdown-mention.tsx ;
-//  - le menu « / », branché sur le registre.
+//  - le menu « / », branché sur le registre, et le chrome du bloc
+//    (components/pages/block-gutter.tsx) : la marge au survol et le menu ⋯.
 //
-// Ce qui n'est PAS ici : le chrome du bloc (le `+` d'insertion, le menu ⋯, les
-// couleurs), qui est MIN-268 et se greffe sur la poignée posée ci-dessous ; et
-// la sauvegarde versionnée, qui est MIN-271 — cet éditeur ne fait que rendre
-// son JSON à chaque frappe.
+// Ce qui n'est PAS ici : la sauvegarde versionnée, qui est MIN-271 — cet
+// éditeur ne fait que rendre son JSON à chaque frappe.
 
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import {
@@ -35,16 +36,21 @@ import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "tiptap-markdown";
 import UniqueID from "@tiptap/extension-unique-id";
 import { NodeRange } from "@tiptap/extension-node-range";
-import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
-import { GripVertical } from "lucide-react";
 import {
   MentionNode,
   MentionSuggest,
   type MentionSuggestOptions,
 } from "@/components/markdown-mention";
-import { PAGE_BLOCKS, blockExtensions } from "@/components/pages/blocks";
+import {
+  BLOCK_ID_ATTRIBUTE,
+  BLOCK_ID_TYPES,
+  PageBlockShortcuts,
+  blockExtensions,
+  pageColorExtensions,
+} from "@/components/pages/blocks";
+import { BlockGutter } from "@/components/pages/block-gutter";
 import {
   PageSlashCommand,
   pageSlashItems,
@@ -54,14 +60,7 @@ import {
   type PagesLookup,
 } from "@/components/pages/pages-lookup";
 
-/** L'attribut qui porte l'ID stable d'un bloc. `blockId` et pas `id` : le
-    document part en JSON dans la base, et un champ nommé `id` au milieu d'un
-    arbre de nœuds se confond avec l'id de la PAGE à la première relecture. */
-export const BLOCK_ID_ATTRIBUTE = "blockId";
-
-/** Les nœuds qui reçoivent un ID stable : TOUS ceux du catalogue.
-    Se recalcule depuis le registre — un bloc neuf est identifié d'office. */
-const ID_TYPES = [...new Set(PAGE_BLOCKS.map((block) => block.nodeName))];
+export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
 
 /* Typographie du corps de page. Même parti pris que le carnet : l'édition EST
    l'aperçu, il n'y a pas de mode markdown brut. */
@@ -136,11 +135,13 @@ export function PageEditor({
           listItem: false,
         }),
         ...blockExtensions(),
+        ...pageColorExtensions(),
+        PageBlockShortcuts,
         MentionNode,
         ...(mentions ? [MentionSuggest.configure(mentions)] : []),
         UniqueID.configure({
           attributeName: BLOCK_ID_ATTRIBUTE,
-          types: ID_TYPES,
+          types: BLOCK_ID_TYPES,
         }),
         NodeRange,
         Markdown.configure({
@@ -188,17 +189,13 @@ export function PageEditor({
   }, [editor, pages]);
 
   const body = (
-    <div className={cn("page-editor relative", className)}>
-      {editor && (
-        <DragHandle editor={editor}>
-          <span
-            aria-label={t("dragHandle")}
-            className="flex size-6 cursor-grab items-center justify-center rounded text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <GripVertical className="size-4" />
-          </span>
-        </DragHandle>
-      )}
+    // La MARGE du bloc, réservée : la poignée et le `+` se placent à gauche du
+    // bloc survolé, donc hors du texte — sans cette réserve (54 px de boutons)
+    // ils débordent du conteneur, et le premier panneau qui défile les coupe.
+    // Rien à réserver sur mobile : la marge n'apparaît qu'au SURVOL, et il n'y
+    // en a pas sur une surface tactile.
+    <div className={cn("page-editor relative pl-2 md:pl-14", className)}>
+      {editor && <BlockGutter editor={editor} />}
       <EditorContent editor={editor} />
     </div>
   );

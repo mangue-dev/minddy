@@ -13,7 +13,7 @@
 //  - un menu « / » groupé et ordonné, un « transformer en » qui n'offre que le
 //    convertible.
 
-import type { AnyExtension, Editor, Extensions, Range } from "@tiptap/core";
+import { Extension, type AnyExtension, type Editor, type Extensions, type Range } from "@tiptap/core";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { PageBlock, PageBlockId, SlashGroup } from "@/components/pages/blocks/types";
 
@@ -33,6 +33,16 @@ import { detailsBlock } from "@/components/pages/blocks/details";
 import { subpageBlock } from "@/components/pages/blocks/subpage";
 
 export type { PageBlock, PageBlockId, SlashGroup } from "@/components/pages/blocks/types";
+export {
+  PAGE_COLORS,
+  PAGE_COLOR_MARK,
+  PAGE_COLOR_ATTRIBUTE,
+  activePageColor,
+  pageColorExtensions,
+  setPageColor,
+  type PageColor,
+  type PageColorKind,
+} from "@/components/pages/blocks/color";
 
 /** Le catalogue v1. Ajouter un bloc = un fichier, et une ligne ICI. */
 export const PAGE_BLOCKS: readonly PageBlock[] = [
@@ -62,6 +72,22 @@ export const blocksByNodeName = PAGE_BLOCKS.reduce((map, block) => {
   else map.set(block.nodeName, [block]);
   return map;
 }, new Map<string, PageBlock[]>());
+
+/* ── L'identité d'un bloc dans le document ────────────────────────────── */
+
+/** L'attribut qui porte l'ID stable d'un bloc. `blockId` et pas `id` : le
+    document part en JSON dans la base, et un champ nommé `id` au milieu d'un
+    arbre de nœuds se confond avec l'id de la PAGE à la première relecture.
+
+    C'est lui qui donne à la poignée sa cible, au lien de bloc son ancre, à la
+    sauvegarde sa fusion par bloc (MIN-271) et aux futurs commentaires la leur. */
+export const BLOCK_ID_ATTRIBUTE = "blockId";
+
+/** Les nœuds qui reçoivent un ID stable : TOUS ceux du catalogue. Se recalcule
+    depuis le registre — un bloc neuf est identifié d'office. */
+export const BLOCK_ID_TYPES = [
+  ...new Set(PAGE_BLOCKS.map((block) => block.nodeName)),
+];
 
 /* ── Les extensions ───────────────────────────────────────────────────── */
 
@@ -160,6 +186,47 @@ export function insertBlock(
   editor.chain().focus().deleteRange(range).run();
   if (block.turnInto) block.turnInto(editor);
 }
+
+/* ── Les raccourcis de conversion ─────────────────────────────────────── */
+
+/**
+ * Les raccourcis `shortcut` du catalogue, montés en une seule extension.
+ *
+ * Deux propriétés qui justifient de reprendre à la main ce que les extensions
+ * tiptap font déjà chacune de leur côté :
+ *
+ *  - un raccourci se DÉCLARE avec le bloc, à côté de son libellé et de son
+ *    icône. Le menu affiche celui-là même que le clavier déclenche : ils ne
+ *    peuvent pas diverger, parce qu'il n'y en a qu'un ;
+ *  - tous ont la même sémantique de BASCULE — le raccourci du bloc actif ramène
+ *    au paragraphe. Sans ça, `⌘⌥1` bascule (Heading) mais `⌘⌥D` non (Details),
+ *    et l'éditeur répond différemment selon le bloc sous le curseur.
+ *
+ * `priority` au-dessus des 100 par défaut : la liaison du registre passe donc
+ * AVANT celle de l'extension du nœud, et c'est elle qui répond.
+ */
+export const PageBlockShortcuts = Extension.create({
+  name: "pageBlockShortcuts",
+  priority: 200,
+
+  addKeyboardShortcuts() {
+    const bindings: Record<string, () => boolean> = {};
+    for (const block of PAGE_BLOCKS) {
+      const { shortcut, turnInto } = block;
+      if (!shortcut || !turnInto) continue;
+      bindings[shortcut.keys] = () => {
+        const editor = this.editor as unknown as Editor;
+        if (block.id !== "paragraph" && block.isActive(editor)) {
+          return paragraphBlock.turnInto
+            ? paragraphBlock.turnInto(editor)
+            : false;
+        }
+        return turnInto(editor);
+      };
+    }
+    return bindings;
+  },
+});
 
 /* ── Le menu « transformer en » ───────────────────────────────────────── */
 

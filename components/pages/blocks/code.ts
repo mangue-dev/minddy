@@ -19,5 +19,6 @@ export const codeBlock: PageBlock = {
   },
   turnInto: (editor) => editor.chain().focus().toggleCodeBlock().run(),
   isActive: (editor) => editor.isActive("codeBlock"),
+  shortcut: { keys: "Mod-Alt-C", display: "⌘⌥C" },
   markdown: { sample: "```ts\nconst answer = 42\n```" },
 };

@@ -85,6 +85,7 @@ export const detailsBlock: PageBlock = {
   },
   turnInto: (editor) => editor.chain().focus().setDetails().run(),
   isActive: (editor) => editor.isActive("details"),
+  shortcut: { keys: "Mod-Alt-D", display: "⌘⌥D" },
   markdown: {
     sample: "<details>\n<summary>A summary</summary>\n\nHidden text\n\n</details>",
   },

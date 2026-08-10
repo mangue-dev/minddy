@@ -16,5 +16,6 @@ export const orderedListBlock: PageBlock = {
   },
   turnInto: (editor) => editor.chain().focus().toggleOrderedList().run(),
   isActive: (editor) => editor.isActive("orderedList"),
+  shortcut: { keys: "Mod-Shift-7", display: "⌘⇧7" },
   markdown: { sample: "1. An item" },
 };

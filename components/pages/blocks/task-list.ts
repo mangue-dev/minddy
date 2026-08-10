@@ -37,6 +37,7 @@ export const taskListBlock: PageBlock = {
   },
   turnInto: (editor) => editor.chain().focus().toggleTaskList().run(),
   isActive: (editor) => editor.isActive("taskList"),
+  shortcut: { keys: "Mod-Shift-9", display: "⌘⇧9" },
   // La sérialisation est celle du carnet, portée par les nœuds eux-mêmes — d'où
   // l'absence de `toMarkdown` ici. Le `sample` est ce qui le PROUVE : il
   // traverse un vrai éditeur dans lib/pages-blocks.test.ts.

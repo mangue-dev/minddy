@@ -16,5 +16,6 @@ export const quoteBlock: PageBlock = {
   },
   turnInto: (editor) => editor.chain().focus().toggleBlockquote().run(),
   isActive: (editor) => editor.isActive("blockquote"),
+  shortcut: { keys: "Mod-Shift-B", display: "⌘⇧B" },
   markdown: { sample: "> A quote" },
 };

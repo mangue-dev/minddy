@@ -165,5 +165,25 @@ export interface PageBlock {
       `heading` est actif pour les trois titres, `heading1` pour un seul. */
   isActive: (editor: Editor) => boolean;
 
+  /**
+   * Le raccourci de CONVERSION vers ce bloc. Déclaré ICI et nulle part ailleurs :
+   * le registre en fait la liaison clavier (`PageBlockShortcuts`) ET le libellé
+   * affiché à droite de l'entrée « transformer en ». Un raccourci qu'on lirait
+   * dans le menu sans qu'il fonctionne, ou l'inverse, n'est donc pas
+   * représentable.
+   *
+   * Les combinaisons reprennent celles du carnet et des extensions tiptap —
+   * `⌘⌥1..3` pour les titres, `⌘⇧7/8/9` pour les listes : un utilisateur qui
+   * passe d'une note à une page ne réapprend rien. Le registre les REDÉCLARE
+   * plutôt que de laisser faire chaque extension, pour leur donner à toutes la
+   * même sémantique de bascule (le raccourci du bloc actif ramène au paragraphe).
+   */
+  shortcut?: {
+    /** La combinaison en notation ProseMirror (`Mod-Alt-1`). */
+    keys: string;
+    /** Ce que le menu AFFICHE (`⌘⌥1`). */
+    display: string;
+  };
+
   markdown: PageBlockMarkdown;
 }

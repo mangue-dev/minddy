@@ -19,5 +19,6 @@ export const bulletListBlock: PageBlock = {
   },
   turnInto: (editor) => editor.chain().focus().toggleBulletList().run(),
   isActive: (editor) => editor.isActive("bulletList"),
+  shortcut: { keys: "Mod-Shift-8", display: "⌘⇧8" },
   markdown: { sample: "- An item" },
 };

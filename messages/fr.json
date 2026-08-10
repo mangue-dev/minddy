@@ -1576,7 +1576,19 @@
     "taskCompleted": "Terminé",
     "taskCancelled": "Annulé",
     "subpageUntitled": "Page sans titre",
-    "dragHandle": "Glisser pour déplacer"
+    "dragHandle": "Glisser pour déplacer",
+    "insertBlock": "Insérer un bloc en dessous",
+    "blockMenu": "Options du bloc",
+    "turnInto": "Transformer en",
+    "duplicateBlock": "Dupliquer",
+    "copyBlockLink": "Copier le lien du bloc",
+    "blockLinkCopied": "Lien copié",
+    "deleteBlock": "Supprimer",
+    "color": "Couleur",
+    "colorText": "Texte",
+    "colorBackground": "Fond",
+    "colorNone": "Par défaut",
+    "blocksSelected": "{count} blocs sélectionnés"
   },
   "Picker": {
     "createNamed": "Créer « {name} »",

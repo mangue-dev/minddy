@@ -856,3 +856,91 @@ nav[aria-label="Navigation"]
   from { background-position: 100% center; }
   to { background-position: 0% center; }
 }
+
+/* ─── Couleurs de texte et de fond des pages (MIN-268) ────────────────────
+   Le document ne stocke QUE le nom de la couleur (cf.
+   components/pages/blocks/color.ts) : c'est ici, et seulement ici, qu'un nom
+   devient une valeur — donc une valeur par thème, et un changement de thème
+   qui recolore la page sans la réécrire.
+
+   Les dix teintes sources sont celles des étiquettes de catégorie
+   (`CATEGORY_COLORS`, lib/category-colors.ts) : minddy n'a qu'une palette.
+   `lib/pages-color.test.ts` échoue si les deux divergent — c'est le seul lien
+   entre un fichier TS et une feuille de style, il ne peut pas être typé.
+
+   En sombre, on ne repose pas une seconde palette : on éclaircit la première
+   d'un même geste (`color-mix` vers le blanc), pour retrouver le contraste que
+   les teintes pleines perdent sur fond noir. */
+:root {
+  --page-ink-red: #ef4444;
+  --page-ink-orange: #f97316;
+  --page-ink-amber: #eab308;
+  --page-ink-green: #22c55e;
+  --page-ink-teal: #14b8a6;
+  --page-ink-blue: #3b82f6;
+  --page-ink-indigo: #6366f1;
+  --page-ink-violet: #a855f7;
+  --page-ink-pink: #ec4899;
+  --page-ink-gray: #6b7280;
+
+  --page-color-red: var(--page-ink-red);
+  --page-color-orange: var(--page-ink-orange);
+  --page-color-amber: color-mix(in oklab, var(--page-ink-amber) 82%, black);
+  --page-color-green: color-mix(in oklab, var(--page-ink-green) 88%, black);
+  --page-color-teal: color-mix(in oklab, var(--page-ink-teal) 88%, black);
+  --page-color-blue: var(--page-ink-blue);
+  --page-color-indigo: var(--page-ink-indigo);
+  --page-color-violet: var(--page-ink-violet);
+  --page-color-pink: var(--page-ink-pink);
+  --page-color-gray: var(--page-ink-gray);
+}
+
+.dark {
+  --page-color-red: color-mix(in oklab, var(--page-ink-red) 72%, white);
+  --page-color-orange: color-mix(in oklab, var(--page-ink-orange) 78%, white);
+  --page-color-amber: color-mix(in oklab, var(--page-ink-amber) 82%, white);
+  --page-color-green: color-mix(in oklab, var(--page-ink-green) 80%, white);
+  --page-color-teal: color-mix(in oklab, var(--page-ink-teal) 80%, white);
+  --page-color-blue: color-mix(in oklab, var(--page-ink-blue) 70%, white);
+  --page-color-indigo: color-mix(in oklab, var(--page-ink-indigo) 68%, white);
+  --page-color-violet: color-mix(in oklab, var(--page-ink-violet) 72%, white);
+  --page-color-pink: color-mix(in oklab, var(--page-ink-pink) 74%, white);
+  --page-color-gray: color-mix(in oklab, var(--page-ink-gray) 60%, white);
+}
+
+[data-page-text="red"] { color: var(--page-color-red); }
+[data-page-text="orange"] { color: var(--page-color-orange); }
+[data-page-text="amber"] { color: var(--page-color-amber); }
+[data-page-text="green"] { color: var(--page-color-green); }
+[data-page-text="teal"] { color: var(--page-color-teal); }
+[data-page-text="blue"] { color: var(--page-color-blue); }
+[data-page-text="indigo"] { color: var(--page-color-indigo); }
+[data-page-text="violet"] { color: var(--page-color-violet); }
+[data-page-text="pink"] { color: var(--page-color-pink); }
+[data-page-text="gray"] { color: var(--page-color-gray); }
+
+[data-page-back="red"] { --page-tint: var(--page-color-red); }
+[data-page-back="orange"] { --page-tint: var(--page-color-orange); }
+[data-page-back="amber"] { --page-tint: var(--page-color-amber); }
+[data-page-back="green"] { --page-tint: var(--page-color-green); }
+[data-page-back="teal"] { --page-tint: var(--page-color-teal); }
+[data-page-back="blue"] { --page-tint: var(--page-color-blue); }
+[data-page-back="indigo"] { --page-tint: var(--page-color-indigo); }
+[data-page-back="violet"] { --page-tint: var(--page-color-violet); }
+[data-page-back="pink"] { --page-tint: var(--page-color-pink); }
+[data-page-back="gray"] { --page-tint: var(--page-color-gray); }
+
+/* Un fond, pas un surligneur : une teinte très diluée, un rayon, et
+   `box-decoration-break` pour qu'un passage qui court sur deux lignes garde ses
+   coins arrondis aux DEUX bouts plutôt qu'au milieu. */
+[data-page-back] {
+  background-color: color-mix(in oklab, var(--page-tint) 16%, transparent);
+  border-radius: 0.25rem;
+  padding: 0.08em 0.18em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.dark [data-page-back] {
+  background-color: color-mix(in oklab, var(--page-tint) 24%, transparent);
+}
