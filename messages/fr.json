@@ -3000,6 +3000,13 @@
     "loadError": "Impossible de charger la configuration.",
     "saved": "Modèle enregistré",
     "fieldDefault": "Modèle par défaut",
+    "suffix": {
+      "label": "Choix du fournisseur",
+      "none": "Sans préférence",
+      "nitro": "Le plus rapide",
+      "floor": "Le moins cher",
+      "exacto": "Le plus fiable"
+    },
     "groups": {
       "assistant": {
         "title": "Assistant",

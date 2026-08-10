@@ -1,8 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { getAppConfigValue } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import { resolveConfiguredModel, withModelSuffixFallback } from "@/lib/server/model-config";
 import type { FeedbackPostStatus } from "@/lib/feedback/types";
 import {
   recordAiUsage,
@@ -35,7 +34,6 @@ export interface EmbeddingUsageRecord {
  */
 
 const OPENROUTER_EMBEDDINGS_URL = "https://openrouter.ai/api/v1/embeddings";
-const DEFAULT_EMBEDDING_MODEL = aiModelFallback("feedback_embedding_model");
 export const EMBEDDING_DIMENSIONS = 1536;
 const MAX_INPUT_CHARS = 6000;
 const DEFAULT_TIMEOUT_MS = 8000;
@@ -57,8 +55,7 @@ export async function embedTexts(
   }
 
   const input = texts.map((t) => t.slice(0, MAX_INPUT_CHARS));
-  try {
-    const model = (await getAppConfigValue("feedback_embedding_model")) || DEFAULT_EMBEDDING_MODEL;
+  const attempt = async (model: string): Promise<(number[] | null)[]> => {
     const response = await fetch(OPENROUTER_EMBEDDINGS_URL, {
       method: "POST",
       headers: {
@@ -108,6 +105,13 @@ export async function embedTexts(
       }
     }
     return texts.map((_, i) => byIndex.get(i) ?? null);
+  };
+
+  try {
+    // Le raccourci de routage admin (MIN-263) s'il y en a un, et le modèle nu
+    // en repli : un embedding manquant coûte au board une passe de rattrapage.
+    const { model } = await resolveConfiguredModel("feedback_embedding_model");
+    return await withModelSuffixFallback(model, attempt, { logPrefix: "[embeddings]" });
   } catch (err) {
     console.error("[embeddings] failed:", (err as Error).message);
     return texts.map(() => null);

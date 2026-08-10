@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
+import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { hasUsageBudget } from "@/lib/server/usage";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import {
@@ -247,14 +248,17 @@ export async function runSmartFill({
 }): Promise<SmartFillPatch> {
   if (!actorId || !title.trim()) return {};
   try {
-    const config = await getAppConfigValues(["smart_fill_enabled", "smart_fill_model"]);
+    const config = await getAppConfigValues([
+      "smart_fill_enabled",
+      ...modelConfigKeys("smart_fill_model"),
+    ]);
     const enabled = (config["smart_fill_enabled"] ?? aiModelFallback("smart_fill_enabled")) !== "false";
     if (!enabled) return {};
     // Le budget de CELUI QUI A ARMÉ la bascule, comme pour la dictée. À sec, on
     // ne remplit pas — et le ticket naît quand même.
     if (!(await hasUsageBudget(actorId))) return {};
 
-    const model = config["smart_fill_model"]?.trim() || aiModelFallback("smart_fill_model");
+    const { model } = resolveFromValues("smart_fill_model", config);
     const ctx = await gatherContext(projectId);
 
     const raw = await forcedToolCall(

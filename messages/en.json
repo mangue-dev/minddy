@@ -3000,6 +3000,13 @@
     "loadError": "Couldn’t load the configuration.",
     "saved": "Model saved",
     "fieldDefault": "Default model",
+    "suffix": {
+      "label": "Provider routing",
+      "none": "No routing",
+      "nitro": "Fastest",
+      "floor": "Cheapest",
+      "exacto": "Most reliable"
+    },
     "groups": {
       "assistant": {
         "title": "Assistant",

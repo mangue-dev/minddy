@@ -2,7 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import {
   embedText,
   matchFeedbackPosts,
@@ -64,7 +64,6 @@ import {
  * assumé : rien de non modéré ne part sur un board public).
  */
 
-const DEFAULT_MODEL = aiModelFallback("feedback_analysis_model");
 const DEFAULT_AUTO_THRESHOLD = 0.92;
 const DEFAULT_SUGGEST_FLOOR = 0.6;
 const DEFAULT_BATCH_SIZE = 50;
@@ -123,7 +122,7 @@ interface ReviewSettings {
 async function loadSettings(): Promise<ReviewSettings> {
   const cfg = await getAppConfigValues([
     "feedback_classify_enabled",
-    "feedback_analysis_model",
+    ...modelConfigKeys("feedback_analysis_model"),
     "feedback_merge_auto_threshold",
     "feedback_merge_suggest_floor",
     "feedback_analysis_batch_size",
@@ -131,7 +130,7 @@ async function loadSettings(): Promise<ReviewSettings> {
   return {
     // Kill-switch global : n'importe quoi d'autre que "false" reste actif.
     enabled: (cfg["feedback_classify_enabled"] ?? "true").trim() !== "false",
-    model: cfg["feedback_analysis_model"]?.trim() || DEFAULT_MODEL,
+    model: resolveFromValues("feedback_analysis_model", cfg).model,
     autoThreshold: parseFloatOr(cfg["feedback_merge_auto_threshold"], DEFAULT_AUTO_THRESHOLD),
     suggestFloor: parseFloatOr(cfg["feedback_merge_suggest_floor"], DEFAULT_SUGGEST_FLOOR),
     batchSize: Math.max(

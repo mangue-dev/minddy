@@ -24,8 +24,12 @@ import { formatModelName } from "@/lib/model-display";
 import {
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_GROUPS,
+  isSuffixableField,
+  modelSuffixKey,
+  MODEL_SUFFIXES,
   type AiConfigField,
   type AiConfigGroup,
+  type ModelSuffix,
 } from "@/lib/ai-model-config";
 import {
   DEFAULT_SUBAGENT_FAVORITES,
@@ -135,6 +139,7 @@ export function AdminModelsDashboard() {
                   key={field.key}
                   field={field}
                   value={values?.[field.key] ?? null}
+                  suffix={values?.[modelSuffixKey(field.key)] ?? null}
                   loading={values === null}
                   onSaved={onSaved}
                 />
@@ -150,11 +155,14 @@ export function AdminModelsDashboard() {
 function ConfigRow({
   field,
   value,
+  suffix,
   loading,
   onSaved,
 }: {
   field: AiConfigField;
   value: string | null;
+  /** Suffixe de routage OpenRouter du champ, quand il en accepte un (MIN-263). */
+  suffix: string | null;
   loading: boolean;
   onSaved: (key: string, value: string) => void;
 }) {
@@ -185,7 +193,16 @@ function ConfigRow({
     case "modelId":
       return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
     case "model":
-      return <ModelRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
+      return (
+        <ModelRow
+          field={field}
+          label={label}
+          desc={desc}
+          value={value}
+          suffix={suffix}
+          onSaved={onSaved}
+        />
+      );
   }
 }
 
@@ -202,18 +219,24 @@ function ConfigRow({
  *
  * Plus de bouton « Enregistrer » : un choix dans une liste est un acte unique,
  * il s'enregistre à la sélection (comme l'interrupteur de `FlagRow`).
+ *
+ * À droite, le raccourci de routage OpenRouter (MIN-263) : il ne change PAS de
+ * modèle, il ordonne les providers de celui-là. D'où la seconde liste plutôt
+ * qu'un id à rallonge dans la première — et « Aucun » par défaut.
  */
 function ModelRow({
   field,
   label,
   desc,
   value,
+  suffix,
   onSaved,
 }: {
   field: AiConfigField;
   label: string;
   desc: string | null;
   value: string | null;
+  suffix: string | null;
   onSaved: (key: string, value: string) => void;
 }) {
   const t = useTranslations("Admin");
@@ -255,10 +278,79 @@ function ModelRow({
             loadingLabel={tAgent("modelSearchLoading")}
             freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
           />
+          {isSuffixableField(field) ? (
+            <SuffixSelect field={field} value={suffix} onSaved={onSaved} />
+          ) : null}
           {busy ? <Spinner className="shrink-0" /> : null}
         </>
       }
     />
+  );
+}
+
+/** Valeur du `Select` pour « aucun raccourci » (un item ne peut être vide). */
+const NO_SUFFIX = "__none__";
+
+/** Libellés des raccourcis — table typée, pas de clé assemblée à l'exécution. */
+const SUFFIX_LABEL_KEYS: Record<ModelSuffix, AdminKey> = {
+  nitro: "suffix.nitro",
+  floor: "suffix.floor",
+  exacto: "suffix.exacto",
+};
+
+/**
+ * Le raccourci de routage OpenRouter d'un modèle (`:nitro`, `:floor`,
+ * `:exacto`). Il s'enregistre sur sa PROPRE clé `app_config` — jamais dans l'id
+ * du modèle — pour que le catalogue, l'affichage et le prix continuent de voir
+ * un id nu, et pour que le retirer ne touche pas au modèle choisi.
+ */
+function SuffixSelect({
+  field,
+  value,
+  onSaved,
+}: {
+  field: AiConfigField;
+  value: string | null;
+  onSaved: (key: string, value: string) => void;
+}) {
+  const t = useTranslations("Admin");
+  const key = modelSuffixKey(field.key);
+  const saved = (value ?? "").trim();
+  const [busy, setBusy] = useState(false);
+
+  const select = async (next: string) => {
+    const wanted = next === NO_SUFFIX ? "" : next;
+    if (busy || wanted === saved) return;
+    setBusy(true);
+    try {
+      await patchConfig(key, wanted);
+      onSaved(key, wanted);
+      toast.success(t("saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Select
+      value={saved || NO_SUFFIX}
+      disabled={busy}
+      onValueChange={(next) => void select(next)}
+    >
+      <SelectTrigger className="w-36 shrink-0" aria-label={t("suffix.label")}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NO_SUFFIX}>{t("suffix.none")}</SelectItem>
+        {MODEL_SUFFIXES.map((suffix) => (
+          <SelectItem key={suffix} value={suffix}>
+            {t(SUFFIX_LABEL_KEYS[suffix])}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

@@ -1,7 +1,11 @@
 import { NextRequest, after } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import {
+  modelConfigKeys,
+  resolveFromValues,
+  withModelSuffixFallback,
+} from "@/lib/server/model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import {
   resolveAudioFormat,
@@ -24,7 +28,6 @@ export const maxDuration = 300;
 // prise ; au-delà, la réponse est un 413 et le client affiche `Dictate.tooLarge`.
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
-const FALLBACK_MODEL = aiModelFallback("transcription_model");
 
 /**
  * Sous quelle feature du ledger inscrire la prise. Par défaut `transcription`,
@@ -102,10 +105,13 @@ export async function POST(request: NextRequest) {
 
   // Model is DB-configured (app_config), like the assistant model.
   const cfg = await getAppConfigValues([
-    "transcription_model",
+    ...modelConfigKeys("transcription_model"),
     "transcription_model_provider",
   ]);
-  const model = cfg.transcription_model?.trim() || FALLBACK_MODEL;
+  const model = resolveFromValues("transcription_model", cfg).model;
+  // Le modèle RÉELLEMENT appelé : le repli du raccourci de routage (MIN-263)
+  // peut retirer le suffixe, et c'est cette valeur-là qui va au ledger.
+  let usedModel = model;
   let provider: Record<string, unknown> | undefined;
   if (cfg.transcription_model_provider?.trim()) {
     try {
@@ -127,18 +133,25 @@ export async function POST(request: NextRequest) {
   const feature = resolveFeature(formData.get("feature"));
 
   try {
-    const result = await transcribeAudio(model, audioBase64, format, apiKey, {
-      language,
-      provider,
-      title: "minddy Dictate",
-    });
+    const result = await withModelSuffixFallback(
+      model,
+      (m) => {
+        usedModel = m;
+        return transcribeAudio(m, audioBase64, format, apiKey, {
+          language,
+          provider,
+          title: "minddy Dictate",
+        });
+      },
+      { logPrefix: "[/api/transcribe]" },
+    );
 
     // Suivi des coûts : appel unique (un run d'un seul appel). Best-effort.
     after(() =>
       recordAiUsage({
         runId,
         feature,
-        model,
+        model: usedModel,
         promptTokens: result.inputTokens || null,
         completionTokens: result.outputTokens || null,
         totalTokens:

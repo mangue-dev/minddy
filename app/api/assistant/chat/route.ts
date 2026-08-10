@@ -3,7 +3,10 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import {
+  modelConfigKeys,
+  resolveCascadeFromValues,
+} from "@/lib/server/model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
@@ -51,7 +54,6 @@ export const maxDuration = 300;
 
 const PROCESSING_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const ASSISTANT_CHAT_RATE_LIMIT = { limit: 20 };
-const DEFAULT_MODEL = aiModelFallback("assistant_model");
 
 /** Ce qu'une pilule épinglée peut désigner, et ce qu'un « @ » peut citer. Les
  *  deux tables sont côte à côte parce qu'elles se suivent : ce qui s'épingle au
@@ -275,11 +277,11 @@ export async function POST(request: NextRequest) {
 
   // Model comes from app_config (DB-configured, not an env var) — swappable
   // without a redeploy thanks to the 60s in-process cache.
-  const modelCfg = await getAppConfigValues(["assistant_model", "fallback_model"]);
-  const model =
-    modelCfg["assistant_model"]?.trim() ||
-    modelCfg["fallback_model"]?.trim() ||
-    DEFAULT_MODEL;
+  const modelCfg = await getAppConfigValues([
+    ...modelConfigKeys("assistant_model"),
+    ...modelConfigKeys("fallback_model"),
+  ]);
+  const { model } = resolveCascadeFromValues(["assistant_model", "fallback_model"], modelCfg);
 
   // Locale from the NEXT_LOCALE cookie (same chain as the rest of the app).
   // Resolved BEFORE the stream starts — next-intl needs the request context.

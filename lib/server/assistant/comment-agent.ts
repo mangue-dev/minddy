@@ -14,6 +14,10 @@ import {
   type NotificationRow,
 } from "@/lib/server/notifications";
 import { getAppConfigValues } from "@/lib/server/app-config";
+import {
+  modelConfigKeys,
+  resolveCascadeFromValues,
+} from "@/lib/server/model-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
 import {
   resolveNumoDefaultStatus,
@@ -285,11 +289,11 @@ export async function runCommentMention({
 
     // Model resolved here (not in runLoop) so its input modalities can gate
     // the attachment parts below.
-    const cfg = await getAppConfigValues(["assistant_model", "fallback_model"]);
-    const model =
-      cfg["assistant_model"]?.trim() ||
-      cfg["fallback_model"]?.trim() ||
-      ASSISTANT_MODEL_FALLBACK;
+    const cfg = await getAppConfigValues([
+      ...modelConfigKeys("assistant_model"),
+      ...modelConfigKeys("fallback_model"),
+    ]);
+    const { model } = resolveCascadeFromValues(["assistant_model", "fallback_model"], cfg);
 
     const triggerText = `${authorName(actorId)} ${
       trigger === "reply"
@@ -530,11 +534,11 @@ export async function runObjectiveCommentMention({
       locale,
     });
 
-    const cfg = await getAppConfigValues(["assistant_model", "fallback_model"]);
-    const model =
-      cfg["assistant_model"]?.trim() ||
-      cfg["fallback_model"]?.trim() ||
-      ASSISTANT_MODEL_FALLBACK;
+    const cfg = await getAppConfigValues([
+      ...modelConfigKeys("assistant_model"),
+      ...modelConfigKeys("fallback_model"),
+    ]);
+    const { model } = resolveCascadeFromValues(["assistant_model", "fallback_model"], cfg);
 
     const triggerText = `${authorName(actorId)} ${
       trigger === "reply"
@@ -797,11 +801,11 @@ export async function runFeedbackCommentMention({
       locale,
     });
 
-    const cfg = await getAppConfigValues(["assistant_model", "fallback_model"]);
-    const model =
-      cfg["assistant_model"]?.trim() ||
-      cfg["fallback_model"]?.trim() ||
-      ASSISTANT_MODEL_FALLBACK;
+    const cfg = await getAppConfigValues([
+      ...modelConfigKeys("assistant_model"),
+      ...modelConfigKeys("fallback_model"),
+    ]);
+    const { model } = resolveCascadeFromValues(["assistant_model", "fallback_model"], cfg);
 
     const triggerText = `${authorName(actorId)} ${
       trigger === "reply"

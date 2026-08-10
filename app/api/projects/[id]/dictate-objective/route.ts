@@ -10,7 +10,11 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import {
+  fetchOpenRouterWithSuffixFallback,
+  modelConfigKeys,
+  resolveFromValues,
+} from "@/lib/server/model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
@@ -39,7 +43,6 @@ export const maxDuration = 120;
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // Même modèle que la dictée de ticket (clé app_config `dictate_model`) : c'est
 // la même étape agentique, sur d'autres champs.
-const DICTATE_DEFAULT_MODEL = aiModelFallback("dictate_model");
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 12;
@@ -366,7 +369,7 @@ export async function POST(
       { db: auth.supabase, service, projectId, projectKey: project.key as string },
       project.owner_id as string
     ),
-    getAppConfigValues(["dictate_model"]),
+    getAppConfigValues(modelConfigKeys("dictate_model")),
     getLocale(),
   ]);
   const members: PromptMember[] =
@@ -376,7 +379,9 @@ export async function POST(
           name: m.name as string,
         }))
       : [];
-  const model = modelCfg["dictate_model"]?.trim() || DICTATE_DEFAULT_MODEL;
+  // `let` : le repli du raccourci de routage (MIN-263) colle au modèle qui a
+  // marché, pour ne pas re-tenter le suffixe à chaque round.
+  let model = resolveFromValues("dictate_model", modelCfg).model;
 
   const messages: OpenRouterMessage[] = [
     {
@@ -404,22 +409,29 @@ export async function POST(
   const usageRows: AiUsageInput[] = [];
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const response = await fetch(OPENROUTER_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://minddy.app",
-          "X-Title": "Numo (minddy)",
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          tools: [UPDATE_DRAFT_TOOL],
-          usage: { include: true },
-          max_tokens: 4096,
+      const call = await fetchOpenRouterWithSuffixFallback(
+        OPENROUTER_URL,
+        model,
+        (m) => ({
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://minddy.app",
+            "X-Title": "Numo (minddy)",
+          },
+          body: JSON.stringify({
+            model: m,
+            messages,
+            tools: [UPDATE_DRAFT_TOOL],
+            usage: { include: true },
+            max_tokens: 4096,
+          }),
         }),
-      });
+        "[dictate-objective]",
+      );
+      const response = call.response;
+      model = call.model;
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);

@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
+import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import type { AiFeature } from "@/lib/server/ai-usage";
 
@@ -154,9 +155,8 @@ export async function generateShortTitle({
   const trimmed = text.trim();
   if (!trimmed) return null;
 
-  const cfg = await getAppConfigValues([SHORT_TITLE_MODEL_KEY]);
-  const model =
-    cfg[SHORT_TITLE_MODEL_KEY]?.trim() || aiModelFallback(SHORT_TITLE_MODEL_KEY);
+  const cfg = await getAppConfigValues(modelConfigKeys(SHORT_TITLE_MODEL_KEY));
+  const { model } = resolveFromValues(SHORT_TITLE_MODEL_KEY, cfg);
 
   const language =
     locale === "auto"

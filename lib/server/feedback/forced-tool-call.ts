@@ -8,6 +8,7 @@ import {
   type AiUsageBillTo,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
+import { stripModelSuffix } from "@/lib/ai-model-config";
 
 /**
  * Appel OpenRouter à sortie structurée forcée (tools + tool_choice) — le contrat
@@ -21,6 +22,21 @@ import {
  */
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+/**
+ * Un refus d'OpenRouter, distingué des autres échecs (timeout, JSON de travers)
+ * parce que c'est le SEUL qu'on rejoue : un modèle portant un raccourci de
+ * routage (`:nitro`, `:floor`, `:exacto`, MIN-263) dont aucun provider ne
+ * satisfait l'ordre demandé se voit refuser au moment de la requête, avant le
+ * premier token. Rejouer un timeout, lui, ne ferait que doubler l'attente de
+ * quelqu'un qui patiente déjà devant son écran.
+ */
+class OpenRouterHttpError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = "OpenRouterHttpError";
+  }
+}
 
 /** Contexte de suivi de coût pour un appel forcé (feature + imputation). */
 export interface ForcedToolCallRecord {
@@ -61,7 +77,7 @@ export async function forcedToolCall(
 
   const logPrefix = options?.logPrefix ?? "[feedback-llm]";
 
-  try {
+  const attempt = async (attemptModel: string): Promise<Record<string, unknown> | null> => {
     const response = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers: {
@@ -71,7 +87,7 @@ export async function forcedToolCall(
         "X-Title": options?.xTitle ?? "Feedback (minddy)",
       },
       body: JSON.stringify({
-        model,
+        model: attemptModel,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
@@ -94,7 +110,10 @@ export async function forcedToolCall(
     });
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
+      throw new OpenRouterHttpError(
+        response.status,
+        `LLM error (${response.status}): ${errorText.slice(0, 200)}`,
+      );
     }
     const data = (await response.json()) as {
       choices?: {
@@ -111,7 +130,7 @@ export async function forcedToolCall(
       await recordAiUsage({
         runId: newRunId(),
         feature: options.record.feature,
-        model: data.model ?? model,
+        model: data.model ?? attemptModel,
         generationId: data.id ?? null,
         promptTokens: u.promptTokens,
         completionTokens: u.completionTokens,
@@ -125,7 +144,23 @@ export async function forcedToolCall(
     const call = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
     if (call?.name !== toolName) return null;
     return JSON.parse(call.arguments || "{}") as Record<string, unknown>;
+  };
+
+  try {
+    return await attempt(model);
   } catch (err) {
+    // Repli du raccourci de routage (MIN-263) : le modèle NU plutôt qu'une
+    // fonctionnalité éteinte. Un seul rejeu, et seulement sur un refus.
+    const base = stripModelSuffix(model);
+    if (err instanceof OpenRouterHttpError && base !== model) {
+      console.warn(`${logPrefix} ${model} refused (${err.status}), retrying on ${base}`);
+      try {
+        return await attempt(base);
+      } catch (retryErr) {
+        console.error(`${logPrefix} LLM call failed:`, (retryErr as Error).message);
+        return null;
+      }
+    }
     console.error(`${logPrefix} LLM call failed:`, (err as Error).message);
     return null;
   }

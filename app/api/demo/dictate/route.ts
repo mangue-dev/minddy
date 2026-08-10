@@ -2,7 +2,12 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import {
+  fetchOpenRouterWithSuffixFallback,
+  modelConfigKeys,
+  resolveFromValues,
+  withModelSuffixFallback,
+} from "@/lib/server/model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { getClientIp } from "@/lib/server/request-ip";
 import { transcribeAudio } from "@/lib/server/openrouter-transcribe";
@@ -84,8 +89,6 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const TRANSCRIPTION_FALLBACK_MODEL = aiModelFallback("transcription_model");
-const DICTATE_FALLBACK_MODEL = aiModelFallback("dictate_model");
 
 const IP_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 } as const;
 const GLOBAL_DAILY_LIMIT = 500;
@@ -132,8 +135,8 @@ export async function POST(request: NextRequest) {
 
   const cfg = await getAppConfigValues([
     "demo_dictation_enabled",
-    "transcription_model",
-    "dictate_model",
+    ...modelConfigKeys("transcription_model"),
+    ...modelConfigKeys("dictate_model"),
   ]);
   if ((cfg.demo_dictation_enabled ?? "true").trim() === "false") {
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
@@ -168,13 +171,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "bad_request" }, { status: 400 });
     }
 
-    const model = cfg.transcription_model?.trim() || TRANSCRIPTION_FALLBACK_MODEL;
+    const model = resolveFromValues("transcription_model", cfg).model;
+    // Le modèle RÉELLEMENT appelé : le repli du raccourci de routage (MIN-263)
+    // peut retirer le suffixe, et c'est cette valeur-là qui va au ledger.
+    let usedModel = model;
     try {
       const audioBase64 = Buffer.from(await audio.arrayBuffer()).toString("base64");
-      const result = await transcribeAudio(model, audioBase64, format, apiKey, {
-        language: locale,
-        title: "minddy public demo",
-      });
+      const result = await withModelSuffixFallback(
+        model,
+        (m) => {
+          usedModel = m;
+          return transcribeAudio(m, audioBase64, format, apiKey, {
+            language: locale,
+            title: "minddy public demo",
+          });
+        },
+        { logPrefix: "[api/demo/dictate]" },
+      );
       transcript = result.text.trim();
       // Les deux appels d'un passage partagent `runId` et la feature
       // `landing_demo` : le tableau admin en fait UNE ligne (« la démo »), et
@@ -184,7 +197,7 @@ export async function POST(request: NextRequest) {
         runId,
         seq: 0,
         feature: "landing_demo",
-        model,
+        model: usedModel,
         promptTokens: result.inputTokens || null,
         completionTokens: result.outputTokens || null,
         cost: result.cost || null,
@@ -226,33 +239,38 @@ export async function POST(request: NextRequest) {
   const today = todayIn(timeZone);
 
   // ── Le rangement : un seul appel, un seul outil, forcé ─────────────────
-  const model = cfg.dictate_model?.trim() || DICTATE_FALLBACK_MODEL;
+  const model = resolveFromValues("dictate_model", cfg).model;
   let ticket: DemoTicket;
   try {
-    const response = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": "minddy public demo",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: "system",
-            content: buildDemoPrompt({ locale, today, members, categories }),
-          },
-          { role: "user", content: transcript },
-        ],
-        tools: [FILL_TICKET_TOOL],
-        tool_choice: { type: "function", function: { name: "fill_ticket" } },
-        usage: { include: true },
-        max_tokens: 700,
+    const { response } = await fetchOpenRouterWithSuffixFallback(
+      OPENROUTER_URL,
+      model,
+      (m) => ({
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://minddy.app",
+          "X-Title": "minddy public demo",
+        },
+        body: JSON.stringify({
+          model: m,
+          messages: [
+            {
+              role: "system",
+              content: buildDemoPrompt({ locale, today, members, categories }),
+            },
+            { role: "user", content: transcript },
+          ],
+          tools: [FILL_TICKET_TOOL],
+          tool_choice: { type: "function", function: { name: "fill_ticket" } },
+          usage: { include: true },
+          max_tokens: 700,
+        }),
+        signal: AbortSignal.timeout(30_000),
       }),
-      signal: AbortSignal.timeout(30_000),
-    });
+      "[api/demo/dictate]",
+    );
     if (!response.ok) {
       throw new Error(
         `LLM error (${response.status}): ${(await response.text()).slice(0, 200)}`,

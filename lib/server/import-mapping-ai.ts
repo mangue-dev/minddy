@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
+import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import {
   ISSUE_EFFORTS,
@@ -236,11 +237,14 @@ export async function proposeImportMapping({
   userId,
   projectId,
 }: ImportMappingAiInput): Promise<ImportMapping | null> {
-  const cfg = await getAppConfigValues([IMPORT_MAP_MODEL_KEY, IMPORT_MAP_ENABLED_KEY]);
+  const cfg = await getAppConfigValues([
+    ...modelConfigKeys(IMPORT_MAP_MODEL_KEY),
+    IMPORT_MAP_ENABLED_KEY,
+  ]);
   if ((cfg[IMPORT_MAP_ENABLED_KEY] ?? aiModelFallback(IMPORT_MAP_ENABLED_KEY)) === "false") {
     return null;
   }
-  const model = cfg[IMPORT_MAP_MODEL_KEY]?.trim() || aiModelFallback(IMPORT_MAP_MODEL_KEY);
+  const { model } = resolveFromValues(IMPORT_MAP_MODEL_KEY, cfg);
 
   const args = await forcedToolCall(
     model,

@@ -36,6 +36,35 @@ export interface AiConfigField {
   fallback: string;
   /** Section the field is grouped under in the dashboard. */
   group: AiConfigGroup;
+  /**
+   * Coupe le suffixe OpenRouter (MIN-263) sur un champ `model` qui, sinon,
+   * en accepterait un. Voir `MODEL_SUFFIXES` pour la raison de chaque exclusion.
+   */
+  noSuffix?: true;
+}
+
+/**
+ * Raccourcis de routage OpenRouter (MIN-263) : collés à l'id du modèle après
+ * deux points, ils ordonnent les providers de CE modèle sans en changer un
+ * seul. Universels — ils marchent sur n'importe quel id.
+ *
+ *   `nitro`  → providers triés par débit (le plus rapide d'abord) ;
+ *   `floor`  → triés par prix (le moins cher d'abord) ;
+ *   `exacto` → qualité d'abord, providers dont le tool-calling est fiable.
+ *
+ * `:online` existe aussi et n'est DÉLIBÉRÉMENT pas offert : il allume la
+ * recherche web payante (~$0,005 par appel, forfait Exa) sur n'importe quel
+ * appel, alors que la recherche de minddy est un tool explicite dont le coût
+ * est une ligne de ledger à part (`lib/server/web-search.ts`). Un suffixe qui
+ * multiplie par mille le prix d'un titre de conversation n'a rien à faire dans
+ * une liste déroulante.
+ */
+export const MODEL_SUFFIXES = ["nitro", "floor", "exacto"] as const;
+
+export type ModelSuffix = (typeof MODEL_SUFFIXES)[number];
+
+export function isModelSuffix(value: string): value is ModelSuffix {
+  return (MODEL_SUFFIXES as readonly string[]).includes(value);
 }
 
 export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
@@ -73,13 +102,30 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // les résultats du plugin OpenRouter. Le drapeau la coupe partout d'un coup.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
   { key: "web_search_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
-  // Agent de code cloud (MIN-46) — défaut racine, surchargé par user puis par run
-  { key: "agent_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "agent" },
+  // Agent de code cloud (MIN-46) — défaut racine, surchargé par user puis par run.
+  // Pas de suffixe (MIN-263) : le modèle d'un run est écrit sur sa ligne
+  // `agent_runs` et retourne pendant des dizaines de rounds, parfois depuis la
+  // microVM — le repli « rejouer sans le `:` » y voudrait dire réécrire le
+  // modèle du run en vol, ce qui est un autre chantier.
+  {
+    key: "agent_model",
+    kind: "model",
+    fallback: "deepseek/deepseek-v4-flash",
+    group: "agent",
+    noSuffix: true,
+  },
   // Review d'une PR par Numo (MIN-141). DÉLIBÉRÉMENT plus cher que `agent_model` :
   // relire du code avec le modèle qui vient de l'écrire ne produit qu'un second
   // avis identique — la valeur d'une review vient d'un autre regard. Un appel par
   // clic, jamais automatique : c'est ce qui rend le tarif tenable.
-  { key: "pr_review_model", kind: "model", fallback: "anthropic/claude-sonnet-5", group: "agent" },
+  // Pas de suffixe non plus : même boucle, même run persisté que `agent_model`.
+  {
+    key: "pr_review_model",
+    kind: "model",
+    fallback: "anthropic/claude-sonnet-5",
+    group: "agent",
+    noSuffix: true,
+  },
   // Favoris servis au prompt du parent pour `spawn_agent` (MIN-112).
   {
     key: "agent_subagent_favorites",
@@ -120,8 +166,59 @@ export const AI_MODEL_CONFIG_GROUPS: AiConfigGroup[] = [
   "feedback",
 ];
 
+/**
+ * Un champ accepte-t-il un suffixe de routage ? Les modèles, sauf ceux marqués
+ * `noSuffix`. Les ids BYOK (`kind: "modelId"`) vivent dans le namespace d'un
+ * provider natif, où les raccourcis OpenRouter n'existent pas.
+ */
+export function isSuffixableField(field: AiConfigField): boolean {
+  return field.kind === "model" && !field.noSuffix;
+}
+
+/**
+ * Clé `app_config` du suffixe d'un réglage de modèle. Elle est DÉRIVÉE, pas
+ * déclarée : un champ `model` ajouté au registre gagne son suffixe sans qu'on
+ * ait une seconde entrée à tenir en face.
+ */
+export function modelSuffixKey(key: string): string {
+  return `${key}_suffix`;
+}
+
+/** Les clés de suffixe du registre, dans l'ordre de leurs champs. */
+export const AI_MODEL_SUFFIX_KEYS: string[] = AI_MODEL_CONFIG_FIELDS.filter(
+  isSuffixableField,
+).map((f) => modelSuffixKey(f.key));
+
+/** Cette clé est-elle le suffixe d'un champ du registre ? */
+export function isModelSuffixKey(key: string): boolean {
+  return AI_MODEL_SUFFIX_KEYS.includes(key);
+}
+
+/**
+ * Colle un suffixe de routage à un id de modèle. No-op quand il n'y a pas de
+ * suffixe, quand il n'est pas reconnu (une ligne `app_config` écrite à la main
+ * ne doit pas casser l'appel), ou quand l'id en porte DÉJÀ un : un admin qui a
+ * saisi `…:free` en texte libre a choisi une variante, pas un ordre de routage,
+ * et `…:free:nitro` n'existe pas.
+ */
+export function applyModelSuffix(model: string, suffix: string | null | undefined): string {
+  const base = model.trim();
+  const wanted = (suffix ?? "").trim();
+  if (!base || !wanted || !isModelSuffix(wanted)) return base;
+  if (base.includes(":")) return base;
+  return `${base}:${wanted}`;
+}
+
+/** L'id nu, sans son suffixe de routage — ce sur quoi on rejoue après un échec. */
+export function stripModelSuffix(model: string): string {
+  return model.split(":")[0];
+}
+
 /** Fast membership check for the admin API (write allowlist). */
-export const AI_MODEL_CONFIG_KEYS = new Set(AI_MODEL_CONFIG_FIELDS.map((f) => f.key));
+export const AI_MODEL_CONFIG_KEYS = new Set([
+  ...AI_MODEL_CONFIG_FIELDS.map((f) => f.key),
+  ...AI_MODEL_SUFFIX_KEYS,
+]);
 
 export function getAiConfigField(key: string): AiConfigField | undefined {
   return AI_MODEL_CONFIG_FIELDS.find((f) => f.key === key);

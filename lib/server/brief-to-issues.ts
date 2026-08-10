@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
+import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { ISSUE_EFFORTS, ISSUE_PRIORITIES } from "@/lib/issue-validation";
 import { sanitizeSeedProposal } from "@/lib/server/seed-issues";
@@ -160,11 +161,11 @@ export async function proposeBacklogFromBrief({
   const text = brief.trim().slice(0, MAX_BRIEF_CHARS);
   if (!text) return null;
 
-  const cfg = await getAppConfigValues([BRIEF_MODEL_KEY, BRIEF_ENABLED_KEY]);
+  const cfg = await getAppConfigValues([...modelConfigKeys(BRIEF_MODEL_KEY), BRIEF_ENABLED_KEY]);
   if ((cfg[BRIEF_ENABLED_KEY] ?? aiModelFallback(BRIEF_ENABLED_KEY)) === "false") {
     return null;
   }
-  const model = cfg[BRIEF_MODEL_KEY]?.trim() || aiModelFallback(BRIEF_MODEL_KEY);
+  const { model } = resolveFromValues(BRIEF_MODEL_KEY, cfg);
 
   // Les marqueurs encadrent la donnée : le modèle sait où le brief commence et
   // où il finit, donc où s'arrête ce qu'il doit lire comme du texte.

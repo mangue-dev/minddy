@@ -9,8 +9,12 @@ import {
 import {
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_KEYS,
+  AI_MODEL_SUFFIX_KEYS,
   getAiConfigField,
   isFlagKey,
+  isModelSuffix,
+  isModelSuffixKey,
+  MODEL_SUFFIXES,
 } from "@/lib/ai-model-config";
 import { parseSubagentFavorites } from "@/lib/subagent-favorites";
 
@@ -36,9 +40,12 @@ export async function GET(request: NextRequest) {
   const denied = await requireAdmin(request);
   if (denied) return denied;
 
-  const values = await getAppConfigValues(
-    AI_MODEL_CONFIG_FIELDS.map((f) => f.key)
-  );
+  // Les suffixes de routage (MIN-263) sont des clés à part entière : le
+  // dashboard les lit dans le même objet que le modèle qu'ils accompagnent.
+  const values = await getAppConfigValues([
+    ...AI_MODEL_CONFIG_FIELDS.map((f) => f.key),
+    ...AI_MODEL_SUFFIX_KEYS,
+  ]);
   return NextResponse.json({ values });
 }
 
@@ -87,6 +94,15 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
+  }
+  // Un suffixe de routage n'a que trois valeurs légales, plus le vide qui
+  // efface la ligne (« aucun paramètre »). Refuser ici plutôt que de laisser
+  // partir un `…:nirto` qu'OpenRouter renverrait en 404 à chaque appel.
+  if (isModelSuffixKey(key) && trimmed && !isModelSuffix(trimmed)) {
+    return NextResponse.json(
+      { error: `Suffix must be one of: ${MODEL_SUFFIXES.join(", ")}` },
+      { status: 400 }
+    );
   }
   if (kind === "favorites" && trimmed && parseSubagentFavorites(trimmed) === null) {
     return NextResponse.json(

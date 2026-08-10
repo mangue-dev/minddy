@@ -9,6 +9,8 @@ import {
   type ToolExecution,
 } from "./execute-tool";
 import type { AssistantToolDef } from "./tools";
+import { stripModelSuffix } from "@/lib/ai-model-config";
+import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 
 // ── OpenRouter streaming agent loop (ported from AutoKap's assistant) ───
 
@@ -88,7 +90,9 @@ export async function modelSupportsCaching(
   apiKey: string
 ): Promise<boolean> {
   await loadModelIndex(apiKey);
-  return modelIndexCache.get(model)?.caching ?? false;
+  // L'id NU : le catalogue OpenRouter ne connaît pas les raccourcis de routage
+  // (`…:nitro`, MIN-263), et un lookup raté couperait le cache sans rien dire.
+  return modelIndexCache.get(stripModelSuffix(model))?.caching ?? false;
 }
 
 /**
@@ -101,7 +105,9 @@ export async function getModelInputModalities(
   apiKey: string
 ): Promise<Set<string>> {
   await loadModelIndex(apiKey);
-  return new Set(modelIndexCache.get(model)?.modalities ?? ["text"]);
+  // Idem : sans l'id nu, un modèle suffixé passerait pour texte seul et les
+  // pièces jointes seraient dégradées en notes.
+  return new Set(modelIndexCache.get(stripModelSuffix(model))?.modalities ?? ["text"]);
 }
 
 /** Cap tool result JSON sent to the LLM. The full result is already persisted in DB. */
@@ -155,6 +161,9 @@ export async function processChat(
   const allToolCalls: AssistantToolCall[] = [];
   let continueLoop = true;
   let roundCount = 0;
+  // Le modèle envoyé, suffixe de routage compris (MIN-263) — il peut perdre son
+  // suffixe en cours de boucle si OpenRouter le refuse.
+  let requestModel = context.model;
   const MAX_TOOL_ROUNDS = 6;
 
   while (continueLoop) {
@@ -162,7 +171,7 @@ export async function processChat(
     roundCount++;
 
     const requestBody: Record<string, unknown> = {
-      model: context.model,
+      model: requestModel,
       messages,
       stream: true,
       stream_options: { include_usage: true },
@@ -174,16 +183,25 @@ export async function processChat(
       requestBody.tools = tools;
     }
 
-    const response = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": "Numo (minddy)",
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const call = await fetchOpenRouterWithSuffixFallback(
+      OPENROUTER_URL,
+      requestModel,
+      (m) => ({
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://minddy.app",
+          "X-Title": "Numo (minddy)",
+        },
+        body: JSON.stringify({ ...requestBody, model: m }),
+      }),
+      "[assistant]",
+    );
+    const response = call.response;
+    // Le repli du raccourci de routage colle au modèle qui a marché : sans ça,
+    // chaque round de la boucle repaierait une requête refusée.
+    requestModel = call.model;
 
     if (!response.ok) {
       const errorText = await response.text();

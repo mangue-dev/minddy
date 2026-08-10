@@ -4,7 +4,11 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import {
+  fetchOpenRouterWithSuffixFallback,
+  modelConfigKeys,
+  resolveFromValues,
+} from "@/lib/server/model-config";
 import { canUseSmartAssign } from "@/lib/server/entitlements";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -58,8 +62,6 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  */
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-// Surchargeable en base via la clé app_config `smart_assign_model`.
-const SMART_ASSIGN_DEFAULT_MODEL = aiModelFallback("smart_assign_model");
 const MAX_DESCRIPTION_CHARS = 4000;
 
 /** Fenêtre du rattrapage : au-delà, un ticket sans assigné est un choix, pas
@@ -427,15 +429,14 @@ async function chooseAssigneeViaAI({
 
   try {
     const [modelCfg, authUsers, { data: categoryRows }] = await Promise.all([
-      getAppConfigValues(["smart_assign_model"]),
+      getAppConfigValues(modelConfigKeys("smart_assign_model")),
       fetchAuthUsersById(service, memberIds),
       service
         .from("issue_categories")
         .select("categories(name)")
         .eq("issue_id", issue.id as string),
     ]);
-    const model =
-      modelCfg["smart_assign_model"]?.trim() || SMART_ASSIGN_DEFAULT_MODEL;
+    const model = resolveFromValues("smart_assign_model", modelCfg).model;
 
     const memberLines = memberIds
       .map((id) => {
@@ -474,40 +475,45 @@ Effort: ${(issue.effort as string) ?? "—"}
 ## Members
 ${memberLines}`;
 
-    const response = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": "Smart Assign (minddy)",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "choose_assignee",
-              description:
-                "Assign the issue to exactly one member. Mandatory — you must always pick one.",
-              parameters: {
-                type: "object",
-                properties: { user_id: { type: "string", enum: memberIds } },
-                required: ["user_id"],
+    const { response } = await fetchOpenRouterWithSuffixFallback(
+      OPENROUTER_URL,
+      model,
+      (m) => ({
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://minddy.app",
+          "X-Title": "Smart Assign (minddy)",
+        },
+        body: JSON.stringify({
+          model: m,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "choose_assignee",
+                description:
+                  "Assign the issue to exactly one member. Mandatory — you must always pick one.",
+                parameters: {
+                  type: "object",
+                  properties: { user_id: { type: "string", enum: memberIds } },
+                  required: ["user_id"],
+                },
               },
             },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "choose_assignee" } },
-        usage: { include: true },
-        max_tokens: 256,
+          ],
+          tool_choice: { type: "function", function: { name: "choose_assignee" } },
+          usage: { include: true },
+          max_tokens: 256,
+        }),
       }),
-    });
+      "[smart-assign]",
+    );
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);

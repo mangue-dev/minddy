@@ -9,7 +9,11 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import {
+  fetchOpenRouterWithSuffixFallback,
+  modelConfigKeys,
+  resolveFromValues,
+} from "@/lib/server/model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
@@ -43,7 +47,6 @@ export const maxDuration = 60;
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // Même modèle que la dictée de ticket (clé app_config `dictate_model`) : c'est
 // le même geste, la même exigence de latence.
-const DICTATE_DEFAULT_MODEL = aiModelFallback("dictate_model");
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 // Une prise n'a pas de limite de durée ; sanitizeAssistantMessageContent plafonne
 // déjà à 12k, ce qui vaut ~1h30 de parole.
@@ -183,38 +186,43 @@ export async function POST(request: NextRequest) {
       : "";
 
   const [modelCfg, locale] = await Promise.all([
-    getAppConfigValues(["dictate_model"]),
+    getAppConfigValues(modelConfigKeys("dictate_model")),
     getLocale(),
   ]);
-  const model = modelCfg["dictate_model"]?.trim() || DICTATE_DEFAULT_MODEL;
+  const model = resolveFromValues("dictate_model", modelCfg).model;
 
   const runId = newRunId();
   const usageRows: AiUsageInput[] = [];
   let tasks: string[] = [];
   try {
-    const response = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": "Numo (minddy)",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: buildPrompt({ note, locale }) },
-          { role: "user", content: transcript },
-        ],
-        tools: [WRITE_TASKS_TOOL],
-        tool_choice: {
-          type: "function",
-          function: { name: "write_tasks" },
+    const { response } = await fetchOpenRouterWithSuffixFallback(
+      OPENROUTER_URL,
+      model,
+      (m) => ({
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://minddy.app",
+          "X-Title": "Numo (minddy)",
         },
-        usage: { include: true },
-        max_tokens: 4096,
+        body: JSON.stringify({
+          model: m,
+          messages: [
+            { role: "system", content: buildPrompt({ note, locale }) },
+            { role: "user", content: transcript },
+          ],
+          tools: [WRITE_TASKS_TOOL],
+          tool_choice: {
+            type: "function",
+            function: { name: "write_tasks" },
+          },
+          usage: { include: true },
+          max_tokens: 4096,
+        }),
       }),
-    });
+      "[dictate-task]",
+    );
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);

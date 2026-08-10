@@ -1,7 +1,8 @@
 import "server-only";
 
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import { stripModelSuffix } from "@/lib/ai-model-config";
+import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import {
   OPENROUTER_USAGE_INCLUDE,
   parseOpenRouterUsage,
@@ -39,9 +40,6 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 /** Clés `app_config` (réglables depuis /admin, cf. lib/ai-model-config.ts). */
 export const WEB_SEARCH_MODEL_CONFIG_KEY = "web_search_model";
 export const WEB_SEARCH_ENABLED_CONFIG_KEY = "web_search_enabled";
-
-/** Modèle du sous-appel si la clé n'est pas posée (miroir du registre admin). */
-export const WEB_SEARCH_MODEL_FALLBACK = aiModelFallback(WEB_SEARCH_MODEL_CONFIG_KEY);
 
 /** Forfait Exa par recherche, tel que facturé par OpenRouter (USD, indicatif). */
 export const WEB_SEARCH_USD_PER_CALL = 0.005;
@@ -100,12 +98,12 @@ export async function getWebSearchSettings(): Promise<{
 }> {
   const cfg = await getAppConfigValues([
     WEB_SEARCH_ENABLED_CONFIG_KEY,
-    WEB_SEARCH_MODEL_CONFIG_KEY,
+    ...modelConfigKeys(WEB_SEARCH_MODEL_CONFIG_KEY),
   ]);
   return {
     // Absent = activé (miroir du fallback du registre admin).
     enabled: cfg[WEB_SEARCH_ENABLED_CONFIG_KEY]?.trim() !== "false",
-    model: cfg[WEB_SEARCH_MODEL_CONFIG_KEY]?.trim() || WEB_SEARCH_MODEL_FALLBACK,
+    model: resolveFromValues(WEB_SEARCH_MODEL_CONFIG_KEY, cfg).model,
   };
 }
 
@@ -154,8 +152,25 @@ export async function runWebSearch(params: {
   maxResults?: number;
   signal?: AbortSignal;
 }): Promise<WebSearchOutcome> {
+  const base = stripModelSuffix(params.model);
+  const first = await attemptWebSearch(params);
+  // Repli du raccourci de routage (MIN-263) : on ne rejoue que sur un REFUS —
+  // un timeout rejoué mettrait la réponse de Numo à 90 s pour rien.
+  if (first.outcome.ok || !first.refused || base === params.model) return first.outcome;
+  console.warn(`[web-search] ${params.model} refused, retrying on ${base}`);
+  return (await attemptWebSearch({ ...params, model: base })).outcome;
+}
+
+/** Un essai, et si c'est un échec, s'il vaut la peine d'être rejoué sans suffixe. */
+async function attemptWebSearch(params: {
+  query: string;
+  apiKey: string;
+  model: string;
+  maxResults?: number;
+  signal?: AbortSignal;
+}): Promise<{ outcome: WebSearchOutcome; refused: boolean }> {
   const query = params.query.trim().slice(0, MAX_QUERY_CHARS);
-  if (!query) return { ok: false, error: "query is required" };
+  if (!query) return { outcome: { ok: false, error: "query is required" }, refused: false };
 
   const maxResults = Math.min(
     Math.max(Math.trunc(params.maxResults ?? DEFAULT_MAX_RESULTS), 1),
@@ -194,14 +209,20 @@ export async function runWebSearch(params: {
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       return {
-        ok: false,
-        error: `web search failed (${response.status}): ${detail.slice(0, 200)}`,
+        outcome: {
+          ok: false,
+          error: `web search failed (${response.status}): ${detail.slice(0, 200)}`,
+        },
+        refused: true,
       };
     }
 
     const body = (await response.json()) as CompletionResponse;
     if (body.error?.message) {
-      return { ok: false, error: `web search failed: ${body.error.message.slice(0, 200)}` };
+      return {
+        outcome: { ok: false, error: `web search failed: ${body.error.message.slice(0, 200)}` },
+        refused: true,
+      };
     }
 
     const message = body.choices?.[0]?.message;
@@ -219,18 +240,24 @@ export async function runWebSearch(params: {
     }
 
     return {
-      ok: true,
-      answer: (message?.content ?? "").trim(),
-      sources,
-      usage: parseOpenRouterUsage(body.usage),
-      model: body.model ?? params.model,
-      generationId: body.id ?? null,
+      outcome: {
+        ok: true,
+        answer: (message?.content ?? "").trim(),
+        sources,
+        usage: parseOpenRouterUsage(body.usage),
+        model: body.model ?? params.model,
+        generationId: body.id ?? null,
+      },
+      refused: false,
     };
   } catch (err) {
     const aborted = (err as Error).name === "AbortError";
     return {
-      ok: false,
-      error: aborted ? "web search timed out" : `web search failed: ${(err as Error).message}`,
+      outcome: {
+        ok: false,
+        error: aborted ? "web search timed out" : `web search failed: ${(err as Error).message}`,
+      },
+      refused: false,
     };
   } finally {
     clearTimeout(timer);

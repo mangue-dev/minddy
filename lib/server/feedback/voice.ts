@@ -1,6 +1,12 @@
 import "server-only";
 
 import { getAppConfigValues } from "@/lib/server/app-config";
+import {
+  fetchOpenRouterWithSuffixFallback,
+  modelConfigKeys,
+  resolveFromValues,
+  withModelSuffixFallback,
+} from "@/lib/server/model-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
@@ -217,21 +223,31 @@ export async function transcribeFeedbackAudio({
   const format = resolveAudioFormat(audio.type || "audio/webm");
   if (!format) throw new Error(`Unsupported audio mime type: ${audio.type}`);
 
-  const cfg = await getAppConfigValues(["transcription_model"]);
-  const model = cfg.transcription_model?.trim() || aiModelFallback("transcription_model");
+  const cfg = await getAppConfigValues(modelConfigKeys("transcription_model"));
+  const model = resolveFromValues("transcription_model", cfg).model;
   const apiKey = requireApiKey();
 
   const audioBase64 = Buffer.from(await audio.arrayBuffer()).toString("base64");
-  const result = await transcribeAudio(model, audioBase64, format, apiKey, {
-    language: locale,
-    title: "minddy Feedback voice",
-  });
+  // Le modèle RÉELLEMENT appelé : le repli du raccourci de routage (MIN-263)
+  // peut retirer le suffixe, et c'est cette valeur-là qui va au ledger.
+  let usedModel = model;
+  const result = await withModelSuffixFallback(
+    model,
+    (m) => {
+      usedModel = m;
+      return transcribeAudio(m, audioBase64, format, apiKey, {
+        language: locale,
+        title: "minddy Feedback voice",
+      });
+    },
+    { logPrefix: "[feedback-voice]" },
+  );
   const usage: AiUsageInput[] = [
     {
       runId,
       seq: 0,
       feature: "feedback_voice",
-      model,
+      model: usedModel,
       promptTokens: result.inputTokens || null,
       completionTokens: result.outputTokens || null,
       totalTokens: (result.inputTokens || 0) + (result.outputTokens || 0) || null,
@@ -286,8 +302,8 @@ export async function runFeedbackVoicePass({
   billTo: AiUsageBillTo;
   projectId: string;
 }): Promise<{ patch: FeedbackVoicePatch; reply: string; usage: AiUsageInput[] }> {
-  const cfg = await getAppConfigValues(["dictate_model"]);
-  const model = cfg.dictate_model?.trim() || aiModelFallback("dictate_model");
+  const cfg = await getAppConfigValues(modelConfigKeys("dictate_model"));
+  const model = resolveFromValues("dictate_model", cfg).model;
   const apiKey = requireApiKey();
 
   const messages: OpenRouterMessage[] = [
@@ -299,24 +315,29 @@ export async function runFeedbackVoicePass({
     { role: "user", content: transcript },
   ];
 
-  const response = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://minddy.app",
-      "X-Title": "Numo (minddy)",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      tools: [UPDATE_FEEDBACK_TOOL],
-      tool_choice: { type: "function", function: { name: "update_feedback" } },
-      usage: { include: true },
-      max_tokens: 4096,
+  const { response } = await fetchOpenRouterWithSuffixFallback(
+    OPENROUTER_URL,
+    model,
+    (m) => ({
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://minddy.app",
+        "X-Title": "Numo (minddy)",
+      },
+      body: JSON.stringify({
+        model: m,
+        messages,
+        tools: [UPDATE_FEEDBACK_TOOL],
+        tool_choice: { type: "function", function: { name: "update_feedback" } },
+        usage: { include: true },
+        max_tokens: 4096,
+      }),
+      signal: AbortSignal.timeout(60_000),
     }),
-    signal: AbortSignal.timeout(60_000),
-  });
+    "[feedback-voice]",
+  );
   if (!response.ok) {
     throw new Error(
       `LLM error (${response.status}): ${(await response.text()).slice(0, 200)}`

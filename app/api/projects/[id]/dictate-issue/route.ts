@@ -10,7 +10,11 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
+import {
+  fetchOpenRouterWithSuffixFallback,
+  modelConfigKeys,
+  resolveFromValues,
+} from "@/lib/server/model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
@@ -46,10 +50,9 @@ export const maxDuration = 120;
 // with the dialog / when the panel switches issue.
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-// Modèle dédié à l'étape agentique post-dictée (transcript → patch d'issue).
-// Rapide et pas cher, distinct du modèle global de Numo (assistant_model).
-// Surchargeable en base via la clé app_config `dictate_model`.
-const DICTATE_DEFAULT_MODEL = aiModelFallback("dictate_model");
+// L'étape agentique post-dictée (transcript → patch d'issue) tourne sur son
+// propre modèle — rapide et pas cher, distinct du modèle global de Numo. Il se
+// règle en base (`dictate_model`, cf. lib/ai-model-config.ts).
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 12;
@@ -443,10 +446,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const service = getServiceClient();
   const [ctx, modelCfg, locale] = await Promise.all([
     gatherProjectPromptContext({ supabase: auth.supabase, service, project }),
-    getAppConfigValues(["dictate_model"]),
+    getAppConfigValues(modelConfigKeys("dictate_model")),
     getLocale(),
   ]);
-  const model = modelCfg["dictate_model"]?.trim() || DICTATE_DEFAULT_MODEL;
+  // `let` : le repli du raccourci de routage (MIN-263) colle au modèle qui a
+  // marché, pour ne pas re-tenter le suffixe à chaque round.
+  let model = resolveFromValues("dictate_model", modelCfg).model;
 
   const messages: OpenRouterMessage[] = [
     {
@@ -474,22 +479,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const usageRows: AiUsageInput[] = [];
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const response = await fetch(OPENROUTER_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://minddy.app",
-          "X-Title": "Numo (minddy)",
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          tools: [updateDraftTool(smartFill)],
-          usage: { include: true },
-          max_tokens: 4096,
+      const call = await fetchOpenRouterWithSuffixFallback(
+        OPENROUTER_URL,
+        model,
+        (m) => ({
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://minddy.app",
+            "X-Title": "Numo (minddy)",
+          },
+          body: JSON.stringify({
+            model: m,
+            messages,
+            tools: [updateDraftTool(smartFill)],
+            usage: { include: true },
+            max_tokens: 4096,
+          }),
         }),
-      });
+        "[dictate-issue]",
+      );
+      const response = call.response;
+      model = call.model;
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
