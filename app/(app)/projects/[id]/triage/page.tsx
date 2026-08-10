@@ -220,7 +220,18 @@ export default function TriagePage() {
     updateComment,
     deleteComment,
     deleteAttachment,
-  } = useIssueTimeline(selected?.id ?? null);
+  } = useIssueTimeline(
+    selected?.id ?? null,
+    // Cf. issue-side-panel : la naissance du ticket vient de sa propre ligne
+    // quand l'événement `created` manque au journal.
+    selected
+      ? {
+          createdAt: selected.created_at,
+          createdBy: selected.created_by,
+          integrationId: selected.integration_id ?? null,
+        }
+      : null
+  );
 
   // Keep a valid selection: default to the first pending issue, and when the
   // selected one leaves triage (accepted/declined/duplicate) move on to the next.

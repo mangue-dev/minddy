@@ -207,7 +207,18 @@ export function IssueSidePanel({
   const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(null);
 
   const { items, addComment, updateComment, deleteComment, deleteAttachment } =
-    useIssueTimeline(issue?.id ?? null);
+    useIssueTimeline(
+      issue?.id ?? null,
+      // Le ticket porte sa propre naissance : de quoi ouvrir sa timeline même
+      // quand l'événement `created` manque (cf. lib/use-issue-timeline.ts).
+      issue
+        ? {
+            createdAt: issue.created_at,
+            createdBy: issue.created_by,
+            integrationId: issue.integration_id ?? null,
+          }
+        : null
+    );
 
   // Agent de code de ce ticket. Mêmes dérivations que les cartes (lib/server/
   // agent/activity.ts), mais depuis les runs de l'issue seule : le panneau

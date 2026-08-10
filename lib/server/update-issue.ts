@@ -15,6 +15,7 @@ import {
   buildPlanChangeEvents,
   insertEvents,
   stampForgeSync,
+  stampOccurredAt,
   stampViaAssistant,
   stampViaAutomation,
   stampMcpKey,
@@ -343,6 +344,13 @@ export async function updateIssueFields({
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
 
+  // L'INSTANT DU GESTE, figé ici : la ligne vient d'être écrite. Les événements
+  // partent en `after()` (juste en dessous) et seraient sinon horodatés à leur
+  // insert — après Smart Assign, qui écrit AVANT la réponse quelques lignes plus
+  // bas. La timeline afficherait « a assigné » avant « a changé le statut »,
+  // c'est-à-dire l'ordre des écritures au lieu de l'ordre des gestes.
+  const occurredAt = new Date().toISOString();
+
   // Activité, stats, notifications, touch cycle : best-effort et DÉJÀ
   // réconciliés côté client via le realtime (broadcasts DB). On les sort du
   // chemin critique du PATCH — la réponse part dès la ligne écrite, ces
@@ -388,15 +396,18 @@ export async function updateIssueFields({
     }
     await insertEvents(
       service,
-      stampForgeSync(
-        stampMcpKey(
-          stampViaAutomation(
-            stampViaAssistant(events as EventRow[], viaAssistant),
-            viaAutomation
+      stampOccurredAt(
+        stampForgeSync(
+          stampMcpKey(
+            stampViaAutomation(
+              stampViaAssistant(events as EventRow[], viaAssistant),
+              viaAutomation
+            ),
+            mcpKeyId
           ),
-          mcpKeyId
+          forgeSync
         ),
-        forgeSync
+        occurredAt
       )
     );
 

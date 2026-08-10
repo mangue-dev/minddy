@@ -436,59 +436,82 @@ export async function createIssueForProject({
     }
   }
 
-  // Activité + ledger de stats : best-effort, sans effet sur l'issue renvoyée
-  // (le client la voit déjà via l'insert optimiste) et reconciliés par le
-  // realtime. Hors du chemin critique du POST via after() — la création répond
-  // dès la ligne + catégories écrites. Hors requête HTTP → run synchrone.
-  const runSideEffects = async () => {
-    // Activity: creation + "sub-issue added" on the parent.
-    const events: EventRow[] = [
-      { issue_id: data.id, actor_id: actorId, type: "created" },
-    ];
-    if (data.parent_id) {
-      events.push({
-        issue_id: data.parent_id,
-        actor_id: actorId,
-        type: "sub_issue_added",
-        to_value: data.id,
-      });
-    }
-    /**
-     * SMART-FILL DANS L'ACTIVITÉ (MIN-260) — un seul événement, après « a créé
-     * le ticket », et attribué à Smart-fill plutôt qu'à l'auteur : ces
-     * propriétés-là, il ne les a pas posées.
-     *
-     * `actor_id` reste celui de l'auteur, comme pour Smart Assign : c'est bien
-     * sous son compte que l'écriture a eu lieu, et le drapeau suffit à ce que la
-     * timeline nomme l'automatisation. `to_value` porte la liste des champs, et
-     * la phrase se compose à l'affichage — dans la langue du lecteur.
-     *
-     * Rien de rempli, rien à dire : un événement « Smart-fill n'a rien trouvé »
-     * n'apprend rien et se répéterait sur tous les tickets d'une ligne.
-     */
-    if (smartFilled.length > 0 || smartFillCategoryIds.length > 0) {
-      const filled = [...smartFilled];
-      if (smartFillCategoryIds.length > 0) filled.push("category_ids");
-      events.push({
-        issue_id: data.id,
-        actor_id: actorId,
-        type: "updated",
-        field: "smart_fill",
-        to_value: filled.join(","),
-        via_smart_fill: true,
-      });
-    }
-    await insertEvents(
-      service,
-      stampForgeSync(
-        stampIntegration(
-          stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId),
-          integrationId
-        ),
-        remote?.provider
-      )
-    );
+  /**
+   * NAISSANCE DU TICKET DANS SON JOURNAL — écrite ICI, avant la réponse, et
+   * c'est le point du module qu'il ne faut pas redéplacer dans `after()`.
+   *
+   * Ces trois lignes y ont vécu, avec le reste des effets de bord, et ça ne
+   * tenait pas — pour les deux raisons que la timeline racontait de travers :
+   *
+   *  1. L'ORDRE. Tout ce qui suit la création écrit AVANT la réponse : Smart
+   *     Assign (cas déterministe, plus bas), et les relations que les
+   *     appelants posent au retour de cette fonction. « a créé le ticket »
+   *     arrivait donc APRÈS « a assigné » ou « a lié » — sur 286 tickets de
+   *     prod, 44 racontaient leur naissance en troisième position.
+   *  2. LA PERTE. Le travail d'après la réponse est best-effort : quand
+   *     l'insert tombe (réseau coupé à la gelée de l'invocation), il est
+   *     journalisé et oublié, et le ticket n'a plus AUCUNE activité — pas
+   *     même sa création. MIN-265 est né comme ça.
+   *
+   * Une insertion, sur un chemin qui vient d'en faire trois : l'attendre coûte
+   * moins cher que de la perdre. Même raisonnement, mot pour mot, que la
+   * découpe de Smart Assign (voir l'en-tête de lib/server/smart-assign.ts).
+   *
+   * Les webhooks, eux, restent différés : `insertEvents` les dispatche dans son
+   * propre `after()`.
+   */
+  const birthEvents: EventRow[] = [
+    { issue_id: data.id, actor_id: actorId, type: "created" },
+  ];
+  if (data.parent_id) {
+    birthEvents.push({
+      issue_id: data.parent_id,
+      actor_id: actorId,
+      type: "sub_issue_added",
+      to_value: data.id,
+    });
+  }
+  /**
+   * SMART-FILL DANS L'ACTIVITÉ (MIN-260) — un seul événement, après « a créé
+   * le ticket », et attribué à Smart-fill plutôt qu'à l'auteur : ces
+   * propriétés-là, il ne les a pas posées.
+   *
+   * `actor_id` reste celui de l'auteur, comme pour Smart Assign : c'est bien
+   * sous son compte que l'écriture a eu lieu, et le drapeau suffit à ce que la
+   * timeline nomme l'automatisation. `to_value` porte la liste des champs, et
+   * la phrase se compose à l'affichage — dans la langue du lecteur.
+   *
+   * Rien de rempli, rien à dire : un événement « Smart-fill n'a rien trouvé »
+   * n'apprend rien et se répéterait sur tous les tickets d'une ligne.
+   */
+  if (smartFilled.length > 0 || smartFillCategoryIds.length > 0) {
+    const filled = [...smartFilled];
+    if (smartFillCategoryIds.length > 0) filled.push("category_ids");
+    birthEvents.push({
+      issue_id: data.id,
+      actor_id: actorId,
+      type: "updated",
+      field: "smart_fill",
+      to_value: filled.join(","),
+      via_smart_fill: true,
+    });
+  }
+  await insertEvents(
+    service,
+    stampForgeSync(
+      stampIntegration(
+        stampMcpKey(stampViaAssistant(birthEvents, viaAssistant), mcpKeyId),
+        integrationId
+      ),
+      remote?.provider
+    )
+  );
 
+  // Ledger de stats + notifications : best-effort, sans effet sur l'issue
+  // renvoyée (le client la voit déjà via l'insert optimiste) et reconciliés par
+  // le realtime. Hors du chemin critique du POST via after(). Hors requête HTTP
+  // → run synchrone.
+  const runSideEffects = async () => {
     // Ledger de stats : une contribution "créée" (et "terminée" si créée
     // directement en done) au nom de l'acteur. Skip pour les issues d'intégration
     // (actorId null) — elles n'appartiennent à aucun utilisateur. Skip aussi pour

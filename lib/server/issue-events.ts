@@ -47,6 +47,24 @@ export interface EventRow {
       issue sync (MIN-97); the timeline then shows the forge as the actor. The
       actor_id stays set — the write needs a project member behind it. */
   forge_sync?: string | null;
+  /**
+   * L'INSTANT DU GESTE, quand il n'est pas celui de l'insert.
+   *
+   * Par défaut la colonne prend `now()`, et c'est le bon choix : le geste vient
+   * d'avoir lieu. Mais un événement écrit APRÈS la réponse (`after()`) est
+   * horodaté à son insert, pas à son geste — et il se fait alors doubler par
+   * tout ce qui s'écrit avant la réponse (Smart Assign, les relations). La
+   * timeline raconte l'ordre des ÉCRITURES au lieu de l'ordre des gestes.
+   *
+   * D'où ce champ : un appelant qui diffère ses événements fige l'instant au
+   * moment du geste et le transmet ici. Laissé vide partout ailleurs.
+   */
+  created_at?: string;
+}
+
+/** Fige l'instant du geste sur un lot d'événements (cf. `created_at` ci-dessus). */
+export function stampOccurredAt(rows: EventRow[], at: string): EventRow[] {
+  return rows.map((r) => ({ created_at: at, ...r }));
 }
 
 /** Stamp a batch of events as assistant-triggered (no-op when false). */
