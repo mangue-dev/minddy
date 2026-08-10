@@ -89,7 +89,7 @@ describe("attachmentPaths", () => {
     // Un type ajouté à la corbeille sans passer ici serait purgé en laissant ses
     // fichiers derrière lui : chaque type doit soit interroger `attachments`,
     // soit avoir dit explicitement qu'il n'en porte pas (`routine`).
-    const withoutAttachments: string[] = ["routine"];
+    const withoutAttachments: string[] = ["routine", "page"];
     for (const type of TRASH_TYPES) {
       const { client, calls } = serviceSpy();
       await attachmentPaths(client, type, ["a"]);

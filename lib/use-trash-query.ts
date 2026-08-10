@@ -60,6 +60,9 @@ export function useTrashQuery(): UseTrashResult {
         keys.push(
           ["issues", item.project_id],
           ["objectives", item.project_id],
+          // L'arbre du wiki : restaurer une page en ramène tout un sous-arbre,
+          // qu'aucun événement realtime ne signalerait (MIN-266).
+          ["pages", item.project_id],
           ["feedback", item.project_id],
           ["feedback-count", item.project_id]
         );
@@ -119,6 +122,7 @@ export function daysLeft(deletedAt: string, retentionDays: number): number {
 export const TRASH_TYPE_ORDER: TrashType[] = [
   "issue",
   "objective",
+  "page",
   "feedback",
   "routine",
   "project",

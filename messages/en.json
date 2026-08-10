@@ -260,7 +260,11 @@
     "issueOutsideRepo": "This issue belongs to a project that doesn't link this repository.",
     "prReviewPrNotFound": "This pull request is no longer reachable from a project you can access.",
     "prReviewPrIncomplete": "This pull request hasn't been fully synced yet: its base branch is unknown, so there is nothing to review against. Refresh the pull request and try again.",
-    "draftTooLarge": "This draft is too large to save."
+    "draftTooLarge": "This draft is too large to save.",
+    "pageNotFound": "Page not found.",
+    "pageParentNotFound": "That parent page doesn't exist.",
+    "pageCycle": "A page can't be moved inside one of its own sub-pages.",
+    "pageTooLarge": "This page is too long to be saved."
   },
   "CustomDomain": {
     "title": "Custom domain",
@@ -1317,9 +1321,10 @@
   },
   "Trash": {
     "title": "Trash",
-    "subtitle": "Deleted issues, objectives, feedback, routines and projects. Kept {days} days, then gone for good.",
+    "subtitle": "Deleted issues, objectives, pages, feedback, routines and projects. Kept {days} days, then gone for good.",
     "issues": "Issues",
     "objectives": "Objectives",
+    "pages": "Pages",
     "feedback": "Feedback",
     "routines": "Routines",
     "projects": "Projects",

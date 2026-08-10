@@ -260,7 +260,11 @@
     "issueOutsideRepo": "Ce ticket appartient à un projet qui ne lie pas ce dépôt.",
     "prReviewPrNotFound": "Cette pull request n'est plus accessible depuis un projet auquel vous avez accès.",
     "prReviewPrIncomplete": "Cette pull request n'est pas encore entièrement synchronisée : sa branche de base est inconnue, il n'y a donc rien contre quoi la relire. Rafraîchissez la pull request et réessayez.",
-    "draftTooLarge": "Ce brouillon est trop lourd pour être enregistré."
+    "draftTooLarge": "Ce brouillon est trop lourd pour être enregistré.",
+    "pageNotFound": "Page introuvable.",
+    "pageParentNotFound": "Cette page parente n’existe pas.",
+    "pageCycle": "Une page ne peut pas être déplacée dans une de ses propres sous-pages.",
+    "pageTooLarge": "Cette page est trop longue pour être enregistrée."
   },
   "CustomDomain": {
     "title": "Domaine personnalisé",
@@ -1317,9 +1321,10 @@
   },
   "Trash": {
     "title": "Corbeille",
-    "subtitle": "Tickets, objectifs, retours, routines et projets supprimés. Gardés {days} jours, puis effacés définitivement.",
+    "subtitle": "Tickets, objectifs, pages, retours, routines et projets supprimés. Gardés {days} jours, puis effacés définitivement.",
     "issues": "Tickets",
     "objectives": "Objectifs",
+    "pages": "Pages",
     "feedback": "Retours",
     "routines": "Routines",
     "projects": "Projets",

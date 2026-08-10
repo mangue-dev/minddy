@@ -222,12 +222,28 @@ async function stripPayloads(service: Service, now: Date) {
   return count ?? 0;
 }
 
-/** Les cinq tables de la corbeille, et le type qui leur correspond. */
-const TRASH_TABLES: { table: string; type: TrashType }[] = [
+/**
+ * Les tables de la corbeille, et le type qui leur correspond.
+ *
+ * Les PAGES y passent DEUX fois, et l'ordre est le fond de l'affaire : une page
+ * corbeillée avec son parent porte `deleted_root_id`, et `parent_id` est
+ * `on delete set null` — purger une racine avant ses descendants les laisserait
+ * derrière, sans racine, donc réapparus à la corbeille comme des lignes
+ * autonomes. Les descendants d'abord, les racines ensuite : le lot borné peut
+ * couper où il veut, il ne laisse jamais d'orphelin visible.
+ */
+const TRASH_TABLES: {
+  table: string;
+  type: TrashType;
+  /** Restreint le lot : `notNull` / `isNull` sur une colonne. */
+  scope?: { column: string; isNull: boolean };
+}[] = [
   { table: "issues", type: "issue" },
   { table: "objectives", type: "objective" },
   { table: "feedback_posts", type: "feedback" },
   { table: "agent_routines", type: "routine" },
+  { table: "pages", type: "page", scope: { column: "deleted_root_id", isNull: false } },
+  { table: "pages", type: "page", scope: { column: "deleted_root_id", isNull: true } },
   { table: "projects", type: "project" },
 ];
 
@@ -252,13 +268,17 @@ async function purgeTrash(service: Service, now: Date) {
   const expired = cutoff(RETENTION_DAYS.trash, now);
   let deleted = 0;
 
-  for (const { table, type } of TRASH_TABLES) {
-    const { data, error } = await service
+  for (const { table, type, scope } of TRASH_TABLES) {
+    const query = service
       .from(table)
       .select("id")
       .not("deleted_at", "is", null)
-      .lt("deleted_at", expired)
-      .limit(TRASH_BATCH);
+      .lt("deleted_at", expired);
+    if (scope) {
+      if (scope.isNull) query.is(scope.column, null);
+      else query.not(scope.column, "is", null);
+    }
+    const { data, error } = await query.limit(TRASH_BATCH);
     if (error) throw error;
 
     const ids = (data ?? []).map((r) => r.id as string);

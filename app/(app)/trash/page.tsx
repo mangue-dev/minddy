@@ -14,6 +14,7 @@ import {
 import {
   CalendarClock,
   CircleDashed,
+  FileText,
   MessagesSquare,
   RotateCcw,
   Target,
@@ -38,8 +39,8 @@ import { DocPageSkeleton } from "@/components/route-skeletons";
 /**
  * La corbeille (MIN-133).
  *
- * Un seul écran pour les cinq choses qu'on peut supprimer — tickets, objectifs,
- * retours, routines (MIN-201), projets — parce que ce qu'on y cherche est
+ * Un seul écran pour les six choses qu'on peut supprimer — tickets, objectifs,
+ * pages (MIN-266), retours, routines (MIN-201), projets — parce que ce qu'on y cherche est
  * toujours la même chose : « je viens d'effacer quelque chose, où est-ce ». Les
  * sections suivent l'ordre du contenu vers le contenant, et chaque ligne dit le
  * délai qui lui reste : c'est l'information qui décide s'il faut agir maintenant.
@@ -52,6 +53,9 @@ import { DocPageSkeleton } from "@/components/route-skeletons";
 const TYPE_ICON: Record<TrashType, LucideIcon> = {
   issue: CircleDashed,
   objective: Target,
+  // Une ligne « page » vaut pour la page ET ses sous-pages : restaurer la
+  // racine ramène l'arbre entier (MIN-266).
+  page: FileText,
   feedback: MessagesSquare,
   // La même que la colonne Routines : c'est à elle qu'on renvoie l'œil.
   routine: CalendarClock,
@@ -60,10 +64,11 @@ const TYPE_ICON: Record<TrashType, LucideIcon> = {
 
 const TYPE_HEADING: Record<
   TrashType,
-  "issues" | "objectives" | "feedback" | "routines" | "projects"
+  "issues" | "objectives" | "pages" | "feedback" | "routines" | "projects"
 > = {
   issue: "issues",
   objective: "objectives",
+  page: "pages",
   feedback: "feedback",
   routine: "routines",
   project: "projects",

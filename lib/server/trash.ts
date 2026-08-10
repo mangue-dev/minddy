@@ -7,6 +7,7 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { removeStorageObjects } from "@/lib/server/attachments";
+import { restorePage, trashPage, type PageErrorKey } from "@/lib/server/pages";
 
 /**
  * La corbeille (MIN-133).
@@ -33,7 +34,13 @@ export { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 /** Garde-fou de lecture : la corbeille d'un mois n'est jamais si longue. */
 const LIST_LIMIT = 200;
 
-export type TrashType = "issue" | "project" | "objective" | "feedback" | "routine";
+export type TrashType =
+  | "issue"
+  | "project"
+  | "objective"
+  | "feedback"
+  | "routine"
+  | "page";
 
 export const TRASH_TYPES: TrashType[] = [
   "issue",
@@ -41,6 +48,7 @@ export const TRASH_TYPES: TrashType[] = [
   "objective",
   "feedback",
   "routine",
+  "page",
 ];
 
 export function isTrashType(value: string): value is TrashType {
@@ -54,6 +62,7 @@ const TABLE: Record<TrashType, string> = {
   objective: "objectives",
   feedback: "feedback_posts",
   routine: "agent_routines",
+  page: "pages",
 };
 
 export interface TrashActor {
@@ -89,6 +98,7 @@ type TrashErrorKey =
   | "objectiveNotFound"
   | "feedbackNotFound"
   | "routineNotFound"
+  | "pageNotFound"
   | "ownerOnly"
   | "projectKeyAlreadyUsed"
   | "databaseError";
@@ -99,6 +109,7 @@ const NOT_FOUND: Record<TrashType, TrashErrorKey> = {
   objective: "objectiveNotFound",
   feedback: "feedbackNotFound",
   routine: "routineNotFound",
+  page: "pageNotFound",
 };
 
 /* ─── Contrôle d'accès ─────────────────────────────────────────────────────── */
@@ -148,6 +159,21 @@ async function authorize(
   return null;
 }
 
+/**
+ * Un refus venu de `lib/server/pages.ts` (le seul module dont la corbeille
+ * délègue des gestes) rendu dans le vocabulaire d'ici. Ses clés d'erreur sont
+ * plus fines que celles de la corbeille — un parent introuvable, un cycle — et
+ * ne se produisent pas sur ces chemins-là : elles retombent sur « introuvable ».
+ */
+function toTrashResult(result: {
+  status: number;
+  errorKey: PageErrorKey;
+}): Extract<TrashResult, { ok: false }> {
+  const errorKey: TrashErrorKey =
+    result.errorKey === "databaseError" ? "databaseError" : "pageNotFound";
+  return { ok: false, status: result.status, errorKey };
+}
+
 /* ─── Suppression ──────────────────────────────────────────────────────────── */
 
 /** Marque un élément comme supprimé, après contrôle d'accès (cf. `authorize`). */
@@ -157,6 +183,13 @@ export async function softDeleteItem(
   actorId: string
 ): Promise<TrashResult> {
   const service = getServiceClient();
+
+  // Une PAGE emporte ses sous-pages (MIN-266) : l'opération n'est pas un update
+  // d'une ligne mais d'un sous-arbre, et elle porte son propre contrôle d'accès.
+  if (type === "page") {
+    const result = await trashPage(id, actorId);
+    return result.ok ? { ok: true } : toTrashResult(result);
+  }
 
   const refusal = await authorize(service, type, id, actorId, false);
   if (refusal) return refusal;
@@ -239,24 +272,28 @@ export async function listTrash(
     ])
   );
 
-  /** Les quatre types portés par un projet se lisent tous de la même façon. */
+  /** Les cinq types portés par un projet se lisent tous de la même façon. */
   const inProjects = async (
     table: string,
     columns: string,
-    ids: string[] = projectIds
+    ids: string[] = projectIds,
+    /** Colonne à exiger nulle en plus — les sous-pages, cf. `pageRows`. */
+    nullColumn?: string
   ): Promise<TrashRow[]> => {
     if (ids.length === 0) return [];
-    const { data } = await service
+    const query = service
       .from(table)
       .select(columns)
       .in("project_id", ids)
-      .not("deleted_at", "is", null)
+      .not("deleted_at", "is", null);
+    if (nullColumn) query.is(nullColumn, null);
+    const { data } = await query
       .order("deleted_at", { ascending: false })
       .limit(LIST_LIMIT);
     return (data ?? []) as unknown as TrashRow[];
   };
 
-  const [issueRows, objectiveRows, feedbackRows, routineRows, projectRows] =
+  const [issueRows, objectiveRows, feedbackRows, routineRows, pageRows, projectRows] =
     await Promise.all([
       inProjects("issues", "id, project_id, deleted_at, deleted_by, number, title"),
       inProjects("objectives", "id, project_id, deleted_at, deleted_by, name"),
@@ -265,6 +302,14 @@ export async function listTrash(
         "agent_routines",
         "id, project_id, deleted_at, deleted_by, title",
         ownedProjectIds
+      ),
+      // Seulement les RACINES de suppression (`deleted_root_id is null`) : une
+      // page et ses vingt sous-pages font UNE ligne à restaurer, pas vingt.
+      inProjects(
+        "pages",
+        "id, project_id, deleted_at, deleted_by, title, deleted_root_id",
+        projectIds,
+        "deleted_root_id"
       ),
       service
         .from("projects")
@@ -281,6 +326,7 @@ export async function listTrash(
     ...objectiveRows,
     ...feedbackRows,
     ...routineRows,
+    ...pageRows,
     ...projectRows,
   ]);
 
@@ -321,6 +367,12 @@ export async function listTrash(
     ...routineRows.map((row) => ({
       ...base(row),
       type: "routine" as const,
+      title: row.title ?? "",
+      identifier: null,
+    })),
+    ...pageRows.map((row) => ({
+      ...base(row),
+      type: "page" as const,
       title: row.title ?? "",
       identifier: null,
     })),
@@ -390,6 +442,13 @@ export async function restoreItem(
 ): Promise<TrashResult> {
   const service = getServiceClient();
 
+  // Une PAGE revient avec tout ce qui est parti avec elle, et remonte à la
+  // racine si son parent est encore corbeillé (MIN-266).
+  if (type === "page") {
+    const result = await restorePage(id, actorId);
+    return result.ok ? { ok: true } : toTrashResult(result);
+  }
+
   const refusal = await authorize(service, type, id, actorId, true);
   if (refusal) return refusal;
 
@@ -436,6 +495,26 @@ export async function purgeItem(
 
   const paths = await attachmentPaths(service, type, [id]);
 
+  // Une page purgée emporte les sous-pages parties avec elle : elles n'ont plus
+  // de racine à qui revenir, et `parent_id` étant `on delete set null`, rien ne
+  // les emporterait — elles réapparaîtraient à la racine de la corbeille.
+  if (type === "page") {
+    const { data: family, error: familyError } = await service
+      .from("pages")
+      .delete()
+      .or(`id.eq.${id},deleted_root_id.eq.${id}`)
+      .not("deleted_at", "is", null)
+      .select("id");
+    if (familyError) {
+      console.error("[trash] purge page failed:", familyError.message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    if (!family || family.length === 0) {
+      return { ok: false, status: 404, errorKey: "pageNotFound" };
+    }
+    return { ok: true };
+  }
+
   const { data, error } = await service
     .from(TABLE[type])
     .delete()
@@ -462,7 +541,10 @@ export async function purgeItem(
  *
  * `null` pour une ROUTINE : elle n'a aucune surface où déposer un fichier —
  * pas de commentaires, pas de ressources —, et lui inventer une colonne ferait
- * échouer la purge sur une colonne qui n'existe pas.
+ * échouer la purge sur une colonne qui n'existe pas. Null aussi pour une PAGE
+ * (MIN-266) : son corps est un document ProseMirror, dont les images ne passent
+ * pas encore par `attachments` — le jour où l'éditeur les y dépose, c'est ici
+ * que la colonne doit apparaître, et le test de trash.test.ts le rappellera.
  */
 const ATTACHMENT_PARENT: Record<TrashType, string | null> = {
   issue: "issue_id",
@@ -470,6 +552,7 @@ const ATTACHMENT_PARENT: Record<TrashType, string | null> = {
   feedback: "feedback_post_id",
   project: "project_id",
   routine: null,
+  page: null,
 };
 
 /**
