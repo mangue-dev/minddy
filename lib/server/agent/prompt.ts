@@ -10,7 +10,7 @@ import {
 // Le tag vit avec le clone qui le pose (`clonePullRequest`) : une seule source
 // pour le geste et pour la phrase qui le nomme. `repo-host` est lui aussi sans DB
 // ni import server-only — il part dans le bundle de la microVM.
-import { PR_BASE_TAG } from "./repo-host";
+import { HISTORY_WINDOW_DAYS, PR_BASE_TAG } from "./repo-host";
 import { describeTemplates } from "./subagent-templates";
 import type { FavoriteSubagentModel, SubagentMode } from "./subagent";
 
@@ -285,7 +285,8 @@ ${input.subagents.templates ?? describeTemplates()}`
 `
       : "";
 
-  const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapping it in \`bash -c\` included. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
+  const gitOwnership = `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. \`run_command\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapping it in \`bash -c\` included. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.
+- **You have history, for the last ${Math.round(HISTORY_WINDOW_DAYS / 30)} months.** The clone is cut at that boundary, not at one commit: \`git log --since=<date>\`, \`git log -- <path>\`, \`git show <sha>\` and \`git diff <sha> <sha>\` all work inside the window, on the base branch and on this one. Past the boundary the oldest commits are grafted and have no parents, so a walk simply stops there — that is the end of the clone, not the beginning of the repository. Never conclude from a short \`git log\` that nothing happened.`;
 
   // Règle DURE, identique aux deux ancrages : la seule écriture de statut côté
   // agent est celle du harness (lancement, cycle de la PR) — jamais un tool.
@@ -802,7 +803,7 @@ The working branch **${repo.workBranch}** already carries committed work, and pu
 
 You are a FRESH session: you did NOT write that code and you have none of the previous conversation — only what follows. So do NOT start the ticket over. **First read the current state of the branch**: run \`git diff ${repo.defaultBranch}\` to see everything this branch already changed, then \`read_file\` what matters. Only then act. Keep iterating on the SAME branch — the harness pushes ${repo.workBranch} and pull request #${pr.number} follows it.
 
-(The clone is shallow: \`git diff ${repo.defaultBranch}\` works, but three-dot diffs and deep \`git log\` have no common history to walk — don't rely on them.)${summaryBlock}${bodyBlock}${commentsBlock}${lineThreadsBlock}
+(The clone carries the last ${Math.round(HISTORY_WINDOW_DAYS / 30)} months of history: \`git diff ${repo.defaultBranch}\` and \`git log\` both work, but three-dot diffs against anything older than that window have no common ancestor to walk.)${summaryBlock}${bodyBlock}${commentsBlock}${lineThreadsBlock}
 
 Everything above is context. Act on the user's message (or, failing that, on the review comments above).`;
 }
@@ -828,7 +829,7 @@ The working branch **${repo.workBranch}** already carries committed work from a 
 
 You are a FRESH session: you did NOT write that code and you have none of the previous conversation — only what follows. So do NOT start the ticket over. **First read the current state of the branch**: run \`git diff ${repo.defaultBranch}\` to see everything this branch already changed, then \`read_file\` what matters. Only then act. Keep working on the SAME branch — the harness pushes ${repo.workBranch} at each turn end.
 
-(The clone is shallow: \`git diff ${repo.defaultBranch}\` works, but three-dot diffs and deep \`git log\` have no common history to walk — don't rely on them.)${summaryBlock}
+(The clone carries the last ${Math.round(HISTORY_WINDOW_DAYS / 30)} months of history: \`git diff ${repo.defaultBranch}\` and \`git log\` both work, but three-dot diffs against anything older than that window have no common ancestor to walk.)${summaryBlock}
 
 Everything above is context. Act on the user's message.`;
 }

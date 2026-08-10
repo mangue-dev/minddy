@@ -260,15 +260,15 @@ export function buildWorkingDiff(out: {
  * LA BASE DU DIFF, RÉSOLUE DANS LE CLONE — `origin/<base>`, c'est-à-dire la base
  * telle qu'elle était AU CLONAGE et pas telle qu'elle est maintenant.
  *
- * C'est ce qui rend le diff juste. Le clone est `--depth 1 --branch <base>` et
- * personne ne re-fetch la base ensuite : `origin/<base>` est donc figé au point
+ * C'est ce qui rend le diff juste. Le clone est `--shallow-since --branch <base>`
+ * et personne ne re-fetch la base ensuite : `origin/<base>` est donc figé au point
  * de départ de la session. S'il suivait le tip vivant, un commit fusionné dans la
  * base depuis le lancement apparaîtrait INVERSÉ dans le diff, comme si l'agent
  * l'avait annulé — le même piège que celui documenté pour `PR_BASE_TAG`.
  *
  * `baseBranch` est nul quand le run est parti sur la branche par défaut du dépôt
  * sans qu'on l'ait nommée. Plutôt que d'aller la demander à la forge (un token
- * d'installation pour un nom), on la lit dans le clone : `--depth 1` implique
+ * d'installation pour un nom), on la lit dans le clone : celui-ci est
  * `--single-branch`, donc il n'y a QU'UNE ref distante, et c'est forcément
  * celle-là.
  *

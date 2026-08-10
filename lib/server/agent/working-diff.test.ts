@@ -277,7 +277,7 @@ describe("resolveBaseRef", () => {
   });
 
   it("retombe sur la seule ref distante du clone quand origin/HEAD manque", async () => {
-    // `--depth 1` implique `--single-branch` : il n'y a qu'une ref distante, et
+    // le clone est `--single-branch` : il n'y a qu'une ref distante, et
     // c'est forcément la base. Aller la demander à la forge coûterait un token.
     const host = fakeHost([[/for-each-ref/, "origin/develop\n"]]);
     expect(await resolveBaseRef(host, null)).toBe("origin/develop");

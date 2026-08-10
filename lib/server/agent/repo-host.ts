@@ -93,10 +93,46 @@ export function sq(value: string): string {
 }
 
 /**
+ * FENÊTRE D'HISTORIQUE du clone de travail, en jours (MIN-267).
+ *
+ * Le clone était à `--depth 1` : UN commit, greffé, sans parent. Suffisant pour
+ * éditer et differ contre la base — mais un run dont le travail EST l'historique
+ * (« audite ce qui a changé depuis le dernier rapport », « relis les commits de
+ * la semaine ») n'avait rien à lire, et rendait un rapport vide en croyant que
+ * le dépôt était vide. C'est arrivé sur la routine d'audit de sécurité.
+ *
+ * D'où une fenêtre de temps plutôt qu'une profondeur : `--shallow-since` borne
+ * le clone par ce qui s'est PASSÉ, pas par un nombre de commits. Sur ce dépôt,
+ * 50 commits ne couvrent que deux jours ; six mois couvrent tout ce dont une
+ * routine mensuelle a besoin, et le coût reste borné par l'activité de la
+ * fenêtre — pas par la taille totale du dépôt, qui, lui, ne cesse de croître.
+ *
+ * Ce que ça coûte, mesuré sur ce dépôt (682 commits, tous dans la fenêtre, donc
+ * le pire cas : le clone est alors COMPLET) : 33 Mo → 97 Mo, et 1,5 s → 4 s. Ce
+ * n'est payé qu'à la création d'une microVM neuve — un réveil de snapshot ne
+ * re-clone pas.
+ */
+export const HISTORY_WINDOW_DAYS = 180;
+
+/** Borne `--shallow-since` du clone, en date ISO courte (UTC). */
+export function historySince(now: Date = new Date()): string {
+  const since = new Date(now.getTime() - HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  return since.toISOString().slice(0, 10);
+}
+
+/**
  * Clone le dépôt (shallow) sur `baseBranch` dans REPO_DIR puis se place sur
  * `workBranch` : reprise de la branche distante si elle existe déjà (le run a
  * poussé du WIP à un chunk précédent), sinon création depuis la base. `authUrl`
  * porte un token d'installation éphémère — jamais persisté hors de la microVM.
+ *
+ * Le clone porte la fenêtre d'historique décrite ci-dessus, et `--single-branch`
+ * y est EXPLICITE : `--depth` l'impliquait, `--shallow-since` aussi en pratique,
+ * mais `resolveBaseRef` ([working-diff.ts](working-diff.ts)) s'appuie sur le fait
+ * qu'il n'y a QU'UNE ref distante — ça se dit dans la commande, pas dans un
+ * effet de bord. La reprise de la branche de travail utilise la MÊME borne : un
+ * `--depth 1` y poserait une greffe sur son tip et re-couperait la marche
+ * arrière, alors même que la base, elle, est profonde.
  */
 export async function cloneRepo(
   host: RepoHost,
@@ -112,8 +148,10 @@ export async function cloneRepo(
   const wipe = await host.exec(`rm -rf ${sq(REPO_DIR)}`, { cwd: SANDBOX_HOME });
   if (wipe.exitCode !== 0) throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
 
+  const since = historySince();
   const clone = await host.exec(
-    `git clone --depth 1 --branch ${sq(opts.baseBranch)} ${sq(opts.authUrl)} ${sq(REPO_DIR)}`,
+    `git clone --shallow-since=${sq(since)} --single-branch --branch ${sq(opts.baseBranch)}` +
+      ` ${sq(opts.authUrl)} ${sq(REPO_DIR)}`,
     { cwd: SANDBOX_HOME, timeoutMs: 180_000 },
   );
   if (clone.exitCode !== 0) throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
@@ -123,7 +161,7 @@ export async function cloneRepo(
     `git config user.email ${sq(opts.committer.email)}`,
     `git config user.name ${sq(opts.committer.name)}`,
     `if git ls-remote --exit-code --heads ${sq(opts.authUrl)} ${sq(opts.workBranch)} >/dev/null 2>&1; then`,
-    `  git fetch --depth 1 ${sq(opts.authUrl)} ${sq(opts.workBranch)}:${sq(opts.workBranch)}`,
+    `  git fetch --shallow-since=${sq(since)} ${sq(opts.authUrl)} ${sq(opts.workBranch)}:${sq(opts.workBranch)}`,
     `  git checkout ${sq(opts.workBranch)}`,
     `else`,
     `  git checkout -b ${sq(opts.workBranch)}`,
