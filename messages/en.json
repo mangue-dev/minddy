@@ -264,6 +264,7 @@
     "pageNotFound": "Page not found.",
     "pageParentNotFound": "That parent page doesn't exist.",
     "pageCycle": "A page can't be moved inside one of its own sub-pages.",
+    "pageStale": "This page was changed elsewhere since your last save.",
     "pageTooLarge": "This page is too long to be saved."
   },
   "CustomDomain": {
@@ -1623,6 +1624,17 @@
     "saved": "Saved",
     "savedJustNow": "Saved just now",
     "savedAgo": "Saved {time}",
+    "savedWithConflict": "Saved, with one block replaced",
+    "conflictTitle": "A block was edited on both sides",
+    "conflictBody": "Your teammate's version was kept. The rest of your changes were merged.",
+    "conflictBlockDeleted": "A block you had deleted",
+    "conflictBlockUntitled": "A block with no text",
+    "conflictRestoreMine": "Restore mine",
+    "conflictRemoveMine": "Delete it again",
+    "conflictDismiss": "Dismiss",
+    "presenceHere": "{name} is on this page",
+    "presenceCount": "{count, plural, one {# person} other {# people}} on this page",
+    "presenceUnknown": "Someone",
     "slashHint": "Type to filter blocks, or pick one below",
     "toggleExpand": "Expand",
     "toggleCollapse": "Collapse"

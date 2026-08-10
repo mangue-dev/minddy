@@ -22,6 +22,7 @@ import { Plus } from "lucide-react";
 
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
+import { PagePresenceProvider } from "@/components/pages/page-presence";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError, type PageSummary } from "@/lib/pages-api";
@@ -108,6 +109,9 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
+    // La PRÉSENCE est ouverte ici, et pas dans la page : la coquille traverse
+    // les navigations, la page ouverte non (MIN-271).
+    <PagePresenceProvider projectId={projectId} pageId={activePageId}>
     <div className="flex h-full min-h-0">
       <SecondarySidebar
         title={t("title")}
@@ -168,5 +172,6 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
         {children}
       </div>
     </div>
+    </PagePresenceProvider>
   );
 }

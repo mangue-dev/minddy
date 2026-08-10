@@ -264,6 +264,7 @@
     "pageNotFound": "Page introuvable.",
     "pageParentNotFound": "Cette page parente n’existe pas.",
     "pageCycle": "Une page ne peut pas être déplacée dans une de ses propres sous-pages.",
+    "pageStale": "Cette page a été modifiée ailleurs depuis votre dernier enregistrement.",
     "pageTooLarge": "Cette page est trop longue pour être enregistrée."
   },
   "CustomDomain": {
@@ -1623,6 +1624,17 @@
     "saved": "Enregistré",
     "savedJustNow": "Enregistré à l'instant",
     "savedAgo": "Enregistré {time}",
+    "savedWithConflict": "Enregistré, avec un bloc remplacé",
+    "conflictTitle": "Un bloc a été modifié des deux côtés",
+    "conflictBody": "La version de votre collègue a été gardée. Le reste de vos modifications a été fusionné.",
+    "conflictBlockDeleted": "Un bloc que vous aviez supprimé",
+    "conflictBlockUntitled": "Un bloc sans texte",
+    "conflictRestoreMine": "Restaurer la mienne",
+    "conflictRemoveMine": "Le supprimer à nouveau",
+    "conflictDismiss": "Fermer",
+    "presenceHere": "{name} est sur cette page",
+    "presenceCount": "{count, plural, one {# personne} other {# personnes}} sur cette page",
+    "presenceUnknown": "Quelqu'un",
     "slashHint": "Tapez pour filtrer les blocs, ou choisissez ci-dessous",
     "toggleExpand": "Déplier",
     "toggleCollapse": "Replier"

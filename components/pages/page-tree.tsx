@@ -47,6 +47,10 @@ import type { PageTreeNode } from "@/lib/pages";
 import { ancestorsOf } from "@/lib/pages";
 import { dropModeAt, type PageDropMode } from "@/lib/pages-move";
 import { matchesFilter } from "@/components/sidebar-filter-field";
+import {
+  PagePresenceDot,
+  usePresentOn,
+} from "@/components/pages/page-presence";
 
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
 const INDENT = 16;
@@ -280,6 +284,9 @@ function PageRow({
 }) {
   const t = useTranslations("Pages");
   const [menuOpen, setMenuOpen] = useState(false);
+  // Moi compris : un autre onglet à moi est bien quelqu'un sur la page, et la
+  // ligne ACTIVE est celle que je lis — on n'y met donc pas de pastille.
+  const present = usePresentOn(active ? null : page.id);
 
   const modeFrom = (event: DragEvent<HTMLDivElement>): PageDropMode => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -369,6 +376,10 @@ function PageRow({
         >
           {page.title || untitled}
         </span>
+        {/* Quelqu'un d'autre lit cette page en ce moment (MIN-271). Un point,
+            et pas un avatar : à cet endroit l'information utile est binaire —
+            qui, on le lit en ouvrant la page. */}
+        <PagePresenceDot count={present.length} />
       </Link>
 
       {/* Les deux gestes de survol. Ils réservent leur place (`opacity`, pas

@@ -8,10 +8,12 @@
 // et une page dont le corps changerait sous l'éditeur ne pourrait pas garder le
 // curseur ni la pile d'annulation de toute façon.
 //
-// La SAUVEGARDE est ici volontairement simple — un PATCH groupé, une seconde
-// après la dernière frappe. La sauvegarde versionnée (fusion par bloc, conflit
-// entre deux onglets, `version`) est MIN-271 : elle remplacera `flush` ci-dessous
-// sans toucher au reste de l'écran.
+// La SAUVEGARDE est VERSIONNÉE (MIN-271) : chaque écriture du corps dit sur
+// quelle `version` elle s'appuie, le serveur refuse si la page a bougé, et le
+// refus se résout par une fusion bloc par bloc plutôt que par un choix. Toute
+// cette mécanique vit dans `usePageAutosave` — ici on ne fait que la brancher,
+// l'afficher (l'état d'enregistrement, le bandeau de conflit) et lui donner
+// l'éditeur, seule surface capable d'adopter un document fusionné.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -21,23 +23,27 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  cn,
   toast,
 } from "mangue-ui";
-import { Check } from "lucide-react";
+import { Check, TriangleAlert } from "lucide-react";
 import type { Editor, JSONContent } from "@tiptap/react";
 
 import { eventKey } from "@/lib/keyboard/event-key";
 
-import {
-  fetchPageApi,
-  updatePageOnUnload,
-  type UpdatePageInput,
-} from "@/lib/pages-api";
-import { usePagesQuery } from "@/lib/use-pages-query";
+import { fetchPageApi, updatePageOnUnload } from "@/lib/pages-api";
+import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { useAuth } from "@/lib/auth-context";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { BLOCK_ID_ATTRIBUTE, PageEditor } from "@/components/pages/page-editor";
 import { PageHeader } from "@/components/pages/page-header";
+import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
+import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
+import {
+  usePageAutosave,
+  type PageSaveState,
+} from "@/components/pages/use-page-autosave";
 import type { PagesLookup } from "@/components/pages/pages-lookup";
 
 /** Délai avant écriture, à compter de la dernière frappe. */
@@ -53,11 +59,11 @@ const SAVE_DELAY_MS = 1_000;
  * disparaît en haut d'un document attire l'œil à chaque frappe, exactement au
  * moment où on écrit.
  */
-function PageSaveState({
-  saving,
+function PageSaveIndicator({
+  state,
   updatedAt,
 }: {
-  saving: boolean;
+  state: PageSaveState;
   updatedAt: string | null;
 }) {
   const t = useTranslations("Pages");
@@ -76,22 +82,39 @@ function PageSaveState({
       ? t("savedJustNow")
       : t("savedAgo", { time: format.relativeTime(at, now) });
 
+  // Le conflit reste dans cette même icône, et ne devient pas une quatrième
+  // chose à lire : la page EST enregistrée — c'est le bandeau, juste au-dessus
+  // du document, qui porte ce qu'il y a à décider.
+  const label =
+    state === "saving"
+      ? t("saving")
+      : state === "conflict"
+        ? t("savedWithConflict")
+        : t("saved");
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           role="status"
-          aria-label={saving ? t("saving") : t("saved")}
-          className="flex text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+          aria-label={label}
+          className={cn(
+            "flex transition-colors",
+            state === "conflict"
+              ? "text-amber-600 dark:text-amber-500"
+              : "text-muted-foreground/60 hover:text-muted-foreground"
+          )}
         >
-          {saving ? (
+          {state === "saving" ? (
             <Spinner className="size-3.5" />
+          ) : state === "conflict" ? (
+            <TriangleAlert className="size-3.5" />
           ) : (
             <Check className="size-3.5" />
           )}
         </span>
       </TooltipTrigger>
-      <TooltipContent>{saving ? t("saving") : when}</TooltipContent>
+      <TooltipContent>{state === "saved" ? when : label}</TooltipContent>
     </Tooltip>
   );
 }
@@ -104,8 +127,10 @@ export function PageView({
   pageId: string;
 }) {
   const t = useTranslations("Pages");
+  const { user } = useAuth();
   const { pages, byId, updatePage, createPage } = usePagesQuery(projectId);
   const { members } = useMembersQuery(projectId, true);
+  const present = usePresentOn(pageId);
   const mentionSources = useDescriptionMentions(projectId, members);
   const mentions = useMemo(
     () => ({
@@ -115,9 +140,20 @@ export function PageView({
     [mentionSources]
   );
 
-  const { data: page, isPending, error } = useQuery({
-    queryKey: ["page", pageId],
+  // `refetchOnMount: "always"` : l'éditeur ne lit son document qu'au montage,
+  // donc ce cache-là n'a pas droit à la fenêtre de fraîcheur des autres. Sans
+  // ça, revenir sur une page moins de cinq minutes après l'avoir quittée la
+  // rouvrait sur le corps du premier chargement — un coéquipier, Numo, ou un
+  // autre onglet a pu écrire depuis, et rien ne serait allé le demander.
+  const {
+    data: page,
+    isPending,
+    isFetchedAfterMount,
+    error,
+  } = useQuery({
+    queryKey: pageKey(pageId),
     queryFn: () => fetchPageApi(projectId, pageId),
+    refetchOnMount: "always",
   });
 
   // La ligne de la LISTE est la source du titre et de l'icône affichés : c'est
@@ -137,43 +173,26 @@ export function PageView({
   const icon =
     edited.icon !== undefined ? edited.icon : (summary?.icon ?? page?.icon ?? null);
 
-  /* ── L'écriture, groupée ─────────────────────────────────────────────── */
-  const pending = useRef<UpdatePageInput | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  /** Le brouillon en attente, retiré de la file — annule aussi le minuteur. */
-  const takePending = useCallback((): UpdatePageInput | null => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-    const patch = pending.current;
-    pending.current = null;
-    return patch;
-  }, []);
-
-  const flush = useCallback(async () => {
-    const patch = takePending();
-    if (!patch) return;
-    setSaving(true);
-    try {
-      await updatePage(pageId, patch);
-    } catch (err) {
+  /* ── L'écriture, groupée et VERSIONNÉE (MIN-271) ──────────────────────── */
+  const editorRef = useRef<Editor | null>(null);
+  const onSaveError = useCallback(
+    (err: unknown) => {
       toast.error(err instanceof Error ? err.message : t("saveFailed"));
-    } finally {
-      setSaving(false);
-    }
-  }, [pageId, updatePage, takePending, t]);
-
-  const schedule = useCallback(
-    (patch: UpdatePageInput) => {
-      pending.current = { ...pending.current, ...patch };
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => void flush(), SAVE_DELAY_MS);
     },
-    [flush]
+    [t]
   );
+  const autosave = usePageAutosave({
+    pageId,
+    page,
+    // La `version` qui sert de garde-fou ne se prend PAS dans le cache : elle
+    // n'a de sens que venue du serveur, et de ce montage-ci.
+    fresh: isFetchedAfterMount,
+    delayMs: SAVE_DELAY_MS,
+    save: updatePage,
+    editorRef,
+    onError: onSaveError,
+  });
+  const { schedule, flush, takePending } = autosave;
 
   // Quitter la page ÉCRIT ce qui restait : sans ça, taper puis cliquer aussitôt
   // sur une autre page de l'arbre perd la dernière seconde de frappe.
@@ -249,7 +268,6 @@ export function PageView({
   );
 
   /* ── L'ancre d'un bloc ───────────────────────────────────────────────── */
-  const editorRef = useRef<Editor | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const loaded = !!page;
   useEffect(() => {
@@ -280,7 +298,17 @@ export function PageView({
     );
   }
 
-  if (isPending || !page) {
+  // On attend la réponse de CE montage, et pas seulement « une » donnée.
+  //
+  // C'est la contrepartie du modèle : tiptap ne relit jamais son `content`, donc
+  // le document sur lequel l'éditeur se monte est celui qu'il gardera à l'écran
+  // jusqu'au démontage. Peindre d'abord le cache — le réflexe partout ailleurs
+  // dans l'app, et ce que fait la réhydratation depuis le disque au
+  // rechargement — mettait à l'écran un corps périmé que la réponse arrivée un
+  // instant plus tard ne pouvait plus corriger. D'où l'attente : sur un
+  // document, un instant de squelette vaut mieux qu'une version d'avant
+  // affichée avec l'aplomb de la bonne.
+  if (isPending || !page || !isFetchedAfterMount) {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
         <Spinner />
@@ -295,10 +323,18 @@ export function PageView({
           descend dans le document, et ne pousse rien. Même place que dans le
           carnet, à ceci près qu'il est à droite — la gauche est occupée par la
           barre secondaire. */}
-      <div className="absolute top-3 right-3.5 z-10">
-        <PageSaveState
-          saving={saving}
-          updatedAt={summary?.updated_at ?? page.updated_at}
+      {/* Les avatars des autres lecteurs voisinent l'état d'enregistrement, et
+          c'est le bon endroit : les deux répondent à la même question — « où en
+          est ce document, et suis-je seul dessus ? ». */}
+      <div className="absolute top-3 right-3.5 z-10 flex items-center gap-2.5">
+        <PagePresence
+          userIds={present}
+          members={members}
+          meId={user?.id ?? null}
+        />
+        <PageSaveIndicator
+          state={autosave.state}
+          updatedAt={autosave.savedAt ?? summary?.updated_at ?? page.updated_at}
         />
       </div>
 
@@ -323,6 +359,15 @@ export function PageView({
             void flush();
           }}
           onEnter={() => editorRef.current?.commands.focus("start")}
+        />
+        {/* Entre le titre et le corps : au-dessus du document, parce que c'est
+            du document qu'il parle, et dans le flux, parce qu'un écrasement
+            silencieux est exactement ce qu'on refuse — il ne se ferme qu'au
+            geste de son lecteur. */}
+        <PageConflictBanner
+          conflicts={autosave.conflicts}
+          onRestore={autosave.restore}
+          onDismiss={autosave.dismiss}
         />
         <div ref={bodyRef} className="mt-6">
           <PageEditor

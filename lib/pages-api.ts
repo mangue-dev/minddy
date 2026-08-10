@@ -32,18 +32,45 @@ export class PageApiError extends Error {
   }
 }
 
-/** Le déplacement refusé parce qu'il fermerait une boucle (lib/server/pages.ts). */
+/**
+ * L'écriture refusée parce que la page a bougé sous nos pieds (MIN-271).
+ *
+ * Elle porte la page du SERVEUR, corps compris : c'est ce qui permet de
+ * fusionner par bloc tout de suite (`lib/pages-merge.ts`) au lieu d'aller
+ * redemander le document — un aller-retour de plus, exactement au moment où
+ * deux personnes écrivent en même temps.
+ */
+export class PageConflictError extends PageApiError {
+  constructor(
+    message: string,
+    readonly page: Page
+  ) {
+    super(message, 409);
+    this.name = "PageConflictError";
+  }
+}
+
+/** Le déplacement refusé parce qu'il fermerait une boucle (lib/server/pages.ts).
+    Un 409 de VERSION porte sa page : ce n'est pas le même refus, et l'arbre ne
+    doit pas dire « boucle » à quelqu'un qui vient simplement d'être doublé. */
 export function isPageCycleError(error: unknown): boolean {
-  return error instanceof PageApiError && error.status === 409;
+  return (
+    error instanceof PageApiError &&
+    error.status === 409 &&
+    !(error instanceof PageConflictError)
+  );
 }
 
 async function ok(response: Response, fallback: string): Promise<void> {
   if (response.ok) return;
-  const data = await response.json().catch(() => null);
-  throw new PageApiError(
-    (data as { error?: string } | null)?.error || fallback,
-    response.status
-  );
+  const data = (await response.json().catch(() => null)) as
+    | { error?: string; conflict?: boolean; page?: Page }
+    | null;
+  const message = data?.error || fallback;
+  if (response.status === 409 && data?.conflict && data.page) {
+    throw new PageConflictError(message, data.page);
+  }
+  throw new PageApiError(message, response.status);
 }
 
 async function json<T>(response: Response, fallback: string): Promise<T> {
@@ -104,6 +131,13 @@ export interface UpdatePageInput {
   /** Index fractionnaire calculé par `positionBetween` (lib/pages.ts). */
   position?: string;
   content?: unknown;
+  /**
+   * La version sur laquelle ce corps s'appuie (MIN-271). Envoyée AVEC un
+   * `content`, elle en fait une écriture conditionnelle : le serveur répond
+   * 409 (`PageConflictError`) plutôt que d'écraser ce qu'un autre a écrit
+   * entre-temps. Sans elle, le dernier qui enregistre gagne, en silence.
+   */
+  version?: number;
 }
 
 export async function updatePageApi(

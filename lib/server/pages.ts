@@ -33,13 +33,25 @@ import {
 
 export type PageResult<T> =
   | { ok: true; page: T }
-  | { ok: false; status: number; errorKey: PageErrorKey };
+  | {
+      ok: false;
+      status: number;
+      errorKey: PageErrorKey;
+      /**
+       * La page TELLE QU'ELLE EST en base, jointe au refus de version (MIN-271).
+       * Sans elle, le client n'aurait qu'un 409 et devrait redemander le
+       * document pour fusionner — un aller-retour de plus au pire moment, celui
+       * où deux personnes écrivent en même temps.
+       */
+      conflict?: Page;
+    };
 
 export type PageErrorKey =
   | "projectNotFound"
   | "pageNotFound"
   | "pageParentNotFound"
   | "pageCycle"
+  | "pageStale"
   | "pageTooLarge"
   | "noFieldsToUpdate"
   | "databaseError";
@@ -254,10 +266,21 @@ export async function updatePage({
   if (content === "too-large") {
     return { ok: false, status: 413, errorKey: "pageTooLarge" };
   }
+
+  // La VERSION sur laquelle l'écriture s'appuie (MIN-271). Elle n'a de sens
+  // qu'avec un corps : renommer une page ne se dispute avec personne.
+  const expected =
+    content !== undefined && typeof input.version === "number"
+      ? input.version
+      : null;
+  if (expected !== null && expected !== page.version) {
+    return { ok: false, status: 409, errorKey: "pageStale", conflict: page };
+  }
+
   if (content !== undefined) {
     patch.content = content;
-    // `version` compte les écritures du CORPS, pas les renommages : c'est de
-    // lui que MIN-271 fera son garde-fou de sauvegarde concurrente.
+    // `version` compte les écritures du CORPS, pas les renommages : c'est le
+    // garde-fou de la sauvegarde concurrente (MIN-271).
     patch.version = page.version + 1;
   }
 
@@ -299,10 +322,15 @@ export async function updatePage({
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
 
-  const { data, error } = await service
-    .from("pages")
-    .update(patch)
-    .eq("id", pageId)
+  // Le verrou est DANS l'écriture, pas seulement dans le contrôle ci-dessus :
+  // deux enregistrements partis à la même milliseconde passent tous les deux le
+  // contrôle (ils ont lu la même ligne) et le second effacerait le premier. La
+  // condition `version = celle qu'on a lue` fait que l'un des deux n'écrit
+  // rien, et repart en fusion comme s'il avait été refusé d'emblée.
+  const write = service.from("pages").update(patch).eq("id", pageId);
+  if (expected !== null) write.eq("version", expected);
+
+  const { data, error } = await write
     .is("deleted_at", null)
     .select(FULL_COLUMNS)
     .maybeSingle();
@@ -311,7 +339,18 @@ export async function updatePage({
     console.error("[pages] update failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  if (!data) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  if (!data) {
+    // Aucune ligne : soit la page vient de partir à la corbeille, soit la
+    // version a bougé entre la lecture et l'écriture. On relit pour trancher —
+    // les deux réponses ne se rattrapent pas de la même façon.
+    if (expected !== null) {
+      const fresh = await loadPage(service, pageId);
+      if (fresh) {
+        return { ok: false, status: 409, errorKey: "pageStale", conflict: fresh };
+      }
+    }
+    return { ok: false, status: 404, errorKey: "pageNotFound" };
+  }
   return { ok: true, page: data as unknown as Page };
 }
 

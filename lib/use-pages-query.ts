@@ -32,10 +32,21 @@ import {
 import {
   buildPageTree,
   descendantIds,
+  type Page,
   type PageTreeNode,
 } from "./pages";
 
 export const pagesKey = (projectId: string) => ["pages", projectId] as const;
+
+/**
+ * Le CORPS d'une page, cache à part (`PageView` la lit, MIN-270).
+ *
+ * Il est nommé ici et pas chez son lecteur parce que ce n'est pas lui qui le
+ * tient à jour : c'est CE module, à chaque écriture acceptée. Un corps
+ * enregistré qui ne redescend pas dans ce cache est un corps que le prochain
+ * montage de l'éditeur ne verra pas — voir `updatePage`.
+ */
+export const pageKey = (pageId: string) => ["page", pageId] as const;
 
 function readPages(
   queryClient: QueryClient,
@@ -59,7 +70,7 @@ export interface UsePagesResult {
   loading: boolean;
   error: Error | null;
   createPage: (input?: CreatePageInput) => Promise<PageSummary>;
-  updatePage: (pageId: string, input: UpdatePageInput) => Promise<void>;
+  updatePage: (pageId: string, input: UpdatePageInput) => Promise<Page>;
   trashPage: (pageId: string) => Promise<number>;
   restorePage: (pageId: string) => Promise<void>;
 }
@@ -125,6 +136,19 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
             current.map((row) => (row.id === pageId ? summary : row))
           );
         }
+        // Le CORPS redescend dans son propre cache, et c'est indispensable :
+        // l'éditeur ne lit son document qu'au MONTAGE (tiptap ne relit jamais
+        // `content`), donc tout ce que ce cache porte de périmé sera affiché
+        // tel quel au prochain montage — revenir sur la page depuis l'arbre,
+        // ou recharger l'onglet, faisait réapparaître le document d'avant les
+        // modifications, jusqu'à ce qu'un refetch ait fini par passer. Le
+        // rendre à jour ici est le seul endroit qui le sache : c'est celui qui
+        // vient d'écrire.
+        queryClient.setQueryData(pageKey(pageId), page);
+        // La page ENTIÈRE remonte à l'appelant, corps et `version` compris :
+        // c'est d'elle que l'autosave (MIN-271) tire la base de sa prochaine
+        // écriture. Le cache de la liste, lui, n'en garde que le résumé.
+        return page;
       } catch (err) {
         // Remettre l'arbre là où il était : c'est le seul rattrapage possible
         // d'un 409 de cycle, et laisser l'état faux à l'écran serait pire que

@@ -46,6 +46,14 @@ describe("isPersistableKey", () => {
     expect(isPersistableKey(["version"])).toBe(false);
   });
 
+  // Le CORPS d'une page va jusqu'à 1 Mo ; le quota est de ~5 Mo. Et la LISTE,
+  // qui ne porte pas les corps, doit rester persistée — c'est elle qui peint
+  // l'arbre au rechargement. Un préfixe écrit « au jugé » confondrait les deux.
+  it("exclut le corps d'une page, mais garde la liste des pages", () => {
+    expect(isPersistableKey(["page", "pg1"])).toBe(false);
+    expect(isPersistableKey(["pages", "p1"])).toBe(true);
+  });
+
   it("ne confond pas un préfixe avec une clé voisine", () => {
     // ["me","board"] partage son premier segment avec ["me","search-index"] :
     // le filtre doit comparer le préfixe entier, pas seulement key[0].

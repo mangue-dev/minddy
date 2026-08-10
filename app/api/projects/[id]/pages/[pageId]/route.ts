@@ -26,6 +26,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
  * Un `parent_id` qui mettrait la page sous un de ses propres descendants répond
  * **409** et n'écrit RIEN : la profondeur est illimitée, donc la seule chose qui
  * empêche la sidebar de partir en récursion infinie est ce refus-là.
+ *
+ * Un corps envoyé avec une `version` PÉRIMÉE répond 409 lui aussi, et pour la
+ * même raison de fond : ne jamais écrire par-dessus ce qu'on n'a pas lu. La
+ * différence est dans la réponse — celle-ci porte `conflict: true` et la page
+ * du serveur, corps compris, pour que le client fusionne par bloc
+ * (`lib/pages-merge.ts`) sans un aller-retour de plus.
  */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
@@ -46,6 +52,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     input: (body ?? {}) as Record<string, unknown>,
   });
   if (!result.ok) {
+    if (result.conflict) {
+      return NextResponse.json(
+        { error: t(result.errorKey), conflict: true, page: result.conflict },
+        { status: result.status }
+      );
+    }
     return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
   return NextResponse.json(result.page);

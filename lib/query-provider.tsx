@@ -67,6 +67,12 @@ const PERSIST_BUSTER = "v1";
  *   disque, il rallumerait le bandeau « nouvelle version » juste après le
  *   rechargement qui vient de mettre l'app à jour — un faux positif
  *   systématique, et que rien ne viendrait éteindre.
+ * - `["page", id]` : le CORPS d'une page (MIN-271). Un document va jusqu'à
+ *   1 Mo (le plafond du serveur), et le quota de localStorage est de ~5 Mo :
+ *   trois pages ouvertes suffiraient à le saturer, ce qui ne dégraderait pas
+ *   la persistance des pages — elle ferait tomber TOUT le snapshot, board
+ *   compris. La liste (`["pages", projectId]`), qui n'a pas les corps, reste
+ *   persistée : c'est elle qui peint l'arbre instantanément.
  *
  * Les préfixes ci-dessous sont les VRAIES clés (cf. lib/use-agent-runs.ts) :
  * s'en écarter donnerait une liste qui ne filtre rien tout en prétendant le
@@ -86,6 +92,7 @@ const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["pr-review-comments"],
   ["billing"],
   ["version"], // lib/use-new-version.ts
+  ["page"], // ["page", pageId] — le CORPS, pas la liste ["pages", projectId]
 ];
 
 /** Exportée pour le test unitaire (lib/query-persist.test.ts). */
