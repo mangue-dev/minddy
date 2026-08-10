@@ -124,6 +124,18 @@ describe("withModelSuffixFallback", () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it("ne rejoue pas une VARIANTE de modèle sur la variante payante", async () => {
+    // `…:free` n'est pas un raccourci de routage : rejouer sans lui, c'est
+    // changer de modèle et se mettre à payer, en silence.
+    const run = vi.fn(async () => {
+      throw new Error("rate limited");
+    });
+    await expect(withModelSuffixFallback("qwen/qwen3-coder:free", run)).rejects.toThrow(
+      "rate limited",
+    );
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
   it("rend le second échec plutôt que d'insister", async () => {
     const run = vi.fn(async () => null);
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -182,6 +194,18 @@ describe("fetchOpenRouterWithSuffixFallback", () => {
     const fetchSpy = stubFetch(() => ({ ok: false, status: 500 }));
     const out = await fetchOpenRouterWithSuffixFallback(URL_, "openai/gpt-5", request, "[test]");
     expect(out.response.ok).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("ne bascule pas une variante gratuite sur la payante", async () => {
+    const fetchSpy = stubFetch(() => ({ ok: false, status: 429 }));
+    const out = await fetchOpenRouterWithSuffixFallback(
+      URL_,
+      "qwen/qwen3-coder:free",
+      request,
+      "[test]",
+    );
+    expect(out.model).toBe("qwen/qwen3-coder:free");
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });

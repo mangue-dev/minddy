@@ -209,9 +209,19 @@ export function applyModelSuffix(model: string, suffix: string | null | undefine
   return `${base}:${wanted}`;
 }
 
-/** L'id nu, sans son suffixe de routage — ce sur quoi on rejoue après un échec. */
+/**
+ * L'id nu, sans son suffixe de ROUTAGE — ce sur quoi on rejoue après un échec.
+ *
+ * On ne coupe que `:nitro`, `:floor`, `:exacto`. Les deux points servent aussi
+ * à désigner une VARIANTE de modèle (`…:free`, `…:thinking`), qui est un autre
+ * modèle, pas un ordre de routage : la couper ferait rejouer un refus sur la
+ * variante payante, en silence. `applyModelSuffix` refuse déjà de coller un
+ * raccourci sur un id qui porte un `:` — les deux moitiés disent la même chose.
+ */
 export function stripModelSuffix(model: string): string {
-  return model.split(":")[0];
+  const cut = model.lastIndexOf(":");
+  if (cut < 0) return model;
+  return isModelSuffix(model.slice(cut + 1)) ? model.slice(0, cut) : model;
 }
 
 /** Fast membership check for the admin API (write allowlist). */

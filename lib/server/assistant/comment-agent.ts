@@ -18,7 +18,6 @@ import {
   modelConfigKeys,
   resolveCascadeFromValues,
 } from "@/lib/server/model-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
 import {
   resolveNumoDefaultStatus,
   type NumoDefaultStatus,
@@ -53,8 +52,6 @@ import {
 // IS the whole artifact.
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-/** Défaut du registre admin, quand ni `assistant_model` ni `fallback_model` n'est posé. */
-const ASSISTANT_MODEL_FALLBACK = aiModelFallback("assistant_model");
 const MAX_TOOL_ROUNDS = 6;
 
 /** Detects an @numo / @Numo mention in a comment body (word-boundary, not mid-email). */

@@ -2957,7 +2957,6 @@
   },
   "Admin": {
     "pageTitle": "Admin",
-    "pageSubtitle": "minddy's accounts, what they do with the app, and the AI configuration.",
     "tabs": {
       "overview": "Overview",
       "users": "Users",
@@ -3199,6 +3198,8 @@
         "sandbox_compute": "Agent sandbox",
         "web_search": "Web search",
         "pr_review": "Numo's PR review",
+        "routine_code": "Routines",
+        "routine_compute": "Routine sandbox",
         "import_map": "Import column matching",
         "brief_split": "Brief breakdown",
         "landing_demo": "Public dictation demo"

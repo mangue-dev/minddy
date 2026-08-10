@@ -63,6 +63,15 @@ describe("stripModelSuffix", () => {
       expect(stripModelSuffix(applyModelSuffix("openai/gpt-5", suffix))).toBe("openai/gpt-5");
     }
   });
+
+  it("ne touche PAS à une variante de modèle", () => {
+    // `…:free` désigne un autre modèle, pas un ordre de routage. Le couper
+    // ferait rejouer un refus sur la variante PAYANTE, sans rien dire — et
+    // `applyModelSuffix` ne colle jamais de raccourci sur un id pareil.
+    for (const model of ["qwen/qwen3-coder:free", "anthropic/claude-sonnet-5:thinking"]) {
+      expect(stripModelSuffix(model)).toBe(model);
+    }
+  });
 });
 
 describe("isModelSuffix", () => {

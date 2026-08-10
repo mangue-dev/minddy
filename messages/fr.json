@@ -2957,7 +2957,6 @@
   },
   "Admin": {
     "pageTitle": "Administration",
-    "pageSubtitle": "Les comptes de minddy, ce qu'ils font de l'app, et la configuration de l'IA.",
     "tabs": {
       "overview": "Vue d'ensemble",
       "users": "Utilisateurs",
@@ -3199,6 +3198,8 @@
         "sandbox_compute": "Sandbox des agents",
         "web_search": "Recherche web",
         "pr_review": "Review d'une PR par Numo",
+        "routine_code": "Routines",
+        "routine_compute": "Sandbox des routines",
         "import_map": "Correspondance d'un import",
         "brief_split": "Découpe d'un brief",
         "landing_demo": "Démo publique de la dictée"

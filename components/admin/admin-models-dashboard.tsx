@@ -220,8 +220,8 @@ function ConfigRow({
  * Plus de bouton « Enregistrer » : un choix dans une liste est un acte unique,
  * il s'enregistre à la sélection (comme l'interrupteur de `FlagRow`).
  *
- * À droite, le raccourci de routage OpenRouter (MIN-263) : il ne change PAS de
- * modèle, il ordonne les providers de celui-là. D'où la seconde liste plutôt
+ * En dessous, le raccourci de routage OpenRouter (MIN-263) : il ne change PAS
+ * de modèle, il ordonne les providers de celui-là. D'où la seconde liste plutôt
  * qu'un id à rallonge dans la première — et « Aucun » par défaut.
  */
 function ModelRow({
@@ -265,24 +265,31 @@ function ModelRow({
       label={label}
       hint={desc ?? undefined}
       control={
-        <>
-          <ModelCombobox
-            scope="platform"
-            value={saved}
-            onChange={(next) => void select(next)}
-            disabled={busy}
-            defaultLabel={t("fieldDefault")}
-            defaultModelId={field.fallback}
-            placeholder={tAgent("modelSearchPlaceholder")}
-            emptyLabel={tAgent("modelSearchEmpty")}
-            loadingLabel={tAgent("modelSearchLoading")}
-            freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
-          />
+        /* Les deux listes l'une SOUS l'autre : côte à côte, elles poussaient la
+           rangée au-delà de la largeur de la carte (le conteneur de contrôle de
+           `SettingsRow` est `shrink-0`, rien ne cède). Le raccourci est cadré à
+           droite, sous le modèle qu'il accompagne — la lecture reste « ce
+           modèle-ci, servi comme ça ». */
+        <div className="flex min-w-0 flex-col items-stretch gap-2 sm:items-end">
+          <div className="flex min-w-0 items-center gap-2">
+            <ModelCombobox
+              scope="platform"
+              value={saved}
+              onChange={(next) => void select(next)}
+              disabled={busy}
+              defaultLabel={t("fieldDefault")}
+              defaultModelId={field.fallback}
+              placeholder={tAgent("modelSearchPlaceholder")}
+              emptyLabel={tAgent("modelSearchEmpty")}
+              loadingLabel={tAgent("modelSearchLoading")}
+              freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
+            />
+            {busy ? <Spinner className="shrink-0" /> : null}
+          </div>
           {isSuffixableField(field) ? (
             <SuffixSelect field={field} value={suffix} onSaved={onSaved} />
           ) : null}
-          {busy ? <Spinner className="shrink-0" /> : null}
-        </>
+        </div>
       }
     />
   );
@@ -339,7 +346,7 @@ function SuffixSelect({
       disabled={busy}
       onValueChange={(next) => void select(next)}
     >
-      <SelectTrigger className="w-36 shrink-0" aria-label={t("suffix.label")}>
+      <SelectTrigger className="w-full shrink-0 sm:w-36" aria-label={t("suffix.label")}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

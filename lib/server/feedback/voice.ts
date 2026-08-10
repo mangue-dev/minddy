@@ -7,7 +7,6 @@ import {
   resolveFromValues,
   withModelSuffixFallback,
 } from "@/lib/server/model-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
   resolveAudioFormat,
