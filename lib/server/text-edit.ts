@@ -81,16 +81,57 @@ export function editIssueText({
   replaceAll?: boolean;
   tools: IssueTextTools;
 }): IssueTextEditResult {
+  return editTextPassage({
+    field,
+    current,
+    oldString,
+    newString,
+    replaceAll,
+    read: tools.read,
+    otherWay: otherWay(field, tools),
+    subject: "issue",
+  });
+}
+
+/**
+ * Le même patch, pour un texte qui n'est PAS un champ de ticket — le corps d'une
+ * page (MIN-273). Seuls changent le mot qui nomme le texte et le conseil de
+ * repli : le moteur, les refus et leurs codes sont les mêmes, et c'est le point.
+ * Une page corrigée par Numo doit échouer exactement comme un plan corrigé par
+ * Numo, avec le même vocabulaire d'erreur des deux côtés.
+ */
+export function editTextPassage({
+  field,
+  current,
+  oldString,
+  newString,
+  replaceAll = false,
+  read,
+  otherWay: fallback,
+  subject = "issue",
+}: {
+  /** Le mot qui nomme le texte dans les messages : « plan », « body »… */
+  field: string;
+  current: string;
+  oldString: string;
+  newString: string;
+  replaceAll?: boolean;
+  /** Le tool qui relit le texte, d'où `old_string` doit être recopié. */
+  read: string;
+  /** Ce qu'il faut faire à la place quand le patch n'est pas la voie. */
+  otherWay: string;
+  /** Ce que porte le texte : « issue », « page ». */
+  subject?: string;
+}): IssueTextEditResult {
   if (!current.trim()) {
     return {
       ok: false,
       code: "invalid_params",
       message:
-        `This issue has no ${field} yet, so there is nothing to patch. ` +
-        otherWay(field, tools),
+        `This ${subject} has no ${field} yet, so there is nothing to patch. ` +
+        fallback,
     };
   }
-
   try {
     const edit = applyEdit(`${field}.md`, current, oldString, newString, replaceAll);
     return {
@@ -115,7 +156,7 @@ export function editIssueText({
           code: "invalid_params",
           message:
             `old_string cannot be empty: give the exact passage of the ${field} ` +
-            `to replace. ${otherWay(field, tools)}`,
+            `to replace. ${fallback}`,
         };
       case "not_found":
         return {
@@ -123,7 +164,7 @@ export function editIssueText({
           code: "text_not_found",
           message:
             `Could not find old_string in the ${field}. It must match the stored ` +
-            `text exactly, whitespace included — read it again with ${tools.read} ` +
+            `text exactly, whitespace included — read it again with ${read} ` +
             "and copy the passage verbatim (it may also have changed since you " +
             "last read it, which is exactly what this refusal protects).",
         };
@@ -142,7 +183,7 @@ export function editIssueText({
           code: "invalid_params",
           message:
             "Refusing the edit: the matched passage is much larger than " +
-            `old_string. Read the ${field} again with ${tools.read} and copy the ` +
+            `old_string. Read the ${field} again with ${read} and copy the ` +
             "exact passage to replace.",
         };
     }

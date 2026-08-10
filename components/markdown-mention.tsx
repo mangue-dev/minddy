@@ -99,6 +99,17 @@ function attrsFromScanned(mention: ScannedMention) {
         color: null,
         icon: null,
       };
+    case "page":
+      return {
+        mentionType: "page",
+        mentionId: mention.page.id,
+        mentionLabel: mention.page.title,
+        seed: null,
+        color: null,
+        // L'émoji de la page voyage dans `icon`, comme le favicon d'un projet :
+        // c'est le même attribut, et la pilule sait quoi en faire selon le type.
+        icon: mention.page.icon,
+      };
     case "objective":
       return {
         mentionType: "objective",

@@ -82,6 +82,21 @@ export const MCP_SERVER_INSTRUCTIONS =
       "the precise way to tick items off; minddy_set_scratchpad replaces the WHOLE doc " +
       "(for editing task text or restructuring), so read first and preserve what you are not " +
       "changing. " +
+      "A project also has PAGES: its wiki, where the durable knowledge its issues " +
+      "assume lives — specs, decisions and their why, conventions, runbooks. Read " +
+      "them: a ticket says what to do, a page says why it is like that. " +
+      "minddy_list_pages maps the wiki (ids, titles, icons, parents, no bodies), " +
+      "minddy_get_page reads one in MARKDOWN with its direct subpages, " +
+      "minddy_create_page writes a new one (optionally under a parent), and — as " +
+      "for a plan, never resend the document to change part of it — " +
+      "minddy_append_to_page adds a block at the end while " +
+      "minddy_edit_page_text rewrites one passage in place (old_string → " +
+      "new_string, unique match). minddy_update_page replaces a whole body, so " +
+      "pass the version you read to be refused rather than overwrite someone. " +
+      "Pages are markdown on both sides, never ProseMirror JSON, and they are how " +
+      "'turn this page into tickets' works: read the page, then create the issues " +
+      "with the issue tools. Pages are never deleted from here — the trash is a " +
+      "human gesture. " +
       "A project can also collect user requests on a FEEDBACK board (also fed by its " +
       "API and internal entry), separate from issues: a user need with a public " +
       "status and votes. minddy_list_feedback / minddy_get_feedback read them (the " +

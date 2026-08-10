@@ -93,6 +93,33 @@ export async function resolveProject(
   return { access };
 }
 
+/** Garde combinée auth + rate limit + accès projet des tools scopés projet.
+    Partagée par les deux modules de tools (les tickets et compagnie dans
+    tools.ts, les pages dans page-tools.ts) : un tool qui se garderait autrement
+    serait un tool à qui on aurait oublié le rate limit. */
+export async function requireProject(
+  extra: ToolExtra,
+  projectId: unknown
+): Promise<
+  | { userId: string; keyId: string | null; access: ProjectAccess }
+  | { error: ToolResult }
+> {
+  const auth = requireUser(extra);
+  if ("error" in auth) return auth;
+  const project = await resolveProject(auth.userId, projectId);
+  if ("error" in project) return project;
+  return { userId: auth.userId, keyId: auth.keyId, access: project.access };
+}
+
+/** Les annotations MCP, les mêmes pour tous les tools de la surface. */
+export const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
+export const WRITE = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  openWorldHint: false,
+} as const;
+export const WRITE_IDEMPOTENT = { ...WRITE, idempotentHint: true } as const;
+
 export type ResolvedIssue = ResolvedIssueRef;
 
 /**

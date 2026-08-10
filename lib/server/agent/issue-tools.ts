@@ -26,6 +26,7 @@ import { displayName } from "@/lib/display-name";
 import { isEffort } from "@/lib/issue-validation";
 import type { NumoDefaultStatus } from "@/lib/numo-default-status";
 import { MAX_PLAN_LENGTH, appendToPlan, parsePlan } from "@/lib/plan";
+import { executePageTool } from "./page-tools";
 import { headTail } from "./prune";
 import type { AgentToolImage } from "./content";
 
@@ -983,6 +984,18 @@ export async function executeIssueTool(
         return await createRoutineTool(ctx, args);
       case "report_verdict":
         return await reportVerdict(ctx, args);
+      // Les pages du projet : même contexte, exécuteur voisin (MIN-273).
+      case "list_pages":
+      case "read_page":
+      case "create_page":
+      case "update_page":
+      case "append_to_page":
+      case "edit_page_text":
+        return await executePageTool(
+          { projectId: ctx.projectId, actorId: ctx.actorId },
+          name,
+          args,
+        );
       default:
         return { result: { error: `Unknown issue tool: ${name}` }, success: false };
     }

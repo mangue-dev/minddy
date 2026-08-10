@@ -620,6 +620,17 @@ const ISSUE_REF_DESCRIPTION =
  * `agentToolsFor` — la phrase de ciblage des tools qui prennent `issue`, et
  * `create_pr`, déclaré à part parce que sa formulation change.
  */
+/** Ce qu'un corps de page accepte, dit là où le modèle le lit — la même prose que
+    sur les deux autres surfaces : la syntaxe d'un lien de sous-page ne se devine
+    pas, et un bloc inventé retombe en texte brut. */
+const PAGE_BODY_DESCRIPTION =
+  "The page BODY in markdown. Supported: headings (## and ###, since a single " +
+  "'# ' is the page title), bold/italic/inline code, links, bullet and numbered " +
+  "lists, task lists ('- [ ]' / '- [x]'), quotes, fenced code blocks, horizontal " +
+  "rules, <details><summary>…</summary>…</details> collapsibles, and " +
+  "'[[page:<page_id>]]' on its own line to link another page. Anything else " +
+  "degrades to plain text.";
+
 const MINDDY_TOOLS: AgentToolDef[] = [
   {
     type: "function",
@@ -797,6 +808,138 @@ const MINDDY_TOOLS: AgentToolDef[] = [
           issue: { type: "string", description: ISSUE_REF_DESCRIPTION },
         },
         required: ["field", "old_string", "new_string"],
+      },
+    },
+  },
+  // ── Les PAGES du projet : son wiki (MIN-273) ─────────────────────────────
+  //
+  // Un ticket dit quoi faire, une page dit pourquoi c'est comme ça. L'agent de
+  // code lisait le code et les tickets, jamais la doc que l'équipe a écrite —
+  // c'est ce trou-là que ces tools ferment. Ils parlent markdown des deux côtés,
+  // et ils sont les MÊMES que ceux du MCP et du chat (lib/server/page-tools.ts).
+  {
+    type: "function",
+    function: {
+      name: "list_pages",
+      description:
+        "List the pages of the minddy project this session works on — its WIKI: ids, titles, icons, parents, no bodies. Pages hold what the code and the tickets assume: specs, architecture decisions and their why, conventions, runbooks. Read the wiki BEFORE deciding how to implement something non-obvious: a convention written by the team beats a convention you infer from two files. parent_page_id carries the nesting. Then open one with read_page.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_page",
+      description:
+        "Read ONE page of the project's wiki in MARKDOWN: its title, its icon, its body, its version and its direct subpages. Ids come from list_pages. A '[[page:<id>]]' line is a LINK to a subpage, not its content — read that page too when it matters. Copy passages from here verbatim for edit_page_text.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+        },
+        required: ["page_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_page",
+      description:
+        "Create a page in the project's wiki, optionally under an existing page. Only when the user asked for documentation — a spec, a decision record, a runbook you were told to write. Never document your own run here: what you did belongs in the pull request and in the ticket. Write it filled, and nested under the right parent.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "Page title, plain text (no leading '#', no emoji).",
+          },
+          markdown: { type: "string", description: PAGE_BODY_DESCRIPTION },
+          icon: {
+            type: "string",
+            description: "A single emoji shown next to the title. Omit for the default.",
+          },
+          parent_page_id: {
+            type: "string",
+            description: "Nest it under this page (from list_pages). Omit for a root page.",
+          },
+        },
+        required: ["title", "markdown"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_page",
+      description:
+        "Replace a wiki page's body, title or icon. markdown REPLACES the whole body and drops anything you don't resend — so keep it for a page you write from scratch, and pass the `version` read_page gave you: the write is then refused instead of overwriting a teammate who is editing that page right now. To change PART of a page, append_to_page or edit_page_text.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+          markdown: {
+            type: "string",
+            description:
+              "The FULL new body in markdown — replaces the current one entirely. Omit to change only the title or the icon.",
+          },
+          version: {
+            type: "number",
+            description: "The version from read_page. Always pass it with markdown.",
+          },
+          title: { type: "string", description: "New title, plain text." },
+          icon: { type: "string", description: "New emoji icon." },
+        },
+        required: ["page_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "append_to_page",
+      description:
+        "Add a block at the END of a wiki page without touching a byte of what is already there, and without re-sending the document. This is how a page GROWS — a new section, a decision that just landed. Refused if someone wrote the page between your read and this call, so nothing of theirs is lost.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+          markdown: {
+            type: "string",
+            description:
+              "The block to ADD, in markdown. ONLY what is new — never repeat what the page already says.",
+          },
+        },
+        required: ["page_id", "markdown"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_page_text",
+      description:
+        "Rewrite ONE passage of a wiki page IN PLACE — exactly like edit_file, but on a minddy page instead of a file: old_string → new_string, copied VERBATIM from read_page, unique match (add the surrounding lines, or set replace_all). Everything else stays byte for byte. Use it to correct a sentence or rewrite one section instead of update_page, which re-emits the whole body and silently drops what someone else changed meanwhile. A stale old_string fails loudly, which is the point.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+          old_string: {
+            type: "string",
+            description:
+              "The exact passage to replace, copied verbatim from read_page (whitespace and line breaks included).",
+          },
+          new_string: {
+            type: "string",
+            description: "What replaces it. An empty string deletes the passage.",
+          },
+          replace_all: {
+            type: "boolean",
+            description:
+              "Replace EVERY occurrence instead of requiring a unique match (default false).",
+          },
+        },
+        required: ["page_id", "old_string", "new_string"],
       },
     },
   },
@@ -1309,6 +1452,11 @@ const PR_REVIEW_MINDDY_TOOL_NAMES: ReadonlySet<string> = new Set([
   "read_issue",
   "read_feedback",
   "read_resource",
+  // Le WIKI en lecture (MIN-273) : une relecture qui juge « ça ne respecte pas la
+  // convention » a besoin de pouvoir lire la convention. Les écritures de page
+  // restent dehors, comme celles de ticket — relire n'autorise pas à réécrire.
+  "list_pages",
+  "read_page",
 ]);
 
 /**

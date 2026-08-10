@@ -37,6 +37,56 @@ export interface PromptProjectContext {
   members: PromptMember[];
   objectives: PromptObjective[];
   categories: PromptCategory[];
+  /** La carte du WIKI (MIN-273) : titres et ids, jamais les corps. Elle est là
+      pour que Numo sache que la doc existe sans avoir à lister d'abord — c'est ce
+      qui fait la différence entre répondre depuis les tickets et répondre depuis
+      ce que l'équipe a écrit. */
+  pages?: PromptPage[];
+}
+
+export interface PromptPage {
+  id: string;
+  title: string;
+  /** L'id du parent, pour que l'imbrication se lise dans le prompt. */
+  parent_id: string | null;
+}
+
+/**
+ * La carte du wiki, telle qu'elle entre dans le prompt (MIN-273) : un titre par
+ * ligne, l'imbrication rendue par l'indentation, et l'id à côté — de quoi
+ * appeler `get_page` sans passer par `list_pages`.
+ *
+ * Bornée à quarante lignes : le prompt doit dire « la doc existe, et voilà de
+ * quoi elle parle », pas transporter l'arbre entier d'un gros wiki. Au-delà,
+ * `list_pages` est à un appel.
+ */
+const WIKI_MAP_LIMIT = 40;
+
+export function formatWikiMap(pages: PromptPage[] | undefined): string {
+  if (!pages || pages.length === 0) return "None yet.";
+  const childrenOf = new Map<string | null, PromptPage[]>();
+  for (const page of pages) {
+    const key = page.parent_id ?? null;
+    const list = childrenOf.get(key);
+    if (list) list.push(page);
+    else childrenOf.set(key, [page]);
+  }
+  const lines: string[] = [];
+  const walk = (parentId: string | null, depth: number) => {
+    for (const page of childrenOf.get(parentId) ?? []) {
+      if (lines.length >= WIKI_MAP_LIMIT) return;
+      lines.push(
+        `${"  ".repeat(depth)}- "${page.title.trim() || "(untitled)"}" (page id: ${page.id})`
+      );
+      walk(page.id, depth + 1);
+    }
+  };
+  walk(null, 0);
+  const hidden = pages.length - lines.length;
+  if (hidden > 0) {
+    lines.push(`- … and ${hidden} more — call list_pages for the whole wiki.`);
+  }
+  return lines.join("\n");
 }
 
 const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
@@ -122,6 +172,27 @@ included — so folding a new detail into a full rewrite silently wipes work.
   get_issue first and resend it complete.
 Beyond the tokens saved, patching is the safe way round: a full rewrite silently overwrites
 what someone else changed meanwhile, whereas a stale old_string fails loudly and you re-read.`;
+
+const PAGES_BLOCK = `## Pages: the project's wiki (what a ticket assumes)
+A project carries PAGES: a nested wiki of the knowledge that outlives tickets — specs,
+decisions and their why, conventions, runbooks, onboarding. A ticket says what to do, a page
+says why it is like that. You can read AND write them, in markdown.
+- list_pages maps the wiki (ids, titles, icons, parents — no bodies); get_page reads one in
+  markdown with its direct subpages. READ before answering "pourquoi c'est comme ça ?", before
+  writing a spec-shaped issue, and whenever the user points at a page.
+- "transforme cette page en tickets" is just get_page + create_issue, one issue per real piece
+  of work. Keep the page as the source and link back to it in each description; never copy the
+  whole page into a ticket.
+- Writing: create_page for a new one (filled, and nested under the right parent). Then NEVER
+  resend a whole body to change part of it — append_to_page adds a block at the end,
+  edit_page_text rewrites one passage in place (old_string → new_string, copied verbatim from
+  get_page). update_page replaces everything, so keep it for a page you write from scratch and
+  pass the \`version\` you read: the write is refused rather than overwriting a human who is
+  editing that page right now.
+- A '[[page:<id>]]' line is a LINK to a subpage, not its content — read that page if you need
+  it. Pages have no trash tool: deleting one stays a human gesture, so say so if asked.
+- What is WORK belongs in an issue, not a page; what is a two-minute personal thing belongs in
+  the task notebook. A page is written for someone who arrives in six months.`;
 
 const SCRATCHPAD_BLOCK = `## Task notebook (the user's personal scratchpad)
 Every account has ONE task notebook ("carnet de tâches" in French, "task notebook" in
@@ -351,9 +422,14 @@ ${objectiveLines}
 ## Categories (labels)
 ${categoryLines}
 
+## Wiki pages (the project's documentation — read them with get_page)
+${formatWikiMap(project.pages)}
+
 ${VOCABULARY_BLOCK}
 
 ${PLAN_BLOCK}
+
+${PAGES_BLOCK}
 
 ${FEEDBACK_BLOCK}
 
@@ -381,6 +457,8 @@ You are running in **global mode** — not tied to any specific project.
 ${VOCABULARY_BLOCK}
 
 ${PLAN_BLOCK}
+
+${PAGES_BLOCK}
 
 ## Saved views in global mode (the "Tous les tickets" board)
 - Here \`list_views\`/\`create_view\`/\`update_view\` act on the user's PERSONAL
@@ -493,9 +571,14 @@ ${objectiveLines}
 ## Categories (labels)
 ${categoryLines}
 
+## Wiki pages (the project's documentation — read them with get_page)
+${formatWikiMap(project.pages)}
+
 ${VOCABULARY_BLOCK}
 
 ${PLAN_BLOCK}
+
+${PAGES_BLOCK}
 
 ${SCRATCHPAD_BLOCK}
 
@@ -594,9 +677,14 @@ ${objectiveLines}
 ## Categories (labels)
 ${categoryLines}
 
+## Wiki pages (the project's documentation — read them with get_page)
+${formatWikiMap(project.pages)}
+
 ${VOCABULARY_BLOCK}
 
 ${PLAN_BLOCK}
+
+${PAGES_BLOCK}
 
 ${SCRATCHPAD_BLOCK}
 
@@ -696,6 +784,8 @@ ${VOCABULARY_BLOCK}
 
 ${PLAN_BLOCK}
 
+${PAGES_BLOCK}
+
 ${SCRATCHPAD_BLOCK}
 
 ## Feedback tools
@@ -784,6 +874,11 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `- Open feedback post: "${ctx.feedbackTitle ?? "(untitled)"}" (id: ${ctx.feedbackId}).`,
       `When the user says "ce feedback", "ce retour", "this feedback", "promeus-le", "réponds-lui" or similar, they mean the feedback post above — use its id directly with the feedback tools (get_feedback, promote_feedback_to_issue, link_feedback_to_issue, respond_to_feedback). Do not search for it.`
     );
+  } else if (ctx.pageId) {
+    lines.push(
+      `- Open wiki page: "${ctx.pageTitle?.trim() || "(untitled)"}" (page id: ${ctx.pageId}).`,
+      `When the user says "cette page", "this page", "ce document", "cette doc" — or gives an instruction with no explicit target while on it ("résume", "transforme ça en tickets", "corrige ce paragraphe", "ajoute une section") — they mean the page above. Read it with get_page on that exact id, do not search for it. Write with append_to_page / edit_page_text rather than update_page: the user may be typing in that very document, and a full rewrite would overwrite them.`
+    );
   } else if (ctx.routineId) {
     lines.push(
       `- Open routine: "${ctx.routineTitle ?? "(untitled)"}" (id: ${ctx.routineId}).`,
@@ -817,6 +912,9 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
         }
         if (item.kind === "objective") {
           return `  - Objective "${item.label}" (id: ${item.id}) — that id is what objective_id fields take`;
+        }
+        if (item.kind === "page") {
+          return `  - Wiki page "${item.label}" (page id: ${item.id}) — read it with get_page`;
         }
         return `  - Team member ${item.label}${item.detail ? ` (${item.detail})` : ""} (user id: ${item.id}) — that id is what assignee fields take`;
       }),

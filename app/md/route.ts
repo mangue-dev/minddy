@@ -119,7 +119,16 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
       t("agentsTitle"),
       t("agentsSubtitle"),
       (
-        ["read", "plan", "track", "create", "comment", "review", "beyond"] as const
+        [
+          "read",
+          "plan",
+          "track",
+          "create",
+          "comment",
+          "wiki",
+          "review",
+          "beyond",
+        ] as const
       ).map((k) => ["", t(`agentsCapability_${k}`)] as [string, string]),
     ],
     [
@@ -235,10 +244,19 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
 
     `## ${t("toolsTitle")}`,
     t("toolsSubtitle"),
-    // Les mêmes sept phrases que la page et que la landing. La référence
-    // complète des outils vit dans `/llms-full.txt`, qui s'adresse aux
-    // machines — la dupliquer ici ne servirait personne.
-    (["read", "plan", "track", "create", "comment", "review", "beyond"] as const)
+    // Les mêmes phrases que la page et que la landing. La référence complète des
+    // outils vit dans `/llms-full.txt`, qui s'adresse aux machines — la
+    // dupliquer ici ne servirait personne.
+    ([
+      "read",
+      "plan",
+      "track",
+      "create",
+      "comment",
+      "wiki",
+      "review",
+      "beyond",
+    ] as const)
       .map((key) => `- ${tl(`agentsCapability_${key}`)}`)
       .join("\n"),
 

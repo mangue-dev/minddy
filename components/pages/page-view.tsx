@@ -48,6 +48,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { BLOCK_ID_ATTRIBUTE, PageEditor } from "@/components/pages/page-editor";
 import { PageHeader } from "@/components/pages/page-header";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
@@ -411,6 +412,22 @@ export function PageView({
   const trail = useMemo(
     () => ancestorsOf(pages, pageId).reverse(),
     [pages, pageId]
+  );
+
+  /* ── Ce que Numo voit quand on est sur cette page ─────────────────────── */
+  //
+  // La page ouverte devient le contexte ambiant de l'assistant (MIN-273) : « fais
+  // des tickets de cette page », « corrige ce paragraphe » se résolvent alors
+  // sans qu'on ait à la nommer, et Numo a les outils pour la lire et l'écrire.
+  //
+  // Le titre part avec l'id : la pilule le dit sans relire la page, et le prompt
+  // peut la nommer avant le premier appel d'outil. C'est le titre AFFICHÉ, donc
+  // celui qu'on vient peut-être de taper.
+  useAssistantContext(
+    useMemo(
+      () => ({ projectId, pageId, pageTitle: title, pageIcon: icon }),
+      [projectId, pageId, title, icon]
+    )
   );
 
   /* ── L'ancre d'un bloc ───────────────────────────────────────────────── */

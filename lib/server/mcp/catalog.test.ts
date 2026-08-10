@@ -310,3 +310,100 @@ describe("catalogue MCP — un objectif se lit et se commente", () => {
     expect(description).toContain("minddy_get_objective");
   });
 });
+
+/**
+ * MIN-273 — les six outils de PAGE. Ce que garde ce bloc n'est pas leur
+ * existence (le catalogue la dit déjà) mais leur CONTRAT annoncé : ce qui est
+ * requis, ce qui ne l'est pas, et surtout le fait que chaque outil dise où
+ * envoyer un modèle qui s'apprête à réécrire un document entier pour changer une
+ * phrase. C'est la seule chose qui empêche `minddy_update_page` de redevenir le
+ * chemin par défaut, comme `minddy_update_issues` l'avait été pour les plans.
+ */
+describe("catalogue MCP — les pages", () => {
+  it("expose les six outils, lectures annoncées sans effet de bord", () => {
+    for (const name of [
+      "minddy_list_pages",
+      "minddy_get_page",
+      "minddy_create_page",
+      "minddy_update_page",
+      "minddy_append_to_page",
+      "minddy_edit_page_text",
+    ]) {
+      expect(tool(name)).toBeDefined();
+    }
+    expect(tool("minddy_list_pages").readOnly).toBe(true);
+    expect(tool("minddy_get_page").readOnly).toBe(true);
+    for (const write of [
+      "minddy_create_page",
+      "minddy_update_page",
+      "minddy_append_to_page",
+      "minddy_edit_page_text",
+    ]) {
+      expect(tool(write).readOnly).toBe(false);
+    }
+  });
+
+  it("met dans `required` ce qu'un petit modèle ne répondrait pas sinon", () => {
+    // Un champ hors `required` d'un appel d'outil forcé n'est tout simplement
+    // pas rempli : le titre et le corps d'une page créée en font partie.
+    for (const required of ["project_id", "title", "markdown"]) {
+      expect(param("minddy_create_page", required).required).toBe(true);
+    }
+    expect(param("minddy_create_page", "parent_page_id").required).toBe(false);
+    expect(param("minddy_create_page", "icon").required).toBe(false);
+
+    for (const required of ["project_id", "page_id", "markdown"]) {
+      expect(param("minddy_append_to_page", required).required).toBe(true);
+    }
+    for (const required of ["project_id", "page_id", "old_string", "new_string"]) {
+      expect(param("minddy_edit_page_text", required).required).toBe(true);
+    }
+    expect(param("minddy_edit_page_text", "replace_all").required).toBe(false);
+    // La chaîne vide SUPPRIME un passage — dit là où le modèle le lit.
+    expect(param("minddy_edit_page_text", "new_string").description).toMatch(/empty/i);
+    // Rien n'est requis au-delà de la cible sur l'écriture totale : on peut ne
+    // changer que l'icône.
+    for (const optional of ["markdown", "title", "icon", "version"]) {
+      expect(param("minddy_update_page", optional).required).toBe(false);
+    }
+  });
+
+  it("détourne minddy_update_page de la réécriture d'une page existante", () => {
+    const description = tool("minddy_update_page").description ?? "";
+    expect(description).toContain("minddy_append_to_page");
+    expect(description).toContain("minddy_edit_page_text");
+    // Le garde-fou d'écriture concurrente, nommé par son code d'erreur.
+    expect(description).toContain("page_stale");
+    expect(param("minddy_update_page", "version").description).toContain(
+      "minddy_get_page"
+    );
+  });
+
+  it("annonce du markdown, jamais du JSON ProseMirror", () => {
+    for (const name of ["minddy_get_page", "minddy_create_page"]) {
+      expect(tool(name).description).toMatch(/markdown/i);
+    }
+    expect(param("minddy_create_page", "markdown").description).toMatch(
+      /Never send ProseMirror JSON/
+    );
+    // La syntaxe d'un lien de page : un agent ne peut pas la deviner.
+    expect(param("minddy_create_page", "markdown").description).toContain(
+      "[[page:"
+    );
+  });
+
+  it("dit par où commencer, et le dit dans le mode d'emploi du serveur", () => {
+    expect(tool("minddy_list_pages").description).toContain("minddy_get_page");
+    expect(tool("minddy_get_page").description).toContain("minddy_edit_page_text");
+    for (const name of [
+      "minddy_list_pages",
+      "minddy_get_page",
+      "minddy_create_page",
+      "minddy_update_page",
+      "minddy_append_to_page",
+      "minddy_edit_page_text",
+    ]) {
+      expect(MCP_SERVER_INSTRUCTIONS).toContain(name);
+    }
+  });
+});

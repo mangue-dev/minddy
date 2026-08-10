@@ -8,6 +8,15 @@ import {
   updateIssueFields,
 } from "@/lib/server/update-issue";
 import { editIssueText, type IssueTextTools } from "@/lib/server/text-edit";
+import {
+  appendToPageForAgent,
+  createPageForAgent,
+  editPageTextForAgent,
+  listPagesForAgent,
+  readPageForAgent,
+  updatePageForAgent,
+  type PageToolResult,
+} from "@/lib/server/page-tools";
 
 /** Les noms que Numo porte, pour que les refus du patch renvoient vers des tools
  *  qui existent DANS LE CHAT (cf. IssueTextTools). */
@@ -946,6 +955,19 @@ export async function executeTool(
           success: failed.length === 0,
         };
       }
+
+      // ── Pages : le wiki du projet (MIN-273) ─────────────────────────
+      //
+      // Le même noyau que le MCP et l'agent de code (lib/server/page-tools.ts) :
+      // ce bloc ne fait que traduire les arguments de Numo et rendre ses refus.
+      case "create_page":
+        return executeCreatePage(args, ctx, projectId);
+      case "list_pages":
+      case "get_page":
+      case "update_page":
+      case "append_to_page":
+      case "edit_page_text":
+        return executePageTool(toolName, args, ctx, projectId);
 
       case "append_to_plan": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
@@ -2280,6 +2302,99 @@ function parseExpectedRev(value: unknown): number | null {
 
 const STALE_REV = (expected: number, actual: number, indices: boolean) =>
   `The notebook changed since rev ${expected} (it is now at rev ${actual}) — the user edited it meanwhile. Call get_scratchpad again${indices ? " for fresh task indices" : ", reapply your change onto the fresh content"}, then retry.`;
+
+/**
+ * Les six gestes de PAGE côté Numo (MIN-273).
+ *
+ * Rien de la logique n'est ici : le noyau (`lib/server/page-tools.ts`) est celui
+ * du MCP et de l'agent de code, projection markdown comprise. Ce que fait cette
+ * fonction, et qui n'est pas rien : elle nomme les tools DE CETTE SURFACE dans
+ * les refus (`get_page`, pas `minddy_get_page`), sans quoi un modèle qui suit le
+ * conseil d'un message d'erreur brûle un tour sur un « Unknown tool ».
+ */
+async function executePageTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+  projectId: string
+): Promise<ToolExecution> {
+  const actorId = ctx.userId;
+  const pageId = typeof args.page_id === "string" ? args.page_id : "";
+  const str = (value: unknown): string | undefined =>
+    typeof value === "string" ? value : undefined;
+
+  const render = <T,>(result: PageToolResult<T>): ToolExecution =>
+    result.ok ? { result: result.data, success: true } : toolError(result.message);
+
+  if (toolName === "list_pages") {
+    const result = await listPagesForAgent({ projectId, actorId });
+    return result.ok
+      ? { result: { count: result.data.pages.length, pages: result.data.pages }, success: true }
+      : toolError(result.message);
+  }
+
+  if (!pageId) return toolError("page_id is required (use list_pages to find it).");
+
+  switch (toolName) {
+    case "get_page":
+      return render(await readPageForAgent({ pageId, projectId, actorId }));
+    case "update_page":
+      return render(
+        await updatePageForAgent({
+          pageId,
+          projectId,
+          actorId,
+          title: str(args.title),
+          icon: "icon" in args ? (str(args.icon) ?? null) : undefined,
+          markdown: str(args.markdown),
+          version: typeof args.version === "number" ? args.version : undefined,
+        })
+      );
+    case "append_to_page":
+      return render(
+        await appendToPageForAgent({
+          pageId,
+          projectId,
+          actorId,
+          markdown: str(args.markdown) ?? "",
+        })
+      );
+    case "edit_page_text":
+      return render(
+        await editPageTextForAgent({
+          pageId,
+          projectId,
+          actorId,
+          oldString: str(args.old_string) ?? "",
+          newString: str(args.new_string) ?? "",
+          replaceAll: args.replace_all === true,
+          tools: { read: "get_page", replaceWhole: "update_page { markdown }" },
+        })
+      );
+    default:
+      return toolError(`Unknown page tool: ${toolName}`);
+  }
+}
+
+/** La création n'a pas de `page_id` : elle sort du dispatch ci-dessus. */
+async function executeCreatePage(
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+  projectId: string
+): Promise<ToolExecution> {
+  const result = await createPageForAgent({
+    projectId,
+    actorId: ctx.userId,
+    title: typeof args.title === "string" ? args.title : "",
+    icon: typeof args.icon === "string" ? args.icon : undefined,
+    markdown: typeof args.markdown === "string" ? args.markdown : undefined,
+    parentPageId:
+      typeof args.parent_page_id === "string" ? args.parent_page_id : null,
+  });
+  return result.ok
+    ? { result: result.data, success: true }
+    : toolError(result.message);
+}
 
 const CONCURRENT_EDIT =
   "The notebook is being edited right now; call get_scratchpad again and retry.";

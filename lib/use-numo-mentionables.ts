@@ -64,8 +64,9 @@ export function useNumoMentionables(scopeProjectId: string | null): {
   const { members } = useNumoMembers(wanted, scopeProjectId);
   const { projects } = useProjects();
   // Tickets et objectifs viennent de l'index de la palette, comme les mentions
-  // d'une description : il porte déjà tout, de tous mes projets.
-  const { issues, objectives, armNow } = useMentionSources(scopeProjectId);
+  // d'une description : il porte déjà tout, de tous mes projets. Les pages, elles,
+  // sont celles du projet en portée — un wiki appartient à son projet.
+  const { issues, objectives, pages, armNow } = useMentionSources(scopeProjectId);
 
   const mentionables = useMemo<MentionOption[]>(
     () => [
@@ -98,8 +99,18 @@ export function useNumoMentionables(scopeProjectId: string | null): {
         label: o.name,
         color: o.color,
       })),
+      // Les pages du wiki du projet courant (MIN-273) : citer « @Guide » suffit
+      // à ce que Numo lise le document avant de répondre.
+      ...pages
+        .filter((p) => p.title.trim())
+        .map((p) => ({
+          type: "page" as const,
+          id: p.id,
+          label: p.title,
+          icon: p.icon,
+        })),
     ],
-    [members, projects, issues, objectives],
+    [members, projects, issues, objectives, pages],
   );
 
   const onMentionQuery = useCallback(

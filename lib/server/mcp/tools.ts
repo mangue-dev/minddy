@@ -132,12 +132,17 @@ import {
   ok,
   fail,
   getUserId,
+  requireProject,
   requireUser,
   resolveProject,
   resolveIssueRef,
+  READ_ONLY,
+  WRITE,
+  WRITE_IDEMPOTENT,
   type ToolExtra,
   type ToolResult,
 } from "@/lib/server/mcp/tool-helpers";
+import { registerPageTools } from "@/lib/server/mcp/page-tools";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
 
@@ -149,9 +154,6 @@ import { durationBucket } from "@/lib/analytics-sanitize";
  * il n'y a aucun état de session entre deux appels (transport stateless).
  */
 
-const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
-const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
-const WRITE_IDEMPOTENT = { ...WRITE, idempotentHint: true } as const;
 
 /** Above this, minddy_get_resource never embeds bytes inline (base64 would
     swamp the model's context) — the signed download_url is the way in. */
@@ -436,21 +438,6 @@ const RECURRENCE_FIELD = z
       "issue per series, so never create the next occurrence yourself. Clear it " +
       "(null, via minddy_update_issues) to stop the series."
   );
-
-/** Garde combinée auth + rate limit + accès projet des tools scopés projet. */
-async function requireProject(
-  extra: ToolExtra,
-  projectId: unknown
-): Promise<
-  | { userId: string; keyId: string | null; access: ProjectAccess }
-  | { error: ToolResult }
-> {
-  const auth = requireUser(extra);
-  if ("error" in auth) return auth;
-  const project = await resolveProject(auth.userId, projectId);
-  if ("error" in project) return project;
-  return { userId: auth.userId, keyId: auth.keyId, access: project.access };
-}
 
 function mcpReadCtx(access: ProjectAccess): ReadContext {
   const service = getServiceClient();
@@ -797,6 +784,11 @@ function withToolAnalytics(server: McpServer): McpServer {
 
 export function registerMinddyTools(rawServer: McpServer): void {
   const server = withToolAnalytics(rawServer);
+
+  // Les PAGES (MIN-273) vivent dans leur propre module, mais s'enregistrent ici :
+  // c'est cet appel qui leur donne l'analytics des tools et leur place dans le
+  // catalogue public (lib/server/mcp/catalog.ts).
+  registerPageTools(server);
 
   // ── Lectures ──────────────────────────────────────────────────────────
 

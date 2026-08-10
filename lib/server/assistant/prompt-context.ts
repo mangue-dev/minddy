@@ -27,6 +27,7 @@ export async function gatherProjectPromptContext({
     { data: memberRows },
     { data: objectives },
     { data: categories },
+    { data: pages },
   ] = await Promise.all([
     supabase.from("issues").select("status").eq("project_id", project.id).is("deleted_at", null),
     supabase
@@ -51,6 +52,14 @@ export async function gatherProjectPromptContext({
       .select("id, name")
       .eq("project_id", project.id)
       .order("name", { ascending: true }),
+    // Le WIKI (MIN-273) : titres et parents, jamais les corps — la carte tient
+    // dans le prompt, les documents se lisent page par page avec get_page.
+    supabase
+      .from("pages")
+      .select("id, title, parent_id")
+      .is("deleted_at", null)
+      .eq("project_id", project.id)
+      .order("position", { ascending: true }),
   ]);
 
   const statusCounts: Record<string, number> = {};
@@ -82,5 +91,6 @@ export async function gatherProjectPromptContext({
     members,
     objectives: (objectives ?? []) as PromptProjectContext["objectives"],
     categories: (categories ?? []) as PromptProjectContext["categories"],
+    pages: (pages ?? []) as PromptProjectContext["pages"],
   };
 }

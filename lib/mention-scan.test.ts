@@ -4,6 +4,7 @@ import {
   mentionScanner,
   type MentionIssue,
   type MentionObjective,
+  type MentionPage,
   type MentionSegment,
 } from "./mention-scan";
 import type { Member } from "./types";
@@ -25,6 +26,13 @@ const objective = (name: string): MentionObjective => ({
   color: "#3b82f6",
 });
 
+const page = (title: string, icon: string | null = null): MentionPage => ({
+  id: `id-${title}`,
+  project_id: "p1",
+  title,
+  icon,
+});
+
 /** Une lecture compacte du découpage : le texte tel quel, une mention en
     « @Nom » (ou « @numo »). */
 const shape = (segments: MentionSegment[]) =>
@@ -39,7 +47,9 @@ const shape = (segments: MentionSegment[]) =>
             ? `@${s.mention.issue.identifier}`
             : s.mention.type === "objective"
               ? `@${s.mention.objective.name}`
-              : `@${s.mention.member.full_name}`,
+              : s.mention.type === "page"
+                ? `@${s.mention.page.title}`
+                : `@${s.mention.member.full_name}`,
   );
 
 describe("mentionScanner", () => {
@@ -164,6 +174,34 @@ describe("contentMentionScanner", () => {
       " regarde ",
       "@MIN-42",
     ]);
+  });
+
+  // MIN-273 — une page du wiki se cite comme un objectif : par son TITRE.
+  it("cite une page du wiki par son titre", () => {
+    const scan = contentMentionScanner({ pages: [page("Guide de démarrage", "📘")] });
+    const segments = scan("tout est dans @Guide de démarrage");
+    expect(shape(segments)).toEqual(["tout est dans ", "@Guide de démarrage"]);
+    // L'émoji voyage avec la page : c'est sa figure sur la pilule.
+    expect(segments[1].mention).toMatchObject({
+      type: "page",
+      page: { icon: "📘" },
+    });
+  });
+
+  it("préfère le plus long titre de page quand l'un contient l'autre", () => {
+    const scan = contentMentionScanner({
+      pages: [page("Guide"), page("Guide de démarrage")],
+    });
+    expect(shape(scan("@Guide de démarrage"))).toEqual(["@Guide de démarrage"]);
+  });
+
+  it("donne l'objectif, pas la page, quand les deux portent le même nom", () => {
+    const scan = contentMentionScanner({
+      objectives: [objective("Atlas")],
+      pages: [page("Atlas")],
+    });
+    const [first] = scan("@Atlas");
+    expect(first.mention?.type).toBe("objective");
   });
 
   it("ne fait pas une pilule de chaque « @ » sans aucune source", () => {

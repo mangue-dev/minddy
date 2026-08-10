@@ -75,7 +75,7 @@ export type AssistantSSEEvent =
  * que pour que Numo puisse nommer la chose sans re-résoudre son id.
  */
 export interface AssistantPinnedContext {
-  kind: "issue" | "project" | "member" | "objective";
+  kind: "issue" | "project" | "member" | "objective" | "page";
   id: string;
   /** « MIN-42 », « minddy », « Clément » — ce qu'affiche la pilule. */
   label: string;
@@ -104,7 +104,7 @@ export type AssistantCommandId = "create-issue";
  * dans la bulle, et à dire à Numo qui/quoi ce nom désigne exactement.
  */
 export interface AssistantMention {
-  type: "member" | "project" | "issue" | "objective";
+  type: "member" | "project" | "issue" | "objective" | "page";
   id: string;
   /** Le texte écrit après le « @ » dans le message. */
   label: string;
@@ -112,6 +112,8 @@ export interface AssistantMention {
   avatarSeed?: string;
   /** Objectifs : leur couleur — voir AssistantPinnedContext.color. */
   color?: string | null;
+  /** Pages du wiki : leur émoji (MIN-273). */
+  icon?: string | null;
 }
 
 /**
@@ -165,6 +167,14 @@ export interface AssistantPageContext {
   cycleId?: string;
   /** Human date-range label ("6–19 juil") — used for the context badge. */
   cycleLabel?: string;
+  /**
+   * La PAGE du wiki ouverte (MIN-273). Le titre voyage avec l'id pour que la
+   * pilule le dise sans relire la page, et pour que Numo puisse la nommer avant
+   * son premier appel de tool.
+   */
+  pageId?: string;
+  pageTitle?: string;
+  pageIcon?: string | null;
 }
 
 // Request body for chat endpoint

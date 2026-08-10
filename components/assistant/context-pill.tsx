@@ -19,6 +19,7 @@
 
 import { useTranslations } from "next-intl";
 import {
+  BookText,
   Eye,
   EyeOff,
   FileText,
@@ -69,6 +70,11 @@ const STYLES: Record<
   routine: {
     icon: CalendarClock,
     tint: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
+  },
+  // Le wiki : la même figure que l'arbre des pages dans la sidebar.
+  page: {
+    icon: BookText,
+    tint: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
   },
   view: {
     icon: LayoutGrid,

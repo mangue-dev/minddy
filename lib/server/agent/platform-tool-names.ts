@@ -28,6 +28,16 @@ export const ISSUE_TOOL_NAMES = new Set([
   "create_issue",
   "create_routine",
   "report_verdict",
+  // Les PAGES du projet (MIN-273) — le wiki. Elles voyagent avec les tickets
+  // parce qu'elles ont exactement le même contexte, le projet du run et son
+  // acteur : une famille de plus dans le routage n'aurait apporté que du
+  // câblage. L'exécution vit dans `page-tools.ts`, à côté de `issue-tools.ts`.
+  "list_pages",
+  "read_page",
+  "create_page",
+  "update_page",
+  "append_to_page",
+  "edit_page_text",
 ]);
 
 /** Tools carnet (routés vers `scratchpad-tools.ts`). */

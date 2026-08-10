@@ -51,6 +51,18 @@ export interface MentionObjective {
   color: string | null;
 }
 
+/** Une PAGE du wiki telle qu'une mention a besoin de la connaître (MIN-273).
+    Son icône voyage avec elle : c'est ce qui distingue « @Guide » d'un ticket au
+    premier coup d'œil, comme partout ailleurs dans l'app. */
+export interface MentionPage {
+  id: string;
+  project_id: string;
+  /** Le TITRE — c'est lui qui s'écrit après l'arobase. */
+  title: string;
+  /** L'émoji de la page, ou null quand elle prend l'icône par défaut. */
+  icon: string | null;
+}
+
 export type ScannedMention =
   | { type: "numo"; member?: undefined }
   | { type: "member"; member: Member }
@@ -59,7 +71,8 @@ export type ScannedMention =
       c'est justement ce qui le distingue d'un `member`. */
   | { type: "forge"; member?: undefined; login: string; avatarUrl: string | null }
   | { type: "issue"; member?: undefined; issue: MentionIssue }
-  | { type: "objective"; member?: undefined; objective: MentionObjective };
+  | { type: "objective"; member?: undefined; objective: MentionObjective }
+  | { type: "page"; member?: undefined; page: MentionPage };
 
 /** Un morceau de texte nu, ou une mention reconnue. Jamais les deux.
     `raw` est ce qui a été LU dans le texte (« @Jean Dupont », « @NUMO ») : les
@@ -175,19 +188,29 @@ export function forgeMentionScanner(
 
 /**
  * Le découpage d'une DESCRIPTION : ce qui s'y cite est plus large que dans un
- * commentaire — une personne, un ticket, un objectif.
+ * commentaire — une personne, un ticket, un objectif, une page du wiki.
  *
  * Les objectifs passent AVANT les membres dans la table : à nom strictement
  * égal, c'est le dernier posé qui gagne, et entre une personne et un objectif
- * homonymes, c'est la personne qu'on a voulu citer.
+ * homonymes, c'est la personne qu'on a voulu citer. Les PAGES du wiki (MIN-273)
+ * se citent de la même façon, par leur titre.
  */
 export function contentMentionScanner(source: {
   members?: Member[];
   issues?: MentionIssue[];
   objectives?: MentionObjective[];
+  pages?: MentionPage[];
 }): MentionScan {
   return buildScanner(
     [
+      // Les pages d'abord, donc les moins prioritaires à titre égal : entre une
+      // page et un objectif qui portent le même nom, c'est l'objectif — l'objet
+      // de travail — qu'on a voulu citer, et entre les deux et une personne,
+      // c'est la personne (cf. l'ordre ci-dessous).
+      ...(source.pages ?? []).map((page) => ({
+        label: page.title,
+        mention: { type: "page", page } as const,
+      })),
       ...(source.objectives ?? []).map((objective) => ({
         label: objective.name,
         mention: { type: "objective", objective } as const,

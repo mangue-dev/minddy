@@ -48,6 +48,17 @@ export type AssistantToolDef = {
   };
 };
 
+/** Ce qu'un corps de page accepte, dit là où le modèle le lit — la même prose
+    que côté MCP (lib/server/mcp/page-tools.ts) : c'est le seul mode d'emploi de
+    la syntaxe, et un lien de sous-page ne se devine pas. */
+const PAGE_BODY_DESCRIPTION =
+  "The page BODY in markdown. Supported: headings (## and ###, since a single " +
+  "'# ' is the page title), bold/italic/inline code, links, bullet and numbered " +
+  "lists, task lists ('- [ ]' / '- [x]'), quotes, fenced code blocks, horizontal " +
+  "rules, <details><summary>…</summary>…</details> collapsibles, and " +
+  "'[[page:<page_id>]]' on its own line to embed a link to another page. Anything " +
+  "else degrades to plain text.";
+
 const ISSUE_FIELD_PROPERTIES = {
   title: { type: "string", description: "Issue title." },
   description: {
@@ -472,6 +483,149 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
         },
         required: ["issue_id", "field", "old_string", "new_string"],
+      },
+    },
+  },
+
+  // ── Pages : le wiki du projet (MIN-273) ─────────────────────────────────
+  //
+  // Le même jeu de six gestes que sur le MCP, et pour la même raison : un
+  // ticket dit quoi faire, une page dit pourquoi c'est comme ça. Les deux
+  // écritures chirurgicales (append, edit) existent ici aussi — sans elles,
+  // corriger une phrase coûte le document entier.
+  {
+    type: "function",
+    function: {
+      name: "list_pages",
+      description:
+        "The project's WIKI as a flat list of pages — id, title, icon, parent id, last update — without any body. Start here: it is the map, and the only place page ids come from. Pages hold the durable knowledge the issues assume (specs, decisions and their why, conventions, runbooks), so read them before answering a 'why is it like this?' question or writing issues from a document. parent_page_id carries the nesting (any depth); rebuild the tree yourself. Then read one with get_page.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_page",
+      description:
+        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A '[[page:<id>]]' line is a LINK to a subpage, never its content — read that page too if you need it.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+        },
+        required: ["page_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_page",
+      description:
+        "Create a page in the project's wiki, optionally UNDER an existing page. Write it FILLED — a title and a real body in one call, not an empty page to fill later. A page is for knowledge that outlives a ticket; work to do belongs in an issue (create_issue), not here. Prefer a subpage of the right parent over a new root page: a flat wiki stops being read.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description:
+              "Page title, plain text (no leading '#', no emoji — the emoji is the icon).",
+          },
+          markdown: {
+            type: "string",
+            description: PAGE_BODY_DESCRIPTION,
+          },
+          icon: {
+            type: "string",
+            description:
+              "A single emoji shown next to the title in the sidebar. Omit for the default icon.",
+          },
+          parent_page_id: {
+            type: "string",
+            description:
+              "Nest the new page under this one (from list_pages). Omit for a root page.",
+          },
+        },
+        required: ["title", "markdown"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_page",
+      description:
+        "Replace a page's body, title or icon. markdown REPLACES the whole body and drops anything you don't resend — so use it to write a page from scratch, never to change part of one: append_to_page adds a block at the end, edit_page_text rewrites one passage. When you do replace the body, pass the version from get_page: the write is then refused if a human or another agent wrote the page meanwhile, instead of silently overwriting them.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+          markdown: {
+            type: "string",
+            description:
+              "The FULL new body in markdown — it replaces the current one entirely. Omit to change only the title or the icon.",
+          },
+          version: {
+            type: "integer",
+            description:
+              "The version from get_page, to refuse the write if the page changed since. Always pass it with markdown.",
+          },
+          title: { type: "string", description: "New title, plain text." },
+          icon: {
+            type: ["string", "null"],
+            description: "New emoji icon; null clears it.",
+          },
+        },
+        required: ["page_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "append_to_page",
+      description:
+        "Add a block at the END of a page WITHOUT touching what is already there, and without re-sending the document — a new section, a decision that just landed, a note. Prefer it to update_page, which rewrites the whole body. Send ONLY what is new. Refused if someone wrote the page between your read and this call, so nothing of theirs is lost.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+          markdown: {
+            type: "string",
+            description:
+              "The block to ADD, in markdown. Only what is new — everything already on the page is kept as-is, so never repeat it here.",
+          },
+        },
+        required: ["page_id", "markdown"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_page_text",
+      description:
+        "Rewrite ONE passage of a page IN PLACE, the way a code editor patches a file: old_string → new_string, copied VERBATIM from get_page, unique match (add the surrounding lines, or set replace_all). Every other byte is left alone. This is how a sentence gets corrected without re-emitting the page — and it is the safe way round: a full rewrite silently overwrites someone else's edit, a stale old_string fails loudly. To ADD text, append_to_page.",
+      parameters: {
+        type: "object",
+        properties: {
+          page_id: { type: "string", description: "Page id, from list_pages." },
+          old_string: {
+            type: "string",
+            description:
+              "The exact passage to replace, copied VERBATIM from the markdown get_page returned — whitespace and line breaks included.",
+          },
+          new_string: {
+            type: "string",
+            description: "What replaces it. An empty string deletes the passage.",
+          },
+          replace_all: {
+            type: "boolean",
+            description:
+              "Replace EVERY occurrence instead of requiring a unique match (default false).",
+          },
+        },
+        required: ["page_id", "old_string", "new_string"],
       },
     },
   },

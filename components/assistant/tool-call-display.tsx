@@ -9,6 +9,9 @@ import type { MessageKey } from "@/lib/i18n-keys";
 import type { SeedProposal } from "@/lib/seed/types";
 import {
   Activity,
+  BookOpen,
+  BookPlus,
+  BookText,
   Bot,
   CalendarClock,
   ChevronRight,
@@ -313,6 +316,53 @@ const TOOL_META: Record<string, ToolMeta> = {
         return plan ? t("editingPlanText") : t("editingDescriptionText");
       if (!success) return t("editIssueTextFailed");
       return plan ? t("planTextEdited") : t("descriptionTextEdited");
+    },
+  },
+  // ── Pages : le wiki du projet (MIN-273) ─────────────────────────────────
+  list_pages: {
+    icon: BookOpen,
+    getLabel: (_args, result, _success, status, t) => {
+      if (status === "running") return t("loadingPages");
+      return t("foundPages", { count: resultCount(result, "pages") });
+    },
+  },
+  get_page: {
+    icon: BookText,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("loadingPage");
+      if (!success) return t("pageNotFound");
+      const title = typeof result?.title === "string" ? result.title.trim() : "";
+      return title ? t("pageLoadedWithTitle", { title }) : t("pageLoaded");
+    },
+  },
+  create_page: {
+    icon: BookPlus,
+    getLabel: (args, _result, success, status, t) => {
+      const title = typeof args.title === "string" ? args.title.trim() : "";
+      if (status === "running") return t("creatingPage");
+      if (!success) return t("createPageFailed");
+      return title ? t("pageCreatedWithTitle", { title }) : t("pageCreated");
+    },
+  },
+  update_page: {
+    icon: BookText,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingPage");
+      return success ? t("pageUpdated") : t("updatePageFailed");
+    },
+  },
+  append_to_page: {
+    icon: BookPlus,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("appendingToPage");
+      return success ? t("pageAppended") : t("appendToPageFailed");
+    },
+  },
+  edit_page_text: {
+    icon: FilePen,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("editingPageText");
+      return success ? t("pageTextEdited") : t("editPageTextFailed");
     },
   },
   set_issue_categories: {

@@ -1,7 +1,7 @@
 "use client";
 
-// Ce qu'une DESCRIPTION peut citer : les gens du projet, et les tickets et
-// objectifs de tous mes projets.
+// Ce qu'une DESCRIPTION peut citer : les gens du projet, les tickets et
+// objectifs de tous mes projets, et les pages du wiki de celui-ci.
 //
 // La source des tickets et des objectifs est l'index de la palette
 // (lib/use-search-index) : il porte déjà chaque ticket et chaque objectif de
@@ -22,15 +22,24 @@ import { mergeByProject } from "@/lib/palette-index-merge";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
+import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import type { MentionOption } from "@/components/mention-suggest";
-import type { MentionIssue, MentionObjective } from "@/lib/mention-scan";
+import type {
+  MentionIssue,
+  MentionObjective,
+  MentionPage,
+} from "@/lib/mention-scan";
 import type { Member } from "@/lib/types";
 
 export interface MentionSources {
   issues: MentionIssue[];
   objectives: MentionObjective[];
+  /** Les pages du wiki du projet COURANT (MIN-273). Elles ne viennent pas de
+      l'index de la palette : citer une page d'un autre projet n'a pas de sens —
+      un wiki appartient à son projet, et son titre n'est unique que chez lui. */
+  pages: MentionPage[];
   /** Réclame l'index tout de suite — à appeler au premier « @ » tapé, plutôt
       que d'attendre le temps mort qui l'arme d'habitude. */
   armNow: () => void;
@@ -53,6 +62,10 @@ export function useMentionSources(projectId?: string | null): MentionSources {
   // et le remplacement ne se déclenche pas.
   const { issues: freshIssues } = useIssuesQuery(projectId ?? null);
   const { objectives: freshObjectives } = useObjectivesQuery(projectId ?? null);
+  // Le cache du wiki, celui-là même que lit la sidebar : citer une page ne coûte
+  // donc aucune requête de plus, et une page renommée change de libellé partout
+  // en même temps.
+  const { pages: projectPages } = usePagesQuery(projectId ?? null);
 
   const keyByProject = useMemo(
     () => new Map(projects.map((p) => [p.id, p.key])),
@@ -96,7 +109,20 @@ export function useMentionSources(projectId?: string | null): MentionSources {
     }));
   }, [index?.objectives, projectId, freshObjectives]);
 
-  return { issues, objectives, armNow };
+  const pages = useMemo<MentionPage[]>(
+    () =>
+      projectId
+        ? projectPages.map((page) => ({
+            id: page.id,
+            project_id: page.project_id,
+            title: page.title,
+            icon: page.icon,
+          }))
+        : [],
+    [projectId, projectPages],
+  );
+
+  return { issues, objectives, pages, armNow };
 }
 
 /**
@@ -113,7 +139,7 @@ export function useDescriptionMentions(
   projectId: string | null | undefined,
   members: Member[],
 ): MarkdownEditorMentions {
-  const { issues, objectives, armNow } = useMentionSources(projectId);
+  const { issues, objectives, pages, armNow } = useMentionSources(projectId);
 
   const options = useMemo<MentionOption[]>(
     () => [
@@ -137,13 +163,23 @@ export function useDescriptionMentions(
         label: o.name,
         color: o.color,
       })),
+      // Une page SANS TITRE n'est pas citable : « @ » suivi de rien ne désigne
+      // rien, et la pilule s'afficherait vide.
+      ...pages
+        .filter((p) => p.title.trim())
+        .map((p) => ({
+          type: "page" as const,
+          id: p.id,
+          label: p.title,
+          icon: p.icon,
+        })),
     ],
-    [members, issues, objectives],
+    [members, issues, objectives, pages],
   );
 
   const scan = useMemo(
-    () => contentMentionScanner({ members, issues, objectives }),
-    [members, issues, objectives],
+    () => contentMentionScanner({ members, issues, objectives, pages }),
+    [members, issues, objectives, pages],
   );
 
   return { options, scan, onQuery: armNow };

@@ -34,6 +34,7 @@ const CAPABILITY_KEYS = [
   "track",
   "create",
   "comment",
+  "wiki",
   "review",
   "beyond",
 ] as const;

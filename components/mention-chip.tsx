@@ -11,7 +11,7 @@
 // sérialisation du composer, et le corps du commentaire tel qu'il est stocké) :
 // côté modèle comme côté serveur, c'est lui qui marque la mention.
 
-import { FileText } from "lucide-react";
+import { BookText, FileText } from "lucide-react";
 import { cn } from "mangue-ui";
 import { NumoAvatar } from "@/components/actor-avatars";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
@@ -23,7 +23,7 @@ import { UserAvatar } from "@/components/user-avatar";
 export const NUMO_MENTION_ID = "__numo__";
 
 /** Ce qu'une mention peut désigner. Les quatre premiers portent une FIGURE (un
-    portrait, une orbe, un visage) ; ticket et objectif n'en ont pas — ils
+    portrait, une orbe, un visage) ; ticket, objectif et page n'en ont pas — ils
     prennent la pastille d'icône des pilules de contexte de Numo, dans la même
     teinte, pour qu'on lise la même chose des deux côtés du composer. */
 export type MentionChipType =
@@ -32,7 +32,8 @@ export type MentionChipType =
   | "numo"
   | "forge"
   | "issue"
-  | "objective";
+  | "objective"
+  | "page";
 
 export function MentionChip({
   type,
@@ -42,6 +43,7 @@ export function MentionChip({
   avatarUrl,
   iconUrl,
   color,
+  icon,
   className,
 }: {
   type: MentionChipType;
@@ -59,6 +61,8 @@ export function MentionChip({
   iconUrl?: string | null;
   /** Objectif : SA couleur, celle que porte sa cible partout ailleurs. */
   color?: string | null;
+  /** Page : son émoji, quand elle en a un (MIN-273). */
+  icon?: string | null;
   className?: string;
 }) {
   return (
@@ -97,6 +101,17 @@ export function MentionChip({
         // reconnaissent au même signe.
         <span className="flex size-4 items-center justify-center rounded-full bg-blue-500/12 text-blue-600 dark:text-blue-400">
           <FileText className="size-2.5" />
+        </span>
+      ) : type === "page" ? (
+        // Même pastille que la pilule de contexte « page » du composer, même
+        // indigo : le wiki se reconnaît au même signe partout. L'ÉMOJI de la page
+        // prend la place de l'icône quand elle en a un — c'est sa figure à elle.
+        <span className="flex size-4 items-center justify-center rounded-full bg-indigo-500/12 text-indigo-600 dark:text-indigo-400">
+          {icon ? (
+            <span className="text-[0.7em] leading-none">{icon}</span>
+          ) : (
+            <BookText className="size-2.5" />
+          )}
         </span>
       ) : type === "objective" ? (
         <ObjectiveIconBadge

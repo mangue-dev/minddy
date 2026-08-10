@@ -63,12 +63,14 @@ const PINNED_KINDS: ReadonlySet<string> = new Set([
   "project",
   "member",
   "objective",
+  "page",
 ]);
 const MENTION_TYPES: ReadonlySet<string> = new Set([
   "member",
   "project",
   "issue",
   "objective",
+  "page",
 ]);
 
 /** Validate the untrusted client-sent page context (prompt-only trust: every
@@ -144,6 +146,9 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     viewName: pick("viewName"),
     cycleId: pick("cycleId"),
     cycleLabel: pick("cycleLabel"),
+    pageId: pick("pageId"),
+    pageTitle: pick("pageTitle"),
+    pageIcon: pick("pageIcon"),
   };
   const hasAnything = Object.values(ctx).some((v) => v !== undefined);
   return hasAnything ? ctx : null;
@@ -190,6 +195,9 @@ function mentionsNote(metadata: unknown): string {
     if (m.type === "member") return `@${m.label} = team member (user id: ${m.id})`;
     if (m.type === "project") return `@${m.label} = project (id: ${m.id})`;
     if (m.type === "issue") return `@${m.label} = issue (id: ${m.id})`;
+    if (m.type === "page") {
+      return `@${m.label} = wiki page (page id: ${m.id}) — read it with get_page`;
+    }
     return `@${m.label} = objective (id: ${m.id})`;
   });
   return `\n\n[Mentions in this message: ${parts.join("; ")}]`;

@@ -20,6 +20,7 @@ export type AssistantContextKind =
   | "objective"
   | "feedback"
   | "routine"
+  | "page"
   | "view"
   | "cycle"
   | "member";
@@ -131,6 +132,15 @@ export function contextChips(
     });
   }
 
+  if (ctx?.pageId) {
+    chips.push({
+      key: "page",
+      kind: "page",
+      label: ctx.pageTitle?.trim() || t("contextPage"),
+      tooltip: t("contextPage"),
+    });
+  }
+
   if (ctx?.routineId) {
     chips.push({
       key: "routine",
@@ -198,6 +208,7 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   objective: ["objectiveId", "objectiveName", "objectiveColor"],
   feedback: ["feedbackId", "feedbackTitle"],
   routine: ["routineId", "routineTitle"],
+  page: ["pageId", "pageTitle", "pageIcon"],
   view: ["viewId", "viewName", "onglet"],
   cycle: ["cycleId", "cycleLabel"],
 };

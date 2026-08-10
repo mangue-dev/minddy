@@ -74,6 +74,10 @@ const CAPABILITY_KEYS = [
   "track",
   "create",
   "comment",
+  // MIN-273 : les pages. Elles arrivent après « commenter » parce que c'est
+  // l'ordre du geste — on lit et on écrit les tickets, puis la doc qui les
+  // explique.
+  "wiki",
   "review",
   "beyond",
 ] as const;
@@ -253,7 +257,7 @@ export default async function McpPage() {
             </Reveal>
           </header>
 
-          {/* Sept phrases, pas trente-deux noms de fonctions : la liste des
+          {/* Huit phrases, pas quarante noms de fonctions : la liste des
               outils disait la même chose en demandant au lecteur de la
               traduire. Ce sont les clés de la landing — une seule copie. */}
           <RevealGroup as="ul" step={0.06} className="grid gap-3 sm:grid-cols-2">

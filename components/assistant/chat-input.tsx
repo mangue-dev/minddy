@@ -64,6 +64,7 @@ const MENTION_TYPES: ReadonlySet<string> = new Set([
   "project",
   "issue",
   "objective",
+  "page",
 ]);
 
 function mentionFromNode(node: HTMLElement): MentionOption | null {
@@ -76,7 +77,14 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
     id,
     label,
     ...(node.dataset.mentionSeed ? { avatarSeed: node.dataset.mentionSeed } : {}),
-    ...(node.dataset.mentionIcon ? { iconUrl: node.dataset.mentionIcon } : {}),
+    // `data-mention-icon` porte deux choses selon le type, et une seule à la
+    // fois : le favicon d'un projet (une URL) ou l'émoji d'une page. Un attribut
+    // de plus pour la même case n'aurait rien clarifié.
+    ...(node.dataset.mentionIcon
+      ? type === "page"
+        ? { icon: node.dataset.mentionIcon }
+        : { iconUrl: node.dataset.mentionIcon }
+      : {}),
     ...(node.dataset.mentionColor ? { color: node.dataset.mentionColor } : {}),
   };
 }
@@ -366,7 +374,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         pill.dataset.mentionId = option.id;
         pill.dataset.mentionLabel = option.label;
         if (option.avatarSeed) pill.dataset.mentionSeed = option.avatarSeed;
-        if (option.iconUrl) pill.dataset.mentionIcon = option.iconUrl;
+        const iconAttr = option.iconUrl ?? option.icon;
+        if (iconAttr) pill.dataset.mentionIcon = iconAttr;
         if (option.color) pill.dataset.mentionColor = option.color;
         pill.className = MENTION_SLOT_CLASS;
         range.insertNode(pill);
@@ -412,6 +421,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           label: option.label,
           ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
           ...(option.color ? { color: option.color } : {}),
+          ...(option.icon ? { icon: option.icon } : {}),
         });
       }
       return out;
@@ -729,6 +739,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               label={option.label}
               avatarSeed={option.avatarSeed}
               iconUrl={option.iconUrl}
+              icon={option.icon}
               color={option.color}
             />,
             el,

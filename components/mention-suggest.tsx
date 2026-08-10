@@ -7,17 +7,17 @@
 // Numo (contentEditable, liste posée au-dessus) et l'éditeur de description
 // (tiptap, menu porté au corps du document). Elles ne partagent pas leur boîte —
 // l'une est ancrée au composer, l'autre au caret — mais elles partagent la
-// FIGURE et la LIGNE : une personne, un projet, un ticket, un objectif s'y
-// reconnaissent au même signe des deux côtés.
+// FIGURE et la LIGNE : une personne, un projet, un ticket, un objectif, une page
+// du wiki s'y reconnaissent au même signe des deux côtés.
 
-import { FileText } from "lucide-react";
+import { BookText, FileText } from "lucide-react";
 import { cn } from "mangue-ui";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 
 export interface MentionOption {
-  type: "member" | "project" | "issue" | "objective";
+  type: "member" | "project" | "issue" | "objective" | "page";
   id: string;
   /** Ce qui s'écrit après le « @ ». */
   label: string;
@@ -27,6 +27,8 @@ export interface MentionOption {
   iconUrl?: string | null;
   /** Objectifs : leur couleur — celle que porte leur cible partout ailleurs. */
   color?: string | null;
+  /** Pages : leur émoji, quand elles en ont un (MIN-273). */
+  icon?: string | null;
   /** Second rang de la ligne : le titre d'un ticket, le nom du projet d'un
       objectif. Ce qui distingue MIN-42 de MIN-43 quand on choisit. */
   detail?: string;
@@ -75,6 +77,22 @@ export function MentionFigure({
         className={cn("shrink-0 rounded-full", className)}
         iconClassName="size-3"
       />
+    );
+  }
+  if (option.type === "page") {
+    return (
+      <span
+        className={cn(
+          "flex shrink-0 items-center justify-center rounded-full bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
+          className,
+        )}
+      >
+        {option.icon ? (
+          <span className="text-[0.7rem] leading-none">{option.icon}</span>
+        ) : (
+          <BookText className="size-3" />
+        )}
+      </span>
     );
   }
   return (

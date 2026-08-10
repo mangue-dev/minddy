@@ -62,7 +62,7 @@ export const PUBLIC_ROUTES = [
     fr: "/fr",
     namespace: "Landing",
     titleIsAbsolute: true,
-    lastModified: "2026-08-06",
+    lastModified: "2026-08-10",
     priority: 1,
   },
   {
@@ -78,7 +78,7 @@ export const PUBLIC_ROUTES = [
     en: "/mcp",
     fr: "/fr/mcp",
     namespace: "Mcp",
-    lastModified: "2026-08-09",
+    lastModified: "2026-08-10",
     priority: 0.9,
   },
   // Seule page dont le `lastModified` n'est PAS tenu à la main : ici,
