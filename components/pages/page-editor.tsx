@@ -2,21 +2,17 @@
 
 // L'éditeur d'une page — le montage, et rien que le montage.
 //
-// Ce qu'il sait des blocs tient en un appel : `blockExtensions()`. Il n'en
-// nomme AUCUN, et c'est la propriété qu'il faut garder. Le jour où l'on ajoute
-// un bloc tableau, ce fichier ne bouge pas.
+// Ce qu'il sait du DOCUMENT tient en un appel : `pageExtensions()`. Il ne nomme
+// aucun bloc, et c'est la propriété qu'il faut garder — le jour où l'on ajoute
+// un bloc tableau, ce fichier ne bouge pas. Et ce même appel est celui que fait
+// la projection markdown (lib/pages-markdown.ts) : l'éditeur et l'agent lisent
+// le même schéma, par construction.
 //
-// Ce qu'il apporte par-dessus le catalogue :
-//  - le SUBSTRAT que les blocs supposent (document, texte, marques, annuler /
-//    refaire, liens) — StarterKit avec les nœuds de bloc coupés, puisque le
-//    registre les apporte tous ;
-//  - `UniqueID` sur tous les nœuds de bloc du catalogue : c'est lui qui donne
-//    à la poignée sa cible, au lien de bloc son ancre, à la sauvegarde sa
-//    fusion par bloc (MIN-271) et aux futurs commentaires la leur ;
+// Ce qu'il apporte par-dessus, et qui ne touche pas au document :
 //  - `NodeRange` : la sélection de plusieurs blocs d'un glissé ou d'un ⇧-clic,
 //    sur laquelle opèrent toutes les actions du menu ⋯ ;
-//  - les marks de couleur, et les raccourcis de conversion du registre ;
-//  - les mentions, reprises telles quelles de components/markdown-mention.tsx ;
+//  - la pilule de mention (components/markdown-mention.tsx) posée sur le nœud
+//    nu du schéma, et sa suggestion « @ » ;
 //  - le menu « / », branché sur le registre, et le chrome du bloc
 //    (components/pages/block-gutter.tsx) : la marge au survol et le menu ⋯.
 //
@@ -31,10 +27,7 @@ import {
   type Extensions,
   type JSONContent,
 } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
-import { Markdown } from "tiptap-markdown";
-import UniqueID from "@tiptap/extension-unique-id";
 import { NodeRange } from "@tiptap/extension-node-range";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
@@ -43,13 +36,7 @@ import {
   MentionSuggest,
   type MentionSuggestOptions,
 } from "@/components/markdown-mention";
-import {
-  BLOCK_ID_ATTRIBUTE,
-  BLOCK_ID_TYPES,
-  PageBlockShortcuts,
-  blockExtensions,
-  pageColorExtensions,
-} from "@/components/pages/blocks";
+import { pageExtensions } from "@/components/pages/page-extensions";
 import { BlockGutter } from "@/components/pages/block-gutter";
 import {
   PageSlashCommand,
@@ -122,37 +109,12 @@ export function PageEditor({
   const extensions = useMemo(
     () =>
       [
-        // Le substrat. Tous les nœuds de BLOC sont coupés : ils viennent du
-        // registre, et deux définitions du même nœud font lever tiptap.
-        StarterKit.configure({
-          paragraph: false,
-          heading: false,
-          blockquote: false,
-          codeBlock: false,
-          horizontalRule: false,
-          bulletList: false,
-          orderedList: false,
-          listItem: false,
-        }),
-        ...blockExtensions(),
-        ...pageColorExtensions(),
-        PageBlockShortcuts,
-        MentionNode,
+        // Le SCHÉMA de la page, celui-là même que monte la projection markdown
+        // (components/pages/page-extensions.ts). L'éditeur y ajoute son chrome,
+        // et rien qui touche au document.
+        ...pageExtensions({ mention: MentionNode }),
         ...(mentions ? [MentionSuggest.configure(mentions)] : []),
-        UniqueID.configure({
-          attributeName: BLOCK_ID_ATTRIBUTE,
-          types: BLOCK_ID_TYPES,
-        }),
         NodeRange,
-        Markdown.configure({
-          // `true` : le dépliant et la sous-page se projettent en HTML minimal
-          // (cf. blocks/details.ts et blocks/subpage.ts) — markdown n'a ni l'un
-          // ni l'autre. Sans ça, les deux repartiraient en texte échappé.
-          html: true,
-          linkify: true,
-          transformPastedText: true,
-          transformCopiedText: true,
-        }),
         Placeholder.configure({
           placeholder: t("placeholder"),
           showOnlyCurrent: true,

@@ -21,7 +21,7 @@ import {
   useImperativeHandle,
   useState,
 } from "react";
-import { Extension, Node, type Editor } from "@tiptap/core";
+import { Extension, type Editor } from "@tiptap/core";
 import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
@@ -36,86 +36,16 @@ import {
   type MentionOption,
 } from "@/components/mention-suggest";
 import { memberLabel, type MentionScan, type ScannedMention } from "@/lib/mention-scan";
+import { MentionNodeBase } from "@/components/mention-node";
 
 /* ── Le nœud ─────────────────────────────────────────────────────────── */
 
-/** Les attributs que porte une mention posée. Ils suffisent à la redessiner
-    sans rien re-résoudre — une annulation ⌘Z restitue le nœud tel quel. */
-const ATTRS = ["mentionType", "mentionId", "mentionLabel", "seed", "color", "icon"] as const;
-
-export const MentionNode = Node.create({
-  name: "mention",
-  group: "inline",
-  inline: true,
-  atom: true,
-  // Insécable : le caret ne rentre pas dedans, et un retour arrière l'efface
-  // d'un bloc — comme la pilule d'un commentaire.
-  selectable: false,
-  draggable: false,
-
-  addAttributes() {
-    return Object.fromEntries(ATTRS.map((name) => [name, { default: null }]));
-  },
-
-  parseHTML() {
-    return [
-      {
-        tag: "span[data-mention-id]",
-        getAttrs: (el) => {
-          const node = el as HTMLElement;
-          return {
-            mentionType: node.dataset.mentionType ?? "member",
-            mentionId: node.dataset.mentionId ?? null,
-            mentionLabel: node.dataset.mentionLabel ?? "",
-            seed: node.dataset.mentionSeed ?? null,
-            color: node.dataset.mentionColor ?? null,
-            icon: node.dataset.mentionIcon ?? null,
-          };
-        },
-      },
-    ];
-  },
-
-  renderHTML({ node }) {
-    return [
-      "span",
-      {
-        "data-mention-type": node.attrs.mentionType,
-        "data-mention-id": node.attrs.mentionId,
-        "data-mention-label": node.attrs.mentionLabel,
-        ...(node.attrs.seed ? { "data-mention-seed": node.attrs.seed } : {}),
-        ...(node.attrs.color ? { "data-mention-color": node.attrs.color } : {}),
-        ...(node.attrs.icon ? { "data-mention-icon": node.attrs.icon } : {}),
-      },
-      `@${node.attrs.mentionLabel}`,
-    ];
-  },
-
-  /** Ce qu'une copie en texte brut emporte — l'arobase comprise. */
-  renderText({ node }) {
-    return `@${node.attrs.mentionLabel}`;
-  },
-
+/** Le nœud PLUS sa pilule. Le schéma, les attributs et la sérialisation markdown
+    vivent à part (components/mention-node.ts) : la projection markdown des pages
+    monte le nœud nu, hors navigateur, sans React. */
+export const MentionNode = MentionNodeBase.extend({
   addNodeView() {
     return ReactNodeViewRenderer(MentionNodeView);
-  },
-
-  addStorage() {
-    return {
-      markdown: {
-        // `false` : pas d'échappement. Un libellé qui contient une étoile ou un
-        // souligné doit repartir TEL QUEL — c'est sur lui que le scanner
-        // retrouvera la mention à la relecture, et « Jean\*Marc » ne serait plus
-        // le nom de personne.
-        serialize(
-          state: { text: (value: string, escape?: boolean) => void },
-          node: { attrs: Record<string, string> },
-        ) {
-          state.text(`@${node.attrs.mentionLabel}`, false);
-        },
-        parse: {},
-      },
-    };
   },
 });
 

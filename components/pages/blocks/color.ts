@@ -75,6 +75,22 @@ function colorMark(kind: PageColorKind) {
     renderHTML({ HTMLAttributes }) {
       return ["span", mergeAttributes(HTMLAttributes), 0];
     },
+
+    /**
+     * La couleur ne se dit pas en markdown : elle est PERDUE à la projection,
+     * proprement — le texte passe, la mark tombe (cf. lib/pages-markdown.ts).
+     *
+     * Le déclarer explicitement n'est pas une redite du commentaire d'en-tête.
+     * Sans spec markdown, tiptap-markdown retombe sur sa sérialisation HTML des
+     * marks inconnues et écrit `<span data-page-text="red">…</span>` au milieu du
+     * markdown : la couleur ne serait alors pas perdue mais RECOPIÉE en balise,
+     * dans ce que lit Numo. Une perte franche vaut mieux qu'une fuite.
+     */
+    addStorage() {
+      return {
+        markdown: { serialize: { open: "", close: "" }, parse: {} },
+      };
+    },
   });
 }
 
