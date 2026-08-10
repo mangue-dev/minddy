@@ -30,10 +30,15 @@ export function EmojiPicker({
   children,
 }: {
   value: string | null;
-  /** `null` retire l'icône — la page reprend l'icône de document par défaut. */
+  /** `null` retire l'icône — la page n'en montre alors AUCUNE (page-header.tsx). */
   onChange: (emoji: string | null) => void;
   className?: string;
-  /** Le déclencheur. Absent : un bouton qui montre l'emoji courant. */
+  /**
+   * Le déclencheur. Absent : un bouton qui montre l'emoji courant — à ne
+   * prendre que lorsqu'il y en a un. Sans icône, c'est à l'appelant de fournir
+   * son propre déclencheur : un 📄 posé d'office se lit comme une icône
+   * choisie, et cache justement qu'on peut en choisir une.
+   */
   children?: React.ReactNode;
 }) {
   const t = useTranslations("Pages");
@@ -49,7 +54,7 @@ export function EmojiPicker({
             aria-label={t("changeIcon")}
             className={cn("size-12 shrink-0 p-0 text-4xl leading-none", className)}
           >
-            {value ?? "📄"}
+            {value}
           </Button>
         )}
       </PopoverTrigger>

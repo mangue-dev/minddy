@@ -38,6 +38,7 @@ function page(overrides: Partial<Page> & { id: string }): Page {
     updated_at: "2026-08-10T00:00:00Z",
     deleted_at: null,
     deleted_by: null,
+    parent_block_removed: false,
     deleted_root_id: null,
     ...overrides,
   };

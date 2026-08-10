@@ -1637,7 +1637,19 @@
     "presenceUnknown": "Someone",
     "slashHint": "Type to filter blocks, or pick one below",
     "toggleExpand": "Expand",
-    "toggleCollapse": "Collapse"
+    "toggleCollapse": "Collapse",
+    "subpageMissing": "Page moved to trash",
+    "subpageRestore": "Restore",
+    "subpageDeleteTitle": "Move {count, plural, one {this page} other {this page and its # sub-pages}} to trash?",
+    "subpageDeleteBody": "{count, plural, one {It stays in the trash for 30 days, and can be restored from there.} other {All # go to the trash together, for 30 days, and can be restored from there.}}",
+    "subpageDeleteCancel": "Keep the page",
+    "subpageDeleteConfirm": "Move to trash",
+    "trashedOne": "Page moved to trash.",
+    "restored": "Page restored.",
+    "restoreFailed": "Could not restore the page.",
+    "addIcon": "Add icon",
+    "duplicated": "Page duplicated.",
+    "duplicateFailed": "Could not duplicate the page."
   },
   "Picker": {
     "createNamed": "Create “{name}”",

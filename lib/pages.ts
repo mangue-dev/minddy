@@ -35,6 +35,13 @@ export interface Page {
   deleted_by: string | null;
   /** La page par laquelle la suppression est arrivée (null sur la racine). */
   deleted_root_id: string | null;
+  /**
+   * Le corps du parent citait cette page, et son bloc en a été retiré au moment
+   * de la mise à la corbeille (MIN-272). C'est ce qui permet à la restauration
+   * de remettre le bloc **là où il y en avait un** — et nulle part ailleurs :
+   * une page née dans la sidebar n'a jamais eu de bloc chez son parent.
+   */
+  parent_block_removed: boolean;
 }
 
 /**

@@ -91,6 +91,120 @@ export function selectedBlockCount(editor: Editor): number {
   return blocksIn(editor, range).length;
 }
 
+/**
+ * La page citée quand la sélection est UN bloc sous-page, et rien d'autre.
+ *
+ * C'est ce qui fait basculer le menu ⋯ d'un vocabulaire de bloc à un
+ * vocabulaire de PAGE (MIN-272) : dupliquer copie la page, supprimer la met à
+ * la corbeille, et « transformer en » comme les couleurs disparaissent — un
+ * lien vers un document ne se convertit pas en citation et n'a pas de couleur
+ * de texte à choisir.
+ *
+ * `null` dès que la sélection porte sur autre chose ou sur plusieurs blocs :
+ * une sélection mêlée retombe sur le menu ordinaire, où « dupliquer » veut dire
+ * dupliquer des blocs. Deux vocabulaires dans un même menu, c'est un menu qui
+ * ment sur la moitié de ce qu'il propose.
+ */
+export function selectedSubpageId(editor: Editor): string | null {
+  const range = blockRange(editor);
+  if (!range) return null;
+  const $from = editor.state.doc.resolve(range.from);
+  const parentStart = $from.start();
+
+  let found: string | null = null;
+  let count = 0;
+  $from.parent.forEach((child, offset) => {
+    const pos = parentStart + offset;
+    if (pos < range.from || pos >= range.to) return;
+    count += 1;
+    const id = child.attrs?.pageId;
+    if (child.type.name === "subpage" && typeof id === "string" && id) {
+      found = id;
+    }
+  });
+  return count === 1 ? found : null;
+}
+
+/**
+ * Poser un bloc sous-page vers `pageId` à la position `at` — ce que fait
+ * « dupliquer » sur un bloc sous-page, une fois la page copiée.
+ *
+ * La position est passée, et non relue : la copie est un aller-retour au
+ * serveur, et pendant ce temps la sélection a pu partir ailleurs. La relire au
+ * retour poserait la copie sous le bloc où l'on se trouve ALORS, pas sous celui
+ * qu'on a dupliqué. Elle est bornée au document plutôt que refusée — le pire
+ * qui puisse arriver est un bloc en fin de page, là où refuser perdrait une
+ * page déjà écrite en base.
+ *
+ * Sans `focus()` non plus : reprendre le curseur une seconde après le clic le
+ * volerait à qui s'est remis à taper entre-temps.
+ */
+export function insertSubpageAfter(
+  editor: Editor,
+  pageId: string,
+  at: number
+): boolean {
+  const pos = Math.min(Math.max(at, 0), editor.state.doc.content.size);
+  return editor
+    .chain()
+    .insertContentAt(pos, { type: "subpage", attrs: { pageId } })
+    .run();
+}
+
+/* ── Deux pièges du DOM des vues de nœud ──────────────────────────────── */
+
+/**
+ * L'élément qui porte VRAIMENT le style d'un bloc, à partir de ce que
+ * `view.nodeDOM` retourne.
+ *
+ * Une vue de nœud React (la sous-page, l'item de tâche) n'est pas rendue dans
+ * cet élément-là : tiptap-react crée un `div.react-renderer` NU et monte le
+ * `NodeViewWrapper` dedans. Tout le style du bloc — son rembourrage, sa hauteur
+ * de ligne — vit donc un cran plus bas, et mesurer le conteneur revient à
+ * mesurer rien : la gouttière (poignée + `+`) se calait sur un div sans
+ * rembourrage et flottait au-dessus du texte, d'exactement la valeur du `py-`
+ * du bloc.
+ *
+ * On descend d'un cran, et d'un seul : ce qu'on cherche est le bloc, pas son
+ * contenu.
+ */
+export function styledBox(dom: HTMLElement): HTMLElement {
+  const inner = dom.firstElementChild;
+  return dom.classList.contains("react-renderer") && inner instanceof HTMLElement
+    ? inner
+    : dom;
+}
+
+/** La marque d'une ancre rendue par une vue de nœud — celle que ni le style ni
+    le clic de l'éditeur ne doivent traiter comme un lien du texte. */
+export const BLOCK_LINK_CLASS = "page-block-link";
+
+/**
+ * Le clic sur le lien d'un BLOC n'appartient pas à l'extension Link.
+ *
+ * Elle attrape tout `<a>` du document, sans savoir d'où il vient, et fait
+ * `window.open(href, target)` — donc un onglet neuf. Sur le bloc sous-page, ça
+ * faisait DEUX navigations pour un clic : le nouvel onglet de l'extension, et
+ * celle du navigateur qui suit l'ancre dans l'onglet courant. Aucune des deux
+ * n'était voulue.
+ *
+ * Posé dans `editorProps`, qui passe AVANT tous les plugins dans `someProp` de
+ * ProseMirror : rendre `true` suffit à couper l'extension. Le `preventDefault`
+ * coupe l'autre moitié, et la vue du bloc prend le relais avec une navigation
+ * d'application (blocks/subpage-view.tsx).
+ *
+ * Avec un MODIFICATEUR, on ne préempte que l'extension : ⌘/Ctrl-clic veut dire
+ * « dans un nouvel onglet », et le navigateur le fait mieux que nous.
+ */
+export function handleBlockLinkClick(event: MouseEvent): boolean {
+  const target = event.target as Element | null;
+  if (!target?.closest?.(`.${BLOCK_LINK_CLASS}`)) return false;
+  const modified =
+    event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+  if (!modified) event.preventDefault();
+  return true;
+}
+
 /* ── Les actions ──────────────────────────────────────────────────────── */
 
 /**

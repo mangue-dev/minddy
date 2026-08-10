@@ -22,6 +22,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 interface Row {
+  parent_block_removed: boolean;
   id: string;
   project_id: string;
   parent_id: string | null;
@@ -57,31 +58,39 @@ vi.mock("@/lib/supabase-service", () => {
   const from = () => {
     const filters: Filter[] = [];
     let mode: "select" | "insert" | "update" | "delete" = "select";
-    let payload: Record<string, unknown> = {};
+    let payload: Record<string, unknown> | Record<string, unknown>[] = {};
     let orderColumn: string | null = null;
 
     const matching = () => h.rows.filter((row) => filters.every((f) => f(row)));
 
     const run = (): { data: Record<string, unknown>[] | null; error: null } => {
       if (mode === "insert") {
-        h.seq += 1;
-        const row = {
-          id: `page-${h.seq}`,
-          parent_id: null,
-          title: "",
-          icon: null,
-          content: { type: "doc", content: [] },
-          version: 1,
-          created_by: null,
-          created_at: `2026-08-10T00:00:0${h.seq}Z`,
-          updated_at: `2026-08-10T00:00:0${h.seq}Z`,
-          deleted_at: null,
-          deleted_by: null,
-          deleted_root_id: null,
-          ...payload,
-        };
-        h.rows.push(row);
-        return { data: [row], error: null };
+        // Un objet OU un tableau : la duplication écrit toute une branche d'un
+        // coup (MIN-272), et une copie à moitié posée serait un arbre faux.
+        const inserted = (Array.isArray(payload) ? payload : [payload]).map(
+          (values) => {
+            h.seq += 1;
+            const row = {
+              id: `page-${h.seq}`,
+              parent_id: null,
+              title: "",
+              icon: null,
+              content: { type: "doc", content: [] },
+              version: 1,
+              created_by: null,
+              created_at: `2026-08-10T00:00:0${h.seq}Z`,
+              updated_at: `2026-08-10T00:00:0${h.seq}Z`,
+              deleted_at: null,
+              deleted_by: null,
+              deleted_root_id: null,
+              parent_block_removed: false,
+              ...values,
+            };
+            h.rows.push(row);
+            return row;
+          }
+        );
+        return { data: inserted, error: null };
       }
       const rows = matching();
       if (mode === "update") {
@@ -100,7 +109,7 @@ vi.mock("@/lib/supabase-service", () => {
 
     const query: Record<string, unknown> = {};
     query.select = () => query;
-    query.insert = (row: Record<string, unknown>) => {
+    query.insert = (row: Record<string, unknown> | Record<string, unknown>[]) => {
       mode = "insert";
       payload = row;
       return query;
@@ -165,6 +174,7 @@ vi.mock("@/lib/server/project-access", () => ({
 
 import {
   createPage,
+  duplicatePage,
   getPage,
   listPages,
   restorePage,
@@ -436,5 +446,262 @@ describe("getPage", () => {
       status: 404,
       errorKey: "pageNotFound",
     });
+  });
+});
+
+/**
+ * MIN-272 — le MIROIR : le bloc `subpage` dans le corps du parent.
+ *
+ * La même information est portée à deux endroits, et c'est là que sont tous les
+ * pièges. `parent_id` fait la vérité, le bloc n'en est qu'une vue — et c'est le
+ * serveur qui tient la vue à jour, parce que le geste part le plus souvent de la
+ * sidebar, sans que personne n'ait le parent ouvert.
+ *
+ * Le pendant côté document (détection de la suppression du bloc dans l'éditeur,
+ * fonctions pures) est dans lib/pages-subpage.test.ts.
+ */
+describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
+  /** Un corps qui cite `pageId`, entouré d'un peu de texte. */
+  const bodyCiting = (pageId: string) => ({
+    type: "doc",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "avant" }] },
+      { type: "subpage", attrs: { pageId } },
+      { type: "paragraph", content: [{ type: "text", text: "après" }] },
+    ],
+  });
+
+  const bodyOf = (id: string) =>
+    rowOf(id).content as { content: { type: string; attrs?: { pageId?: string } }[] };
+
+  it("retire le bloc du corps du parent quand la page part à la corbeille", async () => {
+    const parent = await create("Guide");
+    const child = await create("Chapitre", parent);
+    await updatePage({
+      pageId: parent,
+      actorId: ACTOR,
+      input: { content: bodyCiting(child) },
+    });
+    const before = rowOf(parent).version;
+
+    await trashPage(child, ACTOR);
+
+    expect(bodyOf(parent).content.map((node) => node.type)).toEqual([
+      "paragraph",
+      "paragraph",
+    ]);
+    // La version BOUGE : c'est elle qui envoie en fusion (MIN-271) le client
+    // qui aurait ce parent ouvert, et sa suppression y passe sans bruit.
+    expect(rowOf(parent).version).toBe(before + 1);
+    expect(rowOf(child).parent_block_removed).toBe(true);
+  });
+
+  it("remet le bloc en fin de corps à la restauration", async () => {
+    const parent = await create("Guide");
+    const child = await create("Chapitre", parent);
+    await updatePage({
+      pageId: parent,
+      actorId: ACTOR,
+      input: { content: bodyCiting(child) },
+    });
+
+    await trashPage(child, ACTOR);
+    await restorePage(child, ACTOR);
+
+    const nodes = bodyOf(parent).content;
+    expect(nodes.map((node) => node.type)).toEqual([
+      "paragraph",
+      "paragraph",
+      "subpage",
+    ]);
+    expect(nodes[2].attrs?.pageId).toBe(child);
+    // La marque ne survit pas : c'est le prochain passage à la corbeille qui
+    // dira ce qu'il en est alors.
+    expect(rowOf(child).parent_block_removed).toBe(false);
+  });
+
+  it("n'INVENTE pas de bloc pour une page née dans la sidebar", async () => {
+    // Le piège du sens inverse : une page créée depuis l'arbre n'a jamais eu de
+    // bloc chez son parent. La restaurer ne doit pas en faire apparaître un
+    // dans un document que personne n'a écrit comme ça.
+    const parent = await create("Guide");
+    const child = await create("Chapitre", parent);
+    await updatePage({
+      pageId: parent,
+      actorId: ACTOR,
+      input: {
+        content: {
+          type: "doc",
+          content: [{ type: "paragraph", content: [{ type: "text", text: "seul" }] }],
+        },
+      },
+    });
+    const version = rowOf(parent).version;
+
+    await trashPage(child, ACTOR);
+    await restorePage(child, ACTOR);
+
+    expect(bodyOf(parent).content.map((node) => node.type)).toEqual(["paragraph"]);
+    expect(rowOf(parent).version).toBe(version);
+  });
+
+  it("ne touche qu'au corps de la RACINE du geste, pas à ceux des descendants", async () => {
+    // Les blocs des descendants vivent dans des corps qui partent à la
+    // corbeille en même temps : les réécrire serait du travail pour rien, et
+    // ferait revenir des pages amputées de leurs liens à la restauration.
+    const parent = await create("Guide");
+    const child = await create("Chapitre", parent);
+    const grand = await create("Section", child);
+    await updatePage({
+      pageId: child,
+      actorId: ACTOR,
+      input: { content: bodyCiting(grand) },
+    });
+    const version = rowOf(child).version;
+
+    await trashPage(child, ACTOR);
+
+    expect(bodyOf(child).content.map((node) => node.type)).toContain("subpage");
+    expect(rowOf(child).version).toBe(version);
+  });
+
+  it("ne remet rien en double quand le bloc a été recréé entre-temps", async () => {
+    const parent = await create("Guide");
+    const child = await create("Chapitre", parent);
+    await updatePage({
+      pageId: parent,
+      actorId: ACTOR,
+      input: { content: bodyCiting(child) },
+    });
+
+    await trashPage(child, ACTOR);
+    // Quelqu'un repose un bloc vers la même page avant qu'on restaure.
+    await updatePage({
+      pageId: parent,
+      actorId: ACTOR,
+      input: { content: bodyCiting(child) },
+    });
+    await restorePage(child, ACTOR);
+
+    const subpages = bodyOf(parent).content.filter((node) => node.type === "subpage");
+    expect(subpages).toHaveLength(1);
+  });
+
+  it("laisse la page partir à la corbeille même si le corps du parent est illisible", async () => {
+    // Le miroir est un confort, pas une condition : refuser la suppression
+    // parce que la vue n'a pas suivi serait le mauvais échange.
+    const parent = await create("Guide");
+    const child = await create("Chapitre", parent);
+    rowOf(parent).content = null as unknown as Row["content"];
+
+    const result = await trashPage(child, ACTOR);
+
+    expect(result).toMatchObject({ ok: true, trashed: 1 });
+    expect(rowOf(child).deleted_at).not.toBeNull();
+  });
+});
+
+/**
+ * MIN-272 — la DUPLICATION d'une page.
+ *
+ * Ce qui coûte cher à rater tient en une phrase : une copie dont les blocs
+ * pointent encore vers les ORIGINAUX. On aurait deux arbres dans la sidebar et
+ * un seul jeu de liens — une copie qu'on croit indépendante et qui renvoie
+ * ailleurs, ce qu'on ne découvre qu'en cliquant.
+ */
+describe("duplicatePage (MIN-272)", () => {
+  const bodyCiting = (...pageIds: string[]) => ({
+    type: "doc",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "corps" }] },
+      ...pageIds.map((pageId) => ({ type: "subpage", attrs: { pageId } })),
+    ],
+  });
+
+  const citedBy = (id: string) =>
+    ((rowOf(id).content as { content: { type: string; attrs?: { pageId?: string } }[] })
+      .content.filter((node) => node.type === "subpage")
+      .map((node) => node.attrs?.pageId ?? null));
+
+  it("copie la page ET sa descendance, sous le même parent", async () => {
+    const root = await create("Guide");
+    const child = await create("Chapitre", root);
+    await create("Section", child);
+
+    const result = await duplicatePage(root, ACTOR);
+    if (!result.ok) throw new Error(result.errorKey);
+
+    expect(result.page.id).not.toBe(root);
+    expect(result.page.title).toBe("Guide");
+    expect(result.page.parent_id).toBeNull();
+    // Trois pages copiées, donc six en tout.
+    expect(h.rows).toHaveLength(6);
+    // La racine de la copie passe APRÈS l'originale dans sa fratrie.
+    expect(result.page.position > rowOf(root).position).toBe(true);
+  });
+
+  it("réécrit les liens INTERNES vers la copie, jamais vers l'original", async () => {
+    const root = await create("Guide");
+    const child = await create("Chapitre", root);
+    await updatePage({
+      pageId: root,
+      actorId: ACTOR,
+      input: { content: bodyCiting(child) },
+    });
+
+    const result = await duplicatePage(root, ACTOR);
+    if (!result.ok) throw new Error(result.errorKey);
+
+    const [cited] = citedBy(result.page.id);
+    expect(cited).not.toBe(child);
+    // Et ce qu'il cite est bien LA copie de l'enfant : même titre, parent copié.
+    expect(rowOf(cited!).title).toBe("Chapitre");
+    expect(rowOf(cited!).parent_id).toBe(result.page.id);
+    // L'original n'a pas bougé d'un cheveu.
+    expect(citedBy(root)).toEqual([child]);
+  });
+
+  it("laisse INTACT un lien qui sort de la branche copiée", async () => {
+    // Une page du projet qui n'est pas dans la copie doit continuer d'être
+    // citée telle quelle : on copie une branche, pas le monde autour.
+    const ailleurs = await create("Ailleurs");
+    const root = await create("Guide");
+    const child = await create("Chapitre", root);
+    await updatePage({
+      pageId: root,
+      actorId: ACTOR,
+      input: { content: bodyCiting(child, ailleurs) },
+    });
+
+    const result = await duplicatePage(root, ACTOR);
+    if (!result.ok) throw new Error(result.errorKey);
+
+    const cited = citedBy(result.page.id);
+    expect(cited[0]).not.toBe(child);
+    expect(cited[1]).toBe(ailleurs);
+  });
+
+  it("n'emporte pas les sous-pages déjà à la corbeille", async () => {
+    const root = await create("Guide");
+    const child = await create("Chapitre", root);
+    await trashPage(child, ACTOR);
+
+    const result = await duplicatePage(root, ACTOR);
+    if (!result.ok) throw new Error(result.errorKey);
+
+    const copies = h.rows.filter(
+      (row) => (row as unknown as Row).parent_id === result.page.id
+    );
+    expect(copies).toHaveLength(0);
+  });
+
+  it("répond 404 sur une page corbeillée, inconnue, ou hors des projets de l'acteur", async () => {
+    const root = await create("Guide");
+    await trashPage(root, ACTOR);
+    expect(await duplicatePage(root, ACTOR)).toMatchObject({ ok: false, status: 404 });
+
+    const other = await create("Autre");
+    h.access = new Set();
+    expect(await duplicatePage(other, ACTOR)).toMatchObject({ ok: false, status: 404 });
   });
 });

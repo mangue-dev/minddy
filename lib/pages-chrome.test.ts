@@ -41,6 +41,8 @@ import {
 import {
   blockLink,
   blockRange,
+  handleBlockLinkClick,
+  styledBox,
   deleteBlocks,
   duplicateBlocks,
   insertBlockAround,
@@ -345,5 +347,71 @@ describe("les raccourcis de conversion", () => {
     editor.commands.keyboardShortcut("Mod-Alt-3");
     expect(topLevel(editor)).toEqual(["heading", "heading"]);
     editor.destroy();
+  });
+});
+
+/**
+ * Les deux pièges du DOM des vues de nœud REACT (MIN-272).
+ *
+ * Ils se ressemblent : dans les deux cas, l'éditeur traite un élément produit
+ * par tiptap-react comme s'il venait du document, et se trompe de cible.
+ */
+describe("le DOM d'une vue de nœud", () => {
+  it("mesure l'élément qui porte le style, pas le conteneur de tiptap-react", () => {
+    // `view.nodeDOM` rend un `div.react-renderer` NU : tout le style du bloc —
+    // son rembourrage, sa hauteur de ligne — vit dans le `NodeViewWrapper`
+    // qu'il contient. Mesurer le conteneur revient à mesurer rien, et la
+    // gouttière flottait au-dessus du texte d'exactement le `py-` du bloc.
+    const container = document.createElement("div");
+    container.className = "react-renderer";
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-node-view-wrapper", "");
+    container.append(wrapper);
+
+    expect(styledBox(container)).toBe(wrapper);
+
+    // Un bloc ordinaire (un paragraphe rendu par ProseMirror) se mesure tel quel.
+    const paragraph = document.createElement("p");
+    paragraph.append(document.createTextNode("texte"));
+    expect(styledBox(paragraph)).toBe(paragraph);
+
+    // Un conteneur vide n'a rien où descendre : on ne rend pas `null`.
+    const empty = document.createElement("div");
+    empty.className = "react-renderer";
+    expect(styledBox(empty)).toBe(empty);
+  });
+
+  it("garde le clic d'un lien de bloc hors de l'extension Link", () => {
+    // L'extension attrape TOUT `<a>` du document et fait `window.open` : sur le
+    // bloc sous-page, un clic donnait deux navigations — un onglet neuf, et
+    // l'ancre suivie dans l'onglet courant.
+    const link = document.createElement("a");
+    link.className = "page-block-link";
+    const inner = document.createElement("span");
+    link.append(inner);
+    document.body.append(link);
+
+    const plain = new MouseEvent("click", { cancelable: true });
+    inner.dispatchEvent(plain);
+    expect(handleBlockLinkClick(plain)).toBe(true);
+    expect(plain.defaultPrevented).toBe(true);
+
+    // ⌘-clic : on coupe l'extension, mais on laisse le navigateur ouvrir son
+    // onglet — il le fait mieux que nous.
+    const meta = new MouseEvent("click", { cancelable: true, metaKey: true });
+    inner.dispatchEvent(meta);
+    expect(handleBlockLinkClick(meta)).toBe(true);
+    expect(meta.defaultPrevented).toBe(false);
+
+    // Un lien du TEXTE ne nous regarde pas : l'extension garde la main.
+    const other = document.createElement("a");
+    document.body.append(other);
+    const textLink = new MouseEvent("click", { cancelable: true });
+    other.dispatchEvent(textLink);
+    expect(handleBlockLinkClick(textLink)).toBe(false);
+    expect(textLink.defaultPrevented).toBe(false);
+
+    link.remove();
+    other.remove();
   });
 });

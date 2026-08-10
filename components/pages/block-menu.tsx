@@ -57,8 +57,10 @@ import {
   deleteBlocks,
   duplicateBlocks,
   focusBlockRange,
+  insertSubpageAfter,
   selectedBlockCount,
   selectedBlockId,
+  selectedSubpageId,
 } from "@/components/pages/block-actions";
 
 /** La pastille d'une couleur, peinte avec le jeton qu'elle pose — le « A »
@@ -146,6 +148,37 @@ export function BlockMenu({
   const items = useMemo(() => (open ? turnIntoItems(editor) : []), [open, editor]);
   const count = useMemo(() => (open ? selectedBlockCount(editor) : 0), [open, editor]);
 
+  /**
+   * Un bloc sous-page seul en sélection : le menu change de VOCABULAIRE
+   * (MIN-272).
+   *
+   * Ce qu'on retire — « transformer en » et les couleurs — n'est pas une
+   * simplification de confort : un lien vers un document ne se convertit pas en
+   * citation, et son texte n'est pas du texte à peindre, c'est le titre d'une
+   * autre page, relu à chaque rendu. Les deux entrées agissaient sur un bloc
+   * qui n'a ni l'un ni l'autre.
+   *
+   * Et ce qui reste parle de la PAGE : dupliquer la copie, elle et ses
+   * sous-pages ; supprimer la met à la corbeille — d'où le libellé de la
+   * sidebar, mot pour mot, parce que c'est le même geste.
+   */
+  const subpageId = useMemo(
+    () => (open ? selectedSubpageId(editor) : null),
+    [open, editor]
+  );
+
+  const duplicateSubpage = async (pageId: string) => {
+    const duplicate = editor.storage.subpage?.duplicate;
+    // La place de la copie est retenue MAINTENANT : copier est un aller-retour
+    // au serveur, et la sélection aura peut-être bougé quand il rend la main.
+    const at = blockRange(editor)?.to;
+    if (!duplicate || at === undefined) return;
+    const copy = await duplicate(pageId);
+    // Le bloc n'est posé QUE si la copie a abouti : un bloc vers une page qui
+    // n'existe pas se rendrait en orphelin, pour une erreur déjà signalée.
+    if (copy && !editor.isDestroyed) insertSubpageAfter(editor, copy, at);
+  };
+
   const close = () => onOpenChange(false);
   const closeAndFocus = () => {
     onOpenChange(false);
@@ -180,6 +213,7 @@ export function BlockMenu({
           </DropdownMenuLabel>
         )}
 
+        {!subpageId && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Repeat2 />
@@ -209,7 +243,9 @@ export function BlockMenu({
             })}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        )}
 
+        {!subpageId && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Palette />
@@ -227,12 +263,14 @@ export function BlockMenu({
             <ColorItems editor={editor} kind="background" onDone={close} />
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        )}
 
-        <DropdownMenuSeparator />
+        {!subpageId && <DropdownMenuSeparator />}
 
         <DropdownMenuItem
           onSelect={() => {
-            duplicateBlocks(editor);
+            if (subpageId) void duplicateSubpage(subpageId);
+            else duplicateBlocks(editor);
             close();
           }}
         >
@@ -260,7 +298,13 @@ export function BlockMenu({
           }}
         >
           <Trash2 />
-          <span className="truncate">{t("deleteBlock")}</span>
+          {/* Sur une sous-page, le geste ne supprime pas un bloc : il met une
+              PAGE à la corbeille, avec ses descendants. Le libellé est celui de
+              la sidebar, mot pour mot — c'est le même geste, il ne doit pas
+              porter deux noms selon l'endroit d'où on le déclenche. */}
+          <span className="truncate">
+            {subpageId ? t("deletePage") : t("deleteBlock")}
+          </span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

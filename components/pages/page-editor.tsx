@@ -42,6 +42,7 @@ import {
   pagePlaceholder,
 } from "@/components/pages/block-placeholder";
 import { BlockGutter } from "@/components/pages/block-gutter";
+import { handleBlockLinkClick } from "@/components/pages/block-actions";
 import {
   PageSlashCommand,
   pageSlashItems,
@@ -59,7 +60,14 @@ const PROSE = cn(
   "text-base leading-relaxed break-words outline-none",
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
   "[&_p]:my-2",
-  "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2",
+  // Les liens du TEXTE. `:not(.page-block-link)` en exclut les ancres rendues
+  // par une vue de nœud (le bloc sous-page) : `.ProseMirror a` a une
+  // spécificité plus forte qu'une classe utilitaire posée sur l'ancre, donc
+  // sans cette exception un bloc ne peut PAS se dépeindre — il héritait de la
+  // couleur des liens et portait un second soulignement par-dessus le sien.
+  "[&_a:not(.page-block-link)]:text-primary",
+  "[&_a:not(.page-block-link)]:underline",
+  "[&_a:not(.page-block-link)]:underline-offset-2",
   "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0",
@@ -87,6 +95,10 @@ const EDITOR_PROPS = {
   attributes: { class: PROSE },
   scrollMargin: { top: 0, right: 0, bottom: 160, left: 0 },
   scrollThreshold: { top: 0, right: 0, bottom: 160, left: 0 },
+  // Le clic sur le lien d'un BLOC n'appartient pas à l'extension Link : le
+  // pourquoi, et les deux navigations qu'il évitait, sont dans block-actions.ts.
+  handleClick: (_view: unknown, _pos: number, event: MouseEvent) =>
+    handleBlockLinkClick(event),
 };
 
 export function PageEditor({
@@ -95,6 +107,7 @@ export function PageEditor({
   pages,
   mentions,
   editorRef,
+  onSubpagesRemoved,
   className,
 }: {
   /** Le corps de la page en JSON ProseMirror — le stockage (le markdown est une
@@ -104,6 +117,14 @@ export function PageEditor({
   onChange: (content: JSONContent) => void;
   /** Comment résoudre une sous-page, et comment en créer une (MIN-272). */
   pages?: PagesLookup;
+  /**
+   * Des blocs sous-page viennent de quitter le document (MIN-272).
+   *
+   * L'éditeur ne décide de RIEN ici : il constate. C'est l'appelant qui demande
+   * confirmation, met les pages à la corbeille, et annule le geste si on lui
+   * dit non — parce que lui seul sait combien de descendants partiraient avec.
+   */
+  onSubpagesRemoved?: (pageIds: string[]) => void;
   /** Les citables « @ » — mêmes options que dans une description d'issue. */
   mentions?: MentionSuggestOptions;
   editorRef?: MutableRefObject<Editor | null>;
@@ -158,12 +179,17 @@ export function PageEditor({
     };
   }, [editor, editorRef]);
 
-  // Le créateur de sous-page est LU au clic, pas capturé : il arrive avec le
-  // cache du projet, après le montage de l'éditeur (cf. blocks/subpage.ts).
+  // Les crochets de la sous-page sont LUS au moment du geste, pas capturés :
+  // ils arrivent avec le cache du projet, après le montage de l'éditeur (cf.
+  // blocks/subpage.ts). `removed` est celui qui compte — c'est par lui que la
+  // disparition d'un bloc devient une mise à la corbeille (MIN-272).
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     editor.storage.subpage.create = pages?.create ?? null;
-  }, [editor, pages]);
+    editor.storage.subpage.opened = pages?.opened ?? null;
+    editor.storage.subpage.duplicate = pages?.duplicate ?? null;
+    editor.storage.subpage.removed = onSubpagesRemoved ?? null;
+  }, [editor, pages, onSubpagesRemoved]);
 
   const body = (
     // Ni `relative` ni retrait ici, et c'est le point : la GOUTTIÈRE du chrome

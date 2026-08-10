@@ -16,9 +16,18 @@
 // l'éditeur, seule surface capable d'adopter un document fusionné.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Spinner,
   Tooltip,
   TooltipContent,
@@ -32,6 +41,7 @@ import type { Editor, JSONContent } from "@tiptap/react";
 import { eventKey } from "@/lib/keyboard/event-key";
 
 import { fetchPageApi, updatePageOnUnload } from "@/lib/pages-api";
+import { descendantIds } from "@/lib/pages";
 import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
@@ -119,6 +129,16 @@ function PageSaveIndicator({
   );
 }
 
+/** Un corps vide, ou qui ne porte qu'un paragraphe vide — ce que rend une page
+    qu'on vient de créer, quel que soit le chemin par lequel on l'a créée. */
+function isEmptyDoc(content: unknown): boolean {
+  const blocks = (content as { content?: unknown[] } | null)?.content;
+  if (!Array.isArray(blocks) || blocks.length === 0) return true;
+  if (blocks.length > 1) return false;
+  const only = blocks[0] as { type?: string; content?: unknown[] };
+  return only?.type === "paragraph" && !only.content?.length;
+}
+
 export function PageView({
   projectId,
   pageId,
@@ -128,7 +148,17 @@ export function PageView({
 }) {
   const t = useTranslations("Pages");
   const { user } = useAuth();
-  const { pages, byId, updatePage, createPage } = usePagesQuery(projectId);
+  const {
+    pages,
+    byId,
+    loading: pagesLoading,
+    updatePage,
+    createPage,
+    duplicatePage,
+    trashPage,
+    restorePage,
+  } = usePagesQuery(projectId);
+  const pagesLoaded = !pagesLoading;
   const { members } = useMembersQuery(projectId, true);
   const present = usePresentOn(pageId);
   const mentionSources = useDescriptionMentions(projectId, members);
@@ -248,12 +278,22 @@ export function PageView({
   }, []);
 
   /* ── Les sous-pages du corps (MIN-272) ───────────────────────────────── */
+  //
+  // La même information est portée à deux endroits : `parent_id` en base, et le
+  // bloc `subpage` dans ce document. La colonne fait la vérité, le bloc en est
+  // une vue — et c'est ici que la vue redescend sur la vérité.
+  const router = useRouter();
+  const base = `/projects/${projectId}/pages`;
+
   const lookup = useMemo<PagesLookup>(
     () => ({
+      ready: pagesLoaded,
       get: (id) => {
-        const row = pages.find((p) => p.id === id);
+        const row = byId.get(id);
         return row ? { id: row.id, title: row.title, icon: row.icon } : undefined;
       },
+      href: (id) => `${base}/${id}`,
+      navigate: (id) => router.push(`${base}/${id}`),
       create: async () => {
         try {
           const child = await createPage({ parent_id: pageId });
@@ -263,9 +303,104 @@ export function PageView({
           return null;
         }
       },
+      opened: (id) => {
+        // Le bloc vient d'être posé dans CE document : on l'écrit AVANT de
+        // partir. Sans ce `flush`, la navigation démonte l'éditeur avec, dans
+        // le brouillon, un bloc que personne n'a encore enregistré — la
+        // sous-page existe, son lien dans le parent non.
+        void flushRef.current().finally(() => router.push(`${base}/${id}`));
+      },
+      duplicate: async (id) => {
+        try {
+          const copy = await duplicatePage(id);
+          toast.success(t("duplicated"));
+          return copy.id;
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : t("duplicateFailed"));
+          return null;
+        }
+      },
+      restore: async (id) => {
+        try {
+          await restorePage(id);
+          toast.success(t("restored"));
+          return true;
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : t("restoreFailed"));
+          return false;
+        }
+      },
     }),
-    [pages, createPage, pageId, t]
+    [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, router, t]
   );
+
+  /* ── Supprimer le bloc met la page à la corbeille ─────────────────────── */
+  //
+  // Le comportement de Notion, retenu délibérément contre « détacher » : quand
+  // on supprime le lien vers une sous-page, c'est le plus souvent qu'on veut
+  // supprimer la sous-page. La laisser vivre la ferait survivre dans une
+  // sidebar qu'on ne regarde pas tout le temps, sans jamais qu'on le voie.
+  //
+  // Ce qui rend ce choix tenable, c'est la corbeille : rien n'est détruit,
+  // tout revient pendant 30 jours (MIN-266). Et ce qui le rend honnête, c'est
+  // que la confirmation annonce le compte RÉEL — la page qu'on voit et tous ses
+  // descendants, qui partent avec elle sans être à l'écran.
+  const [pendingTrash, setPendingTrash] = useState<string[] | null>(null);
+  const pendingCount = useMemo(() => {
+    if (!pendingTrash) return 0;
+    const gone = new Set<string>();
+    for (const id of pendingTrash) {
+      gone.add(id);
+      for (const child of descendantIds(pages, id)) gone.add(child);
+    }
+    return gone.size;
+  }, [pendingTrash, pages]);
+
+  const onSubpagesRemoved = useCallback(
+    (ids: string[]) => {
+      // Un bloc ORPHELIN qu'on efface ne demande rien à personne : sa page
+      // n'est déjà plus là, il n'y a que du texte à retirer.
+      const live = ids.filter((id) => byId.has(id));
+      if (live.length === 0) return;
+      setPendingTrash(live);
+    },
+    [byId]
+  );
+
+  // Confirmer ferme la boîte, et Radix annonce toute fermeture de la même
+  // façon. Sans cette marque, le « oui » repasserait par le chemin du « non »
+  // et défairait la suppression qu'on vient d'accepter.
+  const decided = useRef(false);
+
+  const cancelTrash = useCallback(() => {
+    setPendingTrash(null);
+    // Le bloc est DÉJÀ parti du document quand la question se pose : la
+    // détection constate une suppression, elle ne l'intercepte pas (il y a une
+    // douzaine de façons de supprimer un bloc, et les intercepter une par une
+    // c'est en oublier). Annuler, c'est donc défaire — et la boîte étant
+    // modale, le geste défait est bien le dernier.
+    editorRef.current?.commands.undo();
+  }, []);
+
+  const confirmTrash = useCallback(() => {
+    const ids = pendingTrash;
+    decided.current = true;
+    setPendingTrash(null);
+    if (!ids) return;
+    void (async () => {
+      try {
+        let trashed = 0;
+        for (const id of ids) trashed += await trashPage(id);
+        toast.success(
+          trashed > 1
+            ? t("trashedWithChildren", { count: trashed })
+            : t("trashedOne")
+        );
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t("deleteFailed"));
+      }
+    })();
+  }, [pendingTrash, trashPage, t]);
 
   /* ── L'ancre d'un bloc ───────────────────────────────────────────────── */
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -349,6 +484,13 @@ export function PageView({
         <PageHeader
           title={title}
           icon={icon}
+          // Une page NEUVE — sans nom et sans contenu — met le curseur dans son
+          // titre. Le test porte sur ce que la page EST, et pas sur la façon
+          // dont on y est arrivé : c'est vrai qu'on vienne du `/page` du corps
+          // du parent, du `+` de la sidebar ou du menu d'une ligne de l'arbre,
+          // et ça évite de faire voyager un « je viens d'être créée » à travers
+          // trois composants et une navigation.
+          autoFocus={!title && isEmptyDoc(page.content)}
           onTitleChange={(next) => {
             setEdited((current) => ({ ...current, title: next }));
             schedule({ title: next });
@@ -376,10 +518,44 @@ export function PageView({
             pages={lookup}
             mentions={mentions}
             editorRef={editorRef}
+            onSubpagesRemoved={onSubpagesRemoved}
           />
         </div>
       </div>
       </div>
+
+      {/* Le compte annoncé est le compte RÉEL : la page qu'on voit disparaître
+          plus tous ses descendants, qui partent avec elle sans être à l'écran.
+          Dire « cette page » quand cinq s'en vont, c'est faire de la corbeille
+          une surprise plutôt qu'un filet. */}
+      <AlertDialog
+        open={pendingTrash !== null}
+        onOpenChange={(open) => {
+          if (open) return;
+          if (decided.current) {
+            decided.current = false;
+            return;
+          }
+          cancelTrash();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("subpageDeleteTitle", { count: pendingCount })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("subpageDeleteBody", { count: pendingCount })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("subpageDeleteCancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmTrash}>
+              {t("subpageDeleteConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

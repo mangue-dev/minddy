@@ -9,6 +9,8 @@ import {
   wouldCreateCycle,
   type Page,
 } from "@/lib/pages";
+import { appendSubpage, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
+import type { PageDocJSON } from "@/lib/pages-merge";
 
 /**
  * Les PAGES d'un projet (MIN-266) — le noyau serveur, partagé par les routes
@@ -78,7 +80,7 @@ const MAX_ICON_LENGTH = 16;
  * lit page par page, à l'ouverture.
  */
 const LIST_COLUMNS =
-  "id, project_id, parent_id, title, icon, version, position, created_by, created_at, updated_at, deleted_at, deleted_by, deleted_root_id";
+  "id, project_id, parent_id, title, icon, version, position, created_by, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed";
 
 const FULL_COLUMNS = `${LIST_COLUMNS}, content`;
 
@@ -224,6 +226,99 @@ export async function createPage({
   return { ok: true, page: data as unknown as Page };
 }
 
+/* ─── Duplication ──────────────────────────────────────────────────────────── */
+
+/**
+ * Copie une page ET toute sa descendance (MIN-272).
+ *
+ * Deux choses la distinguent d'un `insert` de plus, et les deux comptent :
+ *
+ * 1. **les liens internes sont réécrits.** Recopier les corps tels quels
+ *    donnerait une copie dont les blocs sous-page pointent encore vers les
+ *    ORIGINAUX — deux arbres dans la sidebar, un seul jeu de liens. D'où les
+ *    ids tirés AVANT l'écriture : il faut connaître la table
+ *    `ancien → nouveau` pour réécrire les corps, donc on ne peut pas laisser la
+ *    base les fabriquer. Une citation hors de la branche copiée reste intacte.
+ * 2. **une seule écriture.** Le tableau part d'un coup : une copie à moitié
+ *    faite laisserait des pages orphelines qu'il faudrait retrouver à la main.
+ *
+ * La copie prend le MÊME titre. Un suffixe « (copie) » demanderait une
+ * traduction, donc ferait dépendre une donnée de la langue de qui a cliqué —
+ * et la page s'ouvre juste après, où le titre se change en une frappe.
+ *
+ * La racine reste chez le même parent, en fin de fratrie ; les descendants
+ * gardent leur position, l'ordre interne de la branche est donc préservé.
+ */
+export async function duplicatePage(
+  pageId: string,
+  actorId: string
+): Promise<PageResult<Page>> {
+  const service = getServiceClient();
+  const page = await loadPage(service, pageId);
+  if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  if (!(await access(actorId, page.project_id))) {
+    return { ok: false, status: 404, errorKey: "pageNotFound" };
+  }
+
+  const all = await loadProjectPages(service, page.project_id);
+  const live = all.filter((p) => !p.deleted_at);
+  // `descendantIds` rend les descendants en largeur, donc les parents avant
+  // leurs enfants : l'ordre d'insertion satisfait la clé étrangère de lui-même.
+  const family = [pageId, ...descendantIds(live, pageId)];
+
+  const { data: sources, error: readError } = await service
+    .from("pages")
+    .select(FULL_COLUMNS)
+    .in("id", family);
+  if (readError || !sources) {
+    console.error("[pages] duplicate read failed:", readError?.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  const byId = new Map((sources as unknown as Page[]).map((row) => [row.id, row]));
+  const idMap = new Map(family.map((id) => [id, crypto.randomUUID()]));
+  const rootPosition = positionAtEnd(
+    live.filter((p) => (p.parent_id ?? null) === (page.parent_id ?? null))
+  );
+
+  const rows = family.flatMap((id) => {
+    const source = byId.get(id);
+    if (!source) return [];
+    const root = id === pageId;
+    return [
+      {
+        id: idMap.get(id)!,
+        project_id: source.project_id,
+        // La RACINE reste où elle est ; les descendants suivent leur parent
+        // COPIÉ, jamais l'original — sans quoi la copie s'accrocherait à l'arbre
+        // d'origine et les deux branches se mélangeraient.
+        parent_id: root
+          ? source.parent_id
+          : (idMap.get(source.parent_id ?? "") ?? null),
+        title: source.title,
+        icon: source.icon,
+        content: remapSubpages(source.content as PageDocJSON | null, idMap),
+        position: root ? rootPosition : source.position,
+        created_by: actorId,
+      },
+    ];
+  });
+
+  const { data, error } = await service
+    .from("pages")
+    .insert(rows)
+    .select(FULL_COLUMNS);
+  if (error || !data) {
+    console.error("[pages] duplicate failed:", error?.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  const rootId = idMap.get(pageId);
+  const copy = (data as unknown as Page[]).find((row) => row.id === rootId);
+  if (!copy) return { ok: false, status: 500, errorKey: "databaseError" };
+  return { ok: true, page: copy };
+}
+
 /* ─── Modification ─────────────────────────────────────────────────────────── */
 
 /**
@@ -354,6 +449,56 @@ export async function updatePage({
   return { ok: true, page: data as unknown as Page };
 }
 
+/* ─── Le miroir : le bloc sous-page dans le corps du parent ────────────────── */
+
+/**
+ * La même information est portée à deux endroits, et c'est là que sont tous les
+ * pièges (MIN-272) : `parent_id` fait la vérité, le bloc `subpage` du corps du
+ * parent n'en est qu'une VUE. Ces deux fonctions tiennent la vue à jour quand la
+ * vérité bouge.
+ *
+ * Pourquoi ici, et pas dans l'éditeur : mettre une page à la corbeille depuis
+ * l'arbre doit retirer son bloc du corps du parent **même si personne n'a le
+ * parent ouvert** — et c'est le cas courant. Un geste fait dans la sidebar, ou
+ * par Numo via le MCP, doit laisser la base cohérente sans qu'un navigateur y
+ * soit pour quelque chose.
+ *
+ * Ce que ça fait à un client qui a justement ce parent sous les yeux : sa
+ * prochaine sauvegarde part sur une `version` périmée, donc en 409, et la fusion
+ * de MIN-271 avale la suppression SANS BRUIT — un bloc qu'il n'a pas touché et
+ * que le distant a retiré s'en va sans bandeau (lib/pages-merge.ts, `decide`).
+ * Le bloc reste visible à l'écran jusque-là, en état orphelin, ce que sa vue
+ * sait rendre.
+ *
+ * Une panne sur cette écriture-là ne fait PAS échouer le geste : la page est
+ * bien à la corbeille, et un bloc orphelin de plus se rend proprement. Refuser
+ * la suppression parce que le miroir n'a pas suivi serait le mauvais échange.
+ */
+async function syncParentBody(
+  service: Service,
+  parentId: string,
+  edit: (doc: PageDocJSON | null) => { doc: PageDocJSON; changed: boolean }
+): Promise<void> {
+  const parent = await loadPage(service, parentId);
+  if (!parent) return;
+
+  const { doc, changed } = edit((parent.content as PageDocJSON | null) ?? null);
+  if (!changed) return;
+
+  // `version` est incrémentée comme pour n'importe quelle écriture du corps :
+  // c'est ce compteur qui déclenche la fusion chez qui édite en même temps.
+  // La condition sur la version lue fait le reste — si quelqu'un a écrit entre
+  // la lecture et ici, on ne l'écrase pas ; son propre enregistrement suivant
+  // repassera par la fusion, et le bloc orphelin se rendra en attendant.
+  const { error } = await service
+    .from("pages")
+    .update({ content: doc, version: parent.version + 1 })
+    .eq("id", parentId)
+    .eq("version", parent.version)
+    .is("deleted_at", null);
+  if (error) console.error("[pages] subpage sync failed:", error.message);
+}
+
 /* ─── Corbeille ────────────────────────────────────────────────────────────── */
 
 /**
@@ -414,6 +559,32 @@ export async function trashPage(
     }
   }
 
+  // Le sens inverse (MIN-272) : le bloc du corps du parent s'en va avec la
+  // page. Seule la RACINE du geste est concernée — les blocs des descendants
+  // vivent dans des corps qui partent à la corbeille en même temps.
+  //
+  // Et on RETIENT qu'on l'a retiré : la restauration ne doit remettre un bloc
+  // que là où il y en avait un (cf. la migration, colonne
+  // `parent_block_removed`). Une page née dans la sidebar n'a jamais eu de
+  // bloc, la ressortir de la corbeille ne doit pas lui en inventer un.
+  if (page.parent_id) {
+    let cleared = false;
+    await syncParentBody(service, page.parent_id, (doc) => {
+      const { doc: next, removed } = removeSubpages(doc, [pageId]);
+      cleared = removed > 0;
+      return {
+        doc: (next ?? { type: "doc", content: [] }) as PageDocJSON,
+        changed: cleared,
+      };
+    });
+    if (cleared) {
+      await service
+        .from("pages")
+        .update({ parent_block_removed: true })
+        .eq("id", pageId);
+    }
+  }
+
   return { ok: true, trashed: descendants.length + 1 };
 }
 
@@ -470,6 +641,23 @@ export async function restorePage(
       console.error("[pages] restore lift failed:", liftError.message);
       return { ok: false, status: 500, errorKey: "databaseError" };
     }
+  } else if (parent && page.parent_block_removed) {
+    // Le bloc revient dans le corps du parent, en FIN de document (MIN-272).
+    // Rien ne se remet en double : `appendSubpage` ne pose rien si le corps
+    // cite déjà la page — le cas d'un bloc recréé à la main entre-temps.
+    await syncParentBody(service, parent.id, (doc) => {
+      const { doc: next, added } = appendSubpage(doc, pageId);
+      return { doc: next, changed: added };
+    });
+  }
+
+  // La marque ne survit pas à la restauration : la page est de nouveau vivante,
+  // et c'est le prochain passage à la corbeille qui dira ce qu'il en est alors.
+  if (page.parent_block_removed) {
+    await service
+      .from("pages")
+      .update({ parent_block_removed: false })
+      .eq("id", pageId);
   }
 
   return { ok: true, restored: family.length };

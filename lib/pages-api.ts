@@ -179,6 +179,22 @@ export function updatePageOnUnload(
   }).catch(() => {});
 }
 
+/**
+ * Copie — récursive elle aussi : la page ET ses sous-pages, liens internes
+ * réécrits vers la copie. Rend la RACINE de la copie.
+ */
+export async function duplicatePageApi(
+  projectId: string,
+  pageId: string
+): Promise<Page> {
+  return json(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}/duplicate`, {
+      method: "POST",
+    }),
+    "Duplicate failed"
+  );
+}
+
 /** Corbeille — récursive : la page ET ses sous-pages. Rien n'est détruit. */
 export async function trashPageApi(
   projectId: string,

@@ -49,6 +49,7 @@ import {
   blockRange,
   insertBlockAround,
   selectBlockAt,
+  styledBox,
 } from "@/components/pages/block-actions";
 
 /** Figé au niveau du module : le composant `DragHandle` remonte son plugin dès
@@ -110,7 +111,7 @@ export function BlockGutter({ editor }: { editor: Editor }) {
         element.style.marginTop = "0px";
         return;
       }
-      const style = getComputedStyle(dom);
+      const style = getComputedStyle(styledBox(dom));
       // Le texte ne commence pas au bord du bloc : un bloc de code a 12 px de
       // rembourrage et une bordure, une citation a les siens. Sans les compter,
       // la poignée se cale sur le CADRE et flotte au-dessus de la première

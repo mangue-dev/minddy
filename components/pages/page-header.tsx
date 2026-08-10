@@ -15,6 +15,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
+import { Smile } from "lucide-react";
 
 import { AutoTextarea } from "@/components/auto-textarea";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
@@ -25,6 +26,7 @@ export function PageHeader({
   onTitleChange,
   onIconChange,
   onEnter,
+  autoFocus,
   readOnly,
   className,
 }: {
@@ -34,6 +36,14 @@ export function PageHeader({
   onIconChange: (icon: string | null) => void;
   /** Entrée depuis le titre : le curseur passe dans le corps. */
   onEnter?: () => void;
+  /**
+   * Page qui vient d'être créée : le curseur est mis dans le titre (MIN-272).
+   *
+   * C'est la seule chose qu'on ait à faire d'une page neuve — elle n'a ni nom
+   * ni contenu, et laisser le curseur nulle part obligerait à cliquer dans un
+   * champ vide pour commencer.
+   */
+  autoFocus?: boolean;
   readOnly?: boolean;
   className?: string;
 }) {
@@ -53,12 +63,45 @@ export function PageHeader({
   }, [title]);
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <div className="-ml-1">
-        <EmojiPicker value={icon} onChange={onIconChange} />
-      </div>
+    // `group/header` : le bouton « ajouter une icône » n'existe qu'au survol du
+    // BLOC titre, pas de sa seule ligne — on vise le titre pour l'illustrer, et
+    // la cible se déroberait si elle n'apparaissait qu'au-dessus d'elle-même.
+    <div className={cn("group/header flex flex-col gap-2", className)}>
+      {icon ? (
+        <div className="-ml-1">
+          <EmojiPicker value={icon} onChange={onIconChange} />
+        </div>
+      ) : (
+        // Pas d'icône : RIEN par défaut, et surtout pas un 📄 que personne n'a
+        // choisi. Une icône posée d'office se lit comme une décision de
+        // l'utilisateur — toutes les pages se ressemblent, et celui qui en veut
+        // une vraie ne voit pas qu'il peut la changer.
+        //
+        // La place est RÉSERVÉE (`h-7`) même quand le bouton est invisible :
+        // sans ça, le titre sauterait de 28 px au passage de la souris.
+        <div className="-ml-1.5 flex h-7 items-center">
+          <EmojiPicker value={null} onChange={onIconChange}>
+            <button
+              type="button"
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground",
+                "opacity-0 transition-opacity hover:bg-muted hover:text-foreground",
+                // `data-state=open` : le sélecteur ouvert, la souris part vers
+                // lui et quitte l'en-tête — son déclencheur ne doit pas
+                // s'effacer sous elle en chemin.
+                "group-hover/header:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100",
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              )}
+            >
+              <Smile className="size-3.5" />
+              {t("addIcon")}
+            </button>
+          </EmojiPicker>
+        </div>
+      )}
       <AutoTextarea
         value={draft}
+        autoFocus={autoFocus}
         readOnly={readOnly}
         placeholder={t("titlePlaceholder")}
         aria-label={t("titleLabel")}

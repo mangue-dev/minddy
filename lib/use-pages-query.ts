@@ -21,6 +21,7 @@ import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-quer
 
 import {
   createPageApi,
+  duplicatePageApi,
   fetchPagesApi,
   restorePageApi,
   trashPageApi,
@@ -70,6 +71,8 @@ export interface UsePagesResult {
   loading: boolean;
   error: Error | null;
   createPage: (input?: CreatePageInput) => Promise<PageSummary>;
+  /** Copie une page et sa descendance. Rend la RACINE de la copie. */
+  duplicatePage: (pageId: string) => Promise<Page>;
   updatePage: (pageId: string, input: UpdatePageInput) => Promise<Page>;
   trashPage: (pageId: string) => Promise<number>;
   restorePage: (pageId: string) => Promise<void>;
@@ -160,6 +163,20 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
     [projectId, queryClient]
   );
 
+  const duplicatePage = useCallback(
+    async (pageId: string) => {
+      const pid = projectId as string;
+      const page = await duplicatePageApi(pid, pageId);
+      // La copie emporte ses sous-pages : ce n'est donc PAS une ligne de plus
+      // dans le cache, c'est une branche entière. On redemande la liste plutôt
+      // que de la reconstituer ici — le serveur est le seul à savoir ce qu'il
+      // a écrit, et une branche à moitié posée serait un arbre faux.
+      await queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+      return page;
+    },
+    [projectId, queryClient]
+  );
+
   const trashPage = useCallback(
     async (pageId: string) => {
       const pid = projectId as string;
@@ -206,6 +223,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
     loading: enabled && isPending,
     error: (error as Error | null) ?? null,
     createPage,
+    duplicatePage,
     updatePage,
     trashPage,
     restorePage,

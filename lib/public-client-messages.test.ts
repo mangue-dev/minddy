@@ -87,7 +87,17 @@ function scanEntries(entries: readonly string[]): Scan {
       }
     }
 
-    for (const match of source.matchAll(/(?:from\s*|import\s*\(\s*)["']([^"']+)["']/g)) {
+    // Les imports de TYPES sont retirés avant de suivre le graphe : `import
+    // type … from "x"` est effacé à la compilation, donc `x` n'est jamais
+    // chargé à l'exécution et n'apporte aucun `useTranslations` à la page. Les
+    // suivre quand même faisait remonter des namespaces qu'aucun octet envoyé
+    // au navigateur ne contient — un faux positif qu'on ne pourrait corriger
+    // qu'en déclarant public un namespace qui ne l'est pas.
+    const runtime = source.replace(
+      /^[ \t]*(?:import|export)[ \t]+type[ \t][^;\n]*(?:\n[^;]*)*?;/gm,
+      ""
+    );
+    for (const match of runtime.matchAll(/(?:from\s*|import\s*\(\s*)["']([^"']+)["']/g)) {
       const next = resolveImport(match[1], file);
       if (next) walk(next);
     }

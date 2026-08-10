@@ -1,5 +1,6 @@
 import { Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { FileText } from "lucide-react";
 import { SubpageView } from "@/components/pages/blocks/subpage-view";
 import type {
@@ -16,9 +17,37 @@ import type {
  * sont résolus à l'affichage depuis le cache du projet
  * (components/pages/pages-lookup.tsx).
  *
- * Ce qui n'est PAS ici et appartient à MIN-272 : créer la page enfant, tenir
- * `parent_id`, et mettre la page à la corbeille quand on supprime le bloc. Ce
- * fichier ne pose que le nœud et son descripteur — c'est le contrat du registre.
+ * Le nœud porte aussi la DÉTECTION de sa propre disparition (MIN-272) : à
+ * chaque mise à jour du document, les pages citées avant et après sont
+ * comparées, et celles qui viennent d'en sortir sont annoncées à l'éditeur, qui
+ * demande confirmation puis les met à la corbeille. Ce que ce fichier ne fait
+ * PAS : parler à la base — il ne connaît que deux crochets, `create` et
+ * `removed`, posés par components/pages/page-view.tsx.
+ *
+ * Pourquoi la détection plutôt qu'un bouton « supprimer » : le bloc part par
+ * une douzaine de gestes — retour arrière, menu ⋯, couper, tout sélectionner,
+ * glisser hors du document. Les intercepter un par un, c'est en oublier ; le
+ * document, lui, dit toujours la vérité.
+ *
+ * ── LE REPARENTAGE, et c'est le genre de subtilité qu'on re-découvre sinon ──
+ *
+ * Déplacer une page dans l'arbre de la sidebar change `parent_id` et NE DÉPLACE
+ * PAS son bloc : celui-ci reste dans le corps où il a été écrit, et devient un
+ * simple lien vers une page qui vit désormais ailleurs. C'est délibéré et non
+ * un manque.
+ *
+ * La raison tient au sens des deux objets. Le bloc est une phrase du document —
+ * il a une place dans un texte, entre deux paragraphes qui parlent de lui.
+ * Aller le découper d'un corps pour le recoller à la fin d'un autre détruirait
+ * cette place pour la remplacer par rien, et ferait d'un geste d'ORGANISATION
+ * (ranger une page ailleurs) une modification du TEXTE de deux pages que
+ * personne n'a demandée — chez celui qui les a peut-être ouvertes en ce moment
+ * même.
+ *
+ * La conséquence à assumer : après un reparentage, le corps de l'ancien parent
+ * cite une page qui n'est plus sa fille. Le bloc continue de marcher, il
+ * n'annonce simplement plus une imbrication. C'est ce que `parent_id` est la
+ * vérité veut dire concrètement.
  */
 
 declare module "@tiptap/core" {
@@ -37,7 +66,37 @@ export interface SubpageStorage {
   /** Le créateur de page, posé par l'éditeur au montage (MIN-272). Lu au moment
       du clic, pas capturé : il arrive après le montage de l'éditeur. */
   create: (() => Promise<string | null>) | null;
+  /** Les pages qui viennent de perdre leur bloc dans ce document. Même parti
+      pris que `create` : lu au moment de l'événement, jamais capturé. */
+  removed: ((pageIds: string[]) => void) | null;
+  /** La page qui vient d'être créée depuis le menu « / » et dont le bloc est
+      posé : à l'appelant d'enregistrer le parent, puis de l'ouvrir. */
+  opened: ((pageId: string) => void) | null;
+  /** Copier une page et sa descendance, et rendre l'id de la copie. C'est ce
+      que « dupliquer » fait sur un bloc sous-page — copier le BLOC donnerait
+      deux liens vers la même page, ce que personne ne demande. */
+  duplicate: ((pageId: string) => Promise<string | null>) | null;
   markdown?: unknown;
+}
+
+/**
+ * Les pages citées par un document ProseMirror.
+ *
+ * Sur le nœud plutôt que sur son JSON : `descendants` traverse l'arbre sans
+ * rien sérialiser, et cette lecture tourne à CHAQUE frappe. Elle est récursive
+ * parce qu'un bloc sous-page peut être posé dans un dépliant ou un item de
+ * liste — ne regarder que le premier niveau laisserait un bloc pointant vers le
+ * vide, exactement ce qu'on cherche à empêcher.
+ */
+export function subpageIdsInDoc(doc: ProseMirrorNode): Set<string> {
+  const ids = new Set<string>();
+  doc.descendants((node) => {
+    if (node.type.name !== "subpage") return true;
+    const id = node.attrs.pageId;
+    if (typeof id === "string" && id.length > 0) ids.add(id);
+    return false;
+  });
+  return ids;
 }
 
 const SUBPAGE_MD = /^\[\[page:([^\]\s]+)\]\]$/;
@@ -50,7 +109,30 @@ export const Subpage = Node.create<Record<string, never>, SubpageStorage>({
   selectable: true,
 
   addStorage() {
-    return { create: null };
+    return { create: null, removed: null, opened: null, duplicate: null };
+  },
+
+  /**
+   * `onUpdate` et pas `onTransaction`, et la différence est tout sauf un
+   * détail : adopter un document fusionné passe par `setContent(…, { emitUpdate:
+   * false })` (MIN-271), qui pose `preventUpdate` sur sa transaction. Sur
+   * `onTransaction`, une fusion qui a fait tomber un bloc sous-page — ce que la
+   * fusion fait justement quand le SERVEUR vient de le retirer — se lirait comme
+   * une suppression de l'utilisateur, et corbeillerait la page une seconde fois.
+   *
+   * La comparaison se fait sur `transaction.before` plutôt que sur un instantané
+   * gardé de côté : un instantané se périme précisément à ces adoptions
+   * silencieuses, alors que la transaction porte toujours son propre avant.
+   */
+  onUpdate({ editor, transaction }) {
+    const removed = this.storage.removed;
+    if (!removed || !transaction.docChanged) return;
+
+    const before = subpageIdsInDoc(transaction.before);
+    if (before.size === 0) return;
+    const after = subpageIdsInDoc(editor.state.doc);
+    const gone = [...before].filter((id) => !after.has(id));
+    if (gone.length > 0) removed(gone);
   },
 
   addAttributes() {
@@ -114,8 +196,15 @@ export const subpageBlock: PageBlock = {
       editor.commands.insertSubpage(null);
       return;
     }
+    // `create` crée la page ET ouvre l'enfant, dans cet ordre : le bloc doit
+    // être POSÉ, puis le corps du parent enregistré, avant qu'on quitte la page
+    // — sinon la navigation démonte l'éditeur avec, dans le brouillon, un bloc
+    // que personne n'a encore écrit. L'attente et l'enregistrement vivent chez
+    // l'appelant (`PagesLookup.opened`), qui seul tient l'autosave.
     void create().then((pageId) => {
-      if (!editor.isDestroyed) editor.commands.insertSubpage(pageId);
+      if (editor.isDestroyed) return;
+      editor.commands.insertSubpage(pageId);
+      if (pageId) editor.storage.subpage?.opened?.(pageId);
     });
   },
   isActive: (editor) => editor.isActive("subpage"),

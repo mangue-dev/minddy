@@ -1637,7 +1637,19 @@
     "presenceUnknown": "Quelqu'un",
     "slashHint": "Tapez pour filtrer les blocs, ou choisissez ci-dessous",
     "toggleExpand": "Déplier",
-    "toggleCollapse": "Replier"
+    "toggleCollapse": "Replier",
+    "subpageMissing": "Page mise à la corbeille",
+    "subpageRestore": "Restaurer",
+    "subpageDeleteTitle": "Mettre {count, plural, one {cette page} other {cette page et ses # sous-pages}} à la corbeille ?",
+    "subpageDeleteBody": "{count, plural, one {Elle y reste 30 jours, et se restaure depuis là.} other {Les # partent ensemble à la corbeille, y restent 30 jours, et se restaurent depuis là.}}",
+    "subpageDeleteCancel": "Garder la page",
+    "subpageDeleteConfirm": "Mettre à la corbeille",
+    "trashedOne": "Page mise à la corbeille.",
+    "restored": "Page restaurée.",
+    "restoreFailed": "Impossible de restaurer la page.",
+    "addIcon": "Ajouter une icône",
+    "duplicated": "Page dupliquée.",
+    "duplicateFailed": "Impossible de dupliquer la page."
   },
   "Picker": {
     "createNamed": "Créer « {name} »",
