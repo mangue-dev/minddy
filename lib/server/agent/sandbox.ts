@@ -194,6 +194,26 @@ export async function stopSandboxByName(name: string): Promise<void> {
 }
 
 /**
+ * La microVM d'un run, par son nom, SANS la réveiller — pour la LIRE pendant que
+ * son tour tourne (le diff en cours, MIN-266). `null` quand il n'y a rien à
+ * lire : session expirée, VM endormie par le reaper, API en panne.
+ *
+ * `resume: false` pour la même raison que `isLoopCommandAlive` juste dessous, et
+ * elle compte double ici : cette lecture part d'un geste d'interface (ouvrir la
+ * vue diff), pas d'un cron. Réveiller la microVM d'un run au repos pour peindre
+ * un diff relancerait sa facturation compute sur un clic — et le diff d'un run au
+ * repos, lui, est déjà servi par la forge, qui ne coûte rien.
+ */
+export async function getAgentSandboxByName(name: string): Promise<Sandbox | null> {
+  try {
+    const creds = sandboxCredentials();
+    return await Sandbox.get({ ...creds, name, resume: false });
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Combien de temps on laisse `wait()` répondre avant de conclure « il vit ».
  *
  * MESURÉ (2026-08-07, vraie microVM) : sur un process déjà mort, `wait()` rend en

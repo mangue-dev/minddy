@@ -74,8 +74,13 @@ export function prFileStatus(status: AgentFileChangeStatus): FileStatus {
   return status === "deleted" ? "removed" : status;
 }
 
-/** Totaux +/− d'une liste (0 quand inconnus — vue live). */
-export function changeTotals(files: AgentFileChange[]): { additions: number; deletions: number } {
+/** Totaux +/− d'une liste (0 quand inconnus — vue live). Prend toute liste qui
+ *  PORTE ces deux nombres : la même somme sert les fichiers d'un event
+ *  `files_changed` et ceux du diff lu dans la microVM, qui parlent la langue des
+ *  diffs de forge (`filename`) et pas celle de git (`path`). */
+export function changeTotals(
+  files: { additions: number; deletions: number }[],
+): { additions: number; deletions: number } {
   return files.reduce(
     (acc, f) => ({ additions: acc.additions + f.additions, deletions: acc.deletions + f.deletions }),
     { additions: 0, deletions: 0 },

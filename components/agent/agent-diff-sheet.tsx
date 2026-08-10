@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import {
   Sheet,
@@ -12,21 +13,24 @@ import {
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
 import { runPrEndpoint } from "@/lib/agent-api";
+import { fileAnchorId } from "@/lib/pr-file-tree";
 import { useAgentRunDiffQuery } from "@/lib/use-agent-runs";
 
 /**
  * Vue diff DANS la conversation de l'agent : les modifications de la session sans
  * quitter le fil ni attendre la PR. Ouverte en cliquant un fichier des blocs
- * « fichiers changés » (barre live comme fil), dans un Sheet posé PAR-DESSUS la
+ * « fichiers changés » (fil comme en-tête), dans un Sheet posé PAR-DESSUS la
  * conversation — qui vit elle-même parfois en Sheet (modal d'issue) : Radix
  * empile.
  *
- * Contenu = le diff VIVANT servi par /api/agent-runs/[runId]/diff : la PR quand
- * elle existe, sinon le compare base...branche de travail. C'est le travail
- * POUSSÉ — l'agent pousse à chaque fin de tour, le diff suit à cette cadence
- * (re-poll tant qu'il travaille) ; le live du tour en cours reste la barre de
- * fichiers. Lecture seule : la review (commentaires ancrés) vit sur la page
- * Pull requests.
+ * Contenu = le diff servi par /api/agent-runs/[runId]/diff, qui change de source
+ * selon ce que le run fait : PENDANT LE TOUR, `git diff` lu dans la microVM —
+ * donc ce que l'agent vient d'écrire, avant même qu'il l'ait poussé ; AU REPOS,
+ * la PR quand elle existe, sinon le compare base...branche. On le DIT quand la
+ * réponse vient de la sandbox : un diff qui contient du travail non poussé ne se
+ * lit pas comme un diff de pull request.
+ *
+ * Lecture seule : la review (commentaires ancrés) vit sur la page Pull requests.
  */
 export function AgentDiffSheet({
   runId,
@@ -35,18 +39,44 @@ export function AgentDiffSheet({
   working,
   baseBranch,
   branchName,
+  focusPath,
 }: {
   runId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** L'agent travaille : le diff se re-poll (il avance à chaque fin de tour). */
+  /** L'agent travaille : le diff se re-poll (il avance pendant le tour). */
   working: boolean;
   /** Branche d'origine → branche de session, affichées sous le titre. */
   baseBranch: string | null;
   branchName: string | null;
+  /** Fichier par lequel on est entré : la vue s'ouvre dessus. */
+  focusPath?: string | null;
 }) {
   const t = useTranslations("Agent");
-  const { files, provider, url, loading } = useAgentRunDiffQuery(runId, open, working);
+  const { files, provider, url, live, loading } = useAgentRunDiffQuery(runId, open, working);
+
+  /**
+   * On arrive SUR le fichier cliqué. L'ancre n'existe qu'une fois le diff peint,
+   * et le diff arrive après l'ouverture du Sheet : le saut attend donc les deux.
+   *
+   * Une seule fois par ouverture (`jumped`), et c'est le point : le diff se
+   * re-poll toutes les 7 secondes pendant le tour, et re-sauter à chaque réponse
+   * arracherait la vue sous les yeux de qui est en train de lire ailleurs.
+   */
+  const jumped = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) {
+      jumped.current = null;
+      return;
+    }
+    if (!focusPath || files.length === 0 || jumped.current === focusPath) return;
+    const node = document.getElementById(fileAnchorId(focusPath));
+    // Pas dans ce diff (fichier tout juste touché, diff pas encore rafraîchi) :
+    // on ne marque rien et la prochaine réponse retentera le saut.
+    if (!node) return;
+    jumped.current = focusPath;
+    node.scrollIntoView({ block: "start" });
+  }, [open, focusPath, files]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -59,12 +89,18 @@ export function AgentDiffSheet({
       >
         <SheetHeader className="shrink-0 border-b border-border pr-12">
           <SheetTitle>{t("diffTitle")}</SheetTitle>
+          {/* Ce que la ligne dit d'abord, c'est OÙ va ce diff (origine → session).
+              Quand il vient de la sandbox, elle dit aussi ce qu'il contient de
+              plus que la forge : le travail du tour, pas encore poussé. */}
           {branchName ? (
-            <SheetDescription className="truncate font-mono text-xs">
-              {baseBranch ? `${baseBranch} → ${branchName}` : branchName}
+            <SheetDescription className="truncate text-xs">
+              <span className="font-mono">
+                {baseBranch ? `${baseBranch} → ${branchName}` : branchName}
+              </span>
+              {live ? <span className="text-shimmer">{` · ${t("diffLive")}`}</span> : null}
             </SheetDescription>
           ) : (
-            <SheetDescription>{t("diffDescription")}</SheetDescription>
+            <SheetDescription>{live ? t("diffLive") : t("diffDescription")}</SheetDescription>
           )}
         </SheetHeader>
         {/* Pas de padding en HAUT du conteneur qui défile : `position: sticky` se

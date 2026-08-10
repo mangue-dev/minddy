@@ -566,17 +566,31 @@ export async function fetchPullRequestApi(prId: string): Promise<AgentRunPrRespo
 }
 
 /**
- * Diff VIVANT d'un run — la vue diff DANS la conversation, sans attendre la PR :
- * les fichiers/patches de la PR quand elle existe, sinon le compare
- * base...branche de travail (le travail POUSSÉ, rafraîchi à chaque fin de tour).
+ * Diff VIVANT d'un run — la vue diff DANS la conversation, sans attendre la PR.
+ * Deux sources selon ce que le run fait : pendant le tour, `git diff` lu dans la
+ * microVM (le travail non encore poussé compris) ; au repos, la PR quand elle
+ * existe, sinon le compare base...branche.
+ *
+ * `live` dit que la réponse vient de la sandbox : ce diff-là contient du travail
+ * qui n'est pas encore sur la forge, et ça se dit à l'écran.
  * `url` : la PR ou la page compare du provider (liens « voir sur … »).
+ *
+ * `stat` demande les mêmes fichiers SANS leurs patches — de quoi afficher deux
+ * nombres dans l'en-tête sans faire transiter le diff entier toutes les
+ * quelques secondes.
  */
-export async function fetchAgentRunDiffApi(runId: string): Promise<{
+export async function fetchAgentRunDiffApi(
+  runId: string,
+  opts?: { stat?: boolean },
+): Promise<{
   files: PullRequestFile[];
+  truncated?: boolean;
   provider?: RepoProviderId;
   url: string | null;
+  live?: boolean;
 }> {
-  return parseJson(await fetch(`/api/agent-runs/${runId}/diff`));
+  const query = opts?.stat ? "?stat=1" : "";
+  return parseJson(await fetch(`/api/agent-runs/${runId}/diff${query}`));
 }
 
 /**

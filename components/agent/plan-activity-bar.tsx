@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, Spinner, cn } from "mangue-ui";
 import { CheckCircle2, ChevronRight, Circle, CircleSlash, ListChecks } from "lucide-react";
-import { AgentBeam } from "@/components/agent-beam";
 import type { PlanStep } from "@/lib/agent-plan";
 
 /**
@@ -32,9 +31,13 @@ import type { PlanStep } from "@/lib/agent-plan";
  * c'est la seule différence à lire entre l'étape en cours et celles qui ont été
  * cochées. Une icône fixe ne s'en distinguait que par sa forme.
  *
- * Elle ne vit que pendant le tour qui a posé son plan (cf. `livePlan`) : ce qui
- * s'affiche ici avance forcément, d'où le liseré toujours allumé — exactement
- * comme la carte des sous-agents.
+ * Elle ne vit que pendant le tour qui a posé son plan (cf. `livePlan`). Pas de
+ * liseré « agent en cours » pour autant, contrairement à la carte des sous-agents :
+ * elle se pose contre le composer, qui porte DÉJÀ le sien pendant le tour
+ * ([chat-input](../assistant/chat-input.tsx), `beam={working}`). Deux liserés
+ * empilés à deux pixels l'un de l'autre ne disent pas deux fois « ça tourne » : ils
+ * se lisent comme un cadre. Ce qui avance ici se lit au spinner de l'étape en cours
+ * et au shimmer de son libellé.
  */
 export function PlanActivityBar({ steps }: { steps: PlanStep[] }) {
   const t = useTranslations("Agent");
@@ -47,55 +50,51 @@ export function PlanActivityBar({ steps }: { steps: PlanStep[] }) {
 
   return (
     <div className="px-3 pb-2">
-      {/* Le liseré « agent en cours » (MIN-46), au rayon de la carte. Toujours
-          allumé : cette carte n'existe QUE pendant le tour qui écrit son plan. */}
-      <AgentBeam active className="rounded-xl">
-        <div className="rounded-xl border border-border bg-card">
-          <Collapsible open={open} onOpenChange={setOpen}>
-            <div className="flex items-center gap-2 px-3 py-2.5">
-              <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-                <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
-                <ListChecks className="size-3.5 shrink-0" />
-                {/* L'étape en cours plutôt que le mot « Plan » : c'est elle qu'on
-                    vient chercher. Le shimmer ne court que tant qu'elle avance. */}
-                <span className={cn("truncate", current && "text-shimmer")}>
-                  {current ? current.step : t("plan")}
-                </span>
-                {/* Collé à droite et tabulaire : un compteur ne doit pas danser
-                    quand l'étape d'à côté change de longueur. */}
-                <span className="ml-auto shrink-0 pl-2 tabular-nums">
-                  {done}/{steps.length}
-                </span>
-              </CollapsibleTrigger>
+      <div className="rounded-xl border border-border bg-card">
+        <Collapsible open={open} onOpenChange={setOpen}>
+          <div className="flex items-center gap-2 px-3 py-2.5">
+            <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
+              <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+              <ListChecks className="size-3.5 shrink-0" />
+              {/* L'étape en cours plutôt que le mot « Plan » : c'est elle qu'on
+                  vient chercher. Le shimmer ne court que tant qu'elle avance. */}
+              <span className={cn("truncate", current && "text-shimmer")}>
+                {current ? current.step : t("plan")}
+              </span>
+              {/* Collé à droite et tabulaire : un compteur ne doit pas danser
+                  quand l'étape d'à côté change de longueur. */}
+              <span className="ml-auto shrink-0 pl-2 tabular-nums">
+                {done}/{steps.length}
+              </span>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent>
+            <div className="flex flex-col px-1.5 pb-2">
+              {steps.map((s, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-xs",
+                    s.status === "in_progress" ? "text-foreground" : "text-muted-foreground",
+                    s.status === "cancelled" && "line-through",
+                  )}
+                >
+                  {s.status === "completed" ? (
+                    <CheckCircle2 className="mt-px size-3.5 shrink-0 text-brand" />
+                  ) : s.status === "in_progress" ? (
+                    <Spinner className="mt-px size-3.5 shrink-0 text-brand" />
+                  ) : s.status === "cancelled" ? (
+                    <CircleSlash className="mt-px size-3.5 shrink-0" />
+                  ) : (
+                    <Circle className="mt-px size-3.5 shrink-0" />
+                  )}
+                  <span className="min-w-0">{s.step}</span>
+                </div>
+              ))}
             </div>
-            <CollapsibleContent>
-              <div className="flex flex-col px-1.5 pb-2">
-                {steps.map((s, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-xs",
-                      s.status === "in_progress" ? "text-foreground" : "text-muted-foreground",
-                      s.status === "cancelled" && "line-through",
-                    )}
-                  >
-                    {s.status === "completed" ? (
-                      <CheckCircle2 className="mt-px size-3.5 shrink-0 text-brand" />
-                    ) : s.status === "in_progress" ? (
-                      <Spinner className="mt-px size-3.5 shrink-0 text-brand" />
-                    ) : s.status === "cancelled" ? (
-                      <CircleSlash className="mt-px size-3.5 shrink-0" />
-                    ) : (
-                      <Circle className="mt-px size-3.5 shrink-0" />
-                    )}
-                    <span className="min-w-0">{s.step}</span>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-      </AgentBeam>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
     </div>
   );
 }

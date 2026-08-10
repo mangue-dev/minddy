@@ -42,6 +42,7 @@ import {
   agentRunQueryKey,
   allAgentSessionsQueryKey,
   issueAgentRunsQueryKey,
+  useAgentRunDiffStatQuery,
   useAgentRunEventsQuery,
   useAgentRunQuery,
   useIssueAgentRunsQuery,
@@ -209,6 +210,11 @@ export function AgentConversation({
   // Vue diff de la session (Sheet par-dessus la conversation) : ouverte en
   // cliquant un fichier des blocs « fichiers changés », PR ou pas.
   const [diffOpen, setDiffOpen] = useState(false);
+  // Le fichier par lequel on est entré : la vue s'ouvre DESSUS. Cliquer une
+  // ligne pour atterrir en haut d'un diff de quarante fichiers, c'est arriver à
+  // côté de ce qu'on a demandé. `null` quand l'entrée ne désigne rien (les deux
+  // nombres de l'en-tête) — la vue s'ouvre alors normalement, en haut.
+  const [diffFocus, setDiffFocus] = useState<string | null>(null);
   // La conversation suit ce que l'hôte désigne. Il n'y a plus de sélecteur de
   // runs ici pour lui disputer la main : ce que l'utilisateur choisit, il le
   // choisit dans la LISTE, et l'hôte nous le passe en prop.
@@ -298,7 +304,25 @@ export function AgentConversation({
     () => cumulativeBranchFiles(liveEvents).files,
     [liveEvents],
   );
-  const sessionTotals = useMemo(() => changeTotals(sessionFiles), [sessionFiles]);
+  /**
+   * LES MÊMES DEUX NOMBRES, MAIS PENDANT LE TOUR (MIN-266).
+   *
+   * `files_changed` n'est émis qu'en FIN de tour : tant que l'agent travaillait,
+   * l'en-tête ne bougeait pas d'un chiffre — et au premier tour d'une session il
+   * n'affichait rien du tout, alors que c'est exactement le moment où l'on veut
+   * savoir ce qui est en train d'arriver au dépôt. Ce résumé-là est lu dans la
+   * microVM (`git diff`, sans les patches) et avance donc avec le travail.
+   *
+   * Il ne tourne que pendant le tour ; au repos les events reprennent la main,
+   * et ils sont déjà chargés.
+   */
+  const { files: liveDiffFiles } = useAgentRunDiffStatQuery(liveRun?.id ?? null, working);
+  const sessionTotals = useMemo(
+    // Le direct FAIT FOI dès qu'il a quelque chose : il contient tout ce que
+    // portent les events (les commits des tours passés) PLUS le tour en cours.
+    () => changeTotals(liveDiffFiles.length > 0 ? liveDiffFiles : sessionFiles),
+    [liveDiffFiles, sessionFiles],
+  );
   /**
    * Les sous-agents du tour en cours (MIN-112) → carte au-dessus du composer.
    * Lus sur les MÊMES events que le fil (clé react-query partagée) : aucune
@@ -362,8 +386,15 @@ export function AgentConversation({
   // STABLE (useCallback) : ce callback descend jusqu'aux blocs du fil, qui sont
   // mémoïsés. Recréé à chaque rendu, il les réveillerait tous à chaque poussée du
   // direct — soit quatre fois par seconde pendant que l'agent écrit.
-  const openDiffSheet = useCallback(() => setDiffOpen(true), []);
-  const openDiff = liveRun ? openDiffSheet : undefined;
+  const openDiffSheet = useCallback(() => {
+    setDiffFocus(null);
+    setDiffOpen(true);
+  }, []);
+  const openDiffAt = useCallback((path: string) => {
+    setDiffFocus(path);
+    setDiffOpen(true);
+  }, []);
+  const openDiff = liveRun ? openDiffAt : undefined;
 
   // Changer de run vide les bulles optimistes : elles appartiennent à la
   // conversation qu'on quitte, pas à celle qu'on ouvre. `launchText` part avec :
@@ -581,7 +612,7 @@ export function AgentConversation({
    * nombres s'allongent donc vers la GAUCHE, sans jamais déplacer le bouton de PR.
    */
   const sessionActions =
-    liveRun && sessionFiles.length > 0 ? (
+    liveRun && (sessionFiles.length > 0 || liveDiffFiles.length > 0) ? (
       <>
         {sessionTotals.additions > 0 || sessionTotals.deletions > 0 ? (
           <Tooltip>
@@ -877,6 +908,7 @@ export function AgentConversation({
           runId={liveRun.id}
           open={diffOpen}
           onOpenChange={setDiffOpen}
+          focusPath={diffFocus}
           // Le vrai statut : c'est lui qui cadence le rafraîchissement du diff, et
           // le tour pousse encore pendant les secondes qui suivent l'arrêt demandé.
           working={serverWorking}

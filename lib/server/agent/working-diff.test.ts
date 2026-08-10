@@ -1,0 +1,340 @@
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  buildWorkingDiff,
+  countPatchLines,
+  parseNameStatus,
+  parseNumstat,
+  readWorkingDiff,
+  resolveBaseRef,
+  splitUnifiedDiff,
+} from "./working-diff";
+import type { RepoHost, ShellResult } from "./repo-host";
+
+/**
+ * LA LECTURE DES SORTIES DE GIT, exercée sur des sorties RÉELLES — celles d'un
+ * dépôt jetable monté à la main (une modification, une suppression, un
+ * renommage, un fichier non suivi, un binaire, un chemin à espaces), recopiées
+ * ici telles quelles. C'est tout l'intérêt : ce module ne peut pas s'exercer
+ * contre une vraie microVM, mais son travail réel est de LIRE, et ça, ça se
+ * teste entièrement.
+ */
+
+const NAME_STATUS = ["D\tdel.txt", "M\tkeep.txt", "R100\tren.txt\tren2.txt"].join("\n");
+
+const NUMSTAT = ["0\t1\tdel.txt", "2\t1\tkeep.txt", "0\t0\tren.txt => ren2.txt"].join("\n");
+
+const PATCH = `diff --git a/del.txt b/del.txt
+deleted file mode 100644
+index 587be6b..0000000
+--- a/del.txt
++++ /dev/null
+@@ -1 +0,0 @@
+-x
+diff --git a/keep.txt b/keep.txt
+index de98044..a7bc997 100644
+--- a/keep.txt
++++ b/keep.txt
+@@ -1,3 +1,4 @@
+ a
+-b
++B
+ c
++d
+diff --git a/ren.txt b/ren2.txt
+similarity index 100%
+rename from ren.txt
+rename to ren2.txt
+`;
+
+const UNTRACKED_PATCH = `diff --git a/bin.dat b/bin.dat
+new file mode 100644
+index 0000000..366fd40
+Binary files /dev/null and b/bin.dat differ
+diff --git a/sub/with space.txt b/sub/with space.txt
+new file mode 100644
+index 0000000..b680253
+--- /dev/null
++++ b/sub/with space.txt\t
+@@ -0,0 +1 @@
++z
+diff --git a/untracked.txt b/untracked.txt
+new file mode 100644
+index 0000000..07f33c4
+--- /dev/null
++++ b/untracked.txt
+@@ -0,0 +1,2 @@
++new
++file
+`;
+
+describe("parseNameStatus", () => {
+  it("lit statuts et chemins, renommage compris", () => {
+    expect(parseNameStatus(NAME_STATUS)).toEqual([
+      { filename: "del.txt", status: "removed" },
+      { filename: "keep.txt", status: "modified" },
+      { filename: "ren2.txt", status: "renamed", previousFilename: "ren.txt" },
+    ]);
+  });
+
+  it("range une copie du côté des ajouts et le reste du côté des modifications", () => {
+    expect(parseNameStatus("C075\ta.txt\tb.txt\nT\tc.txt")).toEqual([
+      { filename: "a.txt", status: "added" },
+      { filename: "c.txt", status: "modified" },
+    ]);
+  });
+
+  it("ignore les lignes vides et sans chemin", () => {
+    expect(parseNameStatus("\nM\n\nM\tok.txt\n")).toEqual([
+      { filename: "ok.txt", status: "modified" },
+    ]);
+  });
+});
+
+describe("parseNumstat", () => {
+  it("indexe les compteurs par chemin d'ARRIVÉE d'un renommage", () => {
+    const counts = parseNumstat(NUMSTAT);
+    expect(counts.get("keep.txt")).toEqual({ additions: 2, deletions: 1 });
+    // Le champ compacté `ren.txt => ren2.txt` s'indexe sur le nom d'après —
+    // sinon les compteurs d'un fichier renommé ne rejoindraient jamais sa ligne.
+    expect(counts.get("ren2.txt")).toEqual({ additions: 0, deletions: 0 });
+    expect(counts.has("ren.txt")).toBe(false);
+  });
+
+  it("décompacte aussi la forme à accolades", () => {
+    const counts = parseNumstat("3\t1\tapp/{old => new}/page.tsx");
+    expect(counts.get("app/new/page.tsx")).toEqual({ additions: 3, deletions: 1 });
+  });
+
+  it("compte un binaire 0/0 plutôt que NaN", () => {
+    expect(parseNumstat("-\t-\tbin.dat").get("bin.dat")).toEqual({
+      additions: 0,
+      deletions: 0,
+    });
+  });
+});
+
+describe("splitUnifiedDiff", () => {
+  it("rend les HUNKS seuls, sans l'en-tête que la vue reconstruit", () => {
+    const patches = splitUnifiedDiff(PATCH);
+    expect(patches.get("keep.txt")).toBe("@@ -1,3 +1,4 @@\n a\n-b\n+B\n c\n+d");
+    // Un fichier supprimé n'a pas de `+++ b/...` : son chemin se lit sur `--- a/`.
+    expect(patches.get("del.txt")).toBe("@@ -1 +0,0 @@\n-x");
+  });
+
+  it("suit un renommage pur jusqu'à son nom d'arrivée, patch vide", () => {
+    expect(splitUnifiedDiff(PATCH).get("ren2.txt")).toBe("");
+  });
+
+  it("lit un chemin à espaces sur la ligne +++ , tabulation de git retirée", () => {
+    const patches = splitUnifiedDiff(UNTRACKED_PATCH);
+    expect(patches.get("sub/with space.txt")).toBe("@@ -0,0 +1 @@\n+z");
+  });
+
+  it("garde un binaire (sans hunk) plutôt que de le perdre", () => {
+    expect(splitUnifiedDiff(UNTRACKED_PATCH).get("bin.dat")).toBe("");
+  });
+
+  it("ne se laisse pas couper par un diff DANS un diff", () => {
+    const nested = `diff --git a/doc.md b/doc.md
+--- a/doc.md
++++ b/doc.md
+@@ -1,2 +1,3 @@
+ exemple :
++diff --git a/faux.txt b/faux.txt
+`;
+    const patches = splitUnifiedDiff(nested);
+    expect([...patches.keys()]).toEqual(["doc.md"]);
+    expect(patches.get("doc.md")).toContain("+diff --git a/faux.txt b/faux.txt");
+  });
+
+  it("rend une map vide sur un diff vide", () => {
+    expect(splitUnifiedDiff("").size).toBe(0);
+    expect(splitUnifiedDiff("   \n").size).toBe(0);
+  });
+});
+
+describe("countPatchLines", () => {
+  it("compte les lignes du patch (le seul compte d'un fichier non suivi)", () => {
+    expect(countPatchLines("@@ -0,0 +1,2 @@\n+new\n+file")).toEqual({
+      additions: 2,
+      deletions: 0,
+    });
+  });
+});
+
+describe("buildWorkingDiff", () => {
+  const built = () =>
+    buildWorkingDiff({
+      nameStatus: NAME_STATUS,
+      numstat: NUMSTAT,
+      patch: PATCH,
+      untrackedPatch: UNTRACKED_PATCH,
+    });
+
+  it("assemble suivis et non suivis en une seule liste triée", () => {
+    expect(built().files.map((f) => f.filename)).toEqual([
+      "bin.dat",
+      "del.txt",
+      "keep.txt",
+      "ren2.txt",
+      "sub/with space.txt",
+      "untracked.txt",
+    ]);
+  });
+
+  it("donne à chaque fichier son statut, ses compteurs et son patch", () => {
+    const byName = new Map(built().files.map((f) => [f.filename, f]));
+    expect(byName.get("keep.txt")).toEqual({
+      filename: "keep.txt",
+      status: "modified",
+      additions: 2,
+      deletions: 1,
+      patch: "@@ -1,3 +1,4 @@\n a\n-b\n+B\n c\n+d",
+    });
+    expect(byName.get("ren2.txt")).toMatchObject({
+      status: "renamed",
+      previous_filename: "ren.txt",
+    });
+  });
+
+  it("compte un fichier NON SUIVI en ajout, avec ses lignes", () => {
+    const untracked = built().files.find((f) => f.filename === "untracked.txt");
+    // C'est le cas le plus fréquent d'un tour d'agent, et celui que `git diff`
+    // seul ne voit pas : sans le passage `--no-index`, ce fichier serait absent.
+    expect(untracked).toMatchObject({ status: "added", additions: 2, deletions: 0 });
+  });
+
+  it("ne compte pas deux fois un fichier déjà suivi", () => {
+    const out = buildWorkingDiff({
+      nameStatus: "M\tkeep.txt",
+      numstat: "2\t1\tkeep.txt",
+      patch: PATCH,
+      untrackedPatch: `diff --git a/keep.txt b/keep.txt
+new file mode 100644
+--- /dev/null
++++ b/keep.txt
+@@ -0,0 +1 @@
++doublon
+`,
+    });
+    expect(out.files).toHaveLength(1);
+    expect(out.files[0].status).toBe("modified");
+  });
+
+  it("dit sa troncature quand le texte a été coupé au plafond", () => {
+    const out = buildWorkingDiff({
+      nameStatus: NAME_STATUS,
+      numstat: NUMSTAT,
+      patch: PATCH,
+      untrackedPatch: "",
+      patchTruncated: true,
+    });
+    expect(out.truncated).toBe(true);
+  });
+
+  it("borne la liste à 100 fichiers, et le dit", () => {
+    const many = Array.from({ length: 130 }, (_, i) => `M\tf${String(i).padStart(3, "0")}.txt`);
+    const out = buildWorkingDiff({
+      nameStatus: many.join("\n"),
+      numstat: "",
+      patch: "",
+      untrackedPatch: "",
+    });
+    expect(out.files).toHaveLength(100);
+    expect(out.truncated).toBe(true);
+  });
+});
+
+/** Un hôte de dépôt qui répond par table, et retient ce qu'on lui a demandé. */
+function fakeHost(replies: [RegExp, string][]): RepoHost & { commands: string[] } {
+  const commands: string[] = [];
+  return {
+    commands,
+    exec: async (command: string): Promise<ShellResult> => {
+      commands.push(command);
+      for (const [pattern, stdout] of replies) {
+        if (pattern.test(command)) return { exitCode: 0, stdout, stderr: "" };
+      }
+      return { exitCode: 1, stdout: "", stderr: "" };
+    },
+    readFile: async () => null,
+    writeFile: async () => {},
+    mkdir: async () => {},
+  };
+}
+
+describe("resolveBaseRef", () => {
+  it("prend origin/<base> quand la ref existe", async () => {
+    const host = fakeHost([[/rev-parse --verify/, "abc123\n"]]);
+    expect(await resolveBaseRef(host, "main")).toBe("origin/main");
+  });
+
+  it("prend origin/HEAD quand la base n'est pas nommée", async () => {
+    const host = fakeHost([[/symbolic-ref/, "origin/main\n"]]);
+    expect(await resolveBaseRef(host, null)).toBe("origin/main");
+    expect(host.commands.some((c) => c.includes("rev-parse"))).toBe(false);
+  });
+
+  it("retombe sur la seule ref distante du clone quand origin/HEAD manque", async () => {
+    // `--depth 1` implique `--single-branch` : il n'y a qu'une ref distante, et
+    // c'est forcément la base. Aller la demander à la forge coûterait un token.
+    const host = fakeHost([[/for-each-ref/, "origin/develop\n"]]);
+    expect(await resolveBaseRef(host, null)).toBe("origin/develop");
+    // `origin/HEAD` est exclu : son nom court est « origin » tout court, un ref
+    // valide qui se lit comme un bug dès qu'il apparaît quelque part.
+    expect(host.commands.some((c) => c.includes("--exclude=refs/remotes/origin/HEAD"))).toBe(true);
+  });
+
+  it("retombe aussi quand la base NOMMÉE n'existe pas dans le clone", async () => {
+    const host = fakeHost([[/for-each-ref/, "origin/main\n"]]);
+    expect(await resolveBaseRef(host, "disparue")).toBe("origin/main");
+  });
+
+  it("rend null quand le dépôt ne dit rien", async () => {
+    expect(await resolveBaseRef(fakeHost([]), "main")).toBeNull();
+  });
+});
+
+describe("readWorkingDiff", () => {
+  it("ne demande AUCUNE écriture : ni add, ni commit, ni checkout", async () => {
+    const host = fakeHost([
+      [/--name-status/, NAME_STATUS],
+      [/--numstat/, NUMSTAT],
+      [/--find-renames --no-color/, PATCH],
+      [/ls-files --others/, UNTRACKED_PATCH],
+    ]);
+    await readWorkingDiff(host, "origin/main", { patches: true });
+    // La fin de tour stage et committe SEULE : une intention d'ajout posée ici
+    // finirait dans le commit de quelqu'un d'autre.
+    for (const command of host.commands) {
+      expect(command).not.toMatch(/git (add|commit|checkout|stash|reset)\b/);
+    }
+  });
+
+  it("saute les patches en mode résumé (l'en-tête n'a besoin que des nombres)", async () => {
+    const host = fakeHost([
+      [/--name-status/, NAME_STATUS],
+      [/--numstat/, NUMSTAT],
+    ]);
+    const out = await readWorkingDiff(host, "origin/main", { patches: false });
+    expect(host.commands.some((c) => c.includes("ls-files --others"))).toBe(false);
+    expect(out.files.map((f) => f.filename)).toEqual(["del.txt", "keep.txt", "ren2.txt"]);
+    expect(out.files.every((f) => f.patch === undefined)).toBe(true);
+  });
+
+  it("rend une liste vide plutôt que de lever quand la sandbox tombe", async () => {
+    const host: RepoHost = {
+      exec: vi.fn().mockRejectedValue(new Error("sandbox unreachable")),
+      readFile: async () => null,
+      writeFile: async () => {},
+      mkdir: async () => {},
+    };
+    // Ce chemin est un BONUS sur celui de la forge : une microVM injoignable doit
+    // faire un repli silencieux, pas une vue diff en panne.
+    await expect(readWorkingDiff(host, "origin/main", { patches: true })).resolves.toEqual({
+      files: [],
+      truncated: false,
+    });
+  });
+});

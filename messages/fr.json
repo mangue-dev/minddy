@@ -1832,6 +1832,7 @@
     "diffTitle": "Modifications de la session",
     "diffDescription": "Le travail poussé par l'agent Numo sur la branche de cette session.",
     "diffEmpty": "Aucune modification pour l'instant. L'agent Numo pousse son travail à la fin de chaque tour.",
+    "diffLive": "tour en cours compris",
     "createPullRequest": "Créer une pull request",
     "createPrPrompt": "Ouvre une pull request pour les changements de cette branche.",
     "workedForMinutes": "A travaillé pendant {minutes, plural, one {# minute} other {# minutes}} et {seconds, plural, one {# seconde} other {# secondes}}",

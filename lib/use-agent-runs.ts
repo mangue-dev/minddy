@@ -180,10 +180,14 @@ export function agentRunDiffQueryKey(runId: string) {
 /**
  * Diff vivant d'un run — la vue diff DANS la conversation, sans attendre la PR.
  * Interrogé seulement quand la vue est OUVERTE (`enabled`) ; tant que l'agent
- * travaille, re-poll ~7 s — le diff n'avance qu'aux pushes de fin de tour,
- * inutile de suivre la cadence 2 s des events. `refetchOnMount: always` : la vue
- * repart toujours d'un état frais à l'ouverture (le staleTime global de 5 min
- * garderait sinon un diff d'avant le dernier tour).
+ * travaille, re-poll ~7 s. `refetchOnMount: always` : la vue repart toujours
+ * d'un état frais à l'ouverture (le staleTime global de 5 min garderait sinon un
+ * diff d'avant le dernier tour).
+ *
+ * La cadence de 7 s date du temps où ce diff ne bougeait qu'aux pushes de fin de
+ * tour. Il vient maintenant de la sandbox pendant le tour et avance donc en
+ * continu ; 7 s reste le bon pas — chaque passage est un aller-retour RPC dans la
+ * microVM, et une vue diff qui se repeint quatre fois par seconde ne se lit pas.
  */
 export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: boolean) {
   const { data, isPending } = useQuery({
@@ -197,7 +201,39 @@ export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: b
     files: data?.files ?? [],
     provider: data?.provider,
     url: data?.url ?? null,
+    live: data?.live === true,
     loading: enabled && isPending,
+  };
+}
+
+/** Clé de cache du RÉSUMÉ du diff (les mêmes fichiers, sans les patches). */
+export function agentRunDiffStatQueryKey(runId: string) {
+  return ["agent-run-diff-stat", runId] as const;
+}
+
+/**
+ * LES DEUX NOMBRES DE L'EN-TÊTE PENDANT LE TOUR (MIN-266).
+ *
+ * L'en-tête les tirait des events `files_changed`, émis en FIN de tour : pendant
+ * qu'il travaillait, l'agent pouvait toucher trente fichiers sans que rien ne
+ * bouge là-haut — et au premier tour d'une session, il n'y avait rien du tout.
+ * Cette requête-ci lit le même diff que la vue, en version résumée (aucun patch),
+ * et donne donc les compteurs pendant que le travail se fait.
+ *
+ * Elle ne tourne QUE pendant le tour : au repos, les events font foi et ne
+ * coûtent rien — ils sont déjà chargés par le fil.
+ */
+export function useAgentRunDiffStatQuery(runId: string | null, working: boolean) {
+  const { data } = useQuery({
+    queryKey: agentRunDiffStatQueryKey(runId ?? ""),
+    queryFn: () => fetchAgentRunDiffApi(runId!, { stat: true }),
+    enabled: Boolean(runId) && working,
+    refetchOnMount: "always",
+    refetchInterval: working ? 7000 : false,
+  });
+  return {
+    files: data?.files ?? [],
+    live: data?.live === true,
   };
 }
 

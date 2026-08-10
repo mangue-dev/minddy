@@ -1832,6 +1832,7 @@
     "diffTitle": "Session changes",
     "diffDescription": "The work the Numo agent has pushed on this session's branch.",
     "diffEmpty": "No changes yet. The Numo agent pushes its work at the end of each turn.",
+    "diffLive": "including the current turn",
     "createPullRequest": "Create pull request",
     "createPrPrompt": "Open a pull request for the changes on this branch.",
     "workedForMinutes": "Worked for {minutes, plural, one {# minute} other {# minutes}} and {seconds, plural, one {# second} other {# seconds}}",

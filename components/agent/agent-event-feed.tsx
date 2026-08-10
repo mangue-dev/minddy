@@ -716,11 +716,21 @@ function FilesRow({
   onOpenFile?: (path: string) => void;
 }) {
   const t = useTranslations("Agent");
+  // Le bloc du tour EN COURS ne dit pas la même chose que celui d'un tour fini :
+  // sa liste bouge encore, ses compteurs valent zéro (git n'a rien compté), et
+  // ses lignes mènent au diff VIVANT, pas à l'état poussé. Le libellé le dit
+  // (« N fichiers ce tour ») et shimmer tant que le tour avance — la marque
+  // « ça tourne » du fil, la même que le plan et les sous-agents.
   return (
     <ChangedFilesBlock
       files={item.files}
       truncated={item.truncated}
-      label={t("filesChanged", { count: item.files.length })}
+      label={
+        item.live
+          ? t("filesChangedTurn", { count: item.files.length })
+          : t("filesChanged", { count: item.files.length })
+      }
+      live={item.live}
       defaultOpen
       onOpenFile={onOpenFile}
     />
