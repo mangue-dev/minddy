@@ -11,9 +11,10 @@
 // cadrage « ce sont des notes, pas une spec ; demande avant de deviner » est le
 // même que pour un agent externe.
 //
-// Portée UNE TÂCHE : la ligne arrive précédée des titres de sa section (le seul
-// canal pour l'agent, cf. splitTaskSection) ; le prompt les sort du bloc
-// <notes> et les nomme en clair — sans eux, une tâche isolée perd son contexte.
+// Portée UNE TÂCHE : la tâche — et ses sous-tâches, s'il y en a — arrive
+// précédée des titres de sa section (le seul canal pour l'agent, cf.
+// splitTaskSection) ; le prompt les sort du bloc <notes> et les nomme en clair —
+// sans eux, une tâche isolée perd son contexte.
 
 import { stripScratchpadSpacers } from "@/lib/scratchpad";
 
@@ -54,11 +55,23 @@ export function sectionHeadingChain(
   return chain;
 }
 
+/** Largeur d'indentation d'une ligne, tabulation comptée pour quatre colonnes —
+ *  la même lecture que `parsePlan` (lib/plan.ts). */
+function indentWidth(line: string): number {
+  let cols = 0;
+  for (const ch of line) {
+    if (ch === " ") cols += 1;
+    else if (ch === "\t") cols += 4;
+    else break;
+  }
+  return cols;
+}
+
 /**
  * Une tâche copiée ou lancée depuis le carnet voyage AVEC ses sections : le
  * markdown porté est la chaîne de titres qui la contient (telle quelle, niveaux
- * compris, cf. sectionHeadingChain) suivie de la SEULE ligne de tâche — voir
- * scratchpad-task.tsx. On la redécoupe ici pour la nommer en clair dans le
+ * compris, cf. sectionHeadingChain) suivie de la tâche et de SES SOUS-TÂCHES —
+ * voir scratchpad-task.tsx. On la redécoupe ici pour la nommer en clair dans le
  * prompt : « - [ ] relancer le cron » n'est pas la même tâche selon qu'elle vit
  * sous « Déploiement » ou sous « Idées », et « Sidebar » ne veut rien dire sans
  * le « Pull requests » qui l'englobe — d'où le chemin entier, joint par « > ».
@@ -70,8 +83,13 @@ export function sectionHeadingChain(
  *
  * Les titres de tête doivent s'EMBOÎTER (rangs strictement croissants) : c'est
  * ce que produit une chaîne de sections, et deux titres de même rang décrivent,
- * eux, un vrai bout de note. Tout autre contenu (pas de titre, de la prose,
- * plusieurs tâches) ressort inchangé, sans section.
+ * eux, un vrai bout de note.
+ *
+ * Ce qui suit doit être UNE tâche — au sens de la hiérarchie du carnet : une
+ * ligne de tâche, plus, éventuellement, ses sous-tâches, toutes indentées PLUS
+ * PROFOND qu'elle. Deux tâches de même niveau ne sont pas une tâche, elles sont
+ * un bout de note : elles ressortent inchangées, sans section, comme toute autre
+ * matière (pas de titre, de la prose).
  */
 export function splitTaskSection(notes: string): {
   section: string | null;
@@ -96,12 +114,15 @@ export function splitTaskSection(notes: string): {
   }
 
   const rest = lines.slice(i);
-  if (rest.length !== 1 || !TASK_LINE.test(rest[0])) {
-    return { section: null, body: notes, isTask: false };
-  }
+  const rootIndent = rest.length > 0 ? indentWidth(rest[0]) : 0;
+  const isTask =
+    rest.length > 0 &&
+    rest.every((line) => TASK_LINE.test(line)) &&
+    rest.slice(1).every((line) => indentWidth(line) > rootIndent);
+  if (!isTask) return { section: null, body: notes, isTask: false };
   return {
     section: titles.length > 0 ? titles.join(SECTION_SEPARATOR) : null,
-    body: rest[0],
+    body: rest.join("\n"),
     isTask: true,
   };
 }
@@ -167,5 +188,5 @@ If the minddy MCP tools are not available, that's fine — just work from the no
 ${body}
 </notes>
 ${sectionNote}
-These are rough, personal working notes — a quick to-do list I jotted down, not a formal spec. Checkbox lines are to-do items: '- [ ]' means to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. Some items may be terse or ambiguous. If anything is unclear or you need more detail before acting, ask me first rather than guessing.${withMcp ? `\n\n${mcpBlock}` : ""}`;
+These are rough, personal working notes — a quick to-do list I jotted down, not a formal spec. Checkbox lines are to-do items: '- [ ]' means to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. An indented checkbox line is a sub-task of the line above it, at any depth: finishing a parent means finishing everything nested under it. Some items may be terse or ambiguous. If anything is unclear or you need more detail before acting, ask me first rather than guessing.${withMcp ? `\n\n${mcpBlock}` : ""}`;
 }

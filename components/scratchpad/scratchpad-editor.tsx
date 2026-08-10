@@ -18,7 +18,6 @@ import {
   scratchpadSectionSubtree,
   stripScratchpadSpacers,
 } from "@/lib/scratchpad";
-import { isQuestionHeading } from "@/lib/plan";
 import { AgentBeam } from "@/components/agent-beam";
 import { Arrows } from "@/components/editor-arrows";
 import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
@@ -28,6 +27,10 @@ import {
   ScratchpadTaskItem,
   ScratchpadTaskList,
 } from "@/components/scratchpad/scratchpad-task";
+import {
+  nodeRank,
+  startPendingTasks,
+} from "@/components/scratchpad/start-tasks";
 import {
   SlashCommand,
   type SlashItem,
@@ -105,10 +108,6 @@ function getMarkdown(editor: Editor): string {
   return stripScratchpadSpacers(md).trim() === "" ? "" : md;
 }
 
-/** Rang (1–3) d'un nœud titre. */
-const nodeRank = (node: { attrs: { level?: unknown } }): number =>
-  Math.min(6, Math.max(1, Number(node.attrs.level) || 1));
-
 /**
  * L'intervalle [from, to) du document couvert par le `index`-ième titre — le
  * même index que celui posé sur les boutons de survol (section-copy-extension,
@@ -137,50 +136,6 @@ function sectionRange(
     }
   });
   return from === null ? null : { from, to: to ?? doc.content.size };
-}
-
-/**
- * Passe « en cours » toutes les tâches PAS ENCORE COMMENCÉES de l'intervalle
- * [from, to) — le pendant, à l'échelle d'une section ou du carnet entier, de ce
- * que la ligne fait pour elle seule (scratchpad-task.tsx) : confier du travail à
- * un agent, c'est le commencer. Une tâche déjà en cours, cochée ou annulée ne
- * bouge pas, et les cases d'une section « Questions » non plus — ce sont des
- * questions, pas du travail (même règle que `parsePlan`, que suivent déjà le
- * compteur et l'aperçu de l'accueil).
- *
- * Tout part en UNE transaction : un seul Ctrl-Z remet la section entière, et
- * l'autosave ne voit qu'une modification. Retourne le nombre de tâches déplacées.
- */
-function startPendingTasks(editor: Editor, from: number, to: number): number {
-  const { state } = editor;
-  const tr = state.tr;
-  let moved = 0;
-  // Le balayage part du DÉBUT du document, pas de `from` : l'intervalle visé
-  // peut commencer à l'intérieur d'une section « Questions » ouverte plus haut.
-  let questionRank: number | null = null;
-  state.doc.forEach((node, pos) => {
-    if (node.type.name === "heading") {
-      const rank = nodeRank(node);
-      if (questionRank !== null && rank <= questionRank) questionRank = null;
-      if (isQuestionHeading(node.textContent)) questionRank = rank;
-      return;
-    }
-    if (questionRank !== null || pos < from || pos >= to) return;
-    // Les tâches vivent dans une liste, et une tâche peut en porter d'autres :
-    // on descend le bloc entier. Changer un attribut ne change pas la taille du
-    // nœud, donc les positions déjà relevées restent valides d'un pas à l'autre.
-    node.descendants((child, offset) => {
-      if (child.type.name !== "taskItem" || child.attrs.state !== "pending")
-        return;
-      tr.setNodeMarkup(pos + 1 + offset, undefined, {
-        ...child.attrs,
-        state: "in_progress",
-      });
-      moved += 1;
-    });
-  });
-  if (moved > 0) editor.view.dispatch(tr);
-  return moved;
 }
 
 /**

@@ -63,6 +63,9 @@ function scratchpadPayload(content: string, rev: number) {
       task_index: t.index,
       text: t.text,
       state: t.state,
+      // La profondeur d'imbrication : sans elle, la liste à plat fait passer une
+      // sous-tâche pour une tâche à part, et l'agent perd ce que le carnet dit.
+      depth: t.depth,
     })),
   };
 }
@@ -95,9 +98,21 @@ async function addScratchpadTasks(
         success: false,
       };
     }
+    if (
+      item.depth !== undefined &&
+      (typeof item.depth !== "number" ||
+        !Number.isInteger(item.depth) ||
+        item.depth < 0)
+    ) {
+      return {
+        result: { error: "depth must be a non-negative integer (0 = top level)." },
+        success: false,
+      };
+    }
     tasks.push({
       text: text.slice(0, MAX_TASK_TEXT),
       state: isPlanTaskState(item.state) ? item.state : "pending",
+      depth: typeof item.depth === "number" ? item.depth : 0,
     });
   }
   const section =

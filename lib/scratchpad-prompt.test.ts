@@ -65,6 +65,22 @@ describe("splitTaskSection", () => {
     });
   });
 
+  it("keeps a task's SUB-TASKS with it, indentation included", () => {
+    expect(
+      splitTaskSection(
+        "## Deploy\n\n- [~] restart the cron\n  - [ ] check the logs\n    - [x] warn Marc"
+      )
+    ).toEqual({
+      section: "Deploy",
+      body: "- [~] restart the cron\n  - [ ] check the logs\n    - [x] warn Marc",
+      isTask: true,
+    });
+  });
+
+  it("two tasks of the SAME level are a bit of note, not one task", () => {
+    expect(splitTaskSection("## Deploy\n\n- [ ] a\n- [ ] b").isTask).toBe(false);
+  });
+
   it("accepts any heading level and the four markers", () => {
     for (const marker of ["[ ]", "[~]", "[x]", "[-]"]) {
       expect(splitTaskSection(`#### Ideas\n- ${marker} ship it`).section).toBe(

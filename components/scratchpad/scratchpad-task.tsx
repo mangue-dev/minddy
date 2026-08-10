@@ -7,7 +7,6 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from "@tiptap/react";
-import { TaskItem, TaskList } from "@tiptap/extension-list";
 import type { NodeViewRenderer } from "@tiptap/core";
 import { useTranslations } from "next-intl";
 import {
@@ -37,12 +36,17 @@ import {
   sectionHeadingChain,
 } from "@/lib/scratchpad-prompt";
 import { isPlanTaskState, type PlanTaskState } from "@/lib/plan";
-import { TASK_MARKER_BY_STATE } from "@/lib/scratchpad";
+import { taskLinesMarkdown } from "@/lib/scratchpad";
+import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
 import {
-  resolvePromptCopyAutoStart,
-  shouldAutoStartTask,
-} from "@/lib/prompt-copy-auto-start";
-import { scratchpadTaskMarkdownIt } from "@/components/scratchpad/task-markdown";
+  ScratchpadTaskItemBase,
+  ScratchpadTaskList,
+} from "@/components/scratchpad/task-nodes";
+import {
+  startPendingTasks,
+  taskItemLines,
+  taskOwnText,
+} from "@/components/scratchpad/start-tasks";
 import { useAuth } from "@/lib/auth-context";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
@@ -143,38 +147,50 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   // règles — « copier le prompt » démarre sous l'option de compte (MIN-20,
   // Compte → Préférences), « lancer un agent » démarre toujours (MIN-46). Une
   // tâche déjà commencée, cochée ou annulée ne bouge dans aucun des deux cas.
-  const startOnLaunch = shouldAutoStartTask(state);
-  const startOnCopy =
-    startOnLaunch && resolvePromptCopyAutoStart(user?.user_metadata);
-
-  // Le markdown que porte la ligne quand elle sort du carnet (copie ou agent) :
-  // la tâche telle quelle, marqueur compris, PRÉCÉDÉE des titres des sections
-  // qui la contiennent — seul moyen de dire à l'agent d'où elle vient (le prompt
-  // les reformule en clair, cf. lib/scratchpad-prompt.ts). Null si la ligne est
-  // vide.
   //
-  // Le marqueur est celui de l'état APRÈS le geste (comme le XML d'un ticket
+  // Depuis la reprise des sous-tâches, le geste porte sur le SOUS-ARBRE : un
+  // parent qu'on confie, ce sont ses enfants qu'on confie avec lui, et ce sont
+  // eux, à leur tour, que la passation démarre. Un parent déjà « en cours » qui
+  // porte encore des tâches à faire les démarre donc, alors que lui ne bouge pas.
+  const copyStarts = resolvePromptCopyAutoStart(user?.user_metadata);
+  const started = (s: PlanTaskState): PlanTaskState =>
+    s === "pending" ? "in_progress" : s;
+
+  /** Démarre la tâche et sa descendance ; rend le nombre de tâches déplacées. */
+  const startSubtree = (): number => {
+    const pos = getPos();
+    if (pos == null) return 0;
+    return startPendingTasks(editor, pos, pos + node.nodeSize);
+  };
+
+  // Le markdown que porte la tâche quand elle sort du carnet (copie ou agent) :
+  // la tâche ET SES SOUS-TÂCHES, marqueurs et niveaux compris, PRÉCÉDÉES des
+  // titres des sections qui la contiennent — seul moyen de dire à l'agent d'où
+  // elle vient (le prompt les reformule en clair, cf. lib/scratchpad-prompt.ts).
+  // Null si la ligne est vide.
+  //
+  // Les marqueurs sont ceux de l'état APRÈS le geste (comme le XML d'un ticket
   // copié, cf. issue-card.tsx) : une tâche que la passation démarre part en
   // `[~]`, pas dans son état d'avant — sans quoi le prompt décrirait comme « à
   // faire » un travail que le carnet, lui, dit déjà en cours.
-  const taskMarkdown = (as: PlanTaskState): string | null => {
-    const text = node.textContent.trim();
-    if (!text) return null;
-    const line = `- ${TASK_MARKER_BY_STATE[as]} ${text}`;
+  const taskMarkdown = (start: boolean): string | null => {
+    const lines = taskItemLines(node, start ? started : undefined);
+    if (!lines[0]?.text) return null;
+    const block = taskLinesMarkdown(lines.filter((line) => line.text));
     const headings = sectionHeadingsAt(editor, getPos());
-    return headings.length > 0 ? `${headings.join("\n\n")}\n\n${line}` : line;
+    return headings.length > 0 ? `${headings.join("\n\n")}\n\n${block}` : block;
   };
 
   const copyLine = () => {
-    const md = taskMarkdown(startOnCopy ? "in_progress" : state);
+    const md = taskMarkdown(copyStarts);
     if (!md) return;
     void navigator.clipboard.writeText(
       buildScratchpadPrompt(md, { section: true })
     );
-    if (startOnCopy) set("in_progress");
+    const moved = copyStarts ? startSubtree() : 0;
     // Le toast ne signale le déplacement que s'il a eu lieu.
     toast.success(
-      tScratch(startOnCopy ? "copiedLineMovedToast" : "copiedLineToast")
+      tScratch(moved > 0 ? "copiedLineMovedToast" : "copiedLineToast")
     );
   };
 
@@ -186,11 +202,18 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   // scratchpad-editor.tsx) pour laisser la place au panneau. Pas de projectId :
   // le panneau suit la route, donc le projet courant si on en consulte un, et en
   // mode global Numo demande lequel — le carnet, lui, est cross-projet.
+  //
+  // La note envoyée est le SOUS-ARBRE : les sous-tâches sont le détail du
+  // travail, et un ticket écrit sans elles est un ticket qui perd la moitié de
+  // ce que la note disait. Une tâche sans enfant part en texte simple, comme
+  // avant — pas de case à cocher pour une seule ligne.
   const promoteToIssue = () => {
-    const text = node.textContent.trim();
-    if (!text) return;
+    const lines = taskItemLines(node).filter((line) => line.text);
+    if (lines.length === 0) return;
+    const note =
+      lines.length === 1 ? lines[0].text : taskLinesMarkdown(lines);
     closeScratchpad();
-    openAssistant({ prompt: tScratch("promotePrompt", { note: text }) });
+    openAssistant({ prompt: tScratch("promotePrompt", { note }) });
   };
 
   // « Lancer un agent » (MIN-84) : la ligne part en markdown de carnet (marqueur
@@ -206,12 +229,12 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   // remettre, contre une passation qui ne marque rien dans le cas normal.
   const launchNote = useLaunchAgentNote();
   const launchAgent = () => {
-    const md = taskMarkdown(startOnLaunch ? "in_progress" : state);
+    const md = taskMarkdown(true);
     if (!md) return;
     // AVANT `launchNote` : il ferme le carnet, et c'est ce démontage qui flushe
     // l'autosave (scratchpad-editor.tsx) — l'état doit donc être posé pour
     // partir avec, sinon il se perdrait avec l'éditeur.
-    if (startOnLaunch) set("in_progress");
+    startSubtree();
     launchNote(md, { section: true });
   };
 
@@ -303,7 +326,7 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
       >
         <button
           type="button"
-          aria-label={t("taskCheckboxAria", { text: node.textContent })}
+          aria-label={t("taskCheckboxAria", { text: taskOwnText(node) })}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => set(toggled)}
           className={cn(
@@ -444,68 +467,14 @@ function TaskItemView({ node, updateAttributes, editor, getPos }: NodeViewProps)
   );
 }
 
-export const ScratchpadTaskItem = TaskItem.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      state: {
-        default: "pending" as PlanTaskState,
-        // Entrée en bout de tâche = une tâche NEUVE, donc « à faire » : sans
-        // ça, `splitListItem` recopie les attributs de la ligne coupée et la
-        // suivante naît déjà cochée (barrée, comptée comme faite). C'est le
-        // même réglage que l'attribut `checked` de TaskItem en amont.
-        keepOnSplit: false,
-        parseHTML: (element: HTMLElement) =>
-          element.getAttribute("data-state") ?? "pending",
-        renderHTML: (attributes: { state?: string }) => ({
-          "data-state": attributes.state ?? "pending",
-        }),
-      },
-    };
-  },
-
+/** Le nœud tâche du carnet (task-nodes.ts) + sa vue. Le schéma et le round-trip
+ *  markdown vivent à part pour rester testables sans React. */
+export const ScratchpadTaskItem = ScratchpadTaskItemBase.extend({
   addNodeView() {
     // pnpm dual @tiptap/core (same 3.27.4 version) — the react renderer's type
     // reads as a different identity than extension-list expects. Runtime is fine.
     return ReactNodeViewRenderer(TaskItemView) as unknown as NodeViewRenderer;
   },
-
-  addStorage() {
-    return {
-      ...this.parent?.(),
-      markdown: {
-        serialize(state: any, node: any) {
-          const s = node.attrs.state as PlanTaskState;
-          state.write(`${TASK_MARKER_BY_STATE[s] ?? "[ ]"} `);
-          state.renderContent(node);
-        },
-        // Our markdown-it rule sets data-type/data-state directly, so the
-        // default checkbox DOM rewrite must not run.
-        parse: { updateDOM() {} },
-      },
-    };
-  },
-}).configure({ nested: true });
-
-export const ScratchpadTaskList = TaskList.extend({
-  addStorage() {
-    return {
-      ...this.parent?.(),
-      markdown: {
-        serialize(this: { editor: { storage: Record<string, any> } }, state: any, node: any) {
-          return state.renderList(
-            node,
-            "  ",
-            () =>
-              (this.editor.storage.markdown.options.bulletListMarker || "-") + " "
-          );
-        },
-        parse: {
-          setup(markdownit: unknown) {
-            scratchpadTaskMarkdownIt(markdownit as never);
-          },
-        },
-      },
-    };
-  },
 });
+
+export { ScratchpadTaskList };

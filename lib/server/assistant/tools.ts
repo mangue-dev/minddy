@@ -1411,7 +1411,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_scratchpad",
       description:
-        "Read the user's TASK NOTEBOOK (scratchpad): their single personal, cross-project notes doc of quick things to do right now — not tied to any project, and not the backlog. Markdown with '##' section headings and the same checkbox tasks as an issue plan ('- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' dropped), prose allowed anywhere. Returns the raw markdown, the task progress, the flat task list with its 0-based index in document order (pass those indices to update_scratchpad_tasks), the section titles (the values `section` takes in add_scratchpad_tasks), and `rev` — the version to pass back to a write so a concurrent edit by the user is never overwritten. ALWAYS call this before writing to the notebook.",
+        "Read the user's TASK NOTEBOOK (scratchpad): their single personal, cross-project notes doc of quick things to do right now — not tied to any project, and not the backlog. Markdown with '##' section headings and the same checkbox tasks as an issue plan ('- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' dropped), prose allowed anywhere. Returns the raw markdown, the task progress, the flat task list with its 0-based index in document order (pass those indices to update_scratchpad_tasks) and its `depth` (0 at top level, 1 for a sub-task of the task above it, and so on with no limit — the list is flat, so `depth` is the only thing that says a task belongs to the one before it), the section titles (the values `section` takes in add_scratchpad_tasks), and `rev` — the version to pass back to a write so a concurrent edit by the user is never overwritten. ALWAYS call this before writing to the notebook.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1420,7 +1420,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "add_scratchpad_tasks",
       description:
-        "Append one or more NEW tasks to the task notebook without rewriting it — the tool for 'note ça dans mon carnet' / 'add this to my notes'. Each task defaults to 'pending' (unchecked) and must be a single short line. By default they land at the END of the notebook; pass `section` (the exact text of an existing '##' heading, see get_scratchpad) to append at the end of that section instead — an unknown section is rejected. Notebook items are quick personal to-dos: never create an issue for them unless the user asks.",
+        "Append one or more NEW tasks to the task notebook without rewriting it — the tool for 'note ça dans mon carnet' / 'add this to my notes'. Each task defaults to 'pending' (unchecked) and must be a single short line. By default they land at the END of the notebook; pass `section` (the exact text of an existing '##' heading, see get_scratchpad) to append at the end of that section instead — an unknown section is rejected. Use `depth` to nest: a task at depth 1 becomes a sub-task of the task right before it. Notebook items are quick personal to-dos: never create an issue for them unless the user asks.",
       parameters: {
         type: "object",
         properties: {
@@ -1437,6 +1437,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
                   type: "string",
                   enum: [...PLAN_TASK_STATES],
                   description: "Initial state (default: pending).",
+                },
+                depth: {
+                  type: "number",
+                  description:
+                    "Nesting depth: 0 (default) for a top-level task, 1 to make it a sub-task of the task right before it, and so on.",
                 },
               },
               required: ["text"],

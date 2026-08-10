@@ -290,6 +290,90 @@ export function cleanDictatedTaskLine(value: string, max = 1000): string {
 export interface NewTask {
   text: string;
   state: PlanTaskState;
+  /** Profondeur d'imbrication (0 = premier niveau). Voir TASK_INDENT. */
+  depth?: number;
+}
+
+/**
+ * Ce qui sépare un niveau d'imbrication du suivant dans le markdown du carnet :
+ * DEUX espaces, l'unité que lit `parsePlan` (`indentDepth`) et celle que produit
+ * l'éditeur (`renderList` de prosemirror-markdown, cf. task-nodes.ts). Une
+ * sous-tâche écrite avec un autre pas se relit à la mauvaise profondeur.
+ */
+export const TASK_INDENT = "  ";
+
+/** Une ligne de tâche, telle qu'elle s'écrit dans le carnet. */
+export interface ScratchpadTaskLine {
+  /** 0 = premier niveau. Voir TASK_INDENT. */
+  depth: number;
+  state: PlanTaskState;
+  text: string;
+}
+
+/**
+ * Le markdown d'un bout d'arbre de tâches — la brique commune à tous les gestes
+ * qui SORTENT une tâche du carnet (copier en prompt, lancer un agent, promouvoir
+ * en ticket) et à ceux qui en AJOUTENT une. Les profondeurs sont écrites telles
+ * quelles ; c'est à l'appelant de les avoir ramenées à 0 s'il le faut
+ * (`taskSubtreeLines` le fait).
+ */
+export function taskLinesMarkdown(lines: ScratchpadTaskLine[]): string {
+  return lines
+    .map(
+      (line) =>
+        `${TASK_INDENT.repeat(Math.max(0, Math.trunc(line.depth) || 0))}- ${
+          TASK_MARKER_BY_STATE[line.state]
+        } ${line.text.replace(/\s*\r?\n\s*/g, " ").trim()}`
+    )
+    .join("\n");
+}
+
+/**
+ * La tâche `index` ET tout ce qu'elle porte, en profondeur : ses sous-tâches,
+ * les leurs, sans limite de niveau. Les tâches d'un plan sont dans l'ordre du
+ * document, donc le sous-arbre est la tranche qui suit la racine tant que la
+ * profondeur reste STRICTEMENT plus grande que la sienne.
+ *
+ * Tableau vide si l'index ne désigne aucune tâche.
+ */
+export function taskSubtree(tasks: PlanTask[], index: number): PlanTask[] {
+  const at = tasks.findIndex((task) => task.index === index);
+  if (at === -1) return [];
+  const out = [tasks[at]];
+  for (let i = at + 1; i < tasks.length; i++) {
+    if (tasks[i].depth <= tasks[at].depth) break;
+    out.push(tasks[i]);
+  }
+  return out;
+}
+
+/**
+ * Le sous-arbre de la tâche `index`, prêt à SORTIR du carnet.
+ *
+ * La règle de la hiérarchie : **le parent emporte ses enfants, l'enfant
+ * n'emporte pas son parent.** Plus le geste est haut dans l'arbre, plus il
+ * emporte ; il ne remonte jamais. D'où la renormalisation des profondeurs sur la
+ * racine : une sous-tâche copiée seule part à plat, comme une tâche à elle
+ * seule, sans traîner l'indentation de l'endroit d'où elle vient — qui, hors de
+ * son parent, ne veut plus rien dire (et à partir de quatre espaces se relit
+ * comme un bloc de code).
+ *
+ * `map` permet de sortir les tâches dans leur état d'APRÈS le geste (une
+ * passation démarre le travail, racine et descendance comprises).
+ */
+export function taskSubtreeLines(
+  tasks: PlanTask[],
+  index: number,
+  map?: (state: PlanTaskState) => PlanTaskState
+): ScratchpadTaskLine[] {
+  const subtree = taskSubtree(tasks, index);
+  if (subtree.length === 0) return [];
+  const base = subtree[0].depth;
+  return subtree.map((task) => ({
+    depth: Math.max(0, task.depth - base),
+    state: map ? map(task.state) : task.state,
+    text: task.text,
+  }));
 }
 
 /**
@@ -297,16 +381,25 @@ export interface NewTask {
  * matching '##' section (before the next heading); returns `null` when that
  * section doesn't exist so the caller can report it. Without `section`, they go
  * at the end of the document. Task text is flattened to a single line.
+ *
+ * `depth` imbrique la tâche sous celle qui la précède (0 = premier niveau) —
+ * la seule façon d'AJOUTER une sous-tâche sans réécrire le carnet entier.
  */
 export function appendScratchpadTasks(
   content: string,
   tasks: NewTask[],
   section?: string | null
 ): string | null {
-  const block = tasks.map(
-    (task) =>
-      `- ${TASK_MARKER_BY_STATE[task.state]} ${task.text.replace(/\s*\r?\n\s*/g, " ").trim()}`
-  );
+  const block = taskLinesMarkdown(
+    tasks.map((task) => ({
+      // Pas de renormalisation ici : les profondeurs sont celles voulues par
+      // l'appelant, et une première tâche à `depth: 1` reste une sous-tâche de
+      // ce qui la précède DÉJÀ dans le carnet.
+      depth: Math.max(0, Math.trunc(task.depth ?? 0)),
+      state: task.state,
+      text: task.text,
+    }))
+  ).split("\n");
   const lines = content.split("\n");
 
   if (section && section.trim()) {
@@ -359,24 +452,49 @@ export function appendScratchpadTasks(
  * section that clearing those tasks leaves empty, so vider une section retire
  * son titre au lieu d'y laisser un intertitre orphelin.
  *
+ * MÊME RÈGLE POUR LES SOUS-TÂCHES, un cran plus bas : une tâche cochée qui
+ * porte encore du travail RESTE. La retirer laisserait ses sous-tâches
+ * suspendues dans le vide — indentées sous plus rien, donc relues au niveau du
+ * dessus, ou pire, à partir de quatre espaces, comme un bloc de code. Une tâche
+ * ne s'en va donc que si TOUT son sous-arbre est réglé, et elle s'en va alors
+ * avec lui. C'est la règle de la hiérarchie, prise par l'autre bout : le parent
+ * emporte ses enfants, y compris quand il s'agit de les effacer.
+ *
  * A heading is dropped whole (heading + its emptied sub-headings + their blank
  * lines and '---' separators) only when its ENTIRE subtree — down to the next
  * heading of the same or a shallower level — has nothing left worth keeping: no
  * surviving task (pending or in progress), no prose, no code. So a parent with
  * a still-live subsection stays, an emptied subsection goes, and a section with
  * notes under it keeps its title. Fence-aware (a '#' inside a code block is not
- * a heading). `removed` counts the settled TASKS (0 → content unchanged).
+ * a heading). `removed` counts the settled TASKS actually dropped (0 → content
+ * unchanged).
  */
 export function removeSettledTasks(content: string): {
   content: string;
   removed: number;
 } {
   const parsed = parsePlan(content);
-  const settledLines = new Set(
-    parsed.tasks
-      .filter((task) => task.state === "completed" || task.state === "cancelled")
-      .map((task) => task.line)
-  );
+  const settled = (task: PlanTask) =>
+    task.state === "completed" || task.state === "cancelled";
+  const settledLines = new Set<number>();
+  for (let i = 0; i < parsed.tasks.length; i++) {
+    const task = parsed.tasks[i];
+    if (!settled(task)) continue;
+    // Le sous-arbre entier doit être réglé, sinon la tâche reste : elle porte
+    // encore le travail de ses enfants.
+    let clear = true;
+    for (
+      let j = i + 1;
+      j < parsed.tasks.length && parsed.tasks[j].depth > task.depth;
+      j++
+    ) {
+      if (!settled(parsed.tasks[j])) {
+        clear = false;
+        break;
+      }
+    }
+    if (clear) settledLines.add(task.line);
+  }
   if (settledLines.size === 0) return { content, removed: 0 };
 
   const lines = content.split("\n");

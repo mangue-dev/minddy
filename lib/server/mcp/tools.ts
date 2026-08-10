@@ -2839,7 +2839,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "a problems.md file. Markdown with the same checkbox tasks as plans " +
         "('- [ ]' pending, '- [~]' in progress, '- [x]' done, '- [-]' dropped) " +
         "and '##' section headings. Returns the raw markdown, task progress, and " +
-        "the flat list of tasks with their 0-based index (document order). Pass " +
+        "the flat list of tasks with their 0-based index (document order) and " +
+        "their `depth` — 0 at top level, 1 for a sub-task of the task above it, " +
+        "and so on with no limit; the list is flat, so `depth` is the only thing " +
+        "that says a task belongs to the one before it. Pass " +
         "those indices to minddy_update_scratchpad_task to tick items off without " +
         "rewriting the doc. There is exactly one scratchpad per account; it is " +
         "not tied to a project. Also returns `rev`, the version: pass it back to " +
@@ -2862,6 +2865,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             index: t.index,
             text: t.text,
             state: t.state,
+            depth: t.depth,
           })),
         });
       } catch (err) {
@@ -3053,7 +3057,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "to add them at the end of that section instead; an unknown section is " +
         "rejected (create it with minddy_set_scratchpad first). To change an " +
         "existing task's state use minddy_update_scratchpad_task; to edit task " +
-        "text or remove tasks use minddy_set_scratchpad.",
+        "text or remove tasks use minddy_set_scratchpad. Use `depth` to nest: a " +
+        "task at depth 1 becomes a sub-task of the task right before it.",
       inputSchema: {
         tasks: z
           .array(
@@ -3067,6 +3072,15 @@ export function registerMinddyTools(rawServer: McpServer): void {
                 .enum(PLAN_TASK_STATES)
                 .optional()
                 .describe("Initial state (default: pending)."),
+              depth: z
+                .number()
+                .int()
+                .min(0)
+                .max(10)
+                .optional()
+                .describe(
+                  "Nesting depth: 0 (default) for a top-level task, 1 to make it a sub-task of the task right before it, and so on."
+                ),
             })
           )
           .min(1)
@@ -3095,6 +3109,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             args.tasks.map((task) => ({
               text: task.text,
               state: task.state ?? "pending",
+              depth: task.depth ?? 0,
             })),
             args.section
           )
@@ -3120,6 +3135,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             index: t.index,
             text: t.text,
             state: t.state,
+            depth: t.depth,
           })),
         });
       } catch (err) {

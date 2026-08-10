@@ -6,6 +6,9 @@ import {
   mergeScratchpad,
   removeSettledTasks,
   scratchpadPreview,
+  taskLinesMarkdown,
+  taskSubtree,
+  taskSubtreeLines,
   scratchpadSectionSubtree,
   splitScratchpadSections,
   tasksCheckedOff,
@@ -211,6 +214,64 @@ describe("appendScratchpadTasks", () => {
       appendScratchpadTasks("## A\n- [ ] a", [{ text: "x", state: "pending" }], "Z")
     ).toBeNull();
   });
+
+  it("nests a task under the one before it with `depth`", () => {
+    const out = appendScratchpadTasks("- [ ] a", [
+      { text: "b", state: "pending", depth: 0 },
+      { text: "b1", state: "pending", depth: 1 },
+      { text: "b1a", state: "in_progress", depth: 2 },
+    ]);
+    expect(out).toBe("- [ ] a\n- [ ] b\n  - [ ] b1\n    - [~] b1a\n");
+  });
+
+  it("nests under what is ALREADY in the note", () => {
+    // Une première tâche à depth 1 n'est pas renormalisée : elle passe sous la
+    // dernière ligne du carnet, ce que l'agent demande en écrivant `depth: 1`.
+    expect(
+      appendScratchpadTasks("- [ ] a", [{ text: "a1", state: "pending", depth: 1 }])
+    ).toBe("- [ ] a\n  - [ ] a1\n");
+  });
+});
+
+describe("taskSubtree / taskSubtreeLines", () => {
+  const note = "- [ ] p\n  - [~] c1\n    - [ ] g\n  - [x] c2\n- [ ] sib";
+  const tasks = () => parsePlan(note).tasks;
+
+  it("emporte toute la descendance d'un parent, sans le voisin", () => {
+    expect(taskSubtree(tasks(), 0).map((t) => t.text)).toEqual([
+      "p",
+      "c1",
+      "g",
+      "c2",
+    ]);
+  });
+
+  it("ne remonte jamais : un enfant part sans son parent", () => {
+    expect(taskSubtree(tasks(), 1).map((t) => t.text)).toEqual(["c1", "g"]);
+  });
+
+  it("une feuille est son propre sous-arbre", () => {
+    expect(taskSubtree(tasks(), 2).map((t) => t.text)).toEqual(["g"]);
+  });
+
+  it("rien pour un index qui ne désigne aucune tâche", () => {
+    expect(taskSubtree(tasks(), 42)).toEqual([]);
+  });
+
+  it("ramène la racine au premier niveau quand elle sort du carnet", () => {
+    expect(taskLinesMarkdown(taskSubtreeLines(tasks(), 1))).toBe(
+      "- [~] c1\n  - [ ] g"
+    );
+  });
+
+  it("sort les tâches dans leur état d'APRÈS le geste", () => {
+    const started = taskSubtreeLines(tasks(), 0, (state) =>
+      state === "pending" ? "in_progress" : state
+    );
+    expect(taskLinesMarkdown(started)).toBe(
+      "- [~] p\n  - [~] c1\n    - [~] g\n  - [x] c2"
+    );
+  });
 });
 
 describe("cleanDictatedTaskLine", () => {
@@ -338,6 +399,34 @@ describe("removeSettledTasks", () => {
     const { content, removed } = removeSettledTasks(note);
     expect(removed).toBe(2);
     expect(content).toBe("");
+  });
+});
+
+describe("removeSettledTasks — la hiérarchie", () => {
+  it("garde une tâche cochée qui porte encore du travail", () => {
+    // La retirer laisserait « child » indenté sous plus rien.
+    const note = "- [x] parent\n  - [ ] child";
+    expect(removeSettledTasks(note)).toEqual({ content: note, removed: 0 });
+  });
+
+  it("emporte le sous-arbre quand il est réglé de bout en bout", () => {
+    const note = "- [x] parent\n  - [x] child\n    - [-] grand\n- [ ] sib";
+    const { content, removed } = removeSettledTasks(note);
+    expect(content).toBe("- [ ] sib");
+    expect(removed).toBe(3);
+  });
+
+  it("retire une sous-tâche réglée sous un parent qui reste", () => {
+    const { content, removed } = removeSettledTasks(
+      "- [ ] parent\n  - [x] child\n  - [ ] autre"
+    );
+    expect(content).toBe("- [ ] parent\n  - [ ] autre");
+    expect(removed).toBe(1);
+  });
+
+  it("garde une sous-tâche cochée qui porte elle-même du travail", () => {
+    const note = "- [ ] parent\n  - [x] child\n    - [~] grand";
+    expect(removeSettledTasks(note)).toEqual({ content: note, removed: 0 });
   });
 });
 

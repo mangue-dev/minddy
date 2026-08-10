@@ -872,7 +872,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "read_scratchpad",
       description:
-        "Re-read the launcher's notebook (their personal cross-project notes doc): the full markdown, plus every checkbox task parsed with a stable 0-based task_index, its text and its state (pending '- [ ]', in_progress '- [~]', completed '- [x]', cancelled '- [-]'), and `rev`, the doc's version. Anything you were shown of it at session start is a SNAPSHOT — call this whenever fresh state matters, and ALWAYS right before update_scratchpad_task or set_scratchpad so your indices and rev are current.",
+        "Re-read the launcher's notebook (their personal cross-project notes doc): the full markdown, plus every checkbox task parsed with a stable 0-based task_index, its text, its state (pending '- [ ]', in_progress '- [~]', completed '- [x]', cancelled '- [-]') and its `depth` — 0 for a top-level task, 1 for a sub-task of the task above it, and so on with no limit. The task list is FLAT: `depth` is the only thing that tells you a task belongs to the one before it. Also `rev`, the doc's version. Anything you were shown of it at session start is a SNAPSHOT — call this whenever fresh state matters, and ALWAYS right before update_scratchpad_task or set_scratchpad so your indices and rev are current.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -881,7 +881,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "add_scratchpad_tasks",
       description:
-        "Append tasks to the launcher's notebook. Only on their explicit request ('note that', 'add it to my notes') — the notebook is their personal space, not your scratch space. Tasks land at the end of the doc, or at the end of a named '##' section when you pass one (an unknown section is refused and the existing ones are listed). Appending merges with whatever the user is typing right now; it never overwrites their text.",
+        "Append tasks to the launcher's notebook. Only on their explicit request ('note that', 'add it to my notes') — the notebook is their personal space, not your scratch space. Tasks land at the end of the doc, or at the end of a named '##' section when you pass one (an unknown section is refused and the existing ones are listed). Appending merges with whatever the user is typing right now; it never overwrites their text. Use `depth` to nest: a task at depth 1 becomes a sub-task of the task right before it.",
       parameters: {
         type: "object",
         properties: {
@@ -896,6 +896,11 @@ const MINDDY_TOOLS: AgentToolDef[] = [
                   type: "string",
                   enum: SCRATCHPAD_TASK_STATES,
                   description: "Initial state. Defaults to pending.",
+                },
+                depth: {
+                  type: "number",
+                  description:
+                    "Nesting depth: 0 (default) for a top-level task, 1 to make it a sub-task of the task right before it, and so on.",
                 },
               },
               required: ["text"],

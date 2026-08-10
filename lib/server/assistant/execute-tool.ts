@@ -2261,6 +2261,9 @@ const scratchpadTaskList = (content: string) =>
     index: t.index,
     text: t.text,
     state: t.state,
+    // La liste est à plat : `depth` est la SEULE chose qui dise qu'une tâche
+    // appartient à celle d'avant (0 = premier niveau, sans limite de niveaux).
+    depth: t.depth,
   }));
 
 const scratchpadSections = (content: string): string[] =>
@@ -2319,9 +2322,17 @@ async function executeScratchpadTool(
           `Invalid task state "${String(state)}" — use pending, in_progress, completed or cancelled.`
         );
       }
+      const depth = row.depth;
+      if (
+        depth !== undefined &&
+        (typeof depth !== "number" || !Number.isInteger(depth) || depth < 0)
+      ) {
+        return toolError("depth must be a non-negative integer (0 = top level).");
+      }
       tasks.push({
         text: text.slice(0, 2000),
         state: isPlanTaskState(state) ? state : "pending",
+        depth: typeof depth === "number" ? depth : 0,
       });
     }
     const section =
