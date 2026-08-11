@@ -598,8 +598,8 @@
     "unpublished": "Page dépubliée",
     "includeChildren": "Inclure les sous-pages",
     "noChildren": "Cette page n'a pas de sous-page.",
-    "childrenIncluded": "{count} sous-pages sont publiées avec elle.",
-    "childrenExcluded": "{count} sous-pages restent privées : leurs blocs ne mènent nulle part."
+    "childrenIncluded": "{count, plural, one {# sous-page est publiée avec elle.} other {# sous-pages sont publiées avec elle.}}",
+    "childrenExcluded": "{count, plural, one {# sous-page reste privée : son bloc ne mène nulle part.} other {# sous-pages restent privées : leurs blocs ne mènent nulle part.}}"
   },
   "PublicPage": {
     "untitled": "Page sans titre",
@@ -1740,9 +1740,9 @@
     "publish": "Publier…",
     "export": "Exporter",
     "exportMarkdown": "Markdown (.md)",
-    "exportMarkdownBranch": "Markdown avec {count} sous-pages (.zip)",
+    "exportMarkdownBranch": "{count, plural, one {Markdown avec # sous-page (.zip)} other {Markdown avec # sous-pages (.zip)}}",
     "exportPdf": "Imprimer / PDF",
-    "exportPdfBranch": "Imprimer / PDF avec {count} sous-pages",
+    "exportPdfBranch": "{count, plural, one {Imprimer / PDF avec # sous-page} other {Imprimer / PDF avec # sous-pages}}",
     "exportFailed": "Impossible d'exporter cette page."
   },
   "Picker": {

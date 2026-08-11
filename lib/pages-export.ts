@@ -108,8 +108,13 @@ export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
   // Le chemin de chaque page, d'abord — les liens ne peuvent être réécrits
   // qu'une fois tous les chemins connus.
   const pathOf = new Map<string, string>();
-  const assign = (siblings: ExportInputPage[], prefix: string) => {
-    const taken = new Set<string>();
+  /** `reserved` : les noms déjà pris DANS ce dossier avant qu'on nomme un seul
+      frère. Il n'y en a qu'un, et c'est `index` — le dossier porte le nom de
+      son parent, dont le corps s'y range sous `index.md`. Une sous-page
+      intitulée « Index » y aurait écrit le même chemin, et l'archive n'aurait
+      gardé qu'un des deux fichiers, en silence. */
+  const assign = (siblings: ExportInputPage[], prefix: string, reserved: string[] = []) => {
+    const taken = new Set<string>(reserved);
     for (const page of siblings) {
       const slug = uniqueIn(taken, pageFileSlug(page.title));
       const children = childrenOf.get(page.id) ?? [];
@@ -117,7 +122,7 @@ export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
       // range sous `index.md`, à côté d'eux.
       const path = children.length > 0 ? `${prefix}${slug}/index.md` : `${prefix}${slug}.md`;
       pathOf.set(page.id, path);
-      if (children.length > 0) assign(children, `${prefix}${slug}/`);
+      if (children.length > 0) assign(children, `${prefix}${slug}/`, ["index"]);
     }
   };
   assign(roots, "");

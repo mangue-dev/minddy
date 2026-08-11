@@ -25,7 +25,7 @@ import { trackEvent } from "@/lib/analytics";
  * pages monterait sinon cent dialogues et cent requêtes désactivées.
  *
  * Le PDF n'est pas un format d'export de plus : c'est l'IMPRESSION du document,
- * sur une vue faite pour ça (app/(app)/projects/[id]/pages/[pageId]/print). Un
+ * sur une vue faite pour ça (app/(app)/projects/[id]/pages-print/[pageId]). Un
  * moteur PDF côté serveur aurait voulu dire une seconde définition de la mise
  * en page à tenir, pour produire ce que le navigateur produit déjà.
  */
@@ -71,8 +71,13 @@ export function usePageDocumentMenu({
       trackEvent("page_exported", { format: "pdf" });
       // Un onglet à part : la vue d'impression appelle `window.print()`
       // d'elle-même, et on ne fait pas perdre à quelqu'un la page qu'il lisait.
+      //
+      // `pages-print/<page>` et NON `pages/<page>/print` : le segment `pages/`
+      // porte le layout de la barre secondaire, dont la vue d'impression n'a
+      // que faire (cf. l'en-tête de la route). Le chemin est le sien, et
+      // l'autre n'a jamais existé — il ouvrait un 404.
       window.open(
-        `/projects/${projectId}/pages/${pageId}/print${branch ? "?scope=branch" : ""}`,
+        `/projects/${projectId}/pages-print/${pageId}${branch ? "?scope=branch" : ""}`,
         "_blank",
         "noopener"
       );

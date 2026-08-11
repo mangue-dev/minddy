@@ -71,6 +71,18 @@ describe("exportPagesToFiles", () => {
     expect(file.markdown).toContain("[[page:ailleurs]]");
   });
 
+  it("ne laisse pas une sous-page « Index » écraser le corps de son parent", () => {
+    // Le dossier d'un parent porte son corps sous `index.md` : une fille
+    // intitulée « Index » y écrivait le MÊME chemin, et l'archive ne gardait
+    // qu'un des deux fichiers — sans rien dire.
+    const files = exportPagesToFiles([
+      { id: "r", parent_id: null, title: "Guide", icon: null, markdown: md("r") },
+      { id: "i", parent_id: "r", title: "Index", icon: null, markdown: md("i") },
+    ]);
+    expect(files.map((f) => f.path)).toEqual(["Guide/index.md", "Guide/Index (2).md"]);
+    expect(new Set(files.map((f) => f.path)).size).toBe(files.length);
+  });
+
   it("départage deux sœurs qui portent le même titre", () => {
     const files = exportPagesToFiles([
       { id: "r", parent_id: null, title: "R", icon: null, markdown: md("r") },
