@@ -323,6 +323,38 @@ export function describeObjectiveEvent(
   return t("objectiveUpdated");
 }
 
+/**
+ * Localized description of a PAGE activity event, without the actor (MIN-278).
+ *
+ * Le plus court des quatre describers, et c'est le sujet : une page n'a pas de
+ * champs à suivre — pas de statut, pas de priorité, pas d'assigné. Ce qu'on
+ * vient lire, c'est QUI est passé, et quand. Le reste se lit dans l'historique
+ * (MIN-277), qui rend les états eux-mêmes.
+ *
+ * La règle d'identité de minddy ne se joue PAS ici mais dans l'acteur : une
+ * écriture d'agent porte `via_assistant`, et la ligne nomme donc Numo, alors
+ * que `actor_id` est celui du compte humain qui l'a permise. Sans ce drapeau,
+ * l'activité dirait « Clément a modifié cette page » d'un texte que Clément n'a
+ * pas écrit. La phrase, elle, est la même dans les deux cas.
+ */
+export function describePageEvent(
+  e: IssueEvent,
+  _ctx: EventContext,
+  tr: EventTranslators
+): string {
+  const { t } = tr;
+  switch (e.type) {
+    case "page_created":
+      return t("pageCreated");
+    case "page_trashed":
+      return t("pageTrashed");
+    case "page_restored":
+      return t("pageRestored");
+    default:
+      return t("pageUpdated");
+  }
+}
+
 /** Localized description of a FEEDBACK activity event (without the actor).
     Twin of describeEvent for the feedback detail panel: feedback posts use the
     PublicFeedback status label set, and the tracked actions differ (promotion,

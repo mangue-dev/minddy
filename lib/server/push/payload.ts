@@ -73,6 +73,8 @@ export interface PushContext {
   /** Numéro + titre d'une PULL REQUEST — la bannière les montre comme la
    *  référence et le titre d'un ticket. */
   pullRequests: Map<string, { number: number; title: string | null }>;
+  /** Titre d'une PAGE du wiki (MIN-278) — la bannière ne montre que lui. */
+  pages: Map<string, string>;
   projectKeys: Map<string, string>;
   actorNames: Map<string, string>;
   apiKeyActors: Map<string, ApiKeyActor>;
@@ -86,6 +88,7 @@ export function emptyPushContext(): PushContext {
     feedbackPosts: new Map(),
     routines: new Map(),
     pullRequests: new Map(),
+    pages: new Map(),
     projectKeys: new Map(),
     actorNames: new Map(),
     apiKeyActors: new Map(),
@@ -112,11 +115,22 @@ export async function loadPushContext(
   const feedbackIds = ids((r) => r.feedback_post_id);
   const routineIds = ids((r) => r.routine_id);
   const prIds = ids((r) => r.pull_request_id);
+  const pageIds = ids((r) => r.page_id);
   const projectIds = ids((r) => r.project_id);
   const actorIds = ids((r) => r.actor_id);
   const keyIds = ids((r) => r.api_key_id);
 
-  const [issues, objectives, feedback, routines, pullRequests, projects, actors, keyActors] =
+  const [
+    issues,
+    objectives,
+    feedback,
+    routines,
+    pullRequests,
+    pages,
+    projects,
+    actors,
+    keyActors,
+  ] =
     await Promise.all([
     issueIds.length
       ? service
@@ -149,6 +163,15 @@ export async function loadPushContext(
       : Promise.resolve({
           data: [] as { id: string; number: number; title: string | null }[],
         }),
+    // Une PAGE : corbeillée, elle ne pousse rien — la ligne mènerait à un
+    // écran vide (même règle que les tickets, MIN-133).
+    pageIds.length
+      ? service
+          .from("pages")
+          .select("id, title")
+          .in("id", pageIds)
+          .is("deleted_at", null)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
     projectIds.length
       ? service.from("projects").select("id, key").in("id", projectIds)
       : Promise.resolve({ data: [] as { id: string; key: string }[] }),
@@ -167,6 +190,7 @@ export async function loadPushContext(
   for (const p of pullRequests.data ?? []) {
     ctx.pullRequests.set(p.id, { number: p.number, title: p.title });
   }
+  for (const p of pages.data ?? []) ctx.pages.set(p.id, p.title);
   for (const p of projects.data ?? []) ctx.projectKeys.set(p.id, p.key);
   for (const [id, user] of actors) {
     // Repli VIDE plutôt que « User » : le libellé de repli est traduit, et sa
@@ -216,6 +240,13 @@ export function buildPushPayload(
     if (!pr) return null;
     // `#12 · Réparer…` — le pendant exact de `MIN-42 · …` pour un ticket.
     title = pr.title ? `#${pr.number} · ${pr.title}` : `#${pr.number}`;
+  } else if (row.page_id) {
+    const pageTitle = ctx.pages.get(row.page_id);
+    if (pageTitle === undefined) return null;
+    // Une page sans titre a bien un titre : c'est la chaîne vide. La bannière
+    // système n'a rien d'autre à montrer, d'où le repli explicite — un titre
+    // vide y ferait une notification anonyme.
+    title = pageTitle || t("somePageFallback");
   } else if (row.issue_id) {
     const issue = ctx.issues.get(row.issue_id);
     if (!issue) return null;

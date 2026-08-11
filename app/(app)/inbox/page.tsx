@@ -41,6 +41,10 @@ const AGENT_TYPES: readonly NotificationType[] = [
   "agent_failed",
   // Une routine, c'est Numo qui tourne tout seul : son visage, comme un run.
   "routine_done",
+  // Une écriture d'agent dans une page (MIN-278) : la ligne n'a PAS d'acteur
+  // humain — c'est justement ce qu'elle annonce —, et sans son visage ici elle
+  // retomberait sur la bulle de commentaire du repli.
+  "page_agent_edit",
 ];
 
 type InboxFilter = "all" | "unread" | "mentions";
@@ -123,7 +127,7 @@ function RowAvatar({
   const Icon =
     n.type === "assigned"
       ? UserPlus
-      : n.type === "mention"
+      : n.type === "mention" || n.type === "page_mention"
         ? AtSign
         : n.type === "feedback_new"
           ? Megaphone
@@ -182,7 +186,11 @@ export default function InboxPage() {
       case "unread":
         return notifications.filter((n) => !n.read_at);
       case "mentions":
-        return notifications.filter((n) => n.type === "mention");
+        // Une citation dans une PAGE en est une (MIN-278) : le filtre répond à
+        // « où m'a-t-on appelé », pas « dans quel type d'objet ».
+        return notifications.filter(
+          (n) => n.type === "mention" || n.type === "page_mention"
+        );
       default:
         return notifications;
     }
@@ -238,6 +246,9 @@ export default function InboxPage() {
     // Une pull request : son titre, précédé de son numéro par la référence
     // ci-dessous — elle n'a pas forcément de ticket à nommer.
     if (n.pull_request_id) return n.pull_request_title ?? "";
+    // Une PAGE du wiki (MIN-278) : son titre, et le repli explicite quand elle
+    // n'en a pas — une ligne d'inbox sans titre ne dit plus de quoi on parle.
+    if (n.page_id) return n.page_title || t("somePageFallback");
     return (
       n.issue_title ??
       t("someIssueFallback", { entity: tIssue("entity").toLowerCase() })

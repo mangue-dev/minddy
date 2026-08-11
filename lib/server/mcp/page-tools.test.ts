@@ -173,6 +173,20 @@ vi.mock("@/lib/supabase-service", () => {
   return { getServiceClient: () => ({ from, rpc }) };
 });
 
+/**
+ * Ce qu'une écriture FAIT SAVOIR (MIN-278) — activité, mentions, notification
+ * d'agent — est exercé par ses propres tests. Ici on le coupe : le faux
+ * PostgREST de ce fichier ignore la TABLE visée, donc une ligne `issue_events`
+ * atterrirait parmi les pages et l'index de recherche compterait faux.
+ */
+vi.mock("@/lib/server/page-activity", () => ({
+  recordPageEvent: async () => {},
+  notifyAgentPageWrite: async () => {},
+}));
+vi.mock("@/lib/server/page-mentions", () => ({
+  notifyPageMentions: async () => {},
+}));
+
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async (_userId: string, projectId: string) =>
     h.access.has(projectId)

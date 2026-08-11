@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { NOTIF_COMMENT_META_KEY } from "@/lib/notification-prefs";
+import { NOTIF_COMMENT_META_KEY, NOTIF_PAGE_META_KEY } from "@/lib/notification-prefs";
 
 /**
  * MIN-183 — le branchement du push sur le point d'insertion des notifications.
@@ -79,6 +79,16 @@ function stubService(opts: {
   return { service, inserted };
 }
 
+const pageMentionRow = (userId: string) => ({
+  user_id: userId,
+  project_id: "p1",
+  type: "page_mention" as const,
+  issue_id: null,
+  page_id: "page-1",
+  block_id: "b2",
+  actor_id: "someone",
+});
+
 const commentRow = (userId: string) => ({
   user_id: userId,
   project_id: "p1",
@@ -138,6 +148,22 @@ describe("insertNotifications — volet push (MIN-183)", () => {
     });
 
     await insertNotifications(service, [commentRow(ALICE), commentRow(BOB)]);
+    await runScheduledWork();
+
+    expect(inserted).toHaveLength(1);
+    expect(H.sendPushToUser).toHaveBeenCalledTimes(1);
+    expect(H.sendPushToUser.mock.calls[0][1]).toBe(ALICE);
+  });
+
+  // MIN-278 : les deux signaux du wiki passent par la même porte, donc par le
+  // même filtre. Sans cette bascule, couper « Pages » aurait laissé passer les
+  // citations — la moitié de ce qu'on voulait couper.
+  it("respecte la bascule « Pages » comme n'importe quelle autre", async () => {
+    const { service, inserted } = stubService({
+      prefs: { [BOB]: { [NOTIF_PAGE_META_KEY]: false } },
+    });
+
+    await insertNotifications(service, [pageMentionRow(ALICE), pageMentionRow(BOB)]);
     await runScheduledWork();
 
     expect(inserted).toHaveLength(1);

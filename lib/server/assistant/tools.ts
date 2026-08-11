@@ -1384,6 +1384,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "boolean",
             description: "Inbox: notify on feedback-board activity.",
           },
+          notif_page: {
+            type: "boolean",
+            description:
+              "Inbox: notify on wiki-page activity — the user is mentioned in a page, or the agent writes in one on their behalf.",
+          },
           automation_preset: {
             type: ["string", "null"],
             enum: [...AUTOMATION_PRESET_IDS, null],

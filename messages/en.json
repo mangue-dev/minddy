@@ -132,7 +132,11 @@
     "feedbackMergeUndone": "reverted the merge of “{title}”",
     "feedbackUpdated": "updated this feedback",
     "imported": "imported the issue from {source}",
-    "importedFromBrief": "created the issue from a brief"
+    "importedFromBrief": "created the issue from a brief",
+    "pageCreated": "created the page",
+    "pageUpdated": "edited the page",
+    "pageTrashed": "moved the page to the trash",
+    "pageRestored": "restored the page"
   },
   "ApiErrors": {
     "invalidJson": "Invalid request.",
@@ -1095,7 +1099,10 @@
     "linePrOpened": "A pull request was just opened",
     "lineAutomationPaused": "The automation is waiting for your go-ahead",
     "lineAutomationStopped": "The automation stopped",
-    "lineRoutineDone": "The routine finished its run"
+    "lineRoutineDone": "The routine finished its run",
+    "linePageMention": "{actor} mentioned you in this page",
+    "linePageAgentEdit": "The Numo agent wrote in this page",
+    "somePageFallback": "Untitled page"
   },
   "NotificationSettings": {
     "title": "Inbox notifications",
@@ -1113,7 +1120,9 @@
     "pullRequestLabel": "Pull requests",
     "pullRequestDesc": "A pull request opens on one of your projects, or yours is reviewed or merged.",
     "feedbackLabel": "Feedback",
-    "feedbackDesc": "New feedback lands on the board of a project you belong to."
+    "feedbackDesc": "New feedback lands on the board of a project you belong to.",
+    "pageLabel": "Pages",
+    "pageDesc": "Someone @mentions you in a page, or the Numo agent writes in one you asked it to."
   },
   "Push": {
     "devicesTitle": "Push notifications",
@@ -1670,7 +1679,10 @@
     "historyRestoreFailed": "Could not restore that version.",
     "historyLoadFailed": "Could not load the history.",
     "writtenByAgent": "Written by minddy",
-    "someone": "Someone"
+    "someone": "Someone",
+    "historyTabVersions": "Versions",
+    "historyTabActivity": "Activity",
+    "activityLoadFailed": "Could not load the activity."
   },
   "Picker": {
     "createNamed": "Create “{name}”",

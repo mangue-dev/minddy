@@ -40,6 +40,24 @@ describe("notificationTargetPath", () => {
     ).toBe(`/projects/${P}/feedback?post=fp`);
   });
 
+  // MIN-278 : la page a sa propre route, et son BLOC est un fragment — il ne
+  // part pas au serveur, ne casse aucune route, et c'est déjà la forme des
+  // liens de bloc (`blockLink`). Sans lui, le clic ouvre un document de trois
+  // écrans en tête, sur une citation posée au milieu.
+  it("ouvre la page, et son bloc quand la citation en désigne un", () => {
+    expect(notificationTargetPath({ project_id: P, issue_id: null, page_id: "pg" })).toBe(
+      `/projects/${P}/pages/pg`
+    );
+    expect(
+      notificationTargetPath({
+        project_id: P,
+        issue_id: null,
+        page_id: "pg",
+        block_id: "b2",
+      })
+    ).toBe(`/projects/${P}/pages/pg#b2`);
+  });
+
   it("ne mène nulle part sans projet, ni sans cible", () => {
     expect(notificationTargetPath({ project_id: null, issue_id: "iss" })).toBeNull();
     expect(notificationTargetPath({ project_id: P, issue_id: null })).toBeNull();

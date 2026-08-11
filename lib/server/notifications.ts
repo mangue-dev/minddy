@@ -27,6 +27,12 @@ export interface NotificationRow {
   /** Set instead of all the above for a PULL REQUEST notification: elle se lit
       sur la page Pull requests, et n'a pas forcément de ticket. */
   pull_request_id?: string | null;
+  /** Set instead of all the above for a PAGE notification (MIN-278) — mention
+      dans une page, ou écriture de l'agent dedans. */
+  page_id?: string | null;
+  /** Le bloc visé dans cette page, quand la mention y a été posée : le clic
+      tombe alors sur le paragraphe, pas seulement sur le document. */
+  block_id?: string | null;
   comment_id?: string | null;
   actor_id: string | null;
   /** L'action est passée par le serveur MCP : l'acteur affiché dans l'inbox est
@@ -111,6 +117,12 @@ export async function insertNotifications(
         // matin n'en laisseraient qu'une, et l'autre disparaîtrait sans avoir
         // été lue. Chaque routine déplace la sienne, et elle seule.
         del = r.routine_id ? del.eq("routine_id", r.routine_id) : del.is("routine_id", null);
+        // Même raison pour une PAGE (MIN-278) : sans ce filtre, une écriture
+        // d'agent dans une page déplacerait la ligne non lue de TOUTES les
+        // autres. C'est cette clause qui fait qu'un agent qui réécrit six pages
+        // d'affilée laisse six lignes, et qu'un agent qui repasse dix fois sur
+        // la même n'en laisse qu'une.
+        del = r.page_id ? del.eq("page_id", r.page_id) : del.is("page_id", null);
         return del;
       })
     );

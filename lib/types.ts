@@ -190,7 +190,13 @@ export type NotificationType =
   | "automation_stopped"
   /** Un passage de routine s'est terminé sans rien pousser — le cas où ni la PR
       ni l'échec ne parlent, et où la routine ne disait donc rien du tout. */
-  | "routine_done";
+  | "routine_done"
+  /** On m'a cité dans une PAGE du wiki (MIN-278) — la même phrase que dans un
+      commentaire de ticket, qui elle prévenait déjà. */
+  | "page_mention"
+  /** L'agent a écrit dans une page. Au seul lanceur du run : une page réécrite
+      en silence est le pendant du problème que MIN-277 a outillé. */
+  | "page_agent_edit";
 
 /** A notification enriched for the Inbox UI. */
 export interface MyNotification {
@@ -216,6 +222,11 @@ export interface MyNotification {
   pull_request_id: string | null;
   pull_request_number: number | null;
   pull_request_title: string | null;
+  /** Set instead of all of the above when it points at a PAGE (MIN-278) — le
+      wiki du projet ; `block_id` affine la cible au bloc quand on le connaît. */
+  page_id: string | null;
+  page_title: string | null;
+  block_id: string | null;
   project_id: string | null;
   project_key: string | null;
   actor_name: string | null;
@@ -361,9 +372,12 @@ export interface UserStats {
 
 export interface IssueEvent {
   id: string;
-  /** Exactly one of issue_id / objective_id is set (the event's parent). */
+  /** Exactly one of issue_id / objective_id / feedback_post_id / page_id is set
+      (the event's parent — issue_events_parent_ck). */
   issue_id: string | null;
   objective_id?: string | null;
+  /** Une PAGE du wiki (MIN-278) : créée, modifiée, mise à la corbeille. */
+  page_id?: string | null;
   actor_id: string | null;
   type: string;
   field: string | null;

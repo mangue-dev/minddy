@@ -18,6 +18,16 @@
 // L'aperçu monte le VRAI éditeur en `editable: false`, et pas un rendu à part :
 // l'éditeur EST la surface (cf. l'architecture des mentions). Un second rendu
 // finirait par diverger sur exactement les blocs qu'on regarde le moins.
+//
+// ─── Et l'ACTIVITÉ à côté (MIN-278) ─────────────────────────────────────────
+//
+// Un second onglet, dans le même panneau, parce que la question est la même —
+// « qu'est-il arrivé à cette page ? » — et qu'elle se pose au même endroit : en
+// lisant « modifiée par quelqu'un d'autre » en tête de page. Deux onglets et
+// non une liste, parce que les deux réponses ne sont pas de même nature : les
+// versions sont des ÉTATS qu'on relit et qu'on remet en place, l'activité des
+// GESTES — dont ceux qui ne laissent aucun état derrière eux (créée, mise à la
+// corbeille, restaurée, renommée).
 
 import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
@@ -30,6 +40,10 @@ import {
   SheetHeader,
   SheetTitle,
   Spinner,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -41,8 +55,10 @@ import {
   fetchPageVersionsApi,
   restorePageVersionApi,
 } from "@/lib/pages-api";
-import { pageKey } from "@/lib/use-pages-query";
+import { pageKey, pagesKey } from "@/lib/use-pages-query";
 import { PageEditor } from "@/components/pages/page-editor";
+import { PageActivity } from "@/components/pages/page-activity";
+import { useAuth } from "@/lib/auth-context";
 import type { PageVersion } from "@/lib/pages";
 
 /** La durée de conservation annoncée, la même que la corbeille (30 jours). */
@@ -69,12 +85,18 @@ export function PageHistorySheet({
   const t = useTranslations("Pages");
   const format = useFormatter();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
+  const [tab, setTab] = useState<"versions" | "activity">("versions");
 
-  // Rouvrir le panneau repart de la liste : la version qu'on regardait la fois
-  // d'avant n'a aucune raison d'être celle qu'on vient chercher.
+  // Rouvrir le panneau repart de la liste, et de l'onglet des versions : ni la
+  // version qu'on regardait la fois d'avant ni l'onglet où on l'avait laissé
+  // n'ont de raison d'être ce qu'on vient chercher.
   useEffect(() => {
-    if (!open) setSelected(null);
+    if (!open) {
+      setSelected(null);
+      setTab("versions");
+    }
   }, [open]);
 
   const versions = useQuery({
@@ -99,6 +121,12 @@ export function PageHistorySheet({
     onSuccess: () => {
       toast.success(t("historyRestored"));
       void queryClient.invalidateQueries({ queryKey: pageKey(pageId) });
+      // La LISTE aussi : une restauration ramène le titre et l'icône de la
+      // version, et c'est ce cache-là que lisent la sidebar, le fil d'Ariane,
+      // le bloc sous-page — et le titre affiché en tête. Sans cette ligne, ils
+      // gardent l'ancien nom cinq minutes (le `staleTime` du dépôt), sur une
+      // page dont le corps, lui, a bien changé sous les yeux.
+      void queryClient.invalidateQueries({ queryKey: pagesKey(projectId) });
       void queryClient.invalidateQueries({ queryKey: ["page-versions", pageId] });
       onOpenChange(false);
       onRestored();
@@ -123,89 +151,115 @@ export function PageHistorySheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex min-h-0 flex-1">
-          {/* La LISTE tient la colonne étroite, et c'est elle qui répond à la
-              question qu'on se pose en arrivant : qui a touché à ça, et quand. */}
-          <div className="w-64 shrink-0 overflow-y-auto border-r border-border py-2">
-            {versions.isPending ? (
-              <div className="flex justify-center py-8">
-                <Spinner className="size-4 text-muted-foreground" />
-              </div>
-            ) : versions.error ? (
-              <p className="px-3 py-6 text-xs text-muted-foreground">
-                {t("historyLoadFailed")}
-              </p>
-            ) : rows.length === 0 ? (
-              // Une page qu'on vient de créer n'a rien derrière elle. Le dire
-              // vaut mieux qu'une colonne vide qu'on prendrait pour une panne.
-              <p className="px-3 py-6 text-xs text-muted-foreground">
-                {t("historyEmpty")}
-              </p>
-            ) : (
-              rows.map((version) => (
-                <VersionRow
-                  key={version.id}
-                  version={version}
-                  active={version.id === selected}
-                  onSelect={() => setSelected(version.id)}
-                  label={versionLabel(version, t, format)}
-                />
-              ))
-            )}
-          </div>
+        <Tabs
+          value={tab}
+          onValueChange={(value) => setTab(value as "versions" | "activity")}
+          className="flex min-h-0 flex-1 flex-col gap-0"
+        >
+          <TabsList className="mx-4 mt-3 w-fit shrink-0">
+            <TabsTrigger value="versions">{t("historyTabVersions")}</TabsTrigger>
+            <TabsTrigger value="activity">{t("historyTabActivity")}</TabsTrigger>
+          </TabsList>
 
-          {/* L'APERÇU, en lecture seule. */}
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {!selected ? (
-              <p className="px-6 py-10 text-sm text-muted-foreground">
-                {t("historyPickOne")}
-              </p>
-            ) : preview.isPending ? (
-              <div className="flex justify-center py-10">
-                <Spinner className="size-5 text-muted-foreground" />
-              </div>
-            ) : preview.error || !preview.data ? (
-              <p className="px-6 py-10 text-sm text-muted-foreground">
-                {t("historyLoadFailed")}
-              </p>
-            ) : (
-              <div className="px-6 py-6">
-                <div className="mb-4 flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <h2 className="truncate font-display text-2xl font-semibold tracking-tight">
-                      {preview.data.icon ? `${preview.data.icon} ` : ""}
-                      {preview.data.title || t("untitled")}
-                    </h2>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {versionLabel(preview.data, t, format)}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={restore.isPending}
-                    onClick={() => restore.mutate(preview.data.id)}
-                  >
-                    {restore.isPending ? (
-                      <Spinner className="size-3.5" />
-                    ) : (
-                      <RotateCcw className="size-3.5" />
-                    )}
-                    {t("historyRestore")}
-                  </Button>
+          <TabsContent value="versions" className="flex min-h-0 flex-1">
+            {/* La LISTE tient la colonne étroite, et c'est elle qui répond à la
+                question qu'on se pose en arrivant : qui a touché à ça, et quand. */}
+            <div className="w-64 shrink-0 overflow-y-auto border-r border-border py-2">
+              {versions.isPending ? (
+                <div className="flex justify-center py-8">
+                  <Spinner className="size-4 text-muted-foreground" />
                 </div>
-                {/* `key` sur l'id : tiptap ne relit pas son `content`, donc
-                    passer d'une version à l'autre demande un montage neuf. */}
-                <PageEditor
-                  key={preview.data.id}
-                  editable={false}
-                  initialContent={(preview.data.content as JSONContent | null) ?? null}
-                  onChange={() => {}}
-                />
-              </div>
-            )}
-          </div>
-        </div>
+              ) : versions.error ? (
+                <p className="px-3 py-6 text-xs text-muted-foreground">
+                  {t("historyLoadFailed")}
+                </p>
+              ) : rows.length === 0 ? (
+                // Une page qu'on vient de créer n'a rien derrière elle. Le dire
+                // vaut mieux qu'une colonne vide qu'on prendrait pour une panne.
+                <p className="px-3 py-6 text-xs text-muted-foreground">
+                  {t("historyEmpty")}
+                </p>
+              ) : (
+                rows.map((version) => (
+                  <VersionRow
+                    key={version.id}
+                    version={version}
+                    active={version.id === selected}
+                    onSelect={() => setSelected(version.id)}
+                    label={versionLabel(version, t, format)}
+                  />
+                ))
+              )}
+            </div>
+
+            {/* L'APERÇU, en lecture seule. */}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {!selected ? (
+                <p className="px-6 py-10 text-sm text-muted-foreground">
+                  {t("historyPickOne")}
+                </p>
+              ) : preview.isPending ? (
+                <div className="flex justify-center py-10">
+                  <Spinner className="size-5 text-muted-foreground" />
+                </div>
+              ) : preview.error || !preview.data ? (
+                <p className="px-6 py-10 text-sm text-muted-foreground">
+                  {t("historyLoadFailed")}
+                </p>
+              ) : (
+                <div className="px-6 py-6">
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h2 className="truncate font-display text-2xl font-semibold tracking-tight">
+                        {preview.data.icon ? `${preview.data.icon} ` : ""}
+                        {preview.data.title || t("untitled")}
+                      </h2>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {versionLabel(preview.data, t, format)}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={restore.isPending}
+                      onClick={() => restore.mutate(preview.data.id)}
+                    >
+                      {restore.isPending ? (
+                        <Spinner className="size-3.5" />
+                      ) : (
+                        <RotateCcw className="size-3.5" />
+                      )}
+                      {t("historyRestore")}
+                    </Button>
+                  </div>
+                  {/* `key` sur l'id : tiptap ne relit pas son `content`, donc
+                      passer d'une version à l'autre demande un montage neuf. */}
+                  <PageEditor
+                    key={preview.data.id}
+                    editable={false}
+                    initialContent={(preview.data.content as JSONContent | null) ?? null}
+                    onChange={() => {}}
+                  />
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* L'ACTIVITÉ (MIN-278) : les GESTES, là où l'onglet d'à côté rend les
+              ÉTATS. `enabled` suit l'onglet — le journal ne part chercher ses
+              lignes que quand on le regarde. */}
+          <TabsContent
+            value="activity"
+            className="min-h-0 flex-1 overflow-y-auto px-6 py-4"
+          >
+            <PageActivity
+              projectId={projectId}
+              pageId={pageId}
+              currentUserId={user?.id ?? null}
+              enabled={open && tab === "activity"}
+            />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

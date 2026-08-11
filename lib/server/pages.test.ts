@@ -203,6 +203,55 @@ vi.mock("@/lib/supabase-service", () => {
   return { getServiceClient: () => ({ from }) };
 });
 
+/**
+ * Ce qu'une écriture FAIT SAVOIR (MIN-278) sort du module, et sort du process :
+ * lignes d'activité, notifications de mention, notification d'écriture d'agent.
+ * On l'espionne ici, on l'exerce dans ses propres tests — et sans ce mock, le
+ * faux PostgREST de ce fichier (deux tables, `pages` et `page_versions`) rangerait
+ * les `issue_events` parmi les versions, et l'historique compterait faux.
+ */
+// Signatures explicites : sans elles, `mock.calls` est typé sur un tuple vide
+// et lire `c[1]` ne compile pas (même remarque que notifications.test.ts).
+const announce = vi.hoisted(() => ({
+  recordPageEvent: vi.fn<
+    (
+      service: unknown,
+      params: {
+        pageId: string;
+        actorId: string | null;
+        kind: "human" | "agent";
+        type: string;
+      }
+    ) => Promise<void>
+  >(async () => {}),
+  notifyAgentPageWrite: vi.fn<
+    (
+      service: unknown,
+      params: { projectId: string; pageId: string; actorId: string }
+    ) => Promise<void>
+  >(async () => {}),
+  notifyPageMentions: vi.fn<
+    (
+      service: unknown,
+      params: {
+        projectId: string;
+        pageId: string;
+        actorId: string | null;
+        doc: unknown;
+        previousDoc?: unknown;
+      }
+    ) => Promise<void>
+  >(async () => {}),
+}));
+
+vi.mock("@/lib/server/page-activity", () => ({
+  recordPageEvent: announce.recordPageEvent,
+  notifyAgentPageWrite: announce.notifyAgentPageWrite,
+}));
+vi.mock("@/lib/server/page-mentions", () => ({
+  notifyPageMentions: announce.notifyPageMentions,
+}));
+
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async (_userId: string, projectId: string) =>
     h.access.has(projectId) ? { project: { id: projectId }, isOwner: true, isMember: true } : null,
@@ -261,6 +310,9 @@ beforeEach(() => {
   h.versions = [];
   h.seq = 0;
   h.access = new Set([PROJECT]);
+  announce.recordPageEvent.mockClear();
+  announce.notifyAgentPageWrite.mockClear();
+  announce.notifyPageMentions.mockClear();
 });
 
 describe("createPage", () => {
@@ -1067,6 +1119,25 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
     expect(rowOf(id)).toMatchObject({ updated_by: OTHER, updated_kind: "human" });
   });
 
+  it("ne signe PAS le rangement — favori, déplacement", async () => {
+    const id = await create("Guide");
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      input: { content: doc("le texte de Clément") },
+    });
+
+    // Épingler une page (le favori est partagé par le projet) ou la glisser
+    // dans l'arbre ne dit rien de son contenu. Signer ces gestes ferait dire à
+    // l'en-tête « modifiée par » quelqu'un qui n'a pas ouvert la page.
+    await updatePage({ pageId: id, actorId: OTHER, input: { favorite: true } });
+    expect(rowOf(id)).toMatchObject({ favorite: true, updated_by: ACTOR });
+
+    const parent = await create("Dossier");
+    await updatePage({ pageId: id, actorId: OTHER, input: { parent_id: parent } });
+    expect(rowOf(id)).toMatchObject({ parent_id: parent, updated_by: ACTOR });
+  });
+
   it("n'archive rien à la création ni à la duplication", async () => {
     const id = await create("Guide");
     const copy = await duplicatePage(id, ACTOR);
@@ -1226,5 +1297,132 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
       status: 404,
       errorKey: "pageVersionNotFound",
     });
+  });
+});
+
+/**
+ * MIN-278 — ce qu'une écriture de page FAIT SAVOIR.
+ *
+ * Ici on garde le BRANCHEMENT, et lui seul : quel geste pose quelle ligne, qui
+ * est prévenu, et surtout ce qui ne doit RIEN déclencher. La règle de ce qu'est
+ * une mention vit dans lib/pages-mentions.test.ts ; la coalescence des lignes
+ * d'activité et le déplacement des notifications, dans les modules qui les
+ * portent. Ce qu'aucun des trois ne dit, c'est si le noyau les appelle — et
+ * c'est justement ce qui s'oublie en ajoutant un chemin d'écriture.
+ */
+describe("ce qu'une écriture fait savoir (MIN-278)", () => {
+  const OTHER = "user-2";
+  const doc = (text: string) => ({
+    type: "doc",
+    content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+  });
+
+  /** Les annonces partent par `afterOrNow`, donc après le retour de l'écriture. */
+  const settled = () => vi.waitFor(() => expect(announce.recordPageEvent).toHaveBeenCalled());
+
+  const events = () => announce.recordPageEvent.mock.calls.map((c) => c[1]);
+
+  it("pose « créée » à la création, et « modifiée » à l'écriture suivante", async () => {
+    const id = await create("Guide");
+    await settled();
+    expect(events()).toEqual([
+      { pageId: id, actorId: ACTOR, kind: "human", type: "page_created" },
+    ]);
+
+    await updatePage({ pageId: id, actorId: OTHER, input: { content: doc("du texte") } });
+    await vi.waitFor(() => expect(events()).toHaveLength(2));
+    expect(events()[1]).toMatchObject({ type: "page_updated", actorId: OTHER });
+  });
+
+  it("pose « corbeille » puis « restaurée », sur la RACINE du geste seule", async () => {
+    const parent = await create("Dossier");
+    await create("Annexe", parent);
+    announce.recordPageEvent.mockClear();
+
+    await trashPage(parent, ACTOR);
+    await settled();
+    // Deux pages sont parties, une seule ligne : sinon corbeiller un dossier de
+    // vingt pages ferait vingt lignes pour un geste.
+    expect(events()).toEqual([
+      { pageId: parent, actorId: ACTOR, kind: "human", type: "page_trashed" },
+    ]);
+
+    await restorePage(parent, ACTOR);
+    await vi.waitFor(() => expect(events()).toHaveLength(2));
+    expect(events()[1]).toMatchObject({ pageId: parent, type: "page_restored" });
+  });
+
+  it("ne dit RIEN d'un rangement — épingler, glisser dans l'arbre", async () => {
+    const id = await create("Guide");
+    const parent = await create("Dossier");
+    await settled();
+    announce.recordPageEvent.mockClear();
+
+    await updatePage({ pageId: id, actorId: ACTOR, input: { favorite: true } });
+    await updatePage({ pageId: id, actorId: ACTOR, input: { parent_id: parent } });
+
+    // Réordonner la sidebar n'est pas modifier une page : la même frontière que
+    // celle de la signature « modifiée par » (MIN-277).
+    expect(announce.recordPageEvent).not.toHaveBeenCalled();
+  });
+
+  it("prévient le lanceur du run — et LUI SEUL — quand l'agent écrit", async () => {
+    const id = await create("Guide");
+    await settled();
+    announce.notifyAgentPageWrite.mockClear();
+
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      kind: "agent",
+      input: { content: doc("réécrit par l'agent") },
+    });
+
+    await vi.waitFor(() => expect(announce.notifyAgentPageWrite).toHaveBeenCalledTimes(1));
+    // `actorId` EST le destinataire : les six outils d'écriture tournent sous
+    // l'id du compte qui les a permis.
+    expect(announce.notifyAgentPageWrite.mock.calls[0][1]).toEqual({
+      projectId: PROJECT,
+      pageId: id,
+      actorId: ACTOR,
+    });
+  });
+
+  it("ne prévient personne quand l'écriture est humaine", async () => {
+    const id = await create("Guide");
+    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("à moi") } });
+    await settled();
+    expect(announce.notifyAgentPageWrite).not.toHaveBeenCalled();
+  });
+
+  it("passe le document d'AVANT au scan de mentions — le diff est à ce prix", async () => {
+    const id = await create("Guide");
+    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("un") } });
+    await vi.waitFor(() => expect(announce.notifyPageMentions).toHaveBeenCalledTimes(2));
+
+    const second = announce.notifyPageMentions.mock.calls[1][1];
+    expect(second.pageId).toBe(id);
+    expect(second.doc).toMatchObject(doc("un"));
+    // Sans cet état d'avant, chaque enregistrement re-notifierait toutes les
+    // mentions de la page — une rafale d'autosaves en ferait dix.
+    expect(second.previousDoc).toBeDefined();
+  });
+
+  it("ne scanne PAS les mentions d'une duplication", async () => {
+    const id = await create("Guide");
+    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("@Nom de user-2") } });
+    await vi.waitFor(() => expect(announce.notifyPageMentions).toHaveBeenCalledTimes(2));
+    announce.notifyPageMentions.mockClear();
+
+    // Recopier un texte n'est pas citer quelqu'un : dupliquer une page
+    // repingerait tous les noms qu'elle porte.
+    await duplicatePage(id, ACTOR);
+    await vi.waitFor(() =>
+      expect(announce.recordPageEvent).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "page_created" })
+      )
+    );
+    expect(announce.notifyPageMentions).not.toHaveBeenCalled();
   });
 });

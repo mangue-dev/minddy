@@ -14,6 +14,7 @@ export const NOTIF_AGENT_META_KEY = "notif_agent";
 export const NOTIF_ROUTINE_META_KEY = "notif_routine";
 export const NOTIF_PULL_REQUEST_META_KEY = "notif_pull_request";
 export const NOTIF_FEEDBACK_META_KEY = "notif_feedback";
+export const NOTIF_PAGE_META_KEY = "notif_page";
 
 /** One toggle per trigger family — finer grain would just be noise to manage.
  *  Order = the settings UI's, and the one Numo's tool schema advertises.
@@ -31,6 +32,7 @@ export const NOTIFICATION_CATEGORIES = [
   "routine",
   "pullRequest",
   "feedback",
+  "page",
 ] as const;
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
@@ -43,6 +45,7 @@ export interface NotificationPrefs {
   routine: boolean;
   pullRequest: boolean;
   feedback: boolean;
+  page: boolean;
 }
 
 export const NOTIFICATION_CATEGORY_META_KEYS: Record<NotificationCategory, string> = {
@@ -53,6 +56,7 @@ export const NOTIFICATION_CATEGORY_META_KEYS: Record<NotificationCategory, strin
   routine: NOTIF_ROUTINE_META_KEY,
   pullRequest: NOTIF_PULL_REQUEST_META_KEY,
   feedback: NOTIF_FEEDBACK_META_KEY,
+  page: NOTIF_PAGE_META_KEY,
 };
 
 /** Read the notification preferences from a user's auth user_metadata; only an
@@ -68,6 +72,7 @@ export function resolveNotificationPrefs(
     routine: meta?.[NOTIF_ROUTINE_META_KEY] !== false,
     pullRequest: meta?.[NOTIF_PULL_REQUEST_META_KEY] !== false,
     feedback: meta?.[NOTIF_FEEDBACK_META_KEY] !== false,
+    page: meta?.[NOTIF_PAGE_META_KEY] !== false,
   };
 }
 
@@ -101,6 +106,14 @@ export function categoryOfNotificationType(
       return "pullRequest";
     case "feedback_new":
       return "feedback";
+    // Les deux signaux du WIKI sous la même bascule (MIN-278) : être cité dans
+    // une page et voir l'agent y écrire sont le même sujet — « ce qui bouge
+    // dans les pages ». La mention de page ne rejoint PAS « Mentions », qui
+    // parle des tickets, ni l'écriture d'agent « Numo », qui parle des runs :
+    // couper l'un pour l'autre serait couper deux fois trop.
+    case "page_mention":
+    case "page_agent_edit":
+      return "page";
   }
 }
 

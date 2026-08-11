@@ -148,6 +148,12 @@ function feedbackPostIdOf(change: BroadcastChange): string | null {
   return typeof postId === "string" ? postId : null;
 }
 
+/** La PAGE d'une ligne d'activité (MIN-278) — le quatrième parent d'un event. */
+function pageIdOf(change: BroadcastChange): string | null {
+  const pageId = (change.record ?? change.old_record)?.page_id;
+  return typeof pageId === "string" ? pageId : null;
+}
+
 function keysForUserEvent(change: BroadcastChange): Invalidation[] {
   switch (change.table) {
     case "notifications":
@@ -425,7 +431,11 @@ function keysForProjectEvent(
       const objectiveId = objectiveIdOf(change);
       if (objectiveId) return [active(["objective-events", objectiveId])];
       const postId = feedbackPostIdOf(change);
-      return postId ? [active(["feedback-events", projectId, postId])] : [];
+      if (postId) return [active(["feedback-events", projectId, postId])];
+      // L'activité d'une PAGE (MIN-278) : le panneau ouvert chez un coéquipier
+      // doit voir arriver « X a modifié la page » sans qu'il le referme.
+      const pageId = pageIdOf(change);
+      return pageId ? [active(["page-events", pageId])] : [];
     }
     default:
       return [];
@@ -479,6 +489,10 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["pr-comments"],
   ["pr-commits"],
   ["pr-review-comments"],
+  // L'activité d'une page (MIN-278), en préfixe comme les événements de ticket :
+  // un panneau resté ouvert pendant une coupure doit rattraper les gestes qu'il
+  // n'a pas vus passer.
+  ["page-events"],
   // The aggregates this project feeds — missed events while offline would
   // otherwise leave the dashboard and /all stale until their staleTime.
   GLOBAL_BOARD_KEY,

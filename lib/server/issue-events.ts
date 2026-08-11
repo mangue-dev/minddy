@@ -5,11 +5,13 @@ import { dispatchWebhooksForEvents } from "@/lib/server/webhooks";
 import { diffPlanTasks, stripTaskStates, type PlanTaskState } from "@/lib/plan";
 
 export interface EventRow {
-  /** The parent is an issue OR an objective OR a feedback post — exactly one
-      is set (issue_events_parent_ck). */
+  /** The parent is an issue OR an objective OR a feedback post OR a wiki page —
+      exactly one is set (issue_events_parent_ck). */
   issue_id?: string | null;
   objective_id?: string | null;
   feedback_post_id?: string | null;
+  /** Une PAGE du wiki (MIN-278) : créée, modifiée, corbeillée, restaurée. */
+  page_id?: string | null;
   /** NULL when the action comes from an integration (no user behind it). */
   actor_id: string | null;
   type: string;

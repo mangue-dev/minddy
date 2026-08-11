@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
   const prIds = [
     ...new Set(notifs.map((n) => n.pull_request_id).filter(Boolean)),
   ] as string[];
+  const pageIds = [...new Set(notifs.map((n) => n.page_id).filter(Boolean))] as string[];
   const projectIds = [...new Set(notifs.map((n) => n.project_id).filter(Boolean))] as string[];
   const actorIds = [...new Set(notifs.map((n) => n.actor_id).filter(Boolean))] as string[];
   const commentIds = [...new Set(notifs.map((n) => n.comment_id).filter(Boolean))] as string[];
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
     { data: feedbackPosts },
     { data: routines },
     { data: pullRequests },
+    { data: pages },
     { data: projects },
     actorsById,
     actorSeeds,
@@ -89,6 +91,16 @@ export async function GET(request: NextRequest) {
     prIds.length
       ? service.from("pull_requests").select("id, number, title").in("id", prIds)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
+    // La PAGE d'une notification du wiki (MIN-278) : son titre EST la ligne.
+    // Les corbeillées sont écartées comme les tickets — la notification survit
+    // à la corbeille (MIN-133), mais la ligne mènerait à un écran vide.
+    pageIds.length
+      ? service
+          .from("pages")
+          .select("id, title")
+          .in("id", pageIds)
+          .is("deleted_at", null)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
     projectIds.length
       ? service.from("projects").select("id, key").in("id", projectIds)
       : Promise.resolve({ data: [] as { id: string; key: string }[] }),
@@ -117,6 +129,7 @@ export async function GET(request: NextRequest) {
   const feedbackMap = new Map((feedbackPosts ?? []).map((f) => [f.id, f]));
   const routineMap = new Map((routines ?? []).map((r) => [r.id, r]));
   const prMap = new Map((pullRequests ?? []).map((p) => [p.id, p]));
+  const pageMap = new Map((pages ?? []).map((p) => [p.id, p]));
   const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
   const commentMap = new Map((comments ?? []).map((c) => [c.id, c]));
 
@@ -149,7 +162,10 @@ export async function GET(request: NextRequest) {
     (!n.routine_id || !routines || routineMap.has(n.routine_id)) &&
     // Idem pour une pull request : la ligne part par cascade avec elle, ce
     // filtre ne rattrape donc qu'une lecture partielle.
-    (!n.pull_request_id || !pullRequests || prMap.has(n.pull_request_id));
+    (!n.pull_request_id || !pullRequests || prMap.has(n.pull_request_id)) &&
+    // Une page à la corbeille : même règle que les tickets — la ligne sort de
+    // l'inbox sans être détruite, et revient si la page est restaurée.
+    (!n.page_id || !pages || pageMap.has(n.page_id));
 
   const result: MyNotification[] = notifs.filter(targetAlive).map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
@@ -157,6 +173,7 @@ export async function GET(request: NextRequest) {
     const feedback = n.feedback_post_id ? feedbackMap.get(n.feedback_post_id) : undefined;
     const routine = n.routine_id ? routineMap.get(n.routine_id) : undefined;
     const pullRequest = n.pull_request_id ? prMap.get(n.pull_request_id) : undefined;
+    const page = n.page_id ? pageMap.get(n.page_id) : undefined;
     const project = n.project_id ? projectMap.get(n.project_id) : undefined;
     const actor = n.actor_id ? actorsById.get(n.actor_id) : undefined;
     const comment = n.comment_id ? commentMap.get(n.comment_id) : undefined;
@@ -185,6 +202,9 @@ export async function GET(request: NextRequest) {
       pull_request_id: n.pull_request_id ?? null,
       pull_request_number: pullRequest?.number ?? null,
       pull_request_title: pullRequest?.title ?? null,
+      page_id: n.page_id ?? null,
+      page_title: page?.title ?? null,
+      block_id: n.block_id ?? null,
       project_id: n.project_id,
       project_key: project?.key ?? null,
       actor_name: fromNumo

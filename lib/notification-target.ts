@@ -24,6 +24,12 @@ export interface NotificationTarget {
   /** Une PULL REQUEST : elle se lit sur la page Pull requests, qui est globale
       comme la vue Agents — et elle n'a pas forcément de ticket. */
   pull_request_id?: string | null;
+  /** Une PAGE du wiki (MIN-278). */
+  page_id?: string | null;
+  /** Le BLOC visé dans cette page, quand on le connaît : la mention y a été
+      posée. C'est l'ancre de `blockLink` (components/pages/block-actions.ts),
+      que la page suit à l'ouverture (page-view.tsx). */
+  block_id?: string | null;
 }
 
 /**
@@ -49,6 +55,13 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
   if (n.feedback_post_id) {
     return `/projects/${n.project_id}/feedback?post=${n.feedback_post_id}`;
   }
+  // Une PAGE (MIN-278) : elle a sa propre route, pas un paramètre sur le board.
+  // Le bloc s'ajoute en FRAGMENT — il ne part pas au serveur, ne casse aucune
+  // route, et c'est déjà la forme des liens de bloc (`blockLink`).
+  if (n.page_id) {
+    const path = `/projects/${n.project_id}/pages/${n.page_id}`;
+    return n.block_id ? `${path}#${n.block_id}` : path;
+  }
   if (n.issue_id) return `/projects/${n.project_id}?issue=${n.issue_id}`;
   return null;
 }
@@ -65,6 +78,11 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
  * **Une cible de plus dans `notificationTargetPath` = son paramètre ici**, sinon
  * arriver sur l'une refermerait les notifications de toutes les autres. Le test
  * de lib/push/dismiss.test.ts le vérifie cible par cible.
+ *
+ * Une PAGE (MIN-278) n'en a pas besoin, et c'est la seule dans ce cas : son id
+ * est un SEGMENT de chemin, pas un paramètre — deux pages ne partagent jamais
+ * une URL. Le fragment de bloc, lui, n'entre pas dans la comparaison : arriver
+ * sur la page referme la notification, qu'on ait sauté au bon bloc ou non.
  */
 export const NOTIFICATION_TARGET_PARAMS = [
   "open",
@@ -94,4 +112,6 @@ export const NOTIFICATION_LINE_KEYS: Record<
   automation_paused: "lineAutomationPaused",
   automation_stopped: "lineAutomationStopped",
   routine_done: "lineRoutineDone",
+  page_mention: "linePageMention",
+  page_agent_edit: "linePageAgentEdit",
 };

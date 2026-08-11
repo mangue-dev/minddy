@@ -132,7 +132,11 @@
     "feedbackMergeUndone": "a annulé la fusion de « {title} »",
     "feedbackUpdated": "a mis à jour ce retour",
     "imported": "a importé le ticket depuis {source}",
-    "importedFromBrief": "a créé le ticket depuis un brief"
+    "importedFromBrief": "a créé le ticket depuis un brief",
+    "pageCreated": "a créé la page",
+    "pageUpdated": "a modifié la page",
+    "pageTrashed": "a mis la page à la corbeille",
+    "pageRestored": "a restauré la page"
   },
   "ApiErrors": {
     "invalidJson": "Requête invalide.",
@@ -1095,7 +1099,10 @@
     "linePrOpened": "Une pull request vient de s'ouvrir",
     "lineAutomationPaused": "L'automatisation attend ton feu vert",
     "lineAutomationStopped": "L'automatisation s'est arrêtée",
-    "lineRoutineDone": "La routine a terminé son exécution"
+    "lineRoutineDone": "La routine a terminé son exécution",
+    "linePageMention": "{actor} vous a mentionné dans cette page",
+    "linePageAgentEdit": "L'agent Numo a écrit dans cette page",
+    "somePageFallback": "Page sans titre"
   },
   "NotificationSettings": {
     "title": "Notifications de l'inbox",
@@ -1113,7 +1120,9 @@
     "pullRequestLabel": "Pull requests",
     "pullRequestDesc": "Une pull request s'ouvre sur un de vos projets, ou la vôtre est relue ou fusionnée.",
     "feedbackLabel": "Retours",
-    "feedbackDesc": "Un retour arrive sur le board d'un de vos projets."
+    "feedbackDesc": "Un retour arrive sur le board d'un de vos projets.",
+    "pageLabel": "Pages",
+    "pageDesc": "Quelqu'un vous mentionne dans une page, ou l'agent Numo écrit dans l'une d'elles à votre demande."
   },
   "Push": {
     "devicesTitle": "Notifications push",
@@ -1670,7 +1679,10 @@
     "historyRestoreFailed": "La restauration a échoué.",
     "historyLoadFailed": "Impossible de charger l'historique.",
     "writtenByAgent": "Écrit par minddy",
-    "someone": "Quelqu'un"
+    "someone": "Quelqu'un",
+    "historyTabVersions": "Versions",
+    "historyTabActivity": "Activité",
+    "activityLoadFailed": "Impossible de charger l'activité."
   },
   "Picker": {
     "createNamed": "Créer « {name} »",

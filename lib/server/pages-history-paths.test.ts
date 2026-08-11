@@ -30,6 +30,13 @@ import { describe, expect, it } from "vitest";
  * Ce qu'il ne prétend pas couvrir : que l'archivage garde le BON état, ni que la
  * coalescence coalesce. Ça, c'est `pages.test.ts`, qui fait tourner le vrai
  * noyau sur une table en mémoire.
+ *
+ * MIN-278 ajoute une troisième obligation, de la même famille et pour la même
+ * raison : **un chemin d'écriture ANNONCE ce qu'il fait** (`announcePageWrite`)
+ * — sa ligne d'activité, les gens qu'il vient de citer, et le lanceur du run
+ * quand c'est l'agent qui écrit. Un chemin qui l'oublie ne casse rien de visible
+ * non plus : il rend une page qui change sans que rien ne se passe, ce qui était
+ * exactement l'état d'avant.
  */
 
 const PAGES_PATH = join(process.cwd(), "lib/server/pages.ts");
@@ -134,6 +141,7 @@ function scan() {
   const writes = new Set<string>();
   const signed = new Set<string>();
   const archived = new Set<string>();
+  const announced = new Set<string>();
 
   const visit = (node: ts.Node) => {
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
@@ -153,12 +161,15 @@ function scan() {
       if (node.expression.text === "stampPageWrite") {
         archived.add(enclosingFunction(node));
       }
+      if (node.expression.text === "announcePageWrite") {
+        announced.add(enclosingFunction(node));
+      }
     }
     ts.forEachChild(node, visit);
   };
   visit(src);
 
-  return { writes, signed, archived };
+  return { writes, signed, archived, announced };
 }
 
 describe("les chemins d'écriture du corps d'une page", () => {
@@ -189,6 +200,29 @@ describe("les chemins d'écriture du corps d'une page", () => {
         `l'archiver : ${missing.join(", ")}. Appelez stampPageWrite avec l'état lu ` +
         `avant l'écriture (previous: null sur une création), sinon ce qu'elles ` +
         `écrasent est perdu pour de bon.`
+    ).toEqual([]);
+  });
+
+  /**
+   * Le MIROIR (`syncParentBody`) est la seule exception, et elle est nommée ici
+   * plutôt que devinée : il n'est jamais un geste en soi — il accompagne
+   * toujours une corbeille ou une restauration, qui a déjà posé sa ligne. En
+   * poser une seconde ferait lire « X a modifié Dossier » à chaque sous-page
+   * supprimée.
+   */
+  const MIRROR = "syncParentBody";
+
+  it("annoncent tous ce qu'ils font (MIN-278)", () => {
+    const { writes, announced } = scan();
+
+    const missing = [...writes].filter(
+      (fn) => fn !== MIRROR && !announced.has(fn)
+    );
+    expect(
+      missing,
+      `Ces fonctions de lib/server/pages.ts écrivent une page sans rien en dire : ` +
+        `${missing.join(", ")}. Appelez announcePageWrite — sinon la page change, ` +
+        `personne n'est prévenu et l'activité du projet reste muette.`
     ).toEqual([]);
   });
 

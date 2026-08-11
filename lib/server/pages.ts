@@ -11,6 +11,12 @@ import {
   type PageWriteKind,
 } from "@/lib/pages";
 import { afterOrNow } from "@/lib/server/after-safe";
+import {
+  notifyAgentPageWrite,
+  recordPageEvent,
+  type PageEventType,
+} from "@/lib/server/page-activity";
+import { notifyPageMentions } from "@/lib/server/page-mentions";
 import { appendSubpage, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
 import { bodyFromMarkdownServer } from "@/lib/server/pages-projection";
 import {
@@ -54,6 +60,14 @@ import type { PageDocJSON } from "@/lib/pages-merge";
  * visible non plus — il rend juste une écriture anonyme et irréversible, ce
  * qu'on ne découvre que le jour où l'agent a écrasé une page. Le test
  * structurel de `pages-history-paths.test.ts` le refuse de la même façon.
+ *
+ * Depuis MIN-278, une TROISIÈME, de la même famille : **toute écriture ANNONCE
+ * ce qu'elle fait** (`announcePageWrite`) — sa ligne d'activité, les gens
+ * qu'elle vient de citer, et le lanceur du run quand c'est l'agent qui écrit.
+ * L'oublier ne casse rien de visible une fois de plus : ça rend simplement une
+ * page qui change sans que rien ne se passe, ce qui était l'état d'avant le
+ * ticket. Même test structurel, avec une seule exception nommée — le miroir
+ * `syncParentBody`, qui n'est jamais un geste en soi.
  */
 
 export type PageResult<T> =
@@ -251,6 +265,81 @@ function stampPageWrite({
   });
 }
 
+/**
+ * Ce qu'une écriture de page FAIT SAVOIR (MIN-278).
+ *
+ * Le pendant de `stampPageWrite`, et posé au même endroit pour la même raison :
+ * une page pouvait changer sans que rien ne se passe — ni notification, ni ligne
+ * d'activité, nulle part. Trois signaux, un seul point de passage :
+ *
+ *  1. **l'activité** — « créée / modifiée / mise à la corbeille / restaurée »,
+ *     avec son auteur, coalescée par page + acteur + 5 minutes ;
+ *  2. **les mentions** — ceux qu'on vient de citer, et eux seuls (la comparaison
+ *     avec le document PRÉCÉDENT est ce qui fait qu'une rafale d'autosaves ne
+ *     notifie qu'une fois, à la sauvegarde où le nom apparaît) ;
+ *  3. **l'écriture d'AGENT** — au seul lanceur du run.
+ *
+ * Hors chemin critique (`afterOrNow`), comme l'archivage : la sauvegarde de
+ * l'éditeur ne doit attendre aucun des trois, et une promesse détachée mourrait
+ * avec la réponse (lib/server/after-safe.ts).
+ *
+ * Best-effort de bout en bout : aucun des trois ne remonte à l'appelant. Une
+ * ligne d'activité perdue ne doit pas faire échouer une écriture réussie.
+ */
+function announcePageWrite({
+  service,
+  page,
+  previous,
+  actorId,
+  kind,
+  event,
+  scanMentions = true,
+}: {
+  service: Service;
+  /** La page telle qu'elle vient d'être écrite. */
+  page: Page;
+  /** L'état d'AVANT, pour le diff des mentions. `null` sur une création. */
+  previous: Page | null;
+  actorId: string;
+  kind: PageWriteKind;
+  event: PageEventType;
+  /** La DUPLICATION le coupe : recopier un texte n'est pas citer quelqu'un, et
+      copier une page repingerait tous les noms qu'elle porte. */
+  scanMentions?: boolean;
+}): void {
+  afterOrNow(async () => {
+    await recordPageEvent(service, {
+      pageId: page.id,
+      actorId,
+      kind,
+      type: event,
+    });
+
+    // Les mentions ne se lisent que sur un CORPS. Un renommage ne cite
+    // personne, et une corbeille encore moins.
+    if (scanMentions && page.content !== undefined && page.content !== null) {
+      await notifyPageMentions(service, {
+        projectId: page.project_id,
+        pageId: page.id,
+        actorId,
+        doc: page.content,
+        previousDoc: previous?.content ?? undefined,
+      });
+    }
+
+    // « seulement quand l'acteur est l'agent » : c'est la SURFACE qui le sait
+    // (les six outils de lib/server/page-tools.ts signent `kind: "agent"`), et
+    // `actorId` est le compte qui l'a permise — donc le lanceur du run.
+    if (kind === "agent") {
+      await notifyAgentPageWrite(service, {
+        projectId: page.project_id,
+        pageId: page.id,
+        actorId,
+      });
+    }
+  });
+}
+
 /* ─── Lecture ──────────────────────────────────────────────────────────────── */
 
 /** Les pages VIVANTES du projet, à plat. L'arbre se reconstruit chez l'appelant. */
@@ -409,6 +498,16 @@ export async function createPage({
   // Une création ne recouvre rien : l'appel ne pose que la règle (cf.
   // `stampPageWrite`), il n'écrit aucune ligne d'historique.
   stampPageWrite({ service, previous: null, actorId, kind });
+  // Elle se DIT, en revanche : le wizard de projet et les agents créent des
+  // pages entières d'un coup, mentions comprises (MIN-278).
+  announcePageWrite({
+    service,
+    page,
+    previous: null,
+    actorId,
+    kind,
+    event: "page_created",
+  });
   return { ok: true, page };
 }
 
@@ -515,6 +614,17 @@ export async function duplicatePage(
   const rootId = idMap.get(pageId);
   const copy = (data as unknown as Page[]).find((row) => row.id === rootId);
   if (!copy) return { ok: false, status: 500, errorKey: "databaseError" };
+  // La RACINE seule est annoncée : une branche de vingt pages copiée d'un geste
+  // est un geste, pas vingt.
+  announcePageWrite({
+    service,
+    page: copy,
+    previous: null,
+    actorId,
+    kind,
+    event: "page_created",
+    scanMentions: false,
+  });
   return { ok: true, page: copy };
 }
 
@@ -627,11 +737,21 @@ export async function updatePage({
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
 
-  // L'auteur est posé sur TOUTE modification, corps ou non : renommer une page
-  // est bien la modifier, et l'en-tête dit « modifiée par », pas « corps écrit
-  // par ». L'HISTORIQUE, lui, ne s'occupe que du corps — c'est le seul état
-  // qu'on puisse vouloir remonter.
-  Object.assign(patch, writtenBy(actorId, kind));
+  // L'auteur est posé sur ce qui touche au DOCUMENT — corps, titre, icône :
+  // renommer une page est bien la modifier, et l'en-tête dit « modifiée par »,
+  // pas « corps écrit par ».
+  //
+  // Le RANGEMENT, lui, ne signe pas. Épingler une page (le favori est partagé
+  // par le projet, cf. la migration `pages_favorite`) ou la glisser dans
+  // l'arbre ne dit rien de son contenu, et signer ces gestes-là ferait afficher
+  // « modifiée par Bob » en tête d'une page que Bob n'a jamais ouverte —
+  // exactement la fausse attribution que MIN-277 existe pour éviter.
+  //
+  // L'HISTORIQUE, lui, ne s'occupe que du corps — c'est le seul état qu'on
+  // puisse vouloir remonter.
+  const writesDocument =
+    patch.content !== undefined || patch.title !== undefined || "icon" in patch;
+  if (writesDocument) Object.assign(patch, writtenBy(actorId, kind));
 
   // Le verrou est DANS l'écriture, pas seulement dans le contrôle ci-dessus :
   // deux enregistrements partis à la même milliseconde passent tous les deux le
@@ -672,6 +792,20 @@ export async function updatePage({
     // d'agent) garantit en plus que c'était bien l'état EN BASE à l'instant de
     // l'écriture — la condition `eq("version", expected)` a filtré le reste.
     stampPageWrite({ service, previous: page, actorId, kind, always: alwaysArchive });
+  }
+  // L'annonce suit la MÊME frontière que la signature (`writesDocument`) : le
+  // rangement — épingler, glisser dans l'arbre — ne fait pas une ligne
+  // « modifiée par ». Sinon réordonner la sidebar remplirait l'activité d'un
+  // projet de gestes que personne ne considère comme des modifications.
+  if (writesDocument) {
+    announcePageWrite({
+      service,
+      page: data as unknown as Page,
+      previous: page,
+      actorId,
+      kind,
+      event: "page_updated",
+    });
   }
   return { ok: true, page: data as unknown as Page };
 }
@@ -740,6 +874,12 @@ async function syncParentBody(
     // parent perd un bloc sans que personne l'ait ouvert, c'est précisément une
     // écriture qu'on peut vouloir remonter.
     stampPageWrite({ service, previous: parent, actorId, kind: "human" });
+    // Pas d'ANNONCE ici (MIN-278), et c'est délibéré : ce miroir n'est jamais
+    // un geste en soi — il accompagne toujours une corbeille ou une
+    // restauration, qui a déjà posé sa ligne. En poser une seconde ferait lire
+    // « X a modifié Dossier » à chaque sous-page supprimée. Et il ne peut pas
+    // faire apparaître de mention : il ne fait qu'ajouter ou retirer un bloc
+    // sous-page.
   }
 }
 
@@ -829,6 +969,18 @@ export async function trashPage(
     }
   }
 
+  // La RACINE du geste seule (MIN-278) : la descendance part avec elle, et une
+  // ligne par page ferait vingt lignes pour un bloc effacé. La corbeille reste
+  // le seul geste destructeur des pages — c'est la ligne qu'on vient chercher.
+  announcePageWrite({
+    service,
+    page,
+    previous: null,
+    actorId,
+    kind: "human",
+    event: "page_trashed",
+    scanMentions: false,
+  });
   return { ok: true, trashed: descendants.length + 1 };
 }
 
@@ -973,6 +1125,17 @@ export async function restorePage(
       .eq("id", pageId);
   }
 
+  // Le pendant de la corbeille : sans cette ligne, une page réapparue dans la
+  // sidebar l'aurait fait sans que rien ne le dise.
+  announcePageWrite({
+    service,
+    page,
+    previous: null,
+    actorId,
+    kind: "human",
+    event: "page_restored",
+    scanMentions: false,
+  });
   return { ok: true, restored: family.length };
 }
 

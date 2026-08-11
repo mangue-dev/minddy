@@ -44,6 +44,7 @@ import {
   describeEvent,
   describeFeedbackEvent,
   describeObjectiveEvent,
+  describePageEvent,
   type EventContext,
   type EventTranslators,
 } from "@/lib/describe-event";
@@ -76,7 +77,7 @@ type CommentItem = Extract<TimelineItem, { kind: "comment" }>;
  *  « type instantiation is excessively deep » (TS2589). */
 type TimelineT = ReturnType<typeof useTranslations<"Timeline">>;
 /** Which entity's activity we render — picks the event describer + status set. */
-export type ActivityEntity = "issue" | "objective" | "feedback";
+export type ActivityEntity = "issue" | "objective" | "feedback" | "page";
 
 /** Compact localized relative time, e.g. "Il y a 7min" / "7min ago". */
 function timeAgo(iso: string, t: TimelineT): string {
@@ -328,7 +329,9 @@ function EventRow({
       ? describeFeedbackEvent(item.event, ctx, tr)
       : entity === "objective"
         ? describeObjectiveEvent(item.event, ctx, tr)
-        : describeEvent(item.event, ctx, tr);
+        : entity === "page"
+          ? describePageEvent(item.event, ctx, tr)
+          : describeEvent(item.event, ctx, tr);
   return (
     <li className="flex items-center gap-2.5">
       {forgeSync ? (

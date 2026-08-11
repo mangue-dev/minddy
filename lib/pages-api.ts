@@ -1,6 +1,7 @@
 "use client";
 
 import type { Page, PageVersion } from "./pages";
+import type { IssueEvent } from "./types";
 
 /**
  * Le client HTTP des pages (MIN-266) — de quoi lire et écrire une page depuis
@@ -308,5 +309,26 @@ export async function restorePageVersionApi(
       { method: "POST" }
     ),
     "Restore failed"
+  );
+}
+
+/* ─── L'activité (MIN-278) ─────────────────────────────────────────────────── */
+
+/**
+ * Le journal d'une page — créée, modifiée, mise à la corbeille, restaurée —
+ * dans l'ordre chronologique, avec ses acteurs déjà résolus par le serveur.
+ *
+ * Les lignes sont des `IssueEvent` et ce n'est pas un abus de nom : la table est
+ * la même (`issue_events`, polymorphe depuis les objectifs), et c'est ce qui
+ * permet de les rendre avec le composant d'activité existant plutôt qu'un
+ * second, à tenir en phase avec le premier.
+ */
+export async function fetchPageEventsApi(
+  projectId: string,
+  pageId: string
+): Promise<IssueEvent[]> {
+  return json(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}/events`),
+    "Request failed"
   );
 }
