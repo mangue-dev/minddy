@@ -65,9 +65,14 @@
    aussi bien sur une carte de commentaire que sur une ligne survolée ou sur la
    surface du composer de Numo, et doit prendre la nuance de ce qui la porte.
    Une seule variable, donc une seule classe `bg-*` : un appelant qui repeint la
-   pilule (la bulle sombre du chat) la remplace proprement via tailwind-merge. */
-:root { --mention-chip: oklch(0.21 0.012 265 / 6%); }
-.dark { --mention-chip: oklch(0 0 0 / 25%); }
+   pilule (la bulle sombre du chat) la remplace proprement via tailwind-merge.
+
+   La variante `-hover` sert aux pilules qui MÈNENT quelque part (un ticket, un
+   objectif, une page — jamais une personne, cf. lib/mention-target.ts) : le même
+   fond, appuyé d'un cran, pour que le survol dise « ceci se clique » sans que la
+   pilule change de nature. */
+:root { --mention-chip: oklch(0.21 0.012 265 / 6%); --mention-chip-hover: oklch(0.21 0.012 265 / 12%); }
+.dark { --mention-chip: oklch(0 0 0 / 25%); --mention-chip-hover: oklch(0 0 0 / 40%); }
 
 /* ── Le pouce d'un interrupteur coché (mangue-ui Switch) ──────────────────────
    Même cause que la pilule ci-dessus, et c'est le prix de notre --primary

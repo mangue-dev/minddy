@@ -15,9 +15,11 @@
 // citable tout de suite, et un ticket supprimé cesse de l'être.
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { contentMentionScanner } from "@/lib/mention-scan";
+import { mentionProjectLookup, mentionTargetPath } from "@/lib/mention-target";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
@@ -25,6 +27,7 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
 import type {
   MentionIssue,
@@ -126,6 +129,43 @@ export function useMentionSources(projectId?: string | null): MentionSources {
 }
 
 /**
+ * Où mène chaque élément citable — le projet d'un ticket, d'un objectif ou
+ * d'une page, résolu par son id.
+ *
+ * La résolution se fait à la LECTURE et non à la pose de la pilule : le nœud ne
+ * porte que le type et l'id (cf. components/mention-node.ts), et c'est ce qui
+ * fait qu'une mention écrite avant cette navigation-ci se clique tout autant.
+ * Une mention dont l'élément n'est pas dans les sources — l'index n'est pas
+ * encore arrivé, le ticket appartient à un projet qu'on a quitté — rend `null`
+ * et reste du texte.
+ */
+export function useMentionLinksFor(sources: {
+  issues: MentionIssue[];
+  objectives: MentionObjective[];
+  pages: MentionPage[];
+}): MentionLinks {
+  const router = useRouter();
+  const { issues, objectives, pages } = sources;
+
+  const projectOf = useMemo(
+    () => mentionProjectLookup({ issues, objectives, pages }),
+    [issues, objectives, pages],
+  );
+
+  return useMemo<MentionLinks>(() => {
+    const href: MentionLinks["href"] = (type, id) =>
+      mentionTargetPath(type, id, projectOf(type, id));
+    return {
+      href,
+      navigate: (type, id) => {
+        const path = href(type, id);
+        if (path) router.push(path);
+      },
+    };
+  }, [projectOf, router]);
+}
+
+/**
  * Ce qu'il faut passer à `<MarkdownEditor mentions={…} />` : la liste proposée
  * après le « @ », et la règle qui relit un texte déjà écrit.
  *
@@ -140,6 +180,7 @@ export function useDescriptionMentions(
   members: Member[],
 ): MarkdownEditorMentions {
   const { issues, objectives, pages, armNow } = useMentionSources(projectId);
+  const links = useMentionLinksFor({ issues, objectives, pages });
 
   const options = useMemo<MentionOption[]>(
     () => [
@@ -182,5 +223,12 @@ export function useDescriptionMentions(
     [members, issues, objectives, pages],
   );
 
-  return { options, scan, onQuery: armNow };
+  // Mémoïsé : l'objet est lu comme une IDENTITÉ en aval — l'éditeur reconstruit
+  // ses extensions quand ses options changent, et le contexte des destinations
+  // rerendrait toutes les pilules. Le rendre à neuf à chaque rendu ferait les
+  // deux à chaque frappe.
+  return useMemo(
+    () => ({ options, scan, links, onQuery: armNow }),
+    [options, scan, links, armNow],
+  );
 }

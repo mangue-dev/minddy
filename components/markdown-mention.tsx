@@ -31,6 +31,7 @@ import {
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
 import { PluginKey } from "@tiptap/pm/state";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
+import { useMentionLinks } from "@/components/mention-links";
 import {
   MentionOptionRow,
   filterMentions,
@@ -52,11 +53,20 @@ export const MentionNode = MentionNodeBase.extend({
 
 function MentionNodeView({ node }: NodeViewProps) {
   const type = node.attrs.mentionType as MentionOption["type"] | "numo";
+  const id = (node.attrs.mentionId as string | null) ?? NUMO_MENTION_ID;
+  // Où mène cette pilule-là : la surface le sait (lib/use-mention-sources), le
+  // nœud non — il ne porte que le type et l'id. Une personne ne mène nulle part,
+  // et un élément que les sources ne connaissent pas (encore) non plus : la
+  // pilule reste alors du texte, ce qu'elle a toujours été.
+  const links = useMentionLinks();
+  const href = links?.href(type, id) ?? null;
   return (
     <NodeViewWrapper as="span" className="inline-flex align-middle">
       <MentionChip
         type={type}
-        id={node.attrs.mentionId ?? NUMO_MENTION_ID}
+        id={id}
+        href={href}
+        onNavigate={href ? () => links?.navigate(type, id) : undefined}
         label={node.attrs.mentionLabel ?? ""}
         avatarSeed={node.attrs.seed}
         color={node.attrs.color}

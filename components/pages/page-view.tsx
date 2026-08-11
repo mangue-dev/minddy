@@ -683,6 +683,7 @@ export function PageView({
               }}
               pages={lookup}
               mentions={mentions}
+              mentionLinks={mentionSources.links}
               editorRef={editorRef}
               onEditor={setEditor}
               onSubpagesRemoved={onSubpagesRemoved}

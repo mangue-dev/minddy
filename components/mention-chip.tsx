@@ -10,10 +10,21 @@
 // au-dessus du composer. Le « @ » reste dans le TEXTE envoyé (voir la
 // sérialisation du composer, et le corps du commentaire tel qu'il est stocké) :
 // côté modèle comme côté serveur, c'est lui qui marque la mention.
+//
+// Une pilule qui DÉSIGNE quelque chose — un ticket, un objectif, une page, un
+// projet — s'ouvre d'un clic dès qu'on lui donne un `href` : elle devient alors
+// une vraie ancre. Une PERSONNE, jamais : minddy n'a pas de page de profil. La
+// règle des destinations est dans lib/mention-target.ts, et qui la résout dans
+// components/mention-links.tsx.
 
+import type { MouseEvent } from "react";
 import { BookText, FileText } from "lucide-react";
 import { cn } from "mangue-ui";
 import { NumoAvatar } from "@/components/actor-avatars";
+import {
+  NODE_LINK_CLASS,
+  isPlainNavigationClick,
+} from "@/components/editor-node-link";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
@@ -44,6 +55,8 @@ export function MentionChip({
   iconUrl,
   color,
   icon,
+  href,
+  onNavigate,
   className,
 }: {
   type: MentionChipType;
@@ -63,26 +76,19 @@ export function MentionChip({
   color?: string | null;
   /** Page : son émoji, quand elle en a un (MIN-273). */
   icon?: string | null;
+  /**
+   * Où mène la pilule. Présent = elle se clique, et devient une vraie ancre :
+   * ⌘-clic, clic du milieu et « ouvrir dans un nouvel onglet » viennent avec.
+   * Une personne n'en a jamais (lib/mention-target.ts).
+   */
+  href?: string | null;
+  /** Le clic ORDINAIRE : la navigation d'application, pour ne pas recharger la
+      page entière. Sans lui, l'ancre est suivie par le navigateur. */
+  onNavigate?: () => void;
   className?: string;
 }) {
-  return (
-    // Géométrie de la pilule, dans l'ordre où elle se déduit :
-    //   figure 16px + 3px de marge tout autour → hauteur 22px, donc rayon 11 ;
-    //   rayon intérieur = 11 − 3 = 8, soit la moitié de la figure : dans une
-    //   pilule, ce qui est posé au ras du bord est nécessairement rond — l'orbe
-    //   du projet s'arrondit donc comme le portrait.
-    //
-    // `leading-4` n'est pas cosmétique : sans lui le libellé garde l'interligne
-    // du texte qui l'entoure (leading-relaxed, ~23px), sa ligne dépasse la
-    // figure, et la pilule grandit en hauteur SEULE — les 3px du bas et du haut
-    // en paraissent alors 6, quand ceux des côtés valent toujours 3. Le mettre à
-    // la hauteur de la figure remet les quatre marges à égalité.
-    <span
-      className={cn(
-        "mx-0.5 inline-flex items-center gap-1 rounded-full bg-(--mention-chip) p-[3px] pr-2.5 align-middle text-[0.95em] font-medium leading-4 text-primary",
-        className,
-      )}
-    >
+  const figure = (
+    <>
       {type === "member" ? (
         <UserAvatar seed={avatarSeed ?? id} className="size-4" />
       ) : type === "forge" ? (
@@ -123,6 +129,53 @@ export function MentionChip({
         <ProjectOrb seed={id} iconUrl={iconUrl} className="size-4 rounded-full" />
       )}
       {label}
-    </span>
+    </>
+  );
+
+  // Géométrie de la pilule, dans l'ordre où elle se déduit :
+  //   figure 16px + 3px de marge tout autour → hauteur 22px, donc rayon 11 ;
+  //   rayon intérieur = 11 − 3 = 8, soit la moitié de la figure : dans une
+  //   pilule, ce qui est posé au ras du bord est nécessairement rond — l'orbe
+  //   du projet s'arrondit donc comme le portrait.
+  //
+  // `leading-4` n'est pas cosmétique : sans lui le libellé garde l'interligne
+  // du texte qui l'entoure (leading-relaxed, ~23px), sa ligne dépasse la
+  // figure, et la pilule grandit en hauteur SEULE — les 3px du bas et du haut
+  // en paraissent alors 6, quand ceux des côtés valent toujours 3. Le mettre à
+  // la hauteur de la figure remet les quatre marges à égalité.
+  const shape =
+    "mx-0.5 inline-flex items-center gap-1 rounded-full bg-(--mention-chip) p-[3px] pr-2.5 align-middle text-[0.95em] font-medium leading-4 text-primary";
+
+  if (!href) return <span className={cn(shape, className)}>{figure}</span>;
+
+  return (
+    // Une vraie ancre, et pas une pilule cliquable : ⌘-clic, clic du milieu et
+    // « ouvrir dans un nouvel onglet » viennent avec, et aucun `onClick` ne sait
+    // les refaire. Le clic ORDINAIRE, lui, passe par le routeur.
+    //
+    // `NODE_LINK_CLASS` : dans un éditeur, c'est la marque par laquelle
+    // l'extension Link laisse l'ancre tranquille — sans elle, un clic ouvrait un
+    // onglet neuf EN PLUS de la navigation (components/editor-node-link.ts).
+    // `no-underline` va avec : les surfaces de texte peignent leurs liens, et
+    // une pilule soulignée n'est plus une pilule.
+    <a
+      href={href}
+      className={cn(
+        shape,
+        NODE_LINK_CLASS,
+        "cursor-pointer no-underline transition-colors hover:bg-(--mention-chip-hover)",
+        // En DERNIER : un appelant qui repeint la pilule (la bulle sombre du
+        // chat) repeint aussi son survol, et tailwind-merge ne peut le faire que
+        // si sa classe arrive après la nôtre.
+        className,
+      )}
+      onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+        if (!onNavigate || !isPlainNavigationClick(event)) return;
+        event.preventDefault();
+        onNavigate?.();
+      }}
+    >
+      {figure}
+    </a>
   );
 }

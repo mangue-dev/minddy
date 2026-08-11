@@ -47,10 +47,12 @@ import {
 } from "@/components/pages/block-placeholder";
 import { BlockGutter } from "@/components/pages/block-gutter";
 import { BlockFlash } from "@/components/pages/block-flash";
+import { focusDocumentEnd } from "@/components/pages/block-actions";
+import { handleNodeLinkClick } from "@/components/editor-node-link";
 import {
-  focusDocumentEnd,
-  handleBlockLinkClick,
-} from "@/components/pages/block-actions";
+  MentionLinksProvider,
+  type MentionLinks,
+} from "@/components/mention-links";
 import {
   PageSlashCommand,
   pageSlashItems,
@@ -69,14 +71,15 @@ const PROSE = cn(
   "text-base leading-relaxed break-words outline-none",
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
   "[&_p]:my-2",
-  // Les liens du TEXTE. `:not(.page-block-link)` en exclut les ancres rendues
-  // par une vue de nœud (le bloc sous-page) : `.ProseMirror a` a une
-  // spécificité plus forte qu'une classe utilitaire posée sur l'ancre, donc
-  // sans cette exception un bloc ne peut PAS se dépeindre — il héritait de la
-  // couleur des liens et portait un second soulignement par-dessus le sien.
-  "[&_a:not(.page-block-link)]:text-primary",
-  "[&_a:not(.page-block-link)]:underline",
-  "[&_a:not(.page-block-link)]:underline-offset-2",
+  // Les liens du TEXTE. `:not(.editor-node-link)` en exclut les ancres rendues
+  // par une vue de nœud (le bloc sous-page, la pilule d'une mention) :
+  // `.ProseMirror a` a une spécificité plus forte qu'une classe utilitaire
+  // posée sur l'ancre, donc sans cette exception un bloc ne peut PAS se
+  // dépeindre — il héritait de la couleur des liens et portait un second
+  // soulignement par-dessus le sien.
+  "[&_a:not(.editor-node-link)]:text-primary",
+  "[&_a:not(.editor-node-link)]:underline",
+  "[&_a:not(.editor-node-link)]:underline-offset-2",
   "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0",
@@ -104,10 +107,11 @@ const EDITOR_PROPS = {
   attributes: { class: PROSE },
   scrollMargin: { top: 0, right: 0, bottom: 160, left: 0 },
   scrollThreshold: { top: 0, right: 0, bottom: 160, left: 0 },
-  // Le clic sur le lien d'un BLOC n'appartient pas à l'extension Link : le
-  // pourquoi, et les deux navigations qu'il évitait, sont dans block-actions.ts.
+  // Le clic sur l'ancre d'une vue de nœud n'appartient pas à l'extension Link :
+  // le pourquoi, et les deux navigations qu'il évitait, sont dans
+  // components/editor-node-link.ts.
   handleClick: (_view: unknown, _pos: number, event: MouseEvent) =>
-    handleBlockLinkClick(event),
+    handleNodeLinkClick(event),
   // Écrire périme le pointeur : tant qu'on n'a pas redéplacé la souris, la
   // tâche qu'elle survole ne prend plus ⇧A/⇧P (cf. hover-keys.ts). Même règle
   // que le carnet, et pour la même raison — une page est éditable de bout en
@@ -125,6 +129,7 @@ export function PageEditor({
   onChange,
   pages,
   mentions,
+  mentionLinks,
   editorRef,
   onEditor,
   onSubpagesRemoved,
@@ -148,6 +153,9 @@ export function PageEditor({
   onSubpagesRemoved?: (pageIds: string[]) => void;
   /** Les citables « @ » — mêmes options que dans une description d'issue. */
   mentions?: MentionSuggestOptions;
+  /** Où mènent les pilules déjà posées : un ticket, un objectif, une page
+      s'ouvrent d'un clic (components/mention-links). */
+  mentionLinks?: MentionLinks | null;
   editorRef?: MutableRefObject<Editor | null>;
   /**
    * L'éditeur, rendu à l'appelant sous une forme qui DÉCLENCHE un rendu — ce
@@ -310,9 +318,17 @@ export function PageEditor({
     </div>
   );
 
+  // Deux contextes pour deux vues de nœud, et la même raison des deux côtés :
+  // le bloc sous-page et la pilule de mention sont montés tout en bas, en
+  // portails sous `EditorContent`, et n'ont aucun moyen d'aller chercher
+  // eux-mêmes le titre d'une page ou le projet d'un ticket cité.
+  const withLinks = (
+    <MentionLinksProvider value={mentionLinks ?? null}>{body}</MentionLinksProvider>
+  );
+
   return pages ? (
-    <PagesLookupProvider value={pages}>{body}</PagesLookupProvider>
+    <PagesLookupProvider value={pages}>{withLinks}</PagesLookupProvider>
   ) : (
-    body
+    withLinks
   );
 }

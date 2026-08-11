@@ -13,8 +13,12 @@ import { displayName } from "@/lib/display-name";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import { useMembersQuery } from "@/lib/use-members-query";
-import { useMentionSources } from "@/lib/use-mention-sources";
+import {
+  useMentionLinksFor,
+  useMentionSources,
+} from "@/lib/use-mention-sources";
 import { useProjects } from "@/lib/projects-context";
+import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
 import type { GlobalBoardResponse, Member } from "@/lib/types";
 
@@ -58,6 +62,9 @@ export function useNumoMembers(
  */
 export function useNumoMentionables(scopeProjectId: string | null): {
   mentionables: MentionOption[];
+  /** Où mènent les pilules des messages DÉJÀ envoyés : le fil se relit, et un
+      ticket qu'on y a cité s'ouvre d'un clic (components/mention-links). */
+  links: MentionLinks;
   onMentionQuery: (active: boolean) => void;
 } {
   const [wanted, setWanted] = useState(false);
@@ -67,6 +74,8 @@ export function useNumoMentionables(scopeProjectId: string | null): {
   // d'une description : il porte déjà tout, de tous mes projets. Les pages, elles,
   // sont celles du projet en portée — un wiki appartient à son projet.
   const { issues, objectives, pages, armNow } = useMentionSources(scopeProjectId);
+
+  const links = useMentionLinksFor({ issues, objectives, pages });
 
   const mentionables = useMemo<MentionOption[]>(
     () => [
@@ -122,7 +131,7 @@ export function useNumoMentionables(scopeProjectId: string | null): {
     [armNow],
   );
 
-  return { mentionables, onMentionQuery };
+  return { mentionables, links, onMentionQuery };
 }
 
 /**

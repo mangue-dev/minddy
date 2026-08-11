@@ -236,35 +236,10 @@ export function styledBox(dom: HTMLElement): HTMLElement {
     : dom;
 }
 
-/** La marque d'une ancre rendue par une vue de nœud — celle que ni le style ni
-    le clic de l'éditeur ne doivent traiter comme un lien du texte. */
-export const BLOCK_LINK_CLASS = "page-block-link";
-
-/**
- * Le clic sur le lien d'un BLOC n'appartient pas à l'extension Link.
- *
- * Elle attrape tout `<a>` du document, sans savoir d'où il vient, et fait
- * `window.open(href, target)` — donc un onglet neuf. Sur le bloc sous-page, ça
- * faisait DEUX navigations pour un clic : le nouvel onglet de l'extension, et
- * celle du navigateur qui suit l'ancre dans l'onglet courant. Aucune des deux
- * n'était voulue.
- *
- * Posé dans `editorProps`, qui passe AVANT tous les plugins dans `someProp` de
- * ProseMirror : rendre `true` suffit à couper l'extension. Le `preventDefault`
- * coupe l'autre moitié, et la vue du bloc prend le relais avec une navigation
- * d'application (blocks/subpage-view.tsx).
- *
- * Avec un MODIFICATEUR, on ne préempte que l'extension : ⌘/Ctrl-clic veut dire
- * « dans un nouvel onglet », et le navigateur le fait mieux que nous.
- */
-export function handleBlockLinkClick(event: MouseEvent): boolean {
-  const target = event.target as Element | null;
-  if (!target?.closest?.(`.${BLOCK_LINK_CLASS}`)) return false;
-  const modified =
-    event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
-  if (!modified) event.preventDefault();
-  return true;
-}
+/* L'ancre d'une vue de nœud (le bloc sous-page, la pilule d'une mention) et le
+   clic qui la garde hors de l'extension Link vivent dans
+   components/editor-node-link.ts : elle n'est pas propre aux pages — une
+   description en rend une aussi. */
 
 /* ── Les actions ──────────────────────────────────────────────────────── */
 

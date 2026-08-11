@@ -55,6 +55,7 @@ import {
   withPinnedContext,
 } from "@/lib/assistant-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
+import { MentionLinksProvider } from "@/components/mention-links";
 import { useSlashCommands } from "@/components/assistant/slash-menu";
 import { useProjects } from "@/lib/projects-context";
 import type {
@@ -218,7 +219,7 @@ export const AssistantShell = forwardRef<
 
   // Mentions « @ » dans le texte : la liste ne se charge qu'à la première
   // frappe d'un « @ » (et reste ensuite en cache).
-  const { mentionables, onMentionQuery } = useNumoMentionables(projectId);
+  const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId);
 
   // Read by the send handlers without stale closures. The host may set the
   // context the same tick it dispatches a one-shot send, so the imperative
@@ -585,7 +586,10 @@ export const AssistantShell = forwardRef<
     </div>
   ) : null;
 
-  return (
+  // Même forme que l'éditeur de page : le corps d'abord, ses contextes ensuite.
+  // Écrire le fournisseur autour du `return` aurait réindenté deux cents lignes
+  // de JSX pour une ligne de sens.
+  const shell = (
     <div className="flex h-full overflow-hidden">
       {/* Permanent sidebar — only outside compact mode. */}
       {!compact && (
@@ -794,4 +798,9 @@ export const AssistantShell = forwardRef<
       </div>
     </div>
   );
+
+  // Les pilules « @ » d'un message DÉJÀ envoyé mènent à ce qu'elles citent — un
+  // ticket, un objectif, une page (components/mention-links). Le composer, lui,
+  // n'a pas de destinations : on y écrit, et un clic y pose le curseur.
+  return <MentionLinksProvider value={links}>{shell}</MentionLinksProvider>;
 });

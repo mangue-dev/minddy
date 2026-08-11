@@ -12,6 +12,10 @@ import { useTranslations } from "next-intl";
 // registre de blocs cesserait d'être importable hors navigateur (cf. cx.ts).
 import { cx } from "@/components/pages/blocks/cx";
 import { FileText, RotateCcw } from "lucide-react";
+import {
+  NODE_LINK_CLASS,
+  isPlainNavigationClick,
+} from "@/components/editor-node-link";
 import { usePagesLookup } from "@/components/pages/pages-lookup";
 
 /**
@@ -102,10 +106,10 @@ export function SubpageView({ node, selected }: NodeViewProps) {
         // Une vraie ancre : le ⌘-clic et le clic du milieu ouvrent la page dans
         // un onglet, comme partout ailleurs. Un `onClick` sur un `div` ne sait
         // faire ni l'un ni l'autre.
-        // `page-block-link` n'est pas une classe utilitaire : c'est la marque
+        // `editor-node-link` n'est pas une classe utilitaire : c'est la marque
         // par laquelle l'éditeur laisse cette ancre tranquille — ni sa couleur
-        // de lien, ni son `window.open` (page-editor.tsx, `PROSE` et
-        // `handleClick`).
+        // de lien, ni son `window.open` (components/editor-node-link.ts, et
+        // page-editor.tsx pour `PROSE` et `handleClick`).
         //
         // Une vraie ancre, et pas un `div` cliquable : ⌘-clic, clic du milieu et
         // « ouvrir dans un nouvel onglet » du menu contextuel viennent avec, et
@@ -113,17 +117,9 @@ export function SubpageView({ node, selected }: NodeViewProps) {
         // le routeur — une navigation d'application, pas un rechargement.
         <a
           href={href}
-          className="page-block-link min-w-0 flex-1 truncate"
+          className={cx(NODE_LINK_CLASS, "min-w-0 flex-1 truncate")}
           onClick={(event) => {
-            if (
-              event.metaKey ||
-              event.ctrlKey ||
-              event.shiftKey ||
-              event.altKey ||
-              event.button !== 0
-            ) {
-              return;
-            }
+            if (!isPlainNavigationClick(event)) return;
             event.preventDefault();
             lookup?.navigate?.(pageId!);
           }}

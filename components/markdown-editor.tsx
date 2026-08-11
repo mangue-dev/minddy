@@ -12,6 +12,11 @@ import {
   MentionSuggest,
   hydrateMentions,
 } from "@/components/markdown-mention";
+import {
+  MentionLinksProvider,
+  type MentionLinks,
+} from "@/components/mention-links";
+import { handleNodeLinkClick } from "@/components/editor-node-link";
 import type { MentionOption } from "@/components/mention-suggest";
 import type { MentionScan } from "@/lib/mention-scan";
 
@@ -28,6 +33,9 @@ import type { MentionScan } from "@/lib/mention-scan";
 export interface MarkdownEditorMentions {
   options: MentionOption[];
   scan: MentionScan;
+  /** Où mène chaque pilule — un ticket, un objectif, une page s'ouvrent d'un
+      clic ; une personne ne mène nulle part (components/mention-links). */
+  links?: MentionLinks;
   /** Le premier « @ » tapé — charge la liste à ce moment-là. */
   onQuery?: () => void;
 }
@@ -38,7 +46,13 @@ const PROSE = cn(
   "text-sm leading-relaxed break-words outline-none",
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
   "[&_p]:my-2",
-  "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2",
+  // Les liens du TEXTE. `:not(.editor-node-link)` en exclut l'ancre d'une vue de
+  // nœud — la pilule d'une mention qui mène quelque part : `.ProseMirror a` a
+  // une spécificité plus forte que la classe posée sur l'ancre, donc sans cette
+  // exception la pilule héritait de la couleur des liens et d'un soulignement.
+  "[&_a:not(.editor-node-link)]:text-primary",
+  "[&_a:not(.editor-node-link)]:underline",
+  "[&_a:not(.editor-node-link)]:underline-offset-2",
   "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_li]:my-0.5",
@@ -55,7 +69,14 @@ const PROSE = cn(
 
 /** Les réglages de la vue ProseMirror — figés hors du composant, cf. la règle
     au-dessus de l'appel à `useEditor`. */
-const EDITOR_PROPS = { attributes: { class: PROSE } };
+const EDITOR_PROPS = {
+  attributes: { class: PROSE },
+  // Le clic sur la pilule d'une mention n'appartient pas à l'extension Link :
+  // elle attrape tout `<a>` du document et l'ouvre dans un onglet neuf, ce qui
+  // faisait DEUX navigations pour un clic (components/editor-node-link.ts).
+  handleClick: (_view: unknown, _pos: number, event: MouseEvent) =>
+    handleNodeLinkClick(event),
+};
 
 /**
  * Borderless WYSIWYG markdown editor. Content is edited as rendered rich text
@@ -195,7 +216,13 @@ export function MarkdownEditor({
           {placeholder}
         </p>
       )}
-      <EditorContent editor={editor} />
+      {/* Les pilules sont rendues par des vues de nœud, montées en portails
+          SOUS `EditorContent` : le contexte posé ici leur parvient donc, et
+          c'est ce qui leur donne leur destination sans rien traverser à la
+          main. Même montage que le lookup des sous-pages d'une page. */}
+      <MentionLinksProvider value={mentions?.links ?? null}>
+        <EditorContent editor={editor} />
+      </MentionLinksProvider>
     </div>
   );
 }

@@ -41,10 +41,10 @@ import {
   type PageBlockId,
 } from "@/components/pages/blocks";
 import { BlockFlash, flashBlockAt } from "@/components/pages/block-flash";
+import { handleNodeLinkClick } from "@/components/editor-node-link";
 import {
   blockLink,
   blockRange,
-  handleBlockLinkClick,
   styledBox,
   deleteBlocks,
   duplicateBlocks,
@@ -831,26 +831,26 @@ describe("le DOM d'une vue de nœud", () => {
     expect(styledBox(empty)).toBe(empty);
   });
 
-  it("garde le clic d'un lien de bloc hors de l'extension Link", () => {
+  it("garde le clic d'une ancre de vue de nœud hors de l'extension Link", () => {
     // L'extension attrape TOUT `<a>` du document et fait `window.open` : sur le
-    // bloc sous-page, un clic donnait deux navigations — un onglet neuf, et
-    // l'ancre suivie dans l'onglet courant.
+    // bloc sous-page comme sur la pilule d'une mention, un clic donnait deux
+    // navigations — un onglet neuf, et l'ancre suivie dans l'onglet courant.
     const link = document.createElement("a");
-    link.className = "page-block-link";
+    link.className = "editor-node-link";
     const inner = document.createElement("span");
     link.append(inner);
     document.body.append(link);
 
     const plain = new MouseEvent("click", { cancelable: true });
     inner.dispatchEvent(plain);
-    expect(handleBlockLinkClick(plain)).toBe(true);
+    expect(handleNodeLinkClick(plain)).toBe(true);
     expect(plain.defaultPrevented).toBe(true);
 
     // ⌘-clic : on coupe l'extension, mais on laisse le navigateur ouvrir son
     // onglet — il le fait mieux que nous.
     const meta = new MouseEvent("click", { cancelable: true, metaKey: true });
     inner.dispatchEvent(meta);
-    expect(handleBlockLinkClick(meta)).toBe(true);
+    expect(handleNodeLinkClick(meta)).toBe(true);
     expect(meta.defaultPrevented).toBe(false);
 
     // Un lien du TEXTE ne nous regarde pas : l'extension garde la main.
@@ -858,7 +858,7 @@ describe("le DOM d'une vue de nœud", () => {
     document.body.append(other);
     const textLink = new MouseEvent("click", { cancelable: true });
     other.dispatchEvent(textLink);
-    expect(handleBlockLinkClick(textLink)).toBe(false);
+    expect(handleNodeLinkClick(textLink)).toBe(false);
     expect(textLink.defaultPrevented).toBe(false);
 
     link.remove();

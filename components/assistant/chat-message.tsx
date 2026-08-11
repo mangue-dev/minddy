@@ -19,6 +19,7 @@ import { ContextPill } from "./context-pill";
 import { contextChips } from "@/lib/assistant-context";
 import { useProjects } from "@/lib/projects-context";
 import { MentionChip } from "@/components/mention-chip";
+import { useMentionLinks } from "@/components/mention-links";
 import { ResourcePills, type ResourceLike } from "@/components/resources";
 
 interface ChatMessageProps {
@@ -128,6 +129,10 @@ function UserText({
   // de son id seul : même un projet devenu inaccessible garde la sienne, seul
   // le favicon importé demande de connaître le projet.
   const { projects } = useProjects();
+  // Un message ENVOYÉ se relit : la pilule d'un ticket ou d'un objectif qu'on y
+  // a cité mène à lui, comme dans une description. Le composer, lui, n'a pas de
+  // destinations — on y écrit, un clic y pose le curseur (chat-input.tsx).
+  const links = useMentionLinks();
   const parts = useMemo(() => {
     if (mentions.length === 0) return [content];
     // Le plus long d'abord : « @Marie Curie » avant « @Marie ».
@@ -168,9 +173,12 @@ function UserText({
             }
             icon={part.icon}
             color={part.color}
+            href={links?.href(part.type, part.id) ?? null}
+            onNavigate={() => links?.navigate(part.type, part.id)}
             // Sur la bulle sombre, la teinte de marque ne passe pas : la pilule
-            // s'éclaircit dans la couleur du texte qui l'entoure.
-            className="bg-background/15 text-background"
+            // s'éclaircit dans la couleur du texte qui l'entoure — son survol
+            // avec elle, sinon une pilule cliquable reprendrait le fond clair.
+            className="bg-background/15 text-background hover:bg-background/25"
           />
         ),
       )}
