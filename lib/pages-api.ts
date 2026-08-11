@@ -103,6 +103,13 @@ export interface CreatePageInput {
   /** Sous-page : l'id du parent. Absent = page racine. */
   parent_id?: string | null;
   content?: unknown;
+  /**
+   * Le corps en MARKDOWN, projeté en JSON par le serveur (`content` l'emporte
+   * si les deux sont là). C'est par là que passe le brief collé du wizard de
+   * projet : projeter au serveur évite de tirer le schéma de page dans le
+   * bundle de l'appelant.
+   */
+  markdown?: string;
 }
 
 export async function createPageApi(
@@ -131,6 +138,8 @@ export interface UpdatePageInput {
   /** Index fractionnaire calculé par `positionBetween` (lib/pages.ts). */
   position?: string;
   content?: unknown;
+  /** Épinglée en tête de la barre secondaire — partagé par le projet. */
+  favorite?: boolean;
   /**
    * La version sur laquelle ce corps s'appuie (MIN-271). Envoyée AVEC un
    * `content`, elle en fait une écriture conditionnelle : le serveur répond

@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
+import type { NodeViewRenderer } from "@tiptap/core";
+import {
+  NodeViewWrapper,
+  ReactNodeViewRenderer,
+  type NodeViewProps,
+} from "@tiptap/react";
 import { useTranslations } from "next-intl";
 // `cx` et pas `cn` de mangue-ui : le baril tire le sélecteur d'emoji, et le
 // registre de blocs cesserait d'être importable hors navigateur (cf. cx.ts).
@@ -147,4 +152,19 @@ export function SubpageView({ node, selected }: NodeViewProps) {
       )}
     </NodeViewWrapper>
   );
+}
+
+/**
+ * La vue, prête à être greffée sur le nœud sous-page (blocks/subpage.ts) — par
+ * l'éditeur de page, qui l'injecte dans `pageExtensions({ nodeViews })`.
+ *
+ * Elle vit ICI et non sur le nœud parce que ce fichier est un module client :
+ * le nœud, lui, est monté hors navigateur par la projection markdown (MCP,
+ * Numo, agent), et une référence client appelée depuis le serveur lève.
+ */
+export function subpageNodeView(): NodeViewRenderer {
+  // Même artefact de types que la vue des tâches (task-item-view.tsx) : deux
+  // copies de @tiptap/core de MÊME version, donc deux identités de type pour un
+  // seul runtime.
+  return ReactNodeViewRenderer(SubpageView) as unknown as NodeViewRenderer;
 }

@@ -4,6 +4,7 @@ import {
   ancestorsOf,
   buildPageTree,
   descendantIds,
+  favoritePages,
   flattenPageTree,
   foldPath,
   positionAtEnd,
@@ -34,6 +35,7 @@ function page(overrides: Partial<Page> & { id: string }): Page {
     content: null,
     version: 1,
     position: "V",
+    favorite: false,
     created_by: null,
     created_at: `2026-08-10T00:00:${String(counter).padStart(2, "0")}Z`,
     updated_at: "2026-08-10T00:00:00Z",
@@ -252,5 +254,50 @@ describe("foldPath", () => {
     const trail = path(6);
     foldPath(trail);
     expect(trail).toEqual(path(6));
+  });
+});
+
+/**
+ * Les FAVORIS de la barre secondaire (partagés par le projet).
+ *
+ * Deux propriétés, et elles sont le geste lui-même : le bloc suit l'ordre de
+ * l'ARBRE — pas celui des mises en favori, qui ferait sauter les lignes d'une
+ * visite à l'autre —, et une sous-page épinglée reste À SA PLACE dans l'arbre.
+ * Épingler est un raccourci vers une page, pas un reparentage : la voir quitter
+ * son parent se lirait comme un déplacement que personne n'a demandé.
+ */
+describe("les pages en favori", () => {
+  const doc = () => [
+    page({ id: "a", position: "A" }),
+    page({ id: "a1", parent_id: "a", position: "A", favorite: true }),
+    page({ id: "a2", parent_id: "a", position: "B" }),
+    page({ id: "b", position: "B", favorite: true }),
+  ];
+
+  it("sortent dans l'ordre de l'arbre, pas dans celui de la liste", () => {
+    // « b » est le DERNIER de la liste à plat mais vient après « a1 » dans
+    // l'arbre : c'est cet ordre-là qu'on lit.
+    const tree = buildPageTree(doc());
+    expect(favoritePages(tree).map((p) => p.id)).toEqual(["a1", "b"]);
+  });
+
+  it("ne quittent pas leur place dans l'arbre", () => {
+    const tree = buildPageTree(doc());
+    expect(flattenPageTree(tree).map((p) => p.id)).toEqual(["a", "a1", "a2", "b"]);
+  });
+
+  it("restent épinglées quand leur parent n'est plus dans la liste", () => {
+    // Parent à la corbeille : `buildPageTree` remonte l'enfant à la racine
+    // plutôt que de le faire disparaître, et le favori suit.
+    const orphan = doc().filter((p) => p.id !== "a");
+    expect(favoritePages(buildPageTree(orphan)).map((p) => p.id)).toEqual([
+      "a1",
+      "b",
+    ]);
+  });
+
+  it("rendent une liste vide quand rien n'est épinglé", () => {
+    const none = doc().map((p) => ({ ...p, favorite: false }));
+    expect(favoritePages(buildPageTree(none))).toEqual([]);
   });
 });

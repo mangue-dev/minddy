@@ -44,6 +44,7 @@ import {
   importProjectIconApi,
   uploadProjectIconDataUrlApi,
 } from "@/lib/projects-api";
+import { createPageApi } from "@/lib/pages-api";
 import {
   clearPendingDraftId,
   setPendingDraftId,
@@ -615,6 +616,31 @@ export function CreateProjectWizard({
         bindGitRepoApi(created.id, repo.connectionId, repo.externalRepoId),
       );
       if (linked) track("project_git_linked", { provider: repo.provider });
+    }
+    // Le brief collé devient une PAGE du wiki, « Brief initial », avant même
+    // qu'on en parle à Numo.
+    //
+    // Il n'est pas un formulaire jetable : c'est le texte où quelqu'un a posé
+    // ce qu'il veut construire, et jusqu'ici il ne survivait que sous la forme
+    // du premier message d'une conversation — introuvable trois semaines plus
+    // tard, au moment où l'on se demande justement ce qui était prévu au
+    // départ. Une page, elle, se retrouve, se relit, se corrige, et Numo la lit
+    // par ses outils comme n'importe quelle autre.
+    //
+    // Une finition parmi les autres : son échec n'empêche pas le projet
+    // d'exister, et la conversation part de toute façon avec le brief.
+    if (seed?.kind === "brief" && seed.text.trim()) {
+      await enrich("brief page", () =>
+        createPageApi(created.id, {
+          title: t("wizardBriefPageTitle"),
+          icon: "📝",
+          // Le texte part en MARKDOWN : la projection est faite au serveur, par
+          // le même chemin que les pages écrites par l'agent — un brief collé
+          // en markdown arrive donc avec ses titres et ses listes, et un brief
+          // en texte nu avec ses paragraphes.
+          markdown: seed.text.trim(),
+        }),
+      );
     }
     if (smartAssignEnabled || autoAssignEnabled) {
       await enrich("assign settings", () =>

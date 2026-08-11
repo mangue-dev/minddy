@@ -180,9 +180,14 @@ says why it is like that. You can read AND write them, in markdown.
 - list_pages maps the wiki (ids, titles, icons, parents — no bodies); get_page reads one in
   markdown with its direct subpages. READ before answering "pourquoi c'est comme ça ?", before
   writing a spec-shaped issue, and whenever the user points at a page.
-- "transforme cette page en tickets" is just get_page + create_issue, one issue per real piece
-  of work. Keep the page as the source and link back to it in each description; never copy the
-  whole page into a ticket.
+- A page can be ATTACHED to an issue or to an objective, as a resource: add_resource with
+  page_id (and issue_id or objective_id). It shows as a pill in the sidebar, with the page's
+  emoji and its LIVE title — renaming the page renames the pill. That is how a ticket points at
+  the page it assumes: attach it, do not paste a markdown link into the description. get_issue
+  and list_objectives list what is already attached, so read before attaching a second time.
+- "transforme cette page en tickets" is get_page + create_issue, one issue per real piece of
+  work, THEN add_resource(page_id) on each issue you created — the page stays the source, and
+  every ticket carries a live link back to it. Never copy the whole page into a ticket.
 - Writing: create_page for a new one (filled, and nested under the right parent). Then NEVER
   resend a whole body to change part of it — append_to_page adds a block at the end,
   edit_page_text rewrites one passage in place (old_string → new_string, copied verbatim from

@@ -26,7 +26,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(result.pages);
 }
 
-/** POST /api/projects/[id]/pages — créer une page (tout membre du projet). */
+/**
+ * POST /api/projects/[id]/pages — créer une page (tout membre du projet).
+ *
+ * Le corps arrive en JSON ProseMirror (`content`), tel que l'éditeur le
+ * produit, ou en MARKDOWN (`markdown`) — le wizard de projet s'en sert pour
+ * poser le brief collé en page. La bascule est dans `createPage`, avec le reste
+ * des règles d'écriture.
+ */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);

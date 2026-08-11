@@ -164,7 +164,18 @@ export function blockExtensions(
       const view = options.nodeViews?.[extension.name];
       extensions.push(
         options.headless
-          ? withStorage.extend({ addNodeView: undefined })
+          ? // `null` et NON `undefined`, et c'est tout sauf un détail de style :
+            // `getExtensionField` de tiptap remonte à l'extension PARENTE dès
+            // qu'un champ vaut `undefined` (helpers/getExtensionField.ts). Un
+            // `addNodeView: undefined` ne retire donc rien — il re-trouve la vue
+            // de l'extension d'origine, et `headless` ne l'était pas du tout.
+            // Sur le serveur, cette vue-là est une référence CLIENT
+            // (`@tiptap/react` porte « use client ») : l'appeler faisait lever
+            // « Attempted to call ReactNodeViewRenderer() from the server »
+            // sur le premier outil de page de Numo, du MCP ou de l'agent.
+            // `null` ne remonte pas, et le filtre de tiptap le lit comme
+            // « pas de vue » (`!!getExtensionField(…, "addNodeView")`).
+            withStorage.extend({ addNodeView: null })
           : view
             ? withStorage.extend({ addNodeView: () => view })
             : withStorage

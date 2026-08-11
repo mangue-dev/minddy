@@ -10,6 +10,7 @@ import {
   type Page,
 } from "@/lib/pages";
 import { appendSubpage, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
+import { bodyFromMarkdownServer } from "@/lib/server/pages-projection";
 import type { PageDocJSON } from "@/lib/pages-merge";
 
 /**
@@ -81,7 +82,7 @@ const MAX_ICON_LENGTH = 16;
  * lit page par page, à l'ouverture.
  */
 const LIST_COLUMNS =
-  "id, project_id, parent_id, title, icon, version, position, created_by, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed";
+  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed";
 
 const FULL_COLUMNS = `${LIST_COLUMNS}, content`;
 
@@ -197,7 +198,23 @@ export async function createPage({
     if (!parent) return { ok: false, status: 404, errorKey: "pageParentNotFound" };
   }
 
-  const content = readContent(input.content);
+  // Le corps peut arriver en MARKDOWN plutôt qu'en JSON ProseMirror : c'est par
+  // là que le wizard de projet pose le brief collé en page « Brief initial »
+  // (MIN-170). La projection est la MÊME que celle des outils de Numo
+  // (lib/server/pages-projection.ts) — une page écrite par le wizard et une
+  // page écrite par l'agent se relisent donc pareil, blocs et ids compris.
+  //
+  // La faire ICI et non chez l'appelant a deux effets : le schéma de page
+  // (tiptap, le registre de blocs) reste hors du bundle du navigateur, et le
+  // plafond de taille pèse le JSON PRODUIT, celui qui part vraiment en base.
+  //
+  // `content` l'emporte quand les deux sont là : c'est le format natif.
+  const raw =
+    input.content === undefined && typeof input.markdown === "string"
+      ? await bodyFromMarkdownServer(input.markdown)
+      : input.content;
+
+  const content = readContent(raw);
   if (content === "too-large") {
     return { ok: false, status: 413, errorKey: "pageTooLarge" };
   }
@@ -357,6 +374,10 @@ export async function updatePage({
   if (title !== undefined) patch.title = title;
 
   if ("icon" in input) patch.icon = readIcon(input.icon);
+
+  // Le favori est un booléen NU : partagé par le projet, il n'a ni ordre ni
+  // propriétaire à écrire à côté (cf. la migration `pages_favorite`).
+  if (typeof input.favorite === "boolean") patch.favorite = input.favorite;
 
   const content = readContent(input.content);
   if (content === "too-large") {

@@ -237,7 +237,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_issue",
       description:
-        "Get one issue in full: all fields, categories, comments (with author names), its resources — files AND links (kind, then file name/type/size or url, on the issue and per comment) —, sub-issues, its relations to other issues (blocks / blocked_by / related, each with the other issue's identifier, title and status — read them before saying an issue is ready to start), the duplicate target if any, and linked_feedback: the user requests from the feedback board this issue implements (title, status, vote_count, comment_count). Those are the WHY behind the work, in the users' own words — when an issue carries one, read it with get_feedback before deciding what to build, especially if it has comments. Pass issue_id when known, or number (the N of KEY-N).",
+        "Get one issue in full: all fields, categories, comments (with author names), its resources — files, links AND pages of the project's wiki (kind, then file name/type/size, url, or page_id + live title; on the issue and per comment) —, sub-issues, its relations to other issues (blocks / blocked_by / related, each with the other issue's identifier, title and status — read them before saying an issue is ready to start), the duplicate target if any, and linked_feedback: the user requests from the feedback board this issue implements (title, status, vote_count, comment_count). Those are the WHY behind the work, in the users' own words — when an issue carries one, read it with get_feedback before deciding what to build, especially if it has comments. Pass issue_id when known, or number (the N of KEY-N).",
       parameters: {
         type: "object",
         properties: {
@@ -264,7 +264,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_objectives",
       description:
-        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date, plus their resources (files and links) when they carry any.",
+        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date, plus their resources when they carry any — files, links AND pages of the project's wiki (kind, then file name/type/size, url, or page_id + live title). Attach one with add_resource.",
       parameters: { type: "object", properties: {} },
     },
   },

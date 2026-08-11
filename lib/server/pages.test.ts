@@ -246,6 +246,48 @@ describe("createPage", () => {
     const result = await createPage({ projectId: PROJECT, actorId: ACTOR, input: {} });
     expect(result).toMatchObject({ ok: false, status: 404, errorKey: "projectNotFound" });
   });
+
+  /* ── Le corps donné en MARKDOWN (MIN-170) ────────────────────────────────
+     C'est par là que le brief collé du wizard de projet devient la page
+     « Brief initial ». Ce qui se joue ici et qu'aucun type ne voit : le
+     markdown est bien PROJETÉ (donc un titre reste un titre, pas une ligne de
+     texte), et il n'atteint jamais la table — `markdown` n'est pas une colonne
+     de `pages`, et l'y laisser filer ferait échouer l'insertion entière. */
+  it("projette un corps donné en markdown", async () => {
+    const result = await createPage({
+      projectId: PROJECT,
+      actorId: ACTOR,
+      input: { title: "Brief initial", markdown: "## Le but\n\nUn board." },
+    });
+    expect(result.ok).toBe(true);
+
+    const row = rowOf((result as { page: { id: string } }).page.id);
+    const doc = row.content as { content: { type: string }[] };
+    expect(doc.content.map((node) => node.type)).toEqual([
+      "heading",
+      "paragraph",
+    ]);
+    expect((row as unknown as Record<string, unknown>).markdown).toBeUndefined();
+  });
+
+  it("garde le JSON quand les deux formats sont là", async () => {
+    // `content` est le format natif : un appelant qui l'envoie a déjà fait la
+    // projection, et la refaire depuis un markdown de secours écraserait
+    // exactement ce qu'il vient d'écrire.
+    const content = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "natif" }] }],
+    };
+    const result = await createPage({
+      projectId: PROJECT,
+      actorId: ACTOR,
+      input: { content, markdown: "## ignoré" },
+    });
+    expect(result.ok).toBe(true);
+    expect(rowOf((result as { page: { id: string } }).page.id).content).toEqual(
+      content
+    );
+  });
 });
 
 describe("listPages", () => {

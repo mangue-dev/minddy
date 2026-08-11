@@ -11,7 +11,7 @@ import {
   type ReadContext,
 } from "@/lib/server/issue-reads";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
-import { joinedPage } from "@/lib/server/resource-select";
+import { joinedPage, resourceSummary } from "@/lib/server/resource-select";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { isForgePrEvent, forgePrActor } from "@/lib/pr-events";
@@ -190,29 +190,9 @@ function truncate(text: string | null | undefined, max: number): string | null {
 /** Métadonnées d'une ressource telles que les rendent les lectures MCP : un
     lien porte son url, un fichier son nom/type/taille — ses octets restent
     derrière minddy_get_resource. */
-function resourceMeta(row: Record<string, unknown>): Record<string, unknown> {
-  if (row.kind === "link") {
-    return { id: row.id, kind: "link", url: row.url, title: row.file_name };
-  }
-  // Page du wiki (MIN-275) : le titre VIVANT quand la jointure l'a ramené, la
-  // photo de la ligne sinon. Le document se lit par minddy_get_page.
-  if (row.kind === "page") {
-    const page = joinedPage(row.page);
-    return {
-      id: row.id,
-      kind: "page",
-      page_id: row.page_id,
-      title: page?.title?.trim() || row.file_name,
-    };
-  }
-  return {
-    id: row.id,
-    kind: "file",
-    file_name: row.file_name,
-    mime_type: row.mime_type,
-    size_bytes: row.size_bytes,
-  };
-}
+/** La forme partagée avec le ticket et le chat (lib/server/resource-select.ts) :
+    trois formes, une par `kind`, et le titre d'une page relu de la jointure. */
+const resourceMeta = resourceSummary;
 
 /** Text-ish MIME → return the file as readable text rather than a base64 blob. */
 function isTextMime(mime: string): boolean {
@@ -1426,7 +1406,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "whole description (the goal, not the truncated line " +
         "minddy_list_objectives shows), status, lead, target date, weighted " +
         "progress, the ISSUES it groups (identifier, title, status, priority, " +
-        "effort, assignee), its resources — files AND links —, its COMMENT " +
+        "effort, assignee), its resources — files, links AND pages of the wiki " +
+        "(read one with minddy_get_resource, attach one with minddy_add_resource) —, its COMMENT " +
         "THREAD with author names, and the last activity events with resolved " +
         "actors. Read it before commenting on an objective or reporting on it: " +
         "the thread is where the team already said what it thinks, and the " +

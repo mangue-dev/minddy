@@ -43,6 +43,7 @@ import { useSearchIndex } from "@/lib/use-search-index";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
+import { markDraftPage } from "@/lib/pages-draft";
 import { useAllPullRequestsQuery, useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-query";
@@ -383,7 +384,37 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Les pages du wiki du projet courant, pour ⌘K (MIN-270). Même cache que
   // l'arbre de l'onglet Pages : ouvrir l'onglet ne redemande rien, et une page
   // renommée là-bas change de nom dans la palette sans aller-retour.
-  const { pages: wikiPages } = usePagesQuery(currentProjectId);
+  const { pages: wikiPages, createPage: createWikiPage } =
+    usePagesQuery(currentProjectId);
+
+  /**
+   * « Nouvelle page » depuis ⌘K : la page est créée puis OUVERTE, comme le fait
+   * le « + » de la barre secondaire (components/pages/pages-shell.tsx).
+   *
+   * Pas de dialogue en chemin, contrairement à un ticket ou à un objectif : une
+   * page n'a rien à renseigner avant d'exister — son titre se tape dans le
+   * document. Le geste attendu depuis la palette est donc « je suis dans la
+   * page neuve », pas « je remplis un formulaire ».
+   *
+   * `markDraftPage`, comme partout ailleurs : une page créée n'est pas une page
+   * sauvegardée, et repartir sans y écrire une lettre la fait disparaître.
+   */
+  const createPageFromPalette = useCallback(
+    (projectId: string) => {
+      void (async () => {
+        try {
+          const page = await createWikiPage({});
+          markDraftPage(page.id);
+          router.push(`/projects/${projectId}/pages/${page.id}`);
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : tPages("createFailed")
+          );
+        }
+      })();
+    },
+    [createWikiPage, router, tPages]
+  );
 
   // Cross-project search (MIN-91): every ticket and objective of every project,
   // so ⌘K finds them from any page. Loaded once per tab on browser idle (or on
@@ -538,6 +569,27 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         meta: projectChip(currentProject),
         metaText: currentProject.name,
         onSelect: () => openCreateObjective({ projectId: currentProject.id }),
+      });
+      // La page ne suit le projet ouvert que DANS un projet, contrairement au
+      // ticket : hors projet, la palette ne saurait pas dans quel wiki écrire,
+      // et le cache des pages n'est chargé que pour le projet courant.
+      createItems.push({
+        key: "create-page",
+        label: tPages("newPage"),
+        icon: FileText,
+        keywords: [
+          ...createKw,
+          "page",
+          "wiki",
+          "document",
+          "doc",
+          "note",
+          currentProject.name,
+          currentProject.key,
+        ],
+        meta: projectChip(currentProject),
+        metaText: currentProject.name,
+        onSelect: () => createPageFromPalette(currentProject.id),
       });
     } else {
       for (const p of projects) {
@@ -878,7 +930,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, wikiPages, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, wikiPages, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Réglages : une ligne par CARTE, pas par onglet ───────────────────────
   // Un onglet de réglages est une colonne de cartes ; « Cadence », « Zone

@@ -268,18 +268,30 @@ export function IssueActionsMenu({
   actions,
   align = "end",
   searchable = false,
+  onOpenChange,
 }: {
   trigger: React.ReactNode;
   actions: ContextMenuAction[];
   align?: "start" | "center" | "end";
   searchable?: boolean;
+  /**
+   * Prévenu à chaque ouverture / fermeture. L'état reste INTERNE : l'appelant
+   * n'a pas à le tenir pour savoir, et le seul besoin connu est de garder
+   * visible un chrome qui n'apparaît qu'au survol (le ⋯ d'une ligne d'arbre
+   * disparaîtrait sous le menu qu'il vient d'ouvrir).
+   */
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = React.useState(false);
+  const change = (next: boolean) => {
+    setOpen(next);
+    onOpenChange?.(next);
+  };
   return (
     // Non modal, comme le menu contextuel : les actions enchaînent sur d'autres
     // couches (confirmation de suppression, conversation de l'agent) sans que le
     // verrou de focus/pointeur du menu ne leur survive.
-    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+    <DropdownMenu open={open} onOpenChange={change} modal={false}>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent align={align} side="bottom" className="min-w-56">
         <ActionMenuBody actions={actions} open={open} searchable={searchable} />

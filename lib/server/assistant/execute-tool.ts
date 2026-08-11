@@ -113,6 +113,7 @@ import {
   searchIssues,
   type ReadContext,
 } from "@/lib/server/issue-reads";
+import { resourceSummary } from "@/lib/server/resource-select";
 import {
   isTrashType,
   listTrash,
@@ -783,14 +784,54 @@ export async function executeTool(
         };
       }
       case "list_objectives": {
-        const { data, error } = await ctx.supabase
-          .from("objectives")
-          .select("id, name, status, lead_user_id, target_date")
-          .is("deleted_at", null)
-          .eq("project_id", projectId)
-          .order("created_at", { ascending: true });
+        // Les RESSOURCES viennent avec, et c'est ce que la description du tool
+        // promet depuis toujours — elle le promettait sans que rien ne les
+        // envoie (MIN-275). Un objectif qui porte la page de sa spec le disait
+        // donc dans l'app et nulle part pour Numo, qui repartait recoller un
+        // lien markdown dans une description.
+        //
+        // Lu au client de SESSION, donc sous `pages_select` : une page
+        // corbeillée redescend `page: null`, et la pilule reste inerte sans
+        // qu'on ait à s'occuper de la corbeille (lib/server/resource-select.ts).
+        const [{ data, error }, { data: attachmentRows }] = await Promise.all([
+          ctx.supabase
+            .from("objectives")
+            .select("id, name, status, lead_user_id, target_date")
+            .is("deleted_at", null)
+            .eq("project_id", projectId)
+            .order("created_at", { ascending: true }),
+          ctx.supabase
+            .from("attachments")
+            .select(
+              "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)"
+            )
+            .eq("project_id", projectId)
+            .not("objective_id", "is", null)
+            // Une ressource d'objectif se reconnaît à son `comment_id` nul : le
+            // fil de discussion en porte aussi, et elles n'appartiennent pas à
+            // l'objectif mais au message.
+            .is("comment_id", null)
+            .order("created_at", { ascending: true }),
+        ]);
         if (error) return toolError(error.message);
-        return { result: { objectives: data ?? [] }, success: true };
+
+        const resourcesByObjective = new Map<string, Record<string, unknown>[]>();
+        for (const row of attachmentRows ?? []) {
+          const id = row.objective_id as string;
+          const list = resourcesByObjective.get(id) ?? [];
+          list.push(resourceSummary(row));
+          resourcesByObjective.set(id, list);
+        }
+
+        return {
+          result: {
+            objectives: (data ?? []).map((objective) => {
+              const resources = resourcesByObjective.get(objective.id as string);
+              return resources ? { ...objective, resources } : objective;
+            }),
+          },
+          success: true,
+        };
       }
       case "list_categories": {
         const { data, error } = await ctx.supabase

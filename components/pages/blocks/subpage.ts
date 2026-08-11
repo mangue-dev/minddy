@@ -1,8 +1,6 @@
 import { Node } from "@tiptap/core";
-import { ReactNodeViewRenderer } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { FileText } from "lucide-react";
-import { SubpageView } from "@/components/pages/blocks/subpage-view";
 import type {
   MarkdownNode,
   MarkdownState,
@@ -157,9 +155,14 @@ export const Subpage = Node.create<Record<string, never>, SubpageStorage>({
     ];
   },
 
-  addNodeView() {
-    return ReactNodeViewRenderer(SubpageView);
-  },
+  // Pas d'`addNodeView` ici, et c'est la règle du dossier : la vue
+  // (blocks/subpage-view.tsx) est un module « use client » et `@tiptap/react`
+  // en est un aussi. La nommer depuis ce fichier ferait entrer une référence
+  // client dans le graphe SERVEUR — le registre est monté par la projection
+  // markdown (lib/pages-markdown.ts), donc par le MCP, Numo et l'agent — et
+  // tiptap l'appellerait au montage de l'éditeur headless. La vue est injectée
+  // par la surface, `pageExtensions({ nodeViews: { subpage } })`, exactement
+  // comme la tâche du carnet (cf. task-list.ts).
 
   addCommands() {
     return {

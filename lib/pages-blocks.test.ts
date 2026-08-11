@@ -21,7 +21,7 @@
 // qu'un champ n'est pas vide et un test qui vérifie qu'il dit vrai.
 
 import { describe, expect, it } from "vitest";
-import { Editor } from "@tiptap/core";
+import { Editor, getExtensionField, type NodeViewRenderer } from "@tiptap/core";
 import { Document } from "@tiptap/extension-document";
 import { Text } from "@tiptap/extension-text";
 import { Markdown } from "tiptap-markdown";
@@ -106,10 +106,12 @@ describe("le registre des blocs de page", () => {
     expect(taskView()?.call(null)).not.toBe(view);
     expect(taskView({ nodeViews: { taskItem: view } })?.call(null)).toBe(view);
     // `headless` reste le dernier mot : la projection markdown ne monte jamais
-    // de vue, même si l'appelant en passe une.
+    // de vue, même si l'appelant en passe une. `null` et non `undefined` — le
+    // pourquoi est dans blocks/index.ts, et le test qui compte est plus bas
+    // (« le montage headless »).
     expect(
       taskView({ headless: true, nodeViews: { taskItem: view } })
-    ).toBeUndefined();
+    ).toBeNull();
   });
 
   it("le schéma du catalogue se monte en entier", () => {
@@ -214,5 +216,55 @@ describe("l'aller-retour markdown de chaque bloc", () => {
       ).toBe(true);
       editor.destroy();
     }
+  });
+});
+
+/**
+ * `headless` doit VRAIMENT retirer les vues de nœud.
+ *
+ * Ce que ce test tient, et qu'aucun autre ne voyait : `getExtensionField` de
+ * tiptap remonte à l'extension PARENTE dès qu'un champ vaut `undefined`. Un
+ * `addNodeView: undefined` posé par `blockExtensions({ headless: true })` ne
+ * retirait donc rien — il re-trouvait la vue d'origine. Sous jsdom, personne ne
+ * s'en apercevait : React est là, la vue se monte, le markdown sort juste.
+ *
+ * Dans une fonction serveur, non : `@tiptap/react` porte « use client », donc
+ * la vue est une référence CLIENT, et l'appeler lève « Attempted to call
+ * ReactNodeViewRenderer() from the server ». C'était l'échec de TOUT outil de
+ * page — Numo, le MCP, l'agent — au premier `minddy_get_page`.
+ *
+ * On regarde donc les extensions telles que tiptap les lira, pas telles qu'on
+ * croit les avoir écrites.
+ */
+describe("le montage headless", () => {
+  it("n'expose aucune vue de nœud", () => {
+    const withView = blockExtensions({ headless: true }).filter((extension) =>
+      Boolean(getExtensionField(extension, "addNodeView"))
+    );
+    expect(
+      withView.map((extension) => extension.name),
+      "ces nœuds gardent une vue React hors navigateur"
+    ).toEqual([]);
+  });
+
+  it("greffe en revanche la vue que la SURFACE apporte à la sous-page", () => {
+    // Le pendant du cas précédent : sans lui, « aucune vue » serait aussi vrai
+    // d'un `blockExtensions` qui aurait cessé de savoir en poser une. Et c'est
+    // la sous-page qu'on regarde, parce que c'est SA vue qui a déménagé du
+    // fichier de bloc vers la surface (components/pages/page-editor.tsx).
+    const view = (() => null) as unknown as NodeViewRenderer;
+    const node = blockExtensions({ nodeViews: { subpage: view } }).find(
+      (extension) => extension.name === "subpage"
+    );
+    const addNodeView = getExtensionField<() => unknown>(
+      node!,
+      "addNodeView"
+    );
+    expect(addNodeView?.()).toBe(view);
+
+    // Sans injection, le nœud n'a plus de vue du tout : le bloc se rendrait nu.
+    // C'est ce qui garantit qu'aucune surface ne l'oublie en silence.
+    const bare = blockExtensions().find((e) => e.name === "subpage");
+    expect(getExtensionField(bare!, "addNodeView")).toBeUndefined();
   });
 });

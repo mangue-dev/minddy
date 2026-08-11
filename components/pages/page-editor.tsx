@@ -37,6 +37,8 @@ import {
 } from "@/components/markdown-mention";
 import { pageExtensions } from "@/components/pages/page-extensions";
 import { taskItemNodeView } from "@/components/scratchpad/task-item-view";
+import { subpageNodeView } from "@/components/pages/blocks/subpage-view";
+import { Arrows } from "@/components/editor-arrows";
 import { noteTyping, trackPointerFreshness } from "@/lib/keyboard/hover-keys";
 import { setDetailsLabels } from "@/components/pages/blocks/details";
 import {
@@ -198,11 +200,23 @@ export function PageEditor({
         // de vivre dans le fichier du bloc, parce qu'elle tire `mangue-ui` et
         // que le registre, lui, doit rester importable hors navigateur (cf.
         // components/pages/blocks/task-list.ts).
+        // Même chose pour la SOUS-PAGE, et pour une raison plus dure encore :
+        // sa vue passe par `@tiptap/react`, un module « use client » — nommée
+        // depuis le registre, elle était appelée depuis le serveur au premier
+        // outil de page de Numo (cf. blocks/subpage.ts).
         ...pageExtensions({
           mention: MentionNode,
-          nodeViews: { taskItem: taskItemNodeView() },
+          nodeViews: {
+            taskItem: taskItemNodeView(),
+            subpage: subpageNodeView(),
+          },
         }),
         ...(mentions ? [MentionSuggest.configure(mentions)] : []),
+        // « -> » devient « → » sous les doigts, comme dans le carnet et dans
+        // <MarkdownEditor> (components/editor-arrows.ts). Une règle de SAISIE,
+        // donc rien dans le schéma : la projection markdown n'en voit rien, et
+        // le document porte la vraie flèche.
+        Arrows,
         NodeRange,
         // Le placeholder est à NOUS et pas à @tiptap/extensions : le pourquoi
         // est écrit dans block-placeholder.ts, et il tient en deux mots — les

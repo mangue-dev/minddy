@@ -42,6 +42,16 @@ export interface Page {
    * une page née dans la sidebar n'a jamais eu de bloc chez son parent.
    */
   parent_block_removed: boolean;
+  /**
+   * Épinglée en tête de la barre secondaire — PARTAGÉ par le projet, pas propre
+   * à qui la regarde (cf. la migration `pages_favorite`).
+   *
+   * Une sous-page favorite se lit alors DEUX fois dans la barre : une fois en
+   * tête, à plat, et une fois à sa place dans l'arbre. C'est voulu — le favori
+   * est un raccourci vers une page, pas un déménagement, et la voir sortir de
+   * sous son parent ferait croire à un reparentage.
+   */
+  favorite: boolean;
 }
 
 /**
@@ -154,6 +164,28 @@ export function flattenPageTree<T extends PageRow>(
   };
   walk(nodes);
   return out;
+}
+
+/**
+ * Les pages ÉPINGLÉES, dans l'ordre de l'arbre.
+ *
+ * L'ordre est celui du parcours en profondeur, et non celui des mises en
+ * favori : c'est le seul que l'œil retrouve d'une visite à l'autre, et il ne
+ * réarrange pas le bloc quand on en épingle une quatrième.
+ *
+ * Elle part de l'ARBRE et non de la liste à plat, ce qui règle deux cas d'un
+ * coup : une page dont le parent est à la corbeille a été remontée à la racine
+ * par `buildPageTree` et reste donc épinglée, et chaque fratrie est déjà triée
+ * par `position`.
+ *
+ * Ce qu'elle ne fait PAS : retirer la page de l'arbre. Une sous-page favorite
+ * se lit deux fois dans la barre — épingler est un raccourci, pas un
+ * déménagement.
+ */
+export function favoritePages<T extends PageRow & { favorite: boolean }>(
+  tree: readonly PageTreeNode<T>[]
+): PageTreeNode<T>[] {
+  return flattenPageTree(tree).filter((node) => node.favorite);
 }
 
 /**

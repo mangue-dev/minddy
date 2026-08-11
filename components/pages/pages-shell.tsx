@@ -95,6 +95,27 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
     [pages, updatePage, t]
   );
 
+  /**
+   * Épingler / désépingler, depuis le menu ⋯ d'une ligne de l'arbre.
+   *
+   * L'écriture est optimiste comme le déplacement (`usePagesQuery`) : la ligne
+   * saute en tête de la barre à la seconde du clic. Un favori qui attendrait le
+   * serveur donnerait un menu qui se referme sur rien — le geste est trop petit
+   * pour qu'on lui accorde une attente.
+   */
+  const toggleFavorite = useCallback(
+    (page: PageSummary) => {
+      void updatePage(page.id, { favorite: !page.favorite }).catch(
+        (err: unknown) => {
+          toast.error(
+            err instanceof Error ? err.message : t("favoriteFailed")
+          );
+        }
+      );
+    },
+    [updatePage, t]
+  );
+
   const trash = useCallback(
     (page: PageSummary) => {
       void (async () => {
@@ -122,11 +143,24 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
     [trashPage, activePageId, router, base, t]
   );
 
+  // Un projet SANS AUCUNE page n'a pas d'arbre à montrer, et une barre
+  // secondaire vide n'est pas un état neutre : c'est un meuble qui prend un
+  // quart de l'écran pour dire qu'il ne contient rien, à côté d'un panneau qui
+  // le dit déjà. La barre n'apparaît donc qu'à la première page — et l'écran
+  // d'accueil de l'onglet (app/(app)/projects/[id]/pages/page.tsx) occupe alors
+  // toute la largeur, avec son unique bouton.
+  //
+  // Pendant le CHARGEMENT, on garde la barre (et ses squelettes) : la retirer
+  // pour la remettre une fraction de seconde plus tard ferait sauter la mise en
+  // page à chaque arrivée dans l'onglet, sur la quasi-totalité des projets.
+  const bare = !loading && pages.length === 0;
+
   return (
     // La PRÉSENCE est ouverte ici, et pas dans la page : la coquille traverse
     // les navigations, la page ouverte non (MIN-271).
     <PagePresenceProvider projectId={projectId} pageId={activePageId}>
     <div className="flex h-full min-h-0">
+      {bare ? null : (
       <SecondarySidebar
         title={t("title")}
         hiddenOnMobile={pathname !== base}
@@ -160,6 +194,10 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
             ))}
           </div>
         ) : pages.length === 0 ? (
+          // Atteignable seulement le temps d'un chargement qui vient de finir à
+          // vide, avant que `bare` ne retire la barre : le filtre, lui, peut
+          // aussi vider l'ARBRE sans vider le projet, et c'est `PageTree` qui le
+          // dit.
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
             {t("sidebarEmpty")}
           </p>
@@ -173,14 +211,18 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
             onCreateChild={(parentId) => void create(parentId)}
             onMove={move}
             onTrash={trash}
+            onToggleFavorite={toggleFavorite}
           />
         )}
       </SecondarySidebar>
+      )}
 
       <div
         className={cn(
           "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          pathname === base ? "hidden" : "flex"
+          // Sans barre secondaire, il n'y a plus de « liste à gauche » à
+          // laisser seule sur mobile : ce panneau EST l'onglet.
+          bare || pathname !== base ? "flex" : "hidden"
         )}
       >
         {children}

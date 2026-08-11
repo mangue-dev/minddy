@@ -11,7 +11,7 @@ import {
   listFeedbackForIssue,
   type IssueLinkedFeedback,
 } from "@/lib/server/feedback/team-queries";
-import { joinedPage } from "@/lib/server/resource-select";
+import { resourceSummary } from "@/lib/server/resource-select";
 import type { IssueRelation } from "@/lib/types";
 
 // ── Lectures partagées Numo / MCP ───────────────────────────────────────
@@ -377,26 +377,7 @@ export async function getIssue(
   for (const row of attachmentRows ?? []) {
     const key = (row.comment_id as string | null) ?? null;
     const list = resourcesByComment.get(key) ?? [];
-    const page = joinedPage(row.page);
-    list.push(
-      row.kind === "link"
-        ? { id: row.id, kind: "link", url: row.url, title: row.file_name }
-        : row.kind === "page"
-          ? {
-              id: row.id,
-              kind: "page",
-              page_id: row.page_id,
-              title: page?.title?.trim() || row.file_name,
-              ...(page?.deleted_at ? { page_in_trash: true } : {}),
-            }
-          : {
-              id: row.id,
-              kind: "file",
-              file_name: row.file_name,
-              mime_type: row.mime_type,
-              size_bytes: row.size_bytes,
-            }
-    );
+    list.push(resourceSummary(row));
     resourcesByComment.set(key, list);
   }
 
