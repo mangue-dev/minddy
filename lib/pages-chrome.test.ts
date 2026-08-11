@@ -49,6 +49,7 @@ import {
   deleteBlocks,
   duplicateBlocks,
   focusDocumentEnd,
+  focusDocumentStart,
   insertBlockAround,
   posOfBlockId,
   revealBlock,
@@ -272,6 +273,29 @@ describe("la réserve cliquable du bas", () => {
     focusDocumentEnd(editor);
     expect(topLevel(editor)).toEqual(["paragraph", "blockquote", "paragraph"]);
     expect(editor.state.doc.child(1).textContent).toBe("Deux");
+    editor.destroy();
+  });
+});
+
+describe("Entrée à la fin du titre", () => {
+  it("ouvre une ligne vide en tête du corps, curseur dedans", () => {
+    const editor = makeEditor("<p>Déjà écrit</p>");
+    focusDocumentStart(editor);
+    expect(topLevel(editor)).toEqual(["paragraph", "paragraph"]);
+    // La ligne OUVERTE est la première, et elle est vide : le texte déjà écrit
+    // descend d'un cran, comme quand on ouvre une ligne n'importe où ailleurs.
+    expect(editor.state.doc.child(0).content.size).toBe(0);
+    expect(editor.state.doc.child(1).textContent).toBe("Déjà écrit");
+    expect(editor.state.selection.$from.parent.content.size).toBe(0);
+    editor.destroy();
+  });
+
+  it("n'en empile pas quand le corps commence déjà par une ligne vide", () => {
+    const editor = makeEditor("<p></p><p>Déjà écrit</p>");
+    focusDocumentStart(editor);
+    focusDocumentStart(editor);
+    expect(topLevel(editor)).toEqual(["paragraph", "paragraph"]);
+    expect(editor.state.selection.$from.parent.content.size).toBe(0);
     editor.destroy();
   });
 });

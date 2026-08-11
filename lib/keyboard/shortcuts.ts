@@ -54,6 +54,7 @@ export const CHEATSHEET: CheatsheetSection[] = [
         keys: [["G"], ["P"]],
       },
       { id: "nav.objectives", labelKey: "navObjectives", keys: [["G"], ["O"]] },
+      { id: "nav.pages", labelKey: "navPages", keys: [["G"], ["W"]] },
       { id: "nav.triage", labelKey: "navTriage", keys: [["G"], ["T"]] },
       { id: "nav.feedback", labelKey: "navFeedback", keys: [["G"], ["F"]] },
       {

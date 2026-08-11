@@ -57,7 +57,11 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { PageEditor } from "@/components/pages/page-editor";
-import { posOfBlockId, revealBlock } from "@/components/pages/block-actions";
+import {
+  focusDocumentStart,
+  posOfBlockId,
+  revealBlock,
+} from "@/components/pages/block-actions";
 import { PageHeader } from "@/components/pages/page-header";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
@@ -220,8 +224,36 @@ export function PageView({
   const icon =
     edited.icon !== undefined ? edited.icon : (summary?.icon ?? page?.icon ?? null);
 
+  /* ── Le titre et le corps, cousus au clavier ─────────────────────────── */
+  //
+  // Le titre est un champ à part, mais pour qui écrit c'est la ligne au-dessus
+  // de la première ligne du corps : ⌫ au tout début du document et ↑ depuis sa
+  // première ligne remontent en FIN de titre, ↓ depuis le titre redescend dans
+  // le corps. La moitié « document » du passage vit dans title-bridge.ts ;
+  // c'est ici qu'elle rejoint le champ, seul endroit qui tienne les deux.
+  const titleFieldRef = useRef<HTMLTextAreaElement | null>(null);
+  const focusTitleEnd = useCallback(() => {
+    const field = titleFieldRef.current;
+    if (!field) return;
+    field.focus();
+    // En FIN de titre, et pas là où le caret traînait : on arrive par la
+    // gauche, comme on arriverait en bout de la ligne précédente.
+    const end = field.value.length;
+    field.setSelectionRange(end, end);
+  }, []);
+
   /* ── L'écriture, groupée et VERSIONNÉE (MIN-271) ──────────────────────── */
   const editorRef = useRef<Editor | null>(null);
+  // ↓ DESCEND — le curseur va sur la première ligne du corps, telle qu'elle est.
+  const focusBodyStart = useCallback(() => {
+    editorRef.current?.commands.focus("start");
+  }, []);
+  // Entrée OUVRE une ligne, comme partout ailleurs dans le document : une ligne
+  // vide en tête du corps, curseur dedans (cf. `focusDocumentStart`).
+  const openBodyLine = useCallback(() => {
+    const editor = editorRef.current;
+    if (editor) focusDocumentStart(editor);
+  }, []);
   const onSaveError = useCallback(
     (err: unknown) => {
       toast.error(err instanceof Error ? err.message : t("saveFailed"));
@@ -625,7 +657,9 @@ export function PageView({
             schedule({ icon: next });
             void flush();
           }}
-          onEnter={() => editorRef.current?.commands.focus("start")}
+          onEnter={openBodyLine}
+          onDown={focusBodyStart}
+          fieldRef={titleFieldRef}
         />
         {/* Entre le titre et le corps : au-dessus du document, parce que c'est
             du document qu'il parle, et dans le flux, parce qu'un écrasement
@@ -652,6 +686,7 @@ export function PageView({
               editorRef={editorRef}
               onEditor={setEditor}
               onSubpagesRemoved={onSubpagesRemoved}
+              onLeaveTop={focusTitleEnd}
             />
           </PageTaskSurface>
         </div>

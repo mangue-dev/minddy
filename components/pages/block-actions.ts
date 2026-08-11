@@ -421,6 +421,30 @@ export function focusDocumentEnd(editor: Editor): void {
 }
 
 /**
+ * Écrire AU DÉBUT du document, depuis le titre.
+ *
+ * Entrée à la fin du titre est le geste d'une ligne : elle ouvre la ligne
+ * SUIVANTE, vide, et y met le curseur — le titre se comporte comme la première
+ * ligne de la page alors qu'il est un champ à part (cf. title-bridge.ts). Se
+ * contenter de descendre dans le corps mettait le curseur devant le texte déjà
+ * écrit, où Entrée n'a jamais rien ouvert.
+ *
+ * Même garde que `focusDocumentEnd`, pour la même raison : si le document
+ * commence déjà par un paragraphe vide, on s'y pose au lieu d'en empiler un
+ * second à chaque passage.
+ */
+export function focusDocumentStart(editor: Editor): void {
+  if (editor.isDestroyed) return;
+  const first = editor.state.doc.firstChild;
+  const blank = first?.type.name === "paragraph" && first.content.size === 0;
+  if (blank) {
+    editor.chain().focus("start").run();
+    return;
+  }
+  editor.chain().insertContentAt(0, { type: "paragraph" }).focus("start").run();
+}
+
+/**
  * La position du bloc qui porte cet ID — l'ancre d'un lien de bloc, résolue
  * dans le DOCUMENT et non dans le DOM.
  *

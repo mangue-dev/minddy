@@ -181,6 +181,9 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         case "o":
           go(`${base}/objectives`);
           return true;
+        case "w":
+          go(`${base}/pages`);
+          return true;
         case "t":
           go(`${base}/triage`);
           return true;

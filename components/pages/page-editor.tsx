@@ -57,6 +57,7 @@ import {
   PagesLookupProvider,
   type PagesLookup,
 } from "@/components/pages/pages-lookup";
+import { TitleBridge } from "@/components/pages/title-bridge";
 
 export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
 
@@ -125,6 +126,7 @@ export function PageEditor({
   editorRef,
   onEditor,
   onSubpagesRemoved,
+  onLeaveTop,
   className,
 }: {
   /** Le corps de la page en JSON ProseMirror — le stockage (le markdown est une
@@ -152,6 +154,12 @@ export function PageEditor({
    * réveillée.
    */
   onEditor?: (editor: Editor | null) => void;
+  /**
+   * Le curseur sort du corps PAR LE HAUT — ⌫ au tout début du document, ou ↑
+   * depuis sa première ligne. L'appelant rend le focus au titre, qui est la
+   * ligne d'au-dessus pour qui écrit (cf. title-bridge.ts).
+   */
+  onLeaveTop?: () => void;
   className?: string;
 }) {
   const t = useTranslations("Pages");
@@ -165,6 +173,19 @@ export function PageEditor({
   // Le bouton de repli du dépliant est rendu par un node view sans React : il
   // ne peut pas lire le catalogue lui-même, on le lui pose ici (cf. details.ts).
   setDetailsLabels({ expand: t("toggleExpand"), collapse: t("toggleCollapse") });
+
+  // Le crochet du titre passe par une ref, et la fonction donnée à l'extension
+  // ne change JAMAIS d'identité : même règle que le reste du fichier — tiptap
+  // réapplique ce qui a bougé, et une fonction refabriquée à chaque rendu
+  // remonterait le keymap à chaque frappe.
+  const onLeaveTopRef = useRef(onLeaveTop);
+  onLeaveTopRef.current = onLeaveTop;
+  const leaveTop = useMemo(
+    () => () => {
+      onLeaveTopRef.current?.();
+    },
+    []
+  );
 
   const extensions = useMemo(
     () =>
@@ -192,8 +213,11 @@ export function PageEditor({
         // sur l'élément : ProseMirror défait toute mutation du DOM qu'il n'a
         // pas faite (cf. block-flash.ts).
         BlockFlash,
+        // Le passage vers le TITRE, en dernier et en priorité basse : il ne
+        // prend ⌫ et ↑ que si personne d'autre n'en voulait (title-bridge.ts).
+        TitleBridge.configure({ onLeaveTop: leaveTop }),
       ] as unknown as Extensions,
-    [placeholderFor, slashItems, mentions]
+    [placeholderFor, slashItems, mentions, leaveTop]
   );
 
   const initialRef = useRef(initialContent);

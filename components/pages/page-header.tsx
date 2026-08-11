@@ -12,7 +12,7 @@
 // un titre long doit passer à la ligne comme il le fera dans le document, et
 // non défiler dans une fente d'une ligne.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { Smile } from "lucide-react";
@@ -20,12 +20,32 @@ import { Smile } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
 
+/**
+ * Le curseur est-il sur la DERNIÈRE ligne visible du champ ?
+ *
+ * Un titre n'a pas de saut de ligne (Entrée descend dans le corps), mais il se
+ * REPLIE : un titre long fait deux ou trois lignes à l'écran, et ↓ doit y
+ * descendre d'une ligne avant de quitter le champ. Rien dans le DOM ne dit sur
+ * quelle ligne repliée tombe le caret, d'où la mesure : un champ qui tient sur
+ * une ligne rend toujours `true`, et au-delà on ne passe la main qu'au bout du
+ * texte — c'est-à-dire au bout de la dernière ligne, la seule position dont on
+ * soit sûr.
+ */
+function caretOnLastLine(field: HTMLTextAreaElement): boolean {
+  if (field.selectionStart !== field.selectionEnd) return false;
+  if (field.selectionEnd === field.value.length) return true;
+  const line = parseFloat(getComputedStyle(field).lineHeight);
+  return !Number.isFinite(line) || field.scrollHeight < line * 1.5;
+}
+
 export function PageHeader({
   title,
   icon,
   onTitleChange,
   onIconChange,
   onEnter,
+  onDown,
+  fieldRef,
   autoFocus,
   readOnly,
   className,
@@ -34,8 +54,18 @@ export function PageHeader({
   icon: string | null;
   onTitleChange: (title: string) => void;
   onIconChange: (icon: string | null) => void;
-  /** Entrée depuis le titre : le curseur passe dans le corps. */
+  /** Entrée depuis le titre : une ligne vide s'ouvre en tête du corps, curseur
+      dedans — le geste d'une ligne, pas celui d'un champ qu'on quitte. */
   onEnter?: () => void;
+  /**
+   * ↓ depuis la dernière ligne du titre : le curseur passe dans le corps, parce
+   * que la première ligne du corps est bien la ligne d'en dessous. C'est
+   * l'autre moitié du passage que tient title-bridge.ts dans l'éditeur.
+   */
+  onDown?: () => void;
+  /** Le champ lui-même — par où l'appelant lui rend le focus (⌫ ou ↑ dans le
+      corps ramènent en fin de titre). */
+  fieldRef?: RefObject<HTMLTextAreaElement | null>;
   /**
    * Page qui vient d'être créée : le curseur est mis dans le titre (MIN-272).
    *
@@ -101,6 +131,7 @@ export function PageHeader({
       )}
       <AutoTextarea
         value={draft}
+        ref={fieldRef}
         autoFocus={autoFocus}
         readOnly={readOnly}
         placeholder={t("titlePlaceholder")}
@@ -112,11 +143,17 @@ export function PageHeader({
           onTitleChange(event.target.value);
         }}
         onKeyDown={(event) => {
-          // Un titre n'a pas de saut de ligne : Entrée descend dans le corps,
-          // comme dans n'importe quel éditeur de document.
+          // Un titre n'a pas de saut de ligne : Entrée OUVRE la ligne suivante,
+          // qui est la première du corps — le champ se comporte comme la ligne
+          // qu'il paraît être (cf. block-actions.ts, `focusDocumentStart`).
           if (event.key === "Enter") {
             event.preventDefault();
             onEnter?.();
+            return;
+          }
+          if (event.key === "ArrowDown" && onDown && caretOnLastLine(event.currentTarget)) {
+            event.preventDefault();
+            onDown();
           }
         }}
         className="w-full border-0 bg-transparent p-0 font-display text-4xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"

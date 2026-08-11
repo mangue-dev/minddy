@@ -771,6 +771,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             contextId,
             onSelect: () => router.push(`${base}/objectives`),
           },
+          // Entre Objectifs et Triage, comme dans la sidebar : la palette dit
+          // les écrans d'un projet dans l'ordre où on les y voit.
+          {
+            key: `pg-pages-${p.id}`,
+            label: t("pages"),
+            icon: FileText,
+            keywords: [...kw, "wiki", "documentation", "doc"],
+            meta: chip,
+            metaText,
+            contextId,
+            onSelect: () => router.push(`${base}/pages`),
+          },
           {
             key: `pg-triage-${p.id}`,
             label: t("triage"),
