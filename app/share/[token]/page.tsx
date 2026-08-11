@@ -1,6 +1,5 @@
 import { cache } from "react";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PublicBoard, type PublicCard } from "@/components/public-board";
@@ -19,11 +18,10 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import {
-  SHARE_UNLOCK_COOKIE,
   getPublicShareByToken,
-  unlockCookieValue,
   type PublicShareContext,
 } from "@/lib/server/view-shares";
+import { isShareUnlocked } from "@/lib/server/share-unlock";
 import { getServiceClient } from "@/lib/supabase-service";
 import type {
   Category,
@@ -49,12 +47,11 @@ type PageProps = { params: Promise<{ token: string }> };
 // Deduped between generateMetadata and the page render.
 const getShareContext = cache(getPublicShareByToken);
 
-/** A password share reveals NOTHING (not even the view name) until unlocked. */
+/** A password share reveals NOTHING (not even the view name) until unlocked.
+    La règle est écrite une fois pour les deux surfaces publiques
+    (lib/server/share-unlock.ts). */
 async function isUnlocked(ctx: PublicShareContext): Promise<boolean> {
-  if (ctx.share.level === "public") return true;
-  if (!ctx.share.password_hash) return false;
-  const cookie = (await cookies()).get(SHARE_UNLOCK_COOKIE)?.value;
-  return cookie === unlockCookieValue(ctx.share.token, ctx.share.password_hash);
+  return isShareUnlocked(ctx.share);
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

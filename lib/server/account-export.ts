@@ -63,6 +63,12 @@ function one(table: string, result: QueryResult): Row | null {
 // `deleted_at` en fait partie : l'export donne TOUT ce que le compte détient,
 // corbeille comprise (MIN-133) — la filtrer amputerait un export RGPD de données
 // encore bien présentes. La colonne dit lesquelles étaient en attente de purge.
+// Le corps des pages est dedans : sans lui, l'export dirait qu'un wiki existe
+// sans en donner une ligne.
+const PAGE_COLUMNS =
+  "id, project_id, parent_id, title, icon, content, position, favorite, " +
+  "created_by, updated_by, created_at, updated_at, deleted_at";
+
 const ISSUE_COLUMNS =
   "id, project_id, number, title, description, plan, status, priority, effort, " +
   "assignee_id, due_date, created_by, created_at, updated_at, completed_at, deleted_at";
@@ -80,6 +86,7 @@ export interface AccountExport {
   comments: Row[];
   attachments: Row[];
   page_files: Row[];
+  pages: Row[];
   objectives: Row[];
   views: Row[];
   cycles: Row[];
@@ -131,6 +138,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     comments,
     attachments,
     pageFiles,
+    pages,
     objectives,
     views,
     cycles,
@@ -178,6 +186,17 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       )
       .eq("created_by", userId)
       .order("created_at"),
+    // Le WIKI des projets possédés (MIN-283). Corps compris : une page EST son
+    // document, et un export qui n'en donnerait que les titres ne serait pas un
+    // export. Les pages corbeillées y sont, comme les tickets — la colonne
+    // `deleted_at` dit lesquelles attendaient la purge.
+    ownedIds.length
+      ? service
+          .from("pages")
+          .select(PAGE_COLUMNS)
+          .in("project_id", ownedIds)
+          .order("created_at")
+      : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
       ? service.from("objectives").select("*").in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
@@ -313,6 +332,11 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
         "(métadonnées seulement, comme ci-dessus). Ils sont listés à part des " +
         "ressources : ce ne sont pas des pièces jointes d'un ticket, mais des " +
         "morceaux du document lui-même.",
+      pages:
+        "Les pages du wiki des projets que vous possédez, corps compris — le " +
+        "document est stocké en JSON (le même que celui de l'éditeur). Une " +
+        "page se réexporte aussi en markdown, page par page ou branche " +
+        "entière, depuis son menu dans l'application.",
       secrets:
         "Aucune clé ni aucun jeton ne figure dans ce fichier : seuls les " +
         "préfixes déjà affichés dans les réglages y apparaissent.",
@@ -338,6 +362,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     comments: list("comments", comments),
     attachments: list("attachments", attachments),
     page_files: list("page_files", pageFiles),
+    pages: list("pages", pages),
     objectives: list("objectives", objectives),
     views: list("views", views),
     cycles: list("cycles", cycles),

@@ -8,7 +8,8 @@ import {
 } from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
-import type { View, ViewShare } from "@/lib/types";
+import type { PageShare, View, ViewShare } from "@/lib/types";
+import type { Page } from "@/lib/pages";
 
 /**
  * Public-link sharing of a saved view (MIN-26). One share per view, opt-in:
@@ -20,6 +21,16 @@ import type { View, ViewShare } from "@/lib/types";
  * client, with access enforced HERE like lib/server/views.ts — the actor must
  * access the project, and a personal view (user_id not null) is only its
  * owner's; anything else reads as not found, the same signal RLS gives.
+ *
+ * ── Une PAGE du wiki est une cible de plus (MIN-283) ──────────────────────
+ *
+ * La même table, la même colonne `token`, le même hachage scrypt, le même
+ * cookie de déverrouillage : une page publiée n'apporte que sa cible
+ * (`page_id`) et le seul réglage qui n'ait de sens que pour elle
+ * (`include_children`). Tout ce qui touche au SECRET —
+ * hacher, vérifier, déverrouiller — est écrit une seule fois ci-dessous et
+ * sert aux deux ; c'est la raison d'être de l'élargissement, et la seule chose
+ * à ne jamais dupliquer si une troisième cible apparaît un jour.
  */
 
 export type ViewShareResult =
@@ -68,9 +79,12 @@ interface ShareRow {
   password_salt: string | null;
   password_hash: string | null;
   created_by: string | null;
+  /** Cible page (MIN-283) : la branche part avec elle, ou ne part pas. */
+  include_children: boolean;
 }
 
-const SHARE_SELECT = "id, token, level, password_salt, password_hash, created_by";
+const SHARE_SELECT =
+  "id, token, level, password_salt, password_hash, created_by, include_children";
 
 /** Same access rule as updateView: project access, personal view = owner only.
     Global views (project_id null) are not shareable in v1 — the public share
@@ -259,45 +273,270 @@ export async function deleteViewShare(
   return { ok: true, share: null };
 }
 
+/** Le projet, tel que les deux surfaces publiques le nomment.
+
+    `icon_url` en fait partie : une page publiée porte le LOGO du projet dans son
+    en-tête, comme le board de retours (MIN-283). Sur un document qu'on envoie à
+    un client, c'est la seule chose qui dise de qui il vient. */
+export interface PublicShareProject {
+  id: string;
+  key: string;
+  name: string;
+  owner_id: string;
+  icon_url: string | null;
+}
+
 /** Everything the public /share/[token] page needs to authorize a visitor. */
 export interface PublicShareContext {
   share: ShareRow;
   view: View;
-  project: { id: string; key: string; name: string; owner_id: string };
+  project: PublicShareProject;
 }
 
-/** Resolve a share URL token → share + view + live project, or null (→ 404). */
-export async function getPublicShareByToken(
+/** Ce que /p/[token] a besoin de savoir pour rendre une page publiée (MIN-283). */
+export interface PublicPageShareContext {
+  share: ShareRow;
+  page: Page;
+  project: PublicShareProject;
+}
+
+/**
+ * Un token de partage, résolu sur SA cible.
+ *
+ * Le token est tiré du même chapeau pour les deux, et il est unique dans la
+ * table : c'est donc ici, et nulle part ailleurs, qu'on apprend de quoi il
+ * s'agit. Les deux routes publiques appellent la même fonction et refusent ce
+ * qui n'est pas pour elles — un token de page ouvert sur `/share/…` est un 404,
+ * pas un rendu de travers.
+ */
+export type PublicShareTarget =
+  | ({ kind: "view" } & PublicShareContext)
+  | ({ kind: "page" } & PublicPageShareContext);
+
+/** Resolve a share URL token → share + target + live project, or null (→ 404). */
+export async function getPublicShareTarget(
   token: string
-): Promise<PublicShareContext | null> {
+): Promise<PublicShareTarget | null> {
   if (!token) return null;
   const service = getServiceClient();
 
-  const { data: shareRow } = await service
+  const { data: row } = await service
     .from("view_shares")
-    .select(`${SHARE_SELECT}, view_id`)
+    .select(`${SHARE_SELECT}, view_id, page_id`)
     .eq("token", token)
     .maybeSingle();
-  if (!shareRow) return null;
+  if (!row) return null;
+  const share = row as ShareRow;
+
+  if (row.page_id) {
+    // Une page à la CORBEILLE cesse d'être publique à la seconde : le lien
+    // répond 404 sans qu'on ait à dépublier à la main. La ligne de partage,
+    // elle, survit — restaurer la page rend le lien, avec le même token.
+    const { data: page } = await service
+      .from("pages")
+      .select("*")
+      .eq("id", row.page_id as string)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!page) return null;
+    const project = await livePublicProject(page.project_id as string);
+    if (!project) return null;
+    return { kind: "page", share, page: page as Page, project };
+  }
 
   const { data: view } = await service
     .from("views")
     .select("*")
-    .eq("id", shareRow.view_id as string)
+    .eq("id", row.view_id as string)
     .maybeSingle();
   if (!view) return null;
+  const project = await livePublicProject(view.project_id as string);
+  if (!project) return null;
+  return { kind: "view", share, view: view as View, project };
+}
 
-  const { data: project } = await service
+/** Resolve a share URL token → share + view + live project, or null (→ 404).
+    Un token de page en rend `null` : ce n'est pas cette porte-là. */
+export async function getPublicShareByToken(
+  token: string
+): Promise<PublicShareContext | null> {
+  const target = await getPublicShareTarget(token);
+  return target?.kind === "view" ? target : null;
+}
+
+/** Resolve a share URL token → share + page + live project, or null (→ 404). */
+export async function getPublicPageShareByToken(
+  token: string
+): Promise<PublicPageShareContext | null> {
+  const target = await getPublicShareTarget(token);
+  return target?.kind === "page" ? target : null;
+}
+
+async function livePublicProject(
+  projectId: string
+): Promise<PublicShareProject | null> {
+  const { data } = await getServiceClient()
     .from("projects")
-    .select("id, key, name, owner_id")
-    .eq("id", view.project_id as string)
+    .select("id, key, name, owner_id, icon_url")
+    .eq("id", projectId)
     .is("deleted_at", null)
     .maybeSingle();
-  if (!project) return null;
+  return (data as PublicShareProject | null) ?? null;
+}
 
+/* ── La PAGE comme cible (MIN-283) ───────────────────────────────────────── */
+
+export type PageShareResult =
+  | { ok: true; share: PageShare | null }
+  | {
+      ok: false;
+      status: number;
+      /** Key into the ApiErrors i18n namespace. */
+      errorKey: "pageNotFound" | "passwordRequired" | "databaseError";
+    };
+
+/** La ligne de partage rendue au propriétaire : le lien et ses réglages. */
+function toPageShare(row: ShareRow): PageShare {
   return {
-    share: shareRow as ShareRow,
-    view: view as View,
-    project: project as PublicShareContext["project"],
+    level: row.level,
+    token: row.token,
+    include_children: row.include_children,
   };
+}
+
+/**
+ * La page doit exister, ne pas être à la corbeille, et son projet être
+ * accessible à l'acteur. Tout le reste se lit « page introuvable » — le même
+ * signal que donnerait RLS, et le seul qui ne dise rien de ce qui existe
+ * ailleurs.
+ */
+async function resolveSharePage(
+  pageId: string,
+  actorId: string
+): Promise<{ ok: true; projectId: string } | { ok: false; status: 404; errorKey: "pageNotFound" }> {
+  const service = getServiceClient();
+  const { data: page } = await service
+    .from("pages")
+    .select("id, project_id")
+    .eq("id", pageId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  const access = await getProjectAccess(actorId, page.project_id as string);
+  if (!access) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  return { ok: true, projectId: page.project_id as string };
+}
+
+export async function getPageShare(
+  pageId: string,
+  actorId: string
+): Promise<PageShareResult> {
+  const resolved = await resolveSharePage(pageId, actorId);
+  if (!resolved.ok) return resolved;
+
+  const { data, error } = await getServiceClient()
+    .from("view_shares")
+    .select(SHARE_SELECT)
+    .eq("page_id", pageId)
+    .maybeSingle();
+  if (error) {
+    console.error("[view-shares] page read failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  const row = data as ShareRow | null;
+  return { ok: true, share: row ? toPageShare(row) : null };
+}
+
+/**
+ * Publier une page, ou changer les réglages de sa publication.
+ *
+ * Le token SURVIT aux changements de niveau et de réglages, comme pour une vue :
+ * seule une dépublication (delete) puis une republication forge une nouvelle
+ * URL. Un lien déjà envoyé à un client ne doit pas mourir parce qu'on a coché
+ * « inclure les sous-pages ».
+ */
+export async function upsertPageShare({
+  pageId,
+  actorId,
+  level,
+  password,
+  includeChildren,
+}: {
+  pageId: string;
+  actorId: string;
+  level: "password" | "public";
+  password?: string;
+  includeChildren?: boolean;
+}): Promise<PageShareResult> {
+  const resolved = await resolveSharePage(pageId, actorId);
+  if (!resolved.ok) return resolved;
+
+  const service = getServiceClient();
+  const { data: existingRow, error: readError } = await service
+    .from("view_shares")
+    .select(SHARE_SELECT)
+    .eq("page_id", pageId)
+    .maybeSingle();
+  if (readError) {
+    console.error("[view-shares] page read failed:", readError.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  const existing = existingRow as ShareRow | null;
+
+  // Même règle que pour une vue : « password » n'exige un mot de passe que
+  // s'il n'y en a pas encore ; en fournir un le change.
+  let password_salt: string | null = null;
+  let password_hash: string | null = null;
+  if (level === "password") {
+    const trimmed = password?.trim();
+    if (trimmed) {
+      ({ salt: password_salt, hash: password_hash } = hashSharePassword(trimmed));
+    } else if (existing?.password_hash && existing.password_salt) {
+      ({ password_salt, password_hash } = existing);
+    } else {
+      return { ok: false, status: 400, errorKey: "passwordRequired" };
+    }
+  }
+
+  const include_children = includeChildren ?? existing?.include_children ?? false;
+  const token = existing?.token ?? randomBytes(16).toString("base64url");
+
+  const { error } = existing
+    ? await service
+        .from("view_shares")
+        .update({ level, password_salt, password_hash, include_children })
+        .eq("id", existing.id)
+    : await service.from("view_shares").insert({
+        page_id: pageId,
+        level,
+        token,
+        password_salt,
+        password_hash,
+        include_children,
+        created_by: actorId,
+      });
+  if (error) {
+    console.error("[view-shares] page upsert failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  return { ok: true, share: { level, token, include_children } };
+}
+
+/** Cesser de publier : le lien cesse de répondre, immédiatement. */
+export async function deletePageShare(
+  pageId: string,
+  actorId: string
+): Promise<PageShareResult> {
+  const resolved = await resolveSharePage(pageId, actorId);
+  if (!resolved.ok) return resolved;
+
+  const { error } = await getServiceClient()
+    .from("view_shares")
+    .delete()
+    .eq("page_id", pageId);
+  if (error) {
+    console.error("[view-shares] page delete failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  return { ok: true, share: null };
 }

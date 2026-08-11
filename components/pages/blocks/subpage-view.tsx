@@ -69,7 +69,7 @@ export function SubpageView({ node, selected }: NodeViewProps) {
       {page
         ? page.title || t("untitled")
         : orphan
-          ? t("subpageMissing")
+          ? (lookup?.missingLabel ?? t("subpageMissing"))
           : t("subpageUntitled")}
     </span>
   );

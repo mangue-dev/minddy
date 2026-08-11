@@ -53,9 +53,11 @@ const DISALLOW = [
   "/auth/",
   // Redirection SSO vers le board de feedback : une redirection, pas une page.
   "/feedback",
-  // Vues partagées et boards publics : l'URL EST le secret (MIN-26, MIN-37).
+  // Vues partagées, boards publics et pages publiées : l'URL EST le secret
+  // (MIN-26, MIN-37, MIN-283).
   "/share/",
   "/f/",
+  "/p/",
   // Sans barre finale : un `Disallow` est un préfixe littéral, `/projects`
   // couvre donc `/projects` ET `/projects/<id>/board`. La contrepartie est
   // qu'il couvrirait aussi une future page publique dont l'URL commencerait

@@ -76,9 +76,11 @@ function declaresTitle(file: string): boolean {
     /export\s+const\s+metadata\b/.test(source);
   if (!hasExport) return false;
   // Soit le titre est posé sur place, soit il vient d'une des fabriques.
+  // `publishedPageMetadata` (MIN-283) en est une : les deux routes de la page
+  // publiée délèguent leurs métadonnées au rendu qu'elles partagent.
   return (
     /\btitle\b/.test(source) ||
-    /\b(appPageMetadata|publicPageMetadata|publicTokenMetadata)\s*\(/.test(source)
+    /\b(appPageMetadata|publicPageMetadata|publicTokenMetadata|publishedPageMetadata)\s*\(/.test(source)
   );
 }
 

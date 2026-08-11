@@ -50,6 +50,7 @@ import {
   PagePresenceDot,
   usePresentOn,
 } from "@/components/pages/page-presence";
+import { usePageDocumentMenu } from "@/components/pages/page-document-actions";
 
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
 const INDENT = 16;
@@ -192,6 +193,12 @@ export function PageTree({
     setDrop(null);
   }, []);
 
+  /* ── Publier, exporter (MIN-283) ────────────────────────────────────────
+     Les deux entrées sont écrites une fois pour leurs deux ancrages — cette
+     ligne, et le menu ⋯ de la page ouverte. Le dialogue de publication est
+     monté UNE fois pour tout l'arbre : il porte sa page visée en état. */
+  const { actionsFor, dialogs } = usePageDocumentMenu({ projectId, pages });
+
   if (filtered) {
     return filtered.length === 0 ? (
       <p className="px-4 py-6 text-center text-sm text-muted-foreground">
@@ -210,12 +217,14 @@ export function PageTree({
             drop={null}
             dragging={false}
             untitled={t("untitled")}
+            documentActions={actionsFor(page)}
             onToggle={() => {}}
             onCreateChild={onCreateChild}
             onTrash={onTrash}
             onToggleFavorite={onToggleFavorite}
           />
         ))}
+        {dialogs}
       </div>
     );
   }
@@ -235,6 +244,7 @@ export function PageTree({
           drop={drop?.id === node.id ? drop.mode : null}
           dragging={dragId === node.id}
           untitled={t("untitled")}
+          documentActions={actionsFor(node)}
           onToggle={() => toggle(node.id)}
           onCreateChild={(parentId) => {
             if (!expanded.has(parentId)) {
@@ -280,6 +290,7 @@ export function PageTree({
               drop={null}
               dragging={false}
               untitled={t("untitled")}
+              documentActions={actionsFor(page)}
               pinned
               onToggle={() => {}}
               onCreateChild={onCreateChild}
@@ -291,6 +302,7 @@ export function PageTree({
         </>
       )}
       {rows}
+      {dialogs}
     </div>
   );
 }
@@ -304,6 +316,7 @@ function PageRow({
   drop,
   dragging,
   untitled,
+  documentActions,
   pinned = false,
   onToggle,
   onCreateChild,
@@ -323,6 +336,8 @@ function PageRow({
   drop: PageDropMode | null;
   dragging: boolean;
   untitled: string;
+  /** « Publier » et « Exporter » (MIN-283), écrites par le crochet partagé. */
+  documentActions: ContextMenuAction[];
   /** Rendue dans le BLOC des favoris, en tête de la barre : elle porte alors
       l'étoile qui, faute d'intertitre, dit ce qu'est ce bloc. */
   pinned?: boolean;
@@ -379,6 +394,7 @@ function PageRow({
       ),
       onSelect: () => onToggleFavorite(page),
     },
+    ...documentActions,
     {
       id: "trash",
       label: t("deletePage"),

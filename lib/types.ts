@@ -1161,6 +1161,21 @@ export interface ViewShare {
   token: string;
 }
 
+/**
+ * L'état de publication d'une PAGE du wiki (MIN-283), tel que son propriétaire
+ * le lit. Même token, même table que le partage d'une vue — plus le seul
+ * réglage qui n'ait de sens sur un document : la branche part-elle avec la
+ * page.
+ *
+ * Pas de réglage d'indexation : une page publiée est TOUJOURS `noindex`. Le
+ * lien est le secret, comme pour une vue partagée.
+ */
+export interface PageShare {
+  level: Exclude<ViewShareLevel, "private">;
+  token: string;
+  include_children: boolean;
+}
+
 // ── Intégration git (MIN-47) ────────────────────────────────────────────────
 
 /** Projet minddy liant une connexion git (affiché lors du disconnect). */

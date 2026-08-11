@@ -1162,3 +1162,48 @@ nav[aria-label="Navigation"]
       color-mix(in oklab, var(--page-color-blue) 26%, transparent);
   }
 }
+
+/* ── L'IMPRESSION d'un document (MIN-283) ──────────────────────────────────
+   Le PDF d'une page est ce que le navigateur imprime : pas de moteur PDF
+   serveur, donc pas de seconde définition de la mise en page à tenir. Ce qu'il
+   faut lui donner, c'est le document SEUL — sans le chrome de l'application ni
+   celui de la page publique.
+
+   Le masquage passe par `visibility` et non par `display: none` : un
+   `display: none` sur les ancêtres emporterait le document avec eux, et un
+   conteneur en `position: fixed` ne s'imprimerait que sur la première feuille.
+   `visibility` laisse le flux intact, donc la pagination aussi.
+
+   `data-print-mode` est posé par la vue d'impression (page-print-view.tsx) ;
+   sur une page publiée, il n'y a pas de chrome à masquer et un ⌘P ordinaire
+   suffit — d'où les règles inconditionnelles qui suivent. */
+@media print {
+  html[data-print-mode] body * {
+    visibility: hidden;
+  }
+  html[data-print-mode] [data-print-root],
+  html[data-print-mode] [data-print-root] * {
+    visibility: visible;
+  }
+  html[data-print-mode] [data-print-root] {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    max-width: none;
+    padding: 0;
+  }
+
+  /* Un lien reste lisible ; son adresse, elle, ne s'imprime pas — un document
+     criblé d'URL entre parenthèses est illisible, et celles de minddy ne
+     mènent nulle part pour qui reçoit le PDF. */
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  /* Ni fond ni ombre : l'encre coûte, et un bloc de code sur fond gris sort en
+     aplat sale sur la plupart des imprimantes. */
+  body {
+    background: #fff;
+  }
+}

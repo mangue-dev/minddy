@@ -66,7 +66,7 @@ import {
   taskItemLines,
   taskOwnText,
 } from "@/components/scratchpad/start-tasks";
-import { useAuth } from "@/lib/auth-context";
+import { useAuthOptional } from "@/lib/auth-context";
 import { useTaskSurface } from "@/components/scratchpad/task-surface";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { pointerIsStale, useHoverKeys } from "@/lib/keyboard/hover-keys";
@@ -119,7 +119,11 @@ export function TaskItemView({
   getPos,
 }: NodeViewProps) {
   const t = useTranslations("Plan");
-  const { user } = useAuth();
+  // `useAuthOptional` et non `useAuth` : cet éditeur est aussi monté HORS de
+  // l'application, sur une page publiée (MIN-283), où il n'y a pas de session —
+  // et `useAuth` y levait, emportant la page pour une préférence de compte dont
+  // seules les actions du menu se servent.
+  const user = useAuthOptional()?.user ?? null;
   // Hors provider (un aperçu, un éditeur monté sans surface) : la case reste,
   // le reste disparaît. Cf. task-surface.tsx.
   const surface = useTaskSurface();

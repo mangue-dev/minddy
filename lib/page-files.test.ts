@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  fileDownloadHref,
   formatFileSize,
   pageFileIdFromSrc,
   pageFileIdsInBody,
@@ -107,5 +108,23 @@ describe("le poids affiché", () => {
     expect(formatFileSize(2_400_000)).toBe("2.4 MB");
     // Au-delà de dix unités, la décimale n'apprend plus rien.
     expect(formatFileSize(24_000_000)).toBe("24 MB");
+  });
+});
+
+describe("fileDownloadHref", () => {
+  const url = pageFileUrl(
+    "07b14964-0def-4941-8ddf-686572d6345d",
+    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+  );
+
+  it("demande la pièce jointe à l'adresse d'application", () => {
+    expect(fileDownloadHref(url)).toBe(`${url}?download=1`);
+  });
+
+  it("laisse INTACTE une URL signée (MIN-283)", () => {
+    // Elle porte déjà sa disposition : un second `download` fait répondre 400
+    // au storage — « querystring/download must be string ».
+    const signed = "https://xyz.supabase.co/storage/v1/object/sign/a.pdf?token=abc&download=rapport.pdf";
+    expect(fileDownloadHref(signed)).toBe(signed);
   });
 });

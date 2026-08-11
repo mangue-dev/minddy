@@ -1,7 +1,7 @@
 "use client";
 
 import type { Page, PageVersion } from "./pages";
-import type { IssueEvent, PageBacklink } from "./types";
+import type { IssueEvent, PageBacklink, PageShare } from "./types";
 import type { PageComment } from "./page-comments";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
@@ -432,4 +432,88 @@ export async function deletePageCommentApi(
     "Request failed"
   );
   trackEvent("comment_deleted", { target: "page" });
+}
+
+/* ── Publier et exporter (MIN-283) ───────────────────────────────────────── */
+
+/** L'état de publication d'une page (`null` = privée). */
+export async function fetchPageShareApi(
+  projectId: string,
+  pageId: string
+): Promise<PageShare | null> {
+  const data = await json<{ share: PageShare | null }>(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}/share`),
+    "Request failed"
+  );
+  return data.share;
+}
+
+export async function updatePageShareApi(
+  projectId: string,
+  pageId: string,
+  input: {
+    level: "password" | "public";
+    password?: string;
+    include_children?: boolean;
+  }
+): Promise<PageShare> {
+  trackEvent("page_published", {
+    has_password: input.level === "password",
+    with_children: input.include_children === true,
+  });
+  const data = await json<{ share: PageShare }>(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}/share`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+    "Request failed"
+  );
+  return data.share;
+}
+
+export async function deletePageShareApi(
+  projectId: string,
+  pageId: string
+): Promise<void> {
+  trackEvent("page_unpublished", {});
+  await json<{ ok: boolean }>(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}/share`, {
+      method: "DELETE",
+    }),
+    "Request failed"
+  );
+}
+
+/**
+ * Télécharger une page en markdown — seule (`.md`) ou avec sa branche (`.zip`).
+ *
+ * Le fichier passe par un blob et une ancre programmée plutôt que par une
+ * navigation : la route exige la session, et un `window.open` sur un
+ * `Content-Disposition: attachment` laisse un onglet vide derrière lui sur
+ * plusieurs navigateurs. Le NOM vient du serveur (`Content-Disposition`), seul
+ * endroit qui connaisse la règle des noms de fichiers.
+ */
+export async function downloadPageExportApi(
+  projectId: string,
+  pageId: string,
+  { branch = false }: { branch?: boolean } = {}
+): Promise<void> {
+  trackEvent("page_exported", { format: branch ? "zip" : "md" });
+  const response = await fetch(
+    `/api/projects/${projectId}/pages/${pageId}/export${branch ? "?scope=branch" : ""}`
+  );
+  await ok(response, "Request failed");
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = encoded ? decodeURIComponent(encoded) : `page.${branch ? "zip" : "md"}`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  // Révoqué au tick suivant : Safari lit l'URL APRÈS le clic.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }

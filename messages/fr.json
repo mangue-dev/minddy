@@ -582,6 +582,33 @@
     "linkCopied": "Lien copié",
     "sharingDisabled": "Partage désactivé. Le lien ne fonctionne plus."
   },
+  "PublishPage": {
+    "title": "Publier la page",
+    "description": "Partager « {name} » en lecture seule. Aucun compte n'est nécessaire pour la lire.",
+    "levelPrivate": "Privée",
+    "levelPassword": "Mot de passe",
+    "levelPublic": "Toute personne ayant le lien",
+    "hintPrivate": "Seuls les membres du projet peuvent lire cette page.",
+    "hintPassword": "Il faut le lien et le mot de passe pour la lire.",
+    "hintPublic": "Toute personne ayant le lien peut lire cette page.",
+    "passwordPlaceholder": "Choisir un mot de passe",
+    "changePasswordPlaceholder": "Nouveau mot de passe",
+    "copyLink": "Copier le lien",
+    "linkCopied": "Lien copié",
+    "unpublished": "Page dépubliée",
+    "includeChildren": "Inclure les sous-pages",
+    "noChildren": "Cette page n'a pas de sous-page.",
+    "childrenIncluded": "{count} sous-pages sont publiées avec elle.",
+    "childrenExcluded": "{count} sous-pages restent privées : leurs blocs ne mènent nulle part.",
+    "published": "Publiée",
+    "publishedTooltip": "Cette page est lisible hors de minddy."
+  },
+  "PublicPage": {
+    "untitled": "Page sans titre",
+    "protectedTitle": "Cette page est protégée par un mot de passe",
+    "metaDescription": "Une page partagée depuis {project}.",
+    "subpageNotPublished": "Sous-page non publiée"
+  },
   "PublicShare": {
     "protectedTitle": "Cette page est protégée par un mot de passe",
     "passwordPlaceholder": "Mot de passe",
@@ -1711,7 +1738,14 @@
     "commentOnSelectionPlaceholder": "Commenter ce passage…",
     "openThread": "Ouvrir le fil",
     "closeThread": "Fermer",
-    "commentOnSelection": "Nouveau commentaire"
+    "commentOnSelection": "Nouveau commentaire",
+    "publish": "Publier…",
+    "export": "Exporter",
+    "exportMarkdown": "Markdown (.md)",
+    "exportMarkdownBranch": "Markdown avec {count} sous-pages (.zip)",
+    "exportPdf": "Imprimer / PDF",
+    "exportPdfBranch": "Imprimer / PDF avec {count} sous-pages",
+    "exportFailed": "Impossible d'exporter cette page."
   },
   "Picker": {
     "createNamed": "Créer « {name} »",

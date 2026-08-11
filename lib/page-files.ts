@@ -72,6 +72,27 @@ export function pageFileProjectFromSrc(src: unknown): string | null {
 }
 
 /**
+ * L'adresse à laquelle un bloc fichier TÉLÉCHARGE.
+ *
+ * Deux formes de `src` cohabitent, et une seule sait quoi faire d'un paramètre :
+ *
+ *  - l'adresse d'APPLICATION (celle qui est rangée dans le document) répond par
+ *    une redirection signée, et `?download=1` lui dit d'ajouter la disposition
+ *    « pièce jointe » ;
+ *  - sur une page publiée (MIN-283), le `src` est déjà une URL SIGNÉE du
+ *    storage, dont la disposition a été décidée à la signature. Y recoller un
+ *    `download` en fait un SECOND paramètre du même nom, et le storage répond
+ *    400 (« querystring/download must be string ») : le lecteur reçoit un
+ *    message d'erreur là où il attendait son fichier.
+ *
+ * D'où la règle, ici et pas dans la vue : c'est une propriété de l'adresse.
+ */
+export function fileDownloadHref(src: string): string {
+  if (!pageFileIdFromSrc(src)) return src;
+  return `${src}${src.includes("?") ? "&" : "?"}download=1`;
+}
+
+/**
  * Les fichiers CITÉS par un corps de page, lus sur son JSON.
  *
  * Sur le JSON et non sur un document ProseMirror monté : l'appelant est le

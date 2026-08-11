@@ -13,7 +13,7 @@ import {
   NODE_LINK_CLASS,
   isPlainNavigationClick,
 } from "@/components/editor-node-link";
-import { formatFileSize } from "@/lib/page-files";
+import { fileDownloadHref, formatFileSize } from "@/lib/page-files";
 import { usePageUploadsContext } from "@/components/pages/page-uploads";
 
 /**
@@ -22,11 +22,14 @@ import { usePageUploadsContext } from "@/components/pages/page-uploads";
  * — un envoi qui n'a pas abouti doit se voir et se réessayer, pas laisser un
  * bloc muet dans le document.
  *
- * Le téléchargement est une vraie ancre vers `?download=1` : le ⌘-clic, le clic
- * du milieu et « enregistrer sous » du menu contextuel viennent avec, et aucun
- * `onClick` ne sait les refaire. `editor-node-link` n'est pas décoratif : c'est
- * la marque par laquelle l'éditeur laisse cette ancre tranquille (cf.
+ * Le téléchargement est une vraie ancre : le ⌘-clic, le clic du milieu et
+ * « enregistrer sous » du menu contextuel viennent avec, et aucun `onClick` ne
+ * sait les refaire. `editor-node-link` n'est pas décoratif : c'est la marque par
+ * laquelle l'éditeur laisse cette ancre tranquille (cf.
  * components/editor-node-link.ts et le `PROSE` de page-editor.tsx).
+ *
+ * L'adresse du téléchargement dépend de la forme du `src` — application ou URL
+ * signée d'une page publiée : cf. `fileDownloadHref` (lib/page-files.ts).
  */
 export function FileView({ node, selected }: NodeViewProps) {
   const t = useTranslations("Pages");
@@ -39,6 +42,10 @@ export function FileView({ node, selected }: NodeViewProps) {
   const name =
     (node.attrs.name as string | null) || upload?.file.name || t("blockFile");
   const size = (node.attrs.size as number | null) ?? upload?.file.size ?? 0;
+
+  // La règle vit dans lib/page-files.ts, avec le reste de ce que ce module sait
+  // d'une adresse de fichier — et elle y est testée.
+  const href = src ? fileDownloadHref(src) : null;
 
   const failed = upload?.status === "failed";
   const abandoned = !src && !upload;
@@ -102,9 +109,13 @@ export function FileView({ node, selected }: NodeViewProps) {
         </button>
       )}
 
-      {src && (
+      {href && (
         <a
-          href={`${src}${src.includes("?") ? "&" : "?"}download=1`}
+          href={href}
+          // Le nom du fichier quand le navigateur enregistre lui-même : sur une
+          // URL signée d'un autre hôte il est ignoré (c'est la signature qui
+          // porte la disposition), sur la nôtre il ne coûte rien.
+          download={name}
           className={cx(
             NODE_LINK_CLASS,
             "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground no-underline transition-colors hover:bg-muted hover:text-foreground"

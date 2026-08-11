@@ -28,11 +28,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  Button,
   Spinner,
   cn,
   toast,
 } from "mangue-ui";
-import { Check, TriangleAlert } from "lucide-react";
+import { Check, MoreHorizontal, TriangleAlert } from "lucide-react";
 import type { Editor, JSONContent } from "@tiptap/react";
 
 import { eventKey } from "@/lib/keyboard/event-key";
@@ -63,6 +64,9 @@ import {
   revealBlock,
 } from "@/components/pages/block-actions";
 import { PageHeader } from "@/components/pages/page-header";
+import { IssueActionsMenu } from "@/components/issue-context-menu";
+import { usePageDocumentMenu } from "@/components/pages/page-document-actions";
+import { PagePublishedBadge } from "@/components/pages/page-published-badge";
 import { PageHistorySheet } from "@/components/pages/page-history";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
@@ -626,6 +630,15 @@ function PageSurface({
     [pages, pageId]
   );
 
+  /* ── Faire SORTIR cette page : publier, exporter (MIN-283) ────────────── */
+  //
+  // Les mêmes entrées que dans le menu ⋯ de la ligne d'arbre, écrites une
+  // fois (components/pages/page-document-actions.tsx). Elles sont ICI aussi
+  // parce que c'est en LISANT une page qu'on décide de l'envoyer à quelqu'un —
+  // pas en la cherchant dans une colonne.
+  const documentMenu = usePageDocumentMenu({ projectId, pages });
+  const pageRef = useMemo(() => ({ id: pageId, title }), [pageId, title]);
+
   /* ── Ce que Numo voit quand on est sur cette page ─────────────────────── */
   //
   // La page ouverte devient le contexte ambiant de l'assistant (MIN-273) : « fais
@@ -730,14 +743,24 @@ function PageSurface({
       {/* Le CHEMIN, à l'opposé de l'état d'enregistrement : les deux sont
           épinglés hors du flux et hors du défilement, et se partagent la même
           ligne. Il ne paraît que sur une sous-page — voir page-breadcrumb.tsx. */}
-      {/* La réserve de droite reste celle de deux icônes : l'état est une coche
-          au repos, et son texte ne se déplie qu'au survol — par-dessus, sur son
-          propre fond (MIN-282). */}
-      <div className="absolute top-3 left-3.5 z-10 flex min-w-0 max-w-[calc(100%-9rem)] items-center">
+      {/* La réserve de droite : l'état est une coche au repos et son texte ne
+          se déplie qu'au survol, par-dessus, sur son propre fond (MIN-282) —
+          mais la pastille « publiée » (MIN-283), elle, occupe la place qu'elle
+          annonce. D'où la réserve élargie : sans elle, le fil d'Ariane d'une
+          page publiée passait sous le ⋯. */}
+      <div className="absolute top-3 left-3.5 z-10 flex min-w-0 max-w-[calc(100%-14rem)] items-center">
         <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
       </div>
 
-      <div className="absolute top-3 right-3.5 z-10 flex items-center gap-2.5">
+      <div className="absolute top-3 right-3.5 z-10 flex items-center gap-1.5">
+        {/* « Cette page est publique », dans la page — c'est la moitié qu'on
+            oublie : publier est un geste qu'on fait une fois, et chaque phrase
+            écrite ensuite part avec. */}
+        <PagePublishedBadge
+          projectId={projectId}
+          pageId={pageId}
+          onOpenPublish={() => documentMenu.openPublish(pageRef)}
+        />
         <PagePresence
           userIds={present}
           members={members}
@@ -753,7 +776,22 @@ function PageSurface({
           }
           onOpenHistory={() => setHistoryOpen(true)}
         />
+        <IssueActionsMenu
+          searchable={false}
+          actions={documentMenu.actionsFor(pageRef)}
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 text-muted-foreground/70 hover:text-foreground"
+              aria-label={t("pageOptions")}
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          }
+        />
       </div>
+      {documentMenu.dialogs}
 
       {/* La table des matières flotte au bord droit du PANNEAU, donc hors du
           conteneur qui défile : elle reste à sa place pendant qu'on descend

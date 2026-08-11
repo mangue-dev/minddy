@@ -60,6 +60,17 @@ export interface PagesLookup {
   /** Ressortir de la corbeille la page d'un bloc orphelin. Rend `true` si elle
       est revenue. */
   restore?: (pageId: string) => Promise<boolean>;
+  /**
+   * Ce que dit un bloc dont la page est absente du lookup. Par défaut « Page
+   * déplacée vers la corbeille », qui est la seule raison possible DANS
+   * l'application.
+   *
+   * Sur une page publiée (MIN-283), il y en a une seconde, et elle n'a rien à
+   * voir : la sous-page existe très bien, elle n'est simplement pas publiée.
+   * Lui faire dire « corbeille » serait faux ; lui faire dire son titre serait
+   * la fuite qu'on refuse. D'où ce libellé, posé par la surface.
+   */
+  missingLabel?: string;
 }
 
 const Context = createContext<PagesLookup | null>(null);

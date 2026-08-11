@@ -346,3 +346,17 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
+
+/**
+ * L'utilisateur connecté, ou `null` HORS provider — pour les surfaces qui
+ * peuvent être montées des deux côtés de l'authentification.
+ *
+ * Il y en a maintenant : une page publiée (MIN-283) monte le vrai éditeur de
+ * page, donc les vues de nœud de l'éditeur, pour un visiteur anonyme. `useAuth`
+ * y lève, et fait tomber la page entière — sur un composant qui ne lisait qu'une
+ * préférence de compte. Même parti pris que `useTaskSurface` : hors contexte, la
+ * vue rend ce qu'elle peut rendre plutôt que rien.
+ */
+export function useAuthOptional() {
+  return useContext(AuthContext);
+}

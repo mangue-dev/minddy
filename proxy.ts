@@ -61,17 +61,21 @@ const PUBLIC_ROUTES = new Set([
  * page valide elle-même le token. `/f/` = boards publics de feedback (MIN-37).
  * `/og` = la vignette de partage (app/og/route.tsx) : sans elle, Slack, X et
  * les moteurs recevraient une redirection vers /login au lieu de l'image.
+ * `/p/` = pages du wiki publiées en lecture (MIN-283) — la route valide son
+ * token elle-même, exactement comme `/share/`.
  */
-const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/.well-known/", "/share/", "/f/", "/og", "/md"];
+const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/.well-known/", "/share/", "/f/", "/p/", "/og", "/md"];
 
-/** Publiques mais hors index : l'URL EST le secret, ou il n'y a rien à indexer. */
-const NOINDEX_PREFIXES = ["/share/", "/f/"];
+/** Publiques mais hors index : l'URL EST le secret, ou il n'y a rien à indexer.
+    `/p/` en est (MIN-283) : publier une page n'est pas la rendre trouvable sur
+    Google, et ce n'est pas une option — ni ici, ni dans le dialogue. */
+const NOINDEX_PREFIXES = ["/share/", "/f/", "/p/"];
 
 // Domaines personnalisés (MIN-36) : chemins servis tels quels sur un host
 // custom. `/f/` + `/share/` = navigation croisée par token (onglets du site
 // public) ; `/icon`, `/favicon.ico`, `/manifest.json` = routes/fichiers de
 // métadonnées qui seraient sinon réécrits vers /f/<token>/icon → 404.
-const CUSTOM_HOST_PASS_PREFIXES = ["/f/", "/share/", "/api/", "/auth/", "/_next/", "/.well-known/"];
+const CUSTOM_HOST_PASS_PREFIXES = ["/f/", "/share/", "/p/", "/api/", "/auth/", "/_next/", "/.well-known/"];
 const CUSTOM_HOST_PASS_ROUTES = new Set(["/favicon.ico", "/icon", "/manifest.json"]);
 
 // Pages publiques anonymes (board de feedback /f/, vues partagées /share/, site
@@ -79,7 +83,7 @@ const CUSTOM_HOST_PASS_ROUTES = new Set(["/favicon.ico", "/icon", "/manifest.jso
 // bascule le thème par défaut sur "system" au lieu de "dark" (MIN-60). Le header
 // étant posé côté serveur, le script anti-FOUC du layout choisit le bon défaut
 // dès le premier paint.
-const PUBLIC_SITE_PREFIXES = ["/f/", "/share/"];
+const PUBLIC_SITE_PREFIXES = ["/f/", "/share/", "/p/"];
 const PUBLIC_THEME_HEADER = "x-minddy-public";
 const LOCALE_HEADER = "x-minddy-locale";
 const ROUTE_HEADER = "x-minddy-route";

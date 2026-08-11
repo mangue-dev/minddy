@@ -582,6 +582,33 @@
     "linkCopied": "Link copied",
     "sharingDisabled": "Sharing disabled. The link no longer works."
   },
+  "PublishPage": {
+    "title": "Publish page",
+    "description": "Share “{name}” as a read-only page. No account needed to read it.",
+    "levelPrivate": "Private",
+    "levelPassword": "Password",
+    "levelPublic": "Anyone with the link",
+    "hintPrivate": "Only project members can read this page.",
+    "hintPassword": "Readers need the link and the password.",
+    "hintPublic": "Anyone with the link can read this page.",
+    "passwordPlaceholder": "Set a password",
+    "changePasswordPlaceholder": "New password",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "unpublished": "Page unpublished",
+    "includeChildren": "Include sub-pages",
+    "noChildren": "This page has no sub-pages.",
+    "childrenIncluded": "{count} sub-pages are published with it.",
+    "childrenExcluded": "{count} sub-pages stay private: their blocks lead nowhere.",
+    "published": "Published",
+    "publishedTooltip": "This page is readable outside minddy."
+  },
+  "PublicPage": {
+    "untitled": "Untitled page",
+    "protectedTitle": "This page is password-protected",
+    "metaDescription": "A page shared from {project}.",
+    "subpageNotPublished": "Sub-page not published"
+  },
   "PublicShare": {
     "protectedTitle": "This page is password-protected",
     "passwordPlaceholder": "Password",
@@ -1711,7 +1738,14 @@
     "commentOnSelectionPlaceholder": "Comment on this passage…",
     "openThread": "Open the thread",
     "closeThread": "Close",
-    "commentOnSelection": "New comment"
+    "commentOnSelection": "New comment",
+    "publish": "Publish…",
+    "export": "Export",
+    "exportMarkdown": "Markdown (.md)",
+    "exportMarkdownBranch": "Markdown with {count} sub-pages (.zip)",
+    "exportPdf": "Print / PDF",
+    "exportPdfBranch": "Print / PDF with {count} sub-pages",
+    "exportFailed": "Could not export this page."
   },
   "Picker": {
     "createNamed": "Create “{name}”",

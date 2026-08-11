@@ -317,6 +317,11 @@ export interface AnalyticsEventProps {
   share_link_revoked: NoProps;
   share_link_copied: NoProps;
 
+  // ── Pages publiées et exportées (MIN-283) ──
+  page_published: { has_password: boolean; with_children: boolean };
+  page_unpublished: NoProps;
+  page_exported: { format: "md" | "zip" | "pdf" };
+
   // ── Notifications ──
   notifications_opened: { unread_count: number; surface: "inbox" | "popover" };
   notification_clicked: { type: string; was_unread: boolean };
@@ -650,6 +655,10 @@ const EVENT_NAMES = [
   "share_link_created",
   "share_link_revoked",
   "share_link_copied",
+  // Pages publiées (MIN-283)
+  "page_published",
+  "page_unpublished",
+  "page_exported",
   // Notifications
   "notifications_opened",
   "notification_clicked",
