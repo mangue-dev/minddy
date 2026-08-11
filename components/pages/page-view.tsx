@@ -66,7 +66,6 @@ import {
 import { PageHeader } from "@/components/pages/page-header";
 import { IssueActionsMenu } from "@/components/issue-context-menu";
 import { usePageDocumentMenu } from "@/components/pages/page-document-actions";
-import { PagePublishedBadge } from "@/components/pages/page-published-badge";
 import { PageHistorySheet } from "@/components/pages/page-history";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
@@ -745,22 +744,12 @@ function PageSurface({
           ligne. Il ne paraît que sur une sous-page — voir page-breadcrumb.tsx. */}
       {/* La réserve de droite : l'état est une coche au repos et son texte ne
           se déplie qu'au survol, par-dessus, sur son propre fond (MIN-282) —
-          mais la pastille « publiée » (MIN-283), elle, occupe la place qu'elle
-          annonce. D'où la réserve élargie : sans elle, le fil d'Ariane d'une
-          page publiée passait sous le ⋯. */}
-      <div className="absolute top-3 left-3.5 z-10 flex min-w-0 max-w-[calc(100%-14rem)] items-center">
+          plus le ⋯, qui ouvre la publication et l'export (MIN-283). */}
+      <div className="absolute top-3 left-3.5 z-10 flex min-w-0 max-w-[calc(100%-11rem)] items-center">
         <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
       </div>
 
       <div className="absolute top-3 right-3.5 z-10 flex items-center gap-1.5">
-        {/* « Cette page est publique », dans la page — c'est la moitié qu'on
-            oublie : publier est un geste qu'on fait une fois, et chaque phrase
-            écrite ensuite part avec. */}
-        <PagePublishedBadge
-          projectId={projectId}
-          pageId={pageId}
-          onOpenPublish={() => documentMenu.openPublish(pageRef)}
-        />
         <PagePresence
           userIds={present}
           members={members}

@@ -599,9 +599,7 @@
     "includeChildren": "Include sub-pages",
     "noChildren": "This page has no sub-pages.",
     "childrenIncluded": "{count} sub-pages are published with it.",
-    "childrenExcluded": "{count} sub-pages stay private: their blocks lead nowhere.",
-    "published": "Published",
-    "publishedTooltip": "This page is readable outside minddy."
+    "childrenExcluded": "{count} sub-pages stay private: their blocks lead nowhere."
   },
   "PublicPage": {
     "untitled": "Untitled page",

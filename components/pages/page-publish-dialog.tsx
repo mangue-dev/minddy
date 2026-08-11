@@ -248,8 +248,7 @@ export function PagePublishDialog({
   );
 }
 
-/** La clé de cache de l'état de publication — partagée avec l'indicateur de
-    l'en-tête, qui lit la même chose. */
+/** La clé de cache de l'état de publication. */
 export function pageShareKey(pageId: string): [string, string] {
   return ["page-share", pageId];
 }
