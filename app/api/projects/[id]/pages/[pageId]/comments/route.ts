@@ -18,9 +18,9 @@ const MAX_MENTIONS = 50;
  * donc avec elle sans que cette route ait à y penser — ils suivent la page, pas
  * l'inverse.
  *
- * Le fil ENTIER, résolus compris : masquer les fils clos est une décision
- * d'affichage, et le bouton qui les rouvre doit pouvoir les montrer sans un
- * second aller-retour.
+ * Le fil ENTIER, en une requête : ce qui se montre où — un fil ancré à côté de
+ * son bloc, un fil de page ou détaché dans l'activité — est une décision
+ * d'affichage (lib/page-comments.ts), pas une requête de plus.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;

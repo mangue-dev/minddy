@@ -2,10 +2,10 @@
 
 // Le fil d'une page, côté client (MIN-282).
 //
-// Une seule requête — le fil ENTIER — et tout le reste est du calcul : l'ordre,
-// le détachement, le masquage des fils résolus vivent dans lib/page-comments.ts,
-// qui ne sait rien du réseau. Ce module ne fait que brancher les deux, et les
-// écritures qui les font bouger.
+// Une seule requête — le fil ENTIER — et tout le reste est du calcul : l'ordre
+// et le détachement vivent dans lib/page-comments.ts, qui ne sait rien du
+// réseau. Ce module ne fait que brancher les deux, et les écritures qui les font
+// bouger.
 //
 // Le TEMPS RÉEL ne passe pas par ici : le pont (lib/realtime-provider.tsx)
 // invalide `["page-comments", pageId]` sur toute écriture diffusée par le topic

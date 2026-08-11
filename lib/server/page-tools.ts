@@ -183,6 +183,9 @@ export interface PageRead extends PageTreeEntry {
 
 /** Un fil, tel qu'un agent le lit : ce dont il parle, et ce qui s'y est dit. */
 export interface PageThreadForAgent {
+  /** L'adresse du fil, à repasser en `parent_comment_id` pour répondre DEDANS
+      plutôt que d'en ouvrir un second à côté. */
+  thread_id: string;
   /** L'extrait commenté, figé au moment du commentaire. Null = sur la page. */
   quote: string | null;
   /** L'ancre, à repasser à `minddy_add_page_comment` pour répondre au même

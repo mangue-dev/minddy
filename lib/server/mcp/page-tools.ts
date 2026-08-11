@@ -455,11 +455,12 @@ export function registerPageTools(server: McpServer): void {
         "often the right one — when a passage looks wrong, a comment asks the " +
         "person who wrote it; an edit overwrites them. Anchor it to a BLOCK by " +
         "passing the block_id of a thread you read in minddy_get_page's " +
-        "threads, and reply inside that thread with parent_comment_id. Never " +
+        "threads, and reply inside that thread by passing its thread_id as " +
+        "parent_comment_id. Never " +
         "invent a block_id: they are not in the markdown, and a made-up one " +
         "produces a thread pointing at nothing. Omit both to comment on the page " +
-        "as a whole. Mentioning a teammate with '@Name' notifies them, exactly as " +
-        "in an issue comment.",
+        "as a whole. The page's author and everyone already in the thread are " +
+        "notified.",
       inputSchema: {
         project_id: PROJECT_ID,
         page_id: PAGE_ID,
@@ -482,8 +483,9 @@ export function registerPageTools(server: McpServer): void {
           .uuid()
           .optional()
           .describe(
-            "Reply INSIDE an existing thread instead of opening a new one. The " +
-              "reply inherits the thread's anchor, so block_id is then ignored."
+            "Reply INSIDE an existing thread instead of opening a new one: the " +
+              "thread_id of a thread you read in minddy_get_page. The reply " +
+              "inherits the thread's anchor, so block_id is then ignored."
           ),
       },
       annotations: WRITE,

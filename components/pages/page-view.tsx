@@ -652,9 +652,9 @@ function PageSurface({
 
   /* ── Commenter un passage (MIN-282) ───────────────────────────────────── */
   //
-  // La bulle de sélection rend le bloc et l'extrait ; le fil, en pied de
-  // document, ouvre son composeur dessus. L'état vit ICI parce qu'il relie deux
-  // enfants qui ne se connaissent pas — l'éditeur et le fil.
+  // La bulle de sélection rend le bloc et l'extrait ; le calque ouvre dessus le
+  // panneau du fil, à côté du bloc. L'état vit ICI parce qu'il relie deux
+  // enfants qui ne se connaissent pas — l'éditeur et le calque.
   const [draftAnchor, setDraftAnchor] = useState<PageCommentAnchor | null>(null);
   const onComment = useCallback((anchor: PageCommentAnchor) => {
     setDraftAnchor(anchor);

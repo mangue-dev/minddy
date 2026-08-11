@@ -348,8 +348,9 @@ export async function fetchPageEventsApi(
 }
 
 /* ── Les COMMENTAIRES d'une page (MIN-282) ──────────────────────────────────
-   Le fil ENTIER, fils résolus compris : masquer les fils clos est une décision
-   d'affichage (lib/page-comments.ts), pas une requête de moins. */
+   Le fil ENTIER en une requête : ce qui se lit où — à côté de son bloc, ou dans
+   l'activité de la page — est une décision d'affichage (lib/page-comments.ts),
+   pas une requête de plus. */
 
 export async function fetchPageCommentsApi(
   projectId: string,

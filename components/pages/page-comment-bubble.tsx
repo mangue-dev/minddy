@@ -3,8 +3,8 @@
 // La bulle « Commenter » (MIN-282) — le geste qui ancre une discussion à un bloc.
 //
 // On sélectionne du texte, une bulle paraît au-dessus, on clique : le fil
-// s'ouvre sous le document, ancré sur le BLOC, avec l'extrait sélectionné figé
-// dedans. C'est ce qui rend la relecture utile — « cette phrase-là » — et c'est
+// s'ouvre À CÔTÉ du bloc (page-comment-popover.tsx), ancré sur lui, avec
+// l'extrait sélectionné figé dedans. C'est ce qui rend la relecture utile — « cette phrase-là » — et c'est
 // la seule chose qu'un fil de page sans ancre ne saurait pas dire.
 //
 // ─── Trois choix de mécanique ───────────────────────────────────────────────

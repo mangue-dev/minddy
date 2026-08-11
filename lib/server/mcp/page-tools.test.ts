@@ -836,6 +836,51 @@ describe("les fils de discussion d'une page", () => {
     expect(threads[0].messages).toHaveLength(2);
   });
 
+  /**
+   * Le fil qu'on n'a pas ouvert soi-même est justement celui auquel il faut
+   * répondre. Sans `thread_id` rendu par la lecture, un agent n'avait l'adresse
+   * que des fils qu'il venait d'écrire — répondre à l'objection d'un humain
+   * n'était possible qu'en ouvrant un second fil à côté.
+   */
+  it("répond au fil d'un HUMAIN, dont l'adresse vient de la lecture", async () => {
+    const page = await createPage("Spec", "un corps");
+    // Un humain a posé la question : rien de cet id ne passe par l'agent.
+    h.comments.push({
+      id: "c0000000-0000-4000-8000-000000000001",
+      page_id: page,
+      project_id: PROJECT,
+      block_id: null,
+      quote: null,
+      body: "et le quota des invités ?",
+      author_id: "user-human",
+      parent_id: null,
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+
+    const read = await call("minddy_get_page", {
+      project_id: PROJECT,
+      page_id: page,
+    });
+    const threads = read.payload.threads as Array<{ thread_id: string }>;
+    expect(threads).toHaveLength(1);
+
+    const replied = await call("minddy_add_page_comment", {
+      project_id: PROJECT,
+      page_id: page,
+      body: "il suit celui du projet",
+      parent_comment_id: threads[0].thread_id,
+    });
+    expect(replied.ok, JSON.stringify(replied.payload)).toBe(true);
+
+    const { payload } = await call("minddy_get_page", {
+      project_id: PROJECT,
+      page_id: page,
+    });
+    const after = payload.threads as Array<{ messages: unknown[] }>;
+    expect(after).toHaveLength(1);
+    expect(after[0].messages).toHaveLength(2);
+  });
+
   it("refuse de commenter une page d'un projet qu'on ne voit pas", async () => {
     const page = await createPage("Spec", "un corps");
     h.access = new Set();

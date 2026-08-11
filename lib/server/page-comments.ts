@@ -216,6 +216,7 @@ export async function openPageThreadsForAgent(
   names: (userId: string | null) => string
 ): Promise<
   {
+    thread_id: string;
     quote: string | null;
     block_id: string | null;
     messages: { author: string; body: string; at: string }[];
@@ -230,6 +231,11 @@ export async function openPageThreadsForAgent(
   const rows = data ?? [];
   const roots = rows.filter((r) => !r.parent_id);
   return roots.map((root) => ({
+    // La racine du fil : c'est ELLE qu'on repasse en `parent_comment_id` pour
+    // répondre dedans. Sans cet id, un agent ne pouvait répondre qu'aux fils
+    // qu'il venait lui-même d'ouvrir — ceux d'un humain, précisément ceux
+    // auxquels il faut répondre, n'avaient aucune adresse.
+    thread_id: root.id as string,
     quote: (root.quote as string | null) ?? null,
     block_id: (root.block_id as string | null) ?? null,
     messages: [root, ...rows.filter((r) => r.parent_id === root.id)].map((r) => ({

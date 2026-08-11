@@ -40,9 +40,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { data, error } = await auth.supabase
     .from("page_comments")
     .update({ body: text })
-    // L'auteur, en plus de la policy : `page_comments_update` est ouverte à
-    // l'équipe pour que la RÉSOLUTION le soit (un fil qu'on ne peut clore que si
-    // son auteur revient n'est pas un fil). Le TEXTE, lui, reste à son auteur.
+    // L'auteur, en plus de la policy (`page_comments_update`, resserrée sur lui
+    // en 20261208090000) : la règle vaut quel que soit le chemin, et le filtre
+    // ici est ce qui la rend lisible depuis la route.
     .eq("id", commentId)
     .eq("author_id", auth.user.id)
     .select("*")

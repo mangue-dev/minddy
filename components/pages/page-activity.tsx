@@ -64,7 +64,6 @@ export function PageActivity({
   enabled?: boolean;
 }) {
   const t = useTranslations("Pages");
-  const tTimeline = useTranslations("Timeline");
   const { members } = useMembersQuery(projectId, enabled);
 
   const events = useQuery({
