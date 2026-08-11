@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import packageJson from "@/package.json";
+import { APP_VERSION } from "@/lib/app-version";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -490,7 +490,7 @@ function AccountButton({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <div className="px-2 py-1 text-center text-xs text-muted-foreground">
-            {packageJson.version}
+            {APP_VERSION}
           </div>
         </DropdownMenuContent>
       </DropdownMenu>

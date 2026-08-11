@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import createNextIntlPlugin from "next-intl/plugin";
+import { commitsSinceVersion } from "./scripts/commits-since-version.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -106,6 +107,12 @@ const nextConfig = {
     // le trafic. Vide en local (et si « Automatically expose System Environment
     // Variables » est décoché) → la détection s'éteint d'elle-même.
     NEXT_PUBLIC_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
+    // Le nombre de commits entre le tag de la version courante et le commit
+    // construit — le nombre affiché derrière le numéro de version (0.8.9-3).
+    // Mesuré ICI parce que c'est le seul moment où le dépôt est là : le runtime
+    // Vercel ne voit ni `.git` ni l'historique. Voir le module pour la mesure,
+    // et pour le `VERCEL_DEEP_CLONE=1` qu'elle réclame côté Vercel.
+    NEXT_PUBLIC_VERSION_COMMITS: String(commitsSinceVersion()),
   },
   // Test local des domaines personnalisés (MIN-36) : hosts /etc/hosts pointés
   // sur 127.0.0.1 — sans quoi `next dev` bloque les requêtes cross-origin

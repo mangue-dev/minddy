@@ -73,4 +73,14 @@ npm run deploy -- patch   # non-interactive: bump patch (or minor/major/none)
    still deploy to production**, so do this before (or with) your first
    `npm run deploy`.
 
+3. Still in **Settings → Environment Variables**, add `VERCEL_DEEP_CLONE` = `1`
+   for **Production and Preview**. Vercel otherwise builds from a
+   `git clone --depth=10`, where the `vX` tag of the running version is out of
+   reach past ten commits — and the version indicator in the account menu counts
+   commits from that tag to say how far ahead of its release a deployment is
+   (`0.8.9-3` = three commits past `v0.8.9`, see
+   [`scripts/commits-since-version.mjs`](scripts/commits-since-version.mjs)).
+   Without the variable the count falls back to 0 and the bare version shows —
+   never a wrong count, just no count.
+
 PR humaine sans référence de ticket.

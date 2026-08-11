@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import packageJson from "@/package.json";
+import { APP_VERSION } from "@/lib/app-version";
 import { toast, useTheme } from "mangue-ui";
 import {
   BarChart3,
@@ -201,7 +201,7 @@ export function MobileMenuFooter() {
           ) : null}
         </div>
       </div>
-      <div className="text-center text-xs text-muted-foreground">{packageJson.version}</div>
+      <div className="text-center text-xs text-muted-foreground">{APP_VERSION}</div>
     </div>
   );
 }
