@@ -1377,8 +1377,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       //
       // Mode zen (MIN-134) : on ne CACHE pas la sidebar primaire et le header,
       // on ne les donne pas — pas de gouttière vide là où était la barre. La
-      // secondaire, elle, RESTE : sur /pull-requests elle est le seul moyen de
-      // passer d'une PR à l'autre, et le zen n'est pas censé enfermer.
+      // secondaire, elle, ne part pas non plus : sur /pull-requests elle est le
+      // seul moyen de passer d'une PR à l'autre, et le zen n'est pas censé
+      // enfermer. Elle passe en SURIMPRESSION — hors du flux, rappelée au survol
+      // du bord gauche, exactement le marché que la primaire passe déjà avec son
+      // rail. Le zen retire le meuble, pas la navigation.
       sidebar={
         <div className="relative flex h-full">
           {zen ? null : (
@@ -1388,7 +1391,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               overlay={secondaryNav}
             />
           )}
-          <SecondarySidebarSlot reserve={secondaryNav} />
+          <SecondarySidebarSlot
+            reserve={secondaryNav}
+            // Sans barre secondaire, pas de volet à rappeler : la lisière
+            // sensible n'aurait rien à ouvrir et prendrait les clics du contenu
+            // sur ses 12 px pour rien.
+            overlay={zen && secondaryNav}
+          />
         </div>
       }
       header={
