@@ -43,6 +43,8 @@ import {
 import { BlockFlash, flashBlockAt } from "@/components/pages/block-flash";
 import { handleNodeLinkClick } from "@/components/editor-node-link";
 import {
+  GUTTER_HOVER,
+  GUTTER_WIDTH,
   blockLink,
   blockRange,
   styledBox,
@@ -571,6 +573,82 @@ describe("la palette et ses jetons CSS", () => {
         `--page-color-${name}:`
       );
     }
+  });
+});
+
+/**
+ * La gouttière se survole ELLE-MÊME.
+ *
+ * L'extension de la poignée n'écoute que le `mousemove` de la vue ProseMirror :
+ * hors de cette boîte, rien ne se passe, et la bande vide à gauche du texte —
+ * celle où l'on va justement chercher la poignée — était morte. La réparation
+ * est une règle de style : un rembourrage à gauche étend la boîte de la vue
+ * sous la gouttière, et une marge négative exactement opposée remet le texte où
+ * il était.
+ *
+ * Trois valeurs doivent coïncider, et aucun type ne les regarde : la RÉSERVE
+ * que la colonne laisse à gauche (`md:pl-24`), le rembourrage de la règle, et
+ * la marge négative qui l'annule. Un déséquilibre d'un pixel entre les deux
+ * dernières décale le corps sous son titre. Un rembourrage plus étroit que la
+ * réserve laisse une bande morte au bord gauche — c'est le défaut mesuré au
+ * navigateur sur la première version : la poignée sortait quand on s'arrêtait
+ * à 25 px du texte, et pas quand on s'arrêtait à 70 px, c'est-à-dire pas quand
+ * on visait la gouttière. Un rembourrage plus LARGE, lui, sortirait la boîte
+ * de la colonne.
+ */
+describe("la surface de survol de la gouttière", () => {
+  const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+  const rule = css.slice(
+    css.indexOf(".page-editor[data-gutter] .ProseMirror {"),
+    css.indexOf("}", css.indexOf(".page-editor[data-gutter] .ProseMirror {"))
+  );
+
+  it("couvre TOUTE la réserve de la colonne, pas seulement les boutons", () => {
+    expect(rule, "la règle a disparu de app/globals.css").toContain(
+      "padding-left"
+    );
+    expect(rule).toContain(`padding-left: ${GUTTER_HOVER}px;`);
+    // Le garde-fou du défaut d'origine, dit en une ligne : la bande de survol
+    // est plus large que les boutons, elle ne s'arrête pas à eux.
+    expect(GUTTER_HOVER).toBeGreaterThan(GUTTER_WIDTH);
+  });
+
+  it("ne déplace pas le texte : la marge annule le rembourrage", () => {
+    expect(rule).toContain(`margin-left: -${GUTTER_HOVER}px;`);
+  });
+
+  it("vaut exactement la réserve que la colonne du document se donne", () => {
+    // `md:pl-24` = 6rem = 96 px. C'est la colonne qui décide de la largeur de
+    // la gouttière ; la règle de style ne fait que la recopier. Si l'une des
+    // deux bouge sans l'autre, ou bien la boîte sort de la colonne, ou bien il
+    // reste une bande morte — les deux sont invisibles à la relecture.
+    const view = readFileSync(
+      join(process.cwd(), "components/pages/page-view.tsx"),
+      "utf8"
+    );
+    const rem = GUTTER_HOVER / 16;
+    expect(view, `la colonne n'a plus md:pl-${rem * 4}`).toContain(
+      `md:pl-${rem * 4}`
+    );
+  });
+
+  it("n'est pas allumée là où il n'y a pas de gouttière", () => {
+    // La règle est conditionnée à `[data-gutter]`, que page-editor.tsx ne pose
+    // qu'en édition : une page publique ou une impression n'a pas de réserve à
+    // gauche, et la marge négative y ferait sortir le texte de sa colonne.
+    const editor = readFileSync(
+      join(process.cwd(), "components/pages/page-editor.tsx"),
+      "utf8"
+    );
+    expect(editor).toContain("data-gutter={editor && editable");
+  });
+
+  it("laisse aux boutons leur propre largeur, plus étroite", () => {
+    const gutter = readFileSync(
+      join(process.cwd(), "components/pages/block-gutter.tsx"),
+      "utf8"
+    );
+    expect(gutter).toContain("style={{ width: GUTTER_WIDTH }}");
   });
 });
 

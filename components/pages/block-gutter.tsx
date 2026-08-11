@@ -41,6 +41,7 @@ import { GripVertical, Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
 import { BlockMenu } from "@/components/pages/block-menu";
 import {
+  GUTTER_WIDTH,
   blockRange,
   insertBlockAround,
   selectBlockFromHandle,
@@ -54,6 +55,21 @@ const POSITION = { placement: "left-start", strategy: "absolute" } as const;
 /** Côté d'un bouton de la gouttière (`size-6`), en pixels — il sert au calcul
     de centrage sur la première ligne du bloc, qui n'a pas d'équivalent CSS. */
 const BUTTON_SIZE = 24;
+
+/**
+ * Les infobulles de la gouttière attendent avant de paraître.
+ *
+ * Depuis que TOUTE la marge fait apparaître le chrome, la souris qui descend le
+ * long de la colonne — pour aller ailleurs, pour lire — traverse les deux
+ * boutons de chaque bloc au passage. Sans délai, deux infobulles jaillissent
+ * par bloc traversé, en travers du texte qu'on est en train de lire.
+ *
+ * `disableHoverableContent` finit le travail : l'infobulle ne se survole pas,
+ * elle ne peut donc pas retenir un pointeur déjà reparti. Même délai et même
+ * raison que la barre latérale (`TOOLTIP_DELAY_MS`, components/app-sidebar.tsx)
+ * — deux surfaces qu'on traverse plus souvent qu'on ne les vise.
+ */
+const TOOLTIP_DELAY_MS = 600;
 
 const BUTTON = cn(
   "flex size-6 items-center justify-center rounded text-muted-foreground/60",
@@ -179,8 +195,18 @@ export function BlockGutter({ editor }: { editor: Editor }) {
         computePositionConfig={POSITION}
         onNodeChange={onNodeChange}
       >
-        <div ref={gutter} className="flex items-center gap-0.5 pr-1">
-          <Tooltip>
+        {/* La largeur est ÉCRITE, pas déduite du contenu : c'est la même
+            valeur que la règle de app/globals.css qui étend la surface de
+            survol de l'éditeur jusque sous la gouttière. Un bouton de plus ici
+            déborderait visiblement de cette bande — ce qui est exactement le
+            signal qu'il faut, plutôt qu'une gouttière plus large que la zone
+            qui la fait apparaître. */}
+        <div
+          ref={gutter}
+          style={{ width: GUTTER_WIDTH }}
+          className="flex items-center justify-end gap-0.5 pr-1"
+        >
+          <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
             <TooltipTrigger asChild>
               <button
                 type="button"
@@ -204,7 +230,7 @@ export function BlockGutter({ editor }: { editor: Editor }) {
                 icône ne peut dire et que personne ne devine. */}
             <TooltipContent side="top">{t("insertBlockHint")}</TooltipContent>
           </Tooltip>
-          <Tooltip>
+          <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
             <TooltipTrigger asChild>
               <button
                 type="button"

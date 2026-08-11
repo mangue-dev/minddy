@@ -28,6 +28,31 @@ import {
 } from "@/components/pages/blocks/types";
 import { flashBlockAt } from "@/components/pages/block-flash";
 
+/**
+ * La largeur des BOUTONS de la gouttière, en pixels : deux boutons de 24 px,
+ * leur `gap-0.5` et le `pr-1` qui les sépare du bloc. C'est ce que `BlockGutter`
+ * occupe réellement — pas la bande qui le fait apparaître, ci-dessous.
+ */
+export const GUTTER_WIDTH = 54;
+
+/**
+ * La largeur de la BANDE DE SURVOL, en pixels : toute la réserve que la colonne
+ * du document laisse à sa gauche (`md:pl-24`, components/pages/page-view.tsx).
+ *
+ * Ce n'est PAS `GUTTER_WIDTH`, et la différence est ce qui a fait échouer la
+ * première version : les boutons n'occupent que les 54 px collés au texte, mais
+ * la gouttière qu'on VOIT — et donc celle qu'on vise — est la marge entière. En
+ * la limitant aux boutons, il restait une bande morte de 42 px au bord gauche,
+ * exactement là où la souris arrive quand elle vient de la sidebar. Mesuré au
+ * navigateur : arrêt à 25 px du texte, la poignée sort ; arrêt à 70 px, rien.
+ *
+ * Elle est ici, dans un module sans React, parce qu'elle est lue par deux
+ * endroits qui ne se voient pas l'un l'autre : la règle de `app/globals.css`
+ * qui étend la surface de survol de l'éditeur, et la classe de la colonne qui
+ * lui réserve la place. `lib/pages-chrome.test.ts` compare les trois.
+ */
+export const GUTTER_HOVER = 96;
+
 /** Une plage de blocs entiers, en positions absolues du document. */
 export interface BlockRange {
   from: number;

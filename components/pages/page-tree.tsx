@@ -506,15 +506,6 @@ function PageRow({
             et pas un avatar : à cet endroit l'information utile est binaire —
             qui, on le lit en ouvrant la page. */}
         <PagePresenceDot count={present.length} />
-        {/* Dans le lien, et non à côté des gestes de survol : là-bas elle
-            disparaîtrait sous le ⋯ et le + au passage de la souris, c'est-à-dire
-            exactement au moment où l'on regarde la ligne. */}
-        {pinned && (
-          <Star
-            className="size-3 shrink-0 fill-amber-400 text-amber-400"
-            aria-hidden
-          />
-        )}
       </Link>
 
       {/* Les deux gestes de survol. Ils réservent leur place (`opacity`, pas
@@ -556,6 +547,27 @@ function PageRow({
           <Plus className="size-3.5" />
         </Button>
       </div>
+
+      {/* L'étoile FERME la ligne, après le ⋯ et le + — c'est le bord droit de
+          la colonne, là où l'œil balaie pour trouver ce qui est épinglé.
+          Elle est hors du bloc des gestes de survol, donc elle ne s'efface
+          pas avec eux ; et comme ce bloc réserve sa place (`opacity`, pas
+          `hidden`), elle ne bouge pas d'un pixel quand la souris passe.
+
+          La BOÎTE est celle du `+` juste à sa gauche — `size-6`, contenu
+          centré : c'est ce qui l'écarte du bord. Posée nue, l'étoile ne faisait
+          que ses 12 px et venait se coller au `pr-1` de la ligne, alors que les
+          deux boutons, eux, respirent dans leur carré. Une icône de plus dans
+          la même rangée se loge dans le même carré, sinon la rangée n'a plus
+          de rythme. */}
+      {pinned && (
+        <span
+          aria-hidden
+          className="flex size-6 shrink-0 items-center justify-center"
+        >
+          <Star className="size-3 fill-amber-400 text-amber-400" />
+        </span>
+      )}
     </div>
 
     {/* Le MÊME menu, ancré au pointeur. Hors de la ligne, et c'est délibéré :

@@ -437,7 +437,16 @@ export function PageEditor({
     // positionné, avec la réserve de gouttière à gauche —, et le TITRE de la
     // page y est dedans lui aussi. Sans ça, les deux ne partagent pas le même
     // bord gauche et le corps a l'air imbriqué sous son titre.
-    <div className={cn("page-editor", className)}>
+    // `data-gutter` n'est pas décoratif : c'est lui qui allume, dans
+    // app/globals.css, l'extension de la surface de survol vers la gauche —
+    // celle qui fait que viser la marge suffit à faire apparaître le chrome.
+    // Il ne vaut QUE quand la gouttière existe : sur une page publique ou à
+    // l'impression, le corps n'a pas de réserve à gauche, et la marge négative
+    // y ferait déborder le texte hors de sa colonne.
+    <div
+      className={cn("page-editor", className)}
+      data-gutter={editor && editable ? "" : undefined}
+    >
       {editor && editable && <BlockGutter editor={editor} />}
       {/* La bulle « Commenter » se place en coordonnées d'ÉCRAN : elle n'a
           besoin d'aucun parent positionné, et n'en demande donc pas un à ce

@@ -957,6 +957,42 @@ nav[aria-label="Navigation"]
   margin: 0;
 }
 
+/* ─── La GOUTTIÈRE se survole ELLE-MÊME ───────────────────────────────────
+   Le chrome d'un bloc (la poignée et le `+`) apparaît au survol du bloc, et
+   pas au survol de la bande vide à sa gauche — alors que c'est LÀ qu'on va
+   chercher la poignée. Le geste appris ailleurs est pourtant : viser la marge,
+   les boutons apparaissent. Il fallait donc traverser la colonne de texte
+   d'abord, puis revenir en arrière.
+
+   La cause est en un mot : l'extension écoute le `mousemove` de la VUE
+   ProseMirror (`handleDOMEvents`), et la gouttière est en dehors de cette
+   boîte — aucun événement n'y naît. Elle sait pourtant déjà quoi faire d'un
+   pointeur hors colonne : elle rabat les coordonnées dans le contenu avant de
+   chercher le bloc (`clampToContent`), donc un survol à hauteur d'un bloc mais
+   à gauche de lui désigne bien ce bloc.
+
+   Il suffit donc que la boîte de la vue ARRIVE jusque-là. Un rembourrage à
+   gauche l'étend sous la gouttière ; la marge négative exactement opposée
+   remet le texte où il était. Rien ne bouge à l'écran, et la bande vide fait
+   maintenant partie de la surface qui écoute.
+
+   Les deux valeurs sont la RÉSERVE de la colonne (`GUTTER_HOVER`,
+   components/pages/block-actions.ts), pas la largeur des boutons : ceux-ci ne
+   tiennent que les 54 px collés au texte, mais la gouttière qu'on voit — et
+   qu'on vise — est la marge entière. La première version s'arrêtait aux
+   boutons, et laissait 42 px morts au bord gauche, là où la souris arrive
+   quand elle vient de la sidebar. Pas un pixel de plus non plus : au-delà, la
+   boîte sortirait de la colonne.
+
+   Sous `md`, la colonne n'a que 24 px de retrait : la boîte étendue déborderait
+   du conteneur qui défile. Et il n'y a pas de survol sur un écran tactile. */
+@media (min-width: 768px) {
+  .page-editor[data-gutter] .ProseMirror {
+    padding-left: 96px;
+    margin-left: -96px;
+  }
+}
+
 /* ─── Le DÉPLIANT (MIN-270) ───────────────────────────────────────────────
    Ce bloc n'a AUCUN style par défaut, et c'est ce qui le rendait
    incompréhensible : `@tiptap/extension-details` ne rend pas un `<details>`
