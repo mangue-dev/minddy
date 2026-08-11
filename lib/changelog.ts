@@ -54,6 +54,11 @@ export interface ChangelogEntry {
 
 /** Du plus récent au plus ancien — c'est l'ordre d'affichage ET celui du flux. */
 export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
+  { id: "pages", date: "2026-08-11" },
+  { id: "smart-fill", date: "2026-08-10" },
+  { id: "board-multi-select", date: "2026-08-09" },
+  { id: "issue-sync", date: "2026-08-07" },
+  { id: "invite-by-email", date: "2026-08-07" },
   { id: "routines", date: "2026-08-06" },
   { id: "push-notifications", date: "2026-08-06" },
   { id: "project-start", date: "2026-08-06" },
