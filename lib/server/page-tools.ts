@@ -5,6 +5,7 @@ import {
   createPage,
   getPage,
   listPages,
+  searchProjectPages,
   updatePage,
   type PageErrorKey,
 } from "@/lib/server/pages";
@@ -16,7 +17,10 @@ import {
 import { editTextPassage } from "@/lib/server/text-edit";
 
 /**
- * LES SIX GESTES d'un agent sur les pages (MIN-273), une seule fois.
+ * LES GESTES d'un agent sur les pages (MIN-273), une seule fois.
+ *
+ * Six à l'origine, sept depuis MIN-276 : chercher. C'est celui qui manquait le
+ * plus — l'arbre dit ce qui existe, pas ce qui parle de quoi.
  *
  * Trois surfaces les servent — le serveur MCP (`minddy_*_page`), le chat Numo
  * (`*_page`) et l'agent de code —, et c'est justement pourquoi la logique ne vit
@@ -194,6 +198,89 @@ export async function readPageForAgent({
   return {
     ok: true,
     data: { ...entry(page), markdown, version: page.version, subpages },
+  };
+}
+
+/** Une page trouvée : de quoi décider laquelle ouvrir, sans l'ouvrir. */
+export interface PageSearchResult {
+  page_id: string;
+  title: string;
+  icon: string | null;
+  /** Le chemin des ancêtres, du plus haut au parent direct — « Specs › API ».
+      Deux pages « Notes » dans un wiki, c'est le chemin qui les distingue. */
+  path: string[];
+  /** Le passage du corps qui a répondu. Vide quand seul le titre a répondu. */
+  excerpt: string;
+  updated_at: string;
+}
+
+/**
+ * Chercher dans le wiki, titre ET contenu (MIN-276).
+ *
+ * C'est l'outil qui manquait le plus à un agent : sans lui, « où a-t-on écrit
+ * la décision sur X » se répond en lisant le wiki entier, ou ne se répond pas.
+ * L'arbre (`list_pages`) dit ce qui existe, pas ce qui parle de quoi.
+ *
+ * Le chemin d'ancêtres est reconstruit ici, à partir de la liste à plat que le
+ * noyau rend déjà — une requête de plus, sans corps, contre un aller-retour par
+ * page côté agent.
+ */
+export async function searchPagesForAgent({
+  projectId,
+  actorId,
+  query,
+  limit,
+}: {
+  projectId: string;
+  actorId: string;
+  query: string;
+  limit?: number;
+}): Promise<PageToolResult<{ query: string; pages: PageSearchResult[] }>> {
+  if (!query.trim()) {
+    return {
+      ok: false,
+      code: "invalid_params",
+      message: "query must carry the words to look for.",
+    };
+  }
+
+  const found = await searchProjectPages({ projectId, actorId, query, limit });
+  if (!found.ok) return refuse(found.errorKey);
+  if (found.hits.length === 0) {
+    return { ok: true, data: { query, pages: [] } };
+  }
+
+  const all = await listPages(projectId, actorId);
+  const byId = new Map(
+    (all.ok ? all.pages : []).map((page) => [page.id, page] as const)
+  );
+  const pathOf = (parentId: string | null): string[] => {
+    const path: string[] = [];
+    let cursor = parentId;
+    // Le garde-fou vaut mieux qu'une confiance : la profondeur est illimitée,
+    // et une boucle dans les données ferait tourner cette remontée sans fin.
+    while (cursor && path.length < 20) {
+      const parent = byId.get(cursor);
+      if (!parent) break;
+      path.unshift(parent.title || "(untitled)");
+      cursor = parent.parent_id ?? null;
+    }
+    return path;
+  };
+
+  return {
+    ok: true,
+    data: {
+      query,
+      pages: found.hits.map((hit) => ({
+        page_id: hit.id,
+        title: hit.title,
+        icon: hit.icon,
+        path: pathOf(hit.parent_id),
+        excerpt: hit.excerpt,
+        updated_at: hit.updated_at,
+      })),
+    },
   };
 }
 

@@ -19,6 +19,11 @@ export interface PaletteItem {
   icon?: ComponentType<{ className?: string }>;
   /** Extra terms to match against when searching (identifier, project name…). */
   keywords?: string[];
+  /** Texte secondaire, CHERCHÉ mais moins fort qu'un titre — l'extrait d'une
+   *  page trouvée par son contenu (MIN-276). Le moteur classe un match de titre
+   *  au-dessus ; c'est ce qui fait passer « trouvée par son titre » devant
+   *  « citée dans un corps » sans tri explicite. */
+  description?: string;
   /** Right-aligned trailing content — identifier badge or project chip. */
   meta?: ReactNode;
   /** Plain-text version of `meta` (identifier, project name) — the desktop

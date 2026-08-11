@@ -33,6 +33,7 @@ export const ISSUE_TOOL_NAMES = new Set([
   // acteur : une famille de plus dans le routage n'aurait apporté que du
   // câblage. L'exécution vit dans `page-tools.ts`, à côté de `issue-tools.ts`.
   "list_pages",
+  "search_pages",
   "read_page",
   "create_page",
   "update_page",

@@ -845,3 +845,127 @@ describe("duplicatePage (MIN-272)", () => {
     expect(await duplicatePage(other, ACTOR)).toMatchObject({ ok: false, status: 404 });
   });
 });
+
+/* ─── Le texte de recherche (MIN-276) ─────────────────────────────────────────
+   La colonne `search_text` est la projection markdown du corps, et c'est la
+   SEULE chose que la recherche lit. Ce qui la rend fragile : elle est écrite
+   par un rattrapage, après la réponse (`afterOrNow`), donc rien ne la réclame
+   au moment de l'écriture. Ces cas-ci vérifient qu'elle atterrit vraiment, sur
+   chacun des chemins ; que le rattrapage soit APPELÉ partout est vérifié à
+   part, dans pages-search-paths.test.ts, sur l'arbre syntaxique du module.
+
+   `vi.waitFor` parce que le travail est justement différé : hors d'une requête,
+   `afterOrNow` le lance tout de suite mais ne l'attend pas — c'est son contrat,
+   et le simuler autrement testerait autre chose que ce qui tourne. */
+
+/** Le corps de la page, tel que la recherche le lira. */
+const searchTextOf = (id: string) =>
+  (rowOf(id) as unknown as Record<string, unknown>).search_text as
+    | string
+    | undefined;
+
+async function expectSearchText(id: string, fragment: string) {
+  await vi.waitFor(() => {
+    expect(searchTextOf(id) ?? "").toContain(fragment);
+  });
+}
+
+describe("le texte de recherche", () => {
+  const body = (text: string) => ({
+    type: "doc",
+    content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+  });
+
+  it("est écrit à la création", async () => {
+    const result = await createPage({
+      projectId: PROJECT,
+      actorId: ACTOR,
+      input: { title: "Guide", content: body("mot-très-rare") },
+    });
+    if (!result.ok) throw new Error(result.errorKey);
+    await expectSearchText(result.page.id, "mot-très-rare");
+  });
+
+  it("suit le corps à chaque écriture, et ne garde pas l'ancien", async () => {
+    const page = await create("Guide");
+    await updatePage({
+      pageId: page,
+      actorId: ACTOR,
+      input: { content: body("première version") },
+    });
+    await expectSearchText(page, "première version");
+
+    await updatePage({
+      pageId: page,
+      actorId: ACTOR,
+      input: { content: body("seconde version") },
+    });
+    await expectSearchText(page, "seconde version");
+    expect(searchTextOf(page)).not.toContain("première");
+  });
+
+  it("est écrit sur toute la branche dupliquée", async () => {
+    const root = await create("Guide");
+    const child = await create("Chapitre", root);
+    await updatePage({
+      pageId: child,
+      actorId: ACTOR,
+      input: { content: body("clé-de-voûte") },
+    });
+
+    const copy = await duplicatePage(root, ACTOR);
+    if (!copy.ok) throw new Error(copy.errorKey);
+    const childCopy = h.rows.find(
+      (row) => (row as unknown as Row).parent_id === copy.page.id
+    ) as unknown as Row;
+    await expectSearchText(childCopy.id, "clé-de-voûte");
+  });
+
+  it("suit le corps du PARENT quand une sous-page part à la corbeille", async () => {
+    // Le miroir du bloc sous-page (MIN-272) écrit le corps du parent sans que
+    // personne ne l'ait ouvert : c'est une écriture de contenu comme une autre,
+    // et le texte indexé doit la suivre — sinon le parent reste trouvable par
+    // un bloc qui n'existe plus.
+    const root = await create("Guide");
+    const child = await create("Chapitre", root);
+    await updatePage({
+      pageId: root,
+      actorId: ACTOR,
+      input: {
+        content: {
+          type: "doc",
+          content: [
+            { type: "paragraph", content: [{ type: "text", text: "intro-durable" }] },
+            { type: "subpage", attrs: { pageId: child } },
+          ],
+        },
+      },
+    });
+    await expectSearchText(root, "intro-durable");
+    expect(searchTextOf(root)).toContain(child);
+
+    await trashPage(child, ACTOR);
+    await vi.waitFor(() => {
+      expect(searchTextOf(root) ?? "").not.toContain(child);
+    });
+    expect(searchTextOf(root)).toContain("intro-durable");
+  });
+
+  it("ne repart pas pour un simple renommage", async () => {
+    // Le titre entre dans l'index par la colonne générée : il n'a aucun texte à
+    // rejouer, et monter un éditeur serveur pour un renommage serait payer la
+    // projection pour rien.
+    const page = await create("Guide");
+    await updatePage({
+      pageId: page,
+      actorId: ACTOR,
+      input: { content: body("corps-stable") },
+    });
+    await expectSearchText(page, "corps-stable");
+
+    (rowOf(page) as unknown as Record<string, unknown>).search_text = "TÉMOIN";
+    await updatePage({ pageId: page, actorId: ACTOR, input: { title: "Autre" } });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(searchTextOf(page)).toBe("TÉMOIN");
+  });
+});

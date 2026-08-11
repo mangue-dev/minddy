@@ -177,6 +177,9 @@ const PAGES_BLOCK = `## Pages: the project's wiki (what a ticket assumes)
 A project carries PAGES: a nested wiki of the knowledge that outlives tickets — specs,
 decisions and their why, conventions, runbooks, onboarding. A ticket says what to do, a page
 says why it is like that. You can read AND write them, in markdown.
+- search_pages is the way IN when you have a SUBJECT rather than a page: full text over titles
+  AND bodies, ranked, each hit with the passage that matched. Use it before reading pages one by
+  one — "où est écrite la décision sur X", "y a-t-il une convention pour Y".
 - list_pages maps the wiki (ids, titles, icons, parents — no bodies); get_page reads one in
   markdown with its direct subpages. READ before answering "pourquoi c'est comme ça ?", before
   writing a spec-shaped issue, and whenever the user points at a page.

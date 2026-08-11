@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-273 — les six outils de page, EXERCÉS PAR LEURS VRAIS CALLBACKS.
+ * MIN-273 — les outils de page, EXERCÉS PAR LEURS VRAIS CALLBACKS.
+ * (Six à l'origine ; minddy_search_pages est arrivé avec MIN-276.)
  *
  * Ce test ne relit pas des schémas : il enregistre les tools contre un serveur
  * qui GARDE les callbacks, puis les appelle comme le ferait un client MCP. Tout
@@ -120,7 +121,56 @@ vi.mock("@/lib/supabase-service", () => {
     return query;
   };
 
-  return { getServiceClient: () => ({ from }) };
+  /**
+   * `search_pages`, la fonction SQL, rejouée sur le tableau en mémoire
+   * (MIN-276).
+   *
+   * Ce que le faux reproduit fidèlement : le PÉRIMÈTRE (pages vivantes du
+   * projet demandé), la double lecture titre + `search_text`, la préséance du
+   * titre sur le corps, et l'extrait pris autour du mot trouvé. Ce qu'il ne
+   * reproduit pas et ne prétend pas tester : le scoring exact de `ts_rank_cd`
+   * ni le découpage de `ts_headline` — ça, c'est Postgres, et ça se vérifie
+   * contre une vraie base, pas contre un tableau.
+   */
+  const rpc = async (name: string, args: Record<string, unknown>) => {
+    if (name !== "search_pages") throw new Error(`rpc inconnu : ${name}`);
+    const tokens = String(args.p_query ?? "")
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (tokens.length === 0) return { data: [], error: null };
+
+    const hits = h.rows.flatMap((row) => {
+      if (row.deleted_at) return [];
+      if (args.p_project_id && row.project_id !== args.p_project_id) return [];
+      const title = String(row.title ?? "").toLowerCase();
+      const text = String(row.search_text ?? "").toLowerCase();
+      const inTitle = tokens.every((t) => title.includes(t));
+      const inText = tokens.every((t) => text.includes(t));
+      if (!inTitle && !inText) return [];
+      const at = text.indexOf(tokens[0]);
+      const excerpt =
+        inText && at >= 0
+          ? String(row.search_text).slice(Math.max(0, at - 30), at + 90).trim()
+          : "";
+      return [
+        {
+          id: row.id,
+          project_id: row.project_id,
+          parent_id: row.parent_id ?? null,
+          title: row.title,
+          icon: row.icon ?? null,
+          updated_at: row.updated_at,
+          excerpt,
+          rank: inTitle ? 1 : 0.5,
+        },
+      ];
+    });
+    hits.sort((a, b) => b.rank - a.rank);
+    return { data: hits.slice(0, Number(args.p_limit ?? 20)), error: null };
+  };
+
+  return { getServiceClient: () => ({ from, rpc }) };
 });
 
 vi.mock("@/lib/server/project-access", () => ({
@@ -184,6 +234,19 @@ async function createPage(
   });
   expect(ok, JSON.stringify(payload)).toBe(true);
   return payload.page_id as string;
+}
+
+/**
+ * Attend que le texte de recherche des pages écrites soit posé.
+ *
+ * `search_text` est écrite APRÈS la réponse (`afterOrNow`) : hors requête, le
+ * travail part tout de suite mais n'est pas attendu — c'est son contrat, et
+ * l'attendre ici plutôt que de le rendre synchrone teste ce qui tourne vraiment.
+ */
+async function waitForIndex() {
+  await vi.waitFor(() => {
+    expect(h.rows.every((row) => typeof row.search_text === "string")).toBe(true);
+  });
 }
 
 beforeEach(() => {
@@ -536,5 +599,98 @@ describe("minddy_update_page", () => {
     });
     expect(ok).toBe(false);
     expect((payload.error as { code: string }).code).toBe("invalid_params");
+  });
+});
+
+describe("minddy_search_pages", () => {
+  /** Le mot rare n'est QUE dans le corps : c'est tout l'objet du ticket. */
+  const BODY = [
+    "## Le choix du stockage",
+    "",
+    "On garde la projection markdown dans une colonne dérivée : le mot",
+    "chalcogénure ne devait sortir que d'ici.",
+  ].join("\n");
+
+  it("trouve une page par un mot qui n'est QUE dans son corps, et le rend en extrait", async () => {
+    const guide = await createPage("Guide");
+    const specs = await createPage("Spécifications", "", guide);
+    const page = await createPage("Stockage", BODY, specs);
+    await createPage("Sans rapport", "Rien à voir ici.");
+    await waitForIndex();
+
+    const { ok, payload } = await call("minddy_search_pages", {
+      project_id: PROJECT,
+      query: "chalcogénure",
+    });
+    expect(ok, JSON.stringify(payload)).toBe(true);
+    expect(payload.count).toBe(1);
+
+    const [hit] = payload.pages as Array<Record<string, unknown>>;
+    expect(hit.page_id).toBe(page);
+    expect(hit.title).toBe("Stockage");
+    // Le CHEMIN, pas seulement le titre : deux pages « Notes » dans un wiki,
+    // c'est lui qui les distingue.
+    expect(hit.path).toEqual(["Guide", "Spécifications"]);
+    expect(hit.excerpt).toContain("chalcogénure");
+  });
+
+  it("classe la page trouvée par son TITRE devant celle qui la cite", async () => {
+    const cited = await createPage("Notes", "La cadence se règle ailleurs.");
+    const named = await createPage("Cadence", "Le rythme d'un cycle.");
+    await call("minddy_update_page", {
+      project_id: PROJECT,
+      page_id: cited,
+      markdown: "Voir la page cadence pour le détail.",
+    });
+    await waitForIndex();
+
+    const { ok, payload } = await call("minddy_search_pages", {
+      project_id: PROJECT,
+      query: "cadence",
+    });
+    expect(ok).toBe(true);
+    const pages = payload.pages as Array<Record<string, unknown>>;
+    expect(pages.map((p) => p.page_id)).toEqual([named, cited]);
+  });
+
+  it("ne rend rien d'un projet auquel la clé n'a pas accès, et refuse une requête vide", async () => {
+    await createPage("Guide", BODY);
+    await waitForIndex();
+
+    const empty = await call("minddy_search_pages", {
+      project_id: PROJECT,
+      query: "   ",
+    });
+    expect(empty.ok).toBe(false);
+    expect((empty.payload.error as { code: string }).code).toBe("invalid_params");
+
+    h.access = new Set();
+    const denied = await call("minddy_search_pages", {
+      project_id: PROJECT,
+      query: "chalcogénure",
+    });
+    expect(denied.ok).toBe(false);
+    expect((denied.payload.error as { code: string }).code).toBe("project_not_found");
+  });
+
+  it("oublie une page partie à la corbeille", async () => {
+    const page = await createPage("Stockage", BODY);
+    await waitForIndex();
+    const before = await call("minddy_search_pages", {
+      project_id: PROJECT,
+      query: "chalcogénure",
+    });
+    expect(before.payload.count).toBe(1);
+
+    // La corbeille n'est pas exposée aux agents : on la joue comme l'UI le
+    // ferait, sur la ligne elle-même.
+    const row = h.rows.find((r) => r.id === page)!;
+    row.deleted_at = "2026-08-11T00:00:00Z";
+
+    const after = await call("minddy_search_pages", {
+      project_id: PROJECT,
+      query: "chalcogénure",
+    });
+    expect(after.payload.count).toBe(0);
   });
 });

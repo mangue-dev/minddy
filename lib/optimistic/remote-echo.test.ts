@@ -106,7 +106,14 @@ function emptyBoard(
 }
 
 function emptyIndex(): SearchIndexResponse {
-  return { issues: [], objectives: [], members: {}, categories: {}, truncated: false };
+  return {
+    issues: [],
+    objectives: [],
+    pages: [],
+    members: {},
+    categories: {},
+    truncated: false,
+  };
 }
 
 function seed(client: QueryClient, issues: Issue[] = [], objectives: Objective[] = []) {

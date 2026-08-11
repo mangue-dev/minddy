@@ -111,6 +111,13 @@ const GROUP_BOOSTS: Record<string, number> = {
   account: 100,
   issues: 80,
   objectives: 80,
+  // Le wiki est de la DONNÉE, comme les tickets et les objectifs — pas de la
+  // navigation, malgré le mot « pages » qu'il partage avec le groupe du dessus
+  // (MIN-276). Même palier qu'eux : à pertinence égale, ce qu'on a écrit ne
+  // passe ni devant ni derrière ce qu'on a à faire. Le classement titre >
+  // contenu, lui, ne se joue pas ici : il vient du moteur, qui note un match de
+  // titre au-dessus d'un match de description (l'extrait).
+  "wiki-pages": 80,
 };
 
 /** Icône de statut d'un ticket : le MÊME indicateur que les cartes du board et
@@ -359,6 +366,7 @@ export function CommandPalette({
             id: it.key,
             title: it.label,
             keywords: it.keywords,
+            description: it.description,
             icon: issue
               ? statusIcon(issue.status)
               : Icon

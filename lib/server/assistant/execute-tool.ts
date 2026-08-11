@@ -14,6 +14,7 @@ import {
   editPageTextForAgent,
   listPagesForAgent,
   readPageForAgent,
+  searchPagesForAgent,
   updatePageForAgent,
   type PageToolResult,
 } from "@/lib/server/page-tools";
@@ -1004,6 +1005,7 @@ export async function executeTool(
       case "create_page":
         return executeCreatePage(args, ctx, projectId);
       case "list_pages":
+      case "search_pages":
       case "get_page":
       case "update_page":
       case "append_to_page":
@@ -2378,7 +2380,7 @@ const STALE_REV = (expected: number, actual: number, indices: boolean) =>
   `The notebook changed since rev ${expected} (it is now at rev ${actual}) — the user edited it meanwhile. Call get_scratchpad again${indices ? " for fresh task indices" : ", reapply your change onto the fresh content"}, then retry.`;
 
 /**
- * Les six gestes de PAGE côté Numo (MIN-273).
+ * Les gestes de PAGE côté Numo (MIN-273 ; chercher depuis MIN-276).
  *
  * Rien de la logique n'est ici : le noyau (`lib/server/page-tools.ts`) est celui
  * du MCP et de l'agent de code, projection markdown comprise. Ce que fait cette
@@ -2404,6 +2406,25 @@ async function executePageTool(
     const result = await listPagesForAgent({ projectId, actorId });
     return result.ok
       ? { result: { count: result.data.pages.length, pages: result.data.pages }, success: true }
+      : toolError(result.message);
+  }
+
+  if (toolName === "search_pages") {
+    const result = await searchPagesForAgent({
+      projectId,
+      actorId,
+      query: str(args.query) ?? "",
+      limit: typeof args.limit === "number" ? args.limit : undefined,
+    });
+    return result.ok
+      ? {
+          result: {
+            query: result.data.query,
+            count: result.data.pages.length,
+            pages: result.data.pages,
+          },
+          success: true,
+        }
       : toolError(result.message);
   }
 

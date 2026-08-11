@@ -708,9 +708,45 @@ export interface SearchIndexObjective {
   color: string | null;
 }
 
+/**
+ * Une page du wiki comme la palette la liste (GET /api/me/search-index).
+ *
+ * Le TITRE seul, jamais le corps (MIN-276) : envoyer les documents de tous mes
+ * projets dans le navigateur pour pouvoir les filtrer à la frappe serait payer
+ * le wiki entier à chaque ouverture d'onglet. Le contenu se cherche côté
+ * serveur, en différé — GET /api/me/pages/search.
+ */
+export interface SearchIndexPage {
+  id: string;
+  project_id: string;
+  title: string;
+  icon: string | null;
+  updated_at: string;
+}
+
+/**
+ * Une page trouvée par son CONTENU (GET /api/me/pages/search, MIN-276).
+ *
+ * `excerpt` est ce qui distingue ce résultat d'une ligne d'index : le passage
+ * du corps qui a répondu. Sur une recherche par contenu, le titre seul ne dit
+ * pas pourquoi la page sort — et c'est exactement la moitié qui manquait.
+ */
+export interface PageSearchHit {
+  id: string;
+  project_id: string;
+  parent_id: string | null;
+  title: string;
+  icon: string | null;
+  updated_at: string;
+  excerpt: string;
+  /** Le score de Postgres (`ts_rank_cd`) — l'ordre du serveur, à conserver. */
+  rank: number;
+}
+
 export interface SearchIndexResponse {
   issues: SearchIndexIssue[];
   objectives: SearchIndexObjective[];
+  pages: SearchIndexPage[];
   /** Members by project id — the ⌘; « assigné » picker needs the members of the
       *ticket's* project, which may not be the project the user is looking at. */
   members: Record<string, Member[]>;

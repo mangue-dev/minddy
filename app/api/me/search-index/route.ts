@@ -7,6 +7,7 @@ import type {
   Category,
   SearchIndexIssue,
   SearchIndexObjective,
+  SearchIndexPage,
 } from "@/lib/types";
 
 /**
@@ -17,6 +18,13 @@ import type {
  */
 const MAX_ISSUES = 4000;
 const MAX_OBJECTIVES = 1000;
+/**
+ * Les pages sont plus rares qu'un ticket et bien plus lourdes à lire en entier
+ * — mais on n'en lit que le titre, et un wiki de mille pages est déjà un gros
+ * wiki. Ce que le plafond coupe, la recherche de CONTENU le retrouve
+ * (/api/me/pages/search), qui interroge la base et non cet instantané.
+ */
+const MAX_PAGES = 2000;
 
 /**
  * Only the columns a palette row displays, matches on, or lets ⌘; patch — plus
@@ -30,6 +38,9 @@ const MAX_OBJECTIVES = 1000;
 const ISSUE_COLUMNS =
   "id, project_id, number, title, status, priority, effort, assignee_id, objective_id, updated_at, projects!inner(deleted_at)";
 const OBJECTIVE_COLUMNS = "id, project_id, name, status, color, projects!inner(deleted_at)";
+/** Le titre et son emoji : ce que la ligne affiche. Jamais `content` (MIN-276). */
+const PAGE_COLUMNS =
+  "id, project_id, title, icon, updated_at, projects!inner(deleted_at)";
 
 /** La jointure de filtrage ne descend pas au client. */
 function stripJoin<T>(rows: ({ projects?: unknown } | null)[] | null): T[] {
@@ -40,8 +51,9 @@ function stripJoin<T>(rows: ({ projects?: unknown } | null)[] | null): T[] {
 }
 
 /**
- * GET /api/me/search-index — every ticket and objective of every project I can
- * access, in the lightest shape that still makes a command-palette row (MIN-91).
+ * GET /api/me/search-index — every ticket, objective and wiki page of every
+ * project I can access, in the lightest shape that still makes a command-palette
+ * row (MIN-91, MIN-276).
  *
  * Why a route of its own rather than GET /api/me/board: that one is the
  * cross-project *kanban* payload — full issue rows (description + plan, up to
@@ -59,7 +71,7 @@ export async function GET(request: NextRequest) {
   const t = await getTranslations("ApiErrors");
   const service = getServiceClient();
 
-  const [issuesRes, objectivesRes, categoriesRes, projectsRes] = await Promise.all([
+  const [issuesRes, objectivesRes, pagesRes, categoriesRes, projectsRes] = await Promise.all([
     auth.supabase
       .from("issues")
       .select(ISSUE_COLUMNS)
@@ -72,12 +84,23 @@ export async function GET(request: NextRequest) {
       .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(MAX_OBJECTIVES),
+    // `pages_select` exclut déjà les corbeillées — pas de filtre à ajouter ici.
+    auth.supabase
+      .from("pages")
+      .select(PAGE_COLUMNS)
+      .is("projects.deleted_at", null)
+      .order("updated_at", { ascending: false })
+      .limit(MAX_PAGES),
     auth.supabase.from("categories").select("id, project_id, name, color"),
     auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
   ]);
 
   const firstError =
-    issuesRes.error || objectivesRes.error || categoriesRes.error || projectsRes.error;
+    issuesRes.error ||
+    objectivesRes.error ||
+    pagesRes.error ||
+    categoriesRes.error ||
+    projectsRes.error;
   if (firstError) {
     console.error("[api/me/search-index] load failed:", firstError.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
@@ -85,6 +108,7 @@ export async function GET(request: NextRequest) {
 
   const issues = stripJoin<SearchIndexIssue>(issuesRes.data);
   const objectives = stripJoin<SearchIndexObjective>(objectivesRes.data);
+  const pages = stripJoin<SearchIndexPage>(pagesRes.data);
 
   const categories: Record<string, Category[]> = {};
   for (const c of (categoriesRes.data ?? []) as Category[]) {
@@ -99,8 +123,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     issues,
     objectives,
+    pages,
     members,
     categories,
-    truncated: issues.length >= MAX_ISSUES || objectives.length >= MAX_OBJECTIVES,
+    truncated:
+      issues.length >= MAX_ISSUES ||
+      objectives.length >= MAX_OBJECTIVES ||
+      pages.length >= MAX_PAGES,
   });
 }

@@ -822,8 +822,31 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "list_pages",
       description:
-        "List the pages of the minddy project this session works on — its WIKI: ids, titles, icons, parents, no bodies. Pages hold what the code and the tickets assume: specs, architecture decisions and their why, conventions, runbooks. Read the wiki BEFORE deciding how to implement something non-obvious: a convention written by the team beats a convention you infer from two files. parent_page_id carries the nesting. Then open one with read_page.",
+        "List the pages of the minddy project this session works on — its WIKI: ids, titles, icons, parents, no bodies. Pages hold what the code and the tickets assume: specs, architecture decisions and their why, conventions, runbooks. Read the wiki BEFORE deciding how to implement something non-obvious: a convention written by the team beats a convention you infer from two files. When you are after a SUBJECT rather than the map, use search_pages instead — it reads the bodies too. parent_page_id carries the nesting. Then open one with read_page.",
       parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_pages",
+      description:
+        "Full-text search across the project's wiki — page TITLES and page BODIES — ranked, each hit with the passage that matched and the path of its parent pages. This is the fast way to answer 'is there a convention for X', 'where is the decision about Y written', 'what does the spec say about Z' — questions the code cannot answer. Listing the tree and reading pages one by one costs the whole wiki in tokens and still misses what is buried three levels down. A title match outranks a body match. The excerpt is a fragment: open the page you picked with read_page.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "The words to look for. Quotes force a phrase, a leading - excludes a word. Prefer the distinctive nouns of the subject: every word must appear in the page for it to match.",
+          },
+          limit: {
+            type: "number",
+            description: "How many pages to return, 1–50 (default 20).",
+          },
+        },
+        required: ["query"],
+      },
     },
   },
   {

@@ -6,6 +6,7 @@ import {
   editPageTextForAgent,
   listPagesForAgent,
   readPageForAgent,
+  searchPagesForAgent,
   updatePageForAgent,
   type PageToolResult,
 } from "@/lib/server/page-tools";
@@ -40,6 +41,7 @@ export interface PageToolContext {
 /** Les noms servis au modèle, tels que `lib/server/agent/tools.ts` les déclare. */
 export const PAGE_TOOL_NAMES = new Set([
   "list_pages",
+  "search_pages",
   "read_page",
   "create_page",
   "update_page",
@@ -80,6 +82,25 @@ export async function executePageTool(
     return result.ok
       ? {
           result: { count: result.data.pages.length, pages: result.data.pages },
+          success: true,
+        }
+      : render(result);
+  }
+
+  if (name === "search_pages") {
+    const result = await searchPagesForAgent({
+      projectId,
+      actorId,
+      query: str(args.query) ?? "",
+      limit: typeof args.limit === "number" ? args.limit : undefined,
+    });
+    return result.ok
+      ? {
+          result: {
+            query: result.data.query,
+            count: result.data.pages.length,
+            pages: result.data.pages,
+          },
           success: true,
         }
       : render(result);

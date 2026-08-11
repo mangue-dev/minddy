@@ -8,6 +8,7 @@ import {
   editPageTextForAgent,
   listPagesForAgent,
   readPageForAgent,
+  searchPagesForAgent,
   updatePageForAgent,
   type PageToolResult,
 } from "@/lib/server/page-tools";
@@ -88,7 +89,9 @@ export function registerPageTools(server: McpServer): void {
         "the only place page ids come from. Pages hold the durable knowledge a " +
         "project's issues assume (specs, decisions, conventions, onboarding), so " +
         "read them before answering a 'why is it like this?' question or writing " +
-        "issues from a document. The tree is flat on purpose: parent_page_id " +
+        "issues from a document. When you are after a SUBJECT rather than the " +
+        "map, use minddy_search_pages instead — it reads the bodies too. The " +
+        "tree is flat on purpose: parent_page_id " +
         "carries the nesting, rebuild it yourself (a page can be nested at any " +
         "depth). Then read one with minddy_get_page.",
       inputSchema: { project_id: PROJECT_ID },
@@ -104,6 +107,58 @@ export function registerPageTools(server: McpServer): void {
       if (!result.ok) return refusal(result);
       return ok({
         project_id: scope.access.project.id,
+        count: result.data.pages.length,
+        pages: result.data.pages,
+      });
+    }
+  );
+
+  server.registerTool(
+    "minddy_search_pages",
+    {
+      title: "Search pages",
+      description:
+        "Full-text search across the project's wiki — page TITLES and page " +
+        "BODIES — ranked, each hit with the passage that matched. Reach for this " +
+        "BEFORE minddy_list_pages whenever you have a subject rather than a page " +
+        "in mind: 'where did we write the decision about X', 'is there a " +
+        "convention for Y', 'what does the spec say about Z'. Listing the tree " +
+        "and reading pages one by one to answer that burns the whole wiki in " +
+        "tokens and still misses what is buried three levels down. A title match " +
+        "outranks a body match. Then open the page you picked with " +
+        "minddy_get_page — the excerpt is a fragment, never the answer to quote.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        query: z
+          .string()
+          .min(1)
+          .describe(
+            "The words to look for, as you would type them in a search box. " +
+              'Quotes force a phrase ("smart assign"), a leading - excludes a ' +
+              "word. Prefer the distinctive nouns of the subject over a whole " +
+              "question: every word must appear in the page for it to match."
+          ),
+        limit: z
+          .number()
+          .int()
+          .optional()
+          .describe("How many pages to return, 1–50 (default 20)."),
+      },
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await searchPagesForAgent({
+        projectId: scope.access.project.id,
+        actorId: scope.userId,
+        query: args.query,
+        limit: args.limit,
+      });
+      if (!result.ok) return refusal(result);
+      return ok({
+        project_id: scope.access.project.id,
+        query: result.data.query,
         count: result.data.pages.length,
         pages: result.data.pages,
       });

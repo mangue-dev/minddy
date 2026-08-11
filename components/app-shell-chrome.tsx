@@ -86,10 +86,13 @@ import { useBranchCleanupTargets } from "@/lib/use-branch-cleanup-targets";
 import { BranchCleanupDialog } from "@/components/settings/git-branch-cleanup";
 import type {
   BranchCleanupTarget,
+  PageSearchHit,
   Project,
   SearchIndexIssue,
   SearchIndexObjective,
+  SearchIndexPage,
 } from "@/lib/types";
+import { usePageContentSearch } from "@/lib/use-page-search";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { draftIconUrl } from "@/lib/project-draft";
 
@@ -121,6 +124,19 @@ function capForMobile<T extends { project_id: string }>(
     }
   }
   return capped.length === rows.length ? rows : capped;
+}
+
+/**
+ * L'extrait, dans la place qu'une ligne de palette lui laisse. Il est déjà
+ * borné par `ts_headline` (une vingtaine de mots) ; cette coupe-ci est le
+ * garde-fou d'affichage, pour que le nom du projet reste lisible à sa gauche.
+ */
+const MAX_EXCERPT_CHARS = 90;
+
+function truncateExcerpt(excerpt: string): string {
+  return excerpt.length <= MAX_EXCERPT_CHARS
+    ? excerpt
+    : `${excerpt.slice(0, MAX_EXCERPT_CHARS).trimEnd()}…`;
 }
 
 // L'export CSV est différé comme les dialogues de création : un dialogue qu'on
@@ -431,6 +447,32 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       mergeByProject(searchIndex?.issues ?? [], currentProjectId, projectIssues),
     [searchIndex, currentProjectId, projectIssues]
   );
+  // Les pages du wiki, TOUS PROJETS (MIN-276). Même fusion que les tickets : le
+  // projet courant vient de son cache vivant (renommer une page dans l'arbre la
+  // renomme dans ⌘K sans aller-retour), les autres de l'instantané.
+  const palettePages = useMemo<SearchIndexPage[]>(
+    () =>
+      mergeByProject(
+        searchIndex?.pages ?? [],
+        currentProjectId,
+        wikiPages.length > 0
+          ? wikiPages.map((p) => ({
+              id: p.id,
+              project_id: p.project_id,
+              title: p.title,
+              icon: p.icon,
+              updated_at: p.updated_at,
+            }))
+          : null
+      ),
+    [searchIndex, currentProjectId, wikiPages]
+  );
+
+  // Et ce que les titres ne peuvent pas donner : les pages dont le CONTENU
+  // répond. Une requête au serveur, en retard sur la frappe, qui enrichit la
+  // liste déjà affichée au lieu de la faire attendre.
+  const pageContentHits = usePageContentSearch(paletteOpen);
+
   const paletteObjectives = useMemo<SearchIndexObjective[]>(
     () =>
       mergeByProject(
@@ -905,32 +947,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       groups.push({ key: "pages", heading: t("goTo"), items: pageItems });
     }
 
-    // ── Le wiki du projet COURANT (MIN-270) ─────────────────────────────
-    // Restreint au projet ouvert, contrairement aux tickets et aux objectifs :
-    // ceux-là viennent d'un index cross-projet chargé une fois par onglet, les
-    // pages n'en ont pas. Chercher une page depuis un autre projet demanderait
-    // d'en fabriquer un — c'est un ticket à part, pas un effet de bord de
-    // celui-ci. Chaque ligne porte son emoji, comme dans l'arbre.
-    if (currentProject && wikiPages.length > 0) {
-      groups.push({
-        key: "wiki-pages",
-        heading: t("pages"),
-        items: wikiPages.map((page) => ({
-          key: `wiki-${page.id}`,
-          label: page.title || tPages("untitled"),
-          icon: page.icon ? emojiIcon(page.icon) : FileText,
-          keywords: [currentProject.name, currentProject.key],
-          meta: projectChip(currentProject),
-          metaText: currentProject.name,
-          contextId: currentProject.id,
-          onSelect: () =>
-            router.push(`/projects/${currentProject.id}/pages/${page.id}`),
-        })),
-      });
-    }
-
     return groups;
-  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, wikiPages, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Réglages : une ligne par CARTE, pas par onglet ───────────────────────
   // Un onglet de réglages est une colonne de cartes ; « Cadence », « Zone
@@ -1004,7 +1022,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const buildDataGroups = useCallback(
     (
       issues: SearchIndexIssue[],
-      objectives: SearchIndexObjective[]
+      objectives: SearchIndexObjective[],
+      pages: SearchIndexPage[],
+      contentHits: PageSearchHit[] = []
     ): PaletteGroup[] => {
       const groups: PaletteGroup[] = [];
 
@@ -1064,17 +1084,88 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         });
       }
 
+      // ── Le wiki, TOUS PROJETS (MIN-270, cross-projet depuis MIN-276) ───
+      //
+      // Deux sources en une seule liste, et c'est voulu. Les TITRES viennent de
+      // l'index (filtrés à la frappe, sans serveur) ; le CONTENU vient de
+      // Postgres, avec l'extrait qui dit pourquoi la page sort. L'extrait est
+      // posé en `description` : le moteur de la palette classe un match de
+      // titre au-dessus d'un match de description, donc « trouvée par son
+      // titre » passe devant « citée dans un corps » sans qu'on ait à trier —
+      // et le mot cherché reste visible sur la ligne (`metaText`).
+      //
+      // Une page trouvée par son contenu mais absente de l'index (plafond
+      // atteint, instantané périmé) est ajoutée à la liste : le serveur vient
+      // de dire qu'elle existe et qu'elle répond.
+      const excerptById = new Map(
+        contentHits.map((hit) => [hit.id, hit.excerpt] as const)
+      );
+      const known = new Set(pages.map((p) => p.id));
+      const extras: SearchIndexPage[] = contentHits
+        .filter((hit) => !known.has(hit.id))
+        .map((hit) => ({
+          id: hit.id,
+          project_id: hit.project_id,
+          title: hit.title,
+          icon: hit.icon,
+          updated_at: hit.updated_at,
+        }));
+
+      const allPages = [...pages, ...extras];
+      if (allPages.length > 0) {
+        groups.push({
+          key: "wiki-pages",
+          heading: t("pages"),
+          items: allPages.flatMap((page) => {
+            const project = projectById.get(page.project_id);
+            if (!project) return [];
+            const excerpt = excerptById.get(page.id) ?? "";
+            return [
+              {
+                key: `wiki-${page.id}`,
+                label: page.title || tPages("untitled"),
+                icon: page.icon ? emojiIcon(page.icon) : FileText,
+                description: excerpt,
+                keywords: [project.name, project.key],
+                meta: projectChip(project),
+                metaText: excerpt
+                  ? `${project.name} · ${truncateExcerpt(excerpt)}`
+                  : project.name,
+                contextId: page.project_id,
+                onSelect: () =>
+                  router.push(`/projects/${page.project_id}/pages/${page.id}`),
+              },
+            ];
+          }),
+        });
+      }
+
       return groups;
     },
-    [projectById, router, t, ti]
+    [projectById, router, t, ti, tPages]
   );
 
   // Desktop: the full list, built only while the palette is open — closed, it
   // renders nothing, so building thousands of rows on every shell re-render
   // (notification polls, agent sessions…) would be pure waste.
   const desktopDataGroups = useMemo(
-    () => (paletteOpen ? buildDataGroups(paletteIssues, paletteObjectives) : []),
-    [paletteOpen, buildDataGroups, paletteIssues, paletteObjectives]
+    () =>
+      paletteOpen
+        ? buildDataGroups(
+            paletteIssues,
+            paletteObjectives,
+            palettePages,
+            pageContentHits
+          )
+        : [],
+    [
+      paletteOpen,
+      buildDataGroups,
+      paletteIssues,
+      paletteObjectives,
+      palettePages,
+      pageContentHits,
+    ]
   );
 
   // Mobile: bounded, always ready (MobileNav's search sheet opens on its own).
@@ -1082,9 +1173,16 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     () =>
       buildDataGroups(
         capForMobile(paletteIssues, currentProjectId),
-        capForMobile(paletteObjectives, currentProjectId)
+        capForMobile(paletteObjectives, currentProjectId),
+        capForMobile(palettePages, currentProjectId)
       ),
-    [buildDataGroups, paletteIssues, paletteObjectives, currentProjectId]
+    [
+      buildDataGroups,
+      paletteIssues,
+      paletteObjectives,
+      palettePages,
+      currentProjectId,
+    ]
   );
 
   const inboxItem: AppNavItem = {

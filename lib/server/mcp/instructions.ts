@@ -89,6 +89,8 @@ export const MCP_SERVER_INSTRUCTIONS =
       "A project also has PAGES: its wiki, where the durable knowledge its issues " +
       "assume lives — specs, decisions and their why, conventions, runbooks. Read " +
       "them: a ticket says what to do, a page says why it is like that. " +
+      "minddy_search_pages is the way IN when you have a subject rather than a " +
+      "page — full text over titles AND bodies, with the passage that matched; " +
       "minddy_list_pages maps the wiki (ids, titles, icons, parents, no bodies), " +
       "minddy_get_page reads one in MARKDOWN with its direct subpages, " +
       "minddy_create_page writes a new one (optionally under a parent), and — as " +

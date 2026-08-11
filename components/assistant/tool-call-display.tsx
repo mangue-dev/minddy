@@ -326,6 +326,15 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("foundPages", { count: resultCount(result, "pages") });
     },
   },
+  search_pages: {
+    icon: BookOpen,
+    getLabel: (args, result, _success, status, t) => {
+      const query = typeof args.query === "string" ? args.query.trim() : "";
+      if (status === "running")
+        return query ? t("searchingPagesFor", { query }) : t("searchingPages");
+      return t("pagesFound", { count: resultCount(result, "pages") });
+    },
+  },
   get_page: {
     icon: BookText,
     getLabel: (_args, result, success, status, t) => {

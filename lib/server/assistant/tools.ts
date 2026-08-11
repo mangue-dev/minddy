@@ -503,8 +503,31 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_pages",
       description:
-        "The project's WIKI as a flat list of pages — id, title, icon, parent id, last update — without any body. Start here: it is the map, and the only place page ids come from. Pages hold the durable knowledge the issues assume (specs, decisions and their why, conventions, runbooks), so read them before answering a 'why is it like this?' question or writing issues from a document. parent_page_id carries the nesting (any depth); rebuild the tree yourself. Then read one with get_page.",
+        "The project's WIKI as a flat list of pages — id, title, icon, parent id, last update — without any body. It is the map, and the only place page ids come from. Pages hold the durable knowledge the issues assume (specs, decisions and their why, conventions, runbooks), so read them before answering a 'why is it like this?' question or writing issues from a document. When you are after a SUBJECT rather than the map, use search_pages instead — it reads the bodies too. parent_page_id carries the nesting (any depth); rebuild the tree yourself. Then read one with get_page.",
       parameters: { type: "object", properties: {}, required: [] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_pages",
+      description:
+        "Full-text search across the wiki — page TITLES and page BODIES — ranked, each hit with the passage that matched and the path of its parent pages. Use it BEFORE list_pages whenever you have a subject rather than a page in mind: 'where did we write the decision about X', 'is there a convention for Y', 'what does the spec say about Z'. Listing the tree and reading pages one by one to answer that burns the whole wiki and still misses what is buried three levels down. A title match outranks a body match. The excerpt is a fragment, never the answer — open the page you picked with get_page.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description:
+              'The words to look for, as typed in a search box. Quotes force a phrase ("smart assign"), a leading - excludes a word. Prefer the distinctive nouns of the subject over a whole question: every word must appear in the page for it to match.',
+          },
+          limit: {
+            type: "number",
+            description: "How many pages to return, 1–50 (default 20).",
+          },
+        },
+        required: ["query"],
+      },
     },
   },
   {

@@ -11,6 +11,11 @@ import {
 } from "@/lib/pages";
 import { appendSubpage, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
 import { bodyFromMarkdownServer } from "@/lib/server/pages-projection";
+import {
+  queueSearchText,
+  runPageSearch,
+  type PageSearchHit,
+} from "@/lib/server/pages-search";
 import type { PageDocJSON } from "@/lib/pages-merge";
 
 /**
@@ -32,6 +37,14 @@ import type { PageDocJSON } from "@/lib/pages-merge";
  * 2. la corbeille rend la ligne invisible à `pages_select`, donc le RETURNING
  *    d'un `update` fait au client de session ne la rendrait plus et la route
  *    croirait à un 404 (même piège que `lib/server/trash.ts`).
+ *
+ * Depuis MIN-276, une règle de plus, et c'est un INVARIANT du module : **toute
+ * écriture de `content` est suivie de `queueSearchText`**, qui rejoue la
+ * projection markdown dans la colonne `search_text` — celle qu'indexe la
+ * recherche. Un chemin d'écriture qui l'oublie ne casse rien de visible : il
+ * laisse simplement la page introuvable par son contenu, en silence. D'où le
+ * test STRUCTUREL de `pages-search-paths.test.ts`, qui relit ce fichier et
+ * refuse un `insert`/`update` portant `content` sans son rattrapage.
  */
 
 export type PageResult<T> =
@@ -172,6 +185,45 @@ export async function getPage(
   return { ok: true, page };
 }
 
+/**
+ * Chercher dans les pages d'UN projet, titre et contenu (MIN-276).
+ *
+ * Le tri et l'extrait viennent de Postgres (`search_pages`, cf. la migration) :
+ * `ts_rank_cd` sait ce qu'un `ilike` ne saura jamais — qu'un mot en titre pèse
+ * plus qu'un mot cité en passant, et où couper la phrase qui explique le
+ * résultat.
+ *
+ * Une requête vide rend une liste vide SANS aller en base : c'est l'état de la
+ * barre de recherche à l'ouverture, et il ne vaut pas un aller-retour.
+ */
+export async function searchProjectPages({
+  projectId,
+  actorId,
+  query,
+  limit = 20,
+}: {
+  projectId: string;
+  actorId: string;
+  query: string;
+  limit?: number;
+}): Promise<
+  | { ok: true; hits: PageSearchHit[] }
+  | { ok: false; status: number; errorKey: PageErrorKey }
+> {
+  if (!(await access(actorId, projectId))) {
+    return { ok: false, status: 404, errorKey: "projectNotFound" };
+  }
+  if (!query.trim()) return { ok: true, hits: [] };
+
+  const result = await runPageSearch(getServiceClient(), {
+    query,
+    projectId,
+    limit,
+  });
+  if (!result.ok) return { ok: false, status: 500, errorKey: "databaseError" };
+  return { ok: true, hits: result.hits };
+}
+
 /* ─── Création ─────────────────────────────────────────────────────────────── */
 
 export async function createPage({
@@ -241,7 +293,9 @@ export async function createPage({
     console.error("[pages] create failed:", error?.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, page: data as unknown as Page };
+  const page = data as unknown as Page;
+  queueSearchText(service, [page.id]);
+  return { ok: true, page };
 }
 
 /* ─── Duplication ──────────────────────────────────────────────────────────── */
@@ -330,6 +384,13 @@ export async function duplicatePage(
     console.error("[pages] duplicate failed:", error?.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+
+  // Toute la branche, pas seulement la racine : chaque copie porte son propre
+  // corps (les liens internes y ont même été réécrits), donc son propre texte.
+  queueSearchText(
+    service,
+    (data as unknown as Page[]).map((row) => row.id)
+  );
 
   const rootId = idMap.get(pageId);
   const copy = (data as unknown as Page[]).find((row) => row.id === rootId);
@@ -468,6 +529,10 @@ export async function updatePage({
     }
     return { ok: false, status: 404, errorKey: "pageNotFound" };
   }
+  // Le titre entre dans l'index par la colonne générée, sans rien à écrire ; le
+  // corps, lui, a besoin de sa projection. La file ne part donc que quand le
+  // corps a bougé — un renommage n'a aucun texte à rejouer.
+  if (patch.content !== undefined) queueSearchText(service, [pageId]);
   return { ok: true, page: data as unknown as Page };
 }
 
@@ -519,6 +584,10 @@ async function syncParentBody(
     .eq("version", parent.version)
     .is("deleted_at", null);
   if (error) console.error("[pages] subpage sync failed:", error.message);
+  // Le corps du PARENT vient de changer (un bloc sous-page en moins ou en
+  // plus) : c'est une écriture de `content` comme une autre, et son texte
+  // indexé doit suivre — même quand personne n'a le parent ouvert.
+  else queueSearchText(service, [parentId]);
 }
 
 /* ─── Corbeille ────────────────────────────────────────────────────────────── */
