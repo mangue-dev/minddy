@@ -39,6 +39,11 @@ export interface NotificationRow {
       l'AGENT porté par `api_key_id`, pas le propriétaire de la clé. Même
       vocabulaire que `issue_events` (lib/server/issue-events.ts). */
   via_mcp?: boolean;
+  /** L'action est un geste de NOTRE agent hors MCP — le chat Numo, l'agent de
+      code. L'inbox nomme alors Numo, comme elle le fait déjà d'un commentaire
+      qu'il a écrit (le drapeau se lisait jusqu'ici sur la ligne de commentaire ;
+      une citation dans une page n'a pas cet abri, MIN-278). */
+  via_assistant?: boolean;
   /** La clé API derrière une action MCP — son agent/nom donne logo et libellé. */
   api_key_id?: string | null;
   /** L'affectation vient de Smart Assign (`actor_id` null) : l'inbox nomme la

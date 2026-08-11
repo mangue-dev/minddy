@@ -365,7 +365,21 @@ function keysForProjectEvent(
         ];
       }
       const postId = feedbackPostIdOf(change);
-      return postId ? [active(["feedback-comments", projectId, postId])] : [];
+      if (postId) return [active(["feedback-comments", projectId, postId])];
+      // Une ressource de genre `page` (MIN-275) est l'une des deux moitiés d'un
+      // rétrolien : l'attacher ou la retirer change le « Cité par » de la page
+      // visée, chez qui la lit en ce moment (MIN-279).
+      const pageId = pageIdOf(change);
+      return pageId ? [active(["page-backlinks", pageId])] : [];
+    }
+    // L'autre moitié du rétrolien : la table DÉRIVÉE des mentions (MIN-279).
+    // Elle est réécrite après la réponse, donc l'écho arrive un instant après
+    // l'écriture du ticket qui cite — c'est exactement ce que le pont sert à
+    // rattraper, et c'est ce qui fait apparaître la ligne sans rechargement.
+    case "page_links": {
+      const record = change.record ?? change.old_record;
+      const pageId = typeof record?.page_id === "string" ? record.page_id : null;
+      return pageId ? [active(["page-backlinks", pageId])] : [];
     }
     // Runs de l'agent de code : le spinner « Numo travaille » de la barre
     // latérale, la liste de la page Agents et le compteur de PR. Ces caches ne
@@ -493,6 +507,10 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   // un panneau resté ouvert pendant une coupure doit rattraper les gestes qu'il
   // n'a pas vus passer.
   ["page-events"],
+  // Les rétroliens d'une page (MIN-279), en préfixe pour la même raison : ils
+  // naissent d'écritures faites AILLEURS, donc d'événements qu'un onglet
+  // endormi n'a pas reçus.
+  ["page-backlinks"],
   // The aggregates this project feeds — missed events while offline would
   // otherwise leave the dashboard and /all stale until their staleTime.
   GLOBAL_BOARD_KEY,

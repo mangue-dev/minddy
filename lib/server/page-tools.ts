@@ -15,6 +15,12 @@ import {
   pageBodyToMarkdownServer,
 } from "@/lib/server/pages-projection";
 import { editTextPassage } from "@/lib/server/text-edit";
+import {
+  pageBacklinks,
+  type BacklinkQueryable,
+  type PageBacklink,
+} from "@/lib/server/page-backlinks";
+import { getProjectAccess } from "@/lib/server/project-access";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { getServiceClient } from "@/lib/supabase-service";
 import { displayName } from "@/lib/display-name";
@@ -150,6 +156,15 @@ export interface PageRead extends PageTreeEntry {
   version: number;
   /** Les sous-pages DIRECTES, pour descendre l'arbre sans un second appel. */
   subpages: Array<{ page_id: string; title: string; icon: string | null }>;
+  /**
+   * QUI s'appuie sur cette page (MIN-279) — tickets, objectifs et autres pages,
+   * par la ressource comme par la mention.
+   *
+   * C'est ce qui manque le plus à un agent qui ouvre une spec : sans ça, « que
+   * casse-t-on en changeant cette décision ? » se répond en fouillant tout le
+   * projet, ou ne se répond pas. Le lien allait dans un seul sens.
+   */
+  backlinks: PageBacklink[];
 }
 
 /** L'écriture, telle qu'un agent la relit : de quoi confirmer, pas le document. */
@@ -195,11 +210,17 @@ export async function readPageForAgent({
   pageId,
   projectId,
   actorId,
+  withBacklinks = true,
 }: {
   pageId: string;
   /** Le projet attendu : une page d'un AUTRE projet accessible ne répond pas ici. */
   projectId?: string;
   actorId: string;
+  /** Coupé par les LECTURES INTERNES (l'ajout d'un bloc, la réécriture d'un
+      passage) : elles ne veulent que le markdown et la version, et payer les
+      requêtes de rétroliens à chaque édition serait payer pour une liste que
+      personne ne lit. */
+  withBacklinks?: boolean;
 }): Promise<PageToolResult<PageRead>> {
   const result = await getPage(pageId, actorId);
   if (!result.ok) return refuse(result.errorKey);
@@ -220,6 +241,22 @@ export async function readPageForAgent({
         .map((p) => ({ page_id: p.id, title: p.title, icon: p.icon }))
     : [];
 
+  // La CLÉ du projet, pour que les rétroliens de tickets se lisent « MIN-42 »
+  // et pas en UUID — c'est sous cette forme que l'agent les repassera aux autres
+  // outils. Client SERVICE pour la lecture elle-même : la garde d'accès vient
+  // d'être faite par `getPage`, et la RLS ne s'applique pas ici.
+  let backlinks: PageBacklink[] = [];
+  if (withBacklinks) {
+    const projectAccess = await getProjectAccess(actorId, page.project_id);
+    backlinks = await pageBacklinks(
+      getServiceClient() as unknown as BacklinkQueryable,
+      {
+        pageId: page.id,
+        projectKey: (projectAccess?.project.key as string | undefined) ?? "",
+      }
+    );
+  }
+
   return {
     ok: true,
     data: {
@@ -229,6 +266,7 @@ export async function readPageForAgent({
       markdown,
       version: page.version,
       subpages,
+      backlinks,
     },
   };
 }
@@ -392,6 +430,7 @@ export async function createPageForAgent({
   icon,
   markdown,
   parentPageId,
+  mcpKeyId,
 }: {
   projectId: string;
   actorId: string;
@@ -399,6 +438,10 @@ export async function createPageForAgent({
   icon?: string | null;
   markdown?: string;
   parentPageId?: string | null;
+  /** La clé MCP derrière l'appel, quand la surface en a une (MIN-278) : c'est
+      elle qui NOMME l'agent dans l'activité de la page et dans les citations
+      qu'il y pose. Absente sur le chat et sur l'agent de code, qui sont Numo. */
+  mcpKeyId?: string | null;
 }): Promise<PageToolResult<PageWritten>> {
   const input: Record<string, unknown> = {
     parent_id: parentPageId ?? null,
@@ -417,7 +460,13 @@ export async function createPageForAgent({
   if (icon !== undefined) input.icon = icon;
   if (input.title === undefined) input.title = "";
 
-  const result = await createPage({ projectId, actorId, kind: "agent", input });
+  const result = await createPage({
+    projectId,
+    actorId,
+    kind: "agent",
+    mcpKeyId,
+    input,
+  });
   if (!result.ok) return refuse(result.errorKey);
   return {
     ok: true,
@@ -447,6 +496,7 @@ export async function updatePageForAgent({
   markdown,
   version,
   parentPageId,
+  mcpKeyId,
 }: {
   pageId: string;
   projectId?: string;
@@ -456,6 +506,8 @@ export async function updatePageForAgent({
   markdown?: string;
   version?: number;
   parentPageId?: string | null;
+  /** Cf. `createPageForAgent`. */
+  mcpKeyId?: string | null;
 }): Promise<PageToolResult<PageWritten>> {
   if (
     !title?.trim() &&
@@ -489,7 +541,13 @@ export async function updatePageForAgent({
   if (icon !== undefined) input.icon = icon;
   if (parentPageId !== undefined) input.parent_id = parentPageId;
 
-  const result = await updatePage({ pageId, actorId, kind: "agent", input });
+  const result = await updatePage({
+    pageId,
+    actorId,
+    kind: "agent",
+    mcpKeyId,
+    input,
+  });
   if (!result.ok) return refuse(result.errorKey);
   return {
     ok: true,
@@ -515,11 +573,14 @@ export async function appendToPageForAgent({
   projectId,
   actorId,
   markdown,
+  mcpKeyId,
 }: {
   pageId: string;
   projectId?: string;
   actorId: string;
   markdown: string;
+  /** Cf. `createPageForAgent`. */
+  mcpKeyId?: string | null;
 }): Promise<PageToolResult<PageWritten>> {
   if (!markdown.trim()) {
     return {
@@ -529,7 +590,12 @@ export async function appendToPageForAgent({
     };
   }
 
-  const current = await readPageForAgent({ pageId, projectId, actorId });
+  const current = await readPageForAgent({
+    pageId,
+    projectId,
+    actorId,
+    withBacklinks: false,
+  });
   if (!current.ok) return current;
 
   const body = current.data.markdown.trim();
@@ -540,6 +606,7 @@ export async function appendToPageForAgent({
     actorId,
     markdown: next,
     version: current.data.version,
+    mcpKeyId,
   });
 }
 
@@ -552,6 +619,7 @@ export async function editPageTextForAgent({
   newString,
   replaceAll = false,
   tools,
+  mcpKeyId,
 }: {
   pageId: string;
   projectId?: string;
@@ -562,10 +630,17 @@ export async function editPageTextForAgent({
   /** Les noms que porte la surface appelante, pour que les refus renvoient vers
       des tools qui existent chez elle (cf. IssueTextTools). */
   tools: { read: string; replaceWhole: string };
+  /** Cf. `createPageForAgent`. */
+  mcpKeyId?: string | null;
 }): Promise<
   PageToolResult<PageWritten & { diff: string; additions: number; deletions: number }>
 > {
-  const current = await readPageForAgent({ pageId, projectId, actorId });
+  const current = await readPageForAgent({
+    pageId,
+    projectId,
+    actorId,
+    withBacklinks: false,
+  });
   if (!current.ok) return current;
 
   const edit = editTextPassage({
@@ -585,6 +660,7 @@ export async function editPageTextForAgent({
     actorId,
     markdown: edit.content,
     version: current.data.version,
+    mcpKeyId,
   });
   if (!written.ok) return written;
   return {
@@ -605,11 +681,13 @@ async function writeBody({
   actorId,
   markdown,
   version,
+  mcpKeyId,
 }: {
   pageId: string;
   actorId: string;
   markdown: string;
   version: number;
+  mcpKeyId?: string | null;
 }): Promise<PageToolResult<PageWritten>> {
   if (markdown.length > MAX_PAGE_MARKDOWN) {
     return {
@@ -625,6 +703,7 @@ async function writeBody({
     pageId,
     actorId,
     kind: "agent",
+    mcpKeyId,
     input: { content, version },
   });
   if (!result.ok) return refuse(result.errorKey);

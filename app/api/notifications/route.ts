@@ -180,7 +180,10 @@ export async function GET(request: NextRequest) {
     // A Numo comment is stored under the triggering user's author_id (the row
     // belongs to them, the words don't) — the inbox names Numo, like the
     // timeline does, otherwise the requester reads "you commented".
-    const fromNumo = !!comment?.via_assistant;
+    // La LIGNE peut le dire elle-même depuis MIN-278 : une citation posée par
+    // Numo dans une page n'a pas de commentaire derrière elle où lire le
+    // drapeau, et sans lui elle nommerait le compte qui a permis le geste.
+    const fromNumo = !!n.via_assistant || !!comment?.via_assistant;
     const viaMcp = !fromNumo && (!!n.via_mcp || !!comment?.via_mcp);
     const keyActor = viaMcp
       ? keyActors.get((comment?.api_key_id ?? n.api_key_id) as string)

@@ -34,6 +34,12 @@ export async function notifyPageMentions(
     doc: unknown;
     /** Celui d'avant, à la modification. Absent = création. */
     previousDoc?: unknown;
+    /** L'écriture est un geste d'AGENT : la ligne nomme alors l'agent et non
+        le compte qui l'a permis (cf. `actorLabel` plus bas). */
+    viaAssistant?: boolean;
+    /** La clé MCP derrière l'écriture, quand elle vient de là : c'est SON agent
+        que l'inbox nomme — « Claude Code (mcp) », pas « Numo ». */
+    mcpKeyId?: string | null;
   },
 ): Promise<void> {
   // Le raccourci d'`notifyDescriptionMentions`, et il compte plus encore ici :
@@ -60,6 +66,16 @@ export async function notifyPageMentions(
   });
   if (mentions.length === 0) return;
 
+  // QUI a cité, tel que la ligne le dira. `actor_id` reste le compte sous
+  // lequel l'écriture est passée — il faut bien un id —, mais quand le geste est
+  // celui de l'agent c'est l'AGENT que l'inbox nomme : la clé MCP quand il y en
+  // a une (« Claude Code (mcp) »), Numo sinon (le chat, l'agent de code). Sans
+  // ça, « Untel vous a mentionné » d'une phrase qu'Untel n'a jamais écrite.
+  const actorSource = params.mcpKeyId
+    ? { via_mcp: true, api_key_id: params.mcpKeyId }
+    : params.viaAssistant
+      ? { via_assistant: true }
+      : {};
   const rows: NotificationRow[] = mentions.map((mention) => ({
     user_id: mention.userId,
     project_id: params.projectId,
@@ -68,6 +84,7 @@ export async function notifyPageMentions(
     page_id: params.pageId,
     block_id: mention.blockId,
     actor_id: params.actorId,
+    ...actorSource,
   }));
   await insertNotifications(service, rows);
 }

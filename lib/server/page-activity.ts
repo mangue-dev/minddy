@@ -70,9 +70,14 @@ export async function recordPageEvent(
     actorId: string | null;
     kind: PageWriteKind;
     type: PageEventType;
+    /** La clé MCP derrière le geste, quand il vient de là : la ligne nomme alors
+        l'agent de la clé — « Claude Code (mcp) » —, exactement comme la timeline
+        d'un ticket écrit par le même agent. `via_assistant` prend le relais
+        sinon, et la ligne dit « Numo ». */
+    mcpKeyId?: string | null;
   },
 ): Promise<void> {
-  const { pageId, actorId, kind, type } = params;
+  const { pageId, actorId, kind, type, mcpKeyId } = params;
 
   if (COALESCED.includes(type)) {
     const { data } = await service
@@ -96,7 +101,11 @@ export async function recordPageEvent(
       actor_id: actorId,
       type,
       field: kind,
-      via_assistant: kind === "agent",
+      // Les deux ne se cumulent PAS : la timeline teste `via_assistant` AVANT
+      // `via_mcp` (components/issue-timeline.tsx), donc les porter tous les deux
+      // ferait dire « Numo » d'un geste dont on connaît l'agent par son nom.
+      via_assistant: kind === "agent" && !mcpKeyId,
+      ...(mcpKeyId ? { via_mcp: true, api_key_id: mcpKeyId } : {}),
     },
   ]);
 }

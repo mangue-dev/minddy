@@ -265,6 +265,11 @@ export function buildPushPayload(
   } else if (row.via_mcp) {
     const keyActor = row.api_key_id ? ctx.apiKeyActors.get(row.api_key_id) : null;
     actor = mcpActorLabel(keyActor?.agent, keyActor?.name, tTimeline("mcpFallback"));
+  } else if (row.via_assistant) {
+    // Notre agent hors MCP (MIN-278) : le chat, l'agent de code. Le même nom que
+    // l'inbox lui donne — sans quoi la bannière et la ligne diraient deux
+    // acteurs différents du même geste.
+    actor = "Numo";
   } else {
     actor = ctx.actorNames.get(row.actor_id ?? "")?.trim() || t("someone");
   }

@@ -8,6 +8,7 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { removeStorageObjects } from "@/lib/server/attachments";
 import { restorePage, trashPage, type PageErrorKey } from "@/lib/server/pages";
+import type { PageWriteKind } from "@/lib/pages";
 
 /**
  * La corbeille (MIN-133).
@@ -180,14 +181,18 @@ function toTrashResult(result: {
 export async function softDeleteItem(
   type: TrashType,
   id: string,
-  actorId: string
+  actorId: string,
+  /** La NATURE du geste (MIN-278), qui ne sert qu'aux pages : elles sont les
+      seules à porter une ligne d'activité, et sans ce mot celle-ci nommerait
+      l'humain d'une corbeille demandée à Numo. */
+  kind: PageWriteKind = "human"
 ): Promise<TrashResult> {
   const service = getServiceClient();
 
   // Une PAGE emporte ses sous-pages (MIN-266) : l'opération n'est pas un update
   // d'une ligne mais d'un sous-arbre, et elle porte son propre contrôle d'accès.
   if (type === "page") {
-    const result = await trashPage(id, actorId);
+    const result = await trashPage(id, actorId, kind);
     return result.ok ? { ok: true } : toTrashResult(result);
   }
 
@@ -438,14 +443,17 @@ async function resolveActors(
 export async function restoreItem(
   type: TrashType,
   id: string,
-  actorId: string
+  actorId: string,
+  /** Cf. `softDeleteItem` : la nature du geste, pour la ligne d'activité de la
+      page restaurée. */
+  kind: PageWriteKind = "human"
 ): Promise<TrashResult> {
   const service = getServiceClient();
 
   // Une PAGE revient avec tout ce qui est parti avec elle, et remonte à la
   // racine si son parent est encore corbeillé (MIN-266).
   if (type === "page") {
-    const result = await restorePage(id, actorId);
+    const result = await restorePage(id, actorId, kind);
     return result.ok ? { ok: true } : toTrashResult(result);
   }
 

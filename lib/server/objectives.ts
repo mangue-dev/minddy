@@ -6,6 +6,7 @@ import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
 import { isDateOrNull } from "@/lib/issue-validation";
 import { isValidColor } from "@/lib/category-colors";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
+import { queuePageLinks } from "@/lib/server/page-links";
 import {
   copyResourcesToProject,
   insertAttachments,
@@ -167,6 +168,13 @@ export async function createObjective({
     mcpKeyId,
   });
 
+  // Et les pages qu'elle cite (MIN-279).
+  queuePageLinks(
+    service,
+    { kind: "objective", id: data.id as string, projectId },
+    data.description as string | null
+  );
+
   return { ok: true, objective: data };
 }
 
@@ -287,6 +295,16 @@ export async function updateObjective({
       objectiveId,
       mcpKeyId,
     });
+    // Les pages citées, réécrites en entier — cf. `updateIssueFields`.
+    queuePageLinks(
+      service,
+      {
+        kind: "objective",
+        id: objectiveId,
+        projectId: objective.project_id as string,
+      },
+      updates.description as string | null
+    );
   }
 
   return { ok: true, objective: data };

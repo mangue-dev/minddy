@@ -89,6 +89,29 @@ describe("recordPageEvent", () => {
     ]);
   });
 
+  it("nomme l'agent de la CLÉ quand l'écriture vient du MCP", async () => {
+    const { service } = stubService([]);
+    await recordPageEvent(service, {
+      pageId: PAGE,
+      actorId: ACTOR,
+      kind: "agent",
+      type: "page_updated",
+      mcpKeyId: "key-1",
+    });
+    // Les deux drapeaux ne se cumulent pas : la timeline teste `via_assistant`
+    // AVANT `via_mcp`, donc les porter ensemble ferait dire « Numo » d'un geste
+    // dont on connaît l'agent par son nom.
+    expect(H.insertEvents.mock.calls[0][1][0]).toEqual({
+      page_id: PAGE,
+      actor_id: ACTOR,
+      type: "page_updated",
+      field: "agent",
+      via_assistant: false,
+      via_mcp: true,
+      api_key_id: "key-1",
+    });
+  });
+
   it("n'écrit RIEN quand la même personne vient de modifier la page", async () => {
     const { service, filters } = stubService([{ id: "existing" }]);
     await recordPageEvent(service, {

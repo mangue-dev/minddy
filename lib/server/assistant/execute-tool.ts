@@ -2228,10 +2228,14 @@ async function executeTrashTool(
     );
   }
 
+  // `kind: "agent"` (MIN-278) : le geste tourne sous l'id du compte qui l'a
+  // permis, mais c'est Numo qui l'a fait. Sans ce mot, l'activité d'une page
+  // corbeillée par l'agent nommerait l'humain — la fausse attribution que la
+  // règle d'identité interdit, et que l'écriture de page évite déjà.
   const result =
     toolName === "move_to_trash"
-      ? await softDeleteItem(type, id, ctx.userId)
-      : await restoreItem(type, id, ctx.userId);
+      ? await softDeleteItem(type, id, ctx.userId, "agent")
+      : await restoreItem(type, id, ctx.userId, "agent");
   if (!result.ok) {
     return toolError(TRASH_ERROR_MESSAGES[result.errorKey] ?? result.errorKey);
   }

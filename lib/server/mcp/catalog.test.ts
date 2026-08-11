@@ -392,6 +392,12 @@ describe("catalogue MCP — les pages", () => {
     );
   });
 
+  it("annonce les rétroliens là où on lit une page", () => {
+    // MIN-279 : un agent qui ouvre une spec doit voir ce qui en dépend sans
+    // avoir à le chercher — et il ne le cherchera que s'il sait que c'est là.
+    expect(tool("minddy_get_page").description).toMatch(/backlink/i);
+  });
+
   it("dit par où commencer, et le dit dans le mode d'emploi du serveur", () => {
     expect(tool("minddy_list_pages").description).toContain("minddy_get_page");
     expect(tool("minddy_get_page").description).toContain("minddy_edit_page_text");

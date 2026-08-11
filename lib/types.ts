@@ -757,6 +757,29 @@ export interface PageSearchHit {
   rank: number;
 }
 
+/**
+ * Ce qui CITE une page (MIN-279) — une ligne du panneau « Cité par ».
+ *
+ * Une seule forme pour les trois genres de source, et pour les deux ORIGINES :
+ * la ressource de genre `page` (MIN-275) et la mention dans un texte. Le panneau
+ * ne les distingue pas — « qui s'appuie sur cette page ? » est une question ;
+ * savoir si la réponse passe par une pilule ou par une phrase n'en est pas une.
+ */
+export interface PageBacklink {
+  kind: "issue" | "objective" | "page";
+  id: string;
+  /** « MIN-42 » pour un ticket ; `null` pour un objectif ou une page. */
+  identifier: string | null;
+  /** Le titre d'un ticket ou d'une page, le nom d'un objectif. */
+  title: string;
+  /** L'émoji d'une page ; `null` ailleurs. */
+  icon: string | null;
+  /** La couleur d'un objectif — elle voyage avec lui partout. */
+  color: string | null;
+  /** Quand la citation a été posée : l'ordre à l'intérieur d'un genre. */
+  at: string;
+}
+
 export interface SearchIndexResponse {
   issues: SearchIndexIssue[];
   objectives: SearchIndexObjective[];

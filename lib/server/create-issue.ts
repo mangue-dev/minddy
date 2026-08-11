@@ -23,6 +23,7 @@ import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { runSmartFill } from "@/lib/server/smart-fill";
 import { insertNotifications } from "@/lib/server/notifications";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
+import { queuePageLinks } from "@/lib/server/page-links";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import {
   applySmartAssign,
@@ -568,6 +569,15 @@ export async function createIssueForProject({
       issueId: data.id as string,
       mcpKeyId,
     });
+
+    // Les PAGES citées par cette description (MIN-279) : le ticket qui naît en
+    // s'appuyant sur une spec doit apparaître dans le « Cité par » de cette
+    // spec, sans attendre sa première modification.
+    queuePageLinks(
+      service,
+      { kind: "issue", id: data.id as string, projectId },
+      data.description as string | null
+    );
   };
   const deferSideEffects = () =>
     runSideEffects().catch((e) =>

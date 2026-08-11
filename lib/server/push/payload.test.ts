@@ -39,6 +39,8 @@ const ALL_TYPES: readonly NotificationType[] = [
   "automation_paused",
   "automation_stopped",
   "routine_done",
+  "page_mention",
+  "page_agent_edit",
 ];
 
 function ctxWithIssue(actorName = "Alice"): PushContext {
@@ -113,6 +115,45 @@ describe("buildPushPayload", () => {
     );
     expect(mcp!.body).toContain("Claude Code");
     expect(mcp!.body).not.toContain(fr.Inbox.someone);
+  });
+
+  it("nomme Numo d'une citation posée par l'agent dans une page", () => {
+    // MIN-278 : le geste est passé sous le compte qui l'a permis, mais c'est
+    // l'agent qui a écrit la phrase. Sans ce drapeau, la bannière annoncerait à
+    // Bob que Clément l'a mentionné — ce que Clément n'a pas fait.
+    const ctx = ctxWithIssue();
+    ctx.pages.set("pg", "Décisions produit");
+
+    const numo = buildPushPayload(
+      ctx,
+      issueRow("page_mention", {
+        issue_id: null,
+        page_id: "pg",
+        block_id: "b2",
+        via_assistant: true,
+      }),
+      "fr"
+    );
+    expect(numo).toEqual({
+      title: "Décisions produit",
+      body: fr.Inbox.linePageMention.replace("{actor}", "Numo"),
+      url: `/projects/${PROJECT}/pages/pg#b2`,
+      tag: `/projects/${PROJECT}/pages/pg#b2`,
+    });
+
+    // Par le MCP, on connaît son NOM : c'est lui qui s'affiche, pas « Numo ».
+    ctx.apiKeyActors.set("k1", { name: "Claude Code (mcp)", agent: "claude" });
+    const mcp = buildPushPayload(
+      ctx,
+      issueRow("page_mention", {
+        issue_id: null,
+        page_id: "pg",
+        via_mcp: true,
+        api_key_id: "k1",
+      }),
+      "fr"
+    );
+    expect(mcp!.body).toContain("Claude Code");
   });
 
   it("suit la cible : objectif, retour de board, pull request, ticket", () => {

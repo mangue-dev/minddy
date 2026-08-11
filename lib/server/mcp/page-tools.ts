@@ -179,7 +179,10 @@ export function registerPageTools(server: McpServer): void {
         "It also carries WHO wrote last (last_edited_by, last_edited_kind: " +
         "'human' or 'agent') and when (updated_at): a human edit since your last " +
         "pass is text someone owns — edit around it rather than replacing the " +
-        "whole body.",
+        "whole body. And it carries BACKLINKS: the issues, objectives and pages " +
+        "that cite this one, whether they attached it as a resource or mention " +
+        "it in their text. Read them before changing a decision written here — " +
+        "they are what depends on it, and nothing else in the API will tell you.",
       inputSchema: { project_id: PROJECT_ID, page_id: PAGE_ID },
       annotations: READ_ONLY,
     },
@@ -251,6 +254,10 @@ export function registerPageTools(server: McpServer): void {
         icon: args.icon,
         markdown: args.markdown,
         parentPageId: args.parent_page_id ?? null,
+        // La clé qui écrit NOMME l'agent (MIN-278) : l'activité de la page et
+        // les citations qu'il y pose disent « Claude Code (mcp) », pas le nom du
+        // porteur de la clé — la même règle que la timeline d'un ticket.
+        mcpKeyId: scope.keyId,
       });
       if (!result.ok) return refusal(result);
       return written(result.data);
@@ -312,6 +319,7 @@ export function registerPageTools(server: McpServer): void {
         icon: args.icon,
         markdown: args.markdown,
         version: args.version,
+        mcpKeyId: scope.keyId,
       });
       if (!result.ok) return refusal(result);
       return written(result.data);
@@ -348,6 +356,7 @@ export function registerPageTools(server: McpServer): void {
         projectId: scope.access.project.id,
         actorId: scope.userId,
         markdown: args.markdown,
+        mcpKeyId: scope.keyId,
       });
       if (!result.ok) return refusal(result);
       return written(result.data);
@@ -404,6 +413,7 @@ export function registerPageTools(server: McpServer): void {
           read: "minddy_get_page",
           replaceWhole: "minddy_update_page { markdown }",
         },
+        mcpKeyId: scope.keyId,
       });
       if (!result.ok) return refusal(result);
       return written(trimDiff(result.data));

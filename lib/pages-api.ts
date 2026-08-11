@@ -1,7 +1,7 @@
 "use client";
 
 import type { Page, PageVersion } from "./pages";
-import type { IssueEvent } from "./types";
+import type { IssueEvent, PageBacklink } from "./types";
 
 /**
  * Le client HTTP des pages (MIN-266) — de quoi lire et écrire une page depuis
@@ -323,6 +323,17 @@ export async function restorePageVersionApi(
  * permet de les rendre avec le composant d'activité existant plutôt qu'un
  * second, à tenir en phase avec le premier.
  */
+/** Qui cite cette page (MIN-279) — ressources ET mentions, fondues. */
+export async function fetchPageBacklinksApi(
+  projectId: string,
+  pageId: string
+): Promise<PageBacklink[]> {
+  return json(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}/backlinks`),
+    "Request failed"
+  );
+}
+
 export async function fetchPageEventsApi(
   projectId: string,
   pageId: string

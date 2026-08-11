@@ -1682,7 +1682,8 @@
     "someone": "Someone",
     "historyTabVersions": "Versions",
     "historyTabActivity": "Activity",
-    "activityLoadFailed": "Could not load the activity."
+    "activityLoadFailed": "Could not load the activity.",
+    "backlinksTitle": "{count, plural, one {Cited by # item} other {Cited by # items}}"
   },
   "Picker": {
     "createNamed": "Create “{name}”",

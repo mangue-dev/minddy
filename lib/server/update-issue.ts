@@ -24,6 +24,7 @@ import {
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import { insertNotifications } from "@/lib/server/notifications";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
+import { queuePageLinks } from "@/lib/server/page-links";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import {
   applySmartAssign,
@@ -496,6 +497,19 @@ export async function updateIssueFields({
         issueId,
         mcpKeyId,
       });
+      // Et les PAGES qu'elle cite (MIN-279). Pas de diff ici, contrairement aux
+      // mentions de personnes : les liens ne préviennent personne, ils décrivent
+      // un état — on réécrit donc ce que la description dit MAINTENANT, ce qui
+      // est aussi la seule façon de faire disparaître une citation retirée.
+      queuePageLinks(
+        service,
+        {
+          kind: "issue",
+          id: issueId,
+          projectId: before.project_id as string,
+        },
+        updates.description as string | null
+      );
     }
   };
   const deferSideEffects = () =>

@@ -221,6 +221,7 @@ const announce = vi.hoisted(() => ({
         actorId: string | null;
         kind: "human" | "agent";
         type: string;
+        mcpKeyId?: string | null;
       }
     ) => Promise<void>
   >(async () => {}),
@@ -239,6 +240,8 @@ const announce = vi.hoisted(() => ({
         actorId: string | null;
         doc: unknown;
         previousDoc?: unknown;
+        viaAssistant?: boolean;
+        mcpKeyId?: string | null;
       }
     ) => Promise<void>
   >(async () => {}),
@@ -1352,6 +1355,23 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
     expect(events()[1]).toMatchObject({ pageId: parent, type: "page_restored" });
   });
 
+  it("garde la NATURE du geste quand c'est l'agent qui corbeille ou restaure", async () => {
+    // La corbeille est ouverte à Numo (`move_to_trash`, type `page`). Sans le
+    // mot « agent », la ligne dirait « Clément a mis la page à la corbeille »
+    // d'un geste que Clément n'a pas fait — la fausse attribution que le reste
+    // du ticket évite déjà sur les écritures.
+    const id = await create("Guide");
+    announce.recordPageEvent.mockClear();
+
+    await trashPage(id, ACTOR, "agent");
+    await settled();
+    expect(events()[0]).toMatchObject({ type: "page_trashed", kind: "agent" });
+
+    await restorePage(id, ACTOR, "agent");
+    await vi.waitFor(() => expect(events()).toHaveLength(2));
+    expect(events()[1]).toMatchObject({ type: "page_restored", kind: "agent" });
+  });
+
   it("ne dit RIEN d'un rangement — épingler, glisser dans l'arbre", async () => {
     const id = await create("Guide");
     const parent = await create("Dossier");
@@ -1386,6 +1406,32 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
       pageId: id,
       actorId: ACTOR,
     });
+  });
+
+  it("porte l'identité de l'AGENT jusqu'aux citations et à l'activité", async () => {
+    // Le fond du problème (MIN-278) : l'écriture d'un agent passe sous l'id du
+    // compte qui l'a permise. Sans ces deux mots, une citation posée par Numo se
+    // lirait « Clément vous a mentionné » — d'une phrase que Clément n'a pas
+    // écrite. Et par le MCP, on connaît le nom de l'agent : c'est lui qui doit
+    // descendre jusqu'à la ligne, comme sur la timeline d'un ticket.
+    const id = await create("Guide");
+    announce.notifyPageMentions.mockClear();
+    announce.recordPageEvent.mockClear();
+
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      kind: "agent",
+      mcpKeyId: "key-1",
+      input: { content: doc("à @Nom de user-2 de trancher") },
+    });
+
+    await vi.waitFor(() => expect(announce.notifyPageMentions).toHaveBeenCalled());
+    expect(announce.notifyPageMentions.mock.calls[0][1]).toMatchObject({
+      viaAssistant: true,
+      mcpKeyId: "key-1",
+    });
+    expect(events()[0]).toMatchObject({ type: "page_updated", mcpKeyId: "key-1" });
   });
 
   it("ne prévient personne quand l'écriture est humaine", async () => {

@@ -17,6 +17,7 @@ import {
   type PageEventType,
 } from "@/lib/server/page-activity";
 import { notifyPageMentions } from "@/lib/server/page-mentions";
+import { queuePageBodyLinks } from "@/lib/server/page-links";
 import { appendSubpage, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
 import { bodyFromMarkdownServer } from "@/lib/server/pages-projection";
 import {
@@ -68,6 +69,14 @@ import type { PageDocJSON } from "@/lib/pages-merge";
  * page qui change sans que rien ne se passe, ce qui était l'état d'avant le
  * ticket. Même test structurel, avec une seule exception nommée — le miroir
  * `syncParentBody`, qui n'est jamais un geste en soi.
+ *
+ * Depuis MIN-279, une QUATRIÈME, et c'est la même famille une fois de plus :
+ * **toute écriture de `content` rejoue les liens de la page**
+ * (`queuePageBodyLinks`), c'est-à-dire les rétroliens que son corps FABRIQUE
+ * chez les pages qu'il cite. L'oublier ne casse rien de visible ici — ça laisse
+ * juste une AUTRE page ignorer qu'elle est citée, ce qu'on ne découvre jamais
+ * depuis celle qu'on est en train d'écrire. `page-links-paths.test.ts` le refuse
+ * avec la même règle : `queueSearchText` et `queuePageBodyLinks` vont ensemble.
  */
 
 export type PageResult<T> =
@@ -292,6 +301,7 @@ function announcePageWrite({
   previous,
   actorId,
   kind,
+  mcpKeyId,
   event,
   scanMentions = true,
 }: {
@@ -302,6 +312,10 @@ function announcePageWrite({
   previous: Page | null;
   actorId: string;
   kind: PageWriteKind;
+  /** La clé MCP derrière l'écriture, quand elle vient de là. C'est ce qui
+      distingue les deux agents que `kind: "agent"` recouvre : celui d'une clé,
+      qui a un nom (« Claude Code (mcp) »), et le nôtre, qui s'appelle Numo. */
+  mcpKeyId?: string | null;
   event: PageEventType;
   /** La DUPLICATION le coupe : recopier un texte n'est pas citer quelqu'un, et
       copier une page repingerait tous les noms qu'elle porte. */
@@ -313,6 +327,7 @@ function announcePageWrite({
       actorId,
       kind,
       type: event,
+      mcpKeyId,
     });
 
     // Les mentions ne se lisent que sur un CORPS. Un renommage ne cite
@@ -324,6 +339,11 @@ function announcePageWrite({
         actorId,
         doc: page.content,
         previousDoc: previous?.content ?? undefined,
+        // Citer quelqu'un depuis un texte écrit par l'agent reste une citation
+        // de l'AGENT : la ligne le nomme, lui, et pas le compte sous lequel il
+        // a écrit.
+        viaAssistant: kind === "agent",
+        mcpKeyId,
       });
     }
 
@@ -426,12 +446,16 @@ export async function createPage({
   projectId,
   actorId,
   kind = "human",
+  mcpKeyId,
   input,
 }: {
   projectId: string;
   actorId: string;
   /** La nature du geste (MIN-277) : « agent » sur les six outils d'écriture. */
   kind?: PageWriteKind;
+  /** La clé MCP derrière le geste (MIN-278) : elle NOMME l'agent dans l'activité
+      et dans les citations. Absente sur nos propres agents, qui sont Numo. */
+  mcpKeyId?: string | null;
   input: Record<string, unknown>;
 }): Promise<PageResult<Page>> {
   if (!(await access(actorId, projectId))) {
@@ -495,6 +519,7 @@ export async function createPage({
   }
   const page = data as unknown as Page;
   queueSearchText(service, [page.id]);
+  queuePageBodyLinks(service, [page.id]);
   // Une création ne recouvre rien : l'appel ne pose que la règle (cf.
   // `stampPageWrite`), il n'écrit aucune ligne d'historique.
   stampPageWrite({ service, previous: null, actorId, kind });
@@ -506,6 +531,7 @@ export async function createPage({
     previous: null,
     actorId,
     kind,
+    mcpKeyId,
     event: "page_created",
   });
   return { ok: true, page };
@@ -608,6 +634,10 @@ export async function duplicatePage(
     service,
     (data as unknown as Page[]).map((row) => row.id)
   );
+  queuePageBodyLinks(
+    service,
+    (data as unknown as Page[]).map((row) => row.id)
+  );
   // Des pages NEUVES : comme la création, elles ne recouvrent rien.
   stampPageWrite({ service, previous: null, actorId, kind });
 
@@ -647,6 +677,7 @@ export async function updatePage({
   pageId,
   actorId,
   kind = "human",
+  mcpKeyId,
   alwaysArchive = false,
   input,
 }: {
@@ -654,6 +685,8 @@ export async function updatePage({
   actorId: string;
   /** La nature du geste (MIN-277) : « agent » sur les six outils d'écriture. */
   kind?: PageWriteKind;
+  /** La clé MCP derrière le geste (MIN-278) : cf. `createPage`. */
+  mcpKeyId?: string | null;
   /** Archive l'état recouvert hors coalescence — la restauration d'une version
       (cf. `restorePageVersion`), seul geste qui l'exige. */
   alwaysArchive?: boolean;
@@ -787,6 +820,7 @@ export async function updatePage({
   // corps a bougé — un renommage n'a aucun texte à rejouer.
   if (patch.content !== undefined) {
     queueSearchText(service, [pageId]);
+    queuePageBodyLinks(service, [pageId]);
     // L'état d'AVANT, celui qu'on vient de recouvrir : la ligne lue en tête de
     // cette fonction. Une écriture qui porte sa `version` (l'éditeur, les outils
     // d'agent) garantit en plus que c'était bien l'état EN BASE à l'instant de
@@ -804,6 +838,7 @@ export async function updatePage({
       previous: page,
       actorId,
       kind,
+      mcpKeyId,
       event: "page_updated",
     });
   }
@@ -870,6 +905,7 @@ async function syncParentBody(
   // indexé doit suivre — même quand personne n'a le parent ouvert.
   else {
     queueSearchText(service, [parentId]);
+    queuePageBodyLinks(service, [parentId]);
     // Et son état d'avant est archivé comme n'importe quel autre : le corps du
     // parent perd un bloc sans que personne l'ait ouvert, c'est précisément une
     // écriture qu'on peut vouloir remonter.
@@ -901,7 +937,11 @@ async function syncParentBody(
  */
 export async function trashPage(
   pageId: string,
-  actorId: string
+  actorId: string,
+  /** La nature du geste (MIN-278) : « agent » quand c'est Numo qui corbeille —
+      la corbeille lui est ouverte (`move_to_trash`, type `page`), et sans ça la
+      ligne d'activité nommerait l'humain d'un geste qu'il n'a pas fait. */
+  kind: PageWriteKind = "human"
 ): Promise<{ ok: true; trashed: number } | { ok: false; status: number; errorKey: PageErrorKey }> {
   const service = getServiceClient();
   const page = await loadPage(service, pageId);
@@ -977,7 +1017,7 @@ export async function trashPage(
     page,
     previous: null,
     actorId,
-    kind: "human",
+    kind,
     event: "page_trashed",
     scanMentions: false,
   });
@@ -1065,7 +1105,10 @@ export async function discardPage(
  */
 export async function restorePage(
   pageId: string,
-  actorId: string
+  actorId: string,
+  /** Comme la corbeille ci-dessus : restaurer est le geste inverse, et il
+      s'ouvre au même appelant. */
+  kind: PageWriteKind = "human"
 ): Promise<{ ok: true; restored: number } | { ok: false; status: number; errorKey: PageErrorKey }> {
   const service = getServiceClient();
   const page = await loadPage(service, pageId, { includeTrashed: true });
@@ -1132,7 +1175,7 @@ export async function restorePage(
     page,
     previous: null,
     actorId,
-    kind: "human",
+    kind,
     event: "page_restored",
     scanMentions: false,
   });

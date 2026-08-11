@@ -69,6 +69,7 @@ import { PageHistorySheet } from "@/components/pages/page-history";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
+import { PageBacklinks } from "@/components/pages/page-backlinks";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
@@ -755,6 +756,11 @@ function PageSurface({
             />
           </PageTaskSurface>
         </div>
+        {/* En pied du DOCUMENT, dans la même colonne que lui : « qui s'appuie
+            sur cette page ? » se demande quand on a fini de la lire, pas dans
+            un meuble qui prendrait de la largeur en permanence. Absent tant que
+            personne ne cite la page (MIN-279). */}
+        <PageBacklinks projectId={projectId} pageId={pageId} />
       </div>
       </div>
 
