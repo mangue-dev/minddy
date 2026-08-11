@@ -28,6 +28,19 @@ import type { JSONContent } from "@tiptap/core";
  * process, réutilisée par tous les appels. La détruire entre deux projections
  * coûterait le montage à chaque page lue, pour rien — le document, lui, est
  * jetable et créé par appel (cf. `pageEditor`).
+ *
+ * ⚠️ **jsdom est bloqué en 26.x, et ce n'est pas de la paresse de mise à jour.**
+ * La fonction Vercel tourne sur Node 24, mais lancé avec
+ * `--no-experimental-require-module` : l'interop `require()` d'un module ESM y
+ * est COUPÉE (relevé sur `process.execArgv`, en production). Or jsdom 27+ a fait
+ * passer des dépendances en ESM-only (`@exodus/bytes` via
+ * `html-encoding-sniffer@6`, `@csstools/css-calc` via `@asamuzakjp/css-color`) :
+ * le `require` interne de jsdom lève `ERR_REQUIRE_ESM`, et l'`import()`
+ * ci-dessous échoue en bloc. Ça n'a AUCUN symptôme en local — le loader de Vite
+ * et le Node du poste chargent très bien jsdom 30 — et ça casse en production
+ * toute écriture de page, sur les quatre surfaces à la fois.
+ * `lib/server/pages-projection-loadable.test.ts` rejoue la condition exacte :
+ * s'il tombe, c'est la version de jsdom qu'il faut redescendre, pas le test.
  */
 
 let installing: Promise<void> | null = null;
