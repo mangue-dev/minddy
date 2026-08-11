@@ -111,8 +111,12 @@ export function categoryOfNotificationType(
     // dans les pages ». La mention de page ne rejoint PAS « Mentions », qui
     // parle des tickets, ni l'écriture d'agent « Numo », qui parle des runs :
     // couper l'un pour l'autre serait couper deux fois trop.
+    // Le fil d'une page (MIN-282) rejoint les deux autres : c'est encore « ce
+    // qui bouge dans les pages ». Le mettre sous « Commentaires » aurait voulu
+    // dire qu'une bascule pensée pour les tickets décide du wiki.
     case "page_mention":
     case "page_agent_edit":
+    case "page_comment":
       return "page";
   }
 }

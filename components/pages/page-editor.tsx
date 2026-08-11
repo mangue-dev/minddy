@@ -53,6 +53,11 @@ import {
 } from "@/components/pages/block-placeholder";
 import { BlockGutter } from "@/components/pages/block-gutter";
 import { BlockFlash } from "@/components/pages/block-flash";
+import { BlockComments } from "@/components/pages/block-comments";
+import {
+  PageCommentBubble,
+  type PageCommentAnchor,
+} from "@/components/pages/page-comment-bubble";
 import { focusDocumentEnd } from "@/components/pages/block-actions";
 import { handleNodeLinkClick } from "@/components/editor-node-link";
 import {
@@ -164,6 +169,7 @@ export function PageEditor({
   onEditor,
   onSubpagesRemoved,
   onLeaveTop,
+  onComment,
   editable = true,
   className,
 }: {
@@ -210,6 +216,15 @@ export function PageEditor({
    * ligne d'au-dessus pour qui écrit (cf. title-bridge.ts).
    */
   onLeaveTop?: () => void;
+  /**
+   * COMMENTER un passage (MIN-282) : la bulle qui paraît sur une sélection de
+   * texte, et ce qu'elle rend — le bloc où ancrer, et l'extrait sélectionné.
+   *
+   * Optionnel comme `pages` et `uploads` : sans crochet, pas de bulle. C'est ce
+   * qu'il faut à l'aperçu d'une version de l'historique, qui est en lecture
+   * seule et où il n'y a rien à discuter.
+   */
+  onComment?: (anchor: PageCommentAnchor) => void;
   /**
    * LECTURE SEULE (MIN-277) : l'aperçu d'une version de l'historique.
    *
@@ -292,6 +307,10 @@ export function PageEditor({
         // sur l'élément : ProseMirror défait toute mutation du DOM qu'il n'a
         // pas faite (cf. block-flash.ts).
         BlockFlash,
+        // Le LISERÉ des blocs commentés (MIN-282). Une décoration elle aussi,
+        // et pour une raison de plus que le clignement : une mark serait du
+        // contenu, donc de la projection markdown (cf. block-comments.ts).
+        BlockComments,
         // Le passage vers le TITRE, en dernier et en priorité basse : il ne
         // prend ⌫ et ↑ que si personne d'autre n'en voulait (title-bridge.ts).
         TitleBridge.configure({ onLeaveTop: leaveTop }),
@@ -384,6 +403,33 @@ export function PageEditor({
     editor.storage.subpage.removed = onSubpagesRemoved ?? null;
   }, [editor, pages, onSubpagesRemoved]);
 
+  // Le menu « / » des deux blocs de MIN-280 : ils n'ont rien à convertir, donc
+  // rien à faire de la conversion — ce qu'ils demandent est une BOÎTE DE
+  // DIALOGUE, que le registre ne peut pas ouvrir lui-même (il est monté headless
+  // par la projection markdown). Même montage que les crochets de la sous-page,
+  // juste au-dessus : le bloc lit son `storage`, la surface le pose.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const pick = uploads
+      ? (accept: string) => {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.multiple = true;
+          if (accept) input.accept = accept;
+          input.onchange = () => {
+            const files = Array.from(input.files ?? []);
+            if (files.length > 0) uploadsRef.current?.addFiles(files);
+          };
+          // Le clic reste dans la tâche du geste utilisateur (la sélection dans
+          // le menu) : c'est la seule condition pour que le navigateur ouvre la
+          // boîte de dialogue.
+          input.click();
+        }
+      : null;
+    editor.storage.image.pick = pick;
+    editor.storage.pageFile.pick = pick;
+  }, [editor, uploads]);
+
   const body = (
     // Ni `relative` ni retrait ici, et c'est le point : la GOUTTIÈRE du chrome
     // (poignée + `+`) se place à gauche du bloc survolé, donc en dehors de la
@@ -393,6 +439,12 @@ export function PageEditor({
     // bord gauche et le corps a l'air imbriqué sous son titre.
     <div className={cn("page-editor", className)}>
       {editor && editable && <BlockGutter editor={editor} />}
+      {/* La bulle « Commenter » se place en coordonnées d'ÉCRAN : elle n'a
+          besoin d'aucun parent positionné, et n'en demande donc pas un à ce
+          conteneur, qui n'en a délibérément pas (cf. plus bas). */}
+      {editor && editable && onComment && (
+        <PageCommentBubble editor={editor} onComment={onComment} />
+      )}
       <EditorContent editor={editor} />
       {/* La RÉSERVE du bas : une dizaine de lignes de vide sous le dernier
           bloc, cliquables, qui rendent le curseur à la fin du document.

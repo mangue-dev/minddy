@@ -71,6 +71,8 @@ import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
 import { PageBacklinks } from "@/components/pages/page-backlinks";
+import { PageComments } from "@/components/pages/page-comments";
+import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
@@ -598,6 +600,16 @@ function PageSurface({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
 
+  /* ── Commenter un passage (MIN-282) ───────────────────────────────────── */
+  //
+  // La bulle de sélection rend le bloc et l'extrait ; le fil, en pied de
+  // document, ouvre son composeur dessus. L'état vit ICI parce qu'il relie deux
+  // enfants qui ne se connaissent pas — l'éditeur et le fil.
+  const [draftAnchor, setDraftAnchor] = useState<PageCommentAnchor | null>(null);
+  const onComment = useCallback((anchor: PageCommentAnchor) => {
+    setDraftAnchor(anchor);
+  }, []);
+
   /* ── L'ancre d'un bloc ───────────────────────────────────────────────── */
   /** Marge au-dessus du bloc visé par une ancre, une fois arrivé. */
   const ANCHOR_MARGIN = 96;
@@ -759,6 +771,7 @@ function PageSurface({
               onEditor={setEditor}
               onSubpagesRemoved={onSubpagesRemoved}
               onLeaveTop={focusTitleEnd}
+              onComment={onComment}
             />
           </PageTaskSurface>
         </div>
@@ -767,6 +780,20 @@ function PageSurface({
             un meuble qui prendrait de la largeur en permanence. Absent tant que
             personne ne cite la page (MIN-279). */}
         <PageBacklinks projectId={projectId} pageId={pageId} />
+        {/* Le FIL, à la suite du document (MIN-282) — la page était le seul
+            objet de minddy sur lequel on ne pouvait rien dire. Sous les
+            rétroliens : « qui s'appuie là-dessus ? » se lit d'un coup d'œil,
+            « qu'est-ce qui a été objecté ? » se lit et se répond. */}
+        <PageComments
+          projectId={projectId}
+          pageId={pageId}
+          editor={editor}
+          scrollRef={scrollRef}
+          members={members}
+          currentUserId={user?.id ?? null}
+          draftAnchor={draftAnchor}
+          onDraftAnchorDone={() => setDraftAnchor(null)}
+        />
       </div>
       </div>
 

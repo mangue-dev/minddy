@@ -1,6 +1,7 @@
 import { Node } from "@tiptap/core";
 import { Paperclip } from "lucide-react";
 import { pageFileIdFromSrc } from "@/lib/page-files";
+import type { PageFilePickStorage } from "@/components/pages/blocks/image";
 import type {
   MarkdownNode,
   MarkdownState,
@@ -42,6 +43,9 @@ declare module "@tiptap/core" {
         uploadId?: string | null;
       }) => ReturnType;
     };
+  }
+  interface Storage {
+    pageFile: PageFilePickStorage;
   }
 }
 
@@ -96,6 +100,11 @@ export const PageFile = Node.create({
     return ["div", { ...HTMLAttributes, "data-type": "pageFile" }];
   },
 
+  /** Cf. `storage.image.pick` : le sélecteur de fichier vient de la surface. */
+  addStorage() {
+    return { pick: null };
+  },
+
   addCommands() {
     return {
       insertPageFile:
@@ -128,6 +137,12 @@ export const fileBlock: PageBlock = {
     ],
   },
   turnInto: false,
+  // Cf. blocks/image.ts : `turnInto: false` oblige à porter son `insert`.
+  // `accept` vide — n'importe quel type, c'est tout le propos du bloc.
+  insert: (editor, range) => {
+    editor.chain().focus().deleteRange(range).run();
+    editor.storage.pageFile?.pick?.("");
+  },
   isActive: (editor) => editor.isActive("pageFile"),
   markdown: {
     sample: "[report.pdf](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/22222222-2222-4222-8222-222222222222)",

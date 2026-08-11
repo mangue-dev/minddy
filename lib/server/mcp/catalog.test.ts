@@ -320,7 +320,7 @@ describe("catalogue MCP — un objectif se lit et se commente", () => {
  * chemin par défaut, comme `minddy_update_issues` l'avait été pour les plans.
  */
 describe("catalogue MCP — les pages", () => {
-  it("expose les six outils, lectures annoncées sans effet de bord", () => {
+  it("expose les outils, lectures annoncées sans effet de bord", () => {
     for (const name of [
       "minddy_list_pages",
       "minddy_get_page",
@@ -328,6 +328,7 @@ describe("catalogue MCP — les pages", () => {
       "minddy_update_page",
       "minddy_append_to_page",
       "minddy_edit_page_text",
+      "minddy_add_page_comment",
     ]) {
       expect(tool(name)).toBeDefined();
     }
@@ -338,9 +339,38 @@ describe("catalogue MCP — les pages", () => {
       "minddy_update_page",
       "minddy_append_to_page",
       "minddy_edit_page_text",
+      // Commenter est une ÉCRITURE, même si elle ne touche pas au document :
+      // elle notifie des gens, et elle s'affiche sous leur page.
+      "minddy_add_page_comment",
     ]) {
       expect(tool(write).readOnly).toBe(false);
     }
+  });
+
+  it("dit où lire une objection, et par quoi y répondre", () => {
+    // MIN-282 : le corps dit ce qui a été décidé, les fils disent ce qui est
+    // contesté. Un agent qui réécrit sans les avoir lus tranche un débat que
+    // personne ne lui a demandé de trancher — encore faut-il qu'il sache que
+    // c'est là, et que répondre est un geste qu'il a.
+    expect(tool("minddy_get_page").description).toMatch(/open_threads/i);
+    expect(tool("minddy_get_page").description).toContain(
+      "minddy_add_page_comment"
+    );
+    for (const required of ["project_id", "page_id", "body"]) {
+      expect(param("minddy_add_page_comment", required).required).toBe(true);
+    }
+    for (const optional of ["block_id", "parent_comment_id"]) {
+      expect(param("minddy_add_page_comment", optional).required).toBe(false);
+    }
+    // L'ancre se REPREND, elle ne s'invente pas : les ids de blocs ne sont pas
+    // dans le markdown, et une ancre inventée fait un fil détaché aussitôt né.
+    expect(param("minddy_add_page_comment", "block_id").description).toContain(
+      "open_threads"
+    );
+    expect(tool("minddy_add_page_comment").description).toMatch(
+      /never invent a block_id/i
+    );
+    expect(MCP_SERVER_INSTRUCTIONS).toContain("minddy_add_page_comment");
   });
 
   it("met dans `required` ce qu'un petit modèle ne répondrait pas sinon", () => {

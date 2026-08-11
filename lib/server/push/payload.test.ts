@@ -41,7 +41,15 @@ const ALL_TYPES: readonly NotificationType[] = [
   "routine_done",
   "page_mention",
   "page_agent_edit",
+  "page_comment",
 ];
+
+/** Le tableau ci-dessus doit être EXHAUSTIF : un type ajouté au produit sans sa
+    phrase pousserait « Inbox.… » sur un écran verrouillé, et rien ici ne le
+    dirait si la liste était seulement « à jour à peu près ». */
+const _exhaustive: Record<NotificationType, true> = Object.fromEntries(
+  ALL_TYPES.map((type) => [type, true])
+) as Record<NotificationType, true>;
 
 function ctxWithIssue(actorName = "Alice"): PushContext {
   const ctx = emptyPushContext();

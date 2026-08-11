@@ -2,6 +2,9 @@
 
 import type { Page, PageVersion } from "./pages";
 import type { IssueEvent, PageBacklink } from "./types";
+import type { PageComment } from "./page-comments";
+import { trackEvent } from "./analytics";
+import { lengthBucket } from "./analytics-sanitize";
 
 /**
  * Le client HTTP des pages (MIN-266) — de quoi lire et écrire une page depuis
@@ -340,6 +343,112 @@ export async function fetchPageEventsApi(
 ): Promise<IssueEvent[]> {
   return json(
     await fetch(`/api/projects/${projectId}/pages/${pageId}/events`),
+    "Request failed"
+  );
+}
+
+/* ── Les COMMENTAIRES d'une page (MIN-282) ──────────────────────────────────
+   Le fil ENTIER, fils résolus compris : masquer les fils clos est une décision
+   d'affichage (lib/page-comments.ts), pas une requête de moins. */
+
+export async function fetchPageCommentsApi(
+  projectId: string,
+  pageId: string
+): Promise<PageComment[]> {
+  return json(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}/comments`),
+    "Request failed"
+  );
+}
+
+export async function addPageCommentApi(
+  projectId: string,
+  pageId: string,
+  input: {
+    body: string;
+    /** L'ancre : le bloc commenté. Absente = un commentaire sur la page. */
+    blockId?: string | null;
+    /** L'extrait sélectionné, figé avec le commentaire. */
+    quote?: string | null;
+    parentId?: string | null;
+    mentionedUserIds?: string[];
+  }
+): Promise<PageComment> {
+  // Que des métadonnées : la longueur en tranche, jamais le texte — la même
+  // règle que les trois autres fils (lib/comments-api.ts).
+  trackEvent("comment_added", {
+    target: "page",
+    length_bucket: lengthBucket(input.body),
+    is_reply: !!input.parentId,
+    mention_count: input.mentionedUserIds?.length ?? 0,
+    anchored: !!input.blockId,
+  });
+  return json(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        body: input.body,
+        block_id: input.blockId ?? null,
+        quote: input.quote ?? null,
+        parent_id: input.parentId ?? null,
+        mentioned_user_ids: input.mentionedUserIds ?? [],
+      }),
+    }),
+    "Request failed"
+  );
+}
+
+export async function updatePageCommentApi(
+  projectId: string,
+  pageId: string,
+  commentId: string,
+  body: string
+): Promise<PageComment> {
+  return json(
+    await fetch(
+      `/api/projects/${projectId}/pages/${pageId}/comments/${commentId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      }
+    ),
+    "Request failed"
+  );
+}
+
+export async function deletePageCommentApi(
+  projectId: string,
+  pageId: string,
+  commentId: string
+): Promise<void> {
+  await ok(
+    await fetch(
+      `/api/projects/${projectId}/pages/${pageId}/comments/${commentId}`,
+      { method: "DELETE" }
+    ),
+    "Request failed"
+  );
+  trackEvent("comment_deleted", { target: "page" });
+}
+
+/** Résoudre un fil, ou le rouvrir — le même verbe dans les deux sens. */
+export async function resolvePageThreadApi(
+  projectId: string,
+  pageId: string,
+  commentId: string,
+  resolved: boolean
+): Promise<PageComment> {
+  return json(
+    await fetch(
+      `/api/projects/${projectId}/pages/${pageId}/comments/${commentId}/resolve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolved }),
+      }
+    ),
     "Request failed"
   );
 }

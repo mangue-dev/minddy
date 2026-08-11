@@ -21,6 +21,11 @@ import {
   type PageBacklink,
 } from "@/lib/server/page-backlinks";
 import { getProjectAccess } from "@/lib/server/project-access";
+import {
+  addPageComment,
+  openPageThreadsForAgent,
+} from "@/lib/server/page-comments";
+import { pageBlockTexts } from "@/lib/pages-mentions";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { getServiceClient } from "@/lib/supabase-service";
 import { displayName } from "@/lib/display-name";
@@ -165,6 +170,27 @@ export interface PageRead extends PageTreeEntry {
    * projet, ou ne se répond pas. Le lien allait dans un seul sens.
    */
   backlinks: PageBacklink[];
+  /**
+   * Les fils de discussion OUVERTS de la page (MIN-282), les résolus exclus.
+   *
+   * C'est souvent là qu'est la vraie contrainte : une spec dit ce qui a été
+   * décidé, ses commentaires disent ce qui est contesté et n'a pas encore été
+   * réécrit. Un agent qui réécrit une page sans les avoir lus tranche sans le
+   * savoir un débat en cours.
+   *
+   * Un débat CLOS, lui, est du bruit pour qui vient écrire — d'où « ouverts ».
+   */
+  open_threads: PageThreadForAgent[];
+}
+
+/** Un fil, tel qu'un agent le lit : ce dont il parle, et ce qui s'y est dit. */
+export interface PageThreadForAgent {
+  /** L'extrait commenté, figé au moment du commentaire. Null = sur la page. */
+  quote: string | null;
+  /** L'ancre, à repasser à `minddy_add_page_comment` pour répondre au même
+      endroit. Null = un commentaire sur la page entière. */
+  block_id: string | null;
+  messages: { author: string; body: string; at: string }[];
 }
 
 /** L'écriture, telle qu'un agent la relit : de quoi confirmer, pas le document. */
@@ -246,6 +272,7 @@ export async function readPageForAgent({
   // outils. Client SERVICE pour la lecture elle-même : la garde d'accès vient
   // d'être faite par `getPage`, et la RLS ne s'applique pas ici.
   let backlinks: PageBacklink[] = [];
+  let openThreads: PageThreadForAgent[] = [];
   if (withBacklinks) {
     const projectAccess = await getProjectAccess(actorId, page.project_id);
     backlinks = await pageBacklinks(
@@ -255,6 +282,10 @@ export async function readPageForAgent({
         projectKey: (projectAccess?.project.key as string | undefined) ?? "",
       }
     );
+    // Les FILS OUVERTS (MIN-282), sous la même garde que les rétroliens : les
+    // deux répondent à « sur quoi ce texte engage-t-il ? », et les lectures
+    // internes (ajouter un bloc, corriger un passage) n'en veulent aucun.
+    openThreads = await readOpenThreads(page.id);
   }
 
   return {
@@ -267,7 +298,128 @@ export async function readPageForAgent({
       version: page.version,
       subpages,
       backlinks,
+      open_threads: openThreads,
     },
+  };
+}
+
+/**
+ * Les fils ouverts d'une page, auteurs NOMMÉS.
+ *
+ * Les noms sortent des comptes, comme partout ailleurs — jamais l'email brut
+ * (lib/display-name.ts) —, et une écriture d'agent se dit « minddy » : la règle
+ * d'identité vaut pour ce que lit un agent comme pour ce que lit un humain.
+ */
+async function readOpenThreads(pageId: string): Promise<PageThreadForAgent[]> {
+  const service = getServiceClient();
+  const raw = await openPageThreadsForAgent(service, pageId, (id) => id ?? "");
+  const ids = [
+    ...new Set(
+      raw.flatMap((thread) => thread.messages.map((m) => m.author)).filter(Boolean)
+    ),
+  ];
+  const users = ids.length ? await fetchAuthUsersById(service, ids) : new Map();
+  const name = (id: string) => {
+    const user = users.get(id);
+    return user ? displayName(toNamed(user), "") || SITE_NAME : SITE_NAME;
+  };
+  return raw.map((thread) => ({
+    ...thread,
+    messages: thread.messages.map((m) => ({ ...m, author: name(m.author) })),
+  }));
+}
+
+/** Les refus du noyau des commentaires, traduits dans le vocabulaire des outils
+    de page (codes stables, messages en anglais). */
+const COMMENT_REFUSALS: Record<
+  "commentEmpty" | "pageNotFound" | "commentNotFound" | "databaseError",
+  { ok: false; code: PageToolCode; message: string }
+> = {
+  commentEmpty: {
+    ok: false,
+    code: "invalid_params",
+    message: "A comment cannot be empty.",
+  },
+  pageNotFound: {
+    ok: false,
+    code: "page_not_found",
+    message: MESSAGES.pageNotFound,
+  },
+  commentNotFound: {
+    ok: false,
+    code: "invalid_params",
+    message:
+      "That comment is not on this page — reply to a thread you read with " +
+      "minddy_get_page.",
+  },
+  databaseError: {
+    ok: false,
+    code: "database_error",
+    message: MESSAGES.databaseError,
+  },
+};
+
+/**
+ * COMMENTER une page, ou l'un de ses blocs, en tant qu'agent (MIN-282).
+ *
+ * Le seul geste d'écriture des pages qui ne touche pas au document : répondre à
+ * une objection, en poser une, dire pourquoi on n'a pas fait ce qui était
+ * demandé. Sans lui, un agent lisait des questions sans pouvoir y répondre.
+ *
+ * L'ancre est le `block_id` d'un fil déjà lu (`open_threads`) : un agent ne
+ * fabrique pas d'ancre, il en reprend une — les ids de blocs ne sont pas dans le
+ * markdown qu'il lit, et une ancre inventée ferait un fil détaché à la seconde
+ * où il est écrit.
+ */
+export async function addPageCommentForAgent({
+  pageId,
+  projectId,
+  actorId,
+  body,
+  blockId,
+  parentCommentId,
+  viaAssistant = false,
+  mcpKeyId = null,
+}: {
+  pageId: string;
+  projectId?: string;
+  actorId: string;
+  body: string;
+  blockId?: string | null;
+  parentCommentId?: string | null;
+  viaAssistant?: boolean;
+  mcpKeyId?: string | null;
+}): Promise<PageToolResult<{ page_id: string; comment_id: string }>> {
+  // La page d'abord : le contrôle d'accès et la garde « ce projet-ci » sont les
+  // mêmes que pour une lecture, et ils doivent l'être — un commentaire sur une
+  // page invisible en apprendrait l'existence.
+  const found = await getPage(pageId, actorId);
+  if (!found.ok) return refuse(found.errorKey);
+  if (projectId && found.page.project_id !== projectId) return refuse("pageNotFound");
+
+  // L'extrait : on le RELIT dans le document plutôt que de le demander à
+  // l'agent. Un extrait dicté serait une citation qu'il aurait pu reformuler,
+  // affichée à l'humain comme le texte de sa page.
+  const quote = blockId
+    ? (pageBlockTexts((found.page.content as JSONContent | null) ?? null).find(
+        (block) => block.blockId === blockId
+      )?.text ?? null)
+    : null;
+
+  const result = await addPageComment({
+    pageId,
+    actorId,
+    body,
+    blockId: blockId ?? null,
+    quote,
+    parentId: parentCommentId ?? null,
+    viaAssistant,
+    mcpKeyId,
+  });
+  if (!result.ok) return COMMENT_REFUSALS[result.errorKey];
+  return {
+    ok: true,
+    data: { page_id: pageId, comment_id: result.comment.id as string },
   };
 }
 

@@ -196,7 +196,10 @@ export type NotificationType =
   | "page_mention"
   /** L'agent a écrit dans une page. Au seul lanceur du run : une page réécrite
       en silence est le pendant du problème que MIN-277 a outillé. */
-  | "page_agent_edit";
+  | "page_agent_edit"
+  /** On a commenté une page que j'ai écrite, ou un fil auquel j'ai participé
+      (MIN-282) — le pendant exact de `comment` sur un ticket. */
+  | "page_comment";
 
 /** A notification enriched for the Inbox UI. */
 export interface MyNotification {

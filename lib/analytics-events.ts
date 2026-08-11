@@ -164,8 +164,13 @@ export interface AnalyticsEventProps {
   // ── Tickets : contenu ──
   issue_plan_edited: { task_count: number };
   plan_task_toggled: { to_state: "pending" | "in_progress" | "completed" | "cancelled" };
-  comment_added: { target: "issue" | "objective" | "feedback"; length_bucket: string };
-  comment_deleted: { target: "issue" | "objective" | "feedback" };
+  /** Le fil d'une PAGE est la quatrième cible (MIN-282), et la seule qui
+      puisse être ANCRÉE à un bloc — d'où `anchored`, absent des trois autres. */
+  comment_added: {
+    target: "issue" | "objective" | "feedback" | "page";
+    length_bucket: string;
+  };
+  comment_deleted: { target: "issue" | "objective" | "feedback" | "page" };
   /** Une ressource ajoutée — fichier OU lien (MIN-184). Aucune donnée de
       contenu : ni l'URL, ni le titre, ni le nom de fichier. `size_bucket` et
       `mime_kind` (la FAMILLE MIME : image, application…) n'existent que pour un

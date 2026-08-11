@@ -20,6 +20,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   rows: [] as Record<string, unknown>[],
+  /** Les fils de page (MIN-282) : une table à part, donc un tableau à part —
+      les mélanger ferait compter un commentaire comme une page. */
+  comments: [] as Record<string, unknown>[],
   access: new Set<string>(),
   seq: 0,
 }));
@@ -27,19 +30,35 @@ const h = vi.hoisted(() => ({
 vi.mock("@/lib/supabase-service", () => {
   type Filter = (row: Record<string, unknown>) => boolean;
 
-  const from = () => {
+  const from = (table = "pages") => {
     const filters: Filter[] = [];
     let mode: "select" | "insert" | "update" | "delete" = "select";
     let payload: Record<string, unknown> | Record<string, unknown>[] = {};
     let orderColumn: string | null = null;
+    const comments = table === "page_comments";
+    const store = () => (comments ? h.comments : h.rows);
 
-    const matching = () => h.rows.filter((row) => filters.every((f) => f(row)));
+    const matching = () => store().filter((row) => filters.every((f) => f(row)));
 
     const run = (): { data: Record<string, unknown>[] | null; error: null } => {
       if (mode === "insert") {
         const inserted = (Array.isArray(payload) ? payload : [payload]).map(
           (values) => {
             h.seq += 1;
+            if (comments) {
+              const comment = {
+                id: `comment-${h.seq}`,
+                parent_id: null,
+                block_id: null,
+                quote: null,
+                resolved_at: null,
+                created_at: `2026-08-10T00:00:0${h.seq}Z`,
+                updated_at: `2026-08-10T00:00:0${h.seq}Z`,
+                ...values,
+              };
+              h.comments.push(comment);
+              return comment;
+            }
             const row = {
               id: `page-${h.seq}`,
               parent_id: null,
@@ -67,7 +86,8 @@ vi.mock("@/lib/supabase-service", () => {
         for (const row of rows) Object.assign(row, payload);
       }
       if (mode === "delete") {
-        h.rows = h.rows.filter((row) => !rows.includes(row));
+        if (comments) h.comments = h.comments.filter((row) => !rows.includes(row));
+        else h.rows = h.rows.filter((row) => !rows.includes(row));
       }
       if (orderColumn) {
         rows.sort((a, b) =>
@@ -170,7 +190,24 @@ vi.mock("@/lib/supabase-service", () => {
     return { data: hits.slice(0, Number(args.p_limit ?? 20)), error: null };
   };
 
-  return { getServiceClient: () => ({ from, rpc }) };
+  /** Les comptes, pour que les auteurs d'un fil se lisent par leur nom
+      (MIN-282) — jamais l'email brut, la règle de lib/display-name.ts. */
+  const auth = {
+    admin: {
+      getUserById: async (id: string) => ({
+        data: {
+          user: {
+            id,
+            email: `${id}@minddy.app`,
+            user_metadata: { display_name: "Clément" },
+          },
+        },
+        error: null,
+      }),
+    },
+  };
+
+  return { getServiceClient: () => ({ from, rpc, auth }) };
 });
 
 /**
@@ -185,6 +222,17 @@ vi.mock("@/lib/server/page-activity", () => ({
 }));
 vi.mock("@/lib/server/page-mentions", () => ({
   notifyPageMentions: async () => {},
+}));
+
+/**
+ * Les notifications d'un commentaire de page (MIN-282), coupées ici pour la
+ * même raison : elles écrivent dans `notifications`, une table que ce faux
+ * PostgREST ne connaît pas. Ce qu'elles décident — qui est prévenu, et une
+ * seule fois — est exercé par lib/server/page-comments.test.ts.
+ */
+vi.mock("@/lib/server/notifications", () => ({
+  insertNotifications: async () => {},
+  projectMemberIds: async () => new Set(["user-1"]),
 }));
 
 vi.mock("@/lib/server/project-access", () => ({
@@ -265,6 +313,7 @@ async function waitForIndex() {
 
 beforeEach(() => {
   h.rows = [];
+  h.comments = [];
   h.seq = 0;
   h.access = new Set([PROJECT]);
 });
@@ -706,5 +755,114 @@ describe("minddy_search_pages", () => {
       query: "chalcogénure",
     });
     expect(after.payload.count).toBe(0);
+  });
+});
+
+/**
+ * MIN-282 — le fil d'une page, vu d'un agent.
+ *
+ * Deux choses s'y jouent, et ce sont celles qui font qu'un agent SERT à quelque
+ * chose sur une doc discutée : il voit ce qui est contesté avant de réécrire,
+ * et il peut répondre sans toucher au document. Un fil résolu, lui, n'est plus
+ * une contrainte — le rendre serait rouvrir un débat clos à chaque lecture.
+ */
+describe("les fils de discussion d'une page", () => {
+  it("répond sur un BLOC lu, et re-cite le texte depuis le document", async () => {
+    const page = await createPage("Spec", "Le quota est mensuel.");
+    const read = await call("minddy_get_page", { project_id: PROJECT, page_id: page });
+    // L'agent ne fabrique pas d'ancre : il reprend celle d'un bloc du document.
+    const blockId = (h.rows.find((r) => r.id === page)!.content as {
+      content: Array<{ attrs?: { blockId?: string } }>;
+    }).content[0].attrs?.blockId as string;
+    expect(read.ok).toBe(true);
+
+    const posted = await call("minddy_add_page_comment", {
+      project_id: PROJECT,
+      page_id: page,
+      body: "Mensuel ou glissant ? Le code fait glissant.",
+      block_id: blockId,
+    });
+    expect(posted.ok, JSON.stringify(posted.payload)).toBe(true);
+
+    const again = await call("minddy_get_page", { project_id: PROJECT, page_id: page });
+    const threads = again.payload.open_threads as Array<Record<string, unknown>>;
+    expect(threads).toHaveLength(1);
+    expect(threads[0].block_id).toBe(blockId);
+    // L'extrait est RELU dans le document, pas dicté par l'agent : c'est bien
+    // le texte de la page qui sera montré à l'humain sous son commentaire.
+    expect(threads[0].quote).toBe("Le quota est mensuel.");
+    expect(threads[0].messages).toEqual([
+      expect.objectContaining({
+        author: "Clément",
+        body: "Mensuel ou glissant ? Le code fait glissant.",
+      }),
+    ]);
+  });
+
+  it("commente la page entière quand rien n'est ancré", async () => {
+    const page = await createPage("Spec", "un corps");
+    await call("minddy_add_page_comment", {
+      project_id: PROJECT,
+      page_id: page,
+      body: "cette page devrait être découpée",
+    });
+    const { payload } = await call("minddy_get_page", {
+      project_id: PROJECT,
+      page_id: page,
+    });
+    const threads = payload.open_threads as Array<Record<string, unknown>>;
+    expect(threads[0]).toMatchObject({ block_id: null, quote: null });
+  });
+
+  it("répond DANS un fil plutôt que d'en ouvrir un second", async () => {
+    const page = await createPage("Spec", "un corps");
+    const root = await call("minddy_add_page_comment", {
+      project_id: PROJECT,
+      page_id: page,
+      body: "une question",
+    });
+    await call("minddy_add_page_comment", {
+      project_id: PROJECT,
+      page_id: page,
+      body: "la réponse",
+      parent_comment_id: root.payload.comment_id,
+    });
+
+    const { payload } = await call("minddy_get_page", {
+      project_id: PROJECT,
+      page_id: page,
+    });
+    const threads = payload.open_threads as Array<{ messages: unknown[] }>;
+    expect(threads).toHaveLength(1);
+    expect(threads[0].messages).toHaveLength(2);
+  });
+
+  it("ne rend PAS les fils résolus — un débat clos n'est plus une contrainte", async () => {
+    const page = await createPage("Spec", "un corps");
+    await call("minddy_add_page_comment", {
+      project_id: PROJECT,
+      page_id: page,
+      body: "tranché depuis",
+    });
+    // Résolu par un humain dans l'UI : les agents n'ont pas ce geste.
+    h.comments[0].resolved_at = "2026-08-11T12:00:00Z";
+
+    const { payload } = await call("minddy_get_page", {
+      project_id: PROJECT,
+      page_id: page,
+    });
+    expect(payload.open_threads).toEqual([]);
+  });
+
+  it("refuse de commenter une page d'un projet qu'on ne voit pas", async () => {
+    const page = await createPage("Spec", "un corps");
+    h.access = new Set();
+    const { ok, payload } = await call("minddy_add_page_comment", {
+      project_id: PROJECT,
+      page_id: page,
+      body: "…",
+    });
+    expect(ok).toBe(false);
+    expect((payload.error as { code: string }).code).toBe("project_not_found");
   });
 });

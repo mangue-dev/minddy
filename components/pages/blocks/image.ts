@@ -53,6 +53,19 @@ declare module "@tiptap/core" {
       }) => ReturnType;
     };
   }
+  interface Storage {
+    image: PageFilePickStorage;
+  }
+}
+
+/** Ce que la SURFACE pose sur les deux blocs de fichier : de quoi ouvrir une
+    boîte de dialogue. Lu au moment du geste et jamais capturé, comme les
+    crochets de la sous-page — le registre est monté headless par la projection
+    markdown, où aucun sélecteur de fichier n'a de sens. */
+export interface PageFilePickStorage {
+  /** `accept` d'un `<input type="file">` (`"image/*"`, ou vide pour tout). */
+  pick: ((accept: string) => void) | null;
+  markdown?: unknown;
 }
 
 /** Bornes de la largeur, en pourcentage de la colonne de texte. En deçà de 10 %
@@ -107,6 +120,13 @@ export const PageImage = Node.create({
     return ["img", HTMLAttributes];
   },
 
+  /** Le sélecteur de fichier, posé par la surface au montage — même montage que
+      `storage.subpage.create` : le registre est headless, et ouvrir une boîte de
+      dialogue n'a de sens que dans un navigateur. */
+  addStorage() {
+    return { pick: null };
+  },
+
   addCommands() {
     return {
       insertPageImage:
@@ -141,6 +161,16 @@ export const imageBlock: PageBlock = {
   // Une image ne se « transforme » pas depuis un paragraphe : il n'y a aucun
   // texte à convertir en fichier. Elle s'insère, comme la sous-page.
   turnInto: false,
+  // Et comme la sous-page, elle DOIT donc porter son `insert` : sans lui, le
+  // registre retombe sur « effacer la plage, puis convertir », et une entrée de
+  // menu dont `turnInto` est `false` n'aurait fait qu'avaler le « /image ».
+  // Le sélecteur vient de la surface (`storage.image.pick`) ; sans lui — un
+  // éditeur en lecture seule, l'aperçu d'une version — l'entrée ne fait rien,
+  // mais elle n'est pas offerte là non plus.
+  insert: (editor, range) => {
+    editor.chain().focus().deleteRange(range).run();
+    editor.storage.image?.pick?.("image/*");
+  },
   isActive: (editor) => editor.isActive("image"),
   markdown: {
     sample: "![A screenshot](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/11111111-1111-4111-8111-111111111111)",

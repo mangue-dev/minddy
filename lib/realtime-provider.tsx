@@ -384,6 +384,13 @@ function keysForProjectEvent(
       }
       return cited;
     }
+    // Le fil d'une PAGE (MIN-282). La table porte son `page_id` en clair, donc
+    // rien à aller chercher : le commentaire d'un coéquipier apparaît sous le
+    // document sans rechargement, et le liseré de son bloc avec lui.
+    case "page_comments": {
+      const pageId = pageIdOf(change);
+      return pageId ? [active(["page-comments", pageId])] : [];
+    }
     // L'autre moitié du rétrolien : la table DÉRIVÉE des mentions (MIN-279).
     // Elle est réécrite après la réponse, donc l'écho arrive un instant après
     // l'écriture du ticket qui cite — c'est exactement ce que le pont sert à
@@ -523,6 +530,10 @@ const projectScopeKeys = (projectId: string): QueryKey[] => [
   // naissent d'écritures faites AILLEURS, donc d'événements qu'un onglet
   // endormi n'a pas reçus.
   ["page-backlinks"],
+  // Le fil d'une page (MIN-282), en préfixe comme les commentaires de ticket :
+  // une page laissée ouverte pendant une coupure doit retrouver les objections
+  // écrites entre-temps, pas celles d'avant.
+  ["page-comments"],
   // The aggregates this project feeds — missed events while offline would
   // otherwise leave the dashboard and /all stale until their staleTime.
   GLOBAL_BOARD_KEY,

@@ -36,8 +36,14 @@ import {
   type ReactNode,
 } from "react";
 import type { Editor } from "@tiptap/core";
+import { useTranslations } from "next-intl";
+import { toast } from "mangue-ui";
 import { compressImage } from "@/lib/image-compress";
-import { MAX_PAGE_FILE_BYTES, isImageMime } from "@/lib/page-files";
+import {
+  MAX_PAGE_FILE_BYTES,
+  MAX_PAGE_FILE_MB,
+  isImageMime,
+} from "@/lib/page-files";
 
 /** Ce que la route rend quand le fichier est arrivé. */
 export interface PageFileUploaded {
@@ -170,6 +176,7 @@ export function usePageUploads(
   /** Poser le bloc adapté au fichier, et lancer son envoi. */
   addFiles: (files: Iterable<File>, options?: { at?: number }) => void;
 } {
+  const t = useTranslations("Pages");
   const [uploads, setUploads] = useState<Map<string, PageUpload>>(new Map());
   const uploadsRef = useRef(uploads);
   uploadsRef.current = uploads;
@@ -290,28 +297,24 @@ export function usePageUploads(
 
       let at = options.at;
       for (const file of files) {
-        if (file.size === 0) continue;
-        const uploadId = crypto.randomUUID();
-        const image = isImageMime(file.type);
-
+        // Un refus AVANT le bloc est un refus que rien dans le document ne
+        // montrera : sans ce toast, coller une capture de 15 Mo ne ferait
+        // absolument rien à l'écran — le symptôme exact que ce ticket ouvre.
+        if (file.size === 0) {
+          toast.error(t("uploadEmpty", { name: file.name }));
+          continue;
+        }
         // La taille est refusée AVANT de poser le bloc : un bloc raté d'avance
-        // n'apprend rien de plus à l'utilisateur qu'un message immédiat, et il
+        // n'apprend rien de plus à l'utilisateur que ce message immédiat, et il
         // laisse un trou dans le document à nettoyer à la main. Le serveur
         // revérifie de son côté.
         if (file.size > MAX_PAGE_FILE_BYTES) {
-          setUploads((prev) => {
-            const copy = new Map(prev);
-            copy.set(uploadId, {
-              id: uploadId,
-              file,
-              status: "failed",
-              progress: 0,
-              previewUrl: null,
-            });
-            return copy;
-          });
+          toast.error(t("uploadTooLarge", { name: file.name, max: MAX_PAGE_FILE_MB }));
           continue;
         }
+
+        const uploadId = crypto.randomUUID();
+        const image = isImageMime(file.type);
 
         setUploads((prev) => {
           const copy = new Map(prev);
@@ -348,7 +351,7 @@ export function usePageUploads(
         send(uploadId, file);
       }
     },
-    [editorRef, send]
+    [editorRef, send, t]
   );
 
   const retry = useCallback(

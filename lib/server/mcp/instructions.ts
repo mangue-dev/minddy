@@ -99,6 +99,11 @@ export const MCP_SERVER_INSTRUCTIONS =
       "minddy_edit_page_text rewrites one passage in place (old_string → " +
       "new_string, unique match). minddy_update_page replaces a whole body, so " +
       "pass the version you read to be refused rather than overwrite someone. " +
+      "A page is also DISCUSSED: minddy_get_page returns the threads still open " +
+      "on it — objections and questions anchored to a passage — and " +
+      "minddy_add_page_comment answers one, or raises one, without touching the " +
+      "document. Prefer that to an edit when a passage looks wrong: a comment " +
+      "asks whoever wrote it, an edit overwrites them. " +
       "Pages are markdown on both sides, never ProseMirror JSON, and they are how " +
       "'turn this page into tickets' works: read the page, then create the issues " +
       "with the issue tools. Pages are never deleted from here — the trash is a " +

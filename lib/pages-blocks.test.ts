@@ -181,6 +181,37 @@ describe("le menu « / » et « transformer en »", () => {
     editor.destroy();
   });
 
+  it("posent VRAIMENT quelque chose, chacun", () => {
+    // `insertBlock` retombe sur « effacer la plage, puis convertir » quand le
+    // descripteur ne porte pas d'`insert`. Un bloc à la fois `turnInto: false`
+    // et sans `insert` avale donc le « /… » et ne pose rien — une entrée de menu
+    // qui ne fait rien, sans un mot d'erreur. C'est arrivé aux deux blocs de
+    // MIN-280, et rien ne le disait : le nœud est dans le schéma, le markdown
+    // revient intact, seul le geste manque.
+    const silent = PAGE_BLOCKS.filter(
+      (block) => !block.turnInto && !block.insert
+    ).map((block) => block.id);
+    expect(silent).toEqual([]);
+  });
+
+  it("l'image et le fichier demandent leur sélecteur", () => {
+    // L'autre moitié du même geste : le descripteur appelle bien le crochet que
+    // la surface pose (`storage.<nœud>.pick`, cf. page-editor.tsx). Sans lui,
+    // « /image » n'ouvrirait aucune boîte de dialogue.
+    for (const [id, node, accept] of [
+      ["image", "image", "image/*"],
+      ["file", "pageFile", ""],
+    ] as const) {
+      const editor = makeEditor("/x");
+      const asked: string[] = [];
+      (editor.storage as unknown as Record<string, { pick: unknown }>)[node].pick =
+        (value: string) => asked.push(value);
+      blockById.get(id)?.insert?.(editor, { from: 1, to: 3 });
+      expect(asked, id).toEqual([accept]);
+      editor.destroy();
+    }
+  });
+
   it("marquent le bloc actif", () => {
     const editor = makeEditor("## A heading");
     const active = turnIntoItems(editor).filter((item) => item.active);

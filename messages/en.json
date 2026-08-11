@@ -1105,7 +1105,8 @@
     "lineRoutineDone": "The routine finished its run",
     "linePageMention": "{actor} mentioned you in this page",
     "linePageAgentEdit": "The Numo agent wrote in this page",
-    "somePageFallback": "Untitled page"
+    "somePageFallback": "Untitled page",
+    "linePageComment": "{actor} commented on this page"
   },
   "NotificationSettings": {
     "title": "Inbox notifications",
@@ -1701,7 +1702,20 @@
     "historyTabVersions": "Versions",
     "historyTabActivity": "Activity",
     "activityLoadFailed": "Could not load the activity.",
-    "backlinksTitle": "{count, plural, one {Cited by # item} other {Cited by # items}}"
+    "backlinksTitle": "{count, plural, one {Cited by # item} other {Cited by # items}}",
+    "comments": "Comments",
+    "commentsWithCount": "{count, plural, one {# comment} other {# comments}}",
+    "commentSelection": "Comment",
+    "commentOnPage": "On the page",
+    "commentOnBlock": "On this block",
+    "commentDetached": "The commented text is gone",
+    "commentPagePlaceholder": "Comment on this page…",
+    "commentOnSelectionPlaceholder": "Comment on this passage…",
+    "cancelAnchoredComment": "Cancel",
+    "resolveThread": "Resolve",
+    "reopenThread": "Reopen",
+    "showResolvedComments": "{count, plural, one {# resolved} other {# resolved}}",
+    "hideResolvedComments": "Hide resolved"
   },
   "Picker": {
     "createNamed": "Create “{name}”",

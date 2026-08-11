@@ -114,4 +114,5 @@ export const NOTIFICATION_LINE_KEYS: Record<
   routine_done: "lineRoutineDone",
   page_mention: "linePageMention",
   page_agent_edit: "linePageAgentEdit",
+  page_comment: "linePageComment",
 };

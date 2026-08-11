@@ -1064,6 +1064,26 @@ nav[aria-label="Navigation"]
    qui rendait l'ancienne version invisible chez qui a coché la case) : on
    retire le battement et on TIENT le fond. C'est `flashBlock`
    (components/pages/block-actions.ts) qui pose la classe et la retire. */
+/* Le LISERÉ d'un bloc COMMENTÉ (MIN-282) — « il y a une discussion ici ».
+   Posé par une décoration ProseMirror (components/pages/block-comments.ts), pas
+   par une mark : ce n'est pas du contenu, ça ne part ni en base ni dans la
+   projection markdown. Un trait à gauche, dans le retrait du texte plutôt que
+   dans la gouttière, déjà prise par la poignée et le `+`. */
+.page-block-commented {
+  position: relative;
+}
+
+.page-block-commented::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.75rem;
+  width: 2px;
+  border-radius: 1px;
+  background-color: color-mix(in oklab, var(--page-color-amber) 70%, transparent);
+}
+
 .page-block-target {
   position: relative;
   border-radius: 0.375rem;

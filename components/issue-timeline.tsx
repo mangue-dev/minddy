@@ -66,8 +66,36 @@ import { UserAvatar } from "@/components/user-avatar";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
-import type { Comment, Member, ResourceInput } from "@/lib/types";
+import type { Attachment, Comment, Member, ResourceInput } from "@/lib/types";
 import type { CommentVisibility } from "@/lib/feedback/types";
+
+/**
+ * Ce qu'un message doit porter pour être rendu par `CommentBlock` — le
+ * dénominateur commun des QUATRE fils de l'app (MIN-282).
+ *
+ * Les trois premiers (ticket, objectif, retour) sont des lignes de `comments` et
+ * le remplissent tout entier. Le quatrième, le fil d'une page, vit dans sa
+ * propre table (`page_comments`) et n'a ni pièce jointe, ni visibilité publique,
+ * ni réponse @Numo en cours : d'où les optionnels. C'est cette interface, et non
+ * `Comment`, qui dit ce que ce composant LIT vraiment — l'élargir est ce qui a
+ * évité une quatrième copie du fil.
+ */
+export interface ThreadMessage {
+  id: string;
+  author_id: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  via_assistant?: boolean;
+  via_mcp?: boolean;
+  api_key_name?: string | null;
+  api_key_agent?: string | null;
+  assistant_status?: "working" | "done" | "error" | null;
+  assistant_tool?: string | null;
+  visibility?: CommentVisibility;
+  feedback_users?: Comment["feedback_users"];
+  attachments?: Attachment[];
+}
 
 type EventItem = Extract<TimelineItem, { kind: "event" }>;
 type CommentItem = Extract<TimelineItem, { kind: "comment" }>;
@@ -372,8 +400,9 @@ function EventRow({
 }
 
 /** One comment inside a card (root or reply): header, markdown body, and —
-    for the author — a hover "⋯" menu with inline edit and delete. */
-function CommentBlock({
+    for the author — a hover "⋯" menu with inline edit and delete.
+    Exporté depuis MIN-282 : le fil d'une page le monte tel quel. */
+export function CommentBlock({
   comment,
   ctx,
   currentUserId,
@@ -383,8 +412,11 @@ function CommentBlock({
   deletesReplies,
   isReply = false,
 }: {
-  comment: Comment;
-  ctx: EventContext;
+  comment: ThreadMessage;
+  /** Seuls les MEMBRES sont lus ici (l'auteur, son visage, les pilules de
+      mention) : le type le dit, pour qu'une surface sans objectifs ni
+      catégories — le fil d'une page — n'ait pas à fabriquer un décor vide. */
+  ctx: Pick<EventContext, "members">;
   currentUserId: string | null;
   onEdit: (commentId: string, body: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
@@ -665,13 +697,15 @@ function CommentBlock({
 }
 
 /** Collapsed "Reply…" affordance at the bottom of a card, expanding into a
-    mention-aware composer targeting the thread's root comment. */
-function ReplyComposer({
+    mention-aware composer targeting the thread's root comment.
+    Exporté depuis MIN-282 : le fil d'une page répond avec le même geste. */
+export function ReplyComposer({
   members,
   currentUserId,
   projectId,
   rootId,
   threadIsPublic = false,
+  allowAttachments = true,
   onReply,
 }: {
   members: Member[];
@@ -688,6 +722,16 @@ function ReplyComposer({
    * indexable dans le même costume qu'une note d'équipe.
    */
   threadIsPublic?: boolean;
+  /**
+   * Le fil accepte des PIÈCES JOINTES (MIN-282).
+   *
+   * Faux sur une page, et ce n'est pas une simplification : une ressource pend
+   * à un ticket, à un objectif ou à un retour (`attachments_parent_ck`), donc un
+   * fichier lâché ici partirait en stockage sans jamais trouver de ligne où
+   * s'accrocher. Le document, lui, prend déjà les images et les fichiers
+   * (MIN-280) — c'est là que le geste a un sens.
+   */
+  allowAttachments?: boolean;
   onReply: (
     parentId: string,
     body: string,
@@ -745,21 +789,23 @@ function ReplyComposer({
         // au même endroit, ça doit se ressembler.
         threadIsPublic && "bg-brand/[0.03]"
       )}
-      onPaste={pasteFileHandler(uploads.addFiles)}
-      {...drop.handlers}
+      onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
+      {...(allowAttachments ? drop.handlers : {})}
     >
-      <DropOverlay show={drop.dragging} />
+      <DropOverlay show={allowAttachments && drop.dragging} />
       {/* Attachments are context — they sit ABOVE the text being written. */}
-      <ResourcePills
-        resources={uploads.pending.filter((p) => p.status === "done")}
-        pending={uploads.pending}
-        onRemove={(a) => {
-          const match = uploads.pending.find((p) => p.storage_path === a.storage_path);
-          if (match) uploads.remove(match.localId);
-        }}
-        onRemovePending={uploads.remove}
-        className="px-3.5 pt-2.5"
-      />
+      {allowAttachments && (
+        <ResourcePills
+          resources={uploads.pending.filter((p) => p.status === "done")}
+          pending={uploads.pending}
+          onRemove={(a) => {
+            const match = uploads.pending.find((p) => p.storage_path === a.storage_path);
+            if (match) uploads.remove(match.localId);
+          }}
+          onRemovePending={uploads.remove}
+          className="px-3.5 pt-2.5"
+        />
+      )}
       <MentionTextarea
         value={draft}
         onChange={setDraft}
@@ -780,7 +826,9 @@ function ReplyComposer({
             {t("replyGoesPublic")}
           </span>
         )}
-        <AttachButton onFiles={uploads.addFiles} disabled={posting} />
+        {allowAttachments && (
+          <AttachButton onFiles={uploads.addFiles} disabled={posting} />
+        )}
         <Button variant="ghost" size="sm" className="rounded-full" onClick={close}>
           {tCommon("cancel")}
         </Button>
@@ -1039,9 +1087,22 @@ export function CommentComposer({
   projectId,
   onSubmit,
   publicOption,
+  allowAttachments = true,
+  placeholder,
+  submitLabel,
+  autoFocus = false,
 }: {
   members: Member[];
   projectId: string;
+  /** Cf. `ReplyComposer` : faux sur une page, où un fichier n'a pas de ligne
+      où s'accrocher (MIN-282). */
+  allowAttachments?: boolean;
+  /** Le libellé du champ vide, quand « Écrire un commentaire… » ne dit pas ce
+      qu'on est en train de faire (commenter un PASSAGE, par exemple). */
+  placeholder?: string;
+  /** Le libellé du bouton d'envoi, même raison. */
+  submitLabel?: string;
+  autoFocus?: boolean;
   onSubmit: (
     body: string,
     mentionedUserIds: string[],
@@ -1098,33 +1159,39 @@ export function CommentComposer({
     <div
       className={cn(
         "relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring",
-        drop.dragging && "border-brand",
+        allowAttachments && drop.dragging && "border-brand",
         // Le composeur CHANGE D'AIR quand ce qu'on écrit part sur le board.
         // Une pastille discrète se rate ; la bordure du champ, non — et c'est
         // la seule chose que regarde quelqu'un en train de taper.
         isPublic && "border-brand/50 bg-brand/[0.03]"
       )}
-      onPaste={pasteFileHandler(uploads.addFiles)}
-      {...drop.handlers}
+      onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
+      {...(allowAttachments ? drop.handlers : {})}
     >
-      <DropOverlay show={drop.dragging} />
+      <DropOverlay show={allowAttachments && drop.dragging} />
       {/* Attachments are context — they sit ABOVE the text being written. */}
-      <ResourcePills
-        resources={uploads.pending.filter((p) => p.status === "done")}
-        pending={uploads.pending}
-        onRemove={(a) => {
-          const match = uploads.pending.find((p) => p.storage_path === a.storage_path);
-          if (match) uploads.remove(match.localId);
-        }}
-        onRemovePending={uploads.remove}
-        className="px-3.5 pt-2.5"
-      />
+      {allowAttachments && (
+        <ResourcePills
+          resources={uploads.pending.filter((p) => p.status === "done")}
+          pending={uploads.pending}
+          onRemove={(a) => {
+            const match = uploads.pending.find((p) => p.storage_path === a.storage_path);
+            if (match) uploads.remove(match.localId);
+          }}
+          onRemovePending={uploads.remove}
+          className="px-3.5 pt-2.5"
+        />
+      )}
       <MentionTextarea
         value={draft}
         onChange={setDraft}
         members={members}
         onSubmit={() => void submit()}
-        placeholder={isPublic ? t("publicCommentPlaceholder") : t("commentPlaceholder")}
+        placeholder={
+          placeholder ??
+          (isPublic ? t("publicCommentPlaceholder") : t("commentPlaceholder"))
+        }
+        autoFocus={autoFocus}
         dropUp
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
@@ -1141,7 +1208,9 @@ export function CommentComposer({
           />
         )}
         <span className="min-w-0 flex-1" />
-        <AttachButton onFiles={uploads.addFiles} disabled={posting} />
+        {allowAttachments && (
+          <AttachButton onFiles={uploads.addFiles} disabled={posting} />
+        )}
         <DictateButton
           onTranscription={(text) =>
             setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
@@ -1149,7 +1218,7 @@ export function CommentComposer({
           disabled={posting}
         />
         {(canPost || posting) && (
-          <SendShortcutTooltip label={t("comment")}>
+          <SendShortcutTooltip label={submitLabel ?? t("comment")}>
             <Button
               size="sm"
               className="rounded-full px-4"
@@ -1157,7 +1226,7 @@ export function CommentComposer({
               onClick={() => void submit()}
             >
               {posting && <Spinner />}
-              {t("comment")}
+              {submitLabel ?? t("comment")}
             </Button>
           </SendShortcutTooltip>
         )}

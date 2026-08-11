@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
+  addPageCommentForAgent,
   appendToPageForAgent,
   createPageForAgent,
   editPageTextForAgent,
@@ -198,7 +199,14 @@ export function registerPageTools(server: McpServer): void {
         "whole body. And it carries BACKLINKS: the issues, objectives and pages " +
         "that cite this one, whether they attached it as a resource or mention " +
         "it in their text. Read them before changing a decision written here — " +
-        "they are what depends on it, and nothing else in the API will tell you.",
+        "they are what depends on it, and nothing else in the API will tell you. " +
+        "Finally it carries OPEN_THREADS: the discussion still open on this page " +
+        "— objections, questions, passages someone flagged, each with the text it " +
+        "hangs off. Read them. The body says what was decided; the threads say " +
+        "what is contested and not yet rewritten, and that is usually where the " +
+        "real constraint is. Rewriting a passage under an open thread settles a " +
+        "debate nobody asked you to settle — answer it with " +
+        "minddy_add_page_comment instead.",
       inputSchema: { project_id: PROJECT_ID, page_id: PAGE_ID },
       annotations: READ_ONLY,
     },
@@ -433,6 +441,69 @@ export function registerPageTools(server: McpServer): void {
       });
       if (!result.ok) return refusal(result);
       return written(trimDiff(result.data));
+    }
+  );
+
+  server.registerTool(
+    "minddy_add_page_comment",
+    {
+      title: "Comment on a page",
+      description:
+        "Say something ABOUT a page without touching a single byte of it: answer " +
+        "an open thread, raise an objection, explain why you did not do what the " +
+        "page asks. This is the one page write that is not an edit, and it is " +
+        "often the right one — when a passage looks wrong, a comment asks the " +
+        "person who wrote it; an edit overwrites them. Anchor it to a BLOCK by " +
+        "passing the block_id of a thread you read in minddy_get_page's " +
+        "open_threads, and reply inside that thread with parent_comment_id. Never " +
+        "invent a block_id: they are not in the markdown, and a made-up one " +
+        "produces a thread pointing at nothing. Omit both to comment on the page " +
+        "as a whole. Mentioning a teammate with '@Name' notifies them, exactly as " +
+        "in an issue comment.",
+      inputSchema: {
+        project_id: PROJECT_ID,
+        page_id: PAGE_ID,
+        body: z
+          .string()
+          .min(1)
+          .describe(
+            "The comment, in markdown. Short and specific — it is read next to " +
+              "the text it is about, not instead of it."
+          ),
+        block_id: z
+          .string()
+          .optional()
+          .describe(
+            "Anchor the comment to that block, copied VERBATIM from the " +
+              "open_threads of minddy_get_page. Omit to comment on the whole page."
+          ),
+        parent_comment_id: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            "Reply INSIDE an existing thread instead of opening a new one. The " +
+              "reply inherits the thread's anchor, so block_id is then ignored."
+          ),
+      },
+      annotations: WRITE,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await addPageCommentForAgent({
+        pageId: args.page_id,
+        projectId: scope.access.project.id,
+        actorId: scope.userId,
+        body: args.body,
+        blockId: args.block_id ?? null,
+        parentCommentId: args.parent_comment_id ?? null,
+        // La clé qui écrit NOMME l'agent : le fil dit « Claude Code (mcp) », pas
+        // le nom du porteur de la clé (la règle d'identité de minddy).
+        mcpKeyId: scope.keyId,
+      });
+      if (!result.ok) return refusal(result);
+      return written(result.data);
     }
   );
 }
