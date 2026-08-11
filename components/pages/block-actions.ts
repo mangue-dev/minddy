@@ -186,6 +186,37 @@ export function selectedSubpageId(editor: Editor): string | null {
 }
 
 /**
+ * La sélection ne porte-t-elle QUE des médias — images, fichiers (MIN-282) ?
+ *
+ * Le même besoin que `selectedSubpageId`, et la même raison : le menu doit
+ * changer de vocabulaire plutôt que proposer des gestes qui n'ont pas de sens.
+ * Un fichier ne se « transforme » pas en citation, il n'a pas de couleur de
+ * texte à choisir, et le DUPLIQUER ne duplique rien — il pose une seconde
+ * référence aux mêmes octets, ce qui se lit comme une copie sans en être une.
+ *
+ * Vrai sur une sélection multiple qui n'a que ça : trois images sélectionnées
+ * posent exactement les mêmes questions qu'une seule. Faux sur une sélection
+ * mêlée, qui retombe sur le menu ordinaire — deux vocabulaires dans un même
+ * menu, c'est un menu qui ment sur la moitié de ce qu'il propose.
+ */
+export function selectionIsMediaOnly(editor: Editor): boolean {
+  const range = blockRange(editor);
+  if (!range) return false;
+  const $from = editor.state.doc.resolve(range.from);
+  const parentStart = $from.start();
+
+  let count = 0;
+  let media = 0;
+  $from.parent.forEach((child, offset) => {
+    const pos = parentStart + offset;
+    if (pos < range.from || pos >= range.to) return;
+    count += 1;
+    if (child.type.name === "image" || child.type.name === "pageFile") media += 1;
+  });
+  return count > 0 && count === media;
+}
+
+/**
  * Poser un bloc sous-page vers `pageId` à la position `at` — ce que fait
  * « dupliquer » sur un bloc sous-page, une fois la page copiée.
  *

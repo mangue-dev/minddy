@@ -20,13 +20,10 @@ import {
   addPageCommentApi,
   deletePageCommentApi,
   fetchPageCommentsApi,
-  resolvePageThreadApi,
   updatePageCommentApi,
 } from "@/lib/pages-api";
 import {
   arrangeThreads,
-  commentedBlockIds,
-  resolvedCount,
   type PageComment,
   type PageThread,
 } from "@/lib/page-comments";
@@ -38,10 +35,6 @@ export interface PageCommentsHandle {
   comments: PageComment[];
   /** Les fils VISIBLES, ordonnés — détachés en tête. */
   threads: PageThread[];
-  /** Les blocs qui portent un fil ouvert : ce que peint le liseré. */
-  commentedBlocks: Set<string>;
-  /** Combien de fils résolus sont cachés (0 quand on les montre). */
-  hiddenResolved: number;
   loading: boolean;
   add: (input: {
     body: string;
@@ -52,7 +45,6 @@ export interface PageCommentsHandle {
   }) => Promise<void>;
   edit: (commentId: string, body: string) => Promise<void>;
   remove: (commentId: string) => Promise<void>;
-  resolve: (commentId: string, resolved: boolean) => Promise<void>;
 }
 
 export function usePageComments({
@@ -61,12 +53,10 @@ export function usePageComments({
   /** Les ids de blocs du document TEL QU'IL EST À L'ÉCRAN — c'est lui, et pas
       la dernière sauvegarde, qui décide de ce qui est détaché. */
   blockIds,
-  showResolved = false,
 }: {
   projectId: string;
   pageId: string;
   blockIds: ReadonlySet<string>;
-  showResolved?: boolean;
 }): PageCommentsHandle {
   const queryClient = useQueryClient();
   const { data, isPending } = useQuery({
@@ -76,21 +66,9 @@ export function usePageComments({
   const comments = useMemo(() => data ?? [], [data]);
 
   const threads = useMemo(
-    () => arrangeThreads(comments, blockIds, { includeResolved: showResolved }),
-    [comments, blockIds, showResolved]
-  );
-  const commentedBlocks = useMemo(
-    // Sur la liste COMPLÈTE : le liseré ne dépend pas de ce que l'on a choisi
-    // d'afficher sous le document, et un fil résolu n'allume rien de toute
-    // façon (cf. `commentedBlockIds`).
-    () => commentedBlockIds(arrangeThreads(comments, blockIds, { includeResolved: true })),
+    () => arrangeThreads(comments, blockIds),
     [comments, blockIds]
   );
-  const hiddenResolved = useMemo(
-    () => (showResolved ? 0 : resolvedCount(comments, blockIds)),
-    [comments, blockIds, showResolved]
-  );
-
   const refresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: pageCommentsKey(pageId) });
   }, [queryClient, pageId]);
@@ -116,23 +94,12 @@ export function usePageComments({
     },
     [projectId, pageId, refresh]
   );
-  const resolve = useCallback<PageCommentsHandle["resolve"]>(
-    async (commentId, resolved) => {
-      await resolvePageThreadApi(projectId, pageId, commentId, resolved);
-      refresh();
-    },
-    [projectId, pageId, refresh]
-  );
-
   return {
     comments,
     threads,
-    commentedBlocks,
-    hiddenResolved,
     loading: isPending,
     add,
     edit,
     remove,
-    resolve,
   };
 }

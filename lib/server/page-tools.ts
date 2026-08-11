@@ -171,16 +171,14 @@ export interface PageRead extends PageTreeEntry {
    */
   backlinks: PageBacklink[];
   /**
-   * Les fils de discussion OUVERTS de la page (MIN-282), les résolus exclus.
+   * Les fils de discussion de la page (MIN-282).
    *
    * C'est souvent là qu'est la vraie contrainte : une spec dit ce qui a été
    * décidé, ses commentaires disent ce qui est contesté et n'a pas encore été
    * réécrit. Un agent qui réécrit une page sans les avoir lus tranche sans le
    * savoir un débat en cours.
-   *
-   * Un débat CLOS, lui, est du bruit pour qui vient écrire — d'où « ouverts ».
    */
-  open_threads: PageThreadForAgent[];
+  threads: PageThreadForAgent[];
 }
 
 /** Un fil, tel qu'un agent le lit : ce dont il parle, et ce qui s'y est dit. */
@@ -272,7 +270,7 @@ export async function readPageForAgent({
   // outils. Client SERVICE pour la lecture elle-même : la garde d'accès vient
   // d'être faite par `getPage`, et la RLS ne s'applique pas ici.
   let backlinks: PageBacklink[] = [];
-  let openThreads: PageThreadForAgent[] = [];
+  let threads: PageThreadForAgent[] = [];
   if (withBacklinks) {
     const projectAccess = await getProjectAccess(actorId, page.project_id);
     backlinks = await pageBacklinks(
@@ -282,10 +280,10 @@ export async function readPageForAgent({
         projectKey: (projectAccess?.project.key as string | undefined) ?? "",
       }
     );
-    // Les FILS OUVERTS (MIN-282), sous la même garde que les rétroliens : les
-    // deux répondent à « sur quoi ce texte engage-t-il ? », et les lectures
-    // internes (ajouter un bloc, corriger un passage) n'en veulent aucun.
-    openThreads = await readOpenThreads(page.id);
+    // Les FILS (MIN-282), sous la même garde que les rétroliens : les deux
+    // répondent à « sur quoi ce texte engage-t-il ? », et les lectures internes
+    // (ajouter un bloc, corriger un passage) n'en veulent aucun.
+    threads = await readThreads(page.id);
   }
 
   return {
@@ -298,19 +296,19 @@ export async function readPageForAgent({
       version: page.version,
       subpages,
       backlinks,
-      open_threads: openThreads,
+      threads,
     },
   };
 }
 
 /**
- * Les fils ouverts d'une page, auteurs NOMMÉS.
+ * Les fils d'une page, auteurs NOMMÉS.
  *
  * Les noms sortent des comptes, comme partout ailleurs — jamais l'email brut
  * (lib/display-name.ts) —, et une écriture d'agent se dit « minddy » : la règle
  * d'identité vaut pour ce que lit un agent comme pour ce que lit un humain.
  */
-async function readOpenThreads(pageId: string): Promise<PageThreadForAgent[]> {
+async function readThreads(pageId: string): Promise<PageThreadForAgent[]> {
   const service = getServiceClient();
   const raw = await openPageThreadsForAgent(service, pageId, (id) => id ?? "");
   const ids = [
@@ -366,7 +364,7 @@ const COMMENT_REFUSALS: Record<
  * une objection, en poser une, dire pourquoi on n'a pas fait ce qui était
  * demandé. Sans lui, un agent lisait des questions sans pouvoir y répondre.
  *
- * L'ancre est le `block_id` d'un fil déjà lu (`open_threads`) : un agent ne
+ * L'ancre est le `block_id` d'un fil déjà lu (`threads`) : un agent ne
  * fabrique pas d'ancre, il en reprend une — les ids de blocs ne sont pas dans le
  * markdown qu'il lit, et une ancre inventée ferait un fil détaché à la seconde
  * où il est écrit.

@@ -51,6 +51,10 @@ export interface Page {
    */
   updated_by: string | null;
   updated_kind: PageWriteKind;
+  /** La clé MCP derrière la dernière écriture, quand elle vient d'un agent de
+      clé (MIN-282) : c'est elle qui distingue « Claude Code » de Numo, que
+      `updated_kind: "agent"` recouvre tous les deux. */
+  updated_api_key_id?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -95,6 +99,15 @@ export interface PageVersion {
   author_kind: PageWriteKind;
   /** Le nom à afficher, résolu côté serveur. « minddy » sur un geste d'agent. */
   author_name: string;
+  /**
+   * L'AGENT derrière une écriture de clé MCP, résolu côté serveur — l'id
+   * canonique que lit `McpAvatar` (« claude-code », « cursor »…). Null quand
+   * l'écriture est humaine, ou qu'elle vient de Numo.
+   *
+   * Le NOM reste « minddy » dans les deux cas d'agent (règle d'identité) ; ce
+   * champ ne décide que du visage.
+   */
+  author_agent?: string | null;
   created_at: string;
 }
 

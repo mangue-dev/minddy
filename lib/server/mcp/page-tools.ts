@@ -200,13 +200,13 @@ export function registerPageTools(server: McpServer): void {
         "that cite this one, whether they attached it as a resource or mention " +
         "it in their text. Read them before changing a decision written here — " +
         "they are what depends on it, and nothing else in the API will tell you. " +
-        "Finally it carries OPEN_THREADS: the discussion still open on this page " +
-        "— objections, questions, passages someone flagged, each with the text it " +
-        "hangs off. Read them. The body says what was decided; the threads say " +
-        "what is contested and not yet rewritten, and that is usually where the " +
-        "real constraint is. Rewriting a passage under an open thread settles a " +
-        "debate nobody asked you to settle — answer it with " +
-        "minddy_add_page_comment instead.",
+        "Finally it carries THREADS: the discussion on this page — objections, " +
+        "questions, passages someone flagged, each with the text it hangs off. " +
+        "Read them. The body says what was decided; the threads say what is " +
+        "contested and not yet rewritten, and that is usually where the real " +
+        "constraint is. Rewriting a passage under a thread settles a debate " +
+        "nobody asked you to settle — answer it with minddy_add_page_comment " +
+        "instead.",
       inputSchema: { project_id: PROJECT_ID, page_id: PAGE_ID },
       annotations: READ_ONLY,
     },
@@ -455,7 +455,7 @@ export function registerPageTools(server: McpServer): void {
         "often the right one — when a passage looks wrong, a comment asks the " +
         "person who wrote it; an edit overwrites them. Anchor it to a BLOCK by " +
         "passing the block_id of a thread you read in minddy_get_page's " +
-        "open_threads, and reply inside that thread with parent_comment_id. Never " +
+        "threads, and reply inside that thread with parent_comment_id. Never " +
         "invent a block_id: they are not in the markdown, and a made-up one " +
         "produces a thread pointing at nothing. Omit both to comment on the page " +
         "as a whole. Mentioning a teammate with '@Name' notifies them, exactly as " +
@@ -475,7 +475,7 @@ export function registerPageTools(server: McpServer): void {
           .optional()
           .describe(
             "Anchor the comment to that block, copied VERBATIM from the " +
-              "open_threads of minddy_get_page. Omit to comment on the whole page."
+              "threads of minddy_get_page. Omit to comment on the whole page."
           ),
         parent_comment_id: z
           .string()

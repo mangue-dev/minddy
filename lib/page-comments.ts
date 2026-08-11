@@ -32,8 +32,6 @@ export interface PageComment {
   author_id: string | null;
   /** La racine du fil quand cette ligne est une réponse (profondeur ≤ 1). */
   parent_id: string | null;
-  resolved_at: string | null;
-  resolved_by: string | null;
   via_assistant?: boolean;
   via_mcp?: boolean;
   api_key_id?: string | null;
@@ -51,7 +49,6 @@ export interface PageThread {
   anchored: boolean;
   /** Ancré sur un bloc ABSENT du document : le fil parle d'un texte parti. */
   detached: boolean;
-  resolved: boolean;
 }
 
 /**
@@ -62,14 +59,17 @@ export interface PageThread {
  * du détachement, et il change sous les doigts.
  *
  * L'ordre : les DÉTACHÉS d'abord (ils parlent d'un texte que plus personne ne
- * voit, donc rien dans la page ne les rappellera), puis le reste par date. Les
- * fils RÉSOLUS sortent quand `includeResolved` est faux — c'est le défaut, et
- * c'est ce que « masquer les fils résolus » veut dire.
+ * voit, donc rien dans la page ne les rappellera), puis le reste par date.
+ *
+ * Pas de fil « résolu » : un commentaire de page se supprime quand il n'a plus
+ * lieu d'être, il ne se clôt pas. Résoudre a du sens sur une remarque de RELECTURE
+ * DE CODE — un point à traiter avant de fusionner, et c'est déjà ce que font les
+ * fils d'une pull request — pas sur une note laissée dans une doc, qui n'a pas
+ * d'échéance à franchir.
  */
 export function arrangeThreads(
   comments: PageComment[],
-  blockIds: ReadonlySet<string>,
-  options: { includeResolved?: boolean } = {}
+  blockIds: ReadonlySet<string>
 ): PageThread[] {
   const roots = comments.filter((c) => !c.parent_id);
   const rootIds = new Set(roots.map((c) => c.id));
@@ -94,45 +94,32 @@ export function arrangeThreads(
       ),
       anchored,
       detached: anchored && !blockIds.has(root.block_id as string),
-      resolved: !!root.resolved_at,
     };
   });
 
-  const visible = options.includeResolved
-    ? threads
-    : threads.filter((thread) => !thread.resolved);
-
-  return visible.sort((a, b) => {
+  return threads.sort((a, b) => {
     if (a.detached !== b.detached) return a.detached ? -1 : 1;
     return a.root.created_at.localeCompare(b.root.created_at);
   });
 }
 
 /**
- * Les blocs qui portent un fil OUVERT et vivant — ce que le liseré peint.
+ * Les blocs qui portent un fil vivant, et combien de messages chacun — ce que
+ * peignent le liseré et la pastille (components/pages/block-comments.ts).
  *
- * Un fil résolu n'allume plus rien : c'est la moitié visible de « masquer les
- * fils résolus », et sans elle le document resterait strié de discussions
- * closes.
+ * Un fil DÉTACHÉ n'allume rien : son bloc n'existe plus, il n'y a rien à
+ * peindre ; c'est l'activité de la page qui le montre.
  */
-export function commentedBlockIds(threads: PageThread[]): Set<string> {
-  const ids = new Set<string>();
+export function commentedBlockCounts(
+  threads: PageThread[]
+): Map<string, number> {
+  const counts = new Map<string, number>();
   for (const thread of threads) {
-    if (thread.resolved || thread.detached || !thread.root.block_id) continue;
-    ids.add(thread.root.block_id);
+    if (thread.detached || !thread.root.block_id) continue;
+    const id = thread.root.block_id;
+    counts.set(id, (counts.get(id) ?? 0) + 1 + thread.replies.length);
   }
-  return ids;
-}
-
-/** Combien de fils résolus sont cachés — le compte que porte le bouton qui les
-    rouvre. Sans lui, « il n'y a rien » et « tout est résolu » se ressemblent. */
-export function resolvedCount(
-  comments: PageComment[],
-  blockIds: ReadonlySet<string>
-): number {
-  return arrangeThreads(comments, blockIds, { includeResolved: true }).filter(
-    (thread) => thread.resolved
-  ).length;
+  return counts;
 }
 
 /** Plafond de l'extrait figé : de quoi reconnaître la phrase, pas de quoi

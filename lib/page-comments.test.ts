@@ -2,9 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   arrangeThreads,
-  commentedBlockIds,
+  commentedBlockCounts,
   normalizeQuote,
-  resolvedCount,
   type PageComment,
 } from "./page-comments";
 
@@ -31,8 +30,6 @@ const comment = (over: Partial<PageComment> = {}): PageComment => {
     body: "…",
     author_id: "u-clement",
     parent_id: null,
-    resolved_at: null,
-    resolved_by: null,
     created_at: `2026-08-1${seq}T10:00:00.000Z`,
     updated_at: `2026-08-1${seq}T10:00:00.000Z`,
     ...over,
@@ -76,19 +73,6 @@ describe("arrangeThreads", () => {
     expect(thread.detached).toBe(false);
   });
 
-  it("masque les fils résolus, et les rend sur demande", () => {
-    const open = comment();
-    const done = comment({ resolved_at: "2026-08-11T12:00:00.000Z", resolved_by: "u-bob" });
-
-    expect(arrangeThreads([open, done], blocks()).map((t) => t.root.id)).toEqual([
-      open.id,
-    ]);
-    const all = arrangeThreads([open, done], blocks(), { includeResolved: true });
-    expect(all.map((t) => t.root.id)).toEqual([open.id, done.id]);
-    expect(all[1].resolved).toBe(true);
-    expect(resolvedCount([open, done], blocks())).toBe(1);
-  });
-
   it("range les réponses sous leur racine, dans l'ordre", () => {
     const root = comment();
     const second = comment({
@@ -113,19 +97,26 @@ describe("arrangeThreads", () => {
   });
 });
 
-describe("commentedBlockIds", () => {
-  it("n'allume que les blocs qui portent un fil ouvert ET vivant", () => {
+describe("commentedBlockCounts", () => {
+  it("n'allume que les blocs VIVANTS — pas la page, pas un bloc parti", () => {
     const open = comment({ block_id: "b1" });
-    const done = comment({ block_id: "b2", resolved_at: "2026-08-11T12:00:00.000Z" });
     const gone = comment({ block_id: "b-parti" });
     const onPage = comment();
 
-    const threads = arrangeThreads(
-      [open, done, gone, onPage],
-      blocks("b1", "b2"),
-      { includeResolved: true }
-    );
-    expect([...commentedBlockIds(threads)]).toEqual(["b1"]);
+    const threads = arrangeThreads([open, gone, onPage], blocks("b1"));
+    expect([...commentedBlockCounts(threads)]).toEqual([["b1", 1]]);
+  });
+
+  it("compte les RÉPONSES : la pastille dit la taille de la discussion", () => {
+    // Sans elles, un bloc où trois personnes se répondent porte « 1 », et le
+    // chiffre ne sert plus à décider si ça vaut le clic.
+    const root = comment({ block_id: "b1" });
+    const replies = [
+      comment({ block_id: null, parent_id: root.id }),
+      comment({ block_id: null, parent_id: root.id }),
+    ];
+    const threads = arrangeThreads([root, ...replies], blocks("b1"));
+    expect(commentedBlockCounts(threads).get("b1")).toBe(3);
   });
 });
 

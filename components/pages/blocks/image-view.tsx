@@ -39,7 +39,7 @@ import { usePageUploadsContext } from "@/components/pages/page-uploads";
  * plus, une position de curseur de plus, et un aller-retour markdown à réinventer
  * pour la même phrase.
  */
-export function ImageView({ node, editor, selected, updateAttributes, getPos }: NodeViewProps) {
+export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewProps) {
   const t = useTranslations("Pages");
   const uploads = usePageUploadsContext();
   const src = (node.attrs.src as string | null) ?? null;
@@ -108,10 +108,17 @@ export function ImageView({ node, editor, selected, updateAttributes, getPos }: 
     <NodeViewWrapper
       as="div"
       ref={wrapper}
-      className={cx(
-        "my-2 flex flex-col items-start",
-        selected && "rounded-lg ring-1 ring-ring"
-      )}
+      // Ni contour ni coins arrondis quand le bloc est sélectionné (MIN-282).
+      //
+      // L'anneau encadrait TOUT le bloc, légende comprise, et son rayon rognait
+      // ce qui touche les angles — à commencer par le texte alternatif, que le
+      // navigateur dessine DANS la boîte de l'image quand elle ne charge pas.
+      //
+      // Il n'y a donc plus AUCUNE marque de sélection sur l'image, et c'est
+      // assumé : ce qui désigne le bloc est la gouttière au survol (la poignée
+      // et le `+`), comme sur n'importe quel autre bloc du document. Rien
+      // d'autre dans cet éditeur ne se peint parce qu'il est sélectionné.
+      className="my-2 flex flex-col items-start"
       contentEditable={false}
     >
       {displayed ? (
@@ -127,8 +134,29 @@ export function ImageView({ node, editor, selected, updateAttributes, getPos }: 
           <img
             src={displayed}
             alt={alt}
+            /**
+             * Le glissé ne part pas de l'IMAGE, il part du bloc (MIN-282).
+             *
+             * Une image est nativement glissable, et c'est elle que le
+             * navigateur emporte quand on la tire — pas le nœud qui la contient.
+             * Le transfert porte alors du HTML (`<img src=…>`), donc rien que
+             * ProseMirror reconnaisse comme un déplacement : il retombe sur son
+             * collage par défaut et INSÈRE une seconde image. Un glissé de trois
+             * pixels, celui qu'on fait sans le vouloir en cliquant, dupliquait
+             * le bloc.
+             *
+             * `draggable={false}` rend le geste au conteneur, que ProseMirror
+             * sait déjà glisser (`draggable: true` dans le schéma du nœud,
+             * blocks/image.ts). Tirer une image la DÉPLACE donc, au lieu de la
+             * recopier — ce que fait déjà la poignée de gouttière, et ce que
+             * faisait croire le geste.
+             *
+             * Ce qu'on y perd : glisser l'image vers le bureau ou un autre
+             * onglet. L'ouvrir en grand d'un clic la rend à ce geste-là.
+             */
+            draggable={false}
             className={cx(
-              "h-auto w-full rounded-lg",
+              "h-auto w-full",
               src && "cursor-zoom-in",
               !src && "opacity-60"
             )}
@@ -138,7 +166,7 @@ export function ImageView({ node, editor, selected, updateAttributes, getPos }: 
           />
 
           {upload?.status === "uploading" && (
-            <div className="absolute inset-x-0 bottom-0 h-1 overflow-hidden rounded-b-lg bg-muted">
+            <div className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-muted">
               <div
                 className="h-full bg-primary transition-[width]"
                 style={{ width: `${Math.round((upload.progress || 0) * 100)}%` }}
@@ -231,7 +259,7 @@ export function ImageView({ node, editor, selected, updateAttributes, getPos }: 
           <img
             src={src}
             alt={alt}
-            className="max-h-full max-w-full rounded-lg object-contain"
+            className="max-h-full max-w-full object-contain"
           />
         </div>
       )}

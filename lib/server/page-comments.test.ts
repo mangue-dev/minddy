@@ -77,7 +77,7 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 
-const { addPageComment, resolvePageThread } = await import("./page-comments");
+const { addPageComment } = await import("./page-comments");
 
 const rows = () => H.insertNotifications.mock.calls[0]?.[1] ?? [];
 
@@ -239,75 +239,5 @@ describe("addPageComment", () => {
     });
     expect(H.inserted).toMatchObject({ via_mcp: true, api_key_id: "key-1" });
     expect(rows()[0]).toMatchObject({ via_mcp: true, api_key_id: "key-1" });
-  });
-});
-
-/**
- * La RÉSOLUTION vit sur la racine du fil, et sur elle seule — un fil se clôt
- * entier. Le geste part pourtant de n'importe quel message : cliquer « résoudre »
- * sous une réponse, c'est le même geste vu d'ailleurs, pas une erreur à refuser.
- */
-describe("resolvePageThread", () => {
-  const client = (row: Record<string, unknown> | null) => {
-    const updated: { id?: unknown; patch?: Record<string, unknown> } = {};
-    return {
-      seen: updated,
-      client: {
-        from: () => ({
-          select: () => ({
-            eq: () => ({ maybeSingle: async () => ({ data: row, error: null }) }),
-          }),
-          update(patch: Record<string, unknown>) {
-            updated.patch = patch;
-            return {
-              eq: (_col: string, value: unknown) => {
-                updated.id = value;
-                return {
-                  select: () => ({
-                    maybeSingle: async () => ({
-                      data: { id: value, ...patch },
-                      error: null,
-                    }),
-                  }),
-                };
-              },
-            };
-          },
-        }),
-      },
-    };
-  };
-
-  it("remonte à la racine quand on résout depuis une réponse", async () => {
-    const fake = client({ id: "reply-1", parent_id: "root-1" });
-    const result = await resolvePageThread(fake.client as never, {
-      commentId: "reply-1",
-      actorId: "u-clement",
-      resolved: true,
-    });
-    expect(result.ok).toBe(true);
-    expect(fake.seen.id).toBe("root-1");
-    expect(fake.seen.patch).toMatchObject({ resolved_by: "u-clement" });
-    expect(typeof fake.seen.patch?.resolved_at).toBe("string");
-  });
-
-  it("rouvre par le même verbe, et efface qui avait clos", async () => {
-    const fake = client({ id: "root-1", parent_id: null });
-    await resolvePageThread(fake.client as never, {
-      commentId: "root-1",
-      actorId: "u-bob",
-      resolved: false,
-    });
-    expect(fake.seen.patch).toEqual({ resolved_at: null, resolved_by: null });
-  });
-
-  it("répond 404 sur un fil qu'on ne voit pas — la RLS ne dit rien de plus", async () => {
-    const fake = client(null);
-    const result = await resolvePageThread(fake.client as never, {
-      commentId: "root-1",
-      actorId: "u-intrus",
-      resolved: true,
-    });
-    expect(result).toMatchObject({ ok: false, status: 404, errorKey: "commentNotFound" });
   });
 });

@@ -51,7 +51,6 @@ vi.mock("@/lib/supabase-service", () => {
                 parent_id: null,
                 block_id: null,
                 quote: null,
-                resolved_at: null,
                 created_at: `2026-08-10T00:00:0${h.seq}Z`,
                 updated_at: `2026-08-10T00:00:0${h.seq}Z`,
                 ...values,
@@ -785,7 +784,7 @@ describe("les fils de discussion d'une page", () => {
     expect(posted.ok, JSON.stringify(posted.payload)).toBe(true);
 
     const again = await call("minddy_get_page", { project_id: PROJECT, page_id: page });
-    const threads = again.payload.open_threads as Array<Record<string, unknown>>;
+    const threads = again.payload.threads as Array<Record<string, unknown>>;
     expect(threads).toHaveLength(1);
     expect(threads[0].block_id).toBe(blockId);
     // L'extrait est RELU dans le document, pas dicté par l'agent : c'est bien
@@ -810,7 +809,7 @@ describe("les fils de discussion d'une page", () => {
       project_id: PROJECT,
       page_id: page,
     });
-    const threads = payload.open_threads as Array<Record<string, unknown>>;
+    const threads = payload.threads as Array<Record<string, unknown>>;
     expect(threads[0]).toMatchObject({ block_id: null, quote: null });
   });
 
@@ -832,26 +831,9 @@ describe("les fils de discussion d'une page", () => {
       project_id: PROJECT,
       page_id: page,
     });
-    const threads = payload.open_threads as Array<{ messages: unknown[] }>;
+    const threads = payload.threads as Array<{ messages: unknown[] }>;
     expect(threads).toHaveLength(1);
     expect(threads[0].messages).toHaveLength(2);
-  });
-
-  it("ne rend PAS les fils résolus — un débat clos n'est plus une contrainte", async () => {
-    const page = await createPage("Spec", "un corps");
-    await call("minddy_add_page_comment", {
-      project_id: PROJECT,
-      page_id: page,
-      body: "tranché depuis",
-    });
-    // Résolu par un humain dans l'UI : les agents n'ont pas ce geste.
-    h.comments[0].resolved_at = "2026-08-11T12:00:00Z";
-
-    const { payload } = await call("minddy_get_page", {
-      project_id: PROJECT,
-      page_id: page,
-    });
-    expect(payload.open_threads).toEqual([]);
   });
 
   it("refuse de commenter une page d'un projet qu'on ne voit pas", async () => {

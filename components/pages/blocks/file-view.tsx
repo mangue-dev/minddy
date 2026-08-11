@@ -50,7 +50,11 @@ export function FileView({ node, selected }: NodeViewProps) {
       className={cx(
         "my-1 flex items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors",
         src && "hover:bg-muted",
-        selected && "bg-muted ring-1 ring-ring"
+        // Sélectionné, la ligne s'ASSOMBRIT et rien de plus (MIN-282) :
+        // l'anneau bleu doublait un cadre que ce bloc a déjà, et deux traits
+        // concentriques à deux rayons se lisent comme un défaut de rendu. Le
+        // rayon, lui, reste — ici il dessine une carte, il ne rogne rien.
+        selected && "bg-muted"
       )}
       contentEditable={false}
     >
@@ -105,6 +109,11 @@ export function FileView({ node, selected }: NodeViewProps) {
             NODE_LINK_CLASS,
             "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground no-underline transition-colors hover:bg-muted hover:text-foreground"
           )}
+          // Comme l'image (MIN-282) : une ancre est nativement glissable, et le
+          // glissé qui en part porte son URL. Lâché dans le document, il y
+          // écrivait un lien — un bloc de plus né d'un geste qu'on n'a pas voulu
+          // faire. Le bloc se déplace par sa poignée, pas par son bouton.
+          draggable={false}
           // `handleNodeLinkClick` a déjà coupé l'extension Link ET le
           // comportement par défaut de l'ancre (components/editor-node-link.ts) :
           // sans ce relais, le clic ordinaire ne ferait plus rien du tout. La

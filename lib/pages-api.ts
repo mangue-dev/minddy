@@ -432,23 +432,3 @@ export async function deletePageCommentApi(
   );
   trackEvent("comment_deleted", { target: "page" });
 }
-
-/** Résoudre un fil, ou le rouvrir — le même verbe dans les deux sens. */
-export async function resolvePageThreadApi(
-  projectId: string,
-  pageId: string,
-  commentId: string,
-  resolved: boolean
-): Promise<PageComment> {
-  return json(
-    await fetch(
-      `/api/projects/${projectId}/pages/${pageId}/comments/${commentId}/resolve`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resolved }),
-      }
-    ),
-    "Request failed"
-  );
-}

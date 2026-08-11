@@ -29,9 +29,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -71,7 +68,7 @@ import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
 import { PageBacklinks } from "@/components/pages/page-backlinks";
-import { PageComments } from "@/components/pages/page-comments";
+import { PageCommentLayer } from "@/components/pages/page-comment-layer";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
@@ -86,38 +83,65 @@ import type { PagesLookup } from "@/components/pages/pages-lookup";
 const SAVE_DELAY_MS = 1_000;
 
 /**
- * L'état d'enregistrement, en bout de la ligne d'icône — même grammaire que le
- * carnet : une roue pendant l'écriture, une coche le reste du temps, et le
- * « quand » réservé à l'infobulle.
+ * OÙ EN EST CE DOCUMENT — l'état d'enregistrement et le dernier auteur, en un
+ * seul objet (MIN-282).
  *
- * Une icône plutôt qu'un mot, parce que c'est une information qu'on cherche
- * (« est-ce parti ? ») et non une qu'on doit lire : un texte qui apparaît et
- * disparaît en haut d'un document attire l'œil à chaque frappe, exactement au
- * moment où on écrit.
+ * Les deux répondaient à la même question depuis deux coins opposés de l'écran :
+ * une coche en haut à droite (« c'est parti »), et « modifiée par Clément il y a
+ * 2 jours » sous le titre. Rien ne les reliait, alors qu'on les lit dans le même
+ * mouvement en arrivant sur une page — et la seconde poussait le corps d'une
+ * ligne, sur toutes les pages, pour une information qu'on cherche une fois.
+ *
+ * Ce que la fusion garde du raisonnement d'origine : **ce qui clignote reste une
+ * icône**. Le texte, lui, est stable — un nom et une date qui ne bougent pas à
+ * la frappe —, donc il peut s'écrire. La roue d'enregistrement tourne à côté
+ * sans rien déplacer.
+ *
+ * Et c'est un BOUTON : c'est en lisant « modifiée par quelqu'un d'autre » qu'on
+ * se demande ce qui a changé, donc c'est de là que s'ouvre le panneau
+ * d'activité. La question reste à côté de sa réponse.
  */
-function PageSaveIndicator({
+function PageStatus({
   state,
   updatedAt,
+  lastEdit,
+  onOpenHistory,
 }: {
   state: PageSaveState;
   updatedAt: string | null;
+  /** QUI a écrit en dernier, et quand. Absent tant que le nom n'est pas résolu :
+      un nom qui change sous les yeux se lit comme une erreur. */
+  lastEdit: { name: string; at: string } | null;
+  onOpenHistory: () => void;
 }) {
   const t = useTranslations("Pages");
   const format = useFormatter();
-  const [now, setNow] = useState(() => Date.now());
+  const [tick, setTick] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 15_000);
+    const id = setInterval(() => setTick(Date.now()), 15_000);
     return () => clearInterval(id);
   }, []);
 
+  // Les deux horodatages que cette ligne connaît. Ils sont le plus souvent le
+  // MÊME instant — la dernière écriture est celle qu'on vient d'enregistrer —
+  // mais pas toujours : une écriture venue d'ailleurs bouge `lastEdit` sans
+  // qu'on ait rien enregistré. Les deux tirent l'horloge, ci-dessous.
   const at = updatedAt ? new Date(updatedAt).getTime() : NaN;
-  // Sous la minute, le formateur relatif compte les secondes à voix haute
-  // (« enregistré il y a 4 secondes »), ce qui est plus bavard que le silence.
-  const when =
-    !Number.isFinite(at) || now - at < 60_000
-      ? t("savedJustNow")
-      : t("savedAgo", { time: format.relativeTime(at, now) });
-
+  const editedAt = lastEdit ? new Date(lastEdit.at).getTime() : NaN;
+  /**
+   * L'instant de RÉFÉRENCE des durées relatives, et il ne doit jamais être
+   * dépassé par ce qu'il mesure.
+   *
+   * L'horloge ne bat que toutes les 15 secondes : entre deux battements, un
+   * enregistrement qui vient d'aboutir porte un horodatage POSTÉRIEUR à elle, et
+   * le formateur relatif dit alors « dans 1 seconde ». Le maximum le ramène à
+   * « à l'instant », qui est ce qu'on vient de faire.
+   */
+  const now = Math.max(
+    tick,
+    Number.isFinite(at) ? at : 0,
+    Number.isFinite(editedAt) ? editedAt : 0
+  );
   // Le conflit reste dans cette même icône, et ne devient pas une quatrième
   // chose à lire : la page EST enregistrée — c'est le bandeau, juste au-dessus
   // du document, qui porte ce qu'il y a à décider.
@@ -128,30 +152,56 @@ function PageSaveIndicator({
         ? t("savedWithConflict")
         : t("saved");
 
+  const edited = lastEdit
+    ? t("lastEditedBy", {
+        name: lastEdit.name,
+        time: format.relativeTime(editedAt, now),
+      })
+    : null;
+
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
+    <button
+      type="button"
+      onClick={onOpenHistory}
+      // Le nom accessible ne dépend PAS du survol : le texte visible est caché
+      // au repos, donc absent de l'arbre d'accessibilité. Les deux moitiés sont
+      // reprises ici — l'état, puis qui a écrit —, et le texte à l'écran est
+      // marqué décoratif pour ne pas être annoncé deux fois.
+      aria-label={edited ? `${label} — ${edited}` : label}
+      className={cn(
+        "group flex items-center gap-1.5 rounded px-1 py-0.5 text-xs transition-colors",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        // Le fond au survol fait deux choses d'un coup : il dit que ça se
+        // clique, et il détache le texte qui se déplie de ce qu'il recouvre —
+        // sur une surface étroite, il passe devant le fil d'Ariane.
+        "hover:bg-muted",
+        state === "conflict"
+          ? "text-amber-600 dark:text-amber-500"
+          : "text-muted-foreground/70 hover:text-foreground"
+      )}
+    >
+      <span role="status" aria-label={label} className="flex shrink-0">
+        {state === "saving" ? (
+          <Spinner className="size-3.5" />
+        ) : state === "conflict" ? (
+          <TriangleAlert className="size-3.5" />
+        ) : (
+          <Check className="size-3.5" />
+        )}
+      </span>
+      {/* Au REPOS, une coche et rien d'autre. Le nom et la date ne sont pas ce
+          qu'on surveille en écrivant — c'est ce qu'on va CHERCHER, une fois, en
+          arrivant sur une page qu'on n'a pas écrite. Ils se déplient donc au
+          survol (et à la tabulation), là où l'œil est déjà. */}
+      {edited ? (
         <span
-          role="status"
-          aria-label={label}
-          className={cn(
-            "flex transition-colors",
-            state === "conflict"
-              ? "text-amber-600 dark:text-amber-500"
-              : "text-muted-foreground/60 hover:text-muted-foreground"
-          )}
+          aria-hidden
+          className="hidden max-w-[14rem] truncate group-hover:block group-focus-visible:block"
         >
-          {state === "saving" ? (
-            <Spinner className="size-3.5" />
-          ) : state === "conflict" ? (
-            <TriangleAlert className="size-3.5" />
-          ) : (
-            <Check className="size-3.5" />
-          )}
+          {edited}
         </span>
-      </TooltipTrigger>
-      <TooltipContent>{state === "saved" ? when : label}</TooltipContent>
-    </Tooltip>
+      ) : null}
+    </button>
   );
 }
 
@@ -609,6 +659,7 @@ function PageSurface({
   const onComment = useCallback((anchor: PageCommentAnchor) => {
     setDraftAnchor(anchor);
   }, []);
+  const clearDraftAnchor = useCallback(() => setDraftAnchor(null), []);
 
   /* ── L'ancre d'un bloc ───────────────────────────────────────────────── */
   /** Marge au-dessus du bloc visé par une ancre, une fois arrivé. */
@@ -679,6 +730,9 @@ function PageSurface({
       {/* Le CHEMIN, à l'opposé de l'état d'enregistrement : les deux sont
           épinglés hors du flux et hors du défilement, et se partagent la même
           ligne. Il ne paraît que sur une sous-page — voir page-breadcrumb.tsx. */}
+      {/* La réserve de droite reste celle de deux icônes : l'état est une coche
+          au repos, et son texte ne se déplie qu'au survol — par-dessus, sur son
+          propre fond (MIN-282). */}
       <div className="absolute top-3 left-3.5 z-10 flex min-w-0 max-w-[calc(100%-9rem)] items-center">
         <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
       </div>
@@ -689,9 +743,15 @@ function PageSurface({
           members={members}
           meId={user?.id ?? null}
         />
-        <PageSaveIndicator
+        <PageStatus
           state={autosave.state}
           updatedAt={autosave.savedAt ?? summary?.updated_at ?? page.updated_at}
+          lastEdit={
+            lastEditName && lastEditAt
+              ? { name: lastEditName, at: lastEditAt }
+              : null
+          }
+          onOpenHistory={() => setHistoryOpen(true)}
         />
       </div>
 
@@ -736,12 +796,6 @@ function PageSurface({
           onEnter={openBodyLine}
           onDown={focusBodyStart}
           fieldRef={titleFieldRef}
-          lastEdit={
-            lastEditName && lastEditAt
-              ? { name: lastEditName, at: lastEditAt }
-              : null
-          }
-          onOpenHistory={() => setHistoryOpen(true)}
         />
         {/* Entre le titre et le corps : au-dessus du document, parce que c'est
             du document qu'il parle, et dans le flux, parce qu'un écrasement
@@ -780,20 +834,6 @@ function PageSurface({
             un meuble qui prendrait de la largeur en permanence. Absent tant que
             personne ne cite la page (MIN-279). */}
         <PageBacklinks projectId={projectId} pageId={pageId} />
-        {/* Le FIL, à la suite du document (MIN-282) — la page était le seul
-            objet de minddy sur lequel on ne pouvait rien dire. Sous les
-            rétroliens : « qui s'appuie là-dessus ? » se lit d'un coup d'œil,
-            « qu'est-ce qui a été objecté ? » se lit et se répond. */}
-        <PageComments
-          projectId={projectId}
-          pageId={pageId}
-          editor={editor}
-          scrollRef={scrollRef}
-          members={members}
-          currentUserId={user?.id ?? null}
-          draftAnchor={draftAnchor}
-          onDraftAnchorDone={() => setDraftAnchor(null)}
-        />
       </div>
       </div>
 
@@ -813,6 +853,19 @@ function PageSurface({
           onRestored={onRestored}
         />
       ) : null}
+
+      {/* Les COMMENTAIRES (MIN-282), en calque : rien dans le flux du document.
+          Le fil d'un bloc s'ouvre à côté de son bloc, celui de la page vit dans
+          l'onglet « Activité » de l'historique. */}
+      <PageCommentLayer
+        projectId={projectId}
+        pageId={pageId}
+        editor={editor}
+        members={members}
+        currentUserId={user?.id ?? null}
+        draftAnchor={draftAnchor}
+        onDraftAnchorDone={clearDraftAnchor}
+      />
 
       <AlertDialog
         open={pendingTrash !== null}

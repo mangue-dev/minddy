@@ -97,8 +97,26 @@ export interface ThreadMessage {
   attachments?: Attachment[];
 }
 
-type EventItem = Extract<TimelineItem, { kind: "event" }>;
-type CommentItem = Extract<TimelineItem, { kind: "comment" }>;
+/**
+ * Une ligne de fil d'activité : un GESTE, ou un message.
+ *
+ * `TimelineItem` (lib/use-issue-timeline.ts) en est le cas particulier des trois
+ * surfaces bâties sur la table `comments` ; celui-ci accepte en plus les
+ * messages d'une autre table — le fil d'une page (MIN-282), qui vit dans
+ * `page_comments`. Un `Comment` remplit `ThreadMessage`, donc les anciens
+ * appelants passent tels quels.
+ */
+export type ActivityItem =
+  | { kind: "event"; at: string; event: Extract<TimelineItem, { kind: "event" }>["event"] }
+  | {
+      kind: "comment";
+      at: string;
+      comment: ThreadMessage;
+      replies: ThreadMessage[];
+    };
+
+type EventItem = Extract<ActivityItem, { kind: "event" }>;
+type CommentItem = Extract<ActivityItem, { kind: "comment" }>;
 /** Le translator du namespace `Timeline` — celui que reçoivent les helpers
  *  ci-dessous. Nommer le namespace n'est pas cosmétique : sans lui, le type
  *  couvre les 2 600 clés du catalogue et TypeScript abandonne sur un
@@ -862,6 +880,8 @@ function CommentCard({
   ctx,
   currentUserId,
   projectId,
+  header,
+  allowAttachments = true,
   onReply,
   onEditComment,
   onDeleteComment,
@@ -871,6 +891,9 @@ function CommentCard({
   ctx: EventContext;
   currentUserId: string | null;
   projectId: string;
+  /** Le bandeau de tête, quand la surface en a un (cf. `commentHeader`). */
+  header?: React.ReactNode;
+  allowAttachments?: boolean;
   onReply: (
     parentId: string,
     body: string,
@@ -893,6 +916,9 @@ function CommentCard({
         threadIsPublic ? "border-brand/30" : "border-border"
       )}
     >
+      {header ? (
+        <div className="border-b border-border/60 px-3.5 py-2">{header}</div>
+      ) : null}
       <div className="px-3.5 py-3">
         <CommentBlock
           comment={item.comment}
@@ -925,6 +951,7 @@ function CommentCard({
           projectId={projectId}
           rootId={item.comment.id}
           threadIsPublic={threadIsPublic}
+          allowAttachments={allowAttachments}
           onReply={onReply}
         />
       </div>
@@ -974,7 +1001,7 @@ function EventsGroup({
 /** Groups consecutive events (delimited by comments) so comments stay isolated;
     a run of 3+ events collapses into a "N événements" accordion. */
 function groupRows(
-  items: TimelineItem[]
+  items: ActivityItem[]
 ): ({ type: "comment"; item: CommentItem } | { type: "events"; items: EventItem[] })[] {
   const rows: ({ type: "comment"; item: CommentItem } | { type: "events"; items: EventItem[] })[] = [];
   let buffer: EventItem[] = [];
@@ -1003,13 +1030,26 @@ export function IssueActivity({
   currentUserId,
   projectId,
   entity = "issue",
+  commentHeader,
+  allowAttachments = true,
   onReply,
   onEditComment,
   onDeleteComment,
   onDeleteAttachment,
 }: {
-  items: TimelineItem[];
+  items: ActivityItem[];
   ctx: EventContext;
+  /**
+   * Un bandeau propre à la surface, en tête de la carte d'un fil (MIN-282).
+   *
+   * Le fil d'une page y met ce qu'aucune autre surface n'a : l'extrait cité, le
+   * fait que le bloc commenté ait disparu, et le bouton qui résout. Rendre
+   * `null` n'ajoute rien — un ticket n'a pas de bandeau.
+   */
+  commentHeader?: (comment: ThreadMessage) => React.ReactNode;
+  /** Cf. `ReplyComposer` : faux sur une page, où un fichier n'a pas de ligne où
+      s'accrocher. */
+  allowAttachments?: boolean;
   currentUserId: string | null;
   projectId: string;
   /** Renders objective activity (event describer + status set) when "objective". */
@@ -1059,6 +1099,8 @@ export function IssueActivity({
                     ctx={ctx}
                     currentUserId={currentUserId}
                     projectId={projectId}
+                    header={commentHeader?.(row.item.comment)}
+                    allowAttachments={allowAttachments}
                     onReply={onReply}
                     onEditComment={onEditComment}
                     onDeleteComment={onDeleteComment}

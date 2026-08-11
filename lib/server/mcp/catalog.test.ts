@@ -352,7 +352,7 @@ describe("catalogue MCP — les pages", () => {
     // contesté. Un agent qui réécrit sans les avoir lus tranche un débat que
     // personne ne lui a demandé de trancher — encore faut-il qu'il sache que
     // c'est là, et que répondre est un geste qu'il a.
-    expect(tool("minddy_get_page").description).toMatch(/open_threads/i);
+    expect(tool("minddy_get_page").description).toMatch(/threads/i);
     expect(tool("minddy_get_page").description).toContain(
       "minddy_add_page_comment"
     );
@@ -365,7 +365,7 @@ describe("catalogue MCP — les pages", () => {
     // L'ancre se REPREND, elle ne s'invente pas : les ids de blocs ne sont pas
     // dans le markdown, et une ancre inventée fait un fil détaché aussitôt né.
     expect(param("minddy_add_page_comment", "block_id").description).toContain(
-      "open_threads"
+      "threads"
     );
     expect(tool("minddy_add_page_comment").description).toMatch(
       /never invent a block_id/i

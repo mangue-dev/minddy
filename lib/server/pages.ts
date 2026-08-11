@@ -128,7 +128,7 @@ const MAX_ICON_LENGTH = 16;
  * lit page par page, à l'ouverture.
  */
 const LIST_COLUMNS =
-  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed";
+  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, updated_api_key_id, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed";
 
 const FULL_COLUMNS = `${LIST_COLUMNS}, content`;
 
@@ -188,9 +188,22 @@ async function loadProjectPages(
  */
 function writtenBy(
   actorId: string,
-  kind: PageWriteKind
-): { updated_by: string; updated_kind: PageWriteKind } {
-  return { updated_by: actorId, updated_kind: kind };
+  kind: PageWriteKind,
+  mcpKeyId: string | null = null
+): {
+  updated_by: string;
+  updated_kind: PageWriteKind;
+  updated_api_key_id: string | null;
+} {
+  // La CLÉ, quand l'écriture vient du MCP (MIN-282) : « agent » recouvre deux
+  // visages — Numo, et l'agent qui tient une clé, qui a un nom et un logo. La
+  // colonne est ce qui permet à l'historique de montrer le bon, comme
+  // l'activité le fait déjà par `issue_events.api_key_id`.
+  return {
+    updated_by: actorId,
+    updated_kind: kind,
+    updated_api_key_id: kind === "agent" ? mcpKeyId : null,
+  };
 }
 
 /**
@@ -248,6 +261,9 @@ function stampPageWrite({
   // son créateur : la ligne d'historique nomme quelqu'un plutôt que personne.
   const authorId = previous.updated_by ?? previous.created_by;
   const authorKind: PageWriteKind = previous.updated_kind ?? "human";
+  // La clé de l'état ARCHIVÉ, comme son auteur : celle d'avant l'écriture qui
+  // le recouvre. Null dès que l'auteur n'est pas un agent de clé.
+  const authorKeyId = previous.updated_api_key_id ?? null;
 
   afterOrNow(async () => {
     if (!always && authorId === actorId && authorKind === kind) {
@@ -269,6 +285,7 @@ function stampPageWrite({
       content: previous.content ?? { type: "doc", content: [] },
       author_id: authorId,
       author_kind: authorKind,
+      author_api_key_id: authorKeyId,
     });
     if (error) console.error("[pages] version snapshot failed:", error.message);
   });

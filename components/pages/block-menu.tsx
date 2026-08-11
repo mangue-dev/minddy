@@ -61,6 +61,7 @@ import {
   selectedBlockCount,
   selectedBlockId,
   selectedSubpageId,
+  selectionIsMediaOnly,
   turnBlocksInto,
 } from "@/components/pages/block-actions";
 
@@ -168,6 +169,24 @@ export function BlockMenu({
     [open, editor]
   );
 
+  /**
+   * Une image ou un fichier, seuls en sélection (MIN-282) : le menu se réduit
+   * pour la même raison que sur une sous-page — ce qu'on retire n'a pas de sens
+   * sur ce bloc-là.
+   *
+   * « Transformer en » et les couleurs, comme pour la sous-page : un fichier ne
+   * devient pas une citation, et il n'a pas de texte à peindre. Et DUPLIQUER en
+   * plus, ce que la sous-page garde : dupliquer une sous-page copie vraiment la
+   * page, alors que dupliquer une image ne copie aucun octet — elle pose une
+   * seconde référence au même fichier, qui se lit comme une copie sans en être
+   * une, et que supprimer d'un côté ne libère pas de l'autre.
+   */
+  const mediaOnly = useMemo(
+    () => (open ? selectionIsMediaOnly(editor) : false),
+    [open, editor]
+  );
+  const plain = !subpageId && !mediaOnly;
+
   const duplicateSubpage = async (pageId: string) => {
     const duplicate = editor.storage.subpage?.duplicate;
     // La place de la copie est retenue MAINTENANT : copier est un aller-retour
@@ -214,7 +233,7 @@ export function BlockMenu({
           </DropdownMenuLabel>
         )}
 
-        {!subpageId && (
+        {plain && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Repeat2 />
@@ -246,7 +265,7 @@ export function BlockMenu({
         </DropdownMenuSub>
         )}
 
-        {!subpageId && (
+        {plain && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Palette />
@@ -266,18 +285,20 @@ export function BlockMenu({
         </DropdownMenuSub>
         )}
 
-        {!subpageId && <DropdownMenuSeparator />}
+        {plain && <DropdownMenuSeparator />}
 
-        <DropdownMenuItem
-          onSelect={() => {
-            if (subpageId) void duplicateSubpage(subpageId);
-            else duplicateBlocks(editor);
-            close();
-          }}
-        >
-          <CopyPlus />
-          <span className="truncate">{t("duplicateBlock")}</span>
-        </DropdownMenuItem>
+        {!mediaOnly && (
+          <DropdownMenuItem
+            onSelect={() => {
+              if (subpageId) void duplicateSubpage(subpageId);
+              else duplicateBlocks(editor);
+              close();
+            }}
+          >
+            <CopyPlus />
+            <span className="truncate">{t("duplicateBlock")}</span>
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuItem
           onSelect={() => {

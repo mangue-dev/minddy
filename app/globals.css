@@ -1081,7 +1081,52 @@ nav[aria-label="Navigation"]
   left: -0.75rem;
   width: 2px;
   border-radius: 1px;
-  background-color: color-mix(in oklab, var(--page-color-amber) 70%, transparent);
+  background-color: color-mix(in oklab, var(--page-color-teal) 70%, transparent);
+}
+
+/* La PASTILLE d'un bloc commenté : le compte, et le bouton qui ouvre le fil.
+   Hors flux, dans la marge DROITE — la gauche est prise par la poignée et le
+   `+`. Elle ne pousse donc rien : un bloc commenté a exactement la même mise en
+   page que ses voisins, et c'est ce qui permet de la poser sur tous les blocs
+   sans déformer le document. */
+.page-block-comment-badge {
+  position: absolute;
+  /* Dans la RÉSERVE de droite de la colonne (`md:pr-10`, 2,5 rem), pas
+     au-delà : plus loin, la pastille dépasserait du conteneur qui défile. */
+  right: -1.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.375rem;
+  font-size: 0.6875rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--page-color-teal) 85%, var(--foreground));
+  background-color: transparent;
+  transition: background-color 120ms ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.page-block-comment-badge:hover {
+  background-color: color-mix(in oklab, var(--page-color-teal) 16%, transparent);
+}
+
+.page-block-comment-badge svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* Sous la largeur où la marge droite existe, la pastille revient DANS le flux,
+   en bout de bloc : mieux vaut un décalage d'une ligne qu'un bouton qui sort de
+   l'écran et qu'on ne peut plus cliquer. */
+@media (max-width: 48rem) {
+  .page-block-comment-badge {
+    position: static;
+    margin-left: 0.375rem;
+    vertical-align: middle;
+  }
 }
 
 .page-block-target {

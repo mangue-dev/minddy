@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { SITE_NAME } from "@/lib/site";
 import { updatePage, type PageErrorKey } from "@/lib/server/pages";
@@ -38,7 +39,7 @@ type Service = ReturnType<typeof getServiceClient>;
     `LIST_COLUMNS` côté pages — vingt documents ProseMirror pour une liste de
     dates seraient la requête la plus lourde de l'écran. */
 const VERSION_COLUMNS =
-  "id, page_id, version, title, icon, author_id, author_kind, created_at";
+  "id, page_id, version, title, icon, author_id, author_kind, author_api_key_id, created_at";
 
 export type PageVersionResult<T> =
   | { ok: true; data: T }
@@ -70,6 +71,7 @@ type VersionRow = {
   content?: unknown;
   author_id: string | null;
   author_kind: PageWriteKind;
+  author_api_key_id?: string | null;
   created_at: string;
 };
 
@@ -97,7 +99,25 @@ async function resolveAuthors(
   return names;
 }
 
-function toVersion(row: VersionRow, names: Map<string, string>): PageVersion {
+/**
+ * QUEL agent, quand c'en est un (MIN-282).
+ *
+ * Le NOM ne bouge pas — « minddy » dans les deux cas, c'est la règle
+ * d'identité. Ce qu'on résout ici est le VISAGE : l'agent canonique porté par
+ * la clé (« claude-code », « cursor »…), que la ligne rend en logo. Une version
+ * d'avant cette colonne n'en a pas, et retombe sur le visage de Numo — le bon
+ * repli, une clé MCP étant l'exception.
+ */
+async function resolveAgents(rows: VersionRow[]): Promise<Map<string, string | null>> {
+  const actors = await resolveApiKeyActors(rows.map((row) => row.author_api_key_id));
+  return new Map([...actors].map(([id, actor]) => [id, actor.agent]));
+}
+
+function toVersion(
+  row: VersionRow,
+  names: Map<string, string>,
+  agents: Map<string, string | null>
+): PageVersion {
   return {
     id: row.id,
     page_id: row.page_id,
@@ -111,6 +131,9 @@ function toVersion(row: VersionRow, names: Map<string, string>): PageVersion {
       row.author_kind === "agent"
         ? SITE_NAME
         : (row.author_id ? names.get(row.author_id) : "") || "",
+    author_agent: row.author_api_key_id
+      ? (agents.get(row.author_api_key_id) ?? null)
+      : null,
     created_at: row.created_at,
   };
 }
@@ -136,8 +159,11 @@ export async function listPageVersions(
   }
 
   const rows = (data ?? []) as unknown as VersionRow[];
-  const names = await resolveAuthors(service, rows);
-  return { ok: true, data: rows.map((row) => toVersion(row, names)) };
+  const [names, agents] = await Promise.all([
+    resolveAuthors(service, rows),
+    resolveAgents(rows),
+  ]);
+  return { ok: true, data: rows.map((row) => toVersion(row, names, agents)) };
 }
 
 /** UNE version, corps compris — l'aperçu en lecture seule. */
@@ -166,8 +192,11 @@ export async function getPageVersion(
   if (!data) return { ok: false, status: 404, errorKey: "pageVersionNotFound" };
 
   const row = data as unknown as VersionRow;
-  const names = await resolveAuthors(service, [row]);
-  return { ok: true, data: toVersion(row, names) };
+  const [names, agents] = await Promise.all([
+    resolveAuthors(service, [row]),
+    resolveAgents([row]),
+  ]);
+  return { ok: true, data: toVersion(row, names, agents) };
 }
 
 /**
