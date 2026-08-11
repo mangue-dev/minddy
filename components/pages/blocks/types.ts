@@ -25,6 +25,22 @@ import type { Editor, Extensions, Range } from "@tiptap/core";
 import type { LucideIcon } from "lucide-react";
 import type { MessageKey } from "@/lib/i18n-keys";
 
+/**
+ * L'attribut qui porte l'ID stable d'un bloc. `blockId` et pas `id` : le
+ * document part en JSON dans la base, et un champ nommé `id` au milieu d'un
+ * arbre de nœuds se confond avec l'id de la PAGE à la première relecture.
+ *
+ * C'est lui qui donne à la poignée sa cible, au lien de bloc son ancre, à la
+ * sauvegarde sa fusion par bloc (MIN-271) et aux futurs commentaires la leur.
+ *
+ * Il vit dans ce module-FEUILLE, et pas dans le registre, pour que les actions
+ * du chrome (components/pages/block-actions.ts) puissent le lire sans importer
+ * le catalogue — le registre, lui, importe ces actions pour ses raccourcis, et
+ * deux modules qui s'importent l'un l'autre finissent toujours par se lever
+ * dans le mauvais ordre.
+ */
+export const BLOCK_ID_ATTRIBUTE = "blockId";
+
 /** L'identité d'un bloc dans le CATALOGUE — pas le nom de son nœud tiptap :
     les trois titres sont trois blocs pour un seul nœud `heading`. */
 export type PageBlockId =

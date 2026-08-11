@@ -19,8 +19,10 @@
 //    (`alt`-clic : au-dessus). Le `+` n'est pas un bouton « paragraphe », c'est
 //    l'entrée du catalogue ;
 //  - la poignée, cliquée, sélectionne le bloc et ouvre le menu ⋯. ⇧-clic étend
-//    la sélection depuis le bloc déjà sélectionné, et le menu opère alors sur
-//    tous.
+//    la sélection depuis le bloc déjà sélectionné, et — c'est ce qui manquait —
+//    un clic simple sur un bloc DÉJÀ compris dans une sélection multi-blocs la
+//    garde intacte : balayer trois blocs à la souris puis aller chercher la
+//    poignée ne les ramène plus à un seul (`selectBlockFromHandle`).
 //
 // Le clavier passe par la MÊME ancre. La poignée vit dans un portail que
 // l'extension masque par `visibility` hors survol : rien de ce qui est dedans
@@ -30,25 +32,18 @@
 // contextuel (⇧F10, et la touche « menu » des claviers qui en ont une) l'y
 // amène. Même menu, mêmes actions, sans souris.
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import type { Node } from "@tiptap/pm/model";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
-import { TextSelection } from "@tiptap/pm/state";
 import { GripVertical, Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
 import { BlockMenu } from "@/components/pages/block-menu";
 import {
   blockRange,
   insertBlockAround,
-  selectBlockAt,
+  selectBlockFromHandle,
   styledBox,
 } from "@/components/pages/block-actions";
 
@@ -118,7 +113,8 @@ export function BlockGutter({ editor }: { editor: Editor }) {
       // ligne — visible sur le code, invisible sur un paragraphe qui n'a ni
       // l'un ni l'autre.
       const inset =
-        parseFloat(style.paddingTop || "0") + parseFloat(style.borderTopWidth || "0");
+        parseFloat(style.paddingTop || "0") +
+        parseFloat(style.borderTopWidth || "0");
       // `line-height: normal` ne se lit pas en pixels : on retombe sur la
       // hauteur de police, ce qui reste bien plus juste que zéro.
       const parsed = parseFloat(style.lineHeight);
@@ -143,30 +139,6 @@ export function BlockGutter({ editor }: { editor: Editor }) {
     setAnchor({ top: rect.top, left: rect.left });
     setMenuOpen(true);
   }, []);
-
-  /** ⇧-clic : étendre la sélection courante jusqu'à ce bloc, plutôt que de la
-      remplacer. C'est ce qui donne la sélection multi-blocs à la souris. */
-  const selectFromHandle = useCallback(
-    (pos: number, extend: boolean) => {
-      if (!extend) return selectBlockAt(editor, pos);
-      const node = editor.state.doc.nodeAt(pos);
-      if (!node) return false;
-      const { doc, selection } = editor.state;
-      const from = Math.min(selection.from, pos);
-      const to = Math.max(selection.to, pos + node.nodeSize);
-      editor.view.dispatch(
-        editor.state.tr.setSelection(
-          TextSelection.create(
-            doc,
-            Math.max(from, 0),
-            Math.min(to, doc.content.size)
-          )
-        )
-      );
-      return true;
-    },
-    [editor]
-  );
 
   /** Le clavier : ⇧F10 (ou la touche « menu ») ouvre le menu sur le bloc où est
       le curseur, ancré sur ce bloc. */
@@ -242,7 +214,8 @@ export function BlockGutter({ editor }: { editor: Editor }) {
                 onClick={(event) => {
                   const { pos } = hovered.current;
                   if (pos < 0) return;
-                  if (!selectFromHandle(pos, event.shiftKey)) return;
+                  if (!selectBlockFromHandle(editor, pos, event.shiftKey))
+                    return;
                   openMenuAt(event.currentTarget.getBoundingClientRect());
                 }}
               >
@@ -257,11 +230,7 @@ export function BlockGutter({ editor }: { editor: Editor }) {
         </div>
       </DragHandle>
 
-      <BlockMenu
-        editor={editor}
-        open={menuOpen}
-        onOpenChange={setMenuOpen}
-      >
+      <BlockMenu editor={editor} open={menuOpen} onOpenChange={setMenuOpen}>
         {/* L'ancre du menu : un point, pas un bouton. Elle existe pour que le
             menu ait où se poser quand on l'ouvre au clavier, là où la poignée
             n'est pas atteignable. `tabIndex` négatif — un point de 0 pixel ne

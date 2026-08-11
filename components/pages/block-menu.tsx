@@ -61,6 +61,7 @@ import {
   selectedBlockCount,
   selectedBlockId,
   selectedSubpageId,
+  turnBlocksInto,
 } from "@/components/pages/block-actions";
 
 /** La pastille d'une couleur, peinte avec le jeton qu'elle pose — le « A »
@@ -226,7 +227,7 @@ export function BlockMenu({
                 <DropdownMenuItem
                   key={block.id}
                   onSelect={() => {
-                    block.turnInto && block.turnInto(editor);
+                    turnBlocksInto(editor, block);
                     close();
                   }}
                 >

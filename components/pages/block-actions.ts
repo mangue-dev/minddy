@@ -7,13 +7,25 @@
 //
 // Le fil qui traverse le fichier : **rien ne travaille sur « le bloc »**, tout
 // travaille sur une PLAGE DE BLOCS. Le cas d'un seul bloc n'est que celui d'une
-// plage qui n'en contient qu'un — c'est pour ça que la sélection multi-blocs
-// (`NodeRange`, ⇧-clic dans la marge) n'a demandé aucun code en plus : les
-// mêmes quatre fonctions couvrent les deux.
+// plage qui n'en contient qu'un — dupliquer, supprimer, colorer et copier le
+// lien couvrent les deux sans une ligne de plus.
+//
+// Deux exceptions, et ce sont exactement les deux endroits où la sélection
+// multi-blocs paraissait ne pas exister :
+//
+//  - `turnBlocksInto` — les commandes de conversion de tiptap lisent la
+//    sélection elles-mêmes, et lisaient mal celle que pose la poignée ;
+//  - `selectBlockFromHandle` — aller CHERCHER la poignée effaçait la sélection
+//    qu'on venait de faire.
+//
+// Les deux sont écrits ci-dessous, avec ce qu'ils réparent.
 
 import type { Editor, JSONContent } from "@tiptap/core";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
-import { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
+import {
+  BLOCK_ID_ATTRIBUTE,
+  type PageBlock,
+} from "@/components/pages/blocks/types";
 
 /** Une plage de blocs entiers, en positions absolues du document. */
 export interface BlockRange {
@@ -51,6 +63,53 @@ export function selectBlockAt(editor: Editor, pos: number): boolean {
   const selection = NodeSelection.create(doc, pos);
   editor.view.dispatch(editor.state.tr.setSelection(selection));
   return true;
+}
+
+/**
+ * Ce que sélectionne un clic sur la POIGNÉE, une fois qu'on tient compte de ce
+ * qui était déjà sélectionné.
+ *
+ * Trois cas, et le deuxième est celui qui manquait :
+ *
+ *  - ⇧-clic : étendre depuis la sélection courante jusqu'à ce bloc ;
+ *  - la sélection porte DÉJÀ plusieurs blocs et celui-ci en fait partie : on
+ *    n'y touche pas. C'est ce qui rend la sélection multi-blocs utilisable —
+ *    on balaye trois blocs à la souris, on va chercher la poignée, et la
+ *    poignée gardait la sélection à un seul bloc, celui qu'elle survole. Le
+ *    geste existait, il s'effaçait juste au moment de s'en servir ;
+ *  - sinon : ce bloc, et lui seul.
+ *
+ * Rendre `true` sans rien dispatcher (cas 2) n'est pas un échec : c'est « la
+ * sélection est déjà la bonne », et l'appelant ouvre son menu par-dessus.
+ */
+export function selectBlockFromHandle(
+  editor: Editor,
+  pos: number,
+  extend: boolean
+): boolean {
+  const { doc, selection } = editor.state;
+  const node = doc.nodeAt(pos);
+  if (!node) return false;
+
+  if (extend) {
+    const from = Math.max(Math.min(selection.from, pos), 0);
+    const to = Math.min(
+      Math.max(selection.to, pos + node.nodeSize),
+      doc.content.size
+    );
+    editor.view.dispatch(
+      editor.state.tr.setSelection(TextSelection.create(doc, from, to))
+    );
+    return true;
+  }
+
+  const range = blockRange(editor);
+  const covered =
+    range !== null &&
+    pos >= range.from &&
+    pos + node.nodeSize <= range.to &&
+    selectedBlockCount(editor) > 1;
+  return covered ? true : selectBlockAt(editor, pos);
 }
 
 /**
@@ -170,7 +229,8 @@ export function insertSubpageAfter(
  */
 export function styledBox(dom: HTMLElement): HTMLElement {
   const inner = dom.firstElementChild;
-  return dom.classList.contains("react-renderer") && inner instanceof HTMLElement
+  return dom.classList.contains("react-renderer") &&
+    inner instanceof HTMLElement
     ? inner
     : dom;
 }
@@ -225,6 +285,64 @@ export function withoutBlockIds(content: JSONContent[]): JSONContent[] {
       ...(node.content ? { content: withoutBlockIds(node.content) } : {}),
     };
   });
+}
+
+/**
+ * Poser une sélection de TEXTE qui court d'un bout à l'autre de la plage de
+ * blocs. C'est la forme de sélection que les commandes de conversion de tiptap
+ * savent lire ; une `NodeSelection` — celle que pose la poignée — n'en est pas
+ * une, et c'est là que tout se jouait (cf. `turnBlocksInto`).
+ *
+ * `TextSelection.between` cherche les positions de texte les plus proches des
+ * deux bords et retombe sur une sélection de nœud s'il n'y en a pas — un
+ * séparateur, une sous-page. Rien à protéger de plus.
+ */
+function spreadOverBlocks(editor: Editor): boolean {
+  const range = blockRange(editor);
+  if (!range) return false;
+  const { doc } = editor.state;
+  editor.view.dispatch(
+    editor.state.tr.setSelection(
+      TextSelection.between(doc.resolve(range.from), doc.resolve(range.to))
+    )
+  );
+  return true;
+}
+
+/**
+ * « Transformer en » — sur TOUTE la sélection, et pas sur son premier bloc.
+ *
+ * C'est le geste que le menu ⋯ et les raccourcis du registre déclenchent tous
+ * les deux, et il ne peut pas se contenter d'appeler `block.turnInto` : une
+ * liste de trois items, convertie depuis la poignée, ressortait en une liste
+ * numérotée d'UN item suivie de deux paragraphes nus. La poignée sélectionne le
+ * bloc entier (`NodeSelection`), et `toggleOrderedList` ne sait pas quoi en
+ * faire : il n'y voit pas de liste parente à retyper, retombe sur son chemin
+ * générique, et celui-ci ne rattrape que le premier bloc.
+ *
+ * Deux gestes, donc, avant de convertir :
+ *
+ *  1. **étaler** la sélection sur la plage entière, en sélection de texte ;
+ *  2. **aplatir** (`clearNodes`) : les items sortent de leur liste, le contenu
+ *     sort du dépliant, tout redevient une suite de blocs de même niveau.
+ *
+ * Le deuxième est ce qui donne au menu une réponse dans TOUS les sens, et pas
+ * seulement vers les listes : « liste → paragraphe » et « liste → citation » ne
+ * faisaient, eux, strictement rien avant — `setParagraph` et `toggleBlockquote`
+ * ne délistent pas. Une liste devient trois paragraphes, ou une citation qui
+ * les porte tous les trois ; trois paragraphes deviennent une liste de trois
+ * items. « Transformer en » veut dire la même chose dans les deux sens.
+ *
+ * Ce que ça coûte, et qui est assumé : la conversion repose des blocs NEUFS,
+ * donc de nouveaux `blockId`. C'était déjà le cas d'un simple paragraphe → titre
+ * avant ce changement — un bloc converti n'est pas le même bloc.
+ */
+export function turnBlocksInto(editor: Editor, block: PageBlock): boolean {
+  if (!block.turnInto) return false;
+  if (!spreadOverBlocks(editor)) return false;
+  editor.commands.clearNodes();
+  spreadOverBlocks(editor);
+  return block.turnInto(editor);
 }
 
 /** Dupliquer la sélection JUSTE EN DESSOUS d'elle, enfants compris. */
@@ -293,7 +411,10 @@ export function selectedBlockId(editor: Editor): string | null {
 
 /** Rendre le curseur au document, au début de la plage — ce que fait le menu en
     se fermant, pour que `Échap` ne laisse pas le focus nulle part. */
-export function focusBlockRange(editor: Editor, range: BlockRange | null): void {
+export function focusBlockRange(
+  editor: Editor,
+  range: BlockRange | null
+): void {
   if (!range) {
     editor.commands.focus();
     return;

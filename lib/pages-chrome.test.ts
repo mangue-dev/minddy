@@ -30,6 +30,7 @@ import {
   BLOCK_ID_ATTRIBUTE,
   BLOCK_ID_TYPES,
   PAGE_BLOCKS,
+  blockById,
   PAGE_COLORS,
   PAGE_COLOR_ATTRIBUTE,
   PageBlockShortcuts,
@@ -37,6 +38,7 @@ import {
   blockExtensions,
   pageColorExtensions,
   setPageColor,
+  type PageBlockId,
 } from "@/components/pages/blocks";
 import {
   blockLink,
@@ -47,8 +49,10 @@ import {
   duplicateBlocks,
   insertBlockAround,
   selectBlockAt,
+  selectBlockFromHandle,
   selectedBlockCount,
   selectedBlockIds,
+  turnBlocksInto,
   withoutBlockIds,
 } from "@/components/pages/block-actions";
 
@@ -95,6 +99,32 @@ function topLevel(editor: Editor): string[] {
   return names;
 }
 
+/**
+ * Frapper un raccourci — par le VRAI chemin, celui du plugin `keymap`.
+ *
+ * Et pas `editor.commands.keyboardShortcut()`, qui passe par
+ * `captureTransaction` : celui-ci retient les transactions au lieu de les
+ * appliquer, si bien que l'état de l'éditeur ne bouge pas d'une transaction à
+ * l'autre. Une conversion qui en dispatche plusieurs — étaler la sélection,
+ * aplatir, convertir — s'y calcule donc trois fois sur le document de départ et
+ * lève. Dans un navigateur, le keymap appelle la liaison directement et chaque
+ * transaction s'applique : c'est ce chemin-là qu'on veut mesurer.
+ */
+function press(editor: Editor, shortcut: string): void {
+  const keys = shortcut.split("-");
+  const key = keys[keys.length - 1];
+  const event = new KeyboardEvent("keydown", {
+    key,
+    altKey: keys.includes("Alt"),
+    ctrlKey: keys.includes("Ctrl") || keys.includes("Mod"),
+    metaKey: keys.includes("Meta"),
+    shiftKey: keys.includes("Shift"),
+  });
+  editor.view.someProp("handleKeyDown", (handler) =>
+    handler(editor.view, event)
+  );
+}
+
 describe("la plage de blocs", () => {
   it("part du bloc entier, pas du curseur", () => {
     const editor = makeEditor("<p>Premier</p><p>Second</p>");
@@ -109,15 +139,22 @@ describe("la plage de blocs", () => {
   });
 
   it("couvre TOUS les blocs d'une sélection qui en traverse plusieurs", async () => {
-    const editor = await makeIdentifiedEditor("<p>Un</p><p>Deux</p><p>Trois</p>");
-    editor.commands.setTextSelection({ from: 2, to: editor.state.doc.content.size - 2 });
+    const editor = await makeIdentifiedEditor(
+      "<p>Un</p><p>Deux</p><p>Trois</p>"
+    );
+    editor.commands.setTextSelection({
+      from: 2,
+      to: editor.state.doc.content.size - 2,
+    });
     expect(selectedBlockCount(editor)).toBe(3);
     expect(selectedBlockIds(editor)).toHaveLength(3);
     editor.destroy();
   });
 
   it("emporte les enfants quand le bloc en a", () => {
-    const editor = makeEditor("<ul><li><p>Un</p></li><li><p>Deux</p></li></ul>");
+    const editor = makeEditor(
+      "<ul><li><p>Un</p></li><li><p>Deux</p></li></ul>"
+    );
     selectBlockAt(editor, 0);
     const range = blockRange(editor)!;
     // Un seul bloc de premier niveau — la liste — mais la plage couvre ses deux
@@ -130,7 +167,9 @@ describe("la plage de blocs", () => {
 
 describe("dupliquer", () => {
   it("pose la copie juste en dessous, enfants compris", () => {
-    const editor = makeEditor("<ul><li><p>Un</p></li><li><p>Deux</p></li></ul><p>Après</p>");
+    const editor = makeEditor(
+      "<ul><li><p>Un</p></li><li><p>Deux</p></li></ul><p>Après</p>"
+    );
     selectBlockAt(editor, 0);
     expect(duplicateBlocks(editor)).toBe(true);
     expect(topLevel(editor)).toEqual(["bulletList", "bulletList", "paragraph"]);
@@ -163,7 +202,11 @@ describe("dupliquer", () => {
         type: "bulletList",
         attrs: { [BLOCK_ID_ATTRIBUTE]: "a", other: 1 },
         content: [
-          { type: "listItem", attrs: { [BLOCK_ID_ATTRIBUTE]: "b" }, content: [] },
+          {
+            type: "listItem",
+            attrs: { [BLOCK_ID_ATTRIBUTE]: "b" },
+            content: [],
+          },
         ],
       },
     ]);
@@ -289,12 +332,169 @@ describe("la palette et ses jetons CSS", () => {
   });
 
   it("donne au thème sombre sa propre valeur pour chacune", () => {
-    const dark = css.slice(css.indexOf(".dark {", css.indexOf("--page-ink-red")));
+    const dark = css.slice(
+      css.indexOf(".dark {", css.indexOf("--page-ink-red"))
+    );
     for (const name of PAGE_COLORS) {
       expect(dark, `${name} n'a pas de valeur en thème sombre`).toContain(
         `--page-color-${name}:`
       );
     }
+  });
+});
+
+/**
+ * « Transformer en » sur une PLAGE (MIN-274 bis).
+ *
+ * Le défaut d'origine : une liste de trois items, convertie depuis la poignée,
+ * ressortait en liste numérotée d'UN item suivie de deux paragraphes nus. La
+ * poignée pose une `NodeSelection` sur le bloc entier, ce que les commandes de
+ * liste de tiptap ne savent pas lire — elles retombent sur un chemin générique
+ * qui ne rattrape que le premier bloc. Rien ne le signale : la conversion
+ * « réussit », et c'est le document qui est faux.
+ *
+ * Ces cas-là sont écrits en NOMBRE d'items exprès : c'est ce que l'œil voit à
+ * l'écran, et c'est exactement ce qui manquait.
+ */
+describe("« transformer en »", () => {
+  const LIST =
+    "<ul><li><p>Un</p></li><li><p>Deux</p></li><li><p>Trois</p></li></ul>";
+  const turn = (editor: Editor, id: PageBlockId) =>
+    turnBlocksInto(editor, blockById.get(id)!);
+
+  /** Le nom de chaque bloc de premier niveau, avec son nombre d'enfants. */
+  function outline(editor: Editor): string[] {
+    const out: string[] = [];
+    editor.state.doc.forEach((node) =>
+      out.push(`${node.type.name}:${node.childCount}`)
+    );
+    return out;
+  }
+
+  it("convertit la liste ENTIÈRE, pas son premier item", () => {
+    const editor = makeEditor(LIST);
+    // Exactement ce que fait un clic sur la poignée.
+    selectBlockAt(editor, 0);
+    turn(editor, "orderedList");
+    expect(outline(editor)).toEqual(["orderedList:3"]);
+    editor.destroy();
+  });
+
+  it("donne un bloc par item quand la cible n'est pas une liste", () => {
+    const editor = makeEditor(LIST);
+    selectBlockAt(editor, 0);
+    turn(editor, "heading2");
+    expect(outline(editor)).toEqual(["heading:1", "heading:1", "heading:1"]);
+    editor.destroy();
+  });
+
+  it("DÉLISTE — c'est le sens que « transformer en » n'avait pas", () => {
+    // `setParagraph` et `toggleBlockquote` ne sortent pas les items de leur
+    // liste : les deux entrées de menu ne faisaient donc, littéralement, rien.
+    const toParagraphs = makeEditor(LIST);
+    selectBlockAt(toParagraphs, 0);
+    turn(toParagraphs, "paragraph");
+    expect(outline(toParagraphs)).toEqual([
+      "paragraph:1",
+      "paragraph:1",
+      "paragraph:1",
+    ]);
+    toParagraphs.destroy();
+
+    const toQuote = makeEditor(LIST);
+    selectBlockAt(toQuote, 0);
+    turn(toQuote, "quote");
+    expect(outline(toQuote)).toEqual(["blockquote:3"]);
+    toQuote.destroy();
+  });
+
+  it("rassemble une sélection MÊLÉE en une seule liste", () => {
+    const editor = makeEditor(
+      "<p>Un</p><ul><li><p>Deux</p></li><li><p>Trois</p></li></ul>"
+    );
+    editor.commands.setTextSelection({
+      from: 1,
+      to: editor.state.doc.content.size - 2,
+    });
+    expect(selectedBlockCount(editor)).toBe(2);
+    turn(editor, "orderedList");
+    // Un paragraphe et deux items font trois items — pas un item et une liste
+    // orpheline.
+    expect(outline(editor)).toEqual(["orderedList:3"]);
+    editor.destroy();
+  });
+
+  it("sort le contenu d'un dépliant au lieu de le laisser dedans", () => {
+    const editor = makeEditor(
+      "<div data-type='details'><div data-type='detailsSummary'>Résumé</div><div data-type='detailsContent'><p>Corps</p></div></div>"
+    );
+    selectBlockAt(editor, 0);
+    turn(editor, "paragraph");
+    expect(outline(editor)).toEqual(["paragraph:1", "paragraph:1"]);
+    editor.destroy();
+  });
+
+  it("ne bouge pas quand on redemande le bloc déjà actif", () => {
+    const editor = makeEditor(LIST);
+    selectBlockAt(editor, 0);
+    turn(editor, "bulletList");
+    expect(outline(editor)).toEqual(["bulletList:3"]);
+    editor.destroy();
+  });
+});
+
+/**
+ * La sélection multi-blocs, et ce qui l'effaçait (MIN-274 bis).
+ *
+ * Le geste existait — balayer plusieurs blocs à la souris, le menu ⋯ annonce
+ * « 3 blocs » et agit sur les trois. Ce qui manquait tenait au dernier
+ * centimètre : aller CHERCHER la poignée ramenait la sélection au seul bloc
+ * qu'elle survole, donc la sélection ne survivait jamais jusqu'au menu.
+ */
+describe("la poignée face à une sélection existante", () => {
+  it("garde une sélection multi-blocs qui contient le bloc survolé", () => {
+    const editor = makeEditor("<p>Un</p><p>Deux</p><p>Trois</p>");
+    editor.commands.setTextSelection({ from: 1, to: 14 });
+    expect(selectedBlockCount(editor)).toBe(3);
+
+    // La poignée du DEUXIÈME bloc — au milieu de la sélection.
+    const second = editor.state.doc.firstChild!.nodeSize;
+    expect(selectBlockFromHandle(editor, second, false)).toBe(true);
+    expect(selectedBlockCount(editor)).toBe(3);
+    editor.destroy();
+  });
+
+  it("repart d'un seul bloc quand on vise HORS de la sélection", () => {
+    const editor = makeEditor("<p>Un</p><p>Deux</p><p>Trois</p>");
+    const first = editor.state.doc.firstChild!.nodeSize;
+    editor.commands.setTextSelection({ from: 1, to: 8 });
+    expect(selectedBlockCount(editor)).toBe(2);
+
+    const third = first + editor.state.doc.child(1).nodeSize;
+    expect(selectBlockFromHandle(editor, third, false)).toBe(true);
+    expect(selectedBlockCount(editor)).toBe(1);
+    editor.destroy();
+  });
+
+  it("ne garde rien quand un seul bloc était sélectionné", () => {
+    const editor = makeEditor("<p>Un</p><p>Deux</p>");
+    selectBlockAt(editor, 0);
+    const second = editor.state.doc.firstChild!.nodeSize;
+    selectBlockFromHandle(editor, second, false);
+    expect(selectedBlockCount(editor)).toBe(1);
+    expect(blockRange(editor)!.from).toBe(second);
+    editor.destroy();
+  });
+
+  it("⇧-clic étend jusqu'au bloc visé", () => {
+    const editor = makeEditor("<p>Un</p><p>Deux</p><p>Trois</p>");
+    selectBlockAt(editor, 0);
+    const third =
+      editor.state.doc.firstChild!.nodeSize +
+      editor.state.doc.child(1).nodeSize;
+    expect(selectBlockFromHandle(editor, third, true)).toBe(true);
+    expect(selectedBlockCount(editor)).toBe(3);
+    editor.destroy();
   });
 });
 
@@ -305,7 +505,10 @@ describe("les raccourcis de conversion", () => {
     // pourrait rien faire.
     for (const block of PAGE_BLOCKS) {
       if (!block.shortcut) continue;
-      expect(block.turnInto, `« ${block.id} » a un raccourci sans conversion`).toBeTruthy();
+      expect(
+        block.turnInto,
+        `« ${block.id} » a un raccourci sans conversion`
+      ).toBeTruthy();
       expect(block.shortcut.keys).toMatch(/^(Mod|Shift|Alt)-/);
       expect(block.shortcut.display.length).toBeGreaterThan(0);
     }
@@ -315,7 +518,10 @@ describe("les raccourcis de conversion", () => {
     const seen = new Map<string, string>();
     for (const block of PAGE_BLOCKS) {
       if (!block.shortcut) continue;
-      expect(seen.get(block.shortcut.keys), block.shortcut.keys).toBeUndefined();
+      expect(
+        seen.get(block.shortcut.keys),
+        block.shortcut.keys
+      ).toBeUndefined();
       seen.set(block.shortcut.keys, block.id);
     }
     // Ceux du carnet et des extensions tiptap, à l'identique : un utilisateur
@@ -338,6 +544,19 @@ describe("les raccourcis de conversion", () => {
     // uniforme, `⌘⌥1` basculerait (Heading) et `⌘⌥D` non (Details).
     expect(editor.commands.keyboardShortcut("Mod-Alt-2")).toBe(true);
     expect(editor.state.doc.firstChild!.type.name).toBe("paragraph");
+    editor.destroy();
+  });
+
+  it("convertissent la liste entière, comme le menu ⋯", () => {
+    // Même défaut, autre porte : le raccourci lit la même sélection que le
+    // menu, il devait donc gagner la même correction.
+    const editor = makeEditor(
+      "<ul><li><p>Un</p></li><li><p>Deux</p></li><li><p>Trois</p></li></ul>"
+    );
+    selectBlockAt(editor, 0);
+    press(editor, "Mod-Shift-9");
+    expect(topLevel(editor)).toEqual(["taskList"]);
+    expect(editor.state.doc.firstChild!.childCount).toBe(3);
     editor.destroy();
   });
 

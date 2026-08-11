@@ -22,7 +22,12 @@ import {
   type Range,
 } from "@tiptap/core";
 import type { MessageKey } from "@/lib/i18n-keys";
-import type { PageBlock, PageBlockId, SlashGroup } from "@/components/pages/blocks/types";
+import { turnBlocksInto } from "@/components/pages/block-actions";
+import type {
+  PageBlock,
+  PageBlockId,
+  SlashGroup,
+} from "@/components/pages/blocks/types";
 
 import { paragraphBlock } from "@/components/pages/blocks/paragraph";
 import {
@@ -39,7 +44,11 @@ import { dividerBlock } from "@/components/pages/blocks/divider";
 import { detailsBlock } from "@/components/pages/blocks/details";
 import { subpageBlock } from "@/components/pages/blocks/subpage";
 
-export type { PageBlock, PageBlockId, SlashGroup } from "@/components/pages/blocks/types";
+export type {
+  PageBlock,
+  PageBlockId,
+  SlashGroup,
+} from "@/components/pages/blocks/types";
 export {
   PAGE_COLORS,
   PAGE_COLOR_MARK,
@@ -82,13 +91,10 @@ export const blocksByNodeName = PAGE_BLOCKS.reduce((map, block) => {
 
 /* ── L'identité d'un bloc dans le document ────────────────────────────── */
 
-/** L'attribut qui porte l'ID stable d'un bloc. `blockId` et pas `id` : le
-    document part en JSON dans la base, et un champ nommé `id` au milieu d'un
-    arbre de nœuds se confond avec l'id de la PAGE à la première relecture.
-
-    C'est lui qui donne à la poignée sa cible, au lien de bloc son ancre, à la
-    sauvegarde sa fusion par bloc (MIN-271) et aux futurs commentaires la leur. */
-export const BLOCK_ID_ATTRIBUTE = "blockId";
+/** Déclaré dans blocks/types.ts, re-exporté ici : c'est par le registre que
+    tout le dépôt le lit. Le pourquoi du déménagement est écrit là-bas. */
+export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks/types";
+import { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks/types";
 
 /** Les nœuds qui reçoivent un ID stable : TOUS ceux du catalogue. Se recalcule
     depuis le registre — un bloc neuf est identifié d'office. */
@@ -237,12 +243,14 @@ export const PageBlockShortcuts = Extension.create({
       if (!shortcut || !turnInto) continue;
       bindings[shortcut.keys] = () => {
         const editor = this.editor as unknown as Editor;
+        // `turnBlocksInto` et pas `turnInto` : la conversion porte sur toute la
+        // sélection, listes déliées comprises (cf. block-actions.ts). Le menu ⋯
+        // passe par la même porte — un raccourci qui convertirait autrement que
+        // l'entrée de menu qui l'affiche serait pire que pas de raccourci.
         if (block.id !== "paragraph" && block.isActive(editor)) {
-          return paragraphBlock.turnInto
-            ? paragraphBlock.turnInto(editor)
-            : false;
+          return turnBlocksInto(editor, paragraphBlock);
         }
-        return turnInto(editor);
+        return turnBlocksInto(editor, block);
       };
     }
     return bindings;
