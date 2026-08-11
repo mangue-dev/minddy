@@ -32,7 +32,11 @@ import {
 } from "./prompt";
 import { commentDisplay, type CommentDisplay } from "./comment-live";
 import { gatherProjectPromptContext } from "./prompt-context";
-import { buildAttachmentParts, type PromptAttachment } from "./attachment-parts";
+import {
+  buildAttachmentParts,
+  groupPromptAttachments,
+  PROMPT_ATTACHMENT_COLUMNS,
+} from "./attachment-parts";
 import { recordAiUsage, newRunId, type AiUsageInput } from "@/lib/server/ai-usage";
 import {
   getModelInputModalities,
@@ -230,23 +234,12 @@ export async function runCommentMention({
         // the trigger comment's (+ issue-level ones) feed the model directly.
         service
           .from("attachments")
-          .select("comment_id, storage_path, file_name, mime_type, size_bytes")
+          .select(PROMPT_ATTACHMENT_COLUMNS)
           .eq("issue_id", issueId)
           .order("created_at", { ascending: true }),
       ]);
 
-    const attachmentsByComment = new Map<string | null, PromptAttachment[]>();
-    for (const row of attachmentRows ?? []) {
-      const key = (row.comment_id as string | null) ?? null;
-      const list = attachmentsByComment.get(key) ?? [];
-      list.push({
-        storage_path: row.storage_path as string,
-        file_name: row.file_name as string,
-        mime_type: row.mime_type as string,
-        size_bytes: row.size_bytes as number,
-      });
-      attachmentsByComment.set(key, list);
-    }
+    const attachmentsByComment = groupPromptAttachments(attachmentRows);
 
     const recentComments = [...(threadRows ?? [])].reverse();
     const authorIds = recentComments.map((c) => c.author_id as string);
@@ -474,7 +467,7 @@ export async function runObjectiveCommentMention({
           .limit(20),
         service
           .from("attachments")
-          .select("comment_id, storage_path, file_name, mime_type, size_bytes")
+          .select(PROMPT_ATTACHMENT_COLUMNS)
           .eq("objective_id", objectiveId)
           .order("created_at", { ascending: true }),
         service
@@ -485,18 +478,7 @@ export async function runObjectiveCommentMention({
           .order("number", { ascending: true }),
       ]);
 
-    const attachmentsByComment = new Map<string | null, PromptAttachment[]>();
-    for (const row of attachmentRows ?? []) {
-      const key = (row.comment_id as string | null) ?? null;
-      const list = attachmentsByComment.get(key) ?? [];
-      list.push({
-        storage_path: row.storage_path as string,
-        file_name: row.file_name as string,
-        mime_type: row.mime_type as string,
-        size_bytes: row.size_bytes as number,
-      });
-      attachmentsByComment.set(key, list);
-    }
+    const attachmentsByComment = groupPromptAttachments(attachmentRows);
 
     const recentComments = [...(threadRows ?? [])].reverse();
     const authorIds = recentComments.map((c) => c.author_id as string);
@@ -708,7 +690,7 @@ export async function runFeedbackCommentMention({
           .limit(20),
         service
           .from("attachments")
-          .select("comment_id, storage_path, file_name, mime_type, size_bytes")
+          .select(PROMPT_ATTACHMENT_COLUMNS)
           .eq("feedback_post_id", postId)
           .order("created_at", { ascending: true }),
         post.issue_id
@@ -721,18 +703,7 @@ export async function runFeedbackCommentMention({
           : Promise.resolve({ data: null }),
       ]);
 
-    const attachmentsByComment = new Map<string | null, PromptAttachment[]>();
-    for (const row of attachmentRows ?? []) {
-      const key = (row.comment_id as string | null) ?? null;
-      const list = attachmentsByComment.get(key) ?? [];
-      list.push({
-        storage_path: row.storage_path as string,
-        file_name: row.file_name as string,
-        mime_type: row.mime_type as string,
-        size_bytes: row.size_bytes as number,
-      });
-      attachmentsByComment.set(key, list);
-    }
+    const attachmentsByComment = groupPromptAttachments(attachmentRows);
 
     const recentComments = [...(threadRows ?? [])].reverse();
     const authorIds = recentComments.map((c) => c.author_id as string);

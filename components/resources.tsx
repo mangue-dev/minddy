@@ -366,6 +366,14 @@ export function AddLinkDialog({
           className="flex flex-col gap-3"
           onSubmit={async (e) => {
             e.preventDefault();
+            // Ce dialog s'ouvre DEPUIS un formulaire (le composer de ticket, celui
+            // d'objectif) : le portail de Radix le sort du DOM du parent, mais pas
+            // de l'arbre React — l'événement `submit` d'ici remonte donc jusqu'au
+            // `onSubmit` de là-bas, qui créait le ticket au lieu d'ajouter le lien
+            // (et sans le lien, `addLink` n'ayant pas encore rendu la main).
+            // `preventDefault` ne suffit pas : il annule le comportement natif,
+            // pas la propagation React.
+            e.stopPropagation();
             const url = normalizeWebUrl(value);
             if (!url) {
               setError(t("linkInvalid"));
