@@ -261,7 +261,8 @@
     "pageCycle": "A page can't be moved inside one of its own sub-pages.",
     "pageStale": "This page was changed elsewhere since your last save.",
     "pageNotEmpty": "This page is no longer empty.",
-    "pageTooLarge": "This page is too long to be saved."
+    "pageTooLarge": "This page is too long to be saved.",
+    "pageVersionNotFound": "That version of the page no longer exists."
   },
   "CustomDomain": {
     "title": "Custom domain",
@@ -1657,7 +1658,19 @@
     "duplicateFailed": "Could not duplicate the page.",
     "tableOfContents": "Table of contents",
     "breadcrumb": "Parent pages",
-    "breadcrumbMore": "{count, plural, one {# hidden level} other {# hidden levels}}"
+    "breadcrumbMore": "{count, plural, one {# hidden level} other {# hidden levels}}",
+    "lastEditedBy": "Edited by {name} · {time}",
+    "historyTitle": "Version history",
+    "historyDescription": "Every earlier state of this page, kept for {days} days.",
+    "historyEmpty": "Nothing earlier yet. Edits show up here as they happen.",
+    "historyPickOne": "Pick a version on the left to read it.",
+    "historyBy": "{name} · {time}",
+    "historyRestore": "Restore",
+    "historyRestored": "Version restored.",
+    "historyRestoreFailed": "Could not restore that version.",
+    "historyLoadFailed": "Could not load the history.",
+    "writtenByAgent": "Written by minddy",
+    "someone": "Someone"
   },
   "Picker": {
     "createNamed": "Create “{name}”",

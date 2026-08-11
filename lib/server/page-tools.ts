@@ -15,6 +15,11 @@ import {
   pageBodyToMarkdownServer,
 } from "@/lib/server/pages-projection";
 import { editTextPassage } from "@/lib/server/text-edit";
+import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { getServiceClient } from "@/lib/supabase-service";
+import { displayName } from "@/lib/display-name";
+import { SITE_NAME } from "@/lib/site";
+import type { Page, PageWriteKind } from "@/lib/pages";
 
 /**
  * LES GESTES d'un agent sur les pages (MIN-273), une seule fois.
@@ -37,6 +42,13 @@ import { editTextPassage } from "@/lib/server/text-edit";
  * 2. **l'écriture passe par le même noyau que l'UI** (`lib/server/pages.ts`) :
  *    même garde d'accès, même garde de cycle, même compteur de `version`. Un
  *    chemin parallèle aurait ses propres trous.
+ * 3. **toute écriture d'ici est signée `kind: "agent"`** (MIN-277). C'est le
+ *    seul endroit du dépôt qui le sait : l'`actorId` qui arrive est celui d'un
+ *    compte humain — le porteur de la clé MCP, l'utilisateur de Numo, le
+ *    propriétaire du projet —, et le laisser signer seul afficherait « modifiée
+ *    par Clément » sur une page que Clément n'a pas écrite. Le geste est
+ *    automatisé, il porte donc le nom de minddy, dans l'en-tête comme dans
+ *    l'historique.
  *
  * Ce qui n'est PAS exposé, et c'est une décision : la corbeille. Un agent qui
  * efface des pages est un risque sans contrepartie, et supprimer reste un geste
@@ -65,6 +77,7 @@ export type PageToolResult<T> =
 const CODES: Record<PageErrorKey, PageToolCode> = {
   projectNotFound: "project_not_found",
   pageNotFound: "page_not_found",
+  pageVersionNotFound: "page_not_found",
   pageParentNotFound: "parent_not_found",
   pageCycle: "page_cycle",
   pageStale: "page_stale",
@@ -79,6 +92,7 @@ const CODES: Record<PageErrorKey, PageToolCode> = {
 const MESSAGES: Record<PageErrorKey, string> = {
   projectNotFound: "Project not found or not accessible.",
   pageNotFound: "Page not found in this project.",
+  pageVersionNotFound: "That version of the page no longer exists.",
   pageParentNotFound:
     "The parent page does not exist in this project (or is in the trash).",
   pageCycle: "Refused: that move would put the page under one of its own subpages.",
@@ -119,6 +133,17 @@ export interface PageTreeEntry {
 
 /** Une page lue en entier : son en-tête, son corps en markdown, ses enfants. */
 export interface PageRead extends PageTreeEntry {
+  /**
+   * QUI a écrit en dernier (MIN-277), et de quelle nature était le geste.
+   *
+   * Un agent qui relit une page doit savoir si un humain y est passé depuis son
+   * dernier tour : c'est la différence entre « je reprends mon texte » et « je
+   * m'apprête à écraser celui de quelqu'un ». Le nom suit la règle d'identité —
+   * « minddy » quand la dernière écriture vient d'un agent, quel que soit le
+   * compte qui l'a permise.
+   */
+  last_edited_by: string;
+  last_edited_kind: PageWriteKind;
   /** Le corps SEUL, en markdown (le titre et l'icône sont au-dessus). */
   markdown: string;
   /** Le compteur d'écritures du corps — à repasser pour écrire sans écraser. */
@@ -197,8 +222,31 @@ export async function readPageForAgent({
 
   return {
     ok: true,
-    data: { ...entry(page), markdown, version: page.version, subpages },
+    data: {
+      ...entry(page),
+      last_edited_by: await lastWriterName(page),
+      last_edited_kind: page.updated_kind ?? "human",
+      markdown,
+      version: page.version,
+      subpages,
+    },
   };
+}
+
+/**
+ * Le nom du dernier auteur, tel que la règle d'identité de minddy l'impose.
+ *
+ * Une écriture d'agent porte l'id du compte qui l'a permise ; on ne le lit
+ * pas — le rendre ferait passer pour sien, aux yeux de l'agent suivant, un
+ * texte que personne n'a écrit.
+ */
+async function lastWriterName(page: Page): Promise<string> {
+  if (page.updated_kind === "agent") return SITE_NAME;
+  const id = page.updated_by ?? page.created_by;
+  if (!id) return "";
+  const users = await fetchAuthUsersById(getServiceClient(), [id]);
+  const user = users.get(id);
+  return user ? displayName(toNamed(user), "") : "";
 }
 
 /** Une page trouvée : de quoi décider laquelle ouvrir, sans l'ouvrir. */
@@ -369,7 +417,7 @@ export async function createPageForAgent({
   if (icon !== undefined) input.icon = icon;
   if (input.title === undefined) input.title = "";
 
-  const result = await createPage({ projectId, actorId, input });
+  const result = await createPage({ projectId, actorId, kind: "agent", input });
   if (!result.ok) return refuse(result.errorKey);
   return {
     ok: true,
@@ -441,7 +489,7 @@ export async function updatePageForAgent({
   if (icon !== undefined) input.icon = icon;
   if (parentPageId !== undefined) input.parent_id = parentPageId;
 
-  const result = await updatePage({ pageId, actorId, input });
+  const result = await updatePage({ pageId, actorId, kind: "agent", input });
   if (!result.ok) return refuse(result.errorKey);
   return {
     ok: true,
@@ -576,6 +624,7 @@ async function writeBody({
   const result = await updatePage({
     pageId,
     actorId,
+    kind: "agent",
     input: { content, version },
   });
   if (!result.ok) return refuse(result.errorKey);

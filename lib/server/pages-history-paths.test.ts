@@ -8,26 +8,28 @@ import ts from "typescript-api";
 import { describe, expect, it } from "vitest";
 
 /**
- * MIN-276 — `search_text` est écrite par TOUS les chemins d'écriture du corps,
- * ou elle ment.
+ * MIN-277 — une écriture de page porte SON AUTEUR et archive ce qu'elle
+ * recouvre, ou l'historique ment.
  *
- * La colonne dérivée est la seule chose que la recherche lit. Elle est écrite
- * par un rattrapage (`queueSearchText`), et non par la base : rien, dans le
- * schéma comme dans les types, n'oblige un chemin d'écriture à l'appeler. Un
- * `insert` ou un `update` qui porte `content` sans son rattrapage ne casse
- * rien de visible — il rend juste une page introuvable par son contenu, en
- * silence, et pour toujours. C'est exactement le genre de trou qu'un test de
- * comportement ne trouve pas : il faudrait avoir DEVINÉ le chemin manquant pour
- * écrire le cas qui le couvre.
+ * Le jumeau de `pages-search-paths.test.ts`, et pour la même raison de fond :
+ * rien, dans le schéma comme dans les types, n'oblige un chemin d'écriture à
+ * poser `updated_by` ni à insérer sa ligne de `page_versions`. Un chemin qui
+ * l'oublie ne casse rien de visible — il rend une écriture anonyme et
+ * irréversible, ce qui ne se découvre que le jour de l'incident, quand
+ * quelqu'un demande « qui a écrit ça » et « remets-moi la version d'avant ».
  *
- * D'où un test STRUCTUREL, et sa règle, qui se relit sans retracer les appels :
- * **dans `lib/server/pages.ts`, toute fonction qui écrit `content` appelle
- * `queueSearchText`.** Un chemin ajouté plus tard sans son rattrapage fait
+ * La règle, qui se relit sans retracer les appels : **dans
+ * `lib/server/pages.ts`, toute fonction qui écrit `content` appelle `writtenBy`
+ * ET `stampPageWrite`.** Un chemin ajouté plus tard sans l'un des deux fait
  * tomber ce test en nommant la fonction fautive.
  *
- * Ce qu'il ne prétend pas couvrir : que le rattrapage écrive le BON texte. Ça,
- * c'est `pages.test.ts`, qui fait tourner le vrai noyau sur une table en
- * mémoire.
+ * `stampPageWrite` n'archive rien sur une création (`previous: null`) : le point
+ * d'appel y est conservé exprès, pour que la règle n'ait aucune exception à
+ * retenir — et pour que ce test reste une lecture, pas une liste de cas.
+ *
+ * Ce qu'il ne prétend pas couvrir : que l'archivage garde le BON état, ni que la
+ * coalescence coalesce. Ça, c'est `pages.test.ts`, qui fait tourner le vrai
+ * noyau sur une table en mémoire.
  */
 
 const PAGES_PATH = join(process.cwd(), "lib/server/pages.ts");
@@ -119,22 +121,19 @@ function targetTable(node: ts.CallExpression): string | null {
 }
 
 /**
- * Les fonctions qui ÉCRIVENT le corps, et celles qui rattrapent le texte.
+ * Les fonctions qui ÉCRIVENT le corps, et celles qui signent / archivent.
  *
- * Ce qu'on cherche : un appel `.insert(…)` / `.update(…)` qui porte `content`.
- * Il le porte de deux façons, et les deux comptent — dans le littéral qu'on lui
- * passe (`{ content: doc }`, le miroir du parent), ou dans une VARIABLE
- * construite plus haut (`patch`, `rows`), auquel cas c'est le `content:` ou le
- * `.content =` de la même fonction qui le dit.
- *
- * La distinction est ce qui garde le test juste : la corbeille et la
- * restauration écrivent aussi la table, mais jamais le corps — elles ne
- * doivent donc pas être exigées de rattraper quoi que ce soit.
+ * Même analyse que pour la projection de recherche : un `.insert(…)` /
+ * `.update(…)` qui porte `content`, dans le littéral qu'on lui passe ou dans une
+ * variable construite plus haut (`patch`, `rows`). La corbeille et la
+ * restauration écrivent aussi la table mais jamais le corps — elles ne doivent
+ * donc rien signer d'autre que ce qu'elles touchent.
  */
 function scan() {
   const src = parsePages();
   const writes = new Set<string>();
-  const syncs = new Set<string>();
+  const signed = new Set<string>();
+  const archived = new Set<string>();
 
   const visit = (node: ts.Node) => {
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
@@ -149,34 +148,47 @@ function scan() {
         if (writesBody) writes.add(enclosingFunction(node));
       }
     }
-    if (
-      ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      node.expression.text === "queueSearchText"
-    ) {
-      syncs.add(enclosingFunction(node));
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      if (node.expression.text === "writtenBy") signed.add(enclosingFunction(node));
+      if (node.expression.text === "stampPageWrite") {
+        archived.add(enclosingFunction(node));
+      }
     }
     ts.forEachChild(node, visit);
   };
   visit(src);
 
-  return { writes, syncs };
+  return { writes, signed, archived };
 }
 
 describe("les chemins d'écriture du corps d'une page", () => {
-  it("écrivent tous leur texte de recherche", () => {
-    const { writes, syncs } = scan();
+  it("portent tous leur auteur", () => {
+    const { writes, signed } = scan();
 
     // Le test ne vaut que s'il VOIT les chemins : une refonte qui les rendrait
     // invisibles à l'analyse le laisserait passer en silence.
     expect(writes.size).toBeGreaterThanOrEqual(4);
 
-    const missing = [...writes].filter((fn) => !syncs.has(fn));
+    const missing = [...writes].filter((fn) => !signed.has(fn));
     expect(
       missing,
       `Ces fonctions de lib/server/pages.ts écrivent le corps d'une page sans ` +
-        `rejouer sa projection : ${missing.join(", ")}. Appelez queueSearchText ` +
-        `avec les ids écrits, sinon la page reste introuvable par son contenu.`
+        `dire QUI : ${missing.join(", ")}. Étalez writtenBy(actorId, kind) sur la ` +
+        `ligne écrite, sinon l'en-tête de la page nommera le dernier auteur connu ` +
+        `— ou personne.`
+    ).toEqual([]);
+  });
+
+  it("archivent tous l'état qu'ils recouvrent", () => {
+    const { writes, archived } = scan();
+
+    const missing = [...writes].filter((fn) => !archived.has(fn));
+    expect(
+      missing,
+      `Ces fonctions de lib/server/pages.ts recouvrent le corps d'une page sans ` +
+        `l'archiver : ${missing.join(", ")}. Appelez stampPageWrite avec l'état lu ` +
+        `avant l'écriture (previous: null sur une création), sinon ce qu'elles ` +
+        `écrasent est perdu pour de bon.`
     ).toEqual([]);
   });
 

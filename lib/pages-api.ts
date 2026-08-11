@@ -1,6 +1,6 @@
 "use client";
 
-import type { Page } from "./pages";
+import type { Page, PageVersion } from "./pages";
 
 /**
  * Le client HTTP des pages (MIN-266) — de quoi lire et écrire une page depuis
@@ -258,6 +258,55 @@ export async function restorePageApi(
     await fetch(`/api/projects/${projectId}/pages/${pageId}/restore`, {
       method: "POST",
     }),
+    "Restore failed"
+  );
+}
+
+/* ─── L'historique (MIN-277) ───────────────────────────────────────────────── */
+
+/** Les états antérieurs d'une page, du plus récent au plus ancien, sans corps. */
+export async function fetchPageVersionsApi(
+  projectId: string,
+  pageId: string
+): Promise<PageVersion[]> {
+  const data = await json<{ versions: PageVersion[] }>(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}/versions`),
+    "Request failed"
+  );
+  return data.versions;
+}
+
+/** UNE version, corps compris — ce que l'aperçu en lecture seule monte. */
+export async function fetchPageVersionApi(
+  projectId: string,
+  pageId: string,
+  versionId: string
+): Promise<PageVersion> {
+  return json(
+    await fetch(
+      `/api/projects/${projectId}/pages/${pageId}/versions/${versionId}`
+    ),
+    "Request failed"
+  );
+}
+
+/**
+ * Remet une version en place. Rend la page écrite, corps compris.
+ *
+ * Une écriture comme une autre : elle incrémente la `version` de la page — donc
+ * l'éditeur ouvert doit se recharger dessus plutôt que continuer sur la sienne,
+ * qui est désormais périmée.
+ */
+export async function restorePageVersionApi(
+  projectId: string,
+  pageId: string,
+  versionId: string
+): Promise<Page> {
+  return json(
+    await fetch(
+      `/api/projects/${projectId}/pages/${pageId}/versions/${versionId}/restore`,
+      { method: "POST" }
+    ),
     "Restore failed"
   );
 }

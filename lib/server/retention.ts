@@ -68,6 +68,16 @@ export const RETENTION_DAYS = {
    * ne sait pas exprimer.
    */
   dormantFeedbackIdentities: 90,
+  /**
+   * Historique des pages (MIN-277) : les états antérieurs d'un document.
+   *
+   * Même durée que la corbeille, et c'est délibéré — un second délai serait une
+   * seconde chose à retenir, pour la même promesse (« rien de ce que vous avez
+   * écrit ne disparaît avant trente jours »). Ce qui part ici n'est jamais le
+   * document courant : il vit dans `pages`, et rien ne l'efface tant que
+   * personne ne l'a supprimé.
+   */
+  pageVersions: TRASH_RETENTION_DAYS,
 } as const;
 
 export type RetentionKey = keyof typeof RETENTION_DAYS;
@@ -223,6 +233,33 @@ async function stripPayloads(service: Service, now: Date) {
 }
 
 /**
+ * Versions de page expirées (MIN-277).
+ *
+ * Lot borné comme les autres. Le compteur d'une page très écrite peut monter
+ * vite (une version par tranche de cinq minutes et par auteur), et une purge
+ * illimitée sur un arriéré dépasserait la durée de la fonction ; le balayage du
+ * lendemain reprend la suite.
+ *
+ * La purge DÉFINITIVE d'une page, elle, ne passe pas par ici : ses versions
+ * s'en vont par la cascade de `page_versions.page_id` (cf. la migration), au
+ * moment même où la ligne part.
+ */
+async function purgePageVersions(service: Service, now: Date) {
+  const { data, error } = await service
+    .from("page_versions")
+    .select("id")
+    .lt("created_at", cutoff(RETENTION_DAYS.pageVersions, now))
+    .limit(1000);
+  if (error) throw error;
+
+  const ids = (data ?? []).map((r) => r.id as string);
+  if (ids.length === 0) return 0;
+  return counted(
+    await service.from("page_versions").delete({ count: "exact" }).in("id", ids)
+  );
+}
+
+/**
  * Les tables de la corbeille, et le type qui leur correspond.
  *
  * Les PAGES y passent DEUX fois, et l'ordre est le fond de l'affaire : une page
@@ -308,6 +345,7 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
       purgeDormantFeedbackIdentities(service, now)
     ),
     await step("stripe_webhook_payloads", () => stripPayloads(service, now)),
+    await step("page_versions", () => purgePageVersions(service, now)),
     await step("trash", () => purgeTrash(service, now)),
   ];
 

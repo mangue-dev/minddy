@@ -134,6 +134,7 @@ export function PageEditor({
   onEditor,
   onSubpagesRemoved,
   onLeaveTop,
+  editable = true,
   className,
 }: {
   /** Le corps de la page en JSON ProseMirror — le stockage (le markdown est une
@@ -170,6 +171,19 @@ export function PageEditor({
    * ligne d'au-dessus pour qui écrit (cf. title-bridge.ts).
    */
   onLeaveTop?: () => void;
+  /**
+   * LECTURE SEULE (MIN-277) : l'aperçu d'une version de l'historique.
+   *
+   * L'éditeur monté non éditable plutôt qu'une seconde surface de rendu, et
+   * c'est la même règle que pour les mentions — l'éditeur EST la surface. Un
+   * rendu maison à côté finirait par diverger sur exactement les blocs qu'on
+   * regarde le moins (un dépliant, une sous-page, une pilule).
+   *
+   * Ce qui s'éteint avec lui : la gouttière (poignée et `+`), qui n'a rien à
+   * proposer sur un document qu'on ne modifie pas, et la réserve du bas, dont
+   * le seul rôle est de rendre le curseur à la fin.
+   */
+  editable?: boolean;
   className?: string;
 }) {
   const t = useTranslations("Pages");
@@ -248,6 +262,7 @@ export function PageEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
+    editable,
     extensions,
     content: initialRef.current,
     editorProps: EDITOR_PROPS,
@@ -293,7 +308,7 @@ export function PageEditor({
     // page y est dedans lui aussi. Sans ça, les deux ne partagent pas le même
     // bord gauche et le corps a l'air imbriqué sous son titre.
     <div className={cn("page-editor", className)}>
-      {editor && <BlockGutter editor={editor} />}
+      {editor && editable && <BlockGutter editor={editor} />}
       <EditorContent editor={editor} />
       {/* La RÉSERVE du bas : une dizaine de lignes de vide sous le dernier
           bloc, cliquables, qui rendent le curseur à la fin du document.
@@ -302,7 +317,7 @@ export function PageEditor({
           cumuleraient à chaque visite. Le vide est de la mise en page ; seul le
           clic écrit, et il n'écrit qu'un paragraphe, et seulement s'il en
           manque un (`focusDocumentEnd`). */}
-      {editor && (
+      {editor && editable && (
         <div
           aria-hidden
           className="min-h-[15rem] w-full cursor-text"

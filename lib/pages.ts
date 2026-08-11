@@ -15,6 +15,15 @@
  * n'en est jamais le seul porteur.
  */
 
+/**
+ * La NATURE d'une écriture de page (MIN-277) : un humain, ou l'agent.
+ *
+ * Elle ne se déduit pas de l'acteur — un geste de Numo, du MCP ou de l'agent de
+ * code porte l'id du compte qui l'a permis. Elle se transporte donc avec
+ * l'écriture, depuis la surface qui la déclenche jusqu'à la ligne d'historique.
+ */
+export type PageWriteKind = "human" | "agent";
+
 /** Une page, telle qu'elle sort de la table (colonnes brutes). */
 export interface Page {
   id: string;
@@ -29,6 +38,19 @@ export interface Page {
   /** Index fractionnaire : le tri des fratries est lexicographique. */
   position: string;
   created_by: string | null;
+  /**
+   * L'auteur de la DERNIÈRE écriture (MIN-277), et la nature de son geste.
+   *
+   * Les deux vont ensemble : six outils d'écriture sont ouverts à Numo, au MCP
+   * et à l'agent de code, et tous écrivent sous l'id d'un compte humain. Sans
+   * `updated_kind`, une page réécrite par l'agent s'afficherait « modifiée par
+   * Clément » — l'inverse exact de la règle d'identité de minddy.
+   *
+   * `null` sur une page que personne n'a réécrite depuis sa création : c'est
+   * alors `created_by` qui nomme son auteur.
+   */
+  updated_by: string | null;
+  updated_kind: PageWriteKind;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -52,6 +74,28 @@ export interface Page {
    * sous son parent ferait croire à un reparentage.
    */
   favorite: boolean;
+}
+
+/**
+ * Un ÉTAT ANTÉRIEUR d'une page (MIN-277), tel que l'historique le rend.
+ *
+ * Le corps n'est là que sur l'aperçu d'UNE version : la liste ne le porte
+ * jamais — vingt documents ProseMirror pour une liste de dates serait la
+ * requête la plus lourde de l'écran pour un contenu que personne n'affiche.
+ */
+export interface PageVersion {
+  id: string;
+  page_id: string;
+  version: number;
+  title: string;
+  icon: string | null;
+  /** Document ProseMirror — absent de la liste, présent sur l'aperçu. */
+  content?: unknown;
+  author_id: string | null;
+  author_kind: PageWriteKind;
+  /** Le nom à afficher, résolu côté serveur. « minddy » sur un geste d'agent. */
+  author_name: string;
+  created_at: string;
 }
 
 /**

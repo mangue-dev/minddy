@@ -175,7 +175,11 @@ export function registerPageTools(server: McpServer): void {
         "listing call). This is what you read before writing: copy passages from " +
         "here verbatim for minddy_edit_page_text, and keep the version to write " +
         "the body safely with minddy_update_page. Subpages are separate documents " +
-        "— a '[[page:<id>]]' line in the body is a link to one, never its content.",
+        "— a '[[page:<id>]]' line in the body is a link to one, never its content. " +
+        "It also carries WHO wrote last (last_edited_by, last_edited_kind: " +
+        "'human' or 'agent') and when (updated_at): a human edit since your last " +
+        "pass is text someone owns — edit around it rather than replacing the " +
+        "whole body.",
       inputSchema: { project_id: PROJECT_ID, page_id: PAGE_ID },
       annotations: READ_ONLY,
     },

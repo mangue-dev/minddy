@@ -13,7 +13,7 @@
 // non défiler dans une fente d'une ligne.
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { Smile } from "lucide-react";
 
@@ -48,6 +48,8 @@ export function PageHeader({
   fieldRef,
   autoFocus,
   readOnly,
+  lastEdit,
+  onOpenHistory,
   className,
 }: {
   title: string;
@@ -75,9 +77,26 @@ export function PageHeader({
    */
   autoFocus?: boolean;
   readOnly?: boolean;
+  /**
+   * QUI a écrit en dernier, et quand (MIN-277).
+   *
+   * Sur un ticket, personne ne le demande. Sur de la doc, c'est *la* ligne qui
+   * fait qu'on croit une page : « modifiée par Clément il y a 2 jours »
+   * distingue une décision en vigueur d'une note morte. Le nom vient déjà
+   * résolu — « minddy » quand l'écriture est celle de l'agent, quel que soit le
+   * compte qui l'a permise.
+   */
+  lastEdit?: { name: string; at: string } | null;
+  /**
+   * La ligne devient le chemin vers l'HISTORIQUE, et c'est le bon endroit :
+   * c'est en lisant « modifiée par quelqu'un d'autre » qu'on se demande ce qui a
+   * changé. Un menu ⋯ à part poserait la question loin de sa réponse.
+   */
+  onOpenHistory?: () => void;
   className?: string;
 }) {
   const t = useTranslations("Pages");
+  const format = useFormatter();
 
   // Le champ est NON contrôlé par la prop pendant la frappe : la sauvegarde
   // renvoie la ligne serveur, et rebrancher `value` dessus ferait sauter le
@@ -158,6 +177,27 @@ export function PageHeader({
         }}
         className="w-full border-0 bg-transparent p-0 font-display text-4xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
       />
+      {/* Une LIGNE, pas un bandeau : c'est un repère qu'on cherche quand on
+          arrive sur une page, jamais une chose à lire. L'appelant ne la donne
+          qu'une fois le nom résolu — un nom qui change sous les yeux, le temps
+          que les membres arrivent, se lit comme une erreur. */}
+      {lastEdit ? (
+        <button
+          type="button"
+          onClick={onOpenHistory}
+          disabled={!onOpenHistory}
+          className={cn(
+            "-mt-0.5 w-fit rounded px-0 text-left text-xs text-muted-foreground/70 transition-colors",
+            onOpenHistory && "hover:text-foreground",
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          )}
+        >
+          {t("lastEditedBy", {
+            name: lastEdit.name,
+            time: format.relativeTime(new Date(lastEdit.at), new Date()),
+          })}
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -55,6 +55,8 @@ import { ancestorsOf, descendantIds } from "@/lib/pages";
 import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
+import { displayName } from "@/lib/display-name";
+import { SITE_NAME } from "@/lib/site";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { PageEditor } from "@/components/pages/page-editor";
 import {
@@ -63,6 +65,7 @@ import {
   revealBlock,
 } from "@/components/pages/block-actions";
 import { PageHeader } from "@/components/pages/page-header";
+import { PageHistorySheet } from "@/components/pages/page-history";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
@@ -158,12 +161,42 @@ function isEmptyDoc(content: unknown): boolean {
   return only?.type === "paragraph" && !only.content?.length;
 }
 
+/**
+ * La coquille qui rend la SURFACE remontable (MIN-277).
+ *
+ * Restaurer une version réécrit le corps et fait avancer la `version` : le
+ * document affiché et le compteur sur lequel s'appuie l'enregistrement sont
+ * alors tous les deux périmés, et tiptap ne relit pas son `content`. Plutôt que
+ * de rattraper les deux à la main, on remonte — exactement ce que fait déjà une
+ * navigation d'une page à l'autre.
+ */
 export function PageView({
   projectId,
   pageId,
 }: {
   projectId: string;
   pageId: string;
+}) {
+  const [reload, setReload] = useState(0);
+  return (
+    <PageSurface
+      key={reload}
+      projectId={projectId}
+      pageId={pageId}
+      onRestored={() => setReload((n) => n + 1)}
+    />
+  );
+}
+
+function PageSurface({
+  projectId,
+  pageId,
+  onRestored,
+}: {
+  projectId: string;
+  pageId: string;
+  /** Une version vient d'être remise en place : la surface se remonte. */
+  onRestored: () => void;
 }) {
   const t = useTranslations("Pages");
   const { user } = useAuth();
@@ -180,7 +213,7 @@ export function PageView({
     restorePage,
   } = usePagesQuery(projectId);
   const pagesLoaded = !pagesLoading;
-  const { members } = useMembersQuery(projectId, true);
+  const { members, loading: membersLoading } = useMembersQuery(projectId, true);
   const present = usePresentOn(pageId);
   const mentionSources = useDescriptionMentions(projectId, members);
   const mentions = useMemo(
@@ -500,6 +533,31 @@ export function PageView({
     })();
   }, [pendingTrash, trashPage, t]);
 
+  /* ── Qui a écrit en dernier, et l'historique (MIN-277) ────────────────── */
+  //
+  // Sur un ticket, personne ne le demande ; sur de la doc, c'est la ligne qui
+  // fait qu'on croit une page. Le nom sort des MEMBRES du projet, déjà chargés
+  // pour les mentions et la présence — jamais de l'email brut (lib/display-name).
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const lastWriterId =
+    summary?.updated_by ?? page?.updated_by ?? summary?.created_by ?? page?.created_by ?? null;
+  const lastWriterKind = summary?.updated_kind ?? page?.updated_kind ?? "human";
+  const lastEditName = useMemo(() => {
+    // Une écriture d'agent porte l'id du compte qui l'a permise ; on ne le
+    // montre pas — c'est toute la règle d'identité de minddy.
+    if (lastWriterKind === "agent") return SITE_NAME;
+    if (!lastWriterId) return null;
+    // On attend les membres plutôt que d'écrire « Quelqu'un » une seconde puis
+    // le vrai nom : un nom qui change sous les yeux se lit comme une erreur.
+    if (membersLoading) return null;
+    const member = members.find((m) => m.user_id === lastWriterId);
+    // Parti du projet, ou compte supprimé : la DATE reste la moitié utile de la
+    // ligne, et « Quelqu'un » ne prétend rien de faux.
+    return (member && displayName(member, "")) || t("someone");
+  }, [members, membersLoading, lastWriterId, lastWriterKind, t]);
+  const lastEditAt =
+    autosave.savedAt ?? summary?.updated_at ?? page?.updated_at ?? null;
+
   /* ── Le chemin jusqu'ici ─────────────────────────────────────────────── */
   //
   // `ancestorsOf` remonte du plus proche à la racine ; le fil d'Ariane se lit
@@ -660,6 +718,12 @@ export function PageView({
           onEnter={openBodyLine}
           onDown={focusBodyStart}
           fieldRef={titleFieldRef}
+          lastEdit={
+            lastEditName && lastEditAt
+              ? { name: lastEditName, at: lastEditAt }
+              : null
+          }
+          onOpenHistory={() => setHistoryOpen(true)}
         />
         {/* Entre le titre et le corps : au-dessus du document, parce que c'est
             du document qu'il parle, et dans le flux, parce qu'un écrasement
@@ -698,6 +762,19 @@ export function PageView({
           plus tous ses descendants, qui partent avec elle sans être à l'écran.
           Dire « cette page » quand cinq s'en vont, c'est faire de la corbeille
           une surprise plutôt qu'un filet. */}
+      {/* L'historique, ouvert depuis la ligne « modifiée par » de l'en-tête —
+          là où la question se pose. Monté seulement quand il est demandé : il
+          tire un second éditeur avec lui. */}
+      {historyOpen ? (
+        <PageHistorySheet
+          projectId={projectId}
+          pageId={pageId}
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          onRestored={onRestored}
+        />
+      ) : null}
+
       <AlertDialog
         open={pendingTrash !== null}
         onOpenChange={(open) => {

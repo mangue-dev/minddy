@@ -8,7 +8,9 @@ import {
   positionAtEnd,
   wouldCreateCycle,
   type Page,
+  type PageWriteKind,
 } from "@/lib/pages";
+import { afterOrNow } from "@/lib/server/after-safe";
 import { appendSubpage, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
 import { bodyFromMarkdownServer } from "@/lib/server/pages-projection";
 import {
@@ -45,6 +47,13 @@ import type { PageDocJSON } from "@/lib/pages-merge";
  * laisse simplement la page introuvable par son contenu, en silence. D'où le
  * test STRUCTUREL de `pages-search-paths.test.ts`, qui relit ce fichier et
  * refuse un `insert`/`update` portant `content` sans son rattrapage.
+ *
+ * Depuis MIN-277, la même règle vaut une seconde fois, et pour la même raison :
+ * **toute écriture du corps porte son auteur (`writtenBy`) et archive l'état
+ * qu'elle recouvre (`stampPageWrite`)**. Un chemin qui l'oublie ne casse rien de
+ * visible non plus — il rend juste une écriture anonyme et irréversible, ce
+ * qu'on ne découvre que le jour où l'agent a écrasé une page. Le test
+ * structurel de `pages-history-paths.test.ts` le refuse de la même façon.
  */
 
 export type PageResult<T> =
@@ -65,6 +74,7 @@ export type PageResult<T> =
 export type PageErrorKey =
   | "projectNotFound"
   | "pageNotFound"
+  | "pageVersionNotFound"
   | "pageParentNotFound"
   | "pageCycle"
   | "pageStale"
@@ -95,7 +105,7 @@ const MAX_ICON_LENGTH = 16;
  * lit page par page, à l'ouverture.
  */
 const LIST_COLUMNS =
-  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed";
+  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed";
 
 const FULL_COLUMNS = `${LIST_COLUMNS}, content`;
 
@@ -142,6 +152,103 @@ async function loadProjectPages(
     .select("id, parent_id, position, deleted_at, deleted_root_id")
     .eq("project_id", projectId);
   return (data ?? []) as unknown as Page[];
+}
+
+/* ─── L'auteur d'une écriture, et l'état qu'elle recouvre (MIN-277) ────────── */
+
+/**
+ * Les colonnes d'AUTEUR à poser sur toute écriture de page.
+ *
+ * `kind` ne se déduit pas de `actorId` : une écriture de Numo, du MCP ou de
+ * l'agent de code porte l'id du compte qui l'a permise. C'est la SURFACE qui
+ * sait de quel geste il s'agit, et elle le transporte jusqu'ici.
+ */
+function writtenBy(
+  actorId: string,
+  kind: PageWriteKind
+): { updated_by: string; updated_kind: PageWriteKind } {
+  return { updated_by: actorId, updated_kind: kind };
+}
+
+/**
+ * La fenêtre de COALESCENCE de l'historique.
+ *
+ * L'éditeur enregistre une seconde après la dernière frappe : une version par
+ * écriture ferait quarante lignes pour un paragraphe écrit d'une traite, et un
+ * historique qu'on ne lit plus. Une même personne qui écrit sans s'arrêter ne
+ * produit donc qu'une ligne par tranche de cinq minutes — la règle de Notion,
+ * et celle qui rend l'historique lisible plutôt qu'exhaustif.
+ *
+ * Ce que la fenêtre ne recouvre JAMAIS : un changement d'auteur. L'état écrit
+ * par un humain est archivé quoi qu'il arrive avant que l'agent (ou un
+ * coéquipier) ne le recouvre — c'est exactement l'état qu'on viendra chercher.
+ */
+const VERSION_COALESCE_MS = 5 * 60_000;
+
+/**
+ * Archive l'état qu'une écriture vient de RECOUVRIR.
+ *
+ * Appelée après l'écriture, jamais avant : une écriture refusée (conflit de
+ * version) n'a rien recouvert, et sa ligne d'historique serait un doublon de
+ * l'état courant.
+ *
+ * `previous` à `null` = une CRÉATION : il n'y a rien derrière elle. Le point
+ * d'appel est conservé quand même, et c'est voulu — la règle « toute écriture
+ * du corps passe par ici » se lit alors sur tous les chemins, sans exception à
+ * retenir (cf. `pages-history-paths.test.ts`).
+ *
+ * Hors chemin critique (`afterOrNow`) : la sauvegarde de l'éditeur ne doit pas
+ * attendre l'archivage, et une promesse détachée mourrait avec la réponse
+ * (lib/server/after-safe.ts).
+ */
+function stampPageWrite({
+  service,
+  previous,
+  actorId,
+  kind,
+  always = false,
+}: {
+  service: Service;
+  /** L'état d'AVANT l'écriture, tel qu'il a été lu. `null` sur une création. */
+  previous: Page | null;
+  /** L'auteur de l'écriture qui recouvre — celui qui ferme la fenêtre. */
+  actorId: string;
+  kind: PageWriteKind;
+  /** Archive sans passer par la coalescence : la restauration d'une version ne
+      doit jamais perdre l'état d'avant elle, même écrit dix secondes plus tôt. */
+  always?: boolean;
+}): void {
+  if (!previous) return;
+
+  // L'auteur de l'ÉTAT archivé, et non celui de l'écriture qui l'efface. Sur
+  // une page jamais réécrite depuis sa création (ou née avant MIN-277), c'est
+  // son créateur : la ligne d'historique nomme quelqu'un plutôt que personne.
+  const authorId = previous.updated_by ?? previous.created_by;
+  const authorKind: PageWriteKind = previous.updated_kind ?? "human";
+
+  afterOrNow(async () => {
+    if (!always && authorId === actorId && authorKind === kind) {
+      const { data } = await service
+        .from("page_versions")
+        .select("id")
+        .eq("page_id", previous.id)
+        .gte("created_at", new Date(Date.now() - VERSION_COALESCE_MS).toISOString())
+        .limit(1);
+      if (data && data.length > 0) return;
+    }
+
+    const { error } = await service.from("page_versions").insert({
+      page_id: previous.id,
+      project_id: previous.project_id,
+      version: previous.version,
+      title: previous.title,
+      icon: previous.icon,
+      content: previous.content ?? { type: "doc", content: [] },
+      author_id: authorId,
+      author_kind: authorKind,
+    });
+    if (error) console.error("[pages] version snapshot failed:", error.message);
+  });
 }
 
 /* ─── Lecture ──────────────────────────────────────────────────────────────── */
@@ -229,10 +336,13 @@ export async function searchProjectPages({
 export async function createPage({
   projectId,
   actorId,
+  kind = "human",
   input,
 }: {
   projectId: string;
   actorId: string;
+  /** La nature du geste (MIN-277) : « agent » sur les six outils d'écriture. */
+  kind?: PageWriteKind;
   input: Record<string, unknown>;
 }): Promise<PageResult<Page>> {
   if (!(await access(actorId, projectId))) {
@@ -280,6 +390,7 @@ export async function createPage({
       all.filter((p) => !p.deleted_at && (p.parent_id ?? null) === parentId)
     ),
     created_by: actorId,
+    ...writtenBy(actorId, kind),
   };
   if (content !== undefined) row.content = content;
 
@@ -295,6 +406,9 @@ export async function createPage({
   }
   const page = data as unknown as Page;
   queueSearchText(service, [page.id]);
+  // Une création ne recouvre rien : l'appel ne pose que la règle (cf.
+  // `stampPageWrite`), il n'écrit aucune ligne d'historique.
+  stampPageWrite({ service, previous: null, actorId, kind });
   return { ok: true, page };
 }
 
@@ -323,7 +437,8 @@ export async function createPage({
  */
 export async function duplicatePage(
   pageId: string,
-  actorId: string
+  actorId: string,
+  kind: PageWriteKind = "human"
 ): Promise<PageResult<Page>> {
   const service = getServiceClient();
   const page = await loadPage(service, pageId);
@@ -372,6 +487,9 @@ export async function duplicatePage(
         content: remapSubpages(source.content as PageDocJSON | null, idMap),
         position: root ? rootPosition : source.position,
         created_by: actorId,
+        // La COPIE est une écriture neuve, de celui qui l'a demandée : elle
+        // porte son nom, et non celui du dernier auteur de l'original.
+        ...writtenBy(actorId, kind),
       },
     ];
   });
@@ -391,6 +509,8 @@ export async function duplicatePage(
     service,
     (data as unknown as Page[]).map((row) => row.id)
   );
+  // Des pages NEUVES : comme la création, elles ne recouvrent rien.
+  stampPageWrite({ service, previous: null, actorId, kind });
 
   const rootId = idMap.get(pageId);
   const copy = (data as unknown as Page[]).find((row) => row.id === rootId);
@@ -416,10 +536,17 @@ export async function duplicatePage(
 export async function updatePage({
   pageId,
   actorId,
+  kind = "human",
+  alwaysArchive = false,
   input,
 }: {
   pageId: string;
   actorId: string;
+  /** La nature du geste (MIN-277) : « agent » sur les six outils d'écriture. */
+  kind?: PageWriteKind;
+  /** Archive l'état recouvert hors coalescence — la restauration d'une version
+      (cf. `restorePageVersion`), seul geste qui l'exige. */
+  alwaysArchive?: boolean;
   input: Record<string, unknown>;
 }): Promise<PageResult<Page>> {
   const service = getServiceClient();
@@ -500,6 +627,12 @@ export async function updatePage({
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
 
+  // L'auteur est posé sur TOUTE modification, corps ou non : renommer une page
+  // est bien la modifier, et l'en-tête dit « modifiée par », pas « corps écrit
+  // par ». L'HISTORIQUE, lui, ne s'occupe que du corps — c'est le seul état
+  // qu'on puisse vouloir remonter.
+  Object.assign(patch, writtenBy(actorId, kind));
+
   // Le verrou est DANS l'écriture, pas seulement dans le contrôle ci-dessus :
   // deux enregistrements partis à la même milliseconde passent tous les deux le
   // contrôle (ils ont lu la même ligne) et le second effacerait le premier. La
@@ -532,7 +665,14 @@ export async function updatePage({
   // Le titre entre dans l'index par la colonne générée, sans rien à écrire ; le
   // corps, lui, a besoin de sa projection. La file ne part donc que quand le
   // corps a bougé — un renommage n'a aucun texte à rejouer.
-  if (patch.content !== undefined) queueSearchText(service, [pageId]);
+  if (patch.content !== undefined) {
+    queueSearchText(service, [pageId]);
+    // L'état d'AVANT, celui qu'on vient de recouvrir : la ligne lue en tête de
+    // cette fonction. Une écriture qui porte sa `version` (l'éditeur, les outils
+    // d'agent) garantit en plus que c'était bien l'état EN BASE à l'instant de
+    // l'écriture — la condition `eq("version", expected)` a filtré le reste.
+    stampPageWrite({ service, previous: page, actorId, kind, always: alwaysArchive });
+  }
   return { ok: true, page: data as unknown as Page };
 }
 
@@ -564,6 +704,7 @@ export async function updatePage({
 async function syncParentBody(
   service: Service,
   parentId: string,
+  actorId: string,
   edit: (doc: PageDocJSON | null) => { doc: PageDocJSON; changed: boolean }
 ): Promise<void> {
   const parent = await loadPage(service, parentId);
@@ -579,7 +720,13 @@ async function syncParentBody(
   // repassera par la fusion, et le bloc orphelin se rendra en attendant.
   const { error } = await service
     .from("pages")
-    .update({ content: doc, version: parent.version + 1 })
+    .update({
+      content: doc,
+      version: parent.version + 1,
+      // L'auteur du miroir est celui du GESTE (corbeille, restauration), et le
+      // geste est humain : l'agent n'a pas de chemin vers la corbeille.
+      ...writtenBy(actorId, "human"),
+    })
     .eq("id", parentId)
     .eq("version", parent.version)
     .is("deleted_at", null);
@@ -587,7 +734,13 @@ async function syncParentBody(
   // Le corps du PARENT vient de changer (un bloc sous-page en moins ou en
   // plus) : c'est une écriture de `content` comme une autre, et son texte
   // indexé doit suivre — même quand personne n'a le parent ouvert.
-  else queueSearchText(service, [parentId]);
+  else {
+    queueSearchText(service, [parentId]);
+    // Et son état d'avant est archivé comme n'importe quel autre : le corps du
+    // parent perd un bloc sans que personne l'ait ouvert, c'est précisément une
+    // écriture qu'on peut vouloir remonter.
+    stampPageWrite({ service, previous: parent, actorId, kind: "human" });
+  }
 }
 
 /* ─── Corbeille ────────────────────────────────────────────────────────────── */
@@ -660,7 +813,7 @@ export async function trashPage(
   // bloc, la ressortir de la corbeille ne doit pas lui en inventer un.
   if (page.parent_id) {
     let cleared = false;
-    await syncParentBody(service, page.parent_id, (doc) => {
+    await syncParentBody(service, page.parent_id, actorId, (doc) => {
       const { doc: next, removed } = removeSubpages(doc, [pageId]);
       cleared = removed > 0;
       return {
@@ -731,7 +884,7 @@ export async function discardPage(
   // corbeille (MIN-272), et l'ordre compte — une ligne détruite dont le bloc
   // survit laisse un lien mort dans le document du parent.
   if (page.parent_id) {
-    await syncParentBody(service, page.parent_id, (doc) => {
+    await syncParentBody(service, page.parent_id, actorId, (doc) => {
       const { doc: next, removed } = removeSubpages(doc, [pageId]);
       return {
         doc: (next ?? { type: "doc", content: [] }) as PageDocJSON,
@@ -805,7 +958,7 @@ export async function restorePage(
     // Le bloc revient dans le corps du parent, en FIN de document (MIN-272).
     // Rien ne se remet en double : `appendSubpage` ne pose rien si le corps
     // cite déjà la page — le cas d'un bloc recréé à la main entre-temps.
-    await syncParentBody(service, parent.id, (doc) => {
+    await syncParentBody(service, parent.id, actorId, (doc) => {
       const { doc: next, added } = appendSubpage(doc, pageId);
       return { doc: next, changed: added };
     });

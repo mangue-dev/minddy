@@ -32,6 +32,8 @@ interface Row {
   version: number;
   position: string;
   created_by: string | null;
+  updated_by: string | null;
+  updated_kind: "human" | "agent";
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -41,6 +43,8 @@ interface Row {
 
 const h = vi.hoisted(() => ({
   rows: [] as Record<string, unknown>[],
+  /** L'HISTORIQUE (MIN-277) — `page_versions`, la seconde table du module. */
+  versions: [] as Record<string, unknown>[],
   /** Projets auxquels l'acteur a accès. Vide = tout est « introuvable ». */
   access: new Set<string>(),
   seq: 0,
@@ -55,13 +59,20 @@ const h = vi.hoisted(() => ({
 vi.mock("@/lib/supabase-service", () => {
   type Filter = (row: Record<string, unknown>) => boolean;
 
-  const from = () => {
+  // Deux tables, et il en faut bien deux : une ligne d'historique porte un
+  // `project_id` et pas de `deleted_at`, donc mêlée aux pages elle sortirait
+  // dans la liste de la sidebar — un faux positif qui ferait douter des tests
+  // plutôt que du code.
+  const from = (table: string) => {
+    const pages = table === "pages";
     const filters: Filter[] = [];
     let mode: "select" | "insert" | "update" | "delete" = "select";
     let payload: Record<string, unknown> | Record<string, unknown>[] = {};
     let orderColumn: string | null = null;
+    let ascending = true;
 
-    const matching = () => h.rows.filter((row) => filters.every((f) => f(row)));
+    const all = () => (pages ? h.rows : h.versions);
+    const matching = () => all().filter((row) => filters.every((f) => f(row)));
 
     const run = (): { data: Record<string, unknown>[] | null; error: null } => {
       if (mode === "insert") {
@@ -70,41 +81,61 @@ vi.mock("@/lib/supabase-service", () => {
         const inserted = (Array.isArray(payload) ? payload : [payload]).map(
           (values) => {
             h.seq += 1;
-            const row = {
-              id: `page-${h.seq}`,
-              parent_id: null,
-              title: "",
-              icon: null,
-              content: { type: "doc", content: [] },
-              version: 1,
-              created_by: null,
-              created_at: `2026-08-10T00:00:0${h.seq}Z`,
-              updated_at: `2026-08-10T00:00:0${h.seq}Z`,
-              deleted_at: null,
-              deleted_by: null,
-              deleted_root_id: null,
-              parent_block_removed: false,
-              ...values,
-            };
-            h.rows.push(row);
+            const row = pages
+              ? {
+                  id: `page-${h.seq}`,
+                  parent_id: null,
+                  title: "",
+                  icon: null,
+                  content: { type: "doc", content: [] },
+                  version: 1,
+                  created_by: null,
+                  updated_by: null,
+                  updated_kind: "human",
+                  created_at: `2026-08-10T00:00:0${h.seq}Z`,
+                  updated_at: `2026-08-10T00:00:0${h.seq}Z`,
+                  deleted_at: null,
+                  deleted_by: null,
+                  deleted_root_id: null,
+                  parent_block_removed: false,
+                  ...values,
+                }
+              : {
+                  id: `version-${h.seq}`,
+                  // Le vrai `default now()` : la coalescence lit cette colonne,
+                  // et un horodatage figé ferait passer le test pour vrai.
+                  created_at: new Date().toISOString(),
+                  ...values,
+                };
+            all().push(row);
             return row;
           }
         );
-        return { data: inserted, error: null };
+        return { data: inserted.map((row) => ({ ...row })), error: null };
       }
       const rows = matching();
       if (mode === "update") {
         for (const row of rows) Object.assign(row, payload);
       }
       if (mode === "delete") {
-        h.rows = h.rows.filter((row) => !rows.includes(row));
+        if (pages) h.rows = h.rows.filter((row) => !rows.includes(row));
+        else h.versions = h.versions.filter((row) => !rows.includes(row));
       }
       if (orderColumn) {
-        rows.sort((a, b) =>
-          String(a[orderColumn!]) < String(b[orderColumn!]) ? -1 : 1
-        );
+        rows.sort((a, b) => {
+          const [x, y] = [a[orderColumn!], b[orderColumn!]];
+          const less =
+            typeof x === "number" && typeof y === "number"
+              ? x < y
+              : String(x) < String(y);
+          return (less ? -1 : 1) * (ascending ? 1 : -1);
+        });
       }
-      return { data: rows, error: null };
+      // Des COPIES, comme PostgREST : la ligne rendue par une lecture ne doit pas
+      // être l'objet que la prochaine écriture mutera. Sans ça, l'état « d'avant »
+      // que le noyau garde en main pour l'archiver (MIN-277) se trouvait modifié
+      // par l'écriture qu'il précède — un alias que la vraie base n'a pas.
+      return { data: rows.map((row) => ({ ...row })), error: null };
     };
 
     const query: Record<string, unknown> = {};
@@ -135,6 +166,10 @@ vi.mock("@/lib/supabase-service", () => {
       filters.push((row) => (row[column] ?? null) !== value);
       return query;
     };
+    query.gte = (column: string, value: unknown) => {
+      filters.push((row) => String(row[column] ?? "") >= String(value));
+      return query;
+    };
     query.in = (column: string, values: unknown[]) => {
       filters.push((row) => values.includes(row[column]));
       return query;
@@ -147,8 +182,9 @@ vi.mock("@/lib/supabase-service", () => {
       );
       return query;
     };
-    query.order = (column: string) => {
+    query.order = (column: string, options?: { ascending?: boolean }) => {
       orderColumn = column;
+      ascending = options?.ascending !== false;
       return query;
     };
     query.limit = () => query;
@@ -172,6 +208,21 @@ vi.mock("@/lib/server/project-access", () => ({
     h.access.has(projectId) ? { project: { id: projectId }, isOwner: true, isMember: true } : null,
 }));
 
+/**
+ * Les NOMS des comptes, seule chose qui sorte encore du process côté historique
+ * (l'API admin de GoTrue). Le reste de `auth-users` reste le vrai.
+ */
+vi.mock("@/lib/server/auth-users", async (importActual) => ({
+  ...(await importActual<typeof import("./auth-users")>()),
+  fetchAuthUsersById: async (_service: unknown, ids: string[]) =>
+    new Map(
+      ids.map((id) => [
+        id,
+        { id, email: `${id}@minddy.app`, user_metadata: { display_name: `Nom de ${id}` } },
+      ])
+    ),
+}));
+
 import {
   createPage,
   duplicatePage,
@@ -182,6 +233,11 @@ import {
   trashPage,
   updatePage,
 } from "./pages";
+import {
+  getPageVersion,
+  listPageVersions,
+  restorePageVersion,
+} from "./page-versions";
 import { buildPageTree } from "@/lib/pages";
 
 const ACTOR = "user-1";
@@ -202,6 +258,7 @@ const rowOf = (id: string) => h.rows.find((row) => row.id === id) as unknown as 
 
 beforeEach(() => {
   h.rows = [];
+  h.versions = [];
   h.seq = 0;
   h.access = new Set([PROJECT]);
 });
@@ -967,5 +1024,207 @@ describe("le texte de recherche", () => {
     await updatePage({ pageId: page, actorId: ACTOR, input: { title: "Autre" } });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(searchTextOf(page)).toBe("TÉMOIN");
+  });
+});
+
+/* ─── L'auteur, et l'historique (MIN-277) ──────────────────────────────────── */
+
+describe("qui a écrit, et ce que l'écriture a recouvert", () => {
+  const OTHER = "user-2";
+  const doc = (text: string) => ({
+    type: "doc",
+    content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+  });
+
+  /** Les versions d'une page, du plus ancien au plus récent, en base. */
+  const versionsOf = (pageId: string) =>
+    h.versions.filter((row) => row.page_id === pageId);
+
+  /** L'archivage part par `afterOrNow`, donc après le retour de l'écriture. */
+  async function expectVersions(pageId: string, count: number) {
+    await vi.waitFor(() => {
+      expect(versionsOf(pageId)).toHaveLength(count);
+    });
+  }
+
+  it("pose l'auteur et la NATURE du geste sur toute écriture", async () => {
+    const id = await create("Guide");
+    expect(rowOf(id)).toMatchObject({ updated_by: ACTOR, updated_kind: "human" });
+
+    // Un geste d'agent porte l'id du compte qui l'a permis, et c'est bien pour
+    // ça qu'il faut la seconde colonne : sans elle, la page dirait « modifiée
+    // par Clément » d'un texte que Clément n'a pas écrit.
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      kind: "agent",
+      input: { content: doc("écrit par Numo") },
+    });
+    expect(rowOf(id)).toMatchObject({ updated_by: ACTOR, updated_kind: "agent" });
+
+    // Un simple renommage compte : « modifiée par », pas « corps écrit par ».
+    await updatePage({ pageId: id, actorId: OTHER, input: { title: "Autre" } });
+    expect(rowOf(id)).toMatchObject({ updated_by: OTHER, updated_kind: "human" });
+  });
+
+  it("n'archive rien à la création ni à la duplication", async () => {
+    const id = await create("Guide");
+    const copy = await duplicatePage(id, ACTOR);
+    if (!copy.ok) throw new Error(copy.errorKey);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(h.versions).toHaveLength(0);
+    // La copie est une écriture NEUVE, de celui qui l'a demandée.
+    expect(rowOf(copy.page.id)).toMatchObject({
+      updated_by: ACTOR,
+      updated_kind: "human",
+    });
+  });
+
+  it("archive l'état RECOUVERT, attribué à qui l'avait écrit", async () => {
+    const id = await create("Guide");
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      input: { content: doc("le texte de Clément") },
+    });
+    await expectVersions(id, 1);
+
+    // L'agent écrase. Ce qu'on veut retrouver, c'est le texte D'AVANT, au nom
+    // de celui qui l'avait écrit — c'est tout l'objet de MIN-277.
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      kind: "agent",
+      input: { content: doc("réécrit par l'agent") },
+    });
+    await expectVersions(id, 2);
+
+    const last = versionsOf(id).at(-1) as Record<string, unknown>;
+    expect(last).toMatchObject({ author_id: ACTOR, author_kind: "human", version: 2 });
+    expect(JSON.stringify(last.content)).toContain("le texte de Clément");
+  });
+
+  it("coalesce deux frappes rapprochées du MÊME auteur en une version", async () => {
+    const id = await create("Guide");
+    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("un") } });
+    await expectVersions(id, 1);
+
+    // Dix secondes plus tard, le même auteur : l'état intermédiaire ne vaut pas
+    // une ligne. L'éditeur enregistre à la seconde — sans cette règle, un
+    // paragraphe écrit d'une traite ferait quarante versions.
+    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("deux") } });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(versionsOf(id)).toHaveLength(1);
+  });
+
+  it("n'en coalesce JAMAIS deux d'auteurs différents", async () => {
+    const id = await create("Guide");
+    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("un") } });
+    await expectVersions(id, 1);
+
+    // Même fenêtre de cinq minutes, mais quelqu'un d'autre écrit : l'état de
+    // Clément est archivé quoi qu'il arrive. C'est exactement celui qu'on
+    // viendra chercher.
+    await updatePage({ pageId: id, actorId: OTHER, input: { content: doc("deux") } });
+    await expectVersions(id, 2);
+    expect(versionsOf(id).at(-1)).toMatchObject({ author_id: ACTOR });
+  });
+
+  it("rend l'historique le plus récent d'abord, et nomme minddy sur un geste d'agent", async () => {
+    const id = await create("Guide");
+    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("humain") } });
+    await expectVersions(id, 1);
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      kind: "agent",
+      input: { content: doc("agent") },
+    });
+    await expectVersions(id, 2);
+    await updatePage({ pageId: id, actorId: OTHER, input: { content: doc("humain 2") } });
+    await expectVersions(id, 3);
+
+    const list = await listPageVersions(id, ACTOR);
+    if (!list.ok) throw new Error(list.errorKey);
+    expect(list.data.map((v) => v.version)).toEqual([3, 2, 1]);
+    // L'écriture de l'agent se reconnaît dans la liste : elle porte « minddy »
+    // et non le nom du compte qui l'a permise.
+    expect(list.data[0]).toMatchObject({ author_kind: "agent", author_name: "minddy" });
+    expect(list.data[2]).toMatchObject({
+      author_kind: "human",
+      author_name: `Nom de ${ACTOR}`,
+    });
+  });
+
+  it("refuse l'historique d'une page d'un projet auquel on n'a pas accès", async () => {
+    const id = await create("Guide");
+    h.access = new Set();
+    expect(await listPageVersions(id, ACTOR)).toMatchObject({
+      ok: false,
+      status: 404,
+      errorKey: "pageNotFound",
+    });
+  });
+
+  it("garde l'historique consultable sur une page CORBEILLÉE", async () => {
+    // C'est justement là qu'on va chercher : « ça a disparu, remonte à avant »
+    // est le geste d'après l'incident.
+    const id = await create("Guide");
+    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("texte") } });
+    await expectVersions(id, 1);
+    await trashPage(id, ACTOR);
+
+    const list = await listPageVersions(id, ACTOR);
+    if (!list.ok) throw new Error(list.errorKey);
+    expect(list.data).toHaveLength(1);
+  });
+
+  it("restaure une version, et archive l'état d'avant la restauration", async () => {
+    const id = await create("Guide");
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      input: { title: "Décision", content: doc("la bonne version") },
+    });
+    await expectVersions(id, 1);
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      kind: "agent",
+      input: { title: "Réécrite", content: doc("la version de l'agent") },
+    });
+    await expectVersions(id, 2);
+
+    const list = await listPageVersions(id, ACTOR);
+    if (!list.ok) throw new Error(list.errorKey);
+    const wanted = list.data.find((v) => v.version === 2);
+    if (!wanted) throw new Error("version introuvable");
+
+    const restored = await restorePageVersion(id, wanted.id, OTHER);
+    if (!restored.ok) throw new Error(restored.errorKey);
+    expect(JSON.stringify(restored.data.content)).toContain("la bonne version");
+    // Le titre revient avec le corps : ce sont trois champs d'un même état.
+    expect(restored.data.title).toBe("Décision");
+    expect(rowOf(id)).toMatchObject({ updated_by: OTHER, updated_kind: "human" });
+
+    // Et l'état d'avant la restauration — celui de l'agent — est archivé, hors
+    // coalescence : restaurer par erreur se défait.
+    await expectVersions(id, 3);
+    expect(versionsOf(id).at(-1)).toMatchObject({ author_kind: "agent" });
+  });
+
+  it("ne rend pas une version qui n'appartient pas à la page demandée", async () => {
+    const mine = await create("Guide");
+    const other = await create("Notes");
+    await updatePage({ pageId: other, actorId: ACTOR, input: { content: doc("ailleurs") } });
+    await expectVersions(other, 1);
+    const strayId = versionsOf(other)[0].id as string;
+
+    expect(await getPageVersion(mine, strayId, ACTOR)).toMatchObject({
+      ok: false,
+      status: 404,
+      errorKey: "pageVersionNotFound",
+    });
   });
 });

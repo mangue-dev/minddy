@@ -37,6 +37,8 @@ function page(overrides: Partial<Page> & { id: string }): Page {
     position: "V",
     favorite: false,
     created_by: null,
+    updated_by: null,
+    updated_kind: "human",
     created_at: `2026-08-10T00:00:${String(counter).padStart(2, "0")}Z`,
     updated_at: "2026-08-10T00:00:00Z",
     deleted_at: null,

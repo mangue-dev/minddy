@@ -261,7 +261,8 @@
     "pageCycle": "Une page ne peut pas être déplacée dans une de ses propres sous-pages.",
     "pageStale": "Cette page a été modifiée ailleurs depuis votre dernier enregistrement.",
     "pageNotEmpty": "Cette page n’est plus vide.",
-    "pageTooLarge": "Cette page est trop longue pour être enregistrée."
+    "pageTooLarge": "Cette page est trop longue pour être enregistrée.",
+    "pageVersionNotFound": "Cette version de la page n'existe plus."
   },
   "CustomDomain": {
     "title": "Domaine personnalisé",
@@ -1657,7 +1658,19 @@
     "duplicateFailed": "Impossible de dupliquer la page.",
     "tableOfContents": "Table des matières",
     "breadcrumb": "Pages parentes",
-    "breadcrumbMore": "{count, plural, one {# niveau masqué} other {# niveaux masqués}}"
+    "breadcrumbMore": "{count, plural, one {# niveau masqué} other {# niveaux masqués}}",
+    "lastEditedBy": "Modifiée par {name} · {time}",
+    "historyTitle": "Historique des versions",
+    "historyDescription": "Tous les états antérieurs de cette page, gardés {days} jours.",
+    "historyEmpty": "Rien avant, pour l'instant. Les modifications apparaîtront ici.",
+    "historyPickOne": "Choisissez une version à gauche pour la lire.",
+    "historyBy": "{name} · {time}",
+    "historyRestore": "Restaurer",
+    "historyRestored": "Version restaurée.",
+    "historyRestoreFailed": "La restauration a échoué.",
+    "historyLoadFailed": "Impossible de charger l'historique.",
+    "writtenByAgent": "Écrit par minddy",
+    "someone": "Quelqu'un"
   },
   "Picker": {
     "createNamed": "Créer « {name} »",
