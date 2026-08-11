@@ -1,58 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Spinner, cn, toast } from "mangue-ui";
-import { FileUp, TriangleAlert, X } from "lucide-react";
-import { issuesFromMapping, prepareImport } from "@/lib/import/parse";
-import { buildCsvDigest } from "@/lib/import/digest";
-import { mappingHasGaps, mergeMapping } from "@/lib/import/mapping";
-import {
-  MAX_IMPORT_CSV_BYTES,
-  type ImportContext,
-  type ImportMapping,
-  type ImportSource,
-} from "@/lib/import/types";
-import type { TableStats } from "@/lib/import/stats";
-import type { CsvTable } from "@/lib/import/normalize";
-import { useMembersQuery } from "@/lib/use-members-query";
-import {
-  fetchImportMappingApi,
-  importIssuesApi,
-  type ImportCommitResponse,
-} from "@/lib/import-api";
-import { ISSUE_STATUSES } from "@/lib/issue-validation";
-import { useCategoriesQuery } from "@/lib/use-categories-query";
+import { Badge, Button, Spinner, cn } from "mangue-ui";
+import { TriangleAlert, X } from "lucide-react";
+import { CsvDropzone } from "@/components/import/csv-dropzone";
 import { ImportMappingEditor } from "@/components/settings/import-mapping-editor";
+import { useCsvImport } from "@/lib/use-csv-import";
+import type { ImportCommitResponse } from "@/lib/import-api";
 import type { MessageKey } from "@/lib/i18n-keys";
 
-/** Le fichier déposé, tel que l'aperçu le tient : lu une fois, relu jamais. */
-interface Prepared {
-  fileName: string;
-  csvText: string;
-  table: CsvTable;
-  /** Le comptage des colonnes — recalculer à chaque retouche du tableau de
-   *  correspondance se verrait à l'écran sur un fichier de 2 000 lignes. */
-  stats: TableStats;
-  source: ImportSource;
-  /** Le plan de départ — ce vers quoi « réinitialiser » ramène. */
-  baseMapping: ImportMapping;
-}
+/** Le geste d'import dans une PAGE (MIN-45) : l'onglet « Import » des réglages
+    du projet, où le dépôt et son aperçu se lisent en défilant, entre les autres
+    sections.
 
-/** Le geste d'import lui-même (MIN-45) : déposer un export Linear / Jira /
-    Notion / Trello ou un CSV générique, voir le mapping AVANT de valider (même
-    parseur que celui que le serveur rejoue au commit), importer en un POST.
+    Le parcours en modale, lui, passe par `ImportWizardDialog` — même hook, même
+    tableau de correspondance, mais trois étapes et un CTA pleine largeur : une
+    modale n'a pas la place d'une page. Les deux surfaces partagent tout ce qui
+    décide (`lib/use-csv-import.ts`) et ne diffèrent que par leur mise en scène.
 
-    L'aperçu est vivant : le plan de lecture (`ImportMapping`) est de l'état, et
-    les tickets s'en déduisent. Trois mains l'écrivent — la détection par
-    en-têtes, la proposition du modèle, les corrections de l'utilisateur — et
-    c'est ce même objet qui part au serveur. Ce qu'on a vu est ce qui est importé.
-
-    Le geste seul : la marche à suivre qui le précède vit dans `import-panel.tsx`,
-    qui assemble les deux et sert aussi bien les réglages du projet que le dialog
-    d'import de l'onboarding. Il garde le namespace i18n `Settings` : aucune
-    chaîne n'a changé de place. */
+    Le geste seul : la marche à suivre qui le précède vit dans `import-panel.tsx`.
+    Il garde le namespace i18n `Settings` : aucune chaîne n'a changé de place. */
 export function CsvImportPanel({
   projectId,
   className,
@@ -61,254 +28,37 @@ export function CsvImportPanel({
 }: {
   projectId: string;
   className?: string;
-  /** Fichier déjà tenu par l'appelant — l'onboarding accepte le dépôt sur
-   *  toute sa carte et ouvre le dialog avec le CSV en main. Analysé comme s'il
-   *  venait de la zone de dépôt : un seul chemin de lecture. */
+  /** Fichier déjà tenu par l'appelant, analysé comme s'il venait de la zone de
+   *  dépôt : un seul chemin de lecture. */
   initialFile?: File | null;
   onImported?: (result: ImportCommitResponse) => void;
 }) {
   const t = useTranslations("Settings");
   const tc = useTranslations("Common");
   const tStatus = useTranslations("Status");
-  const queryClient = useQueryClient();
-  const { categories } = useCategoriesQuery(projectId);
-  const { members } = useMembersQuery(projectId, true);
 
-  // Ce que le projet apporte au rapprochement. Recalculé quand les membres ou
-  // les catégories arrivent, mais le fichier n'est PAS relu pour autant : c'est
-  // le plan de départ d'un prochain dépôt.
-  const context = useMemo<ImportContext>(
-    () => ({
-      members: members.map((m) => ({
-        userId: m.user_id,
-        email: m.email,
-        name: m.full_name,
-      })),
-      categories: categories.map((c) => c.name),
-      actorId: "",
-    }),
-    [members, categories]
-  );
-  const contextRef = useRef(context);
-  contextRef.current = context;
-
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dragOver, setDragOver] = useState(false);
-  const [prepared, setPrepared] = useState<Prepared | null>(null);
-  const [mapping, setMapping] = useState<ImportMapping | null>(null);
-  const [aiApplied, setAiApplied] = useState(false);
-  const [aiPending, setAiPending] = useState(false);
-  const [importing, setImporting] = useState(false);
-
-  // Une proposition qui revient après que l'utilisateur a changé de fichier (ou
-  // touché au tableau) ne doit rien écraser : on la jette.
-  const planRequestRef = useRef(0);
-
-  const reset = () => {
-    planRequestRef.current += 1;
-    setPrepared(null);
-    setMapping(null);
-    setAiApplied(false);
-    setAiPending(false);
-    if (inputRef.current) inputRef.current.value = "";
-  };
-
-  const handleFile = useCallback(
-    async (file: File) => {
-      if (file.size > MAX_IMPORT_CSV_BYTES) {
-        toast.error(t("importErrorTooLarge"));
-        return;
-      }
-      const text = await file.text();
-      const result = prepareImport(text, contextRef.current);
-      if (!result.ok) {
-        toast.error(
-          result.error === "tooManyIssues"
-            ? t("importErrorTooMany")
-            : t("importErrorEmpty")
-        );
-        return;
-      }
-      const { table, stats, source, mapping: base } = result;
-
-      setPrepared({
-        fileName: file.name,
-        csvText: text,
-        table,
-        stats,
-        source,
-        baseMapping: base,
-      });
-      setMapping(base);
-      setAiApplied(false);
-
-      // La passe du modèle n'a lieu que s'il reste quelque chose à gagner : une
-      // colonne qu'on n'a pas su placer, une valeur qu'on n'a pas su traduire,
-      // une personne qu'on n'a pas reconnue. Un export Linear propre d'un
-      // projet dont on connaît déjà les gens n'en déclenche aucune.
-      if (!mappingHasGaps(stats, base, source)) return;
-
-      const request = ++planRequestRef.current;
-      setAiPending(true);
-      const proposed = await fetchImportMappingApi(
-        projectId,
-        buildCsvDigest(stats, base, contextRef.current, table.rows.length)
-      );
-      if (request !== planRequestRef.current) return;
-      setAiPending(false);
-      if (!proposed) return;
-
-      setMapping(
-        mergeMapping(base, proposed, {
-          // Sur un export Linear ou Jira, les en-têtes sont ceux, exacts, d'un
-          // format connu : le modèle ne comble que les trous. Sur un CSV
-          // quelconque il tranche, parce qu'il a lu les valeurs.
-          columnsWin: source === "csv",
-        })
-      );
-      setAiApplied(true);
-    },
-    [projectId, t]
-  );
-
-  // Un fichier confié par l'appelant est analysé une fois, à l'identité de
-  // l'objet `File` : sans la marque, chaque rendu relancerait la lecture et
-  // effacerait l'aperçu qu'on vient d'obtenir.
-  const handledFileRef = useRef<File | null>(null);
-  useEffect(() => {
-    if (!initialFile || handledFileRef.current === initialFile) return;
-    handledFileRef.current = initialFile;
-    void handleFile(initialFile);
-  }, [initialFile, handleFile]);
-
-  // Les tickets se REDÉDUISENT du plan : chaque retouche du tableau de
-  // correspondance met à jour les comptes, les avertissements et le bouton.
-  const preview = useMemo(() => {
-    if (!prepared || !mapping) return null;
-    return issuesFromMapping(prepared.table, mapping);
-  }, [prepared, mapping]);
-
-  const changeMapping = (next: ImportMapping) => {
-    // Une correction à la main clôt la partie : la proposition en vol ne doit
-    // plus rien écraser.
-    planRequestRef.current += 1;
-    setAiPending(false);
-    setMapping(next);
-  };
-
-  // Status breakdown in board order; label names not matching an existing
-  // category (case-insensitive) will be created by the import.
-  const statusCounts = useMemo(() => {
-    if (!preview) return [];
-    const counts = new Map<string, number>();
-    for (const issue of preview.issues) {
-      counts.set(issue.status, (counts.get(issue.status) ?? 0) + 1);
-    }
-    return ISSUE_STATUSES.filter((s) => counts.has(s)).map((s) => ({
-      status: s,
-      count: counts.get(s)!,
-    }));
-  }, [preview]);
-
-  const newCategoryCount = useMemo(() => {
-    if (!preview) return 0;
-    const existing = new Set(categories.map((c) => c.name.toLowerCase()));
-    const missing = new Set<string>();
-    for (const issue of preview.issues) {
-      for (const label of issue.labels) {
-        const key = label.toLowerCase();
-        if (!existing.has(key)) missing.add(key);
-      }
-    }
-    return missing.size;
-  }, [preview, categories]);
-
-  const handleImport = async () => {
-    if (!prepared || !mapping || importing) return;
-    setImporting(true);
-    try {
-      const result = await importIssuesApi(projectId, prepared.csvText, mapping);
-      toast.success(t("importSuccessToast", { count: result.created }));
-      void queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
-      void queryClient.invalidateQueries({ queryKey: ["categories", projectId] });
-      reset();
-      onImported?.(result);
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const downloadTemplate = () => {
-    const template = [
-      "title,description,status,priority,effort,labels,due date,id,parent",
-      '"Set up the landing page","First draft in Figma",todo,high,m,"design; marketing",2026-09-30,T-1,',
-      '"Write the hero copy",,backlog,medium,s,marketing,,T-2,T-1',
-    ].join("\n");
-    const url = URL.createObjectURL(new Blob([template], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "minddy-import-template.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const {
+    context,
+    prepared,
+    mapping,
+    preview,
+    aiApplied,
+    aiPending,
+    importing,
+    statusCounts,
+    newCategoryCount,
+    hasTitleColumn,
+    mappingTouched,
+    handleFile,
+    reset,
+    changeMapping,
+    resetMapping,
+    runImport,
+  } = useCsvImport({ projectId, initialFile, onImported });
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      {!prepared && (
-        <>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void handleFile(file);
-            }}
-          />
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => inputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                inputRef.current?.click();
-              }
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              const file = e.dataTransfer.files?.[0];
-              if (file) void handleFile(file);
-            }}
-            className={cn(
-              "flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed px-6 py-10 text-center outline-none transition-colors",
-              dragOver
-                ? "border-ring bg-accent/40"
-                : "border-border hover:border-ring/60 focus-visible:border-ring"
-            )}
-          >
-            <FileUp className="size-5 text-muted-foreground" aria-hidden />
-            <p className="text-sm font-medium">{t("importDropTitle")}</p>
-            <p className="text-xs text-muted-foreground">{t("importDropHint")}</p>
-          </div>
-          <button
-            type="button"
-            onClick={downloadTemplate}
-            className="self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-          >
-            {t("importTemplateLink")}
-          </button>
-        </>
-      )}
+      {!prepared && <CsvDropzone onFile={(file) => void handleFile(file)} />}
 
       {prepared && mapping && preview && (
         <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
@@ -356,7 +106,7 @@ export function CsvImportPanel({
 
           {/* Aucune colonne de titre : le fichier n'est pas refusé, il attend
               qu'on désigne laquelle porte le nom des tickets — juste au-dessus. */}
-          {!mapping.columns.includes("title") && (
+          {!hasTitleColumn && (
             <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
               <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
               {t("importErrorInvalid")}
@@ -380,10 +130,12 @@ export function CsvImportPanel({
             </ul>
           )}
 
-          <div className="flex items-center gap-2">
+          {/* Les boutons s'ENROULENT : dans une colonne étroite, trois boutons
+              sur une ligne sortaient du cadre plutôt que de passer à la ligne. */}
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              onClick={() => void handleImport()}
+              onClick={() => void runImport()}
               // Sans colonne de titre, il n'y a pas de ticket à fabriquer : le
               // tableau de correspondance est ouvert, et c'est là que ça se règle.
               disabled={importing || preview.issues.length === 0}
@@ -391,16 +143,11 @@ export function CsvImportPanel({
               {importing && <Spinner />}
               {t("importButton", { count: preview.issues.length })}
             </Button>
-            {mapping !== prepared.baseMapping && (
+            {mappingTouched && (
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => {
-                  planRequestRef.current += 1;
-                  setAiPending(false);
-                  setAiApplied(false);
-                  setMapping(prepared.baseMapping);
-                }}
+                onClick={resetMapping}
                 disabled={importing}
               >
                 {t("importMappingReset")}

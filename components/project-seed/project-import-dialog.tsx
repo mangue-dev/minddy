@@ -1,27 +1,18 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "mangue-ui";
-import { ImportPanel } from "@/components/settings/import-panel";
+import { ImportWizardDialog } from "@/components/import/import-wizard-dialog";
 
 /**
  * L'amorce d'un projet par un import (MIN-171) — la surface que `?setup=import`
  * ouvre sur le board du projet qui vient d'être créé.
  *
- * Le panneau est celui des réglages, tel quel (`import-panel.tsx`) : le geste
- * d'import existe depuis MIN-45, il n'était qu'enterré là où personne ne le
- * cherche le jour où il crée son projet. Ce dialog ne lui ajoute rien — pas
- * même le sélecteur de projet du dialog d'onboarding : ici, le projet est
- * connu, c'est celui qu'on regarde.
+ * Le parcours est celui du wizard d'import (`import-wizard-dialog.tsx`), tel
+ * quel : ce dialog ne lui ajoute rien — pas même le sélecteur de projet du
+ * dialog d'onboarding, puisque ici le projet est connu, c'est celui qu'on
+ * regarde.
  *
- * `initialFile` est le CSV déposé pendant le wizard : le panneau s'ouvre alors
- * directement sur l'aperçu du mapping.
+ * `initialFile` est le CSV déposé pendant le wizard de création : le parcours
+ * s'ouvre alors directement sur la correspondance.
  */
 export function ProjectImportDialog({
   open,
@@ -34,22 +25,13 @@ export function ProjectImportDialog({
   projectId: string;
   initialFile?: File | null;
 }) {
-  const t = useTranslations("Onboarding");
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("importTitle")}</DialogTitle>
-          <DialogDescription>{t("importDesc")}</DialogDescription>
-        </DialogHeader>
-
-        <ImportPanel
-          projectId={projectId}
-          initialFile={initialFile}
-          onImported={() => onOpenChange(false)}
-        />
-      </DialogContent>
-    </Dialog>
+    <ImportWizardDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      projectId={projectId}
+      initialFile={initialFile}
+      onImported={() => onOpenChange(false)}
+    />
   );
 }

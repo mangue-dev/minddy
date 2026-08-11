@@ -2534,7 +2534,15 @@
     "feedbackParticipantsConfirmDesc": "Their address, name and sessions are permanently deleted. Their contributions stay published under their pseudonym, with nothing left pointing back to them. This cannot be undone.",
     "feedbackParticipantsDone": "Identity erased. {posts} posts and {comments} comments stay online, now without an identifiable author.",
     "feedbackParticipantsAlready": "This identity was already erased.",
-    "feedbackParticipantsFailed": "Erasure failed. Try again."
+    "feedbackParticipantsFailed": "Erasure failed. Try again.",
+    "importMappingDesc": "Check where each column lands, and what each value becomes. Numo fills in what it can; you settle the rest.",
+    "importMappingColumnsTitle": "File columns",
+    "importReviewTitle": "Ready to import",
+    "importReviewDesc": "What minddy will write into the project. Nothing is created until you confirm.",
+    "importQuitTitle": "Discard this import?",
+    "importQuitDescription": "The file and the mapping you adjusted will be lost. Nothing has been imported yet.",
+    "importQuitConfirm": "Discard",
+    "importValueToPlace": "Not matched yet"
   },
   "Seed": {
     "emptyBoardCta": "Chat with Numo",

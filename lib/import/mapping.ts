@@ -31,6 +31,8 @@ import {
   type CsvTable,
 } from "@/lib/import/normalize";
 import {
+  IMPORT_FIELDS,
+  MULTI_COLUMN_FIELDS,
   isImportField,
   type ColumnAliases,
   type ImportContext,
@@ -57,13 +59,24 @@ import { MINDDY_COLUMN_ALIASES } from "@/lib/import/minddy";
  */
 export function assignColumns(table: CsvTable, aliases: ColumnAliases): ImportField[] {
   const columns: ImportField[] = table.headers.map(() => "ignore");
-  const taken = new Set<number>();
+  const takenColumns = new Set<number>();
+  // Et l'inverse : un champ SIMPLE ne se prend qu'une fois. Une table d'alias
+  // porte plusieurs noms pour le même champ (« Description », « Notes », « Body »
+  // pour `description`), et un fichier peut les avoir tous : les deux colonnes
+  // visaient alors le même champ, dont `applyMapping` ne lit que la première —
+  // la seconde disparaissait sans un mot. Laissée `ignore`, elle redevient au
+  // contraire un trou VISIBLE, que le modèle sait combler et que le tableau de
+  // correspondance montre. Les champs à plusieurs colonnes en sont exemptés,
+  // c'est tout leur intérêt (`MULTI_COLUMN_FIELDS`).
+  const takenFields = new Set<ImportField>();
 
   for (const [field, names] of aliases) {
     for (const name of names) {
       for (const index of table.headerIndex.get(name) ?? []) {
-        if (taken.has(index)) continue;
-        taken.add(index);
+        if (takenColumns.has(index)) continue;
+        if (takenFields.has(field)) continue;
+        takenColumns.add(index);
+        if (!MULTI_COLUMN_FIELDS.has(field)) takenFields.add(field);
         columns[index] = field;
       }
     }
@@ -74,6 +87,29 @@ export function assignColumns(table: CsvTable, aliases: ColumnAliases): ImportFi
 /** Les index des colonnes qui alimentent un champ. */
 export const columnsOf = (mapping: ImportMapping, field: ImportField): number[] =>
   mapping.columns.flatMap((f, i) => (f === field ? [i] : []));
+
+/**
+ * Ce que le sélecteur d'une colonne a le droit de proposer : tout, moins les
+ * champs simples qu'une AUTRE colonne occupe déjà (`MULTI_COLUMN_FIELDS`).
+ *
+ * Le champ courant de la colonne y figure toujours, même s'il est en double —
+ * un plan détecté peut l'être (deux colonnes « Status » dans le même fichier),
+ * et un sélecteur dont la valeur n'est pas dans sa liste s'affiche VIDE. On
+ * refuse d'aggraver, on n'efface pas ce qui est là.
+ */
+export function fieldsAvailableForColumn(
+  columns: ImportField[],
+  index: number
+): ImportField[] {
+  const current = columns[index];
+  const takenElsewhere = new Set<ImportField>();
+  columns.forEach((field, i) => {
+    if (i !== index && !MULTI_COLUMN_FIELDS.has(field)) takenElsewhere.add(field);
+  });
+  return IMPORT_FIELDS.filter(
+    (field) => field === current || !takenElsewhere.has(field)
+  );
+}
 
 /**
  * Les valeurs distinctes des colonnes à dictionnaire, libellé d'origine

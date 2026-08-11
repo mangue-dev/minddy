@@ -2534,7 +2534,15 @@
     "feedbackParticipantsConfirmDesc": "Son adresse, son nom et ses sessions sont supprimés définitivement. Ses contributions restent publiées sous son pseudonyme, sans plus rien qui la désigne. Cette action est irréversible.",
     "feedbackParticipantsDone": "Identité effacée. {posts} retours et {comments} commentaires restent en ligne, désormais sans auteur identifiable.",
     "feedbackParticipantsAlready": "Cette identité était déjà effacée.",
-    "feedbackParticipantsFailed": "L'effacement a échoué. Réessayez."
+    "feedbackParticipantsFailed": "L'effacement a échoué. Réessayez.",
+    "importMappingDesc": "Vérifiez où va chaque colonne, et ce que devient chaque valeur. Numo remplit ce qu'il peut ; vous tranchez le reste.",
+    "importMappingColumnsTitle": "Colonnes du fichier",
+    "importReviewTitle": "Prêt à importer",
+    "importReviewDesc": "Ce que minddy va écrire dans le projet. Rien n'est créé avant votre confirmation.",
+    "importQuitTitle": "Abandonner cet import ?",
+    "importQuitDescription": "Le fichier et la correspondance que vous avez réglée seront perdus. Rien n'a encore été importé.",
+    "importQuitConfirm": "Abandonner",
+    "importValueToPlace": "Pas encore placée"
   },
   "Seed": {
     "emptyBoardCta": "Discuter avec Numo",

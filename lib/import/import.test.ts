@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { issuesFromMapping, mapCsvToIssues, prepareImport } from "@/lib/import/parse";
-import { mappingHasGaps, mergeMapping, sanitizeMapping } from "@/lib/import/mapping";
+import {
+  fieldsAvailableForColumn,
+  mappingHasGaps,
+  mergeMapping,
+  sanitizeMapping,
+} from "@/lib/import/mapping";
 import {
   EMPTY_IMPORT_CONTEXT,
   MAX_IMPORT_ISSUES,
+  MULTI_COLUMN_FIELDS,
   type ImportContext,
+  type ImportField,
   type ImportMapping,
 } from "@/lib/import/types";
 import { parseDateValue } from "@/lib/import/normalize";
@@ -390,6 +397,97 @@ describe("import mapping", () => {
 
     const { issues } = issuesFromMapping(table, { ...mapping, columns });
     expect(issues[0].description).toBe("Broken since v2\n\n---\nSprint : S-42");
+  });
+
+  /**
+   * Un champ simple ne se propose qu'une fois, parce qu'`applyMapping` ne lit
+   * QUE la première colonne : la seconde serait du texte perdu en silence. Ce
+   * qui suit vérifie les deux moitiés de cette affirmation — la liste des
+   * exceptions, et le fait qu'elle décrive vraiment le comportement du mapper.
+   */
+  it("offers a simple field only to the column that holds it", () => {
+    const csv = `Title,Description,Sprint\nA,B,S-1\n`;
+    const { table, mapping } = prepared(csv);
+    const at = (header: string) => table.headers.indexOf(header);
+    expect(mapping.columns[at("Title")]).toBe("title");
+    expect(mapping.columns[at("Sprint")]).toBe("ignore");
+
+    // La colonne orpheline peut devenir beaucoup de choses — mais pas un
+    // second titre ni une seconde description.
+    const forOrphan = fieldsAvailableForColumn(mapping.columns, at("Sprint"));
+    expect(forOrphan).not.toContain("title");
+    expect(forOrphan).not.toContain("description");
+    // Les champs à plusieurs colonnes, eux, restent offerts.
+    expect(forOrphan).toEqual(expect.arrayContaining([...MULTI_COLUMN_FIELDS]));
+
+    // Et la colonne qui PORTE le champ le garde dans sa propre liste, sans quoi
+    // son sélecteur s'afficherait vide.
+    expect(fieldsAvailableForColumn(mapping.columns, at("Title"))).toContain("title");
+  });
+
+  it("does not hand a simple field to two columns at detection time either", () => {
+    // « Description » et « Notes » sont deux alias du MÊME champ, et ce fichier
+    // a les deux. Les assigner tous les deux revenait à jeter « Notes » sans
+    // rien dire ; orpheline, la colonne redevient une question qu'on pose.
+    const { table, mapping } = prepared(
+      `Title,Description,Notes\nFix the login,Broken since v2,Reported by Ada\n`
+    );
+    const at = (header: string) => table.headers.indexOf(header);
+    expect(mapping.columns[at("Description")]).toBe("description");
+    expect(mapping.columns[at("Notes")]).toBe("ignore");
+
+    // Rien n'est perdu pour autant : reportée en note, la colonne réapparaît en
+    // bas de la description — c'est exactement ce que le tableau propose.
+    const columns = [...mapping.columns];
+    columns[at("Notes")] = "extraNote";
+    const { issues } = issuesFromMapping(table, { ...mapping, columns });
+    expect(issues[0].description).toBe(
+      "Broken since v2\n\n---\nNotes : Reported by Ada"
+    );
+  });
+
+  it("still lets Jira repeat the columns that are meant to repeat", () => {
+    // Deux « Labels » et les deux identifiants du format : la règle du champ
+    // unique ne doit surtout pas y toucher.
+    const csv =
+      `Issue key,Issue id,Summary,Status,Labels,Labels\n` +
+      `PROJ-12,10042,Fix the login,Done,bug,ui\n`;
+    const { mapping, source } = prepared(csv);
+    expect(source).toBe("jira");
+    expect(mapping.columns.filter((f) => f === "externalKey")).toHaveLength(2);
+    expect(mapping.columns.filter((f) => f === "labels")).toHaveLength(2);
+  });
+
+  it("keeps a duplicate the detection already produced, without adding more", () => {
+    // Deux colonnes du même nom : les deux visent le statut. On n'efface pas ce
+    // qui est là — mais aucune TROISIÈME colonne ne peut s'y ajouter.
+    const columns: ImportField[] = ["title", "status", "status", "ignore"];
+    expect(fieldsAvailableForColumn(columns, 1)).toContain("status");
+    expect(fieldsAvailableForColumn(columns, 2)).toContain("status");
+    expect(fieldsAvailableForColumn(columns, 3)).not.toContain("status");
+  });
+
+  it("only exempts fields the row mapper actually reads more than once", () => {
+    // Le garde-fou de la règle : deux colonnes sur un champ SIMPLE, et la
+    // seconde n'existe pas pour `applyMapping`. Si un jour elle comptait, c'est
+    // ici qu'on l'apprendrait — et `MULTI_COLUMN_FIELDS` devrait l'accueillir.
+    const csv = `Title,Description,Details\nFix the login,Broken since v2,Second body\n`;
+    const { table, mapping } = prepared(csv);
+    const columns = [...mapping.columns];
+    columns[table.headers.indexOf("Details")] = "description";
+
+    const { issues } = issuesFromMapping(table, { ...mapping, columns });
+    expect(issues[0].description).toBe("Broken since v2");
+    expect(MULTI_COLUMN_FIELDS.has("description")).toBe(false);
+
+    // Deux colonnes d'identifiant, à l'inverse, comptent toutes les deux —
+    // c'est un export Jira, et « Parent » y référence l'une OU l'autre.
+    const bothKeys = [...mapping.columns];
+    bothKeys[table.headers.indexOf("Details")] = "externalKey";
+    bothKeys[table.headers.indexOf("Description")] = "externalKey";
+    const keyed = issuesFromMapping(table, { ...mapping, columns: bothKeys });
+    expect(keyed.issues[0].externalKeys).toEqual(["Broken since v2", "Second body"]);
+    expect(MULTI_COLUMN_FIELDS.has("externalKey")).toBe(true);
   });
 
   it("lets a hand-placed value beat the alias tables", () => {

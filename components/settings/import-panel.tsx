@@ -11,13 +11,11 @@ import { CsvImportPanel } from "@/components/settings/csv-import-panel";
  * suivre du côté de l'outil qu'on quitte (`components/import/import-guide.tsx`),
  * puis le vrai dropzone. Le mapping se voit avant de valider.
  *
- * Le même composant sert les réglages du projet (`project-import-section.tsx`)
- * et le dialog d'import de l'onboarding
- * (`components/home/onboarding-import-dialog.tsx`) : on ne sortait pas de la
- * home pour importer, et il n'y a aucune raison que la marche à suivre soit
- * plus courte une fois installé. Le wizard de création, lui, n'affiche que la
- * marche à suivre : son étape ne récolte qu'un fichier, le projet n'existant
- * pas encore.
+ * C'est la version PAGE du geste — l'onglet « Import » des réglages du projet.
+ * En modale, l'import passe par `components/import/import-wizard-dialog.tsx`,
+ * qui assemble les deux mêmes blocs en trois étapes : une page défile, une
+ * modale non. Le wizard de création, lui, n'affiche que la marche à suivre :
+ * son étape ne récolte qu'un fichier, le projet n'existant pas encore.
  */
 export function ImportPanel({
   projectId,

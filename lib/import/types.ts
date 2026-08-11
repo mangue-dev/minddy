@@ -140,6 +140,35 @@ export const IMPORT_FIELDS: ImportField[] = [
   "extraNote",
 ];
 
+/**
+ * Les champs que PLUSIEURS colonnes peuvent viser à la fois — et eux seuls.
+ *
+ * C'est `applyMapping` qui tranche, pas une préférence d'affichage : il lit ces
+ * champs-là avec `cells()`, qui prend TOUTES les colonnes, et tous les autres
+ * avec `cell()`, qui s'arrête à la première valeur non vide. Une seconde colonne
+ * de titre ou de description est donc du texte que personne ne lira jamais —
+ * silencieusement, ce qui est le pire des deux. Le tableau de correspondance ne
+ * propose pas un champ simple déjà pris ailleurs.
+ *
+ * Les quatre exceptions ne sont pas des tolérances, ce sont des besoins :
+ * - `labels` / `extraLabels` : Jira sort ses champs multi-valués en colonnes
+ *   RÉPÉTÉES (« Labels », « Labels », …), et elles se concatènent ;
+ * - `extraNote` : chaque colonne orpheline ajoute sa ligne en bas de la
+ *   description, c'est tout l'intérêt ;
+ * - `externalKey` : une ligne Jira répond À LA FOIS à sa clé (PROJ-12) et à son
+ *   id numérique, parce que « Parent » référence l'une ou l'autre selon la
+ *   version (cf. `lib/import/jira.ts`) — retirer la seconde casserait le
+ *   rattachement des sous-tâches sur la moitié des exports.
+ * - `ignore`, enfin, qui n'est pas un champ mais son absence.
+ */
+export const MULTI_COLUMN_FIELDS = new Set<ImportField>([
+  "ignore",
+  "labels",
+  "extraLabels",
+  "extraNote",
+  "externalKey",
+]);
+
 /** Table d'alias d'une source : les noms d'en-tête (normalisés) par champ, dans
  *  l'ordre de priorité — la première règle qui matche une colonne la prend. */
 export type ColumnAliases = [ImportField, string[]][];
