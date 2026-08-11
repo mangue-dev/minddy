@@ -59,6 +59,7 @@ import { displayName } from "@/lib/display-name";
 import { SITE_NAME } from "@/lib/site";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { PageEditor } from "@/components/pages/page-editor";
+import { usePageUploads } from "@/components/pages/page-uploads";
 import {
   focusDocumentStart,
   posOfBlockId,
@@ -278,6 +279,10 @@ function PageSurface({
 
   /* ── L'écriture, groupée et VERSIONNÉE (MIN-271) ──────────────────────── */
   const editorRef = useRef<Editor | null>(null);
+  // Les images et les fichiers collés ou lâchés dans le corps (MIN-280). Monté
+  // ici, avec l'éditeur, parce que c'est ici que vivent le projet, la page et la
+  // ref de l'éditeur — un envoi qui aboutit doit retrouver son bloc.
+  const uploads = usePageUploads(projectId, pageId, editorRef);
   // ↓ DESCEND — le curseur va sur la première ligne du corps, telle qu'elle est.
   const focusBodyStart = useCallback(() => {
     editorRef.current?.commands.focus("start");
@@ -747,6 +752,7 @@ function PageSurface({
                 schedule({ content });
               }}
               pages={lookup}
+              uploads={uploads}
               mentions={mentions}
               mentionLinks={mentionSources.links}
               editorRef={editorRef}

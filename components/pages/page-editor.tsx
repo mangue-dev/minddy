@@ -38,6 +38,12 @@ import {
 import { pageExtensions } from "@/components/pages/page-extensions";
 import { taskItemNodeView } from "@/components/scratchpad/task-item-view";
 import { subpageNodeView } from "@/components/pages/blocks/subpage-view";
+import { imageNodeView } from "@/components/pages/blocks/image-view";
+import { fileNodeView } from "@/components/pages/blocks/file-view";
+import {
+  PageUploadsProvider,
+  type PageUploads,
+} from "@/components/pages/page-uploads";
 import { Arrows } from "@/components/editor-arrows";
 import { noteTyping, trackPointerFreshness } from "@/lib/keyboard/hover-keys";
 import { setDetailsLabels } from "@/components/pages/blocks/details";
@@ -124,10 +130,34 @@ const EDITOR_PROPS = {
   },
 };
 
+/**
+ * Les fichiers d'un presse-papier ou d'un lâcher, quand ce sont eux qu'on veut.
+ *
+ * Le discernement tient en une règle : un transfert peut porter DES FICHIERS ET
+ * DU TEXTE en même temps — copier une image depuis une page web donne le fichier
+ * et le `<img>` HTML qui va avec, copier un fichier depuis le Finder donne le
+ * fichier et son nom. On prend les fichiers dès qu'il y a une IMAGE parmi eux
+ * (c'est le geste « je colle cette capture », et l'octet vaut mieux qu'un lien
+ * vers le site d'à côté, qui cessera de répondre) ; sinon, seulement quand le
+ * transfert ne porte aucun texte à coller.
+ *
+ * Rendre `true` sur ce chemin est ce qui coupe le `transformPastedText` de
+ * tiptap-markdown : sans ça, un collage d'image passerait par la lecture
+ * markdown et n'y trouverait rien à lire.
+ */
+function filesToUpload(transfer: DataTransfer | null): File[] | null {
+  const files = Array.from(transfer?.files ?? []).filter((file) => file.size > 0);
+  if (files.length === 0) return null;
+  if (files.some((file) => file.type.startsWith("image/"))) return files;
+  const text = transfer?.getData("text/plain") ?? "";
+  return text.trim() ? null : files;
+}
+
 export function PageEditor({
   initialContent,
   onChange,
   pages,
+  uploads,
   mentions,
   mentionLinks,
   editorRef,
@@ -152,6 +182,15 @@ export function PageEditor({
    * dit non — parce que lui seul sait combien de descendants partiraient avec.
    */
   onSubpagesRemoved?: (pageIds: string[]) => void;
+  /**
+   * Les téléversements de la page (MIN-280) : ce qui pose un bloc image ou
+   * fichier et le suit jusqu'à son adresse définitive.
+   *
+   * Optionnel, comme `pages` : sans lui l'éditeur rend les blocs déjà là mais
+   * n'en accepte pas de neufs — c'est exactement ce qu'il faut à l'aperçu d'une
+   * version de l'historique, qui est en lecture seule.
+   */
+  uploads?: PageUploads & { addFiles: (files: Iterable<File>, options?: { at?: number }) => void };
   /** Les citables « @ » — mêmes options que dans une description d'issue. */
   mentions?: MentionSuggestOptions;
   /** Où mènent les pilules déjà posées : un ticket, un objectif, une page
@@ -231,6 +270,10 @@ export function PageEditor({
           nodeViews: {
             taskItem: taskItemNodeView(),
             subpage: subpageNodeView(),
+            // Et pour la même raison encore (MIN-280) : les deux vues lisent le
+            // contexte des téléversements et rendent du React.
+            image: imageNodeView(),
+            pageFile: fileNodeView(),
           },
         }),
         ...(mentions ? [MentionSuggest.configure(mentions)] : []),
@@ -260,12 +303,53 @@ export function PageEditor({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
+  // Même règle que partout dans ce fichier : les `editorProps` ne changent
+  // JAMAIS d'identité, sinon tiptap réapplique tout à chaque rendu. Les
+  // téléverseurs, eux, changent à chaque frappe (leur file est un état React) —
+  // ils passent donc par une ref, lue au moment du geste.
+  const uploadsRef = useRef(uploads);
+  uploadsRef.current = uploads;
+
+  const editorProps = useMemo(
+    () => ({
+      ...EDITOR_PROPS,
+      handlePaste: (_view: unknown, event: ClipboardEvent) => {
+        const files = filesToUpload(event.clipboardData);
+        if (!files || !uploadsRef.current) return false;
+        event.preventDefault();
+        uploadsRef.current.addFiles(files);
+        return true;
+      },
+      handleDrop: (
+        view: {
+          posAtCoords(coords: { left: number; top: number }): { pos: number } | null;
+        },
+        event: DragEvent,
+        _slice: unknown,
+        moved: boolean
+      ) => {
+        // `moved` : c'est un bloc du document qu'on déplace, pas un fichier
+        // qu'on apporte. ProseMirror sait le faire, et bien mieux que nous.
+        if (moved) return false;
+        const files = filesToUpload(event.dataTransfer);
+        if (!files || !uploadsRef.current) return false;
+        event.preventDefault();
+        // À l'endroit du LÂCHER, et non à la fin du document : c'est tout ce que
+        // le geste veut dire.
+        const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        uploadsRef.current.addFiles(files, { at: at?.pos });
+        return true;
+      },
+    }),
+    []
+  );
+
   const editor = useEditor({
     immediatelyRender: false,
     editable,
     extensions,
     content: initialRef.current,
-    editorProps: EDITOR_PROPS,
+    editorProps,
     onUpdate: ({ editor }) => onChangeRef.current(editor.getJSON()),
   });
 
@@ -338,7 +422,13 @@ export function PageEditor({
   // portails sous `EditorContent`, et n'ont aucun moyen d'aller chercher
   // eux-mêmes le titre d'une page ou le projet d'un ticket cité.
   const withLinks = (
-    <MentionLinksProvider value={mentionLinks ?? null}>{body}</MentionLinksProvider>
+    <MentionLinksProvider value={mentionLinks ?? null}>
+      {uploads ? (
+        <PageUploadsProvider value={uploads}>{body}</PageUploadsProvider>
+      ) : (
+        body
+      )}
+    </MentionLinksProvider>
   );
 
   return pages ? (

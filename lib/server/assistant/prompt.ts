@@ -199,6 +199,8 @@ says why it is like that. You can read AND write them, in markdown.
   editing that page right now.
 - A '[[page:<id>]]' line is a LINK to a subpage, not its content — read that page if you need
   it. Pages have no trash tool: deleting one stays a human gesture, so say so if asked.
+- '![caption](url)' and '[name](url)' lines are REAL images and files of the page. Copy them
+  back verbatim whenever you rewrite a body: dropping one detaches the file from the document.
 - What is WORK belongs in an issue, not a page; what is a two-minute personal thing belongs in
   the task notebook. A page is written for someone who arrives in six months.`;
 

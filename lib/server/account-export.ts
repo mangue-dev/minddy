@@ -79,6 +79,7 @@ export interface AccountExport {
   issues: Row[];
   comments: Row[];
   attachments: Row[];
+  page_files: Row[];
   objectives: Row[];
   views: Row[];
   cycles: Row[];
@@ -129,6 +130,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     myIssues,
     comments,
     attachments,
+    pageFiles,
     objectives,
     views,
     cycles,
@@ -163,6 +165,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .from("attachments")
       .select(
         "id, project_id, issue_id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, created_at"
+      )
+      .eq("created_by", userId)
+      .order("created_at"),
+    // Les fichiers POSÉS DANS une page (MIN-280). Une table à part des
+    // ressources, donc une ligne à part ici : les oublier ferait un export qui
+    // ne voit pas la moitié de ce que la personne a téléversé.
+    service
+      .from("page_files")
+      .select(
+        "id, project_id, page_id, file_name, mime_type, size_bytes, created_at"
       )
       .eq("created_by", userId)
       .order("created_at"),
@@ -296,6 +308,11 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
         "les fichiers eux-mêmes restent téléchargeables depuis l'application " +
         "tant que le compte existe), liens, dont l'URL figure ici, et pages du " +
         "projet, désignées par leur identifiant.",
+      page_files:
+        "Fichiers et images que vous avez déposés DANS le corps d'une page " +
+        "(métadonnées seulement, comme ci-dessus). Ils sont listés à part des " +
+        "ressources : ce ne sont pas des pièces jointes d'un ticket, mais des " +
+        "morceaux du document lui-même.",
       secrets:
         "Aucune clé ni aucun jeton ne figure dans ce fichier : seuls les " +
         "préfixes déjà affichés dans les réglages y apparaissent.",
@@ -320,6 +337,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     issues: [...issuesById.values()],
     comments: list("comments", comments),
     attachments: list("attachments", attachments),
+    page_files: list("page_files", pageFiles),
     objectives: list("objectives", objectives),
     views: list("views", views),
     cycles: list("cycles", cycles),

@@ -290,6 +290,13 @@ describe("un document qui contient tout", () => {
     "",
     "[[page:00000000-0000-4000-8000-000000000000]]",
     "",
+    // Une image et un fichier (MIN-280). Le lien du fichier est celui d'un
+    // fichier DE PAGE : c'est ce qui le sépare du `[lien](https://…)` du premier
+    // paragraphe, qui doit rester du texte et non devenir un bloc.
+    "![Une capture d'écran](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/11111111-1111-4111-8111-111111111111)",
+    "",
+    "[rapport.pdf](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/22222222-2222-4222-8222-222222222222)",
+    "",
     "### Et pour finir",
     "",
     "Une mention @MIN-42 et une personne @Clément.",

@@ -140,7 +140,7 @@ describe("les libellés des blocs", () => {
     // Un libellé identique dans les deux langues est presque toujours un
     // copier-coller oublié. Les exceptions sont des mots qui s'écrivent
     // pareil — elles se déclarent ici, une par une.
-    const SAME_IN_BOTH = new Set(["blockCitation", "blockQuote"]);
+    const SAME_IN_BOTH = new Set(["blockCitation", "blockQuote", "blockImage"]);
     const copied = PAGE_BLOCKS.filter(
       (block) =>
         !SAME_IN_BOTH.has(block.labelKey) &&

@@ -55,6 +55,21 @@ const PAGE_ID = z
       "'MIND-42' — only this id)."
   );
 
+/**
+ * Les IMAGES et les FICHIERS d'une page (MIN-280), dits au modèle en trois
+ * phrases parce qu'il ne peut pas les deviner et qu'il en détruirait sans le
+ * savoir : `update_page` remplace le corps ENTIER, donc une ligne d'image qu'on
+ * n'a pas recopiée est un fichier détaché de son document.
+ *
+ * La même prose sur les trois surfaces (MCP, Numo, agent de code), comme le
+ * reste du mode d'emploi de la syntaxe.
+ */
+const IMAGES_AND_FILES =
+  "An image reads '![caption](url)' and a file '[name](url)' — those are REAL " +
+  "files stored by minddy. Keep such lines exactly as you read them when you " +
+  "rewrite a body: dropping one detaches the file from the page. You cannot " +
+  "upload a file yourself, and you must never invent one of those urls.";
+
 /** Le corps d'une page, en markdown. La même prose des deux côtés de l'écriture :
     ce champ est le seul mode d'emploi que le modèle lit avant d'écrire. */
 const BODY = z
@@ -66,7 +81,8 @@ const BODY = z
       "blocks, horizontal rules, <details><summary>…</summary>…</details> " +
       "collapsibles, and '[[page:<page_id>]]' on its own line to embed a link to " +
       "another page. Anything else degrades to plain text. Never send " +
-      "ProseMirror JSON — markdown is the contract."
+      "ProseMirror JSON — markdown is the contract. " +
+      IMAGES_AND_FILES
   );
 
 function refusal(result: { code: string; message: string }): ToolResult {

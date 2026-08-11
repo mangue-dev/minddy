@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { cancelStripeSubscription, isStripeConfigured } from "@/lib/server/stripe";
+import { pageFilePathsForProjects } from "@/lib/server/page-files";
 
 /**
  * Suppression de compte (MIN-119, RGPD art. 17 — droit à l'effacement).
@@ -199,6 +200,16 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
       service,
       "attachments",
       (attachments ?? []).map((a) => a.storage_path as string),
+      warnings
+    );
+
+    // Les fichiers posés DANS les corps de page (MIN-280) : même bucket, même
+    // règle, autre table. Sans ce passage, supprimer un compte laisserait dans
+    // le storage toutes les images des wikis de ses projets.
+    removedStorageObjects += await removeObjects(
+      service,
+      "attachments",
+      await pageFilePathsForProjects(service, ownedIds),
       warnings
     );
 

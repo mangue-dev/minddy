@@ -43,6 +43,8 @@ import { codeBlock } from "@/components/pages/blocks/code";
 import { dividerBlock } from "@/components/pages/blocks/divider";
 import { detailsBlock } from "@/components/pages/blocks/details";
 import { subpageBlock } from "@/components/pages/blocks/subpage";
+import { imageBlock } from "@/components/pages/blocks/image";
+import { fileBlock } from "@/components/pages/blocks/file";
 
 export type {
   PageBlock,
@@ -74,6 +76,8 @@ export const PAGE_BLOCKS: readonly PageBlock[] = [
   dividerBlock,
   detailsBlock,
   subpageBlock,
+  imageBlock,
+  fileBlock,
 ];
 
 export const blockById = new Map<PageBlockId, PageBlock>(

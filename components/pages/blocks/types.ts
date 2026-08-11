@@ -55,7 +55,9 @@ export type PageBlockId =
   | "codeBlock"
   | "divider"
   | "details"
-  | "subpage";
+  | "subpage"
+  | "image"
+  | "file";
 
 /** Les sections du menu « / », dans cet ordre. */
 export type SlashGroup = "basic" | "lists" | "advanced";
@@ -68,6 +70,10 @@ export type SlashGroup = "basic" | "lists" | "advanced";
 export interface MarkdownState {
   write(text: string): void;
   text(text: string, escape?: boolean): void;
+  /** Échappe ce qui a un sens en markdown. `startOfLine` n'est utile qu'aux
+      textes posés en début de bloc ; un texte de lien ou un texte alternatif
+      n'en a pas besoin. */
+  esc(text: string, startOfLine?: boolean): string;
   ensureNewLine(): void;
   renderContent(node: MarkdownNode): void;
   renderInline(node: MarkdownNode): void;

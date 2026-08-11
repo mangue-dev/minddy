@@ -4,6 +4,10 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { attachmentPaths, type TrashType } from "@/lib/server/trash";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { removeStorageObjects } from "@/lib/server/attachments";
+import {
+  ORPHAN_PAGE_FILE_DAYS,
+  sweepOrphanPageFiles,
+} from "@/lib/server/page-files";
 
 /**
  * Application des durées de conservation (MIN-119, RGPD art. 5.1.e).
@@ -78,6 +82,17 @@ export const RETENTION_DAYS = {
    * personne ne l'a supprimé.
    */
   pageVersions: TRASH_RETENTION_DAYS,
+  /**
+   * Fichiers de page ORPHELINS (MIN-280) : plus cités par aucun corps.
+   *
+   * Ce n'est pas une durée de conservation au sens de l'article 5.1.e — le
+   * fichier n'est plus une donnée qu'on garde, c'est un octet que plus rien ne
+   * montre. Le délai est un délai de GRÂCE : une image sort d'un corps par un
+   * retour arrière, et y revient par un `⌘Z` fait le lendemain, par la
+   * restauration d'une version (MIN-277) ou par un passage à la corbeille. Une
+   * semaine couvre tous ces retours ; au-delà, plus personne ne revient.
+   */
+  orphanPageFiles: ORPHAN_PAGE_FILE_DAYS,
 } as const;
 
 export type RetentionKey = keyof typeof RETENTION_DAYS;
@@ -346,6 +361,13 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
     ),
     await step("stripe_webhook_payloads", () => stripPayloads(service, now)),
     await step("page_versions", () => purgePageVersions(service, now)),
+    // AVANT la corbeille, et l'ordre a une raison : purger une page emporte ses
+    // fichiers elle-même (lib/server/trash.ts). Passer d'abord ici évite de
+    // relire des lignes qui vont partir dans la seconde, et surtout de compter
+    // deux fois les mêmes octets dans le rapport du cron.
+    await step("orphan_page_files", () =>
+      sweepOrphanPageFiles(service, cutoff(RETENTION_DAYS.orphanPageFiles, now))
+    ),
     await step("trash", () => purgeTrash(service, now)),
   ];
 

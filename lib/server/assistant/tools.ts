@@ -51,13 +51,29 @@ export type AssistantToolDef = {
 /** Ce qu'un corps de page accepte, dit là où le modèle le lit — la même prose
     que côté MCP (lib/server/mcp/page-tools.ts) : c'est le seul mode d'emploi de
     la syntaxe, et un lien de sous-page ne se devine pas. */
+/**
+ * Les IMAGES et les FICHIERS d'une page (MIN-280), dits au modèle en trois
+ * phrases parce qu'il ne peut pas les deviner et qu'il en détruirait sans le
+ * savoir : `update_page` remplace le corps ENTIER, donc une ligne d'image qu'on
+ * n'a pas recopiée est un fichier détaché de son document.
+ *
+ * La même prose sur les trois surfaces (MCP, Numo, agent de code), comme le
+ * reste du mode d'emploi de la syntaxe.
+ */
+const PAGE_FILES_DESCRIPTION =
+  "An image reads '![caption](url)' and a file '[name](url)' — those are REAL " +
+  "files stored by minddy. Keep such lines exactly as you read them when you " +
+  "rewrite a body: dropping one detaches the file from the page. You cannot " +
+  "upload a file yourself, and you must never invent one of those urls.";
+
 const PAGE_BODY_DESCRIPTION =
   "The page BODY in markdown. Supported: headings (## and ###, since a single " +
   "'# ' is the page title), bold/italic/inline code, links, bullet and numbered " +
   "lists, task lists ('- [ ]' / '- [x]'), quotes, fenced code blocks, horizontal " +
   "rules, <details><summary>…</summary>…</details> collapsibles, and " +
   "'[[page:<page_id>]]' on its own line to embed a link to another page. Anything " +
-  "else degrades to plain text.";
+  "else degrades to plain text. " +
+  PAGE_FILES_DESCRIPTION;
 
 const ISSUE_FIELD_PROPERTIES = {
   title: { type: "string", description: "Issue title." },

@@ -7,6 +7,10 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { removeStorageObjects } from "@/lib/server/attachments";
+import {
+  pageFilePathsForPages,
+  pageFilePathsForProjects,
+} from "@/lib/server/page-files";
 import { restorePage, trashPage, type PageErrorKey } from "@/lib/server/pages";
 import type { PageWriteKind } from "@/lib/pages";
 
@@ -507,6 +511,17 @@ export async function purgeItem(
   // de racine à qui revenir, et `parent_id` étant `on delete set null`, rien ne
   // les emporterait — elles réapparaîtraient à la racine de la corbeille.
   if (type === "page") {
+    // Les fichiers de TOUTE LA FAMILLE, relevés avant le delete : `paths`
+    // ci-dessus ne connaît que la racine, et les sous-pages emportées portent
+    // les leurs (MIN-280). C'est le piège du sujet — la cascade SQL efface les
+    // lignes de `page_files`, jamais les octets du bucket.
+    const { data: descendants } = await service
+      .from("pages")
+      .select("id")
+      .eq("deleted_root_id", id);
+    const familyIds = [id, ...((descendants ?? []) as { id: string }[]).map((p) => p.id)];
+    const familyPaths = await pageFilePathsForPages(service, familyIds);
+
     const { data: family, error: familyError } = await service
       .from("pages")
       .delete()
@@ -520,6 +535,7 @@ export async function purgeItem(
     if (!family || family.length === 0) {
       return { ok: false, status: 404, errorKey: "pageNotFound" };
     }
+    await removeStorageObjects(service, familyPaths);
     return { ok: true };
   }
 
@@ -549,10 +565,11 @@ export async function purgeItem(
  *
  * `null` pour une ROUTINE : elle n'a aucune surface où déposer un fichier —
  * pas de commentaires, pas de ressources —, et lui inventer une colonne ferait
- * échouer la purge sur une colonne qui n'existe pas. Null aussi pour une PAGE
- * (MIN-266) : son corps est un document ProseMirror, dont les images ne passent
- * pas encore par `attachments` — le jour où l'éditeur les y dépose, c'est ici
- * que la colonne doit apparaître, et le test de trash.test.ts le rappellera.
+ * échouer la purge sur une colonne qui n'existe pas. Null aussi pour une PAGE,
+ * mais pour une raison inverse : depuis MIN-280 elle porte bel et bien des
+ * fichiers, seulement ils vivent dans `page_files` et non dans `attachments`
+ * (deux durées de vie, deux tables — cf. la migration). Ils sont relevés juste
+ * en dessous, dans la même fonction.
  */
 const ATTACHMENT_PARENT: Record<TrashType, string | null> = {
   issue: "issue_id",
@@ -576,14 +593,27 @@ export async function attachmentPaths(
   type: TrashType,
   ids: string[]
 ): Promise<string[]> {
+  if (ids.length === 0) return [];
+
+  // Les fichiers POSÉS DANS un corps de page (MIN-280) : une autre table, donc
+  // une requête de plus, mais la même règle — les chemins sont relevés avant le
+  // delete, sinon la cascade emporte les lignes et laisse les octets. Une page
+  // n'a que ceux-là ; un projet a les deux, ses pages partant avec lui.
+  const pageFiles =
+    type === "page"
+      ? await pageFilePathsForPages(service, ids)
+      : type === "project"
+        ? await pageFilePathsForProjects(service, ids)
+        : [];
+
   const parent = ATTACHMENT_PARENT[type];
-  if (!parent || ids.length === 0) return [];
+  if (!parent) return pageFiles;
   const { data } = await service
     .from("attachments")
     .select("storage_path")
     .in(parent, ids)
     .not("storage_path", "is", null);
-  return (data ?? []).map((a) => a.storage_path as string);
+  return [...pageFiles, ...(data ?? []).map((a) => a.storage_path as string)];
 }
 
 /** Vide toute la corbeille de l'appelant, élément par élément. */

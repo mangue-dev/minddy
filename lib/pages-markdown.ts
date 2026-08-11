@@ -20,6 +20,13 @@
  * | La pilule d'une mention | Une mention EST du texte (`@Nom`, `@MIN-42`) — le nœud n'est qu'un habit, reposé à la relecture par lib/mention-scan | `@Nom`, à la lettre |
  * | L'ID de bloc (`blockId`) | Il n'a de sens qu'à l'intérieur d'un document ; un markdown venu de Numo n'en porte pas | Un ID NEUF, posé à la relecture (`stampBlockIds`) |
  * | Le titre d'une sous-page | Il n'est jamais recopié dans le corps du parent, par construction : il est résolu à l'affichage (cf. blocks/subpage.ts) | `[[page:<id>]]`, donc la cible |
+ * | La LARGEUR d'une image | `![…](…)` n'a pas d'attribut. La largeur est un réglage d'affichage — combien de colonne l'image occupe —, jamais du contenu (cf. blocks/image.ts) | L'image, à sa largeur par défaut |
+ * | Le POIDS et le type d'un fichier | Un lien markdown ne porte que son texte et son adresse. Ce sont deux indications de confort, relisibles de `page_files` : le nom et le fichier lui-même, eux, sont là | `[nom](url)`, donc le fichier |
+ *
+ * La LÉGENDE d'une image, elle, ne tombe PAS, et c'est un choix : elle est le
+ * texte alternatif (`![légende](…)`), un seul champ pour les deux. Une bonne
+ * légende est un bon texte alternatif — en garder deux dans le nœud aurait voulu
+ * dire en perdre un à chaque aller-retour.
  *
  * Tout le reste — titres, listes, tâches et leurs quatre états, imbrication,
  * citation, code, séparateur, dépliant, sous-page, gras/italique/code/lien —

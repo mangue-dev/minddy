@@ -350,11 +350,24 @@ function keysForProjectEvent(
     case "attachments": {
       // The table keeps its name; the NOTION is a resource (MIN-184). Those on
       // comments ride the comments cache; entity-level ones have their own query.
+      //
+      // Une ressource de genre `page` (MIN-275) est en plus l'une des deux
+      // moitiés d'un rétrolien : l'attacher ou la retirer change le « Cité par »
+      // de la page visée, chez qui la lit en ce moment (MIN-279). Elle S'AJOUTE
+      // aux branches ci-dessous et n'en est pas une : une ressource pend
+      // toujours à un ticket, à un objectif ou à un retour
+      // (`attachments_parent_ck`), donc une branche placée après elles ne serait
+      // jamais atteinte.
+      const backlinks = pageIdOf(change);
+      const cited: Invalidation[] = backlinks
+        ? [active(["page-backlinks", backlinks])]
+        : [];
       const issueId = issueIdOf(change);
       if (issueId) {
         return [
           active(["comments", issueId]),
           active(["issue-resources", issueId]),
+          ...cited,
         ];
       }
       const objectiveId = objectiveIdOf(change);
@@ -362,15 +375,14 @@ function keysForProjectEvent(
         return [
           active(["objective-comments", objectiveId]),
           active(["objective-resources", objectiveId]),
+          ...cited,
         ];
       }
       const postId = feedbackPostIdOf(change);
-      if (postId) return [active(["feedback-comments", projectId, postId])];
-      // Une ressource de genre `page` (MIN-275) est l'une des deux moitiés d'un
-      // rétrolien : l'attacher ou la retirer change le « Cité par » de la page
-      // visée, chez qui la lit en ce moment (MIN-279).
-      const pageId = pageIdOf(change);
-      return pageId ? [active(["page-backlinks", pageId])] : [];
+      if (postId) {
+        return [active(["feedback-comments", projectId, postId]), ...cited];
+      }
+      return cited;
     }
     // L'autre moitié du rétrolien : la table DÉRIVÉE des mentions (MIN-279).
     // Elle est réécrite après la réponse, donc l'écho arrive un instant après
