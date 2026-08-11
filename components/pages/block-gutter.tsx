@@ -210,7 +210,15 @@ export function BlockGutter({ editor }: { editor: Editor }) {
                 type="button"
                 aria-label={t("blockMenu")}
                 className={cn(BUTTON, "cursor-grab active:cursor-grabbing")}
-                onMouseDown={(event) => event.preventDefault()}
+                // PAS de `preventDefault` sur le `mousedown`, et c'est tout le
+                // sujet : le glissé natif EST l'action par défaut du
+                // `mousedown`. La poignée vit dans un `div[draggable]` posé par
+                // l'extension, qui écoute `dragstart` dessus ; un
+                // `preventDefault` sur le bouton qui la remplit empêchait le
+                // navigateur d'amorcer le glissé, et la poignée ne savait plus
+                // que cliquer. La sélection, elle, ne craint rien : elle vit
+                // dans l'état ProseMirror, que la perte du focus DOM ne touche
+                // pas — c'est `selectBlockFromHandle` qui la lit et la repose.
                 onClick={(event) => {
                   const { pos } = hovered.current;
                   if (pos < 0) return;

@@ -1117,6 +1117,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               active: pathname.startsWith(`${base}/objectives`),
               shortcut: "O",
             },
+            // Entre Objectifs et Triage : le wiki du projet se lit avec ce qui
+            // dit OÙ VA le projet, et pas avec les files qu'on vide. Triage,
+            // Retours et leurs pastilles restent groupés en bas, là où on les
+            // regarde quand on cherche du travail en attente.
+            {
+              key: "pages",
+              label: t("pages"),
+              icon: FileText,
+              href: `${base}/pages`,
+              active: pathname.startsWith(`${base}/pages`),
+              shortcut: "W",
+            },
             {
               key: "triage",
               label: t("triage"),
@@ -1128,17 +1140,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 triageCount,
                 t("triageBadge", { count: triageCount })
               ),
-            },
-            // Entre Triage et Retours (MIN-270) : le wiki du projet est du
-            // contenu qu'on tient, pas une file qu'on vide — il se range donc
-            // après ce qui réclame une action, avant ce qui vient de dehors.
-            {
-              key: "pages",
-              label: t("pages"),
-              icon: FileText,
-              href: `${base}/pages`,
-              active: pathname.startsWith(`${base}/pages`),
-              shortcut: "W",
             },
             {
               key: "feedback",

@@ -26,6 +26,7 @@ import {
   BLOCK_ID_ATTRIBUTE,
   type PageBlock,
 } from "@/components/pages/blocks/types";
+import { flashBlockAt } from "@/components/pages/block-flash";
 
 /** Une plage de blocs entiers, en positions absolues du document. */
 export interface BlockRange {
@@ -389,6 +390,90 @@ export function insertBlockAround(
     .focus(at + 1)
     .insertContent("/")
     .run();
+}
+
+/**
+ * Écrire À LA SUITE du document, depuis le vide sous le dernier bloc.
+ *
+ * Un document se termine là où se termine son dernier bloc, et sous ce bloc il
+ * n'y a rien à cliquer : pour reprendre l'écriture à la fin d'une page, il
+ * fallait viser la dernière ligne au pixel puis appuyer sur Entrée. La réserve
+ * cliquable du bas (components/pages/page-editor.tsx) appelle ceci et rend le
+ * geste évident — on clique sous le texte, on écrit.
+ *
+ * Le paragraphe n'est ajouté que s'il en manque un : cliquer deux fois dans la
+ * réserve ne doit pas empiler des lignes vides dans le document enregistré.
+ */
+export function focusDocumentEnd(editor: Editor): void {
+  if (editor.isDestroyed) return;
+  const { doc } = editor.state;
+  const last = doc.lastChild;
+  const blank = last?.type.name === "paragraph" && last.content.size === 0;
+  if (blank) {
+    editor.chain().focus("end").run();
+    return;
+  }
+  editor
+    .chain()
+    .insertContentAt(doc.content.size, { type: "paragraph" })
+    .focus("end")
+    .run();
+}
+
+/**
+ * La position du bloc qui porte cet ID — l'ancre d'un lien de bloc, résolue
+ * dans le DOCUMENT et non dans le DOM.
+ *
+ * Le DOM ne suffit plus depuis que le clignement passe par une décoration
+ * (components/pages/block-flash.ts) : une décoration se pose sur une position,
+ * pas sur un élément. Et c'est aussi bien — un élément peut être remplacé sous
+ * nos pieds, une position se remappe.
+ */
+export function posOfBlockId(editor: Editor, blockId: string): number | null {
+  let found: number | null = null;
+  editor.state.doc.descendants((node, pos) => {
+    if (found !== null) return false;
+    if (node.attrs?.[BLOCK_ID_ATTRIBUTE] === blockId) {
+      found = pos;
+      return false;
+    }
+    return true;
+  });
+  return found;
+}
+
+/**
+ * AMÈNE un bloc à l'écran et l'allume — le geste complet de « va là ».
+ *
+ * Les deux moitiés sont écrites ensemble, et c'est tout l'intérêt : les
+ * séparer a coûté deux passes. Le défilement DOUX rend la main tout de suite
+ * et met jusqu'à une seconde à arriver, alors qu'une animation CSS tourne
+ * qu'on la voie ou non — le clignement brûlait son temps pendant le trajet et
+ * n'était plus là à l'arrivée. Visible sur un bloc proche, invisible sur un
+ * bloc lointain.
+ *
+ * D'où le saut SEC. Attendre l'arrivée demanderait `scrollend`, que tous les
+ * navigateurs ne servent pas et qui ne vient jamais quand rien n'a défilé.
+ * Et c'est justement pour se repérer après un saut sec que le clignement
+ * existe.
+ *
+ * Rend de quoi ÉTEINDRE le clignement (cf. `flashBlockAt`).
+ */
+export function revealBlock(
+  editor: Editor,
+  container: HTMLElement,
+  pos: number,
+  margin: number
+): () => void {
+  const dom = editor.view.nodeDOM(pos);
+  if (dom instanceof HTMLElement) {
+    const delta =
+      dom.getBoundingClientRect().top -
+      container.getBoundingClientRect().top -
+      margin;
+    container.scrollBy({ top: delta, behavior: "auto" });
+  }
+  return flashBlockAt(editor, pos);
 }
 
 /**

@@ -21,6 +21,7 @@ import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-quer
 
 import {
   createPageApi,
+  discardPageApi,
   duplicatePageApi,
   fetchPagesApi,
   restorePageApi,
@@ -64,6 +65,41 @@ function writePages(
   queryClient.setQueryData(pagesKey(projectId), next);
 }
 
+/**
+ * Ce qu'on a TAPÉ mais que le serveur n'a pas encore renvoyé — par page.
+ *
+ * L'écriture est groupée (une seconde après la dernière frappe) : entre les
+ * deux, la sidebar, le fil d'Ariane et le bloc sous-page lisent ce cache, et la
+ * seule chose qui puisse leur donner le titre en cours de frappe est un ÉCRIT
+ * LOCAL immédiat (`previewPage`). Il faut alors le protéger de la réponse du
+ * PATCH précédent, partie avec le titre d'AVANT les dernières lettres : elle
+ * arrive après, et sans cette table elle remettrait l'ancien titre dans l'arbre
+ * — le titre qu'on est en train de taper se voyait revenir en arrière.
+ *
+ * L'entrée se retire d'elle-même dès que le serveur RENVOIE ce qu'on a tapé :
+ * à ce moment-là il n'y a plus rien à protéger, et la donnée du serveur reprend
+ * la main (un renommage par un coéquipier doit pouvoir passer).
+ *
+ * Au niveau du module, et non dans un état React : `updatePage` doit la lire
+ * dans la continuation d'une promesse, longtemps après le rendu qui l'a créée.
+ */
+type PagePreview = { title?: string; icon?: string | null };
+const previews = new Map<string, PagePreview>();
+
+/** La ligne du serveur, recouverte de ce qu'on est en train de taper. */
+function withPreview(summary: PageSummary): PageSummary {
+  const preview = previews.get(summary.id);
+  if (!preview) return summary;
+  const echoed =
+    (preview.title === undefined || preview.title === summary.title) &&
+    (preview.icon === undefined || preview.icon === summary.icon);
+  if (echoed) {
+    previews.delete(summary.id);
+    return summary;
+  }
+  return { ...summary, ...preview };
+}
+
 export interface UsePagesResult {
   pages: PageSummary[];
   tree: PageTreeNode<PageSummary>[];
@@ -71,10 +107,22 @@ export interface UsePagesResult {
   loading: boolean;
   error: Error | null;
   createPage: (input?: CreatePageInput) => Promise<PageSummary>;
+  /**
+   * Le titre ou l'icône qu'on TAPE, posés dans le cache sans rien demander à
+   * personne : tout ce qui lit la liste (la sidebar au premier chef) suit la
+   * frappe, sans attendre l'enregistrement groupé qui viendra une seconde plus
+   * tard.
+   */
+  previewPage: (pageId: string, patch: PagePreview) => void;
   /** Copie une page et sa descendance. Rend la RACINE de la copie. */
   duplicatePage: (pageId: string) => Promise<Page>;
   updatePage: (pageId: string, input: UpdatePageInput) => Promise<Page>;
   trashPage: (pageId: string) => Promise<number>;
+  /**
+   * DÉTRUIT une page créée puis quittée sans qu'on y écrive (lib/pages-draft.ts).
+   * Ni corbeille ni toast : il ne s'est rien passé, c'est bien le propos.
+   */
+  discardPage: (pageId: string) => Promise<void>;
   restorePage: (pageId: string) => Promise<void>;
 }
 
@@ -111,6 +159,23 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
     [projectId, queryClient]
   );
 
+  const previewPage = useCallback(
+    (pageId: string, patch: PagePreview) => {
+      const pid = projectId as string;
+      previews.set(pageId, { ...previews.get(pageId), ...patch });
+      const current = readPages(queryClient, pid);
+      if (!current) return;
+      writePages(
+        queryClient,
+        pid,
+        current.map((page) =>
+          page.id === pageId ? { ...page, ...patch } : page
+        )
+      );
+    },
+    [projectId, queryClient]
+  );
+
   const updatePage = useCallback(
     async (pageId: string, input: UpdatePageInput) => {
       const pid = projectId as string;
@@ -133,10 +198,13 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
         const { content: _content, ...summary } = page;
         const current = readPages(queryClient, pid);
         if (current) {
+          // `withPreview` : la réponse ne remet pas dans l'arbre le titre
+          // d'avant les dernières lettres tapées (voir `previews`).
+          const next = withPreview(summary);
           writePages(
             queryClient,
             pid,
-            current.map((row) => (row.id === pageId ? summary : row))
+            current.map((row) => (row.id === pageId ? next : row))
           );
         }
         // Le CORPS redescend dans son propre cache, et c'est indispensable :
@@ -204,6 +272,35 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
     [projectId, queryClient]
   );
 
+  const discardPage = useCallback(
+    async (pageId: string) => {
+      const pid = projectId as string;
+      const before = readPages(queryClient, pid);
+      // La ligne quitte l'arbre TOUT DE SUITE : le geste qui l'appelle est un
+      // départ, et voir une page fantôme dans la sidebar le temps d'un
+      // aller-retour serait le seul moment où elle se serait vue.
+      if (before) {
+        writePages(
+          queryClient,
+          pid,
+          before.filter((page) => page.id !== pageId)
+        );
+      }
+      previews.delete(pageId);
+      try {
+        await discardPageApi(pid, pageId);
+        queryClient.removeQueries({ queryKey: pageKey(pageId) });
+      } catch (err) {
+        // Elle n'était pas si vide (une écriture partie en parallèle a pu la
+        // remplir) : on la remet, sans rien dire. Personne n'a demandé cette
+        // suppression, personne n'a à être prévenu qu'elle n'a pas eu lieu.
+        if (before) writePages(queryClient, pid, before);
+        console.error("[pages] discard failed:", err);
+      }
+    },
+    [projectId, queryClient]
+  );
+
   const restorePage = useCallback(
     async (pageId: string) => {
       const pid = projectId as string;
@@ -223,9 +320,11 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
     loading: enabled && isPending,
     error: (error as Error | null) ?? null,
     createPage,
+    previewPage,
     duplicatePage,
     updatePage,
     trashPage,
+    discardPage,
     restorePage,
   };
 }

@@ -260,6 +260,7 @@
     "pageParentNotFound": "That parent page doesn't exist.",
     "pageCycle": "A page can't be moved inside one of its own sub-pages.",
     "pageStale": "This page was changed elsewhere since your last save.",
+    "pageNotEmpty": "This page is no longer empty.",
     "pageTooLarge": "This page is too long to be saved."
   },
   "CustomDomain": {
@@ -1650,6 +1651,7 @@
     "addIcon": "Add icon",
     "duplicated": "Page duplicated.",
     "duplicateFailed": "Could not duplicate the page.",
+    "tableOfContents": "Table of contents",
     "breadcrumb": "Parent pages",
     "breadcrumbMore": "{count, plural, one {# hidden level} other {# hidden levels}}"
   },

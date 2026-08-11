@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getPage, trashPage, updatePage } from "@/lib/server/pages";
+import { discardPage, getPage, trashPage, updatePage } from "@/lib/server/pages";
 
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
@@ -70,12 +70,29 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
  * et revient telle quelle par `POST .../restore` ou depuis la corbeille. C'est
  * ce qui rend acceptable que supprimer le bloc sous-page dans le corps du parent
  * (MIN-272) supprime la page — le geste est rattrapable.
+ *
+ * `?discard=1` est l'EXCEPTION, et la seule : une page créée puis quittée sans
+ * qu'on y écrive une lettre est détruite pour de bon, plutôt que d'aller
+ * encombrer la corbeille d'un document que personne n'a voulu. Le serveur
+ * revérifie qu'elle est bien vide et sans sous-page (`discardPage`) : c'est
+ * cette garde-là, et non la bonne foi du client, qui rend le chemin sûr.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
+
+  if (request.nextUrl.searchParams.get("discard") === "1") {
+    const discarded = await discardPage(pageId, auth.user.id);
+    if (!discarded.ok) {
+      return NextResponse.json(
+        { error: t(discarded.errorKey) },
+        { status: discarded.status }
+      );
+    }
+    return NextResponse.json({ ok: true, discarded: true });
+  }
 
   const result = await trashPage(pageId, auth.user.id);
   if (!result.ok) {

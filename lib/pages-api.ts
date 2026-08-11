@@ -208,6 +208,38 @@ export async function trashPageApi(
   );
 }
 
+/**
+ * DÉTRUIT une page restée vide — pas de corbeille, rien à restaurer.
+ *
+ * Le seul appelant est le départ d'une page qu'on vient de créer et où l'on n'a
+ * rien écrit (lib/pages-draft.ts). Le serveur revérifie qu'elle est bien vide
+ * et sans sous-page, et répond 409 sinon : ce chemin ne peut pas faire
+ * disparaître du contenu.
+ */
+export async function discardPageApi(
+  projectId: string,
+  pageId: string
+): Promise<void> {
+  await ok(
+    await fetch(`/api/projects/${projectId}/pages/${pageId}?discard=1`, {
+      method: "DELETE",
+    }),
+    "Delete failed"
+  );
+}
+
+/**
+ * La même destruction, quand l'onglet s'en va — même raison que
+ * `updatePageOnUnload` : un `fetch` ordinaire lancé depuis `pagehide` meurt
+ * avec le document.
+ */
+export function discardPageOnUnload(projectId: string, pageId: string): void {
+  void fetch(`/api/projects/${projectId}/pages/${pageId}?discard=1`, {
+    method: "DELETE",
+    keepalive: true,
+  }).catch(() => {});
+}
+
 /** Le retour en arrière immédiat (un « Annuler » de toast). */
 export async function restorePageApi(
   projectId: string,

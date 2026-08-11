@@ -402,7 +402,14 @@ function PageRow({
               <MoreHorizontal className="size-3.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
+          {/* Le menu se taille sur SON texte, pas sur une largeur écrite ici :
+              « Déplacer vers la corbeille » repassait à la ligne dans les 48
+              unités qu'on lui donnait, et toute valeur fixe se refait périmer
+              par la traduction suivante. */}
+          <DropdownMenuContent
+            align="start"
+            className="w-auto min-w-48 [&_[role=menuitem]]:whitespace-nowrap"
+          >
             <DropdownMenuItem onSelect={() => onCreateChild(page.id)}>
               <Plus className="size-4" />
               {t("newSubpage")}

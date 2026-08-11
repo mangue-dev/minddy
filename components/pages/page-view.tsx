@@ -40,18 +40,30 @@ import type { Editor, JSONContent } from "@tiptap/react";
 
 import { eventKey } from "@/lib/keyboard/event-key";
 
-import { fetchPageApi, updatePageOnUnload } from "@/lib/pages-api";
+import {
+  discardPageOnUnload,
+  fetchPageApi,
+  updatePageOnUnload,
+} from "@/lib/pages-api";
+import {
+  cancelDraftDiscard,
+  forgetDraftPage,
+  isDraftPage,
+  scheduleDraftDiscard,
+} from "@/lib/pages-draft";
 import { ancestorsOf, descendantIds } from "@/lib/pages";
 import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
-import { BLOCK_ID_ATTRIBUTE, PageEditor } from "@/components/pages/page-editor";
+import { PageEditor } from "@/components/pages/page-editor";
+import { posOfBlockId, revealBlock } from "@/components/pages/block-actions";
 import { PageHeader } from "@/components/pages/page-header";
 import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
+import { PageToc } from "@/components/pages/page-toc";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
 import {
   usePageAutosave,
@@ -156,9 +168,11 @@ export function PageView({
     byId,
     loading: pagesLoading,
     updatePage,
+    previewPage,
     createPage,
     duplicatePage,
     trashPage,
+    discardPage,
     restorePage,
   } = usePagesQuery(projectId);
   const pagesLoaded = !pagesLoading;
@@ -227,11 +241,53 @@ export function PageView({
   });
   const { schedule, flush, takePending } = autosave;
 
-  // Quitter la page ÉCRIT ce qui restait : sans ça, taper puis cliquer aussitôt
-  // sur une autre page de l'arbre perd la dernière seconde de frappe.
+  /* ── Le départ : écrire, ou faire comme si de rien n'était ───────────────
+     Quitter la page ÉCRIT ce qui restait — sans ça, taper puis cliquer aussitôt
+     sur une autre page de l'arbre perd la dernière seconde de frappe.
+     Sauf si la page est un BROUILLON resté vide (lib/pages-draft.ts) : elle
+     vient d'être créée, on n'y a rien mis, et il ne doit rien en rester.
+     Ce qu'on lit au démontage passe par des refs : à cet instant il n'y a plus
+     de rendu, et l'éditeur peut déjà être démonté. */
   const flushRef = useRef(flush);
   flushRef.current = flush;
-  useEffect(() => () => void flushRef.current(), [pageId]);
+  const titleRef = useRef(title);
+  titleRef.current = title;
+  const iconRef = useRef(icon);
+  iconRef.current = icon;
+  const contentRef = useRef<unknown>(null);
+  useEffect(() => {
+    if (page) contentRef.current = page.content;
+  }, [page]);
+  const discardRef = useRef(discardPage);
+  discardRef.current = discardPage;
+
+  /** Rien n'a été écrit sur cette page depuis qu'on l'a créée. */
+  const stillBlank = useCallback(
+    () =>
+      isDraftPage(pageId) &&
+      !titleRef.current.trim() &&
+      !iconRef.current &&
+      isEmptyDoc(contentRef.current),
+    [pageId]
+  );
+  const blankRef = useRef(stillBlank);
+  blankRef.current = stillBlank;
+
+  useEffect(() => {
+    // On est là : rien de ce qui a été programmé au démontage précédent ne doit
+    // aboutir. C'est ce qui rend la destruction sûre en Strict Mode, où React
+    // démonte et remonte aussitôt (cf. lib/pages-draft.ts).
+    cancelDraftDiscard(pageId);
+    return () => {
+      if (blankRef.current()) {
+        scheduleDraftDiscard(pageId, () => void discardRef.current(pageId));
+        return;
+      }
+      // Écrite : ce n'est plus un brouillon, et elle ne le redeviendra pas.
+      forgetDraftPage(pageId);
+      void flushRef.current();
+    };
+  }, [pageId]);
 
   // L'onglet qui s'en va (rafraîchissement, fermeture, navigation externe).
   //
@@ -246,6 +302,13 @@ export function PageView({
   // attendre un retour qui peut ne jamais venir.
   useEffect(() => {
     const onHide = () => {
+      // Même règle qu'au démontage : un brouillon vide ne part pas en base, il
+      // s'efface. `takePending` n'est pas appelé — il n'y a rien à écrire.
+      if (blankRef.current()) {
+        forgetDraftPage(pageId);
+        discardPageOnUnload(projectId, pageId);
+        return;
+      }
       const patch = takePending();
       if (patch) updatePageOnUnload(projectId, pageId, patch);
     };
@@ -431,7 +494,17 @@ export function PageView({
     )
   );
 
+  /* ── La table des matières flottante ─────────────────────────────────── */
+  //
+  // Elle a besoin de DEUX choses que le corps ne rend pas de lui-même :
+  // l'instance de l'éditeur (pour lire les titres et les suivre à la frappe) et
+  // le conteneur qui défile (pour savoir où l'on en est, et pour y aller).
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [editor, setEditor] = useState<Editor | null>(null);
+
   /* ── L'ancre d'un bloc ───────────────────────────────────────────────── */
+  /** Marge au-dessus du bloc visé par une ancre, une fois arrivé. */
+  const ANCHOR_MARGIN = 96;
   const bodyRef = useRef<HTMLDivElement>(null);
   const loaded = !!page;
   useEffect(() => {
@@ -440,19 +513,24 @@ export function PageView({
     if (!id) return;
     // Après la peinture : le bloc visé n'existe dans le DOM qu'une fois le
     // document monté par tiptap, ce qui arrive un cran après la réponse.
+    let unflash: (() => void) | null = null;
     const handle = requestAnimationFrame(() => {
-      const target = bodyRef.current?.querySelector<HTMLElement>(
-        `[data-${BLOCK_ID_ATTRIBUTE}="${CSS.escape(id)}"]`
-      );
-      if (!target) return;
-      target.scrollIntoView({ block: "center", behavior: "smooth" });
-      // Le surlignage se retire tout seul : il dit « c'est ce bloc-là », il
-      // n'est pas une sélection et ne doit pas survivre à la lecture.
-      target.classList.add("page-block-target");
-      setTimeout(() => target.classList.remove("page-block-target"), 2_000);
+      const view = editor;
+      const container = scrollRef.current;
+      if (!view || !container) return;
+      // L'ancre se résout dans le DOCUMENT, et non dans le DOM : le clignement
+      // est une décoration ProseMirror, qui se pose sur une POSITION (cf.
+      // block-flash.ts). Le geste est ensuite exactement celui de la table des
+      // matières — un seul chemin, un seul endroit où se tromper.
+      const pos = posOfBlockId(view, id);
+      if (pos === null) return;
+      unflash = revealBlock(view, container, pos, ANCHOR_MARGIN);
     });
-    return () => cancelAnimationFrame(handle);
-  }, [loaded, pageId]);
+    return () => {
+      cancelAnimationFrame(handle);
+      unflash?.();
+    };
+  }, [loaded, pageId, editor]);
 
   if (error) {
     return (
@@ -509,7 +587,12 @@ export function PageView({
         />
       </div>
 
-      <div className="scrollbar-quiet h-full overflow-y-auto">
+      {/* La table des matières flotte au bord droit du PANNEAU, donc hors du
+          conteneur qui défile : elle reste à sa place pendant qu'on descend
+          dans le document, et c'est le défilement qui la traverse. */}
+      <PageToc editor={editor} scrollRef={scrollRef} />
+
+      <div ref={scrollRef} className="scrollbar-quiet h-full overflow-y-auto">
       {/* La COLONNE du document. Elle porte deux choses, et elle est la seule à
           pouvoir les porter ensemble : la réserve de GOUTTIÈRE à gauche (56 px,
           la largeur exacte de la poignée et du `+`) et le positionnement dont
@@ -529,10 +612,16 @@ export function PageView({
           autoFocus={!title && isEmptyDoc(page.content)}
           onTitleChange={(next) => {
             setEdited((current) => ({ ...current, title: next }));
+            // La sidebar, le fil d'Ariane et le bloc sous-page lisent le cache
+            // de la LISTE : sans cet écrit local, ils ne bougeaient qu'une
+            // seconde plus tard, à l'enregistrement groupé — on tapait un titre
+            // en regardant l'ancien dans la colonne de gauche.
+            previewPage(pageId, { title: next });
             schedule({ title: next });
           }}
           onIconChange={(next) => {
             setEdited((current) => ({ ...current, icon: next }));
+            previewPage(pageId, { icon: next });
             schedule({ icon: next });
             void flush();
           }}
@@ -554,10 +643,14 @@ export function PageView({
           <PageTaskSurface pageTitle={title} flush={flush}>
             <PageEditor
               initialContent={(page.content as JSONContent | null) ?? null}
-              onChange={(content) => schedule({ content })}
+              onChange={(content) => {
+                contentRef.current = content;
+                schedule({ content });
+              }}
               pages={lookup}
               mentions={mentions}
               editorRef={editorRef}
+              onEditor={setEditor}
               onSubpagesRemoved={onSubpagesRemoved}
             />
           </PageTaskSurface>

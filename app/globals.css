@@ -1033,31 +1033,62 @@ nav[aria-label="Navigation"]
   opacity: 0.5;
 }
 
-/* ─── L'ancre d'un bloc (MIN-270) ─────────────────────────────────────────
-   Ouvrir un lien « copier le lien du bloc » défile jusqu'au bloc visé et le
-   désigne deux secondes. C'est un CLIGNEMENT, pas une sélection : il s'efface
-   tout seul, sinon on croirait le bloc mis en surbrillance pour de bon, et il
-   déborde du texte (`inset`) pour désigner le bloc entier, pas ses mots. */
+/* ─── Le clignement d'un bloc (MIN-270) ───────────────────────────────────
+   Deux surfaces s'en servent, et pour la même raison : après un défilement,
+   rien ne distingue le bloc qu'on a DEMANDÉ de ses voisins arrivés à l'écran
+   en même temps. L'ancre d'un lien « copier le lien du bloc » l'allume à
+   l'ouverture de la page ; la table des matières l'allume au clic.
+
+   C'est un CLIGNEMENT, pas une sélection : il s'efface tout seul, sinon on
+   croirait le bloc mis en surbrillance pour de bon, et il déborde du texte
+   (`box-shadow`) pour désigner le bloc entier, pas ses mots.
+
+   La couleur ne vient PAS de --primary, et c'est ce qui manquait : dans ce
+   produit --primary est l'ENCRE — presque noire en clair, presque blanche en
+   sombre. Un fond d'encre à 18 % est un gris pâle qui, le temps d'un
+   défilement, ne se voit pas passer ; le clignement était bien là et ne
+   désignait rien. Il lui faut une teinte d'ATTENTION, qui ne ressemble ni au
+   texte ni à une sélection : le bleu du registre des couleurs de bloc, dilué
+   assez pour rester doux, et déjà décliné dans les deux thèmes.
+
+   Un PULSE plutôt qu'un fond posé : deux battements valent mieux qu'un aplat,
+   parce que c'est le CHANGEMENT que l'œil attrape — surtout quand le
+   défilement vient de bouger toute la page sous lui.
+
+   Sous `prefers-reduced-motion`, on ne réduit pas la durée à néant (c'est ce
+   qui rendait l'ancienne version invisible chez qui a coché la case) : on
+   retire le battement et on TIENT le fond. C'est `flashBlock`
+   (components/pages/block-actions.ts) qui pose la classe et la retire. */
 .page-block-target {
   position: relative;
-  animation: page-block-target 2s ease-out forwards;
   border-radius: 0.375rem;
+  animation: page-block-pulse 1.6s ease-in-out;
 }
 
-@keyframes page-block-target {
+@keyframes page-block-pulse {
   0%,
-  60% {
-    background-color: color-mix(in oklab, var(--primary) 14%, transparent);
-    box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 14%, transparent);
-  }
   100% {
     background-color: transparent;
-    box-shadow: 0 0 0 4px transparent;
+    box-shadow: 0 0 0 6px transparent;
+  }
+  12%,
+  62% {
+    background-color: color-mix(in oklab, var(--page-color-blue) 26%, transparent);
+    box-shadow: 0 0 0 6px
+      color-mix(in oklab, var(--page-color-blue) 26%, transparent);
+  }
+  37% {
+    background-color: color-mix(in oklab, var(--page-color-blue) 9%, transparent);
+    box-shadow: 0 0 0 6px
+      color-mix(in oklab, var(--page-color-blue) 9%, transparent);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .page-block-target {
-    animation-duration: 0.01ms;
+    animation: none;
+    background-color: color-mix(in oklab, var(--page-color-blue) 26%, transparent);
+    box-shadow: 0 0 0 6px
+      color-mix(in oklab, var(--page-color-blue) 26%, transparent);
   }
 }

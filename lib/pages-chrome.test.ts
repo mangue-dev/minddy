@@ -20,7 +20,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Editor } from "@tiptap/core";
 import { Document } from "@tiptap/extension-document";
 import { Text } from "@tiptap/extension-text";
@@ -40,6 +40,7 @@ import {
   setPageColor,
   type PageBlockId,
 } from "@/components/pages/blocks";
+import { BlockFlash, flashBlockAt } from "@/components/pages/block-flash";
 import {
   blockLink,
   blockRange,
@@ -47,7 +48,10 @@ import {
   styledBox,
   deleteBlocks,
   duplicateBlocks,
+  focusDocumentEnd,
   insertBlockAround,
+  posOfBlockId,
+  revealBlock,
   selectBlockAt,
   selectBlockFromHandle,
   selectedBlockCount,
@@ -240,6 +244,209 @@ describe("le « + » de la marge", () => {
     insertBlockAround(editor, 0, "above");
     expect(topLevel(editor)).toEqual(["paragraph", "heading"]);
     editor.destroy();
+  });
+});
+
+describe("la réserve cliquable du bas", () => {
+  it("ajoute un paragraphe et y met le curseur", () => {
+    const editor = makeEditor("<h1>Titre</h1>");
+    focusDocumentEnd(editor);
+    expect(topLevel(editor)).toEqual(["heading", "paragraph"]);
+    expect(editor.state.selection.$from.parent.type.name).toBe("paragraph");
+    editor.destroy();
+  });
+
+  it("n'en empile pas quand la fin du document en porte déjà un vide", () => {
+    const editor = makeEditor("<h1>Titre</h1><p></p>");
+    focusDocumentEnd(editor);
+    focusDocumentEnd(editor);
+    // Deux clics dans la réserve, un seul paragraphe : le vide sous le texte
+    // est de la mise en page, il ne doit pas partir en base.
+    expect(topLevel(editor)).toEqual(["heading", "paragraph"]);
+    expect(editor.state.selection.$from.parent.type.name).toBe("paragraph");
+    editor.destroy();
+  });
+
+  it("écrit à la SUITE, sans toucher au dernier bloc", () => {
+    const editor = makeEditor("<p>Un</p><blockquote><p>Deux</p></blockquote>");
+    focusDocumentEnd(editor);
+    expect(topLevel(editor)).toEqual(["paragraph", "blockquote", "paragraph"]);
+    expect(editor.state.doc.child(1).textContent).toBe("Deux");
+    editor.destroy();
+  });
+});
+
+describe("le clignement d'un bloc", () => {
+  /** Le vrai éditeur, AVEC l'extension du clignement — c'est elle qu'on teste. */
+  function flashEditor(content: string) {
+    return new Editor({
+      element: document.createElement("div"),
+      content,
+      extensions: [
+        Document,
+        Text,
+        ...blockExtensions({ headless: true }),
+        UniqueID.configure({
+          attributeName: BLOCK_ID_ATTRIBUTE,
+          types: BLOCK_ID_TYPES,
+        }),
+        BlockFlash,
+      ] as never,
+    });
+  }
+
+  const domAt = (editor: Editor, pos: number) =>
+    editor.view.nodeDOM(pos) as HTMLElement;
+
+  it("passe par une DÉCORATION, donc la classe est bien dans le document rendu", () => {
+    const editor = flashEditor("<p>Avant</p><h2>Cible</h2>");
+    const pos = 7;
+    expect(editor.state.doc.nodeAt(pos)?.type.name).toBe("heading");
+
+    flashBlockAt(editor, pos);
+    expect(domAt(editor, pos).classList.contains("page-block-target")).toBe(true);
+    editor.destroy();
+  });
+
+  it("SURVIT à un re-rendu du nœud — ce qu'une classe posée à la main ne fait pas", () => {
+    const editor = flashEditor("<p>Avant</p><h2>Cible</h2>");
+    const pos = 7;
+
+    // Le défaut qu'on garde : ProseMirror surveille le DOM de sa zone éditable
+    // et DÉFAIT tout ce qu'il n'a pas écrit. Une classe posée par
+    // `classList.add` atterrissait sur un élément que PM remplaçait dans la
+    // foulée — mesuré dans le navigateur, sur le vrai éditeur. Ici on force le
+    // re-rendu par le chemin le plus court : on change le document.
+    flashBlockAt(editor, pos);
+    editor.commands.insertContentAt(1, "x");
+
+    const node = editor.state.doc.nodeAt(pos + 1);
+    expect(node?.type.name).toBe("heading");
+    // La décoration a SUIVI son nœud, qui a bougé d'un cran.
+    expect(domAt(editor, pos + 1).classList.contains("page-block-target")).toBe(
+      true
+    );
+    editor.destroy();
+  });
+
+  it("n'écrit rien dans le document ni dans l'historique", () => {
+    const editor = flashEditor("<p>Avant</p><h2>Cible</h2>");
+    const before = JSON.stringify(editor.getJSON());
+    let updates = 0;
+    editor.on("update", () => (updates += 1));
+
+    flashBlockAt(editor, 7);
+
+    // Un clignement qui rentrerait dans le document partirait en base et
+    // ressortirait dans le markdown que lit l'agent.
+    expect(JSON.stringify(editor.getJSON())).toBe(before);
+    expect(updates).toBe(0);
+    editor.destroy();
+  });
+
+  it("s'éteint tout seul, et s'annule", () => {
+    // L'éditeur est monté AVANT de figer le temps : tiptap diffère une partie
+    // de son montage, et un faux minuteur le laisserait à moitié construit.
+    const editor = flashEditor("<p>Avant</p><h2>Cible</h2>");
+    const pos = 7;
+    const lit = () =>
+      domAt(editor, pos).classList.contains("page-block-target");
+    vi.useFakeTimers();
+    try {
+      flashBlockAt(editor, pos);
+      expect(lit()).toBe(true);
+      vi.advanceTimersByTime(1_000);
+      expect(lit()).toBe(true);
+      vi.advanceTimersByTime(1_000);
+      expect(lit()).toBe(false);
+
+      // Et l'annulation, qui empêche le minuteur d'un clic d'éteindre le suivant.
+      const cancel = flashBlockAt(editor, pos);
+      cancel();
+      expect(lit()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+      editor.destroy();
+    }
+  });
+
+  it("retrouve un bloc par son identité, pour l'ancre d'un lien", async () => {
+    const editor = await makeIdentifiedEditor("<p>Un</p><p>Deux</p>");
+    const id = editor.state.doc.child(1).attrs[BLOCK_ID_ATTRIBUTE] as string;
+    expect(posOfBlockId(editor, id)).toBe(editor.state.doc.child(0).nodeSize);
+    expect(posOfBlockId(editor, "inconnu")).toBeNull();
+    editor.destroy();
+  });
+});
+
+describe("amener un bloc à l'écran", () => {
+  it("saute SEC, et c'est ce qui rend le clignement visible", () => {
+    vi.useFakeTimers();
+    const editor = new Editor({
+      element: document.createElement("div"),
+      content: "<p>Avant</p><h2>Cible</h2>",
+      extensions: [Document, Text, ...blockExtensions({ headless: true }), BlockFlash] as never,
+    });
+    const pos = 7;
+    const container = document.createElement("div");
+    container.getBoundingClientRect = () => ({ top: 100 }) as DOMRect;
+    (editor.view.nodeDOM(pos) as HTMLElement).getBoundingClientRect = () =>
+      ({ top: 2_000 }) as DOMRect;
+    const calls: ScrollToOptions[] = [];
+    container.scrollBy = ((options: ScrollToOptions) => {
+      calls.push(options);
+    }) as HTMLElement["scrollBy"];
+
+    revealBlock(editor, container, pos, 24);
+
+    // En défilement DOUX, `scrollBy` rend la main tout de suite et la page met
+    // jusqu'à une seconde à arriver — or une animation CSS tourne qu'on la voie
+    // ou non. Le clignement brûlait son temps pendant le trajet et n'était plus
+    // là à l'arrivée : visible sur un bloc proche, invisible sur un bloc loin.
+    expect(calls).toHaveLength(1);
+    expect(calls[0].behavior).toBe("auto");
+    // 2000 - 100 - 24 : le bloc se pose 24 px sous le bord haut, et non collé
+    // dessous, où le fil d'Ariane et l'état d'enregistrement le cacheraient.
+    expect(calls[0].top).toBe(1_876);
+    expect(
+      (editor.view.nodeDOM(pos) as HTMLElement).classList.contains(
+        "page-block-target"
+      )
+    ).toBe(true);
+    vi.useRealTimers();
+    editor.destroy();
+  });
+});
+
+describe("la teinte du clignement", () => {
+  it("n'est PAS l'encre du produit", () => {
+    // Le garde-fou d'une régression déjà commise : `--primary` est l'ENCRE de
+    // minddy — presque noire en clair, presque blanche en sombre. Un fond
+    // d'encre dilué est un gris pâle qui ne se voit pas passer, et le
+    // clignement ne désignait alors rien du tout. Il lui faut une teinte
+    // d'attention, prise au registre des couleurs de bloc.
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    const rule = css.slice(
+      css.indexOf("@keyframes page-block-pulse"),
+      css.indexOf("@media (prefers-reduced-motion: reduce)", css.indexOf("@keyframes page-block-pulse"))
+    );
+    // La teinte vient du registre des couleurs de bloc, quelle qu'elle soit —
+    // ce qui est verrouillé ici, c'est qu'elle n'est PAS l'encre.
+    expect(rule).toMatch(/--page-color-[a-z]+/);
+    expect(rule).not.toContain("--primary");
+  });
+
+  it("tient le fond sous « réduire les animations » au lieu de disparaître", () => {
+    // L'autre moitié de la même régression : une animation réduite à néant est
+    // une animation invisible. Sans battement, le fond doit RESTER — c'est le
+    // minuteur de `flashBlock` qui le retire, pas la durée de l'animation.
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    const start = css.indexOf(".page-block-target {");
+    const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)", start));
+    const block = reduced.slice(0, reduced.indexOf("}", reduced.indexOf("}") + 1));
+    expect(block).toContain("animation: none");
+    expect(block).toContain("background-color");
+    expect(block).not.toContain("animation-duration");
   });
 });
 

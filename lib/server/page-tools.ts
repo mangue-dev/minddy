@@ -48,6 +48,7 @@ export type PageToolCode =
   | "parent_not_found"
   | "page_cycle"
   | "page_stale"
+  | "page_not_empty"
   | "page_too_large"
   | "text_not_found"
   | "text_ambiguous"
@@ -63,6 +64,7 @@ const CODES: Record<PageErrorKey, PageToolCode> = {
   pageParentNotFound: "parent_not_found",
   pageCycle: "page_cycle",
   pageStale: "page_stale",
+  pageNotEmpty: "page_not_empty",
   pageTooLarge: "page_too_large",
   noFieldsToUpdate: "invalid_params",
   databaseError: "database_error",
@@ -79,6 +81,9 @@ const MESSAGES: Record<PageErrorKey, string> = {
   pageStale:
     "The page was written by someone else since you read it. Read it again and " +
     "re-apply your change on the current text.",
+  pageNotEmpty:
+    "Refused: that page is no longer empty. Only a page created and left blank " +
+    "can be discarded; move a written page to the trash instead.",
   pageTooLarge: "The page body is too large; split it into subpages.",
   noFieldsToUpdate: "Nothing to update: pass a title, an icon or a markdown body.",
   databaseError: "Database error.",

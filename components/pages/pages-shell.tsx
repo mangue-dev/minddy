@@ -14,7 +14,7 @@
 // à côté des tickets et des objectifs — un second chemin vers la même liste
 // oblige surtout à se demander lequel des deux dit vrai.
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Skeleton, Tooltip, TooltipContent, TooltipTrigger, cn, toast } from "mangue-ui";
@@ -26,6 +26,8 @@ import { PagePresenceProvider } from "@/components/pages/page-presence";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError, type PageSummary } from "@/lib/pages-api";
+import { rememberLastPage } from "@/lib/pages-last-open";
+import { markDraftPage } from "@/lib/pages-draft";
 
 export function PagesShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Pages");
@@ -46,12 +48,24 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
     usePagesQuery(projectId);
   const [query, setQuery] = useState("");
 
+  // La page ouverte est retenue ICI plutôt que dans `PageView` : la coquille
+  // traverse les navigations, donc elle voit le DERNIER état de l'onglet, y
+  // compris le retour à la liste après une mise à la corbeille. C'est
+  // `app/(app)/projects/[id]/pages/page.tsx` qui la relit à l'ouverture.
+  useEffect(() => {
+    if (activePageId) rememberLastPage(projectId, activePageId);
+  }, [projectId, activePageId]);
+
   const create = useCallback(
     async (parentId: string | null) => {
       try {
         // La position est calculée par le SERVEUR (fin de la fratrie) : il est
         // le seul à voir les pages que ce client n'a pas encore.
         const page = await createPage({ parent_id: parentId });
+        // Elle est en base, mais elle n'est pas encore acquise : quitter sans y
+        // écrire une lettre la détruit (lib/pages-draft.ts). Créer une page
+        // n'est pas la sauvegarder.
+        markDraftPage(page.id);
         router.push(`${base}/${page.id}`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("createFailed"));

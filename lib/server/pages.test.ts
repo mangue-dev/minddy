@@ -177,6 +177,7 @@ import {
   duplicatePage,
   getPage,
   listPages,
+  discardPage,
   restorePage,
   trashPage,
   updatePage,
@@ -385,6 +386,103 @@ describe("trashPage", () => {
     await trashPage(id, ACTOR);
     expect(await trashPage(id, ACTOR)).toMatchObject({ ok: false, status: 404 });
     expect(await trashPage("nope", ACTOR)).toMatchObject({ ok: false, status: 404 });
+  });
+});
+
+describe("discardPage", () => {
+  it("DÉTRUIT une page restée vide, sans passer par la corbeille", async () => {
+    const id = await create("");
+
+    expect(await discardPage(id, ACTOR)).toEqual({ ok: true });
+    // Pas de ligne marquée : la ligne n'existe plus. C'est tout l'intérêt —
+    // une page qu'on a créée puis quittée sans y écrire n'a pas à venir
+    // encombrer la corbeille.
+    expect(h.rows.find((row) => row.id === id)).toBeUndefined();
+  });
+
+  it("refuse une page qui porte un titre", async () => {
+    const id = await create("Cadrage");
+    expect(await discardPage(id, ACTOR)).toMatchObject({
+      ok: false,
+      status: 409,
+      errorKey: "pageNotEmpty",
+    });
+    expect(rowOf(id).deleted_at).toBeNull();
+  });
+
+  it("refuse une page qui porte du texte", async () => {
+    const id = await create("");
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      input: {
+        content: {
+          type: "doc",
+          content: [
+            { type: "paragraph", content: [{ type: "text", text: "Un mot" }] },
+          ],
+        },
+      },
+    });
+
+    expect(await discardPage(id, ACTOR)).toMatchObject({
+      ok: false,
+      errorKey: "pageNotEmpty",
+    });
+    expect(rowOf(id)).toBeDefined();
+  });
+
+  it("refuse une page vide qui porte une sous-page", async () => {
+    const parent = await create("");
+    const child = await create("Dedans", parent);
+
+    expect(await discardPage(parent, ACTOR)).toMatchObject({
+      ok: false,
+      errorKey: "pageNotEmpty",
+    });
+    expect(rowOf(parent)).toBeDefined();
+    expect(rowOf(child)).toBeDefined();
+  });
+
+  it("laisse passer le paragraphe vide d'une page neuve", async () => {
+    const id = await create("");
+    await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      input: { content: { type: "doc", content: [{ type: "paragraph" }] } },
+    });
+
+    expect(await discardPage(id, ACTOR)).toEqual({ ok: true });
+  });
+
+  it("emporte le bloc sous-page du corps du parent", async () => {
+    const parent = await create("Parent");
+    const child = await create("", parent);
+    await updatePage({
+      pageId: parent,
+      actorId: ACTOR,
+      input: {
+        content: {
+          type: "doc",
+          content: [{ type: "subpage", attrs: { pageId: child } }],
+        },
+      },
+    });
+
+    expect(await discardPage(child, ACTOR)).toEqual({ ok: true });
+    // Un bloc qui cite une ligne détruite est un lien mort dans le document du
+    // parent : il part avec elle, comme à la corbeille (MIN-272).
+    expect(JSON.stringify(rowOf(parent).content)).not.toContain(child);
+  });
+
+  it("répond 404 hors du projet, et ne détruit rien", async () => {
+    const id = await create("");
+    h.access = new Set();
+    expect(await discardPage(id, ACTOR)).toMatchObject({
+      ok: false,
+      status: 404,
+    });
+    expect(h.rows.find((row) => row.id === id)).toBeDefined();
   });
 });
 

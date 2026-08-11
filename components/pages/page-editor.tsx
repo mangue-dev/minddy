@@ -44,7 +44,11 @@ import {
   pagePlaceholder,
 } from "@/components/pages/block-placeholder";
 import { BlockGutter } from "@/components/pages/block-gutter";
-import { handleBlockLinkClick } from "@/components/pages/block-actions";
+import { BlockFlash } from "@/components/pages/block-flash";
+import {
+  focusDocumentEnd,
+  handleBlockLinkClick,
+} from "@/components/pages/block-actions";
 import {
   PageSlashCommand,
   pageSlashItems,
@@ -119,6 +123,7 @@ export function PageEditor({
   pages,
   mentions,
   editorRef,
+  onEditor,
   onSubpagesRemoved,
   className,
 }: {
@@ -140,6 +145,13 @@ export function PageEditor({
   /** Les citables « @ » — mêmes options que dans une description d'issue. */
   mentions?: MentionSuggestOptions;
   editorRef?: MutableRefObject<Editor | null>;
+  /**
+   * L'éditeur, rendu à l'appelant sous une forme qui DÉCLENCHE un rendu — ce
+   * que `editorRef` ne fait pas. La table des matières flottante en a besoin :
+   * elle s'abonne à l'instance, et une ref posée en silence ne l'aurait jamais
+   * réveillée.
+   */
+  onEditor?: (editor: Editor | null) => void;
   className?: string;
 }) {
   const t = useTranslations("Pages");
@@ -176,6 +188,10 @@ export function PageEditor({
         // blocs imbriqués, et le curseur lu en retard d'une frappe.
         BlockPlaceholder.configure({ text: placeholderFor }),
         PageSlashCommand.configure({ items: slashItems }),
+        // Le clignement d'un bloc. C'est une DÉCORATION et non une classe posée
+        // sur l'élément : ProseMirror défait toute mutation du DOM qu'il n'a
+        // pas faite (cf. block-flash.ts).
+        BlockFlash,
       ] as unknown as Extensions,
     [placeholderFor, slashItems, mentions]
   );
@@ -196,10 +212,18 @@ export function PageEditor({
   // L'écouteur vit le temps que l'éditeur est monté.
   useEffect(() => trackPointerFreshness(), []);
 
+  // En ref : l'appelant passe le plus souvent un `setState`, mais rien ne
+  // l'oblige — une fonction refabriquée à chaque rendu rejouerait l'effet
+  // ci-dessous, et donc annoncerait `null` à chaque frappe.
+  const onEditorRef = useRef(onEditor);
+  onEditorRef.current = onEditor;
+
   useEffect(() => {
     if (editorRef) editorRef.current = editor ?? null;
+    onEditorRef.current?.(editor ?? null);
     return () => {
       if (editorRef) editorRef.current = null;
+      onEditorRef.current?.(null);
     };
   }, [editor, editorRef]);
 
@@ -225,6 +249,26 @@ export function PageEditor({
     <div className={cn("page-editor", className)}>
       {editor && <BlockGutter editor={editor} />}
       <EditorContent editor={editor} />
+      {/* La RÉSERVE du bas : une dizaine de lignes de vide sous le dernier
+          bloc, cliquables, qui rendent le curseur à la fin du document.
+          Ce n'est PAS une dizaine de paragraphes vides — ceux-là partiraient en
+          base, ressortiraient dans le markdown que lit l'agent, et se
+          cumuleraient à chaque visite. Le vide est de la mise en page ; seul le
+          clic écrit, et il n'écrit qu'un paragraphe, et seulement s'il en
+          manque un (`focusDocumentEnd`). */}
+      {editor && (
+        <div
+          aria-hidden
+          className="min-h-[15rem] w-full cursor-text"
+          // `mousedown` plutôt que `click`, et `preventDefault` avec : sans ça
+          // le navigateur pose d'abord le curseur où il veut (souvent nulle
+          // part, la zone n'étant pas éditable), et on le voit sauter.
+          onMouseDown={(event) => {
+            event.preventDefault();
+            focusDocumentEnd(editor);
+          }}
+        />
+      )}
     </div>
   );
 

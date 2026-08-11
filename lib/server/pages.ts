@@ -54,6 +54,7 @@ export type PageErrorKey =
   | "pageParentNotFound"
   | "pageCycle"
   | "pageStale"
+  | "pageNotEmpty"
   | "pageTooLarge"
   | "noFieldsToUpdate"
   | "databaseError";
@@ -586,6 +587,75 @@ export async function trashPage(
   }
 
   return { ok: true, trashed: descendants.length + 1 };
+}
+
+/**
+ * Un corps qu'on peut considérer comme JAMAIS ÉCRIT : vide, ou réduit au
+ * paragraphe vide que rend une page qu'on vient de créer.
+ */
+function isBlankDoc(content: unknown): boolean {
+  const blocks = (content as { content?: unknown[] } | null)?.content;
+  if (!Array.isArray(blocks) || blocks.length === 0) return true;
+  if (blocks.length > 1) return false;
+  const only = blocks[0] as { type?: string; content?: unknown[] };
+  return only?.type === "paragraph" && !only.content?.length;
+}
+
+/**
+ * DÉTRUIT une page restée vide — le seul geste du module qui ne passe pas par
+ * la corbeille (MIN-270).
+ *
+ * Il ne sert qu'à une chose : créer une page puis repartir sans y écrire une
+ * lettre ne doit rien laisser derrière. Passer par la corbeille remplirait
+ * celle-ci de pages sans titre que personne n'a voulues, ce qui est exactement
+ * le bruit qu'on cherche à éviter.
+ *
+ * Ce qui rend la destruction acceptable, c'est la GARDE, et elle est vérifiée
+ * ICI plutôt qu'au client : sans titre, sans icône, sans corps, sans
+ * sous-page. Une page qui échoue à ce test répond 409 et n'est pas touchée —
+ * le client n'a donc aucun moyen de faire disparaître du contenu par ce
+ * chemin, même en mentant sur ce qu'il croit vide.
+ */
+export async function discardPage(
+  pageId: string,
+  actorId: string
+): Promise<{ ok: true } | { ok: false; status: number; errorKey: PageErrorKey }> {
+  const service = getServiceClient();
+  const page = await loadPage(service, pageId);
+  if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  if (!(await access(actorId, page.project_id))) {
+    return { ok: false, status: 404, errorKey: "pageNotFound" };
+  }
+
+  if (page.title.trim() !== "" || page.icon || !isBlankDoc(page.content)) {
+    return { ok: false, status: 409, errorKey: "pageNotEmpty" };
+  }
+
+  const all = await loadProjectPages(service, page.project_id);
+  const hasChildren = all.some(
+    (p) => p.parent_id === pageId && !p.deleted_at
+  );
+  if (hasChildren) return { ok: false, status: 409, errorKey: "pageNotEmpty" };
+
+  // Le bloc du corps du parent part AVANT la ligne : c'est le même sens que la
+  // corbeille (MIN-272), et l'ordre compte — une ligne détruite dont le bloc
+  // survit laisse un lien mort dans le document du parent.
+  if (page.parent_id) {
+    await syncParentBody(service, page.parent_id, (doc) => {
+      const { doc: next, removed } = removeSubpages(doc, [pageId]);
+      return {
+        doc: (next ?? { type: "doc", content: [] }) as PageDocJSON,
+        changed: removed > 0,
+      };
+    });
+  }
+
+  const { error } = await service.from("pages").delete().eq("id", pageId);
+  if (error) {
+    console.error("[pages] discard failed:", error.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  return { ok: true };
 }
 
 /**
