@@ -36,6 +36,15 @@ const link = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+const PAGE_ID = "33333333-3333-4333-8333-333333333333";
+
+const page = (over: Record<string, unknown> = {}) => ({
+  kind: "page",
+  page_id: PAGE_ID,
+  file_name: "Spécification",
+  ...over,
+});
+
 describe("parseResourcesInput — l'absence d'entrée", () => {
   it("accepte null et undefined comme « rien à enregistrer »", () => {
     expect(parseResourcesInput(null, PREFIX)).toEqual([]);
@@ -152,12 +161,52 @@ describe("parseResourcesInput — un lien", () => {
   });
 });
 
-describe("parseResourcesInput — les deux moitiés ensemble", () => {
-  it("accepte un mélange de fichiers et de liens", () => {
-    const parsed = parseResourcesInput([file(), link()], PREFIX);
-    expect(parsed).toHaveLength(2);
+describe("parseResourcesInput — une page (MIN-275)", () => {
+  it("accepte une page du projet", () => {
+    expect(parseResourcesInput([page()], PREFIX)).toEqual([
+      { kind: "page", page_id: PAGE_ID, file_name: "Spécification" },
+    ]);
+  });
+
+  it("refuse un page_id qui n'est pas un uuid", () => {
+    expect(parseResourcesInput([page({ page_id: "42" })], PREFIX)).toBeNull();
+    expect(parseResourcesInput([page({ page_id: 42 })], PREFIX)).toBeNull();
+  });
+
+  it("refuse une page qui porte AUSSI une url ou un chemin de storage", () => {
+    // Les trois formes s'excluent : accepter les deux laisserait passer une
+    // ligne que la contrainte SQL refuserait de toute façon, mais en 500.
+    expect(
+      parseResourcesInput([page({ url: "https://exemple.com" })], PREFIX)
+    ).toBeNull();
+    expect(
+      parseResourcesInput([page({ storage_path: `${PREFIX}a/b.png` })], PREFIX)
+    ).toBeNull();
+  });
+
+  it("retombe sur un libellé par défaut quand la page n'a pas de titre", () => {
+    const parsed = parseResourcesInput([page({ file_name: "  " })], PREFIX);
+    expect(parsed?.[0].file_name).toBe("Page");
+  });
+
+  it("tronque un titre trop long", () => {
+    const parsed = parseResourcesInput([page({ file_name: "x".repeat(500) })], PREFIX);
+    expect(parsed?.[0].file_name).toHaveLength(200);
+  });
+
+  it("compte dans le plafond commun aux trois formes", () => {
+    const eleven = Array.from({ length: MAX_ATTACHMENTS_PER_ENTITY + 1 }, () => page());
+    expect(parseResourcesInput(eleven, PREFIX)).toBeNull();
+  });
+});
+
+describe("parseResourcesInput — les trois formes ensemble", () => {
+  it("accepte un mélange de fichiers, de liens et de pages", () => {
+    const parsed = parseResourcesInput([file(), link(), page()], PREFIX);
+    expect(parsed).toHaveLength(3);
     expect(parsed?.[0].kind).toBeUndefined();
     expect(parsed?.[1].kind).toBe("link");
+    expect(parsed?.[2].kind).toBe("page");
   });
 
   it("rend null pour TOUT le lot dès qu'une entrée cloche", () => {

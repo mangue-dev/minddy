@@ -172,7 +172,7 @@ export interface AnalyticsEventProps {
       fichier. */
   resource_added: {
     target: "issue" | "objective" | "comment";
-    kind: "file" | "link";
+    kind: "file" | "link" | "page";
     size_bucket?: string;
     mime_kind?: string;
     compressed?: boolean;

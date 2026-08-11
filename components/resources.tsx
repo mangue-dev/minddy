@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   Button,
+  CommandDialog,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
   Dialog,
   DialogContent,
   DialogFooter,
@@ -26,8 +32,11 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { EntityPill, PillIcon, type PillRadius } from "@/components/entity-pill";
 import type { ResourceKind } from "@/lib/types";
 import { normalizeWebUrl } from "@/lib/url-normalize";
+import { usePagesQuery } from "@/lib/use-pages-query";
+import { flattenPageTree } from "@/lib/pages";
 import type { PendingResource } from "@/lib/use-attachment-uploads";
 
 /**
@@ -48,6 +57,18 @@ export interface ResourceLike {
   /** Link half. */
   url?: string | null;
   icon_data_url?: string | null;
+  /** Page half (MIN-275) — the id, and the page itself when the read resolved
+      it. `page` absent or null on a page resource means the page is in the
+      trash (or the read carried no join): the chip stays, inert. */
+  page_id?: string | null;
+  page?: { id: string; title: string; icon: string | null } | null;
+  /** Where the page lives — the chip links to it inside the app. */
+  project_id?: string | null;
+}
+
+/** L'adresse d'une page dans l'app — la même que celle de l'arbre du wiki. */
+export function pageResourceHref(projectId: string, pageId: string): string {
+  return `/projects/${projectId}/pages/${pageId}`;
 }
 
 /** The single read door for the private bucket (302 → signed URL). */
@@ -116,6 +137,8 @@ export function AttachButton({
 export function AddResourceButton({
   onFiles,
   onLink,
+  onPage,
+  projectId,
   disabled,
   accept,
   className,
@@ -124,6 +147,11 @@ export function AddResourceButton({
   /** Resolves once the link is registered — the dialog closes on success and
       stays open, with its error, otherwise. */
   onLink: (url: string) => Promise<void>;
+  /** Cite a PAGE of the project (MIN-275). Given together with `projectId`, the
+      dropdown grows a third item; without them it stays at two — the comment,
+      chat and PR composers have no project's wiki to point at. */
+  onPage?: (page: PickedPage) => void;
+  projectId?: string | null;
   disabled?: boolean;
   accept?: string;
   className?: string;
@@ -131,6 +159,8 @@ export function AddResourceButton({
   const t = useTranslations("Resources");
   const inputRef = useRef<HTMLInputElement>(null);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [pageOpen, setPageOpen] = useState(false);
+  const pages = !!onPage && !!projectId;
 
   return (
     <>
@@ -168,9 +198,133 @@ export function AddResourceButton({
             <Link2 className="size-4" />
             <span>{t("addLink")}</span>
           </DropdownMenuItem>
+          {pages && (
+            <DropdownMenuItem onSelect={() => setPageOpen(true)}>
+              <FileText className="size-4" />
+              <span>{t("addPage")}</span>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <AddLinkDialog open={linkOpen} onOpenChange={setLinkOpen} onSubmit={onLink} />
+      {pages && (
+        <AddPageDialog
+          open={pageOpen}
+          onOpenChange={setPageOpen}
+          projectId={projectId as string}
+          onSelect={onPage as (page: PickedPage) => void}
+        />
+      )}
+    </>
+  );
+}
+
+/** Ce qu'un sélecteur de page rend : de quoi écrire la ressource et l'afficher
+    tout de suite, sans attendre que la ligne redescende du serveur. */
+export interface PickedPage {
+  id: string;
+  title: string;
+  icon: string | null;
+}
+
+/**
+ * « Choisir une page » : l'arbre du wiki du projet, à plat dans son ordre
+ * d'affichage et indenté par profondeur, dans le même shell cmdk que les autres
+ * sélecteurs de l'app.
+ *
+ * L'arbre vient du cache du projet ([use-pages-query](../lib/use-pages-query.ts)),
+ * celui que lisent déjà la sidebar, le fil d'Ariane et le bloc sous-page : une
+ * page renommée ailleurs se cherche ici sous son nouveau nom, sans requête de
+ * plus. Le cache n'est demandé qu'à l'OUVERTURE du dialog (`open` conditionne le
+ * montage) — la sidebar d'un ticket n'a pas à charger le wiki pour afficher un
+ * bouton.
+ */
+export function AddPageDialog({
+  open,
+  onOpenChange,
+  projectId,
+  onSelect,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projectId: string;
+  onSelect: (page: PickedPage) => void;
+}) {
+  const t = useTranslations("Resources");
+  return (
+    <CommandDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("pageDialogTitle")}
+      description={t("pageSearchPlaceholder")}
+      className="sm:max-w-lg"
+    >
+      <CommandInput placeholder={t("pageSearchPlaceholder")} />
+      {/* Le champ de recherche est posé dans un `p-1 pb-0` : la liste reprend le
+          MÊME retrait (4px) de chaque côté — sinon les options mordent un bord
+          que le champ respecte — et son `pt` fait la gouttière qui manquait
+          entre les deux. */}
+      <CommandList className="p-1">
+        {open && (
+          <PageOptions
+            projectId={projectId}
+            onSelect={(page) => {
+              onOpenChange(false);
+              onSelect(page);
+            }}
+          />
+        )}
+      </CommandList>
+    </CommandDialog>
+  );
+}
+
+/**
+ * La liste elle-même — séparée pour que la requête ne parte qu'une fois le
+ * dialog ouvert (le hook n'est monté qu'alors).
+ *
+ * Liste À PLAT : les pages défilent dans l'ordre de la sidebar, mais sans
+ * retrait d'imbrication. Ce qu'on fait ici est CHOISIR une page, pas se repérer
+ * dans l'arbre — et une liste qu'on filtre en tapant perd de toute façon la
+ * hiérarchie dès le premier caractère, ne laissant qu'un décalage sans sens.
+ */
+function PageOptions({
+  projectId,
+  onSelect,
+}: {
+  projectId: string;
+  onSelect: (page: PickedPage) => void;
+}) {
+  const t = useTranslations("Resources");
+  const { tree, loading } = usePagesQuery(projectId);
+  const rows = flattenPageTree(tree);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <Spinner className="size-4" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <CommandEmpty>{t("noPages")}</CommandEmpty>
+      {rows.map((page) => (
+        <CommandItem
+          key={page.id}
+          value={page.id}
+          keywords={[page.title]}
+          onSelect={() =>
+            onSelect({ id: page.id, title: page.title, icon: page.icon })
+          }
+        >
+          <span className="w-4 shrink-0 text-center">
+            {page.icon ?? <FileText className="inline size-3.5 opacity-70" />}
+          </span>
+          <span className="truncate">{page.title.trim() || t("untitledPage")}</span>
+        </CommandItem>
+      ))}
     </>
   );
 }
@@ -366,15 +520,26 @@ function formatBytes(n: number, mb: string, kb: string): string {
   return `${Math.max(1, Math.round(n / 1024))} ${kb}`;
 }
 
+/** Une teinte par genre de ressource, dans la table des pilules de contexte de
+    Numo : une page est indigo ICI COMME LÀ-BAS. Un fichier garde le gris — il
+    n'a pas de nature à annoncer, sa figure MIME le dit déjà. */
+const KIND_TINT: Record<"file" | "link" | "page", string | undefined> = {
+  file: undefined,
+  link: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
+  page: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
+};
+
 /**
- * Common display for resources everywhere in the app — a file and a link read
- * as the same chip, which is the whole point of the notion (MIN-184). What
- * differs is only what fits inside: a file shows its type icon and its weight,
- * a link its favicon and nothing else (a link has no size to speak of).
+ * Common display for resources everywhere in the app — a file, a link and a
+ * page read as the same chip, which is the whole point of the notion (MIN-184,
+ * MIN-275). What differs is only what fits inside: a file shows its type icon
+ * and its weight, a link its favicon, a page its emoji — and neither of those
+ * two has a size to speak of.
  *
- * - `pill` — bordered chip with icon, name and size; click previews images in a
- *   dialog, downloads other files, opens a link in a new tab; `onRemove` adds
- *   an X (composer rows, the author's own resources).
+ * - `pill` — la pilule commune de minddy ([entity-pill.tsx](entity-pill.tsx)),
+ *   celle du contexte de Numo : mêmes rayons concentriques, même figure teintée,
+ *   même croix en surimpression. Le clic prévisualise une image, télécharge un
+ *   autre fichier, ouvre un lien dans un onglet, une page dans l'app.
  * - `ultra-compact` — icon + truncated name only, for dense surfaces (chat
  *   bubbles, reply rows).
  *
@@ -384,6 +549,7 @@ export function ResourcePills({
   resources,
   pending,
   variant = "pill",
+  radius = "full",
   onRemove,
   canRemove,
   onRemovePending,
@@ -393,13 +559,15 @@ export function ResourcePills({
   resources?: ResourceLike[];
   pending?: PendingResource[];
   variant?: "pill" | "ultra-compact";
+  /** Rayon de la pilule — la figure suit (rayons concentriques). `md` pour
+      l'imbrication du composer de Numo. */
+  radius?: PillRadius;
   onRemove?: (resource: ResourceLike) => void;
   /** Per-resource gate for the X (default: every one when onRemove is set). */
   canRemove?: (resource: ResourceLike) => boolean;
   onRemovePending?: (localId: string) => void;
   className?: string;
-  /** Applied to each chip — e.g. `rounded-md` for the Numo composer's
-      concentric nesting, matching its PageContextBadge. */
+  /** Applied to each chip — e.g. `shadow-none` in the Numo composer. */
   pillClassName?: string;
 }) {
   const t = useTranslations("Resources");
@@ -410,23 +578,37 @@ export function ResourcePills({
   if (done.length === 0 && inFlight.length === 0) return null;
 
   const compact = variant === "ultra-compact";
-  // The pill variant mirrors the assistant's PageContextBadge anatomy (same
-  // height, icon tile, typography) — resources read as context chips.
-  const pillClass = cn(
-    compact
-      ? "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-[11px] text-foreground/90"
-      : "flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-border bg-card py-1 pl-1 pr-2.5 text-xs shadow-sm",
+  const compactClass = cn(
+    "inline-flex min-w-0 max-w-full items-center gap-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-[11px] text-foreground/90",
     pillClassName
   );
 
-  /** The chip's leading square — a MIME type icon, or the site's favicon. */
-  const iconTile = (inner: React.ReactNode) =>
+  /** The chip's leading square — a MIME type icon, a favicon, or an emoji. */
+  const iconTile = (inner: React.ReactNode, tint?: string) =>
     compact ? (
       inner
     ) : (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-[5px] border border-border/60 bg-muted text-muted-foreground">
+      <PillIcon radius={radius} tint={tint}>
         {inner}
-      </span>
+      </PillIcon>
+    );
+
+  /** L'emoji de la page, ou l'icône par défaut du wiki — même tuile que le
+      reste, pour que les trois genres se lisent sur une seule ligne. */
+  const pageIcon = (emoji: string | null | undefined) =>
+    iconTile(
+      emoji ? (
+        <span className={compact ? "text-[10px] leading-none" : "text-[11px] leading-none"}>
+          {emoji}
+        </span>
+      ) : (
+        <FileText
+          className={compact ? "size-3 shrink-0 text-muted-foreground" : "h-3 w-3"}
+          aria-hidden
+        />
+      ),
+      // Un emoji porte sa propre couleur : la teinte irait contre lui.
+      emoji ? undefined : KIND_TINT.page
     );
 
   const linkIcon = (iconDataUrl: string | null | undefined) =>
@@ -448,7 +630,8 @@ export function ResourcePills({
           className={compact ? "size-3 shrink-0 text-muted-foreground" : "h-3 w-3"}
           aria-hidden
         />
-      )
+      ),
+      iconDataUrl ? undefined : KIND_TINT.link
     );
 
   return (
@@ -457,43 +640,81 @@ export function ResourcePills({
         // A resource is a link when it says so AND carries an URL; anything
         // else is a file, which is what every row written before MIN-184 is.
         const url = a.kind === "link" ? (a.url ?? null) : null;
+        // A PAGE resource (MIN-275): its title comes from the join, live, so a
+        // renamed page is renamed here too; `file_name` is the snapshot taken
+        // when it was added, and all a trashed page leaves behind.
+        const pageId = a.kind === "page" ? (a.page_id ?? null) : null;
+        const pageHref =
+          pageId && a.project_id && a.page
+            ? pageResourceHref(a.project_id, pageId)
+            : null;
         const path = a.storage_path ?? null;
         const mime = a.mime_type ?? "application/octet-stream";
-        const image = !url && isImage(mime);
-        const label = url ? t("openLink") : image ? t("preview") : t("download");
+        const image = !url && !pageId && isImage(mime);
+        const label = url
+          ? t("openLink")
+          : pageId
+            ? pageHref
+              ? t("openPage")
+              : t("pageUnavailable")
+            : image
+              ? t("preview")
+              : t("download");
         const body = (
           <>
             {url
               ? linkIcon(a.icon_data_url)
-              : iconTile(
-                  <TypeIcon
-                    mime={mime}
-                    className={
-                      compact ? "size-3 shrink-0 text-muted-foreground" : "h-3 w-3"
-                    }
-                  />
-                )}
+              : pageId
+                ? pageIcon(a.page?.icon)
+                : iconTile(
+                    <TypeIcon
+                      mime={mime}
+                      className={
+                        compact ? "size-3 shrink-0 text-muted-foreground" : "h-3 w-3"
+                      }
+                    />
+                  )}
             <span
               className={cn(
                 "truncate",
-                !compact && "min-w-0 font-medium text-foreground/80"
+                !compact && "min-w-0 font-medium text-foreground/80",
+                // Page partie à la corbeille : le titre reste lisible, mais rien
+                // ne prétend qu'on peut l'ouvrir.
+                pageId && !pageHref && "text-muted-foreground line-through"
               )}
             >
-              {a.file_name}
+              {pageId ? (a.page?.title?.trim() || a.file_name) : a.file_name}
             </span>
-            {!compact && !url && (
+            {!compact && !url && !pageId && (
               <span className="shrink-0 text-muted-foreground">
                 {formatBytes(a.size_bytes ?? 0, t("mb"), t("kb"))}
               </span>
             )}
           </>
         );
-        return (
-          <span
-            key={a.id ?? url ?? path ?? a.file_name}
-            className={cn(pillClass, "group/pill")}
-          >
-            {url ? (
+        const removable = !!onRemove && (canRemove?.(a) ?? true);
+        const inner = (
+          <>
+            {pageHref ? (
+              // Navigation INTERNE — une page du wiki n'est pas un lien vers
+              // l'extérieur, et l'ouvrir dans un onglet perdrait le contexte du
+              // ticket qu'on est en train de lire.
+              <Link
+                href={pageHref}
+                title={label}
+                aria-label={label}
+                className="flex min-w-0 items-center gap-[inherit] hover:underline"
+              >
+                {body}
+              </Link>
+            ) : pageId ? (
+              <span
+                title={label}
+                className="flex min-w-0 items-center gap-[inherit]"
+              >
+                {body}
+              </span>
+            ) : url ? (
               <a
                 href={url}
                 target="_blank"
@@ -524,46 +745,95 @@ export function ResourcePills({
             ) : (
               <span className="flex min-w-0 items-center gap-[inherit]">{body}</span>
             )}
-            {onRemove && (canRemove?.(a) ?? true) && (
-              <button
-                type="button"
-                onClick={() => onRemove(a)}
-                title={t("remove")}
-                className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <X className={compact ? "size-3" : "size-3.5"} aria-hidden />
-                <span className="sr-only">{t("remove")}</span>
-              </button>
-            )}
-          </span>
+          </>
+        );
+        const key = a.id ?? url ?? pageId ?? path ?? a.file_name;
+
+        // La forme dense garde son enveloppe à elle : elle vit dans une bulle de
+        // conversation, où la pilule commune serait deux fois trop grande.
+        if (compact) {
+          return (
+            <span key={key} className={compactClass}>
+              {inner}
+              {removable && (
+                <button
+                  type="button"
+                  onClick={() => onRemove(a)}
+                  title={t("remove")}
+                  className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <X className="size-3" aria-hidden />
+                  <span className="sr-only">{t("remove")}</span>
+                </button>
+              )}
+            </span>
+          );
+        }
+
+        return (
+          <EntityPill
+            key={key}
+            radius={radius}
+            className={pillClassName}
+            action={
+              removable
+                ? {
+                    label: t("remove"),
+                    onClick: () => onRemove(a),
+                    icon: <X className="size-3" />,
+                  }
+                : undefined
+            }
+          >
+            {inner}
+          </EntityPill>
         );
       })}
 
       {inFlight
         .filter((p) => p.status === "uploading")
-        .map((p) => (
-          <span key={p.localId} className={cn(pillClass, "text-muted-foreground")}>
-            {compact ? (
+        .map((p) =>
+          compact ? (
+            <span
+              key={p.localId}
+              className={cn(compactClass, "text-muted-foreground")}
+            >
               <Spinner className="size-3 shrink-0" />
-            ) : (
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border border-border/60 bg-muted">
+              <span className="truncate">{p.file_name}</span>
+              {onRemovePending && (
+                <button
+                  type="button"
+                  onClick={() => onRemovePending(p.localId)}
+                  title={t("remove")}
+                  className="shrink-0 rounded-full p-0.5 hover:bg-accent hover:text-foreground"
+                >
+                  <X className="size-3" aria-hidden />
+                  <span className="sr-only">{t("remove")}</span>
+                </button>
+              )}
+            </span>
+          ) : (
+            <EntityPill
+              key={p.localId}
+              radius={radius}
+              className={cn("text-muted-foreground", pillClassName)}
+              action={
+                onRemovePending
+                  ? {
+                      label: t("remove"),
+                      onClick: () => onRemovePending(p.localId),
+                      icon: <X className="size-3" />,
+                    }
+                  : undefined
+              }
+            >
+              <PillIcon radius={radius}>
                 <Spinner className="h-3 w-3" />
-              </span>
-            )}
-            <span className="truncate">{p.file_name}</span>
-            {onRemovePending && (
-              <button
-                type="button"
-                onClick={() => onRemovePending(p.localId)}
-                title={t("remove")}
-                className="shrink-0 rounded-full p-0.5 hover:bg-accent hover:text-foreground"
-              >
-                <X className={compact ? "size-3" : "size-3.5"} aria-hidden />
-                <span className="sr-only">{t("remove")}</span>
-              </button>
-            )}
-          </span>
-        ))}
+              </PillIcon>
+              <span className="min-w-0 truncate">{p.file_name}</span>
+            </EntityPill>
+          )
+        )}
 
       <Dialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
         <DialogContent className="max-w-3xl p-2">

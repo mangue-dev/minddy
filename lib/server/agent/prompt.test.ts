@@ -386,6 +386,27 @@ describe("buildAgentContextMessage", () => {
     expect(msg).toContain("read_resource");
   });
 
+  it("écrit une PAGE du wiki en entier, avec de quoi l'ouvrir (MIN-275)", () => {
+    // Comme un lien : le titre et l'id tiennent en une ligne, et les faire
+    // chercher par un appel de tool serait un aller-retour pour ce qu'on a déjà.
+    const msg = buildAgentContextMessage({
+      ...base,
+      resources: [
+        {
+          id: "att-3",
+          kind: "page" as const,
+          name: "Spécification des pages",
+          pageId: "page-1",
+        },
+      ],
+    });
+    expect(msg).toContain(
+      "- Spécification des pages — a page of the project's wiki, read it with read_page id: page-1"
+    );
+    // Ni taille ni type MIME : une page n'est pas un fichier.
+    expect(msg).not.toMatch(/Spécification des pages \(/);
+  });
+
   it("sans pièce jointe, pas de section ; le snapshot renvoie vers read_issue", () => {
     const msg = buildAgentContextMessage(base);
     expect(msg).not.toContain("Attachments on the ticket");

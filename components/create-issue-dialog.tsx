@@ -774,9 +774,15 @@ export function CreateIssueDialog({
                   {t("numoWorking")}
                 </span>
               )}
+              {/* Le wiki proposé est celui de CE projet. Créer le ticket dans un
+                  autre projet (l'entrée du menu de création) fait voyager les
+                  fichiers, jamais les pages : le serveur écarte celles qui
+                  n'appartiennent pas au projet d'arrivée (MIN-275). */}
               <AddResourceButton
                 onFiles={uploads.addFiles}
                 onLink={uploads.addLink}
+                onPage={uploads.addPage}
+                projectId={projectId}
                 disabled={submitting}
               />
               <div className="ml-auto flex items-center gap-4">

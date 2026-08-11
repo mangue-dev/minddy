@@ -1178,7 +1178,15 @@ export async function executeTool(
        */
       case "add_resource": {
         const url = typeof args.url === "string" ? args.url.trim() : "";
-        if (!url) return toolError("url is required.");
+        const pageId = typeof args.page_id === "string" ? args.page_id.trim() : "";
+        if (!!url === !!pageId) {
+          return toolError(
+            url
+              ? "A resource is a link OR a page: send url, or page_id, not both."
+              : "Nothing to attach: send url for a link, or page_id for a page " +
+                  "of the wiki (list_pages)."
+          );
+        }
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
         const objectiveId =
           typeof args.objective_id === "string" ? args.objective_id : "";
@@ -1205,15 +1213,33 @@ export async function executeTool(
         }
 
         let resource;
-        try {
-          resource = await resolveLinkResource(url);
-        } catch (e) {
-          if (e instanceof FaviconError) {
-            return toolError(
-              "That url can't be reached — it must be a public http(s) address."
-            );
+        if (pageId) {
+          // Le titre est relu ici, pas demandé au modèle : c'est la seule source
+          // qui ne puisse pas se tromper de page.
+          const { data: page } = await ctx.supabase
+            .from("pages")
+            .select("id, title")
+            .eq("id", pageId)
+            .eq("project_id", projectId)
+            .is("deleted_at", null)
+            .maybeSingle();
+          if (!page) return toolError("Page not found in this project.");
+          resource = {
+            kind: "page" as const,
+            page_id: pageId,
+            file_name: ((page.title as string) ?? "").trim() || "Page",
+          };
+        } else {
+          try {
+            resource = await resolveLinkResource(url);
+          } catch (e) {
+            if (e instanceof FaviconError) {
+              return toolError(
+                "That url can't be reached — it must be a public http(s) address."
+              );
+            }
+            return toolError((e as Error).message);
           }
-          return toolError((e as Error).message);
         }
 
         try {
@@ -1227,12 +1253,19 @@ export async function executeTool(
           });
           return {
             result: {
-              resource: {
-                id: row.id,
-                kind: "link",
-                url: row.url,
-                title: row.file_name,
-              },
+              resource: pageId
+                ? {
+                    id: row.id,
+                    kind: "page",
+                    page_id: row.page_id,
+                    title: row.file_name,
+                  }
+                : {
+                    id: row.id,
+                    kind: "link",
+                    url: row.url,
+                    title: row.file_name,
+                  },
             },
             success: true,
           };

@@ -596,6 +596,8 @@ export function ObjectiveDialog({
                 <AddResourceButton
                   onFiles={uploads.addFiles}
                   onLink={uploads.addLink}
+                  onPage={uploads.addPage}
+                  projectId={projectId}
                   disabled={submitting}
                 />
               )}

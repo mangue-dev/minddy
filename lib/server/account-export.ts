@@ -162,7 +162,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     service
       .from("attachments")
       .select(
-        "id, project_id, issue_id, comment_id, kind, url, file_name, mime_type, size_bytes, created_at"
+        "id, project_id, issue_id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, created_at"
       )
       .eq("created_by", userId)
       .order("created_at"),
@@ -294,7 +294,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       attachments:
         "Ressources que vous avez ajoutées : fichiers (métadonnées seulement — " +
         "les fichiers eux-mêmes restent téléchargeables depuis l'application " +
-        "tant que le compte existe) et liens, dont l'URL figure ici.",
+        "tant que le compte existe), liens, dont l'URL figure ici, et pages du " +
+        "projet, désignées par leur identifiant.",
       secrets:
         "Aucune clé ni aucun jeton ne figure dans ce fichier : seuls les " +
         "préfixes déjà affichés dans les réglages y apparaissent.",

@@ -14,7 +14,7 @@ export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB
 /** Files and links confounded — a resource is a resource (MIN-184). */
 export const MAX_ATTACHMENTS = 10;
 
-/** One entry of a composer's queue, file or link, in flight or landed. */
+/** One entry of a composer's queue — file, link or page, in flight or landed. */
 export interface PendingResource {
   localId: string;
   status: "uploading" | "done";
@@ -27,6 +27,11 @@ export interface PendingResource {
   /** Link half. */
   url?: string;
   icon_data_url?: string | null;
+  /** Page half (MIN-275) — `page` mirrors what the resolved row carries, so the
+      chip of a page picked in a composer reads exactly like a saved one. */
+  page_id?: string;
+  page?: { id: string; title: string; icon: string | null } | null;
+  project_id?: string;
 }
 
 /** Re-encoding a gif kills the animation, an svg its vectors — upload as-is. */
@@ -56,12 +61,14 @@ const PROJECT_PREFIX_RE = /^projects\/([0-9a-fA-F-]{36})$/;
 
 /**
  * Shared queue for every resource composer (comments, issue panel, create
- * dialog, Numo shell). The two halves are deliberately symmetric:
+ * dialog, Numo shell). The three forms are deliberately symmetric:
  *
  *  - a FILE goes DIRECTLY from the browser to the private `attachments` bucket
  *    (storage RLS gates the path prefix), then its descriptor lands here;
  *  - a LINK goes to `/api/projects/{id}/link-preview`, which resolves its title
- *    and favicon, then its descriptor lands here the same way.
+ *    and favicon, then its descriptor lands here the same way;
+ *  - a PAGE (MIN-275) skips both: the picker already read its id and title from
+ *    the project's pages cache, so the descriptor lands here at once.
  *
  * Either way the DB rows are created server-side from `inputs` — at submit time
  * for composers, right away for surfaces that pass `onUploaded`. Abandoned
@@ -252,6 +259,50 @@ export function useAttachmentUploads(
     [getPrefix, max, t]
   );
 
+  /**
+   * Le geste « page » (MIN-275) — le plus court des trois : rien à téléverser,
+   * rien à aller résoudre sur le réseau. Le sélecteur a lu l'id, le titre et
+   * l'emoji dans le cache des pages du projet, donc l'entrée naît `done` et
+   * `onUploaded` part dans la foulée.
+   */
+  const addPage = useCallback(
+    (page: { id: string; title: string; icon: string | null }) => {
+      const projectId = PROJECT_PREFIX_RE.exec(getPrefix().replace(/\/+$/, ""))?.[1];
+      if (!projectId) return;
+      if (pendingRef.current.length >= max) {
+        toast.error(t("tooMany", { max }));
+        return;
+      }
+      // Deux fois la même page sur un ticket ne dirait rien de plus.
+      if (pendingRef.current.some((p) => p.page_id === page.id)) return;
+
+      const localId = crypto.randomUUID();
+      const title = page.title.trim() || t("untitledPage");
+      setPending((prev) => [
+        ...prev,
+        {
+          localId,
+          status: "done",
+          kind: "page",
+          storage_path: "",
+          file_name: title,
+          mime_type: "application/vnd.minddy.page",
+          size_bytes: 0,
+          page_id: page.id,
+          page: { id: page.id, title, icon: page.icon },
+          project_id: projectId,
+        },
+      ]);
+      // Ni le titre ni l'id : seulement qu'une page a été citée.
+      trackEvent("resource_added", { target: "issue", kind: "page" });
+      onUploadedRef.current?.(
+        { kind: "page", page_id: page.id, file_name: title },
+        localId
+      );
+    },
+    [getPrefix, max, t]
+  );
+
   // No storage delete policy for users — the dropped object stays orphaned,
   // same policy as an abandoned composer.
   const remove = useCallback((localId: string) => {
@@ -266,7 +317,22 @@ export function useAttachmentUploads(
   const restore = useCallback((restored: ResourceInput[]) => {
     setPending(
       restored.map((input) =>
-        input.kind === "link"
+        input.kind === "page"
+          ? {
+              localId: crypto.randomUUID(),
+              status: "done" as const,
+              kind: "page" as const,
+              storage_path: "",
+              file_name: input.file_name,
+              mime_type: "application/vnd.minddy.page",
+              size_bytes: 0,
+              page_id: input.page_id,
+              // Le brouillon n'a gardé que le TITRE du moment : sans l'emoji ni
+              // la garantie que la page vit encore, la pilule restaurée
+              // s'affiche sur ce qu'on sait, et le serveur tranche à l'envoi.
+              page: { id: input.page_id, title: input.file_name, icon: null },
+            }
+          : input.kind === "link"
           ? {
               localId: crypto.randomUUID(),
               status: "done" as const,
@@ -293,7 +359,13 @@ export function useAttachmentUploads(
       pending
         .filter((p) => p.status === "done")
         .map((p) =>
-          p.kind === "link"
+          p.kind === "page"
+            ? {
+                kind: "page" as const,
+                page_id: p.page_id as string,
+                file_name: p.file_name,
+              }
+            : p.kind === "link"
             ? {
                 kind: "link" as const,
                 url: p.url as string,
@@ -312,7 +384,17 @@ export function useAttachmentUploads(
 
   const uploading = pending.some((p) => p.status === "uploading");
 
-  return { pending, addFiles, addLink, remove, clear, restore, inputs, uploading };
+  return {
+    pending,
+    addFiles,
+    addLink,
+    addPage,
+    remove,
+    clear,
+    restore,
+    inputs,
+    uploading,
+  };
 }
 
 /** `https://www.linear.app/x` → `linear.app`; the raw string if unparsable

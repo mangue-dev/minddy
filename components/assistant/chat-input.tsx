@@ -801,7 +801,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           {uploads.pending.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2.5">
               <ResourcePills
-                pillClassName="rounded-md shadow-none"
+                radius="md"
+                pillClassName="shadow-none"
                 resources={uploads.pending.filter((p) => p.status === "done")}
                 pending={uploads.pending}
                 onRemove={(a) => {

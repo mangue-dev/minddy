@@ -9,6 +9,7 @@ import {
   type ResolvedIssueRef,
 } from "@/lib/server/issue-reads";
 import { signedAttachmentUrl, downloadAttachment } from "@/lib/server/attachments";
+import { joinedPage } from "@/lib/server/resource-select";
 import {
   MAX_DESCRIPTION_LENGTH,
   updateIssueFields,
@@ -40,7 +41,9 @@ import type { AgentToolImage } from "./content";
  *                          avec Numo/MCP).
  *  - `read_issue`       → tout le ticket (getIssue) + plan parsé en tâches +
  *                          derniers commentaires.
- *  - `read_resource`    → une ressource : l'url et le titre pour un LIEN ; pour un
+ *  - `read_resource`    → une ressource : l'url et le titre pour un LIEN ;
+ *                          l'id et le titre pour une PAGE du wiki (le document
+ *                          se lit ensuite par `read_page`) ; pour un
  *                          FICHIER, texte inline quand c'est lisible, l'IMAGE
  *                          ELLE-MÊME quand c'est une maquette et que le modèle du
  *                          run la voit (MIN-111), sinon URL signée courte
@@ -379,7 +382,7 @@ async function readResource(
   const { data: row } = await service
     .from("attachments")
     .select(
-      "id, issue_id, objective_id, project_id, kind, url, storage_path, file_name, mime_type, size_bytes, comment_id",
+      "id, issue_id, objective_id, project_id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, comment_id, page:pages(id, title, deleted_at)",
     )
     .eq("id", resourceId)
     .maybeSingle();
@@ -394,6 +397,26 @@ async function readResource(
     : row.project_id === ctx.projectId;
   if (!inProject) {
     return { result: { error: "Resource not found in this project." }, success: false };
+  }
+
+  // Une page du wiki (MIN-275) : son corps se lit par `read_page`, qui rend du
+  // markdown — le recopier ici ferait une seconde porte à tenir. Lecture en clé
+  // service, donc une page corbeillée remonte aussi : c'est `deleted_at` qui le
+  // dit, pas une absence.
+  if (row.kind === "page") {
+    const page = joinedPage(row.page);
+    return {
+      result: {
+        id: row.id,
+        kind: "page",
+        page_id: row.page_id,
+        title: page?.title?.trim() || row.file_name,
+        ...(page?.deleted_at ? { page_in_trash: true } : {}),
+        read_with: "read_page",
+        comment_id: row.comment_id ?? null,
+      },
+      success: true,
+    };
   }
 
   // Un lien n'a pas d'octets : ni URL signée, ni contenu inline.

@@ -52,6 +52,8 @@ export function IssueResourcesSection({
         <AddResourceButton
           onFiles={uploads.addFiles}
           onLink={uploads.addLink}
+          onPage={uploads.addPage}
+          projectId={projectId}
           className="-mr-1.5"
         />
       </PropertyRow>

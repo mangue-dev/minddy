@@ -11,6 +11,7 @@ import {
   type ReadContext,
 } from "@/lib/server/issue-reads";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { joinedPage } from "@/lib/server/resource-select";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { isForgePrEvent, forgePrActor } from "@/lib/pr-events";
@@ -190,15 +191,27 @@ function truncate(text: string | null | undefined, max: number): string | null {
     lien porte son url, un fichier son nom/type/taille — ses octets restent
     derrière minddy_get_resource. */
 function resourceMeta(row: Record<string, unknown>): Record<string, unknown> {
-  return row.kind === "link"
-    ? { id: row.id, kind: "link", url: row.url, title: row.file_name }
-    : {
-        id: row.id,
-        kind: "file",
-        file_name: row.file_name,
-        mime_type: row.mime_type,
-        size_bytes: row.size_bytes,
-      };
+  if (row.kind === "link") {
+    return { id: row.id, kind: "link", url: row.url, title: row.file_name };
+  }
+  // Page du wiki (MIN-275) : le titre VIVANT quand la jointure l'a ramené, la
+  // photo de la ligne sinon. Le document se lit par minddy_get_page.
+  if (row.kind === "page") {
+    const page = joinedPage(row.page);
+    return {
+      id: row.id,
+      kind: "page",
+      page_id: row.page_id,
+      title: page?.title?.trim() || row.file_name,
+    };
+  }
+  return {
+    id: row.id,
+    kind: "file",
+    file_name: row.file_name,
+    mime_type: row.mime_type,
+    size_bytes: row.size_bytes,
+  };
 }
 
 /** Text-ish MIME → return the file as readable text rather than a base64 blob. */
@@ -940,8 +953,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "effort, assignee, objective, due date, parent), its implementation plan " +
         "(raw markdown plus parsed plan_tasks with stable task_index for " +
         "minddy_update_plan_task, and plan_progress), comments with author names, " +
-        "resource metadata — files AND links (id + kind, file name/type/size or " +
-        "url, on the issue and on each comment; add one with " +
+        "resource metadata — files, links AND pages of the wiki (id + kind, file " +
+        "name/type/size, url, or page_id + live title, on the issue and on each " +
+        "comment; add one with " +
         "minddy_add_resource, read one with minddy_get_resource) —, sub-issues, " +
         "its `relations` (the issues it blocks, is blocked_by, or is related to, " +
         "each with identifier/title/status — that is the order of work; write " +
@@ -1293,8 +1307,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "status (planned/in_progress/done/canceled), lead, target date, " +
         "progress: { done, total, percent } computed from linked issues " +
         "(status 'done' / all linked), same as the UI's progress bar. Plus, when " +
-        "present, the objective's own resources — files AND links (id + kind, " +
-        "file name/type/size or url; read one with minddy_get_resource). " +
+        "present, the objective's own resources — files, links AND pages of the " +
+        "wiki (id + kind, file name/type/size, url, or page_id; read one with " +
+        "minddy_get_resource). " +
         "minddy_get_objective opens ONE of them in full: the whole description, " +
         "its issues, and its comment thread.",
       inputSchema: { project_id: PROJECT_ID },
@@ -1326,7 +1341,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         service
           .from("attachments")
           .select(
-            "id, objective_id, kind, url, file_name, mime_type, size_bytes"
+            "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)"
           )
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null)
@@ -1459,7 +1474,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
             .order("created_at", { ascending: true }),
           service
             .from("attachments")
-            .select("id, comment_id, kind, url, file_name, mime_type, size_bytes")
+            .select(
+              "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)"
+            )
             .eq("objective_id", objective.id)
             .order("created_at", { ascending: true }),
           recentActivity({ objective_id: objective.id as string }),
@@ -2286,11 +2303,13 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Attach a resource to an issue, or to one of its comments (pass " +
         "comment_id, e.g. the id minddy_add_comment returned). A resource is " +
-        "EITHER a file — content inline as base64 with its file_name, 10 MB max " +
-        "after decoding, landing in minddy's private storage — OR a link: pass " +
-        "`url` alone and minddy fetches the page's title and favicon itself. The " +
-        "two are exclusive: send one or the other, never both. Either way it " +
-        "shows as the same pill in the app, and minddy_get_issue lists it.",
+        "ONE of three things: a FILE — content inline as base64 with its " +
+        "file_name, 10 MB max after decoding, landing in minddy's private " +
+        "storage —, a LINK — pass `url` alone and minddy fetches the page's " +
+        "title and favicon itself —, or a PAGE of the project's wiki: pass " +
+        "`page_id` alone (get it from minddy_list_pages). The three are " +
+        "exclusive: send exactly one. Either way it shows as the same pill in " +
+        "the app, and minddy_get_issue lists it.",
       inputSchema: {
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
@@ -2332,6 +2351,15 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .describe(
             "A FILE resource: its content, base64-encoded (no 'data:' prefix)."
           ),
+        page_id: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            "A PAGE resource: the id of a page of THIS project's wiki " +
+              "(minddy_list_pages). Its title is read server-side and stays in " +
+              "sync when the page is renamed. Leave out for a file or a link."
+          ),
       },
       annotations: WRITE,
     },
@@ -2341,18 +2369,20 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      // Les deux moitiés sont exclusives : un appel qui porte les deux (ou
+      // Les trois formes sont exclusives : un appel qui en porte deux (ou
       // aucune) est une intention ambiguë, pas quelque chose à deviner.
       const wantsLink = !!args.url?.trim();
       const wantsFile = !!args.content_base64;
-      if (wantsLink === wantsFile) {
+      const wantsPage = !!args.page_id?.trim();
+      const asked = [wantsLink, wantsFile, wantsPage].filter(Boolean).length;
+      if (asked !== 1) {
         return fail(
           "invalid_params",
-          wantsLink
-            ? "A resource is either a file or a link: send url, or " +
-                "content_base64 + file_name, not both."
-            : "Nothing to attach: send url for a link, or content_base64 + " +
-                "file_name for a file."
+          asked === 0
+            ? "Nothing to attach: send url for a link, page_id for a page of " +
+                "the wiki, or content_base64 + file_name for a file."
+            : "A resource is a file, a link OR a page: send exactly one of " +
+                "content_base64, url and page_id."
         );
       }
 
@@ -2364,6 +2394,49 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .maybeSingle();
         if (!comment || comment.issue_id !== ref.issue.id) {
           return fail("not_found", "Comment not found on this issue.");
+        }
+      }
+
+      if (wantsPage) {
+        const pageId = (args.page_id as string).trim();
+        // Le titre est relu ICI plutôt que demandé à l'appelant : c'est la
+        // seule source qui ne puisse pas mentir, et la photo qu'en garde la
+        // ligne ne sert qu'aux lecteurs sans jointure.
+        const { data: page } = await getServiceClient()
+          .from("pages")
+          .select("id, title")
+          .eq("id", pageId)
+          .eq("project_id", scope.access.project.id)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (!page) {
+          return fail("not_found", "Page not found in this project.");
+        }
+        try {
+          const [row] = await insertAttachments(getServiceClient(), {
+            projectId: scope.access.project.id,
+            issueId: ref.issue.id,
+            commentId: args.comment_id ?? null,
+            createdBy: scope.userId,
+            resources: [
+              {
+                kind: "page",
+                page_id: pageId,
+                file_name: (page.title as string)?.trim() || "Page",
+              },
+            ],
+          });
+          return ok({
+            resource: {
+              id: row.id,
+              kind: "page",
+              page_id: pageId,
+              title: row.file_name,
+              comment_id: row.comment_id,
+            },
+          });
+        } catch (e) {
+          return fail("database_error", (e as Error).message);
         }
       }
 
@@ -2452,7 +2525,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "resource_id you got from minddy_get_issue (issue and comment resources) " +
         "or minddy_list_objectives (objective resources). A LINK comes back as its " +
         "url and title — there is nothing to download, fetch the page yourself if " +
-        "you need its content. A FILE returns its metadata and a short-lived " +
+        "you need its content. A PAGE comes back as its page_id and title: read " +
+        "the document itself with minddy_get_page. A FILE returns its metadata and a short-lived " +
         "signed download_url (~10 min); fetch that URL to grab the bytes without " +
         "loading them into context, whatever the size. Set include_content=true to " +
         "also embed a file inline (base64): images come back viewable, text-ish " +
@@ -2484,13 +2558,33 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const { data: row, error } = await service
         .from("attachments")
         .select(
-          "id, kind, url, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id"
+          "id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id, page:pages(id, title, deleted_at)"
         )
         .eq("id", args.resource_id)
         .eq("project_id", scope.access.project.id)
         .maybeSingle();
       if (error) return fail("database_error", error.message);
       if (!row) return fail("not_found", "Resource not found in this project.");
+
+      // Une page non plus : son corps se lit par minddy_get_page, qui rend du
+      // markdown — le recopier ici en ferait une seconde porte à tenir.
+      if (row.kind === "page") {
+        // Lecture en clé SERVICE : la jointure remonte aussi une page
+        // corbeillée, d'où le `deleted_at` explicite plutôt qu'une absence.
+        const page = joinedPage(row.page);
+        return ok({
+          id: row.id,
+          kind: "page",
+          page_id: row.page_id,
+          // Le titre VIVANT quand la page est là, la photo de la ligne sinon.
+          title: page?.title?.trim() || row.file_name,
+          page_in_trash: !!page?.deleted_at,
+          read_with: "minddy_get_page",
+          issue_id: row.issue_id,
+          objective_id: row.objective_id,
+          comment_id: row.comment_id,
+        });
+      }
 
       // Un lien n'a pas d'octets : ni URL signée, ni contenu inline.
       if (row.kind === "link") {

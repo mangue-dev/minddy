@@ -273,13 +273,18 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "add_resource",
       description:
-        "Attach a LINK to an issue or to an objective — a doc, a design, a reference. It shows in the sidebar as the same pill as a file, with the site's favicon; minddy fetches the page's title itself, so send the url alone. Files can't be attached this way (you have none to send): a person adds those from the app.",
+        "Attach a LINK or a PAGE of the project's wiki to an issue or to an objective — a doc, a design, a reference. It shows in the sidebar as the same pill as a file: a link with the site's favicon (minddy fetches the page's title itself, so send the url alone), a page with its emoji and its live title. Send url OR page_id, never both. Files can't be attached this way (you have none to send): a person adds those from the app.",
       parameters: {
         type: "object",
         properties: {
           url: {
             type: "string",
-            description: "The link's http(s) address.",
+            description: "A LINK: its http(s) address. Exclusive with page_id.",
+          },
+          page_id: {
+            type: "string",
+            description:
+              "A PAGE of this project's wiki: its id, from list_pages. Exclusive with url.",
           },
           issue_id: {
             type: "string",
@@ -290,7 +295,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description: "Attach to this objective. Exclusive with issue_id.",
           },
         },
-        required: ["url"],
+        required: [],
       },
     },
   },

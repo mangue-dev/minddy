@@ -5,9 +5,10 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import type {
   Attachment,
   LinkResourceInput,
+  PageResourceInput,
   ResourceInput,
 } from "@/lib/types";
-import { isLinkResource } from "@/lib/types";
+import { isLinkResource, isPageResource } from "@/lib/types";
 
 /** Client-checked too (use-attachment-uploads) — keep the two in sync. */
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -53,6 +54,31 @@ function parseLinkResource(a: Record<string, unknown>): LinkResourceInput | null
   return { kind: "link", url: raw, file_name: fileName, icon_data_url: icon };
 }
 
+const UUID_RE =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+/**
+ * The page half of {@link parseResourcesInput} (MIN-275). Only the shape is
+ * checked here — that the page exists, lives in the parent's project and isn't
+ * in the trash is a question for the database, answered at the single write
+ * choke point ({@link insertAttachments}).
+ */
+function parsePageResource(a: Record<string, unknown>): PageResourceInput | null {
+  if (typeof a.page_id !== "string" || !UUID_RE.test(a.page_id.trim())) return null;
+  // A page resource carries neither bytes nor an address: anything else in the
+  // payload is a caller confusing the three kinds.
+  if (a.storage_path != null || a.url != null) return null;
+  const fileName =
+    typeof a.file_name === "string" ? a.file_name.trim().slice(0, 200) : "";
+  return {
+    kind: "page",
+    page_id: a.page_id.trim(),
+    // An untitled page is the ordinary state of a page just created; the live
+    // join is what names it anyway.
+    file_name: fileName || "Page",
+  };
+}
+
 /**
  * Validate the resource descriptors a client sends — a FILE (after its
  * direct-to-storage upload) or a LINK (after /link-preview resolved its title
@@ -74,12 +100,19 @@ export function parseResourcesInput(
     if (!item || typeof item !== "object") return null;
     const a = item as Record<string, unknown>;
     const kind = a.kind ?? "file";
-    if (kind !== "file" && kind !== "link") return null;
+    if (kind !== "file" && kind !== "link" && kind !== "page") return null;
 
     if (kind === "link") {
       const link = parseLinkResource(a);
       if (!link) return null;
       out.push(link);
+      continue;
+    }
+
+    if (kind === "page") {
+      const page = parsePageResource(a);
+      if (!page) return null;
+      out.push(page);
       continue;
     }
 
@@ -184,7 +217,9 @@ const PROJECT_PATH_RE = /^projects\/([0-9a-fA-F-]{36})\//;
  * returning descriptors (with the new target paths) ready for insertAttachments.
  * Cross-project issue creation needs this: the browser uploaded the files under
  * the source project, and a storage object can't be referenced across projects.
- * A LINK has no storage object to copy — it goes through untouched.
+ * A LINK has no storage object to copy — it goes through untouched. A PAGE
+ * belongs to a project and cannot follow: it is kept only when the target
+ * project is already its own.
  *
  * Each source project is access-checked against the actor (cached) so a client
  * can't smuggle another project's file into one it owns; files whose source is
@@ -207,6 +242,20 @@ export async function copyResourcesToProject(
   for (const a of args.resources) {
     if (isLinkResource(a)) {
       out.push(a);
+      continue;
+    }
+    // A PAGE belongs to one project and doesn't travel: the ticket created in
+    // another project would cite a page nobody there can open. Dropped like an
+    // unreachable file, not refused — the rest of the creation goes through.
+    if (isPageResource(a)) {
+      const { data: page } = await service
+        .from("pages")
+        .select("id")
+        .eq("id", a.page_id)
+        .eq("project_id", args.targetProjectId)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (page) out.push(a);
       continue;
     }
     const sourcePid = PROJECT_PATH_RE.exec(a.storage_path)?.[1];
@@ -263,36 +312,101 @@ function attachmentRow(parent: AttachmentParent, a: ResourceInput) {
   };
   // A link weighs nothing and isn't a file: the MIME says "an URL",
   // which is what keeps the type-icon branch of the pill honest.
-  return isLinkResource(a)
-    ? {
-        ...columns,
-        kind: "link" as const,
-        url: a.url,
-        icon_data_url: a.icon_data_url ?? null,
-        storage_path: null,
-        file_name: a.file_name,
-        mime_type: "text/uri-list",
-        size_bytes: 0,
-      }
-    : {
-        ...columns,
-        kind: "file" as const,
-        storage_path: a.storage_path,
-        file_name: a.file_name,
-        mime_type: a.mime_type,
-        size_bytes: a.size_bytes,
-      };
+  if (isLinkResource(a)) {
+    return {
+      ...columns,
+      kind: "link" as const,
+      url: a.url,
+      icon_data_url: a.icon_data_url ?? null,
+      storage_path: null,
+      page_id: null,
+      file_name: a.file_name,
+      mime_type: "text/uri-list",
+      size_bytes: 0,
+    };
+  }
+  // A page is neither: no bytes, no address — a foreign key, and a snapshot of
+  // the title for whoever reads the row without the join (MIN-275).
+  if (isPageResource(a)) {
+    return {
+      ...columns,
+      kind: "page" as const,
+      page_id: a.page_id,
+      storage_path: null,
+      url: null,
+      file_name: a.file_name,
+      mime_type: "application/vnd.minddy.page",
+      size_bytes: 0,
+    };
+  }
+  return {
+    ...columns,
+    kind: "file" as const,
+    storage_path: a.storage_path,
+    page_id: null,
+    file_name: a.file_name,
+    mime_type: a.mime_type,
+    size_bytes: a.size_bytes,
+  };
+}
+
+/**
+ * A resource pointing at a page that isn't a live page of the parent's project
+ * (MIN-275). Typed because the routes answer 400 on it — a client naming
+ * someone else's page is a malformed request, not a server failure.
+ */
+export class ResourceScopeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResourceScopeError";
+  }
+}
+
+/**
+ * The one place a page resource is checked against its project.
+ *
+ * `parseResourcesInput` is pure — it validates shapes, and can't ask the
+ * database anything. So the check lives at the WRITE choke point instead, where
+ * every writer passes: the resources routes, ticket and objective creation, the
+ * MCP tool, Numo, the importer. A guard on each of those would be six guards,
+ * and the seventh writer would be written without one.
+ *
+ * Trashed pages are refused too: citing a page nobody can open would produce a
+ * resource that is inert from birth.
+ */
+async function assertPagesInProject(
+  service: SupabaseClient,
+  projectId: string,
+  resources: ResourceInput[]
+): Promise<void> {
+  const ids = [...new Set(resources.filter(isPageResource).map((r) => r.page_id))];
+  if (ids.length === 0) return;
+  const { data, error } = await service
+    .from("pages")
+    .select("id")
+    .eq("project_id", projectId)
+    .is("deleted_at", null)
+    .in("id", ids);
+  if (error) throw new Error(`page resource check failed: ${error.message}`);
+  const live = new Set((data ?? []).map((p) => (p as { id: string }).id));
+  const missing = ids.filter((id) => !live.has(id));
+  if (missing.length > 0) {
+    throw new ResourceScopeError(
+      `page not found in this project: ${missing.join(", ")}`
+    );
+  }
 }
 
 /** Insert the rows for resources — files already uploaded to storage, links
-    already resolved (service client — callers have checked project access).
-    The parent is an issue OR an objective OR a feedback post (exactly one —
-    the attachments_parent_ck constraint). */
+    already resolved, pages cited by id (service client — callers have checked
+    project access). The parent is an issue OR an objective OR a feedback post
+    (exactly one — the attachments_parent_ck constraint). */
 export async function insertAttachments(
   service: SupabaseClient,
   args: AttachmentParent & { resources: ResourceInput[] }
 ): Promise<Attachment[]> {
   if (args.resources.length === 0) return [];
+  await assertPagesInProject(service, args.projectId, args.resources);
   const { data, error } = await service
     .from("attachments")
     .insert(args.resources.map((a) => attachmentRow(args, a)))
@@ -313,6 +427,18 @@ export async function insertAttachmentsFor(
   entries: { parent: AttachmentParent; resource: ResourceInput }[]
 ): Promise<void> {
   if (entries.length === 0) return;
+  // Same guard as insertAttachments, per project — an import batch can carry
+  // several (the importer writes into one project at a time, but nothing in the
+  // signature says so).
+  const byProject = new Map<string, ResourceInput[]>();
+  for (const e of entries) {
+    const list = byProject.get(e.parent.projectId) ?? [];
+    list.push(e.resource);
+    byProject.set(e.parent.projectId, list);
+  }
+  for (const [projectId, resources] of byProject) {
+    await assertPagesInProject(service, projectId, resources);
+  }
   const { error } = await service
     .from("attachments")
     .insert(entries.map((e) => attachmentRow(e.parent, e.resource)));

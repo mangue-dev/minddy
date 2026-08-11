@@ -241,6 +241,64 @@ describe("read_resource — périmètre projet", () => {
   });
 });
 
+/**
+ * MIN-275 : une ressource peut être une PAGE du wiki. Elle n'a ni octets ni
+ * adresse — ce que `read_resource` en rend, c'est de quoi ouvrir le document
+ * avec `read_page`, et surtout le titre VIVANT (une page renommée ne doit pas
+ * revenir sous son ancien nom, qui n'est plus dans aucune sidebar).
+ */
+describe("read_resource sur une page du wiki", () => {
+  const pageRow = (over: Record<string, unknown> = {}) => ({
+    id: "att-1",
+    issue_id: ANCHOR_ID,
+    project_id: "proj-1",
+    kind: "page",
+    page_id: "55555555-5555-4555-8555-555555555555",
+    storage_path: null,
+    url: null,
+    file_name: "Ancien titre",
+    mime_type: "application/vnd.minddy.page",
+    size_bytes: 0,
+    comment_id: null,
+    page: {
+      id: "55555555-5555-4555-8555-555555555555",
+      title: "Spécification des pages",
+      deleted_at: null,
+    },
+    ...over,
+  });
+
+  it("rend l'id et le titre vivant, et renvoie vers read_page", async () => {
+    attachment = pageRow();
+    const out = await read(true);
+    expect(out.success).toBe(true);
+    expect(out.images).toBeUndefined();
+    expect(out.result).toMatchObject({
+      kind: "page",
+      page_id: "55555555-5555-4555-8555-555555555555",
+      title: "Spécification des pages",
+      read_with: "read_page",
+    });
+    // Aucune URL signée : il n'y a pas d'objet dans le bucket.
+    expect(JSON.stringify(out.result)).not.toContain("download_url");
+  });
+
+  it("dit qu'une page est à la corbeille, en retombant sur le titre de la ligne", async () => {
+    attachment = pageRow({
+      page: {
+        id: "55555555-5555-4555-8555-555555555555",
+        title: "",
+        deleted_at: "2026-08-01T00:00:00.000Z",
+      },
+    });
+    const out = await read(true);
+    expect(out.result).toMatchObject({
+      title: "Ancien titre",
+      page_in_trash: true,
+    });
+  });
+});
+
 describe("update_issue — les statuts restent manuels", () => {
   it("refuse `status`, sans rien écrire", async () => {
     const out = await executeIssueTool(ctx(), "update_issue", {

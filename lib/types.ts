@@ -39,12 +39,25 @@ export interface Attachment {
   feedback_post_id?: string | null;
   comment_id: string | null;
   kind: ResourceKind;
-  /** Set for a file, null for a link (attachments_kind_ck). */
+  /** Set for a file, null otherwise (attachments_kind_ck). */
   storage_path: string | null;
-  /** Set for a link, null for a file (attachments_kind_ck). */
+  /** Set for a link, null otherwise (attachments_kind_ck). */
   url?: string | null;
   /** Favicon of a link, `data:image/…;base64,…`; null when the site had none. */
   icon_data_url?: string | null;
+  /** Set for a page resource, null otherwise (attachments_kind_ck, MIN-275). */
+  page_id?: string | null;
+  /**
+   * The referenced page, RESOLVED at read time by the `resources` routes
+   * (`page:pages(id, title, icon)`) — never stored, or renaming a page would
+   * leave its old name on every ticket that cites it.
+   *
+   * `null` (or absent) means « not resolved »: the page is in the trash — the
+   * `pages_select` policy hides it from the session client — or the read didn't
+   * ask for the join. `file_name` then holds the snapshot taken when the
+   * resource was added.
+   */
+  page?: { id: string; title: string; icon: string | null } | null;
   file_name: string;
   mime_type: string;
   size_bytes: number;
@@ -52,7 +65,7 @@ export interface Attachment {
   created_at: string;
 }
 
-export type ResourceKind = "file" | "link";
+export type ResourceKind = "file" | "link" | "page";
 
 /** What the client sends after a direct-to-storage upload; the server
     validates the path prefix and creates the `attachments` row. */
@@ -78,13 +91,35 @@ export interface LinkResourceInput {
   icon_data_url?: string | null;
 }
 
-/** Either half of a resource, as the registration routes accept it. */
-export type ResourceInput = FileResourceInput | LinkResourceInput;
+/**
+ * What the client sends to cite a page of the project (MIN-275). Nothing to
+ * upload and nothing to resolve over the network: the browser already knows the
+ * page's id and title from the project's pages cache.
+ */
+export interface PageResourceInput {
+  kind: "page";
+  page_id: string;
+  /** Snapshot of the page title at that moment — the display name is resolved
+      live at read time, this is only the fallback. */
+  file_name: string;
+}
+
+/** Any of the three forms of a resource, as the registration routes accept it. */
+export type ResourceInput =
+  | FileResourceInput
+  | LinkResourceInput
+  | PageResourceInput;
 
 export function isLinkResource(
   input: ResourceInput
 ): input is LinkResourceInput {
   return input.kind === "link";
+}
+
+export function isPageResource(
+  input: ResourceInput
+): input is PageResourceInput {
+  return input.kind === "page";
 }
 
 export interface Comment {

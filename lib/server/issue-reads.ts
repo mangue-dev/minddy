@@ -11,6 +11,7 @@ import {
   listFeedbackForIssue,
   type IssueLinkedFeedback,
 } from "@/lib/server/feedback/team-queries";
+import { joinedPage } from "@/lib/server/resource-select";
 import type { IssueRelation } from "@/lib/types";
 
 // ── Lectures partagées Numo / MCP ───────────────────────────────────────
@@ -359,12 +360,15 @@ export async function getIssue(
         .is("deleted_at", null)
         .eq("parent_id", issue.id)
         .order("number", { ascending: true }),
-      // Resource metadata (MIN-24, MIN-184): comment_id null = on the issue
-      // itself. A file's contents stay behind the app's signed-URL door — agents
-      // only see names/types/sizes here; a link carries its url outright.
+      // Resource metadata (MIN-24, MIN-184, MIN-275): comment_id null = on the
+      // issue itself. A file's contents stay behind the app's signed-URL door —
+      // agents only see names/types/sizes here; a link carries its url outright,
+      // a page its id and its LIVE title (the join, so a rename shows).
       ctx.db
         .from("attachments")
-        .select("id, comment_id, kind, url, file_name, mime_type, size_bytes")
+        .select(
+          "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title, deleted_at)"
+        )
         .eq("issue_id", issue.id)
         .order("created_at", { ascending: true }),
     ]);
@@ -373,16 +377,25 @@ export async function getIssue(
   for (const row of attachmentRows ?? []) {
     const key = (row.comment_id as string | null) ?? null;
     const list = resourcesByComment.get(key) ?? [];
+    const page = joinedPage(row.page);
     list.push(
       row.kind === "link"
         ? { id: row.id, kind: "link", url: row.url, title: row.file_name }
-        : {
-            id: row.id,
-            kind: "file",
-            file_name: row.file_name,
-            mime_type: row.mime_type,
-            size_bytes: row.size_bytes,
-          }
+        : row.kind === "page"
+          ? {
+              id: row.id,
+              kind: "page",
+              page_id: row.page_id,
+              title: page?.title?.trim() || row.file_name,
+              ...(page?.deleted_at ? { page_in_trash: true } : {}),
+            }
+          : {
+              id: row.id,
+              kind: "file",
+              file_name: row.file_name,
+              mime_type: row.mime_type,
+              size_bytes: row.size_bytes,
+            }
     );
     resourcesByComment.set(key, list);
   }

@@ -157,7 +157,7 @@ This is an open-ended CONVERSATION, not a scripted job. You have no fixed goal: 
 
   // Les tools minddy sont les MÊMES aux deux ancrages (MIN-125) : seule la cible
   // par défaut des tools ticket change, et la description de chaque tool le dit.
-  const minddyTools = `- \`search_issues\` — find a ticket of this project by subject, or resolve 'MIN-42' / a bare number. \`read_issue\` — the LIVE state of a ticket: every field, its plan parsed into tasks, resources, recent comments, sub-issues, relations. \`read_resource\` — open a resource of a ticket; a link comes back as its url and title, a file as text inline (${
+  const minddyTools = `- \`search_issues\` — find a ticket of this project by subject, or resolve 'MIN-42' / a bare number. \`read_issue\` — the LIVE state of a ticket: every field, its plan parsed into tasks, resources, recent comments, sub-issues, relations. \`read_resource\` — open a resource of a ticket; a link comes back as its url and title, a page of the wiki as its id and title (read it with \`read_page\`), a file as text inline (${
     images
       ? "an image comes back AS AN IMAGE you can actually look at — open the mockups a ticket carries BEFORE implementing them, and describe what you see so the user knows you looked; other binaries"
       : "binaries"
@@ -491,7 +491,7 @@ This is a CONVERSATION, not a one-shot pass. You read, you comment on the pull r
 - \`read_file\` — returns content with line numbers.
 - \`run_command\` — read-only work in the repository: \`git diff\`, \`git log\`, the project's type-check, a targeted test. Long output is truncated in the MIDDLE (you always get the beginning and the end) and saved in full at the returned \`full_output_path\`, readable with \`grep\` and \`read_file\` — so never pipe to \`head\`/\`tail\`. Commands already run at the repository ROOT; pass \`workdir\` instead of \`cd <dir> && …\`.
 - \`comment_pr_line\` — post one remark ANCHORED to a line of the diff. \`comment_pr\` — post your summary in the pull request's conversation. \`reply_pr_thread\` — reply inside an existing review thread.
-- \`search_issues\` / \`read_issue\` — the ticket this pull request implements, and any other ticket of the project. \`read_resource\` — open a resource of the ticket; a link comes back as its url and title, a file as text inline (${attachments} via a signed URL you can curl).
+- \`search_issues\` / \`read_issue\` — the ticket this pull request implements, and any other ticket of the project. \`read_resource\` — open a resource of the ticket; a link comes back as its url and title, a page of the wiki as its id and title (read it with \`read_page\`), a file as text inline (${attachments} via a signed URL you can curl).
 - \`list_pages\` / \`read_page\` — the project's WIKI, in markdown. Read it before calling a change wrong on style or structure: a convention written by the team is the standard here, and "ça ne suit pas la convention" is only a finding if the convention exists. Read-only in a review; pages are never written from here.
 
 ## How to read the diff
@@ -840,14 +840,18 @@ Everything above is context. Act on the user's message.`;
  * Ressource annoncée dans l'amorce. Un FICHIER n'y est que nommé — l'agent
  * l'ouvre via `read_resource`. Un LIEN, lui, s'écrit en entier : son url tient
  * en une ligne, et la faire chercher par un appel de tool serait un aller-retour
- * pour un renseignement qu'on a déjà.
+ * pour un renseignement qu'on a déjà. Une PAGE du wiki s'écrit de même, avec son
+ * id : le titre suffit à savoir si le document sert, et `read_page` l'ouvre sans
+ * passer par `read_resource`.
  */
 export interface AgentResourceContext {
   id: string;
-  kind?: "file" | "link";
+  kind?: "file" | "link" | "page";
   name: string;
   /** Lien seul. */
   url?: string | null;
+  /** Page seule. */
+  pageId?: string | null;
   /** Fichier seul. */
   mimeType?: string;
   sizeBytes?: number;
@@ -903,6 +907,9 @@ export function buildAgentContextMessage(input: {
       ? `\n\n## Resources on the ticket (open a file with read_resource)\n${resources
           .map((a) => {
             if (a.kind === "link") return `- ${a.name} — ${a.url}`;
+            if (a.kind === "page") {
+              return `- ${a.name} — a page of the project's wiki, read it with read_page id: ${a.pageId}`;
+            }
             const mime = a.mimeType ?? "application/octet-stream";
             return `- ${a.name} (${mime}, ${formatSize(a.sizeBytes ?? 0)}) — id: ${a.id}${
               input.images === true && mime.startsWith("image/")

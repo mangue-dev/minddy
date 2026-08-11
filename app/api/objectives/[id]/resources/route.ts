@@ -6,12 +6,15 @@ import { getServiceClient } from "@/lib/supabase-service";
 import {
   insertAttachments,
   parseResourcesInput,
+  ResourceScopeError,
 } from "@/lib/server/attachments";
+import { RESOURCE_SELECT } from "@/lib/server/resource-select";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET /api/objectives/[id]/resources — the objective-LEVEL resources, files
-    and links alike (not the ones on comments), RLS-scoped to project members. */
+/** GET /api/objectives/[id]/resources — the objective-LEVEL resources, files,
+    links and pages alike (not the ones on comments), RLS-scoped to project
+    members; a page resource comes back with its page resolved. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -20,7 +23,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   const { data, error } = await auth.supabase
     .from("attachments")
-    .select("*")
+    .select(RESOURCE_SELECT)
     .eq("objective_id", id)
     .is("comment_id", null)
     .order("created_at", { ascending: true });
@@ -81,6 +84,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     });
     return NextResponse.json(rows, { status: 201 });
   } catch (e) {
+    // Une page qui n'est pas une page vivante de ce projet est une requête
+    // malformée, pas une panne : 400, comme le reste de la validation.
+    if (e instanceof ResourceScopeError) {
+      return NextResponse.json({ error: t("resourceInvalid") }, { status: 400 });
+    }
     console.error("[api/objectives/:id/resources] insert failed:", (e as Error).message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }

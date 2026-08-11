@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import {
   recordAiUsage,
@@ -388,7 +389,9 @@ async function loadIssueContext(run: AgentRun, issueId: string): Promise<IssueCo
     service.from("projects").select("key, name").eq("id", run.project_id).maybeSingle(),
     service
       .from("attachments")
-      .select("id, kind, url, file_name, mime_type, size_bytes")
+      .select(
+        "id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(title)",
+      )
       .eq("issue_id", issueId)
       .order("created_at", { ascending: true }),
   ]);
@@ -405,9 +408,11 @@ async function loadIssueContext(run: AgentRun, issueId: string): Promise<IssueCo
       id: string;
       kind: string | null;
       url: string | null;
+      page_id: string | null;
       file_name: string | null;
       mime_type: string | null;
       size_bytes: number | null;
+      page: unknown;
     }>).map((a) =>
       a.kind === "link"
         ? {
@@ -415,6 +420,15 @@ async function loadIssueContext(run: AgentRun, issueId: string): Promise<IssueCo
             kind: "link" as const,
             name: a.file_name ?? "link",
             url: a.url,
+          }
+        : a.kind === "page"
+        ? {
+            id: a.id,
+            kind: "page" as const,
+            // Le titre VIVANT : l'amorce est un instantané, autant qu'il soit
+            // pris au moment du run et pas à celui de l'ajout.
+            name: joinedPage(a.page)?.title?.trim() || a.file_name || "page",
+            pageId: a.page_id,
           }
         : {
             id: a.id,
