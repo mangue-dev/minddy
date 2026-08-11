@@ -21,6 +21,7 @@ import { executeScratchpadTool, type ScratchpadToolContext } from "./scratchpad-
 import { agentRunTopic, broadcastToTopic } from "./live";
 import {
   appendEvent,
+  clearInterrupt,
   getRun,
   hasPendingRunMessages,
   pullPendingMessages,
@@ -320,8 +321,16 @@ export async function handleControlPlaneRequest(opts: {
     return ok({ pending: await hasPendingRunMessages(runId) });
   }
 
-  if (method === "GET" && surface === "/interrupt") {
-    return ok({ interrupted: await readInterruptFlag(runId) });
+  if (surface === "/interrupt") {
+    if (method === "GET") return ok({ interrupted: await readInterruptFlag(runId) });
+    // La boucle CONSOMME le drapeau quand le « stop » qu'elle vient de lire
+    // arrivait avec un message : le tour se poursuit alors avec la consigne au
+    // lieu de sortir pour être re-queué par ce message resté en file. C'est le
+    // seul écrivain de ce champ côté VM, et il ne peut l'écrire que sur son run.
+    if (method === "DELETE") {
+      await clearInterrupt(runId);
+      return ok();
+    }
   }
 
   if (method === "GET" && surface === "/budget") {

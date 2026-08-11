@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ModelPricing } from "@/lib/model-multiplier";
+import { isReasoningLevel, type ModelReasoning, type ReasoningLevel } from "@/lib/agent-reasoning";
 
 /**
  * L'index OpenRouter : UNE lecture de `/models`, mise en cache au niveau du
@@ -12,6 +13,8 @@ import type { ModelPricing } from "@/lib/model-multiplier";
  *    tool-calling ;
  *  - la boucle de l'agent (`model.ts`) — fenêtre de contexte (seuil de
  *    compaction) et entrée image (MIN-111) ;
+ *  - le sélecteur de RAISONNEMENT — les paliers que chaque modèle accepte,
+ *    publiés modèle par modèle (`reasoning.supported_efforts`) ;
  *  - le plafond de plan (`model-plan.ts`) — les prix, donc le multiplicateur.
  * Chacun tirait sa propre requête vers la même URL avant : trois caches à durée
  * de vie différente, qui pouvaient se contredire sur le même modèle.
@@ -41,6 +44,15 @@ export interface OpenRouterModelInfo {
   tools: boolean;
   /** Prix publiés, convertis au million de tokens. `null` si illisibles. */
   pricing: ModelPricing | null;
+  /**
+   * Ce que CE modèle accepte comme niveaux de raisonnement (MIN-122, affiné) —
+   * `null` quand il n'en publie rien, ce qui veut dire deux choses différentes
+   * qu'OpenRouter ne distingue pas : il ne raisonne pas, ou il ne le dit pas. Le
+   * sélecteur retombe dans les deux cas sur les paliers génériques, et c'est le
+   * repli sûr : un palier de trop est rabattu par OpenRouter, un palier manquant
+   * serait un réglage qu'on cacherait sans raison.
+   */
+  reasoning: ModelReasoning | null;
 }
 
 const index = new Map<string, OpenRouterModelInfo>();
@@ -60,6 +72,27 @@ function perMillionTokens(raw: unknown): number | null {
   return Number.isFinite(n) && n >= 0 ? Math.round(n * 1_000_000 * 1e6) / 1e6 : null;
 }
 
+/**
+ * L'objet `reasoning` d'un modèle, ramené à ce que le sélecteur sait montrer.
+ *
+ * `supported_efforts` arrive du plus lourd au plus léger et parle le vocabulaire
+ * d'OpenRouter : on le retourne (nos listes vont du moins cher au plus cher) et
+ * on traduit `none` en `off`, le nôtre. Toute valeur inconnue est JETÉE plutôt
+ * que devinée — un palier qu'on ne sait pas nommer ne peut pas s'afficher, et il
+ * ne doit pas non plus se sélectionner.
+ */
+function parseReasoning(raw: {
+  mandatory?: boolean;
+  supported_efforts?: string[];
+} | undefined): ModelReasoning | null {
+  if (!raw) return null;
+  const efforts = (raw.supported_efforts ?? [])
+    .map((e) => (e === "none" ? "off" : e))
+    .filter((e): e is ReasoningLevel => isReasoningLevel(e))
+    .reverse();
+  return { efforts, mandatory: raw.mandatory === true };
+}
+
 async function fetchIndex(apiKey?: string): Promise<void> {
   const headers: Record<string, string> = {};
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
@@ -72,6 +105,10 @@ async function fetchIndex(apiKey?: string): Promise<void> {
       context_length?: number;
       architecture?: { input_modalities?: string[] };
       supported_parameters?: string[];
+      reasoning?: {
+        mandatory?: boolean;
+        supported_efforts?: string[];
+      };
       pricing?: { prompt?: string | number; completion?: string | number };
     }>;
   };
@@ -86,6 +123,7 @@ async function fetchIndex(apiKey?: string): Promise<void> {
       contextLength: m.context_length && m.context_length > 0 ? m.context_length : null,
       imageInput: (m.architecture?.input_modalities ?? []).includes("image"),
       tools: !m.supported_parameters?.length || m.supported_parameters.includes("tools"),
+      reasoning: parseReasoning(m.reasoning),
       pricing:
         input != null && output != null
           ? { inputUsdPerMTok: input, outputUsdPerMTok: output }

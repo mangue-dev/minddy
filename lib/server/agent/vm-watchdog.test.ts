@@ -103,7 +103,11 @@ const ROW = {
   routine_id: null,
   continuations: 0,
   started_at: new Date(Date.now() - STARTED_MS_AGO).toISOString(),
+  last_activity_at: new Date(Date.now() - STARTED_MS_AGO).toISOString(),
 };
+
+/** Une date vieille de `ms`, au format de la base. */
+const agoIso = (ms: number) => new Date(Date.now() - ms).toISOString();
 
 beforeEach(() => {
   h.alive = null;
@@ -210,11 +214,46 @@ describe("reapDeadVmRuns", () => {
     expect(h.compute).toHaveLength(0);
   });
 
-  it("ignore une ligne sans identifiant de commande — rien à interroger", async () => {
-    h.alive = false;
+  it("sans identifiant de commande, il n'interroge rien — mais il finit par conclure", async () => {
+    // `startVmLoop` écrit cet identifiant à la fin de l'amorçage (~22 s). Une ligne
+    // qui ne l'a toujours pas au bout d'un quart d'heure est une fonction morte
+    // entre le claim et le lancement : il n'y a pas de process à sonder, et il n'y
+    // en aura jamais. C'est le cas que l'ancienne requête ne regardait même pas —
+    // le run restait `running` pour toujours.
     h.rows = [{ ...ROW, loop_command_id: null }];
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(h.probes).toHaveLength(0);
+    expect(reaped).toBe(1);
+    expect(h.stamped[0].fields).toMatchObject({ status: "completed" });
+  });
+
+  it("laisse un amorçage EN COURS tranquille", async () => {
+    // Vingt secondes de vie : la boucle est peut-être en train de démarrer. Le
+    // délai se compte sur `started_at` (posé au claim) et non sur le silence — un
+    // run re-queué avec un délai devant lui arrive au claim avec une horloge
+    // d'activité déjà vieille, et le compter là le tuerait en plein réveil.
+    h.rows = [{ ...ROW, loop_command_id: null, started_at: agoIso(20_000) }];
+    const { reaped } = await reapDeadVmRuns(fakeService());
+    expect(reaped).toBe(0);
+  });
+
+  it("l'ignorance ne dure pas TOUJOURS : au bout de deux heures, elle vaut décès", async () => {
+    // Une microVM détruite répond « introuvable » à chaque passage, donc `null`,
+    // donc rien : le run restait `running` jusqu'à ce qu'un humain le supprime en
+    // base. Ce qui manquait n'est pas un verdict plus audacieux, c'est une borne.
+    h.alive = null;
+    h.rows = [{ ...ROW, started_at: agoIso(3 * 60 * 60_000), last_activity_at: agoIso(3 * 60 * 60_000) }];
+    const { reaped } = await reapDeadVmRuns(fakeService());
+    expect(reaped).toBe(1);
+    expect(h.events[0].payload.code).toBe("turnLost");
+  });
+
+  it("mais elle dure assez pour un tour qui travaille en silence", async () => {
+    // Une heure sans un signe, la plateforme injoignable : un round unique peut
+    // durer ça (un `npm test` qui n'en finit pas). On attend.
+    h.alive = null;
+    h.rows = [{ ...ROW, started_at: agoIso(60 * 60_000), last_activity_at: agoIso(60 * 60_000) }];
+    const { reaped } = await reapDeadVmRuns(fakeService());
     expect(reaped).toBe(0);
   });
 });

@@ -2128,7 +2128,13 @@
     "composeProjectEmpty": "Aucun projet.",
     "composeProjectRequired": "Choisissez d'abord un projet : l'agent clone son dépôt.",
     "composeProjectTooltip": "Choisissez un projet avant de lancer",
-    "composeNoRepo": "Aucun de vos projets n'a de dépôt connecté. L'agent clone un dépôt pour travailler : liez-en un dans les réglages d'un projet."
+    "composeNoRepo": "Aucun de vos projets n'a de dépôt connecté. L'agent clone un dépôt pour travailler : liez-en un dans les réglages d'un projet.",
+    "reasoningMinimal": "Minimal",
+    "reasoningMinimalDesc": "À peine une pause — un temps de réflexion, pas plus.",
+    "reasoningXhigh": "Très poussé",
+    "reasoningXhighDesc": "Plus que « Poussé », sur les modèles qui vont jusque-là.",
+    "reasoningMax": "Maximum",
+    "reasoningMaxDesc": "Tout ce que le modèle peut mettre dans sa réflexion."
   },
   "Projects": {
     "newProject": "Nouveau projet",
@@ -2901,7 +2907,14 @@
     "freeBadge": "Sujet libre",
     "freeSessionTitle": "Conversation sans titre",
     "tabConversations": "Conversations",
-    "tabRoutines": "Routines"
+    "tabRoutines": "Routines",
+    "renameSession": "Renommer",
+    "renameSessionTitle": "Renommer cette conversation",
+    "sessionNamePlaceholder": "Nom de la conversation",
+    "deleteSession": "Supprimer",
+    "deleteSessionTitle": "Supprimer « {name} » ?",
+    "deleteSessionDescription": "Tout le fil part avec, et c'est sans retour.",
+    "sessionDeleted": "Conversation supprimée"
   },
   "PullRequests": {
     "title": "Pull requests",

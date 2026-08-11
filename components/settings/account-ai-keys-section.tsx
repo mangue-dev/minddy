@@ -13,12 +13,12 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 import { saveAgentPreferencesApi } from "@/lib/agent-keys-api";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
 import {
   agentPreferencesQueryKey,
   useAgentPreferencesQuery,
 } from "@/lib/use-agent-preferences-query";
-import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 
 /**
@@ -39,6 +39,7 @@ export function AccountAiKeysSection() {
 
   const { defaultModel, defaultReasoningLevel, loading: prefLoading } = useAgentPreferencesQuery();
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
+  const reasoningLevels = useReasoningLevelsFor(defaultModel || providerDefaultModel);
 
   const onModelChange = async (value: string) => {
     try {
@@ -108,10 +109,15 @@ export function AccountAiKeysSection() {
             <SettingsRow
               label={t("agentReasoningTitle")}
               hint={t("agentReasoningDesc")}
+              // Le défaut du COMPTE : les paliers de son modèle par défaut, et
+              // non les génériques — c'est ce modèle-là qui tournera. Sur un
+              // modèle qui n'en publie pas, `reasoningLevelsFor` retombe de
+              // lui-même sur les quatre historiques.
               control={
                 <ReasoningCombobox
-                  value={defaultReasoningLevel}
+                  value={nearestReasoningLevel(defaultReasoningLevel, reasoningLevels)}
                   onChange={(v) => void onReasoningChange(v)}
+                  levels={reasoningLevels}
                 />
               }
             />

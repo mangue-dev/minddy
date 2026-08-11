@@ -2,6 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_AGENT_PROVIDER, type AgentProviderId } from "@/lib/agent-providers";
+import {
+  reasoningLevelsFor,
+  type ModelReasoning,
+  type ReasoningLevel,
+} from "@/lib/agent-reasoning";
 
 /**
  * Catalogue de modèles pour le picker (MIN-46). `staleTime` long : le catalogue
@@ -33,6 +38,12 @@ export interface AgentModel {
   name: string;
   /** Coût d'usage relatif au modèle par défaut de minddy (lib/model-multiplier.ts). */
   multiplier?: number;
+  /**
+   * Les paliers de raisonnement que ce modèle accepte, tels qu'il les publie.
+   * Absent = rien de publié → le sélecteur montre les paliers génériques
+   * (`reasoningLevelsFor`).
+   */
+  reasoning?: ModelReasoning | null;
 }
 
 export const agentModelsQueryKey = ["agent-models"] as const;
@@ -92,4 +103,25 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
     planId: data?.planId ?? null,
     loading: isPending,
   };
+}
+
+/**
+ * Les paliers de raisonnement du modèle QUI VA TOURNER — celui que le composer
+ * affiche, c'est-à-dire l'override choisi ou, à défaut, le défaut du compte.
+ *
+ * Le sélecteur ne peut pas les déduire seul : il ne connaît que sa valeur, pas le
+ * modèle. Et c'est bien le modèle effectif qu'il faut, pas l'override : laisser
+ * le champ « modèle par défaut » afficher les paliers génériques cacherait le
+ * `xhigh` du modèle qui va réellement travailler.
+ *
+ * Le catalogue vient du cache de `useAgentModelsQuery` (même clé, aucune requête
+ * de plus). Modèle inconnu ou catalogue pas encore arrivé → les paliers
+ * génériques, le temps que la liste réponde.
+ */
+export function useReasoningLevelsFor(
+  modelId: string | null | undefined,
+): ReasoningLevel[] {
+  const { models } = useAgentModelsQuery();
+  const entry = modelId ? models.find((m) => m.id === modelId) : undefined;
+  return reasoningLevelsFor(entry?.reasoning);
 }

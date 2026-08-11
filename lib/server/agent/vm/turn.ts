@@ -671,6 +671,18 @@ export async function runVmTurn(
     },
     parkedForSubagents: job.parkedForSubagents,
     checkInterrupt: async () => runClosed || (await cp.checkInterrupt()),
+    /**
+     * Le pendant du crochet ci-dessus : un « stop » accompagné d'un message se
+     * poursuit dans CE tour (cf. `clearInterrupt` dans agent-loop.ts).
+     *
+     * `runClosed` n'est PAS effaçable, et c'est délibéré : ce n'est pas un stop,
+     * c'est un run qui ne nous appartient plus. Le drapeau reste alors levé, la
+     * boucle le relit derrière et sort — elle ne peut donc pas confondre les deux
+     * signaux que `checkInterrupt` réunit.
+     */
+    clearInterrupt: async () => {
+      if (!runClosed) await cp.clearInterrupt();
+    },
     syncPlan: (steps) => cp.syncPlan(steps),
     emit,
     emitLive,

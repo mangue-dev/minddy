@@ -21,7 +21,7 @@ import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
 import { launchNotebookAgentApi, type AgentRunSummary } from "@/lib/agent-api";
 import { agentRunQueryKey, allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useProjects } from "@/lib/projects-context";
@@ -33,7 +33,7 @@ import {
   rememberAgentProject,
 } from "@/lib/last-agent-project";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
-import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { Project } from "@/lib/types";
 
 /**
@@ -201,7 +201,18 @@ export function SessionCompose({
   // tant qu'on n'y touche pas, c'est le défaut perso qui part — comme dans le
   // composer d'un ticket.
   const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
-  const reasoningLevel = reasoningOverride ?? defaultReasoningLevel;
+  // Le MODÈLE effectif de ce lancement — celui dont on affiche les paliers de
+  // raisonnement. `model` vide = on part sur le défaut perso, sinon celui du
+  // provider : c'est celui-là qui tournera, donc c'est le sien qu'il faut lire.
+  const effectiveModel = model || defaultModel || providerDefaultModel;
+  const reasoningLevels = useReasoningLevelsFor(effectiveModel);
+  // Rabattu sur ce que ce modèle accepte : un défaut perso à `xhigh` sur un
+  // modèle qui n'en veut pas doit s'afficher sur son plus proche voisin, pas
+  // laisser le chip nommer un palier absent de la liste.
+  const reasoningLevel = nearestReasoningLevel(
+    reasoningOverride ?? defaultReasoningLevel,
+    reasoningLevels,
+  );
   const [baseBranch, setBaseBranch] = useState("");
   const [launching, setLaunching] = useState(false);
   // Bulle optimiste du 1er message pendant le POST (mêmes raisons que le launch
@@ -382,6 +393,7 @@ export function SessionCompose({
                   value={reasoningLevel}
                   onChange={setReasoningOverride}
                   disabled={launching}
+                  levels={reasoningLevels}
                 />
                 {projectId ? (
                   <BranchCombobox

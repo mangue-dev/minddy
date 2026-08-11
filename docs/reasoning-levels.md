@@ -1,9 +1,47 @@
 # Le raisonnement de l'agent de code, provider par provider
 
-> **Date** : 2026-07-29 · **Ticket** : MIN-122
+> **Date** : 2026-07-29, revu le 2026-08-11 · **Ticket** : MIN-122
 >
-> Ce que l'utilisateur choisit (`off` / `low` / `medium` / `high`), ce qui part
-> vraiment sur le fil, et ce qui se passe quand le modèle en face n'en veut pas.
+> Ce que l'utilisateur choisit, ce qui part vraiment sur le fil, et ce qui se
+> passe quand le modèle en face n'en veut pas.
+
+## Ce qui a changé le 2026-08-11 : les paliers sont ceux des MODÈLES
+
+Les quatre paliers d'origine (`off` / `low` / `medium` / `high`) étaient les
+mêmes pour tous les modèles. Ils ne le sont plus, parce que les modèles, eux, ne
+le sont pas : OpenRouter publie les paliers acceptés **modèle par modèle** dans
+`/models` (objet `reasoning`, champ `supported_efforts`) — 128 modèles sur 406 en
+déclarent un, et deux d'entre eux ont rarement le même :
+
+| Modèle | Ce qu'il accepte |
+| --- | --- |
+| `openai/gpt-5.1` | `low` · `medium` · `high` · `none` |
+| `openai/gpt-5.1-codex-max` | `low` · `medium` · `high` · **`xhigh`**, et `mandatory` (pas de « sans raisonnement ») |
+| `google/gemini-3.6-flash` | **`minimal`** · `low` · `medium` · `high`, `mandatory` |
+| `anthropic/claude-*` | il raisonne, mais ne publie **aucune** énumération |
+| un modèle sans objet `reasoning` | rien : le sélecteur reste inerte |
+
+Le vocabulaire interne s'élargit donc à celui d'OpenRouter — `off`, `minimal`,
+`low`, `medium`, `high`, `xhigh`, `max` — à un mot près : leur `none` est notre
+`off`, qui dit un peu plus (n'envoyer **aucun** champ).
+
+Trois conséquences, toutes dans [lib/agent-reasoning.ts](../lib/agent-reasoning.ts) :
+
+- **le sélecteur liste ce que le modèle choisi accepte** (`reasoningLevelsFor`),
+  et retombe sur les quatre historiques quand le modèle ne publie rien — un
+  BYOK direct, un modèle hors index. Un palier qu'on ne sait pas nommer est jeté
+  à la lecture de l'index plutôt que deviné ;
+- **un niveau qui ne tient plus est rabattu** (`nearestReasoningLevel`) : d'abord
+  vers le bas, jamais au-dessus de ce qui a été demandé — sauf si le modèle n'a
+  rien de moins cher ;
+- **`xhigh` et `max` ne partent qu'à OpenRouter.** C'est son vocabulaire, et il
+  le rabat lui-même sur ce que le modèle accepte. Les couches compat, elles, ne
+  connaissent que celui de l'API OpenAI : on rabat donc AVANT d'envoyer, parce
+  qu'un champ refusé revient en 400 et tue le round.
+
+La contrainte `CHECK` des deux colonnes concernées a été élargie d'autant
+(`supabase/migrations/20261212090000_agent_reasoning_levels_widen.sql`) : c'est un
+élargissement pur, aucune ligne existante à réécrire.
 
 ## Le principe en une phrase
 

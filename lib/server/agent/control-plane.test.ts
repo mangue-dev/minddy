@@ -41,6 +41,8 @@ const h = vi.hoisted(() => ({
   quota: null as Record<string, unknown> | null,
   /** La somme du ledger pour ce run. */
   ledgerSpent: 0 as number | null,
+  /** Les runs dont le drapeau d'interruption a été effacé. */
+  cleared: [] as string[],
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
@@ -137,6 +139,9 @@ vi.mock("./runs", async (importOriginal) => ({
   }),
   pullPendingMessages: vi.fn(async () => ["fais plutôt ça"]),
   readInterruptFlag: vi.fn(async () => true),
+  clearInterrupt: vi.fn(async (runId: string) => {
+    h.cleared.push(runId);
+  }),
 }));
 
 vi.mock("./issue-tools", async (importOriginal) => ({
@@ -183,6 +188,7 @@ beforeEach(() => {
   h.landed = 0;
   h.prLandings.length = 0;
   h.runReads = 0;
+  h.cleared.length = 0;
   h.quota = { unlimited: false, remaining: 3, allowed: true, mode: "platform" };
   h.ledgerSpent = 0;
   h.run = {
@@ -417,6 +423,15 @@ describe("steering et interruption — inchangés côté base", () => {
 
   it("rendent le drapeau d'interruption", async () => {
     expect((await call("GET", "/interrupt")).body).toEqual({ interrupted: true });
+  });
+
+  it("l'EFFACENT sur DELETE — et seulement pour LEUR run", async () => {
+    // La boucle consomme le drapeau quand le « stop » qu'elle vient de lire
+    // arrivait avec un message : le tour se poursuit alors avec la consigne au
+    // lieu de sortir pour être re-queué par ce message resté en file. Le runId
+    // vient du claim OIDC, jamais du corps : une VM ne peut effacer que le sien.
+    expect((await call("DELETE", "/interrupt")).status).toBe(200);
+    expect(h.cleared).toEqual([RUN_ID]);
   });
 });
 

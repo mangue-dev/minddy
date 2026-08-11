@@ -18,7 +18,7 @@ import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
 import { useProjects } from "@/lib/projects-context";
 import { useAuth } from "@/lib/auth-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { createRoutineApi, runRoutineNowApi, type Routine } from "@/lib/routines-api";
 import {
@@ -28,7 +28,7 @@ import {
   weekdayName,
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
-import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 
 /**
  * Poser une ROUTINE (MIN-185), à la main : où, quoi, avec quel modèle, à quel
@@ -100,6 +100,8 @@ export function CreateRoutineWizard({
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("");
   const [reasoning, setReasoning] = useState<ReasoningLevel | null>(null);
+  // Les paliers du modèle que cette routine fera tourner (cf. le composer).
+  const reasoningLevels = useReasoningLevelsFor(model || defaultModel || providerDefaultModel);
   /** "" = la branche par défaut du dépôt, ce qui est le cas courant. */
   const [baseBranch, setBaseBranch] = useState("");
   /** Ce qu'un passage a le droit de dépenser, en % du budget mensuel. */
@@ -352,8 +354,12 @@ export function CreateRoutineWizard({
             label={t("reasoningLabel")}
             control={
               <ReasoningCombobox
-                value={reasoning ?? defaultReasoningLevel}
+                value={nearestReasoningLevel(
+                  reasoning ?? defaultReasoningLevel,
+                  reasoningLevels,
+                )}
                 onChange={setReasoning}
+                levels={reasoningLevels}
               />
             }
           />

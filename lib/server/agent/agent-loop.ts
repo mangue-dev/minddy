@@ -593,6 +593,25 @@ export interface RunAgentLoopParams {
    * round complet). L'exécuteur repasse alors la session au repos.
    */
   checkInterrupt?: () => Promise<boolean>;
+  /**
+   * CONSOMME le drapeau d'interruption. Sans lui, la boucle ne sait qu'une chose
+   * d'un « stop » : sortir.
+   *
+   * Or le composer envoie TOUJOURS le couple message-puis-stop quand l'agent
+   * travaille — c'est ce que veut dire « arrête-toi et fais plutôt ça ». Sans ce
+   * crochet, l'interruption gagnait la course au sommet du round (elle est lue
+   * avant le drainage du steering) : le tour sortait sans avoir lu le message, et
+   * l'exécuteur le re-queuait aussitôt puisqu'il en restait un en file. Un chunk
+   * entier — dans la nouvelle forme, une microVM et son amorçage — juste pour
+   * relire une phrase qui attendait déjà. Vu de l'écran : « ça a interrompu, mais
+   * pas vraiment », « mon message n'est pas parti », « ça repart tout seul ».
+   *
+   * Avec lui, un stop ACCOMPAGNÉ d'un message est ce qu'il prétend être : le round
+   * en cours est abandonné, le message entre dans l'historique, et le MÊME tour
+   * continue. Un stop SEUL sort comme avant — c'est le drainage qui tranche, pas
+   * une intention devinée.
+   */
+  clearInterrupt?: () => Promise<void>;
 }
 
 /** Interruption utilisateur de la réponse en cours — distincte d'une StreamError
@@ -1605,11 +1624,53 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     return { status: "error", messages, errorMessage: message, costUsd, usageSeqEnd: seq, rounds: round };
   };
 
-  for (;;) {
+  /**
+   * Messages de steering déjà drainés par le bloc d'interruption ci-dessous, en
+   * attente d'injection par le bloc de steering ordinaire. Ils ne peuvent pas être
+   * injectés sur place : c'est là-bas que vivent la bulle du fil et le compte qui
+   * lève le parking des sous-agents, et deux endroits qui injectent finiraient par
+   * ne pas le faire pareil.
+   */
+  const carriedSteering: string[] = [];
+
+  rounds: for (;;) {
     // Interruption demandée entre deux rounds → repos, SANS round partiel (le
     // checkpoint reste au dernier round complet).
     if (params.checkInterrupt && (await params.checkInterrupt())) {
-      return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
+      /**
+       * Sauf si un message l'accompagne : « arrête-toi et fais plutôt ça ». On
+       * draine ALORS SEULEMENT (cf. `clearInterrupt`) — drainer pour repartir
+       * ensuite avec `interrupted` consommerait le message sans que personne ne
+       * l'injecte, et il serait perdu pour de bon. Sans le crochet, on ne draine
+       * pas et on sort comme avant.
+       */
+      const steered =
+        params.clearInterrupt && params.pullSteering
+          ? (await params.pullSteering().catch(() => [])).filter((t) => t.trim())
+          : [];
+      if (steered.length === 0) {
+        return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
+      }
+      // Le drapeau est CONSOMMÉ : sans ça, le round suivant le relirait et sortirait
+      // avec le message pour seule trace — le tour s'arrêterait juste après avoir
+      // accepté la consigne.
+      await params.clearInterrupt!().catch(() => {});
+      carriedSteering.push(...steered);
+      /**
+       * Le drapeau devait tomber. S'il est TOUJOURS levé, c'est qu'il ne le disait
+       * pas : dans la microVM, ce même crochet porte aussi « ce run n'est plus à
+       * toi » (le 409 de la sauvegarde de checkpoint). Là, on sort — mais on rend
+       * d'abord à l'historique les messages qu'on vient de drainer, sans quoi ils
+       * seraient consommés sans avoir jamais été lus par personne.
+       */
+      if (await params.checkInterrupt()) {
+        for (const text of carriedSteering.splice(0)) {
+          messages.push({ role: "user", content: text });
+          await emit("user_message", { text: cap(text, 4000) });
+        }
+        return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
+      }
+      await emit("status", { phase: "steered" });
     }
     // Frontière sûre : suspend AVANT le prochain appel LLM.
     if (elapsed() >= params.softDeadlineMs || round >= maxRounds) {
@@ -1658,8 +1719,11 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
     // Steering : draine les messages user en attente et les injecte comme messages
     // `user` AVANT le prochain appel (frontière sûre, aucun appel en vol). Sert à
     // orienter un run en cours ET à répondre à un `ask_user` (reprise du run).
-    if (params.pullSteering) {
-      const injected = await params.pullSteering();
+    if (carriedSteering.length > 0 || params.pullSteering) {
+      // Ce que le bloc d'interruption vient de drainer passe DEVANT, et dispense de
+      // redemander : la file, on vient de la vider.
+      const injected =
+        carriedSteering.length > 0 ? carriedSteering.splice(0) : await params.pullSteering!();
       for (const text of injected) {
         if (!text.trim()) continue;
         messages.push({ role: "user", content: text });
@@ -1920,8 +1984,16 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
           };
         }
         // Interruption utilisateur pendant le stream → repos, round partiel jeté.
+        //
+        // Sauf quand la boucle sait consommer le drapeau : on remonte alors au
+        // SOMMET du round, où le même bloc qu'entre deux rounds tranche — un stop
+        // accompagné d'un message reprend la main dans ce tour-ci, un stop seul
+        // sort. Le round partiel est jeté dans les deux cas (rien n'a été poussé
+        // dans `messages`), et c'est bien le geste que l'utilisateur a fait :
+        // couper le modèle en pleine phrase pour lui dire autre chose.
         if (err instanceof InterruptedError) {
           clearLive();
+          if (params.clearInterrupt && params.pullSteering) continue rounds;
           return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
         }
         // Erreur LLM FATALE (non reprenable : 402 crédits, 401/403, 400 non-contexte).

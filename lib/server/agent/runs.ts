@@ -1033,6 +1033,20 @@ export async function pullPendingMessages(runId: string): Promise<string[]> {
 /**
  * Rafraîchit l'horloge d'inactivité du run (heartbeat client, steer, entrée au
  * repos). Best-effort. Empêche le reaper de couper la sandbox pendant l'usage.
+ *
+ * JAMAIS SUR UN RUN QUI TRAVAILLE, et c'est tout l'intérêt de cette ligne.
+ * `last_activity_at` sert à DEUX lecteurs, sur deux populations disjointes
+ * ([drain.ts](drain.ts)) : le reaper d'inactivité, qui ne regarde que les runs AU
+ * REPOS, et le chien de garde des microVM, qui ne regarde que les runs `running`.
+ * Un bump pendant que le run travaille n'apporte donc rien au premier — et il
+ * AVEUGLE le second : la conversation ouverte dans un onglet bat toutes les 45 s,
+ * le chien de garde ne sonde qu'après trois minutes de silence, et un tour dont
+ * le process est mort restait `running` pour toujours tant que quelqu'un le
+ * regardait. C'est-à-dire exactement quand on le regardait le plus — impossible à
+ * arrêter, impossible à guider, et supprimé à la main en production.
+ *
+ * Sur un run `running`, ce champ n'a donc qu'un seul écrivain : la boucle
+ * elle-même (sa sauvegarde périodique de checkpoint, cf. `control-plane.ts`).
  */
 export async function bumpRunActivity(runId: string): Promise<void> {
   try {
@@ -1040,7 +1054,8 @@ export async function bumpRunActivity(runId: string): Promise<void> {
     await service
       .from("agent_runs")
       .update({ last_activity_at: new Date().toISOString() })
-      .eq("id", runId);
+      .eq("id", runId)
+      .neq("status", "running");
   } catch (err) {
     console.error("[agent-runs] bumpRunActivity failed:", (err as Error).message);
   }

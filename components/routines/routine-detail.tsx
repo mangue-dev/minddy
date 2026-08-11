@@ -64,10 +64,10 @@ import {
   routinesQueryKey,
   useRoutineRunsQuery,
 } from "@/lib/use-routines-query";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import { calendarDaysBetween } from "@/lib/due-date";
 import {
   describeSchedule,
@@ -967,6 +967,10 @@ function RoutineEditor({
   // si on ne lui fige aucun modèle. Le combobox l'affiche comme option « défaut ».
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel } = useAgentPreferencesQuery();
+  // Les paliers du modèle que cette routine fait tourner (cf. le composer).
+  const reasoningLevels = useReasoningLevelsFor(
+    draft.model || defaultModel || providerDefaultModel,
+  );
 
   const set = <K extends keyof RoutineDraft>(key: K, value: RoutineDraft[K]) =>
     onChange({ ...draft, [key]: value });
@@ -1026,8 +1030,9 @@ function RoutineEditor({
             label={t("reasoningLabel")}
             control={
               <ReasoningCombobox
-                value={draft.reasoning}
+                value={nearestReasoningLevel(draft.reasoning, reasoningLevels)}
                 onChange={(value) => set("reasoning", value)}
+                levels={reasoningLevels}
               />
             }
           />

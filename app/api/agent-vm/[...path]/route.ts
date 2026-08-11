@@ -83,3 +83,7 @@ const handler = defineSandboxProxy(async (request, meta) => {
 export const GET = handler;
 export const POST = handler;
 export const PUT = handler;
+// `DELETE /interrupt` : la boucle consomme le drapeau de « stop » quand celui-ci
+// arrivait avec un message. Un verbe de plus, pas une surface de plus — c'est le
+// pendant exact du `GET /interrupt` qui le lit.
+export const DELETE = handler;

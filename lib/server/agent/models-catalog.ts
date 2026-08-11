@@ -4,6 +4,7 @@ import { getRootDefaultModel, resolveAgentApiKey, resolveProviderDefaultModel } 
 import { getModelPlanLimit, type ModelPlanLimit } from "./model-plan";
 import { listOpenRouterIndex } from "./openrouter-index";
 import { modelCostMultiplier, type ModelPricing } from "@/lib/model-multiplier";
+import type { ModelReasoning } from "@/lib/agent-reasoning";
 import {
   getAgentProvider,
   normalizeBaseUrl,
@@ -34,6 +35,13 @@ import {
 export interface AgentModelEntry {
   id: string;
   name: string;
+  /**
+   * Les paliers de raisonnement que ce modèle accepte (MIN-122, affiné), tels
+   * qu'il les publie. Absent hors OpenRouter : les autres endpoints n'ont pas
+   * d'index de capacités, et le sélecteur retombe alors sur les paliers
+   * génériques — le même repli conservateur que pour l'entrée image.
+   */
+  reasoning?: ModelReasoning | null;
   /**
    * Coût d'usage relatif au modèle par défaut de minddy (cf.
    * lib/model-multiplier.ts). Absent quand il ne veut rien dire : provider BYOK
@@ -76,7 +84,11 @@ function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
 async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
   const index = await listOpenRouterIndex(apiKey);
   if (index.length === 0) throw new Error("empty index");
-  return sortById(index.filter((m) => m.tools).map((m) => ({ id: m.id, name: m.name })));
+  return sortById(
+    index
+      .filter((m) => m.tools)
+      .map((m) => ({ id: m.id, name: m.name, reasoning: m.reasoning })),
+  );
 }
 
 /** Endpoint OpenAI-compatible `/models` (OpenAI, Google, générique). */

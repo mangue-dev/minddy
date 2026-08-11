@@ -2156,6 +2156,10 @@ export async function executeAgentRun(
       // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
       // vol et renvoie `interrupted` (round partiel jeté).
       checkInterrupt: () => readInterruptFlag(run.id),
+      // Ce qui fait qu'un « stop » accompagné d'un message n'est PAS un arrêt : la
+      // boucle consomme le drapeau et poursuit ce tour-ci avec la consigne (cf.
+      // `clearInterrupt` dans agent-loop.ts).
+      clearInterrupt: () => clearInterrupt(run.id),
       // Miroir des états du checklist de l'agent vers le plan de l'issue liée.
       // Run carnet : pas d'issue — le cochage du carnet passe par le tool dédié.
       syncPlan: (steps) =>

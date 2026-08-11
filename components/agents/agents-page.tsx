@@ -5,14 +5,26 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
   Skeleton,
   Spinner,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
   cn,
+  toast,
 } from "mangue-ui";
-import { Bot, Plus } from "lucide-react";
+import { Bot, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  IssueContextMenu,
+  type ContextMenuAction,
+} from "@/components/issue-context-menu";
 import { AgentSessionDetail } from "@/components/agents/agent-session-detail";
 import { EmptyScene } from "@/components/empty-scene";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
@@ -40,7 +52,13 @@ import {
   setAgentComposeDraft,
   useAgentComposeDraft,
 } from "@/lib/agent-compose-draft";
-import { isAgentSessionUnread, type AgentRunSummary, type AgentSessionListItem } from "@/lib/agent-api";
+import {
+  deleteAgentRunApi,
+  isAgentSessionUnread,
+  renameAgentRunApi,
+  type AgentRunSummary,
+  type AgentSessionListItem,
+} from "@/lib/agent-api";
 import { agentSessionTitle } from "@/lib/agent-session-title";
 
 /**
@@ -91,6 +109,8 @@ function SessionRow({
   awaiting,
   dateLabel,
   onSelect,
+  onRename,
+  onDelete,
 }: {
   session: AgentSessionListItem;
   selected: boolean;
@@ -99,8 +119,13 @@ function SessionRow({
   awaiting: boolean;
   dateLabel: string;
   onSelect: () => void;
+  onRename: () => void;
+  onDelete: () => void;
 }) {
   const t = useTranslations("Agents");
+  // Le clic droit : la position du pointeur, ou `null` quand le menu est fermé.
+  // Même montage que l'arbre des Pages (components/pages/page-tree.tsx).
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   // « MIN-42: Corriger la redirection » pour une conversation de ticket, le seul
   // titre pour les autres. Cf. `agentSessionTitle`.
   const title = agentSessionTitle(session, t("freeSessionTitle"));
@@ -114,12 +139,44 @@ function SessionRow({
       ? t("prBadge")
       : t("freeBadge");
 
+  /**
+   * Les deux seules choses qu'on fasse à une conversation sans l'ouvrir : la
+   * renommer et la supprimer. Écrites une fois, comme partout ailleurs dans
+   * l'app — c'est le sens de `ContextMenuAction[]` plutôt que des
+   * `<DropdownMenuItem>` recopiés.
+   */
+  const actions: ContextMenuAction[] = [
+    {
+      id: "rename",
+      label: t("renameSession"),
+      icon: <Pencil className="size-4" />,
+      onSelect: onRename,
+    },
+    {
+      id: "delete",
+      label: t("deleteSession"),
+      icon: <Trash2 className="size-4" />,
+      variant: "destructive",
+      separatorBefore: true,
+      onSelect: onDelete,
+    },
+  ];
+
   return (
+    <>
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
           onClick={onSelect}
+          // Le clic droit ouvre le menu de la ligne, où qu'il tombe dessus. Viser
+          // un « ⋯ » demanderait de survoler la ligne pour le faire apparaître,
+          // puis d'atteindre un carré de 24 px — et la ligne, ici, n'a
+          // délibérément rien d'autre que son titre.
+          onContextMenu={(event) => {
+            event.preventDefault();
+            setMenuPosition({ x: event.clientX, y: event.clientY });
+          }}
           className={cn(
             "flex items-center gap-2 rounded-md py-1.5 pr-2 text-left outline-none transition-colors",
             // Aligné sur le NOM du projet, un niveau plus haut.
@@ -153,6 +210,16 @@ function SessionRow({
         ) : null}
       </TooltipContent>
     </Tooltip>
+    {/* Le menu, ancré au pointeur, HORS de la ligne : il pose une ancre invisible
+        en `position: fixed` aux coordonnées du clic, et la garder dedans
+        déformerait le rectangle de survol du tooltip. */}
+    <IssueContextMenu
+      position={menuPosition}
+      onClose={() => setMenuPosition(null)}
+      actions={actions}
+      searchable={false}
+    />
+    </>
   );
 }
 
@@ -185,6 +252,8 @@ function SessionGroupRows({
   onShowAll,
   onSelect,
   onNewSession,
+  onRename,
+  onDelete,
 }: {
   group: SessionGroup;
   open: boolean;
@@ -204,6 +273,9 @@ function SessionGroupRows({
   onSelect: (key: string) => void;
   /** « + » du survol : conversation vierge, ce projet déjà choisi. */
   onNewSession: () => void;
+  /** Clic droit sur une ligne : renommer / supprimer cette conversation. */
+  onRename: (session: AgentSessionListItem) => void;
+  onDelete: (session: AgentSessionListItem) => void;
 }) {
   const t = useTranslations("Agents");
   // « Afficher plus » et « Sans projet » sont ceux de l'accordéon, partagés avec
@@ -283,6 +355,8 @@ function SessionGroupRows({
             awaiting={unread && s.awaitingInput}
             dateLabel={fmtDay(s.updated_at)}
             onSelect={() => onSelect(key)}
+            onRename={() => onRename(s)}
+            onDelete={() => onDelete(s)}
           />
         );
       })}
@@ -362,6 +436,76 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
 }
 
 /**
+ * Renommer une conversation : un champ, un bouton. Le titre initial est celui que
+ * la ligne AFFICHE — identifiant du ticket compris (`agentSessionTitle`) : on
+ * renomme ce qu'on a sous les yeux, pas une colonne dont on ne verrait la moitié
+ * qu'après coup.
+ *
+ * Un champ VIDÉ est un envoi valide (le bouton reste actif) : c'est ainsi qu'on
+ * efface un titre pour retomber sur celui du ticket.
+ */
+function SessionNameDialog({
+  session,
+  onOpenChange,
+  onSubmit,
+}: {
+  /** La conversation à renommer — `null` ferme le dialog. */
+  session: AgentSessionListItem | null;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (name: string) => Promise<void>;
+}) {
+  const t = useTranslations("Agents");
+  const tCommon = useTranslations("Common");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Repartir du titre courant à chaque ouverture : le dialog est piloté depuis le
+  // parent (poser la cible suffit à ouvrir), donc Radix n'appelle pas
+  // `onOpenChange` et le champ resterait sur le titre de la conversation d'avant.
+  useEffect(() => {
+    if (!session) return;
+    setName(agentSessionTitle(session, t("freeSessionTitle")));
+  }, [session, t]);
+
+  return (
+    <Dialog open={!!session} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{t("renameSessionTitle")}</DialogTitle>
+        </DialogHeader>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            try {
+              await onSubmit(name.trim());
+              onOpenChange(false);
+            } catch (err) {
+              toast.error((err as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="flex flex-col gap-3"
+        >
+          <Input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("sessionNamePlaceholder")}
+          />
+          <DialogFooter>
+            <Button type="submit" disabled={busy}>
+              {tCommon("save")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
  * Page Agents — vue liste/détail : à gauche TOUTES les conversations de l'agent
  * Numo (tous projets accessibles, sans filtre), à droite la conversation inline
  * (`AgentSessionDetail` → `AgentConversation`, le même cœur que la modal).
@@ -408,7 +552,7 @@ export function AgentsPage() {
   const format = useFormatter();
   const router = useRouter();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
-  const { sessions, loading } = useAgentSessionsQuery();
+  const { sessions, loading, refetch } = useAgentSessionsQuery();
   // Les projets où l'agent peut travailler (dépôt lié) — ils seuls portent le
   // « + » de leur en-tête. Même requête que le composer, donc un seul appel.
   const { projectIds: gitLinked } = useGitLinkedProjectsQuery();
@@ -461,6 +605,11 @@ export function AgentsPage() {
   // liste des sessions rattrape cette run précise.
   const [launchedRunId, setLaunchedRunId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  // Cibles du menu contextuel de la liste : la conversation qu'on renomme, celle
+  // qu'on s'apprête à supprimer. `null` = le dialog correspondant est fermé.
+  const [renameTarget, setRenameTarget] = useState<AgentSessionListItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AgentSessionListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   // Remonte le composer À NEUF à chaque « Nouveau » (et à chaque texte pré-écrit
   // reçu) : sans ça, un message tapé puis abandonné traînerait dans la conversation
   // « vierge » suivante — qui ne le serait plus.
@@ -726,6 +875,39 @@ export function AgentsPage() {
     if (composeParam || issueParam || runParam) router.replace("/agents");
   };
 
+  /**
+   * Renommer : on écrit `agent_runs.title`, la première marche de la cascade
+   * d'affichage — le nom change du même coup dans la liste et dans l'en-tête du
+   * volet (cf. `agentSessionTitle`). Un titre vidé efface le sien et la
+   * conversation retombe sur le titre de son ticket : c'est le chemin de retour.
+   */
+  const renameSession = async (session: AgentSessionListItem, title: string) => {
+    await renameAgentRunApi(session.runId, title);
+    await refetch();
+  };
+
+  /**
+   * Supprimer, pour de bon : `agent_run_events` et `agent_run_messages` partent en
+   * cascade, et le serveur coupe d'abord la microVM. Si c'est la conversation
+   * OUVERTE qui disparaît, on retombe sur la conversation vierge plutôt que de
+   * laisser un volet fantôme — l'effet de garde le ferait aussi, une image plus
+   * tard, et cette image-là se voit.
+   */
+  const deleteSession = async (session: AgentSessionListItem) => {
+    setDeleting(true);
+    try {
+      await deleteAgentRunApi(session.runId);
+      if (selectedKey === session.runId) setSelectedKey(FREE_COMPOSE_PARAM);
+      setDeleteTarget(null);
+      await refetch();
+      toast.success(t("sessionDeleted"));
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
 
@@ -876,6 +1058,8 @@ export function AgentsPage() {
                 onShowAll={() => setExpandedGroups((prev) => toggledSet(prev, g.key))}
                 onSelect={selectReal}
                 onNewSession={() => startNewSession(g.project?.id)}
+                onRename={setRenameTarget}
+                onDelete={setDeleteTarget}
               />
             ))}
           </div>
@@ -923,6 +1107,51 @@ export function AgentsPage() {
           </div>
         )}
       </div>
+
+      {/* Renommer / supprimer, depuis le clic droit de la liste. */}
+      <SessionNameDialog
+        session={renameTarget}
+        onOpenChange={(open) => {
+          if (!open) setRenameTarget(null);
+        }}
+        onSubmit={(name) =>
+          renameTarget ? renameSession(renameTarget, name) : Promise.resolve()
+        }
+      />
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {t("deleteSessionTitle", {
+                name: deleteTarget
+                  ? agentSessionTitle(deleteTarget, t("freeSessionTitle"))
+                  : "",
+              })}
+            </DialogTitle>
+            {/* Ce qui part avec : tout le fil, et le travail de l'agent avec lui.
+                Une conversation ne va pas à la corbeille — il n'y en a pas pour
+                elle, et le dire vaut mieux que de le laisser découvrir. */}
+            <DialogDescription>{t("deleteSessionDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() => deleteTarget && void deleteSession(deleteTarget)}
+            >
+              {tCommon("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Panneau latéral de l'issue liée — overlay par-dessus la page (pas de nav). */}
       {panel ? (

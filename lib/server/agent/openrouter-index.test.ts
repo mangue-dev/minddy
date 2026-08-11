@@ -23,6 +23,13 @@ const PAYLOAD = {
       context_length: 163840,
       supported_parameters: ["tools", "reasoning"],
       architecture: { input_modalities: ["text"] },
+      // Le vrai objet publié par OpenRouter : les efforts arrivent du PLUS LOURD
+      // au plus léger, et `none` y est le mot pour « ne raisonne pas ».
+      reasoning: {
+        mandatory: false,
+        default_effort: "medium",
+        supported_efforts: ["xhigh", "high", "medium", "low", "none"],
+      },
       pricing: { prompt: "0.00000010", completion: "0.00000032" },
     },
     {
@@ -31,6 +38,8 @@ const PAYLOAD = {
       context_length: 200000,
       supported_parameters: ["tools"],
       architecture: { input_modalities: ["text", "image"] },
+      // Les Claude : ils raisonnent, mais ne publient aucune énumération.
+      reasoning: { mandatory: false },
       pricing: { prompt: "0.000005", completion: "0.000025" },
     },
     {
@@ -132,5 +141,49 @@ describe("index illisible", () => {
     await expect(listOpenRouterIndex()).resolves.toEqual([]);
     await expect(getOpenRouterModelInfo("anthropic/claude-opus-5")).resolves.toBeNull();
     spy.mockRestore();
+  });
+});
+
+describe("les paliers de raisonnement publiés par le modèle", () => {
+  it("ressortent du moins cher au plus cher, `none` traduit en `off`", async () => {
+    // Nos listes vont dans l'autre sens que celle d'OpenRouter, et `off` dit un
+    // peu plus que leur `none` : n'envoyer AUCUN champ de raisonnement.
+    const { getOpenRouterModelInfo } = await freshIndex();
+    const info = await getOpenRouterModelInfo("deepseek/deepseek-v4-flash");
+    expect(info?.reasoning).toEqual({
+      efforts: ["off", "low", "medium", "high", "xhigh"],
+      mandatory: false,
+    });
+  });
+
+  it("un modèle qui n'énumère rien garde un objet VIDE, pas `null`", async () => {
+    // La nuance porte tout le sélecteur : `null` = rien de publié, liste vide =
+    // il raisonne sans dire comment. Les deux retombent sur les paliers
+    // génériques, mais `mandatory` n'a de sens que dans le second cas.
+    const { getOpenRouterModelInfo } = await freshIndex();
+    const info = await getOpenRouterModelInfo("anthropic/claude-opus-5");
+    expect(info?.reasoning).toEqual({ efforts: [], mandatory: false });
+  });
+
+  it("un modèle sans objet `reasoning` n'en invente pas", async () => {
+    const { getOpenRouterModelInfo } = await freshIndex();
+    const info = await getOpenRouterModelInfo("some/embedding-model");
+    expect(info?.reasoning).toBeNull();
+  });
+
+  it("jette un palier qu'on ne sait pas nommer plutôt que de le deviner", async () => {
+    // Un palier qu'on ne sait pas afficher ne doit pas non plus se sélectionner.
+    const { getOpenRouterModelInfo } = await freshIndex({
+      data: [
+        {
+          id: "x/y",
+          name: "Y",
+          reasoning: { mandatory: true, supported_efforts: ["ultra", "high", "low"] },
+          pricing: { prompt: "0.000001", completion: "0.000001" },
+        },
+      ],
+    });
+    const info = await getOpenRouterModelInfo("x/y");
+    expect(info?.reasoning).toEqual({ efforts: ["low", "high"], mandatory: true });
   });
 });

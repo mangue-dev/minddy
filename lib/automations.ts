@@ -25,7 +25,7 @@
  */
 
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
-import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { REASONING_LEVELS, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AgentLaunchMode } from "@/lib/server/agent/launch-message";
 import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 import { hasPlanTasks } from "@/lib/plan";
@@ -530,7 +530,9 @@ const STATUSES: readonly IssueStatus[] = [
 const PRIORITIES: readonly IssuePriority[] = ["none", "low", "medium", "high", "urgent"];
 const EFFORTS: readonly (IssueEffort | "none")[] = ["xs", "s", "m", "l", "xl", "none"];
 const INTENTS: readonly AgentLaunchIntent[] = ["implement", "plan", "verify", "custom"];
-const REASONING: readonly ReasoningLevel[] = ["off", "low", "medium", "high"];
+// Le vocabulaire complet, celui des modèles (cf. lib/agent-reasoning.ts) : une
+// liste recopiée ici serait une liste qui vieillit à part.
+const REASONING: readonly ReasoningLevel[] = REASONING_LEVELS;
 
 /** Cap d'une consigne libre stockée dans une règle (le reste est du prompt). */
 const MAX_RULE_PROMPT_CHARS = 4000;

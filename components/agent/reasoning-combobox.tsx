@@ -16,34 +16,49 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "mangue-ui";
-import { REASONING_LEVELS, type ReasoningLevel } from "@/lib/agent-reasoning";
+import { GENERIC_REASONING_LEVELS, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
  * Picker du niveau de RAISONNEMENT d'une session d'agent (MIN-122) — le pendant
- * du BranchCombobox, en plus simple : liste courte et FERMÉE (quatre niveaux),
- * donc pas de champ de recherche ni de saisie libre.
+ * du BranchCombobox, en plus simple : liste courte et FERMÉE, donc pas de champ
+ * de recherche ni de saisie libre.
+ *
+ * CE QU'IL LISTE DÉPEND DU MODÈLE, et ne peut pas ne pas en dépendre : les
+ * paliers sont ceux que le modèle choisi publie (`levels`, résolu par
+ * `reasoningLevelsFor` chez l'appelant, qui seul sait quel modèle est retenu).
+ * Un `gpt-5.1-codex-max` en accepte cinq dont `xhigh`, un `gemini-3` quatre dont
+ * `minimal` et sans « sans raisonnement », un Claude n'en publie aucun — on
+ * retombe alors sur les quatre historiques. Proposer les sept partout offrirait
+ * des choix sans effet ; en proposer trois partout cachait ce que les modèles
+ * savent faire.
  *
  * Comme le modèle et la branche, le niveau est choisi au lancement puis FIGÉ pour
  * la session : partout ailleurs, le picker est un chip verrouillé + tooltip.
  *
- * Les quatre niveaux sont ouverts à tous, quota minddy compris — l'abonnement est
+ * Tous les niveaux sont ouverts à tous, quota minddy compris — l'abonnement est
  * payé, il doit être utilisable en entier. Ce qui borne la dépense est le budget
  * d'usage lui-même, pas une restriction sur le niveau.
  */
 
 const LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
   off: "reasoningOff",
+  minimal: "reasoningMinimal",
   low: "reasoningLow",
   medium: "reasoningMedium",
   high: "reasoningHigh",
+  xhigh: "reasoningXhigh",
+  max: "reasoningMax",
 };
 
 const DESC_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
   off: "reasoningOffDesc",
+  minimal: "reasoningMinimalDesc",
   low: "reasoningLowDesc",
   medium: "reasoningMediumDesc",
   high: "reasoningHighDesc",
+  xhigh: "reasoningXhighDesc",
+  max: "reasoningMaxDesc",
 };
 
 export function ReasoningCombobox({
@@ -51,12 +66,19 @@ export function ReasoningCombobox({
   onChange,
   disabled,
   disabledTooltip,
+  levels = GENERIC_REASONING_LEVELS,
 }: {
   value: ReasoningLevel;
   onChange: (value: ReasoningLevel) => void;
   disabled?: boolean;
   /** Tooltip du chip verrouillé (niveau figé pour la session). */
   disabledTooltip?: string;
+  /**
+   * Les paliers du modèle choisi (`reasoningLevelsFor`). Absent = les quatre
+   * historiques : c'est le repli d'un appelant qui ne sait pas encore quel modèle
+   * sera retenu (le catalogue n'est pas arrivé), pas un choix d'affichage.
+   */
+  levels?: ReasoningLevel[];
 }) {
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
@@ -103,7 +125,7 @@ export function ReasoningCombobox({
         <Command shouldFilter={false}>
           {/* mt-1.5 / px-1 : mêmes retraits que les autres pickers du composer. */}
           <CommandList className="mt-1.5 px-1">
-            {REASONING_LEVELS.map((level) => (
+            {levels.map((level) => (
               <CommandItem
                 key={level}
                 value={level}

@@ -2128,7 +2128,13 @@
     "composeProjectEmpty": "No project.",
     "composeProjectRequired": "Pick a project first. The agent clones its repository.",
     "composeProjectTooltip": "Pick a project before launching",
-    "composeNoRepo": "None of your projects has a repository connected. The agent clones a repository to work in: link one in a project's settings."
+    "composeNoRepo": "None of your projects has a repository connected. The agent clones a repository to work in: link one in a project's settings.",
+    "reasoningMinimal": "Minimal",
+    "reasoningMinimalDesc": "Barely a pause — a beat of thought, no more.",
+    "reasoningXhigh": "Very deep",
+    "reasoningXhighDesc": "More thinking than Deep, on models that go that far.",
+    "reasoningMax": "Maximum",
+    "reasoningMaxDesc": "Everything the model can put into thinking."
   },
   "Projects": {
     "newProject": "New project",
@@ -2901,7 +2907,14 @@
     "freeBadge": "Free topic",
     "freeSessionTitle": "Untitled conversation",
     "tabConversations": "Conversations",
-    "tabRoutines": "Routines"
+    "tabRoutines": "Routines",
+    "renameSession": "Rename",
+    "renameSessionTitle": "Rename this conversation",
+    "sessionNamePlaceholder": "Conversation name",
+    "deleteSession": "Delete",
+    "deleteSessionTitle": "Delete “{name}”?",
+    "deleteSessionDescription": "The whole thread goes with it, and it cannot be undone.",
+    "sessionDeleted": "Conversation deleted"
   },
   "PullRequests": {
     "title": "Pull requests",

@@ -2,11 +2,20 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { getRun, type AgentRun } from "@/lib/server/agent/runs";
+import { getRun, requestInterrupt, type AgentRun } from "@/lib/server/agent/runs";
+import { revokeRunKey } from "@/lib/server/agent/run-key";
+import { stopSandboxByName } from "@/lib/server/agent/sandbox";
+import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Détail d'un run d'agent (MIN-46) — colonnes client-safe (jamais le checkpoint
- * ni le sandbox_id). Lecture = membre du projet du run.
+ * Une conversation de l'agent (MIN-46) : la LIRE, la RENOMMER, la SUPPRIMER.
+ *
+ * Les trois demandent la même chose — être membre du projet du run — et rendent
+ * le même 404 quand on ne l'est pas : dire « interdit » apprendrait déjà qu'un run
+ * porte cet identifiant.
+ *
+ * La lecture ne rend que des colonnes client-safe (jamais le checkpoint ni le
+ * sandbox_id).
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -57,4 +66,98 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!access) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   return NextResponse.json({ run: sanitizeRun(run) });
+}
+
+/** Un titre de conversation tient sur une ligne — au-delà, la colonne le tronque
+ *  de toute façon, et la base n'a pas à porter un paragraphe. */
+const MAX_TITLE = 200;
+
+/**
+ * RENOMMER la conversation. Le titre est celui que le titreur a écrit au
+ * lancement (`agent_runs.title`) : le remplacer à la main, c'est écrire la même
+ * colonne, et la cascade d'affichage (`lib/agent-session-title.ts`) le reprend
+ * partout — la ligne de la liste, l'en-tête du volet.
+ *
+ * Un titre VIDE efface le sien : la conversation retombe alors sur le titre de son
+ * ticket, ou sur « Conversation sans titre ». C'est le seul moyen de revenir en
+ * arrière, et il vaut mieux que d'interdire — un renommage malheureux ne doit pas
+ * être définitif.
+ */
+export async function PATCH(request: NextRequest, { params }: RouteContext) {
+  const { runId } = await params;
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+
+  let payload: { title?: unknown };
+  try {
+    payload = (await request.json()) as { title?: unknown };
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  if (!("title" in (payload ?? {}))) {
+    return NextResponse.json({ error: "Title required" }, { status: 400 });
+  }
+  const raw = typeof payload?.title === "string" ? payload.title.trim() : "";
+  const title = raw.slice(0, MAX_TITLE) || null;
+
+  const run = await getRun(runId);
+  if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+
+  const access = await getProjectAccess(auth.user.id, run.project_id);
+  if (!access?.isMember) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+
+  const { error } = await getServiceClient()
+    .from("agent_runs")
+    .update({ title })
+    .eq("id", runId);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ run: sanitizeRun({ ...run, title }) });
+}
+
+/**
+ * SUPPRIMER la conversation, quel que soit son état — y compris `running`.
+ *
+ * C'est délibéré, et c'est même le cas qui a fait écrire cette route : une
+ * conversation dont la boucle est morte reste `running`, ne s'arrête pas et ne se
+ * guide pas. Refuser de la supprimer parce qu'elle « travaille » laisserait pour
+ * seule issue une suppression à la main en base — ce qu'il a fallu faire.
+ *
+ * TROIS GESTES, ET L'ORDRE COMPTE. On pose le drapeau d'interruption, on coupe la
+ * microVM, on révoque la clé du run, PUIS on supprime la ligne. Supprimer d'abord
+ * perdrait le nom de la sandbox et le hash de la clé : la microVM tournerait
+ * jusqu'au bout de sa session (24 h facturées) et la clé resterait valide, sans
+ * plus rien en base pour dire lesquelles. Les trois premiers sont best-effort — un
+ * de ces ménages qui échoue ne doit pas empêcher la suppression demandée.
+ *
+ * La base fait le reste : `agent_run_events` et `agent_run_messages` sont en
+ * `on delete cascade`, et rien d'autre ne référence un run.
+ */
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
+  const { runId } = await params;
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+
+  const run = await getRun(runId);
+  if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+
+  const access = await getProjectAccess(auth.user.id, run.project_id);
+  if (!access?.isMember) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+
+  // Le drapeau d'abord : si la boucle vit encore, elle le lira peut-être avant
+  // qu'on ne lui coupe la machine, et s'arrêtera proprement.
+  if (run.status === "queued" || run.status === "running") {
+    await requestInterrupt(runId).catch(() => {});
+  }
+  if (run.sandbox_id) await stopSandboxByName(run.sandbox_id).catch(() => {});
+  if (run.provider_key_id) await revokeRunKey(run.provider_key_id).catch(() => {});
+
+  const { error } = await getServiceClient().from("agent_runs").delete().eq("id", runId);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

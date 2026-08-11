@@ -92,6 +92,12 @@ export interface ControlPlaneClient {
   hasPendingMessages(): Promise<boolean>;
   checkInterrupt(): Promise<boolean>;
   /**
+   * EFFACE le drapeau d'interruption. Appelé par la boucle quand le « stop » qu'elle
+   * vient de lire arrivait avec un message : le tour continue alors dans ce
+   * tour-ci, au lieu de sortir pour être re-queué par le message resté en file.
+   */
+  clearInterrupt(): Promise<void>;
+  /**
    * Ce que ce tour a ENCORE le droit de dépenser, relu maintenant — le plus serré
    * du restant mensuel du compte et du plafond du run. `null` = inconnu (lecture
    * en panne) ou illimité (BYOK) : l'appelant garde alors son plafond courant.
@@ -115,7 +121,7 @@ export function createControlPlaneClient(appOrigin: string): ControlPlaneClient 
   const url = (surface: string) => agentVmUrl(appOrigin, surface);
 
   async function request(
-    method: "GET" | "POST" | "PUT",
+    method: "GET" | "POST" | "PUT" | "DELETE",
     surface: string,
     body?: unknown,
   ): Promise<unknown> {
@@ -247,6 +253,17 @@ export function createControlPlaneClient(appOrigin: string): ControlPlaneClient 
         console.error("[agent-vm] interrupt read failed:", (err as Error).message);
         return false;
       }
+    },
+
+    /**
+     * LÈVE si elle échoue, à la différence de ses voisines — et c'est l'exception qui
+     * confirme leur règle. Ne pas savoir lire une file peut attendre le round
+     * suivant ; croire avoir effacé un drapeau qui est resté levé fait sortir le
+     * tour au round d'après, message accepté et jamais joué. La boucle traite donc
+     * l'échec comme un « toujours interrompu » (elle relit le drapeau derrière).
+     */
+    clearInterrupt: async () => {
+      await request("DELETE", "/interrupt");
     },
 
     budgetRemaining: async () => {

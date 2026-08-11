@@ -320,6 +320,36 @@ export async function fetchAgentRunApi(
   return parseJson(await fetch(`/api/agent-runs/${runId}`));
 }
 
+/**
+ * RENOMME une conversation. Écrit `agent_runs.title`, c'est-à-dire la première
+ * marche de la cascade d'affichage (`lib/agent-session-title.ts`) : le nom change
+ * partout d'un coup. Un titre vide EFFACE le sien — la conversation retombe alors
+ * sur le titre de son ticket, et c'est le chemin de retour d'un renommage
+ * malheureux.
+ */
+export async function renameAgentRunApi(
+  runId: string,
+  title: string,
+): Promise<{ run: AgentRunSummary }> {
+  return parseJson(
+    await fetch(`/api/agent-runs/${runId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    }),
+  );
+}
+
+/**
+ * SUPPRIME une conversation, quel que soit son état. Le serveur coupe d'abord la
+ * microVM et révoque la clé du run : sans ça, une conversation supprimée en plein
+ * travail continuerait de tourner et de coûter, sans plus rien en base pour dire
+ * laquelle.
+ */
+export async function deleteAgentRunApi(runId: string): Promise<{ ok: true }> {
+  return parseJson(await fetch(`/api/agent-runs/${runId}`, { method: "DELETE" }));
+}
+
 // ── Run détail / events / stop / PR ──────────────────────────────────────────
 
 export type AgentEventType =

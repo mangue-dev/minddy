@@ -113,6 +113,43 @@ export async function reapIdleSandboxes(
 const VM_LOOP_PROBE_AFTER_MS = 3 * 60_000;
 
 /**
+ * Silence après lequel une réponse INDÉTERMINÉE finit par valoir un décès.
+ *
+ * La règle reste « on ne conclut pas sur un silence de l'API » — mais elle ne
+ * peut pas valoir *pour toujours*. Une microVM détruite (session expirée,
+ * plateforme qui l'a rendue) répond « introuvable » à chaque passage, donc
+ * `null`, donc rien : le run restait `running` jusqu'à ce qu'un humain le
+ * supprime en base. Ce qui manquait n'était pas un verdict plus audacieux, c'est
+ * une BORNE : passé deux heures sans le moindre signe de vie de la boucle ET sans
+ * que la plateforme sache seulement dire qu'elle existe, la panne d'API qui
+ * expliquerait les deux n'est plus l'hypothèse raisonnable.
+ *
+ * Deux heures = 24 fois l'intervalle de sauvegarde du checkpoint (5 min), qui est
+ * le battement de cœur de la boucle. Le pire cas assumé — un round unique qui
+ * dure plus de deux heures pendant une panne totale de l'API Sandbox — remet la
+ * session au repos sur son dernier checkpoint : elle reste reprennable, ce qui
+ * est très exactement ce que le run bloqué, lui, n'était pas.
+ */
+const VM_LOOP_LOST_AFTER_MS = 2 * 60 * 60_000;
+
+/**
+ * Délai au-delà duquel un run `running` SANS identifiant de commande est réputé
+ * n'avoir jamais démarré sa boucle.
+ *
+ * `startVmLoop` écrit cet identifiant à la fin de l'amorçage (~22 s à froid) : une
+ * ligne qui ne l'a toujours pas au bout d'un quart d'heure est une fonction morte
+ * entre le claim et le lancement. Il n'y a rien à sonder — pas de commande, donc
+ * pas de constat possible — et c'est précisément le cas que l'ancienne rédaction
+ * laissait filer sans le dire (`.not("loop_command_id", "is", null)` dans la
+ * requête : ces runs-là n'étaient même pas regardés).
+ *
+ * Compté sur `started_at` (posé au claim, donc propre à CE tour) et non sur le
+ * silence : un run re-queué avec un délai devant lui arrive au claim avec une
+ * horloge d'activité déjà vieille, et le compter là le tuerait en plein amorçage.
+ */
+const VM_LOOP_UNLAUNCHED_AFTER_MS = 15 * 60_000;
+
+/**
  * LE CHIEN DE GARDE des runs dont la boucle vit dans la microVM (MIN-224).
  *
  * IL REMPLACE `requeueStuckRuns` POUR CES RUNS-LÀ, et ce n'est pas le même geste.
@@ -128,7 +165,11 @@ const VM_LOOP_PROBE_AFTER_MS = 3 * 60_000;
  * - le process VIT → on ne touche à rien, quel que soit le silence ;
  * - on ne SAIT PAS (microVM introuvable, session expirée, API en panne) → on ne
  *   touche à rien non plus. Un chien de garde qui conclut sur un silence de l'API
- *   remettrait au repos des tours en pleine santé ;
+ *   remettrait au repos des tours en pleine santé. Mais l'attente est BORNÉE
+ *   (`VM_LOOP_LOST_AFTER_MS`, et `VM_LOOP_UNLAUNCHED_AFTER_MS` pour une ligne qui
+ *   n'a même pas de commande à interroger) : « on ne sait pas » ne peut pas durer
+ *   toujours, sans quoi un run reste `running` jusqu'à ce qu'un humain le
+ *   supprime en base ;
  * - le process est MORT → la session repasse au repos sur son DERNIER CHECKPOINT
  *   (celui de la sauvegarde périodique), **le fil le dit**, et le compute de la
  *   microVM est facturé (cf. `recordSandboxUsage` plus bas). C'est ce qui
@@ -140,11 +181,10 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
   const { data } = await service
     .from("agent_runs")
     .select(
-      "id, sandbox_id, loop_command_id, created_by, project_id, issue_id, provider_key_id, run_id, routine_id, continuations, started_at",
+      "id, sandbox_id, loop_command_id, created_by, project_id, issue_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at",
     )
     .eq("status", "running")
     .eq("loop_in_vm", true)
-    .not("loop_command_id", "is", null)
     .lt("last_activity_at", cutoff)
     .limit(50);
   const rows = (data ?? []) as Array<{
@@ -159,6 +199,7 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     routine_id: string | null;
     continuations: number;
     started_at: string | null;
+    last_activity_at: string | null;
   }>;
 
   /**
@@ -180,9 +221,34 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     })),
   );
 
+  /**
+   * Depuis combien de temps ce tour ne donne-t-il plus signe de vie, et depuis
+   * combien de temps a-t-il été claim ? `null` (date absente) = on ne sait pas, et
+   * on ne borne alors rien : les deux replis temporels ci-dessous ne servent qu'à
+   * fermer un cas qu'on a CONSTATÉ ouvert, jamais à conclure sur une ignorance.
+   */
+  const agedMs = (at: string | null): number | null => {
+    const ms = at ? Date.parse(at) : NaN;
+    return Number.isFinite(ms) ? Date.now() - ms : null;
+  };
+
   let reaped = 0;
   for (const { row, alive } of verdicts) {
-    if (alive !== false) continue; // vivant, ou indéterminé : on ne conclut pas.
+    if (alive === true) continue; // le process vit : on ne touche à rien.
+    if (alive === null) {
+      /**
+       * On ne SAIT PAS — et il y a deux façons de ne pas savoir. Sans identifiant
+       * de commande, il n'y a rien à interroger : la boucle n'a jamais été lancée,
+       * et passé le délai d'amorçage c'est un fait, pas une présomption. Avec un
+       * identifiant, c'est la plateforme qui ne répond pas : on lui laisse deux
+       * heures avant d'en tirer une conclusion.
+       */
+      const lost = row.loop_command_id
+        ? (agedMs(row.last_activity_at) ?? 0) >= VM_LOOP_LOST_AFTER_MS &&
+          (agedMs(row.started_at) ?? 0) >= VM_LOOP_LOST_AFTER_MS
+        : (agedMs(row.started_at) ?? 0) >= VM_LOOP_UNLAUNCHED_AFTER_MS;
+      if (!lost) continue;
+    }
 
     // Le fil D'ABORD : si le stamp échoue derrière, l'utilisateur aura quand même
     // lu pourquoi son tour s'est arrêté. L'inverse laisserait une conversation

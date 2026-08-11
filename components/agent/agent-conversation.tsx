@@ -48,9 +48,9 @@ import {
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
-import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
 import { BranchCombobox } from "./branch-combobox";
@@ -462,7 +462,14 @@ export function AgentConversation({
   // Niveau de raisonnement (MIN-122), figé au lancement lui aussi. `null` = pas
   // encore touché → on suit le défaut perso, qui peut arriver après le montage.
   const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
-  const reasoningLevel = reasoningOverride ?? defaultReasoningLevel;
+  // Les paliers du MODÈLE qui va tourner (override choisi, sinon défaut perso,
+  // sinon défaut du provider) : ce que le sélecteur liste dépend de lui, et le
+  // niveau affiché est rabattu sur ce qu'il accepte.
+  const reasoningLevels = useReasoningLevelsFor(model || defaultModel || providerDefaultModel);
+  const reasoningLevel = nearestReasoningLevel(
+    reasoningOverride ?? defaultReasoningLevel,
+    reasoningLevels,
+  );
   const [launching, setLaunching] = useState(false);
   // Seul un BYOK générique sans défaut résoluble impose de choisir un modèle.
   const modelRequired = provider === "generic" && !defaultModel && !model;
@@ -874,6 +881,7 @@ export function AgentConversation({
                     value={reasoningLevel}
                     onChange={setReasoningOverride}
                     disabled={launching}
+                    levels={reasoningLevels}
                   />
                   {/* Branche que l'agent COPIE pour son espace de travail. Choix
                       possible seulement ici (au lancement) et seulement pour une

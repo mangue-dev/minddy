@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
@@ -16,6 +17,10 @@ import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { isForgePrEvent, forgePrActor } from "@/lib/pr-events";
 import { getRepoProvider } from "@/lib/repo-providers";
+import { REASONING_LEVELS } from "@/lib/agent-reasoning";
+
+/** `z.enum` veut un tuple non vide : le vocabulaire complet, dans son ordre. */
+const REASONING_LEVELS_TUPLE = REASONING_LEVELS as [string, ...string[]];
 import {
   MAX_PLAN_LENGTH,
   PLAN_TASK_STATES,
@@ -4330,7 +4335,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "A model above the plan's ceiling is refused here, at creation."
           ),
         reasoning_level: z
-          .enum(["off", "low", "medium", "high"])
+          .enum(REASONING_LEVELS_TUPLE)
           .optional()
           .describe("Reasoning effort of the runs. Omit for the owner's default."),
         base_branch: z
@@ -4418,7 +4423,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .optional()
           .describe("IANA timezone of the hour. Pass the user's, never a guess."),
         model: z.string().optional(),
-        reasoning_level: z.enum(["off", "low", "medium", "high"]).optional(),
+        reasoning_level: z.enum(REASONING_LEVELS_TUPLE).optional(),
         base_branch: z.string().optional(),
         max_spend_percent: z
           .number()
