@@ -13,7 +13,14 @@
 //  - un menu « / » groupé et ordonné, un « transformer en » qui n'offre que le
 //    convertible.
 
-import { Extension, type AnyExtension, type Editor, type Extensions, type Range } from "@tiptap/core";
+import {
+  Extension,
+  type AnyExtension,
+  type Editor,
+  type Extensions,
+  type NodeViewRenderer,
+  type Range,
+} from "@tiptap/core";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { PageBlock, PageBlockId, SlashGroup } from "@/components/pages/blocks/types";
 
@@ -123,9 +130,20 @@ function withMarkdown(block: PageBlock, extension: AnyExtension): AnyExtension {
  * markdown sans une ligne de rendu. C'est ce dont a besoin tout ce qui lit ou
  * écrit une page hors d'un navigateur — la projection markdown, les outils MCP,
  * et les tests. Sans ça, monter le catalogue demanderait React et un `<EditorContent>`.
+ *
+ * `nodeViews` fait l'inverse : il GREFFE une vue sur un nœud, par nom. C'est le
+ * chemin des vues que le catalogue ne peut pas porter lui-même — la tâche
+ * partagée avec le carnet (components/scratchpad/task-item-view.tsx) tire le
+ * baril `mangue-ui`, donc un fichier de bloc qui la nommerait rendrait le
+ * registre entier inimportable hors navigateur (cf. lib/cx.ts). Le nœud reste
+ * au registre, la vue vient de la surface — exactement le partage que
+ * `pageExtensions({ mention })` fait déjà pour la pilule de mention.
  */
 export function blockExtensions(
-  options: { headless?: boolean } = {}
+  options: {
+    headless?: boolean;
+    nodeViews?: Record<string, NodeViewRenderer>;
+  } = {}
 ): Extensions {
   const seen = new Set<string>();
   const extensions: AnyExtension[] = [];
@@ -137,10 +155,13 @@ export function blockExtensions(
         extension.name === block.nodeName
           ? withMarkdown(block, extension)
           : extension;
+      const view = options.nodeViews?.[extension.name];
       extensions.push(
         options.headless
           ? withStorage.extend({ addNodeView: undefined })
-          : withStorage
+          : view
+            ? withStorage.extend({ addNodeView: () => view })
+            : withStorage
       );
     }
   }

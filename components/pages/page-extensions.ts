@@ -17,7 +17,7 @@
 // pilule vit dans un module client, et un module client importé côté serveur ne
 // rend qu'une référence, pas une extension tiptap.
 
-import type { AnyExtension, Extensions } from "@tiptap/core";
+import type { AnyExtension, Extensions, NodeViewRenderer } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import UniqueID from "@tiptap/extension-unique-id";
 import { Markdown } from "tiptap-markdown";
@@ -45,12 +45,27 @@ export interface PageExtensionsOptions {
    * nœud, avec une vue en plus.
    */
   mention?: AnyExtension;
+
+  /**
+   * Les vues de nœud que la SURFACE apporte, par nom de nœud. Même raison que
+   * `mention`, et même forme : une vue qui tire le baril `mangue-ui` ne peut
+   * pas être nommée par un fichier de bloc sans rendre le registre inimportable
+   * hors navigateur. C'est par là que passe la tâche partagée avec le carnet
+   * (`taskItem`, cf. components/scratchpad/task-item-view.tsx).
+   *
+   * Ignoré en `headless`, où il n'y a de toute façon aucune vue.
+   */
+  nodeViews?: Record<string, NodeViewRenderer>;
 }
 
 export function pageExtensions(
   options: PageExtensionsOptions = {}
 ): Extensions {
-  const { headless = false, mention = MentionNodeBase } = options;
+  const {
+    headless = false,
+    mention = MentionNodeBase,
+    nodeViews,
+  } = options;
 
   return [
     // Le substrat : document, texte, marques, annuler / refaire, liens. Tous les
@@ -66,7 +81,7 @@ export function pageExtensions(
       orderedList: false,
       listItem: false,
     }),
-    ...blockExtensions({ headless }),
+    ...blockExtensions({ headless, nodeViews }),
     ...pageColorExtensions(),
     PageBlockShortcuts,
     mention,

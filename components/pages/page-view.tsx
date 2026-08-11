@@ -48,6 +48,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { BLOCK_ID_ATTRIBUTE, PageEditor } from "@/components/pages/page-editor";
 import { PageHeader } from "@/components/pages/page-header";
+import { PageTaskSurface } from "@/components/pages/page-task-surface";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { PageBreadcrumb } from "@/components/pages/page-breadcrumb";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
@@ -547,14 +548,19 @@ export function PageView({
           onDismiss={autosave.dismiss}
         />
         <div ref={bodyRef} className="mt-6">
-          <PageEditor
-            initialContent={(page.content as JSONContent | null) ?? null}
-            onChange={(content) => schedule({ content })}
-            pages={lookup}
-            mentions={mentions}
-            editorRef={editorRef}
-            onSubpagesRemoved={onSubpagesRemoved}
-          />
+          {/* Ce que « confier une tâche » veut dire quand elle sort d'une page
+              plutôt que du carnet : le prompt nomme la page, et la navigation
+              attend que ce qui est en attente soit écrit (MIN-274). */}
+          <PageTaskSurface pageTitle={title} flush={flush}>
+            <PageEditor
+              initialContent={(page.content as JSONContent | null) ?? null}
+              onChange={(content) => schedule({ content })}
+              pages={lookup}
+              mentions={mentions}
+              editorRef={editorRef}
+              onSubpagesRemoved={onSubpagesRemoved}
+            />
+          </PageTaskSurface>
         </div>
       </div>
       </div>

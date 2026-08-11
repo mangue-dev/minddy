@@ -36,6 +36,8 @@ import {
   type MentionSuggestOptions,
 } from "@/components/markdown-mention";
 import { pageExtensions } from "@/components/pages/page-extensions";
+import { taskItemNodeView } from "@/components/scratchpad/task-item-view";
+import { noteTyping, trackPointerFreshness } from "@/lib/keyboard/hover-keys";
 import { setDetailsLabels } from "@/components/pages/blocks/details";
 import {
   BlockPlaceholder,
@@ -99,6 +101,16 @@ const EDITOR_PROPS = {
   // pourquoi, et les deux navigations qu'il évitait, sont dans block-actions.ts.
   handleClick: (_view: unknown, _pos: number, event: MouseEvent) =>
     handleBlockLinkClick(event),
+  // Écrire périme le pointeur : tant qu'on n'a pas redéplacé la souris, la
+  // tâche qu'elle survole ne prend plus ⇧A/⇧P (cf. hover-keys.ts). Même règle
+  // que le carnet, et pour la même raison — une page est éditable de bout en
+  // bout, donc « la frappe l'emporte tant qu'on écrit » est la seule chose qui
+  // sépare le raccourci de la lettre. Le signal est la FRAPPE, pas le
+  // changement de document : les flèches en sont, une insertion programmée non.
+  handleKeyDown: () => {
+    noteTyping();
+    return false;
+  },
 };
 
 export function PageEditor({
@@ -148,7 +160,15 @@ export function PageEditor({
         // Le SCHÉMA de la page, celui-là même que monte la projection markdown
         // (components/pages/page-extensions.ts). L'éditeur y ajoute son chrome,
         // et rien qui touche au document.
-        ...pageExtensions({ mention: MentionNode }),
+        // La vue des TÂCHES est celle du carnet (MIN-274) : même menu ⋯, mêmes
+        // raccourcis de survol, même clic droit. Elle s'injecte ici plutôt que
+        // de vivre dans le fichier du bloc, parce qu'elle tire `mangue-ui` et
+        // que le registre, lui, doit rester importable hors navigateur (cf.
+        // components/pages/blocks/task-list.ts).
+        ...pageExtensions({
+          mention: MentionNode,
+          nodeViews: { taskItem: taskItemNodeView() },
+        }),
         ...(mentions ? [MentionSuggest.configure(mentions)] : []),
         NodeRange,
         // Le placeholder est à NOUS et pas à @tiptap/extensions : le pourquoi
@@ -171,6 +191,10 @@ export function PageEditor({
     editorProps: EDITOR_PROPS,
     onUpdate: ({ editor }) => onChangeRef.current(editor.getJSON()),
   });
+
+  // L'autre moitié de la règle ci-dessus : bouger le pointeur le rafraîchit.
+  // L'écouteur vit le temps que l'éditeur est monté.
+  useEffect(() => trackPointerFreshness(), []);
 
   useEffect(() => {
     if (editorRef) editorRef.current = editor ?? null;

@@ -1,10 +1,8 @@
-import { ReactNodeViewRenderer } from "@tiptap/react";
 import { ListTodo } from "lucide-react";
 import {
   ScratchpadTaskItemBase,
   ScratchpadTaskList,
 } from "@/components/scratchpad/task-nodes";
-import { PageTaskItemView } from "@/components/pages/blocks/task-item-view";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 /**
@@ -15,18 +13,20 @@ import type { PageBlock } from "@/components/pages/blocks/types";
  *
  * Ne rien redéfinir ici, jamais : deux définitions des quatre états, c'est deux
  * grammaires de tâche dans le même produit, et un jour un `[~]` qui se relit
- * `[ ]` d'un côté seulement. Ce fichier ne pose qu'une vue.
+ * `[ ]` d'un côté seulement.
+ *
+ * Ce fichier ne pose donc AUCUNE vue — plus depuis MIN-274. La vue est celle du
+ * carnet (components/scratchpad/task-item-view.tsx), menu ⋯ compris, et elle
+ * tire le baril `mangue-ui` : la nommer ici rendrait le registre entier
+ * inimportable hors navigateur (projection markdown, outils MCP, tests — cf.
+ * lib/cx.ts). C'est l'éditeur de page qui l'injecte au montage,
+ * `pageExtensions({ nodeViews: { taskItem } })`, comme il le fait déjà pour la
+ * pilule de mention.
  */
-const PageTaskItem = ScratchpadTaskItemBase.extend({
-  addNodeView() {
-    return ReactNodeViewRenderer(PageTaskItemView);
-  },
-});
-
 export const taskListBlock: PageBlock = {
   id: "taskList",
   nodeName: "taskList",
-  extensions: [ScratchpadTaskList, PageTaskItem],
+  extensions: [ScratchpadTaskList, ScratchpadTaskItemBase],
   icon: ListTodo,
   labelKey: "blockTaskList",
   descriptionKey: "blockTaskListHint",

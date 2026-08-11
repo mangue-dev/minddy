@@ -60,7 +60,12 @@ function MentionNodeView({ node }: NodeViewProps) {
         label={node.attrs.mentionLabel ?? ""}
         avatarSeed={node.attrs.seed}
         color={node.attrs.color}
-        iconUrl={node.attrs.icon}
+        // L'attribut `icon` porte deux choses selon le type, et une seule à la
+        // fois : le favicon d'un projet (une URL) ou l'émoji d'une page. Les
+        // passer tous les deux sans distinguer donnerait une pilule de page
+        // toujours coiffée du livre générique, jamais de son émoji.
+        iconUrl={type === "page" ? null : node.attrs.icon}
+        icon={type === "page" ? node.attrs.icon : null}
       />
     </NodeViewWrapper>
   );

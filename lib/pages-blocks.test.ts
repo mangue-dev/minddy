@@ -84,6 +84,34 @@ describe("le registre des blocs de page", () => {
     ).toHaveLength(1);
   });
 
+  // MIN-274 : la vue d'une tâche est celle du CARNET, et elle tire le baril
+  // `mangue-ui`. Un fichier de bloc qui la nommerait rendrait le registre
+  // inimportable hors navigateur — ce fichier entier ne se chargerait plus, et
+  // c'est ce qui en fait le garde-fou (cf. lib/cx.ts). D'où le partage : le
+  // nœud au registre, la vue injectée par la surface.
+  it("laisse la surface poser la vue d'une tâche", () => {
+    const view = () => ({}) as never;
+    // `addNodeView` n'est pas dans le type union de `config` (une extension nue
+    // n'en a pas) : on le lit tel qu'il est réellement posé.
+    const taskView = (options?: Parameters<typeof blockExtensions>[0]) => {
+      const node = blockExtensions(options).find((e) => e.name === "taskItem");
+      const config = node?.config as { addNodeView?: () => unknown };
+      return config.addNodeView;
+    };
+
+    // Sans injection, `taskItem` garde la vue de tiptap — la case BINAIRE de
+    // l'extension amont, qui ne connaît pas les quatre états du plan. C'est
+    // dire que l'injection n'est pas un ornement : elle est ce qui rend une
+    // tâche de page conforme au reste du produit.
+    expect(taskView()?.call(null)).not.toBe(view);
+    expect(taskView({ nodeViews: { taskItem: view } })?.call(null)).toBe(view);
+    // `headless` reste le dernier mot : la projection markdown ne monte jamais
+    // de vue, même si l'appelant en passe une.
+    expect(
+      taskView({ headless: true, nodeViews: { taskItem: view } })
+    ).toBeUndefined();
+  });
+
   it("le schéma du catalogue se monte en entier", () => {
     const editor = makeEditor();
     for (const block of PAGE_BLOCKS) {

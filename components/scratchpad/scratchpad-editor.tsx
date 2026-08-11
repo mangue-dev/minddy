@@ -26,6 +26,7 @@ import { PasteMarkdownTasks } from "@/components/scratchpad/paste-markdown";
 import {
   ScratchpadTaskItem,
   ScratchpadTaskList,
+  ScratchpadTaskSurface,
 } from "@/components/scratchpad/scratchpad-task";
 import {
   nodeRank,
@@ -524,62 +525,68 @@ export function ScratchpadEditor({
   // grows to the bottom isn't pinned against the edge. It sits on the editor
   // wrapper rather than the modal's scroll container so that empty space stays
   // click-to-write (the mousedown below drops the caret at the end).
+  // La surface qui dit ce que « confier une tâche » veut dire ICI : le
+  // carnet se ferme en partant, et son démontage flushe l'autosave
+  // (cf. scratchpad-task.tsx). Elle enveloppe l'éditeur parce que les vues
+  // de nœud sont rendues, en portails, dans le sous-arbre d'EditorContent.
   return (
-    <div
-      className="scratchpad-editor relative min-h-[55vh] cursor-text pb-[40vh]"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) editor?.commands.focus("end");
-      }}
-    >
-      <EditorContent editor={editor} />
+    <ScratchpadTaskSurface>
+      <div
+        className="scratchpad-editor relative min-h-[55vh] cursor-text pb-[40vh]"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) editor?.commands.focus("end");
+        }}
+      >
+        <EditorContent editor={editor} />
 
-      {dictating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
-          {/* Le liseré n'accompagne QUE « Numo met au propre » : l'étape
-              `processing` juste avant, c'est la transcription de l'audio, pas
-              Numo. Le wrapper est en `overflow: hidden`, d'où le `shadow-xl`
-              qui passe de la carte à lui ; `keepMounted` garde la carte — et
-              le canvas de la waveform — montée d'un bout à l'autre de la
-              dictée, au lieu de la remonter quand le liseré s'allume. */}
-          <AgentBeam
-            active={dictation.status === "polishing"}
-            keepMounted
-            className="rounded-2xl shadow-xl"
-          >
-            <div className="flex w-64 flex-col items-center gap-4 rounded-2xl border border-border bg-popover px-6 py-5 text-center">
-              {dictation.status === "processing" ||
-              dictation.status === "polishing" ? (
-                <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
-                  <Spinner />
-                  {dictation.status === "polishing"
-                    ? t("dictationPolishing")
-                    : t("dictationProcessing")}
-                </div>
-              ) : dictation.status === "starting" ? (
-                <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
-                  <Spinner />
-                  {tDictate("starting")}
-                </div>
-              ) : (
-                <>
-                  {/* The timer alone, centred: dictation is no longer
-                      time-boxed, so there is no ceiling left to show opposite
-                      it. */}
-                  <div className="flex w-full items-center justify-center text-xs">
-                    <span className="font-medium tabular-nums text-foreground">
-                      {formatTime(dictation.elapsedMs)}
-                    </span>
+        {dictating && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+            {/* Le liseré n'accompagne QUE « Numo met au propre » : l'étape
+                `processing` juste avant, c'est la transcription de l'audio, pas
+                Numo. Le wrapper est en `overflow: hidden`, d'où le `shadow-xl`
+                qui passe de la carte à lui ; `keepMounted` garde la carte — et
+                le canvas de la waveform — montée d'un bout à l'autre de la
+                dictée, au lieu de la remonter quand le liseré s'allume. */}
+            <AgentBeam
+              active={dictation.status === "polishing"}
+              keepMounted
+              className="rounded-2xl shadow-xl"
+            >
+              <div className="flex w-64 flex-col items-center gap-4 rounded-2xl border border-border bg-popover px-6 py-5 text-center">
+                {dictation.status === "processing" ||
+                dictation.status === "polishing" ? (
+                  <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
+                    <Spinner />
+                    {dictation.status === "polishing"
+                      ? t("dictationPolishing")
+                      : t("dictationProcessing")}
                   </div>
-                  <DictateWaveform stream={dictation.stream} />
-                  <p className="text-xs text-muted-foreground">
-                    {t("dictationHint")}
-                  </p>
-                </>
-              )}
-            </div>
-          </AgentBeam>
-        </div>
-      )}
-    </div>
+                ) : dictation.status === "starting" ? (
+                  <div className="flex flex-col items-center gap-2 py-3 text-sm text-muted-foreground">
+                    <Spinner />
+                    {tDictate("starting")}
+                  </div>
+                ) : (
+                  <>
+                    {/* The timer alone, centred: dictation is no longer
+                        time-boxed, so there is no ceiling left to show opposite
+                        it. */}
+                    <div className="flex w-full items-center justify-center text-xs">
+                      <span className="font-medium tabular-nums text-foreground">
+                        {formatTime(dictation.elapsedMs)}
+                      </span>
+                    </div>
+                    <DictateWaveform stream={dictation.stream} />
+                    <p className="text-xs text-muted-foreground">
+                      {t("dictationHint")}
+                    </p>
+                  </>
+                )}
+              </div>
+            </AgentBeam>
+          </div>
+        )}
+      </div>
+    </ScratchpadTaskSurface>
   );
 }
