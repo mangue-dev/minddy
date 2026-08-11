@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 import {
   Button,
@@ -38,6 +38,9 @@ import {
   type FavoriteSubagentModel,
   type SubagentThinkingEffort,
 } from "@/lib/subagent-favorites";
+import { DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels } from "@/lib/recommended-models";
+import { formatMultiplier } from "@/lib/model-multiplier";
+import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 
 type ConfigValues = Record<string, string | null>;
 
@@ -189,6 +192,10 @@ function ConfigRow({
     case "favorites":
       return (
         <FavoritesRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
+      );
+    case "recommended":
+      return (
+        <RecommendedRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />
       );
     case "modelId":
       return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
@@ -663,6 +670,226 @@ function FavoritesRow({
         </div>
         {incomplete ? (
           <p className="text-xs text-muted-foreground">{t("favorites.incomplete")}</p>
+        ) : null}
+      </div>
+    </SettingsRow>
+  );
+}
+
+/**
+ * La liste des modèles CONSEILLÉS : ce que le picker de l'utilisateur montre à
+ * l'ouverture, avant toute frappe (cf. lib/recommended-models.ts).
+ *
+ * À ne pas confondre avec les favoris juste au-dessus, malgré la ressemblance de
+ * l'écran : les favoris sont du PROMPT, lus par un agent parent qui choisit sur
+ * quoi lancer une fille ; ceux-ci sont de l'UI, lus par un humain. D'où la forme
+ * plus pauvre — un id suffit, il n'y a ni conseil d'usage à écrire ni niveau de
+ * réflexion à régler, le picker sait déjà afficher un nom, un logo et un coût.
+ *
+ * Ce qu'on règle ici est un ENSEMBLE, pas une séquence : l'ORDRE est calculé,
+ * du moins cher au plus cher, ici comme dans le picker (`resolveRecommended`).
+ * C'est le seul ordre qui reste vrai — les prix d'OpenRouter bougent, et une
+ * séquence rangée à la main finirait par annoncer une échelle de coût qui
+ * n'existe plus. D'où l'absence de flèches, et le multiplicateur en face de
+ * chaque ligne : c'est lui qui explique le rang.
+ *
+ * Un modèle dont on ne connaît pas le prix se range en fin de liste, faute de
+ * savoir où le mettre — même règle des deux côtés.
+ *
+ * Enregistrement EN LOT comme les favoris, pour la même raison : une liste à
+ * moitié réécrite n'est pas un état qu'on veut servir. « Réinitialiser » efface
+ * la ligne `app_config` — le réglage suit de nouveau le défaut produit au lieu
+ * d'être figé sur la sélection du jour.
+ */
+function RecommendedRow({
+  field,
+  label,
+  desc,
+  value,
+  onSaved,
+}: {
+  field: AiConfigField;
+  label: string;
+  desc: string | null;
+  value: string | null;
+  onSaved: (key: string, value: string) => void;
+}) {
+  const t = useTranslations("Admin");
+  const tAgent = useTranslations("Agent");
+  const locale = useLocale();
+  // Le catalogue plateforme porte les multiplicateurs (cf. getAdminModelCatalog) :
+  // c'est lui qui donne le prix de chaque ligne, donc son rang. Même clé de
+  // query que les pickers de l'écran — aucune requête de plus.
+  const { models } = useAgentModelsQuery("platform");
+  const saved = (value ?? "").trim();
+  // Le MÊME parseur que le runtime : ce que l'écran montre est ce que le picker lira.
+  const savedList = useMemo(
+    () => parseRecommendedModels(saved) ?? DEFAULT_RECOMMENDED_MODELS,
+    [saved],
+  );
+  const [list, setList] = useState<string[]>(savedList);
+  useEffect(() => setList(savedList), [savedList]);
+  const [busy, setBusy] = useState(false);
+
+  const multiplierOf = useCallback(
+    (id: string) => models.find((m) => m.id === id)?.multiplier ?? null,
+    [models],
+  );
+
+  /**
+   * L'ordre d'affichage : le moins cher d'abord, comme le picker le servira.
+   *
+   * Les lignes VIDES (un « Ajouter » qu'on n'a pas encore rempli) restent en
+   * queue quoi qu'il arrive — les trier par un prix qu'elles n'ont pas les
+   * ferait sauter d'un bout à l'autre de la liste pendant qu'on les remplit.
+   */
+  const ordered = useMemo(() => {
+    const rank = (id: string) => (id ? (multiplierOf(id) ?? Infinity) : Number.MAX_VALUE);
+    return [...list].sort(
+      (a, b) => Number(!a) - Number(!b) || rank(a) - rank(b) || a.localeCompare(b),
+    );
+  }, [list, multiplierOf]);
+
+  // Ce qu'on règle est un ENSEMBLE : deux listes qui portent les mêmes modèles
+  // sont la même liste, quel que soit leur ordre — c'est le prix qui le fixe.
+  // Comparer les séquences ferait clignoter « modifié » à chaque réordonnancement
+  // du tri, sans que personne n'ait rien touché.
+  const asSet = (ids: string[]) => [...ids].sort().join("\n");
+  const dirty = asSet(list) !== asSet(savedList);
+  const incomplete = list.some((id) => !id);
+  // Un id en double ne ferait pas deux lignes, il en ferait une qui clignote :
+  // `parseRecommendedModels` déduplique, donc l'enregistrement perdrait
+  // silencieusement une ligne que l'admin voit encore à l'écran.
+  const duplicate = new Set(list.filter(Boolean)).size !== list.filter(Boolean).length;
+
+  const write = async (next: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await patchConfig(field.key, next);
+      onSaved(field.key, next);
+      toast.success(t("saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Liste vidée = retour au repli produit : on efface la ligne plutôt que
+  // d'enregistrer un tableau vide, que le runtime remplacerait de toute façon.
+  // Enregistré DANS L'ORDRE affiché : le serveur retrie de toute façon, mais une
+  // ligne `app_config` qu'on relit à la main se lit mieux rangée.
+  const save = () => void write(ordered.length > 0 ? JSON.stringify(ordered) : "");
+
+  return (
+    <SettingsRow label={label} hint={desc ?? undefined} orientation="vertical">
+      <div className="space-y-2">
+        {ordered.map((id, index) => (
+          <div key={id || `empty-${index}`} className="flex items-center gap-2">
+            <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+              {index + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <ModelCombobox
+                scope="platform"
+                value={id}
+                // Remplacement par IDENTITÉ, pas par rang : la ligne éditée n'est
+                // pas à l'index `index` de `list`, puisque `ordered` est trié.
+                onChange={(next) =>
+                  setList((prev) => {
+                    const at = prev.indexOf(id);
+                    return at < 0 ? [...prev, next] : prev.map((v, i) => (i === at ? next : v));
+                  })
+                }
+                disabled={busy}
+                defaultLabel={t("recommended.pickModel")}
+                placeholder={tAgent("modelSearchPlaceholder")}
+                emptyLabel={tAgent("modelSearchEmpty")}
+                loadingLabel={tAgent("modelSearchLoading")}
+                freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
+              />
+            </div>
+            {/* Ce qui explique le rang. Muet sur un modèle que le catalogue ne
+                situe pas — celui-là est en queue faute de prix, pas par choix. */}
+            <span className="w-12 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+              {multiplierOf(id) != null ? formatMultiplier(multiplierOf(id)!, locale) : null}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0 text-muted-foreground"
+              disabled={busy}
+              aria-label={t("recommended.remove")}
+              onClick={() =>
+                setList((prev) => {
+                  const at = prev.indexOf(id);
+                  return at < 0 ? prev : prev.filter((_, i) => i !== at);
+                })
+              }
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        ))}
+
+        {list.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("recommended.empty")}</p>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {/* Verrouillé tant qu'une ligne est vide : les lignes se repèrent par
+              leur id, et deux lignes vides seraient deux lignes indistinguables
+              — éditer la seconde modifierait la première. */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={busy || incomplete}
+            onClick={() => setList((prev) => [...prev, ""])}
+          >
+            <Plus className="size-4" />
+            {t("recommended.add")}
+          </Button>
+          {dirty ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                disabled={busy || incomplete || duplicate}
+                onClick={save}
+              >
+                {t("recommended.save")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => setList(savedList)}
+              >
+                {t("recommended.cancel")}
+              </Button>
+            </>
+          ) : saved ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={() => void write("")}
+            >
+              {t("recommended.reset")}
+            </Button>
+          ) : null}
+          {busy ? <Spinner className="shrink-0" /> : null}
+        </div>
+        {incomplete ? (
+          <p className="text-xs text-muted-foreground">{t("recommended.incomplete")}</p>
+        ) : null}
+        {duplicate ? (
+          <p className="text-xs text-muted-foreground">{t("recommended.duplicate")}</p>
         ) : null}
       </div>
     </SettingsRow>

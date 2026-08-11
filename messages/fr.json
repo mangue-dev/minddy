@@ -2007,6 +2007,8 @@
     "modelSearchLoading": "Chargement des modèles…",
     "modelUseCustom": "Utiliser « {model} »",
     "modelRequired": "Ce provider n'a pas de modèle par défaut : choisissez-en un.",
+    "modelRecommended": "Conseillés",
+    "modelShowAll": "Voir plus de modèles",
     "modelPlanCap": "Votre plan {plan} va jusqu'à ×{limit} le modèle par défaut de minddy.",
     "errorModelAbovePlan": "{model} coûte ×{multiplier} l'usage du modèle par défaut de minddy; votre plan {plan} va jusqu'à ×{limit}. Choisissez un autre modèle ou changez de plan.",
     "branchDefault": "Branche par défaut",
@@ -2022,10 +2024,6 @@
     "reasoningLow": "Léger",
     "reasoningMedium": "Standard",
     "reasoningHigh": "Poussé",
-    "reasoningOffDesc": "Le modèle répond directement.",
-    "reasoningLowDesc": "Une courte réflexion avant d'agir.",
-    "reasoningMediumDesc": "Le modèle prend le temps de préparer son travail.",
-    "reasoningHighDesc": "La réflexion la plus longue, pour les tâches difficiles.",
     "reasoningLocked": "Pour changer le niveau de raisonnement, lancez un nouvel agent.",
     "reasoningUnsupported": "Ce modèle ignore le niveau de raisonnement.",
     "providerRetry": "Le fournisseur du modèle ne répond pas; attente avant de réessayer.",
@@ -2130,11 +2128,8 @@
     "composeProjectTooltip": "Choisissez un projet avant de lancer",
     "composeNoRepo": "Aucun de vos projets n'a de dépôt connecté. L'agent clone un dépôt pour travailler : liez-en un dans les réglages d'un projet.",
     "reasoningMinimal": "Minimal",
-    "reasoningMinimalDesc": "À peine une pause — un temps de réflexion, pas plus.",
     "reasoningXhigh": "Très poussé",
-    "reasoningXhighDesc": "Plus que « Poussé », sur les modèles qui vont jusque-là.",
-    "reasoningMax": "Maximum",
-    "reasoningMaxDesc": "Tout ce que le modèle peut mettre dans sa réflexion."
+    "reasoningMax": "Maximum"
   },
   "Projects": {
     "newProject": "Nouveau projet",
@@ -3311,6 +3306,10 @@
         "label": "Modèles favoris des sous-agents",
         "desc": "Ce que l'agent lit pour choisir sur quoi lancer un sous-agent. Il peut prendre n'importe quel modèle du catalogue ; ceux-ci sont ceux qu'on lui conseille. Le conseil d'usage part tel quel dans son prompt : écrivez-le en anglais, pour un modèle qui choisit."
       },
+      "recommended_models": {
+        "label": "Modèles conseillés",
+        "desc": "La courte liste sur laquelle s'ouvre le picker de modèle, partout dans l'app, avant qu'on ait tapé quoi que ce soit. Elle ne cache rien : la recherche atteint toujours le catalogue entier, et une dernière ligne en montre plus. L'ordre est calculé selon le prix, le moins cher d'abord — vous ne choisissez donc QUE les modèles conseillés. Un modèle au-delà du plafond du plan Pro (×40) n'est lançable par personne."
+      },
       "byok_default_model_openai": {
         "label": "Défaut OpenAI"
       },
@@ -3578,6 +3577,17 @@
       "effortLow": "Réflexion basse",
       "effortMedium": "Réflexion moyenne",
       "effortHigh": "Réflexion haute"
+    },
+    "recommended": {
+      "pickModel": "Choisir un modèle",
+      "add": "Ajouter un modèle",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "reset": "Revenir à la sélection par défaut",
+      "remove": "Retirer ce modèle",
+      "empty": "Aucun conseil : le picker s'ouvrira sur le catalogue entier. Enregistrer une liste vide rend le réglage à la sélection par défaut.",
+      "incomplete": "Choisissez un modèle pour chaque ligne avant d'enregistrer.",
+      "duplicate": "Le même modèle apparaît deux fois : retirez-en un avant d'enregistrer."
     }
   },
   "Legal": {

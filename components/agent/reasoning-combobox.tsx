@@ -51,16 +51,6 @@ const LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
   max: "reasoningMax",
 };
 
-const DESC_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
-  off: "reasoningOffDesc",
-  minimal: "reasoningMinimalDesc",
-  low: "reasoningLowDesc",
-  medium: "reasoningMediumDesc",
-  high: "reasoningHighDesc",
-  xhigh: "reasoningXhighDesc",
-  max: "reasoningMaxDesc",
-};
-
 export function ReasoningCombobox({
   value,
   onChange,
@@ -93,9 +83,9 @@ export function ReasoningCombobox({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex cursor-not-allowed">
-            <span className="pointer-events-none flex h-8 shrink items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 text-xs font-medium text-foreground/45">
+            <span className="pointer-events-none flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 text-xs font-medium text-foreground/45">
               <Brain className="size-3.5 shrink-0" />
-              <span className="max-w-[9rem] truncate">{label}</span>
+              <span className="whitespace-nowrap">{label}</span>
             </span>
           </span>
         </TooltipTrigger>
@@ -106,6 +96,11 @@ export function ReasoningCombobox({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
+      {/* `shrink-0` et pas `shrink` : les libellés forment un jeu FERMÉ de sept
+          mots courts, dont le plus long (« Sans raisonnement ») tient largement.
+          Rien ici ne justifie de rogner — c'est la barre du composer qui
+          comprimait le chip. Le nom de modèle à côté, lui, garde sa troncature :
+          il est de longueur arbitraire. */}
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -114,14 +109,23 @@ export function ReasoningCombobox({
           aria-expanded={open}
           aria-label={t("reasoning")}
           disabled={disabled}
-          className="h-8 shrink gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
+          className="h-8 shrink-0 gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
         >
           <Brain className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="max-w-[9rem] truncate">{label}</span>
+          <span className="whitespace-nowrap">{label}</span>
           <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      {/* Le nom du palier suffit à le désigner : la liste est courte, ordonnée du
+          plus léger au plus lourd, et c'est cet ORDRE qui dit ce qu'ils valent
+          les uns par rapport aux autres. Une glose sous chaque ligne rallongeait
+          le menu de sept phrases pour redire ça.
+          Aucune largeur imposée : `PopoverContent` est déjà `w-max`, donc la
+          boîte se dimensionne sur SON contenu. On ne lui donne qu'un plancher,
+          pour qu'elle ne se réduise pas à « Léger ». Le `w-72` d'avant, puis le
+          `w-48` que j'avais mis, redonnaient l'ellipse qu'on vient d'ôter dès
+          qu'une traduction rallonge un palier. */}
+      <PopoverContent className="min-w-44 p-0" align="start">
         <Command shouldFilter={false}>
           {/* mt-1.5 / px-1 : mêmes retraits que les autres pickers du composer. */}
           <CommandList className="mt-1.5 px-1">
@@ -133,17 +137,10 @@ export function ReasoningCombobox({
                   onChange(level);
                   setOpen(false);
                 }}
-                className="items-start gap-2"
               >
-                <div className="flex flex-1 flex-col gap-0.5">
-                  <span>{t(LABEL_KEYS[level])}</span>
-                  <span className="text-xs text-muted-foreground">{t(DESC_KEYS[level])}</span>
-                </div>
+                <span className="flex-1 whitespace-nowrap">{t(LABEL_KEYS[level])}</span>
                 <Check
-                  className={cn(
-                    "mt-0.5 size-4 shrink-0",
-                    value === level ? "opacity-100" : "opacity-0",
-                  )}
+                  className={cn("size-4 shrink-0", value === level ? "opacity-100" : "opacity-0")}
                 />
               </CommandItem>
             ))}

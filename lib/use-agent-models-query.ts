@@ -60,6 +60,13 @@ interface AgentModelsResult {
   maxMultiplier: number | null;
   /** Plan du compte, pour le nommer dans l'explication du plafond. */
   planId: string | null;
+  /**
+   * Les ids CONSEILLÉS, dans l'ordre, et déjà restreints par le serveur à ceux
+   * que `models` contient. Vide = pas de conseils applicables (BYOK aux ids
+   * natifs, catalogue admin, liste vidée par l'admin) : le picker rouvre alors
+   * sur le catalogue entier, comme avant.
+   */
+  recommended: string[];
 }
 
 async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsResult> {
@@ -69,6 +76,7 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     models: [],
     maxMultiplier: null,
     planId: null,
+    recommended: [],
   };
   const res = await fetch(SCOPE_ENDPOINTS[scope]);
   if (!res.ok) return empty;
@@ -78,6 +86,7 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     models?: AgentModel[];
     maxMultiplier?: number | null;
     planId?: string | null;
+    recommended?: string[];
   };
   return {
     provider: data.provider ?? DEFAULT_AGENT_PROVIDER,
@@ -85,6 +94,7 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     models: data.models ?? [],
     maxMultiplier: data.maxMultiplier ?? null,
     planId: data.planId ?? null,
+    recommended: data.recommended ?? [],
   };
 }
 
@@ -101,6 +111,7 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
     models: data?.models ?? [],
     maxMultiplier: data?.maxMultiplier ?? null,
     planId: data?.planId ?? null,
+    recommended: data?.recommended ?? [],
     loading: isPending,
   };
 }

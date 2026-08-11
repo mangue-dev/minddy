@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { isAdminUser } from "@/lib/server/admin";
-import { getPlatformModelCatalog } from "@/lib/server/agent/models-catalog";
+import { getAdminModelCatalog } from "@/lib/server/agent/models-catalog";
 
 /**
  * Catalogue de modèles du dashboard admin (`/admin` → onglet « Modèles »).
@@ -13,6 +13,11 @@ import { getPlatformModelCatalog } from "@/lib/server/agent/models-catalog";
  * d'un admin en BYOK ferait écrire des ids inutilisables au runtime. Et il ne
  * filtre pas sur le tool-calling, puisque la config couvre aussi la
  * transcription et les embeddings.
+ *
+ * Chaque modèle porte son multiplicateur de coût, sans plafond en face : c'est
+ * ici qu'on choisit ce que minddy paye — l'échelle de coût y est l'information
+ * de travail, alors qu'aucun plan de facturation ne s'applique à un réglage
+ * d'instance.
  */
 
 export const runtime = "nodejs";
@@ -24,6 +29,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const models = await getPlatformModelCatalog();
-  return NextResponse.json({ provider: "openrouter", defaultModel: null, models });
+  return NextResponse.json(await getAdminModelCatalog());
 }

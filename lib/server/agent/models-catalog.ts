@@ -1,10 +1,17 @@
 import "server-only";
 
 import { getRootDefaultModel, resolveAgentApiKey, resolveProviderDefaultModel } from "./model";
-import { getModelPlanLimit, type ModelPlanLimit } from "./model-plan";
+import { getBaselinePricing, getModelPlanLimit, type ModelPlanLimit } from "./model-plan";
 import { listOpenRouterIndex } from "./openrouter-index";
-import { modelCostMultiplier, type ModelPricing } from "@/lib/model-multiplier";
+import {
+  averageUsdPerMTok,
+  modelCostMultiplier,
+  type ModelPricing,
+} from "@/lib/model-multiplier";
 import type { ModelReasoning } from "@/lib/agent-reasoning";
+import { getAppConfigValue } from "@/lib/server/app-config";
+import { aiModelFallback } from "@/lib/ai-model-config";
+import { parseRecommendedModels } from "@/lib/recommended-models";
 import {
   getAgentProvider,
   normalizeBaseUrl,
@@ -64,6 +71,16 @@ export interface AgentModelsCatalog {
   maxMultiplier?: number | null;
   /** Plan du compte — pour nommer le plafond dans l'UI (« votre plan Go »). */
   planId?: string;
+  /**
+   * Les ids CONSEILLÉS, dans l'ordre voulu par l'admin, et restreints à ceux que
+   * ce catalogue contient vraiment. C'est ce que le picker montre à l'ouverture,
+   * avant toute frappe (cf. lib/recommended-models.ts).
+   *
+   * Absent sur le catalogue ADMIN : là-bas on règle `app_config`, y compris des
+   * modèles de transcription ou d'embedding qu'on ne conseille à personne — une
+   * liste de conseils y masquerait justement ce qu'on est venu chercher.
+   */
+  recommended?: string[];
 }
 
 const TTL_MS = 60 * 60 * 1000;
@@ -80,13 +97,22 @@ function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
  * OpenRouter : le catalogue vient de l'index partagé (`openrouter-index.ts`),
  * filtré au tool-calling. Une seule lecture de `/models` sert ici, les capacités
  * de la boucle et les prix du plafond de plan.
+ *
+ * Deux exclusions en plus du tool-calling, et aucune des deux ne se lit dans
+ * `supported_parameters` :
+ *  - les AIGUILLAGES (`openrouter/auto`, `~anthropic/claude-opus-latest`…) — ce
+ *    ne sont pas des modèles, et ce qu'ils exécutent change sans prévenir ;
+ *  - tout ce qui rend autre chose que du TEXTE (image, audio, vidéo). Le filtre
+ *    par id de `NON_CHAT_RE` ne suffit pas et n'a jamais couru ici : `gpt-audio`
+ *    et `gemini-3-pro-image` déclarent tous deux `tools`.
+ * L'index, lui, les garde : un id collé à la main doit rester chiffrable.
  */
 async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
   const index = await listOpenRouterIndex(apiKey);
   if (index.length === 0) throw new Error("empty index");
   return sortById(
     index
-      .filter((m) => m.tools)
+      .filter((m) => m.tools && m.textOutput && !m.router)
       .map((m) => ({ id: m.id, name: m.name, reasoning: m.reasoning })),
   );
 }
@@ -138,25 +164,94 @@ async function loadModels(
 }
 
 /**
- * Situe chaque modèle sur l'échelle du baseline et joint le plafond du plan.
- * `limit` absent (BYOK, admin) → la liste ressort telle quelle : ni
- * multiplicateur affiché, ni modèle grisé.
+ * Situe chaque modèle sur l'échelle du baseline, joint le plafond du plan et la
+ * liste des conseillés. `limit` absent (BYOK) → ni multiplicateur affiché, ni
+ * modèle grisé ; les conseils, eux, restent — ils ne parlent pas d'argent.
+ *
+ * Tout ce qui sort d'ici est recalculé à chaque appel, jamais mis en cache avec
+ * la liste : le baseline comme les conseils sont des lignes `app_config` qu'un
+ * admin change sans déploiement.
  */
 async function withMultipliers(
   models: AgentModelEntry[],
   limit: ModelPlanLimit | null,
-): Promise<Pick<AgentModelsCatalog, "models" | "maxMultiplier" | "planId">> {
-  if (!limit?.baseline) return { models, maxMultiplier: null };
-  const index = await listOpenRouterIndex();
-  const pricing = new Map<string, ModelPricing | null>(index.map((m) => [m.id, m.pricing]));
+): Promise<Pick<AgentModelsCatalog, "models" | "maxMultiplier" | "planId" | "recommended">> {
+  const recommended = await resolveRecommended(models);
+  if (!limit?.baseline) return { models, maxMultiplier: null, recommended };
   return {
-    models: models.map((m) => {
-      const multiplier = modelCostMultiplier(pricing.get(m.id), limit.baseline);
-      return multiplier == null ? m : { ...m, multiplier };
-    }),
+    models: await attachMultipliers(models, limit.baseline),
     maxMultiplier: limit.maxMultiplier,
     planId: limit.planId,
+    recommended,
   };
+}
+
+/**
+ * Situe chaque modèle sur l'échelle du baseline, SANS rien plafonner.
+ *
+ * Les deux gestes sont séparés parce qu'ils ne répondent pas à la même
+ * question : le multiplicateur DIT un coût, le plafond REFUSE une dépense. Le
+ * dashboard admin veut le premier sans le second — il choisit les modèles que
+ * minddy paye, donc l'échelle de coût y est exactement l'information utile,
+ * alors qu'aucun plan ne s'y applique.
+ */
+async function attachMultipliers(
+  models: AgentModelEntry[],
+  baseline: ModelPricing | null,
+): Promise<AgentModelEntry[]> {
+  if (!baseline) return models;
+  const index = await listOpenRouterIndex();
+  const pricing = new Map<string, ModelPricing | null>(index.map((m) => [m.id, m.pricing]));
+  return models.map((m) => {
+    const multiplier = modelCostMultiplier(pricing.get(m.id), baseline);
+    return multiplier == null ? m : { ...m, multiplier };
+  });
+}
+
+/**
+ * Les conseils, réduits à ce que CE catalogue propose vraiment, et rangés DU
+ * MOINS CHER AU PLUS CHER.
+ *
+ * L'ordre est calculé, pas rangé à la main. C'est le seul qui reste vrai : les
+ * prix d'OpenRouter bougent, et un ordre figé dans `app_config` le jour où on
+ * l'a écrit finirait par annoncer une échelle de coût qui n'existe plus. Le
+ * réglage admin est donc un ENSEMBLE — quels modèles on conseille — pas une
+ * séquence.
+ *
+ * Le critère est le prix moyen entrée/sortie, exactement celui du
+ * multiplicateur affiché (`averageUsdPerMTok`) : la liste est rangée dans
+ * l'ordre des « ×N » qu'on lit en face. Prix inconnu → en fin de liste, faute de
+ * savoir où le mettre.
+ *
+ * L'intersection avec le catalogue n'est pas une précaution de style : sur un
+ * provider BYOK, les ids sont natifs (`claude-sonnet-5`, pas
+ * `anthropic/claude-sonnet-5`) et aucun conseil ne tombe juste. La liste ressort
+ * alors VIDE, et le picker rouvre sur le catalogue entier — le bon repli : mieux
+ * vaut trop de modèles qu'une liste de conseils dont aucun n'est lançable.
+ *
+ * Jamais caché avec la liste de modèles, pour la même raison que les
+ * multiplicateurs : un admin change ce réglage quand il veut, et une heure de
+ * cache le ferait mentir.
+ */
+async function resolveRecommended(models: AgentModelEntry[]): Promise<string[]> {
+  const raw = await getAppConfigValue("recommended_models").catch(() => null);
+  const ids =
+    parseRecommendedModels(raw) ??
+    parseRecommendedModels(aiModelFallback("recommended_models")) ??
+    [];
+  const available = new Set(models.map((m) => m.id));
+  const index = await listOpenRouterIndex();
+  const price = new Map(
+    index.map((m) => [m.id, m.pricing ? averageUsdPerMTok(m.pricing) : null] as const),
+  );
+  // Prix inconnu → `Infinity`, donc en fin de liste. `localeCompare` en second
+  // critère : deux modèles au même prix (les familles se tarifent par paliers)
+  // garderaient sinon l'ordre d'écriture de la ligne `app_config`, qui n'est
+  // plus censé vouloir dire quoi que ce soit.
+  const cost = (id: string) => price.get(id) ?? Infinity;
+  return ids
+    .filter((id) => available.has(id))
+    .sort((a, b) => cost(a) - cost(b) || a.localeCompare(b));
 }
 
 /**
@@ -244,6 +339,27 @@ export async function getPrReviewModelCatalog(userId: string): Promise<AgentMode
  *
  * Même contrat de robustesse que le catalogue utilisateur : ne lève jamais.
  */
+/**
+ * Le catalogue du dashboard admin : celui de la clé plateforme, chaque modèle
+ * SITUÉ sur l'échelle de coût de minddy.
+ *
+ * Le multiplicateur y est l'information de travail : c'est là qu'on choisit les
+ * modèles que minddy paye, et notamment la sélection conseillée, dont l'ordre
+ * suit ces prix. En revanche aucun plafond n'est joint (`maxMultiplier: null`) —
+ * un plan de facturation ne s'applique pas à un réglage d'instance, et griser
+ * les modèles chers d'un écran d'admin n'aurait pas de sens. Pas de
+ * `recommended` non plus : on vient y régler `app_config`, pas suivre un conseil.
+ */
+export async function getAdminModelCatalog(): Promise<AgentModelsCatalog> {
+  const [models, baseline] = await Promise.all([getPlatformModelCatalog(), getBaselinePricing()]);
+  return {
+    provider: DEFAULT_AGENT_PROVIDER,
+    defaultModel: null,
+    models: await attachMultipliers(models, baseline),
+    maxMultiplier: null,
+  };
+}
+
 export async function getPlatformModelCatalog(): Promise<AgentModelEntry[]> {
   const baseUrl = normalizeBaseUrl(resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!);
   const apiKey = process.env.OPENROUTER_API_KEY;

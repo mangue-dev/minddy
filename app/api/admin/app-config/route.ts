@@ -17,6 +17,7 @@ import {
   MODEL_SUFFIXES,
 } from "@/lib/ai-model-config";
 import { parseSubagentFavorites } from "@/lib/subagent-favorites";
+import { parseRecommendedModels } from "@/lib/recommended-models";
 
 /**
  * Admin gate for the app-config endpoints: authenticate the request (JWT via
@@ -107,6 +108,14 @@ export async function PATCH(request: NextRequest) {
   if (kind === "favorites" && trimmed && parseSubagentFavorites(trimmed) === null) {
     return NextResponse.json(
       { error: "Favorites must be a JSON array with at least one entry carrying an id" },
+      { status: 400 }
+    );
+  }
+  // Même règle, même raison : ce que le runtime ignorerait à la lecture, on le
+  // refuse à l'écriture, plutôt que d'enregistrer un réglage sans effet.
+  if (kind === "recommended" && trimmed && parseRecommendedModels(trimmed) === null) {
+    return NextResponse.json(
+      { error: "Recommended models must be a JSON array with at least one model id" },
       { status: 400 }
     );
   }

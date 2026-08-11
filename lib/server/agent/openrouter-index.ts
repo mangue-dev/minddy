@@ -38,6 +38,24 @@ export interface OpenRouterModelInfo {
   /** `architecture.input_modalities` contient `image` → on peut lui MONTRER une maquette. */
   imageInput: boolean;
   /**
+   * `architecture.output_modalities` ne contient QUE `text`. Un modèle qui rend
+   * de l'image, de l'audio ou de la vidéo n'a rien à faire dans un picker
+   * d'agent de code — et `supported_parameters` ne suffit pas à l'écarter :
+   * `google/gemini-3-pro-image` et `openai/gpt-audio` déclarent `tools`.
+   */
+  textOutput: boolean;
+  /**
+   * Ce n'est pas un modèle mais un AIGUILLAGE : `openrouter/auto` et ses cousins
+   * (`fusion`, `free`, `pareto-code`…), et les alias `~éditeur/famille-latest`
+   * qui redirigent vers le dernier modèle d'une famille. OpenRouter les publie
+   * dans `/models` avec `architecture.tokenizer: "Router"`, et les alias portent
+   * en plus un `alias_target`. On les garde dans l'index — un id collé à la main
+   * doit rester chiffrable — mais le catalogue ne les propose pas : ce qu'ils
+   * exécutent change sous les pieds de l'utilisateur, prix et paliers de
+   * raisonnement compris.
+   */
+  router: boolean;
+  /**
    * `supported_parameters` contient `tools`. Un modèle qui ne déclare AUCUN
    * paramètre est réputé compatible : l'absence d'annonce n'est pas un refus.
    */
@@ -103,7 +121,12 @@ async function fetchIndex(apiKey?: string): Promise<void> {
       id?: string;
       name?: string;
       context_length?: number;
-      architecture?: { input_modalities?: string[] };
+      architecture?: {
+        input_modalities?: string[];
+        output_modalities?: string[];
+        tokenizer?: string;
+      };
+      alias_target?: { slug?: string } | null;
       supported_parameters?: string[];
       reasoning?: {
         mandatory?: boolean;
@@ -117,11 +140,16 @@ async function fetchIndex(apiKey?: string): Promise<void> {
     if (!m.id) continue;
     const input = perMillionTokens(m.pricing?.prompt);
     const output = perMillionTokens(m.pricing?.completion);
+    // Un modèle qui ne déclare AUCUNE sortie est réputé textuel : l'absence
+    // d'annonce ne doit pas le faire disparaître du picker.
+    const outputs = m.architecture?.output_modalities ?? [];
     next.set(m.id, {
       id: m.id,
       name: m.name ?? m.id,
       contextLength: m.context_length && m.context_length > 0 ? m.context_length : null,
       imageInput: (m.architecture?.input_modalities ?? []).includes("image"),
+      textOutput: outputs.every((o) => o === "text"),
+      router: m.architecture?.tokenizer === "Router" || !!m.alias_target,
       tools: !m.supported_parameters?.length || m.supported_parameters.includes("tools"),
       reasoning: parseReasoning(m.reasoning),
       pricing:

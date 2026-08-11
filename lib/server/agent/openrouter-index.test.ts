@@ -48,6 +48,39 @@ const PAYLOAD = {
       supported_parameters: [],
       pricing: { prompt: "0.00000002", completion: "0" },
     },
+    // Un aiguillage : pas un modèle, un méta-endpoint qui en choisit un.
+    {
+      id: "openrouter/auto",
+      name: "Auto Router",
+      supported_parameters: ["tools"],
+      architecture: {
+        tokenizer: "Router",
+        input_modalities: ["text", "image"],
+        output_modalities: ["text", "image"],
+      },
+      pricing: { prompt: "-1", completion: "-1" },
+    },
+    // Un ALIAS de famille : même mécanique, mais il porte un `alias_target`.
+    {
+      id: "~anthropic/claude-opus-latest",
+      name: "Anthropic: Claude Opus Latest",
+      alias_target: { slug: "anthropic/claude-opus-5" },
+      supported_parameters: ["tools"],
+      architecture: {
+        tokenizer: "Router",
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+      pricing: { prompt: "0.000005", completion: "0.000025" },
+    },
+    // Il rend de l'IMAGE, et déclare quand même `tools`.
+    {
+      id: "google/gemini-3-pro-image",
+      name: "Gemini 3 Pro Image",
+      supported_parameters: ["tools"],
+      architecture: { input_modalities: ["text"], output_modalities: ["image", "text"] },
+      pricing: { prompt: "0.000002", completion: "0.000012" },
+    },
   ],
 };
 
@@ -119,6 +152,39 @@ describe("getOpenRouterModelInfo", () => {
     const { getOpenRouterModelInfo } = await freshIndex();
     expect((await getOpenRouterModelInfo("some/embedding-model"))?.tools).toBe(true);
     expect((await getOpenRouterModelInfo("anthropic/claude-opus-5"))?.tools).toBe(true);
+  });
+});
+
+describe("aiguillages et modalités de sortie", () => {
+  it("marque comme aiguillage le routeur ET l'alias de famille", async () => {
+    // Les deux se reconnaissent au tokenizer « Router » ; l'alias porte en plus
+    // un `alias_target`, et l'un des deux signes suffit.
+    const { getOpenRouterModelInfo } = await freshIndex();
+    expect((await getOpenRouterModelInfo("openrouter/auto"))?.router).toBe(true);
+    expect((await getOpenRouterModelInfo("~anthropic/claude-opus-latest"))?.router).toBe(true);
+    expect((await getOpenRouterModelInfo("anthropic/claude-opus-5"))?.router).toBe(false);
+  });
+
+  it("distingue le texte de ce qui rend image, audio ou vidéo", async () => {
+    const { getOpenRouterModelInfo } = await freshIndex();
+    expect((await getOpenRouterModelInfo("google/gemini-3-pro-image"))?.textOutput).toBe(false);
+    expect((await getOpenRouterModelInfo("anthropic/claude-opus-5"))?.textOutput).toBe(true);
+  });
+
+  it("répute textuel un modèle qui n'annonce aucune sortie", async () => {
+    // L'absence d'annonce n'est pas un aveu : elle ne doit pas le faire
+    // disparaître du picker.
+    const { getOpenRouterModelInfo } = await freshIndex();
+    expect((await getOpenRouterModelInfo("some/embedding-model"))?.textOutput).toBe(true);
+  });
+
+  it("garde tout de même les aiguillages dans l'index", async () => {
+    // Le catalogue ne les propose pas, mais un id collé à la main doit rester
+    // chiffrable — sinon « prix inconnu », donc sous tous les plafonds.
+    const { listOpenRouterIndex } = await freshIndex();
+    const ids = (await listOpenRouterIndex()).map((m) => m.id);
+    expect(ids).toContain("openrouter/auto");
+    expect(ids).toContain("google/gemini-3-pro-image");
   });
 });
 

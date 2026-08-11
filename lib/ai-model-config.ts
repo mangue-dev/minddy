@@ -16,15 +16,17 @@
  */
 import { getProviderDefaultModel } from "@/lib/agent-providers";
 import { DEFAULT_SUBAGENT_FAVORITES } from "@/lib/subagent-favorites";
+import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 
 /**
- * `model`     → id `provider/model` choisi dans le catalogue de la clé plateforme ;
- * `modelId`   → id saisi tel quel, dans le namespace d'un provider BYOK (`gpt-…`,
- *               `claude-…`) : le catalogue plateforme y écrirait des ids invalides ;
- * `favorites` → liste JSON de `FavoriteSubagentModel` ;
- * `flag`      → interrupteur "true"/"false".
+ * `model`       → id `provider/model` choisi dans le catalogue de la clé plateforme ;
+ * `modelId`     → id saisi tel quel, dans le namespace d'un provider BYOK (`gpt-…`,
+ *                 `claude-…`) : le catalogue plateforme y écrirait des ids invalides ;
+ * `favorites`   → liste JSON de `FavoriteSubagentModel` ;
+ * `recommended` → liste JSON d'ids, dans l'ordre d'affichage du picker ;
+ * `flag`        → interrupteur "true"/"false".
  */
-export type AiConfigKind = "model" | "modelId" | "favorites" | "flag";
+export type AiConfigKind = "model" | "modelId" | "favorites" | "recommended" | "flag";
 
 export type AiConfigGroup = "assistant" | "agent" | "byok" | "voice" | "feedback";
 
@@ -131,6 +133,17 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     key: "agent_subagent_favorites",
     kind: "favorites",
     fallback: JSON.stringify(DEFAULT_SUBAGENT_FAVORITES),
+    group: "agent",
+  },
+  // Les modèles CONSEILLÉS, montrés en tête du picker à l'ouverture
+  // (cf. lib/recommended-models.ts). À ne pas confondre avec les favoris
+  // ci-dessus, qui sont du PROMPT : ceux-là sont de l'UI, lus par un humain qui
+  // choisit sur quoi lancer son agent. Ils ne restreignent rien — le catalogue
+  // entier reste à une recherche.
+  {
+    key: "recommended_models",
+    kind: "recommended",
+    fallback: JSON.stringify(DEFAULT_RECOMMENDED_MODELS),
     group: "agent",
   },
   // Défauts frontier des providers BYOK : ce que tourne un compte qui a posé sa

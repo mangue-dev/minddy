@@ -2007,6 +2007,8 @@
     "modelSearchLoading": "Loading models…",
     "modelUseCustom": "Use “{model}”",
     "modelRequired": "This provider has no default model. Pick one.",
+    "modelRecommended": "Recommended",
+    "modelShowAll": "Browse more models",
     "modelPlanCap": "Your {plan} plan goes up to ×{limit} minddy's default model.",
     "errorModelAbovePlan": "{model} costs ×{multiplier} the usage of minddy's default model; your {plan} plan goes up to ×{limit}. Pick another model or upgrade.",
     "branchDefault": "Default branch",
@@ -2022,10 +2024,6 @@
     "reasoningLow": "Light",
     "reasoningMedium": "Standard",
     "reasoningHigh": "Deep",
-    "reasoningOffDesc": "The model answers straight away.",
-    "reasoningLowDesc": "A short pass of thought before acting.",
-    "reasoningMediumDesc": "The model takes time to plan its work.",
-    "reasoningHighDesc": "The longest thinking, for the hardest tasks.",
     "reasoningLocked": "To change the reasoning level, launch a new agent.",
     "reasoningUnsupported": "This model ignores the reasoning level.",
     "providerRetry": "The model provider isn't responding; waiting before trying again.",
@@ -2130,11 +2128,8 @@
     "composeProjectTooltip": "Pick a project before launching",
     "composeNoRepo": "None of your projects has a repository connected. The agent clones a repository to work in: link one in a project's settings.",
     "reasoningMinimal": "Minimal",
-    "reasoningMinimalDesc": "Barely a pause — a beat of thought, no more.",
     "reasoningXhigh": "Very deep",
-    "reasoningXhighDesc": "More thinking than Deep, on models that go that far.",
-    "reasoningMax": "Maximum",
-    "reasoningMaxDesc": "Everything the model can put into thinking."
+    "reasoningMax": "Maximum"
   },
   "Projects": {
     "newProject": "New project",
@@ -3311,6 +3306,10 @@
         "label": "Sub-agent favorite models",
         "desc": "What the agent reads to pick what to run a sub-agent on. It may use any model in the catalogue; these are the ones we recommend. The use case goes into its prompt verbatim: write it in English, for a model that picks."
       },
+      "recommended_models": {
+        "label": "Recommended models",
+        "desc": "The short list the model picker opens on, everywhere in the app — before anyone types. It hides nothing: searching still reaches the whole catalogue, and a last line opens up more. Order is computed from price, cheapest first, so you only pick WHICH models to recommend. A model above the Pro plan cap (×40) is launchable by nobody."
+      },
       "byok_default_model_openai": {
         "label": "OpenAI default"
       },
@@ -3578,6 +3577,17 @@
       "effortLow": "Low thinking",
       "effortMedium": "Medium thinking",
       "effortHigh": "High thinking"
+    },
+    "recommended": {
+      "pickModel": "Pick a model",
+      "add": "Add a model",
+      "save": "Save",
+      "cancel": "Cancel",
+      "reset": "Back to the default selection",
+      "remove": "Remove this model",
+      "empty": "No recommendations: the picker opens on the whole catalogue. Saving an empty list hands the setting back to the default selection.",
+      "incomplete": "Pick a model for every line before saving.",
+      "duplicate": "The same model appears twice: remove one before saving."
     }
   },
   "Legal": {

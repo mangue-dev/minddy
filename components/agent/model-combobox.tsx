@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, ListPlus } from "lucide-react";
 import {
   Button,
   Command,
+  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
@@ -36,13 +37,29 @@ import {
  * un provider générique dont `/models` peut être vide/indisponible. On
  * filtre/score nous-mêmes (`shouldFilter={false}`) et on tronque à MAX_RESULTS.
  *
+ * À L'OUVERTURE, la liste n'est pas le catalogue : c'est la courte sélection des
+ * modèles CONSEILLÉS (`recommended`, réglée dans /admin, cf.
+ * lib/recommended-models.ts). Trois cents modèles rangés par ordre alphabétique
+ * ouvrent sur `agentica-org/…` — un rang qui ne dit rien de ce qui marche, et
+ * qui laisse le choix entier à charge de quelqu'un qui voulait juste lancer un
+ * agent. Rien n'est CACHÉ pour autant : taper cherche dans tout le catalogue, et
+ * une dernière ligne l'ouvre en entier sans rien taper. Quand le serveur ne
+ * renvoie aucun conseil applicable (BYOK aux ids natifs, catalogue admin, liste
+ * vidée), on retombe sur le catalogue entier — le comportement d'avant.
+ *
  * Chaque modèle porte son COÛT relatif au modèle par défaut de minddy (« ×2,4 »,
  * cf. lib/model-multiplier.ts), et ceux qui dépassent le plafond du plan sont
  * GRISÉS, pas cachés : savoir qu'un modèle existe et ce qu'il coûte est
  * précisément ce qui donne une raison de changer de plan. Le serveur les refuse
  * de son côté (`ensureModelInPlan`) — le grisé est une politesse, pas la serrure.
- * Rien de tout ça n'apparaît quand le catalogue ne renvoie pas de plafond : BYOK
- * (l'utilisateur paye ses tokens) et catalogue admin.
+ *
+ * Les deux vont ensemble mais ne dépendent pas l'un de l'autre : le « ×N »
+ * s'affiche dès que le catalogue situe le modèle, le grisé n'apparaît que s'il
+ * envoie AUSSI un plafond. C'est ce qui donne son échelle de coût au dashboard
+ * admin, où l'on choisit ce que minddy paye sans qu'aucun plan s'applique. En
+ * BYOK, en revanche, le catalogue ne situe rien du tout et il n'y a donc rien à
+ * montrer : l'utilisateur paye ses propres tokens, et une échelle indexée sur le
+ * défaut de minddy ne parlerait pas de sa facture.
  */
 
 const MAX_RESULTS = 50;
@@ -94,14 +111,37 @@ export function ModelCombobox({
    */
   scope?: AgentModelsScope;
 }) {
-  const { provider, models, maxMultiplier, planId, loading } = useAgentModelsQuery(scope);
+  const { provider, models, maxMultiplier, planId, recommended, loading } =
+    useAgentModelsQuery(scope);
   const locale = useLocale();
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // « Voir tous les modèles » : dépliage explicite, remis à plat à la fermeture
+  // comme la recherche — rouvrir le picker doit toujours rouvrir sur les conseils.
+  const [showAll, setShowAll] = useState(false);
+
+  /**
+   * Les conseils tels qu'on peut les AFFICHER : l'ordre de l'admin, résolu sur
+   * le catalogue. Le modèle actuellement choisi y est joint s'il n'en fait pas
+   * partie — sans lui, le picker s'ouvrirait sur une liste où rien n'est coché,
+   * alors qu'un modèle est bel et bien sélectionné.
+   */
+  const shortlist = useMemo(() => {
+    if (recommended.length === 0) return [];
+    const byId = new Map(models.map((m) => [m.id, m]));
+    const list = recommended.map((id) => byId.get(id)).filter((m): m is AgentModel => !!m);
+    const current = value ? byId.get(value) : undefined;
+    return current && !recommended.includes(value) ? [...list, current] : list;
+  }, [models, recommended, value]);
+
+  // Liste courte tant qu'il y a des conseils, qu'on ne cherche pas et qu'on n'a
+  // pas déplié.
+  const collapsed = shortlist.length > 0 && !query.trim() && !showAll;
 
   const results = useMemo(() => {
     const q = query.trim();
+    if (collapsed) return shortlist;
     if (!q) return models.slice(0, MAX_RESULTS);
     return models
       .map((m) => ({ m, score: commandFilter(`${formatModelName(m.id)} ${m.id}`, q) }))
@@ -109,7 +149,7 @@ export function ModelCombobox({
       .sort((a, b) => b.score - a.score)
       .slice(0, MAX_RESULTS)
       .map((r) => r.m);
-  }, [models, query]);
+  }, [collapsed, models, query, shortlist]);
 
   // Logo : OpenRouter → par id (`vendor/model`) ; sinon logo du provider actif.
   const logoFor = (modelId: string) =>
@@ -137,7 +177,7 @@ export function ModelCombobox({
    * restant cliquable.
    */
   const multiplierBadge = (m: AgentModel, alwaysAllowed = false) =>
-    maxMultiplier != null && m.multiplier != null ? (
+    m.multiplier != null ? (
       <span
         className={cn(
           "shrink-0 text-xs tabular-nums",
@@ -151,8 +191,26 @@ export function ModelCombobox({
   const select = (next: string) => {
     onChange(next);
     setQuery("");
+    setShowAll(false);
     setOpen(false);
   };
+
+  /** Une ligne de modèle — rendue telle quelle, ou dans le groupe des conseils. */
+  const modelRow = (m: AgentModel) => (
+    <CommandItem
+      key={m.id}
+      value={m.id}
+      // Hors plafond : la ligne reste LISIBLE (opacité de cmdk) mais n'est ni
+      // cliquable ni navigable au clavier.
+      disabled={!allowed(m)}
+      onSelect={() => select(m.id)}
+    >
+      {logoFor(m.id)}
+      <span className="flex-1 truncate">{formatModelName(m.id)}</span>
+      {multiplierBadge(m)}
+      <Check className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")} />
+    </CommandItem>
+  );
 
   // Rendu de l'option « défaut » : libellé + modèle résolu (logo + nom) en aparté.
   // Son multiplicateur s'affiche comme celui des autres, mais elle n'est JAMAIS
@@ -199,7 +257,10 @@ export function ModelCombobox({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setQuery("");
+        if (!next) {
+          setQuery("");
+          setShowAll(false);
+        }
       }}
     >
       <PopoverTrigger asChild>
@@ -272,23 +333,29 @@ export function ModelCombobox({
               {defaultRow}
               <Check className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
             </CommandItem>
-            {results.map((m) => (
-              <CommandItem
-                key={m.id}
-                value={m.id}
-                // Hors plafond : la ligne reste LISIBLE (opacité de cmdk) mais
-                // n'est ni cliquable ni navigable au clavier.
-                disabled={!allowed(m)}
-                onSelect={() => select(m.id)}
-              >
-                {logoFor(m.id)}
-                <span className="flex-1 truncate">{formatModelName(m.id)}</span>
-                {multiplierBadge(m)}
-                <Check
-                  className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")}
-                />
+            {/* Groupé sous son titre quand c'est la sélection conseillée : la
+                liste est courte, et le titre est ce qui dit POURQUOI. `p-0` : le
+                padding du groupe décalerait ses options de celle du défaut,
+                juste au-dessus (la liste porte déjà son `px-1`). */}
+            {collapsed ? (
+              <CommandGroup className="p-0" heading={t("modelRecommended")}>
+                {results.map(modelRow)}
+              </CommandGroup>
+            ) : (
+              results.map(modelRow)
+            )}
+            {/* Le catalogue entier, sans avoir à deviner quoi taper. Une option
+                de la liste plutôt qu'un bouton en pied : elle se navigue au
+                clavier, dans la continuité des modèles au-dessus. */}
+            {collapsed ? (
+              <CommandItem value="__all__" onSelect={() => setShowAll(true)}>
+                <ListPlus className="size-4 shrink-0 text-muted-foreground" />
+                {/* Pas de compte annoncé : le dépliage tronque à MAX_RESULTS,
+                    et promettre « les 321 modèles » pour en montrer 50 serait
+                    faux. Ce qui les atteint tous, c'est la recherche. */}
+                <span className="flex-1 truncate text-muted-foreground">{t("modelShowAll")}</span>
               </CommandItem>
-            ))}
+            ) : null}
             {showFreeText ? (
               <CommandItem value={`__free__${trimmed}`} onSelect={() => select(trimmed)}>
                 {logoFor(trimmed)}
