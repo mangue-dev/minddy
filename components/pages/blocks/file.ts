@@ -1,6 +1,6 @@
 import { Node } from "@tiptap/core";
 import { Paperclip } from "lucide-react";
-import { pageFileIdFromSrc } from "@/lib/page-files";
+import { normalizePageFileSrc, pageFileIdFromSrc } from "@/lib/page-files";
 import type { PageFilePickStorage } from "@/components/pages/blocks/image";
 import type {
   MarkdownNode,
@@ -60,7 +60,9 @@ export const PageFile = Node.create({
     return {
       src: {
         default: null,
-        parseHTML: (element) => element.getAttribute("data-src"),
+        // Normalisé comme celui du bloc image : un lien markdown écrit avec une
+        // origine (`[x](http://localhost:3000/api/…)`) entre par ici.
+        parseHTML: (element) => normalizePageFileSrc(element.getAttribute("data-src")),
         renderHTML: (attributes) =>
           attributes.src ? { "data-src": attributes.src as string } : {},
       },

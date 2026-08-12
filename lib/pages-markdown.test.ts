@@ -322,6 +322,59 @@ describe("un document qui contient tout", () => {
   });
 });
 
+/* ── L'origine, retirée à l'entrée (MIN-284) ──────────────────────────── */
+
+describe("l'adresse d'un fichier de page entrant avec une ORIGINE", () => {
+  // Le cas vécu : copier-coller un bloc image passe par le presse-papiers, qui
+  // porte du HTML, et Chrome y absolutise les `src`. Le corps rangeait
+  // `http://localhost:3000/api/…` ; l'image ne chargeait plus en production, et
+  // le balayage des orphelins, qui ne la reconnaissait plus, s'apprêtait à
+  // effacer le fichier qu'elle nommait. Le chemin markdown → HTML → parseHTML
+  // joué ici est EXACTEMENT celui d'un collage.
+  const PROJECT = "00000000-0000-4000-8000-000000000000";
+  const IMAGE = "11111111-1111-4111-8111-111111111111";
+  const FILE = "22222222-2222-4222-8222-222222222222";
+
+  it("perd son origine et revient relative", () => {
+    const body = bodyFromMarkdown(
+      [
+        `![Une capture](http://localhost:3000/api/projects/${PROJECT}/pages/files/${IMAGE})`,
+        "",
+        `[rapport.pdf](https://www.minddy.app/api/projects/${PROJECT}/pages/files/${FILE})`,
+      ].join("\n")
+    );
+    const srcs = attrsOf(body.content ?? [])
+      .map((attrs) => attrs.src)
+      .filter(Boolean);
+    expect(srcs).toEqual([
+      `/api/projects/${PROJECT}/pages/files/${IMAGE}`,
+      `/api/projects/${PROJECT}/pages/files/${FILE}`,
+    ]);
+  });
+
+  it("laisse une image EXTERNE telle quelle", () => {
+    const body = bodyFromMarkdown("![Un graphe](https://exemple.org/graphe.png)");
+    expect(attrsOf(body.content ?? [])[0]?.src).toBe(
+      "https://exemple.org/graphe.png"
+    );
+  });
+
+  /** Les attributs des nœuds image et fichier, dans l'ordre du document. */
+  function attrsOf(nodes: JsonNode[]): Record<string, unknown>[] {
+    const out: Record<string, unknown>[] = [];
+    const walk = (list: JsonNode[]) => {
+      for (const node of list) {
+        if (node.type === "image" || node.type === "pageFile") {
+          out.push(node.attrs ?? {});
+        }
+        if (node.content) walk(node.content);
+      }
+    };
+    walk(nodes);
+    return out;
+  }
+});
+
 /* ── Les outils du fichier ────────────────────────────────────────────── */
 
 interface JsonNode {

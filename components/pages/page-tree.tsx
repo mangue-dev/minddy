@@ -357,8 +357,9 @@ function PageRow({
     x: number;
     y: number;
   } | null>(null);
-  // Moi compris : un autre onglet à moi est bien quelqu'un sur la page, et la
-  // ligne ACTIVE est celle que je lis — on n'y met donc pas de pastille.
+  // Les AUTRES, jamais moi (le tri est à la source) : mes propres onglets
+  // allumaient une pastille en face de pages que personne d'autre ne lisait. La
+  // ligne active reste exclue par principe — c'est celle que je lis.
   const present = usePresentOn(active ? null : page.id);
 
   const modeFrom = (event: DragEvent<HTMLDivElement>): PageDropMode => {

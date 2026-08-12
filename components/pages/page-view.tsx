@@ -750,11 +750,7 @@ function PageSurface({
       </div>
 
       <div className="absolute top-3 right-3.5 z-10 flex items-center gap-1.5">
-        <PagePresence
-          userIds={present}
-          members={members}
-          meId={user?.id ?? null}
-        />
+        <PagePresence userIds={present} members={members} />
         <PageStatus
           state={autosave.state}
           updatedAt={autosave.savedAt ?? summary?.updated_at ?? page.updated_at}

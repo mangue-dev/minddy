@@ -32,7 +32,7 @@ export interface PagePresenceState {
   pageId: string;
 }
 
-/** Les pages regardées, par pageId → les ids des personnes présentes. */
+/** Les pages regardées, par pageId → les ids des AUTRES personnes présentes. */
 export type PagePresenceMap = Map<string, string[]>;
 
 /** Le minimum qu'on demande au client Supabase — de quoi mentir dans un test
@@ -51,9 +51,16 @@ export interface PagePresenceHandle {
 /**
  * Rejoint la présence du projet et s'y déclare.
  *
- * `onChange` reçoit l'état complet à chaque mouvement (soi compris : c'est
- * l'appelant qui décide de se montrer ou non, et l'arbre a besoin de savoir
- * qu'une page est regardée même si c'est par nous depuis un autre onglet).
+ * `onChange` reçoit à chaque mouvement les AUTRES, jamais soi — pas même depuis
+ * un autre onglet.
+ *
+ * Le tri se fait ici plutôt que chez chaque appelant, et c'est le sens même de
+ * l'indicateur qui l'impose : il répond « je ne suis pas seul », et une réponse
+ * qui compte le lecteur est fausse quoi qu'elle affiche. Un deuxième onglet à
+ * soi allumait une pastille dans l'arbre en face d'une page que personne d'autre
+ * ne lisait — la présence disait quelque chose, et ce quelque chose était faux.
+ * Filtrer chez l'appelant demandait à chacun de se souvenir de qui il est ;
+ * celui de l'arbre ne le savait même pas.
  *
  * Le token est poussé sur la socket AVANT le join, comme partout ailleurs dans
  * ce dépôt : un canal privé rejoint avec le jeton anon est refusé, en silence.
@@ -82,6 +89,8 @@ export function openPagePresence({
     for (const entries of Object.values(state)) {
       for (const entry of entries) {
         if (!entry?.pageId || !entry.userId) continue;
+        // Soi, sous toutes ses connexions : la présence dit qui d'AUTRE lit.
+        if (entry.userId === userId) continue;
         const people = pages.get(entry.pageId);
         // Un même compte ouvert deux fois sur la même page n'est qu'un avatar.
         if (people) {

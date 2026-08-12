@@ -10,7 +10,9 @@
 //
 // On ne se montre PAS soi-même : le seul visage qu'un utilisateur ne cherche
 // pas sur son propre écran est le sien, et le laisser ferait croire à deux
-// lecteurs là où il n'y en a qu'un.
+// lecteurs là où il n'y en a qu'un. Le tri est fait à la SOURCE, une fois pour
+// toutes les surfaces (lib/page-presence.ts) — l'arbre, lui, ne sait même pas
+// qui je suis, et il posait sa pastille sur mon propre deuxième onglet.
 
 import { createContext, useContext, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
@@ -52,12 +54,13 @@ export function PagePresenceProvider({
   );
 }
 
-/** Tout ce qui est regardé dans le projet — l'arbre en a besoin en entier. */
+/** Tout ce que d'AUTRES regardent dans le projet — l'arbre en a besoin en
+    entier. */
 export function usePresentPages(): PagePresenceMap {
   return useContext(PresenceContext);
 }
 
-/** Les présents sur une page donnée, moi compris. */
+/** Les autres présents sur une page donnée. */
 export function usePresentOn(pageId: string | null): string[] {
   const present = useContext(PresenceContext);
   return (pageId ? present.get(pageId) : undefined) ?? [];
@@ -70,17 +73,15 @@ const MAX_FACES = 3;
 export function PagePresence({
   userIds,
   members,
-  meId,
   className,
 }: {
-  /** Les présents sur CETTE page, moi compris — le tri se fait ici. */
+  /** Les AUTRES présents sur cette page — déjà triés (lib/page-presence.ts). */
   userIds: readonly string[];
   members: readonly Member[];
-  meId: string | null;
   className?: string;
 }) {
   const t = useTranslations("Pages");
-  const others = userIds.filter((id) => id !== meId);
+  const others = userIds;
   if (others.length === 0) return null;
 
   const byId = new Map(members.map((member) => [member.user_id, member]));

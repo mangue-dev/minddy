@@ -20,8 +20,9 @@ import {
 const EMPTY: PagePresenceMap = new Map();
 
 /**
- * Qui regarde quoi dans ce projet — `pageId` → les ids des personnes présentes,
- * moi compris (un autre onglet à moi est quelqu'un pour l'arbre).
+ * Qui d'AUTRE regarde quoi dans ce projet — `pageId` → les ids des présents.
+ * Jamais moi, pas même depuis un autre onglet : le tri se fait à la source
+ * (lib/page-presence.ts).
  */
 export function usePagePresence(
   projectId: string | null,

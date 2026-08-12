@@ -54,21 +54,70 @@ export function pageFileUrl(projectId: string, fileId: string): string {
   return `/api/projects/${projectId}/pages/files/${fileId}`;
 }
 
-const PAGE_FILE_URL_RE =
+const PAGE_FILE_PATH_RE =
   /^\/api\/projects\/([0-9a-fA-F-]{36})\/pages\/files\/([0-9a-fA-F-]{36})$/;
+
+/**
+ * Le couple (projet, fichier) derrière un `src`, quel que soit son ORIGINE.
+ *
+ * L'origine est là où ce module a déjà perdu une image en production. Le
+ * document range une adresse RELATIVE (`/api/…`), mais copier-coller un bloc
+ * image ne recopie pas le document : le presse-papiers passe par du HTML, et
+ * Chrome y ABSOLUTISE les `src` — la même image revient collée en
+ * `http://localhost:3000/api/…`, ce qui marche encore sur le poste, et ne
+ * charge plus rien nulle part ailleurs. Le bloc fichier, lui, range son adresse
+ * dans un `data-src` que le navigateur ne touche pas : il n'a jamais eu le
+ * problème, et c'est ce qui a désigné le coupable.
+ *
+ * On lit donc le CHEMIN, pas la chaîne entière. La contrepartie assumée : une
+ * adresse de cette forme sur un domaine tiers est comptée comme nôtre. Elle ne
+ * se produit pas, et l'asymétrie est du bon côté partout où ce test sert — le
+ * balayage des orphelins garde un fichier de trop plutôt que d'en effacer un
+ * que le document montre encore (lib/server/page-files.ts).
+ */
+function matchPageFileSrc(src: unknown): RegExpExecArray | null {
+  if (typeof src !== "string") return null;
+  const trimmed = src.trim();
+  if (!trimmed) return null;
+  let path = trimmed;
+  if (!path.startsWith("/")) {
+    try {
+      path = new URL(trimmed).pathname;
+    } catch {
+      return null;
+    }
+  }
+  return PAGE_FILE_PATH_RE.exec(path);
+}
 
 /** L'id de la ligne `page_files` derrière un `src`, ou `null` quand le `src`
     pointe ailleurs — une image externe collée depuis le web en est une, et elle
     est parfaitement légitime : elle n'a simplement rien à nous coûter. */
 export function pageFileIdFromSrc(src: unknown): string | null {
-  if (typeof src !== "string") return null;
-  return PAGE_FILE_URL_RE.exec(src.trim())?.[2] ?? null;
+  return matchPageFileSrc(src)?.[2] ?? null;
 }
 
 /** Le projet nommé par un `src` de fichier de page, ou `null`. */
 export function pageFileProjectFromSrc(src: unknown): string | null {
+  return matchPageFileSrc(src)?.[1] ?? null;
+}
+
+/**
+ * L'adresse telle qu'on accepte de la RANGER : la forme relative pour nos
+ * fichiers, la chaîne d'origine pour tout le reste.
+ *
+ * À appeler à la PORTE — quand une adresse entre dans un document depuis du
+ * HTML ou du markdown (blocks/image.ts, blocks/file.ts). Reconnaître une
+ * adresse absolue à la lecture répare l'usage ; la normaliser à l'entrée
+ * l'empêche d'être écrite, et c'est la moitié qui compte : un `src` absolu
+ * rangé dans un corps porte l'origine du poste qui a collé.
+ */
+export function normalizePageFileSrc(src: unknown): string | null {
   if (typeof src !== "string") return null;
-  return PAGE_FILE_URL_RE.exec(src.trim())?.[1] ?? null;
+  const trimmed = src.trim();
+  if (!trimmed) return null;
+  const match = matchPageFileSrc(trimmed);
+  return match ? pageFileUrl(match[1], match[2]) : trimmed;
 }
 
 /**
@@ -88,8 +137,9 @@ export function pageFileProjectFromSrc(src: unknown): string | null {
  * D'où la règle, ici et pas dans la vue : c'est une propriété de l'adresse.
  */
 export function fileDownloadHref(src: string): string {
-  if (!pageFileIdFromSrc(src)) return src;
-  return `${src}${src.includes("?") ? "&" : "?"}download=1`;
+  const ours = normalizePageFileSrc(src);
+  if (!ours || !pageFileIdFromSrc(ours)) return src;
+  return `${ours}?download=1`;
 }
 
 /**

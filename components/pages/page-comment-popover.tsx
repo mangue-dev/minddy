@@ -33,6 +33,10 @@ import {
   ReplyComposer,
 } from "@/components/issue-timeline";
 import { posOfBlockId } from "@/components/pages/block-actions";
+import {
+  hasOpenDismissibleLayer,
+  isInOverlayLayer,
+} from "@/lib/overlay-layers";
 import type { PageThread } from "@/lib/page-comments";
 import type { Member } from "@/lib/types";
 
@@ -40,6 +44,7 @@ import type { Member } from "@/lib/types";
 const WIDTH = 340;
 const GAP = 16;
 const MARGIN = 12;
+
 
 export interface BlockCommentTarget {
   blockId: string;
@@ -126,20 +131,26 @@ export function PageCommentPopover({
     };
   }, [editor, measure]);
 
-  // Échap ferme, et un clic AILLEURS aussi — sauf dans le panneau, et sauf sur
-  // une pastille : cliquer celle d'un autre bloc doit ouvrir SON fil, pas
-  // refermer celui-ci et laisser l'utilisateur cliquer deux fois.
+  // Échap ferme, et un clic AILLEURS aussi — sauf dans le panneau, sauf sur une
+  // pastille (cliquer celle d'un autre bloc doit ouvrir SON fil, pas refermer
+  // celui-ci et laisser l'utilisateur cliquer deux fois), et sauf dans un calque
+  // ouvert PAR-DESSUS : le menu « ⋯ » d'un commentaire et son dialogue de
+  // confirmation sont portés en fin de `body`, donc « ailleurs » au sens du DOM.
+  // Sans cette dernière exception, supprimer un commentaire était impossible —
+  // le clic sur « Supprimer » fermait le panneau, qui emportait le dialogue
+  // avant qu'on ait pu confirmer (lib/overlay-layers.ts).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        onClose();
-      }
+      if (event.key !== "Escape") return;
+      if (hasOpenDismissibleLayer(document)) return;
+      event.stopPropagation();
+      onClose();
     };
     const onDown = (event: MouseEvent) => {
       const node = event.target as HTMLElement | null;
       if (panel.current?.contains(node ?? null)) return;
       if (node?.closest(".page-block-comment-badge")) return;
+      if (isInOverlayLayer(node)) return;
       onClose();
     };
     window.addEventListener("keydown", onKey, true);

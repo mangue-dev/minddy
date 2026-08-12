@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   fileDownloadHref,
   formatFileSize,
+  normalizePageFileSrc,
   pageFileIdFromSrc,
   pageFileIdsInBody,
   pageFileProjectFromSrc,
@@ -46,6 +47,37 @@ describe("l'adresse d'un fichier de page", () => {
     ]) {
       expect(pageFileIdFromSrc(src), String(src)).toBeNull();
     }
+  });
+
+  it("se reconnaît même affublée d'une ORIGINE", () => {
+    // Le cas vécu (MIN-284) : copier-coller un bloc image passe par le
+    // presse-papiers, qui porte du HTML, et Chrome y absolutise les `src`. Le
+    // corps rangeait `http://localhost:3000/api/…` — l'image ne chargeait plus
+    // hors du poste qui avait collé, et le balayage, qui ne la reconnaissait
+    // plus, s'apprêtait à effacer le fichier qu'elle nommait.
+    for (const origin of ["http://localhost:3000", "https://www.minddy.app"]) {
+      const absolute = `${origin}${pageFileUrl(PROJECT, FILE)}`;
+      expect(pageFileIdFromSrc(absolute)).toBe(FILE);
+      expect(pageFileProjectFromSrc(absolute)).toBe(PROJECT);
+      expect(pageFileIdsInBody({ attrs: { src: absolute } })).toEqual(
+        new Set([FILE])
+      );
+      // Et la porte d'entrée la rend à sa forme relative, pour qu'elle cesse
+      // d'être écrite ainsi.
+      expect(normalizePageFileSrc(absolute)).toBe(pageFileUrl(PROJECT, FILE));
+      expect(fileDownloadHref(absolute)).toBe(
+        `${pageFileUrl(PROJECT, FILE)}?download=1`
+      );
+    }
+  });
+
+  it("laisse passer INTACTE une adresse qui n'est pas la nôtre", () => {
+    // La normalisation n'est pas un filtre : une image externe est légitime.
+    expect(normalizePageFileSrc("https://exemple.org/capture.png")).toBe(
+      "https://exemple.org/capture.png"
+    );
+    expect(normalizePageFileSrc("  ")).toBeNull();
+    expect(normalizePageFileSrc(null)).toBeNull();
   });
 
   it("range les octets sous le préfixe du PROJET", () => {

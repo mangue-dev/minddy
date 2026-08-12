@@ -159,6 +159,33 @@ describe("openPagePresence", () => {
     handle.close();
   });
 
+  it("ne se compte JAMAIS soi-même, même depuis un autre onglet", async () => {
+    const supabase = fakeSupabase();
+    let seen: PagePresenceMap = new Map();
+    const handle = openPagePresence({
+      projectId: "proj",
+      userId: "moi",
+      pageId: "page-1",
+      onChange: (present) => {
+        seen = present;
+      },
+      client: supabase.client,
+    });
+    await vi.waitFor(() => expect(supabase.calls.channels).toHaveLength(1));
+
+    supabase.emit({
+      a: [{ userId: "moi", pageId: "page-1" }],
+      // Mon deuxième onglet, sur une AUTRE page : la pastille de l'arbre s'y
+      // allumait en face d'une page que personne d'autre ne lisait.
+      b: [{ userId: "moi", pageId: "page-2" }],
+      c: [{ userId: "elle", pageId: "page-2" }],
+    });
+
+    expect(seen.get("page-1")).toBeUndefined();
+    expect(seen.get("page-2")).toEqual(["elle"]);
+    handle.close();
+  });
+
   it("range les présents par page, un avatar par compte", async () => {
     const supabase = fakeSupabase();
     let seen: PagePresenceMap = new Map();
@@ -175,13 +202,13 @@ describe("openPagePresence", () => {
 
     supabase.emit({
       // Deux onglets du même compte sur la même page : un seul avatar.
-      a: [{ userId: "moi", pageId: "page-1" }],
-      b: [{ userId: "moi", pageId: "page-1" }],
-      c: [{ userId: "elle", pageId: "page-1" }],
+      a: [{ userId: "elle", pageId: "page-1" }],
+      b: [{ userId: "elle", pageId: "page-1" }],
+      c: [{ userId: "moi", pageId: "page-1" }],
       d: [{ userId: "lui", pageId: "page-2" }],
     });
 
-    expect(seen.get("page-1")).toEqual(["moi", "elle"]);
+    expect(seen.get("page-1")).toEqual(["elle"]);
     expect(seen.get("page-2")).toEqual(["lui"]);
     handle.close();
   });

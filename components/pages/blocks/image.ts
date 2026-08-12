@@ -1,5 +1,6 @@
 import { Node } from "@tiptap/core";
 import { ImageIcon } from "lucide-react";
+import { normalizePageFileSrc } from "@/lib/page-files";
 import type {
   MarkdownNode,
   MarkdownState,
@@ -92,7 +93,20 @@ export const PageImage = Node.create({
 
   addAttributes() {
     return {
-      src: { default: null },
+      // Le `src` est RENORMALISÉ à la lecture, et c'est ce qui empêche une
+      // image de disparaître d'un document qu'on rouvre ailleurs.
+      //
+      // Copier un bloc image ne recopie pas le document : le presse-papiers
+      // porte du HTML, et Chrome y réécrit `/api/…` en `http://localhost:3000/api/…`.
+      // Collé, le bloc range cette adresse-là — visible sur le poste qui a
+      // collé, morte partout ailleurs, et invisible pour le balayage des
+      // orphelins, qui finit par effacer le fichier qu'elle nommait. Un cas
+      // vécu (MIN-284) : le bloc fichier, dont l'adresse voyage en `data-src`
+      // que le navigateur ne touche pas, n'a jamais rien eu.
+      src: {
+        default: null,
+        parseHTML: (element) => normalizePageFileSrc(element.getAttribute("src")),
+      },
       // La LÉGENDE, et le texte alternatif : un seul champ, parce que markdown
       // n'en a qu'un (`![légende](…)`) et qu'en avoir deux dans le nœud aurait
       // voulu dire en perdre un à chaque aller-retour. Une bonne légende est un
