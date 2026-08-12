@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Inter, Instrument_Serif } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
@@ -22,6 +22,40 @@ const instrumentSerif = Instrument_Serif({
   style: "italic",
   display: "swap",
 });
+
+/* ── Ce qui allume les safe areas ─────────────────────────────────────────────
+   Sans cet export, Next sert son viewport par défaut — `width=device-width,
+   initial-scale=1`, sans `viewport-fit`. Or `viewport-fit: auto` cale la fenêtre
+   DANS la zone sûre : la page ne passe jamais sous l'encoche ni sous la barre
+   d'indicateur d'accueil, et par conséquent **tous les `env(safe-area-inset-*)`
+   valent 0**. Le dépôt en écrit sept — la pilule de navigation mobile et le
+   dégagement qu'elle réserve (`--mobile-nav-height`, app/globals.css), le FAB de
+   Numo, le bandeau de nouvelle version, le tiroir de la nav marketing, le
+   panneau de l'assistant — et pas un seul ne mesurait quoi que ce soit.
+
+   `cover` rend la page à fond perdu et redonne aux insets leur vraie valeur :
+   c'est la ligne qui met en service tout ce travail déjà écrit. Ce qui touche un
+   bord de l'écran doit donc, à partir d'ici, porter son inset — voir le bloc des
+   safe areas dans app/globals.css pour les surfaces de mangue-ui.
+
+   On ne touche NI à `maximumScale` NI à `userScalable` : brider le zoom est un
+   défaut d'accessibilité, et aucun des correctifs ci-dessus n'en a besoin.
+
+   `interactiveWidget` répond à l'autre moitié du problème : le clavier. Par
+   défaut (`resizes-visual`), le clavier logiciel ne rétrécit QUE la fenêtre
+   visuelle — le viewport de mise en page garde sa hauteur, donc un pied de page
+   ancré en `fixed` reste calé sur un bas d'écran qui n'est plus visible, et
+   passe DERRIÈRE le clavier. C'est le cas des deux composers du produit (pull
+   request, session d'agent), ceux-là mêmes que `.dock-above-nav` remonte déjà
+   au-dessus de la barre mobile dans app/globals.css. `resizes-content` rétrécit
+   le viewport de mise en page : `h-dvh` du shell suit, et le composer remonte
+   avec le clavier au lieu de disparaître dessous. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const [t, locale] = await Promise.all([getTranslations("Meta"), getLocale()]);

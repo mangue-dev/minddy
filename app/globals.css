@@ -441,6 +441,291 @@ nav[aria-label="Navigation"]
   }
 }
 
+/* ─── Zones de sécurité : ce que `viewport-fit=cover` met à découvert ─────────
+   L'export `viewport` du root layout (app/layout.tsx) rend la page à fond perdu,
+   ce qui donne enfin une valeur aux `env(safe-area-inset-*)` déjà écrits dans le
+   dépôt. La contrepartie est immédiate : ce qui touchait un bord de l'écran
+   touche maintenant l'encoche ou la barre d'indicateur d'accueil. Ce bloc paie
+   cette contrepartie pour les surfaces qui viennent de mangue-ui — on ne patche
+   pas node_modules, on vise ses `data-slot`, exactement comme le fait le
+   dégagement de la barre mobile juste au-dessus.
+
+   `display: standalone` dans app/manifest.json : minddy s'installe. C'est là que
+   l'inset du HAUT existe — dans un onglet Safari, la barre d'URL occupe déjà la
+   place et l'inset vaut 0. Ces règles ne changent donc rien au navigateur, et
+   tout à l'app installée. Les insets latéraux, eux, se réveillent en paysage.
+
+   Le shell d'abord. Il est en `h-dvh` (donc plein écran à fond perdu) avec un
+   en-tête `sticky top-0` : sans ces marges, le fil d'Ariane passe sous l'heure
+   et la batterie. `box-sizing: border-box` est global chez Tailwind, donc ce
+   padding se prend DANS les 100 dvh au lieu de déborder. Rien pour le bas : le
+   <main> réserve déjà `--mobile-nav-clearance`, qui contient l'inset. */
+.app-shell {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Les boîtes de dialogue de mangue-ui sont centrées et plafonnées à
+   `max-h-[calc(100dvh-2rem)]`. Une fois les 100 dvh étendus sous l'encoche, une
+   boîte HAUTE — celle qui atteint son plafond — se termine à 1 rem d'un bord qui
+   n'est plus le bord utile : sa dernière rangée de boutons se retrouve sous la
+   barre d'indicateur d'accueil, là où le doigt ne peut plus rien.
+
+   On retranche les deux insets du plafond, et RIEN D'AUTRE. La boîte reste
+   centrée dans la fenêtre entière : réduire sa hauteur de (haut + bas) écarte ses
+   deux bords de la moitié de cette somme, ce qui dégage largement chaque inset
+   pris séparément. Surtout, on ne touche pas au `translate` : Tailwind v4 y
+   compile `-translate-x-1/2 -translate-y-1/2`, et le réécrire ici décentrerait
+   la boîte au lieu de la décaler. */
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
+  max-height: calc(
+    100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
+}
+
+/* Les tiroirs, eux, sont COLLÉS à leur bord — `inset-y-0 h-full` à gauche et à
+   droite, `bottom-0` en bas — donc rien ne les écarte de quoi que ce soit. Un
+   padding, pas une marge : le fond du tiroir doit continuer de courir jusqu'au
+   bord, seul son contenu recule. */
+[data-slot="sheet-content"][data-side="bottom"] {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+[data-slot="sheet-content"][data-side="top"] {
+  padding-top: env(safe-area-inset-top);
+}
+[data-slot="sheet-content"]:is([data-side="left"], [data-side="right"]) {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+[data-slot="sheet-content"][data-side="left"] {
+  padding-left: env(safe-area-inset-left);
+}
+[data-slot="sheet-content"][data-side="right"] {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ─── Le doigt : cibles de 44 px et retour à l'appui ──────────────────────────
+   Deux défauts que le poste de dev ne montre jamais, parce qu'ils n'existent
+   qu'au doigt. Tout ce bloc est sous `pointer: coarse` : le ressenti à la souris
+   ne bouge pas d'un pixel.
+
+   D'abord la TAILLE. Les boutons de mangue-ui mesurent 32 px (`sm`, `icon-sm`),
+   36 px (`default`, `icon`) ou 40 px (`lg`, `icon-lg`) — aucun n'atteint les
+   44 px que réclament les recommandations d'Apple comme celles de Google, et
+   c'est la ronde d'icônes des barres d'outils qui en souffre le plus : une croix
+   de 32 px, on la rate. On ne peut pas simplement les agrandir — mangue-ui vit
+   dans node_modules, et surtout minddy est une interface DENSE : passer chaque
+   bouton à 44 px reflowerait chaque barre d'outils de l'app.
+
+   D'où le pseudo-élément : la cible grandit, le dessin ne bouge pas. `max()`
+   fait le tri tout seul — un bouton déjà plus large que 44 px garde sa largeur,
+   un bouton plus petit est porté à 44. Aucune taille n'est écrite en dur ici,
+   donc rien à retoucher si mangue-ui change ses hauteurs.
+
+   La contrepartie est connue et assumée : deux boutons voisins et serrés voient
+   leurs cibles se chevaucher, et c'est le dernier dans l'ordre du DOM qui prend
+   le recouvrement. 44 px qui se marchent un peu dessus valent mieux que 32 px
+   qu'on rate — mais c'est la raison pour laquelle on ne l'étend pas aux liens en
+   ligne (`data-variant="link"`), dont la cible déborderait sur son paragraphe.
+
+   `position: relative` est posé en `@layer base` À DESSEIN, et pas ici : un
+   bouton positionné par un utilitaire Tailwind (`absolute`, `fixed`, `sticky` —
+   la flèche « revenir en bas » du fil de conversation, la croix de fermeture
+   d'un tiroir) doit garder SON positionnement. Un utilitaire vit dans
+   @layer utilities et bat donc @layer base ; il l'emporte, et l'ancrage du
+   pseudo-élément est sauf de toute façon, puisqu'un élément positionné est déjà
+   un bloc conteneur. Une règle hors layer, elle, aurait écrasé les deux. */
+@layer base {
+  [data-slot="button"] {
+    position: relative;
+  }
+
+  /* Le halo gris que WebKit et Chrome Android peignent sur tout élément tapé.
+     Il arrive en retard, il déborde du rayon de bordure, et il n'a plus rien à
+     dire maintenant que l'appui a son propre retour (plus bas). */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (pointer: coarse) {
+  [data-slot="button"]:not([data-variant="link"])::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+  }
+
+  /* Ensuite le RETOUR. Sans lui, un bouton tapé ne répond rien tant que l'écran
+     n'a pas changé : le survol n'existe pas au doigt, et l'app paraît sourde.
+     Un enfoncement de 3 % suffit — c'est la fourchette où l'œil enregistre le
+     geste sans le voir. `Button` porte déjà `transition-all`, donc il n'y a rien
+     à ajouter côté transition, et `scale` (la propriété, pas la fonction) ne
+     touche pas au `transform` que Tailwind écrit par ailleurs.
+
+     `:disabled` porte `pointer-events: none`, mais un bouton rendu par `asChild`
+     sur une balise <a> ne peut pas être `:disabled` — il porte `aria-disabled`.
+     Les deux sont donc exclus. */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-slot="button"]:not(
+        [data-variant="link"],
+        :disabled,
+        [aria-disabled="true"]
+      ):active {
+      scale: 0.97;
+    }
+  }
+
+  /* Ce qui se tape et n'est pas un bouton. Deux familles, deux traitements —
+     et c'est la géométrie qui tranche, pas le goût.
+
+     Les COMMANDES ISOLÉES s'agrandissent par pseudo-élément, comme les boutons :
+     rien autour d'elles ne se tape, donc le débordement ne coûte rien.
+     mangue-ui en étend déjà deux, mais pas assez loin (16 px + 2×8 pour la case
+     à cocher, 12 px + 2×8 pour le pouce du curseur) : on reprend le SIEN plutôt
+     que d'en poser un second — une règle hors layer bat l'utilitaire `after:`
+     qui l'a écrit. L'interrupteur, lui, n'en a pas ; il en reçoit un, en
+     `absolute` pour ne pas devenir un élément de son propre flex et pousser son
+     pouce. 20 px de haut sur 36, c'est la plus petite cible du produit. */
+  [data-slot="checkbox"]::after {
+    inset: -14px; /* 16 + 2×14 = 44 */
+  }
+  [data-slot="slider-thumb"]::after {
+    inset: -16px; /* 12 + 2×16 = 44 */
+  }
+  [data-slot="switch"] {
+    position: relative;
+  }
+  [data-slot="switch"]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+  }
+
+  /* Un onglet est large mais bas. On ne l'étend donc qu'en HAUTEUR, et par
+     `::before` : son `::after` dessine déjà le trait de l'onglet actif. Les
+     onglets étant côte à côte, cette bande verticale ne recouvre aucun voisin. */
+  [data-slot="tabs-trigger"]::before {
+    content: "";
+    position: absolute;
+    inset-block: 50%;
+    inset-inline: 0;
+    margin-block: -22px;
+  }
+
+  /* Les RANGÉES DE LISTE, elles, ne peuvent pas déborder : deux lignes voisines
+     qui se recouvrent, c'est la ligne d'à côté qu'on ouvre. Là, on grandit pour
+     de vrai. Une liste défile — quelques pixels de plus par ligne ne coûtent
+     rien, contrairement à une barre d'outils, et c'est bien pourquoi les boutons
+     n'ont pas eu ce traitement. Ça couvre les menus, les sélecteurs, et la
+     feuille de recherche plein écran de la barre mobile (cmdk). */
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-radio-item"],
+  [data-slot="dropdown-menu-sub-trigger"],
+  [data-slot="select-item"],
+  [data-slot="command-item"] {
+    min-height: 44px;
+  }
+
+  /* Le délai de 300 ms. Un navigateur tactile attend, après un appui, de voir
+     si un second arrive — un double-tap zoome. Sur une cible qui ne zoome pas,
+     cette attente est du retard pur : le bouton s'enfonce, et l'app ne répond
+     qu'un tiers de seconde plus tard. `manipulation` garde le défilement et le
+     pincement, et abandonne le double-tap. Posé sur ce qui se tape, pas sur la
+     page : le double-tap-pour-zoomer reste disponible sur le contenu, où il
+     rend service (une capture, un tableau, un bloc de code). */
+  [data-slot="button"],
+  [data-slot="switch"],
+  [data-slot="checkbox"],
+  [data-slot="tabs-trigger"],
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-radio-item"],
+  [data-slot="dropdown-menu-sub-trigger"],
+  [data-slot="select-item"],
+  [data-slot="select-trigger"],
+  [data-slot="command-item"] {
+    touch-action: manipulation;
+  }
+
+  /* Le zoom à la mise au point. iOS zoome dans TOUT champ dont la police est
+     sous 16 px — et il ne dézoome pas en sortant : la page reste de travers,
+     l'utilisateur doit pincer pour revenir. mangue-ui l'a compris (ses champs
+     sont en `text-base md:text-sm`, donc 16 px sur mobile), mais les champs
+     écrits à la main du produit, eux, sont en `text-sm` — le titre d'un cycle,
+     le titre d'un brief, les heures du sélecteur de date.
+
+     Une règle plutôt que trois correctifs : elle vaut aussi pour le prochain
+     champ écrit à la main, qui autrement recommencera. On ne vise QUE ce qui se
+     saisit — une case à cocher ou un curseur n'a pas de texte, et un bouton
+     `<input type="submit">` n'a pas à grossir. */
+  input:not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="color"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"],
+      [type="file"],
+      [type="image"]
+    ),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* ─── Le défilement qui part ailleurs ─────────────────────────────────────────
+   Arrivé en bout de course, un conteneur qui défile passe le geste à son parent
+   — et de proche en proche au document, qui déclenche le tirer-pour-rafraîchir.
+   Dans une app, ce n'est jamais ce qu'on voulait : on lisait une liste, elle
+   arrive au bout, et le doigt recharge la page.
+
+   `contain` (et pas `none`) : on coupe la PROPAGATION, on garde le rebond
+   élastique d'iOS, qui est un repère utile — il dit qu'on est en bout de liste.
+   Et c'est posé sur le <main> du shell, pas sur `html, body` : sur la landing et
+   le board public, le tirer-pour-rafraîchir est le comportement attendu du
+   navigateur, et le supprimer là serait le prendre à l'utilisateur. */
+.app-shell main {
+  overscroll-behavior: contain;
+}
+
+/* ─── Le survol qui reste collé ───────────────────────────────────────────────
+   Au doigt il n'y a pas de survol : le navigateur en simule un à l'appui, et il
+   RESTE jusqu'au prochain tap ailleurs. Un bouton tapé garde donc son fond de
+   survol, ce qui le fait passer pour sélectionné.
+
+   Les utilitaires `hover:` de Tailwind v4 sont déjà à l'abri — il les compile
+   sous `@media (hover: hover)`, vérifié dans la feuille générée. Restent les
+   quelques `:hover` écrits à la main dans ce fichier, qui n'ont pas ce filet.
+   Un `@media` ne pouvant pas envelopper des règles déjà écrites plus haut, on
+   les neutralise ici pour le tactile — le `:focus-visible` qui accompagne les
+   deux premières continue, lui, de faire le travail au clavier. */
+@media (hover: none) {
+  .scratchpad-editor .ProseMirror .scratchpad-section-copy:hover,
+  .scratchpad-editor .ProseMirror .scratchpad-section-launch:hover {
+    color: var(--muted-foreground);
+  }
+  .page-editor .page-details-toggle:hover {
+    background-color: transparent;
+    color: var(--muted-foreground);
+  }
+  .page-block-comment-badge:hover {
+    background-color: transparent;
+  }
+}
+
 /* Mobile full-screen search sheet: mangue-ui's <CommandList> ships a default
    max-height (max-h-72 ≈ 288px) sized for the desktop popover. In the full-
    screen sheet that squishes the command palette into the top third with a big

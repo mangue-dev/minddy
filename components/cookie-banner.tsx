@@ -42,7 +42,17 @@ export function CookieBanner() {
     <div
       role="dialog"
       aria-label={t("title")}
-      className="fixed inset-x-4 bottom-4 z-50 md:left-auto md:right-6 md:max-w-sm"
+      // Le padding bas : la page est à fond perdu depuis que le root layout
+      // déclare `viewport-fit=cover`, donc `bottom-4` compte désormais depuis le
+      // bord PHYSIQUE — 16 px, soit moins que la barre d'indicateur d'accueil.
+      // Le padding remonte la carte au-dessus d'elle. Même geste que le FAB de
+      // Numo et le bandeau de nouvelle version.
+      //
+      // Ne PAS abréger un utilitaire à valeur arbitraire par des points de
+      // suspension dans un commentaire : Tailwind scanne le fichier entier,
+      // commentaires compris, et génère une règle avec les points dedans —
+      // qui ne compile pas. On écrit la classe en entier, ou pas du tout.
+      className="fixed inset-x-4 bottom-4 z-50 pb-[env(safe-area-inset-bottom)] md:left-auto md:right-6 md:max-w-sm"
     >
       <div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-lg">
         <p className="text-sm font-semibold text-card-foreground">{t("title")}</p>

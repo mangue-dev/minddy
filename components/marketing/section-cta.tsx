@@ -20,8 +20,14 @@ import { Reveal, RevealHeading } from "./reveal";
 export async function SectionCta() {
   const t = await getTranslations("Landing");
 
+  // `svh` et pas `vh` : sur mobile, `vh` se mesure sur le viewport LARGE —
+  // celui d'après la rétractation de la barre d'URL. Une section calée dessus
+  // déborde donc de la hauteur de cette barre tant qu'elle est déployée,
+  // c'est-à-dire à l'arrivée sur la page. `svh` prend le viewport PETIT (barre
+  // déployée) : la section tient à l'écran d'emblée, et gagne de l'air quand la
+  // barre se rétracte plutôt que d'en manquer avant.
   return (
-    <section className="relative isolate flex min-h-[80vh] items-center overflow-hidden border-t border-border py-24 sm:min-h-screen sm:py-32">
+    <section className="relative isolate flex min-h-[80svh] items-center overflow-hidden border-t border-border py-24 sm:min-h-svh sm:py-32">
       <CtaShader />
       <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6">
         <RevealHeading

@@ -43,7 +43,12 @@ export function WizardChoiceCard({
       aria-checked={selected}
       onClick={onSelect}
       className={cn(
-        "group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card outline-none transition-all hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50",
+        // `active:scale` : la carte est tapée au doigt autant que cliquée, et au
+        // doigt il n'y a pas de survol pour dire que le geste a porté. C'est un
+        // <button> écrit à la main, donc la règle globale de globals.css — qui
+        // vise `[data-slot="button"]` — ne l'atteint pas. 0.99 et pas 0.97 :
+        // l'enfoncement se règle sur la taille, et celle-ci est grande.
+        "group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card outline-none transition-all hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.99] motion-reduce:active:scale-100",
         selected ? "border-brand/50" : "border-border hover:border-brand/40",
       )}
     >
@@ -52,7 +57,13 @@ export function WizardChoiceCard({
       <span className="flex flex-col gap-4 px-5 py-6">
         <IsoIconScene
           icon={icon}
-          className="w-full max-w-60 self-center transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+          // 200 ms, pas 500 : au-delà de ~300 ms un retour d'interaction cesse
+          // d'être un retour et devient une animation qu'on regarde — et sur
+          // mobile, où le survol reste collé après l'appui, on le regardait
+          // vraiment. C'est bien l'ENFANT qui bouge et pas la carte : un parent
+          // qui grandit sous le curseur se retire de dessous et fait clignoter
+          // son propre survol.
+          className="w-full max-w-60 self-center transition-transform duration-200 ease-out group-hover:scale-[1.04]"
         />
         <span
           className={cn(
