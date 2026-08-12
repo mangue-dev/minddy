@@ -1840,7 +1840,13 @@ export function PrDetail({
             )
           ) : null}
 
-          <DialogFooter className="sm:justify-between">
+          {/* Le pied porte TROIS choses quand la relance est cochée — le modèle,
+              annuler, envoyer —, et le dialogue fait 28rem : sur un nom de modèle
+              un peu long, la ligne débordait au lieu de se replier. Elle se replie
+              donc (`flex-wrap`), et c'est `ml-auto` qui tient les boutons à droite
+              — `justify-between` les ramenait à gauche dès que le combobox passait
+              seul sur sa ligne. */}
+          <DialogFooter className="sm:flex-wrap">
             {/* Nouvelle run = nouveau choix de modèle (identique à un premier
                 lancement) ; vide = le modèle par défaut du compte. */}
             {reviewVerdict === "request_changes" && relaunching ? (
@@ -1856,10 +1862,8 @@ export function PrDetail({
                 freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
                 disabled={submitting}
               />
-            ) : (
-              <span />
-            )}
-            <div className="flex items-center gap-2">
+            ) : null}
+            <div className="flex items-center gap-2 sm:ml-auto">
               <Button
                 variant="outline"
                 disabled={submitting}
