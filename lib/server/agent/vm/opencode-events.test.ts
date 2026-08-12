@@ -438,6 +438,10 @@ describe("ce qui ne doit jamais casser un tour", () => {
     );
     expect(out.error).toBeUndefined();
     expect(out.events).toEqual([]);
+    // …mais elle se DIT, pour que le superviseur puisse distinguer la coupure
+    // qu'il a demandée de celle qu'il subit : sans ce drapeau, un round tranché
+    // en vol disparaissait sans laisser un event.
+    expect(out.aborted).toBe(true);
   });
 });
 

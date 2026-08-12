@@ -99,6 +99,16 @@ export interface Translation {
   /** Le tour est mort (`session.error`) — le message est celui d'opencode. */
   error?: string;
   /**
+   * LE ROUND A ÉTÉ COUPÉ (`MessageAbortedError`) — sans dire par qui.
+   *
+   * Opencode publie la même chose pour une coupure VOULUE (notre `abort`) et pour
+   * une coupure SUBIE (flux du fournisseur tranché en vol). Le traducteur ne peut
+   * pas trancher : lui seul sait que c'est une coupure, l'appelant seul sait s'il
+   * l'a demandée. D'où ce drapeau plutôt qu'un `error` — cf. la garde du
+   * superviseur, qui n'en fait une panne que s'il n'a rien demandé.
+   */
+  aborted?: true;
+  /**
    * Un tool attend le verdict du harness (`permission.asked`). C'est là que
    * `command-guard` et `repo-path` s'exécutent — cf.
    * [opencode-permissions.ts](opencode-permissions.ts).
@@ -521,14 +531,26 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
     case "session.error": {
       const error = (props.error ?? {}) as Record<string, unknown>;
       /**
-       * UNE COUPURE N'EST PAS UNE PANNE, et opencode ne fait pas la différence :
-       * tout `abort` publie `session.error` avec `name: "MessageAbortedError"`
-       * (mesuré). Or nous coupons NOUS-MÊMES le tour dans trois cas voulus — le
-       * plafond de dépense, la question posée à l'utilisateur, la deadline. Sans
-       * ce filtre, chacun des trois écrivait un event `error` au fil et un
-       * `errorMessage: "Aborted"` au rapport, par-dessus le vrai motif.
+       * UNE COUPURE N'EST PAS UNE PANNE **QUAND ON L'A DEMANDÉE**, et opencode ne
+       * fait pas la différence : tout `abort` publie `session.error` avec
+       * `name: "MessageAbortedError"` (mesuré). Or nous coupons NOUS-MÊMES le tour
+       * dans trois cas voulus — le plafond de dépense, la question posée à
+       * l'utilisateur, la deadline. Sans filtre, chacun des trois écrivait un event
+       * `error` au fil et un `errorMessage: "Aborted"` au rapport, par-dessus le
+       * vrai motif.
+       *
+       * Mais le filtre ne peut pas être INCONDITIONNEL, et c'est ce qu'il était :
+       * une coupure que personne n'a demandée (flux du fournisseur tranché en vol)
+       * disparaissait avec lui, et le tour se rangeait en « terminé » sans une
+       * ligne — fil figé sur « Ouverture de la sandbox », run sans résumé ni
+       * erreur, dépense au ledger. Observé sur le run `ec9b2ed5` (2026-08-12,
+       * `openai/gpt-5.6-luna`) : 219 tokens facturés, message assistant SANS aucune
+       * part, `MessageAbortedError`, et rien nulle part.
+       *
+       * On rend donc la coupure au superviseur, qui est le seul à savoir s'il l'a
+       * demandée.
        */
-      if (error.name === "MessageAbortedError") return { sessionId, events: [] };
+      if (error.name === "MessageAbortedError") return { sessionId, events: [], aborted: true };
       const data = (error.data ?? {}) as Record<string, unknown>;
       const message =
         typeof error.message === "string"

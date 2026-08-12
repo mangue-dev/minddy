@@ -511,6 +511,21 @@ export async function runOpencodeTurn(
     /** Le tour s'est terminé sur des questions : la session ATTEND l'utilisateur. */
     let askedUser = false;
     /**
+     * UNE COUPURE QU'ON A DEMANDÉE, et une seule — le drapeau se CONSOMME.
+     *
+     * Opencode publie la même `MessageAbortedError` qu'on ait coupé le round
+     * (plafond, « Stop », steering, deadline, question) ou qu'il ait été tranché
+     * en vol. Ce compteur est ce qui les distingue : ce qu'on a demandé se tait,
+     * le reste est une panne. Consommé plutôt que laissé à `true`, parce qu'un
+     * tour continue après un steering — la coupure SUIVANTE, elle, n'a été
+     * demandée par personne.
+     */
+    let abortsRequested = 0;
+    const abortSession = async (): Promise<void> => {
+      abortsRequested += 1;
+      await client.abort(sessionId);
+    };
+    /**
      * Motif du refus d'une permission, par appel de tool. Il ne sert qu'à une
      * chose, et elle compte : reposer `tool_result.reason` sur l'event du tool
      * refusé, comme la boucle maison le faisait (`FORBIDDEN_COMMAND_REASON` est
@@ -793,7 +808,7 @@ export async function runOpencodeTurn(
         if (out.question && !child) {
           askedUser = true;
           await client.rejectQuestion(out.question.id);
-          await client.abort(sessionId);
+          await abortSession();
         }
 
         /**
@@ -887,7 +902,7 @@ export async function runOpencodeTurn(
              * dépense sort des compteurs, ce qui est exactement le défaut que
              * MIN-216 avait fermé côté boucle maison.
              */
-            await client.abort(sessionId);
+            await abortSession();
             break;
           }
         }
@@ -921,6 +936,31 @@ export async function runOpencodeTurn(
          * continue de travailler.
          */
         if (out.error && !child) sessionError = out.error;
+        /**
+         * LA COUPURE QUE PERSONNE N'A DEMANDÉE — la panne la plus silencieuse du
+         * harness avant qu'elle ne soit dite.
+         *
+         * Une coupure VOULUE se tait : on la consomme et le motif qui l'a
+         * déclenchée (plafond, « Stop », deadline, question, steering) fait déjà
+         * le rapport. Ce qui reste est un round tranché en vol — et sans cette
+         * garde, il ne laissait RIEN : pas d'event, pas de résumé, pas d'erreur.
+         * Le tour se rangeait « terminé », le fil restait figé sur son dernier
+         * status (« Ouverture de la sandbox » quand la coupure tombe au premier
+         * round), et la dépense était bien réelle. Mesuré sur le run `ec9b2ed5`.
+         *
+         * On le dit AU FIL et au rapport : `error` sans `errorCode` ne fait pas
+         * re-queuer ([vm-rest.ts](../vm-rest.ts)) — le tour se repose, mais en
+         * disant pourquoi, et le message suivant reprend la session.
+         */
+        if (out.aborted && !child) {
+          if (abortsRequested > 0) {
+            abortsRequested -= 1;
+          } else {
+            sessionError = "The model round was cut short before it produced anything.";
+            await cp.emit("error", { message: sessionError });
+            break;
+          }
+        }
         // Les questions sont PARTIES au fil (juste au-dessus) : on sort une fois
         // l'event émis, pas avant — sinon la carte de questions n'existerait pas
         // et la session attendrait une réponse à rien.
@@ -984,18 +1024,18 @@ export async function runOpencodeTurn(
             const steered = await takeSteering();
             if (steered.length === 0) {
               interrupted = true;
-              await client.abort(sessionId);
+              await abortSession();
               break;
             }
             await cp.clearInterrupt().catch(() => {});
             pendingPrompt.push(...steered.map((text) => ({ text, steered: true })));
-            await client.abort(sessionId);
+            await abortSession();
           } else if (await cp.hasPendingMessages().catch(() => false)) {
             // Drainé seulement maintenant qu'on sait qu'on va couper pour le poster.
             pendingPrompt.push(
               ...(await takeSteering()).map((text) => ({ text, steered: true })),
             );
-            if (pendingPrompt.length > 0) await client.abort(sessionId);
+            if (pendingPrompt.length > 0) await abortSession();
           }
         }
         /**
@@ -1009,12 +1049,12 @@ export async function runOpencodeTurn(
           // Le run a été conclu ailleurs (annulé, ou déjà stampé). Continuer, ce
           // serait dépenser au nom d'une conversation qui n'existe plus.
           interrupted = true;
-          await client.abort(sessionId);
+          await abortSession();
           break;
         }
         if (now() > deadline) {
           timedOut = true;
-          await client.abort(sessionId);
+          await abortSession();
           break;
         }
       }

@@ -862,6 +862,27 @@ describe("les questions à l'utilisateur", () => {
     expect(report.errorMessage).toBeUndefined();
     expect(h.events.some((e) => e.type === "error")).toBe(false);
   });
+
+  it("dit la coupure que PERSONNE n'a demandée", async () => {
+    /**
+     * La panne la plus silencieuse du harness : un round tranché en vol publie la
+     * même `MessageAbortedError` qu'un `abort` voulu. Avalée sans condition, elle
+     * laissait un tour « terminé » sans event, sans résumé et sans erreur — le fil
+     * figé sur son dernier status, la dépense bien réelle (run `ec9b2ed5`).
+     */
+    h.extraFrames = [
+      JSON.stringify({
+        type: "session.error",
+        properties: { sessionID: PARENT, error: { name: "MessageAbortedError", data: { message: "Aborted" } } },
+      }),
+    ];
+    const report = await run();
+    expect(report.status).toBe("error");
+    expect(report.errorMessage).toContain("cut short");
+    // Et surtout : le fil l'apprend. `error_message` n'est lu par personne dans
+    // `components/agent/` — sans cet event, l'utilisateur ne voit toujours rien.
+    expect(h.events.some((e) => e.type === "error")).toBe(true);
+  });
 });
 
 describe("les sessions filles", () => {
