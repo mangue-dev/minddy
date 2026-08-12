@@ -10,7 +10,7 @@ import {
   MAX_SUBAGENT_MODELS,
   subagentAgentTable,
 } from "./opencode-config";
-import { REPO_DIR } from "../repo-host";
+import { HARNESS_DIR, REPO_DIR } from "../repo-host";
 import type { VmJob } from "./protocol";
 
 /**
@@ -395,6 +395,21 @@ describe("l'environnement du serveur", () => {
     // dans un commit du dépôt de l'utilisateur (même règle que `HARNESS_DIR`).
     expect(OPENCODE_DB_PATH.startsWith(`${REPO_DIR}/`)).toBe(false);
     expect(OPENCODE_ANCHOR_FILE.startsWith(`${REPO_DIR}/`)).toBe(false);
+  });
+
+  it("ramène les TROIS dossiers d'opencode sous le harness, pas seulement la config", () => {
+    /**
+     * Mesuré le 2026-08-12 sur le binaire : `XDG_DATA_HOME` reçoit
+     * `opencode/repos/` — des **dépôts git de snapshot** — et `opencode/log/`.
+     * Laissés au `$HOME` de la microVM, ils sont hors de notre portée : un
+     * `$HOME` absent, ou posé sur le dépôt par une image de sandbox, ramènerait
+     * des dépôts git entiers dans le commit du tour.
+     */
+    const env = opencodeServerEnv(job());
+    for (const dir of [env.XDG_CONFIG_HOME, env.XDG_DATA_HOME, env.XDG_CACHE_HOME]) {
+      expect(dir.startsWith(`${HARNESS_DIR}/`)).toBe(true);
+      expect(dir.startsWith(`${REPO_DIR}/`)).toBe(false);
+    }
   });
 
   it("ne dépend d'aucun service en ligne pour démarrer", () => {

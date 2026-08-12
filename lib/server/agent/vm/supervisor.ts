@@ -18,7 +18,7 @@ import {
   subagentAgentTable,
 } from "./opencode-config";
 import { opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
-import { startToolBridge, type ToolBridge } from "./tool-bridge";
+import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-bridge";
 import { makeOpencodeDelivery, type OpencodeDelivery } from "./opencode-delivery";
 import { decidePermission } from "./opencode-permissions";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
@@ -48,9 +48,9 @@ import type { VmJob, VmPushResult, VmTurnReport } from "./protocol";
  * flux, fin de tour. Le lot 2 y a accroché le ledger, le plafond de dépense, les
  * garde-fous (`command-guard` / `repo-path`, rejoués sur `permission.asked`),
  * `ask_user` (le tool `question`), les sous-agents, le pont de tools
- * ([tool-bridge.ts](tool-bridge.ts)) et les règles de livraison
- * ([opencode-delivery.ts](opencode-delivery.ts)). Restent au lot 2 : la forge
- * (`create_pr`, coupé en deux) et le commit de fin de tour côté relecture.
+ * ([tool-bridge.ts](tool-bridge.ts)), les règles de livraison
+ * ([opencode-delivery.ts](opencode-delivery.ts)) et la forge (`create_pr`, coupé
+ * en deux : la VM pousse, la fonction ouvre).
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * DEUX MESURES QUI DÉCIDENT DE LA FORME (opencode-ai@1.18.16)
@@ -126,6 +126,7 @@ export interface SupervisorDeps {
     job: VmJob;
     cp: ControlPlaneClient;
     delivery?: OpencodeDelivery;
+    supervisorTools?: Record<string, SupervisorTool>;
     port?: number;
   }): Promise<ToolBridge>;
   /** 0 = port libre. Les tests s'en servent pour ne pas se disputer 4097. */
@@ -194,10 +195,107 @@ export async function runOpencodeTurn(
     remainingMs: () => SUPERVISOR_TURN_SOFT_DEADLINE_MS - (now() - startedAt),
   });
 
+  /**
+   * L'offre de sous-agents du tour, telle que la config vient de la déclarer.
+   * Une seule source ([opencode-config.ts](opencode-config.ts)) : ce qui est
+   * servi au modèle, ce que le garde-fou accepte et ce que le fil affiche sont
+   * dérivés du même tableau, donc ne peuvent pas diverger.
+   *
+   * Construits AVANT le pont parce que `create_pr` les consulte : commiter
+   * pendant qu'une fille écrit emporterait son travail à moitié posé.
+   */
+  const agentTable = new Map(subagentAgentTable(job).map((a) => [a.name, a]));
+  const subagents = new SubagentRegistry(
+    new Map([...agentTable].map(([name, a]) => [name, a.mode])),
+  );
+
+  /**
+   * LE PUSH DU TOUR, en un seul endroit — il sert deux fois : `create_pr` (la VM
+   * pousse, la fonction ouvre) et la fin de tour.
+   *
+   * L'URL de push est RE-RÉSOLUE à chaque fois, et ce n'est pas une précaution de
+   * style : un tour de microVM dure des heures, un token d'installation de forge
+   * une heure. Le registre de secrets est cumulatif — le token du clone reste
+   * lisible dans `.git/config` longtemps après avoir été remplacé ici.
+   */
+  async function pushWork(message: string): Promise<VmPushResult> {
+    authUrl = (await cp.repoAuthUrl()) ?? authUrl;
+    secrets.addAuthUrl(authUrl);
+    return await commitAndPush(host, {
+      authUrl,
+      workBranch: job.workBranch,
+      baseBranch: job.baseBranch,
+      message,
+    });
+  }
+
+  /**
+   * `create_pr` — LE SEUL TOOL COUPÉ EN DEUX, et il l'est dans le bon sens : le
+   * dépôt vit dans la microVM, le token de forge et l'état de la pull request
+   * côté fonction ([control-plane.ts](../control-plane.ts), `runCreatePr`). Le
+   * superviseur pousse donc, puis fait ouvrir.
+   *
+   * Trois choses le distinguent d'un passe-plat, et chacune répare un cas réel :
+   *
+   * 1. **Il ne franchit pas la porte de livraison seul** : le pont l'enveloppe de
+   *    `gateCreatePr` ([opencode-delivery.ts](opencode-delivery.ts)), donc le
+   *    premier appel d'un tour qui a édité rend les contrôles au lieu de pousser.
+   * 2. **La branche est REMONTÉE, pas relue.** `agent_runs.branch_name` n'est
+   *    stampé qu'après un push réel (MIN-123), or ce push-ci est justement le
+   *    premier du run dans le cas normal : la fonction lirait une branche nulle
+   *    et ouvrirait la pull request sur une tête vide.
+   * 3. **Il refuse pendant qu'une fille écrit.** Le sandbox est PARTAGÉ et
+   *    `commitAndPush` fait `git add -A` : livrer maintenant emporterait le
+   *    travail d'un `implement` à moitié posé (un composant sans ses traductions,
+   *    un renommage laissé au milieu). C'est le verrou d'écriture du parent
+   *    ([subagent.ts](../subagent.ts), `writeLock`), tenu ici parce que la
+   *    demande de permission ne voit passer que les tools d'opencode.
+   *
+   * Il n'y a PAS de `jobsNote` : `bash` n'a pas de mode fond chez opencode
+   * (dossier §4), donc aucun serveur de dev à arrêter avant de stager.
+   */
+  const createPr: SupervisorTool | null = job.writesToRepo
+    ? async (args) => {
+        const writing = subagents.runningImplementId();
+        if (writing) {
+          return {
+            result: {
+              error:
+                `Sub-agent ${writing} is editing the repository right now, and this sandbox is SHARED — ` +
+                `committing now would capture its work half-written. Wait for its report: it is handed to ` +
+                `you on its own, you have nothing to call.`,
+            },
+            success: false,
+          };
+        }
+        const title = typeof args.title === "string" ? args.title.trim() : "";
+        let pushed: VmPushResult;
+        try {
+          pushed = await pushWork(title || `wip(${job.commitRef}): agent update`);
+        } catch (err) {
+          // Un push raté est une erreur de TOOL : le modèle la lit et décide. Le
+          // message peut recopier l'URL de push, token compris (MIN-239).
+          return {
+            result: { error: `push failed: ${secrets.redact((err as Error).message)}` },
+            success: false,
+          };
+        }
+        const res = await cp.callTool("create_pr", {
+          args,
+          pushed,
+          workBranch: job.workBranch,
+        });
+        return { result: res.result, success: res.success };
+      }
+    : null;
+
   const bridge = await (deps.startToolBridge ?? startToolBridge)({
     job,
     cp,
     delivery,
+    // Une session de RELECTURE n'a pas ce tool : `agentToolsFor` ne le sert pas à
+    // l'ancrage `pr`, et le pont refuse ce qui arriverait quand même.
+    ...(createPr ? { supervisorTools: { create_pr: createPr } } : {}),
     port: deps.toolBridgePort ?? OPENCODE_PORT + 1,
   });
 
@@ -251,16 +349,6 @@ export async function runOpencodeTurn(
 
     // ── Le flux, traduit au fil de l'eau ─────────────────────────────────────
     const state = newTurnStreamState();
-    /**
-     * L'offre de sous-agents du tour, telle que la config vient de la déclarer.
-     * Une seule source ([opencode-config.ts](opencode-config.ts)) : ce qui est
-     * servi au modèle, ce que le garde-fou accepte et ce que le fil affiche sont
-     * dérivés du même tableau, donc ne peuvent pas diverger.
-     */
-    const agentTable = new Map(subagentAgentTable(job).map((a) => [a.name, a]));
-    const subagents = new SubagentRegistry(
-      new Map([...agentTable].map(([name, a]) => [name, a.mode])),
-    );
     const ledger = new TurnLedger(job, sessionId, subagents);
     let costUsd = 0;
     let sessionError: string | undefined;
@@ -501,14 +589,7 @@ export async function runOpencodeTurn(
     let pushError: string | undefined;
     if (job.writesToRepo) {
       try {
-        authUrl = (await cp.repoAuthUrl()) ?? authUrl;
-        secrets.addAuthUrl(authUrl);
-        pushed = await commitAndPush(host, {
-          authUrl,
-          workBranch: job.workBranch,
-          baseBranch: job.baseBranch,
-          message: commitMessageFromReply(reply, job.commitRef),
-        });
+        pushed = await pushWork(commitMessageFromReply(reply, job.commitRef));
       } catch (err) {
         pushError = secrets.redact((err as Error).message);
         console.error("[supervisor] turn-end push failed:", pushError);
@@ -759,6 +840,22 @@ export class SubagentRegistry {
     let count = 0;
     for (const entry of this.bySession.values()) if (!entry.done) count += 1;
     return count;
+  }
+
+  /**
+   * La fille qui ÉCRIT en ce moment, s'il y en a une — le verrou d'écriture du
+   * parent ([subagent.ts](../subagent.ts), `runningImplementId`), rendu ici sous
+   * le nom court que le fil affiche. Le seul appelant est `create_pr` : le
+   * `git add -A` de la livraison emporterait sinon un travail à moitié posé.
+   *
+   * En pratique le cas est rare — chez opencode le tool `task` BLOQUE le parent —
+   * mais un round qui appelle `task` et `create_pr` côte à côte le rouvre.
+   */
+  runningImplementId(): string | null {
+    for (const entry of this.bySession.values()) {
+      if (!entry.done && entry.mode === "implement") return entry.id;
+    }
+    return null;
   }
 }
 

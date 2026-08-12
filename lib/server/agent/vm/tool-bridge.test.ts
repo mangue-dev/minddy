@@ -169,9 +169,9 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     await withBridge({}, async (bridge) => {
       for (const name of DOMAIN_TOOL_NAMES) {
         // `create_pr` est le seul à ne pas être un passe-plat : il est coupé en
-        // deux (la VM pousse, la fonction ouvre) et attend son handler (lot 2,
-        // tâche 15). Refusé, donc, mais jamais transmis tel quel : il ouvrirait
-        // une pull request sur une branche que personne n'a poussée.
+        // deux (la VM pousse, la fonction ouvre) et il n'a de handler que sur une
+        // session qui écrit. Sans lui il est refusé, jamais transmis tel quel :
+        // il ouvrirait une pull request sur une branche que personne n'a poussée.
         const res = await call(bridge, name, {});
         expect(res.status).toBe(200);
       }
@@ -215,7 +215,8 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
 
   it("laisse `create_pr` refusé quand il n'a pas de handler, sans lui poser de porte", async () => {
     // Rendre les contrôles pour refuser juste après dirait au modèle qu'il a
-    // livré alors que rien n'a été poussé (la moitié push arrive au lot 2, t. 15).
+    // livré alors que rien n'a été poussé — le cas d'une session de relecture,
+    // qui n'a ni tool d'écriture ni push.
     let gated = false;
     const delivery = {
       wrapDomainTool: (h: unknown) => h,
@@ -230,6 +231,35 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
       expect(JSON.parse(res.body).error).toContain("not available");
       expect(gated).toBe(false);
     });
+  });
+
+  it("pose la porte de livraison sur le `create_pr` du superviseur", async () => {
+    // La porte est ce qui fait rendre les contrôles au premier appel d'un tour
+    // qui a édité (MIN-247). Posée ailleurs qu'ici, elle laisserait passer le
+    // seul chemin par lequel du code part vraiment chez un humain.
+    const delivery = {
+      wrapDomainTool: (h: unknown) => h,
+      wrapCreatePr: () => async () => ({ result: { opened: false }, success: true }),
+    } as unknown as OpencodeDelivery;
+    let pushed = false;
+
+    await withBridge(
+      {
+        delivery,
+        supervisorTools: {
+          create_pr: (async () => {
+            pushed = true;
+            return { result: { url: "https://pr" }, success: true };
+          }) as never,
+        },
+      },
+      async (bridge) => {
+        const res = await call(bridge, "create_pr", { title: "t" });
+        expect(JSON.parse(res.body)).toEqual({ opened: false });
+        // Rien n'a été poussé : la porte a retenu l'appel avant le handler.
+        expect(pushed).toBe(false);
+      },
+    );
   });
 
   it("préfère le tool du superviseur au passe-plat", async () => {

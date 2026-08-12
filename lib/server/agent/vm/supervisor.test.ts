@@ -7,6 +7,7 @@ import { OpencodeClient } from "./opencode-client";
 import { takeGeneration } from "./llm-proxy";
 import { OPENCODE_ANCHOR_FILE, OPENCODE_TOOL_DIR } from "./opencode-config";
 import { SUPERVISOR_URL_ENV } from "./opencode-tools";
+import { startToolBridge } from "./tool-bridge";
 import type { ControlPlaneClient } from "./control-plane-client";
 import type { VmJob } from "./protocol";
 
@@ -95,6 +96,10 @@ const h = {
   /** Ce que le plan de contrôle répond sur le restant de budget. */
   remainingUsd: null as number | null,
   budgetReads: 0,
+  /** Les tools que le superviseur exécute lui-même, tels qu'il les donne au pont. */
+  supervisorTools: {} as Record<string, (args: Record<string, unknown>) => Promise<unknown>>,
+  /** Appels au plan de contrôle (`cp.callTool`), dans l'ordre. */
+  toolCalls: [] as Array<{ name: string; body: Record<string, unknown> }>,
   /** Ce que le proxy local a vu passer chez le fournisseur. */
   generations: [] as Array<{
     id: string | null;
@@ -125,7 +130,10 @@ function cp(): ControlPlaneClient {
       return h.remainingUsd;
     },
     syncPlan: async () => {},
-    callTool: async () => ({ result: {}, success: true }),
+    callTool: async (name, body) => {
+      h.toolCalls.push({ name, body });
+      return { result: { url: "https://forge/pr/7" }, success: true };
+    },
     repoAuthUrl: async () => "https://x-access-token:fresh@github.com/org/repo.git",
     reportTurn: async () => {},
   };
@@ -226,7 +234,13 @@ function deps(): SupervisorDeps {
     }),
     // Le pont de tools est le VRAI ([tool-bridge.ts](tool-bridge.ts)), sur un
     // port libre : en production il en tient un fixe (4097), et deux tests qui
-    // tournent en parallèle se le disputeraient.
+    // tournent en parallèle se le disputeraient. On ne l'intercepte que pour
+    // GARDER les tools que le superviseur exécute lui-même : `create_pr` n'est
+    // appelable que par le modèle, et aucun modèle ne tourne ici.
+    startToolBridge: async (opts) => {
+      h.supervisorTools = (opts.supervisorTools ?? {}) as typeof h.supervisorTools;
+      return await startToolBridge(opts);
+    },
     toolBridgePort: 0,
     // Le vrai plafond est à 60 s : ce test-ci vérifie ce qui se passe QUAND il
     // tombe, pas combien de temps il dure.
@@ -315,6 +329,8 @@ beforeEach(() => {
   h.permissionReplies = [];
   h.questionsRejected = [];
   h.permissionReplyFails = false;
+  h.supervisorTools = {};
+  h.toolCalls = [];
 });
 
 /** Une demande de permission, telle qu'opencode la publie sur le flux. */
@@ -740,6 +756,104 @@ describe("les sessions filles", () => {
     // La réponse part dans le message de commit et dans le fil : le rapport
     // d'une fille n'y a rien à faire.
     expect(report.reply).not.toContain("RAPPORT DE LA FILLE");
+  });
+});
+
+/**
+ * MIN-286 lot 2, tâche 15 — LA FORGE, ET LE SEUL TOOL COUPÉ EN DEUX.
+ *
+ * `create_pr` pousse ICI (la microVM a le dépôt) et fait ouvrir LÀ-BAS (la
+ * fonction a le token de forge). Ce qui se teste est donc la moitié VM : qu'elle
+ * pousse avant de faire ouvrir, qu'elle remonte la branche plutôt que de laisser
+ * la fonction la relire, et qu'elle refuse dans les deux cas où pousser
+ * livrerait autre chose que le travail du tour.
+ */
+describe("la forge", () => {
+  /** Le handler tel que le pont le reçoit — avant sa porte de livraison. */
+  const createPr = () => h.supervisorTools.create_pr;
+
+  it("pousse, PUIS fait ouvrir la pull request, branche comprise", async () => {
+    await run();
+    const out = (await createPr()({ title: "MIN-42: le titre", body: "le corps" })) as {
+      success: boolean;
+    };
+    expect(out.success).toBe(true);
+    const call = h.toolCalls.find((c) => c.name === "create_pr");
+    expect(call).toBeTruthy();
+    // Le push a eu lieu AVANT l'appel : la fonction ouvre sur une tête qui existe.
+    expect((call!.body.pushed as { committed: boolean }).committed).toBe(true);
+    /**
+     * LA BRANCHE VOYAGE. `agent_runs.branch_name` n'est stampé qu'après un push
+     * réel (MIN-123) — or ce push-ci est le premier du run dans le cas normal :
+     * la fonction lirait une branche nulle et ouvrirait sur une tête vide.
+     */
+    expect(call!.body.workBranch).toBe("minddy/agent/min-42-abcd1234");
+  });
+
+  it("rend un push raté au modèle, sans le token de la forge", async () => {
+    h.pushed = false;
+    await run();
+    const out = (await createPr()({ title: "t" })) as { success: boolean; result: { error: string } };
+    expect(out.success).toBe(false);
+    expect(out.result.error).toContain("push failed");
+    // Un rejet de push recopie l'URL de push, token compris (MIN-239).
+    expect(out.result.error).not.toContain("ghs_SECRET");
+    // Et rien n'a été demandé à la forge : il n'y a pas de tête à ouvrir.
+    expect(h.toolCalls.some((c) => c.name === "create_pr")).toBe(false);
+  });
+
+  it("refuse de livrer pendant qu'une fille écrit dans le même dépôt", async () => {
+    // `commitAndPush` fait `git add -A` sur un sandbox PARTAGÉ : livrer ici
+    // emporterait le travail d'un `implement` à moitié posé.
+    h.extraFrames = [
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: PARENT,
+          part: {
+            type: "tool",
+            tool: "task",
+            callID: "call_task",
+            state: {
+              status: "running",
+              input: { subagent_type: "general", description: "d", prompt: "p" },
+              metadata: { sessionId: CHILD },
+            },
+          },
+        },
+      }),
+    ];
+    await run();
+    const out = (await createPr()({ title: "t" })) as { success: boolean; result: { error: string } };
+    expect(out.success).toBe(false);
+    expect(out.result.error).toContain("editing the repository right now");
+    expect(h.toolCalls.some((c) => c.name === "create_pr")).toBe(false);
+  });
+
+  it("ne donne AUCUN `create_pr` à une session de relecture", async () => {
+    // Une relecture ne pousse pas et n'ouvre rien (`writesToRepo: false`) : le
+    // tool n'est ni servi au modèle (`agentToolsFor` à l'ancrage `pr`) ni routé.
+    await run({ writesToRepo: false, anchor: "pr" });
+    expect(h.supervisorTools.create_pr).toBeUndefined();
+    const files = h.files.filter((f) => f.path.startsWith(OPENCODE_TOOL_DIR));
+    expect(files.some((f) => f.path.endsWith("/create_pr.ts"))).toBe(false);
+    // Les trois écritures de la relecture, elles, restent servies : elles
+    // s'exécutent côté fonction, qui a la forge (pr-tools.ts).
+    for (const name of ["comment_pr", "comment_pr_line", "reply_pr_thread"]) {
+      expect(files.some((f) => f.path.endsWith(`/${name}.ts`))).toBe(true);
+    }
+  });
+
+  it("ne sert aucun tool d'écriture à une session de relecture", async () => {
+    await run({ writesToRepo: false, anchor: "pr" });
+    const config = JSON.parse(h.env.OPENCODE_CONFIG_CONTENT) as {
+      permission: Record<string, string>;
+      agent: Record<string, { tools: Record<string, boolean> }>;
+    };
+    expect(config.permission.edit).toBe("deny");
+    for (const tool of ["edit", "write", "apply_patch"]) {
+      expect(config.agent.build.tools[tool]).toBe(false);
+    }
   });
 });
 

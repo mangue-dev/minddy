@@ -564,6 +564,82 @@ quatre modules restent **inchangés, avec leurs tests** ; le câblage vit dans
 Une écriture autorisée puis ratée fait payer un type-check inutile — le sens
 prudent, l'inverse laissant partir du code que la porte n'a pas vu.
 
+### 2.16 La forge : `create_pr` est le seul tool coupé en deux (lot 2)
+
+Les huit autres tools de forge ne bougent pas : les trois écritures d'une
+relecture (`comment_pr`, `comment_pr_line`, `reply_pr_thread`) et les sept pull
+requests du projet sont des **tools de domaine ordinaires** — ils passent par le
+pont, qui les fait suivre au plan de contrôle, seul détenteur du token de forge
+([pr-tools.ts](../lib/server/agent/pr-tools.ts) et
+[project-pr-tools.ts](../lib/server/agent/project-pr-tools.ts) ne changent pas
+d'une ligne). Le seul état qui fasse l'aller-retour est le **compteur d'ancres**
+(`prInlineComments`) : le plafond des 5 se compte sur la vie du RUN, la fonction
+l'oppose et rend celui qu'elle a atteint, le pont le garde, le checkpoint le
+porte au tour suivant.
+
+`create_pr`, lui, se coupe en deux — **la VM pousse, la fonction ouvre** —, et
+c'est dans le bon sens : le dépôt est dans la microVM, le token de forge et
+l'état de la pull request côté fonction. Le superviseur exécute donc la moitié
+push lui-même (`supervisorTools`, [supervisor.ts](../lib/server/agent/vm/supervisor.ts))
+et poste le résultat de push au plan de contrôle, qui appelle
+`openPullRequestAfterPush` inchangé.
+
+**Trois différences avec la boucle maison, et chacune répare un cas réel :**
+
+1. **La branche est REMONTÉE, pas relue.** `agent_runs.branch_name` n'est stampé
+   qu'après un push réel (MIN-123), or ce push-ci est le premier du run dans le
+   cas normal : la fonction lirait une branche nulle et ouvrirait la pull request
+   sur une tête vide.
+2. **Il n'y a plus de `jobsNote`.** `bash` n'a pas de mode fond chez opencode
+   (§3.2), donc aucun serveur de dev à arrêter avant de stager — la phrase qui
+   prévenait le modèle de leur arrêt n'a plus d'objet.
+3. **Le verrou d'écriture du parent est tenu ICI.** `commitAndPush` fait
+   `git add -A` sur un sandbox PARTAGÉ : livrer pendant qu'un `implement`
+   travaille emporterait son travail à moitié posé. Chez opencode le tool `task`
+   BLOQUE le parent, donc le cas est rare — mais un round qui appelle `task` et
+   `create_pr` côte à côte le rouvre, et la demande de permission ne voit passer
+   que les tools d'opencode.
+
+**Une session de RELECTURE (`writesToRepo: false`) n'a pas ce tool du tout**, et
+à trois tours de clé plutôt qu'une phrase de prompt : `agentToolsFor` ne le sert
+pas à l'ancrage `pr` (donc aucun fichier généré), le pont le refuse s'il arrivait
+quand même, et la config pose `permission.edit: "deny"` en retirant `edit` /
+`write` / `apply_patch` du jeu de tools de l'agent (§2.8, mesure n°4 : la carte
+globale pose la permission, le jeu de l'agent fait l'absence).
+
+### 2.17 Le commit de fin de tour : où opencode pose SES fichiers (lot 2)
+
+Le commit et le push de fin de tour ne changent pas de nature — `commitAndPush`
+après `session.idle`, message dérivé de la réponse (`commitMessageFromReply`),
+diff du tour par `changedFiles`. Un seul chemin de push existe dans le
+superviseur, partagé avec `create_pr` (§2.16) : l'URL de push y est **re-résolue
+à chaque fois**, parce qu'un tour dure des heures et un token d'installation de
+forge une heure.
+
+Ce qui demandait une mesure, c'est ce qu'opencode écrit **où**, puisque le tour
+finit par un `git add -A`. Mesuré le 2026-08-12 (serveur réel sur un dépôt git
+jetable, session créée) :
+
+| Ce qu'opencode écrit | Où, par défaut | Où on le met |
+| --- | --- | --- |
+| l'état (sessions, messages, permissions) | `$XDG_DATA_HOME/opencode/opencode.db` | `OPENCODE_DB` → `HARNESS_DIR/opencode.db` |
+| les **snapshots** de travail — des dépôts git | `$XDG_DATA_HOME/opencode/repos/` | `XDG_DATA_HOME` → `HARNESS_DIR/data` |
+| les journaux | `$XDG_DATA_HOME/opencode/log/` | idem |
+| les binaires téléchargés | `$XDG_CACHE_HOME/opencode/bin/` | `XDG_CACHE_HOME` → `HARNESS_DIR/cache` |
+| nos 32 tools de domaine | `$XDG_CONFIG_HOME/opencode/tool/` | `XDG_CONFIG_HOME` → `HARNESS_DIR/config` |
+
+**Le dépôt lui-même reste vierge** : après démarrage et création de session,
+`git status --porcelain` ne rend rien, et il n'y a pas de `.opencode/` dans le
+projet — l'état a quitté le disque du dépôt pour SQLite (§2.2).
+
+Les deux variables ajoutées ne corrigent donc pas un défaut constaté mais en
+ferment un possible : par défaut ces dossiers partent dans le `$HOME` de la
+microVM — hors du dépôt, mais **hors de notre portée**, alors qu'un `$HOME`
+absent ou posé sur le dépôt par une image de sandbox suffirait à ramener des
+dépôts git entiers dans le commit du tour. Tout l'état d'opencode tient
+maintenant sous `HARNESS_DIR`, qui est **frère** de `REPO_DIR` et donc hors de
+portée de `git add -A`.
+
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un

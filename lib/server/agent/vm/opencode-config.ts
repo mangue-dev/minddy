@@ -95,6 +95,21 @@ export const OPENCODE_CONFIG_HOME = `${HARNESS_DIR}/config`;
 export const OPENCODE_TOOL_DIR = `${OPENCODE_CONFIG_HOME}/opencode/tool`;
 
 /**
+ * LES DEUX AUTRES DOSSIERS D'OPENCODE, ramenés eux aussi sous `HARNESS_DIR`.
+ *
+ * Mesuré le 2026-08-12 (serveur réel, dépôt git jetable) : `XDG_DATA_HOME` reçoit
+ * `opencode/repos/` — les **snapshots** de travail, qui sont des dépôts git —, et
+ * `opencode/log/` ; `XDG_CACHE_HOME` reçoit les binaires téléchargés. Sans ces
+ * deux variables, tout cela part dans le `$HOME` de la microVM : hors du dépôt,
+ * donc jamais dans un `git add -A`, mais hors de notre portée aussi — un
+ * `$HOME` absent ou posé sur le dépôt par une image de sandbox suffirait à
+ * ramener des dépôts git entiers dans le commit du tour. Tout l'état d'opencode
+ * tient sous un seul dossier, et ce dossier est frère du dépôt.
+ */
+export const OPENCODE_DATA_HOME = `${HARNESS_DIR}/data`;
+export const OPENCODE_CACHE_HOME = `${HARNESS_DIR}/cache`;
+
+/**
  * Troncature de sortie de tool. Les valeurs par défaut d'opencode, redites ici
  * parce qu'un défaut qui bouge à une release près déplacerait silencieusement une
  * frontière que le produit connaît (`READ_MAX_LINES`, `READ_MAX_BYTES`).
@@ -598,6 +613,10 @@ export function opencodeServerEnv(
     OPENCODE_DB: OPENCODE_DB_PATH,
     // C'est lui qui met les tools de domaine hors du dépôt (cf. `OPENCODE_TOOL_DIR`).
     XDG_CONFIG_HOME: OPENCODE_CONFIG_HOME,
+    // Les snapshots, les journaux et les binaires téléchargés — sous le harness
+    // eux aussi (cf. `OPENCODE_DATA_HOME`).
+    XDG_DATA_HOME: OPENCODE_DATA_HOME,
+    XDG_CACHE_HOME: OPENCODE_CACHE_HOME,
     OPENCODE_DISABLE_AUTOUPDATE: "1",
     OPENCODE_DISABLE_MODELS_FETCH: "1",
     OPENCODE_DISABLE_LSP_DOWNLOAD: "1",

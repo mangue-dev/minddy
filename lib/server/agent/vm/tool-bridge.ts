@@ -108,10 +108,11 @@ export interface ToolBridgeOptions {
    */
   delivery?: OpencodeDelivery;
   /**
-   * Les tools que le superviseur exécute au lieu de les faire suivre. `create_pr`
-   * y entrera au lot 2 tâche 15 ; tant qu'il n'y est pas, il est REFUSÉ plutôt
-   * que passé tel quel — un `create_pr` qui atteindrait la forge sans que la VM
-   * ait poussé ouvrirait une pull request sur une branche vide.
+   * Les tools que le superviseur exécute au lieu de les faire suivre : `create_pr`,
+   * parce qu'il POUSSE avant de faire ouvrir. Absent, il est REFUSÉ plutôt que
+   * passé tel quel — un `create_pr` qui atteindrait la forge sans que la VM ait
+   * poussé ouvrirait une pull request sur une branche vide. C'est le cas d'une
+   * session de relecture, qui ne pousse jamais.
    */
   supervisorTools?: Record<string, SupervisorTool>;
   /** 0 = port libre choisi par l'OS. Le superviseur lit l'URL rendue. */
@@ -198,8 +199,8 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
   /**
    * `create_pr`, sous sa porte : le premier appel d'un tour qui a édité rend les
    * contrôles au lieu de pousser. La porte n'est posée que s'il y a un handler —
-   * sans lui le tool est REFUSÉ (lot 2, tâche 15), et rendre des contrôles pour
-   * refuser juste après dirait au modèle qu'il a livré alors qu'il n'a rien fait.
+   * sans lui le tool est REFUSÉ, et rendre des contrôles pour refuser juste après
+   * dirait au modèle qu'il a livré alors qu'il n'a rien fait.
    */
   const supervisorTools: Record<string, SupervisorTool> = { ...opts.supervisorTools };
   if (opts.delivery && supervisorTools.create_pr) {
