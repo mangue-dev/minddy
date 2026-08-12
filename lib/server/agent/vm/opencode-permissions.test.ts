@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { decidePermission, type PermissionAsk } from "./opencode-permissions";
+import {
+  decidePermission,
+  type PermissionAsk,
+  type SubagentContext,
+} from "./opencode-permissions";
 import { FORBIDDEN_COMMAND_REASON } from "../command-guard";
 import { REPO_DIR } from "../repo-host";
 
@@ -75,6 +79,55 @@ describe("les écritures", () => {
 
   it("refuse une demande sans chemin", () => {
     expect(decidePermission(ask({ permission: "edit" })).reply).toBe("reject");
+  });
+});
+
+/**
+ * La délégation (tâche 12). Mesuré sur le binaire le 2026-08-12 : la demande de
+ * permission d'un `task` porte `patterns: ["explore-cheap"]` et
+ * `metadata: {description, subagent_type}` — **et elle arrive avant** qu'opencode
+ * ne résolve l'agent. C'est ce qui rend ces deux refus possibles.
+ */
+describe("la délégation", () => {
+  const context = (over: Partial<SubagentContext> = {}): SubagentContext => ({
+    names: new Set(["explore", "general", "explore-anthropic-claude-haiku-4-5"]),
+    running: 0,
+    maxParallel: 2,
+    ...over,
+  });
+
+  const task = (subagentType: string) =>
+    ask({ permission: "task", subagentType });
+
+  it("laisse déléguer sur un sous-agent offert", () => {
+    expect(decidePermission(task("explore"), context())).toEqual({ reply: "once" });
+    expect(
+      decidePermission(task("explore-anthropic-claude-haiku-4-5"), context()),
+    ).toEqual({ reply: "once" });
+  });
+
+  it("tient le plafond de simultané, et le DIT au modèle", () => {
+    // Le sandbox est partagé : deux filles qui écrivent en même temps se
+    // marchent dessus. Même refus, aux mots près, que le registre maison.
+    const verdict = decidePermission(task("general"), context({ running: 2, maxParallel: 2 }));
+    expect(verdict.reply).toBe("reject");
+    expect(verdict.message).toContain("2/2");
+    expect(verdict.reason).toBe("subagent_limit");
+  });
+
+  it("rend l'offre au modèle qui demande un sous-agent qui n'existe pas", () => {
+    // Opencode répondrait « Unknown agent type: X » sans dire ce qui est offert.
+    const verdict = decidePermission(task("general-openai-gpt-5"), context());
+    expect(verdict.reply).toBe("reject");
+    expect(verdict.message).toContain("general-openai-gpt-5");
+    expect(verdict.message).toContain("explore-anthropic-claude-haiku-4-5");
+    expect(verdict.reason).toBe("unknown_subagent");
+  });
+
+  it("ne refuse rien quand personne ne lui a donné l'offre du tour", () => {
+    // Un garde-fou qui ne sait pas ce qui est offert ne doit pas inventer un
+    // refus : la config a déjà tranché ce qui existe.
+    expect(decidePermission(task("explore"))).toEqual({ reply: "once" });
   });
 });
 

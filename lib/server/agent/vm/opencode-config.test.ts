@@ -7,6 +7,8 @@ import {
   OPENCODE_DB_PATH,
   OPENCODE_PRIMARY_AGENT,
   OPENCODE_PROVIDER_ID,
+  MAX_SUBAGENT_MODELS,
+  subagentAgentTable,
 } from "./opencode-config";
 import { REPO_DIR } from "../repo-host";
 import type { VmJob } from "./protocol";
@@ -200,11 +202,40 @@ describe("ce que le tour a le droit de faire", () => {
   });
 });
 
+/**
+ * Les sous-agents (MIN-286, lot 2, tâche 12).
+ *
+ * Deux mesures du 2026-08-12 décident de tout ce qui suit, et aucune ne se
+ * devine : le tool `task` n'a **pas** de champ `model` (le modèle d'une fille
+ * vient de `agent.<id>.model`), et le dossier de tools du serveur est servi à
+ * TOUT LE MONDE — une fille reçoit donc les 32 tools de domaine tant qu'un
+ * `"*": false` ne les lui retire pas.
+ */
 describe("les sous-agents", () => {
+  const favorites = (): VmJob["subagents"] => ({
+    models: true,
+    favorites: [
+      { id: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", use_case: "Middle gear." },
+      { id: "anthropic/claude-opus-4.8", label: "Claude Opus 4.8", use_case: "Hard analysis." },
+    ],
+    maxParallel: 2,
+    allowedIds: [],
+    abovePlanIds: [],
+    maxMultiplier: null,
+    pricing: {
+      "anthropic/claude-haiku-4.5": { inputUsdPerMTok: 1, outputUsdPerMTok: 5 },
+      "anthropic/claude-opus-4.8": { inputUsdPerMTok: 15, outputUsdPerMTok: 75 },
+    },
+  });
+
   it("tient la hiérarchie à UN niveau", () => {
     const cfg = buildOpencodeConfig(job());
     expect(cfg.subagent_depth).toBe(1);
-    expect(cfg.agent.general.tools?.task).toBe(false);
+    // Le joker retire `task` du jeu de la fille, et l'ACL le redit : la
+    // délégation en cascade est structurelle, jamais une phrase de prompt.
+    expect(cfg.agent.general.tools?.["*"]).toBe(false);
+    expect(cfg.agent.general.tools?.task).toBeUndefined();
+    expect(cfg.agent.general.permission?.task).toBe("deny");
   });
 
   it("fait de `explore` une lecture seule PAR SON JEU DE TOOLS", () => {
@@ -212,6 +243,39 @@ describe("les sous-agents", () => {
     expect(explore.mode).toBe("subagent");
     expect(explore.tools).toEqual({ "*": false, read: true, grep: true, glob: true });
     expect(explore.permission?.["*"]).toBe("deny");
+  });
+
+  it("retire à une fille les tools de DOMAINE, qui appartiennent au parent", () => {
+    // `SUBAGENT_FORBIDDEN_TOOLS` (MIN-112) : le ticket, le carnet, les pull
+    // requests, le plan de session. Sans le `"*": false`, ils étaient servis —
+    // ils vivent dans le dossier de tools du serveur, donc à tout le monde.
+    const cfg = buildOpencodeConfig(job());
+    for (const agent of [cfg.agent.explore, cfg.agent.general]) {
+      expect(agent.tools?.["*"]).toBe(false);
+      for (const name of ["update_issue", "create_pr", "update_plan", "read_scratchpad"]) {
+        expect(agent.tools?.[name]).toBeUndefined();
+      }
+    }
+    // `web_search` est la seule exception, et c'est celle de `subagentToolsFor` :
+    // il est facturé et plafonné par nous, pas interdit à une fille.
+    expect(cfg.agent.general.tools?.web_search).toBe(true);
+    expect(buildOpencodeConfig(job({ webSearch: false })).agent.general.tools?.web_search).toBe(
+      undefined,
+    );
+  });
+
+  it("ouvre les TROIS interfaces d'écriture à une fille qui écrit", () => {
+    // C'est opencode qui tranche selon le modèle DE LA FILLE (`apply_patch` sur
+    // les `gpt-*`) : en désigner une ici la figerait sur celui du parent.
+    const cfg = buildOpencodeConfig(job());
+    for (const name of ["edit", "write", "apply_patch"]) {
+      expect(cfg.agent.general.tools?.[name]).toBe(true);
+      expect(cfg.agent.explore.tools?.[name]).toBeUndefined();
+    }
+    const review = buildOpencodeConfig(job({ writesToRepo: false }));
+    for (const name of ["edit", "write", "apply_patch"]) {
+      expect(review.agent.general.tools?.[name]).toBeUndefined();
+    }
   });
 
   it("retire la délégation quand le tour n'a pas de fille à donner", () => {
@@ -222,13 +286,100 @@ describe("les sous-agents", () => {
     expect(buildOpencodeConfig(job()).agent[OPENCODE_PRIMARY_AGENT].tools?.task).toBe(true);
   });
 
-  it("ne fige AUCUN modèle de fille en config", () => {
-    // Le scoping par plan (`allowedIds` / `maxMultiplier`) se joue à l'appel de
-    // `task`, où le superviseur rejoue `makeSubagentModelResolver`. Un modèle
-    // posé ici vaudrait pour toutes les filles du tour.
-    const cfg = buildOpencodeConfig(job());
-    expect(cfg.agent.explore.model).toBeUndefined();
-    expect(cfg.agent.general.model).toBeUndefined();
+  it("laisse le superviseur arbitrer chaque délégation", () => {
+    // `ask` et non `allow` : la demande porte le `subagent_type` et arrive AVANT
+    // qu'opencode ne résolve l'agent — c'est le seul endroit d'où tenir le
+    // plafond de simultané et rendre l'offre au modèle qui se trompe de nom.
+    expect(buildOpencodeConfig(job()).permission.task).toBe("ask");
+  });
+
+  it("donne un agent par (mode × modèle offert), puisque `task` n'a pas de `model`", () => {
+    const cfg = buildOpencodeConfig(job({ subagents: favorites() }));
+    expect(Object.keys(cfg.agent).sort()).toEqual(
+      [
+        OPENCODE_PRIMARY_AGENT,
+        "explore",
+        "explore-anthropic-claude-haiku-4-5",
+        "explore-anthropic-claude-opus-4-8",
+        "general",
+        "general-anthropic-claude-haiku-4-5",
+        "general-anthropic-claude-opus-4-8",
+      ].sort(),
+    );
+    expect(cfg.agent["explore-anthropic-claude-haiku-4-5"].model).toBe(
+      `${OPENCODE_PROVIDER_ID}/anthropic/claude-haiku-4.5`,
+    );
+    // Le mode reste le mode : un modèle choisi ne rend pas une fille écrivante.
+    expect(cfg.agent["explore-anthropic-claude-haiku-4-5"].tools).toEqual(
+      cfg.agent.explore.tools,
+    );
+  });
+
+  it("décrit chaque sous-agent — c'est la SEULE chose que le parent en lit", () => {
+    // Sans `description`, opencode écrit « This subagent should only be called
+    // manually by the user » dans la description du tool `task` : l'offre
+    // disparaît et le modèle ne délègue plus.
+    const cfg = buildOpencodeConfig(job({ subagents: favorites() }));
+    for (const [name, agent] of Object.entries(cfg.agent)) {
+      if (name === OPENCODE_PRIMARY_AGENT) continue;
+      expect(agent.description?.length ?? 0).toBeGreaterThan(20);
+    }
+    const haiku = cfg.agent["general-anthropic-claude-haiku-4-5"].description ?? "";
+    expect(haiku).toContain("Claude Haiku 4.5");
+    expect(haiku).toContain("Middle gear.");
+  });
+
+  it("TARIFE tout modèle de fille qu'il offre, et n'offre pas ce qu'il ne sait pas tarifer", () => {
+    // Un modèle déclaré sans `cost` rend `cost: 0` : une fille gratuite au
+    // ledger. Ne pas l'offrir est le seul choix qui ne mente pas.
+    const cfg = buildOpencodeConfig(job({ subagents: favorites() }));
+    const models = cfg.provider[OPENCODE_PROVIDER_ID].models;
+    expect(models["anthropic/claude-haiku-4.5"].cost).toEqual({ input: 1, output: 5 });
+    expect(models["anthropic/claude-opus-4.8"].cost).toEqual({ input: 15, output: 75 });
+
+    const unpriced = favorites();
+    unpriced.pricing = { "anthropic/claude-haiku-4.5": { inputUsdPerMTok: 1, outputUsdPerMTok: 5 } };
+    const partial = buildOpencodeConfig(job({ subagents: unpriced }));
+    expect(partial.agent["general-anthropic-claude-opus-4-8"]).toBeUndefined();
+    expect(partial.provider[OPENCODE_PROVIDER_ID].models["anthropic/claude-opus-4.8"]).toBeUndefined();
+  });
+
+  it("n'offre AUCUN autre modèle en BYOK", () => {
+    // Même règle du tout ou rien que le champ `model` de `spawn_agent` : un run
+    // BYOK Anthropic ne peut pas faire tourner `deepseek/…`.
+    const byok = buildOpencodeConfig(job({ subagents: { ...favorites(), models: false } }));
+    expect(Object.keys(byok.agent).sort()).toEqual([OPENCODE_PRIMARY_AGENT, "explore", "general"].sort());
+    expect(Object.keys(byok.provider[OPENCODE_PROVIDER_ID].models)).toEqual([
+      "deepseek/deepseek-v4-flash",
+    ]);
+  });
+
+  it("borne la liste des modèles offerts", () => {
+    // Chaque modèle coûte deux agents et deux lignes dans la description du tool
+    // `task` : un réglage d'admin parti à trente la ferait grossir en silence.
+    const many = favorites();
+    many.favorites = Array.from({ length: MAX_SUBAGENT_MODELS + 4 }, (_, i) => ({
+      id: `vendor/model-${i}`,
+      label: `Model ${i}`,
+      use_case: "x",
+    }));
+    many.pricing = Object.fromEntries(
+      many.favorites.map((f) => [f.id, { inputUsdPerMTok: 1, outputUsdPerMTok: 2 }]),
+    );
+    const cfg = buildOpencodeConfig(job({ subagents: many }));
+    expect(subagentAgentTable(job({ subagents: many })).filter((a) => a.modelId)).toHaveLength(
+      MAX_SUBAGENT_MODELS * 2,
+    );
+    expect(Object.keys(cfg.agent)).toHaveLength(1 + 2 + MAX_SUBAGENT_MODELS * 2);
+  });
+
+  it("ne se propose jamais lui-même comme modèle de fille", () => {
+    // Le modèle du run est déjà `explore` / `general` : le redonner sous un
+    // deuxième nom offrirait deux fois la même chose.
+    const same = favorites();
+    same.favorites = [{ id: "deepseek/deepseek-v4-flash", label: "Same", use_case: "x" }];
+    same.pricing = { "deepseek/deepseek-v4-flash": { inputUsdPerMTok: 1, outputUsdPerMTok: 2 } };
+    expect(subagentAgentTable(job({ subagents: same })).filter((a) => a.modelId)).toEqual([]);
   });
 });
 

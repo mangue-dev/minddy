@@ -54,6 +54,24 @@ export interface PermissionAsk {
   command?: string;
   /** `metadata.filepath` sur une écriture — absolu (mesure n°2). */
   filepath?: string;
+  /**
+   * `metadata.subagent_type` sur un `task` : le sous-agent demandé, DEMANDÉ
+   * AVANT qu'opencode ne le résolve (mesuré, cf. `decideTask`).
+   */
+  subagentType?: string;
+}
+
+/**
+ * Ce que le superviseur sait des sous-agents au moment du verdict — l'offre du
+ * tour et ce qui tourne déjà. Absent = pas de délégation à arbitrer.
+ */
+export interface SubagentContext {
+  /** Les `subagent_type` déclarés en config ([opencode-config.ts](opencode-config.ts)). */
+  names: ReadonlySet<string>;
+  /** Filles vivantes à cet instant. */
+  running: number;
+  /** Plafond de simultané (`app_config`, MIN-112). */
+  maxParallel: number;
 }
 
 /** Ce que le superviseur doit répondre, et pourquoi. */
@@ -72,8 +90,14 @@ const ALLOW: PermissionVerdict = { reply: "once" };
  * inattendue arrêterait le tour au lieu de le protéger, et le seul chemin sûr
  * quand on ne comprend pas la demande est de la refuser en le disant.
  */
-export function decidePermission(ask: PermissionAsk): PermissionVerdict {
+export function decidePermission(
+  ask: PermissionAsk,
+  subagents?: SubagentContext,
+): PermissionVerdict {
   switch (ask.permission) {
+    case "task":
+      return decideTask(ask, subagents);
+
     case "bash": {
       const command = (ask.command ?? "").trim();
       // Une demande `bash` sans commande n'existe pas dans la mesure. Si elle
@@ -123,6 +147,53 @@ export function decidePermission(ask: PermissionAsk): PermissionVerdict {
     default:
       return ALLOW;
   }
+}
+
+/**
+ * LA DÉLÉGATION (MIN-286, lot 2, tâche 12) — le seul point où l'on peut encore
+ * dire non à un `task`, et le seul d'où le modèle entend autre chose qu'un
+ * message d'opencode.
+ *
+ * Deux refus, et rien d'autre :
+ *
+ * 1. **Le plafond de simultané** (`maxParallel`, réglé en `app_config`). C'est le
+ *    même refus, aux mots près, que celui du registre maison
+ *    ([subagent.ts](../subagent.ts)) : le sandbox est PARTAGÉ, et deux filles qui
+ *    écrivent en même temps se marchent dessus. Chez opencode le `task` de premier
+ *    plan BLOQUE le parent, donc le simultané ne vient que d'un round qui appelle
+ *    `task` plusieurs fois — c'est exactement ce qu'on borne ici.
+ * 2. **Un sous-agent qui n'existe pas.** Opencode répondrait « Unknown agent type:
+ *    X », sans dire ce qui est offert au tour (les agents sont dans la description
+ *    du tool, qu'un modèle a pu perdre de vue). On lui rend l'offre, comme
+ *    `makeSubagentModelResolver` rendait les favoris.
+ *
+ * Le reste passe : la config a déjà décidé de ce qui est offert, et un garde-fou
+ * qui redit la config est un endroit de plus où les deux peuvent diverger.
+ */
+function decideTask(ask: PermissionAsk, subagents?: SubagentContext): PermissionVerdict {
+  if (!subagents) return ALLOW;
+
+  if (subagents.running >= subagents.maxParallel) {
+    return {
+      reply: "reject",
+      message:
+        `Too many sub-agents running at once (${subagents.running}/${subagents.maxParallel}). ` +
+        `Wait for one to report back before delegating again.`,
+      reason: "subagent_limit",
+    };
+  }
+
+  const requested = (ask.subagentType ?? "").trim();
+  if (!subagents.names.has(requested)) {
+    return {
+      reply: "reject",
+      message:
+        `Unknown sub-agent type ${JSON.stringify(requested)}. ` +
+        `Available for this session: ${[...subagents.names].join(", ")}.`,
+      reason: "unknown_subagent",
+    };
+  }
+  return ALLOW;
 }
 
 /**

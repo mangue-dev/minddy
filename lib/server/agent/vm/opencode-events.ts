@@ -96,6 +96,17 @@ export interface Translation {
   permission?: PermissionAsk;
   /** Le modèle pose ses questions (`question.asked`) : c'est notre `ask_user`. */
   question?: { id: string; callId: string; questions: AskUserQuestion[] };
+  /**
+   * UNE FILLE VIENT DE NAÎTRE, et voici à quel appel de `task` elle se rattache.
+   *
+   * C'est la seule frame qui le dise : le tool `task` pose sur son part une
+   * `state.metadata = {parentSessionId, sessionId, model}` (mesuré le
+   * 2026-08-12, sonde de délégation), et elle arrive AVANT le premier message de
+   * la fille. Sans ce rattachement, les events de la fille ne peuvent pas porter
+   * le `parent_call_id` sous lequel le fil les replie, et sa dépense ne sait pas
+   * dans quelle bande de `seq` s'écrire.
+   */
+  child?: { sessionId: string; callId: string; agent: string; model?: string };
 }
 
 /**
@@ -273,13 +284,27 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
         (stateNode.input ?? {}) as Record<string, unknown>,
       );
 
+      /**
+       * LE RATTACHEMENT D'UNE FILLE, à lire sur TOUS les statuts du part `task`.
+       *
+       * Mesuré : le premier `running` arrive sans `metadata` (la fille n'existe
+       * pas encore), le second la porte. Le lire hors du bloc `running` ci-dessous
+       * n'est donc pas de la prudence : c'est la seule frame utile, et elle est
+       * une répétition de celle qui a déjà été annoncée.
+       */
+      const child =
+        opencodeName === "task" ? childOf(stateNode, callId, input) : undefined;
+
       if (status === "running") {
         // `pending` ne dit pas encore QUOI est appelé (`input: {}` mesuré) : un
         // event émis là afficherait un appel sans argument, puis rien.
-        if (!callId || state.announced.has(callId)) return { sessionId, events: [] };
+        if (!callId || state.announced.has(callId)) {
+          return { sessionId, events: [], ...(child ? { child } : {}) };
+        }
         state.announced.add(callId);
         return {
           sessionId,
+          ...(child ? { child } : {}),
           events: [
             { type: "tool_call", payload: { id: callId, name, ...toolArgSummary(name, input) } },
           ],
@@ -386,6 +411,11 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
           callId: String(tool.callID ?? ""),
           ...(typeof metadata.command === "string" ? { command: metadata.command } : {}),
           ...(typeof metadata.filepath === "string" ? { filepath: metadata.filepath } : {}),
+          // La délégation demande AVANT de résoudre l'agent : c'est ce qui permet
+          // de répondre autre chose qu'« Unknown agent type » (cf. `decideTask`).
+          ...(typeof metadata.subagent_type === "string"
+            ? { subagentType: metadata.subagent_type }
+            : {}),
         },
       };
     }
@@ -422,6 +452,31 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       // remplirait `agent_run_events` de lignes que personne ne lit.
       return { sessionId, events: [] };
   }
+}
+
+/**
+ * Le rattachement d'une fille, lu sur le part du `task` qui l'a lancée.
+ * `undefined` tant qu'elle n'a pas de session — c'est-à-dire sur `pending` et sur
+ * le premier `running` (mesuré : `metadata: null`).
+ *
+ * `input` est DÉJÀ traduit (`subagent_type` → `mode`), d'où la lecture par `mode`.
+ */
+function childOf(
+  stateNode: Record<string, unknown>,
+  callId: string,
+  input: Record<string, unknown>,
+): { sessionId: string; callId: string; agent: string; model?: string } | undefined {
+  const metadata = (stateNode.metadata ?? {}) as Record<string, unknown>;
+  const sessionId = typeof metadata.sessionId === "string" ? metadata.sessionId : "";
+  if (!sessionId || !callId) return undefined;
+  const model = (metadata.model ?? {}) as Record<string, unknown>;
+  const modelId = typeof model.modelID === "string" ? model.modelID : "";
+  return {
+    sessionId,
+    callId,
+    agent: String(input.mode ?? ""),
+    ...(modelId ? { model: modelId } : {}),
+  };
 }
 
 /** Le texte du round EN COURS d'une session — la charge du direct. */

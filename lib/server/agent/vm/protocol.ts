@@ -85,6 +85,17 @@ export interface VmSubagentConfig {
   allowedIds: string[];
   abovePlanIds: string[];
   maxMultiplier: number | null;
+  /**
+   * LES PRIX DES MODÈLES DE FILLE, par id (MIN-286) — même rôle et même source
+   * que `VmJob.pricing`, pour la même raison : un modèle déclaré à opencode sans
+   * prix fait rendre `cost: 0`, et la dépense d'une fille sortirait du ledger
+   * sans un mot. Mesuré : une fille sur un modèle tarifé rend son coût comme la
+   * mère (`1.4e-06` sur la sonde de délégation du 2026-08-12).
+   *
+   * Un favori dont le prix manque n'est PAS déclaré en agent : mieux vaut ne pas
+   * l'offrir que de l'offrir gratuit.
+   */
+  pricing?: Record<string, VmModelPricing>;
 }
 
 /**

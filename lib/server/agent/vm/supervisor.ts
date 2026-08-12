@@ -15,6 +15,7 @@ import {
   OPENCODE_ANCHOR_FILE,
   OPENCODE_TOOL_DIR,
   opencodeServerEnv,
+  subagentAgentTable,
 } from "./opencode-config";
 import { opencodeToolFiles } from "./opencode-tools";
 import { decidePermission } from "./opencode-permissions";
@@ -206,7 +207,17 @@ export async function runOpencodeTurn(
 
     // ── Le flux, traduit au fil de l'eau ─────────────────────────────────────
     const state = newTurnStreamState();
-    const ledger = new TurnLedger(job, sessionId);
+    /**
+     * L'offre de sous-agents du tour, telle que la config vient de la déclarer.
+     * Une seule source ([opencode-config.ts](opencode-config.ts)) : ce qui est
+     * servi au modèle, ce que le garde-fou accepte et ce que le fil affiche sont
+     * dérivés du même tableau, donc ne peuvent pas diverger.
+     */
+    const agentTable = new Map(subagentAgentTable(job).map((a) => [a.name, a]));
+    const subagents = new SubagentRegistry(
+      new Map([...agentTable].map(([name, a]) => [name, a.mode])),
+    );
+    const ledger = new TurnLedger(job, sessionId, subagents);
     let costUsd = 0;
     let sessionError: string | undefined;
     let lastLiveAt = 0;
@@ -249,8 +260,16 @@ export async function runOpencodeTurn(
          * ce qui la rend testable sans serveur ; ce qui est ici est le
          * branchement, et le fait qu'un refus se raconte au fil.
          */
+        // Une fille rattachée à son appel de `task` : c'est ce qui donne son nom
+        // aux events qui vont suivre, et sa bande au ledger.
+        if (out.child) subagents.register(out.child);
+
         if (out.permission) {
-          const verdict = decidePermission(out.permission);
+          const verdict = decidePermission(out.permission, {
+            names: new Set(agentTable.keys()),
+            running: subagents.running,
+            maxParallel: job.subagents.maxParallel,
+          });
           if (verdict.reason && out.permission.callId) {
             refusedCalls.set(out.permission.callId, verdict.reason);
           }
@@ -289,14 +308,22 @@ export async function runOpencodeTurn(
             event.type === "tool_result"
               ? refusedCalls.get(String(event.payload.id ?? ""))
               : undefined;
+          let payload = redactPayload(event.payload, secrets);
+          // Un `spawn_agent` ne porte que le NOM de l'agent : on lui rend le mode
+          // et le modèle que le fil affiche depuis MIN-112.
+          if (payload.name === "spawn_agent") payload = describeSpawn(payload, agentTable);
+          // Ce qui vient d'une fille se dit SOUS son appel de `task` : sans ce
+          // marquage, le fil attribuerait à l'agent principal les gestes de
+          // quelqu'un d'autre, et les déplierait au premier niveau.
+          const entry = child ? subagents.entry(out.sessionId ?? "") : undefined;
+          if (entry) payload = markChildPayload(payload, entry);
           await cp.emit(event.type, {
-            ...redactPayload(event.payload, secrets),
+            ...payload,
             ...(reason ? { reason } : {}),
-            // Le reste du marquage d'une fille (`parent_call_id`, `subagent_mode`,
-            // le préfixe d'id) vient avec les sous-agents, tâche 12 du plan. Ce
-            // champ-ci ne peut pas attendre : sans lui, le fil attribuerait à
-            // l'agent principal les gestes de quelqu'un d'autre.
-            ...(child ? { subagent_id: out.sessionId } : {}),
+            // Une fille que le flux n'a rattachée à rien reste marquée : mieux
+            // vaut un event replié sous un id de session qu'un geste attribué à
+            // l'agent principal.
+            ...(child && !entry ? { subagent_id: out.sessionId } : {}),
           });
         }
         if (out.usage) {
@@ -350,13 +377,22 @@ export async function runOpencodeTurn(
             reasoningMs: 0,
           });
         }
-        if (out.error) sessionError = out.error;
+        /**
+         * L'ERREUR D'UNE FILLE N'EST PAS L'ERREUR DU TOUR. Elle revient au parent
+         * comme une erreur de `task` — il la lit et décide —, exactement comme un
+         * sous-agent qui échouait dans la boucle maison. La ranger ici mettrait le
+         * TOUR en `error` : le fil dirait que le run est mort alors que l'agent
+         * continue de travailler.
+         */
+        if (out.error && !child) sessionError = out.error;
         // Les questions sont PARTIES au fil (juste au-dessus) : on sort une fois
         // l'event émis, pas avant — sinon la carte de questions n'existerait pas
         // et la session attendrait une réponse à rien.
         if (askedUser) break;
         // `session.idle` d'une FILLE ne termine pas le tour : la mère, elle,
-        // attend encore son rapport.
+        // attend encore son rapport. Elle libère en revanche une place sous le
+        // plafond de simultané.
+        if (out.idle && child) subagents.finish(out.sessionId ?? "");
         if (out.idle && !child) break;
         if (now() > deadline) {
           timedOut = true;
@@ -506,8 +542,6 @@ export async function runOpencodeTurn(
  */
 class TurnLedger {
   private parentSeq: number;
-  /** Slot de chaque session fille, dans son ordre d'apparition. */
-  private readonly slots = new Map<string, number>();
   /** Rounds déjà écrits par une fille — son avancée dans sa bande. */
   private readonly childSeq = new Map<string, number>();
 
@@ -515,6 +549,9 @@ class TurnLedger {
     private readonly job: VmJob,
     /** La session de la mère : tout le reste du flux est une fille. */
     private readonly parentSession: string,
+    /** Qui numérote les filles — le MÊME registre que le fil, sans quoi la
+     *  dépense d'une fille et ses events ne parleraient pas de la même. */
+    private readonly subagents: SubagentRegistry,
   ) {
     this.parentSeq = job.usageSeqStart;
   }
@@ -559,11 +596,7 @@ class TurnLedger {
   private seqFor(sessionId: string): number {
     if (!sessionId || sessionId === this.parentSession) return this.parentSeq++;
 
-    let slot = this.slots.get(sessionId);
-    if (slot === undefined) {
-      slot = this.slots.size;
-      this.slots.set(sessionId, slot);
-    }
+    const slot = this.subagents.slotOf(sessionId);
     // Les slots repartent de zéro à chaque TOUR, comme la boucle maison recrée
     // son registre de sous-agents à chaque tour (`seqBase: 0`). Deux tours qui
     // délèguent réutilisent donc la même bande : `ai_usage.seq` n'a pas de
@@ -572,6 +605,121 @@ class TurnLedger {
     this.childSeq.set(sessionId, used + 1);
     return subagentUsageSeq(slot) + used;
   }
+}
+
+/**
+ * LE REGISTRE DES FILLES D'UN TOUR (MIN-286, lot 2, tâche 12).
+ *
+ * Il ne LANCE rien — c'est opencode qui lance, et c'est tout l'objet du virage.
+ * Il tient les trois choses qu'opencode ne tient pas pour nous :
+ *
+ * 1. **Un nom court et stable** (`sub-1`, `sub-2`), celui que le fil connaît
+ *    depuis MIN-112 : le feed replie les events d'une fille sous la ligne
+ *    `spawn_agent` par `subagent_id` + `parent_call_id`, et un id de session
+ *    opencode (`ses_00960557effe…`) n'a jamais rien voulu dire pour personne.
+ * 2. **La bande de `seq` du ledger** : la fille n°N écrit dans
+ *    `subagentUsageSeq(N-1)`, la MÊME convention que la boucle maison — sans quoi
+ *    l'ordre d'appel d'un run cesse de se lire au ledger.
+ * 3. **Combien tournent**, qui est le plafond de simultané (`maxParallel`). Une
+ *    fille est vivante de son rattachement jusqu'à son `session.idle`.
+ */
+export class SubagentRegistry {
+  private readonly bySession = new Map<
+    string,
+    { index: number; id: string; callId: string; mode: "explore" | "implement"; done: boolean }
+  >();
+
+  constructor(
+    /** Nom d'agent → notre mode, tel que la config l'a déclaré. */
+    private readonly modes: ReadonlyMap<string, "explore" | "implement">,
+  ) {}
+
+  /** Rattache une fille à l'appel de `task` qui l'a lancée. Idempotent. */
+  register(child: { sessionId: string; callId: string; agent: string }): void {
+    if (this.bySession.has(child.sessionId)) return;
+    const index = this.bySession.size;
+    this.bySession.set(child.sessionId, {
+      index,
+      id: `sub-${index + 1}`,
+      callId: child.callId,
+      // Un nom d'agent inconnu ne devrait pas exister (le verdict de permission
+      // l'a refusé), mais s'il passait, `implement` est le pire cas : c'est celui
+      // sous lequel le fil montre une fille qui peut écrire.
+      mode: this.modes.get(child.agent) ?? "implement",
+      done: false,
+    });
+  }
+
+  entry(sessionId: string) {
+    return this.bySession.get(sessionId);
+  }
+
+  /**
+   * La bande de la fille. Une session inconnue en obtient une quand même :
+   * une dépense qu'on ne sait pas rattacher vaut mieux rangée que perdue.
+   */
+  slotOf(sessionId: string): number {
+    const known = this.bySession.get(sessionId);
+    if (known) return known.index;
+    this.register({ sessionId, callId: "", agent: "" });
+    return this.bySession.get(sessionId)!.index;
+  }
+
+  /** Une fille au repos ne compte plus dans le simultané. */
+  finish(sessionId: string): void {
+    const entry = this.bySession.get(sessionId);
+    if (entry) entry.done = true;
+  }
+
+  get running(): number {
+    let count = 0;
+    for (const entry of this.bySession.values()) if (!entry.done) count += 1;
+    return count;
+  }
+}
+
+/**
+ * LE MARQUAGE D'UN EVENT DE FILLE — les mêmes champs qu'en MIN-112, au nom près.
+ *
+ * `subagent_id` + `parent_call_id` sont ce qui replie l'event sous la ligne
+ * `spawn_agent` dans le fil ; `subagent_mode` est ce qu'il affiche. Et l'id de
+ * l'appel de tool est PRÉFIXÉ, pour la raison qui l'a toujours été : deux modèles
+ * peuvent rendre le même `call_1`, et le fil apparie par id.
+ */
+export function markChildPayload(
+  payload: Record<string, unknown>,
+  entry: { id: string; callId: string; mode: "explore" | "implement" },
+): Record<string, unknown> {
+  const id = payload.id;
+  return {
+    ...payload,
+    ...(typeof id === "string" ? { id: `${entry.id}:${id}` } : {}),
+    subagent_id: entry.id,
+    ...(entry.callId ? { parent_call_id: entry.callId } : {}),
+    subagent_mode: entry.mode,
+  };
+}
+
+/**
+ * Ce que le fil doit lire d'un `spawn_agent`, quand opencode n'en connaît que le
+ * nom d'agent.
+ *
+ * `toolArgSummary` a déjà rangé le `subagent_type` sous `mode` (c'est le champ
+ * qu'il attend) — sauf que ce `mode`-là vaut `explore-anthropic-claude-haiku-4-5`,
+ * pas `explore`. On lui rend donc les deux champs que `spawn_agent` portait, et
+ * que la relecture d'un run affiche : le mode, et le modèle de la fille.
+ */
+export function describeSpawn(
+  payload: Record<string, unknown>,
+  agents: ReadonlyMap<string, { mode: "explore" | "implement"; modelId?: string; label?: string }>,
+): Record<string, unknown> {
+  const entry = agents.get(String(payload.mode ?? ""));
+  if (!entry) return payload;
+  return {
+    ...payload,
+    mode: entry.mode,
+    ...(entry.modelId ? { model: entry.label ?? entry.modelId } : {}),
+  };
 }
 
 /** Le curseur d'export, agrégat par agrégat. */

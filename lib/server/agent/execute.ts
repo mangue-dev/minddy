@@ -1129,6 +1129,23 @@ export async function executeAgentRun(
       catalog: subagentCatalog ?? { models: [], maxMultiplier: null },
     });
     const subagentFavorites = subagentScope.favorites;
+    /**
+     * LES PRIX DES MODÈLES DE FILLE (MIN-286) — même index, même cache et même
+     * raison que `modelPricing` ci-dessous : le harness opencode déclare un
+     * modèle par favori offert, et un modèle sans prix y rend `cost: 0`. Une
+     * fille dont on ne connaît pas le prix n'est pas offerte du tout
+     * (`subagentModelChoices`), plutôt qu'offerte gratuite au ledger.
+     */
+    const subagentPricing = Object.fromEntries(
+      (
+        await Promise.all(
+          subagentFavorites.map(
+            async (f) =>
+              [f.id, await getModelPricing(f.id, provider, apiKey).catch(() => null)] as const,
+          ),
+        )
+      ).flatMap(([id, pricing]) => (pricing ? [[id, pricing] as const] : [])),
+    );
 
     // Rehydrate ou amorce l'historique. L'amorce est CONVERSATIONNELLE : contexte
     // (dépôt + ticket) puis, en DERNIER message utilisateur, la demande réelle du
@@ -1685,6 +1702,7 @@ export async function executeAgentRun(
           allowedIds: subagentScope.allowedIds,
           abovePlanIds: subagentScope.abovePlanIds,
           maxMultiplier: subagentScope.maxMultiplier,
+          ...(Object.keys(subagentPricing).length > 0 ? { pricing: subagentPricing } : {}),
         },
         messages,
         instructions,

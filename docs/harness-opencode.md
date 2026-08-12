@@ -482,6 +482,50 @@ Trois conséquences, et deux d'entre elles corrigent du code déjà écrit :
    laissent un historique apparié. La permission `question`, elle, **n'est pas
    consultée** : ce qui retire vraiment `ask_user` d'une routine est le jeu de
    tools de l'agent, pas l'ACL.
+### 2.14 Les sous-agents : le nom de l'agent EST le modèle (lot 2)
+
+Mesuré le 2026-08-12, même montage qu'au §2.13 (faux fournisseur local, coût nul),
+plus une lecture du binaire. Cinq mesures, dont trois corrigent le cadrage :
+
+| Ce qu'on voulait savoir | Mesure |
+| --- | --- |
+| Le tool `task` sait-il choisir un modèle ? | **Non.** Son schéma est `{description, prompt, subagent_type, task_id, command}` — et rien d'autre. Le modèle d'une fille vient de `agent.<id>.model` (`b.model ?? le modèle du message parent`). |
+| Comment le modèle apprend l'offre | Le serveur colle à la description du tool `task` : « Available agent types and the tools they have access to: » puis un `- <nom>: <description>` par agent **non primaire**. Sans `description`, il écrit « This subagent should only be called manually by the user ». |
+| Comment on retire un sous-agent de l'offre | `permission.task` est évaluée avec le **nom de l'agent** comme patron : `{"*": "allow", "explore-cheap": "deny"}` fait disparaître `explore-cheap` de la liste servie. |
+| Ce qu'une fille reçoit vraiment | `agent.<id>.tools` **retire** pour de bon, joker compris : `{"*": false, read: true}` → **un seul tool** dans le corps de la requête. Vérifié sur le corps, pas sur `/experimental/tool`, qui rend le registre entier sans appliquer l'agent. |
+| Ce que la délégation publie | `permission.asked` `{permission: "task", patterns: ["explore-cheap"], metadata: {description, subagent_type}}`, **avant** qu'opencode ne résolve l'agent ; puis le part du tool porte `state.metadata = {parentSessionId, sessionId, model}` — le seul endroit d'où rattacher une fille à son appel. |
+
+Quatre conséquences :
+
+1. **Un agent par (mode × modèle).** `explore` / `general` sur le modèle du run,
+   puis `explore-<slug>` / `general-<slug>` par favori. C'est la seule traduction
+   possible du champ `model` de `spawn_agent`.
+2. **L'offre se resserre sur les favoris curatés**, et c'est assumé : `spawn_agent`
+   acceptait n'importe quel id du catalogue (`allowedIds`, ~345 modèles), qu'on ne
+   peut pas énumérer en agents sans gonfler la description du tool de 700 lignes.
+   Le plafond de plan reste tenu — les favoris sont déjà passés par
+   `scopeSubagentModels` —, il l'est simplement **par construction** plutôt que par
+   un résolveur. Un nom hors liste revient en erreur de tool, avec l'offre.
+3. **Chaque modèle offert doit être TARIFÉ** dans le `provider` (même mesure qu'au
+   §2.8 : pas de `cost` → `cost: 0`). Un favori dont l'index OpenRouter ne donne
+   pas le prix n'est pas offert du tout — mesuré de bout en bout : une fille sur
+   un modèle tarifé rend son coût comme la mère.
+4. **`OPENCODE_ENABLE_PARALLEL` n'a rien à voir avec le parallélisme des filles**,
+   contrairement à ce que le plan supposait : c'est le drapeau du fournisseur de
+   recherche web *Parallel* (`RuntimeFlags.enableParallel`, à côté d'`enableExa`).
+   Le plafond de simultané (`maxParallel`, `app_config`) se tient donc sur la
+   demande de permission du `task`, qui est le seul point de contrôle qui existe.
+   À savoir avec : sans `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS`, un `task`
+   **bloque** le parent — le simultané ne vient que d'un round qui appelle `task`
+   plusieurs fois.
+
+**Piège lu dans le binaire, pas encore mordu** : `POST /permission/:id/reply` avec
+`reply: "reject"` rejette AUSSI **toutes les autres permissions en attente de la
+même session** (`Permission.reply`, la boucle sur `pending`). Un refus concurrent
+peut donc emporter un appel légitime suspendu au même instant. Rare tant que le
+superviseur répond au fil de l'eau (une demande à la fois), à garder en tête le
+jour où un refus inexpliqué apparaîtra à côté d'un autre.
+
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un
@@ -504,7 +548,7 @@ répartis en `CORE_TOOLS` (18), `MINDDY_TOOLS` (22), `PR_TOOLS` (3),
 | `run_command` | `bash` | Shell **persistant** (gain), `workdir` (gain), timeout à reporter à 180 s. |
 | `move_file` | `bash` | `mv`. Pas de tool dédié — et le garde-fou reste le nôtre (§3.4). |
 | `delete_file` | `bash` | `rm`, idem. |
-| `spawn_agent` | `task` | `subagent_type` + `prompt` ; le scoping par plan se pose en config `agent`. |
+| `spawn_agent` | `task` | **FAIT** (§2.14) : `subagent_type` + `prompt`. Le champ `model` devient le NOM de l'agent (`explore-<slug>`), le plafond de plan est tenu par construction, le plafond de simultané par le verdict de permission. |
 | `agent_status` | `task` (`task_id`) | Reprise d'une fille par son id, notification au retour d'un lancement en fond. |
 | `list_agents` | — | Sans objet : le superviseur voit les sessions filles par `/session/:id/children`. |
 | `ask_user` | `question` | Tool natif + `POST /session/:id/question/:requestID/reply`. Le superviseur y branche notre `ask_user`. |
