@@ -131,6 +131,7 @@ import {
   resolveAgentApiKey,
   getModelContextWindow,
   getModelInputPrice,
+  getModelPricing,
   supportsImageInput,
 } from "./model";
 import {
@@ -1385,9 +1386,13 @@ export async function executeAgentRun(
     // Fenêtre de contexte ET prix d'entrée du modèle (OpenRouter) : le seuil de
     // compaction se dérive des deux — la fenêtre le BORNE, le prix le DIMENSIONNE.
     // Une seule lecture d'index sert les deux (cache de process).
-    const [contextWindow, inputUsdPerMTok] = await Promise.all([
+    // `modelPricing` sort du MÊME index (donc du même aller-retour caché) : il
+    // descend dans la microVM pour que le harness opencode facture à nos prix
+    // plutôt qu'à ceux d'un catalogue tiers (MIN-286, cf. `VmModelPricing`).
+    const [contextWindow, inputUsdPerMTok, modelPricing] = await Promise.all([
       getModelContextWindow(run.model, provider, apiKey).catch(() => null),
       getModelInputPrice(run.model, provider, apiKey).catch(() => null),
+      getModelPricing(run.model, provider, apiKey).catch(() => null),
     ]);
 
     // Budget du chunk : temps restant du drain − marge, borné par la config.
@@ -1662,6 +1667,7 @@ export async function executeAgentRun(
         reasoningLevel: run.reasoning_level,
         contextWindow,
         inputUsdPerMTok,
+        ...(modelPricing ? { pricing: modelPricing } : {}),
         anchor,
         writesToRepo,
         interactive: !run.routine_id,

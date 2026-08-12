@@ -26,6 +26,7 @@ import { newVerificationSink } from "../diagnostics";
 import { gateCreatePr, gateWritePlan, makeDeliveryGate } from "../delivery-gate";
 import { REPO_INSTRUCTION_FILES, type InstructionsState } from "../repo-instructions";
 import { commitAndPush, changedFiles, type RepoHost } from "../repo-host";
+import { commitMessageFromReply } from "../commit-message";
 import { BackgroundJobs } from "../background";
 import { makeExecTool, readRepoInstructions, repoBackgroundRunner } from "../exec-tool";
 import { liveEditHook, newLiveEditLog } from "../live-edits";
@@ -120,17 +121,9 @@ function lastAssistantText(messages: AgentChatMessage[]): string {
   return "";
 }
 
-/**
- * Message de commit d'une fin de tour : la première ligne de la réponse de
- * l'agent, nettoyée et bornée. Recopié de `execute.ts` plutôt qu'importé — ce
- * module-là ne descend pas dans la microVM.
- */
-export function commitMessageFromReply(reply: string, identifier: string): string {
-  const firstLine = reply.split("\n").find((l) => l.trim())?.trim() ?? "";
-  const cleaned = firstLine.replace(/[#*_`>]+/g, "").trim();
-  if (cleaned.length >= 8) return cleaned.length <= 72 ? cleaned : `${cleaned.slice(0, 69)}…`;
-  return `wip(${identifier}): agent update`;
-}
+// `commitMessageFromReply` vit maintenant dans [commit-message.ts](../commit-message.ts)
+// (MIN-286) : deux moteurs commitent, et le second n'a pas à importer cette boucle.
+export { commitMessageFromReply };
 
 /**
  * Joue le tour et rend son rapport. Ne LÈVE pas sur un échec de travail (push

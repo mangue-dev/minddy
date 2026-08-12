@@ -17,6 +17,7 @@ import {
 } from "@/lib/agent-reasoning";
 import { decryptUserAiKey } from "./byok-credentials";
 import { getOpenRouterModelInfo } from "./openrouter-index";
+import type { VmModelPricing } from "./vm/protocol";
 
 /**
  * Résolution du modèle et de l'endpoint de l'agent de code (MIN-46).
@@ -300,6 +301,36 @@ export async function getModelInputPrice(
 ): Promise<number | null> {
   if (provider !== "openrouter") return null;
   return (await getOpenRouterModelInfo(model, apiKey))?.pricing?.inputUsdPerMTok ?? null;
+}
+
+/**
+ * TOUS les prix du modèle, cache compris — ce que la microVM emporte pour que
+ * le harness opencode calcule un coût qui soit le NÔTRE (MIN-286,
+ * cf. `VmModelPricing`). Même source et mêmes limites que les deux fonctions
+ * ci-dessus : l'index OpenRouter, donc `null` en BYOK direct.
+ *
+ * `null` n'est pas un détail bénin ici : un modèle déclaré sans prix fait rendre
+ * `cost: 0` à opencode. L'appelant doit alors écrire l'usage en `estimated`,
+ * jamais un zéro au ledger.
+ */
+export async function getModelPricing(
+  model: string,
+  provider: AgentProviderId,
+  apiKey: string,
+): Promise<VmModelPricing | null> {
+  if (provider !== "openrouter") return null;
+  const info = await getOpenRouterModelInfo(model, apiKey);
+  if (!info?.pricing) return null;
+  return {
+    inputUsdPerMTok: info.pricing.inputUsdPerMTok,
+    outputUsdPerMTok: info.pricing.outputUsdPerMTok,
+    ...(info.cachePricing
+      ? {
+          cacheReadUsdPerMTok: info.cachePricing.readUsdPerMTok,
+          cacheWriteUsdPerMTok: info.cachePricing.writeUsdPerMTok,
+        }
+      : {}),
+  };
 }
 
 /**

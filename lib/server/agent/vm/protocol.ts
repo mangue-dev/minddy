@@ -51,6 +51,30 @@ export const VM_JOB_PATH = `${HARNESS_DIR}/job.json`;
  */
 export const VM_MAX_CHECKPOINT_BYTES = 3_200_000;
 
+/**
+ * LES PRIX DU MODÈLE DU TOUR, au million de tokens (MIN-286).
+ *
+ * Pourquoi ils voyagent, alors que `inputUsdPerMTok` suffisait au seuil de
+ * compaction : opencode CALCULE le coût de chaque round depuis un catalogue de
+ * prix, et un modèle déclaré sans prix rend `cost: 0` — mesuré, tokens exacts et
+ * coût nul, ce qui viderait le ledger en silence. En donnant NOS prix (ceux de
+ * l'index OpenRouter, la même source que le multiplicateur et le plafond de
+ * plan), le coût qu'opencode rend est le nôtre, et la seule inconnue que la sonde
+ * de coût du lot 0 avait laissée ouverte — la dérive du catalogue models.dev —
+ * disparaît (docs/harness-opencode.md §2.5).
+ *
+ * ABSENT = prix inconnus (BYOK hors index OpenRouter). Le coût rendu vaudra alors
+ * zéro, et c'est au superviseur d'écrire l'usage en `estimated` plutôt que
+ * d'inscrire un zéro au ledger.
+ */
+export interface VmModelPricing {
+  inputUsdPerMTok: number;
+  outputUsdPerMTok: number;
+  /** Prix du cache, quand le fournisseur les publie — nos runs cachent beaucoup. */
+  cacheReadUsdPerMTok?: number;
+  cacheWriteUsdPerMTok?: number;
+}
+
 /** Ce que la boucle a besoin de savoir des sous-agents, résolu côté fonction. */
 export interface VmSubagentConfig {
   /** Le modèle des filles est-il choisissable (OpenRouter seulement) ? */
@@ -91,6 +115,8 @@ export interface VmJob {
   /** Prix d'entrée du modèle (USD/Mtok) — dimensionne le seuil de compaction, qui
    *  borne un COÛT par round et non un nombre de tokens. `null` = inconnu. */
   inputUsdPerMTok: number | null;
+  /** Tous les prix du modèle, pour la config d'opencode (cf. `VmModelPricing`). */
+  pricing?: VmModelPricing;
 
   // ── Ce que le tour a le droit de faire ────────────────────────────────────
   anchor: AgentAnchor;
@@ -118,6 +144,26 @@ export interface VmJob {
   // ── L'état du tour ────────────────────────────────────────────────────────
   /** Historique amorcé (tour froid) ou rehydraté depuis le checkpoint. */
   messages: AgentChatMessage[];
+  /**
+   * L'ÉTAT D'OPENCODE du tour précédent (MIN-286) — le journal d'événements que
+   * le superviseur rejoue pour retrouver sa session.
+   *
+   * À côté de `messages` et non à sa place : les deux moteurs coexistent pendant
+   * la bascule (drapeau `agent_engine` par projet), et une ligne de run doit
+   * pouvoir repartir sur l'un comme sur l'autre. Un run mené par la boucle maison
+   * n'a pas ce champ, un run mené par opencode a un `messages` vide — et c'est
+   * exactement ce qui rend le drapeau réversible sans migration de données.
+   *
+   * Ce n'est PAS une conversation sérialisée : c'est un journal append-only,
+   * incrémental par `seq`, dont la sonde du lot 0 a montré qu'il restaure une
+   * session avec son id, ses messages et son coût cumulé sur une microVM qui n'a
+   * jamais vu la conversation (86 events, 61 Ko, 95 ms).
+   */
+  opencode?: {
+    sessionId: string;
+    events: Record<string, unknown>[];
+    seq: Record<string, number>;
+  };
   instructions: { paths: string[]; bytes: number };
   usageSeqStart: number;
   /** Plafond restant, le plus serré du quota et du plafond de run. Absent = BYOK. */

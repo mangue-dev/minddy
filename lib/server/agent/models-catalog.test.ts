@@ -28,6 +28,7 @@ function entry(over: Partial<OpenRouterModelInfo> & { id: string }): OpenRouterM
     tools: true,
     pricing: { inputUsdPerMTok: 1, outputUsdPerMTok: 5 },
     reasoning: null,
+    cachePricing: null,
     ...over,
   };
 }

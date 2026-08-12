@@ -63,6 +63,17 @@ export interface OpenRouterModelInfo {
   /** Prix publiés, convertis au million de tokens. `null` si illisibles. */
   pricing: ModelPricing | null;
   /**
+   * Prix du CACHE de prompt, quand OpenRouter les publie (MIN-286) — `null`
+   * sinon, ce qui est le cas courant.
+   *
+   * Hors du multiplicateur exprès : celui-ci compare des modèles entre eux et
+   * n'a que faire du cache. Ces deux prix-là servent à FACTURER — un round
+   * d'agent relit son historique, donc la majorité de ses tokens d'entrée sont
+   * des lectures de cache, à un dixième du prix plein. Les compter au tarif
+   * d'entrée gonflerait la facture d'un ordre de grandeur.
+   */
+  cachePricing: { readUsdPerMTok: number; writeUsdPerMTok: number } | null;
+  /**
    * Ce que CE modèle accepte comme niveaux de raisonnement (MIN-122, affiné) —
    * `null` quand il n'en publie rien, ce qui veut dire deux choses différentes
    * qu'OpenRouter ne distingue pas : il ne raisonne pas, ou il ne le dit pas. Le
@@ -132,7 +143,12 @@ async function fetchIndex(apiKey?: string): Promise<void> {
         mandatory?: boolean;
         supported_efforts?: string[];
       };
-      pricing?: { prompt?: string | number; completion?: string | number };
+      pricing?: {
+        prompt?: string | number;
+        completion?: string | number;
+        input_cache_read?: string | number;
+        input_cache_write?: string | number;
+      };
     }>;
   };
   const next = new Map<string, OpenRouterModelInfo>();
@@ -140,6 +156,8 @@ async function fetchIndex(apiKey?: string): Promise<void> {
     if (!m.id) continue;
     const input = perMillionTokens(m.pricing?.prompt);
     const output = perMillionTokens(m.pricing?.completion);
+    const cacheRead = perMillionTokens(m.pricing?.input_cache_read);
+    const cacheWrite = perMillionTokens(m.pricing?.input_cache_write);
     // Un modèle qui ne déclare AUCUNE sortie est réputé textuel : l'absence
     // d'annonce ne doit pas le faire disparaître du picker.
     const outputs = m.architecture?.output_modalities ?? [];
@@ -155,6 +173,13 @@ async function fetchIndex(apiKey?: string): Promise<void> {
       pricing:
         input != null && output != null
           ? { inputUsdPerMTok: input, outputUsdPerMTok: output }
+          : null,
+      // Les deux ensemble ou rien : un prix de lecture sans prix d'écriture
+      // ferait payer l'écriture au tarif plein, ce qui est pire que de laisser
+      // opencode retomber sur le prix d'entrée pour les deux.
+      cachePricing:
+        cacheRead != null && cacheWrite != null
+          ? { readUsdPerMTok: cacheRead, writeUsdPerMTok: cacheWrite }
           : null,
     });
   }
