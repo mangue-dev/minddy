@@ -30,6 +30,40 @@ export const BACKGROUND_FETCH_BYTES = 32_000;
 /** Caractères de sortie renvoyés au modèle par `check` (tête + queue). */
 export const BACKGROUND_OUTPUT_CAP = 3000;
 
+/**
+ * OÙ EST LE LOG COMPLET, ET COMMENT LE LIRE — la seule phrase de ce module qui
+ * dépende du moteur (MIN-286, lot 3).
+ *
+ * Le log vit dans `TOOL_OUTPUT_DIR`, donc **hors du dépôt** (le `git add -A` de
+ * fin de tour ne doit jamais le voir). Chez la boucle maison, `read_file` et
+ * `grep` y vont : ce sont nos tools, et ils lisent ce qu'on leur dit. Chez
+ * opencode, non — une lecture hors dépôt publie `external_directory`, que le
+ * harness REFUSE ([opencode-permissions.ts](vm/opencode-permissions.ts)). Y
+ * envoyer le modèle serait l'envoyer contre un mur qu'on tient nous-mêmes ; son
+ * shell, lui, y va.
+ */
+export interface BackgroundLogNotes {
+  /** La phrase de la note de démarrage. */
+  full(logPath: string): string;
+  /** Celle de la note d'élision : lire le fichier plutôt que resonder. */
+  insteadOfPolling(logPath: string): string;
+}
+
+/** Les tools de la boucle maison — le texte d'origine, au mot près. */
+export const LOOP_BACKGROUND_LOG_NOTES: BackgroundLogNotes = {
+  full: (p) => `The complete log is at ${p} (readable with read_file and grep)`,
+  insteadOfPolling: (p) =>
+    `The complete log is at ${p} — grep it or read_file it with offset/limit instead of polling again.`,
+};
+
+/** Chez opencode : le fichier est hors du dépôt, donc c'est le SHELL qui le lit. */
+export const OPENCODE_BACKGROUND_LOG_NOTES: BackgroundLogNotes = {
+  full: (p) =>
+    `The complete log is at ${p} — it is outside the repository, so read it with bash (\`tail -n 200 ${p}\`, \`grep -n <pattern> ${p}\`) rather than with read`,
+  insteadOfPolling: (p) =>
+    `The complete log is at ${p} — it is outside the repository: read it with bash (\`grep -n <pattern> ${p}\`, \`tail -n 200 ${p}\`) instead of polling again.`,
+};
+
 /** Ce que la sandbox renvoie au démarrage d'un job. */
 export interface BackgroundStarted {
   pid: number;
@@ -237,6 +271,8 @@ export class BackgroundJobs {
   constructor(
     private readonly runner: BackgroundJobRunner,
     private readonly seqBase = 0,
+    /** Comment DIRE au modèle d'aller lire le log complet — cf. `BackgroundLogNotes`. */
+    private readonly notes: BackgroundLogNotes = LOOP_BACKGROUND_LOG_NOTES,
   ) {}
 
   /** Exécute un appel `run_background`. Ne lève jamais : tout revient au modèle
@@ -326,9 +362,9 @@ export class BackgroundJobs {
         note:
           `Started in the background. Give it a moment to boot, then poll it with ` +
           `run_background {action:"check", job_id:"${jobId}"} — each check returns only what was ` +
-          `written since the previous one. The complete log is at ${job.logPath} (readable with ` +
-          `read_file and grep). Stop it with {action:"stop"} as soon as you are done; every ` +
-          `background job is killed at the end of this turn anyway.`,
+          `written since the previous one. ${this.notes.full(job.logPath)}. Stop it with ` +
+          `{action:"stop"} as soon as you are done; every background job is killed at the end of ` +
+          `this turn anyway.`,
       },
       success: true,
     };
@@ -365,8 +401,7 @@ export class BackgroundJobs {
               note:
                 `Output since the last check was too long to show in full` +
                 (read.skippedBytes > 0 ? ` (${read.skippedBytes} bytes were skipped)` : "") +
-                `. The complete log is at ${job.logPath} — grep it or read_file it with ` +
-                `offset/limit instead of polling again.`,
+                `. ${this.notes.insteadOfPolling(job.logPath)}`,
             }
           : {}),
       },

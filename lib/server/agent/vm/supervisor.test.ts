@@ -115,6 +115,9 @@ const h = {
   supervisorTools: {} as Record<string, (args: Record<string, unknown>) => Promise<unknown>>,
   /** Appels au plan de contrôle (`cp.callTool`), dans l'ordre. */
   toolCalls: [] as Array<{ name: string; body: Record<string, unknown> }>,
+  /** Les commandes passées au dépôt, dans l'ordre — l'ordre EST ce qui se teste
+   *  pour les jobs de fond : tués avant le `git add -A`, jamais après. */
+  exec: [] as string[],
   /** Ce que le proxy local a vu passer chez le fournisseur. */
   generations: [] as Array<{
     id: string | null;
@@ -161,6 +164,9 @@ function cp(): ControlPlaneClient {
 function host() {
   return {
     exec: vi.fn(async (command: string) => {
+      h.exec.push(command);
+      // Le lanceur d'un job de fond rend son PID sur stdout (`background.ts`).
+      if (command.includes("setsid")) return { exitCode: 0, stdout: "4242\n", stderr: "" };
       // `commitAndPush` enchaîne add / commit / push / rev-parse ; `changedFiles`
       // fait un diff. Ce qui compte est que le superviseur les appelle, pas ce
       // que git répond — la mécanique est testée chez `repo-host`.
@@ -365,6 +371,7 @@ beforeEach(() => {
   h.permissionReplyFails = false;
   h.supervisorTools = {};
   h.toolCalls = [];
+  h.exec = [];
 });
 
 /** Une demande de permission, telle qu'opencode la publie sur le flux. */
@@ -888,6 +895,92 @@ describe("la forge", () => {
     for (const tool of ["edit", "write", "apply_patch"]) {
       expect(config.agent.build.tools[tool]).toBe(false);
     }
+  });
+});
+
+/**
+ * MIN-286 lot 3 — LES JOBS DE FOND, reposés en tool local.
+ *
+ * `bash` n'a pas de mode fond : sans ce tool, la doctrine « fais tourner le code
+ * pour de vrai » se rabattait sur un `&` dans le shell persistant — donc sans
+ * aucun de ses garde-fous. Ce qui se teste ici est exactement ce que le repli ne
+ * tenait pas : le tool est SERVI et exécuté dans la VM, et ses jobs sont TUÉS
+ * avant que quoi que ce soit ne stage le dépôt.
+ */
+describe("les jobs de fond", () => {
+  /** Ce qu'un tool généré poste : le pont, puis le registre du superviseur. */
+  const background = () => h.supervisorTools.run_background;
+
+  it("sert `run_background` au modèle et l'exécute dans la microVM", async () => {
+    await run();
+    const files = h.files.filter((f) => f.path.startsWith(OPENCODE_TOOL_DIR));
+    expect(files.some((f) => f.path.endsWith("/run_background.ts"))).toBe(true);
+
+    const out = (await background()({ action: "start", command: "npm run dev" })) as {
+      success: boolean;
+      result: { job_id: string; pid: number };
+    };
+    expect(out.success).toBe(true);
+    expect(out.result.pid).toBe(4242);
+    // Le job tourne dans le dépôt de la VM, jamais chez le plan de contrôle.
+    expect(h.exec.some((c) => c.includes("setsid"))).toBe(true);
+    expect(h.toolCalls.some((c) => c.name === "run_background")).toBe(false);
+  });
+
+  it("refuse une commande que le garde-fou git interdit", async () => {
+    // `checkCommand` vaut ICI AUSSI : sans lui, `run_background` serait une porte
+    // dérobée sur `git push` (MIN-108).
+    await run();
+    const out = (await background()({ action: "start", command: "git push --force" })) as {
+      success: boolean;
+    };
+    expect(out.success).toBe(false);
+    expect(h.exec.some((c) => c.includes("git push --force"))).toBe(false);
+  });
+
+  it("tue ses jobs AVANT de stager le dépôt en fin de tour", async () => {
+    /**
+     * Le job est lancé PENDANT le tour (le pont est ouvert avant le serveur), ce
+     * qui est la seule façon de prouver l'ordre : un serveur encore vivant
+     * pendant le `git add -A` fait commiter ce qu'il vient d'écrire, et il
+     * tiendrait la microVM éveillée après le tour.
+     */
+    await run(
+      {},
+      {
+        startToolBridge: async (opts) => {
+          h.supervisorTools = (opts.supervisorTools ?? {}) as typeof h.supervisorTools;
+          await background()({ action: "start", command: "npm run dev" });
+          return await startToolBridge(opts);
+        },
+      },
+    );
+    const killed = h.exec.findIndex((c) => c.includes("kill -TERM"));
+    const staged = h.exec.findIndex((c) => c.includes("git add -A"));
+    expect(killed).toBeGreaterThanOrEqual(0);
+    expect(staged).toBeGreaterThanOrEqual(0);
+    expect(killed).toBeLessThan(staged);
+  });
+
+  it("tue ses jobs avant un `create_pr`, et le DIT au modèle", async () => {
+    // Un serveur arrêté en silence laisse le modèle croire qu'il tourne : il
+    // enchaîne des `curl` sur un port mort en cherchant ce qu'il a cassé (MIN-209).
+    await run();
+    await background()({ action: "start", command: "npm run dev" });
+    const out = (await h.supervisorTools.create_pr({ title: "MIN-42: le titre" })) as {
+      success: boolean;
+    };
+    expect(out.success).toBe(true);
+    const call = h.toolCalls.find((c) => c.name === "create_pr");
+    expect(String(call!.body.jobsNote)).toContain("1 background job was stopped");
+  });
+
+  it("n'en donne AUCUN à une session de relecture", async () => {
+    // Une relecture tient dans une session : rien à lancer, rien à laisser vivant.
+    await run({ writesToRepo: false, anchor: "pr" });
+    expect(h.supervisorTools.run_background).toBeUndefined();
+    const files = h.files.filter((f) => f.path.startsWith(OPENCODE_TOOL_DIR));
+    expect(files.some((f) => f.path.endsWith("/run_background.ts"))).toBe(false);
   });
 });
 

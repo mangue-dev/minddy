@@ -1,4 +1,11 @@
-import { changedFiles, commitAndPush, type RepoHost, REPO_DIR } from "../repo-host";
+import {
+  changedFiles,
+  commitAndPush,
+  repoBackgroundRunner,
+  type RepoHost,
+  REPO_DIR,
+} from "../repo-host";
+import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
 import { SecretRedactor } from "../redact";
 import { cap } from "../tool-summary";
 import type { AgentCheckpoint } from "../runs";
@@ -17,7 +24,7 @@ import {
   opencodeServerEnv,
   subagentAgentTable,
 } from "./opencode-config";
-import { opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
+import { localToolsFor, opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-bridge";
 import { makeOpencodeDelivery, type OpencodeDelivery } from "./opencode-delivery";
 import { decidePermission } from "./opencode-permissions";
@@ -220,6 +227,45 @@ export async function runOpencodeTurn(
   );
 
   /**
+   * LES JOBS DE FOND (MIN-286, lot 3 ; MIN-114 pour la politique) — `bash` n'a pas
+   * de mode fond, donc le tool est à nous et son registre vit ICI.
+   *
+   * `background.ts` ne bouge pas d'une ligne : le plafond de jobs, le garde-fou
+   * `checkCommand`, les offsets et la mise en forme y sont purs, et ce sont eux
+   * qui manquaient au repli (« lance ton serveur en `&` ») que ce tool remplace.
+   * Ce qui est neuf tient en trois branchements : le pont l'exécute, `create_pr`
+   * tue avant de stager, la fin de tour tue avant de commiter.
+   *
+   * `seqBase: 0` comme dans [turn.ts](turn.ts) : les fichiers de log sont
+   * numérotés par TOUR, et un tour a sa microVM.
+   */
+  const background = new BackgroundJobs(
+    repoBackgroundRunner(host),
+    0,
+    // Le log vit hors du dépôt, et une lecture hors dépôt est refusée par notre
+    // propre verdict de permission (`external_directory`) : c'est le SHELL qu'on
+    // envoie le lire, pas `read`.
+    OPENCODE_BACKGROUND_LOG_NOTES,
+  );
+  const servesBackground = localToolsFor(job).some(
+    (t) => t.function.name === "run_background",
+  );
+
+  /**
+   * Les jobs tués avant un `git add -A`, DIT au modèle. Un serveur arrêté en
+   * silence lui laisse croire qu'il tourne, et il enchaîne des `curl` sur un port
+   * mort en cherchant ce qu'il a cassé (MIN-209).
+   */
+  async function stopJobsForStaging(): Promise<string> {
+    const stopped = await background.stopAll().catch(() => 0);
+    if (stopped === 0) return "";
+    return (
+      `${stopped === 1 ? "1 background job was" : `${stopped} background jobs were`} stopped ` +
+      `before staging — nothing may write to the repository while it is being committed. Restart what you still need.`
+    );
+  }
+
+  /**
    * LE PUSH DU TOUR, en un seul endroit — il sert deux fois : `create_pr` (la VM
    * pousse, la fonction ouvre) et la fin de tour.
    *
@@ -261,8 +307,10 @@ export async function runOpencodeTurn(
    *    ([subagent.ts](../subagent.ts), `writeLock`), tenu ici parce que la
    *    demande de permission ne voit passer que les tools d'opencode.
    *
-   * Il n'y a PAS de `jobsNote` : `bash` n'a pas de mode fond chez opencode
-   * (dossier §4), donc aucun serveur de dev à arrêter avant de stager.
+   * Et il porte de nouveau un `jobsNote` : depuis que `run_background` est reposé
+   * en tool local, un serveur de dev peut très bien tourner au moment de la
+   * livraison. Il est tué AVANT le staging, et le modèle l'apprend dans la même
+   * réponse — y compris quand le push échoue derrière.
    */
   const createPr: SupervisorTool | null = job.writesToRepo
     ? async (args) => {
@@ -279,20 +327,25 @@ export async function runOpencodeTurn(
           };
         }
         const title = typeof args.title === "string" ? args.title.trim() : "";
+        // Rien ne doit écrire dans le dépôt pendant le `git add -A` : un watcher
+        // qui régénère un fichier au milieu du staging se fait commiter à moitié.
+        const jobsNote = await stopJobsForStaging();
         let pushed: VmPushResult;
         try {
           pushed = await pushWork(title || `wip(${job.commitRef}): agent update`);
         } catch (err) {
           // Un push raté est une erreur de TOOL : le modèle la lit et décide. Le
           // message peut recopier l'URL de push, token compris (MIN-239).
+          const detail = `push failed: ${secrets.redact((err as Error).message)}`;
           return {
-            result: { error: `push failed: ${secrets.redact((err as Error).message)}` },
+            result: { error: jobsNote ? `${detail} ${jobsNote}` : detail },
             success: false,
           };
         }
         const res = await cp.callTool("create_pr", {
           args,
           pushed,
+          ...(jobsNote ? { jobsNote } : {}),
           workBranch: job.workBranch,
         });
         return { result: res.result, success: res.success };
@@ -303,9 +356,14 @@ export async function runOpencodeTurn(
     job,
     cp,
     delivery,
-    // Une session de RELECTURE n'a pas ce tool : `agentToolsFor` ne le sert pas à
-    // l'ancrage `pr`, et le pont refuse ce qui arriverait quand même.
-    ...(createPr ? { supervisorTools: { create_pr: createPr } } : {}),
+    // Une session de RELECTURE n'a ni l'un ni l'autre : `agentToolsFor` ne les
+    // sert pas à l'ancrage `pr`, et le pont refuse ce qui arriverait quand même.
+    supervisorTools: {
+      ...(createPr ? { create_pr: createPr } : {}),
+      // `handle` ne lève jamais : tout revient au modèle comme un résultat de
+      // tool, réussi ou en erreur (plafond atteint, commande refusée, job inconnu).
+      ...(servesBackground ? { run_background: (args) => background.handle(args) } : {}),
+    },
     port: deps.toolBridgePort ?? OPENCODE_PORT + 1,
   });
 
@@ -715,6 +773,14 @@ export async function runOpencodeTurn(
      * c'est pourtant ce verrou que le tour SUIVANT relit dans son checkpoint.
      */
     delivery.noteEdits();
+    /**
+     * LES JOBS DE FOND, TUÉS AVANT LE PUSH — et avant lui seulement : ils ont
+     * servi pendant tout le tour. Un serveur laissé vivant écrirait dans le dépôt
+     * pendant le `git add -A` (un `.next/`, un fichier de build régénéré), et il
+     * tiendrait la microVM éveillée après la fin du tour. Même geste que
+     * [turn.ts](turn.ts), au même endroit.
+     */
+    await background.stopAll().catch(() => 0);
     let pushed: VmPushResult | null = null;
     let pushError: string | undefined;
     if (job.writesToRepo) {
@@ -800,6 +866,10 @@ export async function runOpencodeTurn(
   } catch (err) {
     return failed((err as Error).message);
   } finally {
+    // Filet : un tour qui sort par une exception n'est pas passé par l'arrêt
+    // d'avant-push, et un serveur de dev survivrait au tour. `stopAll` est
+    // idempotent — un job déjà tué n'est plus vivant, donc il n'est pas retué.
+    await background.stopAll().catch(() => 0);
     await server?.stop().catch(() => {});
     await proxy.close().catch(() => {});
     await bridge.close().catch(() => {});

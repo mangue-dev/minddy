@@ -146,6 +146,18 @@ export interface AgentCheckpoint {
    * mort sur son premier appel modèle n'est ni l'un ni l'autre.
    */
   providerRetries?: number;
+  /**
+   * L'ÉTAT D'OPENCODE (MIN-286) — le journal d'événements que le superviseur
+   * rejoue pour retrouver sa session (cf. `OpencodeCheckpointState`).
+   *
+   * À CÔTÉ de `messages` et non à sa place, et ce n'est pas une transition : c'est
+   * ce qui rend un checkpoint lisible sans son contexte. Une conversation menée par
+   * la boucle maison a `messages` et pas ce champ ; une conversation menée par
+   * opencode a ce champ et un `messages` vide. Un tour repris sait donc, en lisant
+   * son seul checkpoint, quel moteur l'a écrit — et c'est ce qui protège un run
+   * dont la LIGNE dirait le contraire (cf. `effectiveEngine` dans execute.ts).
+   */
+  opencode?: { sessionId: string; events: Record<string, unknown>[]; seq: Record<string, number> };
 }
 
 export interface AgentRun {

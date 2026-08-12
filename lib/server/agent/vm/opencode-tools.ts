@@ -105,11 +105,54 @@ export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * LES TOOLS LOCAUX — ceux que le SUPERVISEUR exécute dans la microVM, sans jamais
+ * sortir d'elle (MIN-286, lot 3 ; dossier §3.2).
+ *
+ * `run_background` est le seul : `bash` n'a pas de mode fond, et le registre de
+ * jobs d'opencode sert `task`, pas le shell. Le repli qui tenait jusqu'ici — dire
+ * au modèle de lancer son serveur en `&` dans le shell persistant — portait la
+ * doctrine (« fais tourner le code pour de vrai ») sans aucun de ses garde-fous :
+ * rien ne tuait le serveur avant le `git add -A`, sa sortie n'était bornée par
+ * personne, et `checkCommand` ne voyait pas passer la commande. Le tool est donc
+ * reposé, et c'est [background.ts](../background.ts) inchangé qui le tient — la
+ * politique est pure, seul le câblage est neuf.
+ *
+ * Il traverse le même pont que les tools de domaine : le fichier généré est
+ * identique, c'est le pont qui l'exécute au lieu de le faire suivre.
+ */
+export const LOCAL_TOOL_NAMES: ReadonlySet<string> = new Set(["run_background"]);
+
+/**
  * Les tools de domaine SERVIS par ce tour, avec leurs descriptions déjà taillées
  * à son ancrage. `agentToolsFor` fait tout le travail — on ne garde que ceux dont
  * l'exécution nous revient, les autres étant rendus par opencode.
  */
 export function domainToolsFor(job: VmJob): AgentToolDef[] {
+  return toolsFor(job).filter((t) => DOMAIN_TOOL_NAMES.has(t.function.name));
+}
+
+/**
+ * Les tools LOCAUX servis par ce tour. Le superviseur s'en sert pour ne câbler
+ * `run_background` que là où il est offert — une session de relecture ne lance
+ * rien en fond, et un tool routé sans être servi est un tool qu'on maintient pour
+ * personne.
+ */
+export function localToolsFor(job: VmJob): AgentToolDef[] {
+  return toolsFor(job).filter((t) => LOCAL_TOOL_NAMES.has(t.function.name));
+}
+
+/**
+ * Tout ce qu'on ÉCRIT dans le dossier de tools : domaine + local. Une session de
+ * relecture n'a pas `run_background` (`PR_REVIEW_TOOLS` ne le porte pas), et c'est
+ * `agentToolsFor` qui le dit — pas une deuxième condition ici.
+ */
+function bridgedToolsFor(job: VmJob): AgentToolDef[] {
+  return toolsFor(job).filter(
+    (t) => DOMAIN_TOOL_NAMES.has(t.function.name) || LOCAL_TOOL_NAMES.has(t.function.name),
+  );
+}
+
+function toolsFor(job: VmJob): AgentToolDef[] {
   return agentToolsFor({
     anchor: job.anchor,
     webSearch: job.webSearch,
@@ -119,7 +162,7 @@ export function domainToolsFor(job: VmJob): AgentToolDef[] {
     subagentModels: job.subagents.models,
     chain: job.chain,
     interactive: job.interactive,
-  }).filter((t) => DOMAIN_TOOL_NAMES.has(t.function.name));
+  });
 }
 
 type JsonSchema = {
@@ -250,7 +293,7 @@ export interface OpencodeToolFile {
  * faire diverger reviendrait à servir `read_issue` sous le nom `read-issue.ts`.
  */
 export function opencodeToolFiles(job: VmJob): OpencodeToolFile[] {
-  return domainToolsFor(job).map((def) => ({
+  return bridgedToolsFor(job).map((def) => ({
     path: `${OPENCODE_TOOL_DIR}/${def.function.name}.ts`,
     content: renderOpencodeTool(def),
   }));

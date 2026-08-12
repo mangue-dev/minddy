@@ -108,11 +108,17 @@ export interface ToolBridgeOptions {
    */
   delivery?: OpencodeDelivery;
   /**
-   * Les tools que le superviseur exécute au lieu de les faire suivre : `create_pr`,
-   * parce qu'il POUSSE avant de faire ouvrir. Absent, il est REFUSÉ plutôt que
-   * passé tel quel — un `create_pr` qui atteindrait la forge sans que la VM ait
-   * poussé ouvrirait une pull request sur une branche vide. C'est le cas d'une
-   * session de relecture, qui ne pousse jamais.
+   * Les tools que le superviseur exécute au lieu de les faire suivre :
+   *
+   *  - `create_pr`, parce qu'il POUSSE avant de faire ouvrir ;
+   *  - `run_background`, qui ne sort jamais de la microVM (tool LOCAL, §3.2) : le
+   *    registre de jobs vit dans le superviseur, qui les tue avant chaque
+   *    `git add -A` et à la fin du tour.
+   *
+   * Absent, le tool est REFUSÉ plutôt que passé tel quel — un `create_pr` qui
+   * atteindrait la forge sans que la VM ait poussé ouvrirait une pull request sur
+   * une branche vide. C'est le cas d'une session de relecture, qui ne pousse
+   * jamais et ne lance rien en fond.
    */
   supervisorTools?: Record<string, SupervisorTool>;
   /** 0 = port libre choisi par l'OS. Le superviseur lit l'URL rendue. */
@@ -124,7 +130,7 @@ export interface ToolBridgeOptions {
  * qui n'est pas là-dedans est un passe-plat, et c'est le cas le plus fréquent :
  * lire un ticket ou écrire une page n'a besoin d'aucun état de tour.
  */
-const SUPERVISOR_ONLY = new Set(["create_pr"]);
+const SUPERVISOR_ONLY = new Set(["create_pr", "run_background"]);
 
 /** Démarre le pont. Le superviseur l'ouvre AVANT le serveur opencode. */
 export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBridge> {

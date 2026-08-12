@@ -71,6 +71,16 @@ export interface PromptToolNames {
   shell: string;
   /** Lancer une commande de FOND. `null` = le moteur n'en a pas. */
   background: string | null;
+  /**
+   * Le shell garde-t-il la sortie COMPLÈTE sur disque (`full_output_path`) ?
+   *
+   * Vrai pour `run_command`, faux pour le `bash` d'opencode, qui tronque sans rien
+   * conserver. Ce champ existe parce qu'il était lu dans `background` — commode
+   * tant qu'opencode n'avait pas de tool de fond, faux dès qu'il en a eu un
+   * (MIN-286) : le conseil « relis ta sortie dans le fichier » se serait mis à
+   * promettre un fichier qui n'existe pas.
+   */
+  shellSavesOutput: boolean;
   /** Poser des questions à l'utilisateur et terminer le tour. */
   ask: string;
   /** Déléguer à un sous-agent. */
@@ -83,6 +93,7 @@ export const LOOP_TOOL_NAMES: PromptToolNames = {
   list: "list_dir",
   shell: "run_command",
   background: "run_background",
+  shellSavesOutput: true,
   ask: "ask_user",
   spawn: "spawn_agent",
 };
@@ -90,17 +101,24 @@ export const LOOP_TOOL_NAMES: PromptToolNames = {
 /**
  * Les noms d'opencode, mesurés sur le binaire (docs/harness-opencode.md §3.1).
  *
- * `background: null` : `bash` n'a pas de mode fond, et le registre de jobs
- * d'opencode sert `task`, pas le shell. Ce que `run_background` faisait se refait
- * à la main dans son shell PERSISTANT (`&` puis `kill`), et c'est ce que dit le
- * fragment de repli — pas un tool de plus à maintenir.
+ * `background` porte le MÊME nom des deux côtés, et c'est un choix : `bash` n'a
+ * pas de mode fond (le registre de jobs d'opencode sert `task`, pas le shell), donc
+ * `run_background` est reposé en tool LOCAL de la microVM (MIN-286, lot 3 —
+ * [tool-bridge.ts](vm/tool-bridge.ts)). Le repli qui tenait en attendant — « lance
+ * ton serveur en `&` dans le shell persistant et tue-le toi-même » — disait la
+ * doctrine sans ses garde-fous : rien ne tuait le serveur en fin de tour, rien ne
+ * bornait sa sortie, et `checkCommand` ne voyait pas la commande passer.
+ *
+ * `shellSavesOutput: false` en revanche est bien un écart : le `bash` d'opencode
+ * tronque sans conserver, il n'y a pas de `full_output_path` à relire.
  */
 export const OPENCODE_TOOL_NAMES: PromptToolNames = {
   read: "read",
   // Pas de tool dédié : `read` sur un répertoire le liste (un nom par ligne).
   list: "read",
   shell: "bash",
-  background: null,
+  background: "run_background",
+  shellSavesOutput: false,
   ask: "question",
   spawn: "task",
 };
@@ -359,9 +377,22 @@ export function grepPatternNote(): string {
  * `full_output_path` qui n'existe pas ferait chercher un fichier fantôme.
  */
 export function shellOutputNote(n: PromptToolNames): string {
-  return n.background
+  return n.shellSavesOutput
     ? `Long output is truncated in the MIDDLE (you always get the beginning and the end, where the verdict lives) and the full output is saved inside the sandbox — the returned \`full_output_path\` is readable with \`grep\` and \`${n.read}\` (offset/limit). So never pipe to \`head\`/\`tail\` and never re-run a command with a narrower filter just to shorten its output: run it plainly, then search the saved file. Commands already run at the repository ROOT — AVOID \`cd <dir> && <cmd>\`; to run somewhere else, pass \`workdir\` (repo-relative).`
     : `Long output is truncated, and nothing keeps the rest: when you expect a lot of it, redirect it yourself (\`<cmd> > /tmp/out.log 2>&1\`) and then \`grep\` the file — never pipe to \`head\`/\`tail\`, and never re-run a command with a narrower filter just to shorten its output. The shell is PERSISTENT and starts at the repository ROOT: a \`cd\` sticks for your next call, so come back to the root rather than reasoning from where you left it.`;
+}
+
+/**
+ * LE TOOL DE FOND, décrit une seule fois pour les deux moteurs (MIN-286).
+ *
+ * C'est le même tool des deux côtés — `background.ts` sur `run_command` dans la
+ * boucle maison, `background.ts` sur le shell de la microVM chez opencode — donc
+ * la même description, au nom du shell près. Un moteur qui n'en aurait pas
+ * (`background: null`) rend une chaîne vide plutôt qu'une promesse.
+ */
+export function backgroundToolNote(n: PromptToolNames): string {
+  if (!n.background) return "";
+  return `- \`${n.background}\` — start a long-lived command (dev server, watcher) and keep working: \`start\` gives you a \`job_id\`, \`check\` returns what it wrote since your last check plus whether it is still running, \`stop\` kills it. This is how you see your work actually RUN: start the server, give it a moment, \`curl\` it with \`${n.shell}\` (\`curl -s --retry 5 --retry-connrefused http://localhost:3000/\`), read the answer, stop the job. It has NO stdin — pass the non-interactive flags (\`--yes\`, \`CI=1\`) — and it is not for commands that finish on their own (\`${n.shell}\` gives you their exit code). Every background job is killed when the turn ends, so start it in the turn that uses it, and stop it yourself as soon as you're done.`;
 }
 
 /**
@@ -369,7 +400,7 @@ export function shellOutputNote(n: PromptToolNames): string {
  * lance que du lecture seule, donc pas de `timeout_ms` à expliquer).
  */
 export function reviewShellOutputNote(n: PromptToolNames): string {
-  return n.background
+  return n.shellSavesOutput
     ? `Long output is truncated in the MIDDLE (you always get the beginning and the end) and saved in full at the returned \`full_output_path\`, readable with \`grep\` and \`${n.read}\` — so never pipe to \`head\`/\`tail\`. Commands already run at the repository ROOT; pass \`workdir\` instead of \`cd <dir> && …\`.`
     : `Long output is truncated, and nothing keeps the rest: when you expect a lot of it, redirect it yourself (\`<cmd> > /tmp/out.log 2>&1\`) and then \`grep\` the file — never pipe to \`head\`/\`tail\`. The shell is PERSISTENT and starts at the repository ROOT: a \`cd\` sticks for your next call.`;
 }
@@ -602,7 +633,7 @@ ${input.subagents.templates ?? describeTemplates()}`
 ${editingTools}
 - \`move_file\` / \`delete_file\` — rename or remove a file (they go through git so the pull request captures them). Never use \`run_command\` for these.
 - \`run_command\` — install deps, lint, type-check, build, run tests. Long output is truncated in the MIDDLE (you always get the beginning and the end, where the verdict lives) and the full output is saved inside the sandbox — the returned \`full_output_path\` is readable with \`grep\` and \`read_file\` (offset/limit). So never pipe to \`head\`/\`tail\` and never re-run a command with a narrower filter just to shorten its output: run it plainly, then search the saved file. Commands already run at the repository ROOT — AVOID \`cd <dir> && <cmd>\`; to run somewhere else, pass \`workdir\` (repo-relative). \`timeout_ms\` only lowers the kill timeout, for a command you expect to be quick and that would otherwise hang — and the wall-clock left on the turn lowers it too, on its own: a command killed far below the cap ran out of TURN, it was not hanging.
-- \`run_background\` — start a long-lived command (dev server, watcher) and keep working: \`start\` gives you a \`job_id\`, \`check\` returns what it wrote since your last check plus whether it is still running, \`stop\` kills it. This is how you see your work actually RUN: start the server, give it a moment, \`curl\` it with \`run_command\` (\`curl -s --retry 5 --retry-connrefused http://localhost:3000/\`), read the answer, stop the job. It has NO stdin — pass the non-interactive flags (\`--yes\`, \`CI=1\`) — and it is not for commands that finish on their own (\`run_command\` gives you their exit code). Every background job is killed when the turn ends, so start it in the turn that uses it, and stop it yourself as soon as you're done.${
+${backgroundToolNote(LOOP_TOOL_NAMES)}${
     input.webSearch
       ? `
 - \`web_search\` — look something up on the web (the sandbox has no other internet access). For a dependency's current API, a breaking change, an unfamiliar error from a library, a version, a spec. Read the repo first — package.json, the lockfile, the dependency's files, the repo's own docs — and search only when the answer isn't there and you don't know it reliably. Each search costs money: one focused query, never the same one twice.${

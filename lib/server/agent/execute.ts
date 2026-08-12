@@ -32,6 +32,7 @@ import {
   commitAndPush,
   revParseHead,
   changedFiles,
+  repoBackgroundRunner,
 } from "./repo-host";
 import { liveEditHook, newLiveEditLog } from "./live-edits";
 import { BackgroundJobs } from "./background";
@@ -84,7 +85,6 @@ import {
 import {
   makeExecTool,
   readRepoInstructions,
-  repoBackgroundRunner,
   type CreatePrHandler,
   type WebSearchHandler,
 } from "./exec-tool";
@@ -113,6 +113,7 @@ import {
   type AgentResourceContext,
 } from "./prompt";
 import { buildOpencodeAnchor } from "./opencode-anchor";
+import type { AgentEngine } from "@/lib/agent-engines";
 import {
   loadPrReviewBoot,
   loadPrRunContext,
@@ -345,6 +346,38 @@ function capSubagentHistory(messages: AgentChatMessage[]): AgentChatMessage[] | 
   const trimmed = [...messages];
   pruneToolOutputs(trimmed, { protectBytes: 40_000, minimumBytes: 20_000 });
   return JSON.stringify(trimmed).length <= SUBAGENT_HISTORY_MAX_BYTES ? trimmed : null;
+}
+
+/**
+ * QUEL MOTEUR DOIT JOUER CE TOUR (MIN-286) — la ligne du run, sauf si son
+ * CHECKPOINT dit le contraire.
+ *
+ * La ligne suffirait si elle était toujours vraie, et elle ne l'est pas dans une
+ * fenêtre précise : entre la migration qui a posé `agent_engine` (défaut
+ * `opencode`) et le déploiement de ce code, la prod tournait encore sur la boucle
+ * maison, qui n'écrit pas cette colonne — les runs de cette fenêtre portent donc
+ * `opencode` sur leur ligne et une conversation de boucle dans leur checkpoint.
+ * Repris tels quels, ils partiraient chez opencode avec un journal d'événements
+ * vide : la conversation entière perdue, en silence, sur un run que l'utilisateur
+ * croit poursuivre.
+ *
+ * Le checkpoint, lui, ne peut pas mentir : c'est le moteur qui l'a écrit. Une
+ * conversation dans `messages` sans journal `opencode` a été jouée par la boucle,
+ * et elle FINIT avec elle. Un run neuf n'a pas de checkpoint du tout et suit sa
+ * ligne, donc opencode.
+ *
+ * Ce garde-fou coûte trois lignes et couvre plus que sa fenêtre : n'importe quelle
+ * ligne mal étiquetée (rattrapage de données, SQL à la main) retombe sur le moteur
+ * qui détient réellement l'historique.
+ */
+function effectiveEngine(run: AgentRun): AgentEngine {
+  // PAS de liaison nommée `checkpoint` ici : `checkpoint-turn-state.test.ts` ancre
+  // ses lectures sur la PREMIÈRE déclaration de ce nom dans le fichier, qui est le
+  // checkpoint de fin de tour. L'ombrer lui ferait vérifier le mauvais objet — et
+  // il l'a dit tout de suite, ce qui est exactement ce qu'on lui demande.
+  const saved = run.checkpoint;
+  if (saved?.messages?.length && !saved.opencode) return "loop";
+  return run.agent_engine;
 }
 
 /**
@@ -1353,7 +1386,7 @@ export async function executeAgentRun(
      * l'historique vit dans le journal d'opencode — et le prompt vient du steering.
      */
     const opencodeInput =
-      run.agent_engine === "opencode"
+      effectiveEngine(run) === "opencode"
         ? {
             anchorInstructions: buildOpencodeAnchor({
               locale: commentLocale,
@@ -1752,9 +1785,10 @@ export async function executeAgentRun(
         ledgerRunId: run.run_id ?? run.id,
         projectId: run.project_id,
         appOrigin: agentControlOrigin(),
-        // Le moteur, tel qu'il a été GELÉ sur la ligne au lancement (MIN-286) :
-        // c'est `vm/main.ts` qui aiguille dessus, et il ne le relit nulle part.
-        engine: run.agent_engine,
+        // Le moteur du tour (MIN-286) : celui de la ligne, sauf si le checkpoint
+        // dit le contraire — cf. `effectiveEngine`. C'est `vm/main.ts` qui aiguille
+        // dessus, et il ne le relit nulle part.
+        engine: effectiveEngine(run),
         model: run.model,
         baseUrl,
         provider,

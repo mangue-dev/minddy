@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DOMAIN_TOOL_NAMES,
   domainToolsFor,
+  localToolsFor,
   opencodeToolFiles,
   renderOpencodeTool,
   schemaExpression,
@@ -223,9 +224,33 @@ describe("le fichier généré", () => {
 describe("où les fichiers sont posés", () => {
   it("un fichier par tool, nommé comme le tool", () => {
     const files = opencodeToolFiles(job());
-    const names = domainToolsFor(job()).map((t) => t.function.name);
-    expect(files.map((f) => f.path)).toEqual(
-      names.map((n) => `${OPENCODE_TOOL_DIR}/${n}.ts`),
+    const names = [...domainToolsFor(job()), ...localToolsFor(job())].map(
+      (t) => t.function.name,
+    );
+    expect(new Set(files.map((f) => f.path))).toEqual(
+      new Set(names.map((n) => `${OPENCODE_TOOL_DIR}/${n}.ts`)),
+    );
+    expect(files).toHaveLength(names.length);
+  });
+
+  /**
+   * `run_background` est le seul tool LOCAL (dossier §3.2) : `bash` n'a pas de
+   * mode fond. Il est généré comme les autres — le pont l'exécute au lieu de le
+   * faire suivre —, et une session de RELECTURE ne l'a pas : elle ne lance rien
+   * en fond, et `PR_REVIEW_TOOLS` ne le porte pas.
+   */
+  it("`run_background` est servi au ticket et au carnet, jamais à une relecture", () => {
+    for (const anchor of ["issue", "notebook"] as const) {
+      expect(localToolsFor(job({ anchor })).map((t) => t.function.name)).toEqual([
+        "run_background",
+      ]);
+      expect(opencodeToolFiles(job({ anchor })).map((f) => f.path)).toContain(
+        `${OPENCODE_TOOL_DIR}/run_background.ts`,
+      );
+    }
+    expect(localToolsFor(job({ anchor: "pr" }))).toEqual([]);
+    expect(opencodeToolFiles(job({ anchor: "pr" })).map((f) => f.path)).not.toContain(
+      `${OPENCODE_TOOL_DIR}/run_background.ts`,
     );
   });
 

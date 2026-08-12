@@ -590,9 +590,11 @@ et poste le résultat de push au plan de contrôle, qui appelle
    qu'après un push réel (MIN-123), or ce push-ci est le premier du run dans le
    cas normal : la fonction lirait une branche nulle et ouvrirait la pull request
    sur une tête vide.
-2. **Il n'y a plus de `jobsNote`.** `bash` n'a pas de mode fond chez opencode
-   (§3.2), donc aucun serveur de dev à arrêter avant de stager — la phrase qui
-   prévenait le modèle de leur arrêt n'a plus d'objet.
+2. **Le `jobsNote` est de retour** (§2.21). `bash` n'a pas de mode fond, mais
+   `run_background` est reposé en tool local : un serveur de dev peut donc tourner
+   au moment de la livraison. Il est tué AVANT le staging, et le modèle l'apprend
+   dans la même réponse — un serveur arrêté en silence lui laisse croire qu'il
+   tourne (MIN-209).
 3. **Le verrou d'écriture du parent est tenu ICI.** `commitAndPush` fait
    `git add -A` sur un sandbox PARTAGÉ : livrer pendant qu'un `implement`
    travaille emporterait son travail à moitié posé. Chez opencode le tool `task`
@@ -667,8 +669,9 @@ bien, dans le même message système, c'est se contredire soi-même.
 sortis du corps de `buildAgentSystemPrompt`
 ([prompt.ts](../lib/server/agent/prompt.ts)) et sont appelés par les deux moteurs ;
 la seule chose qui varie est déclarée dans une table, `PromptToolNames` (`read_file`
-→ `read`, `run_command` → `bash`, `spawn_agent` → `task`, `ask_user` → `question`,
-et `run_background` → *rien*). Deux gardes tiennent l'ensemble :
+→ `read`, `run_command` → `bash`, `spawn_agent` → `task`, `ask_user` → `question` ;
+`run_background`, lui, porte le MÊME nom des deux côtés depuis §2.21). Deux gardes
+tiennent l'ensemble :
 
 - le prompt de la boucle maison est **inchangé à l'octet** — vérifié sur 192
   combinaisons d'ancrage × options pendant le refactor ;
@@ -679,9 +682,10 @@ et `run_background` → *rien*). Deux gardes tiennent l'ensemble :
 
 Trois écarts sont écrits à la main, parce que la mesure les a rendus différents :
 `task` **bloque** le parent (§2.14, donc « tu n'attends jamais, tu ne sondes
-jamais » est faux ici), il n'y a **pas d'édition par lot** ni de tool de **fond**
-(§3.2), et `bash` **ne garde pas** la sortie complète d'une commande (pas de
-`full_output_path` à promettre).
+jamais » est faux ici), il n'y a **pas d'édition par lot** (§3.2), et `bash` **ne
+garde pas** la sortie complète d'une commande (pas de `full_output_path` à
+promettre — c'est `shellSavesOutput` dans la table, et non plus l'absence de tool
+de fond, qui le dit).
 
 Le **prompt du tour**, lui, est ce que l'amorce a mis dans les messages
 utilisateur : contexte du ticket ou de la pull request, travail hérité, instructions
@@ -749,6 +753,53 @@ concernait qu'une commande RPC du Sandbox), version **épinglée**, et installat
 **seulement si le binaire manque** — cuit dans `AGENT_SANDBOX_SNAPSHOT_ID` il ne
 manque jamais et le tour paie 1,3 s, sinon le repli coûte les 10,6 s mesurés.
 
+### 2.21 `run_background`, reposé en tool local (lot 3)
+
+`bash` n'a **pas** de mode fond, et le registre `BackgroundJob` d'opencode sert
+`task`, pas le shell (§3.2). Le repli qui tenait jusqu'ici était une phrase de
+prompt : « ton shell est PERSISTANT, lance ton serveur en `&` et tue-le toi-même ».
+Il portait la doctrine — *faire tourner le code pour de vrai* — et **aucun de ses
+garde-fous** :
+
+- rien ne tuait le serveur avant le `git add -A` de fin de tour, donc il écrivait
+  dans le dépôt pendant qu'on le commitait, et il tenait la microVM éveillée après ;
+- sa sortie n'était bornée par personne (`BACKGROUND_OUTPUT_CAP`, l'incrément par
+  sonde) : un watcher bavard revenait en entier dans le contexte ;
+- `checkCommand` ne voyait pas passer la commande — un `git push` lancé en `&`
+  aurait échappé au garde-fou git de MIN-108.
+
+Le tool est donc reposé, et **c'est le seul tool LOCAL** de ce harnais : il ne sort
+jamais de la microVM. [background.ts](../lib/server/agent/background.ts) ne bouge pas
+d'une ligne — la politique (plafond de 3 jobs, garde-fou, offsets, mise en forme) y
+est pure, et ses tests non plus ne bougent pas. Seul le câblage est neuf :
+
+| Ce qu'il fallait | Où |
+| --- | --- |
+| Le fichier servi au modèle | `opencodeToolFiles` le génère comme les 32 autres (`LOCAL_TOOL_NAMES`) |
+| L'exécution | Le pont, en `supervisorTool` — pas de `cp.callTool` : le plan de contrôle n'a pas de dépôt à faire tourner |
+| Les mains sur le dépôt | `repoBackgroundRunner`, déménagé d'`exec-tool.ts` vers [repo-host.ts](../lib/server/agent/repo-host.ts) — les deux moteurs s'en servent, et le lot 3 finira par supprimer le premier |
+| L'arrêt avant tout staging | `create_pr` (avec son `jobsNote`) et la fin de tour, avant le push |
+| Le prompt | `backgroundToolNote`, fragment PARTAGÉ : la boucle maison est inchangée à l'octet, l'ancrage d'opencode le rend avec `bash` pour shell |
+
+**Un piège mesuré sur le binaire, qui aurait rendu le tool à moitié inutile** : le
+log complet d'un job vit dans `TOOL_OUTPUT_DIR`, donc **hors du dépôt** — sans quoi
+le `git add -A` de fin de tour le commiterait. Or opencode gate les lectures hors
+projet derrière la permission `external_directory`, que **nous refusons** (§ garde-
+fous). La note qui dit au modèle où est son log est donc devenue dépendante du
+moteur : `read_file`/`grep` pour la boucle maison, **le shell** (`tail`, `grep`)
+pour opencode. Le texte d'origine l'aurait envoyé contre un mur qu'on tient
+nous-mêmes, et vers un tool (`read_file`) qui n'existe pas chez lui.
+
+**Un piège de table, attrapé au passage** : `PromptToolNames.background` servait
+aussi de discriminant de moteur — « pas de tool de fond » valait « pas de
+`full_output_path` non plus ». Les deux se sont séparés le jour où opencode a eu un
+tool de fond : le champ `shellSavesOutput` dit maintenant la seconde chose, sans
+quoi l'ancrage se serait mis à promettre au modèle un fichier de sortie complète que
+le `bash` d'opencode ne garde pas.
+
+Une session de **relecture** n'en a pas : `PR_REVIEW_TOOLS` ne le porte pas, donc il
+n'est ni généré, ni routé, ni annoncé — une review tient dans une session.
+
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un
@@ -784,7 +835,7 @@ non des tools de domaine : ils ne parlent pas au plan de contrôle.
 | Le nôtre | Pourquoi il ne tombe pas | Ce qu'on fait |
 | --- | --- | --- |
 | `apply_edits` | Opencode n'a **pas** d'édition par lot (pas de `multiedit` en 1.18.16). | À trancher : le reposer en tool local, ou l'abandonner et laisser le modèle enchaîner des `edit`. La deuxième option coûte des rounds ; la première maintient un tool d'édition, c'est-à-dire exactement ce qu'on voulait arrêter de maintenir. **Défaut proposé : l'abandonner**, et mesurer le surcoût en rounds sur la semaine de bascule. |
-| `run_background` | `bash` n'a pas de mode fond ; le registre `BackgroundJob` d'opencode sert `task`, pas le shell. | Le reposer en tool local (démarrer / sonder / arrêter un serveur de dev), au-dessus du shell persistant. C'est [background.ts](../lib/server/agent/background.ts) réduit à sa moitié VM. |
+| `run_background` | `bash` n'a pas de mode fond ; le registre `BackgroundJob` d'opencode sert `task`, pas le shell. | **FAIT (§2.21)** : reposé en tool LOCAL, servi par le pont et exécuté par le superviseur. [background.ts](../lib/server/agent/background.ts) ne bouge pas d'une ligne. |
 
 ### 3.3 À redéclarer en tools de DOMAINE — 35
 

@@ -3,7 +3,9 @@ import {
   backgroundStartScript,
   backgroundStopScript,
   parseBackgroundProbe,
+  BACKGROUND_FETCH_BYTES,
   type BackgroundChunk,
+  type BackgroundJobRunner,
   type BackgroundPaths,
 } from "./background";
 import { grepPathspecs, globPathspecs, expandBraces } from "./git-pathspec";
@@ -1087,5 +1089,29 @@ export async function globRepo(
     files: all.slice(0, GLOB_MAX_FILES),
     truncated: all.length > GLOB_MAX_FILES,
     ok: true,
+  };
+}
+
+/**
+ * Les mains de `run_background` (MIN-114) sur LE dépôt : la politique (plafond,
+ * garde-fou git, offsets, mise en forme) vit dans le module pur `background.ts`,
+ * ce runner ne fait que la poser sur l'hôte. `workdir` passe par `resolveWithin` —
+ * un `../..` revient au modèle en erreur de tool.
+ *
+ * Il vit ICI, et non plus dans `exec-tool.ts`, depuis que les DEUX moteurs s'en
+ * servent (MIN-286, lot 3) : le superviseur d'opencode n'a rien à emprunter à
+ * l'exécuteur de tools de la boucle maison, que le lot 3 finit par supprimer.
+ */
+export function repoBackgroundRunner(host: RepoHost): BackgroundJobRunner {
+  return {
+    start: ({ jobId, command, workdir }) =>
+      startBackground(host, {
+        jobId,
+        command,
+        cwd: workdir ? resolveWithin(REPO_DIR, workdir) : undefined,
+      }),
+    read: ({ jobId, pid, offset }) =>
+      readBackgroundSince(host, { jobId, pid, offset, maxBytes: BACKGROUND_FETCH_BYTES }),
+    stop: ({ pid }) => stopBackground(host, pid),
   };
 }

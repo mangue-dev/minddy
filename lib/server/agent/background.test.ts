@@ -8,6 +8,7 @@ import {
   BACKGROUND_OUTPUT_CAP,
   BACKGROUND_PROBE_HEADER,
   MAX_BACKGROUND_JOBS,
+  OPENCODE_BACKGROUND_LOG_NOTES,
   type BackgroundChunk,
   type BackgroundJobRunner,
 } from "./background";
@@ -288,6 +289,39 @@ describe("run_background — `check` renvoie l'incrément, pas tout depuis le d�
     expect(out.success).toBe(false);
     // Un job mort ne tient plus de place.
     expect(jobs.liveCount()).toBe(0);
+  });
+});
+
+/**
+ * MIN-286 lot 3 — le log complet vit HORS du dépôt (le `git add -A` de fin de
+ * tour ne doit jamais le voir), et les deux moteurs n'y accèdent pas pareil : chez
+ * opencode, une lecture hors dépôt publie `external_directory`, que le harness
+ * REFUSE. Envoyer le modèle y lire avec `read` serait l'envoyer contre un mur
+ * qu'on tient nous-mêmes — et l'envoyer chez `read_file`, un tool qui n'existe
+ * pas chez lui.
+ */
+describe("run_background — où lire le log complet, selon le moteur", () => {
+  it("envoie la boucle maison sur `read_file` / `grep`", async () => {
+    const { runner } = fakeRunner();
+    const jobs = new BackgroundJobs(runner);
+    const out = await jobs.handle({ action: "start", command: "npm run dev" });
+    expect(String(asRecord(out.result).note)).toContain("readable with read_file and grep");
+  });
+
+  it("envoie opencode sur son SHELL, jamais sur `read`", async () => {
+    const { runner, procs } = fakeRunner();
+    const jobs = new BackgroundJobs(runner, 0, OPENCODE_BACKGROUND_LOG_NOTES);
+    const started = await jobs.handle({ action: "start", command: "npm run dev" });
+    const note = String(asRecord(started.result).note);
+    expect(note).toContain("outside the repository");
+    expect(note).toContain("read it with bash");
+    expect(note).not.toContain("read_file");
+
+    procs.get("bg-1")!.log = "x".repeat(500_000);
+    const checked = await jobs.handle({ action: "check", job_id: "bg-1" });
+    const elision = String(asRecord(checked.result).note);
+    expect(elision).toContain("read it with bash");
+    expect(elision).not.toContain("read_file");
   });
 });
 

@@ -50,12 +50,21 @@ describe("createRun écrit le moteur du run, sans drapeau", () => {
 describe("execute.ts passe le moteur et son entrée à la microVM", () => {
   const source = read("execute.ts");
 
-  it("recopie le moteur gelé sur le job", () => {
-    expect(source).toContain("engine: run.agent_engine");
+  it("recopie le moteur du run sur le job", () => {
+    expect(source).toContain("engine: effectiveEngine(run)");
+  });
+
+  it("laisse un checkpoint de la BOUCLE finir sur la boucle, quoi que dise la ligne", () => {
+    // Le cas réel : entre la migration (défaut `opencode`) et le déploiement de ce
+    // code, la prod tournait encore la boucle maison, qui n'écrit pas la colonne.
+    // Ces runs portent donc `opencode` sur leur ligne et une conversation de boucle
+    // dans leur checkpoint — repris chez opencode, ils repartiraient avec un journal
+    // vide, c'est-à-dire sans leur conversation, et sans que rien ne le dise.
+    expect(source).toContain("if (saved?.messages?.length && !saved.opencode) return");
   });
 
   it("compose l'ancrage et le prompt pour opencode, et pas pour l'autre moteur", () => {
-    expect(source).toContain('run.agent_engine === "opencode"');
+    expect(source).toContain('effectiveEngine(run) === "opencode"');
     expect(source).toContain("buildOpencodeAnchor({");
     expect(source).toContain("prompt: userPromptFromMessages(messages)");
   });

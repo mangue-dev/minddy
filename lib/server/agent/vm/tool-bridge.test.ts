@@ -179,6 +179,45 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     });
   });
 
+  /**
+   * MIN-286 lot 3 — `run_background` est un tool LOCAL : il ne sort JAMAIS de la
+   * microVM. Le pont l'exécute (le registre de jobs vit dans le superviseur) au
+   * lieu de le faire suivre — un `run_background` qui atteindrait le plan de
+   * contrôle lui demanderait de lancer un serveur qu'il n'a pas.
+   */
+  it("exécute `run_background` dans la VM, sans jamais l'envoyer au plan de contrôle", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    await withBridge(
+      {
+        supervisorTools: {
+          run_background: (async (args: Record<string, unknown>) => {
+            seen.push(args);
+            return { result: { job_id: "bg-1", pid: 42 }, success: true };
+          }) as never,
+        },
+      },
+      async (bridge) => {
+        const res = await call(bridge, "run_background", { action: "start", command: "npm run dev" });
+        expect(res.status).toBe(200);
+        expect(JSON.parse(res.body).job_id).toBe("bg-1");
+      },
+    );
+    expect(seen).toEqual([{ action: "start", command: "npm run dev" }]);
+    expect(calls.some((c) => c.name === "run_background")).toBe(false);
+  });
+
+  it("refuse `run_background` sans handler plutôt que de le transmettre", async () => {
+    // Le cas d'une session de RELECTURE : le tool n'est pas généré, donc l'appel
+    // vient d'un fichier laissé par un tour d'avant. 200 + `error` : le modèle le
+    // lit et fait autrement.
+    await withBridge({}, async (bridge) => {
+      const res = await call(bridge, "run_background", { action: "start", command: "sleep 1" });
+      expect(res.status).toBe(200);
+      expect(JSON.parse(res.body).error).toContain("not available");
+      expect(calls.some((c) => c.name === "run_background")).toBe(false);
+    });
+  });
+
   it("répond 404 sur un nom inconnu, qui ne doit pas se rattraper en silence", async () => {
     await withBridge({}, async (bridge) => {
       const res = await call(bridge, "tool_qui_nexiste_pas");

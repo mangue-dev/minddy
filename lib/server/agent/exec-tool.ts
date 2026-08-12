@@ -16,18 +16,11 @@ import {
   grepRepo,
   globRepo,
   writeToolOutput,
-  startBackground,
-  readBackgroundSince,
-  stopBackground,
   REPO_DIR,
   type GrepOutputMode,
   type RepoHost,
 } from "./repo-host";
-import {
-  BackgroundJobs,
-  BACKGROUND_FETCH_BYTES,
-  type BackgroundJobRunner,
-} from "./background";
+import { BackgroundJobs } from "./background";
 import { Subagents } from "./subagent";
 import { pruneToolOutputs, TOOL_RESULT_MAX_CHARS } from "./prune";
 import type { ReadWindow } from "./repo-host";
@@ -248,26 +241,6 @@ function subagentDenied(name: string, why: string): { result: unknown; success: 
       error: `You do not have the ${name} tool: ${why}. Do the part you can, then report it.`,
     },
     success: false,
-  };
-}
-
-/**
- * Les mains de `run_background` (MIN-114) dans LA microVM de ce chunk : la
- * politique (plafond, garde-fou git, offsets, mise en forme) vit dans le module
- * pur `background.ts`, ce runner ne fait que la poser sur la sandbox. `workdir`
- * passe par `resolveWithin` — un `../..` revient au modèle en erreur de tool.
- */
-export function repoBackgroundRunner(host: RepoHost): BackgroundJobRunner {
-  return {
-    start: ({ jobId, command, workdir }) =>
-      startBackground(host, {
-        jobId,
-        command,
-        cwd: workdir ? resolveWithin(REPO_DIR, workdir) : undefined,
-      }),
-    read: ({ jobId, pid, offset }) =>
-      readBackgroundSince(host, { jobId, pid, offset, maxBytes: BACKGROUND_FETCH_BYTES }),
-    stop: ({ pid }) => stopBackground(host, pid),
   };
 }
 

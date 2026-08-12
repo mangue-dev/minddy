@@ -123,6 +123,24 @@ describe("buildOpencodeAnchor — les écarts mesurés d'opencode", () => {
     expect(text).not.toContain("You never wait, and you never poll");
   });
 
+  /**
+   * MIN-286 lot 3 — `run_background` est reposé en tool local, donc il est de
+   * NOUS : le prompt d'opencode n'en dit rien, et c'est ici qu'il doit se
+   * décrire. Un tool servi que l'ancrage ne présente pas est un tool que le
+   * modèle n'utilise jamais — la doctrine « fais tourner le code pour de vrai »
+   * repasserait alors par un `&` sans garde-fou.
+   */
+  it("décrit `run_background` et la boucle lancer → sonder → curl → arrêter", () => {
+    expect(text).toContain("`run_background`");
+    for (const action of ["`start`", "`check`", "`stop`"]) expect(text).toContain(action);
+    // Et il `curl` avec le shell d'OPENCODE, pas avec celui de la boucle maison.
+    expect(text).toMatch(/`curl` it with `bash`/);
+    expect(text).toMatch(/killed when the turn ends/i);
+    // La vérification à l'exécution s'appuie dessus plutôt que sur le repli `&`.
+    expect(text).toMatch(/start the dev server with `run_background`/);
+    expect(text).not.toContain("npm run dev > /tmp/dev.log");
+  });
+
   it("dit qu'il n'y a pas d'édition par lot", () => {
     expect(text).toContain("There is no batch-edit tool");
   });
@@ -152,6 +170,8 @@ describe("buildOpencodeAnchor — une routine et une relecture ne promettent rie
   it("une relecture garde sa persona en lecture seule", () => {
     const text = buildOpencodeAnchor({ ...FULL, anchor: "pr", interactive: true });
     expect(text).toContain("review a pull request");
+    // Elle ne lance rien en fond : le tool n'est ni servi ni annoncé.
+    expect(text).not.toContain("run_background");
     expect(text).toContain("You cannot change the code, and that is structural.");
     // Ni ancrage de ticket, ni git, ni délégation : ce sont les gestes qu'elle n'a pas.
     expect(text).not.toContain("## Git and pull requests");

@@ -1,5 +1,6 @@
 import {
   LOOP_TOOL_NAMES,
+  backgroundToolNote,
   OPENCODE_TOOL_NAMES,
   anchorRulesSection,
   askingSection,
@@ -56,7 +57,9 @@ import type { FavoriteSubagentModel } from "./subagent";
  *    devant un tool qui a déjà rendu ;
  *  - le modèle d'une fille est porté par le NOM de l'agent (`explore-<slug>`), pas
  *    par un argument ;
- *  - il n'y a pas d'édition par LOT ni de tool de FOND (§3.2).
+ *  - il n'y a pas d'édition par LOT (§3.2) ;
+ *  - `run_background` est un tool de NOUS, pas d'opencode : son `bash` n'a pas de
+ *    mode fond, donc le harnais le repose et le décrit (§3.2, lot 3).
  */
 
 export interface OpencodeAnchorInput {
@@ -93,6 +96,9 @@ function harnessDeltas(input: OpencodeAnchorInput): string {
     `- **To rename or remove a file, use \`${n.shell}\`** (\`mv\`, \`rm\`): the end-of-turn commit picks them up like any other change.`,
     `- **There is no batch-edit tool.** One \`edit\` call changes one place; chain them rather than looking for a multi-edit. Read the file before editing it, and copy \`oldString\` verbatim from what \`${n.read}\` showed.`,
     `- ${grepPatternNote()}`,
+    // `bash` n'a pas de mode fond : ce tool-là vient de nous, donc le prompt
+    // d'opencode n'en dit rien et c'est ici qu'il se décrit.
+    `${backgroundToolNote(n)}`,
     `- **\`update_plan\` is this session's checklist**, and the only one: any local todo list is off, because your checklist MIRRORS onto the ticket's plan. Keep exactly one step \`in_progress\`; skip it for trivial or conversational turns.`,
   ];
   if (input.webSearch) {
@@ -201,7 +207,9 @@ export const LEGACY_TOOL_NAMES = [
   LOOP_TOOL_NAMES.read,
   LOOP_TOOL_NAMES.list,
   LOOP_TOOL_NAMES.shell,
-  LOOP_TOOL_NAMES.background,
+  // `background` n'est PAS dans cette liste : depuis le lot 3, `run_background`
+  // est servi par les deux moteurs sous le même nom (le harnais le repose dans la
+  // microVM), il ne trahit donc plus une copie du prompt de la boucle maison.
   LOOP_TOOL_NAMES.ask,
   LOOP_TOOL_NAMES.spawn,
   "apply_edits",
