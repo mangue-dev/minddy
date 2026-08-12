@@ -17,7 +17,8 @@ import {
   opencodeServerEnv,
   subagentAgentTable,
 } from "./opencode-config";
-import { opencodeToolFiles } from "./opencode-tools";
+import { opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
+import { startToolBridge, type ToolBridge } from "./tool-bridge";
 import { decidePermission } from "./opencode-permissions";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
@@ -118,6 +119,14 @@ export interface SupervisorDeps {
    * `startLlmProxy`.
    */
   startProxy?(job: VmJob): Promise<LlmProxy>;
+  /** Le pont de tools ([tool-bridge.ts](tool-bridge.ts)). Injecté pour un test. */
+  startToolBridge?(opts: {
+    job: VmJob;
+    cp: ControlPlaneClient;
+    port?: number;
+  }): Promise<ToolBridge>;
+  /** 0 = port libre. Les tests s'en servent pour ne pas se disputer 4097. */
+  toolBridgePort?: number;
   now?(): number;
   /** Attente du démarrage. Réglable pour qu'un test ne poireaute pas 60 s. */
   bootTimeoutMs?: number;
@@ -161,16 +170,31 @@ export async function runOpencodeTurn(
   // Le proxy AVANT le serveur : sa `baseURL` entre dans la config du tour, donc
   // elle doit être connue avant qu'opencode ne lise son environnement.
   const proxy = await (deps.startProxy ?? ((j: VmJob) => startLlmProxy({ job: j })))(job);
+  /**
+   * Le pont de tools, ouvert AVANT le serveur pour la même raison que le proxy :
+   * son adresse entre dans l'environnement d'opencode, donc elle doit exister
+   * avant qu'il ne le lise. C'est lui qui tient les compteurs du TOUR — plafond
+   * de recherches web, ancres de relecture ([tool-bridge.ts](tool-bridge.ts)).
+   */
+  const bridge = await (deps.startToolBridge ?? startToolBridge)({
+    job,
+    cp,
+    port: deps.toolBridgePort ?? OPENCODE_PORT + 1,
+  });
 
   const env = {
     ...opencodeServerEnv(job, { baseUrl: proxy.url }),
     // L'adresse du pont, lue par les 32 tools générés (cf. `SUPERVISOR_URL_ENV`).
-    // Le pont lui-même est du lot 2 ; la variable, elle, doit être posée dès le
-    // démarrage — un tool qui la lit à vide rend une phrase, pas une exception.
-    MDY_SUPERVISOR_URL: `http://127.0.0.1:${OPENCODE_PORT + 1}`,
+    [SUPERVISOR_URL_ENV]: bridge.url,
   };
 
-  const server = await deps.startServer(env);
+  /**
+   * DÉMARRÉ DANS LE `try`, et ce n'est pas un détail de forme : le proxy et le
+   * pont écoutent déjà. Un serveur qui ne démarre pas laisserait sinon leurs deux
+   * sockets ouvertes, et le pont tient un port FIXE — le tour suivant du même
+   * process se ferait refuser son `listen` et mourrait de ça, pas de sa cause.
+   */
+  let server: { stop(): Promise<void> } | null = null;
   const client = deps.client(`http://127.0.0.1:${OPENCODE_PORT}`);
 
   /** Ce qu'on rend quand le tour n'a pas pu commencer. */
@@ -186,6 +210,7 @@ export async function runOpencodeTurn(
   });
 
   try {
+    server = await deps.startServer(env);
     const bootTimeoutMs = deps.bootTimeoutMs ?? OPENCODE_BOOT_TIMEOUT_MS;
     if (!(await client.waitHealthy(bootTimeoutMs))) {
       return failed(`opencode did not become healthy within ${bootTimeoutMs} ms`);
@@ -480,6 +505,10 @@ export async function runOpencodeTurn(
       usageSeq: ledger.nextParentSeq,
       lastFilesSha: status === "completed" ? pushed?.headSha || job.filesFromSha : job.filesFromSha,
       instructions: { paths: [...job.instructions.paths], bytes: job.instructions.bytes },
+      // Le plafond des 5 ancres de relecture se compte sur la vie du RUN, pas du
+      // tour : le compte revient de la fonction à chaque appel, et c'est le
+      // checkpoint qui le porte jusqu'au tour suivant (miroir de `turn.ts`).
+      ...(bridge.prInlineComments > 0 ? { prInlineComments: bridge.prInlineComments } : {}),
       ...(opencodeState ? { opencode: opencodeState } : {}),
     };
 
@@ -504,8 +533,9 @@ export async function runOpencodeTurn(
   } catch (err) {
     return failed((err as Error).message);
   } finally {
-    await server.stop().catch(() => {});
+    await server?.stop().catch(() => {});
     await proxy.close().catch(() => {});
+    await bridge.close().catch(() => {});
   }
 }
 

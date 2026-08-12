@@ -224,6 +224,10 @@ function deps(): SupervisorDeps {
         h.proxyClosed = true;
       },
     }),
+    // Le pont de tools est le VRAI ([tool-bridge.ts](tool-bridge.ts)), sur un
+    // port libre : en production il en tient un fixe (4097), et deux tests qui
+    // tournent en parallèle se le disputeraient.
+    toolBridgePort: 0,
     // Le vrai plafond est à 60 s : ce test-ci vérifie ce qui se passe QUAND il
     // tombe, pas combien de temps il dure.
     bootTimeoutMs: 300,

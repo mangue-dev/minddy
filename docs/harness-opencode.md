@@ -580,6 +580,17 @@ lequel appelle le plan de contrôle avec l'identité que lui donne l'OIDC du
 firewall (même chemin que
 [control-plane-client.ts](../lib/server/agent/vm/control-plane-client.ts)).
 
+> **Le pont est écrit** : [tool-bridge.ts](../lib/server/agent/vm/tool-bridge.ts),
+> un serveur local que le superviseur ouvre AVANT opencode (son adresse entre
+> dans l'environnement) et dont l'URL est `MDY_SUPERVISOR_URL`. Il existe pour
+> ce que **le plan de contrôle ne compte pas** — il facture ce qu'on lui demande,
+> il ne sait pas ce qu'est un tour : le plafond de recherches web, les ancres de
+> relecture déjà posées, la lecture d'images. Deux règles de réponse qui tiennent
+> tout le reste : un tool en ÉCHEC répond **200** avec `{"error": …}` (le modèle
+> doit lire l'erreur et décider — un 5xx lui ferait rendre une phrase de
+> transport qui masque le motif), un **nom inconnu répond 404** (celui-là est
+> notre défaut, il doit se voir).
+
 | Famille | Tools |
 | --- | --- |
 | Tickets (8) | `search_issues`, `read_issue`, `read_feedback`, `read_resource`, `update_issue`, `write_issue_plan`, `append_to_plan`, `edit_issue_text` |
@@ -590,7 +601,7 @@ firewall (même chemin que
 | PR relue (3) | `comment_pr_line`, `comment_pr`, `reply_pr_thread` |
 | Livraison (1) | `create_pr` |
 | Plan de session (1) | `update_plan` — `todowrite` est éteint : notre checklist **est** le plan du ticket, elle se synchronise ([plan-sync.ts](../lib/server/agent/plan-sync.ts)), une todo locale ne se lit nulle part |
-| Web (1) | `web_search` — pas servi sur OpenRouter de toute façon (§2.3), et il porte le plafond `MAX_WEB_SEARCHES_PER_TURN` (5) et la facturation `WEB_SEARCH_USD_PER_CALL` (0,005 $) de [web-search.ts](../lib/server/web-search.ts) |
+| Web (1) | `web_search` — **FAIT** : le `websearch` intégré est éteint (§2.3, il n'est pas servi sur OpenRouter de toute façon) et le nôtre le remplace. Le plafond du tour (`webSearchMax`, 5 — `MAX_WEB_SEARCHES_PER_TURN`) est tenu par le pont, mère et filles confondues, et le compteur sert de `seq` : deux recherches d'un même tour font deux lignes de ledger, pas une. Une recherche refusée n'atteint jamais le plan de contrôle, donc ne paie pas le forfait Exa (`WEB_SEARCH_USD_PER_CALL`, 0,005 $) |
 
 Ce qui **ne change pas** avec eux : le ciblage par ancrage (`TARGET_SUFFIX`,
 `withRequiredIssue`), les retraits structurels (`NON_INTERACTIVE_FORBIDDEN_TOOLS`
