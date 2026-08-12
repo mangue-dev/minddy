@@ -1,7 +1,11 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 import { chatCompletionsUrl, getAgentProvider, type AgentProviderId } from "@/lib/agent-providers";
-import { reasoningRequestFields, type ReasoningLevel } from "@/lib/agent-reasoning";
+import {
+  REASONING_REQUEST_KEYS,
+  reasoningRequestFields,
+  type ReasoningLevel,
+} from "@/lib/agent-reasoning";
 import {
   OPENROUTER_USAGE_INCLUDE,
   parseOpenRouterUsage,
@@ -40,7 +44,10 @@ import type { NormalizedUsage } from "@/lib/server/ai-usage";
  *    imbriquée (OpenRouter) survit. Un BYOK openai / anthropic / google perdrait
  *    donc son raisonnement en silence — le round part, il coûte, il pense moins.
  *    Le champ est réinjecté ici, dans la forme que le registre déclare
- *    ([agent-providers.ts](../../../agent-providers.ts), `reasoningField`).
+ *    ([agent-providers.ts](../../../agent-providers.ts), `reasoningField`) — et
+ *    dans CELLE-LÀ SEULEMENT : un corps qui porte les deux formes à la fois part
+ *    en 400 chez OpenRouter (« both provided with conflicting values »), donc
+ *    l'autre est retirée du corps avant le relais.
  *
  * CE QU'IL NE FAIT PAS : décider. Il observe et il complète le corps ; le ledger,
  * les plafonds et l'appariement restent au superviseur.
@@ -147,13 +154,33 @@ export function patchCompletionBody(
   if (profile.streamUsage && out.stream_options === undefined) {
     out.stream_options = { include_usage: true };
   }
-  // Le raisonnement : uniquement ce qui MANQUE. Sur OpenRouter la forme
-  // imbriquée est déjà passée par la config d'opencode, et la réécrire ici
-  // écraserait un `exclude` que le registre a choisi.
-  for (const [key, value] of Object.entries(
-    reasoningRequestFields(job.reasoningLevel, job.provider),
-  )) {
-    if (out[key] === undefined) out[key] = value;
+  // Le raisonnement : uniquement ce qui MANQUE, et dans UNE SEULE forme.
+  //
+  // Ce qui manque : sur OpenRouter la forme imbriquée est déjà passée par la
+  // config d'opencode, et la réécrire ici écraserait un `exclude` que le
+  // registre a choisi.
+  //
+  // Une seule forme : le corps peut porter les DEUX. La nôtre voyage imbriquée
+  // dans les `options` du modèle, et opencode pose la sienne à plat sur les
+  // modèles de la famille OpenAI — mesuré sur le run c7465b6b (openrouter,
+  // `openai/gpt-5.6-luna`, niveau `high`), mort au tout premier appel :
+  // « "reasoning_effort" and "reasoning.effort" are both provided with
+  // conflicting values ». On ne laisse donc partir que la forme que le registre
+  // déclare, et on retire l'autre du corps — y compris quand le niveau est `off`,
+  // où un `reasoning_effort` posé par opencode ferait penser (et payer) un run
+  // qui avait demandé le contraire.
+  //
+  // `undefined` (provider générique, dont on ne sait rien) : on ne touche à rien.
+  const field = profile.reasoningField;
+  if (field) {
+    const fields = reasoningRequestFields(job.reasoningLevel, job.provider);
+    for (const key of REASONING_REQUEST_KEYS) {
+      if (key in fields) {
+        if (out[key] === undefined) out[key] = fields[key];
+      } else {
+        delete out[key];
+      }
+    }
   }
   return out;
 }

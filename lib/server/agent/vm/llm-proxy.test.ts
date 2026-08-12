@@ -56,6 +56,38 @@ describe("le corps de la requête, complété et pas refait", () => {
     expect(out.reasoning).toEqual({ effort: "high" });
   });
 
+  it("ne laisse jamais partir les deux formes du raisonnement", () => {
+    // Le corps peut porter la forme plate d'opencode ET la nôtre, imbriquée :
+    // OpenRouter refuse alors le round en 400 (« "reasoning_effort" and
+    // "reasoning.effort" are both provided with conflicting values »), et le tour
+    // meurt sans que le niveau demandé y soit pour quoi que ce soit.
+    const out = patchCompletionBody(
+      { model: "x", reasoning: { effort: "high" }, reasoning_effort: "low" },
+      JOB,
+    );
+    expect(out.reasoning).toEqual({ effort: "high" });
+    expect("reasoning_effort" in out).toBe(false);
+
+    // Et dans l'autre sens, sur une couche compat : c'est la forme plate qui reste.
+    const compat = patchCompletionBody(
+      { model: "x", reasoning: { effort: "high" } },
+      { ...JOB, provider: "openai" },
+    );
+    expect(compat.reasoning_effort).toBe("medium");
+    expect("reasoning" in compat).toBe(false);
+  });
+
+  it("fait taire le raisonnement quand le run l'a mis à `off`", () => {
+    // Même faute, autre bout : un `reasoning_effort` posé par opencode ferait
+    // penser — et payer — un run qui avait demandé de ne pas penser.
+    const out = patchCompletionBody(
+      { model: "x", reasoning_effort: "medium" },
+      { ...JOB, reasoningLevel: "off" },
+    );
+    expect("reasoning_effort" in out).toBe(false);
+    expect("reasoning" in out).toBe(false);
+  });
+
   it("n'envoie rien au provider générique, dont on ne sait rien", () => {
     const out = patchCompletionBody({ model: "x" }, { ...JOB, provider: "generic" });
     expect(out).toEqual({ model: "x" });
