@@ -73,9 +73,13 @@ export function SpendCapCombobox({
           <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      {/* `rounded-xl` : c'est `Command` qui peint la surface et il s'impose déjà
+          20px. Avec les 8px de retrait de la liste, les options (12px) sont
+          concentriques. */}
+      <PopoverContent className="w-72 rounded-xl p-0" align="start">
         <Command shouldFilter={false}>
-          <CommandList className="mt-1.5 px-1">
+          {/* `p-1` : mêmes 8px de retrait des QUATRE côtés. */}
+          <CommandList className="p-1">
             {choices.map((percent) => (
               <CommandItem
                 key={percent}

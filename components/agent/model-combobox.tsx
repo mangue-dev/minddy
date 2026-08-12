@@ -317,18 +317,24 @@ export function ModelCombobox({
           impose donc qu'un plafond, pour qu'un id à rallonge ne sorte pas de
           l'écran. Épingler la largeur au déclencheur (ce que faisait
           `w-[var(--radix-popover-trigger-width)]`) écrasait tout. */}
+      {/* `rounded-xl` (20px) et non le `rounded-lg` par défaut du popover :
+          c'est `Command` qui peint cette surface et il s'impose déjà 20px.
+          Avec le retrait de 8px de la liste, les options (12px) sont alors
+          concentriques — 20 − 8 = 12. */}
       <PopoverContent
         className={cn(
-          "p-0",
+          "rounded-xl p-0",
           variant === "compact" ? "w-80" : "max-w-[min(30rem,calc(100vw-2rem))]"
         )}
         align="start"
       >
         <Command shouldFilter={false}>
           <CommandInput value={query} onValueChange={setQuery} placeholder={placeholder} />
-          {/* mt-1.5 : respire sous l'input ; px-1 : aligne la largeur des options
-              sur celle du champ de recherche (même retrait de 8px des bords). */}
-          <CommandList className="mt-1.5 px-1">
+          {/* `p-1` et non `px-1` : par-dessus le `p-1` de `Command`, ça fait le
+              MÊME retrait de 8px des quatre côtés — celui du champ de recherche.
+              Un padding horizontal seul laissait la dernière option à 4px du bas
+              et à 8px des côtés, et aucun rayon ne peut être juste là-dessous. */}
+          <CommandList className="p-1">
             <CommandItem value="__default__" onSelect={() => select("")}>
               {defaultRow}
               <Check className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />

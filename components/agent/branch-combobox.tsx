@@ -177,11 +177,15 @@ export function BranchCombobox({
           <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
+      {/* `rounded-xl` : c'est `Command` qui peint la surface et il s'impose déjà
+          20px. Avec les 8px de retrait de la liste, les options (12px) sont
+          concentriques. */}
+      <PopoverContent className="w-80 rounded-xl p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput value={query} onValueChange={setQuery} placeholder={placeholder} />
-          {/* mt-1.5 / px-1 : mêmes retraits que le picker de modèle. */}
-          <CommandList className="mt-1.5 px-1">
+          {/* `p-1` : mêmes 8px de retrait des QUATRE côtés que le picker de
+              modèle — ceux du champ de recherche juste au-dessus. */}
+          <CommandList className="p-1">
             {results.map((b) => {
               const selected = value === b || (!value && b === defaultBranch);
               return (

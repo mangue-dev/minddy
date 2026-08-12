@@ -125,10 +125,14 @@ export function ReasoningCombobox({
           pour qu'elle ne se réduise pas à « Léger ». Le `w-72` d'avant, puis le
           `w-48` que j'avais mis, redonnaient l'ellipse qu'on vient d'ôter dès
           qu'une traduction rallonge un palier. */}
-      <PopoverContent className="min-w-44 p-0" align="start">
+      {/* `rounded-xl` : c'est `Command` qui peint la surface et il s'impose déjà
+          20px. Avec les 8px de retrait de la liste, les options (12px) sont
+          concentriques. */}
+      <PopoverContent className="min-w-44 rounded-xl p-0" align="start">
         <Command shouldFilter={false}>
-          {/* mt-1.5 / px-1 : mêmes retraits que les autres pickers du composer. */}
-          <CommandList className="mt-1.5 px-1">
+          {/* `p-1` : mêmes 8px de retrait des QUATRE côtés que les autres
+              pickers du composer. */}
+          <CommandList className="p-1">
             {levels.map((level) => (
               <CommandItem
                 key={level}
