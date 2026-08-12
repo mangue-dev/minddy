@@ -54,6 +54,15 @@ export interface OpencodeClientOptions {
   fetchImpl?: typeof fetch;
 }
 
+/**
+ * Plafond d'UNE sonde de santé. Le serveur répond en ~20 ms quand il est prêt ;
+ * ce qui est borné ici, c'est la connexion acceptée mais laissée sans réponse.
+ */
+const HEALTH_PROBE_TIMEOUT_MS = 2_000;
+
+/** Cadence des lignes de journal pendant l'attente du démarrage. */
+const HEALTH_PROGRESS_INTERVAL_MS = 15_000;
+
 export class OpencodeHttpError extends Error {
   constructor(
     readonly status: number,
@@ -94,10 +103,22 @@ export class OpencodeClient {
     return (text ? JSON.parse(text) : {}) as T;
   }
 
-  /** Le serveur répond-il ? Rend `false` plutôt que de lever. */
-  async healthy(): Promise<boolean> {
+  /**
+   * Le serveur répond-il ? Rend `false` plutôt que de lever.
+   *
+   * LA SONDE PORTE SON PROPRE PLAFOND, et c'est ce qui manquait au premier run de
+   * production (2026-08-12) : un serveur qui ACCEPTE la connexion sans répondre
+   * laissait le `fetch` pendre jusqu'au `headersTimeout` d'undici — **300 s** —,
+   * donc bien après la deadline que `waitHealthy` croit tenir. Le run est mort à
+   * 6 min 30 sur un message qui annonçait 60 s, et rien dans le fil ne pouvait le
+   * dire. Sans ce plafond, la boucle de sondage n'en est pas une : elle fait UNE
+   * requête et attend cinq minutes.
+   */
+  async healthy(timeoutMs = HEALTH_PROBE_TIMEOUT_MS): Promise<boolean> {
     try {
-      const body = await this.json<{ healthy?: boolean }>(`${this.base}/global/health`);
+      const body = await this.json<{ healthy?: boolean }>(`${this.base}/global/health`, {
+        signal: AbortSignal.timeout(timeoutMs),
+      });
       return body.healthy === true;
     } catch {
       return false;
@@ -106,13 +127,29 @@ export class OpencodeClient {
 
   /**
    * Attend que le serveur soit prêt. Mesuré au lot 0 : ~1,3 s à froid dans la
-   * microVM. Le plafond est large devant ça — ce qu'il borne n'est pas la
-   * lenteur, c'est le serveur qui ne démarrera jamais.
+   * microVM — mais c'était une microVM DÉJÀ CHAUDE. Sur une VM neuve, le disque
+   * est hydraté paresseusement et le premier exec des 176 Mo de binaire se paie
+   * en minutes : le plafond ne borne donc pas la lenteur normale, il borne le
+   * serveur qui ne démarrera jamais.
+   *
+   * Rend le temps réellement attendu, parce que c'est lui qu'un rapport d'erreur
+   * doit citer : « pas prêt en 60 000 ms » sur une attente de six minutes envoie
+   * chercher la panne au mauvais endroit.
    */
   async waitHealthy(timeoutMs: number, sleep = defaultSleep): Promise<boolean> {
-    const deadline = Date.now() + timeoutMs;
+    const startedAt = Date.now();
+    const deadline = startedAt + timeoutMs;
+    let announced = 0;
     while (Date.now() < deadline) {
       if (await this.healthy()) return true;
+      const waited = Date.now() - startedAt;
+      // Une ligne toutes les 15 s : de quoi lire, dans les logs de la microVM, si
+      // le serveur a mis du temps ou n'a jamais répondu — les deux se corrigent
+      // ailleurs, et rien d'autre ne les distingue après coup.
+      if (waited - announced >= HEALTH_PROGRESS_INTERVAL_MS) {
+        announced = waited;
+        console.log(`[opencode] still waiting for the server (${Math.round(waited / 1000)} s)`);
+      }
       await sleep(200);
     }
     return false;

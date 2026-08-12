@@ -124,4 +124,26 @@ describe("la santé du serveur", () => {
     // quoi dire d'un serveur qui ne démarrera jamais.
     expect(await client.waitHealthy(30, async () => {})).toBe(false);
   });
+
+  it("ne reste pas pendue à une connexion acceptée mais sans réponse", async () => {
+    /**
+     * LE DÉFAUT DU PREMIER RUN DE PRODUCTION (2026-08-12). Sur une microVM neuve,
+     * le serveur accepte la connexion bien avant de savoir répondre. Sans plafond
+     * par sonde, le `fetch` attend le `headersTimeout` d'undici — 300 s — et la
+     * deadline de `waitHealthy` ne veut plus rien dire : le run est mort à
+     * 6 min 30 sur un message qui annonçait 60 s.
+     *
+     * Ce que ce test garde, c'est que la sonde ABANDONNE : on lui donne un
+     * `fetch` qui ne rend jamais, et l'attente doit quand même rendre `false`.
+     */
+    const client = new OpencodeClient({
+      baseUrl: "http://127.0.0.1:4096",
+      directory: "/repo",
+      fetchImpl: ((_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new Error("TimeoutError")));
+        })) as typeof fetch,
+    });
+    expect(await client.healthy(20)).toBe(false);
+  });
 });

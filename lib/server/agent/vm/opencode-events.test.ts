@@ -454,3 +454,76 @@ describe("les garde-fous et les questions", () => {
     expect(out.question).toBeUndefined();
   });
 });
+
+/**
+ * MIN-286 — LA RÉFLEXION, ET POURQUOI ELLE NE PEUT PAS SE DEVINER D'UN DELTA.
+ *
+ * Fixture ([fixtures/opencode-reasoning.ndjson](fixtures/opencode-reasoning.ndjson))
+ * capturée le 2026-08-12 sur un vrai `opencode-ai@1.18.16` dans la microVM, un
+ * faux fournisseur local scriptant la réponse (des deltas `reasoning` puis des
+ * deltas de texte) — coût nul, flux authentique.
+ *
+ * CE QU'ELLE MONTRE, et c'est le défaut qu'elle ferme : **les deltas d'un part de
+ * réflexion portent `field: "text"`, exactement comme ceux de la réponse**. Rien
+ * dans la frame ne les distingue ; seule l'ouverture du part le dit. Tant qu'on ne
+ * la lisait pas, la chaîne de pensée entrait dans le texte du round — donc dans ce
+ * que le fil affiche comme la parole de l'agent, et dans le message de commit.
+ */
+describe("la réflexion du modèle (MIN-122, sous opencode)", () => {
+  const REASONING_FIXTURE = join(__dirname, "fixtures", "opencode-reasoning.ndjson");
+  const SESSION = "ses_008ba49dfffe9FbZVRqW6nMKtw";
+
+  function replayReasoning() {
+    const state = newTurnStreamState();
+    const events: TranslatedEvent[] = [];
+    const reasoning: Array<{ active: boolean; startedAt: number }> = [];
+    const live: string[] = [];
+    for (const line of readFileSync(REASONING_FIXTURE, "utf8").split("\n").filter(Boolean)) {
+      const out = translateEvent(JSON.parse(line) as OpencodeEvent, state);
+      events.push(...out.events);
+      if (out.reasoning) reasoning.push(out.reasoning);
+      if (out.liveText !== undefined) live.push(out.liveText);
+    }
+    return { state, events, reasoning, live };
+  }
+
+  it("garde la chaîne de pensée HORS de la réponse du tour", () => {
+    const { state, live } = replayReasoning();
+    expect(replyOf(state, SESSION)).toBe("Salut, voici la réponse.");
+    // Le direct ne montre que la réponse : pas un fragment de « Je regarde… ».
+    expect(live.some((text) => text.includes("Je regarde"))).toBe(false);
+  });
+
+  it("dit que ça pense, puis que ça ne pense plus", () => {
+    const { reasoning } = replayReasoning();
+    expect(reasoning.length).toBeGreaterThan(1);
+    expect(reasoning[0].active).toBe(true);
+    expect(reasoning[0].startedAt).toBeGreaterThan(0);
+    expect(reasoning.at(-1)?.active).toBe(false);
+  });
+
+  it("rend la trace repliée sous le MÊME event que la boucle maison", () => {
+    const { events } = replayReasoning();
+    const thinking = events.filter((e) => e.type === "thinking");
+    expect(thinking).toHaveLength(1);
+    expect(thinking[0].payload).toMatchObject({
+      kind: "reasoning",
+      text: "Je regarde ce qu'il demande.",
+    });
+    // La durée vient des horodatages d'opencode : le module reste sans horloge.
+    expect(thinking[0].payload.durationMs).toBe(11);
+  });
+
+  it("n'avale pas NOTRE prompt en le prenant pour la réponse", () => {
+    // La session republie le message posté (`dis bonjour`) sous la même forme
+    // qu'un texte du modèle. Il ressortait en tête de la réponse du tour — donc
+    // du message de commit — jusqu'à ce qu'on retienne le rôle des messages.
+    const { state } = replayReasoning();
+    expect(replyOf(state, SESSION).startsWith("dis bonjour")).toBe(false);
+  });
+
+  it("ne dit `thinking` qu'une fois, alors que le part est publié deux fois", () => {
+    const { events } = replayReasoning();
+    expect(events.map((e) => e.type)).toEqual(["thinking"]);
+  });
+});

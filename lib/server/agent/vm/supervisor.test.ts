@@ -578,6 +578,58 @@ describe("le tour", () => {
   });
 });
 
+/**
+ * MIN-286 — CE QUE LE FIL DIT PENDANT QUE LE MODÈLE PENSE.
+ *
+ * Un modèle à `reasoning_level: high` peut penser des minutes avant d'écrire son
+ * premier mot, et ces frames-là ne portent aucun `liveText` : sans ce chemin, le
+ * direct ne partait pas du tout et le fil restait sur « l'agent travaille » — ce
+ * qu'on a lu sur le premier run de production.
+ */
+describe("la réflexion, au direct", () => {
+  const REASONING_PART = "prt_reflexion";
+
+  function reasoningFrames(): string[] {
+    const part = (text: string, time: Record<string, number>) =>
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: PARENT,
+          part: { id: REASONING_PART, sessionID: PARENT, messageID: "msg_r", type: "reasoning", text, time },
+        },
+      });
+    return [
+      part("", { start: 1_000 }),
+      JSON.stringify({
+        type: "message.part.delta",
+        properties: { sessionID: PARENT, messageID: "msg_r", partID: REASONING_PART, field: "text", delta: "je pèse le pour" },
+      }),
+      part("je pèse le pour et le contre", { start: 1_000, end: 4_000 }),
+    ];
+  }
+
+  it("allume l'indicateur de réflexion, sans texte", async () => {
+    h.extraFrames = reasoningFrames();
+    // L'horloge doit avancer : le direct est throttlé à 250 ms.
+    h.tick = 300;
+    await run();
+    const thinking = h.live.filter((l) => l.reasoningActive === true);
+    expect(thinking.length).toBeGreaterThan(0);
+    expect(thinking[0].text).toBe("");
+    expect(thinking[0].reasoningMs).toBeGreaterThan(0);
+  });
+
+  it("dit la trace repliée au fil, et n'en fait pas la réponse du tour", async () => {
+    h.extraFrames = reasoningFrames();
+    const report = await run();
+    expect(h.events.find((e) => e.type === "thinking")?.payload).toMatchObject({
+      kind: "reasoning",
+      text: "je pèse le pour et le contre",
+    });
+    expect(report.reply ?? "").not.toContain("je pèse");
+  });
+});
+
 describe("le plafond de dépense", () => {
   it("coupe le tour à la frontière de round, et le DIT comme un budget", async () => {
     // Le premier round de la fixture coûte déjà plus que ça : la garde doit

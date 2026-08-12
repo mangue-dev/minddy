@@ -82,6 +82,16 @@ export interface Translation {
   events: TranslatedEvent[];
   /** Le texte du round tel qu'écrit jusqu'ici (COMPLET, pas un delta). */
   liveText?: string;
+  /**
+   * LE MODÈLE RÉFLÉCHIT EN CE MOMENT, et depuis combien de temps.
+   *
+   * Ce que le fil en fait est ce qu'il faisait de la boucle maison (MIN-122) : une
+   * ligne compacte avec un compteur, JAMAIS le texte — il arrive replié avec
+   * l'event `thinking` de fin de part. C'est le seul signe de vie d'un modèle à
+   * `reasoning_level: high`, qui peut penser plusieurs minutes avant d'écrire son
+   * premier mot ; sans lui, le fil reste muet et le tour a l'air mort.
+   */
+  reasoning?: { active: boolean; startedAt: number };
   /** Un round assistant s'est terminé : sa ligne de ledger est prête. */
   usage?: RoundUsage;
   /** Le tour est fini (`session.idle`). */
@@ -208,6 +218,34 @@ export interface TurnStreamState {
    * message de commit se rabat sur sa forme générique.
    */
   lastRoundText: Map<string, string>;
+  /**
+   * DE QUELLE NATURE EST CHAQUE PART, et c'est ce qui sépare la réflexion de la
+   * réponse.
+   *
+   * Opencode publie les deltas d'un part `reasoning` avec **le même
+   * `field: "text"`** que ceux d'un part `text` (lu dans le binaire 1.18.16 :
+   * `case "reasoning-delta"` appelle `updatePartDelta({… field:"text"})`). Une
+   * frame de delta ne dit donc RIEN de ce qu'elle transporte — seul le
+   * `message.part.updated` d'ouverture le dit, et il arrive avant.
+   *
+   * Sans cette table, la chaîne de pensée entrait dans le texte du round : elle
+   * s'affichait comme la parole de l'agent, elle repartait dans le message de
+   * commit, et le compteur de réflexion du fil restait éteint.
+   */
+  partKind: Map<string, "text" | "reasoning">;
+  /**
+   * LES MESSAGES QUI VIENNENT DE NOUS, pas du modèle.
+   *
+   * Un prompt posté sur la session est republié en `message.part.updated` de type
+   * `text`, dans le même flux et sous la même forme que la réponse. Sans ce
+   * filtre, la demande de l'utilisateur entrait dans le sac du round : elle
+   * ressortait en tête de « ce que le tour a répondu », donc dans le fil et dans
+   * le message de commit (mesuré sur la fixture de réflexion, où la réponse du
+   * tour commençait par « dis bonjour »).
+   */
+  userMessages: Set<string>;
+  /** Début (ms) de chaque part de réflexion — la durée que le fil affiche. */
+  reasoningStart: Map<string, number>;
   /** Rounds dont le coût a déjà été compté (`messageID`). */
   billed: Set<string>;
   /** `callID` déjà annoncés : `running` peut se répéter. */
@@ -218,6 +256,9 @@ export function newTurnStreamState(): TurnStreamState {
   return {
     textByPart: new Map(),
     lastRoundText: new Map(),
+    partKind: new Map(),
+    userMessages: new Set(),
+    reasoningStart: new Map(),
     billed: new Set(),
     announced: new Set(),
   };
@@ -269,6 +310,17 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       const partId = String(props.partID ?? "");
       const delta = typeof props.delta === "string" ? props.delta : "";
       if (!partId || !delta) return { sessionId, events: [] };
+      if (state.userMessages.has(String(props.messageID ?? ""))) {
+        return { sessionId, events: [] };
+      }
+      /**
+       * UN DELTA DE RÉFLEXION PORTE `field: "text"` LUI AUSSI (cf. `partKind`) :
+       * ce qui les sépare est le part, annoncé plus tôt. Il ne rejoint donc pas le
+       * sac du round — il fait battre le compteur de réflexion, et c'est tout.
+       */
+      if (state.partKind.get(partId) === "reasoning") {
+        return { sessionId, events: [], reasoning: reasoningTick(state, partId) };
+      }
       const parts = partsOf(state, sessionId);
       const text = (parts.get(partId) ?? "") + delta;
       parts.set(partId, text);
@@ -277,12 +329,21 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
 
     case "message.part.updated": {
       const part = (props.part ?? {}) as Record<string, unknown>;
+      const partId = String(part.id ?? "");
+      // Notre propre prompt, republié par la session : il n'a rien à faire dans
+      // ce que le tour a répondu (cf. `userMessages`).
+      if (state.userMessages.has(String(part.messageID ?? ""))) {
+        return { sessionId, events: [] };
+      }
       if (part.type === "text") {
-        const partId = String(part.id ?? "");
+        // Marqué même quand le texte est vide : c'est la frame d'OUVERTURE, celle
+        // qui arrive avant les deltas, et la seule qui dise de quoi ils sont faits.
+        if (partId) state.partKind.set(partId, "text");
         const text = typeof part.text === "string" ? part.text : "";
         if (partId && text) partsOf(state, sessionId).set(partId, text);
         return { sessionId, events: [], ...(text ? { liveText: text } : {}) };
       }
+      if (part.type === "reasoning") return reasoningPart(state, sessionId, part, partId);
       if (part.type !== "tool") return { sessionId, events: [] };
 
       const stateNode = (part.state ?? {}) as Record<string, unknown>;
@@ -338,7 +399,15 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
 
     case "message.updated": {
       const info = (props.info ?? {}) as Record<string, unknown>;
-      if (info.role !== "assistant") return { sessionId, events: [] };
+      if (info.role !== "assistant") {
+        // Le seul endroit du flux qui dise le RÔLE d'un message : les frames de
+        // part, elles, n'en portent pas. On le retient donc au passage — c'est ce
+        // qui permettra d'écarter les parts de notre propre prompt.
+        if (info.role === "user" && typeof info.id === "string" && info.id) {
+          state.userMessages.add(info.id);
+        }
+        return { sessionId, events: [] };
+      }
       const finish = typeof info.finish === "string" ? info.finish : null;
       // Un round non terminé arrive avec `cost: 0` et pas de `finish` : le
       // compter écrirait une ligne de ledger vide, puis une deuxième au vrai
@@ -465,6 +534,57 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       // remplirait `agent_run_events` de lignes que personne ne lit.
       return { sessionId, events: [] };
   }
+}
+
+/**
+ * LA RÉFLEXION QUI CONTINUE — ce qu'un delta de part `reasoning` apprend.
+ *
+ * Il n'y a rien à ranger : le texte de la réflexion n'est ni streamé ni gardé
+ * (il arrivera d'un coup, replié, avec le `thinking` de fin de part). Ce qui sort
+ * d'ici est le seul fait utile : ça pense, et depuis quand.
+ */
+function reasoningTick(state: TurnStreamState, partId: string): { active: boolean; startedAt: number } {
+  return { active: true, startedAt: state.reasoningStart.get(partId) ?? 0 };
+}
+
+/**
+ * UN PART DE RÉFLEXION, à son ouverture puis à sa fermeture.
+ *
+ * `time.start` / `time.end` viennent d'opencode, et c'est voulu : ce module reste
+ * SANS HORLOGE, donc testable sur des fixtures rejouées à l'identique. La durée
+ * affichée par le fil est ainsi celle qu'a mesurée le serveur, pas celle qu'a mise
+ * notre traduction à passer.
+ *
+ * Le part est aussi RETIRÉ du sac de texte : si un delta est arrivé avant la frame
+ * d'ouverture (rien ne le garantit dans l'autre sens), la chaîne de pensée serait
+ * déjà entrée dans la réponse du round.
+ */
+function reasoningPart(
+  state: TurnStreamState,
+  sessionId: string,
+  part: Record<string, unknown>,
+  partId: string,
+): Translation {
+  if (!partId) return { sessionId, events: [] };
+  state.partKind.set(partId, "reasoning");
+  partsOf(state, sessionId).delete(partId);
+
+  const time = (part.time ?? {}) as Record<string, unknown>;
+  const start = typeof time.start === "number" ? time.start : 0;
+  if (start && !state.reasoningStart.has(partId)) state.reasoningStart.set(partId, start);
+  const end = typeof time.end === "number" ? time.end : 0;
+  if (!end) return { sessionId, events: [], reasoning: reasoningTick(state, partId) };
+
+  // Le part est clos : sa trace part au fil sous le MÊME type et la MÊME forme que
+  // celle de la boucle maison (`thinking` + `kind: "reasoning"`), pour que le fil
+  // la replie comme avant et qu'un run d'il y a trois mois se relise pareil.
+  const text = typeof part.text === "string" ? part.text.trim() : "";
+  const durationMs = Math.max(0, end - (state.reasoningStart.get(partId) ?? end));
+  return {
+    sessionId,
+    events: text ? [{ type: "thinking", payload: { kind: "reasoning", text, durationMs } }] : [],
+    reasoning: { active: false, startedAt: state.reasoningStart.get(partId) ?? 0 },
+  };
 }
 
 /**

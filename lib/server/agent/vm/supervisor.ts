@@ -74,8 +74,18 @@ import type { VmJob, VmPushResult, VmTurnReport } from "./protocol";
  *    comment tenir son serveur en vie.
  */
 
-/** Plafond d'attente du démarrage du serveur. ~1,3 s mesuré ; ceci borne la panne. */
-export const OPENCODE_BOOT_TIMEOUT_MS = 60_000;
+/**
+ * Plafond d'attente du démarrage du serveur.
+ *
+ * ~1,3 s mesuré au lot 0 — sur une microVM déjà chaude. **Le premier run de
+ * production est mort ici** (2026-08-12) : sur une VM fraîchement créée depuis le
+ * snapshot, le disque s'hydrate paresseusement et le premier exec des 176 Mo du
+ * binaire se compte en minutes, pendant lesquelles le serveur accepte la connexion
+ * sans répondre. Le plafond ne borne donc PAS la lenteur normale (elle est de
+ * l'ordre de la seconde) : il borne le serveur qui ne démarrera jamais, et il doit
+ * être large devant le pire démarrage à froid mesuré.
+ */
+export const OPENCODE_BOOT_TIMEOUT_MS = 5 * 60_000;
 
 /** Le port local du serveur opencode dans la microVM. Rien d'autre n'écoute là. */
 export const OPENCODE_PORT = 4096;
@@ -408,8 +418,13 @@ export async function runOpencodeTurn(
   try {
     server = await deps.startServer(env);
     const bootTimeoutMs = deps.bootTimeoutMs ?? OPENCODE_BOOT_TIMEOUT_MS;
+    const bootStartedAt = now();
     if (!(await client.waitHealthy(bootTimeoutMs))) {
-      return failed(`opencode did not become healthy within ${bootTimeoutMs} ms`);
+      // Le temps RÉELLEMENT attendu, pas le plafond : les deux ne coïncident que
+      // si chaque sonde a rendu à l'heure, et c'est justement ce qu'on veut lire.
+      return failed(
+        `opencode did not become healthy — waited ${now() - bootStartedAt} ms (cap ${bootTimeoutMs} ms)`,
+      );
     }
 
     // ── La session : reprise par le journal, ou neuve ────────────────────────
@@ -433,6 +448,15 @@ export async function runOpencodeTurn(
     let sessionError: string | undefined;
     let lastLiveAt = 0;
     let toolsSeen = 0;
+    /**
+     * LA RÉFLEXION EN COURS, telle que le direct la raconte (MIN-122).
+     *
+     * `startedAt` est l'horodatage d'opencode ; la durée se calcule ici parce que
+     * c'est ici qu'il y a une horloge — le traducteur, lui, reste pur. Remis à
+     * `null` dès que le part se ferme : un compteur qui continuerait de courir
+     * derrière un modèle qui écrit dirait qu'il pense encore.
+     */
+    let reasoningSince: number | null = null;
     /** Ce que le tour a encore le droit de dépenser. Absent = BYOK, illimité. */
     let budgetUsd = job.budgetUsd;
     let lastBudgetAt = now();
@@ -667,15 +691,23 @@ export async function runOpencodeTurn(
             break;
           }
         }
-        // Le direct est celui de la MÈRE : y pousser le texte d'une fille ferait
-        // clignoter la réponse de l'agent entre deux conversations.
-        if (!child && out.liveText !== undefined && now() - lastLiveAt >= LIVE_INTERVAL_MS) {
+        // Ce que la réflexion de la MÈRE change au direct : elle l'allume, et elle
+        // le pousse toute seule — un modèle qui pense trois minutes avant d'écrire
+        // son premier mot n'émet aucun `liveText`, et le fil resterait muet.
+        if (!child && out.reasoning) {
+          reasoningSince = out.reasoning.active ? (out.reasoning.startedAt || now()) : null;
+        }
+        const liveDue =
+          !child &&
+          (out.liveText !== undefined || out.reasoning !== undefined) &&
+          now() - lastLiveAt >= LIVE_INTERVAL_MS;
+        if (liveDue) {
           lastLiveAt = now();
           cp.emitLive({
             text: secrets.redact(liveTextOf(state, sessionId)),
             tools: toolsSeen,
-            reasoningActive: false,
-            reasoningMs: 0,
+            reasoningActive: reasoningSince !== null,
+            reasoningMs: reasoningSince === null ? 0 : Math.max(0, now() - reasoningSince),
           });
         }
         /**

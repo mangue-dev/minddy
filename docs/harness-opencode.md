@@ -909,6 +909,51 @@ Deux choix qui vont avec :
 `abandoned-spend.ts` reste dans le dépôt pour la boucle maison, mais le chemin
 opencode ne s'en sert pas : il n'a rien à estimer.
 
+### 2.24 Le premier run de production : mort au démarrage, muet au fil (lot 3)
+
+Premier vrai run sur opencode en production, 2026-08-12. Le fil affiche « Ouverture
+de la sandbox » puis « L'agent Numo travaille » — et plus rien, jamais. Autopsie par
+la ligne du run : `error_message: "opencode did not become healthy within 60000 ms"`,
+posé **6 min 30** après le démarrage du harness. Deux défauts, et le second ne se
+serait vu qu'après avoir corrigé le premier.
+
+**1. La sonde de santé n'avait pas de plafond, donc l'attente n'en avait pas non
+plus.** Les logs de la microVM disent que le serveur a démarré (`opencode server
+listening on http://127.0.0.1:4096`, sa base SQLite créée à T+1 s), et pourtant la
+sonde n'a rien obtenu. Sur une microVM **neuve**, le disque est hydraté
+paresseusement : le premier exec des 176 Mo de binaire se paie bien plus cher que
+les 1,3 s mesurées au lot 0 sur une VM chaude, et pendant ce temps le serveur
+**accepte la connexion sans répondre**. Un `fetch` sans signal attend alors le
+`headersTimeout` d'undici — **300 s** —, ce qui explique l'écart entre les 60 000 ms
+annoncés et les 6 min 30 vécues : la boucle de sondage ne bouclait pas, elle faisait
+UNE requête et attendait cinq minutes. Corrigé des deux côtés : `healthy()` porte son
+propre plafond (2 s), le plafond de démarrage passe à 5 min, l'erreur cite le temps
+**réellement** attendu, et une ligne de journal tombe toutes les 15 s pour que le
+prochain diagnostic tienne dans une lecture de logs.
+
+**2. Les deltas de RÉFLEXION portent `field: "text"`, comme la réponse.** Lu dans le
+binaire 1.18.16 (`case "reasoning-delta"` → `updatePartDelta({… field:"text"})`) puis
+**capturé** contre un faux fournisseur local, coût nul
+([fixtures/opencode-reasoning.ndjson](../lib/server/agent/vm/fixtures/opencode-reasoning.ndjson)) :
+une frame de delta ne dit rien de ce qu'elle transporte, seul le
+`message.part.updated` d'ouverture du part le dit (`type: "reasoning"`, `text: ""`,
+`time.start`). Tant qu'on ne le lisait pas, la chaîne de pensée entrait dans le texte
+du round — donc dans ce que le fil affiche comme la parole de l'agent, et dans le
+message de commit — et le compteur de réflexion du fil (MIN-122) restait éteint : un
+modèle à `reasoning_level: high` peut penser des minutes avant son premier mot, et le
+fil n'avait rien à montrer pendant ce temps. La traduction tient désormais la nature
+de chaque part, écarte la réflexion du sac de texte, allume `reasoningActive` au
+direct et rend la trace repliée sous le **même** event `thinking` que la boucle
+maison.
+
+**Au passage, le même défaut ailleurs** : notre propre prompt, republié par la
+session en `message.part.updated` de type `text`, entrait lui aussi dans la réponse
+du tour (mesuré sur la fixture : la réponse commençait par « dis bonjour »). Le rôle
+d'un message ne se lit que sur `message.updated` — on le retient, et les parts des
+messages `user` sont écartés.
+
+---
+
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un
