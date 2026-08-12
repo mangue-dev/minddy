@@ -468,11 +468,20 @@ export async function runOpencodeTurn(
   let server: { stop(): Promise<void> } | null = null;
   const client = deps.client(`http://127.0.0.1:${OPENCODE_PORT}`);
 
-  /** Ce qu'on rend quand le tour n'a pas pu commencer. */
-  const failed = (message: string): VmTurnReport => ({
+  /**
+   * LE LEDGER DU TOUR, DÉCLARÉ HORS DU `try` — pour que le chemin d'EXCEPTION
+   * puisse encore lui reprendre ce que le fournisseur a facturé (MIN-286).
+   *
+   * Il ne prend sa valeur qu'une fois la session connue ; avant ça il n'y a rien
+   * à rendre, et `null` le dit.
+   */
+  let ledger: TurnLedger | null = null;
+
+  /** Ce qu'on rend quand le tour n'a pas pu commencer (ou s'est cassé en vol). */
+  const failed = (message: string, costUsd = 0): VmTurnReport => ({
     status: "error",
     errorMessage: cap(secrets.redact(message), 1000),
-    costUsd: 0,
+    costUsd,
     checkpointDropped: [],
     checkpointBytes: 0,
     pushed: null,
@@ -508,10 +517,22 @@ export async function runOpencodeTurn(
 
     // ── Le flux, traduit au fil de l'eau ─────────────────────────────────────
     const state = newTurnStreamState();
-    const ledger = new TurnLedger(job, sessionId, subagents);
+    const turnLedger = new TurnLedger(job, sessionId, subagents);
+    ledger = turnLedger;
     let costUsd = 0;
     let sessionError: string | undefined;
     let lastLiveAt = 0;
+    /**
+     * OUTILS AMORCÉS DANS LE ROUND EN COURS — par ROUND, et par la MÈRE seule.
+     *
+     * Le fil lit ce compteur comme un prédicat : `tools === 0` ⇒ le texte en
+     * train de s'écrire est peut-être la réponse finale, et il prend la place du
+     * résumé ([agent-event-feed.tsx](../../../../components/agent/agent-event-feed.tsx),
+     * `isLiveAnswer`). La boucle maison envoie `acc.size`, l'accumulateur INTERNE
+     * à un round (`agent-loop.ts`) : un cumul de tour dirait « narration » sur
+     * toutes les réponses d'un tour qui a appelé un tool une fois, et compterait
+     * en plus les gestes des filles, qui ne sont pas ceux de la mère.
+     */
     let toolsSeen = 0;
     /**
      * LA RÉFLEXION EN COURS, telle que le direct la raconte (MIN-122).
@@ -709,7 +730,7 @@ export async function runOpencodeTurn(
          * l'ordre des appels d'un run devient faux — et c'est exactement ce qu'un
          * `seq` sert à dire.
          */
-        usageSeq: ledger.nextParentSeq,
+        usageSeq: turnLedger.nextParentSeq,
         lastFilesSha,
         instructions: { paths: [...job.instructions.paths], bytes: job.instructions.bytes },
         // Le plafond des 5 ancres de relecture se compte sur la vie du RUN, pas du
@@ -757,6 +778,17 @@ export async function runOpencodeTurn(
        * une vraie coupure demandée est déjà consommée quand on arrive ici.
        */
       abortsRequested = 0;
+      /**
+       * ET LE TOUR REPART PROPRE. Un round coupé (steering) ne publie ni `usage`
+       * ni fin de round : sans cette remise à zéro, son compteur d'outils
+       * continuait de courir sous les rounds suivants. Et une erreur de session
+       * déjà passée ne doit pas condamner ce qui recommence ici : on la garde
+       * pour le fil (l'event `error` est parti), pas pour le VERDICT du tour —
+       * sinon un tour relancé qui finit bien se rangeait « en erreur », sans son
+       * `summary`, donc lu comme interrompu.
+       */
+      toolsSeen = 0;
+      sessionError = undefined;
       for (const part of parts) {
         if (part.steered) await cp.emit("user_message", { text: cap(part.text, 4000) });
       }
@@ -1017,7 +1049,7 @@ export async function runOpencodeTurn(
            * le compteur d'outils du direct comptait un geste qui n'en est pas un.
            */
           if (event.payload.name === "update_plan") continue;
-          if (event.type === "tool_call") toolsSeen += 1;
+          if (event.type === "tool_call" && !child) toolsSeen += 1;
           // Un `task` qui se termine sans avoir fait de fille (erreur, refus)
           // rendrait son crédit éternellement ouvert : le plafond se refermerait
           // sur un tour qui ne délègue plus rien.
@@ -1065,13 +1097,19 @@ export async function runOpencodeTurn(
             lastLiveAt = 0;
             cp.emitLive({
               text: "",
-              tools: toolsSeen,
+              // `tools: 0` comme le `clearLive` de la boucle maison : la charge de
+              // purge ne décrit plus rien, et un compteur non nul y ferait lire
+              // une bulle vide plutôt que rien.
+              tools: 0,
               reasoningActive: false,
               reasoningMs: 0,
               ...liveEdits.payload(),
             });
           }
-          const line = await ledger.record(cp, out.usage, proxy);
+          // Le round est clos, quelle que soit sa fin : le compteur d'outils
+          // repart de zéro pour le suivant.
+          if (!child) toolsSeen = 0;
+          const line = await turnLedger.record(cp, out.usage, proxy);
           costUsd += line.cost;
           /**
            * LE PLAFOND, TENU ICI ET PAS DANS LA BOUCLE — parce qu'il n'y a plus
@@ -1243,7 +1281,7 @@ export async function runOpencodeTurn(
      * rien qu'un message. Ce qui compte est qu'il soit au ledger, donc au quota
      * du compte et à la facture.
      */
-    costUsd += await ledger.recordOrphans(cp, proxy);
+    costUsd += await turnLedger.recordOrphans(cp, proxy);
 
     // ── L'état d'opencode, exporté pour le tour suivant ──────────────────────
     let opencodeState: OpencodeCheckpointState | undefined;
@@ -1360,7 +1398,21 @@ export async function runOpencodeTurn(
       sandboxMs: job.bootstrapMs + (now() - startedAt),
     };
   } catch (err) {
-    return failed((err as Error).message);
+    /**
+     * UN TOUR QUI MEURT A QUAND MÊME DÉPENSÉ (MIN-286).
+     *
+     * Le chemin heureux reprend au proxy ce qu'aucun round n'est venu chercher
+     * (`recordOrphans`, plus haut) ; le chemin d'exception passait à côté, et le
+     * `finally` fermait le proxy derrière lui — la dépense partait avec la
+     * microVM. Or c'est justement ici qu'elle est la plus probable : la seule
+     * façon d'apprendre que le serveur opencode est mort est le flux `/event`
+     * qui se rompt, et le round en vol a bel et bien été facturé.
+     *
+     * Best-effort et sans lever : on rend le tour en erreur, pas la panne du
+     * ledger par-dessus.
+     */
+    const salvaged = ledger ? await ledger.recordOrphans(cp, proxy).catch(() => 0) : 0;
+    return failed((err as Error).message, salvaged);
   } finally {
     // Filet : un tour qui sort par une exception n'est pas passé par l'arrêt
     // d'avant-push, et un serveur de dev survivrait au tour. `stopAll` est

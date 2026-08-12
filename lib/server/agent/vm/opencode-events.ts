@@ -556,7 +556,26 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
        * On rend donc la coupure au superviseur, qui est le seul à savoir s'il l'a
        * demandée.
        */
-      if (error.name === "MessageAbortedError") return { sessionId, events: [], aborted: true };
+      if (error.name === "MessageAbortedError") {
+        /**
+         * UN ROUND COUPÉ FERME SON SAC, comme un round terminé (MIN-286).
+         *
+         * Le sac de texte n'était vidé qu'à la fin d'un round FACTURÉ
+         * (`message.updated` avec `finish`) — or un round avorté n'en a pas. Le
+         * fragment écrit avant la coupure restait donc dans le sac de la session,
+         * et un tour repris derrière (steering : `abort` puis nouveau prompt sur
+         * la MÊME session) recollait ce fragment devant tout ce qui suivait : le
+         * direct, la réponse du tour, le `summary` et le message de commit.
+         *
+         * Il est gardé comme dernier texte connu, exactement comme une fin de
+         * round : quand la coupure TERMINE le tour (« Stop », plafond, deadline),
+         * c'est encore ce que l'agent a dit de plus récent.
+         */
+        const cut = liveTextOf(state, sessionId);
+        if (cut.trim()) state.lastRoundText.set(sessionId, cut);
+        partsOf(state, sessionId).clear();
+        return { sessionId, events: [], aborted: true };
+      }
       const data = (error.data ?? {}) as Record<string, unknown>;
       const message =
         typeof error.message === "string"

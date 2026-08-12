@@ -490,6 +490,46 @@ export async function turnDiffStat(
 }
 
 /**
+ * TOUS LES CHEMINS QUE LE TOUR A REMUÉS, suppressions et fichiers neufs compris
+ * (MIN-286).
+ *
+ * `turnDiffStat` sert à DIMENSIONNER un tour : sa liste est celle qu'on passe à
+ * `vitest related`, donc elle exclut ce qui n'existe plus (`--diff-filter=d`) et
+ * ne compte les fichiers neufs qu'en nombre. Ici on veut l'inverse — savoir CE
+ * QUI a bougé, pour que le type-check de fin de tour ait quelque chose à
+ * regarder quand le modèle n'a fait que supprimer ou créer par le shell (sous
+ * opencode, `rm`/`mv` ne passent par aucun tool d'écriture).
+ *
+ * Best-effort comme ses voisines : toute erreur rend une liste vide.
+ */
+export async function turnTouchedPaths(host: RepoHost, fromSha: string): Promise<string[]> {
+  if (!fromSha) return [];
+  try {
+    const [names, porcelain] = await Promise.all([
+      host.exec(`git diff --name-only ${sq(fromSha)}`, { timeoutMs: 30_000 }),
+      host.exec(`git status --porcelain`, { timeoutMs: 30_000 }),
+    ]);
+    const paths = new Set<string>();
+    if (names.exitCode === 0) {
+      for (const line of names.stdout.split("\n")) {
+        const path = line.trim();
+        if (path) paths.add(path);
+      }
+    }
+    if (porcelain.exitCode === 0) {
+      for (const line of porcelain.stdout.split("\n")) {
+        if (!line.startsWith("??")) continue;
+        const path = line.slice(2).trim();
+        if (path) paths.add(path);
+      }
+    }
+    return [...paths];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Fichiers changés entre deux shas (le « diff par tour »). Deux passes git :
  * `--name-status` (statut + chemins propres, renommages compris) pour la liste, et
  * `--numstat` pour les compteurs +/− (fichier binaire → 0/0). Forme deux-points

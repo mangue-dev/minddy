@@ -12,7 +12,7 @@ import {
   type DeliveryGateDeps,
 } from "../delivery-gate";
 import { newPlanWriteSink, watchPlanWrites } from "../plan-closure";
-import { REPO_DIR, turnDiffStat, type RepoHost } from "../repo-host";
+import { REPO_DIR, turnDiffStat, turnTouchedPaths, type RepoHost } from "../repo-host";
 import type { PlatformToolHandler } from "../exec-tool";
 
 /**
@@ -172,7 +172,26 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
     const stat = await turnDiffStat(deps.host, deps.filesFromSha).catch(() => null);
     if (!stat) return;
     if (stat.files.length === 0 && stat.untracked === 0 && stat.lines === 0) return;
+    /**
+     * LA LISTE COMPLÈTE, et pas celle de `turnDiffStat` : elle EXCLUT les
+     * suppressions et ne compte les fichiers neufs qu'en nombre. Un tour qui n'a
+     * fait que `rm lib/x.ts` laissait donc `editedPaths` vide — et le type-check
+     * de fin de tour se tait sur une liste vide (`delivery-gate.ts`), alors que
+     * c'est exactement le changement qui casse le typage ailleurs. La boucle
+     * maison, elle, notait le chemin supprimé (`delete_file` → `noteEdited`).
+     */
+    for (const path of await turnTouchedPaths(deps.host, deps.filesFromSha)) {
+      editedPaths.add(path);
+    }
     for (const path of stat.files) editedPaths.add(path);
+    /**
+     * …ET CE QUE LE MODÈLE AVAIT VÉRIFIÉ NE VAUT PLUS. Même règle que
+     * `noteEdit` : un `npm test` vert lancé AVANT ces changements ne dit rien
+     * d'eux, et le laisser debout ferait TAIRE la porte de livraison sur un tour
+     * dont personne n'a vu le code tourner. La boucle maison périmait de même,
+     * depuis ses tools d'édition et de suppression.
+     */
+    noteVerificationStale(verification);
     gate.noteRepoTouched();
   };
 

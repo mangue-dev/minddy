@@ -208,6 +208,39 @@ function literal(value: string): string {
 }
 
 /**
+ * LES TOOLS QUE NOS DESCRIPTIONS CITENT, DITS AVEC LES NOMS D'OPENCODE (MIN-286).
+ *
+ * `agentToolsFor` est la seule source des descriptions, et elles parlent des tools
+ * VOISINS : « use run_command for those », « exactly like edit_file », « download
+ * them with run_command ». Ces noms-là sont ceux de la boucle maison, et le
+ * modèle qui les lit sous opencode appelle un tool qui n'existe pas — pendant que
+ * son prompt système, lui, cite les bons ([prompt.ts](../prompt.ts),
+ * `OPENCODE_TOOL_NAMES`). Deux vérités dans le même contexte, et un round brûlé
+ * pour découvrir laquelle est la bonne.
+ *
+ * La table est celle du traducteur d'events ([opencode-events.ts](opencode-events.ts),
+ * `TOOL_NAMES`) lue à l'envers, plus `list_dir` — chez opencode, c'est `read` qui
+ * liste. Un nom sans vis-à-vis (`apply_edits`) n'y est pas : le renommer
+ * promettrait autre chose plutôt que rien.
+ */
+const OPENCODE_NAME_FOR: Record<string, string> = {
+  read_file: "read",
+  list_dir: "read",
+  write_file: "write",
+  edit_file: "edit",
+  run_command: "bash",
+  ask_user: "question",
+  spawn_agent: "task",
+};
+
+const OPENCODE_NAME_RE = new RegExp(`\\b(${Object.keys(OPENCODE_NAME_FOR).join("|")})\\b`, "g");
+
+/** Une description de `tools.ts`, retaillée aux noms qu'opencode sert vraiment. */
+export function retargetToolNames(text: string): string {
+  return text.replace(OPENCODE_NAME_RE, (name) => OPENCODE_NAME_FOR[name] ?? name);
+}
+
+/**
  * Un schéma JSON, rendu en expression `tool.schema.…`.
  *
  * Ce que ce traducteur couvre est exactement ce que `tools.ts` emploie —
@@ -219,7 +252,9 @@ function literal(value: string): string {
  */
 export function schemaExpression(schema: JsonSchema, path = "args"): string {
   const describe = (expr: string) =>
-    schema.description ? `${expr}.describe(${literal(schema.description)})` : expr;
+    schema.description
+      ? `${expr}.describe(${literal(retargetToolNames(schema.description))})`
+      : expr;
 
   if (Array.isArray(schema.enum) && schema.enum.length > 0) {
     // Les enums de `tools.ts` sont tous des chaînes ; un enum d'autre chose
@@ -292,7 +327,7 @@ export function renderOpencodeTool(def: AgentToolDef): string {
   return `${HEADER}import { tool } from "@opencode-ai/plugin";
 
 export default tool({
-  description: ${literal(def.function.description)},
+  description: ${literal(retargetToolNames(def.function.description))},
   args: ${argsBlock(def)},
   async execute(args, ctx) {
     const base = process.env[${literal(SUPERVISOR_URL_ENV)}];

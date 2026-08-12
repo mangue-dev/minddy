@@ -58,6 +58,22 @@ function fakeHost(): RepoHost {
   };
 }
 
+/**
+ * Un dépôt qui RÉPOND : `git diff --name-only` (suppressions comprises) et
+ * `git status --porcelain` (fichiers neufs). C'est là que le sondage va chercher
+ * ce qu'aucun tool d'écriture n'a annoncé.
+ */
+function repoSaying(diffNames: string, porcelain: string): RepoHost {
+  return {
+    ...fakeHost(),
+    exec: async (command: string) => ({
+      exitCode: 0,
+      stdout: command.includes("status --porcelain") ? porcelain : diffNames,
+      stderr: "",
+    }),
+  } as RepoHost;
+}
+
 /** Budget large : aucun contrôle n'est empêché par le temps restant. */
 const ROOMY = 12 * 60 * 60_000;
 
@@ -212,15 +228,46 @@ describe("la porte de `create_pr`", () => {
     expect(vi.mocked(typeErrorsForTurn).mock.calls[0][1]).toEqual(["a.ts", "b.ts", "c.ts", "d.ts"]);
   });
 
-  it("compte une SUPPRESSION seule, qui ne laisse aucun chemin à noter", async () => {
-    // `turnDiffStat` exclut les suppressions de `files` (`--diff-filter=d`) : un
-    // tour qui ne fait que `rm` n'a que ses lignes pour se dire.
+  it("compte une SUPPRESSION seule, et la donne au type-check", async () => {
+    /**
+     * MIN-286 — `turnDiffStat` exclut les suppressions de `files`
+     * (`--diff-filter=d`) : sa liste est celle qu'on passe à `vitest related`, où
+     * un chemin disparu n'a pas de sens. Le type-check, lui, en a besoin — c'est
+     * même le changement qui casse le typage AILLEURS, et la porte se tait sur
+     * une liste vide. La boucle maison notait le chemin (`delete_file` →
+     * `noteEdited`) ; il vient maintenant de git.
+     */
     vi.mocked(turnDiffStat).mockResolvedValueOnce({ files: [], lines: 42, untracked: 0 });
-    const { delivery } = deliveryFor();
+    const { delivery } = deliveryFor({ host: repoSaying("lib/y.ts\n", "") });
     const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
 
-    // Pas de type-check (aucun chemin), mais les tests et le diff, eux, sont dus.
-    expect((await createPr({})).followUp).toBe("TESTS\n\n---\n\nDIFF");
+    expect((await createPr({})).followUp).toBe("TYPES\n\n---\n\nTESTS\n\n---\n\nDIFF");
+    expect(vi.mocked(typeErrorsForTurn).mock.calls[0][1]).toEqual(["lib/y.ts"]);
+  });
+
+  it("compte un fichier NEUF créé au shell, que git ne suit pas encore", async () => {
+    vi.mocked(turnDiffStat).mockResolvedValueOnce({ files: [], lines: 0, untracked: 1 });
+    const { delivery } = deliveryFor({ host: repoSaying("", "?? lib/neuf.ts\n") });
+    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+
+    await createPr({});
+    expect(vi.mocked(typeErrorsForTurn).mock.calls[0][1]).toEqual(["lib/neuf.ts"]);
+  });
+
+  it("PÉRIME ce que le modèle avait vérifié avant de toucher au dépôt par le shell", async () => {
+    /**
+     * MIN-286 — `noteVerificationStale` n'était appelé que depuis `noteEdit`,
+     * c'est-à-dire depuis la permission `edit`. Un `npm test` vert lancé AVANT un
+     * `rm`/`sed -i` faisait donc taire la porte sur des tests qui ne parlaient
+     * plus du dépôt qu'on livre. La boucle maison périmait de même, depuis ses
+     * tools de suppression.
+     */
+    const { delivery } = deliveryFor({ host: repoSaying("lib/y.ts\n", "") });
+    delivery.noteShell("npx vitest run", 0);
+    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+
+    expect((await createPr({})).followUp).toContain("TESTS");
+    expect(vi.mocked(testFailuresForTurn)).toHaveBeenCalled();
   });
 });
 

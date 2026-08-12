@@ -256,6 +256,28 @@ function fakeFetch(): typeof fetch {
   }) as typeof fetch;
 }
 
+/**
+ * Le flux `/event` ROMPU en vol — le seul signe qu'un serveur opencode est mort
+ * (il n'y a pas d'autre canal : `startServer` ne surveille pas le process). La
+ * lecture rejette, et la rejection traverse la boucle jusqu'au `catch` du tour.
+ */
+function tornEventStream(): typeof fetch {
+  const base = fakeFetch();
+  return (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).includes("/event")) {
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(new Error("stream torn"));
+          },
+        }),
+        { status: 200, headers: { "content-type": "text/event-stream" } },
+      );
+    }
+    return await base(input, init);
+  }) as typeof fetch;
+}
+
 function deps(): SupervisorDeps {
   return {
     startServer: async (env) => {
@@ -584,6 +606,53 @@ describe("le tour", () => {
       h.usage.reduce((sum, l) => sum + Number(l.cost ?? 0), 0),
       10,
     );
+  });
+
+  it("facture le round coupé MÊME quand le tour meurt en vol", async () => {
+    /**
+     * MIN-286 — la reprise du round coupé vivait sur le seul chemin heureux.
+     *
+     * Or c'est l'autre qui la rend nécessaire : la seule façon d'apprendre que le
+     * serveur opencode est mort est son flux `/event` qui se rompt, et le round
+     * en vol a bel et bien été facturé. L'exception sautait `recordOrphans` et le
+     * `finally` fermait le proxy derrière : la dépense partait avec la microVM,
+     * et le rapport annonçait `costUsd: 0`.
+     */
+    h.generations = [
+      {
+        id: "gen-orphan",
+        model: "un-autre-modele",
+        outputTokens: 159,
+        costUsd: 0.002827,
+        usage: {
+          promptTokens: 2032,
+          completionTokens: 159,
+          totalTokens: 2191,
+          cost: 0.002827,
+          cachedTokens: 0,
+          cacheWriteTokens: 0,
+        },
+      },
+    ];
+    const report = await run(
+      {},
+      {
+        client: (baseUrl) =>
+          new OpencodeClient({
+            baseUrl,
+            directory: "/vercel/sandbox/repo",
+            fetchImpl: tornEventStream(),
+          }),
+      },
+    );
+
+    expect(report.status).toBe("error");
+    const orphan = h.usage.find((l) => l.generationId === "gen-orphan");
+    expect(orphan, "la dépense du round en vol doit atteindre le ledger").toBeTruthy();
+    expect(orphan!.cost).toBe(0.002827);
+    expect(orphan!.estimated).toBe(false);
+    // …et le rapport ne dit plus « ce tour n'a rien coûté ».
+    expect(report.costUsd).toBeCloseTo(0.002827, 10);
   });
 
   it("n'écrit RIEN d'un round coupé dont le fournisseur n'a rien dit", async () => {
@@ -988,6 +1057,26 @@ describe("les sessions filles", () => {
     const cleared = h.live.filter((l) => l.text === "");
     expect(cleared.length).toBe(1);
     expect(h.live.at(-1)?.text).toBe("fini");
+  });
+
+  it("compte les outils PAR ROUND, comme la boucle maison", async () => {
+    /**
+     * MIN-286 — le fil lit `tools` comme un prédicat : `0` ⇒ ce texte est
+     * peut-être la réponse finale, et il prend la place du résumé
+     * (`isLiveAnswer`). La boucle maison envoie l'accumulateur INTERNE au round
+     * (`acc.size`), donc remis à zéro à chaque round.
+     *
+     * Cumulé sur le tour, le compteur ne retombait jamais : la réponse du dernier
+     * round du tour capturé — qui n'appelle aucun tool — s'affichait comme de la
+     * narration parce qu'un `read_issue` avait eu lieu deux rounds plus tôt.
+     */
+    await run();
+    // Le round 1 appelle `read_issue` : la charge de purge de fin de round ne
+    // décrit plus rien, elle part à zéro (le `clearLive` de la boucle maison).
+    expect(h.live.find((l) => l.text === "")?.tools).toBe(0);
+    // Le round 2 n'appelle aucun tool : sa réponse en cours d'écriture doit se
+    // lire comme une réponse.
+    expect(h.live.at(-1)).toMatchObject({ text: "fini", tools: 0 });
   });
 
   it("remet le rapport de la fille au fil, et referme son bloc", async () => {
@@ -1579,6 +1668,38 @@ describe("le steering et le « Stop »", () => {
    * accepté à l'écran, perdu pour toujours, et le run ne se réveillait même pas,
    * puisque c'est la file qui le re-queue.
    */
+  it("un tour REPARTI après une erreur de session ne se range plus en erreur", async () => {
+    /**
+     * MIN-286 — `sessionError` ne se remettait jamais à zéro.
+     *
+     * Une erreur de session qui n'est pas une coupure ne SORT PAS de la boucle
+     * (le tour peut très bien continuer). Reposté derrière par un message de
+     * steering, le tour finissait bien, poussait, et se rangeait quand même
+     * « erreur » — sans son `summary`, donc lu comme interrompu par le fil.
+     */
+    h.tick = 3_000;
+    h.extraFrames = [
+      JSON.stringify({
+        type: "session.error",
+        properties: { sessionID: PARENT, error: { name: "ProviderError", message: "429" } },
+      }),
+    ];
+    const report = await runOpencodeTurn(
+      job(),
+      { prompt: "fais le ticket", anchorInstructions: "# Ancrage" },
+      { ...cp(), ...steeringAfterFirstPrompt("reprends là où tu en étais") },
+      host(),
+      deps(),
+    );
+    // L'erreur est DITE au fil (elle a eu lieu)…
+    expect(h.events.some((e) => e.type === "error")).toBe(true);
+    // …mais elle ne condamne pas ce qui a recommencé derrière.
+    expect(h.prompts.at(-1)).toBe("reprends là où tu en étais");
+    expect(report.status).toBe("completed");
+    expect(report.errorMessage).toBeUndefined();
+    expect(h.events.some((e) => e.type === "summary")).toBe(true);
+  });
+
   it("REMET en file le message drainé quand le tour sort avant de l'avoir posté", async () => {
     h.tick = 3_000;
     // Le plafond tombe sur le premier round : le tour sort par `break` juste

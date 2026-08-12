@@ -1032,6 +1032,38 @@ Là où le code explique pourquoi il fait ce qu'il fait, il avait raison. Les
 quatorze vrais défauts vivent tous à une FRONTIÈRE : entre deux modules, entre le
 plan et la VM, entre une écriture et sa lecture.
 
+### 2.27 La deuxième relecture : sept défauts, tous sur un chemin d'EXCEPTION
+
+Passe du 2026-08-13, menée par six lecteurs indépendants suivis d'une réfutation
+contradictoire de chaque soupçon : **sept défauts confirmés et corrigés**, six
+réfutés. Aucune tâche du plan ne repart en « à faire » — comme la fois d'avant,
+ce qui manquait était un maillon, jamais la brique.
+
+**Le motif, cette fois, n'est plus « une écriture sans lecture » mais « le chemin
+NORMAL est traité, l'autre non ».** Chaque défaut se lit de la même manière : ce
+qui devait arriver à la fin d'un round arrivait bien à la fin d'un round *réussi*,
+et nulle part ailleurs.
+
+| Le défaut | Ce qui manquait |
+| --- | --- |
+| **Un tour mort en vol ne facturait rien.** `recordOrphans` — le seul écrivain de la dépense d'un round qu'opencode ne facture pas (§2.23) — vivait après la boucle, donc uniquement sur le chemin heureux. Or la SEULE façon d'apprendre que le serveur opencode est mort est son flux `/event` qui se rompt : l'exception sautait la reprise, le `finally` fermait le proxy derrière, et le rapport annonçait `costUsd: 0` sur un round que le fournisseur avait facturé. Le trou de MIN-216, rouvert sur le chemin où il est le plus probable. | le `catch` |
+| **Le texte d'un round coupé se recollait devant le suivant.** Le sac de texte n'était vidé qu'à la fin d'un round FACTURÉ ; un round avorté n'en a pas. Sur un steering (`abort` puis nouveau prompt sur la même session), le fragment écrit avant la coupure repartait en tête du direct, de la réponse du tour, du `summary` **et du message de commit**. | le vidage sur `MessageAbortedError` |
+| **`sessionError` ne se remettait jamais à zéro.** Une erreur de session non-coupure ne SORT PAS de la boucle. Reposté par un message de steering, le tour finissait bien, poussait — et se rangeait quand même `error`, sans son `summary`, donc rendu « interrompu » par le fil. | la remise à zéro au repost |
+| **Le compteur d'outils du direct était cumulatif, filles comprises.** Le fil lit `tools === 0` comme « ce texte est peut-être la réponse » (`isLiveAnswer`) ; la boucle maison envoie l'accumulateur INTERNE au round. Cumulé, il ne retombait jamais : dès qu'un tour avait appelé un tool une fois, toutes ses réponses suivantes s'affichaient comme de la narration. | la remise à zéro au round |
+| **Les descriptions de tools citaient les tools de l'ANCIEN harnais.** `agentToolsFor` est la seule source, et son texte dit « use run_command for those », « exactly like edit_file ». Servi tel quel, `run_background` envoyait le modèle appeler un tool qu'opencode ne sert pas — pendant que son prompt système, lui, citait `bash` (`OPENCODE_TOOL_NAMES`). Deux vérités dans le même contexte. | la table de noms, à la génération |
+| **Une RELECTURE recevait la délégation.** `primaryTools` sert `task` dès que `subagents.maxParallel > 0`, et le job posait ce plafond sans regarder `writesToRepo` — les deux prompts, eux, le conditionnaient déjà. Un run de relecture pouvait donc ouvrir des filles qui ÉDITENT le dépôt. | la même condition sur le job |
+| **Suppressions et fichiers neufs faits au shell ne déclenchaient aucun contrôle.** `probeRepoTouched` (§2.26) ouvrait la porte mais remplissait `editedPaths` avec `turnDiffStat.files`, qui EXCLUT les suppressions et ne compte les fichiers neufs qu'en nombre : un tour qui ne faisait que `rm lib/x.ts` livrait sans un type-check, alors que c'est le changement qui casse le typage ailleurs. Et rien ne PÉRIMAIT la vérification du modèle (`noteVerificationStale` n'a qu'un appelant, la permission `edit`) : un `npm test` vert d'avant le `rm` faisait taire la porte. La boucle maison faisait les deux depuis `delete_file`. | `turnTouchedPaths`, et la péremption |
+
+**Ce qui a été réfuté**, et vaut d'être noté pour ne pas y revenir : le flux `/event`
+souscrit après le premier prompt (mesuré : aucune frame perdue), le steering drainé
+sur un `prompt_async` en échec (le journal est rejoué avant), `recordOrphans` sur
+un fournisseur non-OpenRouter, le plafond de temps du `bash` (120 s **par défaut**,
+que le modèle peut monter à 600 s — l'inverse d'un plafond perdu), et le plafond
+d'images par tour (`MAX_IMAGES_PER_TURN`) : le message qu'opencode fabrique d'une
+pièce jointe n'est PAS persisté en session (§2.22), donc il ne repart pas à chaque
+round et n'entre pas dans le journal ; il reste un écart de comportement à mesurer
+pendant la semaine d'observation, pas un défaut avec une sortie fausse.
+
 ---
 
 ---

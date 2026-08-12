@@ -117,3 +117,21 @@ describe("vm/main.ts aiguille sur le moteur du job", () => {
     expect(source).toContain("report = job.engine");
   });
 });
+
+/**
+ * MIN-286 — UNE RELECTURE NE DÉLÈGUE PAS, ET LE JOB DOIT LE DIRE.
+ *
+ * Chez opencode, c'est le plafond de simultané qui décide de servir le tool
+ * `task` (`primaryTools`, [vm/opencode-config.ts](vm/opencode-config.ts)). Les
+ * deux prompts posaient déjà la condition ; le job, lui, l'avait perdue — une
+ * relecture recevait donc un tool de délégation que son ancrage ne décrit pas,
+ * que `PR_REVIEW_TOOLS` refuse, et dont les filles ÉDITENT le dépôt d'un run
+ * censé n'y rien écrire.
+ */
+describe("le plafond de sous-agents suit l'ancrage", () => {
+  const source = read("execute.ts");
+
+  it("ferme la délégation d'un run qui n'écrit pas dans le dépôt", () => {
+    expect(source).toContain("maxParallel: writesToRepo ? subagentMaxParallel : 0");
+  });
+});

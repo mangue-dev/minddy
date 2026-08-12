@@ -6,6 +6,7 @@ import {
   localToolsFor,
   opencodeToolFiles,
   renderOpencodeTool,
+  retargetToolNames,
   schemaExpression,
   SUPERVISOR_URL_ENV,
 } from "./opencode-tools";
@@ -276,5 +277,59 @@ describe("où les fichiers sont posés", () => {
     for (const f of opencodeToolFiles(job())) {
       expect(f.path.startsWith(`${REPO_DIR}/`)).toBe(false);
     }
+  });
+});
+
+/**
+ * MIN-286 — LES DESCRIPTIONS CITENT LES TOOLS VOISINS, et il faut qu'elles citent
+ * ceux qu'opencode SERT.
+ *
+ * `tools.ts` est la seule source, et son texte parle la langue de la boucle
+ * maison : « use run_command for those », « exactly like edit_file ». Servi tel
+ * quel, il donne au modèle un nom de tool qui n'existe pas — pendant que son
+ * prompt système, lui, cite le bon (`OPENCODE_TOOL_NAMES`). Deux vérités dans le
+ * même contexte, et un round brûlé pour découvrir laquelle est la bonne.
+ */
+describe("les descriptions, dites avec les noms d'opencode", () => {
+  /** La description telle que le MODÈLE la lit : celle du fichier généré. */
+  const servedDescription = (name: string, over: Partial<VmJob> = {}) =>
+    renderOpencodeTool(
+      [...domainToolsFor(job(over)), ...localToolsFor(job(over))].find(
+        (t) => t.function.name === name,
+      )!,
+    );
+
+  it("renomme les tools de la boucle maison, sans toucher aux nôtres", () => {
+    expect(retargetToolNames("use run_command for those, it gives you the exit code")).toBe(
+      "use bash for those, it gives you the exit code",
+    );
+    expect(retargetToolNames("exactly like edit_file, but on the minddy ticket")).toBe(
+      "exactly like edit, but on the minddy ticket",
+    );
+    // Nos tools de domaine gardent leur nom : ce sont EUX qui sont servis.
+    expect(retargetToolNames("get the id from read_issue, then read_page")).toBe(
+      "get the id from read_issue, then read_page",
+    );
+  });
+
+  it("ne laisse aucun nom de l'ancien harnais dans un tool généré", () => {
+    const dead = /\b(run_command|read_file|write_file|edit_file|list_dir|ask_user|spawn_agent)\b/;
+    for (const anchor of ["issue", "notebook", "pr"] as const) {
+      for (const file of opencodeToolFiles(job({ anchor, imageInput: true }))) {
+        expect(dead.test(file.content), `${anchor}: ${file.path}`).toBe(false);
+      }
+    }
+  });
+
+  it("envoie le modèle au `bash` d'opencode pour curler son serveur", () => {
+    // Le cas qui coûtait un round : `run_background` dit comment se servir de ce
+    // qu'il vient de lancer, et il le disait avec le nom d'un tool absent.
+    const background = servedDescription("run_background");
+    expect(background).toContain("use bash to curl it");
+    expect(background).not.toContain("run_command");
+  });
+
+  it("dit `read` pour aller chercher les octets d'une pièce jointe", () => {
+    expect(servedDescription("read_resource")).toContain("download them with bash");
   });
 });

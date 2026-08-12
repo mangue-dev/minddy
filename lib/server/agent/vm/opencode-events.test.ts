@@ -502,6 +502,56 @@ describe("ce qui ne doit jamais casser un tour", () => {
     // en vol disparaissait sans laisser un event.
     expect(out.aborted).toBe(true);
   });
+
+  it("ferme le sac de texte d'un round coupé, comme une fin de round", () => {
+    /**
+     * MIN-286 — le texte d'un round avorté se recollait devant le suivant.
+     *
+     * Le sac n'était vidé qu'à la fin d'un round FACTURÉ (`message.updated` avec
+     * `finish`), et un round coupé n'en a pas. Sur un steering — `abort`, puis
+     * nouveau prompt sur la MÊME session — le fragment écrit avant la coupure
+     * repartait donc en tête du direct, de la réponse du tour, du `summary` et du
+     * message de commit.
+     */
+    const state = newTurnStreamState();
+    const wrote = (text: string, partId: string): OpencodeEvent => ({
+      type: "message.part.delta",
+      properties: { sessionID: "ses_1", messageID: "msg_a", partID: partId, field: "text", delta: text },
+    });
+    translateEvent(wrote("Je commence par corriger le parseur, ensu", "prt_1"), state);
+    translateEvent(
+      {
+        type: "session.error",
+        properties: { sessionID: "ses_1", error: { name: "MessageAbortedError" } },
+      },
+      state,
+    );
+    // Le round suivant repart d'un sac vide…
+    translateEvent(wrote("C'est fait : le test passe.", "prt_2"), state);
+    expect(liveTextOf(state, "ses_1")).toBe("C'est fait : le test passe.");
+    expect(replyOf(state, "ses_1")).toBe("C'est fait : le test passe.");
+  });
+
+  it("garde le texte coupé quand la coupure TERMINE le tour", () => {
+    // « Stop », plafond, deadline : il n'y a pas de round derrière, et ce fragment
+    // est encore ce que l'agent a dit de plus récent.
+    const state = newTurnStreamState();
+    translateEvent(
+      {
+        type: "message.part.delta",
+        properties: { sessionID: "ses_1", messageID: "msg_a", partID: "prt_1", field: "text", delta: "j'ai commencé par" },
+      },
+      state,
+    );
+    translateEvent(
+      {
+        type: "session.error",
+        properties: { sessionID: "ses_1", error: { name: "MessageAbortedError" } },
+      },
+      state,
+    );
+    expect(replyOf(state, "ses_1")).toBe("j'ai commencé par");
+  });
 });
 
 describe("les garde-fous et les questions", () => {

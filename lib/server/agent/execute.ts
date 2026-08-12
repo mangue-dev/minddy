@@ -1850,7 +1850,16 @@ export async function executeAgentRun(
         subagents: {
           models: subagentModels,
           favorites: subagentFavorites,
-          maxParallel: subagentMaxParallel,
+          /**
+           * UNE RELECTURE NE DÉLÈGUE PAS, et c'est ce plafond qui le dit sous
+           * opencode : la config sert le tool `task` dès qu'il est > 0
+           * ([opencode-config.ts](vm/opencode-config.ts), `primaryTools`). Les
+           * deux prompts posent déjà la même condition (l.1308 et l.1442) — le
+           * job, lui, l'avait perdue : le modèle recevait un tool de délégation
+           * que son ancrage ne décrit pas et que `PR_REVIEW_TOOLS` refuse, et
+           * une relecture pouvait ouvrir deux sessions filles qui ÉDITENT.
+           */
+          maxParallel: writesToRepo ? subagentMaxParallel : 0,
           allowedIds: subagentScope.allowedIds,
           abovePlanIds: subagentScope.abovePlanIds,
           maxMultiplier: subagentScope.maxMultiplier,
