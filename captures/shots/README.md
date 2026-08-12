@@ -4,26 +4,48 @@
 PNG), `history.jsonl` (un enregistrement par run). Le mode d'emploi est dans le
 skill `capture-shot` ; ce fichier ne tient que l'état.
 
-Cible : `CAPTURE_BASE_URL=https://preview.minddy.app`. Les dix captures du
-2026-08-04 en viennent, sauf `feedbackInbox` — voir sa ligne.
+Cible : `CAPTURE_BASE_URL=https://preview.minddy.app`. Les onze captures en
+viennent — y compris `feedbackInbox`, dont la parenthèse locale du 4 août est
+refermée.
 
 ## Où en sont les onze emplacements
 
-Toutes rafraîchies le **2026-08-04** (commit `2545b33`), après 210 commits sans
-reprise.
+Les dix premières rafraîchies le **2026-08-12** (commit `bce6bbc`, ce que
+`preview.minddy.app` servait alors — `/api/version` le dit), après 223 commits
+sans reprise. `pagesEditor` est du même jour, prise à part.
 
 | Emplacement | Dossier | Cadre | Fenêtre | État |
 |---|---|---|---|---|
 | `heroBoard` | `hero-board/` | 16/10 | 1736 × 1085 | publié |
-| `featureCycle` | `cycle/` | 16/10 | 1736 × 1085 | publié, composition faible (quinzaine décalée) |
+| `featureCycle` | `cycle/` | 16/10 | 1736 × 1085 | publié, composition faible (quinzaine décalée) — **rendu par aucune section** |
 | `featurePalette` | `palette/` | 16/10 | 1736 × 1085 | publié |
 | `feedbackBoard` | `feedback-board/` | 16/10 | 1736 × 1085 | publié |
-| `feedbackInbox` | `feedback-inbox/` | 16/10 | 1736 × 1085 | publié, pris en **local** |
+| `feedbackInbox` | `feedback-inbox/` | 16/10 | 1736 × 1085 | publié, dates relatives fausses (voir son `intent.md`) |
+| `pagesEditor` | `pages-editor/` | 16/10 | 1736 × 1085 | publié |
 | `workflowIssue` | `issue-create/` | 4/3 | 1447 × 1085 | publié |
 | `numoPanel` | `numo/` | 4/3 | **1200 × 900** | publié |
 | `workflowPr` | `pull-request/` | 4/3 | 1447 × 1085 | publié |
 | `scratchpad` | `carnet/` | 4/3 | 1024 × 768 | publié |
 | `workflowAgent` | `agent/` | 4/3 | 1447 × 1085 | publié |
+
+### Trois scripts ont dû être corrigés le 12 août
+
+Chacun est un cas où l'écran a bougé sous un sélecteur, et où le mode d'échec
+mérite d'être connu :
+
+- **`issue-create`** — Smart-fill (MIN-260) est armé par défaut, et il *retire*
+  du DOM les quatre propriétés qu'il va remplir. Échec franc, en timeout.
+- **`agent`** — `/agents` s'ouvre désormais sur une conversation neuve, le run
+  vit dans la colonne de gauche. Sans le clic ajouté, l'image sortait sur un
+  écran d'accueil.
+- **`pull-request`** — le pire des trois, parce qu'il était **vert et faux** :
+  le diff est passé à `@pierre/diffs`, qui rend dans un **Shadow DOM**. Les
+  locators Playwright le traversent (donc l'attente passait), mais
+  `main.querySelectorAll` non — et les couleurs sont calculées en `oklab()`, que
+  la lecture de `rgb()` ne reconnaissait plus. Le comptage disait 0 ligne
+  colorée sur un diff entièrement coloré. **Un contrôle qui lit le DOM doit
+  descendre dans les `shadowRoot`, et laisser le navigateur convertir les
+  couleurs.**
 
 Deux exceptions, chacune motivée dans l'`intent.md` de son dossier :
 
@@ -36,7 +58,7 @@ Deux exceptions, chacune motivée dans l'`intent.md` de son dossier :
   Feedback tombait sur sa frontière d'erreur en preview, et le correctif
   n'était pas encore déployé au moment de la prise.
 
-**Les dix emplacements du catalogue sont publiés.** Le onzième, `voiceDictate`,
+**Les onze emplacements du catalogue sont publiés.** Le douzième, `voiceDictate`,
 a été retiré : la dictée s'illustre par une figure
 (`components/marketing/voice-dictation-figure.tsx`) et non par une capture — le
 popover n'existe qu'après un `getUserMedia` réussi, et il ne montrerait de toute

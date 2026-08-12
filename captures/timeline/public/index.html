@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Frise des captures — minddy</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🎞️</text></svg>"
+    />
+  </head>
+  <body>
+    <header class="top">
+      <div class="top-title">
+        <h1>Frise des captures</h1>
+        <span class="mono dim" id="head"></span>
+      </div>
+      <div class="top-actions">
+        <nav class="tabs" id="nav" hidden>
+          <button class="tab is-on" data-view="dashboard">Tableau de bord</button>
+          <button class="tab" data-view="shot" id="nav-shot" hidden></button>
+        </nav>
+        <button class="ghost" id="refresh" title="Relire le dépôt">Actualiser</button>
+      </div>
+    </header>
+
+    <main id="main">
+      <p class="loading">Lecture de l'historique git…</p>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

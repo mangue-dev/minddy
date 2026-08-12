@@ -12,10 +12,13 @@ les utilisateurs, l'autre ce que l'équipe en fait.
   écran où le tri automatique se voit.
 - Le retour lui-même — « Can we get notified in Slack? » — son texte, et son
   compteur de **5 votes**.
-- Les deux gestes d'équipe : **Promouvoir en issue** et le champ de **Réponse
-  d'équipe**, signé « Équipe Aurora ».
-- La liste de gauche : neuf retours triés par votes, avec leurs statuts (Ouvert,
-  Prévu, En cours, Livré) et le petit repère de fusion sur celui qu'on a ouvert.
+- Les gestes d'équipe de la barre du haut : **Promouvoir en ticket**, **Refuser**
+  et leurs chevrons.
+- La **table de propriétés** du retour — Voix, Statut, Ticket lié, Type de
+  retour, Visibilité, Auteur, Catégories, Créé le — puis l'activité et le
+  composeur de commentaire, qui porte sa bascule **Interne / Public**.
+- La liste de gauche : huit retours triés par votes, avec leurs statuts, l'email
+  de leur auteur, et le petit repère de fusion sur celui qu'on a ouvert.
 
 ## Où
 
@@ -40,6 +43,29 @@ fictives crédibles — pseudonymes, votes et retours inchangés.
 ## Déclinaisons
 
 fr/light, fr/dark, en/light, en/dark
+
+## Ce que l'écran a perdu, et le défaut qui reste (12 août 2026)
+
+Le champ **« Réponse d'équipe »** n'existe plus : la fiche est passée à une
+table de propriétés plus un composeur unique à bascule Interne / Public. La
+réponse publique ne se rédige donc plus ici — l'intention ci-dessus est
+corrigée, pas le produit.
+
+**Les dates de la colonne sont devenues relatives**, et elles sortent FAUSSES :
+« dans 5 jours », « dans 1 semaine ». Ce n'est pas un bug de l'app, c'est notre
+donnée. `FeedbackRow` reçoit `format.relativeTime(created_at, now)` où `now`
+vient de `useNow()` — donc de l'horloge figée des captures, le **15 juillet
+2026**. Or `007-feedback.mjs` date ses retours sur la **quinzaine courante au
+moment du seed** (`spreadInWindow`), et ils sont tombés les 20-24 juillet :
+*après* l'horloge. `world.md` promet pourtant que toute date du monde de démo
+est antérieure au 15 juillet — le seed du feedback est le seul à ne pas le tenir.
+
+Tant que les dates affichées étaient absolues (`20/07/2026`), le décalage ne se
+voyait pas. Il se voit maintenant, sur huit lignes.
+
+La correction est dans la donnée, pas ici : backdater `created_at` des retours
+de démo avant le 15 juillet, par `capture-world` — donc une écriture en base de
+production, qui demande l'accord explicite de l'utilisateur.
 
 ## Pièges connus
 
@@ -83,4 +109,5 @@ Deux précautions qui vont avec :
   n'apparaissait sur aucune capture jusqu'ici — et il s'est invité en bas à
   gauche de la première prise locale.
 
-À rejouer sur preview une fois le correctif déployé.
+**Rejoué sur preview le 12 août 2026**, correctif déployé : l'écran s'y rend, la
+parenthèse locale est refermée.

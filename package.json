@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "node scripts/clean.mjs",
+    "captures:timeline": "node captures/timeline/index.mjs",
     "deploy": "bash deploy.sh"
   },
   "overrides": {

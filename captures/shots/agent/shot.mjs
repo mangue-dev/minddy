@@ -55,18 +55,37 @@ async function applyEditsLabel(locale) {
   return toolCallLabel(locale, "agentApplyEdits", 3);
 }
 
+/** Un libellé traduit passé en motif : il peut contenir des méta-caractères. */
+function escapeRe(text) {
+  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
   try {
     await page.goto(`${CAPTURE.baseUrl}/agents`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=AUR-2" });
 
+    // `/agents` n'ouvre plus le dernier run : la page s'ouvre sur une
+    // conversation NEUVE, et le run vit dans la colonne de gauche. Sans ce clic,
+    // l'image sortirait sur « Bonjour, Camille Roy » et son message d'absence de
+    // dépôt. Le libellé du bouton est une DONNÉE (l'identifiant du ticket et son
+    // titre anglais), donc valable dans les deux langues.
+    await page.getByRole("button", { name: /^AUR-2:/ }).first().click();
+
     // Le fil arrive replié : un run terminé referme son déroulé de travail.
     await page.getByRole("button", { name: DURATION }).click();
 
-    // Plusieurs actions d'un même tour se résument à la dernière : le groupe de
-    // lectures s'ouvre pour rendre les trois lignes.
-    const readGroup = page.getByRole("button", { name: /provider\.tsx$/ }).first();
+    // Plusieurs actions d'un même tour se résument, et le RÉSUMÉ a changé : le
+    // groupe s'intitulait par sa dernière ligne (« … provider.tsx »), il compte
+    // désormais ce qu'il contient (« Lecture de 2 fichiers, une recherche »).
+    // Ce libellé est traduit ; on le rebâtit depuis le catalogue plutôt que de
+    // le recopier, et on n'en garde que la première moitié — le séparateur et la
+    // casse de la phrase sont posés par le composant, pas par une clé.
+    const readSummary = await toolCallLabel(locale, "summaryRead", 2);
+    const readGroup = page
+      .getByRole("button", { name: new RegExp(escapeRe(readSummary), "i") })
+      .first();
     await readGroup.click();
     await page
       .getByText("lib/palette/actions.ts", { exact: false })

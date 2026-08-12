@@ -148,11 +148,42 @@ async function capture({ locale, theme }) {
         const text = main?.textContent || "";
         // Les couleurs du diff : on compte les lignes réellement peintes plutôt
         // que de faire confiance à une classe.
-        const painted = [...(main?.querySelectorAll("*") || [])].filter((el) => {
-          const bg = getComputedStyle(el).backgroundColor;
-          const m = /rgba?\(([^)]+)\)/.exec(bg);
-          if (!m) return false;
-          const [r, g, b, a] = m[1].split(",").map((n) => parseFloat(n));
+        //
+        // Deux choses ont changé sous ce contrôle, et chacune le rendait
+        // silencieusement faux — il rendait 0 sur un diff parfaitement coloré.
+        //
+        // 1. Le diff est rendu par `@pierre/diffs`, DANS UN SHADOW DOM
+        //    (cf. app/globals.css et ses variables `--diffs-*`).
+        //    `main.querySelectorAll` ne le traverse pas : il faut descendre
+        //    dans les `shadowRoot` à la main. Les locators Playwright, eux, le
+        //    percent — d'où l'attente de « export type KeyHint » qui passait
+        //    pendant que le comptage échouait.
+        // 2. Les couleurs calculées ne sont plus en `rgb()`. Les variables
+        //    `--diffs-*` sont posées en `oklch`, et `getComputedStyle` rend
+        //    alors `oklab(0.627 -0.167 0.099 / 0.1)` ou `lab(…)` : la lecture
+        //    du triplet par expression régulière ne reconnaissait plus une
+        //    seule couleur de la page. On ne parse donc plus rien — c'est le
+        //    navigateur qui convertit, via un canvas, et ça vaudra pour la
+        //    prochaine notation qu'il adoptera.
+        const everyElement = (root, out = []) => {
+          for (const el of root.querySelectorAll("*")) {
+            out.push(el);
+            if (el.shadowRoot) everyElement(el.shadowRoot, out);
+          }
+          return out;
+        };
+        const ctx = document.createElement("canvas").getContext("2d", {
+          willReadFrequently: true,
+        });
+        const toRgba = (color) => {
+          ctx.clearRect(0, 0, 1, 1);
+          ctx.fillStyle = "#000";
+          ctx.fillStyle = color;
+          ctx.fillRect(0, 0, 1, 1);
+          return ctx.getImageData(0, 0, 1, 1).data;
+        };
+        const painted = everyElement(main ?? document).filter((el) => {
+          const [r, g, b, a] = toRgba(getComputedStyle(el).backgroundColor);
           if (a === 0) return false;
           // Un vert ou un rouge franc : une composante domine nettement.
           return (g > r + 12 && g > b + 12) || (r > g + 12 && r > b + 12);

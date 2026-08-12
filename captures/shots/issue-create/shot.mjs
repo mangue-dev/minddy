@@ -46,6 +46,7 @@ const ARIA = {
     effort: "Changer l'effort",
     categories: "Modifier les catégories",
     highPriority: "Haute",
+    smartFill: "Smart-fill",
   },
   en: {
     dialog: "New issue",
@@ -53,6 +54,7 @@ const ARIA = {
     effort: "Change effort",
     categories: "Edit categories",
     highPriority: "High",
+    smartFill: "Smart-fill",
   },
 };
 
@@ -113,6 +115,25 @@ async function capture({ locale, theme }) {
     const editor = dialog.locator('[contenteditable="true"]').first();
     await editor.click();
     await page.keyboard.type(ISSUE.description, { delay: 3 });
+
+    // ── Smart-fill : le couper, sinon il n'y a rien à remplir ───────────────
+    // MIN-260 a armé Smart-fill par DÉFAUT, et quand il est actif la rangée ne
+    // garde que les trois propriétés qu'il ne touche pas (statut, assigné,
+    // échéance) : priorité, effort, catégories et objectif sont RETIRÉS du DOM,
+    // pas grisés. Le script ne les trouvait donc plus.
+    //
+    // La légende de la landing dit « Un titre, deux phrases, une priorité » :
+    // c'est la rangée entière que l'image doit montrer. On coupe donc la
+    // bascule — geste ponctuel, reposé à chaque ouverture, qui ne change aucun
+    // réglage de compte.
+    const smartFill = dialog.getByRole("button", { name: words.smartFill });
+    await smartFill.waitFor({ state: "visible", timeout: 10_000 });
+    if ((await smartFill.getAttribute("aria-pressed")) === "true") {
+      await smartFill.click();
+    }
+    await dialog
+      .getByRole("button", { name: words.priority })
+      .waitFor({ state: "visible", timeout: 10_000 });
 
     // ── Les propriétés ──────────────────────────────────────────────────────
     // La liste est reconstruite par cmdk au moment où elle s'ouvre : cliquer sur

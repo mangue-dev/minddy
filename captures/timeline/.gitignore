@@ -1,0 +1,2 @@
+# Tout ce que l'outil fabrique est dérivé de git : rien à versionner.
+.cache/
