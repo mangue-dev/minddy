@@ -159,3 +159,19 @@ export function agentCompactThreshold(opts: {
 export const AGENT_COMPACT_KEEP_RECENT_BYTES = 48_000;
 /** On ne lance pas de compaction (appel LLM en plus) s'il reste moins que ça de budget. */
 export const AGENT_COMPACT_MIN_BUDGET_MS = 60_000;
+
+/**
+ * Cadence à laquelle les DEUX moteurs relisent le plafond de dépense — la boucle
+ * maison (`refreshBudgetUsd`) comme le superviseur d'opencode. Ici plutôt que
+ * chez chacun d'eux : une fenêtre de perte qui différerait entre les deux formes
+ * serait exactement le genre d'écart que MIN-224 s'attache à ne pas créer, et
+ * MIN-286 achève de séparer — le superviseur n'importe pas la boucle qu'il
+ * remplace.
+ *
+ * Une minute, et pas à chaque round : la lecture coûte deux requêtes (facturation
+ * + somme du ledger) et un round peut durer trois secondes. Ce qui peut se perdre
+ * entre deux lectures est donc borné par ce que les AUTRES runs dépensent en une
+ * minute — contre cinq pour l'ancienne forme, qui ne relisait qu'entre ses chunks,
+ * et contre un tour entier (des heures) pour une forme qui ne relirait pas.
+ */
+export const BUDGET_REFRESH_INTERVAL_MS = 60_000;

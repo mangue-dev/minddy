@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runOpencodeTurn, lastSeqByAggregate, type SupervisorDeps } from "./supervisor";
 import { OpencodeClient } from "./opencode-client";
+import { takeGeneration } from "./llm-proxy";
 import { OPENCODE_ANCHOR_FILE, OPENCODE_TOOL_DIR } from "./opencode-config";
 import { SUPERVISOR_URL_ENV } from "./opencode-tools";
 import type { ControlPlaneClient } from "./control-plane-client";
@@ -25,14 +26,47 @@ import type { VmJob } from "./protocol";
 
 const FIXTURE = join(__dirname, "fixtures", "opencode-turn.ndjson");
 
+/** La session du tour capturé — celle que le faux serveur doit rendre. */
+const PARENT = "ses_00999fb08ffe1CH0pZOeoJnbos";
+/** Une session FILLE, comme le `task` d'opencode en ouvre une. */
+const CHILD = "ses_fille";
+
+function fixtureLines(): string[] {
+  return readFileSync(FIXTURE, "utf8").trim().split("\n");
+}
+
+/**
+ * Le flux du faux serveur : le tour capturé, avec les frames du test INSÉRÉES
+ * AVANT le `session.idle` de la mère. Les mettre après ne prouverait rien — la
+ * boucle est déjà sortie, et le test passerait sans jamais les lire.
+ */
 function sseBody(): string {
-  return (
-    readFileSync(FIXTURE, "utf8")
-      .trim()
-      .split("\n")
-      .map((line) => `data: ${line}\n\n`)
-      .join("")
-  );
+  const lines = fixtureLines();
+  const idle = lines.findIndex((line) => line.includes('"session.idle"'));
+  const at = idle === -1 ? lines.length : idle;
+  return [...lines.slice(0, at), ...h.extraFrames, ...lines.slice(at)]
+    .map((line) => `data: ${line}\n\n`)
+    .join("");
+}
+
+/** Un round assistant terminé, tel que `message.updated` le rend. */
+function childRound(over: Record<string, unknown> = {}): string {
+  return JSON.stringify({
+    type: "message.updated",
+    properties: {
+      sessionID: CHILD,
+      info: {
+        id: "msg_fille_1",
+        sessionID: CHILD,
+        role: "assistant",
+        finish: "stop",
+        modelID: "deepseek/deepseek-v4-flash",
+        cost: 0.002,
+        tokens: { input: 100, output: 20, reasoning: 0, cache: { read: 10, write: 5 } },
+        ...over,
+      },
+    },
+  });
 }
 
 const h = {
@@ -49,6 +83,19 @@ const h = {
   replayed: null as Record<string, unknown> | null,
   healthy: true,
   pushed: true,
+  /** Frames ajoutées au flux capturé (sessions filles, erreurs…). */
+  extraFrames: [] as string[],
+  proxyClosed: false,
+  /** Ce que le plan de contrôle répond sur le restant de budget. */
+  remainingUsd: null as number | null,
+  budgetReads: 0,
+  /** Ce que le proxy local a vu passer chez le fournisseur. */
+  generations: [] as Array<{
+    id: string | null;
+    model: string;
+    outputTokens: number | null;
+    costUsd: number | null;
+  }>,
 };
 
 function cp(): ControlPlaneClient {
@@ -67,7 +114,10 @@ function cp(): ControlPlaneClient {
     hasPendingMessages: async () => false,
     checkInterrupt: async () => false,
     clearInterrupt: async () => {},
-    budgetRemaining: async () => null,
+    budgetRemaining: async () => {
+      h.budgetReads += 1;
+      return h.remainingUsd;
+    },
     syncPlan: async () => {},
     callTool: async () => ({ result: {}, success: true }),
     repoAuthUrl: async () => "https://x-access-token:fresh@github.com/org/repo.git",
@@ -106,7 +156,9 @@ function fakeFetch(): typeof fetch {
       return new Response(JSON.stringify({ healthy: h.healthy }), { status: 200 });
     }
     if (path === "/session" && init?.method === "POST") {
-      return new Response(JSON.stringify({ id: "ses_neuve", projectID: "p" }), { status: 200 });
+      // La session rendue est CELLE DU FLUX capturé : c'est ce qui fait du tour
+      // rejoué un tour de la mère, et non un tour d'inconnue.
+      return new Response(JSON.stringify({ id: PARENT, projectID: "p" }), { status: 200 });
     }
     if (path.endsWith("/prompt_async")) return new Response(null, { status: 204 });
     if (path.endsWith("/abort")) return new Response("true", { status: 200 });
@@ -142,6 +194,20 @@ function deps(): SupervisorDeps {
     },
     client: (baseUrl) =>
       new OpencodeClient({ baseUrl, directory: "/vercel/sandbox/repo", fetchImpl: fakeFetch() }),
+    /**
+     * Le proxy, en mémoire : il rend ce que `h.generations` déclare et applique
+     * le MÊME appariement que le vrai (`takeGeneration`), qui est testé à part
+     * chez [llm-proxy.test.ts](llm-proxy.test.ts). Ce qu'on garde ici, c'est le
+     * branchement — que la ligne de ledger porte l'identifiant et le coût vus
+     * chez le fournisseur.
+     */
+    startProxy: async () => ({
+      url: "http://127.0.0.1:9999",
+      take: (round) => takeGeneration(h.generations, round),
+      close: async () => {
+        h.proxyClosed = true;
+      },
+    }),
     // Le vrai plafond est à 60 s : ce test-ci vérifie ce qui se passe QUAND il
     // tombe, pas combien de temps il dure.
     bootTimeoutMs: 300,
@@ -197,13 +263,13 @@ function job(over: Partial<VmJob> = {}): VmJob {
   };
 }
 
-const run = (over: Partial<VmJob> = {}) =>
+const run = (over: Partial<VmJob> = {}, moreDeps: Partial<SupervisorDeps> = {}) =>
   runOpencodeTurn(
     job(over),
     { prompt: "fais le ticket", anchorInstructions: "# Ancrage minddy\nMIN-42" },
     cp(),
     host(),
-    deps(),
+    { ...deps(), ...moreDeps },
   );
 
 beforeEach(() => {
@@ -221,6 +287,11 @@ beforeEach(() => {
   h.replayed = null;
   h.healthy = true;
   h.pushed = true;
+  h.extraFrames = [];
+  h.generations = [];
+  h.proxyClosed = false;
+  h.remainingUsd = null;
+  h.budgetReads = 0;
 });
 
 describe("le décor, posé avant le premier octet de serveur", () => {
@@ -285,6 +356,42 @@ describe("le tour", () => {
     );
   });
 
+  it("porte le `generation_id` et le coût FACTURÉ vus par le proxy", async () => {
+    // Opencode n'expose l'identifiant de génération nulle part (dossier §2.6) :
+    // c'est le proxy local, et lui seul, qui le rend au ledger. Le coût suit la
+    // même règle — celui du fournisseur prime sur celui qu'opencode calcule.
+    h.generations = [{ id: "gen-abc", model: "", outputTokens: null, costUsd: 0.0042 }];
+    const report = await run();
+    expect(h.usage[0].generationId).toBe("gen-abc");
+    expect(h.usage[0].cost).toBe(0.0042);
+    expect(h.usage[0].estimated).toBe(false);
+    expect(report.costUsd).toBeCloseTo(
+      h.usage.reduce((sum, l) => sum + Number(l.cost ?? 0), 0),
+      10,
+    );
+    // Le proxy est fermé avec le serveur : un port qui reste ouvert dans une
+    // microVM qui enchaîne les tours est un port de moins au tour suivant.
+    expect(h.proxyClosed).toBe(true);
+  });
+
+  it("retombe sur le coût d'opencode quand le fournisseur n'a rien dit", async () => {
+    // Le cas normal aujourd'hui : OpenRouter ne rend le coût qu'avec
+    // `usage: {include: true}`, et un provider BYOK peut ne rien rendre du tout.
+    h.generations = [{ id: "gen-xyz", model: "", outputTokens: null, costUsd: null }];
+    await run();
+    expect(h.usage[0].generationId).toBe("gen-xyz");
+    expect(Number(h.usage[0].cost)).toBeGreaterThan(0);
+    expect(h.usage[0].estimated).toBe(false);
+  });
+
+  it("dit au tour suivant où en est la numérotation du ledger", async () => {
+    // `execute.ts` relit `checkpoint.usageSeq` : sans lui, le tour repris
+    // renumérote ses lignes par-dessus celles du tour d'avant.
+    const report = await run();
+    const parentLines = h.usage.filter((l) => Number(l.seq) < 1_000_000);
+    expect((report.checkpoint as { usageSeq?: number }).usageSeq).toBe(7 + parentLines.length);
+  });
+
   it("marque l'usage `estimated` quand le job n'a pas de prix", async () => {
     // Sans prix déclaré, opencode calcule sur un catalogue qu'il n'a pas et rend
     // zéro : une ligne à zéro marquée « exacte » serait un mensonge définitif.
@@ -313,12 +420,146 @@ describe("le tour", () => {
   });
 });
 
+describe("le plafond de dépense", () => {
+  it("coupe le tour à la frontière de round, et le DIT comme un budget", async () => {
+    // Le premier round de la fixture coûte déjà plus que ça : la garde doit
+    // mordre là, couper la session, et rendre `budget_exhausted` — pas `error`.
+    // La fonction en tire une conduite propre (event `quota_exhausted`, pas de
+    // re-queue) ; rangé sous `error`, le run serait retenté sans quoi payer.
+    const report = await run({ budgetUsd: 0.0000001 });
+    expect(report.status).toBe("budget_exhausted");
+    expect(h.routes.some((r) => r.endsWith("/abort"))).toBe(true);
+    // Une seule ligne de ledger : on ne paie pas un appel de plus.
+    expect(h.usage).toHaveLength(1);
+    // Le tour garde tout de même son journal — la reprise ne dépend pas de la
+    // raison de l'arrêt.
+    expect((report.checkpoint as { opencode?: unknown }).opencode).toBeTruthy();
+  });
+
+  it("laisse le tour aller au bout quand il reste du budget", async () => {
+    const report = await run({ budgetUsd: 100 });
+    expect(report.status).toBe("completed");
+    expect(h.routes.some((r) => r.endsWith("/abort"))).toBe(false);
+  });
+
+  it("RELIT le plafond en cours de tour, il ne le snapshote pas", async () => {
+    // Rien ne réserve de budget : deux runs concurrents lisent le même restant
+    // et le prennent chacun pour plafond. Un tour de microVM dure des heures —
+    // un plafond figé au démarrage serait aveugle du début à la fin.
+    h.remainingUsd = 0;
+    // L'horloge avance d'une minute par lecture, pour franchir la cadence de
+    // relecture sans faire attendre le test.
+    let clock = Date.now();
+    const report = await run(
+      { budgetUsd: 1_000 },
+      {
+        now: () => {
+          clock += 60_000;
+          return clock;
+        },
+      },
+    );
+    expect(h.budgetReads).toBeGreaterThan(0);
+    expect(report.status).toBe("budget_exhausted");
+  });
+
+  it("ne plafonne rien quand le job n'a pas de budget (BYOK)", async () => {
+    const report = await run({ budgetUsd: undefined });
+    expect(report.status).toBe("completed");
+  });
+});
+
+describe("les sessions filles", () => {
+  /**
+   * Le flux `/event` est celui du SERVEUR : quand le modèle délègue, la fille
+   * publie sur le même canal. Trois choses en dépendent, et chacune casse en
+   * silence — le tour se termine trop tôt, la réponse se mélange, la dépense se
+   * range dans la mauvaise bande.
+   */
+  it("compte la fille dans le MÊME run, dans la bande des sous-agents", async () => {
+    h.extraFrames = [childRound()];
+    await run();
+    const child = h.usage.find((l) => Number(l.seq) >= 2_000_000_000);
+    expect(child, "la fille doit avoir sa ligne de ledger").toBeTruthy();
+    // Slot 0 de la bande des sous-agents — la convention de la boucle maison
+    // (`subagentUsageSeq`), pour que l'ordre d'un run se lise pareil.
+    expect(child!.seq).toBe(2_000_000_000);
+    expect(child!.cachedTokens).toBe(10);
+    expect(child!.cacheWriteTokens).toBe(5);
+    // La mère garde sa propre numérotation, elle ne saute pas.
+    expect(h.usage[0].seq).toBe(7);
+  });
+
+  it("ne termine PAS le tour sur le `session.idle` d'une fille", async () => {
+    // La fille se tait avant la mère : si son `idle` sortait de la boucle, tout
+    // ce que la mère fait ensuite serait perdu — et le tour rendrait la main
+    // sans rien avoir répondu.
+    h.extraFrames = [
+      JSON.stringify({ type: "session.idle", properties: { sessionID: CHILD } }),
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: PARENT,
+          part: {
+            type: "tool",
+            tool: "grep",
+            callID: "call_apres",
+            state: { status: "running", input: { pattern: "y" } },
+          },
+        },
+      }),
+    ];
+    const report = await run();
+    expect(h.events.some((e) => e.payload.id === "call_apres")).toBe(true);
+    expect(report.status).toBe("completed");
+    expect(report.reply).toBeTruthy();
+  });
+
+  it("marque les gestes de la fille au lieu de les prêter à la mère", async () => {
+    h.extraFrames = [
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: CHILD,
+          part: {
+            type: "tool",
+            tool: "grep",
+            callID: "call_fille",
+            state: { status: "running", input: { pattern: "x" } },
+          },
+        },
+      }),
+    ];
+    await run();
+    const own = h.events.find((e) => e.payload.id === "call_fille");
+    expect(own?.payload.subagent_id).toBe(CHILD);
+    // Ceux de la mère ne portent rien : c'est elle qui parle.
+    expect(h.events.find((e) => e.payload.id === "call_1")?.payload.subagent_id).toBeUndefined();
+  });
+
+  it("garde le texte de la fille hors de la réponse du tour", async () => {
+    h.extraFrames = [
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: CHILD,
+          part: { type: "text", id: "prt_fille", text: "RAPPORT DE LA FILLE" },
+        },
+      }),
+    ];
+    const report = await run();
+    // La réponse part dans le message de commit et dans le fil : le rapport
+    // d'une fille n'y a rien à faire.
+    expect(report.reply).not.toContain("RAPPORT DE LA FILLE");
+  });
+});
+
 describe("la reprise", () => {
   it("exporte le journal du tour pour que le suivant reparte d'ailleurs", async () => {
     const report = await run();
     const state = (report.checkpoint as { opencode?: { sessionId: string; seq: Record<string, number> } })
       .opencode;
-    expect(state?.sessionId).toBe("ses_neuve");
+    expect(state?.sessionId).toBe(PARENT);
     // Le curseur, agrégat par agrégat : c'est lui qui rend l'export incrémental
     // (5 events pour un tour, au lieu de tout l'historique).
     expect(state?.seq).toEqual({ ses_neuve: 4 });

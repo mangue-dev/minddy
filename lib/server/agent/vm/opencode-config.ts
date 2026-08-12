@@ -324,7 +324,7 @@ function subagentAgents(job: VmJob): Record<string, OpencodeAgentConfig> {
  */
 export function buildOpencodeConfig(
   job: VmJob,
-  opts: { plugins?: string[] } = {},
+  opts: { plugins?: string[]; baseUrl?: string } = {},
 ): OpencodeConfig {
   const ref = modelRef(job.model);
   return {
@@ -346,7 +346,17 @@ export function buildOpencodeConfig(
           // microVM (cf. `network-policy.ts`) : ce document part sur le disque
           // d'un process où le modèle exécute du shell arbitraire.
           apiKey: job.llmPlaceholderKey,
-          baseURL: job.baseUrl,
+          /**
+           * LE PROXY LOCAL QUAND IL Y EN A UN (lot 2), le fournisseur sinon.
+           *
+           * `127.0.0.1` ne relâche rien : le proxy tourne DANS la microVM, il
+           * relaie vers cette même URL de fournisseur avec le même placeholder,
+           * et c'est toujours le firewall qui pose la clé à la sortie. Ce qu'il
+           * ajoute — `generation_id`, coût facturé, raisonnement des couches
+           * compat — n'a aucun autre point d'observation
+           * ([llm-proxy.ts](llm-proxy.ts)).
+           */
+          baseURL: opts.baseUrl ?? job.baseUrl,
         },
         models: { [job.model]: modelDef(job) },
       },
@@ -380,7 +390,7 @@ export function buildOpencodeConfig(
  */
 export function opencodeServerEnv(
   job: VmJob,
-  opts: { plugins?: string[] } = {},
+  opts: { plugins?: string[]; baseUrl?: string } = {},
 ): Record<string, string> {
   return {
     OPENCODE_CONFIG_CONTENT: JSON.stringify(buildOpencodeConfig(job, opts)),

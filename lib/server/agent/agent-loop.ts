@@ -159,18 +159,11 @@ const SUSPENDED_TOOL_REASON = "turn_suspended";
  */
 const MAX_SUBAGENT_WAIT_REENTRIES = 8;
 /**
- * Cadence à laquelle les DEUX moteurs relisent le plafond de dépense
- * (`refreshBudgetUsd`). Ici plutôt que chez chacun d'eux : une fenêtre de perte
- * qui différerait entre les deux formes serait exactement le genre d'écart que
- * MIN-224 s'attache à ne pas créer.
- *
- * Une minute, et pas à chaque round : la lecture coûte deux requêtes (facturation
- * + somme du ledger) et un round peut durer trois secondes. Ce qui peut se perdre
- * entre deux lectures est donc borné par ce que les AUTRES runs dépensent en une
- * minute — contre cinq pour l'ancienne forme, qui ne relisait qu'entre ses chunks,
- * et contre un tour entier (des heures) pour la nouvelle, qui ne relisait pas.
+ * Ré-exportée : elle vit désormais dans [agent-models.ts](@/lib/agent-models)
+ * (MIN-286), pour que le superviseur d'opencode la lise sans importer cette
+ * boucle-ci — que le lot 3 supprime.
  */
-export const BUDGET_REFRESH_INTERVAL_MS = 60_000;
+export { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
 /**
  * Garde-fou de compaction : au plus `MAX_COMPACTIONS_PER_WINDOW` compactions par
  * FENÊTRE DE ROUNDS (convergence normalement immédiate — le quota n'existe que

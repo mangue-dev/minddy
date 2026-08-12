@@ -392,6 +392,56 @@ binaire : 131 events exportés, tous en camelCase après passage du client.
 Aucune ne bloque. Le chantier peut passer au lot 1 — reste la **décision** de
 Clément, qui est un point du plan à elle seule.
 
+
+### 2.12 Le ledger d'un tour : le proxy est posé, et le flux est celui du SERVEUR (lot 2)
+
+Écrit le 2026-08-12 en branchant `ai_usage`
+([supervisor.ts](../lib/server/agent/vm/supervisor.ts), `TurnLedger` ;
+[llm-proxy.ts](../lib/server/agent/vm/llm-proxy.ts)).
+
+Le proxy du §2.6 **existe** : opencode parle à `127.0.0.1`, le superviseur relaie
+vers le fournisseur avec le placeholder, `network-policy.ts` ne change pas. Il rend
+trois choses qui n'ont aucun autre point d'observation — le `generation_id`, le
+**coût facturé** (`usage: {include: true}`, qui prime sur celui qu'opencode
+calcule), et le `reasoning_effort` à plat que le §2.8 avait vu disparaître du corps.
+
+Ce que le branchement a fait apparaître, et qu'aucune doc ne dit :
+
+1. **Le flux `/event` est celui du SERVEUR, pas d'une session.** Quand le modèle
+   délègue, la fille ouvre sa propre session et ses frames arrivent mêlées à celles
+   de la mère. Trois défauts en découlaient, tous silencieux : un `session.idle`
+   de fille **terminait le tour**, le texte de la fille entrait dans la réponse
+   (donc dans le message de commit), et sa dépense se rangeait dans la bande de
+   `seq` du parent. Tout ce qui se traduit porte donc maintenant sa `sessionId`, et
+   les filles écrivent dans la bande `subagentUsageSeq` — la convention de la
+   boucle maison, pour que l'ordre d'un run se lise pareil aux deux moteurs.
+2. **La réponse du tour était TOUJOURS vide**, et le test qui l'a montrée n'existait
+   pas : `message.updated` (fin de round) arrive **avant** `session.idle`, et c'est
+   lui qui vide le texte du direct. Le tour lisait sa réponse dans ce sac déjà vidé.
+   Le fil n'affichait rien et le message de commit retombait sur sa forme générique.
+   Le dernier round terminé est désormais gardé à part (`replyOf`).
+3. **Le checkpoint doit porter `usageSeq`.** `execute.ts` le relit
+   (`run.checkpoint?.usageSeq ?? …`) ; sans lui, un tour repris renumérote ses
+   lignes par-dessus celles du tour d'avant. Rien n'est perdu — pas de contrainte
+   d'unicité, la dépense se somme — mais l'ordre des appels d'un run devient faux,
+   ce qui est exactement ce qu'un `seq` sert à dire.
+
+**Le plafond de dépense se tient au même endroit**, à la frontière de round : le
+cumul des `message.updated` contre `budgetUsd`, relu toutes les minutes
+(`BUDGET_REFRESH_INTERVAL_MS`, déplacée en [agent-models.ts](../lib/agent-models.ts)
+pour que le superviseur ne réimporte pas la boucle que le lot 3 supprime), puis
+`abort` et statut `budget_exhausted` — pas `error`, sinon la fonction retenterait
+un run qui n'a plus de quoi payer. **Ce qui reste à mesurer** : ce qu'opencode
+facture d'un round coupé en vol. S'il pose un `finish` sur le message avorté, la
+ligne s'écrit comme un round ordinaire ; sinon la dépense sort des compteurs, et
+c'est le défaut que MIN-216 avait fermé côté boucle maison
+([abandoned-spend.ts](../lib/server/agent/abandoned-spend.ts), gardé pour ça).
+
+L'appariement round → génération se fait par modèle, puis par tokens de sortie,
+sinon dans l'ordre d'arrivée : **exact en séquentiel**, seulement probable quand
+deux filles tournent en parallèle sur le même modèle. Ce qui se joue là est une
+référence de réconciliation, pas une dépense — les tokens et le coût viennent du
+round, jamais de l'appariement.
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un

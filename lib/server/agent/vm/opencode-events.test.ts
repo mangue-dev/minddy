@@ -3,9 +3,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  liveTextOf,
   newTurnStreamState,
   ourToolArgs,
   ourToolName,
+  replyOf,
   translateEvent,
   type OpencodeEvent,
   type RoundUsage,
@@ -126,6 +128,49 @@ describe("un vrai tour capturé", () => {
     const { live } = replay();
     expect(live.length).toBeGreaterThan(0);
     expect(live.at(-1)).toBeTruthy();
+  });
+
+  it("garde ce que le tour a répondu, alors que la fin de round vide le direct", () => {
+    // Le piège, et il ne se voit dans aucun test de traduction pris seul :
+    // `message.updated` (fin de round) arrive AVANT `session.idle`. Le texte du
+    // direct est vidé là — donc si la réponse se lisait dans le même sac, un
+    // tour sur deux rendrait une réponse vide, et le message de commit se
+    // rabattrait sur sa forme générique sans que rien ne le signale.
+    const { state } = replay();
+    const session = "ses_00999fb08ffe1CH0pZOeoJnbos";
+    expect(liveTextOf(state, session)).toBe("");
+    expect(replyOf(state, session)).toBeTruthy();
+  });
+});
+
+describe("la mère et ses filles, sur le même flux", () => {
+  it("dit de quelle session vient chaque événement", () => {
+    const { usage } = replay();
+    expect(usage.every((u) => u.sessionId === "ses_00999fb08ffe1CH0pZOeoJnbos")).toBe(true);
+  });
+
+  it("ne mélange pas les textes de deux sessions", () => {
+    // Une fille écrit son rapport pendant que la mère attend : un seul sac le
+    // ferait entrer dans la réponse du tour, donc dans le message de commit.
+    const state = newTurnStreamState();
+    const text = (sessionID: string, id: string, value: string): OpencodeEvent => ({
+      type: "message.part.updated",
+      properties: { sessionID, part: { type: "text", id, text: value } },
+    });
+    translateEvent(text("ses_mere", "p1", "réponse de la mère"), state);
+    translateEvent(text("ses_fille", "p2", "rapport de la fille"), state);
+    expect(liveTextOf(state, "ses_mere")).toBe("réponse de la mère");
+    expect(liveTextOf(state, "ses_fille")).toBe("rapport de la fille");
+  });
+
+  it("attache l'`idle` à SA session", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      { type: "session.idle", properties: { sessionID: "ses_fille" } },
+      state,
+    );
+    expect(out.idle).toBe(true);
+    expect(out.sessionId).toBe("ses_fille");
   });
 });
 

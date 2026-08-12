@@ -50,6 +50,8 @@ export interface TranslatedEvent {
 /** Le coût et les tokens d'un round, relevés sur le message assistant. */
 export interface RoundUsage {
   messageId: string;
+  /** La session qui a payé ce round — la mère, ou une fille (cf. `sessionId`). */
+  sessionId: string;
   model: string;
   costUsd: number;
   inputTokens: number;
@@ -63,6 +65,18 @@ export interface RoundUsage {
 
 /** Ce qu'un événement traduit produit : des events, du direct, du compte. */
 export interface Translation {
+  /**
+   * LA SESSION D'OÙ VIENT L'ÉVÉNEMENT, et c'est ce qui tient le lot 2.
+   *
+   * Le flux `/event` est celui du SERVEUR, pas d'une session : quand le modèle
+   * délègue (`task`), la fille ouvre sa propre session et ses événements
+   * arrivent ici, mêlés à ceux de la mère. Trois choses en dépendent, et chacune
+   * casse en silence sans ce champ : un `session.idle` de FILLE terminerait le
+   * tour de la mère, le texte de la fille entrerait dans la réponse (donc dans
+   * le message de commit), et sa dépense se rangerait dans la bande de seq du
+   * parent au lieu de la sienne.
+   */
+  sessionId?: string;
   events: TranslatedEvent[];
   /** Le texte du round tel qu'écrit jusqu'ici (COMPLET, pas un delta). */
   liveText?: string;
@@ -143,12 +157,27 @@ function numberAt(source: unknown, ...path: string[]): number {
  * porte deux fois le même coût.
  */
 export interface TurnStreamState {
-  /** Texte accumulé du round en cours, par part. */
-  textByPart: Map<string, string>;
+  /**
+   * Texte accumulé du round en cours, PAR SESSION puis par part.
+   *
+   * La double clé n'est pas de la prudence : une fille écrit son rapport
+   * pendant que la mère attend, et un seul sac ferait entrer ce rapport dans la
+   * réponse du tour — donc dans le message de commit, et dans ce que le fil
+   * affiche comme la parole de l'agent.
+   */
+  textByPart: Map<string, Map<string, string>>;
+  /**
+   * Le texte du DERNIER round terminé, par session — la réponse du tour.
+   *
+   * Il existe parce que `textByPart` est vidé à la fin de chaque round (le direct
+   * doit repartir de zéro, sinon deux rounds s'empilent à l'écran) et que la fin
+   * de round arrive AVANT `session.idle`. Sans cette copie, ce que le tour rend
+   * comme réponse est systématiquement vide : le fil n'affiche rien, et le
+   * message de commit se rabat sur sa forme générique.
+   */
+  lastRoundText: Map<string, string>;
   /** Rounds dont le coût a déjà été compté (`messageID`). */
   billed: Set<string>;
-  /** Appels de tools amorcés dans le round en cours — le `tools` du direct. */
-  toolsThisRound: number;
   /** `callID` déjà annoncés : `running` peut se répéter. */
   announced: Set<string>;
 }
@@ -156,10 +185,39 @@ export interface TurnStreamState {
 export function newTurnStreamState(): TurnStreamState {
   return {
     textByPart: new Map(),
+    lastRoundText: new Map(),
     billed: new Set(),
-    toolsThisRound: 0,
     announced: new Set(),
   };
+}
+
+/** Le sac de texte d'une session, créé à la demande. */
+function partsOf(state: TurnStreamState, sessionId: string): Map<string, string> {
+  let parts = state.textByPart.get(sessionId);
+  if (!parts) {
+    parts = new Map();
+    state.textByPart.set(sessionId, parts);
+  }
+  return parts;
+}
+
+/**
+ * D'où vient l'événement. `properties.sessionID` est posé sur TOUTES les frames
+ * mesurées (fixture capturée) ; les deux replis lisent la même chose une couche
+ * plus bas, pour qu'une frame d'une version future qui l'oublierait ne se range
+ * pas silencieusement dans la session vide — c'est-à-dire dans celle de la mère.
+ */
+function sessionOf(props: Record<string, unknown>): string {
+  const direct = props.sessionID;
+  if (typeof direct === "string" && direct) return direct;
+  for (const key of ["part", "info"]) {
+    const node = props[key];
+    if (node && typeof node === "object") {
+      const nested = (node as Record<string, unknown>).sessionID;
+      if (typeof nested === "string" && nested) return nested;
+    }
+  }
+  return "";
 }
 
 /**
@@ -171,16 +229,18 @@ export function newTurnStreamState(): TurnStreamState {
  */
 export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Translation {
   const props = event.properties ?? {};
+  const sessionId = sessionOf(props);
 
   switch (event.type) {
     case "message.part.delta": {
-      if (props.field !== "text") return { events: [] };
+      if (props.field !== "text") return { sessionId, events: [] };
       const partId = String(props.partID ?? "");
       const delta = typeof props.delta === "string" ? props.delta : "";
-      if (!partId || !delta) return { events: [] };
-      const text = (state.textByPart.get(partId) ?? "") + delta;
-      state.textByPart.set(partId, text);
-      return { events: [], liveText: text };
+      if (!partId || !delta) return { sessionId, events: [] };
+      const parts = partsOf(state, sessionId);
+      const text = (parts.get(partId) ?? "") + delta;
+      parts.set(partId, text);
+      return { sessionId, events: [], liveText: text };
     }
 
     case "message.part.updated": {
@@ -188,10 +248,10 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       if (part.type === "text") {
         const partId = String(part.id ?? "");
         const text = typeof part.text === "string" ? part.text : "";
-        if (partId && text) state.textByPart.set(partId, text);
-        return { events: [], ...(text ? { liveText: text } : {}) };
+        if (partId && text) partsOf(state, sessionId).set(partId, text);
+        return { sessionId, events: [], ...(text ? { liveText: text } : {}) };
       }
-      if (part.type !== "tool") return { events: [] };
+      if (part.type !== "tool") return { sessionId, events: [] };
 
       const stateNode = (part.state ?? {}) as Record<string, unknown>;
       const status = String(stateNode.status ?? "");
@@ -206,10 +266,10 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       if (status === "running") {
         // `pending` ne dit pas encore QUOI est appelé (`input: {}` mesuré) : un
         // event émis là afficherait un appel sans argument, puis rien.
-        if (!callId || state.announced.has(callId)) return { events: [] };
+        if (!callId || state.announced.has(callId)) return { sessionId, events: [] };
         state.announced.add(callId);
-        state.toolsThisRound += 1;
         return {
+          sessionId,
           events: [
             { type: "tool_call", payload: { id: callId, name, ...toolArgSummary(name, input) } },
           ],
@@ -221,33 +281,40 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
         const raw = success ? stateNode.output : (stateNode.error ?? stateNode.output);
         const preview = cap(typeof raw === "string" ? raw : JSON.stringify(raw ?? ""), PREVIEW_MAX);
         return {
+          sessionId,
           events: [{ type: "tool_result", payload: { id: callId, name, success, preview } }],
         };
       }
-      return { events: [] };
+      return { sessionId, events: [] };
     }
 
     case "message.updated": {
       const info = (props.info ?? {}) as Record<string, unknown>;
-      if (info.role !== "assistant") return { events: [] };
+      if (info.role !== "assistant") return { sessionId, events: [] };
       const finish = typeof info.finish === "string" ? info.finish : null;
       // Un round non terminé arrive avec `cost: 0` et pas de `finish` : le
       // compter écrirait une ligne de ledger vide, puis une deuxième au vrai
       // coût. Et `message.updated` se répète à l'identique une fois terminé —
       // d'où les deux gardes, qui ne font pas le même travail.
-      if (!finish) return { events: [] };
+      if (!finish) return { sessionId, events: [] };
       const messageId = String(info.id ?? "");
-      if (!messageId || state.billed.has(messageId)) return { events: [] };
+      if (!messageId || state.billed.has(messageId)) return { sessionId, events: [] };
       state.billed.add(messageId);
 
-      // Un round fini : le suivant repart avec ses propres compteurs de direct.
-      state.toolsThisRound = 0;
-      state.textByPart.clear();
+      // Un round fini : on GARDE son texte (c'est la réponse du tour) avant de
+      // vider le sac, pour que le suivant reparte à zéro. Et on ne vide que
+      // CETTE session : effacer celui des autres emporterait, en plein vol, le
+      // rapport qu'une fille est en train d'écrire.
+      const written = liveTextOf(state, sessionId);
+      if (written.trim()) state.lastRoundText.set(sessionId, written);
+      partsOf(state, sessionId).clear();
 
       return {
+        sessionId,
         events: [],
         usage: {
           messageId,
+          sessionId,
           model: String(info.modelID ?? ""),
           costUsd: numberAt(info, "cost"),
           inputTokens: numberAt(info, "tokens", "input"),
@@ -261,7 +328,9 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
     }
 
     case "session.idle":
-      return { events: [], idle: true };
+      // `idle` vaut pour SA session : c'est l'appelant qui sait laquelle est la
+      // mère. Une fille au repos ne termine pas le tour.
+      return { sessionId, events: [], idle: true };
 
     case "session.error": {
       const error = (props.error ?? {}) as Record<string, unknown>;
@@ -271,18 +340,31 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
           : typeof props.message === "string"
             ? props.message
             : JSON.stringify(error).slice(0, 1000);
-      return { events: [{ type: "error", payload: { message } }], error: message };
+      return { sessionId, events: [{ type: "error", payload: { message } }], error: message };
     }
 
     default:
       // `session.status`, `session.updated`, `session.diff`, `server.connected` :
       // du bruit pour nous. Le fil n'a pas d'équivalent, et en inventer un
       // remplirait `agent_run_events` de lignes que personne ne lit.
-      return { events: [] };
+      return { sessionId, events: [] };
   }
 }
 
-/** Le texte du round en cours, tous parts confondus — la charge du direct. */
-export function liveTextOf(state: TurnStreamState): string {
-  return [...state.textByPart.values()].join("");
+/** Le texte du round EN COURS d'une session — la charge du direct. */
+export function liveTextOf(state: TurnStreamState, sessionId: string): string {
+  return [...(state.textByPart.get(sessionId)?.values() ?? [])].join("");
+}
+
+/**
+ * CE QUE LA SESSION A RÉPONDU — le round en cours s'il a écrit, le dernier round
+ * terminé sinon.
+ *
+ * Les deux cas arrivent vraiment : un tour qui finit sur du texte a déjà vu son
+ * `message.updated` (donc le sac courant est vide, et c'est la copie qui parle),
+ * un tour coupé en plein vol n'a que son sac courant.
+ */
+export function replyOf(state: TurnStreamState, sessionId: string): string {
+  const current = liveTextOf(state, sessionId);
+  return (current.trim() ? current : (state.lastRoundText.get(sessionId) ?? "")).trim();
 }

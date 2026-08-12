@@ -7,6 +7,7 @@ import { OpencodeClient } from "./opencode-client";
 import {
   liveTextOf,
   newTurnStreamState,
+  replyOf,
   translateEvent,
   type RoundUsage,
 } from "./opencode-events";
@@ -16,7 +17,10 @@ import {
   opencodeServerEnv,
 } from "./opencode-config";
 import { opencodeToolFiles } from "./opencode-tools";
+import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
+import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
+import { subagentUsageSeq } from "../subagent";
 import type { VmJob, VmPushResult, VmTurnReport } from "./protocol";
 
 /**
@@ -106,6 +110,12 @@ export interface SupervisorDeps {
   writeFile(path: string, content: string): Promise<void>;
   /** Le client HTTP du serveur — injecté pour les mêmes raisons. */
   client(baseUrl: string): OpencodeClient;
+  /**
+   * Le proxy local posé devant le fournisseur ([llm-proxy.ts](llm-proxy.ts)).
+   * Injecté pour qu'un test n'ouvre pas de socket ; en production, c'est
+   * `startLlmProxy`.
+   */
+  startProxy?(job: VmJob): Promise<LlmProxy>;
   now?(): number;
   /** Attente du démarrage. Réglable pour qu'un test ne poireaute pas 60 s. */
   bootTimeoutMs?: number;
@@ -146,8 +156,12 @@ export async function runOpencodeTurn(
     await deps.writeFile(file.path, file.content);
   }
 
+  // Le proxy AVANT le serveur : sa `baseURL` entre dans la config du tour, donc
+  // elle doit être connue avant qu'opencode ne lise son environnement.
+  const proxy = await (deps.startProxy ?? ((j: VmJob) => startLlmProxy({ job: j })))(job);
+
   const env = {
-    ...opencodeServerEnv(job),
+    ...opencodeServerEnv(job, { baseUrl: proxy.url }),
     // L'adresse du pont, lue par les 32 tools générés (cf. `SUPERVISOR_URL_ENV`).
     // Le pont lui-même est du lot 2 ; la variable, elle, doit être posée dès le
     // démarrage — un tool qui la lit à vide rend une phrase, pas une exception.
@@ -191,11 +205,15 @@ export async function runOpencodeTurn(
 
     // ── Le flux, traduit au fil de l'eau ─────────────────────────────────────
     const state = newTurnStreamState();
-    const usageLines: RoundUsage[] = [];
+    const ledger = new TurnLedger(job, sessionId);
     let costUsd = 0;
     let sessionError: string | undefined;
     let lastLiveAt = 0;
     let toolsSeen = 0;
+    /** Ce que le tour a encore le droit de dépenser. Absent = BYOK, illimité. */
+    let budgetUsd = job.budgetUsd;
+    let lastBudgetAt = now();
+    let budgetExhausted = false;
 
     const abortEvents = new AbortController();
     const stream = client.events(abortEvents.signal);
@@ -207,26 +225,77 @@ export async function runOpencodeTurn(
     try {
       for await (const raw of stream) {
         const out = translateEvent(raw, state);
+        // Une session qui n'est pas la mère est une FILLE : le modèle a délégué,
+        // et opencode publie tout sur le même flux. Ce qui vient d'elle se dit,
+        // se compte et se facture — mais dans sa bande à elle, et sans jamais
+        // parler au nom de la mère (cf. `Translation.sessionId`).
+        const child = !!out.sessionId && out.sessionId !== sessionId;
         for (const event of out.events) {
           if (event.type === "tool_call") toolsSeen += 1;
-          await cp.emit(event.type, redactPayload(event.payload, secrets));
+          await cp.emit(event.type, {
+            ...redactPayload(event.payload, secrets),
+            // Le reste du marquage d'une fille (`parent_call_id`, `subagent_mode`,
+            // le préfixe d'id) vient avec les sous-agents, tâche 12 du plan. Ce
+            // champ-ci ne peut pas attendre : sans lui, le fil attribuerait à
+            // l'agent principal les gestes de quelqu'un d'autre.
+            ...(child ? { subagent_id: out.sessionId } : {}),
+          });
         }
         if (out.usage) {
-          usageLines.push(out.usage);
-          costUsd += out.usage.costUsd;
-          await recordRound(cp, job, out.usage, usageLines.length - 1);
+          const line = await ledger.record(cp, out.usage, proxy);
+          costUsd += line.cost;
+          /**
+           * LE PLAFOND, TENU ICI ET PAS DANS LA BOUCLE — parce qu'il n'y a plus
+           * de boucle à nous. La frontière de round reste la même qu'avant : on
+           * ne coupe jamais un appel en vol, on refuse le suivant (politique
+           * assumée de [usage.ts](../../usage.ts), comme chez Claude/ChatGPT).
+           *
+           * Il se RELIT (`budgetRemaining`), il n'est pas seulement snapshoté au
+           * lancement : rien ne réserve de budget, deux runs concurrents lisent
+           * le même restant et le prennent chacun pour plafond. Ce qui borne la
+           * casse est la fréquence de relecture — et un tour de microVM dure des
+           * heures, donc un plafond figé au démarrage serait aveugle du début à
+           * la fin.
+           */
+          if (now() - lastBudgetAt >= BUDGET_REFRESH_INTERVAL_MS) {
+            lastBudgetAt = now();
+            const fresh = await cp.budgetRemaining();
+            // `costUsd + restant` : le crochet rend ce qu'on a encore le DROIT
+            // de dépenser, la garde compare des dépenses de tour.
+            if (fresh !== null) budgetUsd = costUsd + Math.max(0, fresh);
+          }
+          if (budgetUsd !== undefined && costUsd >= budgetUsd) {
+            budgetExhausted = true;
+            /**
+             * 40 ms mesurés : la requête en vol se termine proprement, et le tour
+             * garde son journal, son push et son rapport.
+             *
+             * RESTE À MESURER, et [abandoned-spend.ts](../abandoned-spend.ts) est
+             * gardé pour ça : ce qu'opencode facture d'un round coupé au milieu.
+             * S'il pose un `finish` sur le message avorté, notre garde du
+             * traducteur l'écrit au ledger comme un round ordinaire ; sinon la
+             * dépense sort des compteurs, ce qui est exactement le défaut que
+             * MIN-216 avait fermé côté boucle maison.
+             */
+            await client.abort(sessionId);
+            break;
+          }
         }
-        if (out.liveText !== undefined && now() - lastLiveAt >= LIVE_INTERVAL_MS) {
+        // Le direct est celui de la MÈRE : y pousser le texte d'une fille ferait
+        // clignoter la réponse de l'agent entre deux conversations.
+        if (!child && out.liveText !== undefined && now() - lastLiveAt >= LIVE_INTERVAL_MS) {
           lastLiveAt = now();
           cp.emitLive({
-            text: secrets.redact(liveTextOf(state)),
+            text: secrets.redact(liveTextOf(state, sessionId)),
             tools: toolsSeen,
             reasoningActive: false,
             reasoningMs: 0,
           });
         }
         if (out.error) sessionError = out.error;
-        if (out.idle) break;
+        // `session.idle` d'une FILLE ne termine pas le tour : la mère, elle,
+        // attend encore son rapport.
+        if (out.idle && !child) break;
         if (now() > deadline) {
           timedOut = true;
           await client.abort(sessionId);
@@ -254,7 +323,7 @@ export async function runOpencodeTurn(
     }
 
     // ── Le push, le diff, le rapport ─────────────────────────────────────────
-    const reply = lastAssistantReply(state);
+    const reply = replyOf(state, sessionId);
     let pushed: VmPushResult | null = null;
     let pushError: string | undefined;
     if (job.writesToRepo) {
@@ -273,9 +342,16 @@ export async function runOpencodeTurn(
       }
     }
 
-    const status: VmTurnReport["status"] = sessionError
-      ? "error"
-      : timedOut
+    /**
+     * L'ORDRE DES CAUSES, et il n'est pas indifférent : `budget_exhausted` est
+     * un statut à part dans le protocole, et la fonction en tire une conduite
+     * propre — event `quota_exhausted`, pas de re-queue, message qui distingue le
+     * plafond du RUN de celui du COMPTE ([execute.ts](../execute.ts)). Le ranger
+     * sous `error` ferait retenter un run qui n'a plus de quoi payer.
+     */
+    const status: VmTurnReport["status"] = budgetExhausted
+      ? "budget_exhausted"
+      : sessionError || timedOut
         ? "error"
         : "completed";
 
@@ -289,6 +365,15 @@ export async function runOpencodeTurn(
       // d'opencode. Le champ reste (le type est partagé avec l'autre moteur) et
       // part vide — c'est ce qui rend la bascule réversible sans migration.
       messages: [],
+      /**
+       * OÙ EN EST LA NUMÉROTATION DU LEDGER, et c'est le tour SUIVANT qui la lit
+       * (`execute.ts` : `run.checkpoint?.usageSeq ?? …`). Sans elle, un tour
+       * repris renumérote ses lignes par-dessus celles du tour d'avant : rien
+       * n'est perdu (pas de contrainte d'unicité, la dépense se somme), mais
+       * l'ordre des appels d'un run devient faux — et c'est exactement ce qu'un
+       * `seq` sert à dire.
+       */
+      usageSeq: ledger.nextParentSeq,
       lastFilesSha: status === "completed" ? pushed?.headSha || job.filesFromSha : job.filesFromSha,
       instructions: { paths: [...job.instructions.paths], bytes: job.instructions.bytes },
       ...(opencodeState ? { opencode: opencodeState } : {}),
@@ -313,43 +398,109 @@ export async function runOpencodeTurn(
     return failed((err as Error).message);
   } finally {
     await server.stop().catch(() => {});
+    await proxy.close().catch(() => {});
   }
 }
 
 /**
- * Une ligne de ledger par ROUND, telle que le message assistant la donne.
+ * LE LEDGER D'UN TOUR (MIN-286, lot 2) — une ligne `ai_usage` par ROUND, mère et
+ * filles comprises, sous le `run_id` du run.
  *
- * `estimated` suit les PRIX : quand le job n'en porte pas (BYOK hors index
- * OpenRouter), opencode calcule sur un catalogue qu'il n'a pas et rend zéro. Une
- * ligne à zéro marquée « exacte » serait un mensonge qui ne se rattrape pas —
- * cf. `VmModelPricing`.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * D'OÙ VIENNENT LES TROIS NOMBRES, et pourquoi ils ne viennent pas du même endroit
+ *
+ * - **Les tokens** viennent du message assistant d'opencode. Le mapping est
+ *   celui du plan : `input→prompt_tokens`, `output→completion_tokens`,
+ *   `cache.read→cached_tokens`, `cache.write→cache_write_tokens`. Le
+ *   raisonnement n'a pas de colonne : il est DÉJÀ dans `output` (mesuré au
+ *   lot 0), l'ajouter compterait deux fois les mêmes tokens.
+ * - **Le coût** vient du FOURNISSEUR quand le proxy a su le lire, d'opencode
+ *   sinon. La sonde du lot 0 a mesuré les deux égaux sur cinq générations, ce
+ *   qui n'est pas une promesse : le jour où ils divergent, c'est la facture qui
+ *   a raison. C'est aussi ce qui rend le ledger comparable ligne à ligne entre
+ *   les deux moteurs — le critère de bascule du lot 3.
+ * - **Le `generation_id`** ne vient que du proxy : opencode ne l'expose nulle
+ *   part (dossier §2.6).
+ *
+ * `estimated` dit « ce coût est CALCULÉ, pas relevé chez le fournisseur ». Donc :
+ * faux dès que le proxy a rendu le coût facturé ; faux aussi sur le coût
+ * d'opencode calculé avec NOS prix (décision du lot 0, écart nul mesuré) ; vrai
+ * quand le job n'a pas de prix — là, opencode rend zéro, et une ligne à zéro
+ * marquée « exacte » serait un mensonge qu'on ne rattrape plus.
+ *
+ * LES SEQ : la mère continue la numérotation du run (`usageSeqStart`), chaque
+ * fille prend la sienne dans la bande des sous-agents (`subagentUsageSeq`, base
+ * 2e9, 1 000 par slot) — la MÊME convention que la boucle maison, sans quoi
+ * l'ordre d'appel d'un run cesse de se lire au ledger.
  */
-async function recordRound(
-  cp: ControlPlaneClient,
-  job: VmJob,
-  usage: RoundUsage,
-  index: number,
-): Promise<void> {
-  await cp.recordUsage({
-    runId: job.ledgerRunId,
-    seq: job.usageSeqStart + index,
-    feature: job.feature,
-    billTo: { unattributed: "resolved by the control plane" },
-    model: usage.model || job.model,
-    promptTokens: usage.inputTokens,
-    completionTokens: usage.outputTokens,
-    totalTokens: usage.inputTokens + usage.outputTokens,
-    cachedTokens: usage.cacheReadTokens,
-    cacheWriteTokens: usage.cacheWriteTokens,
-    cost: usage.costUsd,
-    estimated: !job.pricing,
-    projectId: job.projectId,
-  });
-}
+class TurnLedger {
+  private parentSeq: number;
+  /** Slot de chaque session fille, dans son ordre d'apparition. */
+  private readonly slots = new Map<string, number>();
+  /** Rounds déjà écrits par une fille — son avancée dans sa bande. */
+  private readonly childSeq = new Map<string, number>();
 
-/** Le texte final du tour — ce que le fil affiche comme réponse. */
-function lastAssistantReply(state: ReturnType<typeof newTurnStreamState>): string {
-  return liveTextOf(state).trim();
+  constructor(
+    private readonly job: VmJob,
+    /** La session de la mère : tout le reste du flux est une fille. */
+    private readonly parentSession: string,
+  ) {
+    this.parentSeq = job.usageSeqStart;
+  }
+
+  /** Le prochain `seq` LIBRE de la mère — ce que le checkpoint doit porter. */
+  get nextParentSeq(): number {
+    return this.parentSeq;
+  }
+
+  /** Écrit le round, et rend ce qui a été facturé. */
+  async record(
+    cp: ControlPlaneClient,
+    usage: RoundUsage,
+    proxy: LlmProxy,
+  ): Promise<{ cost: number }> {
+    const generation = proxy.take({ model: usage.model, outputTokens: usage.outputTokens });
+    const cost = generation?.costUsd ?? usage.costUsd;
+    await cp.recordUsage({
+      runId: this.job.ledgerRunId,
+      seq: this.seqFor(usage.sessionId),
+      feature: this.job.feature,
+      billTo: { unattributed: "resolved by the control plane" },
+      model: usage.model || this.job.model,
+      ...(generation?.id ? { generationId: generation.id } : {}),
+      promptTokens: usage.inputTokens,
+      completionTokens: usage.outputTokens,
+      totalTokens: usage.inputTokens + usage.outputTokens,
+      cachedTokens: usage.cacheReadTokens,
+      cacheWriteTokens: usage.cacheWriteTokens,
+      cost,
+      estimated: generation?.costUsd == null && !this.job.pricing,
+      projectId: this.job.projectId,
+    });
+    return { cost };
+  }
+
+  /**
+   * Le `seq` de ce round. Une session inconnue tombe dans la bande de la mère
+   * seulement si le flux n'a pas dit d'où elle venait — mieux vaut un round de
+   * mère mal rangé qu'une ligne perdue.
+   */
+  private seqFor(sessionId: string): number {
+    if (!sessionId || sessionId === this.parentSession) return this.parentSeq++;
+
+    let slot = this.slots.get(sessionId);
+    if (slot === undefined) {
+      slot = this.slots.size;
+      this.slots.set(sessionId, slot);
+    }
+    // Les slots repartent de zéro à chaque TOUR, comme la boucle maison recrée
+    // son registre de sous-agents à chaque tour (`seqBase: 0`). Deux tours qui
+    // délèguent réutilisent donc la même bande : `ai_usage.seq` n'a pas de
+    // contrainte d'unicité, et la dépense, elle, se somme.
+    const used = this.childSeq.get(sessionId) ?? 0;
+    this.childSeq.set(sessionId, used + 1);
+    return subagentUsageSeq(slot) + used;
+  }
 }
 
 /** Le curseur d'export, agrégat par agrégat. */
