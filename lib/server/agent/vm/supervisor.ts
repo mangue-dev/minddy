@@ -94,6 +94,17 @@ export const LIVE_INTERVAL_MS = 250;
 export const STEER_POLL_INTERVAL_MS = 5_000;
 
 /**
+ * Combien de temps on attend, en fin de tour, qu'un round coupé finisse d'arriver
+ * chez le fournisseur (`proxy.settle`, MIN-286 lot 3).
+ *
+ * Mesuré : l'amont continue **1 221 ms** après le départ du client, et c'est sa
+ * dernière frame qui porte le coût. Dix secondes laissent une marge large devant
+ * ce chiffre tout en bornant le seul cas gênant — un flux que le fournisseur ne
+ * fermerait jamais, qui retiendrait la fin du tour pour une ligne de ledger.
+ */
+export const ORPHAN_SETTLE_MS = 10_000;
+
+/**
  * Plafond mural d'un TOUR. Repris de [turn.ts](turn.ts) sans changer de valeur :
  * ce qu'il protège n'a pas changé de nature — la session de microVM est plafonnée
  * à 24 h par la plateforme, et un tour tué par elle ne laisserait aucune trace.
@@ -743,6 +754,23 @@ export async function runOpencodeTurn(
       abortEvents.abort();
     }
 
+    /**
+     * LE ROUND COUPÉ EN VOL, RENDU AU LEDGER (MIN-286, lot 3, dossier §2.23).
+     *
+     * Toutes les sorties de la boucle ci-dessus sauf une passent par un `abort` :
+     * plafond de dépense, « Stop », steering, deadline, question du modèle. Et
+     * mesuré sur le binaire : opencode ne facture RIEN d'un round avorté — pas de
+     * `finish`, donc pas de `usage`, donc pas de ligne. Le fournisseur, lui, a
+     * facturé. Le proxy est le seul à l'avoir vu passer ; on lui reprend ce que
+     * plus aucun round ne viendra chercher.
+     *
+     * `costUsd` est ajouté au cumul du tour **après** le plafond, volontairement :
+     * ce round-là est déjà coupé, l'opposer à nouveau au plafond ne changerait
+     * rien qu'un message. Ce qui compte est qu'il soit au ledger, donc au quota
+     * du compte et à la facture.
+     */
+    costUsd += await ledger.recordOrphans(cp, proxy);
+
     // ── L'état d'opencode, exporté pour le tour suivant ──────────────────────
     let opencodeState: OpencodeCheckpointState | undefined;
     try {
@@ -953,6 +981,61 @@ class TurnLedger {
       projectId: this.job.projectId,
     });
     return { cost };
+  }
+
+  /**
+   * LES ROUNDS COUPÉS EN VOL — ceux dont opencode ne dira jamais rien.
+   *
+   * Mesuré (dossier §2.23) : un round avorté rend `finish: null`, `cost: 0`,
+   * `tokens: 0` et une `MessageAbortedError`, alors que le fournisseur a facturé.
+   * Le proxy, lui, a lu la dernière frame du flux — il ne coupe pas l'amont quand
+   * le client s'en va. On écrit donc la ligne avec SES nombres.
+   *
+   * `estimated: false` sans hésiter : ce n'est pas un calcul, c'est le montant
+   * facturé, lu dans la réponse. Un flux qui n'aurait même pas rendu son `usage`
+   * (fournisseur coupé, panne réseau) n'est pas écrit du tout : une ligne à zéro
+   * se lirait « cet appel était gratuit », ce qui refait exactement le trou.
+   *
+   * `seq` : la bande de la MÈRE, toujours. Le proxy ne sait pas de quelle session
+   * venait la requête — il voit du HTTP, pas des sessions — et une ligne rangée
+   * sous la mère vaut infiniment mieux qu'une dépense qui n'existe nulle part.
+   */
+  async recordOrphans(cp: ControlPlaneClient, proxy: LlmProxy): Promise<number> {
+    // La course : l'amont finit APRÈS le client (1,2 s mesurés). Drainer sans
+    // attendre ne trouverait rien.
+    await proxy.settle(ORPHAN_SETTLE_MS);
+    let total = 0;
+    for (const gen of proxy.drain()) {
+      const usage = gen.usage;
+      if (!usage || gen.costUsd == null) {
+        // Rien de facturable à écrire, mais ça se DIT : c'est le seul signe
+        // qu'une dépense a pu sortir des compteurs.
+        console.error(
+          `[supervisor] round coupé sans usage du fournisseur (gen ${gen.id ?? "?"}) — non facturé`,
+        );
+        continue;
+      }
+      const prompt = usage.promptTokens ?? 0;
+      const completion = usage.completionTokens ?? 0;
+      await cp.recordUsage({
+        runId: this.job.ledgerRunId,
+        seq: this.parentSeq++,
+        feature: this.job.feature,
+        billTo: { unattributed: "resolved by the control plane" },
+        model: gen.model || this.job.model,
+        ...(gen.id ? { generationId: gen.id } : {}),
+        promptTokens: prompt,
+        completionTokens: completion,
+        totalTokens: usage.totalTokens ?? prompt + completion,
+        cachedTokens: usage.cachedTokens ?? 0,
+        cacheWriteTokens: usage.cacheWriteTokens ?? 0,
+        cost: gen.costUsd,
+        estimated: false,
+        projectId: this.job.projectId,
+      });
+      total += gen.costUsd;
+    }
+    return total;
   }
 
   /**

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runOpencodeTurn, lastSeqByAggregate, type SupervisorDeps } from "./supervisor";
 import { OpencodeClient } from "./opencode-client";
-import { takeGeneration } from "./llm-proxy";
+import { takeGeneration, type CapturedGeneration } from "./llm-proxy";
 import { OPENCODE_ANCHOR_FILE, OPENCODE_TOOL_DIR } from "./opencode-config";
 import { SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge } from "./tool-bridge";
@@ -119,12 +119,7 @@ const h = {
    *  pour les jobs de fond : tués avant le `git add -A`, jamais après. */
   exec: [] as string[],
   /** Ce que le proxy local a vu passer chez le fournisseur. */
-  generations: [] as Array<{
-    id: string | null;
-    model: string;
-    outputTokens: number | null;
-    costUsd: number | null;
-  }>,
+  generations: [] as CapturedGeneration[],
 };
 
 function cp(): ControlPlaneClient {
@@ -259,6 +254,10 @@ function deps(): SupervisorDeps {
     startProxy: async () => ({
       url: "http://127.0.0.1:9999",
       take: (round) => takeGeneration(h.generations, round),
+      // Ce que le vrai proxy rend en fin de tour : les générations que plus aucun
+      // round n'a prises — un round coupé en vol (MIN-286 lot 3, §2.23).
+      drain: () => h.generations.splice(0, h.generations.length),
+      settle: async () => {},
       close: async () => {
         h.proxyClosed = true;
       },
@@ -461,7 +460,9 @@ describe("le tour", () => {
     // Opencode n'expose l'identifiant de génération nulle part (dossier §2.6) :
     // c'est le proxy local, et lui seul, qui le rend au ledger. Le coût suit la
     // même règle — celui du fournisseur prime sur celui qu'opencode calcule.
-    h.generations = [{ id: "gen-abc", model: "", outputTokens: null, costUsd: 0.0042 }];
+    h.generations = [
+      { id: "gen-abc", model: "", outputTokens: null, costUsd: 0.0042, usage: null },
+    ];
     const report = await run();
     expect(h.usage[0].generationId).toBe("gen-abc");
     expect(h.usage[0].cost).toBe(0.0042);
@@ -478,11 +479,67 @@ describe("le tour", () => {
   it("retombe sur le coût d'opencode quand le fournisseur n'a rien dit", async () => {
     // Le cas normal aujourd'hui : OpenRouter ne rend le coût qu'avec
     // `usage: {include: true}`, et un provider BYOK peut ne rien rendre du tout.
-    h.generations = [{ id: "gen-xyz", model: "", outputTokens: null, costUsd: null }];
+    h.generations = [
+      { id: "gen-xyz", model: "", outputTokens: null, costUsd: null, usage: null },
+    ];
     await run();
     expect(h.usage[0].generationId).toBe("gen-xyz");
     expect(Number(h.usage[0].cost)).toBeGreaterThan(0);
     expect(h.usage[0].estimated).toBe(false);
+  });
+
+  it("facture le round COUPÉ EN VOL, que opencode ne facture pas", async () => {
+    /**
+     * MIN-286 lot 3 (§2.23), et c'est un trou de facturation, pas un détail :
+     * mesuré sur le binaire, un round avorté (« Stop », plafond, deadline,
+     * question) rend `finish: null`, `cost: 0`, `tokens: 0` — donc AUCUNE ligne —
+     * alors que le fournisseur a bel et bien facturé. Le proxy, lui, l'a vu
+     * passer : il ne coupe pas l'amont quand le client s'en va.
+     *
+     * Le modèle de la génération ne concorde avec aucun round : `take` la laisse
+     * donc dans la file, exactement comme le fait un round qui ne rendra jamais
+     * son message assistant.
+     */
+    h.generations = [
+      {
+        id: "gen-orphan",
+        model: "un-autre-modele",
+        outputTokens: 159,
+        costUsd: 0.002827,
+        usage: {
+          promptTokens: 2032,
+          completionTokens: 159,
+          totalTokens: 2191,
+          cost: 0.002827,
+          cachedTokens: 0,
+          cacheWriteTokens: 0,
+        },
+      },
+    ];
+    const report = await run();
+
+    const orphan = h.usage.find((l) => l.generationId === "gen-orphan");
+    expect(orphan, "la dépense du round coupé doit atteindre le ledger").toBeTruthy();
+    expect(orphan!.cost).toBe(0.002827);
+    expect(orphan!.promptTokens).toBe(2032);
+    expect(orphan!.completionTokens).toBe(159);
+    // Ce n'est pas un calcul : c'est le montant lu chez le fournisseur.
+    expect(orphan!.estimated).toBe(false);
+    // Et il compte dans la dépense du tour, donc dans le quota et la facture.
+    expect(report.costUsd).toBeCloseTo(
+      h.usage.reduce((sum, l) => sum + Number(l.cost ?? 0), 0),
+      10,
+    );
+  });
+
+  it("n'écrit RIEN d'un round coupé dont le fournisseur n'a rien dit", async () => {
+    // Une ligne à zéro se lirait « cet appel était gratuit » et referait le trou
+    // qu'on vient de boucher. On préfère l'absence, dite dans les logs.
+    h.generations = [
+      { id: "gen-muet", model: "un-autre-modele", outputTokens: null, costUsd: null, usage: null },
+    ];
+    await run();
+    expect(h.usage.find((l) => l.generationId === "gen-muet")).toBeUndefined();
   });
 
   it("dit au tour suivant où en est la numérotation du ledger", async () => {

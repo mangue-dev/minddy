@@ -80,6 +80,21 @@ const HEADER = `// Généré par lib/server/agent/vm/opencode-tools.ts — NE PA
 export const SUPERVISOR_URL_ENV = "MDY_SUPERVISOR_URL";
 
 /**
+ * L'EN-TÊTE QUI DIT « CETTE RÉPONSE PORTE UNE IMAGE » (MIN-286, lot 3).
+ *
+ * Le pont répond du TEXTE dans l'écrasante majorité des cas, et le tool généré le
+ * rend tel quel. Une seule réponse ne rentre pas là-dedans : `read_resource` sur
+ * une maquette, qui doit devenir une **pièce jointe** de message pour que le
+ * modèle la VOIE au lieu d'en lire la fiche signalétique (mesuré, dossier §2.22).
+ *
+ * On l'annonce par un en-tête plutôt que par la forme du corps : c'est le seul
+ * moyen de distinguer les deux sans qu'un tool de domaine qui rendrait, lui,
+ * légitimement un objet `{output, attachments}` ne soit pris pour une enveloppe.
+ * Les deux chemins existants ne bougent donc pas d'un octet.
+ */
+export const TOOL_ATTACHMENTS_HEADER = "x-minddy-attachments";
+
+/**
  * Les tools qui deviennent des tools de DOMAINE, c'est-à-dire ceux dont
  * l'exécution vit côté serveur. Dérivés des `Set` de routage
  * ([platform-tool-names.ts](../platform-tool-names.ts)) plutôt que réécrits :
@@ -250,6 +265,14 @@ function argsBlock(def: AgentToolDef): string {
  * Un échec de transport n'est PAS une exception qui remonte : le modèle doit lire
  * l'erreur et pouvoir réessayer ou faire autrement. Un tool qui lève coupe le
  * round, ce qui est la manière la plus chère de dire « réessaie ».
+ *
+ * LA SEULE BRANCHE : l'en-tête `TOOL_ATTACHMENTS_HEADER`, qui annonce une image
+ * (`read_resource` sur une maquette). Le corps est alors une **enveloppe**
+ * `{output, attachments}` que le tool rend telle quelle — c'est la forme riche du
+ * `ToolResult` d'`@opencode-ai/plugin`, et opencode la transforme en une partie
+ * `image_url` d'un message `user` posé après le round (mesuré, dossier §2.22).
+ * Une enveloppe illisible retombe sur le texte : une maquette perdue vaut mieux
+ * qu'un round perdu.
  */
 export function renderOpencodeTool(def: AgentToolDef): string {
   const name = def.function.name;
@@ -270,6 +293,14 @@ export default tool({
       });
       const text = await res.text();
       if (!res.ok) return "minddy tool ${name} failed (HTTP " + res.status + "): " + text.slice(0, 500);
+      if (res.headers.get(${literal(TOOL_ATTACHMENTS_HEADER)})) {
+        try {
+          const envelope = JSON.parse(text);
+          if (envelope && typeof envelope.output === "string" && Array.isArray(envelope.attachments)) {
+            return { output: envelope.output, attachments: envelope.attachments };
+          }
+        } catch {}
+      }
       return text;
     } catch (err) {
       return "minddy tool ${name} could not reach the harness: " + (err instanceof Error ? err.message : String(err));

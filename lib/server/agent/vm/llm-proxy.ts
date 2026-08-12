@@ -7,6 +7,7 @@ import {
   parseOpenRouterUsage,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage-shape";
+import type { NormalizedUsage } from "@/lib/server/ai-usage";
 
 /**
  * LE PROXY LOCAL DU SUPERVISEUR (MIN-286, lot 2) — les quarante lignes qui
@@ -55,6 +56,12 @@ export interface CapturedGeneration {
   outputTokens: number | null;
   /** Le coût FACTURÉ, quand le fournisseur le rend (`usage: {include: true}`). */
   costUsd: number | null;
+  /**
+   * L'usage COMPLET du fournisseur, gardé pour les rounds dont opencode ne dira
+   * jamais rien (`drain`). Sur un round ordinaire il ne sert pas : les tokens
+   * viennent du message assistant, qui les tient déjà.
+   */
+  usage: NormalizedUsage | null;
 }
 
 /** Ce que le superviseur tient du proxy. */
@@ -72,6 +79,37 @@ export interface LlmProxy {
    * une dépense : les tokens et le coût viennent du round, pas de l'appariement.
    */
   take(round: { model: string; outputTokens: number }): CapturedGeneration | null;
+  /**
+   * LES GÉNÉRATIONS QUE PLUS AUCUN ROUND NE VIENDRA PRENDRE, retirées de la file.
+   *
+   * C'est ce qu'un round COUPÉ EN VOL laisse derrière lui, et c'est le seul
+   * endroit du harness où sa dépense existe encore. Mesuré le 2026-08-12
+   * (dossier §2.23) : opencode ne facture RIEN d'un round avorté — `finish: null`,
+   * `cost: 0`, `tokens: 0`, `error: MessageAbortedError` — alors que 179 caractères
+   * étaient déjà écrits et que le fournisseur, lui, a bel et bien facturé
+   * 0,002827 $. Sans ce drain, un « Stop », un plafond ou une deadline sortiraient
+   * la dépense du ledger, du quota et de la facture, sur un geste déclenchable à
+   * volonté — le défaut exact que MIN-216 avait fermé côté boucle maison.
+   *
+   * Ce que ce proxy a de plus que tout le reste : **il ne coupe pas l'amont quand
+   * le client s'en va**. Le `fetch` vers le fournisseur n'a pas de signal, la
+   * boucle de lecture continue jusqu'au bout du flux (mesuré : 1 221 ms après le
+   * départ du client, sans une erreur de socket), et la dernière frame — celle qui
+   * porte `usage` et son coût — arrive donc quand même. La ligne écrite n'est pas
+   * une estimation : c'est le chiffre du fournisseur.
+   */
+  drain(): CapturedGeneration[];
+  /**
+   * Attend que les relais ENCORE EN VOL se terminent, au plus `timeoutMs`.
+   *
+   * À appeler avant `drain`, et c'est une question de course, pas de prudence :
+   * quand le client coupe, l'amont continue — mesuré à **1 221 ms** de plus
+   * jusqu'à sa dernière frame. Drainer tout de suite après un `abort` ne
+   * trouverait donc rien, et la dépense repartirait par le trou qu'on vient de
+   * boucher. Le plafond, lui, existe pour le cas inverse : un fournisseur qui ne
+   * fermerait jamais son flux ne doit pas retenir la fin du tour.
+   */
+  settle(timeoutMs: number): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -180,11 +218,18 @@ export class GenerationSniffer {
       // et surtout rien qui doive interrompre le relais.
       return;
     }
-    const gen = (this.current ??= { id: null, model: "", outputTokens: null, costUsd: null });
+    const gen = (this.current ??= {
+      id: null,
+      model: "",
+      outputTokens: null,
+      costUsd: null,
+      usage: null,
+    });
     if (typeof parsed.id === "string" && parsed.id && !gen.id) gen.id = parsed.id;
     if (typeof parsed.model === "string" && parsed.model && !gen.model) gen.model = parsed.model;
     if (parsed.usage) {
       const usage = parseOpenRouterUsage(parsed.usage as OpenRouterUsage);
+      gen.usage = usage;
       if (usage.completionTokens != null) gen.outputTokens = usage.completionTokens;
       if (usage.cost != null) gen.costUsd = usage.cost;
     }
@@ -229,6 +274,8 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
    * exactement ce que le tour fait quand le modèle délègue.
    */
   const pool: CapturedGeneration[] = [];
+  /** Relais commencés et pas finis — ce que `settle` attend. */
+  let inFlight = 0;
   const target = chatCompletionsUrl(job.baseUrl).replace(/\/chat\/completions$/, "");
 
   const server = createServer((req, res) => {
@@ -242,6 +289,15 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   });
 
   async function relay(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    inFlight++;
+    try {
+      await relayOnce(req, res);
+    } finally {
+      inFlight--;
+    }
+  }
+
+  async function relayOnce(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const path = req.url ?? "/";
     const raw = await readBody(req);
     const isCompletion = path.split("?")[0].endsWith("/chat/completions");
@@ -304,6 +360,13 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   return {
     url: `http://127.0.0.1:${port}`,
     take: (round) => takeGeneration(pool, round),
+    drain: () => pool.splice(0, pool.length),
+    settle: async (timeoutMs) => {
+      const deadline = Date.now() + timeoutMs;
+      while (inFlight > 0 && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    },
     close: () =>
       new Promise<void>((resolve) => {
         server.close(() => resolve());

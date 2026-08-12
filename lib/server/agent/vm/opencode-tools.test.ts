@@ -208,6 +208,18 @@ describe("le fichier généré", () => {
     expect(content).not.toContain("throw ");
   });
 
+  it("rend une pièce jointe quand le pont l'annonce, et du texte sinon", () => {
+    const content = file();
+    // Le tool généré ne DÉCIDE de rien : c'est l'en-tête du pont qui distingue
+    // une réponse ordinaire d'une maquette à montrer (MIN-286 lot 3, §2.22).
+    expect(content).toContain('res.headers.get("x-minddy-attachments")');
+    expect(content).toContain("return { output: envelope.output, attachments: envelope.attachments };");
+    // Une enveloppe illisible retombe sur le texte : une maquette perdue vaut
+    // mieux qu'un round perdu.
+    expect(content).toContain("return text;");
+    expect(content).not.toContain("throw ");
+  });
+
   it("échappe une description qui contient des guillemets et des retours ligne", () => {
     const content = renderOpencodeTool({
       type: "function",

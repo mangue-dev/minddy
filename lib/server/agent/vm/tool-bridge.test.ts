@@ -316,3 +316,71 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     );
   });
 });
+
+/**
+ * MIN-286 lot 3 — LES IMAGES, la dernière parité que le pont avait perdue.
+ *
+ * Le pont répond du texte, et un modèle qui reçoit du texte lit la fiche
+ * signalétique d'une maquette au lieu de la regarder. Ce que ces tests fixent,
+ * c'est le contrat mesuré sur `opencode-ai@1.18.16` (dossier §2.22) : quand le
+ * plan de contrôle rend des images, la réponse devient une ENVELOPPE annoncée
+ * par son en-tête, et le tool généré la rend en `{output, attachments}` —
+ * qu'opencode republie en partie `image_url` d'un message posé après le round.
+ */
+describe("images — l'enveloppe de pièces jointes", () => {
+  const withImage = (): ControlPlaneClient =>
+    cp({
+      callTool: async (name, body) => {
+        calls.push({ name, body });
+        return {
+          result: { name: "maquette.png", mime: "image/png", bytes: 12 },
+          success: true,
+          images: [{ url: "data:image/png;base64,AAAA", name: "maquette.png" }],
+        };
+      },
+    } as Partial<ControlPlaneClient>);
+
+  it("annonce l'image par son en-tête et la rend en pièce jointe", async () => {
+    await withBridge({ cp: withImage(), job: job({ imageInput: true }) }, async (bridge) => {
+      const res = await fetch(`${bridge.url}/tool/read_resource`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ args: { resource_id: "r1" } }),
+      });
+      expect(res.headers.get("x-minddy-attachments")).toBe("1");
+
+      const envelope = JSON.parse(await res.text());
+      // Le TEXTE ne change pas : la fiche signalétique reste ce que le modèle
+      // lit, l'image s'y ajoute. Un fil raconte donc la même chose qu'avant.
+      expect(JSON.parse(envelope.output)).toEqual({
+        name: "maquette.png",
+        mime: "image/png",
+        bytes: 12,
+      });
+      // La forme exacte du `ToolAttachment` d'@opencode-ai/plugin, mime relu
+      // sur la data URL plutôt que supposé.
+      expect(envelope.attachments).toEqual([
+        {
+          type: "file",
+          mime: "image/png",
+          url: "data:image/png;base64,AAAA",
+          filename: "maquette.png",
+        },
+      ]);
+    });
+  });
+
+  it("ne pose ni en-tête ni enveloppe quand le tool ne rend pas d'image", async () => {
+    await withBridge({}, async (bridge) => {
+      const res = await fetch(`${bridge.url}/tool/read_issue`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ args: {} }),
+      });
+      expect(res.headers.get("x-minddy-attachments")).toBeNull();
+      // Le corps est le résultat NU, comme avant : c'est ce que le tool généré
+      // rend tel quel au modèle.
+      expect(JSON.parse(await res.text())).toHaveProperty("answer");
+    });
+  });
+});

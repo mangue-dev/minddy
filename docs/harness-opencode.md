@@ -257,6 +257,26 @@ pré-chauffée (`AGENT_SANDBOX_SNAPSHOT_ID`). **Recommandation : cuire opencode 
 ce snapshot**, et le coût du virage sur le chemin critique tombe à ~1,3 s par
 microVM neuve.
 
+**FAIT le 2026-08-12** :
+[scripts/create-agent-snapshot.ts](../scripts/create-agent-snapshot.ts) installe
+opencode dans `/vercel/oc` avant de figer l'image, et la question qui restait
+ouverte est tranchée par la mesure — **`/vercel/oc` survit bien à la prise
+d'image**, alors qu'il est hors de `/vercel/sandbox`, le répertoire de travail des
+runs. Le script rejoue donc un reboot sur son propre snapshot et n'annonce l'id
+qu'après avoir vu `opencode --version` répondre dessus : sans ce contrôle, une
+image qui n'aurait rien cuit rendrait un id parfaitement valide, et la seule trace
+en serait une lenteur que personne ne relie jamais à ici. Relevé : **12 s
+d'installation, 351 Mo, image de 0,54 Go**, `expiration: 0` (**jamais** — un
+snapshot de base est une image de produit ; ceux des runs, eux, expirent bien).
+
+Deux conséquences écrites dans le code plutôt que dans une mémoire :
+
+- le snapshot est à **rejouer après tout bump d'`OPENCODE_VERSION`** ;
+- et si on l'oublie, `opencode-host.ts` compare désormais la version **posée sur le
+  disque** à son épingle, et réinstalle quand elles divergent. Un simple test
+  d'existence aurait trouvé le binaire d'hier très bien, et tous les runs
+  auraient tourné sur l'ancien moteur pendant que le dépôt jure le contraire.
+
 Le démarrage sans catalogue en ligne marche aussi, ce qui veut dire qu'un run ne
 dépend pas de la disponibilité de models.dev — à confirmer sur les **prix**
 (le catalogue embarqué doit être frais, cf. le risque de dérive du §2.5).
@@ -799,6 +819,95 @@ le `bash` d'opencode ne garde pas.
 
 Une session de **relecture** n'en a pas : `PR_REVIEW_TOOLS` ne le porte pas, donc il
 n'est ni généré, ni routé, ni annoncé — une review tient dans une session.
+
+### 2.22 Les images de `read_resource` : elles traversent, et il fallait DEUX déclarations (lot 3)
+
+Mesuré le 2026-08-12 sur `opencode-ai@1.18.16`, serveur réel, vraie clé, modèle de
+vision, ~0,004 $ sur quatre passages. La sonde reste dans le dépôt et se rejoue :
+[opencode-images.probe.test.ts](../lib/server/agent/vm/opencode-images.probe.test.ts)
+(`MDY_OPENCODE_IMAGE_PROBE=1`) — le modèle doit nommer les quatre quadrants d'une
+PNG 64×64 générée à l'exécution, ce qu'aucun modèle ne devine.
+
+Le plan supposait un **prompt de relance** portant l'image après le tool. Ce n'était
+pas nécessaire, et la vraie voie est meilleure : le `ToolResult` d'`@opencode-ai/plugin`
+a une forme riche, `{title, output, attachments}`, et `ToolAttachment` est
+`{type: "file", mime, url, filename}` — **une data URL passe telle quelle**, ce qui
+tombe pile sur `AgentToolImage` ([content.ts](../lib/server/agent/content.ts)), qui
+est déjà une data URL et pour la même raison (l'historique est rejoué des heures
+plus tard, une URL signée a expiré).
+
+Ce qu'opencode en fait, lu dans le corps de requête : il pose un message `user`
+juste après le round, `[{type: "text", text: "Attached media from tool result:"},
+{type: "image_url", image_url: {url: …}}]` — **exactement** ce que la boucle maison
+construisait. Ce message n'est PAS persisté en session (vérifié sur
+`/session/:id/message` : trois messages, pas quatre), donc il ne produit aucun
+événement et ne peut pas entrer dans le texte du round ni dans le message de commit.
+
+**LE PIÈGE, et il coûtait la parité en silence.** `attachment: true` sur le modèle
+**ne suffit pas**. L'image traverse tout le harness, et opencode la remplace au
+dernier moment par un texte :
+
+> `ERROR: Cannot read "quad.png" (this model does not support image input). Inform the user.`
+
+Le modèle répondait donc `NO_IMAGE` — et en production il aurait prévenu
+l'utilisateur d'une limite qui n'existe pas. Ce que le binaire teste, c'est
+`capabilities.input.image`, qui se déclare en config par **`modalities.input`**.
+D'où les deux champs posés ensemble dans `modelDef`, sur le même `job.imageInput`.
+Rien dans un type-check ni dans un test unitaire ne l'aurait dit.
+
+Le câblage, lui, tient en trois pièces :
+
+| Pièce | Ce qu'elle fait |
+| --- | --- |
+| [opencode-config.ts](../lib/server/agent/vm/opencode-config.ts) | `attachment` **et** `modalities.input: ["text","image"]` quand `job.imageInput` |
+| [tool-bridge.ts](../lib/server/agent/vm/tool-bridge.ts) | les `images` du plan de contrôle deviennent une **enveloppe** `{output, attachments}`, annoncée par l'en-tête `x-minddy-attachments` |
+| [opencode-tools.ts](../lib/server/agent/vm/opencode-tools.ts) | le tool généré rend l'enveloppe en `ToolResult` riche ; sans l'en-tête, il rend le texte comme avant, à l'octet |
+
+Le **texte** du résultat ne change pas : la fiche signalétique reste ce que le
+modèle lit, l'image s'y ajoute. Un fil raconte donc la même chose des deux côtés de
+la bascule. Les sous-agents n'en ont pas besoin : `read_resource` est dans
+`SUBAGENT_FORBIDDEN_TOOLS`, leurs modèles ne déclarent donc pas la modalité.
+
+### 2.23 Le round coupé en vol : opencode n'en facture RIEN, le proxy si (lot 3)
+
+Mesuré le 2026-08-12, serveur réel, vraie clé, ~0,003 $ par passage. Sonde
+rejouable :
+[opencode-abort.probe.test.ts](../lib/server/agent/vm/opencode-abort.probe.test.ts)
+(`MDY_OPENCODE_ABORT_PROBE=1`) — elle monte le **vrai** proxy de production.
+
+C'est la question que le plan avait laissée ouverte, et la réponse est la
+mauvaise :
+
+| Après un `abort` en pleine génération | Ce qu'on relève |
+| --- | --- |
+| Le message assistant d'opencode | `finish: null`, `cost: 0`, `tokens: {input: 0, output: 0}`, `error: MessageAbortedError` — alors que **179 caractères** étaient écrits |
+| Notre traducteur | exige un `finish` pour écrire au ledger, à raison : sans lui il écrirait une ligne vide puis une vraie |
+| Le fournisseur | a facturé **0,002827 $** (2 032 tokens de prompt, 159 de complétion) |
+
+Toutes les sorties du superviseur sauf une passent par un `abort` — plafond de
+dépense, « Stop », steering, deadline, question du modèle. La dépense sortait donc
+du ledger, du quota et de la facture **sur un geste déclenchable à volonté** :
+exactement le défaut que MIN-216 avait fermé côté boucle maison, rouvert par le
+changement de moteur.
+
+**Ce qui le referme, et c'est une propriété du proxy, pas une estimation** : il ne
+passe aucun signal à son `fetch` amont. Quand opencode s'en va, la boucle de
+lecture continue jusqu'à la dernière frame — **1 221 ms plus tard, sans une erreur
+de socket** — et cette frame-là porte `usage`, donc le coût facturé et le
+`generation_id`. Le superviseur appelle donc `proxy.settle()` puis `proxy.drain()`
+en fin de tour (`TurnLedger.recordOrphans`) et écrit la ligne au montant du
+FOURNISSEUR, `estimated: false`.
+
+Deux choix qui vont avec :
+
+- un flux qui n'aurait même pas rendu son `usage` (fournisseur coupé, panne
+  réseau) **n'est pas écrit** : une ligne à zéro se lirait « cet appel était
+  gratuit », ce qui refait le trou. Elle est journalisée, elle.
+- la ligne prend un `seq` de la **mère** : le proxy voit du HTTP, pas des
+  sessions. Une ligne mal rangée vaut mieux qu'une dépense qui n'existe nulle part.
+
+`abandoned-spend.ts` reste dans le dépôt pour la boucle maison, mais le chemin
+opencode ne s'en sert pas : il n'a rien à estimer.
 
 ---
 

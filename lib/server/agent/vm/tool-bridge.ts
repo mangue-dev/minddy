@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 import type { ControlPlaneClient } from "./control-plane-client";
-import { DOMAIN_TOOL_NAMES } from "./opencode-tools";
+import { DOMAIN_TOOL_NAMES, TOOL_ATTACHMENTS_HEADER } from "./opencode-tools";
 import type { OpencodeDelivery } from "./opencode-delivery";
 import type { VmJob } from "./protocol";
 
@@ -98,6 +98,17 @@ export type SupervisorTool = (
   args: Record<string, unknown>,
 ) => Promise<{ result: unknown; success: boolean; followUp?: string }>;
 
+/**
+ * Ce qu'un appel rend au pont. `images` est la seule sortie qui ne soit pas du
+ * texte : elle devient une pièce jointe de message chez opencode (cf. `forwardRaw`).
+ */
+interface ToolOutcome {
+  result: unknown;
+  success: boolean;
+  followUp?: string;
+  images?: Array<{ url: string; name?: string }>;
+}
+
 export interface ToolBridgeOptions {
   job: VmJob;
   cp: ControlPlaneClient;
@@ -179,19 +190,30 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
   async function forwardRaw(
     name: string,
     args: Record<string, unknown>,
-  ): Promise<{ result: unknown; success: boolean }> {
+  ): Promise<ToolOutcome> {
     const res = await cp.callTool(name, { args, imageInput: job.imageInput, prInlineComments });
     // Le compteur d'ancres fait l'aller-retour : c'est la fonction qui l'oppose
     // au plafond des 5 et qui rend celui qu'elle a atteint (`runPrTool`).
     if (typeof res.inlineUsed === "number") prInlineComments = res.inlineUsed;
     /**
-     * LES IMAGES de `read_resource` ne traversent PAS encore ce pont : le
-     * résultat d'un tool opencode est du texte, et une maquette rendue au modèle
-     * demande une pièce jointe de message. À traiter à part (lot 2) ; d'ici là
-     * une lecture de maquette rend sa fiche signalétique, ce qu'elle rendait
-     * déjà sur un run dont le modèle ne voit pas les images.
+     * LES IMAGES de `read_resource` traversent ce pont depuis MIN-286 lot 3.
+     *
+     * Le résultat d'un tool opencode est du TEXTE — mais son `ToolResult` riche
+     * porte des `attachments`, et opencode les republie en partie `image_url`
+     * d'un message `user` posé juste après le round (« Attached media from tool
+     * result: »). C'est exactement ce que la boucle maison faisait de son côté,
+     * et le corps de requête est le même (mesuré, dossier §2.22).
+     *
+     * On ne filtre pas sur `job.imageInput` ici : c'est le plan de contrôle qui
+     * décide de servir l'image ou non — on la lui a demandée avec ce drapeau
+     * (`issue-tools.ts`), et une image qui arrive quand même est une image que
+     * le modèle sait lire.
      */
-    return { result: res.result, success: res.success };
+    return {
+      result: res.result,
+      success: res.success,
+      ...(res.images?.length ? { images: res.images } : {}),
+    };
   }
 
   /**
@@ -216,7 +238,7 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
   async function dispatch(
     name: string,
     args: Record<string, unknown>,
-  ): Promise<{ result: unknown; success: boolean; followUp?: string } | null> {
+  ): Promise<ToolOutcome | null> {
     const own = supervisorTools[name];
     if (own) return await own(args);
     if (SUPERVISOR_ONLY.has(name)) {
@@ -259,7 +281,7 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
       return;
     }
 
-    let outcome: { result: unknown; success: boolean; followUp?: string } | null;
+    let outcome: ToolOutcome | null;
     try {
       outcome = await dispatch(name, body.args ?? {});
     } catch (err) {
@@ -283,10 +305,43 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     const rendered = JSON.stringify(
       outcome.result ?? (outcome.success ? {} : { error: "no result" }),
     );
+    const output = outcome.followUp ? `${rendered}\n\n${outcome.followUp}` : rendered;
+
+    /**
+     * UNE IMAGE → L'ENVELOPPE, et elle est annoncée par son en-tête (cf.
+     * `TOOL_ATTACHMENTS_HEADER`). Le tool généré rend alors un `ToolResult` riche
+     * plutôt qu'une chaîne, et opencode publie la maquette en pièce jointe.
+     *
+     * Le TEXTE de la réponse ne change pas d'un octet pour autant : la fiche
+     * signalétique du fichier reste ce que le modèle lit, l'image s'y AJOUTE. Un
+     * fil racontera donc la même chose des deux côtés de la bascule.
+     */
+    if (outcome.images?.length) {
+      res.writeHead(200, {
+        "content-type": "application/json",
+        [TOOL_ATTACHMENTS_HEADER]: String(outcome.images.length),
+      });
+      res.end(
+        JSON.stringify({
+          output,
+          attachments: outcome.images.map((image) => ({
+            type: "file",
+            // La data URL porte son propre type MIME ; hors de ce cas on ne sait
+            // pas, et `application/octet-stream` vaut mieux qu'un `image/png`
+            // affirmé au hasard — opencode décide de la modalité là-dessus.
+            mime: mimeOfDataUrl(image.url) ?? "application/octet-stream",
+            url: image.url,
+            ...(image.name ? { filename: image.name } : {}),
+          })),
+        }),
+      );
+      return;
+    }
+
     res.writeHead(200, {
       "content-type": outcome.followUp ? "text/plain; charset=utf-8" : "application/json",
     });
-    res.end(outcome.followUp ? `${rendered}\n\n${outcome.followUp}` : rendered);
+    res.end(output);
   }
 
   const port = await listen(server, opts.port ?? 0);
@@ -305,6 +360,17 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
         server.closeAllConnections?.();
       }),
   };
+}
+
+/**
+ * Le type MIME d'une data URL, ou `null`. Nos images en sont toujours
+ * ([content.ts](../content.ts) : jamais d'URL signée, parce que l'historique est
+ * rejoué des heures plus tard) — mais le lire plutôt que le supposer coûte une
+ * ligne, et une signature qui changerait se verrait ici plutôt qu'en production.
+ */
+function mimeOfDataUrl(url: string): string | null {
+  const match = /^data:([^;,]+)[;,]/.exec(url);
+  return match ? match[1] : null;
 }
 
 function readBody(req: IncomingMessage): Promise<Buffer> {

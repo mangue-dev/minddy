@@ -70,9 +70,15 @@ describe("ce que la réponse laisse voir", () => {
     // Coupé au milieu d'une frame : c'est le cas normal d'un flux réseau.
     sniffer.push(`ces":[]}\n\ndata: {"id":"gen-1","usage":{"completion_tokens":42,"cost":0.0012}}\n\n`);
     sniffer.end();
-    expect(sniffer.captured()).toEqual([
+    expect(sniffer.captured()).toMatchObject([
       { id: "gen-1", model: "anthropic/claude-haiku-4.5", outputTokens: 42, costUsd: 0.0012 },
     ]);
+    // L'usage COMPLET est gardé à côté : c'est lui, et lui seul, qui permet
+    // d'écrire la ligne d'un round coupé en vol (MIN-286 lot 3, §2.23).
+    expect(sniffer.captured()[0].usage).toMatchObject({
+      completionTokens: 42,
+      cost: 0.0012,
+    });
   });
 
   it("ne s'étrangle pas sur ce qui n'est pas du JSON", () => {
@@ -86,8 +92,8 @@ describe("ce que la réponse laisse voir", () => {
 describe("l'appariement round → génération", () => {
   it("prend celle qui a le même nombre de tokens de sortie", () => {
     const pool = [
-      { id: "gen-a", model: "m", outputTokens: 10, costUsd: 1 },
-      { id: "gen-b", model: "m", outputTokens: 20, costUsd: 2 },
+      { id: "gen-a", model: "m", outputTokens: 10, costUsd: 1, usage: null },
+      { id: "gen-b", model: "m", outputTokens: 20, costUsd: 2, usage: null },
     ];
     expect(takeGeneration(pool, { model: "m", outputTokens: 20 })?.id).toBe("gen-b");
     // Consommée : le round suivant ne la reprendra pas.
@@ -97,12 +103,12 @@ describe("l'appariement round → génération", () => {
   it("retombe sur l'ordre d'arrivée quand les tokens ne concordent pas", () => {
     // Les tokens d'opencode et ceux du fournisseur ne se comptent pas forcément
     // pareil ; l'ordre, lui, est toujours vrai en séquentiel.
-    const pool = [{ id: "gen-a", model: "m", outputTokens: 7, costUsd: 1 }];
+    const pool = [{ id: "gen-a", model: "m", outputTokens: 7, costUsd: 1, usage: null }];
     expect(takeGeneration(pool, { model: "m", outputTokens: 99 })?.id).toBe("gen-a");
   });
 
   it("rend `null` plutôt qu'une génération d'un autre modèle", () => {
-    const pool = [{ id: "gen-a", model: "autre", outputTokens: 7, costUsd: 1 }];
+    const pool = [{ id: "gen-a", model: "autre", outputTokens: 7, costUsd: 1, usage: null }];
     expect(takeGeneration(pool, { model: "m", outputTokens: 7 })).toBeNull();
     expect(pool).toHaveLength(1);
   });
@@ -148,7 +154,7 @@ describe("le relais, monté pour de vrai", () => {
       expect(seen!.headers.authorization).toBe("Bearer placeholder");
       expect(seen!.headers["HTTP-Referer"]).toBe("https://minddy.app");
 
-      expect(proxy.take({ model: "deepseek/deepseek-v4-flash", outputTokens: 5 })).toEqual({
+      expect(proxy.take({ model: "deepseek/deepseek-v4-flash", outputTokens: 5 })).toMatchObject({
         id: "gen-42",
         model: "deepseek/deepseek-v4-flash",
         outputTokens: 5,

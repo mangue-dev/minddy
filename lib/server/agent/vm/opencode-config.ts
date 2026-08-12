@@ -157,6 +157,8 @@ interface OpencodeModelDef {
   name: string;
   tool_call: true;
   attachment?: boolean;
+  /** `input`/`output` au sens models.dev — cf. `modelDef` pour ce qui en dépend. */
+  modalities?: { input: string[]; output: string[] };
   reasoning?: boolean;
   options?: Record<string, unknown>;
   cost?: { input: number; output: number; cache_read?: number; cache_write?: number };
@@ -207,12 +209,30 @@ function modelRef(model: string): string {
  * `tool_call: true` est une affirmation et non une mesure — un modèle sans appel
  * d'outil ne sort jamais du catalogue de l'agent (`models-catalog.ts` le filtre),
  * donc celui qui arrive ici en a forcément.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * LES IMAGES DEMANDENT **DEUX** DÉCLARATIONS, ET `attachment` N'EST PAS LA BONNE
+ *
+ * Mesuré le 2026-08-12 (dossier §2.22) : avec `attachment: true` seul, une image
+ * rendue par un tool est bien acheminée jusqu'au dernier moment, puis **remplacée
+ * par un texte d'erreur** juste avant l'appel — « ERROR: Cannot read "x.png"
+ * (this model does not support image input). Inform the user. » Le modèle lit
+ * donc une phrase qui l'invite à prévenir l'utilisateur d'une limite qui n'existe
+ * pas, et la maquette est perdue en silence.
+ *
+ * Ce que le binaire teste, c'est `capabilities.input.image`, qui se déclare en
+ * config par **`modalities.input`** — d'où les deux champs ci-dessous, posés
+ * ensemble et sur le même `job.imageInput`. Ne jamais en poser un sans l'autre.
  */
 function modelDef(job: VmJob): OpencodeModelDef {
   const def: OpencodeModelDef = {
     name: job.model,
     tool_call: true,
     attachment: job.imageInput,
+    modalities: {
+      input: job.imageInput ? ["text", "image"] : ["text"],
+      output: ["text"],
+    },
   };
   if (job.pricing) {
     def.cost = {

@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { OpencodeClient } from "./opencode-client";
+import { OPENCODE_BIN, OPENCODE_INSTALL_DIR, OPENCODE_VERSION } from "./opencode-version";
 import { OPENCODE_DIRECTORY, type SupervisorDeps } from "./supervisor";
 
 /**
@@ -25,22 +26,20 @@ import { OPENCODE_DIRECTORY, type SupervisorDeps } from "./supervisor";
  *    exactement la garantie qu'on veut : pas de serveur orphelin entre deux tours.
  * 2. **L'installation coûte 10,6 s / 351 Mo, le démarrage 1,3 s.** D'où la forme :
  *    on installe SEULEMENT si le binaire manque. Cuit dans
- *    `AGENT_SANDBOX_SNAPSHOT_ID`, il ne manque jamais et un tour neuf paie 1,3 s ;
- *    sans snapshot à jour, le repli fonctionne quand même, il coûte dix secondes.
+ *    `AGENT_SANDBOX_SNAPSHOT_ID` par
+ *    [scripts/create-agent-snapshot.ts](../../../../scripts/create-agent-snapshot.ts),
+ *    il ne manque jamais et un tour neuf paie 1,3 s ; sans snapshot à jour, le
+ *    repli ci-dessous fonctionne quand même, il coûte dix secondes.
+ *    **Un changement d'`OPENCODE_VERSION` périme le snapshot** : le binaire cuit
+ *    n'est plus celui qu'on veut, et comme il ne manque pas, personne ne
+ *    l'installera. Rejouer le script après tout bump — c'est écrit dedans.
  * 3. **La version est ÉPINGLÉE.** C'est le harness du produit : une mise à jour
  *    qui arriverait d'elle-même changerait de moteur au milieu d'un run (l'auto-update
  *    est éteint par `opencodeServerEnv`, cette épingle-ci en est le pendant à
  *    l'installation).
  */
 
-/** La version d'opencode que ce dépôt a mesurée. Voir docs/harness-opencode.md. */
-export const OPENCODE_VERSION = "1.18.16";
-
-/** Où le binaire vit dans la microVM — hors du dépôt, comme tout le harness. */
-export const OPENCODE_INSTALL_DIR = "/vercel/oc";
-
-/** Le binaire lui-même, tel que `npm i opencode-ai` le pose. */
-export const OPENCODE_BIN = `${OPENCODE_INSTALL_DIR}/node_modules/.bin/opencode`;
+export { OPENCODE_BIN, OPENCODE_INSTALL_DIR, OPENCODE_VERSION };
 
 async function exists(path: string): Promise<boolean> {
   return await access(path).then(
@@ -49,9 +48,48 @@ async function exists(path: string): Promise<boolean> {
   );
 }
 
-/** `npm i` du binaire, et seulement s'il manque (cf. §2 ci-dessus). */
+/**
+ * La version RÉELLEMENT posée dans `/vercel/oc`, lue sur le disque — `null` si
+ * rien n'est installé, ou si le paquet est là sans son manifeste.
+ *
+ * On la lit plutôt que d'exécuter `opencode --version` : un `spawn` de 144 Mo de
+ * binaire natif à chaque tour pour apprendre un numéro qui est écrit dans un
+ * fichier de 2 Ko, c'est cher pour la même réponse.
+ */
+async function installedVersion(): Promise<string | null> {
+  try {
+    const manifest = await readFile(
+      `${OPENCODE_INSTALL_DIR}/node_modules/opencode-ai/package.json`,
+      "utf8",
+    );
+    const version = (JSON.parse(manifest) as { version?: string }).version;
+    return typeof version === "string" ? version : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `npm i` du binaire, et seulement s'il manque **ou s'il n'est pas le nôtre**
+ * (cf. §2 et §3 ci-dessus).
+ *
+ * LA DEUXIÈME MOITIÉ DE CETTE CONDITION EST CE QUI TIENT L'ÉPINGLE. Un snapshot
+ * pré-chauffé est cuit une fois puis oublié : le jour où `OPENCODE_VERSION`
+ * bouge, un test d'existence seul verrait le binaire d'hier, le trouverait très
+ * bien, et tous les runs tourneraient sur l'ancien moteur pendant que le dépôt
+ * jure le contraire — sans une ligne de log pour le dire. On compare donc au
+ * numéro écrit sur le disque, et une divergence réinstalle (dix secondes, une
+ * fois, jusqu'à ce que le snapshot soit rejoué).
+ */
 async function ensureInstalled(): Promise<void> {
-  if (await exists(OPENCODE_BIN)) return;
+  const found = await installedVersion();
+  if (found === OPENCODE_VERSION && (await exists(OPENCODE_BIN))) return;
+  if (found && found !== OPENCODE_VERSION) {
+    console.log(
+      `[opencode] version ${found} installée, ${OPENCODE_VERSION} attendue — réinstallation ` +
+        `(snapshot AGENT_SANDBOX_SNAPSHOT_ID à rejouer : scripts/create-agent-snapshot.ts)`,
+    );
+  }
   await mkdir(OPENCODE_INSTALL_DIR, { recursive: true });
   await new Promise<void>((resolve, reject) => {
     const child = spawn(

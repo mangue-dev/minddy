@@ -104,6 +104,25 @@ describe("le modèle et son fournisseur", () => {
     ]);
   });
 
+  it("déclare la modalité image, sans quoi une maquette est remplacée par une erreur", () => {
+    // MESURÉ (§2.22) : `attachment: true` seul ne suffit PAS. Le binaire teste
+    // `capabilities.input.image`, qui se déclare par `modalities.input` — sans
+    // lui, opencode remplace l'image par « ERROR: Cannot read … (this model does
+    // not support image input). Inform the user. » et le modèle prévient
+    // l'utilisateur d'une limite qui n'existe pas.
+    const withImages = buildOpencodeConfig(job({ imageInput: true }));
+    const model = withImages.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"];
+    expect(model.attachment).toBe(true);
+    expect(model.modalities).toEqual({ input: ["text", "image"], output: ["text"] });
+
+    // Et l'inverse : un run dont le modèle ne voit pas les images ne l'annonce
+    // pas — le plan de contrôle ne lui en servira pas non plus.
+    const without = buildOpencodeConfig(job({ imageInput: false }));
+    const blind = without.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"];
+    expect(blind.attachment).toBe(false);
+    expect(blind.modalities).toEqual({ input: ["text"], output: ["text"] });
+  });
+
   it("donne NOS prix au modèle — sans eux opencode facture zéro", () => {
     const cfg = buildOpencodeConfig(
       job({
