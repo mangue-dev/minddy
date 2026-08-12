@@ -183,6 +183,24 @@ export const TABLE_SCOPES = {
       { column: "category_id", table: "categories" },
     ],
   },
+
+  // ── Pages (le wiki d'un projet) ──────────────────────────────────────────
+  // Ancrée par le projet, comme les tickets. `parent_id` pointe une AUTRE page
+  // et n'est donc pas couverte par `parents` : la table serait son propre
+  // parent, et l'ordre de déclaration (un parent avant son enfant) ne peut pas
+  // se satisfaire lui-même. La garde est dans le script de seed, qui engendre
+  // les identifiants des pages qu'il crée et refuse tout `parent_id` qui n'en
+  // fait pas partie — un arbre de démo ne peut donc pas se greffer sur la page
+  // d'un vrai projet.
+  //
+  // `search_text` n'est PAS calculée en base : `search_tsv` est générée à
+  // partir d'elle, mais c'est l'appelant qui la remplit (il n'y a pas de tiptap
+  // en SQL, cf. migration 20261201090000). Le seed la pose lui-même.
+  pages: {
+    writable: true,
+    projectColumn: "project_id",
+    userRefColumns: ["created_by", "updated_by", "deleted_by"],
+  },
 };
 
 /** Les tables où l'on a le droit d'écrire — sous-ensemble strict de TABLE_SCOPES. */
