@@ -117,6 +117,7 @@ const cp = (): ControlPlaneClient => ({
   recordUsage: vi.fn(async () => {}),
   saveCheckpointQuietly: vi.fn(async () => true),
   pullSteering: vi.fn(async () => []),
+  pushSteering: vi.fn(async () => {}),
   hasPendingMessages: vi.fn(async () => false),
   checkInterrupt: vi.fn(async () => false),
   clearInterrupt: vi.fn(async () => {}),

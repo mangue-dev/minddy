@@ -144,6 +144,11 @@ function cp(): ControlPlaneClient {
       return !h.runClosed;
     },
     pullSteering: async () => h.steering.splice(0),
+    // La vraie surface REMET en file : un message drainé et non posté redevient un
+    // message en attente, et c'est lui qui re-queue le run.
+    pushSteering: async (texts) => {
+      h.steering.push(...texts);
+    },
     hasPendingMessages: async () => h.steering.length > 0,
     checkInterrupt: async () => h.interrupt,
     clearInterrupt: async () => {
@@ -482,6 +487,27 @@ describe("le tour", () => {
       h.usage.reduce((sum, l) => sum + Number(l.cost ?? 0), 0),
       10,
     );
+  });
+
+  /**
+   * MIN-286 — `prompt_tokens` AU SENS DU FOURNISSEUR, cache compris.
+   *
+   * L'`input` d'opencode l'EXCLUT (identité mesurée au lot 0 :
+   * `input + cache.read + cache.write = native_tokens_prompt`). Écrit tel quel, il
+   * donnait à la colonne un sens différent de celui de l'autre moteur — et un taux
+   * de hit `cached_tokens / prompt_tokens` qui pouvait dépasser 1.
+   */
+  it("écrit `prompt_tokens` cache compris, comme la boucle maison", async () => {
+    h.extraFrames = [childRound({ sessionID: PARENT, id: "msg_mere_tokens" })];
+    await run();
+    const line = h.usage.find((l) => Number(l.promptTokens) === 115);
+    // 100 d'entrée + 10 relus dans le cache + 5 écrits dedans.
+    expect(line).toBeDefined();
+    expect(line!.cachedTokens).toBe(10);
+    expect(line!.cacheWriteTokens).toBe(5);
+    expect(line!.totalTokens).toBe(135);
+    // La lecture qui donne son sens à la colonne (migration MIN-242).
+    expect(Number(line!.cachedTokens)).toBeLessThanOrEqual(Number(line!.promptTokens));
   });
 
   it("porte le `generation_id` et le coût FACTURÉ vus par le proxy", async () => {
@@ -1176,6 +1202,51 @@ describe("la checklist du tour", () => {
       { step: "Vraie étape", status: "pending" },
     ]);
   });
+
+  /**
+   * MIN-286 — UN TOOL DE CONTRÔLE NE FAIT PAS DE BULLE.
+   *
+   * La boucle maison n'émettait AUCUN event de tool pour `update_plan` : elle
+   * répondait au tool-call et passait au suivant, le fil ne voyant que la
+   * checklist. Chez opencode il passe par le binaire comme les autres, donc le
+   * flux en publie les parts — la checklist se retrouvait racontée deux fois, une
+   * barre de plan et un appel brut au-dessus.
+   */
+  it("ne fait PAS de bulle de tool dans le fil", async () => {
+    h.extraFrames = [
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: PARENT,
+          part: {
+            id: "prt_plan",
+            type: "tool",
+            tool: "update_plan",
+            callID: "call_plan",
+            state: { status: "running", input: { plan: [] } },
+          },
+        },
+      }),
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: PARENT,
+          part: {
+            id: "prt_plan",
+            type: "tool",
+            tool: "update_plan",
+            callID: "call_plan",
+            state: { status: "completed", input: { plan: [] }, output: '{"ok":true}' },
+          },
+        },
+      }),
+    ];
+    await run();
+    expect(h.events.some((e) => e.payload.name === "update_plan")).toBe(false);
+    // Et il ne compte pas non plus dans le compteur d'outils du direct : ce n'est
+    // pas un geste de l'agent, c'est le harness qui accuse réception.
+    expect(h.live.every((p) => Number(p.tools ?? 0) <= 1)).toBe(true);
+  });
 });
 
 describe("les jobs de fond", () => {
@@ -1334,6 +1405,42 @@ describe("la reprise", () => {
     expect(h.routes).not.toContain("POST /session");
   });
 
+  /**
+   * MIN-286 — LE JOURNAL TIENT DANS LE GABARIT DU CHECKPOINT, ou il part.
+   *
+   * L'EXPORT est incrémental, l'ENVOI ne l'est pas : le checkpoint porte
+   * l'accumulateur entier, et il remonte par le plan de contrôle, dont le corps
+   * est plafonné. Le plan tenait ce plafond pour « sans objet » depuis que le
+   * checkpoint était devenu un journal append-only — mais un journal append-only
+   * se réécrit entier à chaque sauvegarde. Passé la barre, chaque `PUT` prenait un
+   * 413 rangé en panne passagère : plus de sauvegarde, plus de battement de cœur,
+   * et un rapport de fin de tour refusé à son tour.
+   */
+  it("LÂCHE le journal plutôt que de rendre un checkpoint qui ne remonte pas", async () => {
+    const fat = "x".repeat(4_000);
+    h.history = [
+      { aggregate_id: "ses_neuve", seq: 3, type: "message.created", data: { fat } },
+      { aggregate_id: "ses_neuve", seq: 4, type: "message.updated", data: { fat } },
+    ];
+    const report = await run({ checkpointMaxBytes: 5_000 });
+    const state = (report.checkpoint as { opencode?: { sessionId: string; events: unknown[] } })
+      .opencode;
+    expect(state?.events).toEqual([]);
+    // La session part AVEC : un id sans son journal n'existe sur aucun serveur
+    // neuf, et le tour suivant se ferait refuser son prompt. Il en crée une.
+    expect(state?.sessionId).toBe("");
+    // Et ça se DIT au fil (`vm-rest.ts` en tire `turnHistoryReset`) : sinon
+    // l'agent paraît avoir tout oublié sans raison au tour suivant.
+    expect(report.checkpointDropped).toEqual(["history"]);
+  });
+
+  it("garde le journal quand il tient", async () => {
+    const report = await run({ checkpointMaxBytes: 3_200_000 });
+    expect(report.checkpointDropped).toEqual([]);
+    const state = (report.checkpoint as { opencode?: { events: unknown[] } }).opencode;
+    expect(state?.events).toHaveLength(2);
+  });
+
   it("normalise le curseur d'export", () => {
     expect(
       lastSeqByAggregate({ a: 2 }, [
@@ -1461,5 +1568,89 @@ describe("le steering et le « Stop »", () => {
     expect(h.interruptCleared).toBe(1);
     expect(report.status).not.toBe("interrupted");
     expect(h.prompts.at(-1)).toBe("arrête ça et fais plutôt l'autre");
+  });
+
+  /**
+   * MIN-286 — CE QU'ON A DRAINÉ SANS SAVOIR LE JOUER RETOURNE EN FILE.
+   *
+   * `pullSteering` CONSOMME. On ne draine qu'en sachant qu'on va couper pour
+   * reposter derrière — mais le tour peut sortir entre les deux. Le message était
+   * alors consommé en base et vivant dans une variable locale de la microVM :
+   * accepté à l'écran, perdu pour toujours, et le run ne se réveillait même pas,
+   * puisque c'est la file qui le re-queue.
+   */
+  it("REMET en file le message drainé quand le tour sort avant de l'avoir posté", async () => {
+    h.tick = 3_000;
+    // Le plafond tombe sur le premier round : le tour sort par `break` juste
+    // après avoir drainé, sans jamais atteindre le `session.idle` qui postait.
+    h.remainingUsd = 0;
+    const report = await runOpencodeTurn(
+      job({ budgetUsd: 0.0001 }),
+      { prompt: "fais le ticket", anchorInstructions: "# Ancrage" },
+      { ...cp(), ...steeringAfterFirstPrompt("et regarde les tests") },
+      host(),
+      deps(),
+    );
+    expect(report.status).toBe("budget_exhausted");
+    // Jamais posté…
+    expect(h.prompts).toEqual(["fais le ticket"]);
+    // …donc rendu à la file, où le tour suivant le trouvera.
+    expect(h.steering).toEqual(["et regarde les tests"]);
+  });
+});
+
+/**
+ * MIN-286 — LE BATTEMENT DU TOUR.
+ *
+ * Tout ce qui fait vivre un tour — le « Stop », le steering, la sauvegarde
+ * périodique (qui EST le battement de cœur du run) et l'échéance murale — vivait
+ * dans le corps de la boucle d'events. Un `bash` de vingt minutes ne publie rien
+ * entre son début et sa fin : le flux se taisait, et avec lui s'arrêtaient la
+ * seule horloge du tour et le seul écrivain de `last_activity_at`. Le chien de
+ * garde partait alors sonder une microVM parfaitement vivante.
+ */
+describe("le battement du tour", () => {
+  /** Un flux qui ne rend JAMAIS rien — le `bash` de vingt minutes. */
+  function silentStream(): Partial<SupervisorDeps> {
+    return {
+      client: (baseUrl) =>
+        new OpencodeClient({
+          baseUrl,
+          directory: "/vercel/sandbox/repo",
+          fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
+            const path = String(input).replace(/^http:\/\/127\.0\.0\.1:\d+/, "").split("?")[0];
+            if (path === "/event") {
+              // Ouvert, et muet : la socket vit, aucune frame n'arrive.
+              return new Response(
+                new ReadableStream({ start() {} }),
+                { status: 200, headers: { "content-type": "text/event-stream" } },
+              );
+            }
+            return await fakeFetch()(input, init);
+          }) as typeof fetch,
+        }),
+      lifecycleBeatMs: 5,
+    };
+  }
+
+  it("entend le « Stop » alors que le flux n'a rien dit", async () => {
+    h.tick = 3_000;
+    h.interrupt = true;
+    const report = await run({}, silentStream());
+    expect(report.status).toBe("interrupted");
+    expect(h.aborts).toBeGreaterThanOrEqual(1);
+  });
+
+  it("sauvegarde — donc bat le cœur du run — et tient son échéance murale", async () => {
+    // Une heure par lecture d'horloge : la sauvegarde périodique (deux minutes)
+    // tombe au premier battement, et la deadline de douze heures quelques
+    // battements plus tard. Les deux ne sont lues QUE par le battement.
+    h.tick = 60 * 60_000;
+    const report = await run({}, silentStream());
+    // Le seul écrivain de `last_activity_at` sur un tour qui travaille : sans
+    // lui, le chien de garde va sonder une microVM vivante au bout de 3 minutes.
+    expect(h.checkpoints.length).toBeGreaterThanOrEqual(1);
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBe("turnTooLong");
   });
 });

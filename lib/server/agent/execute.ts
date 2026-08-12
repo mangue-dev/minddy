@@ -1249,6 +1249,23 @@ export async function executeAgentRun(
     };
     if (run.checkpoint?.messages?.length) {
       messages = run.checkpoint.messages;
+    } else if (run.checkpoint?.opencode?.events?.length) {
+      /**
+       * UN TOUR REPRIS SOUS OPENCODE N'A PAS D'AMORCE À REFAIRE (MIN-286).
+       *
+       * Sa mémoire est le journal d'événements, que le superviseur rejoue : le
+       * contexte du ticket, les instructions du dépôt et la demande du lanceur y
+       * sont déjà, dits une fois au premier tour. Rejouer l'amorce ici les
+       * reposterait PAR-DESSUS l'historique restauré — l'agent relirait la
+       * consigne initiale comme si elle venait d'arriver, et repartirait faire ce
+       * qu'il vient de faire. C'est ce que `VmJob.opencodeInput` promet en toutes
+       * lettres (« `prompt` est vide sur un tour REPRIS : la demande y arrive par
+       * le steering »), et l'amorce coûterait en plus six appels de forge.
+       *
+       * Le pendant de la branche du dessus, pour l'autre moteur : là-bas la
+       * conversation EST `checkpoint.messages`, ici elle n'y est jamais.
+       */
+      messages = [];
     } else {
       // Ce qu'une relecture ne peut PAS lire dans la sandbox : le ticket, la
       // discussion déjà tenue sur la PR, la CI, le sommaire des fichiers. Chargé
@@ -1843,6 +1860,19 @@ export async function executeAgentRun(
         // c'est `opencodeInput` qui porte le tour (cf. `VmJob.opencodeInput`) :
         // l'historique, là-bas, est le journal d'événements du checkpoint.
         messages: opencodeInput ? [] : messages,
+        /**
+         * LE JOURNAL D'OPENCODE DU TOUR PRÉCÉDENT — c'est LUI la mémoire d'un run
+         * mené par opencode, et il ne descendait pas dans la microVM (MIN-286).
+         *
+         * Le superviseur le rejoue (`/sync/replay`) pour retrouver sa session ;
+         * sans lui, `job.opencode` est `undefined`, il crée une session NEUVE, et
+         * le tour repart sans une ligne de sa conversation. Le chemin d'écriture
+         * était complet de bout en bout (le superviseur l'exporte, le plan de
+         * contrôle l'estampille, `AgentCheckpoint` le déclare) : seule cette
+         * lecture-ci manquait, donc rien ne se voyait — pas d'erreur, pas de type
+         * qui proteste, juste un agent amnésique d'un tour à l'autre.
+         */
+        ...(run.checkpoint?.opencode ? { opencode: run.checkpoint.opencode } : {}),
         ...(opencodeInput ? { opencodeInput } : {}),
         instructions,
         usageSeqStart,

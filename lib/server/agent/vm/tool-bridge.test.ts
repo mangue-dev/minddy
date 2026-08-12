@@ -60,6 +60,7 @@ async function withBridge(
     cp?: ControlPlaneClient;
     supervisorTools?: Record<string, never>;
     delivery?: OpencodeDelivery;
+    onToolRefused?: (callId: string, reason: string) => void;
   },
   body: (bridge: ToolBridge) => Promise<void>,
 ): Promise<void> {
@@ -70,6 +71,7 @@ async function withBridge(
     port: 0,
     ...(opts.supervisorTools ? { supervisorTools: opts.supervisorTools } : {}),
     ...(opts.delivery ? { delivery: opts.delivery } : {}),
+    ...(opts.onToolRefused ? { onToolRefused: opts.onToolRefused } : {}),
   });
   try {
     await body(bridge);
@@ -382,5 +384,51 @@ describe("images — l'enveloppe de pièces jointes", () => {
       // rend tel quel au modèle.
       expect(JSON.parse(await res.text())).toHaveProperty("answer");
     });
+  });
+});
+
+/**
+ * MIN-286 — LE MOTIF D'UN REFUS DU HARNESS REMONTE.
+ *
+ * `run_background` est un tool LOCAL : quand `checkCommand` écarte un `git push`
+ * (MIN-108), le motif (`forbidden_command`) est ce qui rend le refus MESURABLE sur
+ * `agent_run_events` — la boucle maison le reposait sur son `tool_result`. Le pont
+ * ne construisait sa réponse qu'à partir du résultat et du `followUp` : le motif
+ * était perdu entre le registre de jobs et le fil, et les refus devenaient
+ * invisibles en base.
+ */
+describe("le motif d'un refus", () => {
+  it("remonte au superviseur avec le `callID` de l'appel", async () => {
+    const refused: Array<{ callId: string; reason: string }> = [];
+    await withBridge(
+      {
+        onToolRefused: (callId, reason) => refused.push({ callId, reason }),
+        supervisorTools: {
+          run_background: (async () => ({
+            result: { error: "git push is not allowed" },
+            success: false,
+            reason: "forbidden_command",
+          })) as never,
+        },
+      },
+      async (bridge) => {
+        const res = await call(bridge, "run_background", { command: "git push" });
+        // Le modèle, lui, lit le motif en clair — la réponse ne change pas.
+        expect(res.status).toBe(200);
+        expect(JSON.parse(res.body)).toEqual({ error: "git push is not allowed" });
+      },
+    );
+    expect(refused).toEqual([{ callId: "call_1", reason: "forbidden_command" }]);
+  });
+
+  it("ne dit rien d'un appel qui a réussi", async () => {
+    const refused: string[] = [];
+    await withBridge(
+      { onToolRefused: (_callId, reason) => refused.push(reason) },
+      async (bridge) => {
+        await call(bridge, "read_issue", {});
+      },
+    );
+    expect(refused).toEqual([]);
   });
 });

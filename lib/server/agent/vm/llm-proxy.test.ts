@@ -119,6 +119,35 @@ describe("ce que la réponse laisse voir", () => {
     sniffer.end();
     expect(sniffer.captured()).toEqual([]);
   });
+
+  /**
+   * MIN-286 — UNE GÉNÉRATION SANS AUCUNE TRACE N'EN EST PAS UNE.
+   *
+   * Le lecteur alloue dès la première ligne JSON lisible, sans exiger d'`id` ni
+   * d'`usage` : un corps d'erreur du fournisseur (`{"error":{…}}` sur un 429) en
+   * fabriquait une, au MODÈLE VIDE — donc appariable à n'importe quel round par
+   * `takeGeneration`. Le round repartait sans son coût facturé, et la vraie
+   * génération restait en file jusqu'à `recordOrphans`, qui l'écrivait une SECONDE
+   * fois : un round facturé deux fois sur une réponse d'erreur.
+   */
+  it("ne retient RIEN d'un corps d'erreur, qui n'a ni identifiant ni usage", () => {
+    const sniffer = new GenerationSniffer();
+    sniffer.push(`{"error":{"message":"rate limited","code":429}}`);
+    sniffer.end();
+    expect(sniffer.captured()).toEqual([]);
+  });
+
+  it("garde une génération dès qu'elle a l'un des deux", () => {
+    const withId = new GenerationSniffer();
+    withId.push(`data: {"id":"gen-1","choices":[]}\n\n`);
+    withId.end();
+    expect(withId.captured()).toHaveLength(1);
+
+    const withUsage = new GenerationSniffer();
+    withUsage.push(`data: {"usage":{"completion_tokens":3,"cost":0.001}}\n\n`);
+    withUsage.end();
+    expect(withUsage.captured()).toHaveLength(1);
+  });
 });
 
 describe("l'appariement round → génération", () => {

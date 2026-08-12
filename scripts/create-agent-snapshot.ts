@@ -33,6 +33,9 @@ import {
 /** Le runtime du snapshot DOIT être celui des runs (`SANDBOX_RUNTIME`). */
 const RUNTIME = "node24";
 
+/** Le journal de l'installation — hors du dossier figé dans l'image. */
+const INSTALL_LOG = "/tmp/opencode-install.log";
+
 function credentials(): { token: string; teamId: string; projectId: string } | Record<string, never> {
   const token = process.env.VERCEL_TOKEN?.trim();
   const teamId = process.env.VERCEL_TEAM_ID?.trim();
@@ -75,12 +78,21 @@ async function main(): Promise<void> {
      */
     console.log(`\n⏳ npm i opencode-ai@${OPENCODE_VERSION} dans ${OPENCODE_INSTALL_DIR}…`);
     const started = Date.now();
+    /**
+     * LE JOURNAL DANS UN FICHIER, PAS DANS UN TUYAU. Un `npm i … | tail -5` rend
+     * le code de sortie de `tail`, qui réussit toujours : le garde-fou juste en
+     * dessous ne pouvait alors JAMAIS se déclencher, et un registre en panne
+     * partait se faire prendre pour un binaire de mauvaise version dix lignes plus
+     * bas. `set -o pipefail` n'est pas une option : le `sh` de la microVM n'est pas
+     * garanti bash.
+     */
     const install = await sh(
       `mkdir -p ${OPENCODE_INSTALL_DIR} && cd ${OPENCODE_INSTALL_DIR} && ` +
-        `npm i --no-audit --no-fund opencode-ai@${OPENCODE_VERSION} 2>&1 | tail -5`,
+        `npm i --no-audit --no-fund opencode-ai@${OPENCODE_VERSION} > ${INSTALL_LOG} 2>&1`,
     );
     if (install.exitCode !== 0) {
-      throw new Error(`installation d'opencode échouée (exit ${install.exitCode}) : ${install.stdout}`);
+      const log = await sh(`tail -20 ${INSTALL_LOG}`);
+      throw new Error(`installation d'opencode échouée (exit ${install.exitCode}) : ${log.stdout}`);
     }
 
     /**

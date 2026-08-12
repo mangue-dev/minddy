@@ -194,6 +194,27 @@ describe("la narration entre deux rounds", () => {
     const state = newTurnStreamState();
     expect(translateEvent(roundEnd("tool-calls", "msg_3"), state).events).toEqual([]);
   });
+
+  /**
+   * MIN-286 — LA RÈGLE PORTE SUR `tool-calls`, PAS SUR « ≠ stop ».
+   *
+   * `tool-calls` est la SEULE fin qui laisse la session travailler ; toutes les
+   * autres la mettent au repos, donc terminent le tour. Testée par la négation, un
+   * round terminal fini sur `length` (fenêtre pleine) ou `error` partait DEUX
+   * fois : en `thinking` à 2 000 caractères, puis en `summary` à 8 000 — et le
+   * dédoublonnage du fil se fait par égalité de texte, que deux plafonds
+   * différents ne rendent jamais.
+   */
+  it("se tait sur toute fin qui TERMINE le tour, pas seulement `stop`", () => {
+    for (const finish of ["length", "content-filter", "error", "other"]) {
+      const state = newTurnStreamState();
+      translateEvent(wrote("réponse coupée net", `prt_${finish}`), state);
+      const out = translateEvent(roundEnd(finish, `msg_${finish}`), state);
+      expect(out.events).toEqual([]);
+      // …et le texte reste la réponse du tour, qui partira en `summary`.
+      expect(replyOf(state, "ses_1")).toBe("réponse coupée net");
+    }
+  });
 });
 
 describe("la mère et ses filles, sur le même flux", () => {
@@ -270,6 +291,44 @@ describe("le vocabulaire d'opencode, traduit vers le nôtre", () => {
     );
     expect(out.events).toEqual([
       { type: "tool_call", payload: { id: "call_9", name: "read_file", path: "/repo/lib/a.ts" } },
+    ]);
+  });
+
+  /**
+   * MIN-286 — `webfetch` N'A PAS DE VIS-À-VIS MAISON, donc pas de résumé : il
+   * tombait dans le `default` de `toolArgSummary`, et l'event partait à `{}`.
+   * L'URL que le modèle est allé lire n'atteignait ni le fil ni
+   * `agent_run_events` — un tour entier de lecture web illisible au replay.
+   */
+  it("porte l'URL d'un `webfetch`, qui arrive sous le nom d'opencode", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      {
+        type: "message.part.updated",
+        properties: {
+          part: {
+            type: "tool",
+            tool: "webfetch",
+            callID: "call_web",
+            state: {
+              status: "running",
+              input: { url: "https://example.com/doc", format: "markdown" },
+            },
+          },
+        },
+      },
+      state,
+    );
+    expect(out.events).toEqual([
+      {
+        type: "tool_call",
+        payload: {
+          id: "call_web",
+          name: "webfetch",
+          url: "https://example.com/doc",
+          format: "markdown",
+        },
+      },
     ]);
   });
 

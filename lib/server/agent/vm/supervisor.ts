@@ -19,6 +19,7 @@ import {
   newTurnStreamState,
   replyOf,
   translateEvent,
+  type OpencodeEvent,
   type RoundUsage,
 } from "./opencode-events";
 import {
@@ -108,6 +109,20 @@ export const LIVE_INTERVAL_MS = 250;
 export const STEER_POLL_INTERVAL_MS = 5_000;
 
 /**
+ * LE BATTEMENT DU TOUR — ce qui fait vivre le « Stop », le steering, la
+ * sauvegarde périodique et l'échéance murale QUAND LE FLUX SE TAIT.
+ *
+ * Un `bash` de vingt minutes ne publie rien entre son début et sa fin : sans
+ * battement, le tour n'avait plus aucune horloge, et son seul signe de vie
+ * (`last_activity_at`, écrit par la sauvegarde) se figeait. Aligné sur le sondage
+ * de steering, dont il est la borne supérieure de latence.
+ */
+export const LIFECYCLE_BEAT_MS = 5_000;
+
+/** Le jeton du battement, distinct de tout `IteratorResult`. */
+const LIFECYCLE_BEAT = Symbol("lifecycle-beat");
+
+/**
  * Cadence de la sauvegarde périodique du checkpoint — qui est AUSSI le seul
  * battement de cœur d'un tour d'opencode (cf. `maybeSaveCheckpoint`).
  *
@@ -188,6 +203,8 @@ export interface SupervisorDeps {
   now?(): number;
   /** Attente du démarrage. Réglable pour qu'un test ne poireaute pas 60 s. */
   bootTimeoutMs?: number;
+  /** Le battement du tour (cf. `LIFECYCLE_BEAT_MS`). Réglable pour la même raison. */
+  lifecycleBeatMs?: number;
 }
 
 /** Le texte d'ancrage minddy, servi en `instructions` au prompt système. */
@@ -389,10 +406,24 @@ export async function runOpencodeTurn(
       }
     : null;
 
+  /**
+   * Motif du refus d'un appel de tool, par `callId`. Il ne sert qu'à une chose, et
+   * elle compte : reposer `tool_result.reason` sur l'event du tool refusé, comme la
+   * boucle maison le faisait (`FORBIDDEN_COMMAND_REASON` est ce qui rend les refus
+   * MESURABLES sur `agent_run_events`). Le traducteur, lui, est pur : il ne sait ni
+   * ce qu'on a répondu à une permission, ni ce que le pont a refusé.
+   *
+   * Déclaré AVANT le pont parce que les deux l'alimentent : le verdict de
+   * permission pour les tools intégrés, le pont pour les tools locaux
+   * (`run_background`, dont `checkCommand` écarte un `git push`).
+   */
+  const refusedCalls = new Map<string, string>();
+
   const bridge = await (deps.startToolBridge ?? startToolBridge)({
     job,
     cp,
     delivery,
+    onToolRefused: (callId, reason) => refusedCalls.set(callId, reason),
     // Une session de RELECTURE n'a ni l'un ni l'autre : `agentToolsFor` ne les
     // sert pas à l'ancrage `pr`, et le pont refuse ce qui arriverait quand même.
     supervisorTools: {
@@ -526,13 +557,12 @@ export async function runOpencodeTurn(
       await client.abort(sessionId);
     };
     /**
-     * Motif du refus d'une permission, par appel de tool. Il ne sert qu'à une
-     * chose, et elle compte : reposer `tool_result.reason` sur l'event du tool
-     * refusé, comme la boucle maison le faisait (`FORBIDDEN_COMMAND_REASON` est
-     * ce qui rend les refus MESURABLES sur `agent_run_events`). Le traducteur,
-     * lui, est pur : il ne sait pas ce qu'on a répondu à une permission.
+     * Délégations AUTORISÉES dont la fille n'est pas encore née, par `callId`.
+     * Le plafond de simultané se compte dessus autant que sur les vivantes
+     * (cf. `SubagentContext.pending`) ; le crédit se solde à la naissance de la
+     * fille, ou à la fin du `task` s'il n'en a jamais fait.
      */
-    const refusedCalls = new Map<string, string>();
+    const pendingTasks = new Set<string>();
 
     const abortEvents = new AbortController();
     const stream = client.events(abortEvents.signal);
@@ -569,11 +599,45 @@ export async function runOpencodeTurn(
      */
     let journalEvents: Record<string, unknown>[] = [...(previous?.events ?? [])];
     let journalSeq: Record<string, number> = { ...(previous?.seq ?? {}) };
+    /**
+     * LE JOURNAL A DÛ PARTIR pour que le checkpoint tienne dans son gabarit. Dit
+     * au fil par `vm-rest.ts` (`turnHistoryReset`) — sinon l'agent paraît avoir
+     * tout oublié sans raison au tour suivant.
+     */
+    let journalDropped: string[] = [];
+    /**
+     * LE GABARIT DU CHECKPOINT, TENU ICI AUSSI (MIN-286).
+     *
+     * L'export est incrémental, l'ENVOI ne l'est pas : `syncHistory` ne rend que
+     * la suite, mais le checkpoint porte l'accumulateur ENTIER, et il remonte par
+     * le plan de contrôle, dont le corps est plafonné (`VM_MAX_CHECKPOINT_BYTES`,
+     * sous les 4 Mo de la plateforme). Le plan du lot 0 tenait ce plafond pour
+     * « sans objet » depuis que le checkpoint était devenu un journal append-only :
+     * c'est faux, un journal append-only se réécrit entier à chaque sauvegarde.
+     * Passé la barre, chaque `PUT /checkpoint` prenait un 413 — que
+     * `saveCheckpointQuietly` range en « panne passagère », donc sans 409 ni
+     * arrêt : le tour continuait des heures sans plus rien sauvegarder, sans
+     * battement de cœur, et rendait à la fin un rapport que le plan de contrôle
+     * refusait à son tour.
+     *
+     * On ne RABOTE pas : `/sync/replay` veut une suite de `seq` contiguë par
+     * agrégat, un trou en milieu de journal est irrejouable. On lâche donc tout, et
+     * on le dit — le tour suivant repart d'une session neuve, ce que la remise à
+     * blanc de `sessionId` déclenche à elle seule.
+     */
     const syncJournal = async (): Promise<OpencodeCheckpointState> => {
       const fresh = await client.syncHistory(journalSeq);
       journalEvents = [...journalEvents, ...fresh];
       journalSeq = lastSeqByAggregate(journalSeq, fresh);
-      return { sessionId, events: journalEvents, seq: journalSeq };
+      const state = { sessionId, events: journalEvents, seq: journalSeq };
+      if (JSON.stringify(state).length <= job.checkpointMaxBytes) return state;
+      console.error(
+        `[supervisor] journal trop gros pour le checkpoint (${journalEvents.length} events) — remis à zéro`,
+      );
+      journalEvents = [];
+      journalSeq = {};
+      journalDropped = ["history"];
+      return { sessionId: "", events: [], seq: {} };
     };
 
     /**
@@ -679,6 +743,20 @@ export async function runOpencodeTurn(
     const postPending = async (): Promise<void> => {
       const parts = pendingPrompt.splice(0);
       if (parts.length === 0) return;
+      /**
+       * UN ROUND NEUF N'A AUCUNE COUPURE EN ATTENTE. Le compteur se DÉCRÉMENTAIT
+       * seulement, et un `abort` peut très bien ne rien publier — opencode répond
+       * 200 sur une session déjà au repos (`opencode-client.ts`), et le steering
+       * coupe justement une session dont le round vient parfois de finir. Le
+       * crédit restait alors ouvert jusqu'à la fin du tour, et la PROCHAINE
+       * coupure subie — celle que personne n'a demandée — se faisait avaler en
+       * silence : ni event, ni erreur, un tour rangé « terminé ».
+       *
+       * L'ordre du flux rend la remise à zéro sûre : `session.error`
+       * (`MessageAbortedError`) précède le `session.idle` d'où l'on repose, donc
+       * une vraie coupure demandée est déjà consommée quand on arrive ici.
+       */
+      abortsRequested = 0;
       for (const part of parts) {
         if (part.steered) await cp.emit("user_message", { text: cap(part.text, 4000) });
       }
@@ -717,8 +795,97 @@ export async function runOpencodeTurn(
 
     const deadline = startedAt + SUPERVISOR_TURN_SOFT_DEADLINE_MS;
     let timedOut = false;
+
+    /**
+     * ── LA VIE DU TOUR, HORS DU FLUX ──────────────────────────────────────────
+     *
+     * Le « Stop », le steering, le battement de cœur et l'échéance murale. Rend
+     * `true` quand le tour doit sortir.
+     *
+     * Sortie de la boucle d'events pour une raison qui n'est pas de forme : ces
+     * quatre-là ne doivent PAS dépendre de l'arrivée d'un event. Un `bash` de
+     * vingt minutes, un modèle qui réfléchit longtemps, un fournisseur qui cale :
+     * le flux se tait, et avec lui s'arrêtaient le seul écrivain de
+     * `last_activity_at` — donc le chien de garde partait sonder une microVM
+     * parfaitement vivante (`drain.ts`, trois minutes) —, le bouton « Stop », et
+     * la deadline de douze heures. Un flux muet gelait le tour entier.
+     */
+    const lifecycle = async (): Promise<boolean> => {
+      /**
+       * LE « STOP » ET LE STEERING. La granularité est celle du battement : un
+       * `bash` de trois minutes retarde le stop de cinq secondes au plus, là où il
+       * le retardait de trois minutes — c'était déjà le pire cas de la boucle
+       * maison, qui ne relisait le drapeau qu'entre deux rounds.
+       */
+      if (now() - lastSteerAt >= STEER_POLL_INTERVAL_MS) {
+        lastSteerAt = now();
+        if (await cp.checkInterrupt().catch(() => false)) {
+          /**
+           * UN STOP ACCOMPAGNÉ D'UN MESSAGE se poursuit dans CE tour (« arrête-toi
+           * et fais plutôt ça ») : le composer envoie toujours le couple steer
+           * PUIS interrupt. On ne draine donc que là, et on consomme le drapeau —
+           * sans quoi le sondage suivant le relirait et sortirait, message accepté
+           * et jamais joué (même raisonnement que `clearInterrupt` dans
+           * `agent-loop.ts`).
+           */
+          const steered = await takeSteering();
+          if (steered.length === 0) {
+            interrupted = true;
+            await abortSession();
+            return true;
+          }
+          await cp.clearInterrupt().catch(() => {});
+          pendingPrompt.push(...steered.map((text) => ({ text, steered: true })));
+          await abortSession();
+        } else if (await cp.hasPendingMessages().catch(() => false)) {
+          // Drainé seulement maintenant qu'on sait qu'on va couper pour le poster.
+          pendingPrompt.push(...(await takeSteering()).map((text) => ({ text, steered: true })));
+          if (pendingPrompt.length > 0) await abortSession();
+        }
+      }
+      // La sauvegarde périodique EST le battement de cœur (cf. son commentaire).
+      await maybeSaveCheckpoint();
+      if (runClosed) {
+        // Le run a été conclu ailleurs (annulé, ou déjà stampé). Continuer, ce
+        // serait dépenser au nom d'une conversation qui n'existe plus.
+        interrupted = true;
+        await abortSession();
+        return true;
+      }
+      if (now() > deadline) {
+        timedOut = true;
+        await abortSession();
+        return true;
+      }
+      return false;
+    };
+
     try {
-      for await (const raw of stream) {
+      /**
+       * LE FLUX, LU À LA MAIN PLUTÔT QU'EN `for await` — pour que le silence ne
+       * gèle rien (cf. `lifecycle`). L'attente de l'event suivant court contre un
+       * battement ; la promesse en vol est GARDÉE d'un tour de boucle à l'autre,
+       * sans quoi chaque battement en ouvrirait une nouvelle et laisserait tomber
+       * l'event que la précédente allait rendre.
+       */
+      const beatMs = deps.lifecycleBeatMs ?? LIFECYCLE_BEAT_MS;
+      const iterator = stream[Symbol.asyncIterator]();
+      let nextEvent: Promise<IteratorResult<OpencodeEvent>> | null = null;
+      for (;;) {
+        nextEvent ??= iterator.next();
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const beat = new Promise<typeof LIFECYCLE_BEAT>((resolve) => {
+          timer = setTimeout(() => resolve(LIFECYCLE_BEAT), beatMs);
+        });
+        const winner = await Promise.race([nextEvent, beat]);
+        clearTimeout(timer);
+        if (winner === LIFECYCLE_BEAT) {
+          if (await lifecycle()) break;
+          continue;
+        }
+        nextEvent = null;
+        if (winner.done) break;
+        const raw = winner.value;
         const out = translateEvent(raw, state);
         // Une session qui n'est pas la mère est une FILLE : le modèle a délégué,
         // et opencode publie tout sur le même flux. Ce qui vient d'elle se dit,
@@ -734,17 +901,36 @@ export async function runOpencodeTurn(
          * branchement, et le fait qu'un refus se raconte au fil.
          */
         // Une fille rattachée à son appel de `task` : c'est ce qui donne son nom
-        // aux events qui vont suivre, et sa bande au ledger.
-        if (out.child) subagents.register(out.child);
+        // aux events qui vont suivre, et sa bande au ledger. Sa naissance solde
+        // du même geste le crédit ouvert par l'autorisation (cf. `pendingTasks`).
+        if (out.child) {
+          subagents.register(out.child);
+          pendingTasks.delete(out.child.callId);
+        }
 
         if (out.permission) {
           const verdict = decidePermission(out.permission, {
             names: new Set(agentTable.keys()),
             running: subagents.running,
+            pending: pendingTasks.size,
             maxParallel: job.subagents.maxParallel,
           });
           if (verdict.reason && out.permission.callId) {
             refusedCalls.set(out.permission.callId, verdict.reason);
+          }
+          /**
+           * UNE DÉLÉGATION AUTORISÉE OUVRE UN CRÉDIT, jusqu'à ce que sa fille
+           * existe. C'est ce qui rend le plafond de simultané opérant sur le seul
+           * cas qui le mette à l'épreuve : un round qui appelle `task` plusieurs
+           * fois, dont les demandes sont toutes arbitrées avant la première
+           * naissance (cf. `SubagentContext.pending`).
+           */
+          if (
+            out.permission.permission === "task" &&
+            verdict.reply === "once" &&
+            out.permission.callId
+          ) {
+            pendingTasks.add(out.permission.callId);
           }
           /**
            * UNE ÉCRITURE AUTORISÉE EST UNE ÉDITION DU TOUR. C'est le seul endroit
@@ -821,7 +1007,23 @@ export async function runOpencodeTurn(
         if (out.shell) delivery.noteShell(out.shell.command, out.shell.exit);
 
         for (const event of out.events) {
+          /**
+           * `update_plan` NE FAIT PAS DE BULLE — c'est un tool de CONTRÔLE, et la
+           * boucle maison n'en émettait aucun event (`agent-loop.ts` : `emit`
+           * `plan_update` puis `continue`, avant toute écriture de `tool_call`).
+           * Chez opencode il passe par le binaire comme les autres, donc le flux
+           * en publie les parts : sans ce filtre, le fil montrait la checklist
+           * DEUX fois — une barre de plan et un appel de tool brut au-dessus —, et
+           * le compteur d'outils du direct comptait un geste qui n'en est pas un.
+           */
+          if (event.payload.name === "update_plan") continue;
           if (event.type === "tool_call") toolsSeen += 1;
+          // Un `task` qui se termine sans avoir fait de fille (erreur, refus)
+          // rendrait son crédit éternellement ouvert : le plafond se refermerait
+          // sur un tour qui ne délègue plus rien.
+          if (event.type === "tool_result" && event.payload.name === "spawn_agent") {
+            pendingTasks.delete(String(event.payload.id ?? ""));
+          }
           const reason =
             event.type === "tool_result"
               ? refusedCalls.get(String(event.payload.id ?? ""))
@@ -851,12 +1053,14 @@ export async function runOpencodeTurn(
            * en `thinking`, et le laisser aussi dans la charge du direct le ferait
            * lire en double — une bulle provisoire sous sa version définitive.
            *
-           * Le round FINAL (`stop`), lui, garde son texte au direct : sa version
-           * définitive (`summary`) ne part qu'à la toute fin du tour, et l'effacer
-           * ici ferait disparaître la réponse de l'écran le temps de l'export du
-           * journal et du push.
+           * Le round FINAL, lui, garde son texte au direct : sa version définitive
+           * (`summary`) ne part qu'à la toute fin du tour, et l'effacer ici ferait
+           * disparaître la réponse de l'écran le temps de l'export du journal et
+           * du push. « Final » se lit sur `tool-calls`, et pas sur « différent de
+           * `stop` » : c'est la SEULE fin qui laisse la session travailler, et le
+           * traducteur tranche déjà la narration sur le même critère.
            */
-          if (!child && out.usage.finish !== "stop") {
+          if (!child && out.usage.finish === "tool-calls") {
             reasoningSince = null;
             lastLiveAt = 0;
             cp.emitLive({
@@ -1002,64 +1206,26 @@ export async function runOpencodeTurn(
           break;
         }
 
-        /**
-         * LE « STOP » ET LE STEERING, sondés au fil des events plutôt qu'à chaque
-         * round — il n'y a plus de round à nous. La granularité est donc celle du
-         * flux : un event tombe à chaque début et chaque fin de tool, et en continu
-         * pendant que le modèle écrit. Un `bash` de trois minutes est le pire cas,
-         * et il retarde le stop d'autant : c'était déjà vrai de la boucle maison,
-         * qui ne relisait le drapeau qu'entre deux rounds.
-         */
-        if (now() - lastSteerAt >= STEER_POLL_INTERVAL_MS) {
-          lastSteerAt = now();
-          if (await cp.checkInterrupt().catch(() => false)) {
-            /**
-             * UN STOP ACCOMPAGNÉ D'UN MESSAGE se poursuit dans CE tour (« arrête-toi
-             * et fais plutôt ça ») : le composer envoie toujours le couple steer
-             * PUIS interrupt. On ne draine donc que là, et on consomme le drapeau —
-             * sans quoi le sondage suivant le relirait et sortirait, message accepté
-             * et jamais joué (même raisonnement que `clearInterrupt` dans
-             * `agent-loop.ts`).
-             */
-            const steered = await takeSteering();
-            if (steered.length === 0) {
-              interrupted = true;
-              await abortSession();
-              break;
-            }
-            await cp.clearInterrupt().catch(() => {});
-            pendingPrompt.push(...steered.map((text) => ({ text, steered: true })));
-            await abortSession();
-          } else if (await cp.hasPendingMessages().catch(() => false)) {
-            // Drainé seulement maintenant qu'on sait qu'on va couper pour le poster.
-            pendingPrompt.push(
-              ...(await takeSteering()).map((text) => ({ text, steered: true })),
-            );
-            if (pendingPrompt.length > 0) await abortSession();
-          }
-        }
-        /**
-         * La sauvegarde périodique EST le battement de cœur (cf. son commentaire) :
-         * elle vit dans le même sondage que le « stop », qui tombe toutes les cinq
-         * secondes — assez fin pour que l'échéance de deux minutes soit tenue à la
-         * seconde près, et sans timer à tenir en parallèle du flux.
-         */
-        await maybeSaveCheckpoint();
-        if (runClosed) {
-          // Le run a été conclu ailleurs (annulé, ou déjà stampé). Continuer, ce
-          // serait dépenser au nom d'une conversation qui n'existe plus.
-          interrupted = true;
-          await abortSession();
-          break;
-        }
-        if (now() > deadline) {
-          timedOut = true;
-          await abortSession();
-          break;
-        }
+        if (await lifecycle()) break;
       }
     } finally {
       abortEvents.abort();
+      /**
+       * CE QU'ON A DRAINÉ SANS SAVOIR LE JOUER RETOURNE EN FILE (MIN-286).
+       *
+       * `pullSteering` CONSOMME, et on ne draine qu'en sachant qu'on va couper pour
+       * reposter derrière — sauf que le tour peut sortir entre les deux : plafond
+       * de dépense atteint sur le round coupé, deadline, run conclu ailleurs,
+       * coupure subie. Le message était alors consommé en base et vivant dans
+       * `pendingPrompt`, une variable locale qui meurt avec la microVM : accepté à
+       * l'écran, perdu pour toujours, et le run ne se réveillait même pas — c'est
+       * la file qui le re-queue.
+       *
+       * Le chemin heureux ne passe pas par ici : `postPending` a déjà vidé le sac.
+       */
+      const unposted = pendingPrompt.filter((part) => part.steered).map((part) => part.text);
+      pendingPrompt = [];
+      if (unposted.length > 0) await cp.pushSteering(unposted).catch(() => {});
     }
 
     /**
@@ -1124,6 +1290,10 @@ export async function runOpencodeTurn(
      * un tour qui n'ouvre pas de pull request n'a jamais franchi la porte, et
      * c'est pourtant ce verrou que le tour SUIVANT relit dans son checkpoint.
      */
+    // …et ce que le SHELL a fait au dépôt sans passer par un tool d'écriture
+    // (`rm`, `mv`, un codemod) : sans cette lecture, un tour qui n'a fait que ça
+    // se croit vierge, et le tour suivant le relit tel quel dans son checkpoint.
+    await delivery.probeRepoTouched();
     delivery.noteEdits();
     /**
      * LES JOBS DE FOND, TUÉS AVANT LE PUSH — et avant lui seulement : ils ont
@@ -1181,7 +1351,7 @@ export async function runOpencodeTurn(
       ...(sessionError ? { errorMessage: cap(secrets.redact(sessionError), 1000) } : {}),
       costUsd,
       checkpoint,
-      checkpointDropped: [],
+      checkpointDropped: journalDropped,
       checkpointBytes: JSON.stringify(checkpoint).length,
       pushed,
       workBranch: job.workBranch,
@@ -1262,6 +1432,18 @@ class TurnLedger {
   ): Promise<{ cost: number }> {
     const generation = proxy.take({ model: usage.model, outputTokens: usage.outputTokens });
     const cost = generation?.costUsd ?? usage.costUsd;
+    /**
+     * `prompt_tokens` AU SENS DU FOURNISSEUR, cache compris — et pas l'`input`
+     * d'opencode, qui l'EXCLUT (identité mesurée au lot 0, dossier §2.5 :
+     * `input + cache.read + cache.write = native_tokens_prompt`).
+     *
+     * La colonne a un sens écrit, et deux lecteurs en dépendent : le taux de hit
+     * du cache se lit `cached_tokens / prompt_tokens` (migration MIN-242), qui
+     * dépassait 1 sur ce chemin, et la comparaison ligne à ligne des deux moteurs
+     * est le critère de bascule du lot 3 — la boucle maison, elle, écrit le
+     * `prompt_tokens` d'OpenRouter, comme `recordOrphans` juste en dessous.
+     */
+    const promptTokens = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
     await cp.recordUsage({
       runId: this.job.ledgerRunId,
       seq: this.seqFor(usage.sessionId),
@@ -1269,9 +1451,9 @@ class TurnLedger {
       billTo: { unattributed: "resolved by the control plane" },
       model: usage.model || this.job.model,
       ...(generation?.id ? { generationId: generation.id } : {}),
-      promptTokens: usage.inputTokens,
+      promptTokens,
       completionTokens: usage.outputTokens,
-      totalTokens: usage.inputTokens + usage.outputTokens,
+      totalTokens: promptTokens + usage.outputTokens,
       cachedTokens: usage.cacheReadTokens,
       cacheWriteTokens: usage.cacheWriteTokens,
       cost,

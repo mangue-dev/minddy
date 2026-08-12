@@ -502,8 +502,14 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
        * (plafonné à 8 000). Émettre les deux ferait deux bulles dès que la réponse
        * dépasse 2 000 caractères — le dédoublonnage du fil se fait par égalité de
        * texte, et deux plafonds différents ne s'égalent plus.
+       *
+       * Le test porte donc sur `tool-calls` et PAS sur « différent de `stop` » :
+       * `tool-calls` est la seule fin qui laisse la session travailler. Toutes les
+       * autres (`length`, `content-filter`, `error`, `other`…) mettent la session
+       * au repos, donc terminent le tour — leur texte est la réponse, et la
+       * négation les faisait partir DEUX fois, en `thinking` puis en `summary`.
        */
-      const narration = finish === "stop" ? "" : written.trim();
+      const narration = finish === "tool-calls" ? written.trim() : "";
 
       return {
         sessionId,

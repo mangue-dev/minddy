@@ -85,6 +85,18 @@ export interface SubagentContext {
   names: ReadonlySet<string>;
   /** Filles vivantes à cet instant. */
   running: number;
+  /**
+   * DÉLÉGATIONS AUTORISÉES ET PAS ENCORE NÉES — sans elles, le plafond ne borne
+   * rien du seul cas qu'il ait à borner.
+   *
+   * Une fille n'entre dans `running` qu'à sa NAISSANCE, et le flux ne l'annonce
+   * qu'après coup (`metadata` du part `task`, mesuré : `opencode-delegation.test.ts`
+   * ancre `runningAtAsk === 0`). Un round qui appelle `task` trois fois voyait donc
+   * ses trois demandes arbitrées avant qu'aucune fille n'existe, et `running`
+   * valait zéro aux trois — le plafond passait toujours. Ce qu'on compte ici est
+   * le crédit ouvert entre l'autorisation et la naissance.
+   */
+  pending?: number;
   /** Plafond de simultané (`app_config`, MIN-112). */
   maxParallel: number;
 }
@@ -197,11 +209,14 @@ export function decidePermission(
 function decideTask(ask: PermissionAsk, subagents?: SubagentContext): PermissionVerdict {
   if (!subagents) return ALLOW;
 
-  if (subagents.running >= subagents.maxParallel) {
+  // Vivantes ET promises : une autorisation déjà donnée compte, sans quoi un round
+  // qui appelle `task` en rafale passe entièrement sous le plafond (cf. `pending`).
+  const engaged = subagents.running + (subagents.pending ?? 0);
+  if (engaged >= subagents.maxParallel) {
     return {
       reply: "reject",
       message:
-        `Too many sub-agents running at once (${subagents.running}/${subagents.maxParallel}). ` +
+        `Too many sub-agents running at once (${engaged}/${subagents.maxParallel}). ` +
         `Wait for one to report back before delegating again.`,
       reason: "subagent_limit",
     };

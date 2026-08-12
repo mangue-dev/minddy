@@ -30,7 +30,7 @@ vi.mock("../repo-host", async (importOriginal) => ({
 
 import { makeOpencodeDelivery, repoRelative } from "./opencode-delivery";
 import { typeErrorsForTurn, testFailuresForTurn } from "../diagnostics";
-import { REPO_DIR, type RepoHost } from "../repo-host";
+import { REPO_DIR, turnDiffStat, type RepoHost } from "../repo-host";
 
 /**
  * MIN-286 lot 2, tâche 14 — LES RÈGLES DE LIVRAISON, DANS LE MONDE D'OPENCODE.
@@ -181,12 +181,46 @@ describe("la porte de `create_pr`", () => {
   });
 
   it("laisse passer du premier coup un tour qui n'a rien touché", async () => {
+    // Rien édité ET arbre de travail propre : c'est la conjonction qui définit
+    // « n'a rien touché » depuis que le shell compte (cf. le cas suivant).
+    vi.mocked(turnDiffStat).mockResolvedValueOnce({ files: [], lines: 0, untracked: 0 });
     const { delivery } = deliveryFor();
     const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
 
     const out = await createPr({});
     expect(out.result).toEqual({ url: "u" });
     expect(out.followUp).toBeUndefined();
+  });
+
+  /**
+   * MIN-286 — LE TOUR QUI N'A ÉDITÉ PAR AUCUN TOOL.
+   *
+   * Supprimer et renommer sont des COMMANDES chez opencode, plus des tools : un
+   * `rm`, un `mv`, un `sed -i` ne passent par aucune demande de permission `edit`,
+   * donc `editedPaths` reste vide et la porte restait muette — pas de type-check,
+   * pas de tests, pas de relecture du diff, sur un tour qui a bel et bien changé
+   * le dépôt. C'est l'arbre de travail qui tranche.
+   */
+  it("réclame quand même ses contrôles quand le dépôt a bougé par le SHELL", async () => {
+    const { delivery } = deliveryFor();
+    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+
+    const out = await createPr({});
+    expect(out.followUp).toBe("TYPES\n\n---\n\nTESTS\n\n---\n\nDIFF");
+    // Les fichiers encore là entrent dans le type-check ciblé : c'est ce qu'un
+    // codemod vient de réécrire.
+    expect(vi.mocked(typeErrorsForTurn).mock.calls[0][1]).toEqual(["a.ts", "b.ts", "c.ts", "d.ts"]);
+  });
+
+  it("compte une SUPPRESSION seule, qui ne laisse aucun chemin à noter", async () => {
+    // `turnDiffStat` exclut les suppressions de `files` (`--diff-filter=d`) : un
+    // tour qui ne fait que `rm` n'a que ses lignes pour se dire.
+    vi.mocked(turnDiffStat).mockResolvedValueOnce({ files: [], lines: 42, untracked: 0 });
+    const { delivery } = deliveryFor();
+    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+
+    // Pas de type-check (aucun chemin), mais les tests et le diff, eux, sont dus.
+    expect((await createPr({})).followUp).toBe("TESTS\n\n---\n\nDIFF");
   });
 });
 

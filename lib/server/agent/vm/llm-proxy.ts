@@ -262,11 +262,24 @@ export class GenerationSniffer {
     }
   }
 
+  /**
+   * UNE GÉNÉRATION SANS AUCUNE TRACE N'EN EST PAS UNE (MIN-286).
+   *
+   * `line()` alloue dès la PREMIÈRE ligne JSON lisible, sans exiger d'`id` ni
+   * d'`usage` : un corps d'erreur du fournisseur (`{"error":{…}}` sur un 429, une
+   * frame d'erreur au milieu d'un 200) fabriquait donc une génération fantôme.
+   * Elle ne coûtait pas rien : `takeGeneration` apparie sur le modèle, et un
+   * fantôme a le modèle VIDE, donc il matche tout et se fait prendre en premier —
+   * le round repartait sans son coût facturé ni son `generation_id`, et la vraie
+   * génération restait dans la file jusqu'à `recordOrphans`, qui l'écrivait une
+   * SECONDE fois. Un round facturé deux fois, sur une réponse d'erreur.
+   */
   private flush(): void {
-    if (this.current) {
-      this.done.push(this.current);
-      this.current = null;
-    }
+    const gen = this.current;
+    this.current = null;
+    if (!gen) return;
+    if (gen.id == null && gen.usage == null) return;
+    this.done.push(gen);
   }
 
   /** Ce qui a été vu et pas encore consommé. */
@@ -365,6 +378,13 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       res.end();
       return;
     }
+    /**
+     * ON NE LIT QUE LES RÉPONSES QUI ONT ABOUTI. Un 4xx/5xx du fournisseur porte
+     * un corps JSON (`{"error":{…}}`) que le lecteur prendrait pour le début d'une
+     * génération : rien à facturer, mais une entrée de plus dans la file, au
+     * modèle vide — donc appariable à n'importe quel round (cf. `flush`).
+     */
+    const sniff = isCompletion && upstream.status < 400;
     const sniffer = new GenerationSniffer();
     const reader = upstream.body.getReader();
     const decoder = new TextDecoder();
@@ -373,9 +393,9 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       if (done) break;
       // On ÉCRIT D'ABORD : le flux du modèle ne doit pas attendre notre lecture.
       res.write(value);
-      if (isCompletion) sniffer.push(decoder.decode(value, { stream: true }));
+      if (sniff) sniffer.push(decoder.decode(value, { stream: true }));
     }
-    if (isCompletion) {
+    if (sniff) {
       sniffer.end();
       pool.push(...sniffer.captured());
     }

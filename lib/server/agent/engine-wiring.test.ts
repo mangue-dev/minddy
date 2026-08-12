@@ -75,6 +75,29 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
     // en prompt et une fois en conversation morte.
     expect(source).toContain("messages: opencodeInput ? [] : messages");
   });
+
+  /**
+   * MIN-286 — LA MÉMOIRE D'UN RUN OPENCODE DESCEND DANS LA VM.
+   *
+   * Le journal d'événements est TOUTE la mémoire d'un run mené par opencode, et
+   * il ne descendait pas : `job.opencode` restait `undefined`, le superviseur
+   * créait une session neuve, et chaque tour repartait sans une ligne de sa
+   * conversation. Le chemin d'écriture, lui, était complet de bout en bout — le
+   * superviseur exporte, le plan de contrôle estampille, `AgentCheckpoint` le
+   * déclare —, donc rien ne se voyait : ni erreur, ni type qui proteste, juste un
+   * agent amnésique d'un tour à l'autre.
+   */
+  it("descend le journal du tour précédent dans le job", () => {
+    expect(source).toContain("opencode: run.checkpoint.opencode");
+  });
+
+  it("n'amorce pas un tour REPRIS : sa demande arrive par le steering", () => {
+    // Rejouer l'amorce reposterait le contexte du ticket et la demande du lanceur
+    // PAR-DESSUS l'historique restauré — l'agent relirait la consigne initiale
+    // comme si elle venait d'arriver. C'est ce que `VmJob.opencodeInput` promet en
+    // toutes lettres (« `prompt` est vide sur un tour REPRIS »).
+    expect(source).toContain("else if (run.checkpoint?.opencode?.events?.length)");
+  });
 });
 
 describe("vm/main.ts aiguille sur le moteur du job", () => {

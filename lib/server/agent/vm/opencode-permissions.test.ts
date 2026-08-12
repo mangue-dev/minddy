@@ -208,6 +208,35 @@ describe("la délégation", () => {
     expect(verdict.reason).toBe("subagent_limit");
   });
 
+  /**
+   * MIN-286 — LE CAS QUE LE PLAFOND A À BORNER, ET LE SEUL.
+   *
+   * Chez opencode, le `task` de premier plan BLOQUE le parent : le simultané ne
+   * peut venir que d'un round qui appelle `task` PLUSIEURS FOIS. Or ces demandes
+   * sont toutes arbitrées avant qu'aucune fille n'existe — le flux ne rattache une
+   * fille qu'après coup (`opencode-delegation.test.ts` ancre `runningAtAsk === 0`).
+   * Compté sur les seules vivantes, le plafond valait donc zéro aux trois, et ne
+   * bornait rien. C'est le crédit ouvert par les autorisations qui le tient.
+   */
+  it("compte les délégations AUTORISÉES dont la fille n'est pas encore née", () => {
+    const verdict = decidePermission(
+      task("general"),
+      context({ running: 0, pending: 2, maxParallel: 2 }),
+    );
+    expect(verdict.reply).toBe("reject");
+    expect(verdict.message).toContain("2/2");
+    expect(verdict.reason).toBe("subagent_limit");
+  });
+
+  it("additionne les vivantes et les promises", () => {
+    expect(
+      decidePermission(task("general"), context({ running: 1, pending: 1, maxParallel: 2 })).reply,
+    ).toBe("reject");
+    expect(
+      decidePermission(task("general"), context({ running: 1, pending: 0, maxParallel: 2 })).reply,
+    ).toBe("once");
+  });
+
   it("rend l'offre au modèle qui demande un sous-agent qui n'existe pas", () => {
     // Opencode répondrait « Unknown agent type: X » sans dire ce qui est offert.
     const verdict = decidePermission(task("general-openai-gpt-5"), context());

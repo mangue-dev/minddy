@@ -43,6 +43,8 @@ const h = vi.hoisted(() => ({
   ledgerSpent: 0 as number | null,
   /** Les runs dont le drapeau d'interruption a été effacé. */
   cleared: [] as string[],
+  /** Les messages REMIS en file par la microVM (`POST /messages`). */
+  requeued: [] as Array<{ runId: string; userId: string | null; content: string }>,
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
@@ -138,6 +140,9 @@ vi.mock("./runs", async (importOriginal) => ({
     return h.stampReturnsNull ? null : (h.run as never);
   }),
   pullPendingMessages: vi.fn(async () => ["fais plutôt ça"]),
+  insertRunMessage: vi.fn(async (runId: string, userId: string | null, content: string) => {
+    h.requeued.push({ runId, userId, content });
+  }),
   readInterruptFlag: vi.fn(async () => true),
   clearInterrupt: vi.fn(async (runId: string) => {
     h.cleared.push(runId);
@@ -183,6 +188,7 @@ beforeEach(() => {
   h.stamped.length = 0;
   h.issueCalls.length = 0;
   h.afterWork.length = 0;
+  h.requeued.length = 0;
   h.prIssueId = null;
   h.stampReturnsNull = false;
   h.landed = 0;
@@ -425,6 +431,21 @@ describe("steering et interruption — inchangés côté base", () => {
     expect((await call("GET", "/interrupt")).body).toEqual({ interrupted: true });
   });
 
+  /**
+   * MIN-286 — le pendant du drainage. Le superviseur d'opencode consomme la file
+   * AVANT de couper le round pour reposter derrière : quand le tour sort entre les
+   * deux (plafond, deadline, run conclu ailleurs), le message n'a été ni joué ni
+   * gardé, et il meurt avec la microVM. Il revient donc en file, et c'est LUI qui
+   * re-queue le run.
+   */
+  it("REMETTENT en file ce qui a été drainé sans être joué", async () => {
+    const res = await call("POST", "/messages", { messages: ["fais plutôt ça", "  ", ""] });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ requeued: 1 });
+    // Sans auteur : réinséré, il redevient un message en attente ordinaire.
+    expect(h.requeued).toEqual([{ runId: RUN_ID, userId: null, content: "fais plutôt ça" }]);
+  });
+
   it("l'EFFACENT sur DELETE — et seulement pour LEUR run", async () => {
     // La boucle consomme le drapeau quand le « stop » qu'elle vient de lire
     // arrivait avec un message : le tour se poursuit alors avec la consigne au
@@ -501,7 +522,7 @@ describe("la surface est fermée", () => {
     expect((await call("POST", "/whatever")).status).toBe(404);
     // …y compris une bonne surface avec la mauvaise méthode.
     expect((await call("GET", "/events")).status).toBe(404);
-    expect((await call("POST", "/messages")).status).toBe(404);
+    expect((await call("POST", "/messages/pending")).status).toBe(404);
   });
 
   it("refuse un run qui n'existe pas", async () => {

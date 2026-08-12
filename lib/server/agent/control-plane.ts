@@ -24,6 +24,7 @@ import {
   clearInterrupt,
   getRun,
   hasPendingRunMessages,
+  insertRunMessage,
   pullPendingMessages,
   readInterruptFlag,
   stampRun,
@@ -311,6 +312,28 @@ export async function handleControlPlaneRequest(opts: {
     // Draine ET consomme, comme la boucle le fait à la frontière de round : un run
     // n'a qu'UN écrivain à la fois (le claimer), donc pas de double lecture.
     return ok({ messages: await pullPendingMessages(runId) });
+  }
+
+  /**
+   * REMETTRE EN FILE CE QU'ON A DRAINÉ SANS SAVOIR LE JOUER (MIN-286).
+   *
+   * `GET /messages` CONSOMME, et le superviseur draine avant de couper le round
+   * pour reposter derrière. Quand le tour sort entre les deux — plafond de
+   * dépense, deadline, run conclu ailleurs, coupure subie —, le message n'a été ni
+   * joué ni gardé : il était consommé en base et vivant dans une variable locale
+   * de la microVM, qui meurt avec elle. L'utilisateur voyait son message accepté
+   * puis ignoré pour toujours, et le run ne se réveillait même pas (c'est la file
+   * qui le re-queue).
+   *
+   * On le réinsère donc tel quel, sans auteur : il redevient un message en attente,
+   * exactement comme s'il venait d'être écrit.
+   */
+  if (method === "POST" && surface === "/messages") {
+    const texts = Array.isArray(body.messages)
+      ? body.messages.filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+      : [];
+    for (const text of texts) await insertRunMessage(runId, null, text);
+    return ok({ requeued: texts.length });
   }
 
   if (method === "GET" && surface === "/messages/pending") {

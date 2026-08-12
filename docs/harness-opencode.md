@@ -991,6 +991,47 @@ du journal et le push, et l'effacer plus tôt ferait clignoter la réponse.
 sous-agent lit un `summary` marqué à son nom et se referme sur
 `status: subagent_report` — les deux partent désormais sur son `session.idle`.
 
+### 2.26 La relecture du chantier : quatorze défauts, et le motif qu'ils partagent
+
+Passe de vérification du 2026-08-12, plan et dossier en main, code lu ligne à
+ligne. Quatorze défauts confirmés — corrigés, chacun avec son test —, seize
+soupçons réfutés. **Aucune tâche du plan n'était fausse au point de repartir en
+« à faire » : ce qui manquait était toujours un maillon, jamais la brique.**
+
+**Le motif, et il est le même six fois : une écriture complète, une lecture
+absente.** Un chemin où l'on produit soigneusement une donnée que personne ne
+relit ne lève rien, ne type rien de travers, et ne se voit que sur un run réel.
+
+| Le défaut | Ce qui manquait |
+| --- | --- |
+| **La reprise ne reprenait rien.** `VmJob.opencode` n'était écrit par personne (`execute.ts`) : chaque tour créait une session NEUVE. Le superviseur exportait, le plan de contrôle estampillait, `AgentCheckpoint` déclarait — et la microVM ne recevait rien. La sonde du lot 0 mesurait un chemin que la prod n'empruntait jamais. | une ligne de lecture |
+| **Un tour repris rejouait son amorce.** Corollaire du précédent : `messages` étant vide sous opencode, l'amorce à froid repartait, et le contexte du ticket + la demande du lanceur seraient repostés PAR-DESSUS l'historique restauré. `VmJob.opencodeInput` promet pourtant « `prompt` est vide sur un tour REPRIS ». | une branche |
+| **Un flux muet gelait le tour.** « Stop », steering, sauvegarde périodique et échéance murale vivaient tous DANS le corps de la boucle d'events. Un `bash` de vingt minutes ne publie rien : plus d'horloge, et surtout plus de `last_activity_at` — le chien de garde partait sonder une microVM vivante (§2.24 en avait corrigé le symptôme, pas la cause). D'où le **battement** (`LIFECYCLE_BEAT_MS`), qui court contre l'event suivant. | un timer |
+| **Le journal n'était borné par rien.** L'export est incrémental, l'ENVOI ne l'est pas : le checkpoint porte l'accumulateur entier. Le plan tenait le plafond de 4,5 Mo pour « sans objet » depuis que le checkpoint était devenu append-only — **un journal append-only se réécrit entier à chaque sauvegarde**. Passé la barre : 413 rangé en panne passagère, plus aucune sauvegarde, plus de battement de cœur, rapport final refusé. On lâche le journal (jamais on ne le rabote : `/sync/replay` veut des `seq` contigus) et on dit `turnHistoryReset`. | le plafond |
+| **Un message de steering drainé pouvait mourir.** `pullSteering` CONSOMME, et le tour peut sortir entre le drainage et le post (plafond, deadline, run conclu). Accepté à l'écran, perdu pour toujours — et le run ne se réveillait pas, puisque c'est la file qui le re-queue. D'où `POST /messages`, qui le remet en file. | un chemin de retour |
+| **Le plafond de sous-agents ne bornait rien.** Il se comptait sur les filles VIVANTES, or la naissance suit l'autorisation (le dépôt l'ancre lui-même : `runningAtAsk === 0`). Un round qui appelle `task` trois fois voyait ses trois demandes passer. `SubagentContext.pending` compte le crédit ouvert. | le compte des promises |
+| **Une réponse d'erreur du fournisseur faisait facturer un round DEUX fois.** Le lecteur du proxy allouait dès la première ligne JSON lisible : un `{"error":…}` sur 429 devenait une génération au modèle VIDE, donc appariable à tout. Le round repartait sans son coût, et la vraie génération finissait en « orpheline ». | deux gardes (statut, et trace) |
+| **`prompt_tokens` ne voulait pas dire la même chose sur les deux moteurs.** L'`input` d'opencode EXCLUT le cache. Le plan disait `input→prompt_tokens` : **c'est le plan qui avait tort**, et sa propre mesure le dit (`input + cache.read + cache.write = native_tokens_prompt`, §2.5). Le taux de hit `cached_tokens / prompt_tokens` (MIN-242) pouvait dépasser 1, et la comparaison ligne à ligne — le critère de bascule — ne comparait pas la même chose. | l'addition |
+| **La porte de livraison était aveugle au shell.** `rm`, `mv`, `sed -i`, un codemod : plus de `delete_file` ni de `move_file` sous opencode, donc `editedPaths` restait vide et un tour qui n'a fait que ça livrait **sans un contrôle**. C'est l'arbre de travail qui tranche maintenant (`probeRepoTouched`), en recours seulement. | la lecture de git |
+| **`abortsRequested` ne se remettait jamais à zéro.** Un `abort` peut ne rien publier (opencode répond 200 sur une session au repos), et le steering coupe justement des sessions qui viennent parfois de finir. Le crédit restait ouvert, et la coupure SUIVANTE — celle que personne n'a demandée — se faisait avaler : ni event, ni erreur, un tour rangé « terminé ». | la remise à zéro au round |
+| **Une fin de tour sur `length` partait deux fois.** La narration se décidait sur « ≠ `stop` », alors que `tool-calls` est la seule fin qui CONTINUE. Le texte partait en `thinking` (2 000) puis en `summary` (8 000) — et le fil dédoublonne par égalité de texte, que deux plafonds ne rendent jamais. | le bon prédicat |
+| **`update_plan` faisait une bulle.** Tool de CONTRÔLE : la boucle maison n'en émettait aucun event. Chez opencode il passe par le binaire, donc le flux publie ses parts — la checklist était racontée deux fois. | un filtre |
+| **`webfetch` partait sans son URL.** Aucun vis-à-vis maison, donc aucun cas dans `toolArgSummary` : l'event partait à `{}`. Un tour de lecture web illisible au replay. | un `case` |
+| **Le motif d'un refus local ne remontait plus.** `forbidden_command` sur un `run_background` mourait dans le pont : les refus cessaient d'être mesurables sur `agent_run_events`. | un rappel |
+
+Et un quinzième, hors VM : le garde-fou d'installation de
+[create-agent-snapshot.ts](../scripts/create-agent-snapshot.ts) ne pouvait pas se
+déclencher — `npm i … | tail -5` rend le code de sortie de `tail`, qui réussit
+toujours. Un registre en panne se serait fait prendre pour un binaire de mauvaise
+version dix lignes plus bas.
+
+**Ce que la relecture n'a PAS trouvé, et qui vaut d'être dit** : les seize
+soupçons réfutés portaient presque tous sur les endroits les plus commentés du
+chantier — le proxy, les permissions, l'appariement des générations, les images.
+Là où le code explique pourquoi il fait ce qu'il fait, il avait raison. Les
+quatorze vrais défauts vivent tous à une FRONTIÈRE : entre deux modules, entre le
+plan et la VM, entre une écriture et sa lecture.
+
 ---
 
 ---

@@ -12,7 +12,7 @@ import {
   type DeliveryGateDeps,
 } from "../delivery-gate";
 import { newPlanWriteSink, watchPlanWrites } from "../plan-closure";
-import { REPO_DIR, type RepoHost } from "../repo-host";
+import { REPO_DIR, turnDiffStat, type RepoHost } from "../repo-host";
 import type { PlatformToolHandler } from "../exec-tool";
 
 /**
@@ -120,6 +120,11 @@ export interface OpencodeDelivery {
   noteShell(command: string, exit: number): void;
   /** Note les éditions en attente comme « dépôt touché », avant le push. */
   noteEdits(): void;
+  /**
+   * REGARDE L'ARBRE DE TRAVAIL, et ouvre la porte s'il a bougé. Le seul moyen de
+   * voir ce qui n'est passé par aucun tool d'écriture (cf. `noteRepoTouched`).
+   */
+  probeRepoTouched(): Promise<void>;
   repoTouched(): boolean;
   /** Ce que le checkpoint doit porter — capé, et vide quand il n'y a rien. */
   checkpointEditedPaths(): string[];
@@ -141,11 +146,51 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
     logPrefix: "[supervisor]",
   });
 
+  /**
+   * CE QUE LE SHELL A FAIT AU DÉPÔT, LU DANS LE DÉPÔT (MIN-286).
+   *
+   * Sous opencode, supprimer et renommer sont des commandes, pas des tools : ni
+   * `rm`, ni `mv`, ni `sed -i`, ni un codemod ne passent par une demande de
+   * permission `edit`, donc rien ne remplissait `editedPaths` — et un tour qui ne
+   * faisait QUE ça franchissait la porte de livraison sans un contrôle, alors que
+   * la boucle maison le voyait par ses tools `delete_file` / `move_file`.
+   *
+   * Deux gestes, et ils ne disent pas la même chose : les fichiers encore là
+   * entrent dans `editedPaths` (c'est ce que le type-check ciblé doit regarder),
+   * et le verrou se pose dès que l'arbre diffère — une suppression ne laisse aucun
+   * chemin à noter, mais elle compte autant.
+   *
+   * Best-effort de bout en bout : une lecture de git en panne ne doit jamais
+   * empêcher un tour de livrer.
+   */
+  const probeRepoTouched = async (): Promise<void> => {
+    // Un tour qui a édité par ses tools n'a rien à apprendre de git : `noteEdits`
+    // latche déjà, et remplacer sa liste par le diff ENTIER du tour élargirait le
+    // type-check ciblé à tout ce qui a changé depuis le premier tour. Le sondage
+    // est un RECOURS, pour le seul cas où l'on n'a rien d'autre.
+    if (gate.repoTouched() || editedPaths.size > 0) return;
+    const stat = await turnDiffStat(deps.host, deps.filesFromSha).catch(() => null);
+    if (!stat) return;
+    if (stat.files.length === 0 && stat.untracked === 0 && stat.lines === 0) return;
+    for (const path of stat.files) editedPaths.add(path);
+    gate.noteRepoTouched();
+  };
+
   return {
     wrapDomainTool: (handler) =>
       gateWritePlan(watchPlanWrites(handler, planWrites), gate, deps.remainingMs),
 
-    wrapCreatePr: (handler) => gateCreatePr(handler, gate, deps.remainingMs),
+    wrapCreatePr: (handler) => {
+      const gated = gateCreatePr(handler, gate, deps.remainingMs);
+      // Sondé AVANT la porte : c'est elle qui décide de rendre les contrôles ou
+      // de pousser, et elle décide sur `repoTouched`.
+      return async (args) => {
+        await probeRepoTouched();
+        return await gated(args);
+      };
+    },
+
+    probeRepoTouched,
 
     noteEdit(filepath: string) {
       const relative = repoRelative(filepath);

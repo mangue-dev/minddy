@@ -85,6 +85,13 @@ export interface ControlPlaneClient {
   saveCheckpointQuietly(checkpoint: AgentCheckpoint): Promise<boolean>;
   pullSteering(): Promise<string[]>;
   /**
+   * REMET EN FILE ce qu'on a drainé sans avoir su le jouer — `pullSteering`
+   * consomme, et un tour qui sort avant d'avoir reposté emporterait le message
+   * dans la mort de sa microVM. Réinsérés sans auteur, ils redeviennent des
+   * messages en attente : le run se re-queue, et le tour suivant les délivre.
+   */
+  pushSteering(texts: string[]): Promise<void>;
+  /**
    * Reste-t-il un message NON CONSOMMÉ ? Sonde de l'attente d'un sous-agent : elle
    * ne DRAINE pas, contrairement à `pullSteering` — le message doit rester en file
    * pour que le round suivant l'injecte dans l'historique.
@@ -230,6 +237,17 @@ export function createControlPlaneClient(appOrigin: string): ControlPlaneClient 
       } catch (err) {
         console.error("[agent-vm] steering read failed:", (err as Error).message);
         return [];
+      }
+    },
+
+    pushSteering: async (texts) => {
+      if (texts.length === 0) return;
+      try {
+        await request("POST", "/messages", { messages: texts });
+      } catch (err) {
+        // Le tour se termine de toute façon : ce qui se perd ici est le message,
+        // et c'est précisément ce qu'il faut dire.
+        console.error("[agent-vm] steering requeue failed:", (err as Error).message);
       }
     },
 

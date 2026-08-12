@@ -96,7 +96,7 @@ export interface ToolBridge {
  */
 export type SupervisorTool = (
   args: Record<string, unknown>,
-) => Promise<{ result: unknown; success: boolean; followUp?: string }>;
+) => Promise<{ result: unknown; success: boolean; followUp?: string; reason?: string }>;
 
 /**
  * Ce qu'un appel rend au pont. `images` est la seule sortie qui ne soit pas du
@@ -107,6 +107,14 @@ interface ToolOutcome {
   success: boolean;
   followUp?: string;
   images?: Array<{ url: string; name?: string }>;
+  /**
+   * POURQUOI le harness a refusé, dans le vocabulaire d'`agent_run_events` —
+   * `forbidden_command` sur un `run_background` que `checkCommand` a écarté
+   * (MIN-108). Le modèle, lui, lit le motif en clair dans `result.error` ; ce
+   * champ-ci sert à ce que le refus reste MESURABLE en base, comme il l'était
+   * dans la boucle maison, qui le reposait sur son `tool_result`.
+   */
+  reason?: string;
 }
 
 export interface ToolBridgeOptions {
@@ -132,6 +140,12 @@ export interface ToolBridgeOptions {
    * jamais et ne lance rien en fond.
    */
   supervisorTools?: Record<string, SupervisorTool>;
+  /**
+   * Un tool refusé PAR LE HARNESS, avec son motif — le pendant, côté tools
+   * locaux, de ce que le verdict de permission rend pour les tools intégrés. Le
+   * superviseur le repose sur l'event `tool_result` de cet appel.
+   */
+  onToolRefused?: (callId: string, reason: string) => void;
   /** 0 = port libre choisi par l'OS. Le superviseur lit l'URL rendue. */
   port?: number;
 }
@@ -284,6 +298,10 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     let outcome: ToolOutcome | null;
     try {
       outcome = await dispatch(name, body.args ?? {});
+      // Le motif du refus part au superviseur, qui seul écrit au fil : le pont, lui,
+      // ne connaît que du HTTP. `callID` est celui d'opencode, donc celui que porte
+      // l'event `tool_result` de cet appel.
+      if (outcome?.reason && body.callID) opts.onToolRefused?.(body.callID, outcome.reason);
     } catch (err) {
       // Le plan de contrôle a lâché (409, panne, timeout). Le modèle doit le
       // lire : un tool en erreur se retente, un round coupé se repaie.

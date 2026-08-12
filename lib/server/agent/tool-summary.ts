@@ -131,6 +131,15 @@ export function toolArgSummary(name: string, args: Record<string, unknown>): Rec
       };
     case "agent_status":
       return { id: String(args.id ?? "") };
+    // `webfetch` n'a pas de vis-à-vis maison (MIN-286) : il arrive sous le nom
+    // d'opencode, avec le schéma mesuré sur le binaire (`{url, format?, timeout?}`).
+    // Sans ce cas il tombait dans le `default`, et le fil montrait une lecture de
+    // page dont l'URL n'apparaissait ni à l'écran ni dans `agent_run_events`.
+    case "webfetch":
+      return {
+        url: cap(String(args.url ?? ""), 200),
+        ...(args.format ? { format: String(args.format) } : {}),
+      };
     default:
       return {};
   }

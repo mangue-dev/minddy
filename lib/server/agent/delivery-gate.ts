@@ -120,6 +120,17 @@ export interface DeliveryGate {
    * (tour sans pull request, interrompu, suspendu).
    */
   noteEdits: () => void;
+  /**
+   * LE DÉPÔT A ÉTÉ TOUCHÉ AUTREMENT QUE PAR UN TOOL D'ÉDITION (MIN-286).
+   *
+   * `noteEdits` latche sur `editedPaths`, qui vient des tools d'écriture. Sous
+   * opencode il n'y a plus de `delete_file` ni de `move_file` : un `rm`, un `mv`,
+   * un `sed -i` ou un codemod passent par le SHELL, ne remplissent rien, et la
+   * porte restait alors muette sur un tour qui a pourtant changé le dépôt — ni
+   * type-check, ni tests, ni relecture du diff avant la pull request. L'appelant
+   * qui a constaté la différence (l'état de l'arbre de travail) le dit ici.
+   */
+  noteRepoTouched: () => void;
 }
 
 /**
@@ -381,6 +392,9 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   return {
     repoTouched: () => repoTouched,
     noteEdits,
+    noteRepoTouched: () => {
+      repoTouched = true;
+    },
     checkBeforeSubmit: submitChecks,
     checkPlanAfterWrite: async (budgetMs: number) => await planBlock(budgetMs),
   };
