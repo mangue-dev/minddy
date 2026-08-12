@@ -100,14 +100,18 @@ export const TOOL_ATTACHMENTS_HEADER = "x-minddy-attachments";
  * ([platform-tool-names.ts](../platform-tool-names.ts)) plutôt que réécrits :
  * ce sont les mêmes noms que `exec-tool.ts` route aujourd'hui.
  *
- * Les quatre ajouts, et pourquoi chacun n'est pas dans ces `Set` :
+ * Les trois ajouts, et pourquoi chacun n'est pas dans ces `Set` :
  *  - `create_pr` — coupé en deux (la VM pousse, la fonction ouvre) ;
  *  - `web_search` — facturé et plafonné par nous, et de toute façon pas servi
  *    par opencode sur OpenRouter ;
- *  - `update_plan` — notre checklist EST le plan du ticket ; `todowrite` est
- *    éteint et ce tool le remplace ;
  *  - `ask_user` n'y est PAS : il a un vis-à-vis natif (`question`), que le
  *    superviseur branche sur notre file de questions.
+ *
+ * `update_plan` n'y est PLUS : il n'a jamais eu de handler côté serveur (c'est
+ * un tool de CONTRÔLE, que la boucle maison exécutait elle-même sans sortir),
+ * donc chaque appel repartait en `404: unknown platform tool: update_plan` — la
+ * checklist du fil restait vide sur tous les runs opencode. Il est passé aux
+ * tools LOCAUX, où il aurait dû être dès le départ.
  */
 export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
   ...ISSUE_TOOL_NAMES,
@@ -116,14 +120,20 @@ export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
   ...PROJECT_PR_TOOL_NAMES,
   "create_pr",
   "web_search",
-  "update_plan",
 ]);
 
 /**
  * LES TOOLS LOCAUX — ceux que le SUPERVISEUR exécute dans la microVM, sans jamais
  * sortir d'elle (MIN-286, lot 3 ; dossier §3.2).
  *
- * `run_background` est le seul : `bash` n'a pas de mode fond, et le registre de
+ * `update_plan` en est, et c'est ce qui manquait : c'est un tool de CONTRÔLE,
+ * pas de domaine. Il n'exécute rien — il émet l'event `plan_update` que le fil
+ * rend en checklist, et miroite les états vers le plan du ticket. La boucle
+ * maison le traitait ainsi ([agent-loop.ts](../agent-loop.ts)) ; rangé côté
+ * domaine, il partait au plan de contrôle, qui n'a jamais eu de handler à lui
+ * opposer — 404 à chaque appel, checklist morte.
+ *
+ * `run_background` était le seul jusque-là : `bash` n'a pas de mode fond, et le registre de
  * jobs d'opencode sert `task`, pas le shell. Le repli qui tenait jusqu'ici — dire
  * au modèle de lancer son serveur en `&` dans le shell persistant — portait la
  * doctrine (« fais tourner le code pour de vrai ») sans aucun de ses garde-fous :
@@ -135,7 +145,10 @@ export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
  * Il traverse le même pont que les tools de domaine : le fichier généré est
  * identique, c'est le pont qui l'exécute au lieu de le faire suivre.
  */
-export const LOCAL_TOOL_NAMES: ReadonlySet<string> = new Set(["run_background"]);
+export const LOCAL_TOOL_NAMES: ReadonlySet<string> = new Set([
+  "run_background",
+  "update_plan",
+]);
 
 /**
  * Les tools de domaine SERVIS par ce tour, avec leurs descriptions déjà taillées

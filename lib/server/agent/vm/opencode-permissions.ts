@@ -55,6 +55,21 @@ export interface PermissionAsk {
   /** `metadata.filepath` sur une écriture — absolu (mesure n°2). */
   filepath?: string;
   /**
+   * LES FICHIERS D'UN `apply_patch`, UN PAR UN (`metadata.files`).
+   *
+   * `write` et `edit` touchent un fichier et publient un `filepath`. `apply_patch`
+   * en touche N et n'en publie **qu'une seule demande**, dont le `filepath` est la
+   * liste RECOLLÉE : `resources.join(", ")` (mesuré sur le binaire). Prise pour un
+   * chemin, cette chaîne donnait une ligne de « fichiers changés » portant trois à
+   * cinq noms séparés par des virgules — et, plus grave, un `assertNotGit` qui ne
+   * voit qu'un segment `a.ts, .git` : le seul garde-fou du dépôt passait à côté
+   * d'un patch qui touche `.git/config` en second.
+   *
+   * `metadata.files` porte la vraie liste, avec la nature de chaque geste. Vide
+   * (ou absent) sur les tools mono-fichier : `filepath` suffit et fait foi.
+   */
+  files?: { path: string; status: "added" | "modified" | "deleted" }[];
+  /**
    * `metadata.subagent_type` sur un `task` : le sous-agent demandé, DEMANDÉ
    * AVANT qu'opencode ne le résolve (mesuré, cf. `decideTask`).
    */
@@ -114,21 +129,30 @@ export function decidePermission(
     }
 
     case "edit": {
-      const filepath = (ask.filepath ?? "").trim();
-      if (!filepath) {
+      /**
+       * TOUS LES CHEMINS DE LA DEMANDE, et pas seulement le premier : une
+       * permission d'`apply_patch` en porte N (cf. `PermissionAsk.files`). Un
+       * seul chemin refusé refuse la demande entière — il n'y a pas de « oui
+       * pour ces trois fichiers, non pour le quatrième » dans le protocole, et
+       * c'est le sens prudent.
+       */
+      const targets = editTargets(ask);
+      if (targets.length === 0) {
         return {
           reply: "reject",
           message: "The harness could not read the path to write, so it refused the edit.",
         };
       }
       try {
-        // `resolveWithin` prend un chemin RELATIF au dépôt : lui passer un absolu
-        // le recollerait sous `REPO_DIR` (`/etc/x` → `<dépôt>/etc/x`), donc sans
-        // jamais sortir — c'est-à-dire sans jamais rien refuser. On ramène donc
-        // d'abord au relatif, et un chemin qui n'est pas sous le dépôt est refusé
-        // avant même d'être normalisé.
-        const abs = absoluteInRepo(filepath);
-        assertNotGit(REPO_DIR, abs, filepath);
+        for (const { path } of targets) {
+          // `resolveWithin` prend un chemin RELATIF au dépôt : lui passer un absolu
+          // le recollerait sous `REPO_DIR` (`/etc/x` → `<dépôt>/etc/x`), donc sans
+          // jamais sortir — c'est-à-dire sans jamais rien refuser. On ramène donc
+          // d'abord au relatif, et un chemin qui n'est pas sous le dépôt est refusé
+          // avant même d'être normalisé.
+          const abs = absoluteInRepo(path);
+          assertNotGit(REPO_DIR, abs, path);
+        }
         return ALLOW;
       } catch (err) {
         return { reply: "reject", message: (err as Error).message };
@@ -194,6 +218,22 @@ function decideTask(ask: PermissionAsk, subagents?: SubagentContext): Permission
     };
   }
   return ALLOW;
+}
+
+/**
+ * Ce qu'une demande d'écriture engage, fichier par fichier. `files` fait foi dès
+ * qu'il est là (`apply_patch`, qui porte aussi la NATURE de chaque geste) ;
+ * sinon c'est `filepath`, qui est alors un vrai chemin unique (`write`, `edit`)
+ * dont on ne sait dire que « modifié » — la liste de git, en fin de tour,
+ * tranchera.
+ */
+export function editTargets(ask: PermissionAsk): NonNullable<PermissionAsk["files"]> {
+  const files = (ask.files ?? [])
+    .map((f) => ({ ...f, path: f.path.trim() }))
+    .filter((f) => f.path);
+  if (files.length > 0) return files;
+  const single = (ask.filepath ?? "").trim();
+  return single ? [{ path: single, status: "modified" }] : [];
 }
 
 /**

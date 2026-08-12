@@ -20,6 +20,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   /** Ce que la plateforme répond : true vivant, false mort, null « on ne sait pas ». */
   alive: null as boolean | null,
+  /** Le stamp est refusé : quelqu'un a conclu le run entre-temps. */
+  stampRefused: false,
   probes: [] as Array<{ sandbox: string; command: string }>,
   events: [] as Array<{ runId: string; type: string; payload: Record<string, unknown> }>,
   stamped: [] as Array<{ runId: string; fields: Record<string, unknown> }>,
@@ -53,7 +55,7 @@ vi.mock("./runs", async (importOriginal) => ({
   }),
   stampRun: vi.fn(async (runId: string, fields: Record<string, unknown>) => {
     h.stamped.push({ runId, fields });
-    return { id: runId } as never;
+    return h.stampRefused ? null : ({ id: runId } as never);
   }),
   notifyAgentRun: vi.fn(async (_run: unknown, type: string) => {
     h.notifications.push(type);
@@ -111,6 +113,7 @@ const agoIso = (ms: number) => new Date(Date.now() - ms).toISOString();
 
 beforeEach(() => {
   h.alive = null;
+  h.stampRefused = false;
   h.probes.length = 0;
   h.events.length = 0;
   h.stamped.length = 0;
@@ -140,19 +143,33 @@ describe("reapDeadVmRuns", () => {
     expect(h.stamped).toHaveLength(0);
   });
 
-  it("sur un process MORT : le fil parle D'ABORD, puis la ligne repose", async () => {
+  it("sur un process MORT : la ligne repose, et le fil le dit", async () => {
     h.alive = false;
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(reaped).toBe(1);
-    // L'ordre compte : si le stamp échoue derrière, l'utilisateur aura quand même
-    // lu pourquoi son tour s'est arrêté.
-    expect(h.events[0]).toMatchObject({ runId: "run-1", type: "error" });
-    expect(h.events[0].payload.code).toBe("turnLost");
     expect(h.stamped[0].fields).toMatchObject({
       status: "completed",
       loop_command_id: null,
     });
+    expect(h.events[0]).toMatchObject({ runId: "run-1", type: "error" });
+    expect(h.events[0].payload.code).toBe("turnLost");
     expect(h.notifications).toEqual(["agent_failed"]);
+  });
+
+  /**
+   * LE FAUX POSITIF QU'ON A LU EN PRODUCTION (run de la PR 51). Le stamp ne peut
+   * échouer que d'une façon — sa garde `status in ('running')` ne matche plus,
+   * c'est-à-dire que quelqu'un vient de conclure ce run. Le tour ne s'est alors
+   * pas arrêté : il a FINI. Annoncer sa perte avant de le savoir écrivait un
+   * message d'échec sous une conversation qui s'était bien terminée.
+   */
+  it("ne raconte RIEN quand la conclusion lui a été soufflée entre-temps", async () => {
+    h.alive = false;
+    h.stampRefused = true;
+    const { reaped } = await reapDeadVmRuns(fakeService());
+    expect(reaped).toBe(0);
+    expect(h.events).toEqual([]);
+    expect(h.notifications).toEqual([]);
   });
 
   it("NE TOUCHE PAS au checkpoint — c'est de lui que le tour suivant repart", async () => {

@@ -257,14 +257,24 @@ export function buildWorkingDiff(out: {
  * la vue de s'ouvrir.
  */
 /**
- * LA BASE DU DIFF, RÉSOLUE DANS LE CLONE — `origin/<base>`, c'est-à-dire la base
- * telle qu'elle était AU CLONAGE et pas telle qu'elle est maintenant.
+ * LA BASE DU DIFF, RÉSOLUE DANS LE CLONE — le POINT DE DÉPART DE LA BRANCHE,
+ * c'est-à-dire `git merge-base origin/<base> HEAD`, et surtout pas le tip de
+ * `origin/<base>`.
  *
- * C'est ce qui rend le diff juste. Le clone est `--shallow-since --branch <base>`
- * et personne ne re-fetch la base ensuite : `origin/<base>` est donc figé au point
- * de départ de la session. S'il suivait le tip vivant, un commit fusionné dans la
- * base depuis le lancement apparaîtrait INVERSÉ dans le diff, comme si l'agent
- * l'avait annulé — le même piège que celui documenté pour `PR_BASE_TAG`.
+ * C'EST LA DIFFÉRENCE ENTRE DEUX POINTS ET TROIS POINTS, et elle se chiffre. Un
+ * `git diff origin/main` compare l'arbre de travail au tip de la base : tout ce
+ * qui a atterri sur `main` depuis que la branche est partie y apparaît
+ * **INVERSÉ**, comme si l'agent l'avait annulé. La forge, elle, montre
+ * `base...tête` — depuis le point commun. Les deux vues ne racontent alors pas
+ * le même tour, et c'est ce qu'on a lu sur la PR 51 : **881 lignes en direct
+ * contre 130 à la forge**, parce que deux commits (729 lignes) étaient tombés
+ * sur `main` entre la naissance de la branche et le clonage de ce tour-là.
+ *
+ * Le commentaire d'avant disait « `origin/<base>` est figé au clonage, donc le
+ * diff est juste ». Figé, il l'est — mais au clonage de CE TOUR, pas à la
+ * naissance de la branche. Une session qui reprend une branche vieille de
+ * quelques heures reclone une base qui a bougé, et l'écart est exactement le
+ * travail des autres.
  *
  * `baseBranch` est nul quand le run est parti sur la branche par défaut du dépôt
  * sans qu'on l'ait nommée. Plutôt que d'aller la demander à la forge (un token
@@ -280,6 +290,17 @@ export async function resolveBaseRef(
   baseBranch: string | null,
 ): Promise<string | null> {
   const shell: ShellOpts = { cwd: REPO_DIR, timeoutMs: 15_000 };
+  const ref = await resolveBaseTip(host, baseBranch, shell);
+  if (!ref) return null;
+  return await mergeBaseWithHead(host, ref, shell);
+}
+
+/** Le tip de la base dans le clone — la ref, avant de remonter au point commun. */
+async function resolveBaseTip(
+  host: RepoHost,
+  baseBranch: string | null,
+  shell: ShellOpts,
+): Promise<string | null> {
   const named = baseBranch?.trim();
   if (named) {
     const ref = `origin/${named}`;
@@ -299,6 +320,25 @@ export async function resolveBaseRef(
     shell,
   );
   return only.trim() || null;
+}
+
+/**
+ * Le point commun entre la base et la tête, ou la base elle-même quand git ne
+ * sait pas le dire.
+ *
+ * LE REPLI EST LE COMPORTEMENT D'AVANT, et il est assumé : un clone `--depth`
+ * peut n'avoir aucun ancêtre commun dans son greffon, et `merge-base` rend alors
+ * un code 1 sans rien écrire. Mieux vaut le diff légèrement trop large qu'aucun
+ * diff — la vue tombe sinon sur la forge, qui ne connaît pas le travail non
+ * poussé, c'est-à-dire précisément ce qu'on est venu voir.
+ */
+async function mergeBaseWithHead(
+  host: RepoHost,
+  ref: string,
+  shell: ShellOpts,
+): Promise<string> {
+  const base = await run(host, `git merge-base ${sq(ref)} HEAD`, shell);
+  return base.trim() || ref;
 }
 
 export async function readWorkingDiff(

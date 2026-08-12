@@ -270,6 +270,26 @@ describe("resolveBaseRef", () => {
     expect(await resolveBaseRef(host, "main")).toBe("origin/main");
   });
 
+  /**
+   * LE DÉFAUT QUI FAISAIT LIRE 881 LIGNES POUR 130 (PR 51). Sans le point commun,
+   * le diff en direct compare l'arbre de travail au TIP de la base : les commits
+   * tombés sur `main` depuis la naissance de la branche y apparaissent inversés,
+   * et la vue au repos (la forge, qui montre `base...tête`) dit autre chose.
+   */
+  it("remonte au point commun avec la tête, pas au tip de la base", async () => {
+    const host = fakeHost([
+      [/rev-parse --verify/, "abc123\n"],
+      [/merge-base/, "deadbee\n"],
+    ]);
+    expect(await resolveBaseRef(host, "main")).toBe("deadbee");
+    expect(host.commands.some((c) => c.includes("git merge-base 'origin/main' HEAD"))).toBe(true);
+  });
+
+  it("retombe sur la base quand merge-base ne dit rien (clone greffé)", async () => {
+    const host = fakeHost([[/rev-parse --verify/, "abc123\n"]]);
+    expect(await resolveBaseRef(host, "main")).toBe("origin/main");
+  });
+
   it("prend origin/HEAD quand la base n'est pas nommée", async () => {
     const host = fakeHost([[/symbolic-ref/, "origin/main\n"]]);
     expect(await resolveBaseRef(host, null)).toBe("origin/main");

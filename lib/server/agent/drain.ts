@@ -250,17 +250,26 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
       if (!lost) continue;
     }
 
-    // Le fil D'ABORD : si le stamp échoue derrière, l'utilisateur aura quand même
-    // lu pourquoi son tour s'est arrêté. L'inverse laisserait une conversation
-    // qui redevient silencieusement disponible, sans explication.
-    await appendEvent(row.id, "error", {
-      code: "turnLost",
-      message:
-        "This turn's process stopped before it could finish. The session was restored from its last save — send a message to carry on.",
-    }).catch(() => {});
-    // Le CHECKPOINT N'EST PAS TOUCHÉ : celui qui est en base est le dernier
-    // sauvegardé périodiquement par la boucle, à une frontière de round sûre.
-    // C'est exactement ce depuis quoi le tour suivant doit repartir.
+    /**
+     * LE STAMP D'ABORD, LE FIL ENSUITE — l'ordre inverse de celui d'origine, et
+     * c'est une leçon de production.
+     *
+     * L'argument d'avant était : « si le stamp échoue derrière, l'utilisateur
+     * aura quand même lu pourquoi son tour s'est arrêté ». Mais la seule façon
+     * dont ce stamp échoue est sa garde `status in ('running')`, c'est-à-dire :
+     * **quelqu'un a conclu ce run entre-temps**. Le tour ne s'est alors pas
+     * arrêté du tout — il vient de finir. On écrivait donc un message d'échec
+     * dans une conversation qui s'était bien terminée, et c'est ce qu'on a lu
+     * sur le run de la PR 51.
+     *
+     * Ce qu'on perd est un cas qui n'existe pas : un stamp refusé laissait, dans
+     * l'ancien ordre, une erreur orpheline ; dans celui-ci, le passage suivant du
+     * drain reverra le run s'il est vraiment resté `running`.
+     *
+     * Le CHECKPOINT N'EST PAS TOUCHÉ : celui qui est en base est le dernier
+     * sauvegardé périodiquement par la boucle, à une frontière de round sûre.
+     * C'est exactement ce depuis quoi le tour suivant doit repartir.
+     */
     const stamped = await stampRun(row.id, {
       status: "completed",
       error_message: "The agent process stopped unexpectedly",
@@ -272,6 +281,12 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
       loop_command_id: null,
     });
     if (!stamped) continue; // course : quelqu'un a conclu entre-temps.
+
+    await appendEvent(row.id, "error", {
+      code: "turnLost",
+      message:
+        "This turn's process stopped before it could finish. The session was restored from its last save — send a message to carry on.",
+    }).catch(() => {});
 
     /**
      * LE COMPUTE DE LA MICROVM, ET C'EST ICI QUE PERSONNE NE LE FACTURERAIT.

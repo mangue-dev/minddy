@@ -92,7 +92,7 @@ describe("le jeu de tools de domaine sort de tools.ts, pas d'une liste", () => {
     // Aucun tool servi et « à nous » ne doit manquer : c'est cette assertion-là
     // qui casse quand quelqu'un ajoute un tool minddy sans l'inscrire au routage.
     expect(domain).toEqual(served.filter((n) => DOMAIN_TOOL_NAMES.has(n)));
-    expect(domain.length).toBeGreaterThan(30);
+    expect(domain.length).toBeGreaterThan(25);
   });
 
   it("hérite des retraits structurels au lieu de les redire", () => {
@@ -246,15 +246,21 @@ describe("où les fichiers sont posés", () => {
   });
 
   /**
-   * `run_background` est le seul tool LOCAL (dossier §3.2) : `bash` n'a pas de
-   * mode fond. Il est généré comme les autres — le pont l'exécute au lieu de le
-   * faire suivre —, et une session de RELECTURE ne l'a pas : elle ne lance rien
-   * en fond, et `PR_REVIEW_TOOLS` ne le porte pas.
+   * Les tools LOCAUX (dossier §3.2), que le superviseur exécute dans la microVM :
+   * `run_background`, parce que `bash` n'a pas de mode fond, et `update_plan`,
+   * qui est un tool de CONTRÔLE — il n'exécute rien, il émet l'event que le fil
+   * rend en checklist. Rangé côté domaine, il repartait au plan de contrôle et y
+   * recevait un 404 à chaque appel.
+   *
+   * Ils sont générés comme les autres — le pont les exécute au lieu de les faire
+   * suivre —, et une session de RELECTURE n'a pas `run_background` : elle ne
+   * lance rien en fond, et `PR_REVIEW_TOOLS` ne le porte pas.
    */
   it("`run_background` est servi au ticket et au carnet, jamais à une relecture", () => {
     for (const anchor of ["issue", "notebook"] as const) {
       expect(localToolsFor(job({ anchor })).map((t) => t.function.name)).toEqual([
         "run_background",
+        "update_plan",
       ]);
       expect(opencodeToolFiles(job({ anchor })).map((f) => f.path)).toContain(
         `${OPENCODE_TOOL_DIR}/run_background.ts`,

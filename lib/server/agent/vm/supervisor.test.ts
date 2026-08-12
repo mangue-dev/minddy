@@ -81,6 +81,12 @@ const h = {
   routes: [] as string[],
   /** Le journal que `/sync/history` rend. */
   history: [] as Record<string, unknown>[],
+  /** Les checkpoints sauvegardés EN COURS DE TOUR (le battement de cœur). */
+  checkpoints: [] as Record<string, unknown>[],
+  /** Les plans miroités vers le ticket (`update_plan`). */
+  plansSynced: [] as Record<string, unknown>[][],
+  /** Le plan de contrôle refuse la sauvegarde : le run a été conclu ailleurs. */
+  runClosed: false,
   replayed: null as Record<string, unknown> | null,
   healthy: true,
   pushed: true,
@@ -133,7 +139,10 @@ function cp(): ControlPlaneClient {
     recordUsage: async (line) => {
       h.usage.push(line as unknown as Record<string, unknown>);
     },
-    saveCheckpointQuietly: async () => true,
+    saveCheckpointQuietly: async (checkpoint) => {
+      h.checkpoints.push(checkpoint as unknown as Record<string, unknown>);
+      return !h.runClosed;
+    },
     pullSteering: async () => h.steering.splice(0),
     hasPendingMessages: async () => h.steering.length > 0,
     checkInterrupt: async () => h.interrupt,
@@ -145,7 +154,9 @@ function cp(): ControlPlaneClient {
       h.budgetReads += 1;
       return h.remainingUsd;
     },
-    syncPlan: async () => {},
+    syncPlan: async (steps) => {
+      h.plansSynced.push(steps as unknown as Record<string, unknown>[]);
+    },
     callTool: async (name, body) => {
       h.toolCalls.push({ name, body });
       return { result: { url: "https://forge/pr/7" }, success: true };
@@ -213,7 +224,18 @@ function fakeFetch(): typeof fetch {
       return new Response("true", { status: 200 });
     }
     if (path === "/sync/history") {
-      return new Response(JSON.stringify({ events: h.history }), { status: 200 });
+      /**
+       * INCRÉMENTAL, comme le vrai : le corps est le curseur par agrégat, et un
+       * event déjà exporté ne repart pas. Sans ça, la sauvegarde périodique et
+       * l'export de fin rendraient deux fois le même journal, et un test sur la
+       * reprise passerait sur un doublon qui n'existe pas en production.
+       */
+      const since = JSON.parse(String(init?.body ?? "{}")) as Record<string, number>;
+      const events = h.history.filter((e) => {
+        const aggregate = String(e.aggregate_id ?? e.aggregateID ?? "");
+        return Number(e.seq ?? 0) > (since[aggregate] ?? 0);
+      });
+      return new Response(JSON.stringify({ events }), { status: 200 });
     }
     if (path === "/sync/replay") {
       h.replayed = JSON.parse(String(init?.body ?? "{}"));
@@ -350,6 +372,9 @@ beforeEach(() => {
     { aggregate_id: "ses_neuve", seq: 3, type: "message.created", data: {} },
     { aggregate_id: "ses_neuve", seq: 4, type: "message.updated", data: {} },
   ];
+  h.checkpoints = [];
+  h.plansSynced = [];
+  h.runClosed = false;
   h.replayed = null;
   h.healthy = true;
   h.pushed = true;
@@ -1086,6 +1111,52 @@ describe("la forge", () => {
  * tenait pas : le tool est SERVI et exécuté dans la VM, et ses jobs sont TUÉS
  * avant que quoi que ce soit ne stage le dépôt.
  */
+/**
+ * `update_plan` — un tool de CONTRÔLE, pas de domaine. Rangé côté domaine, il
+ * repartait au plan de contrôle qui n'a jamais eu de handler pour lui : chaque
+ * appel revenait en `404: unknown platform tool: update_plan` (lu deux fois sur
+ * le run de la PR 51), la checklist du fil ne s'est jamais remplie, et le modèle
+ * lisait une erreur là où il attendait un accusé de réception.
+ */
+describe("la checklist du tour", () => {
+  const updatePlan = () => h.supervisorTools.update_plan;
+
+  it("émet `plan_update` et miroite vers le ticket, sans sortir de la VM", async () => {
+    await run();
+    const out = (await updatePlan()({
+      plan: [
+        { step: "Lire le diff", status: "completed" },
+        { step: "Corriger les remarques", status: "in_progress" },
+      ],
+    })) as { success: boolean };
+    expect(out.success).toBe(true);
+
+    const emitted = h.events.filter((e) => e.type === "plan_update");
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].payload.plan).toEqual([
+      { step: "Lire le diff", status: "completed" },
+      { step: "Corriger les remarques", status: "in_progress" },
+    ]);
+    expect(h.plansSynced).toHaveLength(1);
+    // Et surtout : RIEN n'est parti au plan de contrôle comme tool de domaine.
+    expect(h.toolCalls.some((c) => c.name === "update_plan")).toBe(false);
+  });
+
+  it("normalise ce que le modèle envoie, comme la boucle maison", async () => {
+    await run();
+    await updatePlan()({
+      plan: [
+        { step: "  ", status: "completed" },
+        { step: "Vraie étape", status: "n'importe quoi" },
+      ],
+    });
+    // Étape vide écartée, statut inconnu ramené à `pending`.
+    expect(h.events.find((e) => e.type === "plan_update")?.payload.plan).toEqual([
+      { step: "Vraie étape", status: "pending" },
+    ]);
+  });
+});
+
 describe("les jobs de fond", () => {
   /** Ce qu'un tool généré poste : le pont, puis le registre du superviseur. */
   const background = () => h.supervisorTools.run_background;
@@ -1160,6 +1231,57 @@ describe("les jobs de fond", () => {
     expect(h.supervisorTools.run_background).toBeUndefined();
     const files = h.files.filter((f) => f.path.startsWith(OPENCODE_TOOL_DIR));
     expect(files.some((f) => f.path.endsWith("/run_background.ts"))).toBe(false);
+  });
+});
+
+/**
+ * LE BATTEMENT DE CŒUR, ET CE QU'IL A COÛTÉ DE NE PAS L'AVOIR (run de la PR 51,
+ * 2026-08-12). Ce moteur ne sauvegardait qu'à la toute fin : le seul écrivain de
+ * `last_activity_at` sur un run qui travaille étant cette sauvegarde, un tour
+ * d'opencode paraissait muet depuis son lancement. Passé trois minutes, le chien
+ * de garde des microVM va interroger la plateforme, et une sonde qui répond mal
+ * conclut « process mort » — le fil affiche « le processus de ce tour s'est
+ * arrêté avant d'avoir fini », le run passe au repos, et le rapport de fin se
+ * fait refuser en 409 derrière. Le tour de la PR 51 a perdu sa conversation
+ * comme ça, checkpoint resté `null` en base.
+ */
+describe("la sauvegarde périodique", () => {
+  it("sauvegarde EN COURS de tour, journal compris", async () => {
+    // L'horloge avance de plus de deux minutes à chaque lecture : le sondage qui
+    // porte la sauvegarde tombe donc dès le premier passage.
+    h.tick = 130_000;
+    await run();
+    expect(h.checkpoints.length).toBeGreaterThan(0);
+    const first = h.checkpoints[0] as { opencode?: { sessionId: string } };
+    // Ce qu'un tour repris doit relire : la session d'opencode et son journal.
+    expect(first.opencode?.sessionId).toBe(PARENT);
+  });
+
+  it("ne sauvegarde pas sur un tour court", async () => {
+    // Horloge figée : rien ne doit partir, un tour de trois secondes n'a pas à
+    // écrire en base à chaque event du flux.
+    h.tick = 0;
+    await run();
+    expect(h.checkpoints).toEqual([]);
+  });
+
+  it("n'exporte le journal qu'une fois : la sauvegarde n'en fait pas un doublon", async () => {
+    h.tick = 130_000;
+    const report = await run();
+    const state = (report.checkpoint as { opencode?: { events: unknown[] } }).opencode;
+    // Deux events au journal du faux serveur, deux dans le checkpoint : le
+    // curseur d'export a bien avancé avec la sauvegarde périodique.
+    expect(state?.events).toHaveLength(2);
+  });
+
+  it("s'arrête quand le plan de contrôle refuse la sauvegarde (run conclu ailleurs)", async () => {
+    h.tick = 130_000;
+    h.runClosed = true;
+    const report = await run();
+    // Un run conclu sous nous ne se poursuit pas : continuer, ce serait dépenser
+    // au nom d'une conversation qui n'existe plus.
+    expect(report.status).toBe("interrupted");
+    expect(h.aborts).toBeGreaterThan(0);
   });
 });
 

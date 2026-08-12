@@ -6,6 +6,9 @@ import {
   REPO_DIR,
 } from "../repo-host";
 import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
+// La MÊME normalisation que la boucle maison : `update_plan` est un tool de
+// contrôle, et les deux moteurs doivent en tirer le même event `plan_update`.
+import { normalizePlan } from "../agent-loop";
 import { SecretRedactor } from "../redact";
 import { cap } from "../tool-summary";
 import type { AgentCheckpoint } from "../runs";
@@ -28,7 +31,7 @@ import { localToolsFor, opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode
 import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-bridge";
 import { makeOpencodeDelivery, repoRelative, type OpencodeDelivery } from "./opencode-delivery";
 import { newLiveEditLog } from "../live-edits";
-import { decidePermission } from "./opencode-permissions";
+import { decidePermission, editTargets } from "./opencode-permissions";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
 import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
@@ -103,6 +106,18 @@ export const LIVE_INTERVAL_MS = 250;
  * ce sondage qui pèse sur le compte d'invocations.
  */
 export const STEER_POLL_INTERVAL_MS = 5_000;
+
+/**
+ * Cadence de la sauvegarde périodique du checkpoint — qui est AUSSI le seul
+ * battement de cœur d'un tour d'opencode (cf. `maybeSaveCheckpoint`).
+ *
+ * DEUX MINUTES, sous les trois du chien de garde (`VM_LOOP_PROBE_AFTER_MS` dans
+ * [drain.ts](../drain.ts)) : un tour vivant garde ainsi un `last_activity_at`
+ * frais et n'est jamais candidat à la sonde de la plateforme. La boucle maison
+ * sauvegarde toutes les cinq minutes ([turn.ts](turn.ts)) — elle peut, sa
+ * commande répond à la sonde ; ici la sauvegarde est le seul signe de vie.
+ */
+export const SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS = 2 * 60_000;
 
 /**
  * Combien de temps on attend, en fin de tour, qu'un round coupé finisse d'arriver
@@ -385,6 +400,24 @@ export async function runOpencodeTurn(
       // `handle` ne lève jamais : tout revient au modèle comme un résultat de
       // tool, réussi ou en erreur (plafond atteint, commande refusée, job inconnu).
       ...(servesBackground ? { run_background: (args) => background.handle(args) } : {}),
+      /**
+       * LA CHECKLIST DU TOUR — un tool de CONTRÔLE, exécuté ici et nulle part
+       * ailleurs (le même geste que la boucle maison : normaliser, émettre
+       * `plan_update`, miroiter vers le plan du ticket, répondre `ok`).
+       *
+       * Il partait jusqu'ici au plan de contrôle avec les tools de domaine, qui
+       * n'a pas de handler pour lui : `404: unknown platform tool: update_plan`
+       * à chaque appel, sur TOUS les runs opencode — la barre de plan du fil ne
+       * s'est jamais remplie, et le modèle lisait une erreur là où il attendait
+       * un accusé de réception.
+       */
+      update_plan: async (args) => {
+        const plan = normalizePlan(args.plan);
+        await cp.emit("plan_update", { plan });
+        // Miroir vers le plan de l'issue — best-effort, ne bloque jamais le tour.
+        await cp.syncPlan(plan).catch(() => {});
+        return { result: { ok: true }, success: true };
+      },
     },
     port: deps.toolBridgePort ?? OPENCODE_PORT + 1,
   });
@@ -512,6 +545,111 @@ export async function runOpencodeTurn(
     let pendingPrompt: Array<{ text: string; steered: boolean }> = [];
     let interrupted = false;
     let lastSteerAt = now();
+
+    /**
+     * LE JOURNAL D'OPENCODE, TENU AU FIL DU TOUR — et pas seulement exporté à la
+     * fin. C'est ce qui rend la sauvegarde périodique possible : le curseur par
+     * agrégat avance ici, chaque export est incrémental, et la fin de tour lit
+     * le même accumulateur.
+     */
+    let journalEvents: Record<string, unknown>[] = [...(previous?.events ?? [])];
+    let journalSeq: Record<string, number> = { ...(previous?.seq ?? {}) };
+    const syncJournal = async (): Promise<OpencodeCheckpointState> => {
+      const fresh = await client.syncHistory(journalSeq);
+      journalEvents = [...journalEvents, ...fresh];
+      journalSeq = lastSeqByAggregate(journalSeq, fresh);
+      return { sessionId, events: journalEvents, seq: journalSeq };
+    };
+
+    /**
+     * LA SAUVEGARDE PÉRIODIQUE, ET LE BATTEMENT DE CŒUR AVEC — car c'est le même
+     * geste (MIN-286 ; le défaut est celui du run de la PR 51).
+     *
+     * Ce moteur n'en avait AUCUN. Le seul écrivain de `last_activity_at` sur un
+     * run qui travaille est cette sauvegarde ([control-plane.ts](../control-plane.ts),
+     * `PUT /checkpoint`), et le superviseur ne construisait son checkpoint qu'à
+     * la toute fin. Un tour d'opencode paraissait donc muet depuis son lancement,
+     * et le chien de garde des microVM ([drain.ts](../drain.ts)) allait interroger
+     * la plateforme dès trois minutes de « silence » — sur un tour parfaitement
+     * vivant. Une sonde qui répond mal à ce moment-là conclut « process mort » :
+     * le fil affiche « le processus de ce tour s'est arrêté avant d'avoir fini »,
+     * le run passe au repos, et le rapport de fin de tour arrive derrière pour se
+     * faire refuser en 409 — **la conversation du tour est alors perdue**, ce qui
+     * est exactement ce que le message promettait d'éviter (« restaurée depuis sa
+     * dernière sauvegarde » : il n'y en avait aucune).
+     *
+     * DEUX MINUTES, et le chiffre n'est pas libre : il doit rester SOUS le délai
+     * au bout duquel le chien de garde va sonder (trois minutes de
+     * `last_activity_at` figé, `VM_LOOP_PROBE_AFTER_MS`). Un tour vivant n'est
+     * alors jamais candidat à la sonde, et la question de savoir si la sonde dit
+     * vrai ne se pose plus. La boucle maison sauvegarde toutes les cinq minutes
+     * ([turn.ts](turn.ts)) : elle peut se le permettre, son process répond à la
+     * sonde depuis son lancement.
+     */
+    let lastSaveAt = now();
+    /** Le run a été conclu SOUS nous (409 sur la sauvegarde) : le tour s'arrête. */
+    let runClosed = false;
+    const maybeSaveCheckpoint = async (): Promise<void> => {
+      if (now() - lastSaveAt < SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS) return;
+      lastSaveAt = now();
+      try {
+        const opencode = await syncJournal();
+        // `lastFilesSha` reste celui du départ : rien n'est poussé avant la fin
+        // du tour, donc la baseline du diff n'a pas bougé.
+        if (!(await cp.saveCheckpointQuietly(turnCheckpoint(job.filesFromSha, opencode)))) {
+          runClosed = true;
+        }
+      } catch (err) {
+        // Une sauvegarde ratée ne casse pas le tour : elle coûte la reprise, et
+        // le prochain passage réessaiera. Ce qu'elle ne doit pas faire, c'est
+        // repousser l'échéance en silence — d'où la trace.
+        console.error("[supervisor] periodic checkpoint failed:", (err as Error).message);
+      }
+    };
+
+    /**
+     * L'ÉTAT DU TOUR, à la forme du checkpoint — le même objet en cours de route
+     * et à l'arrivée, à deux champs près (le sha des fichiers, qui bouge au push).
+     * Écrit une fois : deux constructions parallèles finiraient par diverger, et
+     * c'est la moitié en cours de route qui serait oubliée.
+     */
+    function turnCheckpoint(
+      lastFilesSha: string,
+      opencode?: OpencodeCheckpointState,
+    ): OpencodeCheckpoint {
+      return {
+        // L'historique de la CONVERSATION n'est plus ici : il vit dans le journal
+        // d'opencode. Le champ reste (le type est partagé avec l'autre moteur) et
+        // part vide — c'est ce qui rend la bascule réversible sans migration.
+        messages: [],
+        /**
+         * OÙ EN EST LA NUMÉROTATION DU LEDGER, et c'est le tour SUIVANT qui la lit
+         * (`execute.ts` : `run.checkpoint?.usageSeq ?? …`). Sans elle, un tour
+         * repris renumérote ses lignes par-dessus celles du tour d'avant : rien
+         * n'est perdu (pas de contrainte d'unicité, la dépense se somme), mais
+         * l'ordre des appels d'un run devient faux — et c'est exactement ce qu'un
+         * `seq` sert à dire.
+         */
+        usageSeq: ledger.nextParentSeq,
+        lastFilesSha,
+        instructions: { paths: [...job.instructions.paths], bytes: job.instructions.bytes },
+        // Le plafond des 5 ancres de relecture se compte sur la vie du RUN, pas du
+        // tour : le compte revient de la fonction à chaque appel, et c'est le
+        // checkpoint qui le porte jusqu'au tour suivant (miroir de `turn.ts`).
+        ...(bridge.prInlineComments > 0 ? { prInlineComments: bridge.prInlineComments } : {}),
+        /**
+         * L'ÉTAT DE LA PORTE DE LIVRAISON, qui porte sur le TOUR et voyage donc
+         * semé. Sans lui, un tour repris après coupure de la VM se croit vierge :
+         * il n'a plus rien édité, donc plus rien à type-checker ni à relire, et le
+         * code part chez un humain sans qu'aucun contrôle ne l'ait vu.
+         */
+        ...(delivery.checkpointEditedPaths().length > 0
+          ? { editedPaths: delivery.checkpointEditedPaths() }
+          : {}),
+        ...(delivery.repoTouched() ? { repoTouched: true } : {}),
+        ...(opencode ? { opencode } : {}),
+      };
+    }
     const takeSteering = async (): Promise<string[]> =>
       (await cp.pullSteering().catch(() => [])).map((t) => t.trim()).filter(Boolean);
     /**
@@ -601,13 +739,24 @@ export async function runOpencodeTurn(
            * `related` du runner de tests, et le verrou « le dépôt a été touché ».
            */
           if (out.permission.permission === "edit" && verdict.reply === "once") {
-            delivery.noteEdit(out.permission.filepath ?? "");
-            // …et elle se VOIT tout de suite : une édition n'avance pas le round
-            // (ni texte, ni réflexion), donc rien d'autre ne ferait partir une
-            // charge de direct avant le round suivant.
-            const path = repoRelative(out.permission.filepath ?? "");
-            if (path && !child) {
-              liveEdits.note([{ path, status: "modified" }]);
+            /**
+             * UN PATCH TOUCHE N FICHIERS ET NE DEMANDE QU'UNE FOIS. `editPaths`
+             * rend la vraie liste (`metadata.files`) plutôt que le `filepath`
+             * recollé à la virgule, qui donnait une seule ligne « a.ts, b.ts,
+             * c.ts » dans les fichiers changés — et une seule entrée pour le
+             * type-check ciblé de la porte de livraison, sur un chemin qui
+             * n'existe pas.
+             */
+            const targets = editTargets(out.permission);
+            for (const { path } of targets) delivery.noteEdit(path);
+            // …et elles se VOIENT tout de suite : une édition n'avance pas le
+            // round (ni texte, ni réflexion), donc rien d'autre ne ferait partir
+            // une charge de direct avant le round suivant.
+            const live = targets
+              .map(({ path, status }) => ({ path: repoRelative(path), status }))
+              .filter((edit) => edit.path);
+            if (live.length > 0 && !child) {
+              liveEdits.note(live);
               lastLiveAt = 0;
               cp.emitLive({
                 text: secrets.redact(liveTextOf(state, sessionId)),
@@ -849,6 +998,20 @@ export async function runOpencodeTurn(
             if (pendingPrompt.length > 0) await client.abort(sessionId);
           }
         }
+        /**
+         * La sauvegarde périodique EST le battement de cœur (cf. son commentaire) :
+         * elle vit dans le même sondage que le « stop », qui tombe toutes les cinq
+         * secondes — assez fin pour que l'échéance de deux minutes soit tenue à la
+         * seconde près, et sans timer à tenir en parallèle du flux.
+         */
+        await maybeSaveCheckpoint();
+        if (runClosed) {
+          // Le run a été conclu ailleurs (annulé, ou déjà stampé). Continuer, ce
+          // serait dépenser au nom d'une conversation qui n'existe plus.
+          interrupted = true;
+          await client.abort(sessionId);
+          break;
+        }
         if (now() > deadline) {
           timedOut = true;
           await client.abort(sessionId);
@@ -879,12 +1042,9 @@ export async function runOpencodeTurn(
     // ── L'état d'opencode, exporté pour le tour suivant ──────────────────────
     let opencodeState: OpencodeCheckpointState | undefined;
     try {
-      const fresh = await client.syncHistory(previous?.seq ?? {});
-      opencodeState = {
-        sessionId,
-        events: [...(previous?.events ?? []), ...fresh],
-        seq: lastSeqByAggregate(previous?.seq ?? {}, fresh),
-      };
+      // Incrémental depuis le DERNIER export, périodique compris : le curseur est
+      // celui de l'accumulateur, pas celui du tour précédent.
+      opencodeState = await syncJournal();
     } catch (err) {
       // Un journal qu'on n'a pas su exporter ne perd pas le tour : il perd la
       // REPRISE, et le tour suivant repartira d'une session neuve. À dire, donc,
@@ -964,38 +1124,12 @@ export async function runOpencodeTurn(
         ? await changedFiles(host, job.filesFromSha, pushed.headSha).catch(() => null)
         : null;
 
-    const checkpoint: OpencodeCheckpoint = {
-      // L'historique de la CONVERSATION n'est plus ici : il vit dans le journal
-      // d'opencode. Le champ reste (le type est partagé avec l'autre moteur) et
-      // part vide — c'est ce qui rend la bascule réversible sans migration.
-      messages: [],
-      /**
-       * OÙ EN EST LA NUMÉROTATION DU LEDGER, et c'est le tour SUIVANT qui la lit
-       * (`execute.ts` : `run.checkpoint?.usageSeq ?? …`). Sans elle, un tour
-       * repris renumérote ses lignes par-dessus celles du tour d'avant : rien
-       * n'est perdu (pas de contrainte d'unicité, la dépense se somme), mais
-       * l'ordre des appels d'un run devient faux — et c'est exactement ce qu'un
-       * `seq` sert à dire.
-       */
-      usageSeq: ledger.nextParentSeq,
-      lastFilesSha: status === "completed" ? pushed?.headSha || job.filesFromSha : job.filesFromSha,
-      instructions: { paths: [...job.instructions.paths], bytes: job.instructions.bytes },
-      // Le plafond des 5 ancres de relecture se compte sur la vie du RUN, pas du
-      // tour : le compte revient de la fonction à chaque appel, et c'est le
-      // checkpoint qui le porte jusqu'au tour suivant (miroir de `turn.ts`).
-      ...(bridge.prInlineComments > 0 ? { prInlineComments: bridge.prInlineComments } : {}),
-      /**
-       * L'ÉTAT DE LA PORTE DE LIVRAISON, qui porte sur le TOUR et voyage donc
-       * semé. Sans lui, un tour repris après coupure de la VM se croit vierge :
-       * il n'a plus rien édité, donc plus rien à type-checker ni à relire, et le
-       * code part chez un humain sans qu'aucun contrôle ne l'ait vu.
-       */
-      ...(delivery.checkpointEditedPaths().length > 0
-        ? { editedPaths: delivery.checkpointEditedPaths() }
-        : {}),
-      ...(delivery.repoTouched() ? { repoTouched: true } : {}),
-      ...(opencodeState ? { opencode: opencodeState } : {}),
-    };
+    // Le MÊME constructeur que la sauvegarde périodique : seul le sha des
+    // fichiers change, et il ne change qu'ici (c'est le push qui l'a bougé).
+    const checkpoint: OpencodeCheckpoint = turnCheckpoint(
+      status === "completed" ? pushed?.headSha || job.filesFromSha : job.filesFromSha,
+      opencodeState,
+    );
 
     return {
       status,

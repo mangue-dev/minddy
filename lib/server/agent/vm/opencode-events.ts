@@ -164,7 +164,58 @@ const TOOL_ARGS: Record<string, Record<string, string>> = {
   bash: { command: "command", workdir: "workdir" },
   grep: { include: "glob" },
   task: { subagent_type: "mode", description: "task" },
+  /**
+   * `patchText`, et c'est tout ce que ce tool prend (mesuré sur le binaire :
+   * `patchText: p.String.annotate({description: "The full patch text…"})`). Notre
+   * résumé, lui, lit `patch` pour compter les en-têtes `*** Update File:` du
+   * dialecte Codex — c'est de là que sortent le décompte et les chemins de la vue
+   * « fichiers changés ».
+   *
+   * Sans cette ligne, `toolArgSummary` ne trouvait rien et le fil annonçait
+   * **« Patch de 0 fichier »** à chaque édition d'un run `gpt-*` — c'est-à-dire
+   * sur le seul chemin d'édition que ces modèles ont.
+   */
+  apply_patch: { patchText: "patch" },
 };
+
+/**
+ * `metadata.files` d'une demande de permission → nos chemins, un par fichier.
+ *
+ * C'est `apply_patch` qui en pose, et lui seul : sa demande est UNIQUE pour un
+ * patch qui touche N fichiers, et son `metadata.filepath` n'est que
+ * `chemins.join(", ")`. Mesuré sur le binaire (1.18.16) : chaque entrée est
+ * `{type: "add"|"update"|"delete", filePath, relativePath, patch, additions,
+ * deletions, movePath?}`.
+ *
+ * On garde `filePath` (absolu) : c'est ce que le garde-fou compare au dépôt, et
+ * ce que `repoRelative` sait ramener pour l'affichage — exactement comme le
+ * `filepath` d'un `edit`. Une entrée illisible est ignorée plutôt que devinée :
+ * la liste sert un garde-fou, une forme inattendue n'a pas à y entrer en
+ * silence.
+ */
+function permissionFiles(
+  metadata: Record<string, unknown>,
+): { path: string; status: "added" | "modified" | "deleted" }[] {
+  if (!Array.isArray(metadata.files)) return [];
+  const out: { path: string; status: "added" | "modified" | "deleted" }[] = [];
+  for (const raw of metadata.files) {
+    if (!raw || typeof raw !== "object") continue;
+    const entry = raw as Record<string, unknown>;
+    const path =
+      typeof entry.filePath === "string" && entry.filePath.trim()
+        ? entry.filePath
+        : typeof entry.relativePath === "string"
+          ? entry.relativePath
+          : "";
+    if (!path.trim()) continue;
+    const type = String(entry.type ?? "");
+    out.push({
+      path,
+      status: type === "add" ? "added" : type === "delete" ? "deleted" : "modified",
+    });
+  }
+  return out;
+}
 
 /** Le nom de tool que le fil connaît. */
 export function ourToolName(opencodeName: string): string {
@@ -501,6 +552,7 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       if (!id) return { sessionId, events: [] };
       const metadata = (props.metadata ?? {}) as Record<string, unknown>;
       const tool = (props.tool ?? {}) as Record<string, unknown>;
+      const files = permissionFiles(metadata);
       return {
         sessionId,
         events: [],
@@ -511,6 +563,7 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
           callId: String(tool.callID ?? ""),
           ...(typeof metadata.command === "string" ? { command: metadata.command } : {}),
           ...(typeof metadata.filepath === "string" ? { filepath: metadata.filepath } : {}),
+          ...(files.length > 0 ? { files } : {}),
           // La délégation demande AVANT de résoudre l'agent : c'est ce qui permet
           // de répondre autre chose qu'« Unknown agent type » (cf. `decideTask`).
           ...(typeof metadata.subagent_type === "string"

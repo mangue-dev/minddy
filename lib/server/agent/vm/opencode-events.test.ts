@@ -273,6 +273,52 @@ describe("le vocabulaire d'opencode, traduit vers le nôtre", () => {
     ]);
   });
 
+  /**
+   * « Patch de 0 fichier », lu sur chaque édition d'un run `gpt-*` : opencode
+   * nomme `patchText` ce que `toolArgSummary` lit sous `patch`, et le résumé
+   * partait donc à `{count: 0, paths: []}` — sur le SEUL chemin d'édition de ces
+   * modèles.
+   */
+  it("compte les fichiers d'un `apply_patch`, dont opencode nomme l'entrée `patchText`", () => {
+    const state = newTurnStreamState();
+    const patchText = [
+      "*** Begin Patch",
+      "*** Update File: lib/a.ts",
+      "@@",
+      "-const a = 1;",
+      "+const a = 2;",
+      "*** Add File: lib/b.ts",
+      "+export const b = 3;",
+      "*** Delete File: lib/c.ts",
+      "*** End Patch",
+    ].join("\n");
+    const out = translateEvent(
+      {
+        type: "message.part.updated",
+        properties: {
+          part: {
+            type: "tool",
+            tool: "apply_patch",
+            callID: "call_11",
+            state: { status: "running", input: { patchText } },
+          },
+        },
+      },
+      state,
+    );
+    expect(out.events).toEqual([
+      {
+        type: "tool_call",
+        payload: {
+          id: "call_11",
+          name: "apply_patch",
+          count: 3,
+          paths: ["lib/a.ts", "lib/b.ts", "lib/c.ts"],
+        },
+      },
+    ]);
+  });
+
   it("rend un échec de tool comme un échec", () => {
     const state = newTurnStreamState();
     const out = translateEvent(
@@ -445,6 +491,61 @@ describe("les garde-fous et les questions", () => {
       filepath: "/vercel/sandbox/repo/.git/config",
       callId: "call_2",
     });
+  });
+
+  /**
+   * `apply_patch` ne demande QU'UNE FOIS pour N fichiers, et son `filepath` est
+   * la liste recollée à la virgule. `metadata.files` est le seul endroit où les
+   * chemins se lisent un par un — sans lui, la vue « fichiers changés » affichait
+   * « a.ts, b.ts, c.ts » sur une seule ligne.
+   */
+  it("lit les fichiers d'un patch un par un, avec la nature du geste", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      {
+        type: "permission.asked",
+        properties: {
+          id: "per_3",
+          sessionID: "ses_1",
+          permission: "edit",
+          patterns: ["lib/a.ts", "lib/b.ts"],
+          metadata: {
+            filepath: "/vercel/sandbox/repo/lib/a.ts, /vercel/sandbox/repo/lib/b.ts",
+            diff: "…",
+            files: [
+              { type: "update", filePath: "/vercel/sandbox/repo/lib/a.ts", relativePath: "lib/a.ts" },
+              { type: "add", filePath: "/vercel/sandbox/repo/lib/b.ts", relativePath: "lib/b.ts" },
+              { type: "delete", filePath: "/vercel/sandbox/repo/lib/c.ts", relativePath: "lib/c.ts" },
+            ],
+          },
+          tool: { messageID: "msg_1", callID: "call_9" },
+        },
+      },
+      state,
+    );
+    expect(out.permission?.files).toEqual([
+      { path: "/vercel/sandbox/repo/lib/a.ts", status: "modified" },
+      { path: "/vercel/sandbox/repo/lib/b.ts", status: "added" },
+      { path: "/vercel/sandbox/repo/lib/c.ts", status: "deleted" },
+    ]);
+  });
+
+  it("ne pose `files` que quand opencode en publie", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      {
+        type: "permission.asked",
+        properties: {
+          id: "per_4",
+          sessionID: "ses_1",
+          permission: "edit",
+          metadata: { filepath: "/vercel/sandbox/repo/lib/a.ts" },
+          tool: { messageID: "msg_1", callID: "call_10" },
+        },
+      },
+      state,
+    );
+    expect(out.permission).not.toHaveProperty("files");
   });
 
   it("traduit `question.asked` en NOTRE event `question`", () => {

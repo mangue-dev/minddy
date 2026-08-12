@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   decidePermission,
+  editTargets,
   type PermissionAsk,
   type SubagentContext,
 } from "./opencode-permissions";
@@ -79,6 +80,98 @@ describe("les écritures", () => {
 
   it("refuse une demande sans chemin", () => {
     expect(decidePermission(ask({ permission: "edit" })).reply).toBe("reject");
+  });
+});
+
+/**
+ * `apply_patch` — UNE demande pour N fichiers (mesuré sur opencode-ai@1.18.16 :
+ * `ask({permission: "edit", metadata: {filepath: chemins.join(", "), files}})`).
+ * Le `filepath` recollé n'est pas un chemin : lu comme tel, il faisait passer
+ * `a.ts, .git` pour un unique segment de répertoire, et le garde-fou du dépôt ne
+ * voyait plus le `.git/` qui suivait.
+ */
+describe("les écritures d'un patch multi-fichiers", () => {
+  const patch = (files: { path: string; status: "added" | "modified" | "deleted" }[]) =>
+    ask({
+      permission: "edit",
+      filepath: files.map((f) => f.path).join(", "),
+      files,
+    });
+
+  it("laisse passer quand TOUS les fichiers sont dans le dépôt", () => {
+    expect(
+      decidePermission(
+        patch([
+          { path: `${REPO_DIR}/lib/a.ts`, status: "modified" },
+          { path: `${REPO_DIR}/lib/b.ts`, status: "added" },
+        ]),
+      ),
+    ).toEqual({ reply: "once" });
+  });
+
+  it("refuse dès qu'UN fichier sort du dépôt, fût-il le dernier", () => {
+    const verdict = decidePermission(
+      patch([
+        { path: `${REPO_DIR}/lib/a.ts`, status: "modified" },
+        { path: "/etc/passwd", status: "modified" },
+      ]),
+    );
+    expect(verdict.reply).toBe("reject");
+  });
+
+  it("refuse un `.git/` caché derrière un premier fichier légitime", () => {
+    const verdict = decidePermission(
+      patch([
+        { path: `${REPO_DIR}/lib/a.ts`, status: "modified" },
+        { path: `${REPO_DIR}/.git/config`, status: "modified" },
+      ]),
+    );
+    expect(verdict.reply).toBe("reject");
+    expect(verdict.message).toContain(".git");
+  });
+
+  it("ne lit JAMAIS le filepath recollé comme un chemin", () => {
+    // Sans `files`, c'est cette chaîne-là qui servait de chemin unique.
+    const joined = ask({
+      permission: "edit",
+      filepath: `${REPO_DIR}/lib/a.ts, ${REPO_DIR}/.git/config`,
+      files: [
+        { path: `${REPO_DIR}/lib/a.ts`, status: "modified" },
+        { path: `${REPO_DIR}/.git/config`, status: "modified" },
+      ],
+    });
+    expect(decidePermission(joined).reply).toBe("reject");
+  });
+});
+
+describe("editTargets", () => {
+  it("rend la liste de `files` quand elle est là, avec la nature du geste", () => {
+    expect(
+      editTargets(
+        ask({
+          permission: "edit",
+          filepath: "a.ts, b.ts",
+          files: [
+            { path: "a.ts", status: "added" },
+            { path: "b.ts", status: "deleted" },
+          ],
+        }),
+      ),
+    ).toEqual([
+      { path: "a.ts", status: "added" },
+      { path: "b.ts", status: "deleted" },
+    ]);
+  });
+
+  it("retombe sur le `filepath` seul des tools mono-fichier", () => {
+    expect(editTargets(ask({ permission: "edit", filepath: "lib/a.ts" }))).toEqual([
+      { path: "lib/a.ts", status: "modified" },
+    ]);
+  });
+
+  it("ne rend rien quand il n'y a rien à lire", () => {
+    expect(editTargets(ask({ permission: "edit" }))).toEqual([]);
+    expect(editTargets(ask({ permission: "edit", filepath: "   " }))).toEqual([]);
   });
 });
 
