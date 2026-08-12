@@ -418,48 +418,81 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
             {t("voiceDemoSpoken")}
           </p>
 
-          {/* La prise : même géométrie que le popover de dictée du produit. */}
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+          {/* LA PRISE (refaite en MIN-254). C'était une barre discrète avec un
+              micro de 32 px dedans, reprise du popover de dictée du produit :
+              dans l'app le geste est connu, sur la landing personne ne voyait
+              qu'il y avait quelque chose à essayer.
+
+              Trois changements, un seul but — qu'on comprenne qu'on peut
+              parler : le micro fait 56 px et porte la couleur de marque en
+              aplat, c'est TOUTE la boîte qui déclenche et non la pastille
+              seule, et l'intitulé est une invitation à l'impératif plutôt
+              qu'une étiquette. L'anneau qui bat pendant l'enregistrement dit
+              que ça tourne sans avoir à lire le chrono.
+
+              Le bouton COUVRE la boîte au lieu de la contenir : la forme d'onde
+              est un `<div>` avec son canvas, et un bouton n'accepte que du
+              contenu de phrasé. Le calque en `absolute inset-0` donne la même
+              cible de clic sans mentir sur le HTML — et il porte l'intitulé
+              accessible, puisque c'est lui, le bouton. */}
+          <div
+            className={cn(
+              "group relative flex items-center gap-4 rounded-xl border p-4 transition-colors",
+              status === "recording"
+                ? "border-brand/50 bg-brand/5"
+                : "border-border bg-muted/30 hover:border-brand/40 hover:bg-brand/5",
+              status === "processing" && "opacity-70",
+            )}
+          >
             <button
               type="button"
               onClick={status === "recording" ? stopRecording : startRecording}
               disabled={status === "processing"}
               aria-label={status === "recording" ? t("voiceDemoStop") : t("voiceDemoStart")}
+              className="absolute inset-0 z-10 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+            />
+
+            <span
               className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50",
-                status === "recording"
-                  ? "bg-brand text-brand-foreground"
-                  : "bg-brand/10 text-brand hover:bg-brand/20",
+                "relative flex size-14 shrink-0 items-center justify-center rounded-full bg-brand text-brand-foreground transition-transform",
+                status !== "recording" && "group-hover:scale-105",
               )}
             >
-              {status === "processing" ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : status === "recording" ? (
-                <Square className="size-3.5 fill-current" />
-              ) : (
-                <Mic className="size-4" />
+              {status === "recording" && (
+                <span
+                  aria-hidden
+                  className="absolute inset-0 animate-ping rounded-full bg-brand/40 motion-reduce:animate-none"
+                />
               )}
-            </button>
+              {status === "processing" ? (
+                <Loader2 className="relative size-6 animate-spin" />
+              ) : status === "recording" ? (
+                <Square className="relative size-5 fill-current" />
+              ) : (
+                <Mic className="relative size-6" />
+              )}
+            </span>
 
             <div className="min-w-0 flex-1">
               {status === "recording" ? (
                 <>
-                  <div className="flex items-center justify-center text-xs">
-                    <span className="font-medium tabular-nums text-foreground">
+                  <p className="flex items-baseline gap-2 text-sm font-semibold">
+                    {t("voiceDemoStop")}
+                    <span className="text-xs font-medium tabular-nums text-muted-foreground">
                       {formatTime(elapsedMs)}
                     </span>
-                  </div>
+                  </p>
                   <DictateWaveform stream={stream} className="mt-1.5" />
                 </>
               ) : (
-                <div className="flex h-[46px] flex-col justify-center">
-                  <p className="text-sm font-medium">
-                    {status === "processing"
-                      ? t("voiceDemoProcessing")
-                      : t("voiceDemoStart")}
+                <>
+                  <p className="text-base font-semibold">
+                    {status === "processing" ? t("voiceDemoProcessing") : t("voiceDemoStart")}
                   </p>
-                  <p className="text-xs text-muted-foreground">{t("voiceDemoHint")}</p>
-                </div>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                    {t("voiceDemoHint")}
+                  </p>
+                </>
               )}
             </div>
           </div>
@@ -595,10 +628,6 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
           </div>
         </div>
       </div>
-
-      <figcaption className="mt-6 border-t border-border pt-4 text-center text-sm text-muted-foreground">
-        {t("voiceDemoCaption")}
-      </figcaption>
     </figure>
   );
 }

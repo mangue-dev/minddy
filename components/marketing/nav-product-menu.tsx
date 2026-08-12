@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { NumoFace } from "@/components/numo-face";
+import { IsoIconTile } from "./iso-tile";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
@@ -47,6 +48,7 @@ export type ProductEntryKey =
   | "speed"
   | "agents"
   | "numo"
+  | "pages"
   | "feedback"
   | "more"
   | "mcp";
@@ -182,19 +184,26 @@ export function NavProductMenu({
                     href={localizedHref(entry.href, locale)}
                     onClick={() => setOpen(false)}
                     tabIndex={open ? undefined : -1}
-                    className="group flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/70 focus-visible:bg-muted/70 focus-visible:outline-none"
+                    className="group flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/70 focus-visible:bg-muted/70 focus-visible:outline-none"
                   >
-                    {/* Icônes MONOCHROMES, teintées seulement au survol. Une
-                        pastille de couleur par entrée transforme le menu en
-                        nuancier et noie la hiérarchie : le titre doit se lire
-                        avant l'icône, pas l'inverse. */}
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground transition-colors group-hover:border-primary/20 group-hover:bg-primary/10 group-hover:text-primary">
-                      {Icon ? (
-                        <Icon className="h-4 w-4" />
-                      ) : (
-                        <NumoFace className="h-3.5 w-auto" />
-                      )}
-                    </span>
+                    {/* Les icônes de l'APPLICATION, couchées dans son plan
+                        isométrique (MIN-254). C'était jusqu'ici une pastille
+                        grise avec une icône lucide dedans — le dessin le plus
+                        neutre possible, donc celui qui ne disait rien de minddy,
+                        dans ce qui est souvent le premier écran du produit que
+                        voit un visiteur. Elles gardent la teinte de marque à
+                        tous les états : ce sont ses deux nuances (la face et son
+                        épaisseur) qui portent le relief, les repeindre au survol
+                        l'écraserait. */}
+                    {Icon ? (
+                      <IsoIconTile icon={Icon} className="w-11 shrink-0" />
+                    ) : (
+                      /* Numo porte son visage : il n'y a rien à coucher dans le
+                         plan, c'est déjà un dessin de marque. */
+                      <span className="flex w-11 shrink-0 items-center justify-center text-muted-foreground">
+                        <NumoFace className="h-4 w-auto" />
+                      </span>
+                    )}
                     <span className="min-w-0">
                       <span className="block text-sm font-medium text-foreground">
                         {t(`navMenu_${entry.key}_title`)}

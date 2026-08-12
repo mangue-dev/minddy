@@ -954,6 +954,78 @@ nav[aria-label="Navigation"]
   animation-name: hero-fade-up-media;
 }
 
+/* ─── Figure de la boucle agent (hero) ───────────────────────────────────
+   `components/marketing/agent-loop-figure.tsx` : le ticket arrive, l'agent
+   écrit son plan, les cases se cochent, la pull request se rattache. Quatre
+   temps qui se suivent, joués au CHARGEMENT — la figure est au-dessus de la
+   ligne de flottaison, un observer n'ajouterait qu'une latence d'hydratation.
+
+   TOUT EST EN `backwards`, jamais en `forwards`, et ce n'est pas un détail de
+   style : l'état d'arrivée de chaque animation EST l'état de base de l'élément
+   (case cochée, trait tiré, rail déployé). Le remplissage n'a donc qu'un seul
+   travail — tenir l'état de DÉPART pendant le délai d'attente — et l'animation
+   lâche l'élément à la fin au lieu d'en figer une couche composée (voir le
+   commentaire de `reveal-in` plus bas, même piège). Corollaire utile : sans JS,
+   sans CSS ou en mouvement réduit, la figure s'affiche déjà terminée. */
+@keyframes loop-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.loop-step {
+  animation: loop-step-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--loop-i, 0) * 0.3s + 0.4s);
+}
+
+/* Le trait du rail se déploie vers le bas : il annonce le temps suivant juste
+   avant qu'il n'arrive, ce qui fait lire la figure comme une suite et non comme
+   quatre blocs empilés. */
+@keyframes loop-rail-in {
+  from {
+    transform: scaleY(0);
+  }
+}
+.loop-rail {
+  transform-origin: top;
+  animation: loop-rail-in 0.35s ease-out backwards;
+  animation-delay: calc(var(--loop-i, 0) * 0.3s + 0.75s);
+}
+
+/* La case cochée : elle part vide (bordure grise, fond transparent, coche
+   invisible) et se remplit. Aucun `to` — le 100 % implicite reprend le style de
+   base, c'est-à-dire la case cochée en `primary` du vrai `TaskRow`. */
+@keyframes loop-check-in {
+  from {
+    background-color: transparent;
+    border-color: var(--border);
+    color: transparent;
+  }
+}
+.loop-check {
+  animation: loop-check-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--loop-i, 0) * 0.22s + 1.35s);
+}
+
+/* La barre sur une tâche faite. `text-decoration` ne s'anime pas : c'est donc
+   un trait dessiné, tiré de gauche à droite juste après que la case se coche. */
+@keyframes loop-strike-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+.loop-strike::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0.8em;
+  height: 1px;
+  background-color: currentColor;
+  transform-origin: left;
+  animation: loop-strike-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--loop-i, 0) * 0.22s + 1.45s);
+}
+
 /* ─── Blocs qui apparaissent au scroll (<Reveal>, <RevealGroup>) ─────────
    Sans JS et au rendu serveur, rien n'est masqué : `.reveal-ready` n'est posé
    qu'au montage, donc la landing reste entièrement lisible si le script ne
@@ -1104,6 +1176,10 @@ nav[aria-label="Navigation"]
 @media (prefers-reduced-motion: reduce) {
   .hero-word,
   .hero-reveal,
+  .loop-step,
+  .loop-rail,
+  .loop-check,
+  .loop-strike::after,
   .reveal.reveal-ready,
   .reveal.reveal-ready[data-revealed="true"],
   .reveal-group.reveal-ready > *,

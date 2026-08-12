@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { Reveal, RevealGroup, RevealHeading } from "./reveal";
+import { IsoNumber } from "./iso-tile";
 
 /**
  * Le board de feedback public — une section entière, pas une case de grille.
@@ -75,9 +76,10 @@ export async function SectionFeedback() {
         >
           {STEPS.map((step, index) => (
             <li key={step} className="bg-card p-6">
-              <span className="mb-4 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted/60 font-mono text-sm text-muted-foreground">
-                {index + 1}
-              </span>
+              {/* Le chiffre est COUCHÉ comme les icônes des autres sections :
+                  c'est le même dessin, avec un glyphe au lieu d'un tracé
+                  (`isoGlyph`). */}
+              <IsoNumber value={String(index + 1)} className="mb-4 w-12" />
               <h3 className="mb-1.5 font-medium">{t(`feedback_${step}_title`)}</h3>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {t(`feedback_${step}_body`)}

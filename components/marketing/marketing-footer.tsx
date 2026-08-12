@@ -40,6 +40,7 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       { href: "/#speed", labelKey: "footerSpeed" },
       { href: "/#voice", labelKey: "footerVoice" },
       { href: "/#scratchpad", labelKey: "footerScratchpad" },
+      { href: "/#pages", labelKey: "navMenu_pages_title" },
       { href: "/#feedback", labelKey: "footerFeedback" },
       { href: "/#more", labelKey: "footerMore" },
       { href: "/pricing", labelKey: "navPricing" },

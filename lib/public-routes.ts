@@ -62,7 +62,7 @@ export const PUBLIC_ROUTES = [
     fr: "/fr",
     namespace: "Landing",
     titleIsAbsolute: true,
-    lastModified: "2026-08-10",
+    lastModified: "2026-08-12",
     priority: 1,
   },
   {

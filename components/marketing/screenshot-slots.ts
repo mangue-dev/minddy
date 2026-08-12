@@ -144,6 +144,15 @@ const SLOTS = {
     ratio: "16/10",
     src: null,
   },
+  pagesEditor: {
+    id: "pagesEditor",
+    route: "/projects/<id>/pages/<pageId>",
+    shot:
+      "Une page du wiki ouverte : à gauche l'arbre des pages du projet avec une page dépliée sur ses sous-pages, à droite le contenu — un titre, un paragraphe, une liste de cases à cocher dont deux cochées, et une pilule de mention vers un ticket dans le texte. Pas de menu ouvert : c'est la page telle qu'on la lit, pas l'éditeur en train d'être manipulé.",
+    altKey: "shotAlt_pagesEditor",
+    ratio: "16/10",
+    src: null,
+  },
   featurePalette: {
     id: "featurePalette",
     route: "n'importe quelle page de l'app, palette ouverte",

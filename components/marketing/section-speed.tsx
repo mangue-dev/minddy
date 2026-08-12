@@ -3,18 +3,16 @@ import {
   ArrowUpRight,
   Bot,
   ClipboardCopy,
-  Command,
   ListChecks,
-  MessagesSquare,
   Mic,
   NotebookPen,
-  PencilLine,
   Plug,
   type LucideIcon,
 } from "lucide-react";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { VoiceDemo } from "./voice-demo";
 import { Reveal, RevealGroup, RevealHeading } from "./reveal";
+import { IsoTile, type IsoTileName } from "./iso-tile";
 
 /**
  * §3 — « Fait pour aller vite » (nouvelle section).
@@ -35,10 +33,10 @@ import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 
 /** Les trois usages de la dictée, tels que `DictateButton` est réellement monté. */
 const VOICE_WAYS = [
-  { key: "create", icon: Mic },
-  { key: "edit", icon: PencilLine },
-  { key: "everywhere", icon: MessagesSquare },
-] as const satisfies ReadonlyArray<{ key: string; icon: LucideIcon }>;
+  { key: "create", icon: "mic" },
+  { key: "edit", icon: "pencil" },
+  { key: "everywhere", icon: "message" },
+] as const satisfies ReadonlyArray<{ key: string; icon: IsoTileName }>;
 
 const SCRATCHPAD_POINTS = [
   { key: "write", icon: ListChecks },
@@ -75,9 +73,7 @@ export async function SectionSpeed() {
         <RevealGroup step={0.12} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
           <ScreenshotSlot id="featurePalette" />
           <div>
-            <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
-              <Command className="h-4 w-4" />
-            </span>
+            <IsoTile name="command" className="mb-4 w-14" />
             <h3 className="mb-3 text-2xl font-semibold tracking-tight">
               {t("feature_palette_title")}
             </h3>
@@ -129,20 +125,15 @@ export async function SectionSpeed() {
             as="ul"
             className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-3"
           >
-            {VOICE_WAYS.map((way) => {
-              const Icon = way.icon;
-              return (
-                <li key={way.key} className="bg-card p-6">
-                  <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/60 text-muted-foreground">
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <h4 className="mb-1.5 font-medium">{t(`voice_${way.key}_title`)}</h4>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {t(`voice_${way.key}_body`)}
-                  </p>
-                </li>
-              );
-            })}
+            {VOICE_WAYS.map((way) => (
+              <li key={way.key} className="bg-card p-6">
+                <IsoTile name={way.icon} className="mb-4 w-14" />
+                <h4 className="mb-1.5 font-medium">{t(`voice_${way.key}_title`)}</h4>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {t(`voice_${way.key}_body`)}
+                </p>
+              </li>
+            ))}
           </Reveal>
         </div>
 

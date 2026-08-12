@@ -7,6 +7,7 @@ import { Hero } from "@/components/marketing/hero";
 import { SectionTracker } from "@/components/marketing/section-tracker";
 import { SectionSpeed } from "@/components/marketing/section-speed";
 import { SectionAgents } from "@/components/marketing/section-agents";
+import { SectionPages } from "@/components/marketing/section-pages";
 import { SectionFeedback } from "@/components/marketing/section-feedback";
 import { SectionMore } from "@/components/marketing/section-more";
 import { SectionPricingTeaser } from "@/components/marketing/section-pricing-teaser";
@@ -38,7 +39,7 @@ export default async function LandingPage() {
           `relative isolate` du layout marketing (<main> n'est pas positionné). */}
       <HeroShader />
       <Hero />
-      {/* Six sections de contenu, dans l'ordre de la démonstration : le hero
+      {/* Sept sections de contenu, dans l'ordre de la démonstration : le hero
           promet la boucle agent, le tracker rassure aussitôt (« et dessous,
           c'est un vrai tracker »), la section Agents prouve la promesse, la
           vitesse suit, puis ce qui entre depuis l'extérieur, puis le rappel que
@@ -49,6 +50,10 @@ export default async function LandingPage() {
       <SectionTracker />
       <SectionAgents />
       <SectionSpeed />
+      {/* Les pages avant les retours, et pas après : la section suivante
+          s'ouvre sur « jusqu'ici, tout venait de vous ». Le wiki est le dernier
+          endroit où c'est encore vrai. */}
+      <SectionPages />
       <SectionFeedback />
       <SectionMore />
       <SectionPricingTeaser />

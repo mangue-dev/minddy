@@ -1,11 +1,12 @@
 import { getTranslations } from "next-intl/server";
-import { Check, Crosshair, PencilLine, Search, type LucideIcon } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
 import { BrandLogo } from "@/components/brand-logo";
 import { NumoFace } from "@/components/numo-face";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { Reveal, RevealGroup, RevealHeading } from "./reveal";
+import { IsoTile, type IsoTileName } from "./iso-tile";
 import type { ScreenshotSlotId } from "./screenshot-slots";
 
 /**
@@ -53,10 +54,10 @@ const STEPS = [
  * temps qui la précède maintenant dans la même section.
  */
 const NUMO_CAPABILITIES = [
-  { key: "find", icon: Search },
-  { key: "act", icon: PencilLine },
-  { key: "context", icon: Crosshair },
-] as const satisfies ReadonlyArray<{ key: string; icon: LucideIcon }>;
+  { key: "find", icon: "find" },
+  { key: "act", icon: "pencil" },
+  { key: "context", icon: "context" },
+] as const satisfies ReadonlyArray<{ key: string; icon: IsoTileName }>;
 
 const NUMO_EXAMPLES = ["triage", "assign", "view", "plan"] as const;
 
@@ -206,24 +207,19 @@ export async function SectionAgents() {
               </Reveal>
 
               <RevealGroup as="ul" className="flex flex-col gap-6">
-                {NUMO_CAPABILITIES.map((capability) => {
-                  const Icon = capability.icon;
-                  return (
-                    <li key={capability.key} className="flex items-start gap-4">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/60 text-muted-foreground">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <h4 className="mb-1 font-medium">
-                          {t(`numoCapability_${capability.key}_title`)}
-                        </h4>
-                        <p className="text-sm leading-relaxed text-muted-foreground">
-                          {t(`numoCapability_${capability.key}_body`)}
-                        </p>
-                      </div>
-                    </li>
-                  );
-                })}
+                {NUMO_CAPABILITIES.map((capability) => (
+                  <li key={capability.key} className="flex items-start gap-4">
+                    <IsoTile name={capability.icon} className="mt-0.5 w-12 shrink-0" />
+                    <div>
+                      <h4 className="mb-1 font-medium">
+                        {t(`numoCapability_${capability.key}_title`)}
+                      </h4>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {t(`numoCapability_${capability.key}_body`)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
               </RevealGroup>
             </div>
           </div>

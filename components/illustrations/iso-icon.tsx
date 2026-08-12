@@ -169,6 +169,61 @@ export function IsoIcon({
 }
 
 /**
+ * Un TEXTE couché comme une icône — un chiffre, deux lettres.
+ *
+ * `IsoIcon` ne sait dessiner qu'une chose : un composant SVG qui se laisse
+ * teinter, transformer et MESURER. Un glyphe en est un ; il n'y avait donc rien
+ * à changer à la mise en isométrie, juste à fabriquer le SVG. Les cartes
+ * numérotées de la landing (le trajet d'un retour utilisateur) portent ainsi
+ * leur chiffre dans le même plan que les icônes des sections voisines, au lieu
+ * d'une pastille ronde qui les faisait dériver du reste.
+ *
+ * Le cache tient l'IDENTITÉ du composant stable d'un rendu à l'autre : c'est la
+ * dépendance de l'effet de mesure de `IsoIcon`: une fabrique appelée à chaque
+ * rendu le relancerait indéfiniment.
+ */
+const GLYPHS = new Map<string, SceneIcon>();
+
+export function isoGlyph(text: string): SceneIcon {
+  const cached = GLYPHS.get(text);
+  if (cached) return cached;
+  const Glyph = ({
+    className,
+    style,
+    ref,
+  }: {
+    className?: string;
+    style?: CSSProperties;
+    ref?: Ref<SVGSVGElement>;
+  }) => (
+    <svg
+      ref={ref}
+      viewBox="0 0 24 24"
+      className={className}
+      style={style}
+      fill="currentColor"
+      stroke="none"
+      aria-hidden
+    >
+      <text
+        x="12"
+        y="12"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="18"
+        fontWeight="600"
+        letterSpacing="-0.5"
+      >
+        {text}
+      </text>
+    </svg>
+  );
+  Glyph.displayName = `IsoGlyph(${text})`;
+  GLYPHS.set(text, Glyph);
+  return Glyph;
+}
+
+/**
  * Le terrain : un losange en pointillés et sa grille, le sol commun de toutes
  * les scènes. Un carré de côté 99 vu en isométrie 2:1 — d'où les demi-
  * diagonales 70 et 35, et le carré où l'icône vient s'inscrire.
