@@ -426,9 +426,27 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       if (written.trim()) state.lastRoundText.set(sessionId, written);
       partsOf(state, sessionId).clear();
 
+      /**
+       * LA NARRATION D'UN ROUND INTERMÉDIAIRE — ce que le modèle écrit ENTRE deux
+       * séries d'appels de tools, et qui n'existait nulle part sous opencode.
+       *
+       * Le direct la montrait puis l'effaçait (le sac du round est vidé juste
+       * au-dessus, et rien ne prenait le relais) : à l'écran, le texte de l'agent
+       * apparaissait pendant quelques secondes puis disparaissait pour toujours.
+       * C'est le `thinking` sans `kind` de la boucle maison, au mot près — même
+       * type, même plafond de 2 000 caractères, même rendu en bulle.
+       *
+       * Seuls les rounds qui CONTINUENT (`finish: "tool-calls"`) l'émettent : le
+       * texte du dernier round est la réponse du tour, et elle part en `summary`
+       * (plafonné à 8 000). Émettre les deux ferait deux bulles dès que la réponse
+       * dépasse 2 000 caractères — le dédoublonnage du fil se fait par égalité de
+       * texte, et deux plafonds différents ne s'égalent plus.
+       */
+      const narration = finish === "stop" ? "" : written.trim();
+
       return {
         sessionId,
-        events: [],
+        events: narration ? [{ type: "thinking", payload: { text: cap(narration, 2000) } }] : [],
         usage: {
           messageId,
           sessionId,

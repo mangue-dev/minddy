@@ -143,6 +143,59 @@ describe("un vrai tour capturé", () => {
   });
 });
 
+/**
+ * MIN-286 — CE QUE LE MODÈLE ÉCRIT ENTRE DEUX SÉRIES DE TOOLS.
+ *
+ * Le direct le montrait puis l'effaçait : rien ne le persistait, donc à l'écran le
+ * texte de l'agent apparaissait quelques secondes puis disparaissait pour toujours
+ * (observé sur le run du 2026-08-12 — 148 events, pas une bulle de texte).
+ * C'est la règle de la boucle maison, reprise au mot : narration en `thinking`
+ * quand le round CONTINUE, réponse en `summary` quand il s'arrête.
+ */
+describe("la narration entre deux rounds", () => {
+  function roundEnd(finish: string, id: string): OpencodeEvent {
+    return {
+      type: "message.updated",
+      properties: {
+        sessionID: "ses_1",
+        info: { id, role: "assistant", finish, modelID: "m", cost: 0, tokens: {} },
+      },
+    };
+  }
+
+  function wrote(text: string, partId: string): OpencodeEvent {
+    return {
+      type: "message.part.delta",
+      properties: { sessionID: "ses_1", messageID: "msg_a", partID: partId, field: "text", delta: text },
+    };
+  }
+
+  it("dit au fil le texte d'un round qui appelle des tools", () => {
+    const state = newTurnStreamState();
+    translateEvent(wrote("je regarde les deux fichiers", "prt_1"), state);
+    const out = translateEvent(roundEnd("tool-calls", "msg_1"), state);
+    expect(out.events).toEqual([
+      { type: "thinking", payload: { text: "je regarde les deux fichiers" } },
+    ]);
+  });
+
+  it("ne dit RIEN du texte d'un round qui s'arrête : c'est la réponse du tour", () => {
+    // Elle part en `summary` (8 000 caractères) ; la redire ici en `thinking`
+    // (2 000) ferait deux bulles dès qu'elle est longue — le fil dédoublonne par
+    // égalité de texte, et deux plafonds différents ne s'égalent plus.
+    const state = newTurnStreamState();
+    translateEvent(wrote("voilà, c'est fait", "prt_2"), state);
+    const out = translateEvent(roundEnd("stop", "msg_2"), state);
+    expect(out.events).toEqual([]);
+    expect(replyOf(state, "ses_1")).toBe("voilà, c'est fait");
+  });
+
+  it("ne parle pas d'un round muet", () => {
+    const state = newTurnStreamState();
+    expect(translateEvent(roundEnd("tool-calls", "msg_3"), state).events).toEqual([]);
+  });
+});
+
 describe("la mère et ses filles, sur le même flux", () => {
   it("dit de quelle session vient chaque événement", () => {
     const { usage } = replay();

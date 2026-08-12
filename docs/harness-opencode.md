@@ -954,6 +954,45 @@ messages `user` sont écartés.
 
 ---
 
+### 2.25 Le fil ne racontait plus le tour : trois symptômes, un seul manque (lot 3)
+
+Deuxième run de production, 2026-08-12, `openai/gpt-5.6-luna`. Le travail est bon
+(PR ouverte, tests et type-check passés), mais **l'écran ment sur trois points** :
+
+1. le texte que le modèle écrit entre deux séries de tools apparaît en direct puis
+   **disparaît** ;
+2. le tour se termine normalement et le fil le rend **« interrompu »** ;
+3. sur le message suivant, l'indicateur repart avec le chrono du tour **précédent**,
+   dont le déroulé se vide ensuite en events bruts, sans clôture.
+
+**Un seul manque les explique tous les trois** : le superviseur n'émettait AUCUN
+event pour le texte du modèle. Le run compte 148 events — `tool_call`,
+`tool_result`, `thinking (reasoning)`, `status` — et pas une bulle de texte.
+
+- Le direct n'est persisté nulle part (c'est sa définition) : sans event derrière,
+  la narration s'efface à la fin du round. → symptôme 1.
+- Le fil ne connaît qu'un seul signe de fin de tour, l'event **`summary`**
+  (`closesTurn`, agent-event-feed.tsx). Un tour au repos sans clôture est lu comme
+  un tour arrêté en cours de route. → symptôme 2.
+- Le tour restant ouvert, le travail du tour suivant s'empile dans le même
+  accordéon, et le `user_message` du steering **vide** le travail non clos en items
+  libres (`flush()`). → symptôme 3.
+
+La règle de la boucle maison est reprise au mot (`agent-loop.ts`) : `thinking`
+(sans `kind`, 2 000 caractères) pour le texte d'un round qui CONTINUE — chez
+opencode, `message.updated` avec `finish: "tool-calls"` —, `summary` (8 000) pour la
+réponse du tour, émis en fin de tour et **seulement** s'il s'est terminé
+normalement : un tour coupé n'a pas de mot de la fin, et le fil doit continuer de
+le dire interrompu. Le direct se tait à la fin d'un round intermédiaire (`clearLive`)
+mais **garde** le texte du dernier round : son `summary` ne part qu'après l'export
+du journal et le push, et l'effacer plus tôt ferait clignoter la réponse.
+
+**Et les filles** : leur rapport ne remontait nulle part non plus. Le bloc d'un
+sous-agent lit un `summary` marqué à son nom et se referme sur
+`status: subagent_report` — les deux partent désormais sur son `session.idle`.
+
+---
+
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un

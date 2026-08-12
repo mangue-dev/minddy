@@ -438,8 +438,11 @@ describe("le tour", () => {
 
   it("traduit le flux en events de NOTRE fil", async () => {
     await run();
-    expect(h.events.map((e) => e.type)).toEqual(["tool_call", "tool_result"]);
+    // `summary` FERME le tour à l'écran : sans lui le fil laisse le déroulé
+    // ouvert et rend un tour fini comme un tour interrompu.
+    expect(h.events.map((e) => e.type)).toEqual(["tool_call", "tool_result", "summary"]);
     expect(h.events[0].payload).toMatchObject({ name: "read_issue", issue: "MIN-286" });
+    expect(h.events.at(-1)?.payload.text).toBe("fini");
   });
 
   it("écrit une ligne de ledger par round, numérotée depuis le job", async () => {
@@ -744,6 +747,18 @@ describe("les garde-fous", () => {
     expect(report.checkpoint?.repoTouched).toBe(true);
   });
 
+  it("montre le fichier touché AU DIRECT, sur chaque charge qui suit", async () => {
+    // Une édition n'avance pas le round : sans cette charge-là, la liste
+    // n'apparaîtrait qu'en fin de tour, avec `files_changed`.
+    h.extraFrames = [permissionFrame("edit", { filepath: "/vercel/sandbox/repo/lib/a.ts" })];
+    await run();
+    const withFiles = h.live.filter((l) => Array.isArray(l.files));
+    expect(withFiles.length).toBeGreaterThan(0);
+    expect(withFiles[0].files).toEqual([{ path: "lib/a.ts", status: "modified" }]);
+    // Portée par la DERNIÈRE charge aussi : le fil efface ce qu'une charge tait.
+    expect(h.live.at(-1)?.files).toEqual([{ path: "lib/a.ts", status: "modified" }]);
+  });
+
   it("ne note RIEN d'une écriture refusée — elle n'a pas eu lieu", async () => {
     h.extraFrames = [permissionFrame("edit", { filepath: "/vercel/sandbox/repo/.git/config" })];
     const report = await run();
@@ -890,6 +905,61 @@ describe("les sessions filles", () => {
     expect(own?.payload.subagent_id).toBe(CHILD);
     // Ceux de la mère ne portent rien : c'est elle qui parle.
     expect(h.events.find((e) => e.payload.id === "call_1")?.payload.subagent_id).toBeUndefined();
+  });
+
+  it("tait le direct quand le round continue, et le garde quand il conclut", async () => {
+    // Le texte d'un round intermédiaire part au fil en `thinking` : le laisser
+    // aussi au direct le ferait lire deux fois. Celui du dernier round, lui,
+    // attend son `summary`, qui ne part qu'à la fin du tour — l'effacer ici
+    // ferait disparaître la réponse pendant l'export et le push.
+    await run();
+    const cleared = h.live.filter((l) => l.text === "");
+    expect(cleared.length).toBe(1);
+    expect(h.live.at(-1)?.text).toBe("fini");
+  });
+
+  it("remet le rapport de la fille au fil, et referme son bloc", async () => {
+    /**
+     * Le fil tient un bloc par fille : son rapport vient d'un `summary` marqué à
+     * son nom, et son chrono s'arrête sur `status: subagent_report`. Sans les
+     * deux, une fille reste « au travail » sous un tour terminé, et ce qu'elle a
+     * trouvé n'est lisible nulle part.
+     */
+    h.extraFrames = [
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: PARENT,
+          part: {
+            type: "tool",
+            tool: "task",
+            callID: "call_task",
+            state: {
+              status: "running",
+              input: { subagent_type: "general", description: "d", prompt: "p" },
+              metadata: { sessionId: CHILD },
+            },
+          },
+        },
+      }),
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: CHILD,
+          part: { type: "text", id: "prt_rapport", messageID: "msg_f", text: "RAPPORT DE LA FILLE" },
+        },
+      }),
+      JSON.stringify({ type: "session.idle", properties: { sessionID: CHILD } }),
+    ];
+    await run();
+    const report = h.events.find((e) => e.type === "summary" && e.payload.subagent_id === "sub-1");
+    expect(report?.payload.text).toBe("RAPPORT DE LA FILLE");
+    expect(report?.payload.parent_call_id).toBe("call_task");
+    expect(
+      h.events.some(
+        (e) => e.type === "status" && e.payload.phase === "subagent_report" && e.payload.id === "sub-1",
+      ),
+    ).toBe(true);
   });
 
   it("garde le texte de la fille hors de la réponse du tour", async () => {
@@ -1228,6 +1298,9 @@ describe("le steering et le « Stop »", () => {
     // Le drapeau n'est PAS consommé sur un stop nu : c'est la fonction qui le
     // range en remettant la session au repos.
     expect(h.interruptCleared).toBe(0);
+    // Et le tour ne se CLÔT pas : `summary` dit « voilà ma réponse », ce qu'un
+    // tour coupé n'a pas dit. Le fil le rend interrompu, et c'est la vérité.
+    expect(h.events.some((e) => e.type === "summary")).toBe(false);
   });
 
   it("un « Stop » ACCOMPAGNÉ d'un message se poursuit dans ce tour", async () => {

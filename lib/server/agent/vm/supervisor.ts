@@ -26,7 +26,8 @@ import {
 } from "./opencode-config";
 import { localToolsFor, opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-bridge";
-import { makeOpencodeDelivery, type OpencodeDelivery } from "./opencode-delivery";
+import { makeOpencodeDelivery, repoRelative, type OpencodeDelivery } from "./opencode-delivery";
+import { newLiveEditLog } from "../live-edits";
 import { decidePermission } from "./opencode-permissions";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
@@ -457,6 +458,19 @@ export async function runOpencodeTurn(
      * derrière un modèle qui écrit dirait qu'il pense encore.
      */
     let reasoningSince: number | null = null;
+    /**
+     * LES FICHIERS DU TOUR EN COURS, portés par CHAQUE charge du direct — la
+     * moitié provisoire dont `files_changed` (dérivé de git, en fin de tour) est
+     * l'autorité. Le module est partagé avec l'autre moteur ([live-edits.ts](../live-edits.ts))
+     * pour la raison qui l'a fait naître : un état tenu en double finit par ne
+     * plus l'être, et la liste ne s'affichait alors que sur un des deux chemins.
+     *
+     * Ce qu'on sait ici est plus pauvre qu'un `edit_file` maison : la demande de
+     * permission donne le CHEMIN, pas la nature du geste. Tout est donc noté
+     * `modified` — la liste de git, en fin de tour, dira « ajouté » ou
+     * « supprimé » si c'en était.
+     */
+    const liveEdits = newLiveEditLog();
     /** Ce que le tour a encore le droit de dépenser. Absent = BYOK, illimité. */
     let budgetUsd = job.budgetUsd;
     let lastBudgetAt = now();
@@ -588,6 +602,21 @@ export async function runOpencodeTurn(
            */
           if (out.permission.permission === "edit" && verdict.reply === "once") {
             delivery.noteEdit(out.permission.filepath ?? "");
+            // …et elle se VOIT tout de suite : une édition n'avance pas le round
+            // (ni texte, ni réflexion), donc rien d'autre ne ferait partir une
+            // charge de direct avant le round suivant.
+            const path = repoRelative(out.permission.filepath ?? "");
+            if (path && !child) {
+              liveEdits.note([{ path, status: "modified" }]);
+              lastLiveAt = 0;
+              cp.emitLive({
+                text: secrets.redact(liveTextOf(state, sessionId)),
+                tools: toolsSeen,
+                reasoningActive: false,
+                reasoningMs: 0,
+                ...liveEdits.payload(),
+              });
+            }
           }
           await client
             .replyPermission(out.permission.id, verdict.reply, verdict.message)
@@ -652,6 +681,28 @@ export async function runOpencodeTurn(
           });
         }
         if (out.usage) {
+          /**
+           * LE DIRECT SE TAIT À LA FIN D'UN ROUND QUI CONTINUE, comme `clearLive`
+           * de la boucle maison : ce qui vient de s'écrire est déjà parti au fil
+           * en `thinking`, et le laisser aussi dans la charge du direct le ferait
+           * lire en double — une bulle provisoire sous sa version définitive.
+           *
+           * Le round FINAL (`stop`), lui, garde son texte au direct : sa version
+           * définitive (`summary`) ne part qu'à la toute fin du tour, et l'effacer
+           * ici ferait disparaître la réponse de l'écran le temps de l'export du
+           * journal et du push.
+           */
+          if (!child && out.usage.finish !== "stop") {
+            reasoningSince = null;
+            lastLiveAt = 0;
+            cp.emitLive({
+              text: "",
+              tools: toolsSeen,
+              reasoningActive: false,
+              reasoningMs: 0,
+              ...liveEdits.payload(),
+            });
+          }
           const line = await ledger.record(cp, out.usage, proxy);
           costUsd += line.cost;
           /**
@@ -708,6 +759,9 @@ export async function runOpencodeTurn(
             tools: toolsSeen,
             reasoningActive: reasoningSince !== null,
             reasoningMs: reasoningSince === null ? 0 : Math.max(0, now() - reasoningSince),
+            // La liste part avec CHAQUE charge : le fil efface ce qu'une charge
+            // tait, donc l'émettre à part la ferait disparaître à la suivante.
+            ...liveEdits.payload(),
           });
         }
         /**
@@ -725,7 +779,26 @@ export async function runOpencodeTurn(
         // `session.idle` d'une FILLE ne termine pas le tour : la mère, elle,
         // attend encore son rapport. Elle libère en revanche une place sous le
         // plafond de simultané.
-        if (out.idle && child) subagents.finish(out.sessionId ?? "");
+        /**
+         * UNE FILLE QUI SE TAIT A RENDU SON RAPPORT, et le fil veut l'entendre :
+         * son bloc lit un `summary` marqué à son nom (c'est ce qui remplit
+         * « rapport ») et un `status: subagent_report` (c'est ce qui le referme et
+         * arrête son chrono). Les deux existaient dans la boucle maison ; sans
+         * eux, une fille reste éternellement « au travail » sous un tour terminé.
+         */
+        if (out.idle && child) {
+          const childSession = out.sessionId ?? "";
+          const entry = subagents.entry(childSession);
+          const report = replyOf(state, childSession);
+          if (entry && report.trim()) {
+            await cp.emit(
+              "summary",
+              markChildPayload({ text: cap(secrets.redact(report), 4000) }, entry),
+            );
+          }
+          if (entry) await cp.emit("status", { phase: "subagent_report", id: entry.id });
+          subagents.finish(childSession);
+        }
         if (out.idle && !child) {
           /**
            * LA FRONTIÈRE SÛRE, et le seul endroit d'où l'on parle au modèle : la
@@ -827,6 +900,25 @@ export async function runOpencodeTurn(
      * son message générique plutôt qu'une phrase écrite avant la question.
      */
     const reply = askedUser ? "" : replyOf(state, sessionId);
+    /**
+     * LE MOT DE LA FIN, DIT AU FIL — et c'est ce qui CLÔT le tour à l'écran.
+     *
+     * Le fil ne connaît qu'un seul signe de fin : l'event `summary`
+     * ([agent-event-feed.tsx](../../../../components/agent/agent-event-feed.tsx),
+     * `closesTurn`). Sans lui, le déroulé du tour reste ouvert, et un tour au
+     * repos sans clôture est lu comme un tour INTERROMPU : c'est ce qu'on a vu sur
+     * les premiers runs opencode — le tour finissait bien, la PR était ouverte, et
+     * le fil affichait « interrompu », puis le tour suivant venait s'empiler dans
+     * le même accordéon avec le chrono du précédent.
+     *
+     * Plafonné à 8 000 comme la boucle maison, et posé AVANT le push : ce qui suit
+     * peut échouer (push, forge, export du journal), et la réponse de l'agent ne
+     * doit pas se perdre avec.
+     */
+    const endedWell = !budgetExhausted && !interrupted && !sessionError && !timedOut;
+    if (reply.trim() && endedWell) {
+      await cp.emit("summary", { text: cap(secrets.redact(reply), 8000) });
+    }
     /**
      * Le verrou « le dépôt a été touché », posé une dernière fois avant le push :
      * un tour qui n'ouvre pas de pull request n'a jamais franchi la porte, et
