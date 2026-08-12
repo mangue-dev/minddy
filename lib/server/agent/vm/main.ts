@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 
 import { createControlPlaneClient } from "./control-plane-client";
 import { localHost } from "./local-host";
+import { opencodeSupervisorDeps } from "./opencode-host";
+import { OPENCODE_PORT, runOpencodeTurn } from "./supervisor";
 import { runVmTurn } from "./turn";
 import { VM_JOB_PATH, type VmJob, type VmTurnReport } from "./protocol";
 
@@ -27,6 +29,30 @@ import { VM_JOB_PATH, type VmJob, type VmTurnReport } from "./protocol";
  * (docs/orchestrateur-process-long.md §1).
  */
 
+/**
+ * L'AIGUILLAGE DES DEUX MOTEURS (MIN-286) — sur `job.engine`, et rien d'autre.
+ *
+ * Le drapeau a été gelé sur la ligne du run au lancement
+ * ([engine-flag.ts](../engine-flag.ts)) : ce qui est lu ici est donc ce qui a été
+ * décidé au premier tour de la conversation, jamais l'état courant d'`app_config`.
+ * C'est ce qui fait qu'une session ne change pas de moteur en cours de vie — les
+ * deux gardent leur mémoire dans deux champs différents du checkpoint.
+ *
+ * Un job `opencode` SANS `opencodeInput` est une faute de la fonction, pas une
+ * variante : on lève plutôt que de poster un tour vide, et le `try` de `main`
+ * transforme cela en rapport d'erreur — c'est-à-dire en quelque chose qui se voit.
+ */
+async function runOpencodeTurnHere(
+  job: VmJob,
+  cp: ReturnType<typeof createControlPlaneClient>,
+  host: ReturnType<typeof localHost>,
+): Promise<VmTurnReport> {
+  if (!job.opencodeInput) throw new Error("engine=opencode job carries no opencodeInput");
+  return await runOpencodeTurn(job, job.opencodeInput, cp, host, {
+    ...opencodeSupervisorDeps(OPENCODE_PORT),
+  });
+}
+
 async function main(): Promise<void> {
   const job = JSON.parse(await readFile(VM_JOB_PATH, "utf8")) as VmJob;
   const cp = createControlPlaneClient(job.appOrigin);
@@ -35,7 +61,7 @@ async function main(): Promise<void> {
 
   let report: VmTurnReport;
   try {
-    report = await runVmTurn(job, cp, host);
+    report = job.engine === "opencode" ? await runOpencodeTurnHere(job, cp, host) : await runVmTurn(job, cp, host);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[agent-vm] turn crashed:", message);

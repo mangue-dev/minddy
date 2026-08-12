@@ -138,6 +138,7 @@ function job(over: Partial<VmJob> = {}): VmJob {
     ledgerRunId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     projectId: "proj-1",
     appOrigin: "https://minddy.example",
+    engine: "loop",
     model: "deepseek/deepseek-v4-flash",
     baseUrl: "https://openrouter.ai/api/v1",
     provider: "openrouter",

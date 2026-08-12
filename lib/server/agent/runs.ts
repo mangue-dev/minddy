@@ -7,6 +7,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { AGENT_ENGINE, type AgentEngine } from "@/lib/agent-engines";
 // Type SEUL (donc effacé à la compilation) : `launch.ts` importe ce module, la
 // dépendance ne doit pas exister à l'exécution.
 import type { AgentLaunchIntent } from "./launch";
@@ -16,7 +17,6 @@ import { broadcastRunEvent } from "./live";
 import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
-import { loopInVmForProject } from "./vm-flag";
 import { notifyChainOfRunEnd } from "@/lib/server/automations/hooks";
 import { notifyRoutineOfRunEnd, stampRoutineRunEnd } from "@/lib/server/routine-hooks";
 import { afterOrNow } from "@/lib/server/after-safe";
@@ -261,6 +261,17 @@ export interface AgentRun {
    * vingt minutes de silence, un constat, et il est exact.
    */
   loop_command_id: string | null;
+  /**
+   * LE HARNESS qui joue ce run (MIN-286) : `loop`, la boucle maison, ou
+   * `opencode`, le serveur headless piloté par notre superviseur.
+   *
+   * FIGÉ AU LANCEMENT depuis `app_config` (cf. `engine-flag.ts`), pour la même
+   * raison que `loop_in_vm` — en plus serré : les deux moteurs gardent leur
+   * mémoire dans DEUX champs différents du checkpoint (`messages` d'un côté,
+   * `opencode` de l'autre), donc un run qui changerait de moteur en cours de vie
+   * ne perdrait pas un réglage, il perdrait la conversation.
+   */
+  agent_engine: AgentEngine;
   created_at: string;
   updated_at: string;
 }
@@ -355,13 +366,26 @@ const PG_UNIQUE_VIOLATION = "23505";
 export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const service = getServiceClient();
   /**
-   * Le moteur du run (MIN-224), résolu ICI et pas chez les appelants : c'est le
-   * seul passage obligé de la création, donc le seul endroit où le drapeau ne
-   * peut pas être oublié sur un chemin de lancement. Il est lu une fois puis
-   * gelé sur la ligne — cf. `vm-flag.ts` pour pourquoi ce gel n'est pas un
-   * détail.
+   * LE MOTEUR ET LA MICROVM, POSÉS SANS RIEN DEMANDER À PERSONNE (MIN-286).
+   *
+   * Il n'y a plus de drapeau : `opencode` est le harness, et il ne tourne que dans
+   * la microVM — il n'existe pas de version « dans la fonction » de son
+   * superviseur, qui pilote un serveur vivant à côté du dépôt. Les deux listes de
+   * projets d'`app_config` (`agent_opencode_projects`, `agent_loop_in_vm_projects`)
+   * ont donc disparu avec ce qu'elles servaient à décider.
+   *
+   * Les deux valeurs restent ÉCRITES sur la ligne, et c'est ce qui compte : elles
+   * disent quel moteur a joué CE run, et un run déjà en vol au moment du déploiement
+   * garde le sien. Les deux moteurs ne gardent pas leur mémoire au même endroit
+   * (`checkpoint.messages` contre `checkpoint.opencode`), donc une conversation qui
+   * changerait de moteur en cours de vie ne perdrait pas un réglage : elle perdrait
+   * son historique. La colonne est par ailleurs lue par les BALAYEURS
+   * (`reapDeadVmRuns` la veut vraie, `requeueStuckRuns` la veut fausse) — une ligne
+   * qui dirait `false` en jouant dans la VM se ferait voler son claim par le second
+   * et ne serait jamais constatée morte par le premier.
    */
-  const loopInVm = await loopInVmForProject(input.projectId);
+  const engine = AGENT_ENGINE;
+  const loopInVm = true;
   const { data, error } = await service
     .from("agent_runs")
     .insert({
@@ -394,6 +418,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       // les chunks d'un run lancé depuis un preview restent sur ce déploiement.
       deployment_url: currentDeploymentScope(),
       loop_in_vm: loopInVm,
+      agent_engine: engine,
     })
     .select("*")
     .single();

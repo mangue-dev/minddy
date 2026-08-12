@@ -642,6 +642,115 @@ portée de `git add -A`.
 
 ---
 
+### 2.18 L'ancrage minddy et le prompt du tour (lot 3)
+
+Le lot 1 avait posé `instructions: [OPENCODE_ANCHOR_FILE]` dans la config sans que
+personne n'écrive ce fichier : le superviseur recevait un `SupervisorInput` que
+seul un test remplissait. C'est ce que ce lot ferme, et la question à trancher
+n'était pas technique — **que met-on dedans ?**
+
+**Ce qu'on n'y met pas** : une redescription des tools d'opencode. Son prompt
+système décrit déjà `read`, `edit`, `bash`, `task`, `question` ; les redire moins
+bien, dans le même message système, c'est se contredire soi-même.
+
+**Ce qu'on y met** : les trois choses qu'opencode ne peut pas savoir.
+
+1. **Qui l'agent est** dans minddy, et à quoi la session est ancrée (ticket /
+   carnet / relecture de PR).
+2. **Les 32 tools de domaine** et leur doctrine — le plan du ticket appartient à
+   l'utilisateur, un statut ne s'écrit jamais, une remarque ancrée est rationnée.
+3. **Ce que le HARNESS impose à ses tools à lui** : git nous appartient et le shell
+   refuse ce qui détruit du travail, la recherche web est la nôtre et plafonnée, une
+   question TERMINE le tour, la porte de livraison du premier `create_pr`.
+
+**Et c'est LE MÊME TEXTE que la boucle maison.** Les fragments de doctrine ont été
+sortis du corps de `buildAgentSystemPrompt`
+([prompt.ts](../lib/server/agent/prompt.ts)) et sont appelés par les deux moteurs ;
+la seule chose qui varie est déclarée dans une table, `PromptToolNames` (`read_file`
+→ `read`, `run_command` → `bash`, `spawn_agent` → `task`, `ask_user` → `question`,
+et `run_background` → *rien*). Deux gardes tiennent l'ensemble :
+
+- le prompt de la boucle maison est **inchangé à l'octet** — vérifié sur 192
+  combinaisons d'ancrage × options pendant le refactor ;
+- l'ancrage servi à opencode ne contient **aucun nom de tool de l'ancien harnais**
+  ([opencode-anchor.test.ts](../lib/server/agent/opencode-anchor.test.ts)) : c'est
+  le seul défaut de cette famille qui ne se voit nulle part — un modèle appelle un
+  tool qui n'existe pas, round après round, et il a juste l'air bête.
+
+Trois écarts sont écrits à la main, parce que la mesure les a rendus différents :
+`task` **bloque** le parent (§2.14, donc « tu n'attends jamais, tu ne sondes
+jamais » est faux ici), il n'y a **pas d'édition par lot** ni de tool de **fond**
+(§3.2), et `bash` **ne garde pas** la sortie complète d'une commande (pas de
+`full_output_path` à promettre).
+
+Le **prompt du tour**, lui, est ce que l'amorce a mis dans les messages
+utilisateur : contexte du ticket ou de la pull request, travail hérité, instructions
+du dépôt, demande du lanceur. Sur un tour repris il est vide — l'historique est dans
+le journal, et la demande arrive par le steering (§2.19).
+
+### 2.19 Le steering et le « Stop » (lot 3)
+
+Les deux gestes les plus visibles du produit, et les deux qui manquaient au
+superviseur : le bouton « Stop » ne faisait rien, et un message écrit pendant un
+tour restait dans la file jusqu'au tour suivant — sur un tour qui dure des heures,
+c'est-à-dire indéfiniment.
+
+**Un message ne s'injecte pas dans une session qui travaille.** Chez opencode il n'y
+a pas d'historique à muter entre deux appels : il y a un tour en cours. Le geste est
+donc `abort` (40 ms mesurés, la requête en vol se termine proprement) puis un
+nouveau prompt **au `session.idle` qui suit** — la même frontière sûre que la boucle
+maison, atteinte par l'autre bout.
+
+Deux règles qui décident du reste :
+
+- **On ne draine la file que quand on est en mesure de poster derrière.**
+  `pullSteering` consomme ; un message drainé et non posté est perdu pour de bon,
+  puisque le plan de contrôle ne re-queue un run que sur ce qui reste dans la file.
+  D'où la sonde `hasPendingMessages` avant le drain.
+- **Un « Stop » accompagné d'un message se poursuit dans CE tour**, et le drapeau
+  est alors **consommé** — sans quoi le sondage suivant le relirait et sortirait,
+  message accepté et jamais joué. C'est mot pour mot le raisonnement de
+  `clearInterrupt` dans `agent-loop.ts`, et les deux moteurs le tiennent pareil.
+
+Le sondage est **temporel** (5 s) et non par round, puisqu'il n'y a plus de round à
+nous : sa granularité est celle du flux d'events. Un `bash` de trois minutes retarde
+donc le stop d'autant — c'était déjà vrai de la boucle maison, qui ne relisait le
+drapeau qu'entre deux rounds.
+
+### 2.20 Pas de drapeau : opencode EST le moteur (lot 3)
+
+La première version de ce lot posait un drapeau par projet en `app_config`, sur le
+modèle du drapeau VM de MIN-224. **Clément l'a retiré**, et l'argument est le bon :
+minddy a un utilisateur, et un interrupteur qu'une seule personne pourrait actionner
+ne vaut pas la surface qu'il ajoute. `agent_opencode_projects` et
+`agent_loop_in_vm_projects` ont donc disparu tous les deux, avec le module qui les
+lisait — tout run neuf part sur opencode, dans la microVM, sans rien demander.
+
+**Ce qui reste, et qui n'est pas le drapeau** : la colonne `agent_runs.agent_engine`,
+écrite à la création et jamais relue ailleurs. Elle ne décide de rien ; elle **dit**
+quel harness a joué ce run-là. Deux raisons de la garder :
+
+1. **Un run déjà en vol garde son moteur.** Les deux ne gardent pas leur mémoire au
+   même endroit (`checkpoint.messages` contre `checkpoint.opencode`) : rebasculer une
+   conversation en cours ne lui ferait pas perdre un réglage, ça lui ferait perdre son
+   historique. Le déploiement de la bascule est donc sans effet sur ce qui tourne.
+2. **La lecture d'un incident.** « Pourquoi ce run s'est-il comporté autrement ? » se
+   répond sur la ligne, pas sur l'état d'une config au moment où on regarde.
+
+La valeur `loop` disparaîtra avec `agent-loop.ts`, quand il ne restera plus rien à
+reprendre. Et `loop_in_vm` est désormais toujours vrai : la colonne est lue par les
+balayeurs (`reapDeadVmRuns` la veut vraie, `requeueStuckRuns` la veut fausse), donc
+elle doit dire la vérité même quand plus personne ne la décide.
+
+Le serveur, enfin, est tenu par
+[vm/opencode-host.ts](../lib/server/agent/vm/opencode-host.ts) : `spawn` d'un
+enfant ordinaire depuis le process du harness (le piège du `nohup` du §2.7 ne
+concernait qu'une commande RPC du Sandbox), version **épinglée**, et installation
+**seulement si le binaire manque** — cuit dans `AGENT_SANDBOX_SNAPSHOT_ID` il ne
+manque jamais et le tour paie 1,3 s, sinon le repli coûte les 10,6 s mesurés.
+
+---
+
 ## 3. L'inventaire de parité — nos 51 tools, un par un
 
 Source : [tools.ts](../lib/server/agent/tools.ts) (1 801 lignes). 51 tools servis,

@@ -93,6 +93,21 @@ const h = {
   /** Le serveur refuse la réponse à une permission. */
   permissionReplyFails: false,
   proxyClosed: false,
+  /** L'horloge du superviseur : `tick` la fait avancer à chaque lecture, ce qui
+   *  est le seul moyen de faire tomber un sondage (steering, budget) dans un test
+   *  qui dure trois millisecondes. À 0, le temps ne bouge pas. */
+  clock: 1_000_000,
+  tick: 0,
+  /** La file de steering du plan de contrôle, drainée par `pullSteering`. */
+  steering: [] as string[],
+  /** Le drapeau d'interruption (« Stop »). */
+  interrupt: false,
+  /** Combien de fois le superviseur l'a EFFACÉ (un stop + message le consomme). */
+  interruptCleared: 0,
+  /** Les prompts postés à la session, dans l'ordre. */
+  prompts: [] as string[],
+  /** Combien de fois la session a été coupée. */
+  aborts: 0,
   /** Ce que le plan de contrôle répond sur le restant de budget. */
   remainingUsd: null as number | null,
   budgetReads: 0,
@@ -121,10 +136,13 @@ function cp(): ControlPlaneClient {
       h.usage.push(line as unknown as Record<string, unknown>);
     },
     saveCheckpointQuietly: async () => true,
-    pullSteering: async () => [],
-    hasPendingMessages: async () => false,
-    checkInterrupt: async () => false,
-    clearInterrupt: async () => {},
+    pullSteering: async () => h.steering.splice(0),
+    hasPendingMessages: async () => h.steering.length > 0,
+    checkInterrupt: async () => h.interrupt,
+    clearInterrupt: async () => {
+      h.interrupt = false;
+      h.interruptCleared += 1;
+    },
     budgetRemaining: async () => {
       h.budgetReads += 1;
       return h.remainingUsd;
@@ -174,7 +192,11 @@ function fakeFetch(): typeof fetch {
       // rejoué un tour de la mère, et non un tour d'inconnue.
       return new Response(JSON.stringify({ id: PARENT, projectID: "p" }), { status: 200 });
     }
-    if (path.endsWith("/prompt_async")) return new Response(null, { status: 204 });
+    if (path.endsWith("/prompt_async")) {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { parts?: Array<{ text?: string }> };
+      h.prompts.push((body.parts ?? []).map((part) => part.text ?? "").join(""));
+      return new Response(null, { status: 204 });
+    }
     if (path.startsWith("/permission/") && path.endsWith("/reply")) {
       const body = JSON.parse(String(init?.body ?? "{}")) as { reply: string; message?: string };
       h.permissionReplies.push({ id: path.split("/")[2], ...body });
@@ -185,7 +207,10 @@ function fakeFetch(): typeof fetch {
       h.questionsRejected.push(path.split("/")[2]);
       return new Response("true", { status: 200 });
     }
-    if (path.endsWith("/abort")) return new Response("true", { status: 200 });
+    if (path.endsWith("/abort")) {
+      h.aborts += 1;
+      return new Response("true", { status: 200 });
+    }
     if (path === "/sync/history") {
       return new Response(JSON.stringify({ events: h.history }), { status: 200 });
     }
@@ -245,6 +270,7 @@ function deps(): SupervisorDeps {
     // Le vrai plafond est à 60 s : ce test-ci vérifie ce qui se passe QUAND il
     // tombe, pas combien de temps il dure.
     bootTimeoutMs: 300,
+    now: () => (h.clock += h.tick),
   };
 }
 
@@ -254,6 +280,7 @@ function job(over: Partial<VmJob> = {}): VmJob {
     ledgerRunId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     projectId: "proj-1",
     appOrigin: "https://minddy.example",
+    engine: "opencode",
     model: "deepseek/deepseek-v4-flash",
     baseUrl: "https://openrouter.ai/api/v1",
     provider: "openrouter",
@@ -326,6 +353,13 @@ beforeEach(() => {
   h.proxyClosed = false;
   h.remainingUsd = null;
   h.budgetReads = 0;
+  h.clock = 1_000_000;
+  h.tick = 0;
+  h.steering = [];
+  h.interrupt = false;
+  h.interruptCleared = 0;
+  h.prompts = [];
+  h.aborts = 0;
   h.permissionReplies = [];
   h.questionsRejected = [];
   h.permissionReplyFails = false;
@@ -894,5 +928,120 @@ describe("la reprise", () => {
         { seq: 9 },
       ]),
     ).toEqual({ a: 5, b: 1 });
+  });
+});
+
+/**
+ * MIN-286 lot 3 — LE STEERING ET LE « STOP ».
+ *
+ * Les deux gestes les plus visibles du produit, et les deux que le superviseur
+ * n'avait pas : un bouton « Stop » qui ne fait rien et un message écrit pendant un
+ * tour qui reste dans la file ne se voient dans aucun test de type — ils se voient
+ * en s'en servant, sur un tour qui dure des heures.
+ *
+ * Ce que ces tests fixent, et qui n'est pas évident : **on ne draine la file que
+ * quand on est en mesure de poster derrière**. `pullSteering` consomme ; un message
+ * drainé et non posté est perdu pour de bon, puisque le plan de contrôle ne
+ * re-queue le run que sur ce qui reste dans la file.
+ */
+/**
+ * Une file qui se remplit APRÈS le premier prompt — c'est le seul montage qui
+ * exerce l'injection en cours de tour. Une file remplie avant partirait avec le
+ * prompt du tour, et le test passerait sans rien couper.
+ */
+function steeringAfterFirstPrompt(text: string): Partial<ControlPlaneClient> {
+  let given = false;
+  const ready = () => h.prompts.length >= 1 && !given;
+  return {
+    hasPendingMessages: async () => ready(),
+    pullSteering: async () => {
+      if (!ready()) return [];
+      given = true;
+      return [text];
+    },
+  };
+}
+
+describe("le steering et le « Stop »", () => {
+  it("poste la file avec le prompt du tour, et le dit au fil", async () => {
+    h.steering = ["et regarde aussi les tests"];
+    await run();
+    expect(h.prompts[0]).toBe("fais le ticket\n\net regarde aussi les tests");
+    // SEUL le message de steering entre dans le fil : le prompt du tour y est
+    // déjà (message de lancement, ou réponse affichée par le composer), et le
+    // dire deux fois le ferait lire deux fois.
+    expect(h.events.filter((e) => e.type === "user_message").map((e) => e.payload.text)).toEqual([
+      "et regarde aussi les tests",
+    ]);
+  });
+
+  it("un tour REPRIS n'a que la file : c'est par là qu'arrive la réponse à une question", async () => {
+    h.steering = ["oui, la deuxième option"];
+    const report = await run({}, {});
+    expect(h.prompts[0]).toBe("fais le ticket\n\noui, la deuxième option");
+    expect(report.status).toBe("completed");
+  });
+
+  it("ne poste RIEN quand il n'y a rien à dire — pas de relance fabriquée", async () => {
+    const report = await runOpencodeTurn(
+      job(),
+      { prompt: "   ", anchorInstructions: "# Ancrage" },
+      cp(),
+      host(),
+      deps(),
+    );
+    expect(h.prompts).toEqual([]);
+    expect(report.status).toBe("completed");
+    expect(report.costUsd).toBe(0);
+    // Un tour qui n'a rien joué ne pousse pas : il n'a rien produit.
+    expect(report.pushed).toBeNull();
+  });
+
+  it("coupe le round et repose la consigne à la frontière suivante", async () => {
+    // Le temps avance : c'est ce qui fait tomber le sondage en cours de tour. Et
+    // le message n'arrive qu'APRÈS le premier prompt — sinon il partirait avec
+    // lui, et le test ne dirait rien de l'injection en cours de tour.
+    h.tick = 3_000;
+    const report = await runOpencodeTurn(
+      job(),
+      { prompt: "fais le ticket", anchorInstructions: "# Ancrage" },
+      { ...cp(), ...steeringAfterFirstPrompt("ajoute un test") },
+      host(),
+      deps(),
+    );
+    // La consigne n'est jamais postée dans une session qui travaille : on coupe
+    // (`abort`), et on repose au `session.idle` qui suit.
+    expect(h.aborts).toBeGreaterThanOrEqual(1);
+    expect(h.events.some((e) => e.type === "status" && e.payload.phase === "steered")).toBe(true);
+    expect(h.prompts).toEqual(["fais le ticket", "ajoute un test"]);
+    expect(report.status).toBe("completed");
+  });
+
+  it("un « Stop » nu arrête le tour, et le rapport le DIT", async () => {
+    h.tick = 3_000;
+    h.interrupt = true;
+    const report = await run();
+    expect(h.aborts).toBeGreaterThanOrEqual(1);
+    expect(report.status).toBe("interrupted");
+    // Le drapeau n'est PAS consommé sur un stop nu : c'est la fonction qui le
+    // range en remettant la session au repos.
+    expect(h.interruptCleared).toBe(0);
+  });
+
+  it("un « Stop » ACCOMPAGNÉ d'un message se poursuit dans ce tour", async () => {
+    h.tick = 3_000;
+    h.interrupt = true;
+    const report = await runOpencodeTurn(
+      job(),
+      { prompt: "fais le ticket", anchorInstructions: "# Ancrage" },
+      { ...cp(), ...steeringAfterFirstPrompt("arrête ça et fais plutôt l'autre") },
+      host(),
+      deps(),
+    );
+    // Le drapeau est consommé, sinon le sondage suivant sortirait du tour avec le
+    // message pour seule trace — accepté et jamais joué.
+    expect(h.interruptCleared).toBe(1);
+    expect(report.status).not.toBe("interrupted");
+    expect(h.prompts.at(-1)).toBe("arrête ça et fais plutôt l'autre");
   });
 });

@@ -77,6 +77,16 @@ export const OPENCODE_PORT = 4096;
 export const LIVE_INTERVAL_MS = 250;
 
 /**
+ * Cadence de sondage du « Stop » et de la file de steering.
+ *
+ * Deux requêtes au plan de contrôle toutes les cinq secondes au pire, et une seule
+ * dans le cas courant (`/interrupt`, puis `/messages/pending` seulement s'il n'y a
+ * pas de stop) — à comparer aux ~4 appels PAR SECONDE du direct. Ce n'est donc pas
+ * ce sondage qui pèse sur le compte d'invocations.
+ */
+export const STEER_POLL_INTERVAL_MS = 5_000;
+
+/**
  * Plafond mural d'un TOUR. Repris de [turn.ts](turn.ts) sans changer de valeur :
  * ce qu'il protège n'a pas changé de nature — la session de microVM est plafonnée
  * à 24 h par la plateforme, et un tour tué par elle ne laisserait aucune trace.
@@ -372,7 +382,78 @@ export async function runOpencodeTurn(
     const abortEvents = new AbortController();
     const stream = client.events(abortEvents.signal);
 
-    await client.promptAsync(sessionId, input.prompt);
+    /**
+     * ── LE STEERING ET LE « STOP » (MIN-286, lot 3) ───────────────────────────
+     *
+     * Ce que la boucle maison faisait à chaque frontière de round : drainer les
+     * messages de l'utilisateur, les injecter, et sortir sur le drapeau
+     * d'interruption. Sans ça, un projet basculé perdrait les deux gestes les plus
+     * visibles du produit — le bouton « Stop » ne ferait rien, et un message écrit
+     * pendant qu'un tour travaille resterait dans la file jusqu'au tour d'après.
+     *
+     * UN MESSAGE NE S'INJECTE PAS DANS UNE SESSION QUI TRAVAILLE. Chez opencode il
+     * n'y a pas d'historique à muter entre deux appels : il y a un tour en cours.
+     * Le geste est donc `abort` (40 ms mesurés, la requête en vol se termine
+     * proprement) puis un nouveau prompt sur la session — ce qui passe par
+     * `pendingPrompt`, posté au `session.idle` qui suit. C'est la même frontière que
+     * la boucle maison, atteinte par l'autre bout.
+     *
+     * `pullSteering` DRAINE : on ne l'appelle donc que quand on est en mesure de
+     * poster derrière. Un message drainé et non posté serait perdu — personne ne le
+     * remet dans la file, et le plan de contrôle ne re-queue le run que sur la file.
+     */
+    let pendingPrompt: Array<{ text: string; steered: boolean }> = [];
+    let interrupted = false;
+    let lastSteerAt = now();
+    const takeSteering = async (): Promise<string[]> =>
+      (await cp.pullSteering().catch(() => [])).map((t) => t.trim()).filter(Boolean);
+    /**
+     * Poste le prompt en attente sur une session au repos, et dit au fil ce qui
+     * vient de l'UTILISATEUR.
+     *
+     * `steered` distingue les deux, et ce n'est pas cosmétique : le prompt du tour
+     * est déjà dans le fil (c'est le message de lancement, ou la réponse affichée
+     * par le composer), alors qu'un message de steering n'a pas d'autre trace.
+     * Émettre les deux ferait lire deux fois la même phrase à l'utilisateur.
+     */
+    const postPending = async (): Promise<void> => {
+      const parts = pendingPrompt.splice(0);
+      if (parts.length === 0) return;
+      for (const part of parts) {
+        if (part.steered) await cp.emit("user_message", { text: cap(part.text, 4000) });
+      }
+      await client.promptAsync(sessionId, parts.map((part) => part.text).join("\n\n"));
+    };
+
+    /**
+     * LE PREMIER PROMPT DU TOUR : ce que la fonction a composé (contexte du ticket
+     * + demande, sur un tour froid) PLUS ce qui attendait dans la file. Un tour
+     * repris n'a que le second — c'est par là qu'arrivent la réponse à une question
+     * et le « et maintenant fais plutôt ça » écrit pendant que la VM dormait.
+     */
+    pendingPrompt = [
+      ...(input.prompt.trim() ? [{ text: input.prompt.trim(), steered: false }] : []),
+      ...(await takeSteering()).map((text) => ({ text, steered: true })),
+    ];
+    if (pendingPrompt.length === 0) {
+      /**
+       * RIEN À DIRE AU MODÈLE : on ne poste pas un prompt vide, et surtout on ne
+       * fabrique pas une relance (« continue ») qui ferait payer un round pour
+       * apprendre qu'il n'y a rien à faire. Le tour se termine, la fonction met la
+       * session au repos, et le prochain message la réveillera.
+       */
+      console.error("[supervisor] nothing to prompt — ending the turn");
+      return {
+        status: "completed",
+        costUsd: 0,
+        checkpointDropped: [],
+        checkpointBytes: 0,
+        pushed: null,
+        workBranch: job.workBranch,
+        sandboxMs: job.bootstrapMs + (now() - startedAt),
+      };
+    }
+    await postPending();
 
     const deadline = startedAt + SUPERVISOR_TURN_SOFT_DEADLINE_MS;
     let timedOut = false;
@@ -544,7 +625,56 @@ export async function runOpencodeTurn(
         // attend encore son rapport. Elle libère en revanche une place sous le
         // plafond de simultané.
         if (out.idle && child) subagents.finish(out.sessionId ?? "");
-        if (out.idle && !child) break;
+        if (out.idle && !child) {
+          /**
+           * LA FRONTIÈRE SÛRE, et le seul endroit d'où l'on parle au modèle : la
+           * session est au repos, l'historique est apparié. Un message de steering
+           * arrivé pendant le tour a coupé le round (`abort`) et attend ici.
+           */
+          if (pendingPrompt.length > 0) {
+            await cp.emit("status", { phase: "steered" });
+            await postPending();
+            continue;
+          }
+          break;
+        }
+
+        /**
+         * LE « STOP » ET LE STEERING, sondés au fil des events plutôt qu'à chaque
+         * round — il n'y a plus de round à nous. La granularité est donc celle du
+         * flux : un event tombe à chaque début et chaque fin de tool, et en continu
+         * pendant que le modèle écrit. Un `bash` de trois minutes est le pire cas,
+         * et il retarde le stop d'autant : c'était déjà vrai de la boucle maison,
+         * qui ne relisait le drapeau qu'entre deux rounds.
+         */
+        if (now() - lastSteerAt >= STEER_POLL_INTERVAL_MS) {
+          lastSteerAt = now();
+          if (await cp.checkInterrupt().catch(() => false)) {
+            /**
+             * UN STOP ACCOMPAGNÉ D'UN MESSAGE se poursuit dans CE tour (« arrête-toi
+             * et fais plutôt ça ») : le composer envoie toujours le couple steer
+             * PUIS interrupt. On ne draine donc que là, et on consomme le drapeau —
+             * sans quoi le sondage suivant le relirait et sortirait, message accepté
+             * et jamais joué (même raisonnement que `clearInterrupt` dans
+             * `agent-loop.ts`).
+             */
+            const steered = await takeSteering();
+            if (steered.length === 0) {
+              interrupted = true;
+              await client.abort(sessionId);
+              break;
+            }
+            await cp.clearInterrupt().catch(() => {});
+            pendingPrompt.push(...steered.map((text) => ({ text, steered: true })));
+            await client.abort(sessionId);
+          } else if (await cp.hasPendingMessages().catch(() => false)) {
+            // Drainé seulement maintenant qu'on sait qu'on va couper pour le poster.
+            pendingPrompt.push(
+              ...(await takeSteering()).map((text) => ({ text, steered: true })),
+            );
+            if (pendingPrompt.length > 0) await client.abort(sessionId);
+          }
+        }
         if (now() > deadline) {
           timedOut = true;
           await client.abort(sessionId);
@@ -605,9 +735,11 @@ export async function runOpencodeTurn(
      */
     const status: VmTurnReport["status"] = budgetExhausted
       ? "budget_exhausted"
-      : sessionError || timedOut
-        ? "error"
-        : "completed";
+      : interrupted
+        ? "interrupted"
+        : sessionError || timedOut
+          ? "error"
+          : "completed";
 
     const changed =
       status === "completed" && pushed?.headSha && pushed.headSha !== job.filesFromSha

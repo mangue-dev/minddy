@@ -3,6 +3,7 @@ import type { AgentCheckpoint } from "../runs";
 import type { AgentChatMessage } from "../agent-loop";
 import type { AgentAnchor } from "../prompt";
 import type { ScopedFavorite } from "../subagent-config";
+import type { AgentEngine } from "@/lib/agent-engines";
 import type { AgentProviderId } from "@/lib/agent-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { Locale } from "@/i18n/config";
@@ -112,6 +113,13 @@ export interface VmJob {
   /** Origine du plan de contrôle — le déploiement qui a lancé ce run, jamais la
    *  prod par défaut (cf. `agentControlOrigin`). */
   appOrigin: string;
+  /**
+   * LE HARNESS QUI JOUE CE TOUR (MIN-286) : la boucle maison, ou opencode piloté
+   * par le superviseur. Recopié de `agent_runs.agent_engine`, où il a été gelé au
+   * lancement (cf. `engine-flag.ts`) — et donc jamais relu ici : c'est
+   * `vm/main.ts` qui aiguille, sur ce champ et rien d'autre.
+   */
+  engine: AgentEngine;
 
   // ── Modèle ────────────────────────────────────────────────────────────────
   model: string;
@@ -175,6 +183,24 @@ export interface VmJob {
     events: Record<string, unknown>[];
     seq: Record<string, number>;
   };
+  /**
+   * CE QUE LE SUPERVISEUR POSTE, ET L'ANCRAGE QU'IL INJECTE (MIN-286).
+   *
+   * Présent seulement sous `engine: "opencode"`, parce que les deux moteurs ne
+   * reçoivent pas la même chose : la boucle maison prend une CONVERSATION
+   * (`messages`, prompt système compris), opencode prend un prompt système à LUI
+   * plus nos `instructions`, et un message d'utilisateur.
+   *
+   * `anchorInstructions` est reconstruit à CHAQUE tour, et c'est un gain plutôt
+   * qu'une redite : le fichier d'ancrage est relu par opencode à chaque démarrage,
+   * donc l'instantané du ticket qu'il porte ne peut pas rester périmé une semaine
+   * dans un historique.
+   *
+   * `prompt` est vide sur un tour REPRIS : la demande y arrive par le steering,
+   * que le superviseur draine au démarrage (`pullSteering`). Un tour froid, lui,
+   * porte ici le contexte du ticket et la demande du lanceur.
+   */
+  opencodeInput?: { prompt: string; anchorInstructions: string };
   instructions: { paths: string[]; bytes: number };
   usageSeqStart: number;
   /** Plafond restant, le plus serré du quota et du plafond de run. Absent = BYOK. */

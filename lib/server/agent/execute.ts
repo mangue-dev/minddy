@@ -112,6 +112,7 @@ import {
   type AgentRepoContext,
   type AgentResourceContext,
 } from "./prompt";
+import { buildOpencodeAnchor } from "./opencode-anchor";
 import {
   loadPrReviewBoot,
   loadPrRunContext,
@@ -344,6 +345,37 @@ function capSubagentHistory(messages: AgentChatMessage[]): AgentChatMessage[] | 
   const trimmed = [...messages];
   pruneToolOutputs(trimmed, { protectBytes: 40_000, minimumBytes: 20_000 });
   return JSON.stringify(trimmed).length <= SUBAGENT_HISTORY_MAX_BYTES ? trimmed : null;
+}
+
+/**
+ * LE PROMPT D'UN TOUR OPENCODE, tiré de l'amorce (MIN-286).
+ *
+ * L'amorce d'un tour froid est CONVERSATIONNELLE : un prompt système, puis des
+ * messages utilisateur — contexte du ticket ou de la pull request, travail hérité
+ * d'une PR, instructions du dépôt, et en dernier la demande du lanceur. Opencode
+ * n'accepte qu'un message : on lui rend donc ces morceaux-là, dans l'ordre, séparés
+ * comme des blocs.
+ *
+ * Le message SYSTÈME est délibérément laissé de côté : son vis-à-vis chez opencode
+ * est l'ancrage servi en `instructions` (cf. `buildOpencodeAnchor`), et l'envoyer
+ * ici en plus le dirait deux fois, une fois dans le système et une fois dans la
+ * bouche de l'utilisateur.
+ */
+function userPromptFromMessages(messages: AgentChatMessage[]): string {
+  return messages
+    .filter((m) => m.role === "user")
+    .map((m) =>
+      typeof m.content === "string"
+        ? m.content
+        : // Une amorce n'a que du texte (les images arrivent par les tools) ; le
+          // repli existe pour ne jamais rendre « [object Object] » à un modèle.
+          (m.content ?? [])
+            .map((part) => ("text" in part && typeof part.text === "string" ? part.text : ""))
+            .join(""),
+    )
+    .map((text) => text.trim())
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function lastAssistantText(messages: AgentChatMessage[]): string {
@@ -1305,6 +1337,49 @@ export async function executeAgentRun(
       }
     }
 
+    /**
+     * CE QUE LE MOTEUR OPENCODE REÇOIT DU TOUR (MIN-286) : son ancrage minddy et
+     * le message à poster. Composé ICI, dans la fonction, comme tout le reste de
+     * l'amorçage — la microVM n'a ni le ticket, ni les favoris, ni la locale.
+     *
+     * L'ancrage se reconstruit à chaque tour (cf. `VmJob.opencodeInput`) et prend
+     * les MÊMES arguments que le prompt système de la boucle maison : c'est ce qui
+     * garantit qu'un run basculé se comporte pareil, et c'est le critère de la
+     * semaine de bascule.
+     *
+     * Le prompt, lui, est ce que l'amorce a mis dans les messages UTILISATEUR :
+     * contexte du ticket (ou de la pull request), travail hérité, instructions du
+     * dépôt, demande du lanceur. Sur un tour repris, l'amorce n'a rien écrit —
+     * l'historique vit dans le journal d'opencode — et le prompt vient du steering.
+     */
+    const opencodeInput =
+      run.agent_engine === "opencode"
+        ? {
+            anchorInstructions: buildOpencodeAnchor({
+              locale: commentLocale,
+              anchor,
+              interactive: !run.routine_id,
+              webSearch: webSearchAllowed,
+              webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
+              chain: !!run.chain_id,
+              images: imageInput,
+              // Même règle que le prompt système : une relecture ne délègue pas,
+              // et un tour sans place de fille ne doit pas lire une section qui
+              // décrit un tool que la config ne sert pas.
+              ...(writesToRepo && subagentMaxParallel > 0
+                ? {
+                    subagents: {
+                      favorites: subagentFavorites,
+                      models: subagentModels,
+                      maxMultiplier: subagentScope.maxMultiplier,
+                    },
+                  }
+                : {}),
+            }),
+            prompt: userPromptFromMessages(messages),
+          }
+        : undefined;
+
     // État PR de la session, MUTÉ pendant le tour (create_pr, réouverture au push) :
     // la fin de tour lit l'état à jour, pas celui figé au claim.
     const prState: { number: number | null; url: string | null; state: AgentRun["pr_state"] } = {
@@ -1677,6 +1752,9 @@ export async function executeAgentRun(
         ledgerRunId: run.run_id ?? run.id,
         projectId: run.project_id,
         appOrigin: agentControlOrigin(),
+        // Le moteur, tel qu'il a été GELÉ sur la ligne au lancement (MIN-286) :
+        // c'est `vm/main.ts` qui aiguille dessus, et il ne le relit nulle part.
+        engine: run.agent_engine,
         model: run.model,
         baseUrl,
         provider,
@@ -1704,7 +1782,11 @@ export async function executeAgentRun(
           maxMultiplier: subagentScope.maxMultiplier,
           ...(Object.keys(subagentPricing).length > 0 ? { pricing: subagentPricing } : {}),
         },
-        messages,
+        // La conversation, pour la boucle maison. Sous opencode elle part VIDE et
+        // c'est `opencodeInput` qui porte le tour (cf. `VmJob.opencodeInput`) :
+        // l'historique, là-bas, est le journal d'événements du checkpoint.
+        messages: opencodeInput ? [] : messages,
+        ...(opencodeInput ? { opencodeInput } : {}),
         instructions,
         usageSeqStart,
         ...(budgetUsd !== undefined ? { budgetUsd } : {}),
