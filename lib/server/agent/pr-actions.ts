@@ -1498,6 +1498,10 @@ export async function prCommentImageResponse(
 
 const LAUNCH_ERROR_STATUS: Record<string, number> = {
   issueNotFound: 404,
+  prNotFound: 404,
+  // Conflit d'état, comme `noAgentRun` juste à côté : la PR existe, elle n'a
+  // simplement plus (ou pas) de branche à reprendre.
+  prNoBranch: 409,
   noRepo: 409,
   unsupportedProvider: 409,
   alreadyRunning: 409,
@@ -1844,11 +1848,16 @@ export async function prStateActionResponse(
  * « et relancer Numo » ouvre EN PLUS une run froide qui hérite de la branche et
  * de la PR — c'est ce que minddy sait faire et que GitHub ne sait pas.
  *
- * La relance exige que la PR ait DÉJÀ un run : `inheritableWorkForIssue` cherche
- * le travail héritable dans les runs PRÉCÉDENTS du ticket, et une PR humaine
- * n'en a aucun — Numo repartirait sur une branche neuve au lieu de reprendre
- * celle de la PR. L'UI masque le geste ; ici on le refuse, plutôt que de le
- * laisser produire silencieusement un travail à côté de la plaque.
+ * La relance exige que la PR ait DÉJÀ un run — c'est de lui qu'elle hérite la
+ * branche. Une PR humaine n'en a aucun : Numo repartirait sur une branche neuve
+ * au lieu de reprendre celle de la PR. L'UI masque le geste ; ici on le refuse,
+ * plutôt que de le laisser produire silencieusement un travail à côté de la plaque.
+ *
+ * Le TICKET, lui, n'est pas exigé (MIN-292). Il l'a été, et ça coupait un cas
+ * entier : une PR ouverte par une session CARNET a bien une branche vivante et un
+ * run derrière elle, mais aucun ticket — le geste était refusé sur les PR de Numo
+ * lui-même. La lignée se lit alors sur la PR (`inheritableWorkForPr`), et la run
+ * relancée est une run carnet ancrée à cette branche.
  *
  * `published: "comment"` en retour = la forge a refusé de publier le verdict
  * (une App ne peut pas approuver sa propre PR : 422 mesuré). Le verdict est
@@ -1900,9 +1909,6 @@ export async function prReviewResponse(
 
   let launchedRunId: string | null = null;
   if (relaunch) {
-    if (!scope.pr.issue_id) {
-      return NextResponse.json({ error: "noIssue", code: "noIssue" }, { status: 409 });
-    }
     if (scope.pr.state === "merged") {
       return NextResponse.json(
         { error: "Pull request is merged", code: "prMerged" },
@@ -1926,8 +1932,13 @@ export async function prReviewResponse(
       typeof body.model === "string" && body.model.trim()
         ? body.model.trim().slice(0, MAX_MODEL_ID_LENGTH)
         : undefined;
+    // Deux ancrages pour un même geste : le ticket quand la PR en porte un (la
+    // lignée du ticket fait autorité — c'est elle qui déplace son statut), la PR
+    // elle-même sinon. `launchAgentRun` ignore le second dès que le premier est
+    // fourni ; on passe les deux et on le laisse trancher.
     const result = await launchAgentRun({
       issueId: scope.pr.issue_id,
+      continuePullRequestId: scope.pr.id,
       userId,
       triggeredBy: "button",
       prompt: message,

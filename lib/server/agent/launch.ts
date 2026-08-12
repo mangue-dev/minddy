@@ -23,7 +23,9 @@ import {
   activeRunForIssue,
   activeRunForPullRequest,
   activeRunForRoutine,
+  activeRunForPrNumber,
   inheritableWorkForIssue,
+  inheritableWorkForPr,
   insertRunMessage,
   bumpRunActivity,
   ActiveRunExistsError,
@@ -55,6 +57,8 @@ export type LaunchError =
   | "issueNotFound"
   | "prNotFound"
   | "prIncomplete"
+  /** Reprise d'une PR sans branche à hériter : rien à corriger dessus (MIN-292). */
+  | "prNoBranch"
   | "noRepo"
   | "unsupportedProvider"
   | "alreadyRunning"
@@ -94,6 +98,16 @@ export interface LaunchAgentInput {
    * chaque lancement est une conversation autonome.
    */
   issueId?: string | null;
+  /**
+   * Pull request dont le run REPREND le travail (MIN-292), quand elle n'a pas de
+   * ticket : une PR ouverte par une session carnet a bien une branche vivante, et
+   * « demander des changements » doit pouvoir repartir dessus. Le projet vient du
+   * dépôt de la PR (comme pour une relecture), la lignée de `inheritableWorkForPr`,
+   * et le run reste un run CARNET — il n'a pas de ticket à occuper ni à déplacer.
+   * Ignoré quand `issueId` est fourni : la lignée du ticket fait alors autorité.
+   * Sans rapport avec `pullRequestId`, qui ancre une RELECTURE (aucune écriture).
+   */
+  continuePullRequestId?: string | null;
   /**
    * Pull request d'ancrage (MIN-168) : le run RELIT cette PR — il clone sa
    * branche de tête, lit le code et commente, sans jamais écrire dans le dépôt.
@@ -187,10 +201,14 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   if (input.pullRequestId) return launchPrReviewRun(input, input.pullRequestId);
 
   const issueId = input.issueId ?? null;
+  // Reprise d'une PR SANS ticket (MIN-292) : c'est la PR qui porte la lignée.
+  // `issueId` gagne — une PR rattachée à un ticket se reprend par son ticket.
+  const continuePrId = issueId ? null : input.continuePullRequestId ?? null;
   let projectId: string;
   // Titre du TICKET : la moitié durable de ce que le titreur résume (l'autre est
   // la consigne). Cf. `agentRunTitleSource`.
   let issueTitle: string | null = null;
+  let continuePr: PrRunContext | null = null;
   if (issueId) {
     const { data: issue } = await service
       .from("issues")
@@ -201,6 +219,22 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     if (!issue) return { ok: false, error: "issueNotFound" };
     projectId = (issue as { project_id: string }).project_id;
     issueTitle = (issue as { title: string | null }).title;
+  } else if (continuePrId) {
+    // Même résolution de projet qu'une relecture : une PR appartient à un dépôt,
+    // et le projet porteur est le premier lien accessible au lanceur — c'est lui
+    // qui porte la RLS du run, donc la visibilité de la session.
+    continuePr = await loadPrRunContext(continuePrId);
+    if (!continuePr) return { ok: false, error: "prNotFound" };
+    const prLink = await resolveProjectLinkForRepo({
+      userId: input.userId,
+      provider: continuePr.provider,
+      repoFullName: continuePr.repoFullName,
+    });
+    if (!prLink) return { ok: false, error: "prNotFound" };
+    // Comme un run carnet : sans consigne, la session n'aurait pas de mission —
+    // et ici la consigne EST la demande de changements.
+    if (!input.prompt?.trim()) return { ok: false, error: "promptRequired" };
+    projectId = prLink.projectId;
   } else {
     // Run CARNET : sans ticket, la note EST la mission — un run carnet sans
     // instruction n'aurait rien à faire (un run d'issue, si : le ticket).
@@ -226,6 +260,16 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // suivante — même instruction, même dépense, deux fois.
   if (issueId) {
     const active = await activeRunForIssue(issueId);
+    if (active) return { ok: false, error: "alreadyRunning", run: active };
+  } else if (continuePr) {
+    // Une reprise de PR, elle, retrouve la règle : deux relances en parallèle
+    // pousseraient sur la MÊME branche. C'est la lignée qui est unique, pas le
+    // carnet — et ici la lignée est la pull request.
+    const active = await activeRunForPrNumber({
+      repoFullName: continuePr.repoFullName,
+      prNumber: continuePr.number,
+      provider: continuePr.provider,
+    });
     if (active) return { ok: false, error: "alreadyRunning", run: active };
   } else if (input.routineId) {
     const active = await activeRunForRoutine(input.routineId);
@@ -314,7 +358,21 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // le cas échéant (une `closed` est rouverte au push). Après un merge, plus rien
   // à hériter : branche neuve.
   // Un run carnet n'hérite jamais : pas de lignée, branche neuve à chaque fois.
-  const inherited = issueId ? await inheritableWorkForIssue(issueId) : null;
+  // Sauf s'il REPREND une pull request (MIN-292) : là, la lignée existe — c'est
+  // la PR — et elle se lit sur les runs qui portent son numéro. Une PR sans
+  // branche à reprendre (aucun run l'ayant ouverte, ou déjà mergée) est refusée
+  // ici plutôt que de partir en silence sur une branche neuve, ce qui perdrait
+  // le travail qu'on demandait justement de corriger.
+  const inherited = issueId
+    ? await inheritableWorkForIssue(issueId)
+    : continuePr
+      ? await inheritableWorkForPr({
+          repoFullName: continuePr.repoFullName,
+          prNumber: continuePr.number,
+          provider: continuePr.provider,
+        })
+      : null;
+  if (continuePr && !inherited) return { ok: false, error: "prNoBranch" };
 
   let run: AgentRun;
   try {

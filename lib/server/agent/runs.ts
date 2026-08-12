@@ -685,6 +685,81 @@ export async function inheritableWorkForIssue(issueId: string): Promise<Inherita
 }
 
 /**
+ * TRAVAIL dont une run froide hérite quand la lignée n'est PAS celle d'un ticket
+ * (MIN-292) : une pull request ouverte par une session CARNET n'a pas d'issue à
+ * interroger, et `inheritableWorkForIssue` répondait donc « rien à reprendre » là
+ * où une branche existe pourtant, portée par la session qui a ouvert la PR.
+ *
+ * La lignée est ici indexée sur la PULL REQUEST — c'est-à-dire sur les runs qui
+ * portent son numéro dans ce dépôt (`pr_number`, la colonne qui dit « ce run a
+ * OUVERT cette PR »). Un run de RELECTURE ne la porte jamais (cf. MIN-168), il ne
+ * peut donc pas être pris pour une lignée de travail.
+ *
+ * Mêmes règles qu'au ticket : la run la plus récente qui porte une branche gagne,
+ * et une PR `merged` ne se reprend pas (le travail est livré).
+ */
+export async function inheritableWorkForPr(opts: {
+  repoFullName: string;
+  prNumber: number;
+  provider: RepoProviderId;
+}): Promise<InheritableWork | null> {
+  const service = getServiceClient();
+  const linkIds = await repoLinkIds(service, opts.repoFullName, opts.provider);
+  if (linkIds.length === 0) return null;
+  const { data } = await service
+    .from("agent_runs")
+    .select("branch_name, base_branch, pr_number, pr_url, pr_state")
+    .eq("pr_number", opts.prNumber)
+    .in("repo_link_id", linkIds)
+    .not("branch_name", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const row = data as {
+    branch_name: string | null;
+    base_branch: string | null;
+    pr_number: number | null;
+    pr_url: string | null;
+    pr_state: AgentRun["pr_state"];
+  } | null;
+  if (!row?.branch_name) return null;
+  if (row.pr_state === "merged") return null;
+  return {
+    branchName: row.branch_name,
+    baseBranch: row.base_branch,
+    prNumber: row.pr_number,
+    prUrl: row.pr_url,
+    prState: row.pr_state,
+  };
+}
+
+/**
+ * Run ACTIF (queued/running) portant cette PR, ou null (MIN-292). C'est la règle
+ * « un seul agent à la fois » écrite pour une lignée SANS ticket : sans elle,
+ * deux relances sur la même pull request pousseraient sur la même branche en
+ * parallèle. Aucun index unique ne la garantit en base (les runs carnet n'en ont
+ * pas) — cette lecture est donc la garde, pas un garde-fou.
+ */
+export async function activeRunForPrNumber(opts: {
+  repoFullName: string;
+  prNumber: number;
+  provider: RepoProviderId;
+}): Promise<AgentRun | null> {
+  const service = getServiceClient();
+  const linkIds = await repoLinkIds(service, opts.repoFullName, opts.provider);
+  if (linkIds.length === 0) return null;
+  const { data } = await service
+    .from("agent_runs")
+    .select("*")
+    .eq("pr_number", opts.prNumber)
+    .in("repo_link_id", linkIds)
+    .in("status", ACTIVE_STATUSES)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  return ((data ?? []) as AgentRun[])[0] ?? null;
+}
+
+/**
  * Une run PLUS ANCIENNE de l'issue a-t-elle déjà travaillé cette branche ?
  * Distingue, à l'amorce d'une run sans checkpoint, une branche HÉRITÉE (elle porte
  * le travail d'une session précédente → message d'héritage) de la branche NEUVE
@@ -722,6 +797,38 @@ export async function previousRunSummaryForIssue(
     .from("agent_runs")
     .select("outcome")
     .eq("issue_id", issueId)
+    .neq("id", excludeRunId)
+    .eq("status", "completed")
+    .not("outcome", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const outcome = (data as { outcome?: string | null } | null)?.outcome ?? null;
+  return outcome?.trim() ? outcome.trim() : null;
+}
+
+/**
+ * Résumé de la run précédente d'une PULL REQUEST (MIN-292) — même rôle que
+ * `previousRunSummaryForIssue`, pour une lignée qui n'a pas de ticket : sans lui,
+ * une relance sur une PR de carnet repartirait sans le moindre lien avec ce que
+ * la session précédente a fait, et le raconterait à l'agent comme un premier jour.
+ */
+export async function previousRunSummaryForPr(
+  opts: {
+    repoFullName: string;
+    prNumber: number;
+    provider: RepoProviderId;
+  },
+  excludeRunId: string,
+): Promise<string | null> {
+  const service = getServiceClient();
+  const linkIds = await repoLinkIds(service, opts.repoFullName, opts.provider);
+  if (linkIds.length === 0) return null;
+  const { data } = await service
+    .from("agent_runs")
+    .select("outcome")
+    .eq("pr_number", opts.prNumber)
+    .in("repo_link_id", linkIds)
     .neq("id", excludeRunId)
     .eq("status", "completed")
     .not("outcome", "is", null)

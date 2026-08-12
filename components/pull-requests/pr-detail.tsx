@@ -588,9 +588,15 @@ export function PrDetail({
     "conversation",
   );
   // « Et relancer Numo » n'existe que si un run porte déjà cette PR : c'est de
-  // SES runs que la nouvelle hérite la branche (MIN-143). Une PR humaine, ou un
-  // ticket dont la PR n'a jamais été ouverte par Numo, n'a rien à hériter.
-  const canRelaunch = !!item.runId && !!item.issue;
+  // SES runs que la nouvelle hérite la branche (MIN-143). Une PR humaine n'a
+  // rien à hériter.
+  //
+  // Le TICKET n'entre pas dans cette condition (MIN-292). Il y était, et il
+  // fermait le geste sur les PR ouvertes par une session CARNET — c'est-à-dire
+  // sur des PR de Numo, avec leur branche et leurs runs, à qui l'écran répondait
+  // « Numo n'a jamais travaillé sur cette pull request ». La lignée d'une PR sans
+  // ticket, c'est la PR elle-même : le serveur la lit par son numéro.
+  const canRelaunch = !!item.runId;
   // `item` vient de la liste (valeur DB, éventuellement en retard d'un webhook),
   // `pr` du GET de la forge (la vérité) : la forge gagne dès qu'elle a répondu.
   const isDraft = pr?.draft ?? item.pr_state === "draft";
@@ -1805,9 +1811,10 @@ export function PrDetail({
           {/* Le geste que minddy a et que GitHub n'a pas : la demande de
               changements peut relancer Numo sur cette même PR (MIN-68).
               ABSENT sur une PR sans run (MIN-143) : Numo hérite du travail par
-              les runs PRÉCÉDENTS du ticket, et une PR humaine n'en a aucun — il
-              repartirait d'une branche neuve au lieu de reprendre celle-ci. Le
-              geste est masqué plutôt que cassé. */}
+              les runs PRÉCÉDENTS de cette lignée — son ticket, ou la PR
+              elle-même quand elle n'en a pas (MIN-292) —, et une PR humaine n'en
+              a aucun : il repartirait d'une branche neuve au lieu de reprendre
+              celle-ci. Le geste est masqué plutôt que cassé. */}
           {reviewVerdict === "request_changes" && reviewMode === "write" && canRelaunch ? (
             item.busyRunId ? (
               <Tooltip>

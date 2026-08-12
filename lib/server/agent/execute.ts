@@ -167,6 +167,7 @@ import {
   executeScratchpadTool,
   type ScratchpadToolContext,
 } from "./scratchpad-tools";
+import type { RepoProviderId } from "@/lib/repo-providers";
 import {
   notePrCommits as notePrCommitsOn,
   registerPr as registerPrOn,
@@ -185,6 +186,7 @@ import {
   appendEvent,
   pullPendingMessages,
   previousRunSummaryForIssue,
+  previousRunSummaryForPr,
   branchHasPriorRun,
   readInterruptFlag,
   clearInterrupt,
@@ -543,13 +545,21 @@ async function buildInheritedPrContext(
     forge: Forge;
     token: string;
     repoFullName: string;
+    /** Forge du dépôt — un numéro de PR n'est unique QUE par forge (cf. MIN-69). */
+    provider: RepoProviderId;
     repo: AgentRepoContext;
   },
 ): Promise<string | null> {
-  // Un run CARNET n'hérite jamais (pas de lignée) : rien à raconter.
-  if (!run.issue_id) return null;
+  // Un run CARNET n'hérite de rien PAR DÉFAUT (pas de lignée). L'exception est
+  // celui qui REPREND une pull request (MIN-292) : sa lignée est la PR, et la
+  // suite de cette fonction sait déjà la raconter à partir de `pr_number` — c'est
+  // seulement le résumé de la session précédente qui se lit ailleurs (par PR, pas
+  // par ticket). Sans PR héritée, rien à dire : la branche d'un run carnet neuf
+  // n'a pas de passé.
+  if (!run.issue_id && run.pr_number == null) return null;
   const issueId = run.issue_id;
   if (run.pr_number == null) {
+    if (!issueId) return null;
     // Pas de PR : la branche héritée porte-t-elle du travail d'une session
     // précédente ? (Une branche neuve stampée par un premier chunk crashé, non.)
     if (!run.branch_name) return null;
@@ -596,7 +606,19 @@ async function buildInheritedPrContext(
         number,
       })
       .catch(() => []),
-    previousRunSummaryForIssue(issueId, run.id).catch(() => null),
+    // Le fil de la lignée : par ticket quand il y en a un, par pull request
+    // sinon (une PR de carnet reprise — MIN-292).
+    (issueId
+      ? previousRunSummaryForIssue(issueId, run.id)
+      : previousRunSummaryForPr(
+          {
+            repoFullName: opts.repoFullName,
+            prNumber: number,
+            provider: opts.provider,
+          },
+          run.id,
+        )
+    ).catch(() => null),
   ]);
 
   return buildInheritedPrMessage({
@@ -1333,6 +1355,7 @@ export async function executeAgentRun(
             forge,
             token: target.token,
             repoFullName: target.repoFullName,
+            provider: target.provider,
             repo: { fullName: target.repoFullName, defaultBranch: baseBranch, workBranch },
           })
         : null;
