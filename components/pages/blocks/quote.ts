@@ -8,7 +8,6 @@ export const quoteBlock: PageBlock = {
   extensions: [Blockquote],
   icon: TextQuote,
   labelKey: "blockQuote",
-  descriptionKey: "blockQuoteHint",
   slash: {
     group: "advanced",
     order: 0,

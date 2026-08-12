@@ -157,7 +157,6 @@ export const imageBlock: PageBlock = {
   extensions: [PageImage],
   icon: ImageIcon,
   labelKey: "blockImage",
-  descriptionKey: "blockImageHint",
   slash: {
     group: "advanced",
     order: 5,

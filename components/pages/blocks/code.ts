@@ -11,7 +11,6 @@ export const codeBlock: PageBlock = {
   extensions: [CodeBlock],
   icon: Code2,
   labelKey: "blockCode",
-  descriptionKey: "blockCodeHint",
   slash: {
     group: "advanced",
     order: 1,

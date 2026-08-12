@@ -180,7 +180,6 @@ export const subpageBlock: PageBlock = {
   extensions: [Subpage],
   icon: FileText,
   labelKey: "blockSubpage",
-  descriptionKey: "blockSubpageHint",
   slash: {
     group: "advanced",
     order: 4,

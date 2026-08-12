@@ -129,10 +129,8 @@ describe("le registre des blocs de page", () => {
 describe("les libellés des blocs", () => {
   it("existent dans les DEUX catalogues", () => {
     for (const block of PAGE_BLOCKS) {
-      for (const key of [block.labelKey, block.descriptionKey]) {
-        expect(enPages[key], `Pages.${key} manque en anglais`).toBeTruthy();
-        expect(frPages[key], `Pages.${key} manque en français`).toBeTruthy();
-      }
+      expect(enPages[block.labelKey], `Pages.${block.labelKey} manque en anglais`).toBeTruthy();
+      expect(frPages[block.labelKey], `Pages.${block.labelKey} manque en français`).toBeTruthy();
     }
   });
 

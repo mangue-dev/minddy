@@ -11,7 +11,6 @@ export const paragraphBlock: PageBlock = {
   extensions: [Paragraph],
   icon: Pilcrow,
   labelKey: "blockParagraph",
-  descriptionKey: "blockParagraphHint",
   slash: {
     group: "basic",
     order: 0,

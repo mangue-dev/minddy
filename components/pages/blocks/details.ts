@@ -123,7 +123,6 @@ export const detailsBlock: PageBlock = {
   extensions: [PageDetails, PageDetailsSummary, PageDetailsContent],
   icon: ChevronRight,
   labelKey: "blockDetails",
-  descriptionKey: "blockDetailsHint",
   slash: {
     group: "advanced",
     order: 3,

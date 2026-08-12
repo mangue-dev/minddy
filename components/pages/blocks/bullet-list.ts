@@ -11,7 +11,6 @@ export const bulletListBlock: PageBlock = {
   extensions: [BulletList, ListItem],
   icon: List,
   labelKey: "blockBulletList",
-  descriptionKey: "blockBulletListHint",
   slash: {
     group: "lists",
     order: 0,

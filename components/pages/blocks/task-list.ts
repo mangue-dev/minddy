@@ -29,7 +29,6 @@ export const taskListBlock: PageBlock = {
   extensions: [ScratchpadTaskList, ScratchpadTaskItemBase],
   icon: ListTodo,
   labelKey: "blockTaskList",
-  descriptionKey: "blockTaskListHint",
   slash: {
     group: "lists",
     order: 2,

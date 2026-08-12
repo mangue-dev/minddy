@@ -16,7 +16,6 @@ export const dividerBlock: PageBlock = {
   extensions: [HorizontalRule],
   icon: Minus,
   labelKey: "blockDivider",
-  descriptionKey: "blockDividerHint",
   slash: {
     group: "advanced",
     order: 2,

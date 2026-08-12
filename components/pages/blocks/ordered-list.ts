@@ -8,7 +8,6 @@ export const orderedListBlock: PageBlock = {
   extensions: [OrderedList, ListItem],
   icon: ListOrdered,
   labelKey: "blockOrderedList",
-  descriptionKey: "blockOrderedListHint",
   slash: {
     group: "lists",
     order: 1,

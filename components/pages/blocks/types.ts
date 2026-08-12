@@ -14,8 +14,8 @@
 // parcourent tous les trois. Aucun consommateur n'importe un bloc nommément.
 //
 // Ce que le compilateur tient déjà, sans test : un descripteur auquel il manque
-// un champ ne compile pas, et `labelKey` / `descriptionKey` sont typés
-// `MessageKey<"Pages">` — une clé i18n absente du catalogue anglais est une
+// un champ ne compile pas, et `labelKey` est typé `MessageKey<"Pages">` — une
+// clé i18n absente du catalogue anglais est une
 // erreur de type, pas un `Pages.slashTableau` affiché à l'écran.
 // Ce qu'il ne tient pas, et que lib/pages-blocks.test.ts tient : la présence de
 // la clé dans le catalogue FRANÇAIS, et le fait que le markdown du bloc revienne
@@ -162,7 +162,6 @@ export interface PageBlock {
 
   icon: LucideIcon;
   labelKey: MessageKey<"Pages">;
-  descriptionKey: MessageKey<"Pages">;
 
   /** Le menu « / » : où le bloc apparaît, et sur quoi il se cherche. Les
       aliases portent les DEUX langues — c'est une saisie, pas un affichage. */

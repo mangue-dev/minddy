@@ -6,9 +6,9 @@
 // position absolue se fait couper par son conteneur.
 //
 // La différence tient en une ligne, et c'est tout l'objet du ticket : ce menu
-// n'a AUCUNE liste de blocs. Il affiche ce que `slashItems()` lui rend, groupé
-// par `SLASH_GROUPS`, et pose le bloc par `insertBlock()`. Ajouter un bloc
-// tableau ne demandera pas d'y revenir.
+// n'a AUCUNE liste de blocs. Il affiche ce que `slashItems()` lui rend et pose
+// le bloc par `insertBlock()`. Ajouter un bloc tableau ne demandera pas d'y
+// revenir.
 
 import {
   forwardRef,
@@ -22,10 +22,8 @@ import { Extension, type Editor, type Range } from "@tiptap/core";
 import { ReactRenderer } from "@tiptap/react";
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
 import { PluginKey } from "@tiptap/pm/state";
-import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import {
-  SLASH_GROUPS,
   insertBlock,
   slashItems,
   type PageBlock,
@@ -36,8 +34,6 @@ import {
 export interface PageSlashItem {
   block: PageBlock;
   label: string;
-  description: string;
-  groupLabel: string;
 }
 
 /** Le catalogue traduit, dans l'ordre du menu. `t` vient du composant appelant
@@ -46,14 +42,9 @@ export interface PageSlashItem {
 export function pageSlashItems(
   t: (key: PageBlock["labelKey"]) => string
 ): PageSlashItem[] {
-  const groupLabel = new Map(
-    SLASH_GROUPS.map(({ group, labelKey }) => [group, t(labelKey)])
-  );
   return slashItems().map((block) => ({
     block,
     label: t(block.labelKey),
-    description: t(block.descriptionKey),
-    groupLabel: groupLabel.get(block.slash.group) ?? "",
   }));
 }
 
@@ -83,7 +74,6 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   props,
   ref
 ) {
-  const t = useTranslations("Pages");
   const [selected, setSelected] = useState(0);
   useEffect(() => setSelected(0), [props.items]);
 
@@ -147,25 +137,9 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
 
   if (props.items.length === 0) return null;
 
-  // Les titres de groupe sont posés à la volée, au premier bloc de chaque
-  // groupe : un filtrage qui vide un groupe en fait disparaître le titre, sans
-  // que le menu ait à regrouper quoi que ce soit.
-  let lastGroup: string | null = null;
-  const rows: ReactNode[] = [];
-  props.items.forEach((item, index) => {
-    if (item.groupLabel !== lastGroup) {
-      lastGroup = item.groupLabel;
-      rows.push(
-        <div
-          key={`group:${item.groupLabel}`}
-          className="px-2.5 pb-1.5 pt-3 text-xs font-medium text-muted-foreground first:pt-1.5"
-        >
-          {item.groupLabel}
-        </div>
-      );
-    }
+  const rows: ReactNode[] = props.items.map((item, index) => {
     const Icon = item.block.icon;
-    rows.push(
+    return (
       <button
         type="button"
         key={item.block.id}
@@ -176,39 +150,24 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
         }}
         onClick={() => choose(index)}
         className={cn(
-          "flex w-full items-start gap-2.5 scroll-my-1.5 rounded-lg px-2.5 py-2 text-left transition-colors",
+          "flex w-full items-center gap-2.5 scroll-my-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
           index === selected ? "bg-muted text-foreground" : "text-foreground/90",
           // Pendant la navigation au clavier, la souris ne peint plus rien :
           // deux lignes allumées, ce serait deux réponses à « Entrée ».
           keyboard && "pointer-events-none"
         )}
       >
-        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0">
-          <span className="block truncate text-sm">{item.label}</span>
-          <span className="block truncate text-xs text-muted-foreground">
-            {item.description}
-          </span>
-        </span>
+        <Icon className="size-4 shrink-0 text-muted-foreground" />
+        <span className="truncate">{item.label}</span>
       </button>
     );
   });
 
   return (
-    <div className="w-72 overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
-      {/* Tant que rien n'est tapé, le menu DIT ce qu'il attend. Un « / » suivi
-          d'une liste de blocs se lit comme un menu à cliquer ; c'est aussi un
-          champ de recherche, et rien à l'écran ne le disait. La ligne
-          disparaît dès la première lettre — elle a fini son travail, et la
-          place revient aux blocs. */}
-      {props.query.length === 0 ? (
-        <p className="border-b border-border px-3 py-2 text-xs text-muted-foreground">
-          {t("slashHint")}
-        </p>
-      ) : null}
+    <div className="min-w-52 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg">
       <div
         ref={listRef}
-        className="scrollbar-quiet max-h-80 overflow-y-auto overscroll-contain p-1.5"
+        className="scrollbar-quiet max-h-80 overflow-y-auto overscroll-contain"
       >
         {rows}
       </div>

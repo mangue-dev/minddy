@@ -21,7 +21,6 @@ import {
   type NodeViewRenderer,
   type Range,
 } from "@tiptap/core";
-import type { MessageKey } from "@/lib/i18n-keys";
 import { turnBlocksInto } from "@/components/pages/block-actions";
 import type {
   PageBlock,
@@ -191,14 +190,13 @@ export function blockExtensions(
 
 /* ── Le menu « / » ────────────────────────────────────────────────────── */
 
-/** Les sections du menu, dans l'ordre d'affichage, avec leur clé de libellé. */
+/** Les sections du catalogue, dans l'ordre de tri du menu. */
 export const SLASH_GROUPS: ReadonlyArray<{
   group: SlashGroup;
-  labelKey: MessageKey<"Pages">;
 }> = [
-  { group: "basic", labelKey: "groupBasic" },
-  { group: "lists", labelKey: "groupLists" },
-  { group: "advanced", labelKey: "groupAdvanced" },
+  { group: "basic" },
+  { group: "lists" },
+  { group: "advanced" },
 ];
 
 /** Le catalogue dans l'ordre du menu « / » : groupe par groupe, `order` par

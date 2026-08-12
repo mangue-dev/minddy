@@ -24,7 +24,6 @@ function headingBlock(level: (typeof LEVELS)[number]): PageBlock {
     extensions: level === 1 ? [Heading.configure({ levels: [...LEVELS] })] : [],
     icon,
     labelKey: `blockHeading${level}`,
-    descriptionKey: `blockHeading${level}Hint`,
     slash: {
       group: "basic",
       order: level,
