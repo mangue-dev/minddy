@@ -17,6 +17,7 @@ import {
   opencodeServerEnv,
 } from "./opencode-config";
 import { opencodeToolFiles } from "./opencode-tools";
+import { decidePermission } from "./opencode-permissions";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
 import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
@@ -41,11 +42,11 @@ import type { VmJob, VmPushResult, VmTurnReport } from "./protocol";
  * CE QUI EST ICI, ET CE QUI N'Y EST PAS ENCORE
  *
  * Ce fichier est le socle du lot 1 : démarrage, session, prompt, traduction du
- * flux, fin de tour. Les branchements du lot 2 — le pont de tools (`/tool/:name`
- * servi au `MDY_SUPERVISOR_URL` que les tools généurés appellent), la réponse aux
- * permissions par `command-guard`, les règles de livraison, les sous-agents —
- * s'accrochent tous à des points déjà nommés ici : `onUsage`, `onPermission`,
- * `toolBridge`. Ils sont **déclarés et non implémentés**, plutôt qu'oubliés.
+ * flux, fin de tour. Le lot 2 y a accroché le ledger, le plafond de dépense, les
+ * garde-fous (`command-guard` / `repo-path`, rejoués sur `permission.asked`) et
+ * `ask_user` (le tool `question`). Restent à brancher : le pont de tools
+ * (`/tool/:name` servi au `MDY_SUPERVISOR_URL` que les tools générés appellent),
+ * les règles de livraison, les sous-agents.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * DEUX MESURES QUI DÉCIDENT DE LA FORME (opencode-ai@1.18.16)
@@ -214,6 +215,16 @@ export async function runOpencodeTurn(
     let budgetUsd = job.budgetUsd;
     let lastBudgetAt = now();
     let budgetExhausted = false;
+    /** Le tour s'est terminé sur des questions : la session ATTEND l'utilisateur. */
+    let askedUser = false;
+    /**
+     * Motif du refus d'une permission, par appel de tool. Il ne sert qu'à une
+     * chose, et elle compte : reposer `tool_result.reason` sur l'event du tool
+     * refusé, comme la boucle maison le faisait (`FORBIDDEN_COMMAND_REASON` est
+     * ce qui rend les refus MESURABLES sur `agent_run_events`). Le traducteur,
+     * lui, est pur : il ne sait pas ce qu'on a répondu à une permission.
+     */
+    const refusedCalls = new Map<string, string>();
 
     const abortEvents = new AbortController();
     const stream = client.events(abortEvents.signal);
@@ -230,10 +241,57 @@ export async function runOpencodeTurn(
         // se compte et se facture — mais dans sa bande à elle, et sans jamais
         // parler au nom de la mère (cf. `Translation.sessionId`).
         const child = !!out.sessionId && out.sessionId !== sessionId;
+
+        /**
+         * LE GARDE-FOU, RÉPONDU AVANT TOUT LE RESTE — un tool suspendu attend, et
+         * chaque milliseconde de plus est du temps de microVM facturé. La
+         * décision est pure ([opencode-permissions.ts](opencode-permissions.ts)),
+         * ce qui la rend testable sans serveur ; ce qui est ici est le
+         * branchement, et le fait qu'un refus se raconte au fil.
+         */
+        if (out.permission) {
+          const verdict = decidePermission(out.permission);
+          if (verdict.reason && out.permission.callId) {
+            refusedCalls.set(out.permission.callId, verdict.reason);
+          }
+          await client
+            .replyPermission(out.permission.id, verdict.reply, verdict.message)
+            .catch((err) => {
+              // Un verdict qui n'arrive pas laisse le tool suspendu jusqu'à la
+              // deadline du tour. À dire, donc — mais pas à faire tomber le tour :
+              // le modèle verra son tool ne jamais rendre, et c'est déjà un signal.
+              console.error("[supervisor] permission reply failed:", (err as Error).message);
+            });
+        }
+
+        /**
+         * LA QUESTION AU LIEU DU TOUR. `ask_user` a toujours été TERMINAL chez
+         * nous : les questions partent au fil, la session se met en attente, et
+         * la réponse revient au tour suivant par le steering. Chez opencode le
+         * tool BLOQUE — tenir une microVM ouverte le temps qu'un humain revienne
+         * coûterait des heures de compute pour ne rien faire.
+         *
+         * On écarte donc la question (le tool se résout, l'historique reste
+         * apparié) et on coupe le tour. Mesuré : `reject` rend le tool en erreur
+         * « The user dismissed this question », et l'`abort` seul le rendrait
+         * « Tool execution aborted » — les deux laissent un historique que le
+         * tour suivant rejoue sans trou.
+         */
+        if (out.question && !child) {
+          askedUser = true;
+          await client.rejectQuestion(out.question.id);
+          await client.abort(sessionId);
+        }
+
         for (const event of out.events) {
           if (event.type === "tool_call") toolsSeen += 1;
+          const reason =
+            event.type === "tool_result"
+              ? refusedCalls.get(String(event.payload.id ?? ""))
+              : undefined;
           await cp.emit(event.type, {
             ...redactPayload(event.payload, secrets),
+            ...(reason ? { reason } : {}),
             // Le reste du marquage d'une fille (`parent_call_id`, `subagent_mode`,
             // le préfixe d'id) vient avec les sous-agents, tâche 12 du plan. Ce
             // champ-ci ne peut pas attendre : sans lui, le fil attribuerait à
@@ -293,6 +351,10 @@ export async function runOpencodeTurn(
           });
         }
         if (out.error) sessionError = out.error;
+        // Les questions sont PARTIES au fil (juste au-dessus) : on sort une fois
+        // l'event émis, pas avant — sinon la carte de questions n'existerait pas
+        // et la session attendrait une réponse à rien.
+        if (askedUser) break;
         // `session.idle` d'une FILLE ne termine pas le tour : la mère, elle,
         // attend encore son rapport.
         if (out.idle && !child) break;
@@ -323,7 +385,13 @@ export async function runOpencodeTurn(
     }
 
     // ── Le push, le diff, le rapport ─────────────────────────────────────────
-    const reply = replyOf(state, sessionId);
+    /**
+     * Un tour qui a posé ses questions n'a PAS de réponse, et c'est la même règle
+     * que la boucle maison (`reply: ""` sur `ask_user`) : la carte de questions
+     * clôt le fil, il n'y a pas de mot de la fin à afficher, et le commit prend
+     * son message générique plutôt qu'une phrase écrite avant la question.
+     */
+    const reply = askedUser ? "" : replyOf(state, sessionId);
     let pushed: VmPushResult | null = null;
     let pushError: string | undefined;
     if (job.writesToRepo) {
@@ -382,6 +450,9 @@ export async function runOpencodeTurn(
     return {
       status,
       ...(reply ? { reply } : {}),
+      // C'est lui qui met la session en `awaiting_input` et envoie la notification
+      // `agent_question` plutôt qu'`agent_done` ([vm-rest.ts](../vm-rest.ts)).
+      ...(askedUser ? { askedUser: true } : {}),
       ...(timedOut ? { errorCode: "turnTooLong" as const } : {}),
       ...(sessionError ? { errorMessage: cap(secrets.redact(sessionError), 1000) } : {}),
       costUsd,

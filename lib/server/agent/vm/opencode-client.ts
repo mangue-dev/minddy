@@ -20,8 +20,14 @@ import type { OpencodeEvent } from "./opencode-events";
  *   pas. On attend donc la fin d'un tour sur **`session.idle` du flux `/event`**,
  *   qu'on consomme de toute façon, et c'est mieux : aucune requête HTTP ne reste
  *   ouverte pendant des heures.
- * - **La réponse à une permission est `POST /session/:id/permissions/:permissionID`**
- *   avec `{response: "once"|"always"|"reject"}` — pas `/permission/:id/reply`.
+ * - **La réponse à une permission est `POST /permission/:id/reply`**, corps
+ *   `{reply: "once"|"always"|"reject", message?}` — mesuré 200 `true` (lot 2).
+ *   `/session/:id/permissions/:permissionID` marche encore mais est `deprecated`
+ *   et n'a pas de `message` : c'est ce champ qui porte le motif du refus au
+ *   modèle, donc c'est la première route qui compte.
+ * - **Une coupure publie `session.error` `MessageAbortedError`** : un `abort`
+ *   voulu (plafond, question, deadline) n'est pas une panne
+ *   ([opencode-events.ts](opencode-events.ts) le filtre).
  * - `POST /session/:id/prompt_async` rend **204** immédiatement.
  * - `POST /session/:id/abort` rend **200 `true`**, même sur une session au repos.
  * - `POST /session` rend la session complète (`id`, `projectID`, `directory`…).
@@ -142,19 +148,43 @@ export class OpencodeClient {
     await this.http(route, { method: "POST" }).catch(() => undefined);
   }
 
-  /** Répond à une demande de permission (le garde-fou du superviseur). */
+  /**
+   * Répond à une demande de permission — c'est ici que le garde-fou du
+   * superviseur s'exerce ([opencode-permissions.ts](opencode-permissions.ts)).
+   *
+   * `POST /permission/:id/reply`, corps `{reply, message?}` — mesuré 200 `true`.
+   * PAS `/session/:id/permissions/:id`, qui existe encore mais est marquée
+   * `deprecated` dans l'OpenAPI **et n'accepte pas de `message`** : c'est ce
+   * champ, et lui seul, qui porte le motif du refus jusqu'au modèle (il le lit
+   * dans l'erreur du tool). Un refus muet lui laisserait deviner pourquoi.
+   */
   async replyPermission(
-    sessionId: string,
     permissionId: string,
-    response: PermissionResponse,
+    reply: PermissionResponse,
+    message?: string,
   ): Promise<void> {
-    const route = this.legacy(`/session/${sessionId}/permissions/${permissionId}`);
+    const route = this.legacy(`/permission/${permissionId}/reply`);
     const res = await this.http(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ response }),
+      body: JSON.stringify({ reply, ...(message ? { message } : {}) }),
     });
     if (!res.ok) throw new OpencodeHttpError(res.status, route, await res.text());
+  }
+
+  /**
+   * Écarte une question du modèle. Notre `ask_user` ne se répond pas ici : il
+   * REND LA MAIN À L'UTILISATEUR, et la réponse revient au tour suivant par le
+   * steering. Le tool, lui, doit être résolu pour que l'historique reste
+   * apparié — mesuré : il revient en `error`, « The user dismissed this question ».
+   */
+  async rejectQuestion(questionId: string): Promise<void> {
+    const route = this.legacy(`/question/${questionId}/reject`);
+    await this.http(route, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    }).catch(() => undefined);
   }
 
   /**

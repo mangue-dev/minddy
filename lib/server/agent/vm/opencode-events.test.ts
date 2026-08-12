@@ -270,4 +270,134 @@ describe("ce qui ne doit jamais casser un tour", () => {
     expect(out.error).toBe("provider is down");
     expect(out.events).toEqual([{ type: "error", payload: { message: "provider is down" } }]);
   });
+
+  it("ne prend PAS une coupure voulue pour une panne", () => {
+    // Mesuré : tout `abort` publie `session.error` `MessageAbortedError`. Or nous
+    // coupons nous-mêmes dans trois cas voulus (plafond de dépense, question à
+    // l'utilisateur, deadline) — sans ce filtre, chacun écrivait un event `error`
+    // au fil et un `errorMessage: "Aborted"` par-dessus le vrai motif.
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      {
+        type: "session.error",
+        properties: { sessionID: "ses_1", error: { name: "MessageAbortedError", data: { message: "Aborted" } } },
+      },
+      state,
+    );
+    expect(out.error).toBeUndefined();
+    expect(out.events).toEqual([]);
+  });
+});
+
+describe("les garde-fous et les questions", () => {
+  it("rend la demande de permission d'un `bash` telle que le garde-fou l'attend", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      {
+        type: "permission.asked",
+        properties: {
+          id: "per_1",
+          sessionID: "ses_1",
+          permission: "bash",
+          patterns: ["git reset --hard"],
+          metadata: { command: "git reset --hard" },
+          always: ["git reset *"],
+          tool: { messageID: "msg_1", callID: "call_1" },
+        },
+      },
+      state,
+    );
+    expect(out.permission).toEqual({
+      id: "per_1",
+      sessionId: "ses_1",
+      permission: "bash",
+      callId: "call_1",
+      command: "git reset --hard",
+    });
+    // Rien au fil : un refus se raconte dans le `tool_result` du tool refusé.
+    expect(out.events).toEqual([]);
+  });
+
+  it("rend le chemin ABSOLU d'une écriture", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      {
+        type: "permission.asked",
+        properties: {
+          id: "per_2",
+          sessionID: "ses_1",
+          permission: "edit",
+          patterns: [".git/config"],
+          metadata: { filepath: "/vercel/sandbox/repo/.git/config", diff: "…" },
+          tool: { messageID: "msg_1", callID: "call_2" },
+        },
+      },
+      state,
+    );
+    expect(out.permission).toMatchObject({
+      permission: "edit",
+      filepath: "/vercel/sandbox/repo/.git/config",
+      callId: "call_2",
+    });
+  });
+
+  it("traduit `question.asked` en NOTRE event `question`", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      {
+        type: "question.asked",
+        properties: {
+          id: "que_1",
+          sessionID: "ses_1",
+          questions: [
+            {
+              question: "Quelle approche pour le cache ?",
+              header: "Cache",
+              multiple: true,
+              options: [
+                { label: "Redis (Recommended)", description: "Rapide." },
+                { label: "En mémoire", description: "Zéro dépendance." },
+              ],
+            },
+          ],
+          tool: { messageID: "msg_1", callID: "call_7" },
+        },
+      },
+      state,
+    );
+    // Le MÊME event que la boucle maison : `id` est l'appel de tool, et les
+    // questions sont normalisées par le parseur partagé — c'est ce qui permet à
+    // la carte de questions du feed de ne rien savoir du moteur.
+    expect(out.events).toEqual([
+      {
+        type: "question",
+        payload: {
+          id: "call_7",
+          questions: [
+            {
+              question: "Quelle approche pour le cache ?",
+              header: "Cache",
+              // `multiple` chez opencode, `multi_select` chez nous.
+              multiSelect: true,
+              options: [
+                { label: "Redis", description: "Rapide.", recommended: true },
+                { label: "En mémoire", description: "Zéro dépendance.", recommended: false },
+              ],
+            },
+          ],
+        },
+      },
+    ]);
+    expect(out.question?.id).toBe("que_1");
+  });
+
+  it("ignore une question vide plutôt que d'arrêter le tour pour rien", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      { type: "question.asked", properties: { id: "que_2", sessionID: "ses_1", questions: [] } },
+      state,
+    );
+    expect(out.events).toEqual([]);
+    expect(out.question).toBeUndefined();
+  });
 });

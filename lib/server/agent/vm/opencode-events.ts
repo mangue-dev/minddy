@@ -1,4 +1,6 @@
 import { cap, toolArgSummary } from "../tool-summary";
+import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
+import type { PermissionAsk } from "./opencode-permissions";
 import type { AgentEventType } from "@/lib/agent-api";
 
 /**
@@ -86,6 +88,14 @@ export interface Translation {
   idle?: boolean;
   /** Le tour est mort (`session.error`) — le message est celui d'opencode. */
   error?: string;
+  /**
+   * Un tool attend le verdict du harness (`permission.asked`). C'est là que
+   * `command-guard` et `repo-path` s'exécutent — cf.
+   * [opencode-permissions.ts](opencode-permissions.ts).
+   */
+  permission?: PermissionAsk;
+  /** Le modèle pose ses questions (`question.asked`) : c'est notre `ask_user`. */
+  question?: { id: string; callId: string; questions: AskUserQuestion[] };
 }
 
 /**
@@ -334,13 +344,76 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
 
     case "session.error": {
       const error = (props.error ?? {}) as Record<string, unknown>;
+      /**
+       * UNE COUPURE N'EST PAS UNE PANNE, et opencode ne fait pas la différence :
+       * tout `abort` publie `session.error` avec `name: "MessageAbortedError"`
+       * (mesuré). Or nous coupons NOUS-MÊMES le tour dans trois cas voulus — le
+       * plafond de dépense, la question posée à l'utilisateur, la deadline. Sans
+       * ce filtre, chacun des trois écrivait un event `error` au fil et un
+       * `errorMessage: "Aborted"` au rapport, par-dessus le vrai motif.
+       */
+      if (error.name === "MessageAbortedError") return { sessionId, events: [] };
+      const data = (error.data ?? {}) as Record<string, unknown>;
       const message =
         typeof error.message === "string"
           ? error.message
-          : typeof props.message === "string"
-            ? props.message
-            : JSON.stringify(error).slice(0, 1000);
+          : typeof data.message === "string"
+            ? data.message
+            : typeof props.message === "string"
+              ? props.message
+              : JSON.stringify(error).slice(0, 1000);
       return { sessionId, events: [{ type: "error", payload: { message } }], error: message };
+    }
+
+    /**
+     * UN TOOL SUSPENDU QUI ATTEND NOTRE VERDICT. Le payload mesuré :
+     * `{id, sessionID, permission, patterns, metadata, always, tool:{messageID, callID}}`.
+     * Rien n'est émis au fil ici — un refus se raconte dans le `tool_result` du
+     * tool refusé, exactement comme la boucle maison le racontait.
+     */
+    case "permission.asked": {
+      const id = String(props.id ?? "");
+      if (!id) return { sessionId, events: [] };
+      const metadata = (props.metadata ?? {}) as Record<string, unknown>;
+      const tool = (props.tool ?? {}) as Record<string, unknown>;
+      return {
+        sessionId,
+        events: [],
+        permission: {
+          id,
+          sessionId,
+          permission: String(props.permission ?? ""),
+          callId: String(tool.callID ?? ""),
+          ...(typeof metadata.command === "string" ? { command: metadata.command } : {}),
+          ...(typeof metadata.filepath === "string" ? { filepath: metadata.filepath } : {}),
+        },
+      };
+    }
+
+    /**
+     * NOTRE `ask_user`, RENDU PAR LE TOOL NATIF. L'event du fil est le MÊME que
+     * celui de la boucle maison (`{id, questions}`, `id` = l'appel de tool) : le
+     * feed rend une carte de questions, et un run d'il y a trois mois se relit
+     * pareil. Seule la graphie du multi-choix change (`multiple` chez opencode,
+     * `multi_select` chez nous), et c'est ici qu'on la traduit.
+     */
+    case "question.asked": {
+      const id = String(props.id ?? "");
+      const tool = (props.tool ?? {}) as Record<string, unknown>;
+      const callId = String(tool.callID ?? id);
+      const raw = Array.isArray(props.questions) ? props.questions : [];
+      const questions = parseAskUserQuestions({
+        questions: raw.map((q) => {
+          const rec = (q ?? {}) as Record<string, unknown>;
+          return { ...rec, multi_select: rec.multiple === true };
+        }),
+      });
+      if (!id || questions.length === 0) return { sessionId, events: [] };
+      return {
+        sessionId,
+        events: [{ type: "question", payload: { id: callId, questions } }],
+        question: { id, callId, questions },
+      };
     }
 
     default:

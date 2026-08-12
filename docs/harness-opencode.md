@@ -365,7 +365,7 @@ superviseur ([supervisor.ts](../lib/server/agent/vm/supervisor.ts)).
 | Route | Ce que le §2.4 en disait | Ce qu'elle fait |
 | --- | --- | --- |
 | `POST /api/session/:id/wait` | la moitié v2 du couple prompt/wait | **503** — « Session wait is not available yet ». Elle est dans l'OpenAPI, le serveur ne l'implémente pas. |
-| réponse à une permission | `POST /permission/:id/reply` | `POST /session/:id/permissions/:permissionID`, corps `{response: "once"｜"always"｜"reject"}`. |
+| réponse à une permission | `POST /permission/:id/reply` | Elle EXISTE et c'est celle-là qu'il faut (corrigé au lot 2, §2.13) : corps `{reply, message?}`. `POST /session/:id/permissions/:permissionID` marche aussi mais est `deprecated` **et n'a pas de `message`**. |
 
 Conséquence directe, et elle est meilleure que le plan : **la fin d'un tour se lit
 sur `session.idle` du flux `/event`**, qu'on consomme de toute façon pour le fil.
@@ -442,6 +442,46 @@ sinon dans l'ordre d'arrivée : **exact en séquentiel**, seulement probable qua
 deux filles tournent en parallèle sur le même modèle. Ce qui se joue là est une
 référence de réconciliation, pas une dépense — les tokens et le coût viennent du
 round, jamais de l'appariement.
+
+### 2.13 Les garde-fous et `ask_user` : ce que la permission publie (lot 2)
+
+Mesuré le 2026-08-12 avec un **faux fournisseur local** qui scripte les appels de
+tool — le modèle ne tourne pas, la mesure ne coûte rien, et elle porte sur le vrai
+binaire ([opencode-permissions.ts](../lib/server/agent/vm/opencode-permissions.ts)).
+
+| Ce qu'on voulait savoir | Mesure |
+| --- | --- |
+| Ce qu'une permission publie | `permission.asked` → `{id, sessionID, permission, patterns, metadata, always, tool: {messageID, callID}}`. **Forme héritée**, pas `permission.v2.asked`. |
+| `bash: "ask"` demande-t-il pour tout ? | **Oui**, `echo hi` comprise : `metadata.command` porte la commande. Le garde-fou voit donc exactement ce que voyait `run_command`. |
+| Ce qu'une écriture publie | `permission: "edit"`, `metadata.filepath` **ABSOLU** (+ un `diff`), quel que soit le tool (`write`, `edit`, `apply_patch`). Hors dépôt, une `external_directory` la précède. |
+| Comment un refus parle au modèle | `POST /permission/:id/reply {reply: "reject", message}` → le tool revient en `error` : « The user rejected permission … with the following feedback: *message* ». Le refus reste donc **une erreur de tool**, comme chez nous. |
+| Ce que `question` fait | `question.asked` → `{id, sessionID, questions: [{question, header, options: [{label, description}], multiple}], tool: {callID}}`, et le tool **BLOQUE** jusqu'à `POST /question/:id/reply` ou `/reject`. |
+| Ce qu'un `abort` laisse derrière | Le tool en vol passe en `error` (« Tool execution aborted ») et l'historique **reste apparié** : le tour suivant repart sans trou. |
+
+Trois conséquences, et deux d'entre elles corrigent du code déjà écrit :
+
+1. **`.git/` n'est gardé par personne chez opencode** — mesuré : un `write` sur
+   `<dépôt>/.git/config` a été **exécuté** et a écrasé le fichier. C'est
+   exactement ce qu'`assertNotGit` protège (écrire un hook ou un `config` =
+   exfiltration du token d'installation). D'où `permission.edit: "ask"` sur une
+   session qui écrit, là où le lot 1 avait mis `allow` : c'est le `ask` qui donne
+   la main au superviseur. Le piège du branchement, attrapé par un test :
+   `resolveWithin` prend un chemin **relatif** et recolle un absolu sous le dépôt
+   (`/etc/passwd` → `<dépôt>/etc/passwd`), donc ne refuse rien — or `filepath` est
+   justement absolu.
+2. **Un `abort` publie `session.error` `MessageAbortedError`.** Nous coupons
+   nous-mêmes dans trois cas VOULUS (plafond de dépense, question posée, deadline) :
+   sans filtre, chacun écrivait un event `error` au fil et un
+   `errorMessage: "Aborted"` par-dessus le vrai motif. Le traducteur l'écarte.
+3. **`ask_user` reste TERMINAL, contre le grain d'opencode.** Chez nous la session
+   se met en attente et la réponse revient au tour suivant par le steering ; chez
+   opencode le tool bloque, et tenir une microVM ouverte le temps qu'un humain
+   revienne coûterait des heures de compute pour ne rien faire. Le superviseur
+   émet donc notre event `question` (même payload, la carte du feed ne sait rien
+   du moteur), **écarte** la question et **coupe** la session — les deux gestes
+   laissent un historique apparié. La permission `question`, elle, **n'est pas
+   consultée** : ce qui retire vraiment `ask_user` d'une routine est le jeu de
+   tools de l'agent, pas l'ACL.
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un
@@ -519,7 +559,12 @@ lieu d'un `filter` sur un tableau — mais ce sont les mêmes règles, et elles 
 
 Fonctions pures, testées, sans vis-à-vis chez opencode. Le superviseur les rejoue
 sur `POST /permission/:id/reply` et dans un **plugin** (`tool.execute.before/after`,
-`session.idle`) :
+`session.idle`).
+
+> **FAIT au lot 2** pour les deux premières : `command-guard` et `repo-path` sont
+> rejoués sur `permission.asked` par
+> [opencode-permissions.ts](../lib/server/agent/vm/opencode-permissions.ts) — un
+> module pur, et **leurs tests n'ont pas bougé d'une ligne** (§2.13).
 
 [command-guard.ts](../lib/server/agent/command-guard.ts) ·
 [repo-path.ts](../lib/server/agent/repo-path.ts) (`resolveWithin`, `assertNotGit`) ·

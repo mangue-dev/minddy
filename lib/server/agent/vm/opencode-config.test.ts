@@ -169,15 +169,24 @@ describe("ce que le tour a le droit de faire", () => {
     }
   });
 
-  it("écrit quand la session écrit", () => {
+  it("laisse l'écriture en `ask` — c'est ce qui protège `.git/`", () => {
+    // Mesuré : `.git/` n'est gardé par personne chez opencode, un `write` sur
+    // `<dépôt>/.git/config` l'écrase. `ask` est ce qui donne la main au
+    // superviseur, qui y rejoue `assertNotGit` et `resolveWithin`.
     const cfg = buildOpencodeConfig(job({ writesToRepo: true }));
-    expect(cfg.permission.edit).toBe("allow");
+    expect(cfg.permission.edit).toBe("ask");
     expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools?.edit).toBeUndefined();
   });
 
   it("coupe la question quand personne ne peut répondre (routine)", () => {
-    expect(buildOpencodeConfig(job({ interactive: false })).permission.question).toBe("deny");
-    expect(buildOpencodeConfig(job({ interactive: true })).permission.question).toBe("ask");
+    const routine = buildOpencodeConfig(job({ interactive: false }));
+    // Le RETRAIT du tool, et pas seulement l'ACL : mesuré, la permission
+    // `question` n'est pas consultée — le tool s'exécute et publie sa question.
+    expect(routine.agent[OPENCODE_PRIMARY_AGENT].tools?.question).toBe(false);
+    expect(routine.permission.question).toBe("deny");
+    const interactive = buildOpencodeConfig(job({ interactive: true }));
+    expect(interactive.agent[OPENCODE_PRIMARY_AGENT].tools?.question).toBe(true);
+    expect(interactive.permission.question).toBe("ask");
   });
 
   it("éteint les intégrés qui n'ont pas de lecteur chez nous", () => {

@@ -85,6 +85,12 @@ const h = {
   pushed: true,
   /** Frames ajoutées au flux capturé (sessions filles, erreurs…). */
   extraFrames: [] as string[],
+  /** Ce que le superviseur a répondu aux permissions, dans l'ordre. */
+  permissionReplies: [] as Array<{ id: string; reply: string; message?: string }>,
+  /** Questions écartées (`/question/:id/reject`). */
+  questionsRejected: [] as string[],
+  /** Le serveur refuse la réponse à une permission. */
+  permissionReplyFails: false,
   proxyClosed: false,
   /** Ce que le plan de contrôle répond sur le restant de budget. */
   remainingUsd: null as number | null,
@@ -161,6 +167,16 @@ function fakeFetch(): typeof fetch {
       return new Response(JSON.stringify({ id: PARENT, projectID: "p" }), { status: 200 });
     }
     if (path.endsWith("/prompt_async")) return new Response(null, { status: 204 });
+    if (path.startsWith("/permission/") && path.endsWith("/reply")) {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { reply: string; message?: string };
+      h.permissionReplies.push({ id: path.split("/")[2], ...body });
+      if (h.permissionReplyFails) return new Response("gone", { status: 404 });
+      return new Response("true", { status: 200 });
+    }
+    if (path.startsWith("/question/") && path.endsWith("/reject")) {
+      h.questionsRejected.push(path.split("/")[2]);
+      return new Response("true", { status: 200 });
+    }
     if (path.endsWith("/abort")) return new Response("true", { status: 200 });
     if (path === "/sync/history") {
       return new Response(JSON.stringify({ events: h.history }), { status: 200 });
@@ -292,7 +308,31 @@ beforeEach(() => {
   h.proxyClosed = false;
   h.remainingUsd = null;
   h.budgetReads = 0;
+  h.permissionReplies = [];
+  h.questionsRejected = [];
+  h.permissionReplyFails = false;
 });
+
+/** Une demande de permission, telle qu'opencode la publie sur le flux. */
+function permissionFrame(
+  permission: string,
+  metadata: Record<string, unknown>,
+  callId = "call_garde",
+  id = "per_1",
+): string {
+  return JSON.stringify({
+    type: "permission.asked",
+    properties: {
+      id,
+      sessionID: PARENT,
+      permission,
+      patterns: [],
+      metadata,
+      always: [],
+      tool: { messageID: "msg_1", callID: callId },
+    },
+  });
+}
 
 describe("le décor, posé avant le premier octet de serveur", () => {
   it("écrit l'ancrage et les 32 tools de domaine hors du dépôt", async () => {
@@ -466,6 +506,130 @@ describe("le plafond de dépense", () => {
   it("ne plafonne rien quand le job n'a pas de budget (BYOK)", async () => {
     const report = await run({ budgetUsd: undefined });
     expect(report.status).toBe("completed");
+  });
+});
+
+describe("les garde-fous", () => {
+  it("laisse passer une commande anodine", async () => {
+    h.extraFrames = [permissionFrame("bash", { command: "npm test" })];
+    await run();
+    expect(h.permissionReplies).toEqual([{ id: "per_1", reply: "once" }]);
+  });
+
+  it("refuse `git reset --hard` et dit pourquoi AU MODÈLE", async () => {
+    h.extraFrames = [
+      permissionFrame("bash", { command: "git reset --hard" }),
+      // Le tool revient en erreur derrière le refus : c'est cette frame-là qui
+      // porte le refus jusqu'au fil.
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: PARENT,
+          part: {
+            type: "tool",
+            tool: "bash",
+            callID: "call_garde",
+            state: { status: "error", error: "rejected", input: { command: "git reset --hard" } },
+          },
+        },
+      }),
+    ];
+    await run();
+    expect(h.permissionReplies[0].reply).toBe("reject");
+    // Le message VOYAGE : opencode le recopie dans l'erreur du tool. Sans lui, le
+    // modèle ne sait pas ce qu'on lui reproche et réessaie.
+    expect(h.permissionReplies[0].message).toContain("the harness owns git");
+    // Et le refus reste mesurable sur `agent_run_events`, comme du temps de la
+    // boucle maison (`FORBIDDEN_COMMAND_REASON`).
+    const result = h.events.find((e) => e.payload.id === "call_garde" && e.type === "tool_result");
+    expect(result?.payload.reason).toBe("forbidden_command");
+  });
+
+  it("refuse une écriture dans `.git/`, qu'opencode exécuterait sans rien dire", async () => {
+    h.extraFrames = [
+      permissionFrame("edit", { filepath: "/vercel/sandbox/repo/.git/config" }),
+    ];
+    await run();
+    expect(h.permissionReplies[0].reply).toBe("reject");
+    expect(h.permissionReplies[0].message).toContain(".git");
+  });
+
+  it("laisse passer une écriture du dépôt", async () => {
+    h.extraFrames = [permissionFrame("edit", { filepath: "/vercel/sandbox/repo/lib/a.ts" })];
+    await run();
+    expect(h.permissionReplies[0].reply).toBe("once");
+  });
+
+  it("ne perd pas le tour quand le verdict n'arrive pas à destination", async () => {
+    // Le serveur peut refuser la réponse (permission déjà expirée, route qui
+    // bouge à une release près). Le tour continue : le tool restera suspendu
+    // jusqu'à la deadline, ce qui est un signal — un tour mort n'en est pas un.
+    h.extraFrames = [permissionFrame("bash", { command: "ls" })];
+    h.permissionReplyFails = true;
+    const report = await run();
+    expect(report.status).toBe("completed");
+  });
+});
+
+describe("les questions à l'utilisateur", () => {
+  const question = JSON.stringify({
+    type: "question.asked",
+    properties: {
+      id: "que_1",
+      sessionID: PARENT,
+      questions: [
+        {
+          question: "Quelle approche ?",
+          header: "Approche",
+          options: [{ label: "A (Recommended)", description: "…" }, { label: "B", description: "…" }],
+        },
+      ],
+      tool: { messageID: "msg_1", callID: "call_q" },
+    },
+  });
+
+  it("pose les questions au fil, puis ARRÊTE le tour", async () => {
+    h.extraFrames = [question];
+    const report = await run();
+    // Le même event que la boucle maison : c'est ce que la carte de questions du
+    // feed sait déjà rendre, y compris sur un run relu trois mois plus tard.
+    const asked = h.events.find((e) => e.type === "question");
+    expect(asked?.payload.id).toBe("call_q");
+    // `askedUser` est ce qui met la session en `awaiting_input` et envoie
+    // `agent_question` plutôt qu'`agent_done` (vm-rest.ts).
+    expect(report.askedUser).toBe(true);
+    expect(report.status).toBe("completed");
+    // Pas de mot de la fin : la carte de questions clôt le fil, et le commit
+    // prend son message générique.
+    expect(report.reply).toBeUndefined();
+  });
+
+  it("ne tient pas la microVM ouverte le temps qu'un humain revienne", async () => {
+    h.extraFrames = [question];
+    const report = await run();
+    // La question est écartée (le tool se résout, l'historique reste apparié) et
+    // la session coupée : la réponse reviendra au tour suivant, par le steering.
+    expect(h.questionsRejected).toEqual(["que_1"]);
+    expect(h.routes.some((r) => r.endsWith("/abort"))).toBe(true);
+    // Et le tour garde son journal : c'est lui qui fera repartir le suivant.
+    expect((report.checkpoint as { opencode?: unknown }).opencode).toBeTruthy();
+  });
+
+  it("ne prend PAS l'abort de la question pour une panne", async () => {
+    // Tout `abort` publie `session.error` `MessageAbortedError` : sans le filtre
+    // du traducteur, le tour rendrait `error` et le fil afficherait une panne là
+    // où il y a une question.
+    h.extraFrames = [
+      question,
+      JSON.stringify({
+        type: "session.error",
+        properties: { sessionID: PARENT, error: { name: "MessageAbortedError", data: { message: "Aborted" } } },
+      }),
+    ];
+    const report = await run();
+    expect(report.status).toBe("completed");
+    expect(report.errorMessage).toBeUndefined();
+    expect(h.events.some((e) => e.type === "error")).toBe(false);
   });
 });
 

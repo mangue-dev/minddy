@@ -233,7 +233,14 @@ function reasoningOptions(job: VmJob): Record<string, unknown> | null {
  * règle qui approuve tout retirerait au superviseur son point de contrôle.
  */
 function permissions(job: VmJob): Record<string, PermissionRule> {
-  const write: PermissionAction = job.writesToRepo ? "allow" : "deny";
+  /**
+   * `ask` ET NON `allow` sur une session qui écrit, et ça n'est pas de la
+   * prudence : `.git/` n'est protégé par personne chez opencode — mesuré, un
+   * `write` sur `<dépôt>/.git/config` l'a écrasé. `ask` est ce qui donne la main
+   * au superviseur, qui y rejoue `assertNotGit` et `resolveWithin`
+   * ([opencode-permissions.ts](opencode-permissions.ts)).
+   */
+  const write: PermissionAction = job.writesToRepo ? "ask" : "deny";
   return {
     read: "allow",
     glob: "allow",
@@ -242,7 +249,9 @@ function permissions(job: VmJob): Record<string, PermissionRule> {
     // Chaque commande passe par nous : c'est là que `command-guard` s'exécute.
     bash: "ask",
     edit: write,
-    // `ask_user` n'existe pas pour une ROUTINE (MIN-185) : personne ne répondra.
+    // Second rideau seulement : la permission `question` n'est PAS consultée
+    // (mesuré). Ce qui retire vraiment `ask_user` d'une routine est le jeu de
+    // tools de l'agent (`primaryTools`).
     question: job.interactive ? "ask" : "deny",
     webfetch: "allow",
     websearch: "deny",
@@ -276,6 +285,15 @@ function primaryTools(job: VmJob): Record<string, boolean> {
   // La délégation est le tool `task` : il disparaît quand le tour n'a pas de
   // sous-agents à donner, plutôt que d'être servi et de refuser.
   tools.task = job.subagents.maxParallel > 0;
+  /**
+   * `ask_user` N'EXISTE PAS POUR UNE ROUTINE (MIN-185) : personne ne répondra à
+   * 9 h du matin. Le RETRAIT est ici et pas seulement dans l'ACL, parce que la
+   * permission `question` n'est pas consultée — mesuré : avec `question: "ask"`
+   * en config, aucune `permission.asked` n'est publiée, le tool s'exécute et
+   * publie directement `question.asked`. Seul le jeu de tools de l'agent le
+   * retire vraiment (§4).
+   */
+  tools.question = job.interactive;
   return tools;
 }
 
