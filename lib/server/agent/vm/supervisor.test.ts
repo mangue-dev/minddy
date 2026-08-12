@@ -564,6 +564,27 @@ describe("les garde-fous", () => {
     expect(h.permissionReplies[0].reply).toBe("once");
   });
 
+  /**
+   * MIN-286 lot 2, tâche 14 — L'ÉDITION EST LE FAIT QUE LES RÈGLES DE LIVRAISON
+   * LISENT, et chez opencode elle ne passe plus par un de nos tools : la demande
+   * de permission est le seul endroit où on la voit. Sans ce câblage, un tour qui
+   * édite se présente à la porte comme un tour qui n'a rien touché — donc sans
+   * type-check, sans tests et sans relecture avant que le code parte chez un humain.
+   */
+  it("note une écriture autorisée au checkpoint, en chemin de dépôt", async () => {
+    h.extraFrames = [permissionFrame("edit", { filepath: "/vercel/sandbox/repo/lib/a.ts" })];
+    const report = await run();
+    expect(report.checkpoint?.editedPaths).toEqual(["lib/a.ts"]);
+    expect(report.checkpoint?.repoTouched).toBe(true);
+  });
+
+  it("ne note RIEN d'une écriture refusée — elle n'a pas eu lieu", async () => {
+    h.extraFrames = [permissionFrame("edit", { filepath: "/vercel/sandbox/repo/.git/config" })];
+    const report = await run();
+    expect(report.checkpoint?.editedPaths).toBeUndefined();
+    expect(report.checkpoint?.repoTouched).toBeUndefined();
+  });
+
   it("ne perd pas le tour quand le verdict n'arrive pas à destination", async () => {
     // Le serveur peut refuser la réponse (permission déjà expirée, route qui
     // bouge à une release près). Le tour continue : le tool restera suspendu

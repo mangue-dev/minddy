@@ -107,6 +107,17 @@ export interface Translation {
    * dans quelle bande de `seq` s'écrire.
    */
   child?: { sessionId: string; callId: string; agent: string; model?: string };
+  /**
+   * UNE COMMANDE DU MODÈLE VIENT DE SE TERMINER, avec son code de sortie.
+   *
+   * C'est ce que lisait `run_command` chez nous, et ce dont la porte de
+   * livraison a besoin pour se taire quand le modèle a lancé les tests lui-même
+   * (MIN-262, `VerificationSink`). Le tool `bash` d'opencode le pose sur
+   * `state.metadata.exit` — un nombre, `null` quand la commande a été abandonnée
+   * ou tuée par le timeout. Absent = on ne conclut rien, ce qui est le sens
+   * prudent : la porte relance alors la suite entière.
+   */
+  shell?: { command: string; exit: number };
 }
 
 /**
@@ -315,9 +326,11 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
         const success = status === "completed";
         const raw = success ? stateNode.output : (stateNode.error ?? stateNode.output);
         const preview = cap(typeof raw === "string" ? raw : JSON.stringify(raw ?? ""), PREVIEW_MAX);
+        const shell = opencodeName === "bash" ? shellOf(stateNode, input) : undefined;
         return {
           sessionId,
           events: [{ type: "tool_result", payload: { id: callId, name, success, preview } }],
+          ...(shell ? { shell } : {}),
         };
       }
       return { sessionId, events: [] };
@@ -477,6 +490,25 @@ function childOf(
     agent: String(input.mode ?? ""),
     ...(modelId ? { model: modelId } : {}),
   };
+}
+
+/**
+ * La commande et son code de sortie, lus sur le part d'un `bash` terminé.
+ *
+ * `undefined` dès qu'un des deux manque — et `exit` manque pour de vrai : la
+ * source d'opencode y pose `null` quand la commande a été abandonnée ou tuée par
+ * le timeout. Un code de sortie inconnu n'est pas un zéro, et le prendre pour
+ * tel ferait taire la porte de livraison sur un tour non vérifié.
+ */
+function shellOf(
+  stateNode: Record<string, unknown>,
+  input: Record<string, unknown>,
+): { command: string; exit: number } | undefined {
+  const metadata = (stateNode.metadata ?? {}) as Record<string, unknown>;
+  const exit = metadata.exit;
+  const command = typeof input.command === "string" ? input.command.trim() : "";
+  if (!command || typeof exit !== "number" || !Number.isFinite(exit)) return undefined;
+  return { command, exit };
 }
 
 /** Le texte du round EN COURS d'une session — la charge du direct. */

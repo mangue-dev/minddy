@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 import type { ControlPlaneClient } from "./control-plane-client";
 import { DOMAIN_TOOL_NAMES } from "./opencode-tools";
+import type { OpencodeDelivery } from "./opencode-delivery";
 import type { VmJob } from "./protocol";
 
 /**
@@ -52,6 +53,19 @@ import type { VmJob } from "./protocol";
  *   « réessaie ».
  * - **Un nom inconnu répond 404.** Celui-là n'est pas une erreur du modèle mais
  *   de nous : un tool servi et non routé. Il doit se voir, pas se rattraper.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ET LA VOIX DU HARNESS (MIN-286, lot 2, tâche 14)
+ *
+ * Deux tools portent une règle de livraison : `write_issue_plan` (le plan relu
+ * et sa clôture) et `create_pr` (type-check, tests, diff). Les deux la rendent
+ * en `followUp` — ce que la boucle maison servait en message `user` après le
+ * round, faute de pouvoir grossir un résultat de tool qu'elle élidait par le
+ * milieu. **Chez opencode, un résultat de tool EST le texte que le tool rend**,
+ * et rien ne l'élide en dessous des plafonds de `tool_output` (2 000 lignes /
+ * 50 Ko ; le plus gros bloc, le diff, est capé à 12 Ko). Le pont colle donc le
+ * `followUp` APRÈS le résultat, dans le même texte : le modèle lit les deux d'un
+ * geste, sans qu'aucun message ne s'ajoute à la conversation.
  */
 
 /** Le corps qu'un tool généré poste. `args` est ce que le modèle a rempli. */
@@ -82,11 +96,17 @@ export interface ToolBridge {
  */
 export type SupervisorTool = (
   args: Record<string, unknown>,
-) => Promise<{ result: unknown; success: boolean }>;
+) => Promise<{ result: unknown; success: boolean; followUp?: string }>;
 
 export interface ToolBridgeOptions {
   job: VmJob;
   cp: ControlPlaneClient;
+  /**
+   * Les règles de livraison ([opencode-delivery.ts](opencode-delivery.ts)).
+   * Absentes, le pont est un passe-plat nu — c'est ce que veulent les tests qui
+   * n'ont rien à dire du plan ni de la porte, et jamais un tour de production.
+   */
+  delivery?: OpencodeDelivery;
   /**
    * Les tools que le superviseur exécute au lieu de les faire suivre. `create_pr`
    * y entrera au lot 2 tâche 15 ; tant qu'il n'y est pas, il est REFUSÉ plutôt
@@ -149,7 +169,7 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
   }
 
   /** Le passe-plat : les états de tour partent avec, et reviennent à jour. */
-  async function forward(
+  async function forwardRaw(
     name: string,
     args: Record<string, unknown>,
   ): Promise<{ result: unknown; success: boolean }> {
@@ -167,11 +187,30 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     return { result: res.result, success: res.success };
   }
 
+  /**
+   * Le passe-plat SOUS les règles de livraison : `write_issue_plan` y note le
+   * plan écrit et repart avec sa relecture en `followUp`. Enveloppé une fois, au
+   * démarrage — l'envelopper par appel referait un sink de plan neuf à chaque
+   * fois, donc un contrôle qui ne parle jamais.
+   */
+  const forward = opts.delivery ? opts.delivery.wrapDomainTool(forwardRaw) : forwardRaw;
+
+  /**
+   * `create_pr`, sous sa porte : le premier appel d'un tour qui a édité rend les
+   * contrôles au lieu de pousser. La porte n'est posée que s'il y a un handler —
+   * sans lui le tool est REFUSÉ (lot 2, tâche 15), et rendre des contrôles pour
+   * refuser juste après dirait au modèle qu'il a livré alors qu'il n'a rien fait.
+   */
+  const supervisorTools: Record<string, SupervisorTool> = { ...opts.supervisorTools };
+  if (opts.delivery && supervisorTools.create_pr) {
+    supervisorTools.create_pr = opts.delivery.wrapCreatePr(supervisorTools.create_pr);
+  }
+
   async function dispatch(
     name: string,
     args: Record<string, unknown>,
-  ): Promise<{ result: unknown; success: boolean } | null> {
-    const own = opts.supervisorTools?.[name];
+  ): Promise<{ result: unknown; success: boolean; followUp?: string } | null> {
+    const own = supervisorTools[name];
     if (own) return await own(args);
     if (SUPERVISOR_ONLY.has(name)) {
       return {
@@ -213,7 +252,7 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
       return;
     }
 
-    let outcome: { result: unknown; success: boolean } | null;
+    let outcome: { result: unknown; success: boolean; followUp?: string } | null;
     try {
       outcome = await dispatch(name, body.args ?? {});
     } catch (err) {
@@ -230,11 +269,17 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
       return;
     }
 
-    res.writeHead(200, { "content-type": "application/json" });
     // `JSON.stringify` du résultat, tel quel : c'est ce que la boucle maison
     // donnait au modèle, et une deuxième mise en forme serait une deuxième chose
-    // à garder en phase pendant la bascule.
-    res.end(JSON.stringify(outcome.result ?? (outcome.success ? {} : { error: "no result" })));
+    // à garder en phase pendant la bascule. La voix du harness, elle, vient
+    // APRÈS, en texte : le modèle lit un résultat puis ce qu'on a à lui en dire.
+    const rendered = JSON.stringify(
+      outcome.result ?? (outcome.success ? {} : { error: "no result" }),
+    );
+    res.writeHead(200, {
+      "content-type": outcome.followUp ? "text/plain; charset=utf-8" : "application/json",
+    });
+    res.end(outcome.followUp ? `${rendered}\n\n${outcome.followUp}` : rendered);
   }
 
   const port = await listen(server, opts.port ?? 0);

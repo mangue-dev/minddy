@@ -1,0 +1,184 @@
+import {
+  newVerificationSink,
+  noteVerificationCommand,
+  noteVerificationStale,
+  type VerificationSink,
+} from "../diagnostics";
+import {
+  gateCreatePr,
+  gateWritePlan,
+  makeDeliveryGate,
+  type DeliveryGate,
+  type DeliveryGateDeps,
+} from "../delivery-gate";
+import { newPlanWriteSink, watchPlanWrites } from "../plan-closure";
+import { REPO_DIR, type RepoHost } from "../repo-host";
+import type { PlatformToolHandler } from "../exec-tool";
+
+/**
+ * LES RÈGLES DE LIVRAISON, TENUES AU-DESSUS D'OPENCODE (MIN-286, lot 2, tâche 14).
+ *
+ * Ce que le harness vérifie n'a pas changé d'une ligne : la porte de livraison
+ * ([delivery-gate.ts](../delivery-gate.ts)), l'auto-relecture du diff
+ * ([self-review.ts](../self-review.ts)), la clôture du plan
+ * ([plan-closure.ts](../plan-closure.ts)) et les diagnostics
+ * ([diagnostics.ts](../diagnostics.ts)) sont les MÊMES fonctions, avec leurs
+ * tests inchangés. Ce module est le câblage : il leur donne, dans le monde
+ * d'opencode, les trois faits qu'elles lisaient dans nos tools.
+ *
+ * | Ce que la règle lit | Où le harness maison le prenait | Où on le prend ici |
+ * | --- | --- | --- |
+ * | `editedPaths` | le tool `edit_file` / `write_file` / `apply_patch` | la **demande de permission** `edit`, autorisée (`metadata.filepath`) |
+ * | `verification` (le modèle a-t-il testé ?) | le code de sortie de `run_command` | `state.metadata.exit` du tool `bash` |
+ * | `planWrites` | `watchPlanWrites` sur les tools ticket | le même `watchPlanWrites`, posé sur le passe-plat du pont |
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * POURQUOI ICI, ET PAS EN PLUGIN OPENCODE COMME LE PLAN L'ANNONÇAIT
+ *
+ * Le cadrage disait « réimplantés en plugin opencode
+ * (`tool.execute.before/after`, `session.idle`) ». Deux choses mesurées depuis
+ * l'ont rendu inutile, et coûteux :
+ *
+ * - **les tools qui déclenchent les règles passent DÉJÀ par nous.**
+ *   `write_issue_plan` et `create_pr` sont des tools de domaine : ils arrivent au
+ *   pont ([tool-bridge.ts](tool-bridge.ts)), qui est exactement le
+ *   `tool.execute.after` qu'un plugin aurait offert, sans second processus ni
+ *   second vocabulaire ;
+ * - **les deux faits qui viennent des tools INTÉGRÉS (édition, shell) arrivent
+ *   sur le flux `/event`**, que le superviseur lit déjà — la permission pour
+ *   l'un, le part du tool pour l'autre.
+ *
+ * Un plugin aurait donc ajouté un troisième endroit où le harness parle au
+ * modèle, dans un fichier généré tournant *dans* opencode, sans rien rendre que
+ * ces deux chemins ne rendent. La règle du chantier tient : **on ne redéclare
+ * jamais ce que la seule source dit déjà.**
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CE QU'ON ASSUME, ET QUI SE VOIT
+ *
+ * 1. **L'édition est notée à l'AUTORISATION, pas à l'exécution.** Une écriture
+ *    autorisée puis ratée (disque plein, `oldString` introuvable) laisse son
+ *    chemin dans `editedPaths` : le tour paie un type-check qu'il n'avait pas à
+ *    payer. C'est le sens prudent — l'inverse (rater une édition réelle) rendrait
+ *    la porte muette sur le code qui part chez un humain.
+ * 2. **Le shell ne remplit le registre de vérification que si son code de sortie
+ *    est LISIBLE** (`metadata.exit`, un nombre — la source d'opencode le pose sur
+ *    chaque commande, `null` sur un abandon ou un timeout). Sans lui, on ne
+ *    conclut rien, et la porte relance la suite entière : un faux « c'est vert »
+ *    ferait TAIRE le harness sur un tour que personne n'a vérifié (`diagnostics.ts`).
+ */
+
+/** Ce qu'un tool rend au pont, la voix du harness comprise. */
+export interface DeliveryToolOutcome {
+  result: unknown;
+  success: boolean;
+  /**
+   * Ce que le harness a de LONG à dire sur cet appel. Le pont le colle APRÈS le
+   * résultat, dans le texte que le tool rend au modèle : chez opencode un
+   * résultat de tool EST du texte, il n'y a pas de message `user` à insérer
+   * après le round comme la boucle maison le faisait.
+   */
+  followUp?: string;
+}
+
+/** Un tool que le superviseur exécute lui-même — `create_pr` aujourd'hui. */
+export type DeliveryTool = (args: Record<string, unknown>) => Promise<DeliveryToolOutcome>;
+
+/**
+ * Chemins d'édition gardés au checkpoint. La même valeur que
+ * [turn.ts](turn.ts) : ce qu'on garde sert à mettre en tête les erreurs de
+ * typage du tour, pas à tenir un journal.
+ */
+export const CHECKPOINT_EDITED_PATHS_MAX = 200;
+
+export interface OpencodeDeliveryDeps {
+  host: RepoHost;
+  emit: DeliveryGateDeps["emit"];
+  /** Baseline du diff du tour (`lastFilesSha` du checkpoint, ou la tête d'origine). */
+  filesFromSha: string;
+  /** Fichiers édités par les tours PRÉCÉDENTS, tels que le checkpoint les porte. */
+  editedPaths?: readonly string[];
+  /** Graine du verrou « le dépôt a été touché » — vient du checkpoint. */
+  repoTouched?: boolean;
+  /** Ce qu'il reste de budget mural au tour, pour que la porte se taise à temps. */
+  remainingMs: () => number;
+}
+
+export interface OpencodeDelivery {
+  /**
+   * Le passe-plat des tools de domaine, enveloppé : il note le plan écrit
+   * (`watchPlanWrites`) et rend le contrôle du plan en `followUp`
+   * (`gateWritePlan`).
+   */
+  wrapDomainTool(handler: PlatformToolHandler): PlatformToolHandler;
+  /** `create_pr`, enveloppé de sa porte : le premier appel d'un tour qui a édité
+   *  rend les contrôles au lieu de pousser (`gateCreatePr`). */
+  wrapCreatePr(handler: DeliveryTool): DeliveryTool;
+  /** Une écriture vient d'être AUTORISÉE — chemin absolu ou relatif au dépôt. */
+  noteEdit(filepath: string): void;
+  /** Une commande du modèle s'est terminée, avec son code de sortie. */
+  noteShell(command: string, exit: number): void;
+  /** Note les éditions en attente comme « dépôt touché », avant le push. */
+  noteEdits(): void;
+  repoTouched(): boolean;
+  /** Ce que le checkpoint doit porter — capé, et vide quand il n'y a rien. */
+  checkpointEditedPaths(): string[];
+}
+
+export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelivery {
+  const editedPaths = new Set<string>(deps.editedPaths ?? []);
+  const planWrites = newPlanWriteSink();
+  const verification: VerificationSink = newVerificationSink();
+
+  const gate: DeliveryGate = makeDeliveryGate({
+    host: deps.host,
+    emit: deps.emit,
+    editedPaths,
+    planWrites,
+    verification,
+    filesFromSha: deps.filesFromSha,
+    repoTouched: deps.repoTouched ?? false,
+    logPrefix: "[supervisor]",
+  });
+
+  return {
+    wrapDomainTool: (handler) =>
+      gateWritePlan(watchPlanWrites(handler, planWrites), gate, deps.remainingMs),
+
+    wrapCreatePr: (handler) => gateCreatePr(handler, gate, deps.remainingMs),
+
+    noteEdit(filepath: string) {
+      const relative = repoRelative(filepath);
+      if (!relative) return;
+      editedPaths.add(relative);
+      // Toute édition périme ce que le modèle avait vérifié : vert AVANT la
+      // dernière édition ne veut rien dire (`diagnostics.ts`).
+      noteVerificationStale(verification);
+    },
+
+    noteShell(command: string, exit: number) {
+      noteVerificationCommand(verification, command, exit);
+    },
+
+    noteEdits: () => gate.noteEdits(),
+    repoTouched: () => gate.repoTouched(),
+    checkpointEditedPaths: () => [...editedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX),
+  };
+}
+
+/**
+ * Le chemin RELATIF au dépôt, ou `""` si le chemin n'est pas dedans.
+ *
+ * `metadata.filepath` d'opencode est ABSOLU (mesuré, cf.
+ * [opencode-permissions.ts](opencode-permissions.ts)) là où le type-check et le
+ * mode ciblé du runner de tests parlent en chemins de dépôt. Ce qui sort du
+ * dépôt n'est pas noté : la permission le refusera de toute façon, et un
+ * `/etc/passwd` en tête d'un bloc d'erreurs de typage n'aiderait personne.
+ */
+export function repoRelative(filepath: string): string {
+  const trimmed = filepath.trim();
+  if (!trimmed) return "";
+  if (!trimmed.startsWith("/")) return trimmed.replace(/^\.\//, "");
+  if (trimmed === REPO_DIR) return "";
+  return trimmed.startsWith(`${REPO_DIR}/`) ? trimmed.slice(REPO_DIR.length + 1) : "";
+}

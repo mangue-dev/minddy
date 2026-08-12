@@ -245,6 +245,59 @@ describe("le vocabulaire d'opencode, traduit vers le nôtre", () => {
   });
 });
 
+describe("le code de sortie d'une commande (MIN-262)", () => {
+  /** Un `bash` terminé, tel qu'opencode rend son part. */
+  function bashDone(metadata: Record<string, unknown>, command = "npx vitest run") {
+    return translateEvent(
+      {
+        type: "message.part.updated",
+        properties: {
+          part: {
+            type: "tool",
+            tool: "bash",
+            callID: "call_7",
+            state: { status: "completed", output: "ok", input: { command }, metadata },
+          },
+        },
+      },
+      newTurnStreamState(),
+    );
+  }
+
+  it("rend la commande et son code de sortie", () => {
+    // C'est ce que lisait `run_command` chez nous, et ce qui fait taire la porte
+    // de livraison quand le modèle a lancé les tests lui-même.
+    expect(bashDone({ exit: 0 }).shell).toEqual({ command: "npx vitest run", exit: 0 });
+    expect(bashDone({ exit: 1 }).shell).toEqual({ command: "npx vitest run", exit: 1 });
+  });
+
+  it("ne conclut RIEN quand le code de sortie manque", () => {
+    // Opencode y pose `null` sur une commande abandonnée ou tuée par le timeout.
+    // Un code inconnu n'est pas un zéro : le prendre pour tel ferait taire le
+    // harness sur un tour que personne n'a vérifié.
+    expect(bashDone({ exit: null }).shell).toBeUndefined();
+    expect(bashDone({}).shell).toBeUndefined();
+  });
+
+  it("ne parle que pour le shell", () => {
+    const out = translateEvent(
+      {
+        type: "message.part.updated",
+        properties: {
+          part: {
+            type: "tool",
+            tool: "read",
+            callID: "call_8",
+            state: { status: "completed", output: "x", input: { filePath: "/a" }, metadata: { exit: 0 } },
+          },
+        },
+      },
+      newTurnStreamState(),
+    );
+    expect(out.shell).toBeUndefined();
+  });
+});
+
 describe("ce qui ne doit jamais casser un tour", () => {
   it("avale une forme inattendue sans lever", () => {
     // Le flux vient d'un tiers dont on adopte la cadence de release. Une forme

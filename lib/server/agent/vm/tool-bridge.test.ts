@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { startToolBridge, type ToolBridge } from "./tool-bridge";
 import { DOMAIN_TOOL_NAMES } from "./opencode-tools";
+import type { OpencodeDelivery } from "./opencode-delivery";
 import type { ControlPlaneClient } from "./control-plane-client";
 import type { VmJob } from "./protocol";
 
@@ -54,7 +55,12 @@ async function call(
 
 /** Monte le pont, joue le scénario, referme — un port ouvert par test, pas plus. */
 async function withBridge(
-  opts: { job?: VmJob; cp?: ControlPlaneClient; supervisorTools?: Record<string, never> },
+  opts: {
+    job?: VmJob;
+    cp?: ControlPlaneClient;
+    supervisorTools?: Record<string, never>;
+    delivery?: OpencodeDelivery;
+  },
   body: (bridge: ToolBridge) => Promise<void>,
 ): Promise<void> {
   calls.length = 0;
@@ -63,6 +69,7 @@ async function withBridge(
     cp: opts.cp ?? cp(),
     port: 0,
     ...(opts.supervisorTools ? { supervisorTools: opts.supervisorTools } : {}),
+    ...(opts.delivery ? { delivery: opts.delivery } : {}),
   });
   try {
     await body(bridge);
@@ -176,6 +183,52 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     await withBridge({}, async (bridge) => {
       const res = await call(bridge, "tool_qui_nexiste_pas");
       expect(res.status).toBe(404);
+    });
+  });
+
+  /**
+   * MIN-286 lot 2, tâche 14 — LA VOIX DU HARNESS ARRIVE AU MODÈLE.
+   *
+   * Ce que la boucle maison servait en message `user` après le round part ici
+   * dans le TEXTE que le tool rend : chez opencode il n'y a pas de message à
+   * insérer, et un `followUp` qui resterait dans une clé JSON que personne ne
+   * lit serait un contrôle exécuté pour rien.
+   */
+  it("colle le followUp du harness après le résultat, dans le texte rendu au modèle", async () => {
+    const delivery = {
+      wrapDomainTool:
+        (handler: (name: string, args: Record<string, unknown>) => Promise<unknown>) =>
+        async (name: string, args: Record<string, unknown>) => ({
+          ...((await handler(name, args)) as { result: unknown; success: boolean }),
+          followUp: "LE BLOC DU HARNESS",
+        }),
+      wrapCreatePr: (h: unknown) => h,
+    } as unknown as OpencodeDelivery;
+
+    await withBridge({ delivery }, async (bridge) => {
+      const res = await call(bridge, "read_issue", { identifier: "MIN-42" });
+      const [body, followUp] = res.body.split("\n\n");
+      expect(JSON.parse(body).answer).toContain("réponse à");
+      expect(followUp).toBe("LE BLOC DU HARNESS");
+    });
+  });
+
+  it("laisse `create_pr` refusé quand il n'a pas de handler, sans lui poser de porte", async () => {
+    // Rendre les contrôles pour refuser juste après dirait au modèle qu'il a
+    // livré alors que rien n'a été poussé (la moitié push arrive au lot 2, t. 15).
+    let gated = false;
+    const delivery = {
+      wrapDomainTool: (h: unknown) => h,
+      wrapCreatePr: (h: unknown) => {
+        gated = true;
+        return h;
+      },
+    } as unknown as OpencodeDelivery;
+
+    await withBridge({ delivery }, async (bridge) => {
+      const res = await call(bridge, "create_pr", { title: "t" });
+      expect(JSON.parse(res.body).error).toContain("not available");
+      expect(gated).toBe(false);
     });
   });
 

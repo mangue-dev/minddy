@@ -19,6 +19,7 @@ import {
 } from "./opencode-config";
 import { opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge, type ToolBridge } from "./tool-bridge";
+import { makeOpencodeDelivery, type OpencodeDelivery } from "./opencode-delivery";
 import { decidePermission } from "./opencode-permissions";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
@@ -45,10 +46,11 @@ import type { VmJob, VmPushResult, VmTurnReport } from "./protocol";
  *
  * Ce fichier est le socle du lot 1 : démarrage, session, prompt, traduction du
  * flux, fin de tour. Le lot 2 y a accroché le ledger, le plafond de dépense, les
- * garde-fous (`command-guard` / `repo-path`, rejoués sur `permission.asked`) et
- * `ask_user` (le tool `question`). Restent à brancher : le pont de tools
- * (`/tool/:name` servi au `MDY_SUPERVISOR_URL` que les tools générés appellent),
- * les règles de livraison, les sous-agents.
+ * garde-fous (`command-guard` / `repo-path`, rejoués sur `permission.asked`),
+ * `ask_user` (le tool `question`), les sous-agents, le pont de tools
+ * ([tool-bridge.ts](tool-bridge.ts)) et les règles de livraison
+ * ([opencode-delivery.ts](opencode-delivery.ts)). Restent au lot 2 : la forge
+ * (`create_pr`, coupé en deux) et le commit de fin de tour côté relecture.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * DEUX MESURES QUI DÉCIDENT DE LA FORME (opencode-ai@1.18.16)
@@ -123,6 +125,7 @@ export interface SupervisorDeps {
   startToolBridge?(opts: {
     job: VmJob;
     cp: ControlPlaneClient;
+    delivery?: OpencodeDelivery;
     port?: number;
   }): Promise<ToolBridge>;
   /** 0 = port libre. Les tests s'en servent pour ne pas se disputer 4097. */
@@ -176,9 +179,25 @@ export async function runOpencodeTurn(
    * avant qu'il ne le lise. C'est lui qui tient les compteurs du TOUR — plafond
    * de recherches web, ancres de relecture ([tool-bridge.ts](tool-bridge.ts)).
    */
+  /**
+   * LES RÈGLES DE LIVRAISON (lot 2, tâche 14), construites AVANT le pont : c'est
+   * lui qui sert `write_issue_plan` et `create_pr`, donc lui qui porte la voix du
+   * harness. Le superviseur, de son côté, leur donne les deux faits qui viennent
+   * des tools intégrés — une écriture autorisée, une commande terminée.
+   */
+  const delivery = makeOpencodeDelivery({
+    host,
+    emit: (type, payload) => cp.emit(type, payload),
+    filesFromSha: job.filesFromSha,
+    editedPaths: job.editedPaths,
+    repoTouched: job.repoTouched,
+    remainingMs: () => SUPERVISOR_TURN_SOFT_DEADLINE_MS - (now() - startedAt),
+  });
+
   const bridge = await (deps.startToolBridge ?? startToolBridge)({
     job,
     cp,
+    delivery,
     port: deps.toolBridgePort ?? OPENCODE_PORT + 1,
   });
 
@@ -298,6 +317,16 @@ export async function runOpencodeTurn(
           if (verdict.reason && out.permission.callId) {
             refusedCalls.set(out.permission.callId, verdict.reason);
           }
+          /**
+           * UNE ÉCRITURE AUTORISÉE EST UNE ÉDITION DU TOUR. C'est le seul endroit
+           * où on la voit : chez opencode, l'édition est un tool INTÉGRÉ, et sa
+           * demande de permission est ce que notre `edit_file` nous disait. De là
+           * viennent le type-check ciblé de la porte de livraison, le mode
+           * `related` du runner de tests, et le verrou « le dépôt a été touché ».
+           */
+          if (out.permission.permission === "edit" && verdict.reply === "once") {
+            delivery.noteEdit(out.permission.filepath ?? "");
+          }
           await client
             .replyPermission(out.permission.id, verdict.reply, verdict.message)
             .catch((err) => {
@@ -326,6 +355,15 @@ export async function runOpencodeTurn(
           await client.rejectQuestion(out.question.id);
           await client.abort(sessionId);
         }
+
+        /**
+         * CE QUE LE MODÈLE A VÉRIFIÉ LUI-MÊME (MIN-262) : une commande de test du
+         * dépôt sortie en 0, sans réédition derrière, fait taire la porte de
+         * livraison — elle ne relance pas 80 s de tests pour apprendre ce que le
+         * tour vient de lire. Une fille compte comme la mère : c'est le même
+         * dépôt, et la porte ne regarde que le dépôt.
+         */
+        if (out.shell) delivery.noteShell(out.shell.command, out.shell.exit);
 
         for (const event of out.events) {
           if (event.type === "tool_call") toolsSeen += 1;
@@ -453,6 +491,12 @@ export async function runOpencodeTurn(
      * son message générique plutôt qu'une phrase écrite avant la question.
      */
     const reply = askedUser ? "" : replyOf(state, sessionId);
+    /**
+     * Le verrou « le dépôt a été touché », posé une dernière fois avant le push :
+     * un tour qui n'ouvre pas de pull request n'a jamais franchi la porte, et
+     * c'est pourtant ce verrou que le tour SUIVANT relit dans son checkpoint.
+     */
+    delivery.noteEdits();
     let pushed: VmPushResult | null = null;
     let pushError: string | undefined;
     if (job.writesToRepo) {
@@ -509,6 +553,16 @@ export async function runOpencodeTurn(
       // tour : le compte revient de la fonction à chaque appel, et c'est le
       // checkpoint qui le porte jusqu'au tour suivant (miroir de `turn.ts`).
       ...(bridge.prInlineComments > 0 ? { prInlineComments: bridge.prInlineComments } : {}),
+      /**
+       * L'ÉTAT DE LA PORTE DE LIVRAISON, qui porte sur le TOUR et voyage donc
+       * semé. Sans lui, un tour repris après coupure de la VM se croit vierge :
+       * il n'a plus rien édité, donc plus rien à type-checker ni à relire, et le
+       * code part chez un humain sans qu'aucun contrôle ne l'ait vu.
+       */
+      ...(delivery.checkpointEditedPaths().length > 0
+        ? { editedPaths: delivery.checkpointEditedPaths() }
+        : {}),
+      ...(delivery.repoTouched() ? { repoTouched: true } : {}),
       ...(opencodeState ? { opencode: opencodeState } : {}),
     };
 

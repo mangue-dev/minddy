@@ -526,6 +526,44 @@ peut donc emporter un appel légitime suspendu au même instant. Rare tant que l
 superviseur répond au fil de l'eau (une demande à la fois), à garder en tête le
 jour où un refus inexpliqué apparaîtra à côté d'un autre.
 
+### 2.15 Les règles de livraison : pas de plugin, et le code de sortie du shell (lot 2)
+
+Le plan annonçait « delivery-gate, self-review, plan-closure **réimplantés en
+plugin opencode** (`tool.execute.before/after`, `session.idle`) ». **Le plugin n'a
+pas lieu d'être**, et ce n'est pas un raccourci : les trois faits que ces règles
+lisent arrivent déjà chez nous.
+
+| Le fait que la règle lit | D'où il venait | D'où il vient maintenant |
+| --- | --- | --- |
+| `editedPaths` | nos tools `edit_file` / `write_file` / `apply_patch` | la **demande de permission** `edit`, quand le superviseur l'autorise (`metadata.filepath`, absolu — §2.13) |
+| « le modèle a testé lui-même » (`VerificationSink`, MIN-262) | le code de sortie de `run_command` | **`state.metadata.exit`** du part du tool `bash` |
+| le plan écrit (`planWrites`) | `watchPlanWrites` sur les tools ticket | le **même** `watchPlanWrites`, posé sur le passe-plat du pont |
+
+Un plugin aurait donc ajouté un troisième endroit où le harness parle au modèle,
+dans un fichier généré tournant *dans* opencode, sans rien rendre de plus. Les
+quatre modules restent **inchangés, avec leurs tests** ; le câblage vit dans
+[opencode-delivery.ts](../lib/server/agent/vm/opencode-delivery.ts).
+
+**Deux choses à savoir, et la seconde est un piège.**
+
+1. **Le `bash` d'opencode pose `exit` sur son `metadata`** (lu dans la source :
+   `metadata: {output, exit: code, truncated, …}`), et un code **non nul ne fait
+   pas échouer le tool** — le part reste `completed`. Le statut du tool ne dit
+   donc RIEN du verdict de la commande : seul `metadata.exit` le dit. Et il vaut
+   `null` sur une commande abandonnée ou tuée par le timeout — un code inconnu
+   n'est pas un zéro, et le prendre pour tel ferait **taire** la porte de
+   livraison sur un tour que personne n'a vérifié.
+2. **La voix du harness (`followUp`) part dans le TEXTE du résultat de tool.** La
+   boucle maison la servait en message `user` après le round, faute de pouvoir
+   grossir un résultat qu'elle élidait par le milieu ; chez opencode un résultat
+   de tool *est* le texte que le tool rend, et rien ne l'élide sous les plafonds
+   de `tool_output` (2 000 lignes / 50 Ko — le plus gros bloc, le diff, est capé à
+   12 Ko). Le pont le colle donc après le résultat, séparé d'une ligne vide.
+
+**Ce qu'on assume** : l'édition est notée à l'**autorisation**, pas à l'exécution.
+Une écriture autorisée puis ratée fait payer un type-check inutile — le sens
+prudent, l'inverse laissant partir du code que la porte n'a pas vu.
+
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un
