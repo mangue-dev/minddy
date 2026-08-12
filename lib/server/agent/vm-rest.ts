@@ -25,6 +25,7 @@ import {
   clearInterrupt,
   notifyAgentRun,
   stampRun,
+  stampRunResult,
   type AgentRun,
 } from "./runs";
 import type { EmitAgentEvent } from "./agent-loop";
@@ -182,7 +183,7 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
    */
   const restStamp = async (extra: Partial<Parameters<typeof stampRun>[1]>): Promise<boolean> => {
     const pending = await hasPendingRunMessages(run.id).catch(() => false);
-    await stampRun(run.id, {
+    await stampToRest({
       status: pending ? "queued" : "completed",
       ...restFields,
       ...(pending ? { not_before: new Date().toISOString() } : {}),
@@ -191,11 +192,44 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
     return pending;
   };
 
+  /**
+   * LA MISE AU REPOS DOIT ABOUTIR, MÊME SI LA BASE REFUSE LE CHECKPOINT (MIN-286).
+   *
+   * `stampRun` avale son erreur : un refus laissait le run `running` alors que la
+   * VM venait de rendre son rapport et s'apprêtait à mourir — plus personne pour
+   * conclure, une conversation figée à l'écran, et le chien de garde qui finit par
+   * la ranger en « le processus s'est arrêté ». C'est arrivé le 2026-08-12, sur un
+   * octet nul dans le journal d'opencode.
+   *
+   * On retente donc SANS le checkpoint, qui est le seul champ gros et venu du
+   * modèle. Ce qu'on perd alors est la mémoire du dernier tour — celle que la base
+   * refusait de toute façon —, et ce qu'on garde est une session au repos, qu'un
+   * message réveille.
+   */
+  async function stampToRest(fields: Parameters<typeof stampRun>[1]): Promise<void> {
+    const first = await stampRunResult(run.id, fields);
+    if (!first.failed) return;
+    console.error("[agent-vm-rest] rest stamp refused — retrying without the checkpoint");
+    const { checkpoint: _dropped, ...withoutCheckpoint } = fields;
+    const second = await stampRunResult(run.id, withoutCheckpoint);
+    if (second.failed) {
+      console.error("[agent-vm-rest] rest stamp refused TWICE — the watchdog will close this run");
+      return;
+    }
+    await Promise.resolve(
+      emit("error", {
+        code: "checkpointRefused",
+        message:
+          "This turn's memory could not be saved, so the session restarts from its previous state. Its work is pushed on the branch.",
+      }),
+    ).catch(() => {});
+  }
+
   if (report.status === "budget_exhausted") {
     await emitBudgetExhausted(run, emit);
     // Volontairement PAS `restStamp` : celui-ci re-queue s'il reste du steering,
     // ce qui relancerait aussitôt un tour sans budget. Le message attend.
-    await stampRun(run.id, { status: "completed", ...restFields });
+    await stampToRest({ status: "completed", ...restFields });
     await notifyAgentRun(run, "agent_failed");
     await revokeKey(run);
     return;

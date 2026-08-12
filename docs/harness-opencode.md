@@ -1064,6 +1064,60 @@ pièce jointe n'est PAS persisté en session (§2.22), donc il ne repart pas à 
 round et n'entre pas dans le journal ; il reste un écart de comportement à mesurer
 pendant la semaine d'observation, pas un défaut avec une sortie fausse.
 
+### 2.28 Un octet nul, et le tour se fige — l'incident du 2026-08-12 (23 h)
+
+Deux symptômes rapportés le même soir, un seul défaut dessous, et il n'est pas
+dans le superviseur : **il est dans ce que Postgres accepte**.
+
+Ce qui se voit : un message de steering envoyé pendant que l'agent répond coupe sa
+réponse **et ne le relance pas** — comme un « Stop ». Le tour reste « en cours »,
+figé sur le même tool pendant un quart d'heure, la microVM tourne toujours, et le
+message a disparu de la conversation au rechargement. Puis, quelques minutes plus
+tard, la session se range toute seule avec « le processus de ce tour s'est arrêté
+avant d'avoir fini ».
+
+Ce qui s'est passé, lu dans les logs de production (runs `66023558`, `a8051d06`) :
+
+```
+[agent-runs] stampRun 66023558 → (fields) failed: unsupported Unicode escape sequence   PUT /checkpoint → 409
+[agent-runs] stampRun 66023558 → completed failed: unsupported Unicode escape sequence  POST /rest → 200
+```
+
+`\u0000` ne se stocke NI en `text` NI en `jsonb` : Postgres refuse la ligne
+entière. Et ce que nous écrivons vient d'un modèle et de son shell — la sortie
+d'une commande qui touche un binaire, un log tronqué au milieu d'un caractère, le
+journal d'événements d'opencode qui les transporte. **Un octet, et la chaîne
+entière tombe, dans cet ordre :**
+
+1. la sauvegarde périodique est refusée ⇒ **le battement de cœur s'arrête** ;
+2. le plan de contrôle rend **409**, et le superviseur lit un 409 comme « le run a
+   été conclu ailleurs » : il coupe le tour et rend la main. Le steering n'était
+   pour rien dans la coupure — il tombait au même moment ;
+3. le rapport de fin de tour ne s'écrit pas non plus, et `landVmTurn` avale
+   l'échec : le run **reste `running`** alors que la VM meurt derrière ;
+4. le chien de garde le constate trois minutes plus tard — d'où la phrase sur le
+   processus arrêté, qui décrivait une conséquence, pas la cause.
+
+Trois correctifs, un par maillon, et le premier suffirait à fermer le cas connu :
+
+- **`stripUnstorable`** ([runs.ts](../lib/server/agent/runs.ts)) retire l'octet nul
+  et les demi-caractères isolés de tout ce qui part en base — `stampRun`,
+  `appendEvent`, `insertRunMessage`. On les retire plutôt que de refuser
+  l'écriture : ils ne valent rien pour personne, et le tour vaut beaucoup.
+- **Une panne d'écriture n'est plus un run conclu** : `stampRunResult` distingue
+  « la garde n'a pas matché » de « la base a refusé », et le plan de contrôle rend
+  **503** sur le second — le client retente, le tour continue. C'est ce qui
+  transformait n'importe quel hoquet de base en mort d'un tour vivant.
+- **La mise au repos aboutit** : si le checkpoint est refusé, `vm-rest` refait le
+  stamp **sans lui** et le dit au fil (`checkpointRefused`). Une session repart de
+  son état précédent, au lieu de rester ouverte jusqu'au chien de garde.
+
+Et un quatrième, hors chaîne mais du même soir : `insertRunMessage` ne regardait
+pas le résultat de son insert. supabase-js ne lève pas — il rend `{ error }`. La
+route de steering répondait donc `ok` sur un message que **personne n'avait mis en
+file** : bulle optimiste à l'écran, agent qui ne lit rien, message disparu au
+rechargement. Il lève maintenant, et le composer retire sa bulle en le disant.
+
 ---
 
 ---

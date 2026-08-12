@@ -28,6 +28,8 @@ const h = vi.hoisted(() => ({
   notifications: [] as string[],
   revoked: [] as string[],
   pendingMessages: false,
+  /** La base REFUSE une écriture qui porte le checkpoint (octet nul dedans). */
+  stampFails: false,
   /** La cible de clone. `null` = dépôt délié : l'atterrissage PR doit s'abstenir. */
   target: null as Record<string, unknown> | null,
   run: null as Record<string, unknown> | null,
@@ -52,6 +54,16 @@ vi.mock("./runs", async (importOriginal) => ({
   stampRun: vi.fn(async (_runId: string, fields: Record<string, unknown>) => {
     h.stamped.push(fields);
     return h.run as never;
+  }),
+  // La mise au repos passe par lui depuis MIN-286 : il DIT si la base a refusé,
+  // là où `stampRun` avale son erreur (`h.stampFails` joue ce refus).
+  stampRunResult: vi.fn(async (_runId: string, fields: Record<string, unknown>) => {
+    h.stamped.push(fields);
+    // Le refus PORTE sur le checkpoint — c'est lui qui charrie ce que le modèle
+    // a écrit, donc l'octet nul. La même écriture sans lui passe.
+    return h.stampFails && "checkpoint" in fields
+      ? { run: null, failed: true }
+      : { run: h.run as never, failed: false };
   }),
   hasPendingRunMessages: vi.fn(async () => h.pendingMessages),
   clearInterrupt: vi.fn(async () => {}),
@@ -139,6 +151,7 @@ beforeEach(() => {
   h.notifications.length = 0;
   h.revoked.length = 0;
   h.pendingMessages = false;
+  h.stampFails = false;
   h.target = null;
   h.run = { ...RUN };
 });
@@ -185,6 +198,30 @@ describe("les quatre sorties, et elles quittent toutes `running`", () => {
     });
     expect(rest?.checkpoint).toEqual(report().checkpoint);
     expect(h.notifications).toEqual(["agent_done"]);
+  });
+
+  /**
+   * MIN-286 — LA MISE AU REPOS DOIT ABOUTIR MÊME SI LA BASE REFUSE.
+   *
+   * `stampRun` avale son erreur : un refus laissait le run `running` alors que la
+   * VM venait de rendre son rapport et allait mourir — plus personne pour
+   * conclure, un fil figé « en cours », et le chien de garde qui range ça en
+   * « le processus s'est arrêté » plusieurs minutes plus tard. Vécu le
+   * 2026-08-12, sur un octet nul dans le journal d'opencode.
+   */
+  it("repose SANS son checkpoint plutôt que de laisser le run en cours", async () => {
+    h.stampFails = true;
+    await landVmTurn(run(), report());
+
+    // Deux tentatives : la complète, puis la même sans le champ que la base
+    // refusait — le seul qui soit gros et qui vienne du modèle.
+    const attempts = h.stamped.filter((f) => f.status === "completed");
+    expect(attempts).toHaveLength(2);
+    expect(attempts[0]).toHaveProperty("checkpoint");
+    expect(attempts[1]).not.toHaveProperty("checkpoint");
+    // …et l'utilisateur l'apprend, plutôt que de reprendre une conversation qui
+    // aurait silencieusement oublié son dernier tour.
+    expect(h.events.some((e) => e.payload?.code === "checkpointRefused")).toBe(true);
   });
 
   it("fin de tour sur un ask_user : la session ATTEND", async () => {

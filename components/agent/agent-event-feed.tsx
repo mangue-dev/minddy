@@ -861,6 +861,9 @@ const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   // MIN-243 : le même appel, les mêmes arguments et le même résultat, quatre fois
   // dans les dix derniers. Le tour est coupé avant que le budget ne le fasse.
   toolLoop: "errorToolLoop",
+  // MIN-286 : la base a refusé la mémoire du tour (un octet nul dans la sortie
+  // d'une commande). Le travail, lui, est poussé sur la branche.
+  checkpointRefused: "errorCheckpointRefused",
 };
 
 function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {

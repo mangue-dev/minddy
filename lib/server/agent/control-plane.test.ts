@@ -30,6 +30,8 @@ const h = vi.hoisted(() => ({
   afterWork: [] as Array<() => void | Promise<void>>,
   prIssueId: null as string | null,
   stampReturnsNull: false,
+  /** La BASE refuse l'écriture (octet nul, panne) — pas la garde de transition. */
+  stampFails: false,
   landed: 0,
   /** Les contextes d'atterrissage passés à l'implémentation partagée. */
   prLandings: [] as Array<{ workBranch: string; baseBranch: string }>,
@@ -137,7 +139,12 @@ vi.mock("./runs", async (importOriginal) => ({
   }),
   stampRun: vi.fn(async (_runId: string, fields: Record<string, unknown>) => {
     h.stamped.push(fields);
-    return h.stampReturnsNull ? null : (h.run as never);
+    return h.stampReturnsNull || h.stampFails ? null : (h.run as never);
+  }),
+  stampRunResult: vi.fn(async (_runId: string, fields: Record<string, unknown>) => {
+    h.stamped.push(fields);
+    if (h.stampFails) return { run: null, failed: true };
+    return { run: h.stampReturnsNull ? null : (h.run as never), failed: false };
   }),
   pullPendingMessages: vi.fn(async () => ["fais plutôt ça"]),
   insertRunMessage: vi.fn(async (runId: string, userId: string | null, content: string) => {
@@ -191,6 +198,7 @@ beforeEach(() => {
   h.requeued.length = 0;
   h.prIssueId = null;
   h.stampReturnsNull = false;
+  h.stampFails = false;
   h.landed = 0;
   h.prLandings.length = 0;
   h.runReads = 0;
@@ -568,5 +576,19 @@ describe("le checkpoint périodique fait aussi office de battement de cœur", ()
     h.stampReturnsNull = true;
     const res = await call("PUT", "/checkpoint", { checkpoint: { messages: [] } });
     expect(res.status).toBe(409);
+  });
+
+  /**
+   * MIN-286 — UNE PANNE D'ÉCRITURE N'EST PAS UN RUN CONCLU.
+   *
+   * Le superviseur lit un 409 comme « la conversation n'existe plus » : il coupe
+   * le tour, il ne pousse pas, il rend la main. Une base qui refuse la ligne —
+   * l'octet nul du 2026-08-12, une coupure réseau — lui disait donc d'abandonner
+   * un tour parfaitement vivant, et le fil restait figé sur son dernier geste.
+   */
+  it("dit 503 quand la BASE refuse — la VM doit retenter, pas mourir", async () => {
+    h.stampFails = true;
+    const res = await call("PUT", "/checkpoint", { checkpoint: { messages: [] } });
+    expect(res.status).toBe(503);
   });
 });

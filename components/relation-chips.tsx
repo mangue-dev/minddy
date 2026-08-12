@@ -52,7 +52,7 @@ export function RelationChips({
     <span className={cn("flex items-center gap-1", className)}>
       {shown.map((r) => {
         const id = issueIdentifier(projectKey, r.otherNumber);
-        const label = `${t(r.relation)} · ${id}`;
+        const label = `${t(r.relation)} ${id}`;
         const inner = (
           <>
             <RelationIcon relation={r.relation} className="size-3" />

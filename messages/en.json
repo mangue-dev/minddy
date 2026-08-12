@@ -2021,6 +2021,7 @@
     "errorReplyIncomplete": "The model's reply never came through in full; its work is kept, and nothing was committed. Send a message to carry on.",
     "errorProviderUnavailable": "The model provider kept failing, so this turn was paused; its work is kept. Send a message to carry on.",
     "errorTurnLost": "This turn's process stopped before it could finish; the session was restored from its last save. Send a message to carry on.",
+    "errorCheckpointRefused": "This turn's memory could not be saved, so the session picks up from its previous state. Its work is pushed on the branch — send a message to carry on.",
     "errorToolLoop": "The model kept repeating the same step without learning anything new, so this turn was stopped; its work is kept, and you were not charged for the rest. Send a message to point it elsewhere.",
     "runCapTitle": "This run reached its spending cap",
     "runCapReached": "Its routine lets one run spend up to {percent}% of your monthly usage.",

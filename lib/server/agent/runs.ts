@@ -839,6 +839,46 @@ export async function previousRunSummaryForPr(
   return outcome?.trim() ? outcome.trim() : null;
 }
 
+/**
+ * L'OCTET NUL, RETIRÉ AVANT LA BASE (MIN-286) — et ce n'est pas de l'hygiène,
+ * c'est un tour d'agent qui meurt.
+ *
+ * Postgres ne sait pas stocker `\u0000` dans une chaîne, ni en `text` ni dans un
+ * `jsonb` : l'écriture entière est refusée, avec `unsupported Unicode escape
+ * sequence`. Or ce que nous écrivons vient d'un MODÈLE et de son shell — la
+ * sortie d'une commande qui lit un binaire, un fichier de log tronqué au milieu
+ * d'un caractère, le journal d'événements d'opencode qui les transporte. Un seul
+ * de ces octets et c'est la LIGNE qui ne s'écrit plus : plus de sauvegarde de
+ * checkpoint, donc plus de battement de cœur, et le rapport de fin de tour
+ * refusé lui aussi. Vécu en production le 2026-08-12 (runs `66023558`,
+ * `a8051d06`) : le tour se figeait, le fil restait « en cours », et le chien de
+ * garde finissait par ranger le run en « le processus s'est arrêté ».
+ *
+ * On le RETIRE plutôt que de refuser l'écriture : cet octet n'a aucune valeur
+ * pour un lecteur humain ni pour le modèle, et le perdre coûte infiniment moins
+ * que perdre le tour. Les substituts de surrogates isolés tombent avec, pour la
+ * même raison — `JSON.parse` côté Postgres les refuse tout autant.
+ */
+const NUL_AND_LONE_SURROGATES =
+  /[\u0000]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+
+export function stripUnstorable<T>(value: T): T {
+  if (typeof value === "string") {
+    // `replace` remet `lastIndex` à zéro, `test` NON : sonder d'abord ferait
+    // sauter un caractère sur deux d'une chaîne à l'autre.
+    return value.replace(NUL_AND_LONE_SURROGATES, "") as T;
+  }
+  if (Array.isArray(value)) return value.map((item) => stripUnstorable(item)) as T;
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = stripUnstorable(item);
+    }
+    return out as T;
+  }
+  return value;
+}
+
 export interface StampFields {
   status?: AgentRunStatus;
   checkpoint?: AgentCheckpoint | null;
@@ -884,11 +924,32 @@ export async function stampRun(
   fields: StampFields,
   opts?: { guard?: AgentRunStatus[] },
 ): Promise<AgentRun | null> {
+  return (await stampRunResult(runId, fields, opts)).run;
+}
+
+/**
+ * LE MÊME STAMP, MAIS QUI DIT POURQUOI IL N'A PAS ÉCRIT (MIN-286).
+ *
+ * `null` recouvre deux choses que rien ne distinguait, et qui appellent des
+ * conduites opposées : **la garde n'a pas matché** (quelqu'un a conclu ce run —
+ * il faut s'arrêter) et **l'écriture a échoué** (panne de base, octet nul, coupure
+ * réseau — il faut retenter). Le plan de contrôle rendait 409 dans les deux cas,
+ * et le superviseur lit un 409 comme « le run n'existe plus » : une sauvegarde de
+ * checkpoint refusée par la base TUAIT donc le tour en cours, en silence et sans
+ * qu'il ait rien fait de mal. Vécu en production le 2026-08-12.
+ */
+export async function stampRunResult(
+  runId: string,
+  fields: StampFields,
+  opts?: { guard?: AgentRunStatus[] },
+): Promise<{ run: AgentRun | null; failed: boolean }> {
   const service = getServiceClient();
   const guard = opts?.guard ?? ["running"];
   const { data, error } = await service
     .from("agent_runs")
-    .update(fields)
+    // Ce qu'on écrit ici vient du modèle et de son shell (checkpoint, résumé,
+    // message d'erreur) : un octet nul dedans ferait refuser la ligne ENTIÈRE.
+    .update(stripUnstorable(fields))
     .eq("id", runId)
     .in("status", guard)
     .select("*")
@@ -946,7 +1007,7 @@ export async function stampRun(
       });
     }
   }
-  return run;
+  return { run, failed: !!error };
 }
 
 /**
@@ -1150,9 +1211,15 @@ export async function insertRunMessage(
   content: string,
 ): Promise<void> {
   const service = getServiceClient();
-  await service
+  const { error } = await service
     .from("agent_run_messages")
-    .insert({ run_id: runId, created_by: userId, content });
+    .insert({ run_id: runId, created_by: userId, content: stripUnstorable(content) });
+  // Un insert refusé (RLS, contrainte, octet nul) revient dans `{ error }` sans
+  // lever : sans ce contrôle, la route répondait `ok` sur un message que
+  // PERSONNE n'avait mis en file — accepté à l'écran, jamais joué, disparu au
+  // rechargement. L'appelant en fait une erreur HTTP, donc une bulle retirée et
+  // un motif à l'écran.
+  if (error) throw new Error(`agent_run_messages insert failed: ${error.message}`);
 }
 
 /**
@@ -1305,7 +1372,9 @@ export async function appendEvent(
       // de agent_run_events disparaît en silence total (vécu sur `question`, MIN-86).
       const { data: row, error } = await service
         .from("agent_run_events")
-        .insert({ run_id: runId, seq: nextSeq, type, payload })
+        // Même garde que `stampRun` : le payload d'un `tool_result` porte la
+        // sortie d'une commande du modèle, où un octet nul se glisse tout seul.
+        .insert({ run_id: runId, seq: nextSeq, type, payload: stripUnstorable(payload) })
         .select("id, seq, type, payload, created_at")
         .single();
       if (error) {

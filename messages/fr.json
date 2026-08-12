@@ -2021,6 +2021,7 @@
     "errorReplyIncomplete": "La réponse du modèle n'est jamais arrivée en entier; son travail est gardé, et rien n'a été commité. Envoyez un message pour poursuivre.",
     "errorProviderUnavailable": "Le fournisseur du modèle a échoué de façon répétée, ce tour est donc en pause; son travail est gardé. Envoyez un message pour poursuivre.",
     "errorTurnLost": "Le processus de ce tour s'est arrêté avant d'avoir fini; la session a été restaurée depuis sa dernière sauvegarde. Envoyez un message pour poursuivre.",
+    "errorCheckpointRefused": "La mémoire de ce tour n'a pas pu être enregistrée ; la session repart de son état précédent. Son travail est poussé sur la branche — envoyez un message pour poursuivre.",
     "errorToolLoop": "Le modèle répétait la même étape sans rien apprendre de neuf : ce tour a été arrêté; son travail est gardé, et la suite ne vous a pas été facturée. Envoyez un message pour le remettre sur une autre piste.",
     "runCapTitle": "Ce passage a atteint son plafond de dépense",
     "runCapReached": "Sa routine autorise {percent} % du budget mensuel par passage.",

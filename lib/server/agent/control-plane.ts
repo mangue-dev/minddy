@@ -28,6 +28,7 @@ import {
   pullPendingMessages,
   readInterruptFlag,
   stampRun,
+  stampRunResult,
   type AgentRun,
 } from "./runs";
 import type { AgentCheckpoint } from "./runs";
@@ -296,14 +297,25 @@ export async function handleControlPlaneRequest(opts: {
       // c'est le seul signal régulier qu'un tour qui vit dans la VM produise, et
       // c'est sur ce champ que le chien de garde décide d'aller interroger la
       // plateforme. Sans lui, il irait la sonder pour chaque run à chaque passage.
-      const stamped = await stampRun(runId, {
+      const stamped = await stampRunResult(runId, {
         checkpoint,
         last_activity_at: new Date().toISOString(),
       });
+      /**
+       * UNE PANNE D'ÉCRITURE N'EST PAS UN RUN CONCLU, et les confondre coûtait le
+       * tour (MIN-286). Le superviseur lit un 409 comme « la conversation n'existe
+       * plus » : il coupe, il ne pousse pas, il rend la main. Une base qui refuse
+       * la ligne — un octet nul dans la sortie d'une commande, une coupure — lui
+       * disait donc d'abandonner un tour parfaitement vivant. C'est un 5xx : le
+       * client du plan de contrôle retente, et le tour continue.
+       */
+      if (stamped.failed) {
+        return { status: 503, body: { error: "checkpoint save failed — retry" } };
+      }
       // La garde de `stampRun` (`status in ('running')`) n'a pas matché : le run a
       // été annulé, ou un autre exécuteur a conclu. Ça se DIT — une VM qui croit
       // avoir sauvegardé et continue travaille pour une conversation qui est finie.
-      if (!stamped) return { status: 409, body: { error: "run is no longer running" } };
+      if (!stamped.run) return { status: 409, body: { error: "run is no longer running" } };
       return ok();
     }
   }
