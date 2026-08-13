@@ -14,14 +14,16 @@ import {
   PopoverContent,
   PopoverTrigger,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "mangue-ui";
 import {
   useIssueRepoBranchesQuery,
   useProjectRepoBranchesQuery,
 } from "@/lib/use-repo-branches-query";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Picker de la branche de BASE d'une session d'agent — le pendant du

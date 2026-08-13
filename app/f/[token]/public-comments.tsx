@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { CornerDownRight, Lock, Trash2 } from "lucide-react";
-import { Button, Spinner, Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { Button, Spinner, cn } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { isSendShortcut, SendShortcutTooltip } from "@/components/send-shortcut";
 import { ProjectOrb } from "@/components/project-orb";
@@ -16,6 +16,11 @@ import {
   type PublicProject,
 } from "@/lib/feedback/types";
 import { addPublicCommentAction, deletePublicCommentAction } from "./actions";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Le fil PUBLIC d'un retour (MIN-196).

@@ -1,10 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { Plug } from "lucide-react";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import type { Issue } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Bluish plug shown next to the identifier of integration-created issues;
     hovering names the exact integration. Renders nothing for human issues. */

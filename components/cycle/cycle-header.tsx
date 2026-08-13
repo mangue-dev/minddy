@@ -10,15 +10,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "mangue-ui";
 import { Check, ChevronDown } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProgressRing } from "@/components/progress-ring";
 import { addDays } from "@/lib/cycle";
 import type { BoardCycles, CycleInfo } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * The cycle-mode header (MIN-32): a date-range title-selector on the left

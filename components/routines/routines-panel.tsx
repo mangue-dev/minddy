@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Skeleton, Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { Button, Skeleton, cn } from "mangue-ui";
 import { CalendarClock, Plus } from "lucide-react";
 
 import { EmptyScene } from "@/components/empty-scene";
@@ -24,6 +24,11 @@ import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
 import type { Routine } from "@/lib/routines-api";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * L'onglet ROUTINES (MIN-185) de la vue Agents : la liste à gauche, la routine

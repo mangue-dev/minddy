@@ -21,9 +21,6 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
   useTheme,
   cn,
   type NavItem,
@@ -64,6 +61,11 @@ import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const EXPANDED_WIDTH = 256;
 const COLLAPSED_WIDTH = 56;

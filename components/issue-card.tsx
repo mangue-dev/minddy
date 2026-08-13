@@ -8,9 +8,6 @@ import { useTranslations, useFormatter } from "next-intl";
 import {
   ConfirmDeleteDialog,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -120,6 +117,11 @@ import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Strip common markdown so the description preview reads as plain text. */
 function plainPreview(md: string): string {

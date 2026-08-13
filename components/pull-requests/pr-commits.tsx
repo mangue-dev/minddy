@@ -6,9 +6,6 @@ import {
   Badge,
   Button,
   Skeleton,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import { Check, Copy, ExternalLink, ShieldCheck } from "lucide-react";
@@ -17,6 +14,11 @@ import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-she
 import type { PullRequestCommit } from "@/lib/agent-api";
 import { newestFirstPullRequestCommits } from "@/lib/pull-request-commits";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Onglet Commits d'une pull request : ce qui la COMPOSE, dans l'ordre où le

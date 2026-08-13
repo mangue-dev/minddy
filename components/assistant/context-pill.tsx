@@ -29,7 +29,7 @@ import {
   Target,
   X,
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import {
   EntityPill,
   PillIcon,
@@ -43,6 +43,11 @@ import type {
   AssistantContextChip,
   AssistantContextKind,
 } from "@/lib/assistant-context";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Une couleur par nature de contexte : la pilule se reconnaît du coin de l'œil,

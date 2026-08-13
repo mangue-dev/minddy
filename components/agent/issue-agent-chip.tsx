@@ -1,10 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import { isPrWorthShowing, type IssuePr } from "@/lib/agent-api";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * L'état de l'agent de code sur l'en-tête du panneau d'issue, en un chip — le

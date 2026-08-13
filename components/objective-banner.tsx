@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   Button,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import { ChevronDown, Pencil, X, Target } from "lucide-react";
@@ -19,6 +16,11 @@ import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { Member, Objective } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Le nom du bandeau est un SÉLECTEUR : d'un board d'objectif, on passe au

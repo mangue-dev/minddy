@@ -16,10 +16,6 @@ import {
   PopoverContent,
   PopoverTrigger,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -28,6 +24,12 @@ import { KbdSequence } from "@/components/ui/kbd";
 import { DictateWaveform } from "./dictate-waveform";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 // Dictation isn't time-boxed: talk for as long as you need. The only ceiling
 // left is the payload one — /api/transcribe rejects over 10 MB — so the

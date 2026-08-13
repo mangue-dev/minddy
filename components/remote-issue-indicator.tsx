@@ -1,10 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { Github, Gitlab } from "lucide-react";
 import { getRepoProvider } from "@/lib/repo-providers";
 import type { Issue } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
 

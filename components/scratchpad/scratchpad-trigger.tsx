@@ -1,10 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button, cn, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
+import { Button, cn } from "mangue-ui";
 import { NotebookPen } from "lucide-react";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useScratchpadProgress } from "@/lib/use-scratchpad-query";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Header entry point for the task notebook (also reachable via ⌘K and the
     `G N` chord). Filled bordered icon button, matching the ⌘K search pill —

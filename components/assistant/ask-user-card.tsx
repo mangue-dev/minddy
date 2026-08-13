@@ -6,9 +6,6 @@ import {
   Button,
   IconButton,
   Input,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import { Square, SquareCheck, X } from "lucide-react";
@@ -17,6 +14,11 @@ import {
   composeAskUserReply,
   type AskUserQuestion,
 } from "@/lib/ask-user";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Carte de questions `ask_user` (MIN-86) — partagée entre le chat Numo et le fil

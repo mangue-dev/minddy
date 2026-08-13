@@ -11,9 +11,6 @@ import {
   CollapsibleTrigger,
   Skeleton,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import { ModelBadge } from "@/components/model-badge";
@@ -25,6 +22,11 @@ import {
 } from "@/components/stats/stats-chrome";
 import type { AdminFinance, AdminFinanceDay } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * `/admin` → onglet « Finances » (MIN-92). L'écran répond à UNE question : est-ce

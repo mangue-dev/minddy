@@ -12,9 +12,6 @@ import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   Spinner,
   toast,
@@ -65,6 +62,11 @@ import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import type { AssistantMention } from "@/lib/assistant-types";
 import { MentionLinksProvider } from "@/components/mention-links";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Cœur réutilisable de la conversation de l'agent de code (MIN-46 + MIN-68), extrait

@@ -17,7 +17,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, Skeleton, Tooltip, TooltipContent, TooltipTrigger, cn, toast } from "mangue-ui";
+import {
+  Button,
+  Skeleton,
+  cn,
+  toast,
+} from "mangue-ui";
 import { Plus } from "lucide-react";
 
 import { SecondarySidebar } from "@/components/secondary-sidebar";
@@ -28,6 +33,11 @@ import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError, type PageSummary } from "@/lib/pages-api";
 import { rememberLastPage } from "@/lib/pages-last-open";
 import { markDraftPage } from "@/lib/pages-draft";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function PagesShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Pages");

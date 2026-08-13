@@ -7,7 +7,7 @@
 // contracts as the side-panel fields in issue-property-fields.tsx.
 
 import { useTranslations } from "next-intl";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { Sparkles, Tag, Target, Triangle, UserCircle2 } from "lucide-react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
@@ -37,6 +37,11 @@ import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type { Category, Member, Objective } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Au doigt, la rangée d'options est faite de cibles de 30 px, sous le seuil du
 // confortable : sous `sm` chaque déclencheur gagne quelques pixels de garde.

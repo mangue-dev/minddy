@@ -14,9 +14,6 @@ import {
   Input,
   Skeleton,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -60,6 +57,11 @@ import {
   type AgentSessionListItem,
 } from "@/lib/agent-api";
 import { agentSessionTitle } from "@/lib/agent-session-title";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Vrai dès que le volet détail est rendu par le layout (breakpoint md = 768px, le

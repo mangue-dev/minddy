@@ -7,9 +7,6 @@ import {
   Button,
   Input,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -23,6 +20,11 @@ import {
   previewProjectIconFileApi,
   uploadProjectIconApi,
 } from "@/lib/projects-api";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Icône du projet (MIN-62) : image envoyée par l'utilisateur, favicon du site

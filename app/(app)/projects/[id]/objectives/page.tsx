@@ -14,9 +14,6 @@ import {
   CommandGroup,
   CommandItem,
   Skeleton,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -48,6 +45,11 @@ import { ObjectiveDialog } from "@/components/objective-dialog";
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Ce que la colonne montre. Les quatre états d'un objectif, plus les deux qui

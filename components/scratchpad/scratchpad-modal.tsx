@@ -9,9 +9,6 @@ import {
   DialogDescription,
   DialogTitle,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   toast,
 } from "mangue-ui";
 import { Bot, Check, Copy, ListX, X } from "lucide-react";
@@ -24,6 +21,11 @@ import { useScratchpadDoc } from "@/lib/use-scratchpad-query";
 import { ScratchpadEditor } from "@/components/scratchpad/scratchpad-editor";
 import { SLASH_MENU_ATTR } from "@/components/scratchpad/slash-command";
 import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Notes — the personal scratchpad, a minimal modal at the create-project

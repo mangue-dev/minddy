@@ -1,8 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { ProgressRing } from "@/components/progress-ring";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * L'avancement d'un objectif, sous sa forme compacte : l'anneau du cycle et, à

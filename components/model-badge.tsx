@@ -1,8 +1,13 @@
 "use client";
 
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { ModelLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Badge d'un modèle IA (MIN-46) : vrai logo du provider (`ModelLogo`) + nom

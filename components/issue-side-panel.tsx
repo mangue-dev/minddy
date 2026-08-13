@@ -16,9 +16,6 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   toast,
 } from "mangue-ui";
 import {
@@ -113,6 +110,11 @@ import type {
   Member,
   Objective,
 } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function IssueSidePanel({
   issue,

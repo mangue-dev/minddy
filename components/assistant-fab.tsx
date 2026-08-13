@@ -4,9 +4,6 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   transitions,
   buttonTap,
@@ -18,6 +15,11 @@ import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { useZenMode } from "@/lib/zen-mode-context";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Minimal circular FAB that opens the global assistant panel. Hover reveals a

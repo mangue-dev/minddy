@@ -8,9 +8,6 @@ import {
   PopoverContent,
   PopoverTrigger,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -47,6 +44,11 @@ import {
 } from "@/lib/pr-review-reactions";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { PrReviewThread } from "@/lib/pr-diff-anchors";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Briques d'affichage des commentaires de review d'une PR : le fil ancré sous une

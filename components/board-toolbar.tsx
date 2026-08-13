@@ -39,9 +39,6 @@ import {
   Separator,
   SplitButton,
   Textarea,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -98,6 +95,11 @@ import type {
   ViewFilters,
   ViewSort,
 } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const SORTS: ViewSort[] = ["manual", "priority", "created", "updated", "due"];
 

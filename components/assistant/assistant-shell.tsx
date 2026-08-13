@@ -20,9 +20,6 @@ import {
   Sheet,
   SheetContent,
   SheetTitle,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
 import {
@@ -66,6 +63,11 @@ import type {
   AssistantPinnedContext,
 } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const STARTER_KEYS = ["s1", "s2", "s3", "s4"] as const;
 

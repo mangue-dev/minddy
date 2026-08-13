@@ -12,12 +12,14 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "mangue-ui";
 import { GENERIC_REASONING_LEVELS, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { MessageKey } from "@/lib/i18n-keys";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Picker du niveau de RAISONNEMENT d'une session d'agent (MIN-122) — le pendant

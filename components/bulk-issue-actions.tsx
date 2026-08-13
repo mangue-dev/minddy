@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Command as CommandIcon, X } from "lucide-react";
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
+import { Button } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
 import { NumoIcon } from "@/components/numo-icon";
 import {
@@ -11,6 +11,11 @@ import {
   type BulkCycleActions,
 } from "@/lib/bulk-actions-context";
 import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Linear-style floating selection pill (MIN-75). It no longer carries its own

@@ -7,10 +7,15 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { RelationIcon } from "@/components/issue-indicators";
 import type { IssueRelationType } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface ChipRelation {
   id: string;

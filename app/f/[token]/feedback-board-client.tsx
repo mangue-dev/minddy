@@ -18,10 +18,6 @@ import {
   DropdownMenuTrigger,
   Spinner,
   Switch,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
   toast,
 } from "mangue-ui";
 import { ArrowUpDown, Check, ChevronDown, ListFilter, Mic, MessagesSquare, Megaphone, Search } from "lucide-react";
@@ -53,6 +49,12 @@ import type { MessageKey } from "@/lib/i18n-keys";
 import {
   FeedbackPostRow,
 } from "./feedback-bits";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 /**
  * Liste du board public (MIN-37) — structure type UserJot : barre de filtres

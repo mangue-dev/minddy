@@ -2,7 +2,12 @@
 
 import { useTranslations } from "next-intl";
 import { FileClock, X } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Minimal shape the row needs — either draft kind maps onto it. */
 export interface DraftSummary {

@@ -4,9 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Skeleton,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import {
@@ -17,6 +14,11 @@ import {
   TotalItem,
 } from "@/components/stats/stats-chrome";
 import type { AdminOverview, AdminOverviewDay } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * `/admin` → onglet « Vue d'ensemble » (MIN-90) : l'app vue d'en haut —

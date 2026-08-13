@@ -21,12 +21,14 @@ import {
   PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Shared styling for the search input inside any dropdown (cmdk or Radix). */
 export const searchInputClass =

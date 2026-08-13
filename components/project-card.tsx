@@ -9,9 +9,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
   cn,
 } from "mangue-ui";
 import {
@@ -30,6 +27,11 @@ import { issuesQueryFn } from "@/lib/issues-api";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { ProjectOrb } from "@/components/project-orb";
 import type { Project } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** One quick stat: icon then value, with a tooltip explaining what it is. */
 function Stat({

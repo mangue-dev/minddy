@@ -7,9 +7,6 @@ import {
   Sheet,
   SheetContent,
   SheetTitle,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "mangue-ui";
 import { Maximize2, Minimize2, X } from "lucide-react";
 import {
@@ -18,6 +15,11 @@ import {
   type PanelDisplayMode,
 } from "@/components/assistant/panel-geometry";
 import { AgentConversation } from "./agent-conversation";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Modal conversationnelle de l'agent de code (MIN-46). Réutilise le shell du chat

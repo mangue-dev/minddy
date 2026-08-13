@@ -18,9 +18,13 @@
 // « ⌘↵ » dans une seule se lirait comme une touche unique.
 
 import type { ReactElement } from "react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Vrai si l'événement clavier est le raccourci d'envoi. Un seul endroit décide
     de ce qu'« envoyer au clavier » veut dire, côté touche comme côté légende —

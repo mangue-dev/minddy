@@ -27,9 +27,6 @@ import {
   Spinner,
   SplitButton,
   Switch,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -135,6 +132,11 @@ import type {
 import type { TeamFeedbackUserOption } from "@/app/api/projects/[id]/feedback/users/route";
 import { trackEvent } from "@/lib/analytics";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Onglet équipe des retours (MIN-37) — deux panneaux façon triage : liste

@@ -15,9 +15,6 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   SendButtonWithCost,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import { ArrowUp, Paperclip, Square } from "lucide-react";
@@ -40,6 +37,11 @@ import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
 import type { AssistantCommandId, AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** What the "+" offers Numo: files it can actually read (images, PDF, CSV,
     text-ish) — MIN-24 scope. */

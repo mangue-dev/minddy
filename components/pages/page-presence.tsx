@@ -16,13 +16,18 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { usePagePresence } from "@/lib/use-page-presence";
 import type { PagePresenceMap } from "@/lib/page-presence";
 import type { Member } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /* ── Le canal, monté UNE fois ──────────────────────────────────────────── */
 

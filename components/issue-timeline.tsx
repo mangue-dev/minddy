@@ -10,9 +10,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -68,6 +65,11 @@ import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
 import type { Attachment, Comment, Member, ResourceInput } from "@/lib/types";
 import type { CommentVisibility } from "@/lib/feedback/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Ce qu'un message doit porter pour être rendu par `CommentBlock` — le

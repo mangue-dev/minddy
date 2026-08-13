@@ -7,9 +7,6 @@ import {
   Badge,
   Button,
   ConfirmDeleteDialog,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -38,6 +35,11 @@ import { normalizeWebhookUrl } from "@/lib/webhook-url";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { EmptyScene } from "@/components/empty-scene";
 import type { Integration, IntegrationKind } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Le TYPE d'une clé décide de ce qu'elle a le droit d'écrire — des tickets dans

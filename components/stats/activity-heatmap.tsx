@@ -2,8 +2,12 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
 import type { StatsHeatmap, HeatmapDay } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Échelle d'intensité (5 niveaux) façon GitHub, teinte "done" (emerald — la
 // couleur du statut Terminé partout dans l'app). Classes littérales complètes :

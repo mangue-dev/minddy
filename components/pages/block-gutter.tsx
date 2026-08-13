@@ -38,7 +38,7 @@ import type { Editor } from "@tiptap/core";
 import type { Node } from "@tiptap/pm/model";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { GripVertical, Plus } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { BlockMenu } from "@/components/pages/block-menu";
 import {
   GUTTER_WIDTH,
@@ -47,6 +47,11 @@ import {
   selectBlockFromHandle,
   styledBox,
 } from "@/components/pages/block-actions";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Figé au niveau du module : le composant `DragHandle` remonte son plugin dès
     que cet objet change d'identité. */

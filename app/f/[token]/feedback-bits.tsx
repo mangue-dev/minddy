@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { ArrowLeft, Ban, ChevronUp, EyeOff, MessageSquare } from "lucide-react";
-import { Badge, Button, Tooltip, TooltipContent, TooltipTrigger, cn } from "mangue-ui";
+import { Badge, Button, cn } from "mangue-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
@@ -20,6 +20,11 @@ import {
   type PublicProject,
 } from "@/lib/feedback/types";
 import { togglePostVoteAction } from "./actions";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Briques partagées du board public : badge de statut (mêmes icônes que les
     statuts d'issue), vote en pill horizontal (style UserJot), avatars

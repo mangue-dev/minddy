@@ -26,9 +26,6 @@ import {
   Skeleton,
   Spinner,
   Switch,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -57,6 +54,11 @@ import type {
   AdminUsersResponse,
 } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * `/admin` → onglet « Utilisateurs » (MIN-90) : LA vue des comptes de l'app.

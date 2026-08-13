@@ -21,9 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
@@ -38,6 +35,11 @@ import {
   type RecurrenceCadence,
 } from "@/lib/recurrence";
 import { recurrenceLabel } from "@/lib/recurrence-label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /** Default time applied when the time toggle is switched on. */
 const DEFAULT_HOUR = 9;

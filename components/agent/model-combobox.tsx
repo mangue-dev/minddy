@@ -16,9 +16,6 @@ import {
   PopoverContent,
   PopoverTrigger,
   Spinner,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "mangue-ui";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
@@ -28,6 +25,11 @@ import {
   type AgentModel,
   type AgentModelsScope,
 } from "@/lib/use-agent-models-query";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Picker de modèle recherchable de l'agent (MIN-46). Recherche dans le catalogue

@@ -5,9 +5,6 @@ import { useTranslations, useLocale } from "next-intl";
 import {
   Button,
   ConfirmDeleteDialog,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -35,6 +32,11 @@ import { EmptyScene } from "@/components/empty-scene";
 import { StatsSectionHeader } from "@/components/stats/stats-chrome";
 import { UserAvatar } from "@/components/user-avatar";
 import { DocPageSkeleton } from "@/components/route-skeletons";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * La corbeille (MIN-133).

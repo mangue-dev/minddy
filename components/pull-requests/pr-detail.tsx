@@ -23,9 +23,6 @@ import {
   TabsList,
   TabsTrigger,
   Textarea,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -107,6 +104,11 @@ import {
 } from "@/lib/pr-timeline";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { parseForgeLogin, prIdentifier, type RepoProviderId } from "@/lib/repo-providers";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Panneau de détail d'une PR (MIN-66 + MIN-138 + MIN-143) : en-tête (ticket +

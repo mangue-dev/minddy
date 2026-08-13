@@ -10,9 +10,6 @@ import {
   Spinner,
   Switch,
   Textarea,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -80,6 +77,11 @@ import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Wizard de création de projet (MIN-62, MIN-171) : D'où part-on ? → Projet →

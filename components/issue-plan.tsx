@@ -9,9 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Progress,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "mangue-ui";
 import {
   ChevronDown,
@@ -31,6 +28,11 @@ import {
   type PlanTaskState,
 } from "@/lib/plan";
 import { trackEvent } from "@/lib/analytics";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * The issue's implementation plan (Plan tab of the side panel): rendered

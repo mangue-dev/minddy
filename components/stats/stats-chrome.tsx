@@ -1,8 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { cn, Tooltip, TooltipTrigger, TooltipContent } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { Info, ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Chrome partagé de la page statistiques (MIN-85).

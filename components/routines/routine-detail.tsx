@@ -16,9 +16,6 @@ import {
   DropdownMenuTrigger,
   Skeleton,
   Switch,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
   toast,
 } from "mangue-ui";
@@ -76,6 +73,11 @@ import {
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
 import type { AgentRunSummary } from "@/lib/agent-api";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Une ROUTINE (MIN-185) et ses « Exécutions précédentes ».

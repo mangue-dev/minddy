@@ -1,7 +1,11 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * L'infobulle des deux gestes de l'adresse de contact du pied de page : copier,

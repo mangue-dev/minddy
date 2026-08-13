@@ -1,11 +1,16 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { cn, Tooltip, TooltipContent, TooltipTrigger } from "mangue-ui";
+import { cn } from "mangue-ui";
 import { BotBadge } from "@/components/git/git-login";
 import { UserAvatar } from "@/components/user-avatar";
 import { parseForgeLogin } from "@/lib/repo-providers";
 import type { CommitAuthor } from "@/lib/commit-authors";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Les auteurs d'un commit, empilés — la forme que les forges donnent à un commit
