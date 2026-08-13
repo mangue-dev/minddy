@@ -52,13 +52,17 @@ const ACCEPT =
 /** L'enveloppe d'une mention dans l'éditeur : un nœud NON éditable, vide, dans
     lequel React porte la vraie pilule (MentionChip). Le composer ne redessine
     donc pas une pilule « comme » celle du contexte — c'est la même. */
-const MENTION_SLOT_CLASS = "inline-flex align-middle";
+const MENTION_SLOT_CLASS = "inline-block align-baseline";
 
 /** La pilule d'une commande « / » posée en tête du message : même géométrie que
     la pilule de mention, sans figure — le « / » suffit à dire ce qu'elle est.
-    Elle porte son texte directement (pas de portail : rien à re-rendre). */
+    Elle porte son texte directement (pas de portail : rien à re-rendre).
+
+    Elle garde le fond NEUTRE (le repli de `--mention-chip`, cf. globals.css) là
+    où les mentions sont désormais teintées par type : une commande ne cite rien,
+    elle n'a donc aucune teinte à suivre. */
 const COMMAND_PILL_CLASS =
-  "mx-0.5 inline-flex items-center rounded-full bg-(--mention-chip) px-2 py-[3px] align-middle text-[0.95em] font-medium leading-4 text-primary";
+  "mx-0.5 inline-block whitespace-nowrap rounded-[5px] bg-(--mention-chip) px-1.5 py-px align-baseline text-[0.95em] font-medium leading-4 text-primary";
 
 /** Ce qu'une enveloppe sait dire d'elle-même : de quoi la re-rendre sans rien
     d'autre que le DOM (une annulation ⌘Z peut la restituer bien après coup). */

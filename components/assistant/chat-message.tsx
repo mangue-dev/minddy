@@ -175,10 +175,6 @@ function UserText({
             color={part.color}
             href={links?.href(part.type, part.id) ?? null}
             onNavigate={() => links?.navigate(part.type, part.id)}
-            // Sur la bulle sombre, la teinte de marque ne passe pas : la pilule
-            // s'éclaircit dans la couleur du texte qui l'entoure — son survol
-            // avec elle, sinon une pilule cliquable reprendrait le fond clair.
-            className="bg-background/15 text-background hover:bg-background/25"
           />
         ),
       )}
@@ -241,7 +237,17 @@ export const ChatMessage = memo(function ChatMessage({
               )}
             {message.content && (
               <>
-                <div className="chat-selectable relative rounded-2xl bg-foreground px-4 py-2 text-sm leading-relaxed text-background">
+                {/* `rounded-xl` et non le `rounded-2xl` des SURFACES (le
+                    composer, les cartes) : une bulle n'en est pas une, elle
+                    n'est qu'un fond posé sur du texte. Un rayon plus court la
+                    range derrière la surface qui la contient au lieu de la
+                    mettre à son niveau.
+
+                    `mention-on-ink` : les pilules de mention gardent leur teinte
+                    de type sur cette bulle-là, mais aux clartés d'une surface
+                    d'encre — c'est la SURFACE qui le dit, pas chaque pilule
+                    (app/globals.css). */}
+                <div className="chat-selectable mention-on-ink relative rounded-xl bg-foreground px-4 py-2 text-sm leading-relaxed text-background">
                   <UserText
                     content={message.content}
                     mentions={

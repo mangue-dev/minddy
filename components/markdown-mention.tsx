@@ -61,7 +61,9 @@ function MentionNodeView({ node }: NodeViewProps) {
   const links = useMentionLinks();
   const href = links?.href(type, id) ?? null;
   return (
-    <NodeViewWrapper as="span" className="inline-flex align-middle">
+    // `align-baseline`, comme la pilule qu'elle porte : une enveloppe centrée
+    // sur la hauteur d'x remettrait le décalage que la pilule vient de corriger.
+    <NodeViewWrapper as="span" className="inline-block align-baseline">
       <MentionChip
         type={type}
         id={id}

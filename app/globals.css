@@ -54,25 +54,65 @@
 :root { --primary: oklch(0.21 0.012 265); }                          /* encre, texte blanc dessus */
 .dark { --primary: oklch(0.97 0.004 265); --primary-foreground: oklch(0.18 0.01 265); }
 
-/* ── Le fond de la pilule de mention (components/mention-chip.tsx) ────────────
-   Elle ne peut pas se déduire de --primary comme le reste : l'encre est presque
-   noire en clair et presque blanche en sombre, donc une même opacité d'encre
-   ÉCLAIRCIT le fond sombre alors qu'elle assombrit le clair. La pilule doit
-   s'enfoncer dans les deux thèmes — clair sur clair, sombre sur sombre — c'est
-   donc une teinte en clair et une ombre en sombre, deux valeurs sans rapport.
+/* ── La pilule de mention (components/mention-chip.tsx) ───────────────────────
+   Elle est TEINTÉE PAR TYPE : le fond et le texte sont la même couleur reposée
+   à deux clartés, celle qui s'enfonce dans la page et celle qui se lit dessus.
+   La pilule dérive les trois variables ci-dessous de SA teinte, en syntaxe de
+   couleur relative — d'où des CLARTÉS et des OPACITÉS ici, et pas des couleurs :
+   la teinte, elle, vient du type (`mentionTone`), et pour un objectif ou un
+   projet c'est une couleur qu'aucune feuille de style ne connaît d'avance.
 
-   Translucide des deux côtés, et pas une couleur pleine : la pilule se pose
-   aussi bien sur une carte de commentaire que sur une ligne survolée ou sur la
-   surface du composer de Numo, et doit prendre la nuance de ce qui la porte.
-   Une seule variable, donc une seule classe `bg-*` : un appelant qui repeint la
-   pilule (la bulle sombre du chat) la remplace proprement via tailwind-merge.
+   Ces clartés ne peuvent pas se déduire l'une de l'autre d'un thème à l'autre :
+   sur fond clair une pilule s'assombrit pour se lire, sur fond sombre elle
+   s'éclaircit. Deux jeux, donc, et sans rapport arithmétique.
+
+   Le fond reste TRANSLUCIDE des deux côtés, et pas une couleur pleine : la
+   pilule se pose aussi bien sur une carte de commentaire que sur une ligne
+   survolée ou sur la surface du composer de Numo, et doit prendre la nuance de
+   ce qui la porte. Une seule variable par rôle, donc une seule classe `bg-*` /
+   `text-*` : un appelant qui repeint la pilule (la bulle sombre du chat) la
+   remplace proprement via tailwind-merge.
 
    La variante `-hover` sert aux pilules qui MÈNENT quelque part (un ticket, un
    objectif, une page — jamais une personne, cf. lib/mention-target.ts) : le même
    fond, appuyé d'un cran, pour que le survol dise « ceci se clique » sans que la
-   pilule change de nature. */
-:root { --mention-chip: oklch(0.21 0.012 265 / 6%); --mention-chip-hover: oklch(0.21 0.012 265 / 12%); }
-.dark { --mention-chip: oklch(0 0 0 / 25%); --mention-chip-hover: oklch(0 0 0 / 40%); }
+   pilule change de nature.
+
+   Les valeurs de `--mention-chip` et `--mention-chip-hover` posées ici servent
+   de REPLI : elles peignent ce qui emprunte la géométrie de la pilule sans en
+   être une — la pilule d'une commande « / » du composer de Numo. */
+:root {
+  --mention-chip: oklch(0.21 0.012 265 / 6%); --mention-chip-hover: oklch(0.21 0.012 265 / 12%);
+  --mention-chip-l: 0.62; --mention-chip-a: 13%; --mention-chip-a-hover: 22%; --mention-chip-ink-l: 0.47;
+}
+.dark {
+  --mention-chip: oklch(0 0 0 / 25%); --mention-chip-hover: oklch(0 0 0 / 40%);
+  --mention-chip-l: 0.72; --mention-chip-a: 18%; --mention-chip-a-hover: 28%; --mention-chip-ink-l: 0.84;
+}
+
+/* Une pilule posée sur une surface D'ENCRE plutôt que sur la page : la bulle
+   d'un message envoyé, dans le composer de Numo comme dans le fil de l'agent.
+   Elle garde SA teinte — c'est bien le même ticket, la même personne qu'ailleurs
+   — mais la reprend aux clartés de l'autre thème : la bulle est en --foreground,
+   donc sombre quand la page est claire, et claire quand la page est sombre.
+   D'où l'inversion, et non un jeu de valeurs à part. À poser sur la SURFACE,
+   pas sur la pilule : elle vaut pour toutes celles qu'elle porte. */
+.mention-on-ink {
+  --mention-chip-l: 0.8; --mention-chip-a: 22%; --mention-chip-a-hover: 32%; --mention-chip-ink-l: 0.88;
+}
+.dark .mention-on-ink {
+  --mention-chip-l: 0.58; --mention-chip-a: 16%; --mention-chip-a-hover: 26%; --mention-chip-ink-l: 0.45;
+}
+
+/* Les teintes fixes des mentions. Un objectif et un projet n'en ont pas ici :
+   ils portent la leur (la couleur de l'objectif, celle de l'orbe du projet).
+   Bleu et indigo sont ceux qu'avaient les pastilles du ticket et de la page ;
+   le violet est celui des personnes, et Numo prend --brand. */
+:root {
+  --mention-person: oklch(0.55 0.2 305);
+  --mention-issue: oklch(0.55 0.2 258);
+  --mention-page: oklch(0.55 0.2 277);
+}
 
 /* ── Le pouce d'un interrupteur coché (mangue-ui Switch) ──────────────────────
    Même cause que la pilule ci-dessus, et c'est le prix de notre --primary
