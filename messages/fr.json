@@ -1914,7 +1914,13 @@
     "aiKeyRemovedToast": "Clé supprimée.",
     "aiKeyRemove": "Supprimer",
     "securityTab": "Sécurité",
-    "securityTabIndicator": "Double authentification inactive"
+    "securityTabIndicator": "Double authentification inactive",
+    "keyboardSectionTitle": "Clavier",
+    "keyboardSectionDesc": "Comment un message part, dans les commentaires comme dans le composer de Numo.",
+    "sendShortcutTitle": "Envoyer un message avec",
+    "sendShortcutDesc": "Maj + Entrée saute toujours à la ligne. {mod} + Entrée envoie dans les deux réglages. Les formulaires qui portent une description — un nouveau ticket, un nouvel objectif — restent sur {mod} + Entrée, pour qu'Entrée y commence encore un paragraphe.",
+    "sendShortcutModEnter": "{mod} + Entrée",
+    "sendShortcutEnter": "Entrée"
   },
   "AccountData": {
     "exportTitle": "Exporter mes données",

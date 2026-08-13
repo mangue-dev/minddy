@@ -258,6 +258,7 @@ export function WizardDialog<Id extends string>({
             <div className="flex w-full flex-col items-center gap-3">
               {!step.hideSubmit && (
                 <SendShortcutTooltip
+                  scope="form"
                   label={step.submitLabel ?? tCommon("continue")}
                 >
                   <Button

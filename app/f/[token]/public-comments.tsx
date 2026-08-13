@@ -6,7 +6,8 @@ import { useFormatter, useTranslations } from "next-intl";
 import { CornerDownRight, Lock, Trash2 } from "lucide-react";
 import { Button, Spinner, cn } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
-import { isSendShortcut, SendShortcutTooltip } from "@/components/send-shortcut";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import {
@@ -227,6 +228,10 @@ function Composer({
 }) {
   const t = useTranslations("PublicFeedback");
   const tCommon = useTranslations("Common");
+  // Board public : le visiteur n'a pas de compte, `useIsSendShortcut` retombe
+  // donc sur ⌘/Ctrl+Entrée. Le membre qui répond depuis son compte, lui, garde
+  // le réglage qu'il a choisi ailleurs dans l'app.
+  const isSend = useIsSendShortcut();
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -250,7 +255,7 @@ function Composer({
             onCancel();
             return;
           }
-          if (!isSendShortcut(e)) return;
+          if (!isSend(e)) return;
           e.preventDefault();
           send();
         }}

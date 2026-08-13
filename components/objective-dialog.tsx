@@ -607,6 +607,7 @@ export function ObjectiveDialog({
                      props traversent `SplitButton` jusqu'au bouton de gauche,
                      le seul que ⌘↵ actionne. */
                   <SendShortcutTooltip
+                    scope="form"
                     label={t("createInProject", { project: currentProject!.name })}
                   >
                     <SplitButton
@@ -636,6 +637,7 @@ export function ObjectiveDialog({
                   </SendShortcutTooltip>
                 ) : (
                   <SendShortcutTooltip
+                    scope="form"
                     label={objective ? tCommon("save") : tCommon("create")}
                   >
                     <Button

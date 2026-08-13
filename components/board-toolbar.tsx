@@ -612,7 +612,7 @@ function ViewNameDialog({
             </div>
           )}
           <DialogFooter>
-            <SendShortcutTooltip label={submitLabel ?? tc("save")}>
+            <SendShortcutTooltip scope="form" label={submitLabel ?? tc("save")}>
               <Button type="submit" disabled={busy || !name.trim()}>
                 {submitLabel ?? tc("save")}
               </Button>

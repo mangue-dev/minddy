@@ -28,6 +28,7 @@ import {
   type PlanTaskState,
 } from "@/lib/plan";
 import { trackEvent } from "@/lib/analytics";
+import { isSendShortcut } from "@/lib/keyboard/send-shortcut";
 import {
   Tooltip,
   TooltipContent,
@@ -123,7 +124,10 @@ export function IssuePlan({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+            // L'éditeur de plan est un DOCUMENT, pas un message : Entrée y fait
+            // une ligne quel que soit le réglage de compte, d'où l'appel sans
+            // mode — mais la définition du geste reste la seule de l'app.
+            if (isSendShortcut(e)) {
               e.preventDefault();
               saveDraft();
             }

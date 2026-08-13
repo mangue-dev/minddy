@@ -9,7 +9,8 @@ import {
   cn,
 } from "mangue-ui";
 import { Square, SquareCheck, X } from "lucide-react";
-import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import {
   composeAskUserReply,
   type AskUserQuestion,
@@ -67,6 +68,7 @@ function draftAnswer(d: Draft | undefined): string {
 
 export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
   const t = useTranslations("ToolCall");
+  const isSend = useIsSendShortcut();
   const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   const [current, setCurrent] = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -281,14 +283,16 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
     // bordée, ombre légère, rounded-2xl) plutôt qu'une teinte de marque — elle
     // suit ainsi le thème clair/sombre comme le reste de l'interface.
     //
-    // Elle en reprend aussi le RACCOURCI : ⌘/Ctrl+Entrée envoie les réponses,
-    // depuis n'importe lequel de ses champs. Entrée seule garde son rôle de
-    // navigation (question suivante) — dans un champ d'une ligne, elle n'a pas
-    // de saut de ligne à insérer.
+    // Elle en reprend aussi le RACCOURCI : ⌘/Ctrl+Entrée envoie les réponses —
+    // ou Entrée seule, si le compte l'a réglé ainsi. Le champ de réponse libre
+    // garde la priorité (Entrée y avance d'une question et `preventDefault`),
+    // d'où la garde `defaultPrevented` : sans elle, en mode « Entrée envoie »,
+    // la même frappe avancerait ET enverrait.
     <div
       className="relative rounded-2xl border border-border bg-card px-3.5 py-3 text-sm shadow-sm"
       onKeyDown={(e) => {
-        if (!isSendShortcut(e) || !live || !allAnswered) return;
+        if (e.defaultPrevented) return;
+        if (!isSend(e) || !live || !allAnswered) return;
         e.preventDefault();
         submit();
       }}

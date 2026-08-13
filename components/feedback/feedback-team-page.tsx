@@ -2900,7 +2900,7 @@ function InternalFeedbackDialog({
               {tDictate("numoWorking")}
             </span>
           )}
-          <SendShortcutTooltip label={t("create")}>
+          <SendShortcutTooltip scope="form" label={t("create")}>
             <Button disabled={!canSubmit} onClick={() => void submit()}>
               {busy && <Spinner />}
               {t("create")}

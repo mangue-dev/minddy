@@ -63,7 +63,8 @@ import {
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
-import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { UserAvatar } from "@/components/user-avatar";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
@@ -488,6 +489,7 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
+  const isSend = useIsSendShortcut();
   const format = useFormatter();
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel } = useAgentPreferencesQuery();
@@ -1781,11 +1783,12 @@ export function PrDetail({
           <Textarea
             value={reviewMessage}
             onChange={(e) => setReviewMessage(e.target.value)}
-            // Même raccourci que les autres composers de l'app : ⌘/Ctrl+Entrée
-            // envoie, Entrée passe à la ligne. Le bouton n'est atteignable que
-            // si la review a de quoi partir — la garde est la sienne, relue ici.
+            // Même raccourci que les autres composers de l'app, réglage de
+            // compte compris : ⌘/Ctrl+Entrée envoie (ou Entrée seule), Maj+Entrée
+            // passe à la ligne. Le bouton n'est atteignable que si la review a de
+            // quoi partir — la garde est la sienne, relue ici.
             onKeyDown={(e) => {
-              if (!isSendShortcut(e)) return;
+              if (!isSend(e)) return;
               e.preventDefault();
               if (!reviewSubmitDisabled) void submitReview();
             }}

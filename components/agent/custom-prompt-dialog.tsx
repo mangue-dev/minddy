@@ -12,7 +12,8 @@ import {
   DialogTitle,
   Textarea,
 } from "mangue-ui";
-import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 
 /**
  * Où part la consigne écrite ici : le presse-papier (« Copier le prompt » →
@@ -45,6 +46,7 @@ export function CustomPromptDialog({
   onSubmit: (instructions: string, target: CustomPromptTarget) => void;
 }) {
   const t = useTranslations("Agent");
+  const isSend = useIsSendShortcut();
   const tIssueUI = useTranslations("IssueUI");
   const [instructions, setInstructions] = useState("");
 
@@ -90,10 +92,11 @@ export function CustomPromptDialog({
             autoFocus
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
-            // ⌘/Ctrl+Entrée valide : la touche Entrée seule reste un retour à la
-            // ligne, une consigne tenant souvent sur plusieurs.
+            // ⌘/Ctrl+Entrée valide ; Entrée seule reste un retour à la ligne,
+            // une consigne tenant souvent sur plusieurs — sauf si le compte a
+            // mis l'envoi sur Entrée, où Maj+Entrée prend le relais.
             onKeyDown={(e) => {
-              if (isSendShortcut(e)) {
+              if (isSend(e)) {
                 e.preventDefault();
                 submit();
               }

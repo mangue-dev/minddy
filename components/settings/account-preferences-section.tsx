@@ -15,7 +15,7 @@ import {
   toast,
   type SegmentedControlOption,
 } from "mangue-ui";
-import { Palette, Ticket } from "lucide-react";
+import { Keyboard, Palette, Ticket } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 import { locales, type Locale } from "@/i18n/config";
@@ -36,6 +36,12 @@ import {
   resolveAutoAssignOnStart,
 } from "@/lib/auto-assign-on-start";
 import { resolveSmartFill, SMART_FILL_META_KEY } from "@/lib/smart-fill";
+import {
+  SEND_MODE_META_KEY,
+  resolveSendMode,
+  type SendMode,
+} from "@/lib/keyboard/send-shortcut";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
@@ -58,6 +64,7 @@ export function AccountPreferencesSection() {
   const router = useRouter();
   const { user, updateUser, updateUserMetadata } = useAuth();
   const { theme, setTheme } = useTheme();
+  const modKey = useModKey();
   const [switchingLocale, setSwitchingLocale] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -167,6 +174,27 @@ export function AccountPreferencesSection() {
     }
   };
 
+  // Le raccourci d'envoi (MIN-287). Même mécanique que ses voisines, sauf que
+  // ce n'est pas un booléen : un mode, dont le défaut est celui de toujours.
+  const [sendMode, setSendMode] = useState<SendMode>(
+    resolveSendMode(user?.user_metadata),
+  );
+  useEffect(() => {
+    setSendMode(resolveSendMode(user?.user_metadata));
+  }, [user]);
+
+  const changeSendMode = async (next: SendMode) => {
+    if (!user || next === sendMode) return;
+    const prev = sendMode;
+    setSendMode(next);
+    try {
+      await updateUserMetadata({ [SEND_MODE_META_KEY]: next });
+    } catch (e) {
+      setSendMode(prev);
+      toast.error((e as Error).message);
+    }
+  };
+
   const switchLocale = async (locale: Locale) => {
     if (locale === currentLocale || switchingLocale) return;
     setSwitchingLocale(true);
@@ -183,6 +211,11 @@ export function AccountPreferencesSection() {
       setSwitchingLocale(false);
     }
   };
+
+  const sendModeOptions: SegmentedControlOption<SendMode>[] = [
+    { value: "mod-enter", label: ta("sendShortcutModEnter", { mod: modKey }) },
+    { value: "enter", label: ta("sendShortcutEnter") },
+  ];
 
   const themeOptions: SegmentedControlOption<ThemeValue>[] = [
     { value: "light", label: tNav("themeLight") },
@@ -229,6 +262,29 @@ export function AccountPreferencesSection() {
               value={mounted ? ((theme ?? "") as ThemeValue) : ""}
               onChange={(v) => v && setTheme(v)}
               ariaLabel={ta("themeTitle")}
+              className="w-60"
+            />
+          }
+        />
+      </SettingsGroup>
+
+      {/* Clavier — un seul réglage pour l'instant, mais un sujet à lui : le
+          geste d'envoi n'est ni une apparence ni une propriété de ticket. */}
+      <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountKeyboard}
+        icon={Keyboard}
+        title={ta("keyboardSectionTitle")}
+        description={ta("keyboardSectionDesc")}
+      >
+        <SettingsRow
+          label={ta("sendShortcutTitle")}
+          hint={ta("sendShortcutDesc", { mod: modKey })}
+          control={
+            <SegmentedControl
+              options={sendModeOptions}
+              value={sendMode}
+              onChange={(v) => void changeSendMode(v)}
+              ariaLabel={ta("sendShortcutTitle")}
               className="w-60"
             />
           }

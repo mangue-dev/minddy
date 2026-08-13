@@ -32,7 +32,8 @@ import {
   type SlashCommandOption,
 } from "@/components/assistant/slash-menu";
 import { ResourcePills, DropOverlay, useFileDrop } from "@/components/resources";
-import { SendShortcutKeys, isSendShortcut } from "@/components/send-shortcut";
+import { SendShortcutKeys } from "@/components/send-shortcut";
+import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
 import type { AssistantCommandId, AssistantMention } from "@/lib/assistant-types";
@@ -205,6 +206,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     ref
   ) {
     const t = useTranslations("Assistant");
+    const isSend = useIsSendShortcut();
     const tAttach = useTranslations("Resources");
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
@@ -590,13 +592,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         // et Entrée partait au milieu d'une pensée. Le contrat est le même dans
         // les quatre surfaces qui le montent (accueil, panneau Numo, page
         // agents, conversation d'agent), puisqu'elles montent CE composer, et le
-        // même que dans tous les autres composers de l'app (`send-shortcut`).
-        if (isSendShortcut(e)) {
+        // même que dans tous les autres composers de l'app (`send-shortcut`) —
+        // y compris quand le compte a mis l'envoi sur Entrée seule.
+        if (isSend(e)) {
           e.preventDefault();
           handleSubmit();
         }
       },
       [
+        isSend,
         handleSubmit,
         mentionOpen,
         mentionOptions,

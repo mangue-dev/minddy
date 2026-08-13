@@ -1914,7 +1914,13 @@
     "aiKeyRemovedToast": "Key removed.",
     "aiKeyRemove": "Remove",
     "securityTab": "Security",
-    "securityTabIndicator": "Two-factor authentication is off"
+    "securityTabIndicator": "Two-factor authentication is off",
+    "keyboardSectionTitle": "Keyboard",
+    "keyboardSectionDesc": "How a message leaves your hands, in comments and in Numo's composer.",
+    "sendShortcutTitle": "Send a message with",
+    "sendShortcutDesc": "Shift + Enter always adds a line break. {mod} + Enter sends in both settings. Forms that carry a description — a new issue, a new objective — keep {mod} + Enter, so Enter can still start a paragraph there.",
+    "sendShortcutModEnter": "{mod} + Enter",
+    "sendShortcutEnter": "Enter"
   },
   "AccountData": {
     "exportTitle": "Export my data",

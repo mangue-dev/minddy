@@ -806,6 +806,7 @@ export function CreateIssueDialog({
                      props traversent `SplitButton` jusqu'au bouton de gauche,
                      le seul que ⌘↵ actionne. */
                   <SendShortcutTooltip
+                    scope="form"
                     label={t("createInProject", { project: currentProject.name })}
                   >
                     <SplitButton
@@ -832,7 +833,7 @@ export function CreateIssueDialog({
                     </SplitButton>
                   </SendShortcutTooltip>
                 ) : (
-                  <SendShortcutTooltip label={t("createTicket")}>
+                  <SendShortcutTooltip scope="form" label={t("createTicket")}>
                     <Button
                       type="submit"
                       className="rounded-full px-4 max-sm:w-full"

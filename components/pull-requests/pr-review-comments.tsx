@@ -21,7 +21,8 @@ import {
 import { AutoTextarea } from "@/components/auto-textarea";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrHunk } from "@/components/pull-requests/pr-hunk";
-import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
+import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
 import { UserAvatar } from "@/components/user-avatar";
@@ -506,6 +507,7 @@ function PlainComposer({
   autoFocus?: boolean;
 }) {
   const t = useTranslations("PullRequests");
+  const isSend = useIsSendShortcut();
 
   return (
     <div className="flex flex-col gap-2">
@@ -515,7 +517,7 @@ function PlainComposer({
           value={value}
           onChange={(e) => onChange(() => e.target.value)}
           onKeyDown={(e) => {
-            if (isSendShortcut(e)) {
+            if (isSend(e)) {
               e.preventDefault();
               onSubmit();
             }

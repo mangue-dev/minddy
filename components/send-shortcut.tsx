@@ -8,6 +8,10 @@
 // à la ligne. Un composer où l'on rédige plusieurs phrases ne peut pas partir
 // sur la touche qui sert à respirer.
 //
+// Depuis MIN-287 c'est un DÉFAUT et non plus une loi : Compte → Préférences
+// permet de mettre l'envoi sur Entrée seule. La légende suit donc le compte —
+// et seulement là où la touche le suit aussi, d'où `scope` ci-dessous.
+//
 // La contrepartie d'un envoi qui n'est plus sur Entrée, c'est qu'il ne se
 // devine plus : le geste doit se LIRE au survol du bouton qui l'exécute. D'où
 // ces deux composants plutôt qu'un `title` recopié dix fois — le jour où le
@@ -20,6 +24,7 @@
 import type { ReactElement } from "react";
 import { Kbd } from "@/components/ui/kbd";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
+import { useSendMode } from "@/lib/keyboard/use-send-mode";
 import {
   Tooltip,
   TooltipContent,
@@ -32,9 +37,33 @@ import {
     surfaces qui rendent la légende n'aient qu'un import à faire. */
 export { isSendShortcut } from "@/lib/keyboard/send-shortcut";
 
-/** Les deux touches, telles que les porte le clavier de la plateforme. */
-export function SendShortcutKeys({ size = "sm" }: { size?: "sm" | "default" }) {
+/**
+ * De quel côté du réglage se trouve le bouton qu'on légende.
+ *
+ * - `composer` (le défaut) : un message — commentaire, réponse, prompt, retour.
+ *   La préférence de compte s'y applique, la légende la suit ;
+ * - `form` : un formulaire dont le corps est un ÉDITEUR (créer un ticket, un
+ *   objectif, une vue, une étape de wizard). Entrée y appartient au paragraphe
+ *   suivant quoi qu'ait choisi le compte, donc la légende reste « ⌘ ↵ ».
+ */
+export type SendShortcutScope = "composer" | "form";
+
+/** La ou les touches d'envoi, telles que les porte le clavier de la plateforme
+    et telles que les a réglées le compte. */
+export function SendShortcutKeys({
+  size = "sm",
+  scope = "composer",
+}: {
+  size?: "sm" | "default";
+  scope?: SendShortcutScope;
+}) {
   const mod = useModKey();
+  const mode = useSendMode();
+  // Entrée seule : une seule pastille. Dire « ⌘ ↵ » à qui a choisi Entrée
+  // serait exact (⌘↵ envoie aussi) mais lui apprendrait le geste le plus long.
+  if (scope === "composer" && mode === "enter") {
+    return <Kbd size={size}>↵</Kbd>;
+  }
   return (
     <span className="inline-flex items-center gap-0.5">
       <Kbd size={size}>{mod}</Kbd>
@@ -57,10 +86,12 @@ export function SendShortcutKeys({ size = "sm" }: { size?: "sm" | "default" }) {
 export function SendShortcutTooltip({
   label,
   side = "top",
+  scope = "composer",
   children,
 }: {
   label: string;
   side?: "top" | "bottom" | "left" | "right";
+  scope?: SendShortcutScope;
   children: ReactElement;
 }) {
   return (
@@ -69,7 +100,7 @@ export function SendShortcutTooltip({
       <TooltipContent side={side}>
         <span className="inline-flex items-center gap-1.5">
           {label}
-          <SendShortcutKeys />
+          <SendShortcutKeys scope={scope} />
         </span>
       </TooltipContent>
     </Tooltip>

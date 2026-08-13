@@ -841,7 +841,7 @@ function ComposerDialog({
               {tDictate("numoWorking")}
             </span>
           )}
-          <SendShortcutTooltip label={t("submitPost")}>
+          <SendShortcutTooltip scope="form" label={t("submitPost")}>
             <Button
               onClick={() => title.trim() && submit()}
               disabled={pending || numoBusy || !title.trim()}
