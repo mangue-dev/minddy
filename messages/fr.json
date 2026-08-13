@@ -3860,6 +3860,17 @@
     "thDuration": "Durée",
     "thKey": "Clé"
   },
+  "Analytics": {
+    "title": "Mesure d'audience",
+    "description": "Comment minddy est utilisé, pour l'améliorer. Pas de publicité, pas de revente de données.",
+    "enableLabel": "Mesurer mon usage",
+    "enableHint": "Statistiques d'usage anonymes. Éteint, rien n'est conservé sur cet appareil.",
+    "learnMore": "Politique de cookies",
+    "promptTitle": "Aider à améliorer minddy ?",
+    "promptSettingsHint": "Vous pourrez le changer à tout moment dans Réglages › Données.",
+    "promptAccept": "Mesurer mon usage",
+    "promptDecline": "Non merci"
+  },
   "CookieBanner": {
     "title": "Cookies et mesure d'audience",
     "description": "On mesure l'usage du produit pour l'améliorer. Pas de publicité, pas de revente de données.",

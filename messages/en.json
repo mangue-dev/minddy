@@ -3860,6 +3860,17 @@
     "thDuration": "Duration",
     "thKey": "Key"
   },
+  "Analytics": {
+    "title": "Usage measurement",
+    "description": "How minddy is used, so it can be improved. No ads, no data resale.",
+    "enableLabel": "Measure my usage",
+    "enableHint": "Anonymous product analytics. Off leaves nothing on this device.",
+    "learnMore": "Cookie policy",
+    "promptTitle": "Help improve minddy?",
+    "promptSettingsHint": "You can change this any time in Settings › Data.",
+    "promptAccept": "Measure my usage",
+    "promptDecline": "No thanks"
+  },
   "CookieBanner": {
     "title": "Cookies and analytics",
     "description": "We measure product usage to improve it. No ads, no data resale.",

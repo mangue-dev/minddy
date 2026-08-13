@@ -30,6 +30,7 @@ import { AccountMcpSection } from "@/components/settings/account-mcp-section";
 import { AccountConnectedAppsSection } from "@/components/settings/account-connected-apps-section";
 import { AccountGitConnectionsSection } from "@/components/settings/account-git-connections-section";
 import { AccountAiKeysSection } from "@/components/settings/account-ai-keys-section";
+import { AccountAnalyticsSection } from "@/components/settings/account-analytics-section";
 import { AccountDataSection } from "@/components/settings/account-data-section";
 import { SettingsAssistantPrompt } from "@/components/settings-assistant-prompt";
 import { ACCOUNT_SETTINGS_DEFAULT_TAB } from "@/lib/settings-sections";
@@ -129,7 +130,14 @@ export default function AccountSettingsPage() {
       value: "data",
       label: t("dataTab"),
       icon: ShieldCheck,
-      content: <AccountDataSection />,
+      content: (
+        <>
+          {/* La mesure d'audience avant l'export et la suppression : c'est le
+              seul réglage de cet onglet qu'on vient CHANGER plutôt que subir. */}
+          <AccountAnalyticsSection />
+          <AccountDataSection />
+        </>
+      ),
     },
   ];
 

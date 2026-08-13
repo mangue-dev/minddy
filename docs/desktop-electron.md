@@ -133,6 +133,21 @@ coin). Trois conséquences se tiennent ensemble :
   Chromium : le rail se refermerait sous le pointeur et les emporterait, d'où le
   guetteur de `app-sidebar.tsx`, qui reconnaît cette sortie-là à son coin.
 
+**Ce qui est du SITE ne suit pas dans la fenêtre.** L'argumentaire, déjà (plus
+haut), et le bandeau de cookies : une carte flottante qui demande la permission
+de mesurer s'adresse à quelqu'un qui vient d'arriver de nulle part, et dans une
+app installée elle ne dit plus qu'une chose — « ceci est un site web dans une
+fenêtre ». Le choix, lui, ne disparaît pas. Il se pose **une fois**, au centre, dans le
+langage de l'app — deux réponses franches, aucune sortie sans répondre, pour que
+la question ne se repose jamais (le défaut même des bandeaux qu'on remplace) —
+et il vit ensuite dans les réglages (onglet Données), où toute app de bureau le
+met, RÉVERSIBLE, ce qu'il n'était pas tant que le bandeau était le seul chemin.
+
+Le laisser seulement dans les réglages avait été essayé une heure : personne n'y
+serait allé, et la mesure serait restée éteinte pour tout le monde sans que ce
+soit un choix. Tant qu'aucune réponse n'est donnée, le consentement vaut `null`
+et PostHog reste sans cookie ni identité — rien n'est mesuré en douce.
+
 **Et en plein écran, on ne les cache jamais.** macOS les emmène en haut de
 l'écran, sous sa propre garde ; les masquer par-dessus retire le seul moyen d'en
 sortir à la souris. La page, elle, doit quand même l'apprendre pour ne pas leur

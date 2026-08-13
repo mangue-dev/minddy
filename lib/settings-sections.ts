@@ -1,5 +1,6 @@
 import {
   AppWindow,
+  BarChart3,
   BellRing,
   Bot,
   CalendarClock,
@@ -103,6 +104,7 @@ export const SETTINGS_SECTIONS = {
   accountGitConnections: "account-git-connections",
   accountAiProvider: "account-ai-provider",
   accountAgent: "account-agent",
+  accountAnalytics: "account-analytics",
   accountDataExport: "account-data-export",
   accountDataDelete: "account-data-delete",
 
@@ -182,6 +184,7 @@ export function useSettingsSections(): SettingsSection[] {
   const tAccount = useTranslations("Account");
   const tSecurity = useTranslations("AccountSecurity");
   const tData = useTranslations("AccountData");
+  const tAnalytics = useTranslations("Analytics");
   const tAutomations = useTranslations("Automations");
   const tCycles = useTranslations("Cycles");
   const tNotifications = useTranslations("NotificationSettings");
@@ -426,6 +429,17 @@ export function useSettingsSections(): SettingsSection[] {
         keywords: [
           "agent", "numo", "modèle", "modele", "model", "raisonnement",
           "reasoning", "défaut", "defaut", "default",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountAnalytics,
+        tab: "data",
+        icon: BarChart3,
+        title: tAnalytics("title"),
+        keywords: [
+          "audience", "analytics", "mesure", "statistiques", "posthog",
+          "cookies", "consentement", "consent", "vie privée", "vie privee",
+          "privacy", "rgpd", "gdpr", "suivi", "tracking",
         ],
       }),
       account({

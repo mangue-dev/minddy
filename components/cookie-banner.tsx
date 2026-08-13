@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "mangue-ui/components/ui/button";
 import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-consent";
+import { isDesktop } from "@/lib/desktop/bridge";
 import { useAnalytics } from "@/lib/use-analytics";
 import { localizedHref } from "@/lib/locale-href";
 import { SITE_URL } from "@/lib/site";
@@ -14,6 +15,24 @@ import type { Locale } from "@/i18n/config";
  * qu'aucun choix n'a été fait, et jamais côté serveur (le localStorage n'est lu
  * qu'après montage, sinon le HTML pré-rendu afficherait le bandeau à tout le
  * monde le temps de l'hydratation).
+ *
+ * ## Et jamais dans l'app de bureau (MIN-291)
+ *
+ * Une carte flottante qui demande la permission de mesurer est un objet de
+ * SITE : elle s'adresse à quelqu'un qui vient d'arriver de nulle part et à qui
+ * on doit une information avant de rien écrire chez lui. Dans une app qu'on a
+ * téléchargée, signée, installée et ouverte, elle n'a plus personne à informer
+ * de cette façon-là — elle dit seulement « ceci est un site web dans une
+ * fenêtre ».
+ *
+ * Ce qui ne disparaît pas, c'est le CHOIX. Il déménage dans les réglages
+ * (components/settings/account-analytics-section.tsx), où toute app de bureau le
+ * met, et il y est réversible — ce qu'il n'était pas jusqu'ici, une fois le
+ * bandeau répondu. Tant qu'il n'est pas fait, le consentement vaut `null` et
+ * PostHog reste sans cookie ni identité, exactement comme pour un visiteur du
+ * web qui n'a pas encore tranché : **rien n'est mesuré en douce**. La
+ * contrepartie est réelle et assumée — la mesure d'audience est éteinte par
+ * défaut sur l'app de bureau.
  */
 export function CookieBanner() {
   const t = useTranslations("CookieBanner");
@@ -22,7 +41,7 @@ export function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(readConsent() === null);
+    setVisible(readConsent() === null && !isDesktop());
   }, []);
 
   const choose = (consent: CookieConsent) => {

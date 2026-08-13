@@ -23,6 +23,7 @@ import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { NewVersionBanner } from "@/components/new-version-banner";
 import { PushServiceWorker } from "@/components/push-service-worker";
 import { DesktopNotifications } from "@/components/desktop-notifications";
+import { DesktopAnalyticsPrompt } from "@/components/desktop-analytics-prompt";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 
@@ -87,6 +88,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                                 le pont temps réel de MIN-89 fournit déjà tout,
                                 il n'y a que les bannières à émettre. */}
                             <DesktopNotifications />
+                            {/* La question de la mesure d'audience, posée une
+                                fois dans l'app de bureau — le bandeau de site
+                                n'y va pas (MIN-291). */}
+                            <DesktopAnalyticsPrompt />
                             {/* Suspense obligatoire : il lit `useSearchParams`,
                                 parce que la cible d'une notification vit dans la
                                 query (`?issue=…`). */}
