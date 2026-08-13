@@ -1089,7 +1089,10 @@
     "dueSoonInDays": "in {days, plural, one {# day} other {# days}}",
     "dueSoonInDaysHours": "in {days, plural, one {# day} other {# days}} and {hours, plural, one {# hour} other {# hours}}",
     "dueSoonDaysAgo": "{days, plural, one {# day} other {# days}} ago",
-    "dueSoonDaysHoursAgo": "{days, plural, one {# day} other {# days}} and {hours, plural, one {# hour} other {# hours}} ago"
+    "dueSoonDaysHoursAgo": "{days, plural, one {# day} other {# days}} and {hours, plural, one {# hour} other {# hours}} ago",
+    "desktopBannerText": "Download the Mac app to go further",
+    "desktopBannerCta": "Download",
+    "desktopBannerDismiss": "Don't show this again"
   },
   "GlobalBoard": {
     "allTitle": "All issues",
@@ -1922,7 +1925,10 @@
     "sendShortcutTitle": "Send a message with",
     "sendShortcutDesc": "Shift + Enter always adds a line break. {mod} + Enter sends in both settings. Forms that carry a description — a new issue, a new objective — keep {mod} + Enter, so Enter can still start a paragraph there.",
     "sendShortcutModEnter": "{mod} + Enter",
-    "sendShortcutEnter": "Enter"
+    "sendShortcutEnter": "Enter",
+    "desktopAppLabel": "Desktop app",
+    "desktopAppHint": "macOS only. Its own window, native notifications, and it updates itself.",
+    "desktopAppCta": "Download"
   },
   "AccountData": {
     "exportTitle": "Export my data",

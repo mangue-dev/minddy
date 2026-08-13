@@ -1089,7 +1089,10 @@
     "dueSoonInDays": "dans {days, plural, one {# jour} other {# jours}}",
     "dueSoonInDaysHours": "dans {days, plural, one {# jour} other {# jours}} et {hours, plural, one {# heure} other {# heures}}",
     "dueSoonDaysAgo": "il y a {days, plural, one {# jour} other {# jours}}",
-    "dueSoonDaysHoursAgo": "il y a {days, plural, one {# jour} other {# jours}} et {hours, plural, one {# heure} other {# heures}}"
+    "dueSoonDaysHoursAgo": "il y a {days, plural, one {# jour} other {# jours}} et {hours, plural, one {# heure} other {# heures}}",
+    "desktopBannerText": "Téléchargez l'app Mac pour aller plus loin",
+    "desktopBannerCta": "Télécharger",
+    "desktopBannerDismiss": "Ne plus afficher"
   },
   "GlobalBoard": {
     "allTitle": "Tous les tickets",
@@ -1922,7 +1925,10 @@
     "sendShortcutTitle": "Envoyer un message avec",
     "sendShortcutDesc": "Maj + Entrée saute toujours à la ligne. {mod} + Entrée envoie dans les deux réglages. Les formulaires qui portent une description — un nouveau ticket, un nouvel objectif — restent sur {mod} + Entrée, pour qu'Entrée y commence encore un paragraphe.",
     "sendShortcutModEnter": "{mod} + Entrée",
-    "sendShortcutEnter": "Entrée"
+    "sendShortcutEnter": "Entrée",
+    "desktopAppLabel": "App de bureau",
+    "desktopAppHint": "macOS uniquement. Sa fenêtre, des notifications natives, et elle se met à jour seule.",
+    "desktopAppCta": "Télécharger"
   },
   "AccountData": {
     "exportTitle": "Exporter mes données",

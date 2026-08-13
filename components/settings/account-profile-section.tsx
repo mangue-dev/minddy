@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { Button, Input, Spinner, toast } from "mangue-ui";
-import { Shuffle, User } from "lucide-react";
+import { Download, Shuffle, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { isDesktop } from "@/lib/desktop/bridge";
 import { emailLocalPart } from "@/lib/display-name";
 import { useMyAvatarSeed, useRegenerateAvatar } from "@/lib/use-my-avatar";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
@@ -38,6 +40,10 @@ export function AccountProfileSection() {
     emailLocalPart(user?.email) ||
     "";
   const seed = useMyAvatarSeed();
+  // Lu APRÈS le montage : `window.minddy` n'existe pas au rendu serveur, et le
+  // supposer ferait diverger l'hydratation.
+  const [inDesktopApp, setInDesktopApp] = useState(false);
+  useEffect(() => setInDesktopApp(isDesktop()), []);
   const regenerate = useRegenerateAvatar();
 
   const [name, setName] = useState(currentName);
@@ -136,6 +142,31 @@ export function AccountProfileSection() {
           hint={ta("emailHint")}
           control={
             <span className="text-sm text-muted-foreground">{user.email}</span>
+          }
+        />
+      )}
+
+      {/* L'app de bureau (MIN-292) — FIXE, sans bouton pour l'écarter.
+          Contrairement au bandeau de l'accueil, qui ne paraît qu'une fois dans
+          la vie du compte, celle-ci est l'endroit où l'on revient chercher ce
+          qu'on avait écarté. Une ligne qu'on peut faire disparaître d'un réglage
+          n'est plus un réglage.
+
+          Absente DANS l'app : proposer de l'installer à qui l'a ouverte est du
+          bruit. Elle reste en revanche visible sous Windows et Linux, où son
+          libellé dit que c'est macOS — c'est une information, pas une promesse,
+          et la taire ferait croire que l'app n'existe pas. */}
+      {!inDesktopApp && (
+        <SettingsRow
+          label={ta("desktopAppLabel")}
+          hint={ta("desktopAppHint")}
+          control={
+            <Button asChild variant="outline" size="sm">
+              <Link href="/download">
+                <Download />
+                {ta("desktopAppCta")}
+              </Link>
+            </Button>
           }
         />
       )}

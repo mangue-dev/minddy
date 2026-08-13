@@ -13,6 +13,7 @@ import { HomeSmartAssignWarning } from "@/components/home/home-smart-assign-warn
 import { HomeProjectSignals } from "@/components/home/home-project-signals";
 import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { OnboardingCard } from "@/components/home/onboarding-card";
+import { DesktopInstallBanner } from "@/components/home/desktop-install-banner";
 
 /** Display name from Supabase auth metadata (display_name → full_name → name),
     never the raw email — mirrors the sidebar account button. */
@@ -170,6 +171,12 @@ export default function HomePage() {
             son premier projet n'a pas à s'entendre dire ce qu'il y a à trier
             dedans. */}
         <HomeProjectSignals />
+        {/* EN DERNIER, et pour la même raison d'urgence que l'ordre ci-dessus :
+            c'est la seule ligne du bloc qui n'attend aucune réponse. Elle est
+            aussi la seule à ne paraître qu'une fois dans la vie du compte — et
+            elle ne paraît pas du tout pendant l'onboarding, cette branche ne
+            s'affichant qu'après (MIN-292). */}
+        <DesktopInstallBanner />
       </div>
     </section>
   );
