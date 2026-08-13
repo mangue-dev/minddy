@@ -16,8 +16,16 @@ Pipeline:
   1. Verify the working tree is clean.
   2. Run `npm run typecheck` (aborts on failure).
   3. Bump the version (patch/minor/major) or skip — commit + tag the bump.
+  3b. Desktop app: republish ONLY if the macOS shell actually changed.
   4. Push the current branch (usually `main`) → Vercel preview deploy.
   5. Merge the current branch into `production` + push → Vercel production deploy.
+
+Desktop app (macOS):
+  The app is a window onto www.minddy.app, so deploying the site is enough for
+  almost everything. Step 3b compares a fingerprint of what really goes into the
+  binary against the last published one (desktop/released.json) and offers to
+  rebuild only when they differ — a version bump alone never triggers it.
+  Set MINDDY_SKIP_DESKTOP=1 to skip the check. See docs/desktop-release.md.
 
 Branch model:
   main        → preview deploys (every push)
@@ -120,6 +128,81 @@ case "$BUMP_TYPE" in
     exit 1
     ;;
 esac
+
+# 3b. L'app de bureau macOS (MIN-292) — republier SEULEMENT si elle a changé.
+#
+# L'app est une fenêtre sur www.minddy.app : le déploiement ci-dessous suffit à
+# changer ce qu'elle affiche, et la plupart des déploiements ne la concernent
+# pas. Republier un binaire coûte une dizaine de minutes de machine ÉVEILLÉE
+# (mesuré : signature, notarisation, agrafage, puis 485 Mo d'envoi) et 120 Mo que
+# chaque utilisateur téléchargera — on ne le fait donc que sur un vrai
+# changement de la COQUILLE, pas sur un bump de version.
+#
+# `desktop-fingerprint.mjs` tranche : il demande à esbuild quels fichiers entrent
+# réellement dans le bundle (la liste déborde de `desktop/` — `lib/public-routes.ts`
+# en fait partie) et ignore ce qui bouge sans rien changer au comportement. Voir
+# docs/desktop-release.md.
+#
+# Ici, et pas plus tôt : la version vient d'être posée, et l'app doit porter
+# celle du site dont elle est tirée.
+DESKTOP_SKIP="${MINDDY_SKIP_DESKTOP:-}"
+if [ "$DESKTOP_SKIP" = "1" ]; then
+  echo "→ Desktop app: skipped (MINDDY_SKIP_DESKTOP=1)"
+elif [ ! -f desktop/released.json ]; then
+  echo "⚠ Desktop app: never published (desktop/released.json missing)."
+  echo "  See docs/desktop-release.md — deploy continues, the app is untouched."
+elif [ "$(node scripts/desktop-fingerprint.mjs)" = "$(node -p "require('./desktop/released.json').fingerprint")" ]; then
+  echo "→ Desktop app: unchanged since $(node -p "require('./desktop/released.json').version") — nothing to republish."
+else
+  echo ""
+  echo "→ Desktop app: the shell CHANGED since it was last published."
+  node scripts/desktop-fingerprint.mjs --explain | sed 's/^/    /'
+  echo ""
+  echo "  Rebuilding signs + notarizes and pushes ~485 MB to the feed — ~10 min, measured."
+  echo "  It runs LOCALLY and waits on Apple: keep the Mac awake (caffeinate is applied)."
+  echo "  Installed apps pick it up within 6 h and install it on their next quit."
+
+  DESKTOP_ANSWER=""
+  if [ -t 0 ]; then
+    read -p "  Rebuild and publish the desktop app now? [Y/n]: " DESKTOP_ANSWER
+  else
+    # Non interactif (CI, script) : on ne lance pas dix minutes de build et
+    # d'envoi tout seul, et surtout on ne le TAIT pas.
+    echo "  Non-interactive run: skipping. Run \`npm run desktop:release\` when ready."
+    DESKTOP_ANSWER="n"
+  fi
+
+  case "$DESKTOP_ANSWER" in
+    n|N|no|NO)
+      echo "  → Skipped. The site deploys; installed apps keep the previous shell."
+      ;;
+    *)
+      # Les identifiants vivent dans `.env` (flux de mise à jour, jeton du blob,
+      # profil trousseau de notarisation). `set -a` les exporte pour les deux
+      # scripts appelés ci-dessous.
+      if [ -f .env ]; then set -a; . ./.env; set +a; fi
+      : "${APPLE_KEYCHAIN_PROFILE:?manque — voir docs/desktop-signing.md §3}"
+      : "${MINDDY_DESKTOP_FEED_URL:?manque — voir docs/desktop-release.md}"
+
+      # `caffeinate -i` empêche la veille PENDANT ces deux commandes, et rend la
+      # main juste après. Ce n'est pas du confort : la notarisation est une
+      # ATTENTE d'un verdict distant, et le ticket doit ensuite être agrafé dans
+      # le bundle ICI. Un Mac qui s'endort au milieu suspend le processus et
+      # casse l'attente — après quoi il faut tout recommencer, Apple compris.
+      # Le couvercle rabattu, lui, endort la machine quoi qu'il arrive : ce
+      # garde-fou couvre la veille d'inactivité, pas celle-là.
+      echo "→ Building, signing and notarizing the desktop app (~10 min, keep the lid open)..."
+      caffeinate -i npm --prefix desktop run dist
+
+      echo "→ Publishing the update feed (~485 MB)..."
+      caffeinate -i node scripts/publish-desktop.mjs
+
+      git add desktop/package.json desktop/package-lock.json desktop/released.json
+      git commit -m "chore(desktop): publish $(node -p "require('./desktop/package.json').version")"
+      echo "→ Desktop app published and recorded."
+      ;;
+  esac
+fi
 
 # 4. Push the current branch → triggers a Vercel preview deploy.
 echo "→ Pushing $CURRENT to origin..."

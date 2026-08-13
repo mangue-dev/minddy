@@ -10,7 +10,7 @@ import {
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
-import { isMarketingPath } from "@/lib/desktop/window-routes";
+import { routeDisposition } from "@/lib/desktop/window-routes";
 import { buildAppMenu } from "./menu";
 import { startAutoUpdates } from "./updater";
 
@@ -112,35 +112,78 @@ function flushAuthLink(): void {
   pendingAuthLink = null;
 }
 
+function goHome(window: BrowserWindow): void {
+  void window.loadURL(`${DESKTOP_ORIGIN}${DESKTOP_ENTRY_PATH}`);
+}
+
 /**
  * La garde de navigation. Sans elle, un lien vers un site tiers ouvre ce site
  * DANS minddy, avec notre `preload` chargé — c'est-à-dire avec le pont.
+ *
+ * Elle répond à deux questions distinctes, dans cet ordre : **est-ce chez
+ * nous ?** (`navigationDecision`, lib/desktop/nav-guard.ts), puis **est-ce une
+ * page que la fenêtre a le droit de montrer ?** (`routeDisposition`,
+ * lib/desktop/window-routes.ts). La seconde est ce qui garde l'app à ses deux
+ * seuls écrans : l'authentification et l'app.
+ *
+ * **Il faut brancher QUATRE événements, et chacun rattrape ce que les autres ne
+ * voient pas.** C'est le genre de liste qu'on croit finie à deux :
+ *
+ * - `will-navigate` — le clic ordinaire sur un lien ;
+ * - `will-redirect` — les redirections SERVEUR. C'est par là qu'on atteint le
+ *   board de feedback : `/feedback` pose un JWT et renvoie vers `/f/<jeton>`,
+ *   sans qu'aucun lien n'ait jamais pointé sur le board. Sans cet événement,
+ *   toute la surface publique à jeton rentrait dans la fenêtre par la porte de
+ *   derrière ;
+ * - `did-navigate-in-page` — les navigations de la SPA, que Next pousse dans
+ *   l'historique sans charger de document. C'est par là que passent les liens
+ *   CGU et confidentialité de l'écran d'inscription ;
+ * - `setWindowOpenHandler` — les `target="_blank"`.
  */
 function guardNavigation(window: BrowserWindow): void {
-  window.webContents.on("will-navigate", (event, url) => {
+  const guard = (event: { preventDefault: () => void }, url: string) => {
     const decision = navigationDecision(url, DESKTOP_ORIGIN);
-    if (decision === "allow") {
-      // Chez nous, mais sur le site public : l'app n'affiche pas l'argumentaire.
-      // On ne bloque pas sèchement — on ramène à l'entrée, qui mène à l'app ou
-      // à la connexion selon la session.
-      if (isMarketingPath(url)) {
-        event.preventDefault();
-        void window.loadURL(`${DESKTOP_ORIGIN}${DESKTOP_ENTRY_PATH}`);
-      }
+    if (decision !== "allow") {
+      event.preventDefault();
+      // Un site tiers part au navigateur ; un schéma inconnu ne va nulle part.
+      if (decision === "external") void shell.openExternal(url);
       return;
     }
+    const disposition = routeDisposition(url);
+    if (disposition === "allow") return;
     event.preventDefault();
-    if (decision === "external") void shell.openExternal(url);
+    // La landing n'est pas une destination qu'on demande : on y tombe. On ramène
+    // donc à l'entrée plutôt que de lancer un navigateur sous les doigts de
+    // quelqu'un qui a juste cliqué le logo.
+    if (disposition === "home") goHome(window);
+    else void shell.openExternal(url);
+  };
+
+  window.webContents.on("will-navigate", (event, url) => guard(event, url));
+  window.webContents.on("will-redirect", (details) => {
+    if (details.isMainFrame) guard(details, details.url);
   });
 
-  // `will-navigate` ne voit PAS les navigations de la SPA (Next pousse dans
-  // l'historique sans charger de document). Or c'est par là qu'on atterrit sur
-  // l'argumentaire : un logo qui pointe vers `/`. La page a bien son propre
-  // garde-fou, mais il vit dans un déploiement, et la coquille, elle, vit chez
-  // les gens — elle doit tenir toute seule contre la version en ligne du jour.
+  // ⚠ **Celui-ci n'est pas annulable** : la navigation a déjà eu lieu quand on
+  // l'apprend. Il ne peut donc que RÉPARER, et la seule réparation qui marche à
+  // tous les coups est de recharger l'entrée.
+  //
+  // Défaire proprement a été essayé deux fois, et les deux échouent :
+  // `navigationHistory.goBack()` ne fait rien (`canGoBack()` rend `false` juste
+  // après un `pushState`), et `executeJavaScript("history.back()")` voit sa
+  // promesse REJETER — la navigation qu'elle déclenche détruit le contexte
+  // d'exécution qui l'attendait. Mesuré dans la fenêtre, pas déduit.
+  //
+  // D'où le partage des rôles : ce filet garantit qu'aucune page publique ne
+  // s'affiche jamais ici, et **c'est la PAGE qui évite d'y arriver** — les
+  // mentions légales de l'écran d'inscription ouvrent le navigateur elles-mêmes
+  // (`LegalLink`, components/auth/login-form.tsx) plutôt que de naviguer.
   window.webContents.on("did-navigate-in-page", (_event, url, isMainFrame) => {
-    if (!isMainFrame || !isMarketingPath(url)) return;
-    void window.loadURL(`${DESKTOP_ORIGIN}${DESKTOP_ENTRY_PATH}`);
+    if (!isMainFrame) return;
+    const disposition = routeDisposition(url);
+    if (disposition === "allow") return;
+    if (disposition === "external") void shell.openExternal(url);
+    goHome(window);
   });
 
   window.webContents.setWindowOpenHandler(({ url }) => {

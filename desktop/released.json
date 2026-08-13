@@ -1,0 +1,23 @@
+{
+  "version": "0.9.2",
+  "publishedAt": "2026-08-13T18:11:24.205Z",
+  "fingerprint": "e5bb38213348f4f699e4b54e1c0e338102103cc5194fc300800a3c10c7a5095f",
+  "files": {
+    "desktop/build/entitlements.mac.plist": "547057076bc4df42545523ef8f7a15ceaf9682ffefc08d1ea16a41071fd3ce4a",
+    "desktop/build/icon.icns": "a80dd482f93fae8a2e3259d0c41a91f5b4ba7e56970b311f642e370c998bf49d",
+    "desktop/electron-builder.yml": "5fac73420f0749f0b28ad5d82cb2b1343509e47b6e29ab0128ee315b9d9965e0",
+    "desktop/package.json": "e13afe3facfca459a992a162a593c1b168c20583652694c234290ea97b53aa4b",
+    "desktop/src/main.ts": "d5aa57b5266cd5e56617ebaf8bc03d4a87d03b4710bae69586cec6412d001580",
+    "desktop/src/menu.ts": "8282a339dbe0b137dcea0ccaac350b6cfad66ccd6f5bbd609a30051179214ba7",
+    "desktop/src/preload.ts": "b94883cb291e5b0b300557c1cf0d1ada8f87053ae53fc6e92061e74cf0889fa5",
+    "desktop/src/updater.ts": "5058707637e4d290d24a384335e2cafeed37d2310185fe9fa96f41489ee84d8f",
+    "lib/auth-redirect.ts": "9a1ec3cebda6cf7b0306062e10d46fbd84e806237ee43d5a4a1e86b74d33dbee",
+    "lib/desktop/auth-link.ts": "b8e4279dde3b04b15f5716816727d5721b6f55d40c5dd8cd86ab167c887a1010",
+    "lib/desktop/config.ts": "4f76d3a377801a3815c0a92950bb6da576e585d42b76e4b13bd279a529031079",
+    "lib/desktop/nav-guard.ts": "c45a115920e2d615b62fe9fdf27b289f30f08cae7dced73eb50adc1407113e9d",
+    "lib/desktop/window-routes.ts": "45e058442b4d40fdb480723883e07b47a97fff1abfe8e029b1c3bf0aa7c7db19",
+    "lib/public-routes.ts": "b68ca3c97f79a03e091d79b29323ef4527f2c3ae267b43b85cdc402497648682",
+    "lib/site.ts": "fe8de915a33574c5ae209e74c0dce9780b44884d88409c458cad4f6c97a18226",
+    "scripts/build-desktop.mjs": "0956b19c650f0530ef5dcffa0b2901367628bf2ff0aaf1f5e04b3ad73e897bb3"
+  }
+}

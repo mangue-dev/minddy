@@ -13,7 +13,7 @@ import type { Locale } from "@/i18n/config";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { AuthShader } from "@/components/auth-shader";
 import { useAuth } from "@/lib/auth-context";
-import { isDesktop } from "@/lib/desktop/bridge";
+import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { useAnalytics } from "@/lib/use-analytics";
 import { errorReason } from "@/lib/analytics-sanitize";
@@ -69,6 +69,53 @@ function LogoMark({ asLink }: { asLink: boolean }) {
     </Link>
   ) : (
     <div className={className}>{mark}</div>
+  );
+}
+
+/**
+ * Les mentions légales sous le bouton d'inscription — CGU et confidentialité.
+ *
+ * **Dans l'app de bureau, elles ouvrent le NAVIGATEUR** (MIN-292) : la fenêtre
+ * ne montre que l'authentification et l'app, et une page publique n'y entre pas.
+ * La coquille a bien un garde-fou pour ça, mais il agit APRÈS coup — une
+ * navigation SPA n'est pas annulable, il ne peut que ramener à l'entrée, et il
+ * jetterait ce formulaire à moitié rempli. Le geste juste est donc de ne pas
+ * naviguer du tout.
+ *
+ * Ça reste un vrai `<a href>` : le lien est copiable, ouvrable au milieu, et
+ * lisible par un lecteur d'écran comme n'importe quel autre.
+ */
+function LegalLink({
+  href,
+  external,
+  children,
+}: {
+  href: string;
+  external: boolean;
+  children: React.ReactNode;
+}) {
+  const className = "underline underline-offset-4 hover:text-foreground";
+  if (!external) {
+    return (
+      <Link href={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <a
+      href={href}
+      className={className}
+      onClick={(event) => {
+        event.preventDefault();
+        // Absolue, et bâtie sur l'origine COURANTE : en développement la
+        // coquille pointe sur `localhost`, et un lien vers la production
+        // ouvrirait la mauvaise page.
+        getDesktopBridge()?.openExternal(new URL(href, window.location.origin).href);
+      }}
+    >
+      {children}
+    </a>
   );
 }
 
@@ -427,20 +474,20 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
                 <p className="text-center text-xs leading-relaxed text-muted-foreground">
                   {t.rich("signupLegalNotice", {
                     terms: (chunks) => (
-                      <Link
+                      <LegalLink
                         href={localizedHref("/terms", locale)}
-                        className="underline underline-offset-4 hover:text-foreground"
+                        external={inDesktopApp}
                       >
                         {chunks}
-                      </Link>
+                      </LegalLink>
                     ),
                     privacy: (chunks) => (
-                      <Link
+                      <LegalLink
                         href={localizedHref("/privacy", locale)}
-                        className="underline underline-offset-4 hover:text-foreground"
+                        external={inDesktopApp}
                       >
                         {chunks}
-                      </Link>
+                      </LegalLink>
                     ),
                   })}
                 </p>

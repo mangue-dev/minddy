@@ -138,8 +138,34 @@ coin). Trois conséquences se tiennent ensemble :
   Chromium : le rail se refermerait sous le pointeur et les emporterait, d'où le
   guetteur de `app-sidebar.tsx`, qui reconnaît cette sortie-là à son coin.
 
-**Ce qui est du SITE ne suit pas dans la fenêtre.** L'argumentaire, déjà (plus
-haut), et le bandeau de cookies : une carte flottante qui demande la permission
+**Ce qui est du SITE ne suit pas dans la fenêtre — et « site » veut dire TOUT le
+site** (resserré en MIN-292). L'app de bureau ne montre que deux choses :
+l'authentification, et l'app. Les tarifs, la doc du serveur MCP, les
+comparatifs, les nouveautés, les pages légales, la page de téléchargement, et
+les surfaces publiques à jeton — board de feedback, page publiée, vue partagée —
+s'ouvrent dans le NAVIGATEUR. Un board de feedback public dans une fenêtre
+installée, c'est le site web dans une fenêtre.
+
+La seule exception est la **landing**, qui ne part pas dehors mais ramène à
+l'entrée : on n'y va pas, on y TOMBE, par un logo qui pointe sur `/`. Lancer un
+navigateur à chaque clic de logo serait un châtiment.
+
+La décision est dérivée de `PUBLIC_ROUTES`, donc une page publique de plus sort
+de la fenêtre sans que personne y pense
+([window-routes.ts](../lib/desktop/window-routes.ts)). Et elle a demandé
+**quatre** points d'accroche, dont deux qu'on ne trouve pas en réfléchissant :
+`will-redirect`, parce que le board de feedback s'atteint par une redirection
+SERVEUR (`/feedback` pose un JWT et renvoie vers `/f/<jeton>`, aucun lien ne
+pointe jamais dessus), et `did-navigate-in-page`, pour les navigations SPA. Ce
+dernier n'est PAS annulable : il ne peut que ramener à l'entrée, et défaire la
+navigation a été essayé deux fois sans succès (`canGoBack()` rend `false` juste
+après un `pushState` ; la promesse d'`executeJavaScript("history.back()")`
+rejette, la navigation détruisant le contexte qui l'attendait). D'où le partage
+des rôles : le main process garantit qu'aucune page publique ne s'affiche, et
+c'est la PAGE qui évite d'y arriver — les mentions légales de l'écran
+d'inscription ouvrent le navigateur elles-mêmes plutôt que de naviguer.
+
+Le bandeau de cookies, lui : une carte flottante qui demande la permission
 de mesurer s'adresse à quelqu'un qui vient d'arriver de nulle part, et dans une
 app installée elle ne dit plus qu'une chose — « ceci est un site web dans une
 fenêtre ». Le choix, lui, ne disparaît pas. Il se pose **une fois**, au centre, dans le

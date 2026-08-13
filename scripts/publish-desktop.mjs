@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { put } from "@vercel/blob";
+
+import { computeDesktopFingerprint } from "./desktop-fingerprint.mjs";
 
 /**
  * PUBLIER LE FLUX DE L'APP DE BUREAU (MIN-292).
@@ -190,6 +192,31 @@ for (const name of files) {
   console.log(`[publish-desktop] ${name} → ${url}`);
 }
 
-console.log(
-  `[publish-desktop] ${files.length} fichiers publiés. Vérifier que ${feedUrl}/latest-mac.yml répond.`
+/**
+ * Le relevé de ce qui vient d'être publié — `desktop/released.json`, COMMITÉ.
+ *
+ * C'est lui qui permet à `npm run deploy` de répondre « faut-il republier
+ * l'app ? » sans rien demander à personne : il compare l'empreinte du dépôt à
+ * celle-ci. Un fichier versionné plutôt qu'un appel réseau, pour que la réponse
+ * se lise dans un diff et qu'un déploiement hors ligne reste possible.
+ *
+ * Il s'écrit APRÈS l'envoi, jamais avant : un relevé qui annoncerait une
+ * publication ratée ferait sauter tous les déploiements suivants.
+ */
+const version = JSON.parse(
+  await readFile(path.join(repo, "desktop", "package.json"), "utf8")
+).version;
+const { fingerprint, files: fingerprintFiles } = await computeDesktopFingerprint();
+await writeFile(
+  path.join(repo, "desktop", "released.json"),
+  `${JSON.stringify(
+    { version, publishedAt: new Date().toISOString(), fingerprint, files: fingerprintFiles },
+    null,
+    2
+  )}\n`
 );
+
+console.log(
+  `[publish-desktop] ${files.length} fichiers publiés en ${version} (empreinte ${fingerprint.slice(0, 12)}).`
+);
+console.log("[publish-desktop] desktop/released.json mis à jour — À COMMITER.");

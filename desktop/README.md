@@ -99,8 +99,17 @@ sans l'autre donne une app qui s'installe et ne se met jamais à jour, sans rien
 dire. Et Squirrel **exige une app signée** — d'où le refus de
 `scripts/publish-desktop.mjs` devant un bundle non signé.
 
-La marche à marche du compte Apple, du certificat, de la notarisation et de la
-première publication : **[docs/desktop-signing.md](../docs/desktop-signing.md)**.
+**Quand faut-il republier ?** Presque jamais — l'app est une fenêtre sur le site,
+donc `npm run deploy` suffit à changer ce qu'elle affiche. Le déploiement le dit
+tout seul : il compare une empreinte de ce qui entre RÉELLEMENT dans le binaire
+(la liste déborde de ce dossier : `lib/public-routes.ts` en fait partie) à la
+dernière publication enregistrée dans `released.json`. `npm run desktop:check`
+donne la même réponse à la demande.
+
+Les deux marches à marche :
+**[docs/desktop-release.md](../docs/desktop-release.md)** pour livrer,
+**[docs/desktop-signing.md](../docs/desktop-signing.md)** pour le compte Apple et
+le certificat.
 
 ## Ce qui n'est pas fait ici
 
