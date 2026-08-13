@@ -36,6 +36,12 @@ import type { AgentAnchor } from "./prompt";
  *                  programmé, retiré à un run de routine pour qu'elle ne
  *                  s'auto-réplique pas) — exécutés par
  *                  lib/server/agent/issue-tools.ts.
+ *  - objectifs   : list_objectives, read_objective, create_objective,
+ *                  update_objective, comment_objective (MIN-287) — le BUT que
+ *                  le ticket sert. `create_issue` et `update_issue` prennent en
+ *                  plus un `objective` : un ticket hors objectif est hors de
+ *                  toute barre de progression et hors du remplissage de cycle.
+ *                  Exécutés par lib/server/agent/objective-tools.ts.
  *  - carnet      : read_scratchpad, add_scratchpad_tasks, update_scratchpad_task,
  *                  set_scratchpad — exécutés par lib/server/agent/scratchpad-tools.ts.
  *  - pull requests du PROJET (MIN-267) : list_pull_requests, read_pull_request,
@@ -614,6 +620,10 @@ const SCRATCHPAD_TASK_STATES = ["pending", "in_progress", "completed", "cancelle
 const ISSUE_REF_DESCRIPTION =
   "The ticket to act on: a UUID, an identifier like 'MIN-42', or a bare issue number. Resolve it with search_issues when you only know its subject.";
 
+/** Référence d'objectif acceptée partout où un tool prend `objective`. */
+const OBJECTIVE_REF_DESCRIPTION =
+  "The objective this work belongs to: its id, or its exact name (case-insensitive). Get both from list_objectives — never invent a name, an unknown one is refused. A ticket attached to no objective counts in no progress bar and fills no cycle.";
+
 /**
  * Tools minddy, servis aux DEUX ancrages (MIN-125) : les tickets du projet du run
  * et le carnet de son lanceur. Ce qui reste ancrage-dépendant est ajouté par
@@ -730,7 +740,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
     function: {
       name: "update_issue",
       description:
-        "Edit a ticket's TITLE, DESCRIPTION or EFFORT estimate. Send only the fields you are changing — the others are left untouched. Rename when the title no longer describes the work; rewrite the description when the user asks, or when what it claims has become wrong. You CANNOT change a ticket's STATUS or its PRIORITY here: those are the user's decision (and the harness already moves the ticket along with the pull request), and passing either is refused. Say in your reply what you think the status should be instead.",
+        "Edit a ticket's TITLE, DESCRIPTION or EFFORT estimate, or attach it to an OBJECTIVE. Send only the fields you are changing — the others are left untouched. Rename when the title no longer describes the work; rewrite the description when the user asks, or when what it claims has become wrong. You CANNOT change a ticket's STATUS or its PRIORITY here: those are the user's decision (and the harness already moves the ticket along with the pull request), and passing either is refused. Say in your reply what you think the status should be instead.",
       parameters: {
         type: "object",
         properties: {
@@ -744,6 +754,12 @@ const MINDDY_TOOLS: AgentToolDef[] = [
             type: "string",
             enum: ["xs", "s", "m", "l", "xl"],
             description: "New t-shirt effort estimate. Pass null to clear it.",
+          },
+          objective: {
+            type: "string",
+            description:
+              OBJECTIVE_REF_DESCRIPTION +
+              " Pass null to detach the ticket from its objective.",
           },
         },
       },
@@ -982,12 +998,120 @@ const MINDDY_TOOLS: AgentToolDef[] = [
       },
     },
   },
+  // ── Les OBJECTIFS du projet : le but que le ticket sert (MIN-287) ────────
+  //
+  // L'agent lisait un ticket sans jamais savoir à quoi ce ticket sert, et ce
+  // qu'il créait tombait hors de tout objectif — donc hors des barres de
+  // progression et hors du remplissage de cycle. Même doctrine que les
+  // relations : ce qu'on n'a pas rangé, quelqu'un devra le ranger à la main.
+  // Exécutés par lib/server/agent/objective-tools.ts, sur les noyaux du MCP.
+  {
+    type: "function",
+    function: {
+      name: "list_objectives",
+      description:
+        "List the OBJECTIVES of the minddy project this session works on — the named goals its tickets are grouped under (a quarter's theme, a redesign, a migration), each with its status, its lead, its target date, a truncated description and its progress (done / total tickets, and a percent weighted by effort, the same bar the team reads). This is what tells you WHY the ticket you are implementing exists and what else is being done towards the same goal. Read it before creating a ticket or attaching one: names and ids both come from here, and `objective` on create_issue / update_issue accepts either. Open one in full with read_objective.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_objective",
+      description:
+        "Open ONE objective in full — the counterpart of read_issue: its whole description (the goal, not the truncated line list_objectives shows), status, lead, target date, weighted progress, its resources, the TICKETS it groups (identifier, title, status, priority, effort, assignee) and its COMMENT THREAD. Read it when the ticket you work on belongs to an objective and the ticket alone does not say what the work is for: the description is where the goal is written, the ticket list is what the progress bar is actually made of, and the thread is where the team already said what it thinks. Read it before commenting on it.",
+      parameters: {
+        type: "object",
+        properties: {
+          objective: { type: "string", description: OBJECTIVE_REF_DESCRIPTION },
+        },
+        required: ["objective"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_objective",
+      description:
+        "Create an objective — a named goal that groups tickets of this project. ONLY when the user asks for one: an objective is a product decision, and inventing goals nobody set is not your call. Check list_objectives first, an objective that already covers the work is the one to use. Fill it like a ticket: the description is what the team reads to know what this goal is and when it is reached, so say the intent and what counts as done — a name alone leaves it for a human to finish. Then ATTACH ITS TICKETS: an objective with no ticket has a progress bar stuck at zero forever.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Objective name. Short, concrete." },
+          description: {
+            type: "string",
+            description:
+              "What this goal is, why it matters, and what counts as reaching it. Markdown.",
+          },
+          status: {
+            type: "string",
+            enum: ["planned", "in_progress", "done", "canceled"],
+            description: "Optional — defaults to planned.",
+          },
+          target_date: {
+            type: "string",
+            description: "Optional target date, 'YYYY-MM-DD'. Only when one was named.",
+          },
+        },
+        required: ["name", "description"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_objective",
+      description:
+        "Edit an objective's name, description, status or target date. Send only the fields you are changing — the others are left untouched, and `description` REPLACES the whole document, so read_objective it first. Unlike a ticket's status, an objective's IS editable here: closing a goal the team reached, or reopening one, is a normal report of where the work stands. Still, it is the user's goal — change its status when the work you just did actually moves it there, or when you were asked to, never to tidy up.",
+      parameters: {
+        type: "object",
+        properties: {
+          objective: { type: "string", description: OBJECTIVE_REF_DESCRIPTION },
+          name: { type: "string", description: "New name." },
+          description: {
+            type: "string",
+            description: "New description in markdown — REPLACES the current one entirely.",
+          },
+          status: {
+            type: "string",
+            enum: ["planned", "in_progress", "done", "canceled"],
+            description: "New status.",
+          },
+          target_date: {
+            type: "string",
+            description: "New target date, 'YYYY-MM-DD'. Pass null to clear it.",
+          },
+        },
+        required: ["objective"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "comment_objective",
+      description:
+        "Post a comment on an OBJECTIVE's thread — the goal itself, not one of its tickets. Use it to report something that concerns the whole goal: a finding that changes how it should be pursued, a blocker that affects several of its tickets, the summary of a piece of work that moves it forward. A note about ONE ticket does not belong here — say it in your reply or in the pull request. KEEP IT SHORT: a message to colleagues, a few sentences or a handful of one-line bullets, no headings. The team sees it in the objective's thread with your session's owner as the author.",
+      parameters: {
+        type: "object",
+        properties: {
+          objective: { type: "string", description: OBJECTIVE_REF_DESCRIPTION },
+          body: {
+            type: "string",
+            description: "Markdown, short: a few sentences or short bullets, no headings.",
+          },
+        },
+        required: ["objective", "body"],
+      },
+    },
+  },
   {
     type: "function",
     function: {
       name: "create_issue",
       description:
-        "Create a REAL ticket in the project this session works on. Use it when the user asks for one, or when work you ran into genuinely deserves a formal, trackable ticket (a substantial feature, a real bug the team should see) — never automatically, and never as a substitute for just doing the work. The ticket lands in the status the user chose for tickets created through Numo: that is an account setting, not a parameter, so you cannot pick it — the result tells you where it landed, report that.",
+        "Create a REAL ticket in the project this session works on. Use it when the user asks for one, or when work you ran into genuinely deserves a formal, trackable ticket (a substantial feature, a real bug the team should see) — never automatically, and never as a substitute for just doing the work. The ticket lands in the status the user chose for tickets created through Numo: that is an account setting, not a parameter, so you cannot pick it — the result tells you where it landed, report that. Attach it to the OBJECTIVE that covers it (list_objectives): a ticket outside every objective is outside every progress bar and fills no cycle, and someone will have to file it by hand.",
       parameters: {
         type: "object",
         properties: {
@@ -1006,6 +1130,7 @@ const MINDDY_TOOLS: AgentToolDef[] = [
             enum: ["xs", "s", "m", "l", "xl"],
             description: "Optional t-shirt effort estimate.",
           },
+          objective: { type: "string", description: OBJECTIVE_REF_DESCRIPTION },
         },
         required: ["title"],
       },
@@ -1496,6 +1621,11 @@ const PR_REVIEW_MINDDY_TOOL_NAMES: ReadonlySet<string> = new Set([
   // restent dehors, comme celles de ticket — relire n'autorise pas à réécrire.
   "list_pages",
   "read_page",
+  // Les OBJECTIFS en lecture (MIN-287) : « cette PR sert-elle le but du
+  // ticket ? » ne se juge pas sans le but. Les écritures d'objectif restent
+  // dehors, comme celles de ticket et de page.
+  "list_objectives",
+  "read_objective",
 ]);
 
 /**

@@ -204,6 +204,78 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
  * ce que le modèle lit en premier — la laisser promettre une capacité absente
  * ferait « je vois la maquette » sur des métadonnées.
  */
+/**
+ * MIN-287 : l'agent n'avait AUCUN tool d'objectif, là où le MCP en a cinq. Il
+ * travaillait donc sur un ticket sans savoir à quel but il sert, et un ticket
+ * qu'il créait tombait hors de toute barre de progression.
+ */
+describe("agentToolsFor — les objectifs", () => {
+  const OBJECTIVE_TOOLS = [
+    "list_objectives",
+    "read_objective",
+    "create_objective",
+    "update_objective",
+    "comment_objective",
+  ];
+
+  for (const anchor of ["issue", "notebook"] as const) {
+    it(`sert les cinq tools d'objectif (ancrage ${anchor})`, () => {
+      const served = names({ anchor, webSearch: true });
+      for (const tool of OBJECTIVE_TOOLS) expect(served).toContain(tool);
+      expect(new Set(served).size).toBe(served.length);
+    });
+  }
+
+  it("donne à une relecture les deux LECTEURS, et aucune écriture d'objectif", () => {
+    const served = names({ anchor: "pr", webSearch: false });
+    expect(served).toContain("list_objectives");
+    expect(served).toContain("read_objective");
+    for (const tool of ["create_objective", "update_objective", "comment_objective"]) {
+      expect(served).not.toContain(tool);
+    }
+  });
+
+  it("laisse rattacher un ticket à un objectif, à la création comme à la mise à jour", () => {
+    const params = (name: string) =>
+      agentToolsFor({ anchor: "issue", webSearch: true }).find(
+        (t) => t.function.name === name,
+      )!.function.parameters;
+    for (const name of ["create_issue", "update_issue"]) {
+      expect(Object.keys(params(name).properties)).toContain("objective");
+    }
+    // `update_issue` sait détacher ; `create_issue` n'a rien à détacher.
+    expect(
+      JSON.stringify(params("update_issue").properties.objective),
+    ).toMatch(/null to detach/);
+  });
+
+  it("n'exige jamais un objectif inventé : la référence vient de list_objectives", () => {
+    const tools = agentToolsFor({ anchor: "issue", webSearch: true });
+    const objectiveRef = (name: string) =>
+      String(
+        (
+          tools.find((t) => t.function.name === name)!.function.parameters.properties
+            .objective as { description: string }
+        ).description,
+      );
+    for (const name of ["create_issue", "update_issue", "read_objective", "comment_objective"]) {
+      expect(objectiveRef(name)).toMatch(/list_objectives/);
+    }
+    // Et `create_objective` dit que ce n'est pas à lui d'inventer un but.
+    expect(
+      tools.find((t) => t.function.name === "create_objective")!.function.description,
+    ).toMatch(/ONLY when the user asks/);
+  });
+
+  // Une fille ne parle pas au ticket du parent ; l'objectif suit la même règle.
+  it("ne les sert JAMAIS à un sous-agent", () => {
+    for (const mode of ["explore", "implement"] as const) {
+      const served = subagentToolsFor(mode, { webSearch: true }).map((t) => t.function.name);
+      for (const tool of OBJECTIVE_TOOLS) expect(served).not.toContain(tool);
+    }
+  });
+});
+
 describe("agentToolsFor — read_resource et les images", () => {
   const description = (images: boolean) =>
     agentToolsFor({ anchor: "issue", webSearch: true, images }).find(

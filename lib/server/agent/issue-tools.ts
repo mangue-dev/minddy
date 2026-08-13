@@ -28,6 +28,7 @@ import { isEffort } from "@/lib/issue-validation";
 import type { NumoDefaultStatus } from "@/lib/numo-default-status";
 import { MAX_PLAN_LENGTH, appendToPlan, parsePlan } from "@/lib/plan";
 import { executePageTool } from "./page-tools";
+import { executeObjectiveTool, resolveObjectiveRef } from "./objective-tools";
 import { headTail } from "./prune";
 import type { AgentToolImage } from "./content";
 
@@ -48,7 +49,8 @@ import type { AgentToolImage } from "./content";
  *                          ELLE-MÊME quand c'est une maquette et que le modèle du
  *                          run la voit (MIN-111), sinon URL signée courte
  *                          (curl-able depuis la sandbox).
- *  - `update_issue`     → titre, description, effort. JAMAIS le statut ni la
+ *  - `update_issue`     → titre, description, effort, et le RATTACHEMENT à un
+ *                          objectif (MIN-287). JAMAIS le statut ni la
  *                          priorité : ce sont des décisions de l'utilisateur, et le
  *                          tool REFUSE explicitement l'argument plutôt que de
  *                          l'avaler (un champ hors schéma est vite halluciné).
@@ -218,6 +220,24 @@ async function readIssue(
     if (users) assigneeName = displayName(toNamed(users.get(assigneeId)), "User");
   }
 
+  // L'OBJECTIF du ticket (MIN-287) : `objective_id` seul est un uuid muet, et
+  // un agent qui ne sait pas à quel but sert le ticket qu'il implémente le lit
+  // hors de son intention. Le nom et le statut sont ce qui rend le rattachement
+  // lisible — et son absence, actionnable.
+  const objectiveId = (detail.issue.objective_id as string | null) ?? null;
+  let objective: { id: string; name: string; status: unknown } | null = null;
+  if (objectiveId) {
+    const { data: row } = await service
+      .from("objectives")
+      .select("id, name, status")
+      .is("deleted_at", null)
+      .eq("id", objectiveId)
+      .maybeSingle();
+    if (row) {
+      objective = { id: row.id as string, name: row.name as string, status: row.status };
+    }
+  }
+
   // Plan parsé en tâches indexées : c'est la forme actionnable (« plan prêt,
   // plus qu'à l'appliquer ») — les états [ ]/[~]/[x]/[-] deviennent lisibles.
   const plan = detail.issue.plan;
@@ -239,6 +259,13 @@ async function readIssue(
         // comment le nommer (« MIN-7 ») — jamais par son uuid.
         identifier: target.issue.identifier,
         ...(assigneeName ? { assignee_name: assigneeName } : {}),
+        ...(objective
+          ? { objective }
+          : {
+              objective: null,
+              objective_note:
+                "This ticket belongs to NO objective — it is outside every progress bar and out of cycle filling. If an objective covers this work (list_objectives), attach it with update_issue { objective }.",
+            }),
       },
       ...(parsed
         ? {
@@ -560,9 +587,27 @@ async function updateIssue(
     input.effort = args.effort;
     changed.push("effort");
   }
+  // Le rattachement à un OBJECTIF (MIN-287) : `null` détache. C'est le geste qui
+  // fait entrer le ticket dans une barre de progression et dans le remplissage
+  // de cycle — sans lui, l'humain repasse derrière l'agent pour ranger.
+  if (args.objective !== undefined) {
+    if (args.objective === null) {
+      input.objective_id = null;
+    } else {
+      const objective = await resolveObjectiveRef(ctx.projectId, args.objective);
+      if ("error" in objective) {
+        return { result: { error: objective.error }, success: false };
+      }
+      input.objective_id = objective.objective.id;
+    }
+    changed.push("objective");
+  }
   if (changed.length === 0) {
     return {
-      result: { error: "Nothing to update — pass at least one of title, description or effort." },
+      result: {
+        error:
+          "Nothing to update — pass at least one of title, description, effort or objective.",
+      },
       success: false,
     };
   }
@@ -794,6 +839,17 @@ async function createIssue(
   const title = typeof args.title === "string" ? args.title.trim() : "";
   if (!title) return { result: { error: "title is required." }, success: false };
 
+  // Un ticket créé hors de tout objectif est un ticket qu'un humain devra
+  // ranger : le rattachement se fait ICI, à la création (MIN-287).
+  let objectiveId: string | null = null;
+  if (typeof args.objective === "string" && args.objective.trim()) {
+    const objective = await resolveObjectiveRef(ctx.projectId, args.objective);
+    if ("error" in objective) {
+      return { result: { error: objective.error }, success: false };
+    }
+    objectiveId = objective.objective.id;
+  }
+
   const result = await createIssueForProject({
     projectId: ctx.projectId,
     actorId: ctx.actorId,
@@ -808,6 +864,7 @@ async function createIssue(
         : {}),
       ...(typeof args.priority === "string" ? { priority: args.priority } : {}),
       ...(typeof args.effort === "string" ? { effort: args.effort } : {}),
+      ...(objectiveId ? { objective_id: objectiveId } : {}),
     },
   });
   if (!result.ok) {
@@ -825,7 +882,14 @@ async function createIssue(
         identifier: typeof number === "number" ? `${ctx.projectKey}-${number}` : null,
         title,
         status: ctx.numoDefaultStatus,
+        objective_id: objectiveId,
       },
+      ...(objectiveId
+        ? {}
+        : {
+            objective_note:
+              "This ticket belongs to no objective, so it counts in no progress bar. If one covers it (list_objectives), attach it with update_issue { objective }.",
+          }),
     },
     success: true,
   };
@@ -1009,6 +1073,9 @@ export async function executeIssueTool(
         return await reportVerdict(ctx, args);
       // Les pages du projet : même contexte, exécuteur voisin (MIN-273).
       case "list_pages":
+      // `search_pages` était servi au modèle et routé par `ISSUE_TOOL_NAMES`,
+      // mais absent d'ici : chaque appel repartait en « Unknown issue tool ».
+      case "search_pages":
       case "read_page":
       case "create_page":
       case "update_page":
@@ -1016,6 +1083,17 @@ export async function executeIssueTool(
       case "edit_page_text":
         return await executePageTool(
           { projectId: ctx.projectId, actorId: ctx.actorId },
+          name,
+          args,
+        );
+      // Les objectifs du projet : même contexte, exécuteur voisin (MIN-287).
+      case "list_objectives":
+      case "read_objective":
+      case "create_objective":
+      case "update_objective":
+      case "comment_objective":
+        return await executeObjectiveTool(
+          { projectId: ctx.projectId, projectKey: ctx.projectKey, actorId: ctx.actorId },
           name,
           args,
         );

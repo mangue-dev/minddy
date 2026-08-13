@@ -51,6 +51,14 @@ const ISSUE_ROWS = [
   },
 ];
 
+/** Objectifs du projet (MIN-287) — la cible de `objective` sur create/update. */
+const OBJECTIVE_ID = "44444444-4444-4444-8444-444444444444";
+const FOREIGN_OBJECTIVE_ID = "55555555-5555-4555-8555-555555555555";
+const OBJECTIVE_ROWS = [
+  { id: OBJECTIVE_ID, project_id: "proj-1", name: "Refonte du board", status: "in_progress" },
+  { id: FOREIGN_OBJECTIVE_ID, project_id: "proj-2", name: "Ailleurs", status: "planned" },
+];
+
 const attachmentBase = {
   id: "att-1",
   issue_id: ANCHOR_ID,
@@ -67,7 +75,13 @@ let downloaded: Buffer | null = Buffer.from("PNGBYTES");
 vi.mock("@/lib/supabase-service", () => {
   const rowFor = (table: string, filters: Record<string, unknown>) => {
     const rows =
-      table === "issues" ? ISSUE_ROWS : attachment ? [attachment] : [];
+      table === "issues"
+        ? ISSUE_ROWS
+        : table === "objectives"
+          ? OBJECTIVE_ROWS
+          : attachment
+            ? [attachment]
+            : [];
     return (
       rows.find((row) =>
         Object.entries(filters).every(
@@ -416,6 +430,89 @@ describe("create_issue — le statut d'atterrissage vient du compte du lanceur",
       );
     });
   }
+});
+
+/**
+ * MIN-287 — le RATTACHEMENT à un objectif. Un ticket créé ou modifié sans
+ * objectif est hors de toute barre de progression et hors du remplissage de
+ * cycle : c'est ce trou-là que ces trois cas ferment, aux deux portes d'écriture
+ * et dans la lecture.
+ */
+describe("objectif d'un ticket", () => {
+  it("create_issue rattache le ticket à l'objectif visé", async () => {
+    const out = await executeIssueTool(ctx(), "create_issue", {
+      title: "Nouveau ticket",
+      objective: OBJECTIVE_ID,
+    });
+    expect(out.success).toBe(true);
+    expect(createIssueForProject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({ objective_id: OBJECTIVE_ID }),
+      }),
+    );
+    expect(out.result).toMatchObject({ issue: { objective_id: OBJECTIVE_ID } });
+  });
+
+  it("create_issue sans objectif le DIT, plutôt que de le taire", async () => {
+    const out = await executeIssueTool(ctx(), "create_issue", { title: "Orphelin" });
+    expect(out.success).toBe(true);
+    expect(JSON.stringify(out.result)).toMatch(/no objective/i);
+  });
+
+  it("create_issue refuse un objectif d'un autre projet, sans rien créer", async () => {
+    const out = await executeIssueTool(ctx(), "create_issue", {
+      title: "Ticket",
+      objective: FOREIGN_OBJECTIVE_ID,
+    });
+    expect(out.success).toBe(false);
+    expect(createIssueForProject).not.toHaveBeenCalled();
+  });
+
+  it("update_issue attache et détache", async () => {
+    const attach = await executeIssueTool(ctx(), "update_issue", {
+      objective: OBJECTIVE_ID,
+    });
+    expect(attach.success).toBe(true);
+    expect(updateIssueFields).toHaveBeenCalledWith(
+      expect.objectContaining({ input: { objective_id: OBJECTIVE_ID } }),
+    );
+
+    vi.clearAllMocks();
+    const detach = await executeIssueTool(ctx(), "update_issue", { objective: null });
+    expect(detach.success).toBe(true);
+    expect(updateIssueFields).toHaveBeenCalledWith(
+      expect.objectContaining({ input: { objective_id: null } }),
+    );
+  });
+
+  it("read_issue nomme l'objectif du ticket au lieu d'un uuid muet", async () => {
+    getIssue.mockResolvedValueOnce({
+      issue: {
+        id: ANCHOR_ID,
+        title: "Un ticket",
+        plan: null,
+        assignee_id: null,
+        objective_id: OBJECTIVE_ID,
+      },
+      comments: [],
+      sub_issues: [],
+      relations: [],
+    } as never);
+    const out = await executeIssueTool(ctx(), "read_issue", {});
+    expect(out.success).toBe(true);
+    expect((out.result as { issue: Record<string, unknown> }).issue.objective).toMatchObject({
+      id: OBJECTIVE_ID,
+      name: "Refonte du board",
+      status: "in_progress",
+    });
+  });
+
+  it("read_issue dit qu'un ticket sans objectif est hors de toute barre", async () => {
+    const out = await executeIssueTool(ctx(), "read_issue", {});
+    const issue = (out.result as { issue: Record<string, unknown> }).issue;
+    expect(issue.objective).toBeNull();
+    expect(String(issue.objective_note)).toMatch(/progress bar/i);
+  });
 });
 
 describe("search_issues", () => {

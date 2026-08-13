@@ -462,6 +462,28 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("objectiveUpdated") : t("updateObjectiveFailed");
     },
   },
+  // Les deux gestes que l'agent de code a en plus (MIN-287) : ouvrir un objectif
+  // et écrire sur son fil. Le nom se lit dans le RÉSULTAT (le modèle a pu viser
+  // par nom comme par id) — comme `create_objective` juste au-dessus, et il
+  // retombe donc sur le libellé sans nom là où le fil ne transporte pas les
+  // résultats.
+  read_objective: {
+    icon: Target,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("loadingObjective");
+      if (!success) return t("objectiveNotFound");
+      const objective = result?.objective as Record<string, unknown> | undefined;
+      const name = typeof objective?.name === "string" ? objective.name : null;
+      return name ? t("objectiveLoadedWithName", { name }) : t("objectiveLoaded");
+    },
+  },
+  comment_objective: {
+    icon: MessageSquare,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("commentingObjective");
+      return success ? t("objectiveCommented") : t("commentObjectiveFailed");
+    },
+  },
   create_category: {
     icon: Tag,
     getLabel: (_args, result, success, status, t) => {

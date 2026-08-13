@@ -39,6 +39,15 @@ export const ISSUE_TOOL_NAMES = new Set([
   "update_page",
   "append_to_page",
   "edit_page_text",
+  // Les OBJECTIFS du projet (MIN-287) — le but auquel sert le ticket. Ils
+  // voyagent avec les tickets pour la même raison que les pages : même
+  // contexte, le projet du run et son acteur. L'exécution vit dans
+  // `objective-tools.ts`.
+  "list_objectives",
+  "read_objective",
+  "create_objective",
+  "update_objective",
+  "comment_objective",
 ]);
 
 /** Tools carnet (routés vers `scratchpad-tools.ts`). */
