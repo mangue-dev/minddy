@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   Boxes,
   Equal,
+  Download,
   FileText,
   Laptop,
   LayoutGrid,
@@ -232,6 +233,17 @@ export function MarketingNav() {
               <Equal className="h-5 w-5" />
             </button>
 
+            {/* DEUX BOUTONS, jamais trois (MIN-292) : télécharger, et créer un
+                compte. La nav dit la même chose que le hero, dans le même ordre.
+
+                **« Se connecter » a quitté la barre**, et ce n'est pas une
+                omission. Trois contrôles côte à côte demandaient au visiteur de
+                choisir entre deux portes qui mènent au même endroit — or
+                l'immense majorité des gens qui lisent l'argumentaire n'ont pas
+                encore de compte. Ceux qui en ont un le retrouvent en un clic :
+                l'écran d'inscription porte « j'ai déjà un compte », le pied de
+                page garde son lien, et une session existante remplace de toute
+                façon les deux boutons par un seul « ouvrir l'app ». */}
             <div className="hidden items-center gap-2 sm:flex">
               {hasSession ? (
                 <Button asChild size="sm" className="px-4">
@@ -239,8 +251,19 @@ export function MarketingNav() {
                 </Button>
               ) : (
                 <>
-                  <Button asChild variant="ghost" size="sm" className="px-4">
-                    <Link href="/login">{t("navSignIn")}</Link>
+                  {/* Masqué sous `lg` : à cette largeur la pastille est déjà
+                      pleine, et l'entrée « App Mac » du menu Produit prend le
+                      relais. */}
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="sm"
+                    className="hidden px-3 lg:inline-flex"
+                  >
+                    <Link href={localizedHref("/download", locale)}>
+                      <Download data-icon="inline-start" />
+                      {t("navDownload")}
+                    </Link>
                   </Button>
                   <Button asChild size="sm" className="px-4">
                     <Link

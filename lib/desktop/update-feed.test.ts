@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   desktopFeedBaseUrl,
+  dmgEntry,
   dmgForArch,
+  formatBytes,
   isMacArch,
   parseLatestMacFeed,
 } from "./update-feed";
@@ -47,6 +49,18 @@ describe("parseLatestMacFeed", () => {
     ]);
   });
 
+  it("lit la TAILLE de chaque fichier — la page l'affiche plutôt qu'un poids en dur", () => {
+    const release = parseLatestMacFeed(FEED);
+    expect(release?.files.map((file) => file.size)).toEqual([
+      104857600, 101857600, 109857600, 106857600,
+    ]);
+  });
+
+  it("rend `null` sur une taille absente plutôt que NaN", () => {
+    const release = parseLatestMacFeed("version: 1.0.0\nfiles:\n  - url: minddy.dmg\n    sha512: x\n");
+    expect(release?.files[0].size).toBeNull();
+  });
+
   // `path:` redit le premier fichier en fin de manifeste, mais sans la clé
   // `url:` — il ne peut donc pas entrer. Le dédoublonnage, lui, garde la liste
   // juste si un jour le générateur écrit la même entrée deux fois.
@@ -71,6 +85,23 @@ describe("parseLatestMacFeed", () => {
       "version: 1.0.0\nfiles:\n  - url: minddy-1.0.0-arm64.dmg\n  - url: minddy-1.0.0-arm64.dmg.blockmap\n"
     );
     expect(release?.files.map((f) => f.name)).toEqual(["minddy-1.0.0-arm64.dmg"]);
+  });
+});
+
+describe("formatBytes", () => {
+  it("compte en méga-octets DÉCIMAUX, comme le Finder", () => {
+    expect(formatBytes(119370561, "fr")).toBe("119 Mo");
+    expect(formatBytes(119370561, "en")).toBe("119 MB");
+  });
+});
+
+describe("dmgEntry", () => {
+  it("rend le fichier ET sa taille", () => {
+    const release = parseLatestMacFeed(FEED)!;
+    expect(dmgEntry(release, "arm64")).toMatchObject({
+      name: "minddy-1.2.0-arm64.dmg",
+      size: 104857600,
+    });
   });
 });
 

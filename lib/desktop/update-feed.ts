@@ -30,7 +30,13 @@ export function isMacArch(value: string | null | undefined): value is MacArch {
 export interface DesktopRelease {
   version: string;
   /** Les fichiers du flux, dans l'ordre du manifeste. */
-  files: ReadonlyArray<{ name: string; arch: MacArch; kind: "dmg" | "zip" }>;
+  files: ReadonlyArray<{
+    name: string;
+    arch: MacArch;
+    kind: "dmg" | "zip";
+    /** Octets, `null` quand le manifeste ne le dit pas. */
+    size: number | null;
+  }>;
 }
 
 /**
@@ -67,18 +73,44 @@ export function parseLatestMacFeed(yml: string): DesktopRelease | null {
   const version = /^version:\s*(.+)$/m.exec(yml)?.[1]?.trim().replace(/^['"]|['"]$/g, "");
   if (!version) return null;
 
-  const files: Array<{ name: string; arch: MacArch; kind: "dmg" | "zip" }> = [];
-  // Les entrées de `files:` sont des tirets indentés portant `url:`. On ne lit
-  // que cette ligne-là : `sha512` et `size` sont l'affaire d'electron-updater,
-  // qui les vérifie, pas la nôtre.
-  for (const match of yml.matchAll(/^\s*-?\s*url:\s*(.+)$/gm)) {
-    const name = match[1].trim().replace(/^['"]|['"]$/g, "");
-    if (!name) continue;
-    const kind = name.endsWith(".dmg") ? "dmg" : name.endsWith(".zip") ? "zip" : null;
-    if (!kind) continue;
-    if (files.some((file) => file.name === name)) continue;
-    files.push({ name, arch: archOf(name), kind });
+  /**
+   * Lecture LIGNE À LIGNE, et pas une expression régulière multi-lignes.
+   * Essayé, et abandonné : une entrée de `files:` s'étend jusqu'à la suivante,
+   * ce qui demande de reconnaître la fin de la liste — or JavaScript n'a pas
+   * `\Z`, et `\Z` écrit quand même y matche la lettre « Z ». Un curseur qui
+   * avance ligne par ligne dit la même chose sans piège.
+   */
+  const files: Array<DesktopRelease["files"][number]> = [];
+  let current: DesktopRelease["files"][number] | null = null;
+
+  const flush = () => {
+    if (current && !files.some((file) => file.name === current!.name)) files.push(current);
+    current = null;
+  };
+
+  for (const line of yml.split("\n")) {
+    const url = /^\s*-\s*url:\s*(.+)$/.exec(line);
+    if (url) {
+      flush();
+      const name = url[1].trim().replace(/^['"]|['"]$/g, "");
+      const kind = name.endsWith(".dmg") ? "dmg" : name.endsWith(".zip") ? "zip" : null;
+      // `.blockmap` et compagnie : on les saute sans ouvrir d'entrée, sinon les
+      // `size:` qui suivent iraient au fichier précédent.
+      current = kind ? { name, arch: archOf(name), kind, size: null } : null;
+      continue;
+    }
+    if (!current) continue;
+    // Une clé non indentée (`path:`, `releaseDate:`) ferme la liste.
+    if (/^\S/.test(line)) {
+      flush();
+      continue;
+    }
+    const size = /^\s*size:\s*(\d+)\s*$/.exec(line);
+    // La taille est ce que la page de téléchargement affiche : un poids écrit en
+    // dur dans une chaîne traduite vieillirait à la première publication.
+    if (size) current.size = Number(size[1]);
   }
+  flush();
 
   return files.length > 0 ? { version, files } : null;
 }
@@ -89,5 +121,24 @@ export function parseLatestMacFeed(yml: string): DesktopRelease | null {
  * pour Squirrel.Mac et n'a rien à faire dans un navigateur.
  */
 export function dmgForArch(release: DesktopRelease, arch: MacArch): string | null {
-  return release.files.find((file) => file.kind === "dmg" && file.arch === arch)?.name ?? null;
+  return dmgEntry(release, arch)?.name ?? null;
+}
+
+/** Le `.dmg` d'une architecture, avec sa taille — ce que la page affiche. */
+export function dmgEntry(
+  release: DesktopRelease,
+  arch: MacArch
+): DesktopRelease["files"][number] | null {
+  return release.files.find((file) => file.kind === "dmg" && file.arch === arch) ?? null;
+}
+
+/**
+ * « 119 Mo ». En méga-octets DÉCIMAUX, comme le Finder les compte depuis Snow
+ * Leopard : afficher 113,8 (des mébioctets) à côté d'un fichier que macOS
+ * annonce à 119,4 ferait douter du bon fichier.
+ */
+export function formatBytes(bytes: number, locale: string): string {
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(
+    Math.round(bytes / 1_000_000)
+  )} ${locale.startsWith("fr") ? "Mo" : "MB"}`;
 }

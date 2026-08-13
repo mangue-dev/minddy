@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowRight } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { AgentLoopFigure } from "./agent-loop-figure";
 import { TrackedCta } from "./tracked-cta";
@@ -116,11 +116,25 @@ export async function Hero() {
             style={{ "--hero-d": afterTitle + 0.12 } as CSSProperties}
             className="hero-reveal mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
           >
+            {/* L'ACTION PREMIÈRE EST LE TÉLÉCHARGEMENT (MIN-292).
+
+                Elle a pris la place de « Commencer gratuitement », et ce qui
+                rendait ce choix impossible a été levé au même moment : l'app
+                s'ouvrait sur l'écran de CONNEXION, donc télécharger sans compte
+                menait dans le mur. Elle s'ouvre désormais sur l'inscription
+                (`login-form.tsx`), et le geste se termine là où il promettait
+                d'aller.
+
+                Elle vise la PAGE et non `/api/desktop/download` : lâcher 120 Mo
+                sur le clic de quelqu'un qui vient de lire un titre serait
+                brutal, et la page porte ce que le bouton ne peut pas dire — la
+                puce Intel, la configuration requise, et les notifications qui
+                s'arrêtent quand on quitte l'app. */}
             <Button asChild size="lg">
-              <TrackedCta href="/signup" location="hero">
-                {t("heroCtaPrimary")}
-                <ArrowRight data-icon="inline-end" />
-              </TrackedCta>
+              <a href={href("/download")}>
+                <Download data-icon="inline-start" />
+                {t("heroCtaDownload")}
+              </a>
             </Button>
             {/* L'action secondaire ne vise plus /pricing : demander le prix à
                 quelqu'un qui vient de lire le titre arrive trop tôt, et la note
@@ -137,11 +151,34 @@ export async function Hero() {
             </Button>
           </div>
 
+          {/* La note d'offre, et l'entrée par le NAVIGATEUR — qui a échangé sa
+              place avec le téléchargement (MIN-292).
+
+              Elle descend d'un bouton à une note, mais elle ne DISPARAÎT pas, et
+              c'est ce qui compte : la landing est vue depuis Windows, Linux et
+              les téléphones, où le bouton du dessus ne mène nulle part. Elle
+              reste par ailleurs un bouton plein dans la barre de navigation, à
+              l'écran en permanence.
+
+              Elle garde son `TrackedCta` : `landing_cta_clicked` compte les
+              entrées vers l'INSCRIPTION, et celle-ci en est une — la déplacer
+              sans la tracker aurait fait chuter « hero » à zéro dans les
+              statistiques sans qu'aucun visiteur n'ait changé de comportement. */}
           <p
             style={{ "--hero-d": afterTitle + 0.22 } as CSSProperties}
-            className="hero-reveal mt-4 text-xs text-muted-foreground"
+            className="hero-reveal mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
           >
-            {t("heroNote")}
+            <span>{t("heroNote")}</span>
+            <span aria-hidden className="text-muted-foreground/40">
+              ·
+            </span>
+            <TrackedCta
+              href="/signup"
+              location="hero"
+              className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            >
+              {t("heroNoteSignup")}
+            </TrackedCta>
           </p>
         </div>
 

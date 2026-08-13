@@ -38,7 +38,21 @@ import { cn } from "mangue-ui/lib/utils";
 /** Éléments qu'on peut vouloir animer. Volontairement restreint : `Reveal`
     REMPLACE une balise existante (`as="header"`) plutôt que d'en ajouter une,
     pour ne pas insérer de `<div>` au milieu d'une grille ou d'un flex. */
-type RevealTag = "div" | "header" | "section" | "figure" | "p" | "li" | "ul" | "ol" | "span";
+// `h1` et `dl` sont arrivés avec /download (MIN-292) : un titre dont une partie
+// est en serif italique ne peut pas passer par `RevealHeading`, qui découpe le
+// texte mot à mot, et une fiche technique est une liste de définitions.
+type RevealTag =
+  | "div"
+  | "header"
+  | "section"
+  | "figure"
+  | "p"
+  | "li"
+  | "ul"
+  | "ol"
+  | "dl"
+  | "span"
+  | "h1";
 
 /**
  * Ref de rappel qui branche l'observer sur l'élément. Une seule fonction pour

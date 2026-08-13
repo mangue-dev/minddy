@@ -172,6 +172,27 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   const [inDesktopApp, setInDesktopApp] = useState(false);
   useEffect(() => setInDesktopApp(isDesktop()), []);
 
+  /**
+   * **Dans l'app de bureau, l'écran s'ouvre sur l'INSCRIPTION** (MIN-292).
+   *
+   * Quelqu'un qui vient de télécharger 120 Mo et de faire glisser une icône
+   * dans Applications n'a, très majoritairement, pas encore de compte : c'est
+   * la même population que celle qui arrive par un lien d'invitation, et on lui
+   * ouvre déjà l'inscription (plus haut). Lui présenter un formulaire de
+   * connexion lui demande de trouver la bascule avant de pouvoir commencer.
+   *
+   * Le test se fait dans un effet et pas au rendu initial : `window.minddy`
+   * n'existe pas côté serveur, et le supposer ferait diverger l'hydratation.
+   * Il ne s'exécute qu'une fois, et **jamais quand un `?mode=` est présent** —
+   * un choix explicite, y compris celui qu'on vient de faire en cliquant
+   * « j'ai déjà un compte », n'a pas à être défait par un défaut.
+   */
+  const modeParam = searchParams.get("mode");
+  useEffect(() => {
+    if (modeParam || !isDesktop()) return;
+    setIsSignUp(true);
+  }, [modeParam]);
+
   // Une seule tentative de connexion à la fois (email OU provider).
   const busy = loading || oauthPending !== null;
 
