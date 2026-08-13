@@ -79,8 +79,15 @@ dans le dépôt.
 ```bash
 npm --prefix desktop run pack   # un .app NON signé, dans desktop/release/mac-*/
 npm --prefix desktop run dist   # les .dmg et .zip, signés et notarisés
-npm --prefix desktop run icon   # refaire build/icon.icns quand le logo change
 ```
+
+**L'icône n'a plus d'étape à elle.** Sa source est `build/icon.icon`, le dossier
+rendu par Icon Composer : on l'ouvre, on l'enregistre, et le build suivant la
+reprend. electron-builder appelle `actool` dessus et pose les DEUX icônes que
+macOS attend depuis Tahoe — `Assets.car` + `CFBundleIconName` pour macOS 26 et
+au-delà (verre, sombre, teintée), et un `icon.icns` dérivé de la même sortie pour
+les versions antérieures. **Ça exige Xcode 26 ou plus** sur la machine de build :
+en deçà, `actool` fait échouer la fabrication, en le disant.
 
 **L'identité de l'app vit dans [electron-builder.yml](electron-builder.yml), et
 nulle part dans le code.** Le nom sous l'icône, celui de la barre de menus,

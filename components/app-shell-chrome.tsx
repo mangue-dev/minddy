@@ -67,10 +67,15 @@ import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
 import { NumoIcon } from "@/components/numo-icon";
 import {
   AppSidebar,
+  EXPANDED_WIDTH,
   type AppNavItem,
   type AppNavSection,
 } from "@/components/app-sidebar";
-import { SecondarySidebarSlot } from "@/components/secondary-sidebar";
+import {
+  SecondarySidebarSlot,
+  SECONDARY_WIDTH,
+} from "@/components/secondary-sidebar";
+import { ZenNavOverlay } from "@/components/zen-nav-overlay";
 import {
   routeHasSecondaryNav,
   useSecondarySidebar,
@@ -1473,29 +1478,36 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       // même boîte, à gauche du header — c'est ce qui décale le fil d'Ariane et
       // le contenu, au lieu de les laisser passer au-dessus d'une colonne.
       //
-      // Mode zen (MIN-134) : on ne CACHE pas la sidebar primaire et le header,
-      // on ne les donne pas — pas de gouttière vide là où était la barre. La
-      // secondaire, elle, ne part pas non plus : sur /pull-requests elle est le
-      // seul moyen de passer d'une PR à l'autre, et le zen n'est pas censé
-      // enfermer. Elle passe en SURIMPRESSION — hors du flux, rappelée au survol
-      // du bord gauche, exactement le marché que la primaire passe déjà avec son
-      // rail. Le zen retire le meuble, pas la navigation.
+      // Mode zen (MIN-134) : le header n'est pas caché, il n'est pas donné —
+      // pas de bande vide là où il était. La NAVIGATION, elle, ne part pas : le
+      // zen n'est pas censé enfermer. Les deux barres quittent le flux d'un seul
+      // bloc et se rappellent au survol du bord gauche (`ZenNavOverlay`), hors
+      // du flux, sans rien décaler — exactement le marché que la primaire passe
+      // déjà avec son rail. Le zen retire le meuble, pas la navigation.
+      //
+      // Le bloc porte TOUJOURS la primaire, la secondaire s'y ajoutant quand la
+      // page en a une : c'est elle qui héberge les boutons de fenêtre de l'app
+      // de bureau, et c'est aussi la seule navigation des pages qui n'ont pas de
+      // barre secondaire.
       sidebar={
         <div className="relative flex h-full">
-          {zen ? null : (
-            <AppSidebar
-              sections={sections}
-              modeKey={modeKey}
-              overlay={secondaryNav}
-            />
+          {zen ? (
+            <ZenNavOverlay
+              width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
+            >
+              <AppSidebar sections={sections} modeKey={modeKey} inZenPanel />
+              <SecondarySidebarSlot reserve={secondaryNav} />
+            </ZenNavOverlay>
+          ) : (
+            <>
+              <AppSidebar
+                sections={sections}
+                modeKey={modeKey}
+                overlay={secondaryNav}
+              />
+              <SecondarySidebarSlot reserve={secondaryNav} />
+            </>
           )}
-          <SecondarySidebarSlot
-            reserve={secondaryNav}
-            // Sans barre secondaire, pas de volet à rappeler : la lisière
-            // sensible n'aurait rien à ouvrir et prendrait les clics du contenu
-            // sur ses 12 px pour rien.
-            overlay={zen && secondaryNav}
-          />
         </div>
       }
       header={

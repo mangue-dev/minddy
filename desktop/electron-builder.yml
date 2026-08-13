@@ -43,7 +43,33 @@ protocols:
 
 mac:
   category: public.app-category.productivity
-  icon: build/icon.icns
+  # LA SOURCE EST LE `.icon`, PAS UN `.icns`.
+  #
+  # `build/icon.icon` est le dossier rendu par Icon Composer (`icon.json` + le
+  # SVG du logo) : le vecteur, les couches, le verre, et les déclinaisons sombre
+  # et teintée. Depuis macOS 26 un bundle porte DEUX icônes, et elles ne se
+  # remplacent pas — `Assets.car` + `CFBundleIconName` pour 26 et au-delà,
+  # `icon.icns` + `CFBundleIconFile` pour tout ce qui précède (ici jusqu'à
+  # Big Sur, cf. `minimumSystemVersion`). Retirer la seconde, c'est laisser sans
+  # icône tous ceux qui n'ont pas encore migré.
+  #
+  # electron-builder 26 pose les deux à partir de cette seule ligne
+  # (`macPackager.applyCommonInfo` → `util/macosIconComposer`) : il appelle
+  # `actool` sur le `.icon`, écrit l'`Assets.car`, pose la clé, ET dérive
+  # l'`icns` de compatibilité de la même sortie. D'où la disparition de
+  # `scripts/build-desktop-icon.mjs` et de l'`icns` commité, qui fabriquaient à
+  # la main — depuis un PNG carré de 512, sans squircle ni marges — quelque
+  # chose qui n'avait pas la forme d'une icône macOS.
+  #
+  # **Le build exige donc Xcode 26 ou plus** : `actool` en version < 26 fait
+  # échouer la fabrication, avec un message explicite. C'était déjà le cas de la
+  # notarisation pour la machine (macOS), ça l'est maintenant pour l'outillage.
+  #
+  # Une réserve à connaître : l'`icns` que rend `actool` s'arrête à 256 px. Sur
+  # macOS 11→15, une vue Finder en grandes icônes agrandit donc du 256. C'est le
+  # prix de la chaîne officielle, et il vaut mieux qu'une icône bien nette de
+  # mauvaise forme.
+  icon: build/icon.icon
   # Electron 43 ne démarre plus en deçà (et Big Sur est la première version qui
   # tourne sur Apple Silicon).
   minimumSystemVersion: "11.0"

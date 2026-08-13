@@ -1,6 +1,6 @@
 import { build } from "esbuild";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -40,7 +40,9 @@ const repo = path.resolve(dir, "..");
 const PACKAGING_INPUTS = [
   "desktop/electron-builder.yml",
   "desktop/build/entitlements.mac.plist",
-  "desktop/build/icon.icns",
+  // La source Icon Composer est un DOSSIER (`icon.json` + le SVG) : elle est
+  // dépliée fichier par fichier, cf. `expandDirectories`.
+  "desktop/build/icon.icon",
   // Les options du bundler font partie de ce qui est produit.
   "scripts/build-desktop.mjs",
   // Pour les VERSIONS d'electron et d'electron-updater — voir NORMALIZE, qui en
@@ -105,11 +107,32 @@ async function bundleInputs() {
 }
 
 /**
+ * Déplie les entrées qui sont des dossiers en leurs fichiers, chemins relatifs au
+ * dépôt. Une entrée de `PACKAGING_INPUTS` peut en être un depuis que l'icône est
+ * une source Icon Composer : garder le détail fichier par fichier, c'est ce qui
+ * permet à `--explain` de dire *quoi* a changé dans l'icône.
+ */
+async function expandDirectories(entries) {
+  const files = [];
+  for (const entry of entries) {
+    if ((await stat(path.join(repo, entry))).isDirectory()) {
+      for (const name of await readdir(path.join(repo, entry), { recursive: true })) {
+        const child = path.join(entry, name);
+        if ((await stat(path.join(repo, child))).isFile()) files.push(child);
+      }
+    } else {
+      files.push(entry);
+    }
+  }
+  return files;
+}
+
+/**
  * L'empreinte, et le détail par fichier — c'est ce détail qui permet de DIRE ce
  * qui a changé plutôt que d'annoncer « quelque chose a changé ».
  */
 export async function computeDesktopFingerprint() {
-  const files = [...(await bundleInputs()), ...PACKAGING_INPUTS].sort();
+  const files = [...(await bundleInputs()), ...(await expandDirectories(PACKAGING_INPUTS))].sort();
   const perFile = {};
 
   for (const file of files) {

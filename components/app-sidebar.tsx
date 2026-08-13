@@ -76,7 +76,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const EXPANDED_WIDTH = 256;
+/** La barre dépliée. Exportée pour le bloc de navigation du mode zen, qui la
+ *  déplie hors du flux et doit connaître sa largeur pour se ranger. */
+export const EXPANDED_WIDTH = 256;
 const COLLAPSED_WIDTH = 56;
 
 /**
@@ -621,10 +623,24 @@ export function AppSidebar({
   sections,
   modeKey,
   overlay = false,
+  inZenPanel = false,
 }: {
   sections: AppNavSection[];
   modeKey: string;
   overlay?: boolean;
+  /**
+   * La barre est rendue DANS le bloc de navigation du mode zen : dépliée comme
+   * partout ailleurs, mais entière hors du flux, et rangée hors de l'écran tant
+   * qu'on ne survole pas le bord (`components/zen-nav-overlay.tsx`).
+   *
+   * Une seule chose en dépend, et c'est l'ANIMATION de la marque : les boutons
+   * macOS s'en vont avec le bloc et reviennent avec lui, donc la place qu'ils
+   * réservent s'ouvre et se referme à chaque survol. Animée, la marque
+   * traverserait sa ligne à chaque fois, en retard sur un bloc qui glisse déjà —
+   * exactement ce que `data-rail` désarme pour le mode rail. Même raison, même
+   * marqueur (cf. app/globals.css).
+   */
+  inZenPanel?: boolean;
 }) {
   const reduce = useReducedMotion();
   const dx = modeKey === "home" ? -16 : 16;
@@ -869,7 +885,7 @@ export function AppSidebar({
           // Mode rail : le seul état où la LARGEUR de la barre change. La
           // marque y suit la ligne en temps réel (`100cqw`) et ne doit surtout
           // pas être amortie en plus — voir app/globals.css.
-          data-rail={overlay ? "" : undefined}
+          data-rail={overlay || inZenPanel ? "" : undefined}
           className={cn(
             "sidebar-brand-row relative flex h-[60px] shrink-0 items-center border-b border-border",
             GUTTER,
