@@ -462,10 +462,12 @@
     "addContextProject": "Project",
     "addContextIssue": "Issue",
     "addContextObjective": "Objective",
+    "addContextPage": "Page",
     "addContextMemberSearch": "Search a member…",
     "addContextProjectSearch": "Search a project…",
     "addContextIssueSearch": "Search an issue…",
     "addContextObjectiveSearch": "Search an objective…",
+    "addContextPageSearch": "Search a page…",
     "addContextLoading": "Loading…",
     "slashCreateIssueLabel": "create issue",
     "slashCreateIssueDescription": "Numo gathers the context, then creates the issue"

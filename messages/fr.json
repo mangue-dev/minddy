@@ -462,10 +462,12 @@
     "addContextProject": "Projet",
     "addContextIssue": "Ticket",
     "addContextObjective": "Objectif",
+    "addContextPage": "Page",
     "addContextMemberSearch": "Chercher un membre…",
     "addContextProjectSearch": "Chercher un projet…",
     "addContextIssueSearch": "Chercher un ticket…",
     "addContextObjectiveSearch": "Chercher un objectif…",
+    "addContextPageSearch": "Chercher une page…",
     "addContextLoading": "Chargement…",
     "slashCreateIssueLabel": "créer ticket",
     "slashCreateIssueDescription": "Numo réunit le contexte, puis crée le ticket"

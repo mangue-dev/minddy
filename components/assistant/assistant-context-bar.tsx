@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AtSign,
+  BookText,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -29,6 +30,8 @@ import { ContextPill } from "@/components/assistant/context-pill";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier, isClosedStatus } from "@/lib/issue-constants";
 import { useMentionSources } from "@/lib/use-mention-sources";
+import { usePagesQuery } from "@/lib/use-pages-query";
+import { flattenPageTree } from "@/lib/pages";
 import { useProjects } from "@/lib/projects-context";
 import { useNumoBoard, useNumoMembers } from "@/lib/use-numo-mentionables";
 import type { AssistantContextChip } from "@/lib/assistant-context";
@@ -104,7 +107,7 @@ function HScroller({ children }: { children: React.ReactNode }) {
 
 // ── Bouton @ : ajouter du contexte ────────────────────────────────────
 
-type AddKind = "member" | "project" | "issue" | "objective";
+type AddKind = "member" | "project" | "issue" | "objective" | "page";
 
 function AddContextButton({
   scopeProjectId,
@@ -132,6 +135,19 @@ function AddContextButton({
   // Les objectifs viennent de l'index de la palette — la même source que le
   // « @ » du texte, donc la même liste des deux côtés du composer.
   const mentionSources = useMentionSources(scopeProjectId);
+  // Les pages, elles, sont celles du projet COURANT : un wiki appartient à son
+  // projet (voir use-mention-sources). C'est le cache que lit déjà la sidebar,
+  // donc épingler une page ne coûte aucune requête de plus — et on le parcourt
+  // en profondeur pour proposer l'arbre dans l'ordre où on le lit à gauche.
+  const pagesQuery = usePagesQuery(scopeProjectId ?? null);
+  const pages = useMemo(
+    () =>
+      flattenPageTree(pagesQuery.tree)
+        // Une page SANS TITRE n'est pas épinglable : la pilule s'afficherait
+        // vide, et Numo n'aurait rien pour la nommer.
+        .filter((page) => page.title.trim()),
+    [pagesQuery.tree],
+  );
 
   // Le panneau de Numo est un Sheet modal : react-remove-scroll bloque la molette
   // sur tout ce qui est porté à <body>. On porte donc le menu DANS le panneau,
@@ -178,10 +194,24 @@ function AddContextButton({
       icon: <Target className="size-4" />,
       label: t("addContextObjective"),
     },
+    // Le wiki n'existe que dans un projet : hors portée de projet (conversation
+    // globale), la ligne ne mènerait qu'à une liste vide, donc elle ne s'ouvre
+    // pas du tout.
+    ...(scopeProjectId
+      ? [
+          {
+            kind: "page" as const,
+            icon: <BookText className="size-4" />,
+            label: t("addContextPage"),
+          },
+        ]
+      : []),
   ];
 
   const loading =
-    (kind === "member" && membersLoading) || (boardOn && board.isPending);
+    (kind === "member" && membersLoading) ||
+    (boardOn && board.isPending) ||
+    (kind === "page" && !!scopeProjectId && pagesQuery.loading);
 
   return (
     <div ref={anchorRef} className="shrink-0">
@@ -208,7 +238,9 @@ function AddContextButton({
                 ? t("addContextIssueSearch")
                 : kind === "objective"
                   ? t("addContextObjectiveSearch")
-                  : t("addContext")
+                  : kind === "page"
+                    ? t("addContextPageSearch")
+                    : t("addContext")
         }
         emptyText={loading ? t("addContextLoading") : undefined}
         // Plus large que le w-60 par défaut : à l'étape « ticket » on reconnaît
@@ -299,6 +331,27 @@ function AddContextButton({
                     iconClassName="size-2.5"
                   />
                   <span className="truncate">{objective.name}</span>
+                </CommandItem>
+              ))}
+            {kind === "page" &&
+              pages.map((page) => (
+                <CommandItem
+                  key={page.id}
+                  value={page.id}
+                  keywords={[page.title]}
+                  onSelect={() =>
+                    pick({ kind: "page", id: page.id, label: page.title })
+                  }
+                  className="gap-2"
+                >
+                  {/* Son émoji quand elle en a un, sinon la figure du wiki —
+                      celle de l'arbre des pages et de sa pilule de contexte. */}
+                  <span className="flex size-5 shrink-0 items-center justify-center text-sm">
+                    {page.icon ?? (
+                      <BookText className="size-4 text-muted-foreground" />
+                    )}
+                  </span>
+                  <span className="truncate">{page.title}</span>
                 </CommandItem>
               ))}
             {kind === "issue" &&
