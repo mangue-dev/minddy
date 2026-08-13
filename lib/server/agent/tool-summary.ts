@@ -85,6 +85,47 @@ export function toolArgSummary(name: string, args: Record<string, unknown>): Rec
       };
     case "create_pr":
       return { title: cap(String(args.title ?? ""), 200) };
+    /**
+     * LES PULL REQUESTS — celles de la session de relecture (MIN-168) et celles
+     * du projet (MIN-267). Sans ces cas, le fil relu n'avait ni le numéro visé,
+     * ni la ligne commentée, ni le verdict : « Relecture de la #0 » sur une
+     * approbation, et rien du tout sur un merge.
+     */
+    case "comment_pr_line":
+      return { path: String(args.path ?? ""), line: Number(args.line ?? 0) };
+    case "reply_pr_thread":
+      return { comment_id: Number(args.comment_id ?? 0) };
+    case "read_pull_request":
+    case "comment_pull_request":
+      return { pull_request: Number(args.pull_request ?? 0) };
+    case "comment_pull_request_line":
+      return {
+        pull_request: Number(args.pull_request ?? 0),
+        path: String(args.path ?? ""),
+        line: Number(args.line ?? 0),
+      };
+    case "reply_pull_request_thread":
+      return {
+        pull_request: Number(args.pull_request ?? 0),
+        comment_id: Number(args.comment_id ?? 0),
+      };
+    case "review_pull_request":
+      return {
+        pull_request: Number(args.pull_request ?? 0),
+        verdict: String(args.verdict ?? ""),
+      };
+    case "set_pull_request_state":
+      return {
+        pull_request: Number(args.pull_request ?? 0),
+        state: String(args.state ?? ""),
+        ...(args.merge_method ? { merge_method: String(args.merge_method) } : {}),
+      };
+    // Concluant ou bloquant : c'est tout ce que la ligne du fil a besoin de dire,
+    // et c'est ce qui décide de la suite de la chaîne.
+    case "report_verdict":
+      return { ok: args.ok === true };
+    case "read_page":
+      return { page_id: String(args.page_id ?? "") };
     case "read_resource":
     case "read_attachment":
       return {

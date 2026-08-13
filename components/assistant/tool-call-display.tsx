@@ -15,6 +15,7 @@ import {
   Bot,
   CalendarClock,
   ChevronRight,
+  ClipboardCheck,
   FilePen,
   FilePlus2,
   FileSearch,
@@ -23,7 +24,9 @@ import {
   FileX,
   Filter,
   FolderTree,
+  GitMerge,
   GitPullRequest,
+  GitPullRequestCreate,
   Globe,
   IterationCw,
   LayoutGrid,
@@ -33,13 +36,16 @@ import {
   MailX,
   MessageCircleQuestion,
   MessageSquare,
+  MessageSquareCode,
   MessagesSquare,
   Notebook,
   NotebookPen,
   Plug,
+  Reply,
   RotateCcw,
   Search,
   Settings2,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Tag,
@@ -166,6 +172,39 @@ const SCRATCHPAD_TASKS_META: ToolMeta = {
     return t("scratchpadTasksUpdated", { count: updated });
   },
 };
+
+/**
+ * Lecture d'une page du wiki. Servie sous DEUX noms : `get_page` (Numo) et
+ * `read_page` (agent de code) — même geste, même ligne dans le fil.
+ */
+const PAGE_READ_META: ToolMeta = {
+  icon: BookText,
+  getLabel: (_args, result, success, status, t) => {
+    if (status === "running") return t("loadingPage");
+    if (!success) return t("pageNotFound");
+    const title = typeof result?.title === "string" ? result.title.trim() : "";
+    return title ? t("pageLoadedWithTitle", { title }) : t("pageLoaded");
+  },
+};
+
+/** Lecture d'un retour du board. `get_feedback` (Numo) et `read_feedback` (agent). */
+const FEEDBACK_READ_META: ToolMeta = {
+  icon: MessagesSquare,
+  getLabel: (_args, _result, success, status, t) => {
+    if (status === "running") return t("loadingFeedbackPost");
+    return success ? t("feedbackPostLoaded") : t("feedbackPostNotFound");
+  },
+};
+
+/**
+ * Le numéro de la pull request visée, tel que le fil d'un run le relit : les
+ * tools des pull requests DU PROJET (MIN-267) le prennent en argument, et
+ * `toolArgSummary` le persiste. Absent (session de relecture, où la pull request
+ * est celle de la session) : la ligne se dit sans numéro.
+ */
+function prNumber(args: Record<string, unknown>): number | null {
+  return typeof args.pull_request === "number" ? args.pull_request : null;
+}
 
 /** Référence du ticket visé quand le tool en portait une (sinon : celui du run). */
 function targetIssue(args: Record<string, unknown>): string | null {
@@ -335,15 +374,7 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("pagesFound", { count: resultCount(result, "pages") });
     },
   },
-  get_page: {
-    icon: BookText,
-    getLabel: (_args, result, success, status, t) => {
-      if (status === "running") return t("loadingPage");
-      if (!success) return t("pageNotFound");
-      const title = typeof result?.title === "string" ? result.title.trim() : "";
-      return title ? t("pageLoadedWithTitle", { title }) : t("pageLoaded");
-    },
-  },
+  get_page: PAGE_READ_META,
   create_page: {
     icon: BookPlus,
     getLabel: (args, _result, success, status, t) => {
@@ -556,13 +587,7 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("foundFeedback", { count: resultCount(result, "feedback") });
     },
   },
-  get_feedback: {
-    icon: MessagesSquare,
-    getLabel: (_args, _result, success, status, t) => {
-      if (status === "running") return t("loadingFeedbackPost");
-      return success ? t("feedbackPostLoaded") : t("feedbackPostNotFound");
-    },
-  },
+  get_feedback: FEEDBACK_READ_META,
   promote_feedback_to_issue: {
     icon: FilePlus2,
     getLabel: (_args, result, success, status, t) => {
@@ -659,10 +684,13 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   read_pull_request: {
     icon: GitPullRequest,
-    getLabel: (_args, result, success, status, t) => {
+    getLabel: (args, result, success, status, t) => {
       if (status === "running") return t("loadingPullRequest");
       if (!success) return t("pullRequestNotFound");
-      const number = typeof result?.number === "number" ? result.number : null;
+      // Le résultat pour Numo, les arguments pour l'agent : le fil d'un run ne
+      // transporte PAS le résultat des tools, seulement le résumé des arguments.
+      const number =
+        typeof result?.number === "number" ? result.number : prNumber(args);
       return number != null
         ? t("pullRequestLoadedWithNumber", { number })
         : t("pullRequestLoaded");
@@ -952,6 +980,112 @@ const TOOL_META: Record<string, ToolMeta> = {
     // ci-dessus, et il a été vu à l'écran avant d'être corrigé ici.
     getLabel: (_a, _r, _s, _st, t) => t("agentSubagentList"),
   },
+  read_page: PAGE_READ_META,
+  read_feedback: FEEDBACK_READ_META,
+  // `webfetch` arrive sous le nom d'opencode : il n'a pas de vis-à-vis maison,
+  // donc pas de nom à traduire ([opencode-events.ts](lib/server/agent/vm/opencode-events.ts)).
+  webfetch: {
+    icon: Globe,
+    getLabel: (args, _r, _s, _st, t) =>
+      t("agentWebFetch", { url: (args.url as string) || "…" }),
+  },
+  report_verdict: {
+    icon: ShieldCheck,
+    getLabel: (args, _r, _s, _st, t) =>
+      args.ok === true ? t("agentVerdictOk") : t("agentVerdictBlocked"),
+  },
+  // ── Pull requests de l'agent ─────────────────────────────────────────
+  //
+  // OUVRIR LA PULL REQUEST EST L'ACTE LE PLUS VISIBLE D'UN RUN, et sans entrée
+  // ici il s'affichait « Traitement… » puis « Terminé », sous l'icône grille du
+  // repli — c'est-à-dire la seule ligne du fil qui ne disait rien de ce qu'elle
+  // faisait. Le titre vient des arguments, que `toolArgSummary` persiste ; un
+  // échec (rien à livrer, PR refusée à rouvrir) se dit, il ne se devine pas.
+  create_pr: {
+    icon: GitPullRequestCreate,
+    getLabel: (args, _result, success, status, t) => {
+      if (status === "complete" && !success) return t("agentCreatePrFailed");
+      const raw = typeof args.title === "string" ? args.title.trim() : "";
+      const title = raw.length > 60 ? `${raw.slice(0, 60)}…` : raw;
+      return title ? t("agentCreatePrTitled", { title }) : t("agentCreatePr");
+    },
+  },
+  // Les trois écritures d'une session de RELECTURE (MIN-168) : la pull request
+  // est celle de la session, donc jamais de numéro.
+  comment_pr: {
+    icon: MessageSquare,
+    getLabel: (_a, _r, success, status, t) =>
+      status === "complete" && !success ? t("agentCommentPrFailed") : t("agentCommentPr"),
+  },
+  comment_pr_line: {
+    icon: MessageSquareCode,
+    getLabel: (args, _r, success, status, t) => {
+      if (status === "complete" && !success) return t("agentCommentPrLineFailed");
+      return t("agentCommentPrLine", {
+        path: (args.path as string) || "…",
+        line: typeof args.line === "number" ? args.line : 0,
+      });
+    },
+  },
+  reply_pr_thread: {
+    icon: Reply,
+    getLabel: (_a, _r, success, status, t) =>
+      status === "complete" && !success ? t("agentReplyPrThreadFailed") : t("agentReplyPrThread"),
+  },
+  // Les pull requests DU PROJET (MIN-267) : celles-là portent un numéro.
+  list_pull_requests: {
+    icon: GitPullRequest,
+    getLabel: (_a, _r, _s, _st, t) => t("agentListPullRequests"),
+  },
+  comment_pull_request: {
+    icon: MessageSquare,
+    getLabel: (args, _r, success, status, t) => {
+      if (status === "complete" && !success) return t("agentCommentPrFailed");
+      const number = prNumber(args);
+      return number != null ? t("agentCommentPrTarget", { number }) : t("agentCommentPr");
+    },
+  },
+  comment_pull_request_line: {
+    icon: MessageSquareCode,
+    getLabel: (args, _r, success, status, t) => {
+      if (status === "complete" && !success) return t("agentCommentPrLineFailed");
+      return t("agentCommentPrLine", {
+        path: (args.path as string) || "…",
+        line: typeof args.line === "number" ? args.line : 0,
+      });
+    },
+  },
+  reply_pull_request_thread: {
+    icon: Reply,
+    getLabel: (_a, _r, success, status, t) =>
+      status === "complete" && !success ? t("agentReplyPrThreadFailed") : t("agentReplyPrThread"),
+  },
+  // Le VERDICT porte l'information : une approbation et une demande de
+  // modifications n'engagent pas la même chose, et la forge les enregistre.
+  review_pull_request: {
+    icon: ClipboardCheck,
+    getLabel: (args, _r, success, status, t) => {
+      if (status === "complete" && !success) return t("agentReviewPrFailed");
+      const number = prNumber(args) ?? 0;
+      if (args.verdict === "approve") return t("agentReviewPrApprove", { number });
+      if (args.verdict === "request_changes")
+        return t("agentReviewPrRequestChanges", { number });
+      return t("agentReviewPrComment", { number });
+    },
+  },
+  // Fusionner est irréversible : la ligne le NOMME plutôt que de dire
+  // « mise à jour de la pull request ».
+  set_pull_request_state: {
+    icon: GitMerge,
+    getLabel: (args, _r, success, status, t) => {
+      if (status === "complete" && !success) return t("agentSetPrStateFailed");
+      const number = prNumber(args) ?? 0;
+      if (args.state === "merged") return t("agentMergePr", { number });
+      if (args.state === "closed") return t("agentClosePr", { number });
+      if (args.state === "open") return t("agentReopenPr", { number });
+      return t("agentReadyPr", { number });
+    },
+  },
 };
 
 const DEFAULT_ICON = LayoutGrid;
@@ -1035,6 +1169,7 @@ const ACTION_KIND: Record<string, ActionKind> = {
   glob: "search",
   list_dir: "search",
   web_search: "search",
+  webfetch: "search",
   edit_file: "edit",
   apply_edits: "edit",
   apply_patch: "edit",
@@ -1049,6 +1184,8 @@ const ACTION_KIND: Record<string, ActionKind> = {
   // Une proposition d'amorce n'écrit rien : elle attend l'utilisateur.
   propose_backlog: "other",
   ask_user: "other",
+  // Rendre un verdict ne change rien : c'est ce que la chaîne LIT pour décider.
+  report_verdict: "other",
 };
 
 function actionKind(name: string): ActionKind {
