@@ -72,6 +72,22 @@ describe("catalogue MCP — édition partielle d'un plan", () => {
  * sont ce lien — elles échouent le jour où un statut s'ajoute sans être dit.
  */
 describe("catalogue MCP — le feedback dit ce que l'app fait", () => {
+  it("expose toutes les options de configuration du board", () => {
+    for (const optional of [
+      "enabled",
+      "generate_sso_secret",
+      "show_categories",
+      "show_views",
+      "visible_view_ids",
+      "allow_comments",
+    ]) {
+      expect(param("minddy_configure_feedback_board", optional).required).toBe(false);
+    }
+    expect(param("minddy_configure_feedback_board", "visible_view_ids").description).toMatch(
+      /shared view ids/i
+    );
+  });
+
   it("nomme les six statuts d'un retour, `spam` compris", () => {
     const description = tool("minddy_list_feedback").description ?? "";
     for (const status of FEEDBACK_POST_STATUSES) {

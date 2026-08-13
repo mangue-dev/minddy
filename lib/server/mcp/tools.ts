@@ -3947,8 +3947,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Configure feedback board",
       description:
-        "Publish or unpublish the project's public feedback board, and/or get its " +
-        "SSO secret. OWNER ONLY. enabled=true creates the board if the project has " +
+        "Publish or unpublish the project's public feedback board, configure its " +
+        "display options, and/or get its SSO secret. OWNER ONLY. enabled=true creates " +
+        "the board if the project has " +
         "none; enabled=false only takes the public page down — collection through " +
         "the feedback API keeps working. generate_sso_secret=true returns the HS256 " +
         "secret used to pre-identify signed-in users: it NEVER rotates an existing " +
@@ -3973,7 +3974,23 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "existing thread readable but closes it to new comments; the team can " +
               "still reply publicly. Needs an existing board."
           ),
-      },
+        show_categories: z
+          .boolean()
+          .optional()
+          .describe("Show each post's categories on the public board."),
+        show_views: z
+          .boolean()
+          .optional()
+          .describe("Show the project's shared views as tabs on the public site."),
+        visible_view_ids: z
+          .array(z.string().uuid())
+          .max(50)
+          .optional()
+          .describe(
+            "Which shared view ids appear as tabs. The list replaces the current " +
+            "selection; non-shared or foreign-project views are ignored."
+          ),
+       },
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -3982,18 +3999,37 @@ export function registerMinddyTools(rawServer: McpServer): void {
       if (!scope.access.isOwner) {
         return fail("forbidden", "Only the project owner can configure the feedback board.");
       }
+      let visibleViewIds = args.visible_view_ids;
+      if (visibleViewIds !== undefined) {
+        const { data: sharedViews, error } = await getServiceClient()
+          .from("view_shares")
+          .select("views!inner (id, project_id)")
+          .eq("views.project_id", scope.access.project.id);
+        if (error) return fail("database_error", error.message);
+        const known = new Set(
+          (sharedViews ?? [])
+            .map((row) => (row.views as { id?: string } | null)?.id)
+            .filter((id): id is string => typeof id === "string")
+        );
+        visibleViewIds = visibleViewIds.filter((id) => known.has(id));
+      }
+
       const result = await configureFeedbackBoard({
         projectId: scope.access.project.id,
         enabled: args.enabled,
         generateSso: args.generate_sso_secret === true,
         allowComments: args.allow_comments,
+        showCategories: args.show_categories,
+        showViews: args.show_views,
+        visibleViewIds,
       });
       if (!result.ok) {
         switch (result.errorKey) {
           case "noFieldsToUpdate":
             return fail(
               "invalid_params",
-              "Pass enabled, allow_comments and/or generate_sso_secret."
+              "Pass enabled, show_categories, show_views, visible_view_ids, " +
+                "allow_comments and/or generate_sso_secret."
             );
           case "boardNotFound":
             return fail(
@@ -4144,7 +4180,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .string()
           .nullable()
           .describe(
-            "HTTPS endpoint that receives the deliveries, or null to turn the " +
+            "HTTP(S) endpoint that receives the deliveries, or null to turn the " +
               "webhook off. Must be reachable from the internet — a localhost URL " +
               "is accepted and will simply never be delivered."
           ),
