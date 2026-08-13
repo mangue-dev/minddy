@@ -3,6 +3,7 @@ import { BrowserWindow, app, ipcMain, session, shell } from "electron";
 
 import { parseDesktopAuthLink, type DesktopAuthLink } from "@/lib/desktop/auth-link";
 import {
+  DESKTOP_APP_NAME,
   DESKTOP_ENTRY_PATH,
   DESKTOP_ORIGIN,
   DESKTOP_PROTOCOL,
@@ -288,6 +289,13 @@ function hardenSession(): void {
     callback(ALLOWED_PERMISSIONS.has(permission));
   });
 }
+
+// Le nom, AVANT tout le reste : `app.getPath("userData")` en dérive, et une
+// seule ligne plus bas il serait déjà trop tard — la session, les caches et les
+// worktrees de l'agent local se rangeraient sous « Electron ». Le changer une
+// fois l'app installée chez des gens demanderait une migration de dossier pour
+// un simple renommage.
+app.setName(DESKTOP_APP_NAME);
 
 // Instance unique : le deep link doit atteindre l'app DÉJÀ ouverte, pas en
 // lancer une seconde qui n'aurait ni sa session ni sa fenêtre.
