@@ -82,6 +82,29 @@ mac:
       arch: [arm64, x64]
     - target: zip
       arch: [arm64, x64]
+  # LA PHRASE QUE MACOS AFFICHE EN DEMANDANT LE MICRO (MIN-294).
+  #
+  # Sans elle, pas de fenêtre de demande — et pas d'avertissement non plus : le
+  # système refuse, l'app n'en sait rien. Le bundle en HÉRITE pourtant une,
+  # d'Electron.app, mais c'est son gabarit anglais (« This app needs access to
+  # the microphone ») : il ne dit ni qui demande ni pour quoi faire, et c'est la
+  # seule phrase que la personne lira avant de décider.
+  #
+  # La version française est dans `build/fr.lproj/InfoPlist.strings`, posée par
+  # `extraResources` juste en dessous. Celle-ci reste la base, servie à tous les
+  # autres.
+  extendInfo:
+    NSMicrophoneUsageDescription: >-
+      minddy uses your microphone to turn what you say into text — dictating an
+      issue, a note or a message to Numo. Nothing is recorded unless you start a
+      dictation yourself.
+  # Les `.lproj` d'Electron sont des dossiers VIDES : ils ne servent qu'à
+  # déclarer les langues du bundle. Y déposer un `InfoPlist.strings`, c'est
+  # traduire la phrase ci-dessus pour qui a réglé son Mac en français — la seule
+  # autre langue que minddy parle.
+  extraResources:
+    - from: build/fr.lproj/InfoPlist.strings
+      to: fr.lproj/InfoPlist.strings
   # Hardened runtime : Apple refuse de notariser sans. Les entitlements qui
   # l'accompagnent sont dans build/entitlements.mac.plist, avec la raison de
   # chacun.

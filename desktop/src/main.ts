@@ -1,5 +1,13 @@
 import path from "node:path";
-import { BrowserWindow, app, ipcMain, session, shell } from "electron";
+import {
+  BrowserWindow,
+  app,
+  dialog,
+  ipcMain,
+  session,
+  shell,
+  systemPreferences,
+} from "electron";
 
 import { parseDesktopAuthLink, type DesktopAuthLink } from "@/lib/desktop/auth-link";
 import {
@@ -9,6 +17,7 @@ import {
   DESKTOP_PROTOCOL,
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
+import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
 import { routeDisposition } from "@/lib/desktop/window-routes";
@@ -359,9 +368,13 @@ function registerIpc(): void {
 /**
  * Ce que la page a le droit de demander au système. Les notifications, oui —
  * c'est le §3. Le presse-papier aussi, l'app s'en sert des deux côtés. La
- * caméra, le micro, la géolocalisation : non, minddy ne les utilise pas, et une
- * permission qu'on n'utilise pas est une permission qu'on n'a pas à laisser
- * ouverte à du code distant.
+ * géolocalisation, la caméra : non, minddy ne les utilise pas, et une permission
+ * qu'on n'utilise pas est une permission qu'on n'a pas à laisser ouverte à du
+ * code distant.
+ *
+ * Le MICRO, lui, n'est pas dans cette liste et n'y sera pas : il arrive sous la
+ * permission `media`, qui couvre aussi la caméra, et il se décide donc à part —
+ * voir `microphoneRequestAllowed` et le gestionnaire juste en dessous.
  */
 const ALLOWED_PERMISSIONS = new Set([
   "notifications",
@@ -370,10 +383,91 @@ const ALLOWED_PERMISSIONS = new Set([
   "fullscreen",
 ]);
 
+/** Le volet des réglages macOS où le micro se rend, quand il a été refusé. */
+const MICROPHONE_SETTINGS_URL =
+  "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone";
+
+/**
+ * L'accès au micro, côté SYSTÈME — la moitié qu'Electron ne fait pas.
+ *
+ * Dire oui à la page ne suffit pas : sur macOS, c'est TCC qui tient le micro, et
+ * il ne tranche qu'une fois. Trois états, trois conduites :
+ *
+ * - `not-determined` — personne n'a encore demandé. `askForMediaAccess` ouvre la
+ *   fenêtre du système ; elle ne s'ouvrira qu'ICI, et une seule fois dans la vie
+ *   de l'installation. On rend sa réponse.
+ * - `granted` — c'est déjà oui, rien à demander.
+ * - `denied` / `restricted` — c'est non, et **le système ne le redemandera
+ *   jamais**. Redemander ne fait rien du tout : le seul chemin restant passe par
+ *   les Réglages, donc on l'ouvre plutôt que de laisser un refus muet.
+ *
+ * Hors macOS, il n'y a pas de couche de plus : la réponse de la page fait foi.
+ */
+async function grantMicrophoneAccess(): Promise<boolean> {
+  if (process.platform !== "darwin") return true;
+  const status = systemPreferences.getMediaAccessStatus("microphone");
+  if (status === "granted") return true;
+  if (status === "not-determined") {
+    return systemPreferences.askForMediaAccess("microphone");
+  }
+  // La fenêtre n'est PAS attendue : le rappel de permission doit repartir tout
+  // de suite, sinon le bouton de dictée reste en « démarrage » derrière elle.
+  void offerMicrophoneSettings();
+  return false;
+}
+
+/** Une seule à la fois : le bouton de dictée se reclique. */
+let microphoneDialogOpen = false;
+
+/**
+ * Le refus dit, et le geste qui le répare — en natif, parce que le refus vient
+ * du système et que la page n'a aucun moyen de le lever elle-même.
+ */
+async function offerMicrophoneSettings(): Promise<void> {
+  if (microphoneDialogOpen) return;
+  microphoneDialogOpen = true;
+  try {
+    const options: Electron.MessageBoxOptions = {
+      type: "info",
+      message: "minddy can’t reach your microphone",
+      detail:
+        "macOS is blocking it. Open Privacy & Security › Microphone, turn minddy on, then start dictating again.",
+      buttons: ["Open System Settings", "Cancel"],
+      defaultId: 0,
+      cancelId: 1,
+    };
+    const { response } = mainWindow
+      ? await dialog.showMessageBox(mainWindow, options)
+      : await dialog.showMessageBox(options);
+    if (response === 0) await shell.openExternal(MICROPHONE_SETTINGS_URL);
+  } finally {
+    microphoneDialogOpen = false;
+  }
+}
+
 function hardenSession(): void {
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(ALLOWED_PERMISSIONS.has(permission));
-  });
+  session.defaultSession.setPermissionRequestHandler(
+    (_wc, permission, callback, details) => {
+      if (permission === "media") {
+        const request = details as Electron.MediaAccessPermissionRequest;
+        const allowed = microphoneRequestAllowed(
+          {
+            securityOrigin: request.securityOrigin,
+            requestingUrl: request.requestingUrl,
+            mediaTypes: request.mediaTypes,
+          },
+          DESKTOP_ORIGIN
+        );
+        if (!allowed) {
+          callback(false);
+          return;
+        }
+        void grantMicrophoneAccess().then(callback);
+        return;
+      }
+      callback(ALLOWED_PERMISSIONS.has(permission));
+    }
+  );
 }
 
 // Le nom, AVANT tout le reste : `app.getPath("userData")` en dérive, et une

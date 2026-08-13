@@ -1,0 +1,6 @@
+/* La phrase de la fenêtre de demande du micro, en français (MIN-294).
+
+   Le pendant de `NSMicrophoneUsageDescription` dans electron-builder.yml : même
+   clé, même sens, l'une ne va pas sans l'autre. macOS lit celle-ci quand le Mac
+   est réglé en français, la base anglaise partout ailleurs. */
+"NSMicrophoneUsageDescription" = "minddy se sert du micro pour transformer ce que vous dites en texte — dicter un ticket, une note, un message à Numo. Rien n'est enregistré tant que vous ne lancez pas une dictée vous-même.";

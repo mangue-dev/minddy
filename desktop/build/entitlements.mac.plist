@@ -31,5 +31,15 @@
          process fils (renderer, GPU, utilitaires). -->
     <key>com.apple.security.cs.allow-dyld-environment-variables</key>
     <true/>
+    <!-- LA DICTÉE VOCALE (MIN-294). Sous hardened runtime, le micro est fermé
+         par le noyau, PAS par TCC : sans cette clé, l'app signée n'obtient rien
+         et la fenêtre de demande ne s'ouvre même pas — le refus est muet, et il
+         n'arrive qu'une fois l'app empaquetée, jamais en développement (la
+         coquille de dév tourne sous Electron.app, qui la porte déjà).
+         Elle va de pair avec `NSMicrophoneUsageDescription`, posé par
+         electron-builder.yml : l'entitlement ouvre la porte, la phrase dit
+         pourquoi. Il manque l'une des deux, il ne se passe rien. -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
   </dict>
 </plist>
