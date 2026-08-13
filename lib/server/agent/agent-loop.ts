@@ -26,6 +26,12 @@ import {
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
 import type { AgentToolDef } from "./tools";
+import {
+  parseAgentUserMessage,
+  promptWithMentions,
+  type AgentMessageInput,
+  type AgentUserMessage,
+} from "@/lib/agent-mentions";
 import type { EditTelemetry } from "./edit";
 import { textOf, type AgentContentPart, type AgentToolImage } from "./content";
 import { pruneToolOutputs, capHistoryImages, headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
@@ -509,7 +515,7 @@ export interface RunAgentLoopParams {
    * messages `user` avant le prochain appel LLM → orientation à chaud + reprise
    * d'un `ask_user`. Optionnel (absent = pas de steering).
    */
-  pullSteering?: () => Promise<string[]>;
+  pullSteering?: () => Promise<AgentMessageInput[]>;
   /**
    * Rapports de sous-agents TERMINÉS, drainés au SOMMET de chaque round juste après
    * le steering (MIN-112) : chaque rapport devient un message `user`. C'est ÇA le
@@ -1508,7 +1514,7 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
    * lève le parking des sous-agents, et deux endroits qui injectent finiraient par
    * ne pas le faire pareil.
    */
-  const carriedSteering: string[] = [];
+  const carriedSteering: AgentUserMessage[] = [];
 
   rounds: for (;;) {
     // Interruption demandée entre deux rounds → repos, SANS round partiel (le
@@ -1523,7 +1529,9 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
        */
       const steered =
         params.clearInterrupt && params.pullSteering
-          ? (await params.pullSteering().catch(() => [])).filter((t) => t.trim())
+          ? (await params.pullSteering().catch(() => []))
+              .map(parseAgentUserMessage)
+              .filter((message) => message.text.trim())
           : [];
       if (steered.length === 0) {
         return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
@@ -1541,9 +1549,15 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
        * seraient consommés sans avoir jamais été lus par personne.
        */
       if (await params.checkInterrupt()) {
-        for (const text of carriedSteering.splice(0)) {
-          messages.push({ role: "user", content: text });
-          await emit("user_message", { text: cap(text, 4000) });
+        for (const message of carriedSteering.splice(0)) {
+          messages.push({
+            role: "user",
+            content: promptWithMentions(message.text, message.mentions),
+          });
+          await emit("user_message", {
+            text: cap(message.text, 4000),
+            ...(message.mentions?.length ? { mentions: message.mentions } : {}),
+          });
         }
         return { status: "interrupted", messages, costUsd, usageSeqEnd: seq, rounds: round };
       }
@@ -1601,11 +1615,18 @@ export async function runAgentLoop(params: RunAgentLoopParams): Promise<AgentLoo
       // redemander : la file, on vient de la vider.
       const injected =
         carriedSteering.length > 0 ? carriedSteering.splice(0) : await params.pullSteering!();
-      for (const text of injected) {
-        if (!text.trim()) continue;
-        messages.push({ role: "user", content: text });
+      for (const raw of injected) {
+        const message = parseAgentUserMessage(raw);
+        if (!message.text.trim()) continue;
+        messages.push({
+          role: "user",
+          content: promptWithMentions(message.text, message.mentions),
+        });
         injectedThisRound++;
-        await emit("user_message", { text: cap(text, 4000) });
+        await emit("user_message", {
+          text: cap(message.text, 4000),
+          ...(message.mentions?.length ? { mentions: message.mentions } : {}),
+        });
       }
     }
 

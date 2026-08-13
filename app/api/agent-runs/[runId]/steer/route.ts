@@ -16,6 +16,7 @@ import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
 import { syncIssueStatusOnAgentStart } from "@/lib/server/agent/issue-status-sync";
 import { getServiceClient } from "@/lib/supabase-service";
+import { parseAgentMentions } from "@/lib/agent-mentions";
 
 /**
  * Reprise à CHAUD d'un run d'agent (MIN-46 + MIN-68) : l'utilisateur envoie un
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  let payload: { message?: string };
+  let payload: { message?: string; mentions?: unknown };
   try {
     payload = (await request.json()) as { message?: string };
   } catch {
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  await insertRunMessage(runId, auth.user.id, message);
+  await insertRunMessage(runId, auth.user.id, message, parseAgentMentions(payload?.mentions));
   // Un message relance l'horloge d'inactivité (empêche le reaping imminent).
   await bumpRunActivity(runId);
 

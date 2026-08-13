@@ -46,7 +46,12 @@ const h = vi.hoisted(() => ({
   /** Les runs dont le drapeau d'interruption a été effacé. */
   cleared: [] as string[],
   /** Les messages REMIS en file par la microVM (`POST /messages`). */
-  requeued: [] as Array<{ runId: string; userId: string | null; content: string }>,
+  requeued: [] as Array<{
+    runId: string;
+    userId: string | null;
+    content: string;
+    mentions: unknown;
+  }>,
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
@@ -146,10 +151,19 @@ vi.mock("./runs", async (importOriginal) => ({
     if (h.stampFails) return { run: null, failed: true };
     return { run: h.stampReturnsNull ? null : (h.run as never), failed: false };
   }),
-  pullPendingMessages: vi.fn(async () => ["fais plutôt ça"]),
-  insertRunMessage: vi.fn(async (runId: string, userId: string | null, content: string) => {
-    h.requeued.push({ runId, userId, content });
-  }),
+  pullPendingMessages: vi.fn(async () => [
+    { text: "relis @MIN-42", mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }] },
+  ]),
+  insertRunMessage: vi.fn(
+    async (
+      runId: string,
+      userId: string | null,
+      content: string,
+      mentions?: unknown[] | null,
+    ) => {
+      h.requeued.push({ runId, userId, content, mentions: mentions ?? null });
+    },
+  ),
   readInterruptFlag: vi.fn(async () => true),
   clearInterrupt: vi.fn(async (runId: string) => {
     h.cleared.push(runId);
@@ -431,8 +445,13 @@ describe("le checkpoint", () => {
 });
 
 describe("steering et interruption — inchangés côté base", () => {
-  it("drainent les messages en attente", async () => {
-    expect((await call("GET", "/messages")).body).toEqual({ messages: ["fais plutôt ça"] });
+  it("drainent les messages en attente, MENTIONS COMPRISES", async () => {
+    // La forme a changé avec les mentions (PR 52) : un message est un objet, et
+    // ses ids voyagent à côté de son texte — c'est ce que le superviseur
+    // repostera au modèle sans les lui faire deviner.
+    expect((await call("GET", "/messages")).body).toEqual({
+      messages: [{ text: "relis @MIN-42", mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }] }],
+    });
   });
 
   it("rendent le drapeau d'interruption", async () => {
@@ -451,7 +470,39 @@ describe("steering et interruption — inchangés côté base", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ requeued: 1 });
     // Sans auteur : réinséré, il redevient un message en attente ordinaire.
-    expect(h.requeued).toEqual([{ runId: RUN_ID, userId: null, content: "fais plutôt ça" }]);
+    expect(h.requeued).toEqual([
+      // `parseAgentMentions` rend une liste VIDE quand il n'y a rien à lire —
+      // `insertRunMessage` n'écrit alors pas la colonne.
+      { runId: RUN_ID, userId: null, content: "fais plutôt ça", mentions: [] },
+    ]);
+  });
+
+  /**
+   * PR 52 — UN MESSAGE REMIS EN FILE GARDE SES MENTIONS.
+   *
+   * Le retour en file est la seule chose qui sépare « accepté à l'écran » de
+   * « joué » quand un tour sort au mauvais moment. S'il perdait les ids en
+   * chemin, le tour suivant relirait « relis @MIN-42 » sans savoir de quel
+   * ticket on parle — c'est-à-dire exactement ce que cette PR répare.
+   */
+  it("gardent les mentions d'un message remis en file, et ignorent une forme illisible", async () => {
+    const res = await call("POST", "/messages", {
+      messages: [
+        { text: "relis @MIN-42", mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }] },
+        { text: "   " },
+        { mentions: [] },
+        42,
+      ],
+    });
+    expect(res.body).toEqual({ requeued: 1 });
+    expect(h.requeued).toEqual([
+      {
+        runId: RUN_ID,
+        userId: null,
+        content: "relis @MIN-42",
+        mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }],
+      },
+    ]);
   });
 
   it("l'EFFACENT sur DELETE — et seulement pour LEUR run", async () => {

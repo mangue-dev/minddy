@@ -9,6 +9,7 @@ import {
   type AgentLaunchIntent,
   type LaunchResult,
 } from "@/lib/server/agent/launch";
+import { parseAgentMentions } from "@/lib/agent-mentions";
 
 /**
  * Runs de l'agent de code d'une issue (MIN-46).
@@ -27,7 +28,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const RUN_COLUMNS =
-  "id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, pull_request_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input";
+  "id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -104,6 +105,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     baseBranch?: string;
     reasoningLevel?: string;
     intent?: AgentLaunchIntent;
+    mentions?: unknown;
   };
   let body: LaunchBody = {};
   try {
@@ -145,6 +147,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       body.intent === "plan" || body.intent === "verify" || body.intent === "custom"
         ? body.intent
         : "implement",
+    promptMentions: parseAgentMentions(body.mentions),
   });
   if (!result.ok) return launchErrorResponse(result);
   return NextResponse.json({ run: result.run });

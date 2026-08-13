@@ -1118,6 +1118,7 @@ export function IssueSidePanel({
           open={chatOpen}
           onOpenChange={setChatOpen}
           issueId={issue.id}
+          projectId={issue.project_id}
           issueIdentifier={issueIdentifier(projectKey, issue.number)}
           initialRunId={latestRun.id}
         />

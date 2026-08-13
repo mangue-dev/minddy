@@ -37,7 +37,7 @@ import {
   type AgentRunEvent,
   type AgentRunStatus,
 } from "@/lib/agent-api";
-import type { AssistantMessage, AssistantToolCall } from "@/lib/assistant-types";
+import type { AssistantMessage, AssistantToolCall, AssistantMention } from "@/lib/assistant-types";
 
 /**
  * Flux d'activité d'un run d'agent (MIN-46), rendu en PARITÉ EXACTE avec le chat
@@ -179,6 +179,7 @@ function makeMessage(
   id: string,
   content: string | null,
   role: "assistant" | "user" = "assistant",
+  mentions?: AssistantMention[],
 ): AssistantMessage {
   return {
     id,
@@ -188,7 +189,7 @@ function makeMessage(
     tool_calls: null,
     tool_call_id: null,
     tool_name: null,
-    metadata: {},
+    metadata: mentions?.length ? { mentions } : {},
     created_at: "",
   };
 }
@@ -221,6 +222,7 @@ function str(v: unknown): string {
 function buildFeed(
   events: AgentRunEvent[],
   initialPrompt?: string | null,
+  initialPromptMentions?: AssistantMention[] | null,
 ): {
   items: FeedItem[];
   results: Map<string, ToolResult>;
@@ -254,7 +256,7 @@ function buildFeed(
     userTexts.push(prompt);
     items.push({
       kind: "message",
-      message: makeMessage("initial-prompt", prompt, "user"),
+       message: makeMessage("initial-prompt", prompt, "user", initialPromptMentions ?? undefined),
       createdAt: "",
     });
   }
@@ -388,6 +390,9 @@ function buildFeed(
       case "user_message": {
         const text = str(p.text);
         if (!text.trim()) break;
+        const mentions = Array.isArray(p.mentions)
+          ? (p.mentions as AssistantMention[])
+          : undefined;
         userTexts.push(text.trim());
         current = null;
         // Réponse à un ask_user : ABSORBÉE par la ligne de la question (détails
@@ -401,7 +406,7 @@ function buildFeed(
         // tool-calls suivants (ils appartiennent au prochain tour de l'agent).
         items.push({
           kind: "message",
-          message: makeMessage(e.id, text, "user"),
+          message: makeMessage(e.id, text, "user", mentions),
           createdAt: e.created_at,
         });
         break;
@@ -907,6 +912,7 @@ export function AgentEventFeed({
   status,
   stopping = false,
   prompt,
+  promptMentions,
   className,
   pendingUserMessages = [],
   onOpenFile,
@@ -929,6 +935,7 @@ export function AgentEventFeed({
   stopping?: boolean;
   /** Prompt de lancement, affiché en tête comme 1re bulle utilisateur. */
   prompt?: string | null;
+  promptMentions?: AssistantMention[] | null;
   className?: string;
   /** Rend cliquables les fichiers des blocs de diff (ouvre la vue diff de la session). */
   onOpenFile?: (path: string) => void;
@@ -943,7 +950,7 @@ export function AgentEventFeed({
    * le draine — réveil de sandbox compris, soit plusieurs secondes. Sans eux, on
    * taperait dans le vide : la bulle n'apparaîtrait qu'une fois l'agent reparti.
    */
-  pendingUserMessages?: string[];
+  pendingUserMessages?: Array<{ text: string; mentions?: AssistantMention[] }>;
 }) {
   const t = useTranslations("Agent");
   const tc = useTranslations("Common");
@@ -979,8 +986,8 @@ export function AgentEventFeed({
   }, []);
 
   const { items, results, userTexts, sandboxReady } = useMemo(
-    () => buildFeed(events, prompt),
-    [events, prompt],
+    () => buildFeed(events, prompt, promptMentions),
+    [events, prompt, promptMentions],
   );
 
   // Bulles optimistes encore à afficher : dédoublonnées contre TOUS les textes
@@ -1001,7 +1008,7 @@ export function AgentEventFeed({
       last.message.tool_calls?.some((tc) => tc.function.name === "ask_user")
     ) {
       displayItems = items.map((it) =>
-        it === last ? { ...it, askUserAnswer: stillPending[0] } : it,
+        it === last ? { ...it, askUserAnswer: stillPending[0].text } : it,
       );
       displayPending = stillPending.slice(1);
     }
@@ -1175,10 +1182,13 @@ export function AgentEventFeed({
         {/* Envoyés, pas encore revenus du serveur. Rendus APRÈS les blocs (et non
             injectés dans `items`) : un message user referme le tour en cours, donc
             les glisser dans le flux replierait l'accordéon du travail en direct. */}
-        {displayPending.map((text, i) => (
+        {displayPending.map((pending, i) => (
           <ChatMessage
-            key={`pending-${i}-${text}`}
-            message={makeMessage(`pending-${i}`, text, "user")}
+            key={`pending-${i}-${pending.text}`}
+            /* Les mentions viennent de CE message, pas d'un homonyme : deux
+               « ok » à la suite dont un seul cite un ticket ne doivent pas
+               échanger leurs pilules. */
+            message={makeMessage(`pending-${i}`, pending.text, "user", pending.mentions)}
             toolCallResults={results}
           />
         ))}

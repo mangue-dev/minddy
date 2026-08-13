@@ -51,3 +51,30 @@ describe("unechoedMessages", () => {
     expect(unechoedMessages(["b"], ["a", "c"])).toEqual(["b"]);
   });
 });
+
+/**
+ * PR 52 — LES MENTIONS VOYAGENT AVEC LEUR MESSAGE.
+ *
+ * Un message en attente ne porte pas que du texte : il porte les ids de ce qu'il
+ * cite. Les retrouver après coup par égalité de texte donnait les pilules du
+ * premier « ok » au second — celui qui citait un ticket.
+ */
+describe("les objets en attente, pas leurs textes", () => {
+  it("rend le message ENTIER, mentions comprises", () => {
+    const pending = [
+      { text: "ok", mentions: [] },
+      { text: "ok", mentions: [{ type: "issue", id: "i-1", label: "MIN-7" }] },
+    ];
+    expect(unechoedMessages(pending, [])).toEqual(pending);
+  });
+
+  it("ne consomme QU'UN homonyme par écho, et garde le bon", () => {
+    const pending = [
+      { text: "ok", mentions: [] },
+      { text: "ok", mentions: [{ type: "issue", id: "i-1", label: "MIN-7" }] },
+    ];
+    // Le premier « ok » est revenu du serveur : c'est LUI qui part, et celui qui
+    // reste garde ses mentions.
+    expect(unechoedMessages(pending, ["ok"])).toEqual([pending[1]]);
+  });
+});

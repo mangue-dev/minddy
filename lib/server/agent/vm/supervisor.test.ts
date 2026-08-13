@@ -9,6 +9,7 @@ import { OPENCODE_ANCHOR_FILE, OPENCODE_TOOL_DIR } from "./opencode-config";
 import { SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge } from "./tool-bridge";
 import type { ControlPlaneClient } from "./control-plane-client";
+import type { AgentUserMessage } from "@/lib/agent-mentions";
 import type { VmJob } from "./protocol";
 
 /**
@@ -143,11 +144,11 @@ function cp(): ControlPlaneClient {
       h.checkpoints.push(checkpoint as unknown as Record<string, unknown>);
       return !h.runClosed;
     },
-    pullSteering: async () => h.steering.splice(0),
+    pullSteering: async () => h.steering.splice(0).map((text) => ({ text })),
     // La vraie surface REMET en file : un message drainé et non posté redevient un
     // message en attente, et c'est lui qui re-queue le run.
     pushSteering: async (texts) => {
-      h.steering.push(...texts);
+      h.steering.push(...texts.map((message) => message.text));
     },
     hasPendingMessages: async () => h.steering.length > 0,
     checkInterrupt: async () => h.interrupt,
@@ -1565,10 +1566,10 @@ function steeringAfterFirstPrompt(text: string): Partial<ControlPlaneClient> {
   const ready = () => h.prompts.length >= 1 && !given;
   return {
     hasPendingMessages: async () => ready(),
-    pullSteering: async () => {
+    pullSteering: async (): Promise<AgentUserMessage[]> => {
       if (!ready()) return [];
       given = true;
-      return [text];
+      return [{ text }];
     },
   };
 }

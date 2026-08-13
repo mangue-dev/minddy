@@ -4,6 +4,7 @@ import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import { parseAgentMentions } from "@/lib/agent-mentions";
 
 /**
  * Liste GLOBALE des conversations de l'agent de code (Numo), tous projets
@@ -245,6 +246,7 @@ export async function POST(request: NextRequest) {
     model?: string;
     reasoningLevel?: string;
     baseBranch?: string;
+    mentions?: unknown;
   };
   try {
     const parsed: unknown = await request.json();
@@ -298,6 +300,7 @@ export async function POST(request: NextRequest) {
     forced: !!model,
     reasoningLevel,
     baseBranch,
+    promptMentions: parseAgentMentions(body.mentions),
   });
   if (!result.ok) return launchErrorResponse(result);
   return NextResponse.json({ run: result.run });

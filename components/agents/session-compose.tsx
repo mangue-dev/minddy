@@ -35,6 +35,9 @@ import {
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { Project } from "@/lib/types";
+import { useNumoMentionables } from "@/lib/use-numo-mentionables";
+import { MentionLinksProvider } from "@/components/mention-links";
+import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
  * Sélecteur du PROJET de la conversation. Obligatoire : sans ticket, seul le
@@ -218,10 +221,16 @@ export function SessionCompose({
   // Bulle optimiste du 1er message pendant le POST (mêmes raisons que le launch
   // d'AgentConversation : les pré-checks serveur prennent quelques secondes).
   const [launchText, setLaunchText] = useState<string | null>(null);
+  const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
   const modelRequired = provider === "generic" && !defaultModel && !model;
   const selectedProject = launchable.find((p) => p.id === projectId) ?? null;
+  const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId || null);
 
-  const launch = async (message: string) => {
+  const launch = async (
+    message: string,
+    _attachments: unknown[] = [],
+    mentions: AssistantMention[] = [],
+  ) => {
     if (launching) return;
     const prompt = message.trim();
     if (!prompt) return;
@@ -235,6 +244,7 @@ export function SessionCompose({
     }
     setLaunching(true);
     setLaunchText(prompt);
+    setLaunchMentions(mentions);
     try {
       const { run } = await launchNotebookAgentApi({
         projectId,
@@ -242,6 +252,7 @@ export function SessionCompose({
         model: model || undefined,
         reasoningLevel,
         baseBranch: baseBranch || undefined,
+        mentions,
       });
       /**
        * Amorce le cache de la session AVANT de rendre la main.
@@ -264,6 +275,7 @@ export function SessionCompose({
       // Refusé (pas de dépôt lié, quota…) : la run n'existe pas → on retire la
       // bulle plutôt que de laisser croire au lancement.
       setLaunchText(null);
+      setLaunchMentions([]);
       toast.error(agentErrorMessage(err));
     } finally {
       setLaunching(false);
@@ -310,12 +322,18 @@ export function SessionCompose({
       </div>
       <div className="min-h-0 flex-1">
         {launchText ? (
-          <AgentEventFeed
-            runId={null}
-            status="queued"
-            pendingUserMessages={[launchText]}
-            className="h-full py-4"
-          />
+          /* Les pilules de mention MÈNENT QUELQUE PART, ici comme dans la
+             conversation ([agent-conversation.tsx]) : sans ce fournisseur, la
+             bulle optimiste affiche `@MIN-42` et le clic ne fait rien — alors
+             que la même pilule est cliquable partout ailleurs. */
+          <MentionLinksProvider value={links}>
+            <AgentEventFeed
+              runId={null}
+              status="queued"
+              pendingUserMessages={[{ text: launchText, mentions: launchMentions }]}
+              className="h-full py-4"
+            />
+          </MentionLinksProvider>
         ) : (
           /* La conversation n'a pas encore de fil : sa place accueille le seul
              choix qui manque avant de lancer — le PROJET, dont l'agent clonera
@@ -362,7 +380,9 @@ export function SessionCompose({
         <div className="mx-auto w-full max-w-[800px]">
           <ChatInput
             key="session-compose"
-            onSend={(message) => void launch(message)}
+            onSend={(message, attachments, mentions) => void launch(message, attachments, mentions)}
+            mentionables={mentionables}
+            onMentionQuery={onMentionQuery}
             disabled={launching}
             // Sans projet, rien à cloner : l'envoi est bloqué (le texte reste
             // librement éditable) et le tooltip du bouton dit ce qui manque —

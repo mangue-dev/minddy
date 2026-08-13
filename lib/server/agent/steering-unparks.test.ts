@@ -120,6 +120,46 @@ describe("parking du parent en attente de ses sous-agents", () => {
     });
   });
 
+  it("injecte les ids des mentions dans le prompt mais garde le texte lisible dans le fil", async () => {
+    const events: Array<{ type: string; payload: Record<string, unknown> }> = [];
+    const result = await runAgentLoop({
+      ...baseParams,
+      messages: seed(),
+      emit: async (type, payload) => {
+        events.push({ type, payload });
+      },
+      pullSteering: async () => [
+        {
+          text: "Relis @MIN-42",
+          mentions: [{ type: "issue", id: "issue-1", label: "MIN-42" }],
+        },
+      ],
+    });
+
+    expect(result.status).toBe("completed");
+    expect(
+      sentMessages[0].some((message) =>
+        JSON.stringify(message.content).includes("issue (id: issue-1)"),
+      ),
+    ).toBe(true);
+
+    /**
+     * ET L'AUTRE MOITIÉ DU CONTRAT, celle qui fait toute la PR : ce que
+     * l'UTILISATEUR relit dans le fil reste sa phrase. Les ids sont pour le
+     * modèle ; les recopier dans l'event ferait lire « Relis @MIN-42 (id:
+     * issue-1) » à quelqu'un qui a écrit trois mots.
+     */
+    const bubble = events.find((e) => e.type === "user_message");
+    expect(bubble?.payload.text).toBe("Relis @MIN-42");
+    // L'id n'est PAS dans le texte — c'est là qu'il se serait vu.
+    expect(String(bubble?.payload.text)).not.toContain("issue-1");
+    // Les mentions voyagent À CÔTÉ du texte : c'est ce que le fil rend en
+    // pilules cliquables.
+    expect(bubble?.payload.mentions).toEqual([
+      { type: "issue", id: "issue-1", label: "MIN-42" },
+    ]);
+  });
+
   it("sans rien de neuf, le parking tient : le parent attend AVANT d'appeler le modèle", async () => {
     // Le contrôle qui donne son sens au test du dessus. Faire parler le parent pour
     // qu'il redise « j'attends » coûterait un aller-retour par chunk d'attente.

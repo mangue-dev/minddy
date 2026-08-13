@@ -300,6 +300,7 @@ export function RoutineDetail({
         <AgentConversation
           key={openRun.id}
           noteRunId={openRun.id}
+          projectId={project?.id ?? null}
           active
           headerTitle={
             <div className="flex min-w-0 flex-1 items-center gap-2">

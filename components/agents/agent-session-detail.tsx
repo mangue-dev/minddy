@@ -146,6 +146,7 @@ export function AgentSessionDetail({
         <AgentConversation
           key={item.runId}
           noteRunId={item.runId}
+          projectId={project.id}
           active
           headerTitle={
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -183,6 +184,7 @@ export function AgentSessionDetail({
         <AgentConversation
           key={item.runId}
           noteRunId={item.runId}
+          projectId={project.id}
           active
           headerTitle={
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -229,6 +231,7 @@ export function AgentSessionDetail({
         key={item.runId}
         issueId={issue.id}
         issueIdentifier={identifier}
+        projectId={project.id}
         // LE run de la ligne, et rien d'autre : c'est lui la conversation qu'on a
         // choisie. Auparavant on laissait la conversation résoudre elle-même « la
         // plus active du ticket » (`initialRunId=null`), parce que la ligne

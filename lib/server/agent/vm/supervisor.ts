@@ -38,6 +38,11 @@ import { commitMessageFromReply } from "../commit-message";
 import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
 import { subagentUsageSeq } from "../subagent";
 import type { VmJob, VmPushResult, VmTurnReport } from "./protocol";
+import {
+  parseAgentUserMessage,
+  promptWithMentions,
+  type AgentUserMessage,
+} from "@/lib/agent-mentions";
 
 /**
  * LE SUPERVISEUR (MIN-286, lot 1) — ce que devient `runVmTurn` quand la boucle
@@ -608,7 +613,7 @@ export async function runOpencodeTurn(
      * poster derrière. Un message drainé et non posté serait perdu — personne ne le
      * remet dans la file, et le plan de contrôle ne re-queue le run que sur la file.
      */
-    let pendingPrompt: Array<{ text: string; steered: boolean }> = [];
+    let pendingPrompt: Array<{ message: AgentUserMessage; steered: boolean }> = [];
     let interrupted = false;
     let lastSteerAt = now();
 
@@ -750,8 +755,10 @@ export async function runOpencodeTurn(
         ...(opencode ? { opencode } : {}),
       };
     }
-    const takeSteering = async (): Promise<string[]> =>
-      (await cp.pullSteering().catch(() => [])).map((t) => t.trim()).filter(Boolean);
+    const takeSteering = async (): Promise<AgentUserMessage[]> =>
+      (await cp.pullSteering().catch(() => []))
+        .map(parseAgentUserMessage)
+        .filter((message) => message.text.trim());
     /**
      * Poste le prompt en attente sur une session au repos, et dit au fil ce qui
      * vient de l'UTILISATEUR.
@@ -789,10 +796,18 @@ export async function runOpencodeTurn(
        */
       toolsSeen = 0;
       sessionError = undefined;
-      for (const part of parts) {
-        if (part.steered) await cp.emit("user_message", { text: cap(part.text, 4000) });
-      }
-      await client.promptAsync(sessionId, parts.map((part) => part.text).join("\n\n"));
+       for (const part of parts) {
+         if (part.steered) {
+           await cp.emit("user_message", {
+             text: cap(part.message.text, 4000),
+             ...(part.message.mentions?.length ? { mentions: part.message.mentions } : {}),
+           });
+         }
+       }
+       await client.promptAsync(
+         sessionId,
+         parts.map((part) => promptWithMentions(part.message.text, part.message.mentions)).join("\n\n"),
+       );
     };
 
     /**
@@ -802,8 +817,10 @@ export async function runOpencodeTurn(
      * et le « et maintenant fais plutôt ça » écrit pendant que la VM dormait.
      */
     pendingPrompt = [
-      ...(input.prompt.trim() ? [{ text: input.prompt.trim(), steered: false }] : []),
-      ...(await takeSteering()).map((text) => ({ text, steered: true })),
+       ...(input.prompt.trim()
+         ? [{ message: { text: input.prompt.trim() }, steered: false }]
+         : []),
+       ...(await takeSteering()).map((message) => ({ message, steered: true })),
     ];
     if (pendingPrompt.length === 0) {
       /**
@@ -867,11 +884,13 @@ export async function runOpencodeTurn(
             return true;
           }
           await cp.clearInterrupt().catch(() => {});
-          pendingPrompt.push(...steered.map((text) => ({ text, steered: true })));
+           pendingPrompt.push(...steered.map((message) => ({ message, steered: true })));
           await abortSession();
         } else if (await cp.hasPendingMessages().catch(() => false)) {
           // Drainé seulement maintenant qu'on sait qu'on va couper pour le poster.
-          pendingPrompt.push(...(await takeSteering()).map((text) => ({ text, steered: true })));
+           pendingPrompt.push(
+             ...(await takeSteering()).map((message) => ({ message, steered: true })),
+           );
           if (pendingPrompt.length > 0) await abortSession();
         }
       }
@@ -1261,7 +1280,9 @@ export async function runOpencodeTurn(
        *
        * Le chemin heureux ne passe pas par ici : `postPending` a déjà vidé le sac.
        */
-      const unposted = pendingPrompt.filter((part) => part.steered).map((part) => part.text);
+       const unposted = pendingPrompt
+         .filter((part) => part.steered)
+         .map((part) => part.message);
       pendingPrompt = [];
       if (unposted.length > 0) await cp.pushSteering(unposted).catch(() => {});
     }

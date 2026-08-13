@@ -20,6 +20,8 @@ import { durationBucket } from "@/lib/analytics-sanitize";
 import { notifyChainOfRunEnd } from "@/lib/server/automations/hooks";
 import { notifyRoutineOfRunEnd, stampRoutineRunEnd } from "@/lib/server/routine-hooks";
 import { afterOrNow } from "@/lib/server/after-safe";
+import type { AssistantMention } from "@/lib/assistant-types";
+import type { AgentUserMessage } from "@/lib/agent-mentions";
 
 /**
  * Accès données des runs de l'agent de code (MIN-46) : création, claim CAS,
@@ -185,6 +187,7 @@ export interface AgentRun {
   triggered_by: AgentRunTrigger;
   created_by: string | null;
   prompt: string | null;
+  prompt_mentions: AssistantMention[] | null;
   /** Résumé court de la note, pour les sessions CARNET. Null = pas de résumé
    *  (run d'issue, dont le titre est celui du ticket ; ou génération échouée). */
   title: string | null;
@@ -314,6 +317,7 @@ export interface CreateRunInput {
   connectionId: string | null;
   createdBy: string;
   prompt?: string | null;
+  promptMentions?: AssistantMention[] | null;
   /** Résumé de la note (runs carnet) — cf. `AgentRun.title`. */
   title?: string | null;
   model: string;
@@ -411,6 +415,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       triggered_by: input.triggeredBy,
       created_by: input.createdBy,
       prompt: input.prompt ?? null,
+      prompt_mentions: input.promptMentions ?? null,
       title: input.title ?? null,
       model: input.model,
       model_forced: input.modelForced,
@@ -1209,11 +1214,20 @@ export async function insertRunMessage(
   runId: string,
   userId: string | null,
   content: string,
+  mentions?: AssistantMention[] | null,
 ): Promise<void> {
   const service = getServiceClient();
   const { error } = await service
     .from("agent_run_messages")
-    .insert({ run_id: runId, created_by: userId, content: stripUnstorable(content) });
+    .insert({
+      run_id: runId,
+      created_by: userId,
+      content: stripUnstorable(content),
+      // Les labels des mentions viennent de titres et de noms : ils passent par
+      // le même filtre que le texte, sinon un octet nul dedans ferait refuser
+      // l'insert jsonb — et le message avec.
+      ...(mentions?.length ? { mentions: stripUnstorable(mentions) } : {}),
+    });
   // Un insert refusé (RLS, contrainte, octet nul) revient dans `{ error }` sans
   // lever : sans ce contrôle, la route répondait `ok` sur un message que
   // PERSONNE n'avait mis en file — accepté à l'écran, jamais joué, disparu au
@@ -1227,18 +1241,33 @@ export async function insertRunMessage(
  * marque consommés et renvoie leur contenu, ordre chronologique. Appelé au SOMMET
  * de chaque round de la boucle. Un run n'a qu'UN écrivain à la fois (le claimer).
  */
-export async function pullPendingMessages(runId: string): Promise<string[]> {
+export async function pullPendingMessages(runId: string): Promise<AgentUserMessage[]> {
   const service = getServiceClient();
   const { data, error } = await service
     .from("agent_run_messages")
     .update({ consumed_at: new Date().toISOString() })
     .eq("run_id", runId)
     .is("consumed_at", null)
-    .select("content, created_at");
-  if (error || !data) return [];
-  return (data as Array<{ content: string; created_at: string }>)
+    .select("content, mentions, created_at");
+  /**
+   * UN DRAIN QUI ÉCHOUE SE DIT. Ce `return []` veut dire « personne ne t'a rien
+   * écrit » au tour qui appelle : une colonne manquante (migration pas encore
+   * poussée), une RLS, une panne — et les messages de l'utilisateur
+   * disparaissent en silence, alors qu'ils sont TOUJOURS en file, non consommés.
+   * Le symptôme est le plus déroutant du produit : « il ne me répond pas », sans
+   * une ligne nulle part.
+   */
+  if (error) {
+    console.error("[agent-runs] pullPendingMessages failed:", error.message);
+    return [];
+  }
+  if (!data) return [];
+  return (data as Array<{ content: string; mentions?: AssistantMention[] | null; created_at: string }>)
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
-    .map((r) => r.content);
+    .map((r) => ({
+      text: r.content,
+      ...(r.mentions?.length ? { mentions: r.mentions } : {}),
+    }));
 }
 
 /**

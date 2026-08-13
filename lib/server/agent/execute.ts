@@ -113,6 +113,7 @@ import {
   type AgentResourceContext,
 } from "./prompt";
 import { buildOpencodeAnchor } from "./opencode-anchor";
+import { promptWithMentions } from "@/lib/agent-mentions";
 import type { AgentEngine } from "@/lib/agent-engines";
 import {
   loadPrReviewBoot,
@@ -1403,9 +1404,10 @@ export async function executeAgentRun(
       if (run.prompt?.trim() && !prRun) {
         messages.push({
           role: "user",
-          content: issue
-            ? run.prompt.trim()
-            : buildScratchpadPrompt(run.prompt.trim(), { mcp: false }),
+          content: promptWithMentions(
+            issue ? run.prompt.trim() : buildScratchpadPrompt(run.prompt.trim(), { mcp: false }),
+            run.prompt_mentions,
+          ),
         });
       }
     }

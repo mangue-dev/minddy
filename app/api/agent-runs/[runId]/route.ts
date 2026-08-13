@@ -36,6 +36,7 @@ function sanitizeRun(run: AgentRun) {
     triggered_by: run.triggered_by,
     // Bulle « originelle » de la conversation (la note, pour un run carnet).
     prompt: run.prompt,
+    prompt_mentions: run.prompt_mentions,
     base_branch: run.base_branch,
     branch_name: run.branch_name,
     pr_number: run.pr_number,

@@ -33,6 +33,7 @@ import {
 } from "./runs";
 import type { AgentCheckpoint } from "./runs";
 import type { AgentEventType } from "./agent-loop";
+import { parseAgentMentions } from "@/lib/agent-mentions";
 
 /**
  * PLAN DE CONTRÔLE de la microVM (MIN-223) — la seule surface par laquelle une
@@ -341,11 +342,26 @@ export async function handleControlPlaneRequest(opts: {
    * exactement comme s'il venait d'être écrit.
    */
   if (method === "POST" && surface === "/messages") {
-    const texts = Array.isArray(body.messages)
-      ? body.messages.filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+    const messages = Array.isArray(body.messages)
+      ? body.messages.flatMap((message) => {
+          if (typeof message === "string") {
+            return message.trim().length > 0 ? [{ text: message }] : [];
+          }
+          if (
+            message &&
+            typeof message === "object" &&
+            typeof (message as { text?: unknown }).text === "string" &&
+            (message as { text: string }).text.trim().length > 0
+          ) {
+            return [message as { text: string; mentions?: unknown }];
+          }
+          return [];
+        })
       : [];
-    for (const text of texts) await insertRunMessage(runId, null, text);
-    return ok({ requeued: texts.length });
+    for (const message of messages) {
+      await insertRunMessage(runId, null, message.text, parseAgentMentions(message.mentions));
+    }
+    return ok({ requeued: messages.length });
   }
 
   if (method === "GET" && surface === "/messages/pending") {

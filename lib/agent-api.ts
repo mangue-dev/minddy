@@ -12,6 +12,7 @@ import type {
 } from "@/lib/pr-review-reactions";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
+import type { AssistantMention } from "./assistant-types";
 
 /**
  * Fetchers client de l'agent de code (MIN-46) : lancer un run sur une issue et
@@ -72,6 +73,7 @@ export interface AgentRunSummary {
   triggered_by: "button" | "chat" | "mention";
   /** Prompt de lancement (bulle « originelle » de la conversation). */
   prompt: string | null;
+  prompt_mentions?: AssistantMention[] | null;
   /** Non nul = session de RELECTURE (MIN-168) : lecture seule sur le dépôt, donc
    *  ni branche, ni pull request à ouvrir depuis la conversation. */
   pull_request_id: string | null;
@@ -238,6 +240,7 @@ export async function launchAgentRunApi(
      *  (consigne libre de l'utilisateur) laissent l'issue où elle est : seul
      *  `implement` la passe « en cours » côté serveur. */
     intent?: "implement" | "plan" | "verify" | "custom";
+    mentions?: AssistantMention[];
   },
 ): Promise<{ run: AgentRunSummary }> {
   // Le prompt n'est JAMAIS envoyé — seulement sa présence et sa longueur.
@@ -283,6 +286,7 @@ export async function fetchIssueRepoBranchesApi(
 export async function launchNotebookAgentApi(body: {
   projectId: string;
   prompt: string;
+  mentions?: AssistantMention[];
   model?: string;
   /** Niveau de raisonnement choisi au lancement (MIN-122). Absent = défaut perso. */
   reasoningLevel?: ReasoningLevel;
@@ -467,13 +471,14 @@ export async function heartbeatAgentRunApi(runId: string): Promise<void> {
 export async function steerAgentRunApi(
   runId: string,
   message: string,
+  mentions: AssistantMention[] = [],
 ): Promise<{ ok: true; status: AgentRunStatus }> {
   trackEvent("agent_steered", { length_bucket: lengthBucket(message) });
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/steer`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, ...(mentions.length ? { mentions } : {}) }),
     }),
   );
 }

@@ -38,6 +38,7 @@ import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
 import { agentRunTitleSource } from "./run-title";
+import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
  * Point d'entrée UNIQUE pour démarrer un run FROID (MIN-46 + MIN-68). Appelé par
@@ -123,6 +124,7 @@ export interface LaunchAgentInput {
   triggeredBy: AgentRunTrigger;
   /** Consigne libre en plus de l'issue (optionnelle) — ou LA note (run carnet). */
   prompt?: string | null;
+  promptMentions?: AssistantMention[] | null;
   /** Modèle explicite = override/forçage (numo ou l'utilisateur). */
   model?: string | null;
   /** true si le modèle est imposé (numo « utilise tel modèle »). */
@@ -383,6 +385,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       connectionId: link.connection_id,
       createdBy: input.userId,
       prompt: input.prompt ?? null,
+      promptMentions: input.promptMentions ?? null,
       // Le titre fourni gagne : c'est celui de la routine, et il n'a rien à
       // attendre d'une génération qui n'a pas eu lieu.
       title: input.title?.trim() || (await titlePromise),
@@ -613,7 +616,7 @@ export async function continueOrLaunchAgentRun(
       : null;
   if (active) {
     const text = (input.prompt ?? "").trim();
-    if (text) await insertRunMessage(active.id, input.userId, text);
+    if (text) await insertRunMessage(active.id, input.userId, text, input.promptMentions);
     await bumpRunActivity(active.id);
     return { ok: true, run: active, continued: true };
   }

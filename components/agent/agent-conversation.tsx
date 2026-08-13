@@ -62,6 +62,9 @@ import { PlanActivityBar } from "./plan-activity-bar";
 import { turnSubagents } from "@/lib/agent-subagents";
 import { livePlan } from "@/lib/agent-plan";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
+import { useNumoMentionables } from "@/lib/use-numo-mentionables";
+import type { AssistantMention } from "@/lib/assistant-types";
+import { MentionLinksProvider } from "@/components/mention-links";
 
 /**
  * Cœur réutilisable de la conversation de l'agent de code (MIN-46 + MIN-68), extrait
@@ -96,6 +99,7 @@ import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 export function AgentConversation({
   issueId = null,
   issueIdentifier = "",
+  projectId = null,
   noteRunId = null,
   initialRunId = null,
   initialCompose = false,
@@ -110,6 +114,8 @@ export function AgentConversation({
   issueId?: string | null;
   /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
   issueIdentifier?: string;
+  /** Project scope for @ mention suggestions and page resolution. */
+  projectId?: string | null;
   /**
    * Session SANS TICKET (MIN-84) : le run EST la session — conversation d'UN
    * run, sans historique d'issue ni phase compose (le run existe déjà ; le
@@ -156,6 +162,7 @@ export function AgentConversation({
   const t = useTranslations("Agent");
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
+  const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId);
 
   /**
    * Le FAB de Numo s'efface tant que cette conversation est à l'écran : son
@@ -198,12 +205,15 @@ export function AgentConversation({
   // si l'issue a des runs passées (sinon on rouvrirait la dernière).
   const [composing, setComposing] = useState(initialCompose);
   // Messages envoyés dont l'écho serveur n'est pas encore arrivé (bulles optimistes).
-  const [pendingMessages, setPendingMessages] = useState<string[]>([]);
+  const [pendingMessages, setPendingMessages] = useState<
+    Array<{ text: string; mentions: AssistantMention[] }>
+  >([]);
   // 1er message d'une session en cours de création : le POST de lancement fait les
   // pré-checks (dépôt, quota, modèle) avant de rendre la session, et pendant ce
   // temps il n'y a rien à afficher — le message a quitté le composer et n'existe
   // encore nulle part. On le tient ici pour le montrer tout de suite.
   const [launchText, setLaunchText] = useState<string | null>(null);
+  const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
   // Demande « créer la PR » envoyée : désactive le bouton le temps que l'agent
   // reparte (working) ou que la PR apparaisse. Remise à zéro par l'effet plus bas.
   const [requestingPr, setRequestingPr] = useState(false);
@@ -358,7 +368,9 @@ export function AgentConversation({
       .filter((e) => e.type === "user_message")
       .map((e) => (typeof e.payload?.text === "string" ? e.payload.text : ""));
     if (liveRun.prompt?.trim()) echoed.push(liveRun.prompt);
-    if (unechoedMessages(pendingMessages, echoed).length > 0) return null;
+    if (unechoedMessages(pendingMessages.map((message) => message.text), echoed).length > 0) {
+      return null;
+    }
     for (let i = ordered.length - 1; i >= 0; i--) {
       const e = ordered[i];
       if (e.type === "user_message" || e.type === "summary") return null;
@@ -474,7 +486,7 @@ export function AgentConversation({
   // Seul un BYOK générique sans défaut résoluble impose de choisir un modèle.
   const modelRequired = provider === "generic" && !defaultModel && !model;
 
-  const launch = async (message: string) => {
+  const launch = async (message: string, _attachments: unknown[] = [], mentions: AssistantMention[] = []) => {
     // La phase compose n'existe que pour un ancrage ISSUE (celui des sessions
     // sans ticket vit dans SessionCompose, avant toute run) : sans issue, rien
     // à lancer ici.
@@ -490,6 +502,7 @@ export function AgentConversation({
     // session, et pendant ce temps le message n'existe nulle part — ni dans le
     // composer (vidé à l'envoi), ni dans le fil (aucune session à afficher).
     if (prompt) setLaunchText(prompt);
+    setLaunchMentions(mentions);
     try {
       const { run: started } = await launchAgentRunApi(issueId, {
         prompt: prompt || undefined,
@@ -499,6 +512,7 @@ export function AgentConversation({
         baseBranch: baseBranch || undefined,
         reasoningLevel,
         intent: composeIntent,
+        mentions,
       });
       // La session neuve devient la session ouverte → bascule live immédiate. Son
       // `prompt` porte le même texte : le fil affiche la MÊME bulle, sans coupure.
@@ -511,6 +525,7 @@ export function AgentConversation({
       // Refusé (quota, pas de dépôt, une session tourne déjà…) : la session n'existe
       // pas → on retire la bulle plutôt que de laisser croire au lancement.
       setLaunchText(null);
+      setLaunchMentions([]);
       toast.error(agentErrorMessage(err));
     } finally {
       setLaunching(false);
@@ -518,7 +533,7 @@ export function AgentConversation({
   };
 
   // Message au repos : poursuit la conversation (nouveau tour dans le même contexte).
-  const steer = async (message: string) => {
+  const steer = async (message: string, mentions: AssistantMention[] = []) => {
     if (!liveRun) return;
     const text = message.trim();
     if (!text) return;
@@ -526,9 +541,9 @@ export function AgentConversation({
     // boucle (réveil de sandbox compris, plusieurs secondes) — d'ici là l'utilisateur
     // aurait l'impression d'avoir tapé dans le vide. Le feed la retire dès que son
     // écho arrive. En cas d'échec, on la retire nous-mêmes (le message n'existe pas).
-    setPendingMessages((p) => [...p, text]);
+    setPendingMessages((p) => [...p, { text, mentions }]);
     try {
-      await steerAgentRunApi(liveRun.id, text);
+      await steerAgentRunApi(liveRun.id, text, mentions);
       await Promise.all([
         refreshRuns(),
         queryClient.invalidateQueries({ queryKey: ["agent-run-events", liveRun.id] }),
@@ -538,7 +553,7 @@ export function AgentConversation({
       // dans un autre onglet…) : le message n'existe nulle part → on retire sa bulle
       // plutôt que de laisser croire qu'il est parti.
       setPendingMessages((p) => {
-        const i = p.indexOf(text);
+        const i = p.findIndex((message) => message.text === text);
         return i === -1 ? p : [...p.slice(0, i), ...p.slice(i + 1)];
       });
       toast.error(agentErrorMessage(err));
@@ -569,10 +584,10 @@ export function AgentConversation({
   // Envoi depuis le composer live. Si l'agent TRAVAILLE : on met d'abord le message
   // en file PUIS on interrompt → le tour en cours s'arrête et reprend en traitant
   // ce message en priorité (steering). Au repos : simple relance.
-  const sendLive = async (message: string) => {
+  const sendLive = async (message: string, _attachments: unknown[] = [], mentions: AssistantMention[] = []) => {
     const text = message.trim();
     if (!text) return;
-    await steer(text);
+    await steer(text, mentions);
     // Sur ce que fait le SERVEUR, pas sur ce que l'interface montre : un arrêt
     // déjà demandé mais pas encore pris laisse le tour tourner, et le message
     // doit quand même le couper.
@@ -659,7 +674,8 @@ export function AgentConversation({
     ) : null;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <MentionLinksProvider value={links}>
+      <div className="flex h-full flex-col overflow-hidden">
       {/* En-tête : bloc de gauche fourni par l'hôte (défaut : modèle de la session en
           live / issue ciblée en compose) + actions à droite. Sans bordure : le fil
           respire jusqu'en haut, et l'en-tête ne se lit pas comme une barre séparée.
@@ -698,6 +714,7 @@ export function AgentConversation({
             status={liveRun.status}
             stopping={stopping}
             prompt={liveRun.prompt}
+            promptMentions={liveRun.prompt_mentions}
             pendingUserMessages={pendingMessages}
             onOpenFile={openDiff}
             hiddenQuestionEventId={activeQuestion?.eventId}
@@ -711,7 +728,7 @@ export function AgentConversation({
           <AgentEventFeed
             runId={null}
             status="queued"
-            pendingUserMessages={[launchText]}
+            pendingUserMessages={[{ text: launchText, mentions: launchMentions }]}
             className="h-full py-4"
           />
         ) : phase === "loading" ? (
@@ -779,16 +796,20 @@ export function AgentConversation({
           ) : null}
           {liveRun ? (
             <div className={cn(activeQuestion && "hidden")}>
-            <ChatInput
+              <ChatInput
               key={liveRun.id}
-              onSend={(message) => void sendLive(message)}
+                onSend={(message, attachments, mentions) =>
+                  void sendLive(message, attachments, mentions)
+                }
               onAbort={() => void interrupt()}
               isStreaming={working}
               sendWhileStreaming
-              beam={working}
-              disabled={!steerable}
-              hideAttach
-              placeholder={
+                beam={working}
+                disabled={!steerable}
+                hideAttach
+                mentionables={mentionables}
+                onMentionQuery={onMentionQuery}
+                placeholder={
                 steerable
                   ? working
                     ? t("livePlaceholder")
@@ -853,12 +874,16 @@ export function AgentConversation({
                   />
                 </>
               }
-            />
+              />
             </div>
           ) : (
             <ChatInput
               key="compose"
-              onSend={(message) => void launch(message)}
+              onSend={(message, attachments, mentions) =>
+                void launch(message, attachments, mentions)
+              }
+              mentionables={mentionables}
+              onMentionQuery={onMentionQuery}
               disabled={launching}
               hideAttach
               initialValue={initialComposeText}
@@ -924,6 +949,7 @@ export function AgentConversation({
           branchName={liveRun.branch_name}
         />
       ) : null}
-    </div>
+      </div>
+    </MentionLinksProvider>
   );
 }

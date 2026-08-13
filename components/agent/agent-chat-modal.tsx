@@ -38,6 +38,7 @@ export function AgentChatModal({
   onOpenChange,
   issueId,
   issueIdentifier,
+  projectId,
   initialRunId = null,
   compose = false,
 }: {
@@ -46,6 +47,7 @@ export function AgentChatModal({
   issueId: string;
   /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
   issueIdentifier: string;
+  projectId?: string | null;
   /** Ouvre CETTE run (sinon : session au travail, à défaut la dernière session). */
   initialRunId?: string | null;
   /** Force la phase compose (« Lancer un NOUVEL agent »). */
@@ -76,6 +78,7 @@ export function AgentChatModal({
           active={open}
           issueId={issueId}
           issueIdentifier={issueIdentifier}
+          projectId={projectId}
           initialRunId={initialRunId}
           initialCompose={compose}
           headerActions={
