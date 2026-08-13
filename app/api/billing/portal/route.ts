@@ -1,7 +1,14 @@
 import { type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getBillingAccountForUser } from "@/lib/server/billing-accounts";
-import { createStripePortalSession, isStripeConfigured } from "@/lib/server/stripe";
+import {
+  getBillingAccountForUser,
+  upsertBillingAccount,
+} from "@/lib/server/billing-accounts";
+import {
+  createStripePortalSession,
+  isMissingCustomerError,
+  isStripeConfigured,
+} from "@/lib/server/stripe";
 import { billingReturnUrl } from "@/lib/desktop/return-url";
 
 /**
@@ -38,9 +45,29 @@ export async function POST(request: NextRequest) {
   }
 
   const fromDesktop = await readsDesktopFlag(request);
-  const session = await createStripePortalSession({
-    customerId: account.stripe_customer_id,
-    returnUrl: billingReturnUrl(request.nextUrl.origin, "/billing", fromDesktop),
-  });
-  return Response.json({ url: session.url });
+  try {
+    const session = await createStripePortalSession({
+      customerId: account.stripe_customer_id,
+      returnUrl: billingReturnUrl(request.nextUrl.origin, "/billing", fromDesktop),
+    });
+    return Response.json({ url: session.url });
+  } catch (error) {
+    if (!isMissingCustomerError(error)) throw error;
+    /**
+     * Le client n'existe plus chez Stripe (supprimé au tableau de bord, ou clé
+     * passée sur un autre compte Stripe). **On n'en refait PAS un ici** — au
+     * contraire du checkout : le portal sert à gérer un abonnement, et un client
+     * tout neuf n'en a aucun. On ouvrirait un écran vide en promettant le
+     * contraire.
+     *
+     * On efface donc la référence morte et on rend le même 400 que si le compte
+     * n'avait jamais eu de client. C'est ce que l'app sait déjà traiter : elle
+     * propose alors le checkout, qui refera un client pour de bon.
+     */
+    console.warn(
+      `[billing] client Stripe périmé (${account.stripe_customer_id}) — référence effacée`
+    );
+    await upsertBillingAccount(auth.user.id, { stripe_customer_id: null });
+    return Response.json({ error: "No Stripe customer" }, { status: 400 });
+  }
 }

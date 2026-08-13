@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
-import { createSupabaseFromRequest } from "@/lib/server/api-auth";
+import { createSupabaseWithCookieSink } from "@/lib/server/api-auth";
 import { toNamed } from "@/lib/server/auth-users";
 import { signFeedbackSsoJwt } from "@/lib/feedback/sso-jwt";
 import { lookupCustomDomain } from "@/lib/custom-domain-lookup";
@@ -69,7 +69,25 @@ export async function GET(request: NextRequest) {
   // strict équivalent de getUser() tant qu'on est en HS256 — zéro régression.
   // La session est déjà validée par le middleware (route protégée) ; ici on ne
   // fait que forger un JWT SSO court, re-vérifié en aval sur le board.
-  const supabase = createSupabaseFromRequest(request);
+  /**
+   * ⚠ Le client à ÉVIER À COOKIES, et pas celui des routes d'app (MIN-293).
+   *
+   * Cette route est PUBLIQUE : le proxy la laisse passer sans toucher à l'auth,
+   * elle est donc la première et la seule à ouvrir les cookies de session — avec
+   * un jeton d'accès qui peut être expiré. Lire le renouvelle alors, GoTrue fait
+   * tourner le jeton de rafraîchissement, et jeter le couple neuf DÉCONNECTE :
+   * le navigateur garde un jeton que le serveur vient de dépenser.
+   *
+   * Ça ne se voyait pas d'ici. Le bouton « Partager un retour » menait au board
+   * sans pré-identification — l'inverse exact de ce que cette route fait — et
+   * l'utilisateur se retrouvait déconnecté plus tard, ailleurs, sans lien
+   * visible avec un clic sur un lien de feedback. Le seul indice était deux
+   * `Invalid Refresh Token: Refresh Token Not Found` dans les logs du serveur.
+   *
+   * D'où `applyCookies` sur les deux sorties : une redirection porte des cookies
+   * comme n'importe quelle réponse, et c'est la seule occasion de les rendre.
+   */
+  const { supabase, applyCookies } = createSupabaseWithCookieSink(request);
   const [{ data }, boardUrl] = await Promise.all([
     supabase.auth.getClaims(),
     boardBaseUrl(request),
@@ -78,7 +96,7 @@ export async function GET(request: NextRequest) {
 
   // Déconnecté (ou SSO non configuré) → board anonyme, vérification email sur place.
   if (!claims?.sub || !secret) {
-    return NextResponse.redirect(boardUrl, 302);
+    return applyCookies(NextResponse.redirect(boardUrl, 302));
   }
 
   const named = toNamed({
@@ -91,5 +109,7 @@ export async function GET(request: NextRequest) {
     secret
   );
   // Atterrissage direct sur la route SSO (pose le cookie), pas sur la page board.
-  return NextResponse.redirect(`${boardUrl}/sso?jwt=${encodeURIComponent(jwt)}`, 302);
+  return applyCookies(
+    NextResponse.redirect(`${boardUrl}/sso?jwt=${encodeURIComponent(jwt)}`, 302)
+  );
 }

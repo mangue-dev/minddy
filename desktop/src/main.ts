@@ -279,7 +279,20 @@ function createWindow(): BrowserWindow {
   // dialogue ouverte au moment du rechargement, par exemple. Sans cette remise à
   // zéro, les boutons restaient cachés POUR TOUJOURS, sans plus personne pour
   // les rendre. Le renderer réaffirme ses raisons dès qu'il est monté.
-  window.webContents.on("did-start-loading", () => {
+  //
+  // ⚠ **`did-start-navigation`, et NON `did-start-loading`** (MIN-293). Celui-ci
+  // a l'air de dire « un document arrive » ; il dit en réalité « le rouet de
+  // l'onglet tourne », ce qui inclut les navigations MÊME-DOCUMENT — un
+  // `pushState`, un `replaceState`, c'est-à-dire toute navigation de la SPA.
+  // Chaque changement d'onglet de la page Agents (`router.replace`) remettait
+  // donc la demande à zéro et rendait les boutons, alors que la barre latérale
+  // était au rail et n'avait rien relâché. Ils restaient là, définitivement :
+  // personne, côté page, n'avait de raison de redemander quoi que ce soit.
+  //
+  // `isSameDocument` est exactement la distinction qui manquait, et
+  // `isMainFrame` écarte les sous-cadres, qui ne remplacent pas la page.
+  window.webContents.on("did-start-navigation", (details) => {
+    if (details.isSameDocument || !details.isMainFrame) return;
     wantsWindowButtons = true;
     applyWindowButtons(window);
   });

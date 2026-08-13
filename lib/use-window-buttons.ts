@@ -28,8 +28,38 @@ import { getDesktopBridge } from "./desktop/bridge";
  */
 const holds = new Set<string>();
 
+let flush = 0;
+
+/**
+ * On annonce l'état des raisons **une fois la pile retombée**, pas à chaque
+ * mouvement — et c'est ce qui empêche les boutons de CLIGNOTER.
+ *
+ * Une raison peut être relâchée puis reprise dans le même tour de boucle : React
+ * démonte les effets d'un sous-arbre avant de monter ceux du suivant, et deux
+ * écrans qui demandent la même chose se relaient exactement comme ça. Poussé
+ * tel quel, ça donne deux messages — « montre-les », puis « cache-les » — que le
+ * main process exécute l'un après l'autre. Les boutons sont NATIFS : ils
+ * apparaissent à l'instant même, hors de tout rendu de la page, et le compositeur
+ * a tout le temps de les peindre entre les deux. On les voit surgir puis
+ * disparaître, sans que rien à l'écran n'ait bougé.
+ *
+ * Un report à la fin du tour suffit : les deux mouvements s'y annulent, et il ne
+ * part qu'UN message, portant l'état retombé. Ce qui change vraiment part à
+ * l'image suivante — personne ne peut voir la différence.
+ *
+ * ⚠ On n'ajoute PAS de déduplication sur la valeur envoyée, et c'est délibéré :
+ * `useWindowButtonsSlot` attend une réponse du pont pour dégeler sa mise en page
+ * (cf. `settling`). Taire un message parce qu'il répète le précédent — cas réel :
+ * un dialogue qui s'ouvre et se ferme alors que le rail tient déjà les boutons —
+ * la laisserait attendre une réponse qui ne viendrait jamais. Un message de trop
+ * ne coûte qu'un `setWindowButtonVisibility` de plus.
+ */
 function pushToBridge(): void {
-  getDesktopBridge()?.setWindowButtonsVisible(holds.size === 0);
+  if (flush) return;
+  flush = window.setTimeout(() => {
+    flush = 0;
+    getDesktopBridge()?.setWindowButtonsVisible(holds.size === 0);
+  }, 0);
 }
 
 /**
@@ -43,6 +73,7 @@ function pushToBridge(): void {
 export function useHoldWindowButtons(reason: string, active: boolean): void {
   useEffect(() => {
     if (!active) return;
+    watchContradiction();
     holds.add(reason);
     pushToBridge();
     return () => {
@@ -50,6 +81,38 @@ export function useHoldWindowButtons(reason: string, active: boolean): void {
       pushToBridge();
     };
   }, [reason, active]);
+}
+
+/**
+ * Le garde-fou : **la demande peut être remise à zéro sans que la page le
+ * sache**, et il faut alors la réaffirmer.
+ *
+ * La coquille remet `wantsWindowButtons` à vrai à chaque nouveau document —
+ * légitime, une page neuve n'a jamais rien demandé. Mais elle l'a longtemps fait
+ * sur un événement trop large (`did-start-loading`, qui couvre aussi les
+ * navigations de la SPA), et le résultat était muet : les boutons revenaient par
+ * dessus une barre au rail, définitivement, parce que personne côté page n'avait
+ * de raison de redemander. Rien dans le code de la page ne pouvait le laisser
+ * voir — le `Set` était juste, c'est l'autre bout qui ne l'écoutait plus.
+ *
+ * L'événement est corrigé (desktop/src/main.ts), et **ce garde-fou reste** : il
+ * ne dépend d'aucun événement en particulier, seulement de la contradiction
+ * elle-même. Les boutons sont annoncés PRÉSENTS alors que la page a des raisons
+ * de les retirer ? Quelque chose a repris la main ; on redemande. En plein écran
+ * la coquille annonce `false`, donc ce cas-là ne se déclenche jamais à tort, et
+ * il n'y a pas de boucle possible : notre demande fait publier `false`.
+ *
+ * Un seul abonnement pour toute la page, ouvert à la première raison posée et
+ * gardé ensuite — c'est une propriété de la fenêtre, pas d'un composant.
+ */
+let contradictionWatcher: (() => void) | null = null;
+
+function watchContradiction(): void {
+  if (contradictionWatcher) return;
+  contradictionWatcher =
+    getDesktopBridge()?.onWindowButtons((visible) => {
+      if (visible && holds.size > 0) pushToBridge();
+    }) ?? null;
 }
 
 /* ─── Ce qui couvre l'app ──────────────────────────────────────────────── */

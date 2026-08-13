@@ -11,8 +11,15 @@ import {
 } from "mangue-ui";
 import { BarChart3 } from "lucide-react";
 
+import { useAuth } from "@/lib/auth-context";
 import { isDesktop } from "@/lib/desktop/bridge";
-import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-consent";
+import {
+  ANALYTICS_CONSENT_META_KEY,
+  readConsent,
+  resolveAnalyticsConsent,
+  writeConsent,
+  type CookieConsent,
+} from "@/lib/cookie-consent";
 import { useAnalytics } from "@/lib/use-analytics";
 
 /**
@@ -39,17 +46,40 @@ import { useAnalytics } from "@/lib/use-analytics";
  *
  * **Et elle reste réversible**, dans les réglages, ce que le dialogue dit
  * lui-même plutôt que de le laisser deviner.
+ *
+ * ## « Une fois » veut dire une fois, et le stockage local ne suffisait pas
+ *
+ * Le choix vivait dans le seul localStorage. Dans un navigateur, ça tient — il
+ * garde son stockage pour toujours. Ici, non : la question revenait à chaque
+ * lancement, et à chaque reconnexion. Un profil neuf, une réinstallation, une
+ * coquille de dév, et la modale bloquante repartait de zéro. C'est exactement le
+ * harcèlement que le troisième point ci-dessus prétendait éviter.
+ *
+ * Le choix est donc AUSSI écrit dans le compte (`user_metadata`), et cet
+ * écran-ci l'y lit d'abord : un appareil sans choix local mais dont le compte en
+ * porte un l'ADOPTE en silence, sans redemander. Voir lib/cookie-consent.ts pour
+ * le partage des rôles entre les deux stockages.
  */
 export function DesktopAnalyticsPrompt() {
   const t = useTranslations("Analytics");
   const { track } = useAnalytics();
+  const { user, updateUserMetadata } = useAuth();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     // Après le montage : ni le pont ni le stockage local n'existent au rendu
     // serveur, et les supposer ferait diverger l'hydratation.
-    if (isDesktop() && readConsent() === null) setOpen(true);
-  }, []);
+    if (!isDesktop() || readConsent() !== null) return;
+    // La session arrive après le premier rendu : tant qu'elle n'est pas là, on
+    // ne sait pas encore si la question a déjà une réponse, et la poser serait
+    // la poser à quelqu'un qui y a peut-être déjà répondu.
+    if (!user) return;
+    const fromAccount = resolveAnalyticsConsent(user.user_metadata);
+    // Adopté sur cet appareil : `writeConsent` prévient PostHog dans la foulée,
+    // donc la mesure part (ou reste coupée) sans rechargement ni question.
+    if (fromAccount) writeConsent(fromAccount);
+    else setOpen(true);
+  }, [user]);
 
   const choose = (consent: CookieConsent) => {
     // Tracké AVANT `writeConsent`, comme le bandeau : sur un refus, celui-ci
@@ -58,6 +88,12 @@ export function DesktopAnalyticsPrompt() {
     track("cookie_consent_choice", { choice: consent });
     writeConsent(consent);
     setOpen(false);
+    // Le compte, pour que la question ne se repose pas sur le prochain profil.
+    // Détaché volontairement : l'écran est déjà fermé, et une panne de réseau ne
+    // doit pas rouvrir une modale bloquante sur un choix déjà fait ici.
+    void updateUserMetadata({ [ANALYTICS_CONSENT_META_KEY]: consent }).catch(
+      (e: unknown) => console.error("[analytics] consentement non enregistré:", e)
+    );
   };
 
   if (!open) return null;

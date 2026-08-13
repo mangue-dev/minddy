@@ -29,6 +29,7 @@ import { resolveRelations } from "@/lib/relation-constants";
 import { issueComparator } from "@/lib/view-filter";
 import { displayRank, dragBundle, planBoardMove } from "@/lib/board-drag";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import { BOARD_FADE_RAMP, BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
@@ -231,7 +232,10 @@ export function KanbanBoard({
   );
 
   // Fade the left/right edges of the board while more columns lie off-screen.
-  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>("x");
+  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>(
+    "x",
+    BOARD_FADE_RAMP
+  );
 
   // Mobile: track which column is snapped into view to drive the dot indicator.
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -365,7 +369,7 @@ export function KanbanBoard({
           }}
           onPointerDown={onMarqueePointerDown}
           style={scrollProps.style}
-          className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 snap-x snap-mandatory desktop:snap-none desktop:px-6"
+          className={cn("min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
         >
           {columns.map(({ status, items }) => (
             <KanbanColumn

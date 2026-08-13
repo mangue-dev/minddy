@@ -866,6 +866,10 @@ export function AppSidebar({
           // « fermée », et animer ce rattrapage ferait démarrer l'app sur un
           // logo qui traverse sa barre.
           data-window-buttons-ready={windowButtons.ready ? "" : undefined}
+          // Mode rail : le seul état où la LARGEUR de la barre change. La
+          // marque y suit la ligne en temps réel (`100cqw`) et ne doit surtout
+          // pas être amortie en plus — voir app/globals.css.
+          data-rail={overlay ? "" : undefined}
           className={cn(
             "sidebar-brand-row relative flex h-[60px] shrink-0 items-center border-b border-border",
             GUTTER,

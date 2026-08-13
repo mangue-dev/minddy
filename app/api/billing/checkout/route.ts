@@ -13,6 +13,7 @@ import {
   createStripeCustomer,
   findStripeCustomerByEmail,
   getStripePriceIdForPlan,
+  isMissingCustomerError,
   isStripeConfigured,
 } from "@/lib/server/stripe";
 
@@ -75,6 +76,9 @@ export async function POST(request: NextRequest) {
     ).id;
   }
 
+  const freshCustomer = async () =>
+    (await createStripeCustomer({ email: user.email, userId: user.id })).id;
+
   const origin = request.nextUrl.origin;
   // Le paiement s'ouvre dans le NAVIGATEUR même quand il part de l'app de
   // bureau (une page de carte bancaire n'a rien à faire dans une fenêtre à
@@ -82,14 +86,37 @@ export async function POST(request: NextRequest) {
   // sa page de facturation dans Safari, l'app toujours ouverte derrière et
   // toujours sur l'ancien plan. Voir lib/desktop/open-link.ts.
   const fromDesktop = (body as { desktop?: unknown })?.desktop === true;
-  const session = await createStripeCheckoutSession({
-    customerId,
-    planId,
-    interval,
-    userId: user.id,
-    successUrl: billingReturnUrl(origin, "/billing?billing=success", fromDesktop),
-    cancelUrl: billingReturnUrl(origin, "/billing?billing=cancelled", fromDesktop),
-  });
+  const openCheckout = (customer: string) =>
+    createStripeCheckoutSession({
+      customerId: customer,
+      planId,
+      interval,
+      userId: user.id,
+      successUrl: billingReturnUrl(origin, "/billing?billing=success", fromDesktop),
+      cancelUrl: billingReturnUrl(origin, "/billing?billing=cancelled", fromDesktop),
+    });
+
+  /**
+   * L'identifiant de client qu'on garde peut ne plus rien désigner chez Stripe :
+   * client supprimé depuis leur tableau de bord, ou clé qui a changé de compte
+   * Stripe. Il reste alors écrit ici, et l'appel échouait en 500 — « No such
+   * customer » sur un simple clic « passer au plan supérieur ».
+   *
+   * On en refait un et on rejoue, une fois. C'est sans perte : le checkout n'est
+   * proposé qu'à un compte SANS abonnement actif (le 409 plus haut), il n'y a
+   * donc rien à retrouver sur l'ancien client. Une seule reprise, et l'échec
+   * suivant remonte : si le second client ne marche pas non plus, ce n'est plus
+   * une référence périmée, c'est une panne, et la masquer ne sert personne.
+   */
+  let session;
+  try {
+    session = await openCheckout(customerId);
+  } catch (error) {
+    if (!isMissingCustomerError(error)) throw error;
+    console.warn(`[billing] client Stripe périmé (${customerId}) — on en refait un`);
+    customerId = await freshCustomer();
+    session = await openCheckout(customerId);
+  }
 
   await upsertBillingAccount(user.id, {
     email: user.email ?? account?.email ?? null,

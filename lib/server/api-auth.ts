@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
@@ -26,6 +26,84 @@ export function createSupabaseFromRequest(request: NextRequest): SupabaseClient 
       },
     }
   );
+}
+
+/**
+ * Le même client, mais qui SAIT ÉCRIRE les cookies rafraîchis (MIN-293).
+ *
+ * ## Pourquoi il existe, et pourquoi il ne remplace pas le précédent
+ *
+ * Lire une session peut la RENOUVELER. Quand le jeton d'accès a expiré,
+ * `getClaims()` / `getSession()` échangent le jeton de rafraîchissement contre
+ * un couple neuf — et GoTrue **fait tourner** le jeton de rafraîchissement au
+ * passage : l'ancien ne vaut plus rien quelques secondes plus tard.
+ *
+ * Un adaptateur qui jette ce qu'on lui donne à écrire transforme donc une
+ * lecture en DESTRUCTION de session : le serveur a dépensé le jeton, le
+ * navigateur garde l'ancien, et le prochain rafraîchissement — le sien comme le
+ * nôtre — échoue en `refresh_token_not_found`. Dans les logs :
+ *
+ *     Error [AuthApiError]: Invalid Refresh Token: Refresh Token Not Found
+ *
+ * Pour les routes de l'app, ça n'arrive pas : le proxy passe AVANT, et lui écrit
+ * les cookies (proxy.ts, branche « routes de l'app »). Le jeton est donc déjà
+ * frais quand un handler le lit, et son `setAll` vide ne coûte rien. C'est ce
+ * que dit `createSupabaseFromRequest`, et ça reste vrai.
+ *
+ * **Le trou est la route PUBLIQUE qui lit quand même une session.** Le proxy la
+ * laisse passer sans toucher à l'auth — c'est tout l'intérêt d'être publique —
+ * donc le handler est le premier et le seul à ouvrir les cookies, avec un jeton
+ * qui peut très bien être expiré. `/feedback` est ce cas : il pré-identifie
+ * l'utilisateur connecté, et il le faisait au prix de sa session.
+ *
+ * D'où ce constructeur-ci, à réserver exactement à ça : **une surface publique
+ * qui lit l'utilisateur connecté**. Elle doit passer sa réponse par
+ * `applyCookies` avant de la rendre, sans quoi on est revenu au point de départ.
+ */
+export interface CookieSink {
+  /** Ce que `@supabase/ssr` appelle pour écrire — son `cookies.setAll`. */
+  collect: (cookies: { name: string; value: string; options: CookieOptions }[]) => void;
+  /** À appeler sur la réponse rendue — y compris une redirection. */
+  applyCookies: <T extends NextResponse>(response: T) => T;
+}
+
+/**
+ * Le report en lui-même, sans Supabase : ce qu'on a reçu à écrire ressort sur la
+ * réponse. Séparé pour être tenu par un test — c'est le maillon qui manquait, et
+ * un maillon qu'on ne peut pas exercer est un maillon qui recassera.
+ */
+export function createCookieSink(): CookieSink {
+  const pending: { name: string; value: string; options: CookieOptions }[] = [];
+  return {
+    collect(cookies) {
+      pending.push(...cookies);
+    },
+    applyCookies(response) {
+      for (const { name, value, options } of pending) {
+        response.cookies.set(name, value, options);
+      }
+      return response;
+    },
+  };
+}
+
+export function createSupabaseWithCookieSink(
+  request: NextRequest
+): CookieSink & { supabase: SupabaseClient } {
+  const sink = createCookieSink();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll: sink.collect,
+      },
+    }
+  );
+  return { ...sink, supabase };
 }
 
 export type AuthedResult =

@@ -39,3 +39,37 @@ export function writeConsent(consent: CookieConsent): void {
   }
   window.dispatchEvent(new Event(CONSENT_CHANGED_EVENT));
 }
+
+/* ─── La copie qui SURVIT à l'appareil ─────────────────────────────────── */
+
+/**
+ * Le même choix, dans le compte (MIN-293).
+ *
+ * Le localStorage seul suffisait tant que la question se posait dans un
+ * navigateur, qui garde son stockage pour toujours. **Dans l'app de bureau,
+ * non** : la question s'y pose en modale bloquante au lancement, et le moindre
+ * profil neuf — une réinstallation, une coquille de dév, une session repartie de
+ * zéro — la reposait. Une question posée « une fois » qui revient à chaque
+ * lancement n'est plus une question, c'est le bandeau qu'on remplaçait.
+ *
+ * D'où la copie dans `user_metadata`, écrite à côté du stockage local et jamais
+ * à sa place. Le partage des rôles compte :
+ *
+ * - **le localStorage reste la source de vérité de la MESURE.** C'est lui que
+ *   `posthog-init` lit, de façon synchrone, avant toute session ; le compte
+ *   n'existe pas encore à ce moment-là, et attendre une session pour décider de
+ *   poser un cookie serait le prendre à l'envers ;
+ * - **le compte est la source de vérité de la QUESTION.** Un appareil sans choix
+ *   local mais dont le compte en a un adopte celui du compte, sans redemander.
+ *
+ * Ce que ça ne change pas : un refus reste un refus partout, et l'accord d'un
+ * appareil ne pose rien sur un autre tant qu'on ne s'y connecte pas.
+ */
+export const ANALYTICS_CONSENT_META_KEY = "analytics_consent";
+
+/** Le choix porté par le compte, ou `null` s'il n'en porte pas. */
+export function resolveAnalyticsConsent(meta: unknown): CookieConsent | null {
+  if (!meta || typeof meta !== "object") return null;
+  const raw = (meta as Record<string, unknown>)[ANALYTICS_CONSENT_META_KEY];
+  return raw === "accepted" || raw === "declined" ? raw : null;
+}

@@ -8,7 +8,13 @@ import Link from "next/link";
 
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { readConsent, writeConsent } from "@/lib/cookie-consent";
+import { useAuth } from "@/lib/auth-context";
+import {
+  ANALYTICS_CONSENT_META_KEY,
+  readConsent,
+  resolveAnalyticsConsent,
+  writeConsent,
+} from "@/lib/cookie-consent";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
@@ -21,10 +27,15 @@ import type { Locale } from "@/i18n/config";
  * que l'app de bureau ne l'affiche pas — sans cet écran, personne ne pourrait
  * plus rien choisir du tout là-bas.
  *
- * Même stockage que le bandeau (`lib/cookie-consent.ts`) : une préférence
- * d'APPAREIL dans le localStorage, jamais une donnée de compte. L'app de bureau
- * a son propre stockage, donc son propre choix — ce qui est le comportement
- * juste : consentir sur le web ne consent pas pour une autre machine.
+ * Même stockage que le bandeau (`lib/cookie-consent.ts`) : le localStorage
+ * décide de la MESURE sur cet appareil, et lui seul — consentir sur le web ne
+ * pose rien sur une autre machine.
+ *
+ * Ce qui s'y ajoute (MIN-293) : le choix est recopié dans le compte, qui décide
+ * de la QUESTION. Sans ça, couper la mesure ici revenait à effacer toute réponse
+ * du point de vue de l'app de bureau, et sa modale de bienvenue se rouvrait au
+ * lancement suivant — l'interrupteur des réglages rallumait la question qu'il
+ * était censé clore.
  *
  * L'état de départ est `false` le temps du montage, comme partout où l'on lit le
  * stockage local : le rendu serveur ne le voit pas, et le supposer ferait
@@ -33,17 +44,26 @@ import type { Locale } from "@/i18n/config";
 export function AccountAnalyticsSection() {
   const t = useTranslations("Analytics");
   const locale = useLocale() as Locale;
+  const { user, updateUserMetadata } = useAuth();
   const [accepted, setAccepted] = useState(false);
 
   useEffect(() => {
-    setAccepted(readConsent() === "accepted");
-  }, []);
+    // Cet appareil d'abord ; à défaut, ce que le compte porte. L'interrupteur
+    // montre donc le bon état sur une machine où l'on vient d'arriver, au lieu
+    // d'annoncer « éteint » à quelqu'un qui a dit oui ailleurs.
+    const local = readConsent();
+    setAccepted((local ?? resolveAnalyticsConsent(user?.user_metadata)) === "accepted");
+  }, [user]);
 
   const toggle = (next: boolean) => {
+    const consent = next ? "accepted" : "declined";
     setAccepted(next);
     // `writeConsent` prévient PostHog dans la foulée (CONSENT_CHANGED_EVENT) :
     // couper ici coupe la mesure tout de suite, sans rechargement.
-    writeConsent(next ? "accepted" : "declined");
+    writeConsent(consent);
+    void updateUserMetadata({ [ANALYTICS_CONSENT_META_KEY]: consent }).catch(
+      (e: unknown) => console.error("[analytics] consentement non enregistré:", e)
+    );
   };
 
   return (

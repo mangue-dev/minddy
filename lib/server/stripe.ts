@@ -175,6 +175,43 @@ export function coerceStripePlanId(value: unknown): BillingPlanId | null {
   return coerceBillingPlanId(value);
 }
 
+/**
+ * Une erreur de Stripe, avec ce que Stripe en dit — pas seulement sa phrase.
+ *
+ * Le message seul ne se relit pas : `code` et `param` sont ce qui permet de
+ * distinguer « ce client n'existe pas » d'une panne, et de réparer plutôt que
+ * de rendre un 500. Cf. `isMissingCustomerError`.
+ */
+export class StripeApiError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+    readonly param: string | null,
+    readonly status: number
+  ) {
+    super(message);
+    this.name = "StripeApiError";
+  }
+}
+
+/**
+ * L'identifiant de client qu'on garde ne désigne-t-il plus rien ?
+ *
+ * **Ça arrive pour de vrai, et pas seulement en développement.** Un client
+ * supprimé depuis le tableau de bord Stripe, une clé qui change de compte
+ * Stripe (test → autre test, test → live) : l'identifiant reste écrit chez nous
+ * et ne vaut plus rien chez eux. Vu en local avec un `cus_…` d'un ancien compte
+ * de test — la page de facturation rendait un 500 sur un simple clic « passer
+ * au plan supérieur », alors que le geste juste est de refaire un client.
+ */
+export function isMissingCustomerError(error: unknown): boolean {
+  return (
+    error instanceof StripeApiError &&
+    error.code === "resource_missing" &&
+    (error.param === "customer" || /No such customer/i.test(error.message))
+  );
+}
+
 async function stripeRequest<T>(
   path: string,
   body?: URLSearchParams,
@@ -190,9 +227,16 @@ async function stripeRequest<T>(
     body: body?.toString(),
   });
 
-  const data = (await response.json()) as T & { error?: { message?: string } };
+  const data = (await response.json()) as T & {
+    error?: { message?: string; code?: string; param?: string };
+  };
   if (!response.ok) {
-    throw new Error(data.error?.message || `Stripe request failed: ${path}`);
+    throw new StripeApiError(
+      data.error?.message || `Stripe request failed: ${path}`,
+      data.error?.code ?? null,
+      data.error?.param ?? null,
+      response.status
+    );
   }
   return data as T;
 }

@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { toast } from "mangue-ui";
+import { cn, toast } from "mangue-ui";
 import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type {
@@ -29,6 +29,7 @@ import { issueComparator } from "@/lib/view-filter";
 import { resolveRelations } from "@/lib/relation-constants";
 import { displayRank, dragBundle, planBoardMove } from "@/lib/board-drag";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import { BOARD_FADE_RAMP, BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
@@ -267,7 +268,10 @@ export function GlobalKanbanBoard({
 
   // Fade the left/right edges of the board while more columns lie off-screen
   // — same affordance as the project board.
-  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>("x");
+  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>(
+    "x",
+    BOARD_FADE_RAMP
+  );
 
   // Le fondu des bords et le lasso veulent le même nœud. Fusion mémoïsée : une
   // nouvelle identité à chaque rendu les ferait détacher puis rattacher.
@@ -367,7 +371,7 @@ export function GlobalKanbanBoard({
         onScroll={scrollProps.onScroll}
         onPointerDown={onMarqueePointerDown}
         style={scrollProps.style}
-        className="flex h-full min-h-0 gap-3 overflow-x-auto px-4 snap-x snap-mandatory desktop:snap-none desktop:px-6"
+        className={cn("h-full min-h-0", BOARD_SCROLLER_CLASS)}
       >
         {columns.map(({ status, items }) => (
           <GlobalKanbanColumn
