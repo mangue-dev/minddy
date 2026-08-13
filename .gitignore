@@ -33,3 +33,7 @@ supabase/.temp/
 
 # bundle du harness de la microVM (MIN-224) — reconstruit au prebuild
 /.agent-vm/
+
+# bundle de la projection markdown des pages (MIN-295) — reconstruit au prebuild,
+# au predev, et par le globalSetup de vitest
+/.pages-md/

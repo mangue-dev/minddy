@@ -79,21 +79,33 @@ const nextConfig = {
     optimizePackageImports: ["radix-ui"],
   },
   /**
-   * Le bundle du harness de la microVM (MIN-224), embarqué dans les fonctions.
+   * LES DEUX BUNDLES ESBUILD DU DÉPÔT, embarqués dans les fonctions.
    *
-   * Il est produit par `prebuild` (`scripts/build-agent-vm.mjs`) et LU au runtime
-   * par `fs` avant d'être écrit dans la VM : le traceur de Next, qui suit les
-   * imports, ne peut pas le voir passer — un fichier lu par chemin n'est pas une
-   * arête du graphe. Sans cette ligne, la fonction déploie sans lui et chaque run
-   * `loop_in_vm` échoue sur un ENOENT.
+   * Tous deux sont produits par `prebuild` et LUS PAR CHEMIN à l'exécution — l'un
+   * par `fs`, l'autre par `require`. Le traceur de Next suit les IMPORTS : un
+   * fichier lu par chemin n'est pas une arête du graphe, et il ne peut donc pas
+   * le voir passer. Sans ces lignes, la fonction déploie sans eux.
    *
-   * Le motif couvre toutes les routes d'API : le harnais est écrit depuis le
-   * chemin de LANCEMENT comme depuis le CRON de drain, et lister les deux à la
+   * `.agent-vm/` (MIN-224) — le harness de la microVM, écrit dans la VM au
+   * démarrage de chaque tour. Absent, chaque run `loop_in_vm` échoue sur un
+   * ENOENT. Le motif couvre toutes les routes d'API : le harnais est écrit depuis
+   * le chemin de LANCEMENT comme depuis le CRON de drain, et lister les deux à la
    * main ferait qu'un troisième appelant, un jour, découvrirait le problème en
    * production.
+   *
+   * `.pages-md/` (MIN-295) — la projection markdown des pages, sortie du bundler
+   * de Next parce que celui-ci substitue `typeof window` → `"undefined"` et
+   * réduit ainsi `elementFromString` de tiptap à un `throw` inconditionnel (voir
+   * scripts/build-pages-md.mjs, qui porte la mesure). Ici le motif est `/**`, et
+   * pas `/api/**` : la projection est appelée depuis les routes d'API, mais aussi
+   * depuis l'export, la recherche et les server actions de pages — c'est-à-dire
+   * depuis des routes de page. Restreindre le motif reviendrait à tenir cette
+   * liste à la main, pour économiser un fichier que Vercel mutualise de toute
+   * façon entre les traces.
    */
   outputFileTracingIncludes: {
     "/api/**": [".agent-vm/**"],
+    "/**": [".pages-md/**"],
   },
   // Bridge Vercel's server-only VERCEL_ENV into a public var so client
   // components (e.g. the sidebar env badge) can tell prod/preview/local apart.

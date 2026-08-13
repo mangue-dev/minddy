@@ -3,10 +3,12 @@
   "version": "0.9.2",
   "private": true,
   "scripts": {
+    "predev": "npm run build:pages-md",
     "dev": "NODE_OPTIONS=--max-http-header-size=32768 next dev",
-    "prebuild": "npm run build:agent-vm",
+    "prebuild": "npm run build:agent-vm && npm run build:pages-md",
     "build": "next build",
     "build:agent-vm": "node scripts/build-agent-vm.mjs",
+    "build:pages-md": "node scripts/build-pages-md.mjs",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

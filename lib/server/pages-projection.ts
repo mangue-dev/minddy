@@ -1,5 +1,8 @@
 import "server-only";
 
+import { createRequire } from "node:module";
+import path from "node:path";
+
 import type { JSONContent } from "@tiptap/core";
 
 /**
@@ -41,6 +44,14 @@ import type { JSONContent } from "@tiptap/core";
  * toute écriture de page, sur les quatre surfaces à la fois.
  * `lib/server/pages-projection-loadable.test.ts` rejoue la condition exacte :
  * s'il tombe, c'est la version de jsdom qu'il faut redescendre, pas le test.
+ *
+ * ⚠️ **Et `lib/pages-markdown.ts` n'est PAS importé — il est chargé par chemin,
+ * depuis un bundle esbuild à part.** Deuxième piège de build, cousin du premier
+ * (MIN-295) : le bundler de Next substitue `typeof window` → `"undefined"` côté
+ * serveur, ce qui réduit `elementFromString` de `@tiptap/core` à un `throw`
+ * inconditionnel. Le DOM installé plus bas n'y peut rien — la décision est prise
+ * à la COMPILATION, avant que jsdom n'existe. Voir `scripts/build-pages-md.mjs`,
+ * qui porte la mesure et les deux routes écartées.
  */
 
 let installing: Promise<void> | null = null;
@@ -99,24 +110,71 @@ export function ensurePageDom(): Promise<void> {
   return installing;
 }
 
+/* ── La projection, chargée par CHEMIN ────────────────────────────────── */
+
+/** Ce que le bundle expose — la surface de `lib/pages-markdown.ts`, à la lettre. */
+type PagesMarkdown = typeof import("@/lib/pages-markdown");
+
+/**
+ * Où le bundle est lu. Produit par `prebuild` et `predev`
+ * (`scripts/build-pages-md.mjs`), embarqué dans les fonctions par
+ * `outputFileTracingIncludes` (next.config.mjs), et construit avant la suite par
+ * le `globalSetup` de vitest.
+ */
+const BUNDLE_PATH = path.join(process.cwd(), ".pages-md", "main.js");
+
+/**
+ * `createRequire` plutôt qu'un `import()` : c'est le seul appel que le bundler
+ * ne peut pas suivre. Un `import()` d'un chemin calculé le ferait quand même
+ * essayer, et surtout un `import()` de ce module-ci le ramènerait dans le
+ * graphe — donc sous la substitution qu'on cherche précisément à fuir.
+ */
+const requireFromRepo = createRequire(path.join(process.cwd(), "noop.js"));
+
+let bundle: PagesMarkdown | null = null;
+
+/**
+ * Le bundle chargé, une fois par instance de fonction.
+ *
+ * **Pas de repli sur `import("@/lib/pages-markdown")` si le fichier manque**, et
+ * c'est le cœur du correctif : ce repli est exactement le code mort de MIN-295.
+ * Il rendrait la panne silencieuse au premier oubli de câblage — un `prebuild`
+ * qui saute, une ligne de `outputFileTracingIncludes` perdue dans un refactor —
+ * et on reviendrait à un wiki qu'aucun agent ne peut écrire, sans rien dans les
+ * logs qui le dise. Une erreur qui nomme le script à lancer vaut mieux.
+ */
+function pagesMarkdown(): PagesMarkdown {
+  if (bundle) return bundle;
+  try {
+    bundle = requireFromRepo(BUNDLE_PATH) as PagesMarkdown;
+  } catch (err) {
+    throw new Error(
+      `bundle de la projection des pages introuvable à ${BUNDLE_PATH} — lancer \`npm run build:pages-md\` (câblé en \`prebuild\` et \`predev\`) : ${(err as Error).message}`
+    );
+  }
+  return bundle;
+}
+
+/** Le DOM posé ET la projection chargée — le préalable de toutes les surfaces. */
+async function projection(): Promise<PagesMarkdown> {
+  await ensurePageDom();
+  return pagesMarkdown();
+}
+
 /** La page entière en markdown, en-tête (titre + icône) compris. */
 export async function pageToMarkdownServer(page: {
   title: string;
   icon: string | null;
   content: JSONContent | null;
 }): Promise<string> {
-  await ensurePageDom();
-  const { pageToMarkdown } = await import("@/lib/pages-markdown");
-  return pageToMarkdown(page);
+  return (await projection()).pageToMarkdown(page);
 }
 
 /** Le corps seul en markdown — pour une surface qui a déjà le titre. */
 export async function pageBodyToMarkdownServer(
   content: JSONContent | null
 ): Promise<string> {
-  await ensurePageDom();
-  const { bodyToMarkdown } = await import("@/lib/pages-markdown");
-  return bodyToMarkdown(content);
+  return (await projection()).bodyToMarkdown(content);
 }
 
 /** Le markdown relu en page : titre, icône, corps ProseMirror. */
@@ -125,16 +183,12 @@ export async function markdownToPageServer(markdown: string): Promise<{
   icon: string | null;
   content: JSONContent | null;
 }> {
-  await ensurePageDom();
-  const { markdownToPage } = await import("@/lib/pages-markdown");
-  return markdownToPage(markdown);
+  return (await projection()).markdownToPage(markdown);
 }
 
 /** Le corps seul, relu depuis du markdown. */
 export async function bodyFromMarkdownServer(
   markdown: string
 ): Promise<JSONContent> {
-  await ensurePageDom();
-  const { bodyFromMarkdown } = await import("@/lib/pages-markdown");
-  return bodyFromMarkdown(markdown);
+  return (await projection()).bodyFromMarkdown(markdown);
 }
