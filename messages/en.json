@@ -1179,7 +1179,8 @@
     "deniedHint": "Notifications are blocked for minddy in this browser. Re-allow them in its site settings; asking again from here won't reopen the prompt.",
     "unsupportedHint": "This browser doesn't support push notifications.",
     "notConfiguredHint": "Push notifications aren't configured on this server.",
-    "iosInstallHint": "On iPhone and iPad, add minddy to your home screen first: tap Share, then “Add to Home Screen”. Notifications only work from the installed app."
+    "iosInstallHint": "On iPhone and iPad, add minddy to your home screen first: tap Share, then “Add to Home Screen”. Notifications only work from the installed app.",
+    "desktopHint": "The desktop app notifies you natively while it's open, and stops when you quit it. To be notified either way, keep minddy open in your browser: push works there."
   },
   "Issue": {
     "entity": "Issue",

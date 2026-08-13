@@ -22,6 +22,7 @@ import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { NewVersionBanner } from "@/components/new-version-banner";
 import { PushServiceWorker } from "@/components/push-service-worker";
+import { DesktopNotifications } from "@/components/desktop-notifications";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 
@@ -82,6 +83,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             <AnalyticsProjectGroup />
                             <NewVersionBanner />
                             <PushServiceWorker />
+                            {/* Le pendant natif dans l'app de bureau (MIN-291) :
+                                le pont temps réel de MIN-89 fournit déjà tout,
+                                il n'y a que les bannières à émettre. */}
+                            <DesktopNotifications />
                             {/* Suspense obligatoire : il lit `useSearchParams`,
                                 parce que la cible d'une notification vit dans la
                                 query (`?issue=…`). */}

@@ -29,6 +29,7 @@ import {
   unsubscribeThisDevice,
 } from "@/lib/push/client";
 import { trackEvent } from "@/lib/analytics";
+import { isDesktop } from "@/lib/desktop/bridge";
 import { isMobileDeviceLabel } from "@/lib/device-label";
 import {
   SettingsEmpty,
@@ -70,6 +71,8 @@ export function AccountPushDevicesSection() {
     NotificationPermission | "unsupported" | null
   >(null);
   const [needsInstall, setNeedsInstall] = useState(false);
+  /** Comme les capacités du navigateur, lue après le montage (voir l'effet). */
+  const [inDesktopApp, setInDesktopApp] = useState(false);
   const [thisEndpoint, setThisEndpoint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
@@ -80,6 +83,7 @@ export function AccountPushDevicesSection() {
   useEffect(() => {
     setPermission(pushPermission());
     setNeedsInstall(isIOS() && !isStandalone());
+    setInDesktopApp(isDesktop());
     if (isPushSupported()) void currentEndpoint().then(setThisEndpoint);
   }, []);
 
@@ -219,13 +223,19 @@ export function AccountPushDevicesSection() {
   // ailleurs on met l'indice à sa place : dire pourquoi vaut mieux qu'offrir un
   // geste qui échouera.
   const blocked =
-    permission === "unsupported"
-      ? t("unsupportedHint")
-      : permission === "denied"
-        ? t("deniedHint")
-        : needsInstall
-          ? t("iosInstallHint")
-          : null;
+    // L'app de bureau (MIN-291) : Electron n'embarque pas l'API Push, donc
+    // `permission` y vaut `unsupported` — mais « ce navigateur ne gère pas les
+    // notifications push » se lit comme une panne, alors que c'est un
+    // renoncement assumé, et qu'il a une issue (garder le web ouvert). Le dire.
+    inDesktopApp
+      ? t("desktopHint")
+      : permission === "unsupported"
+        ? t("unsupportedHint")
+        : permission === "denied"
+          ? t("deniedHint")
+          : needsInstall
+            ? t("iosInstallHint")
+            : null;
 
   return (
     <>

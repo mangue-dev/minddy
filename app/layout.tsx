@@ -7,6 +7,7 @@ import { ThemeProvider } from "mangue-ui/components/theme-provider";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/cookie-banner";
+import { DesktopChrome } from "@/components/desktop-chrome";
 import { LazyToaster } from "@/components/lazy-toaster";
 import { PostHogInit } from "@/components/posthog-init";
 import { ThemeInitScript } from "@/components/theme-init-script";
@@ -147,6 +148,10 @@ export default async function RootLayout({
         <ThemeProvider defaultTheme={defaultTheme}>
           <NextIntlClientProvider messages={clientMessages}>
             {children}
+            {/* Marque le document dans l'app de bureau (MIN-291) : c'est ce que
+                lisent les zones de déplacement de la fenêtre, qui n'ont pas
+                d'autre source possible que la page. Ne rend rien. */}
+            <DesktopChrome />
             <LazyToaster />
             <CookieBanner />
             {/* PostHog (MIN-78). Monté ici, donc actif PARTOUT — y compris sur

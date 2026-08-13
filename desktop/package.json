@@ -1,0 +1,15 @@
+{
+  "name": "minddy-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "La coquille macOS de minddy — une fenêtre sur www.minddy.app",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "node ../scripts/build-desktop.mjs",
+    "typecheck": "tsc --noEmit",
+    "start": "npm run build && electron ."
+  },
+  "devDependencies": {
+    "electron": "^43.4.0"
+  }
+}

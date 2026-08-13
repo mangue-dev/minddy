@@ -1644,3 +1644,67 @@ nav[aria-label="Navigation"]
     background: #fff;
   }
 }
+
+/* ── App de bureau : par où se déplace la fenêtre ─────────────────────────────
+   MIN-291. La coquille masque la barre de titre native (`hiddenInset`) pour que
+   minddy n'ait pas une bande grise au-dessus de son propre en-tête. En échange,
+   macOS ne sait plus par où saisir la fenêtre : `-webkit-app-region` est une
+   propriété CSS, donc la réponse ne peut venir que d'ici. Sans ces règles, la
+   fenêtre ne se déplace pas DU TOUT.
+
+   L'attribut est posé sur <html> par components/desktop-chrome.tsx, uniquement
+   quand le pont existe. Dans un navigateur, rien de ce bloc ne s'applique. */
+
+/* L'en-tête de l'app — `.app-shell > div > header`, donc l'en-tête DU SHELL et
+   pas un <header> de page (ceux-là vivent dans <main>). C'est la grande zone
+   vide entre le fil d'Ariane et les actions : la prise naturelle. */
+html[data-desktop-app] .app-shell > div > header {
+  -webkit-app-region: drag;
+}
+
+/* … sauf ce sur quoi on clique. Une zone `drag` avale l'événement : sans cette
+   exception, la palette, les compteurs et le bouton « Nouveau » deviendraient
+   des poignées de fenêtre. */
+html[data-desktop-app] .app-shell > div > header :is(a, button, input, select, textarea, [role="button"], [role="menuitem"], [role="combobox"], [tabindex]) {
+  -webkit-app-region: no-drag;
+}
+
+/* Les feux de circulation sont dessinés PAR-DESSUS la page, en haut à gauche.
+   Plutôt que de descendre la colonne pour leur faire une bande à eux — ce qui
+   pousse toute la barre latérale vers le bas et laisse voir une couture d'une
+   autre couleur au-dessus d'elle —, ils se posent DANS la ligne de marque, à la
+   place de la marque, qui passe à droite. La ligne garde ses 60 px et son fond :
+   rien ne bouge, il n'y a rien de neuf à l'écran, seulement une place échangée.
+
+   `data-window-buttons` est posé par components/app-sidebar.tsx quand les
+   boutons sont là. En mode RAIL ils sont retirés (56 px ne les tiennent pas) et
+   l'attribut disparaît avec eux : la marque revient à gauche, à sa place.
+   `padding-left` = la position des boutons (desktop/src/main.ts, 19 px) plus
+   leur largeur — les deux chiffres se lisent ensemble. */
+html[data-desktop-app] .sidebar-brand-row[data-window-buttons] {
+  padding-left: 78px;
+  justify-content: flex-end;
+}
+
+/* La ligne de marque est aussi la prise de la fenêtre du côté de la barre
+   latérale : c'est la seule bande horizontale libre qu'elle ait. */
+html[data-desktop-app] .sidebar-brand-row {
+  -webkit-app-region: drag;
+}
+html[data-desktop-app] .sidebar-brand-row :is(a, button, [role="button"], [tabindex]) {
+  -webkit-app-region: no-drag;
+}
+
+/* Les écrans d'authentification n'ont pas d'en-tête : sans cette bande, on ne
+   peut pas déplacer la fenêtre tant qu'on n'est pas connecté — soit exactement
+   au moment où on découvre l'app. Le bandeau est transparent, haut de la barre
+   de titre qu'on a retirée, et il ne recouvre rien de cliquable : dans l'app, le
+   logo de la page de connexion n'est plus un lien (il ne mènerait qu'ici). */
+html[data-desktop-app] .auth-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 38px;
+  z-index: 40;
+  -webkit-app-region: drag;
+}

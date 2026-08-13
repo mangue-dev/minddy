@@ -26,7 +26,10 @@ import {
   SmartAssignAvatar,
 } from "@/components/actor-avatars";
 import { UserAvatar } from "@/components/user-avatar";
-import { mcpActorLabel } from "@/lib/mcp-agents";
+import {
+  notificationActor,
+  notificationTitle,
+} from "@/lib/notification-line";
 import { useNotifications } from "@/lib/use-notifications";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
 import {
@@ -156,6 +159,17 @@ export default function InboxPage() {
   // Le seul emprunt à la timeline : le repli d'une clé MCP sans nom, qui se dit
   // au même endroit des deux côtés.
   const tTimeline = useTranslations("Timeline");
+  // Les mots que la ligne emprunte, rassemblés une fois : la formulation, elle,
+  // vit dans lib/notification-line.ts — la même qu'une bannière poussée et
+  // qu'une notification native de l'app de bureau (MIN-291).
+  const labels = {
+    someone: t("someone"),
+    mcpFallback: tTimeline("mcpFallback"),
+    somePageFallback: t("somePageFallback"),
+    someIssueFallback: t("someIssueFallback", {
+      entity: tIssue("entity").toLowerCase(),
+    }),
+  };
   const format = useFormatter();
   // Référence de temps stable pour les horodatages relatifs, rafraîchie
   // chaque minute — sans ça next-intl retombe sur Date.now() et prévient.
@@ -237,42 +251,17 @@ export default function InboxPage() {
   };
 
   /** Ligne 1 : ce dont on parle — réf + titre du ticket, ou nom de la cible. */
-  const titleOf = (n: MyNotification): string => {
-    if (n.objective_id) return n.objective_name ?? "";
-    if (n.feedback_post_id) return n.feedback_title ?? "";
-    // Une routine (MIN-185) : son titre EST la ligne — elle n'a pas de ticket
-    // à nommer, et le repli « un ticket » mentirait sur ce qui s'est passé.
-    if (n.routine_id) return n.routine_title ?? "";
-    // Une pull request : son titre, précédé de son numéro par la référence
-    // ci-dessous — elle n'a pas forcément de ticket à nommer.
-    if (n.pull_request_id) return n.pull_request_title ?? "";
-    // Une PAGE du wiki (MIN-278) : son titre, et le repli explicite quand elle
-    // n'en a pas — une ligne d'inbox sans titre ne dit plus de quoi on parle.
-    if (n.page_id) return n.page_title || t("somePageFallback");
-    return (
-      n.issue_title ??
-      t("someIssueFallback", { entity: tIssue("entity").toLowerCase() })
-    );
-  };
+  const titleOf = (n: MyNotification): string => notificationTitle(n, labels);
 
   /** Qui invite : son nom, à défaut son adresse, à défaut « Quelqu'un ». */
   const inviterOf = (inv: MyInvitation): string =>
     inv.inviter_name || inv.inviter_email || t("someone");
 
-  /** Le nom de l'acteur, dans les mêmes termes que la timeline : une action
-   *  passée par le MCP est celle de l'AGENT, une affectation automatique celle
-   *  de Smart Assign — jamais « Quelqu'un », qui ne renseigne personne. */
-  const actorOf = (n: MyNotification): string => {
-    if (n.via_smart_assign) return "Smart Assign";
-    if (n.via_mcp) {
-      return mcpActorLabel(n.api_key_agent, n.api_key_name, tTimeline("mcpFallback"));
-    }
-    return n.actor_name ?? t("someone");
-  };
-
   /** Ligne 2 : qui a fait quoi — complétée par l'extrait du commentaire. */
   const sentenceOf = (n: MyNotification): string => {
-    const sentence = t(NOTIFICATION_LINE_KEYS[n.type], { actor: actorOf(n) });
+    const sentence = t(NOTIFICATION_LINE_KEYS[n.type], {
+      actor: notificationActor(n, labels),
+    });
     return n.comment_excerpt ? `${sentence} : ${n.comment_excerpt}` : sentence;
   };
 

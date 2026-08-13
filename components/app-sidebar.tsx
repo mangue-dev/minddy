@@ -9,6 +9,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { APP_VERSION } from "@/lib/app-version";
+import { useWindowButtons } from "@/lib/use-window-buttons";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -623,8 +624,13 @@ export function AppSidebar({
   const [focusWithin, setFocusWithin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** La barre elle-même, pour savoir si le pointeur y revient (cf. plus bas). */
+  const railRef = useRef<HTMLElement>(null);
+  /** Le guetteur du retour de pointeur, et de quoi le retirer. */
+  const returnWatcher = useRef<(() => void) | null>(null);
   useEffect(() => () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
+    returnWatcher.current?.();
   }, []);
 
   // Ceinture et bretelles : la navigation démonte la ligne qui avait le focus,
@@ -651,6 +657,10 @@ export function AppSidebar({
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
+    // Le guetteur de pointeur va avec : quitter le mode rail alors qu'il attend
+    // le retour du pointeur le laisserait branché sur une barre qui n'a plus
+    // rien à refermer.
+    returnWatcher.current?.();
     setHovered(false);
     setMenuOpen(false);
   }, [overlay]);
@@ -662,12 +672,75 @@ export function AppSidebar({
     }
     setHovered(true);
   };
-  const closeRail = () => {
+
+  /**
+   * Le pointeur sort-il de la barre PAR LES BOUTONS macOS ? (MIN-291)
+   *
+   * Ils sont natifs : dessinés par-dessus la page, ils ne reçoivent aucun
+   * événement du DOM et n'en émettent aucun. Aller les cliquer depuis un rail
+   * déplié, c'est donc SORTIR de la barre du point de vue de Chromium — le rail
+   * se referme, les boutons disparaissent avec lui, et ils deviennent
+   * impossibles à atteindre. Le pointeur n'aura même pas fini son geste.
+   *
+   * On reconnaît cette sortie à l'endroit où elle a lieu, faute de mieux : le
+   * coin haut-gauche, celui-là même que la ligne de marque leur réserve. La
+   * boîte reprend `trafficLightPosition` (desktop/src/main.ts) et le
+   * `padding-left` de `.sidebar-brand-row` (app/globals.css) — trois endroits,
+   * un seul objet, et il faut les lire ensemble.
+   */
+  const leavesThroughWindowButtons = (e: { clientX: number; clientY: number }) =>
+    windowButtons && e.clientX <= 78 && e.clientY <= 60;
+
+  /**
+   * Le pointeur est parti sur les boutons : on ne referme pas, et on attend de
+   * le REVOIR pour trancher. Tant qu'il est sur eux, la page ne reçoit rien ;
+   * son premier mouvement de retour dit s'il rentre dans la barre (elle reprend
+   * la main) ou s'il est ailleurs (on referme). Sans ce guetteur, le rail
+   * resterait ouvert indéfiniment — et c'est exactement le défaut que les
+   * commentaires ci-dessus racontent, en pire.
+   */
+  const watchPointerReturn = () => {
+    returnWatcher.current?.();
+    const onMove = (event: PointerEvent) => {
+      returnWatcher.current = null;
+      if (railRef.current?.contains(event.target as Node)) return;
+      closeRail();
+    };
+    document.addEventListener("pointermove", onMove, { once: true });
+    returnWatcher.current = () => {
+      document.removeEventListener("pointermove", onMove);
+      returnWatcher.current = null;
+    };
+  };
+
+  const closeRail = (e?: { clientX: number; clientY: number }) => {
+    if (e && leavesThroughWindowButtons(e)) {
+      watchPointerReturn();
+      return;
+    }
     if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => setHovered(false), RAIL_CLOSE_DELAY_MS);
   };
 
   const collapsed = overlay && !(hovered || focusWithin || menuOpen);
+
+  /**
+   * Les boutons macOS, dans l'app de bureau (MIN-291). Ils se posent sur la
+   * ligne de marque, à la place de la marque — et on les retire quand la barre
+   * est REPLIÉE : 56 px ne tiennent pas trois boutons plus la marque, et les
+   * laisser déborderait sur la navigation.
+   *
+   * C'est `collapsed` qui décide, pas `overlay` : la barre dépliée PAR-DESSUS
+   * la secondaire est une barre dépliée comme une autre, elle a ses 256 px et
+   * doit donc reprendre les boutons. Le survol du rail les ramène, le quitter
+   * les remet de côté — c'est le même geste que celui qui rend la navigation
+   * lisible, et il vaut pour tout ce que la ligne de marque contient.
+   *
+   * Ce qu'on rend, en revanche, suit ce que les boutons font VRAIMENT — le
+   * plein écran les emmène ailleurs sans que la page en sache rien. Voir
+   * lib/use-window-buttons.ts.
+   */
+  const windowButtons = useWindowButtons(!collapsed);
 
   // Deux largeurs, et c'est tout le mécanisme : celle que la barre OCCUPE dans
   // le flux, et celle qu'elle MESURE. En mode rail la première reste au rail
@@ -697,6 +770,7 @@ export function AppSidebar({
         transition={shellTransition}
       />
       <motion.aside
+        ref={railRef}
         data-collapsed={collapsed}
         initial={{ width: asideWidth }}
         animate={{ width: asideWidth }}
@@ -708,7 +782,9 @@ export function AppSidebar({
         // Le moindre mouvement rattrape cet état, au lieu d'attendre une sortie
         // et une rentrée.
         onPointerMove={overlay ? openRail : undefined}
-        onPointerLeave={overlay ? closeRail : undefined}
+        // L'ÉVÉNEMENT est passé, et il compte : c'est l'endroit de la sortie
+        // qui dit si le pointeur part sur les boutons macOS (cf. closeRail).
+        onPointerLeave={overlay ? (e) => closeRail(e) : undefined}
         onFocusCapture={
           overlay
             ? (e) => {
@@ -755,10 +831,16 @@ export function AppSidebar({
             coupe — elle ne se recentre pas et ne bouge donc jamais.
             Même hauteur et même bordure basse que le header et que la ligne de
             titre de la sidebar secondaire : une seule ligne horizontale
-            traverse l'application, d'un bord à l'autre. */}
+            traverse l'application, d'un bord à l'autre.
+
+            Dans l'app de bureau, c'est CETTE ligne qui accueille les boutons
+            macOS, à la place de la marque, qui passe à droite (MIN-291) —
+            `sidebar-brand-row` est la prise de app/globals.css, et
+            `data-window-buttons` lui dit si les boutons sont là. */}
         <div
+          data-window-buttons={windowButtons ? "" : undefined}
           className={cn(
-            "flex h-[60px] shrink-0 items-center border-b border-border",
+            "sidebar-brand-row flex h-[60px] shrink-0 items-center border-b border-border",
             GUTTER,
           )}
         >

@@ -11,6 +11,9 @@ import {
 } from "react";
 import { getSupabase } from "./supabase";
 import { sanitizeInternalRedirectPath } from "./auth-redirect";
+import { getDesktopBridge } from "./desktop/bridge";
+import { DESKTOP_CALLBACK_FLAG } from "./desktop/config";
+import type { DesktopAuthLink } from "./desktop/auth-link";
 import { clearPersistedQueryCache } from "./query-provider";
 import { useAnalytics } from "./use-analytics";
 import type { User, Session } from "@supabase/supabase-js";
@@ -30,6 +33,12 @@ interface AuthContextValue {
     provider: "google" | "github",
     redirectAfter?: string
   ) => Promise<void>;
+  /**
+   * Termine une connexion revenue par deep link dans l'app de bureau (MIN-291),
+   * et rend la destination où aller ensuite. C'est ICI que le code est échangé,
+   * et nulle part ailleurs : le vérificateur PKCE est dans ce stockage-ci.
+   */
+  completeDesktopSignIn: (link: DesktopAuthLink) => Promise<string>;
   signOut: () => Promise<void>;
   updateUser: (attributes: {
     password?: string;
@@ -163,6 +172,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUpWithPassword = useCallback(
     async (email: string, password: string, options?: { fullName?: string }) => {
+      // Le lien de confirmation s'ouvrira dans le navigateur PAR DÉFAUT, quoi
+      // qu'on fasse — un mail ne s'ouvre pas dans Electron. Marqué `desktop=1`,
+      // le callback lui renverra le jeton au lieu de le consommer, et c'est
+      // l'app qui aura la session (MIN-291). Sans ce marqueur, s'inscrire depuis
+      // l'app connecterait le navigateur et laisserait l'app sur son écran de
+      // connexion.
+      const confirmUrl = new URL(`${window.location.origin}/auth/callback`);
+      if (getDesktopBridge()) confirmUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
       const { data, error } = await getSupabase().auth.signUp({
         email,
         password,
@@ -173,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // vers la leur, pas vers la prod. GoTrue ne la retient que si elle
           // figure dans l'allowlist « Redirect URLs » ; sinon il retombe sur le
           // Site URL, et le lien de confirmation part vers le mauvais domaine.
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: confirmUrl.toString(),
           ...(options?.fullName ? { data: { full_name: options.fullName } } : {}),
         },
       });
@@ -185,19 +202,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithOAuth = useCallback(
     async (provider: "google" | "github", redirectAfter?: string) => {
+      const desktop = getDesktopBridge();
       const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
       const safeRedirect = sanitizeInternalRedirectPath(redirectAfter);
       if (safeRedirect !== "/home") {
         callbackUrl.searchParams.set("next", safeRedirect);
       }
-      const { error } = await getSupabase().auth.signInWithOAuth({
+      // Le marqueur voyage jusqu'au provider et revient avec lui : c'est la
+      // SEULE chose qui dira au callback que la session à ouvrir n'est pas celle
+      // du navigateur qui l'appelle (MIN-291).
+      if (desktop) callbackUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
+
+      const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider,
-        options: { redirectTo: callbackUrl.toString() },
+        options: {
+          redirectTo: callbackUrl.toString(),
+          // Google REFUSE OAuth depuis un navigateur embarqué. Dans l'app, on ne
+          // navigue donc pas : on demande l'URL, et le navigateur du système
+          // fait le tour. `skipBrowserRedirect` est ce qui rend cette URL au
+          // lieu de nous y envoyer.
+          ...(desktop ? { skipBrowserRedirect: true } : {}),
+        },
       });
       if (error) throw error;
+      if (desktop && data?.url) desktop.openExternal(data.url);
     },
     []
   );
+
+  const completeDesktopSignIn = useCallback(async (link: DesktopAuthLink) => {
+    const supabase = getSupabase();
+    if (link.kind === "error") throw new Error(link.error);
+    if (link.kind === "code") {
+      const { error } = await supabase.auth.exchangeCodeForSession(link.code);
+      if (error) throw error;
+    } else {
+      // Le lien mail n'a PAS été consommé par le callback : il l'a transmis tel
+      // quel, précisément pour que la session naisse ici.
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: link.tokenHash,
+        type: link.type,
+      });
+      if (error) throw error;
+    }
+    return link.next;
+  }, []);
 
   const signOut = useCallback(async () => {
     // `scope: "local"` — SANS lui, supabase-js part en portée GLOBALE et révoque
@@ -324,6 +373,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithPassword,
         signUpWithPassword,
         signInWithOAuth,
+        completeDesktopSignIn,
         signOut,
         updateUser,
         updateUserMetadata,

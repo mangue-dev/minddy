@@ -13,6 +13,7 @@ import type { Locale } from "@/i18n/config";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { AuthShader } from "@/components/auth-shader";
 import { useAuth } from "@/lib/auth-context";
+import { isDesktop } from "@/lib/desktop/bridge";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { useAnalytics } from "@/lib/use-analytics";
 import { errorReason } from "@/lib/analytics-sanitize";
@@ -39,6 +40,35 @@ function GoogleGlyph() {
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
       />
     </svg>
+  );
+}
+
+/** La marque, avec ou sans lien vers le site public. */
+function LogoMark({ asLink }: { asLink: boolean }) {
+  const mark = (
+    <>
+      <MinddyLogo
+        className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])}
+      />
+      <span className="font-display text-lg font-semibold tracking-tight">
+        minddy
+      </span>
+    </>
+  );
+  const className = "inline-flex w-fit items-center gap-2 rounded-sm";
+  return asLink ? (
+    <Link
+      href="/"
+      aria-label="minddy"
+      className={cn(
+        className,
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      )}
+    >
+      {mark}
+    </Link>
+  ) : (
+    <div className={className}>{mark}</div>
   );
 }
 
@@ -90,6 +120,10 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
     authErrorMessages[searchParams.get("error") ?? ""] ?? null
   );
   const [notice, setNotice] = useState<string | null>(null);
+  // Lu APRÈS le montage : `window.minddy` n'existe pas au rendu serveur, et le
+  // supposer ferait diverger l'hydratation.
+  const [inDesktopApp, setInDesktopApp] = useState(false);
+  useEffect(() => setInDesktopApp(isDesktop()), []);
 
   // Une seule tentative de connexion à la fois (email OU provider).
   const busy = loading || oauthPending !== null;
@@ -206,19 +240,11 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
 
       {/* Droite — formulaire d'auth */}
       <div className="relative flex flex-col p-8">
-        {/* Logo — coin haut-gauche du panneau, ramène à l'accueil */}
-        <Link
-          href="/"
-          aria-label="minddy"
-          className="inline-flex w-fit items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <MinddyLogo
-            className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])}
-          />
-          <span className="font-display text-lg font-semibold tracking-tight">
-            minddy
-          </span>
-        </Link>
+        {/* Logo — coin haut-gauche du panneau, ramène à l'accueil. Dans l'app de
+            bureau il ne ramène nulle part : le site public n'y a pas de place, et
+            un lien qui rebondirait aussitôt vers ici vaut moins qu'une marque
+            posée (MIN-291). */}
+        <LogoMark asLink={!inDesktopApp} />
 
         <div className="flex flex-1 items-center justify-center">
           {mfaStep === "required" ? (

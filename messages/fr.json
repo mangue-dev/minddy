@@ -1179,7 +1179,8 @@
     "deniedHint": "Les notifications sont bloquées pour minddy dans ce navigateur. Réautorisez-les dans les réglages du site; redemander depuis ici ne rouvrira pas la fenêtre.",
     "unsupportedHint": "Ce navigateur ne gère pas les notifications push.",
     "notConfiguredHint": "Les notifications push ne sont pas configurées sur ce serveur.",
-    "iosInstallHint": "Sur iPhone et iPad, ajoutez d'abord minddy à l'écran d'accueil : bouton Partager, puis « Sur l'écran d'accueil ». Les notifications ne fonctionnent que depuis l'app installée."
+    "iosInstallHint": "Sur iPhone et iPad, ajoutez d'abord minddy à l'écran d'accueil : bouton Partager, puis « Sur l'écran d'accueil ». Les notifications ne fonctionnent que depuis l'app installée.",
+    "desktopHint": "L'app de bureau vous prévient nativement tant qu'elle est ouverte, et se tait dès qu'on la quitte. Pour être prévenu dans tous les cas, gardez minddy ouvert dans votre navigateur : le push y fonctionne."
   },
   "Issue": {
     "entity": "Ticket",

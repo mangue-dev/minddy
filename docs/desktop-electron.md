@@ -28,9 +28,17 @@ Deux prémisses de MIN-285 ne tiennent pas telles quelles. L'une lui retire son
 premier argument, l'autre le rend beaucoup plus constructible qu'il n'en a l'air.
 
 **Le push est une régression, pas un gain.** Electron n'est pas bâti sur Chromium
-mais sur *Chromium Content*, un sous-ensemble qui **n'embarque ni l'API Push ni le
-service de push**. `PushManager` n'existe pas dans un renderer Electron ; le
-`pushManager.subscribe()` de [lib/push/client.ts](../lib/push/client.ts) y échouera.
+mais sur *Chromium Content*, un sous-ensemble qui **n'embarque pas le service de
+push**. Mesuré dans une vraie fenêtre en MIN-291, et la nuance compte : l'API,
+elle, est bien là — `PushManager` existe, `pushManager` est sur le prototype de
+`ServiceWorkerRegistration`, et `/sw.js` s'enregistre normalement. C'est
+`subscribe()` qui échoue, sur `AbortError: Registration failed - push service not
+available`. Conséquence pratique, et elle n'est pas cosmétique :
+`isPushSupported()` ([lib/push/client.ts](../lib/push/client.ts)) rend **`true`**
+dans l'app, donc l'interrupteur des réglages s'y afficherait comme partout et
+échouerait sur une erreur illisible. D'où la branche desktop de
+[account-push-devices-section.tsx](../components/settings/account-push-devices-section.tsx),
+qui dit le renoncement au lieu de laisser essayer.
 Or minddy a déjà le vrai push web depuis MIN-183 — service worker, VAPID, émetteur
 serveur — et il sonne **même quand l'app est fermée**, dans Chrome comme dans
 Safari. Emballer la web app dans Electron ne l'améliore pas : ça le supprime. Les
@@ -105,12 +113,44 @@ Les réglages qui ne se discutent pas :
 - Un suffixe d'user agent (`minddy-desktop/<version>`), pour que le serveur et
   l'UI sachent tous deux qu'on est dans l'app.
 
+**La barre de titre est une décision d'interface, pas un réglage.** Elle est
+masquée (`titleBarStyle: "hidden"`, et non `frame: false` — sans cadre, les
+boutons ne se positionnent plus depuis la même origine et remontent dans le
+coin). Trois conséquences se tiennent ensemble :
+
+- macOS ne sait plus par où saisir la fenêtre. `-webkit-app-region` est du CSS,
+  donc c'est la PAGE qui doit le dire (app/globals.css, section « app de
+  bureau ») : l'en-tête du shell, la ligne de marque, et une bande sur les
+  écrans d'authentification, qui n'ont pas d'en-tête.
+- Les boutons du système n'existent plus d'eux-mêmes : ils s'allument à la main,
+  et se posent **dans la ligne de marque de la barre latérale, à la place de la
+  marque**, qui passe à droite. Pas dans une bande à eux, qui pousserait toute la
+  colonne vers le bas et se trahirait par une couture d'une autre couleur.
+- Barre REPLIÉE (rail), ses 56 px ne les tiennent plus : on les retire, et la
+  marque reprend sa place. Le survol qui déplie le rail les ramène — une barre
+  dépliée par-dessus la secondaire est une barre dépliée comme une autre. Aller
+  les cliquer depuis là revient à SORTIR de la barre du point de vue de
+  Chromium : le rail se refermerait sous le pointeur et les emporterait, d'où le
+  guetteur de `app-sidebar.tsx`, qui reconnaît cette sortie-là à son coin.
+
+**Et en plein écran, on ne les cache jamais.** macOS les emmène en haut de
+l'écran, sous sa propre garde ; les masquer par-dessus retire le seul moyen d'en
+sortir à la souris. La page, elle, doit quand même l'apprendre pour ne pas leur
+garder leur place — d'où deux notions distinctes, ce que la barre DEMANDE et ce
+que les boutons FONT, et un aller-retour par le pont
+([lib/use-window-buttons.ts](../lib/use-window-buttons.ts)).
+
 **Le seul vrai piège est l'authentification.** minddy propose Google et GitHub
-([login-form.tsx](../components/auth/login-form.tsx)), et **Google refuse
-délibérément OAuth depuis un navigateur embarqué** : l'écran « this browser or app
-may not be secure ». Falsifier l'user agent pour passer est fragile et contraire à
-leur politique. Le chemin correct est le même que celui de toutes les apps de
-bureau :
+([login-form.tsx](../components/auth/login-form.tsx)), et la politique de Google
+est de **refuser OAuth depuis un navigateur embarqué** : l'écran « this browser or
+app may not be secure ». La sonde de MIN-290 a nuancé le fait sans changer la
+décision : dans une `BrowserWindow` ordinaire (user agent Chrome + `Electron/43`),
+l'écran d'identification de Google **s'affiche normalement**, aucun refus — on n'a
+pas mené le tour jusqu'au bout avec de vrais identifiants. C'est une détection
+qu'on ne contrôle pas et qui peut se resserrer du jour au lendemain ; s'appuyer
+dessus, c'est faire dépendre la connexion d'une politique tierce. Falsifier
+l'user agent pour passer est fragile et contraire à cette politique. Le chemin
+correct est le même que celui de toutes les apps de bureau :
 
 1. l'app demande l'URL d'autorisation sans naviguer (`signInWithOAuth` avec
    `skipBrowserRedirect`), et l'ouvre avec `shell.openExternal` ;
@@ -126,11 +166,20 @@ reçu par mail s'ouvre dans le navigateur par défaut, jamais dans Electron. Don
 le construit une fois et les trois chemins d'entrée s'en servent. Seule la
 connexion par mot de passe fonctionne sans lui.
 
-Ce qui reste à vérifier dans une vraie fenêtre, et qu'aucune lecture de code ne
-tranche : la palette ⌘K (elle capture des raccourcis que le menu natif capture
-aussi), le presse-papier, le collage d'images dans l'éditeur tiptap, le glisser-
-déposer de fichiers, et le comportement du realtime quand la fenêtre passe en
-arrière-plan.
+Ce qui restait à vérifier dans une vraie fenêtre — palette ⌘K, presse-papier,
+collage d'images dans tiptap, glisser-déposer, realtime en arrière-plan — a été
+vérifié : voir §7.1. Rien ne casse ; il faut un menu applicatif à nous.
+
+**Construit en MIN-291**, et deux choses à savoir avant d'y toucher. La coquille
+vit dans [desktop/](../desktop/README.md) et ne contient que du câblage : les
+décisions — garde de navigation, contenu du deep link, surface du pont — vivent
+dans `lib/desktop/` et y sont testées, parce qu'un dossier qu'on ne compile
+qu'avec Electron installé ne peut pas l'être par la suite du dépôt. Et
+**`minddy://` ne se teste pas avant l'empaquetage** : hors app empaquetée,
+`app.setAsDefaultProtocolClient` inscrit *Electron.app* auprès de LaunchServices,
+pas notre instance, et un `open minddy://…` n'atteint donc rien. C'est
+`CFBundleURLTypes` qui le règle, et il arrive avec le `.dmg` de MIN-292 — la
+première vraie connexion par lien externe se vérifie là.
 
 ---
 
@@ -140,7 +189,14 @@ arrière-plan.
 tous les projets de l'utilisateur (le pont de MIN-89) ; le renderer transforme ce
 qu'il reçoit en `new Notification()`, que le main process rend native, et pose le
 compteur de non-lus sur le dock (`app.dock.setBadge`). Zéro infrastructure, zéro
-table, zéro clé.
+table, zéro clé. Livré en MIN-291
+([lib/use-desktop-notifications.ts](../lib/use-desktop-notifications.ts)) : la
+liste de `["notifications"]` suffit, la formulation est celle de l'inbox et des
+bannières poussées ([lib/notification-line.ts](../lib/notification-line.ts)), et
+la première liste au démarrage est enregistrée SANS rien afficher — sinon ouvrir
+l'app le matin ferait tomber trente bannières d'un coup. La sonde de MIN-290 l'a vérifié dans une vraie fenêtre :
+`Notification.permission` vaut déjà `granted` et la notification part du renderer
+sans qu'on demande quoi que ce soit à l'utilisateur.
 
 **Ce qu'on perd, et il faut le dire au lieu de l'habiller** : app quittée, plus
 rien. C'est acceptable pour une app de bureau qu'on laisse ouverte, et c'est
@@ -351,16 +407,33 @@ Quatre choses sont écrites au conditionnel parce qu'elles n'ont pas été mesur
 Aucune ne remet en cause la direction ; toutes doivent tomber avant le lot
 correspondant.
 
-1. **Ce qui casse dans une vraie fenêtre.** Palette ⌘K, presse-papier, collage
-   d'images, glisser-déposer, realtime en arrière-plan, écran de connexion. Une
-   coquille de quatre-vingts lignes, lancée en local et non signée, répond en une
-   après-midi — et c'est la première chose à faire.
+1. ~~**Ce qui casse dans une vraie fenêtre.**~~ **Mesuré (MIN-290), et la réponse
+   est : rien.** Une coquille jetable sur Electron 43.4.0 a chargé
+   `https://www.minddy.app` en `sandbox: true` / `contextIsolation: true`,
+   connectée par mot de passe. Marchent tels quels : ⌘K et ⌘P (le menu par
+   défaut porte 19 accélérateurs, aucun ne touche ⌘K, ⌘P ni ⌘;) ; le
+   presse-papier dans les deux sens, permissions déjà accordées ; le collage
+   d'une image du presse-papier système dans tiptap, téléversée et insérée ; le
+   dépôt d'un vrai fichier sur l'éditeur (`Input.dispatchDragEvent`), téléversé
+   et inséré au point du lâcher ; `new Notification()` depuis le renderer, sans
+   demande de permission ; la session, qui persiste dans la partition.
+   **Le realtime survit à l'arrière-plan** : fenêtre cachée 7 minutes, la
+   WebSocket Supabase reste ouverte et le battement garde son rythme (~2/min),
+   avec `backgroundThrottling` à `true` comme à `false` — inutile de le couper.
+   Ce qu'il reste à faire, et c'est du travail, pas un risque : **un menu
+   applicatif à nous**, parce que le menu par défaut donne ⌘W à « fermer la
+   fenêtre » et ⌘R à « recharger », deux gestes qu'une app ne doit pas offrir
+   sur une SPA authentifiée.
+   Deux réserves honnêtes : sept minutes ne sont pas une nuit, et le clavier a
+   été injecté par Chromium sur une partie des essais — l'arbitrage du menu
+   natif, lui, a été lu dans le menu plutôt que frappé.
 2. **Le gain réel du local.** Personne n'a chiffré ce que le tour gagne à tourner
    sur un Mac plutôt que dans `iad1`. Le dossier ne repose pas dessus (il repose
    sur *« l'agent voit ta machine »*), mais il ne faut pas resservir un chiffre
    qu'on n'a pas.
-3. **Le Node d'Electron contre la cible du bundle.** Un `node -e` dans la version
-   d'Electron retenue, comparé à `node24`.
+3. ~~**Le Node d'Electron contre la cible du bundle.**~~ **Mesuré (MIN-290) :**
+   Electron 43.4.0 embarque **Node 24.18.1** — la cible `node24` du bundle,
+   trait pour trait.
 4. **L'installation d'opencode sur une machine sans npm.** Aujourd'hui la VM fait
    `npm i opencode-ai` en ~10,6 s ; sur une machine d'utilisateur, il faut décider
    si on dépend de npm ou si on télécharge la release épinglée.
