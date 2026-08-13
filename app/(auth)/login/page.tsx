@@ -1,7 +1,9 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { Spinner } from "mangue-ui";
 import { LoginForm } from "@/components/auth/login-form";
 import { resolveInvitationToken } from "@/lib/server/invitation-token";
+import { preserveAuthParams } from "@/lib/signup-wizard";
 
 /**
  * L'écran de connexion est un formulaire client (`components/auth/login-form`),
@@ -16,6 +18,19 @@ export default async function LoginPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+
+  // `?mode=signup` a été l'inscription pendant toute la vie de cet écran : les
+  // vieux liens (emails d'invitation déjà partis, marque-pages, la 308 qu'on
+  // vient de retirer de next.config) le portent encore. Il mène maintenant au
+  // parcours, en gardant ce qui doit le suivre (MIN-300).
+  if (params.mode === "signup") {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (typeof value === "string") search.set(key, value);
+    }
+    redirect(`/signup${preserveAuthParams(search)}`);
+  }
+
   const raw = params.invite;
   const token = typeof raw === "string" ? raw : null;
   const invite = token ? await resolveInvitationToken(token) : null;

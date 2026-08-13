@@ -104,6 +104,39 @@ export async function fetchAvatarSeed(
 }
 
 /**
+ * Adopte le seed CHOISI à l'inscription (MIN-300), s'il n'y a pas déjà de ligne.
+ *
+ * Le wizard tire l'avatar dans le navigateur, avant qu'aucun compte n'existe :
+ * il n'y a pas encore de session à qui l'écrire. Le seed voyage donc dans le
+ * `user_metadata` du compte (`avatar_seed`), et se pose ici à la première
+ * occasion — le passage par `/auth/callback`, ou l'appel direct du wizard quand
+ * la session est immédiate.
+ *
+ * `ignoreDuplicates` est le cœur de la fonction : elle ne REMPLACE jamais un
+ * seed existant. Elle peut donc être appelée à chaque connexion sans risque
+ * d'annuler un « Nouvel avatar » fait depuis les réglages — le métadonnée, lui,
+ * garde à jamais la valeur du premier jour.
+ *
+ * Rend `true` si la ligne vient d'être créée avec CE seed.
+ */
+export async function claimAvatarSeed(
+  service: SupabaseClient,
+  userId: string,
+  seed: string | null | undefined
+): Promise<boolean> {
+  if (!userId || !seed || !UUID_RE.test(seed)) return false;
+  const { data, error } = await service
+    .from("user_avatars")
+    .upsert(
+      { user_id: userId, seed },
+      { onConflict: "user_id", ignoreDuplicates: true }
+    )
+    .select("seed");
+  if (error) throw new Error(error.message);
+  return (data?.length ?? 0) > 0;
+}
+
+/**
  * Retire un nouveau seed au sort, et renvoie celui qui a été posé.
  *
  * Le tirage est fait ici et non par la base : la valeur par défaut de la colonne

@@ -8,6 +8,7 @@ import { Download, Shuffle, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { isDesktop } from "@/lib/desktop/bridge";
 import { emailLocalPart } from "@/lib/display-name";
+import { useAnalytics } from "@/lib/use-analytics";
 import { useMyAvatarSeed, useRegenerateAvatar } from "@/lib/use-my-avatar";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
@@ -40,6 +41,7 @@ export function AccountProfileSection() {
     emailLocalPart(user?.email) ||
     "";
   const seed = useMyAvatarSeed();
+  const { track } = useAnalytics();
   // Lu APRÈS le montage : `window.minddy` n'existe pas au rendu serveur, et le
   // supposer ferait diverger l'hydratation.
   const [inDesktopApp, setInDesktopApp] = useState(false);
@@ -162,7 +164,12 @@ export function AccountProfileSection() {
           hint={ta("desktopAppHint")}
           control={
             <Button asChild variant="outline" size="sm">
-              <Link href="/download">
+              <Link
+                href="/download"
+                onClick={() =>
+                  track("desktop_install_prompt_clicked", { surface: "settings" })
+                }
+              >
                 <Download />
                 {ta("desktopAppCta")}
               </Link>

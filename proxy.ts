@@ -37,9 +37,9 @@ import { decodeJwtPayload, needsMfaChallenge } from "@/lib/mfa";
  */
 const PUBLIC_ROUTES = new Set([
   "/login",
-  // `/signup` part en 308 vers `/login?mode=signup` depuis next.config, donc
-  // avant d'arriver ici. On le garde par sécurité : si la redirection saute, la
-  // route doit tomber en 404, pas repartir vers /login avec un `?redirect=`.
+  // `/signup` est une vraie page depuis MIN-300 (le wizard d'inscription) : il
+  // lui faut sa ligne ici, sans quoi le proxy renverrait vers `/login` la
+  // personne qui vient précisément créer son compte.
   "/signup",
   // `/feedback` (app/feedback/route.ts) pré-identifie l'utilisateur connecté
   // puis redirige vers le board public ; déconnecté, elle redirige sans SSO.
@@ -341,10 +341,12 @@ export async function proxy(request: NextRequest) {
 
   // --- Autres routes publiques (login, assets de métadonnées, boards…) ------
   if (PUBLIC_ROUTES.has(pathname) || hasPrefix(pathname, PUBLIC_PREFIXES)) {
-    // On /login, bounce already-authenticated users to /home — sauf si leur
-    // session attend encore son second facteur (MIN-132) : /login EST l'écran de
-    // challenge, et les renvoyer vers /home reboucle indéfiniment.
-    if (pathname === "/login") {
+    // On /login et /signup, bounce already-authenticated users to /home — sauf
+    // si leur session attend encore son second facteur (MIN-132) : /login EST
+    // l'écran de challenge, et les renvoyer vers /home reboucle indéfiniment.
+    // `/signup` suit la même règle : un compte connecté n'a pas de compte à
+    // créer, et le wizard s'en irait de lui-même une frame plus tard.
+    if (pathname === "/login" || pathname === "/signup") {
       const session = await readSession(request, supabaseUrl, supabaseKey);
       if (session?.user && !awaitsMfaChallenge(session)) {
         return NextResponse.redirect(new URL("/home", request.url));

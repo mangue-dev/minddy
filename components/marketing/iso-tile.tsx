@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  AppWindowMac,
+  BellRing,
   CalendarRange,
   Command,
   Crosshair,
@@ -14,6 +16,7 @@ import {
   Mic,
   PencilLine,
   Plug2,
+  RefreshCw,
   Search,
   Target,
   Upload,
@@ -45,6 +48,7 @@ import { IsoIcon, isoGlyph } from "@/components/illustrations/iso-icon";
 
 const ICONS = {
   api: Plug2,
+  bell: BellRing,
   command: Command,
   context: Crosshair,
   cycles: CalendarRange,
@@ -58,8 +62,10 @@ const ICONS = {
   objectives: Target,
   pages: FileText,
   pencil: PencilLine,
+  refresh: RefreshCw,
   share: Link2,
   triage: ListFilter,
+  window: AppWindowMac,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IsoTileName = keyof typeof ICONS;
@@ -94,13 +100,16 @@ function IsoBox({ className, children }: { className?: string; children: React.R
 /**
  * L'icône couchée, sans cadre autour.
  *
- * `depth` donne l'épaisseur (des copies décalées derrière la face) : trois
- * couches suffisent à lire le relief à cette taille, au-delà le dessin s'empâte.
+ * `depth` donne l'épaisseur : des copies du tracé décalées derrière la face, à
+ * 25 % d'opacité. **Les pages publiques la laissent à 1**, donc un seul tracé.
+ * À cette taille, trois couches ne se lisent pas comme un relief mais comme un
+ * flou — le dessin double, il n'épaissit pas. L'épaisseur reste dans les états
+ * vides de l'app (`IsoIconScene`), où l'icône est assez grande pour la porter.
  */
 export function IsoTile({
   name,
   className,
-  depth = 3,
+  depth = 1,
 }: {
   name: IsoTileName;
   className?: string;
@@ -117,7 +126,7 @@ export function IsoTile({
 export function IsoIconTile({
   icon,
   className,
-  depth = 3,
+  depth = 1,
 }: {
   icon: LucideIcon;
   className?: string;
@@ -140,7 +149,7 @@ export function IsoIconTile({
 export function IsoNumber({
   value,
   className,
-  depth = 3,
+  depth = 1,
 }: {
   value: string;
   className?: string;

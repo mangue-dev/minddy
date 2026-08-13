@@ -26,7 +26,8 @@
  *   agent_run_started/completed/failed, agent_pr_opened,
  *   automation_chain_started, automation_chain_finished (MIN-147),
  *   mcp_tool_called, mcp_session_started, oauth_grant_created,
- *   public_feedback_created, public_feedback_voted, import_completed.
+ *   public_feedback_created, public_feedback_voted, import_completed,
+ *   desktop_download_started (MIN-292 — le `.dmg` qui part vraiment).
  */
 
 /** Valeurs primitives acceptées après sanitisation (optionnelles par confort). */
@@ -441,6 +442,26 @@ export interface AnalyticsEventProps {
   // une absence de trafic. Le rétablir = une ligne ici + un composant client
   // qui l'émet, les deux dans le même geste.
   landing_faq_opened: { question_index: number };
+
+  // ── App de bureau (MIN-292) ──
+  //
+  // Ce sont les INTENTIONS. Le téléchargement lui-même est compté par le
+  // serveur (`desktop_download_started`, dans app/api/desktop/download) : lui
+  // seul sait qu'un fichier est parti, et il compte aussi les liens partagés
+  // hors de l'app. Les deux ensemble donnent le taux d'aboutissement ; l'un
+  // sans l'autre ne donne rien.
+  /** La proposition d'installer l'app, sur l'accueil web — vue par quelqu'un
+   *  qui y est éligible (un Mac, hors de l'app, jamais écartée). C'est le
+   *  dénominateur des deux événements suivants. */
+  desktop_install_prompt_shown: NoProps;
+  desktop_install_prompt_clicked: { surface: "home_banner" | "settings" };
+  /** « Non merci », et c'est pour toujours (voir lib/desktop/install-prompt.ts).
+   *  Le rapport au `shown` dit si la proposition dérange plus qu'elle ne sert. */
+  desktop_install_prompt_dismissed: NoProps;
+  /** Le clic sur le bouton de `/download`. `arch` distingue le lien Intel du
+   *  bouton principal : c'est ce qui dira si les vieux Mac valent encore leur
+   *  build. */
+  desktop_download_clicked: { arch: "arm64" | "x64" };
   /** Démo de dictée jouable (MIN-150). `input` distingue la prise au micro de
    *  la phrase d'exemple : savoir laquelle des deux fait le « aha » décide de
    *  laquelle mettre en avant. Aucun texte dicté ne remonte, jamais. */
@@ -722,6 +743,11 @@ const EVENT_NAMES = [
   "landing_viewed",
   "landing_cta_clicked",
   "landing_faq_opened",
+  // App de bureau
+  "desktop_install_prompt_shown",
+  "desktop_install_prompt_clicked",
+  "desktop_install_prompt_dismissed",
+  "desktop_download_clicked",
   "landing_voice_demo_started",
   "landing_voice_demo_completed",
   "landing_voice_demo_failed",

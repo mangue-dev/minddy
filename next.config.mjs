@@ -144,13 +144,6 @@ const nextConfig = {
         destination: "/projects/:id?view=my",
         permanent: false,
       },
-      // `/signup` est une URL publique (le hero, la nav et le pied de page y
-      // envoient) mais pas une page : c'est `/login` avec un onglet
-      // pré-sélectionné. C'était une redirection D'EXÉCUTION dans
-      // `app/(auth)/signup/page.tsx`, donc un rendu complet suivi d'un 307 —
-      // une « page avec redirection » de plus dans Search Console. En 308, elle
-      // est traitée au routage et transmet son autorité à la cible (MIN-88).
-      { source: "/signup", destination: "/login?mode=signup", permanent: true },
       ...FRENCH_SLUG_REDIRECTS.map((rule) => ({ ...rule, permanent: true })),
     ];
   },

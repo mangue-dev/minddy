@@ -26,7 +26,7 @@ interface AuthContextValue {
   signUpWithPassword: (
     email: string,
     password: string,
-    options?: { fullName?: string }
+    options?: { fullName?: string; avatarSeed?: string }
   ) => Promise<{ requiresEmailConfirmation: boolean }>;
   /** Wired for later — OAuth buttons aren't shown in the v1 foundations UI. */
   signInWithOAuth: (
@@ -171,7 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUpWithPassword = useCallback(
-    async (email: string, password: string, options?: { fullName?: string }) => {
+    async (
+      email: string,
+      password: string,
+      options?: { fullName?: string; avatarSeed?: string }
+    ) => {
       // Le lien de confirmation s'ouvrira dans le navigateur PAR DÉFAUT, quoi
       // qu'on fasse — un mail ne s'ouvre pas dans Electron. Marqué `desktop=1`,
       // le callback lui renverra le jeton au lieu de le consommer, et c'est
@@ -191,7 +195,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // figure dans l'allowlist « Redirect URLs » ; sinon il retombe sur le
           // Site URL, et le lien de confirmation part vers le mauvais domaine.
           emailRedirectTo: confirmUrl.toString(),
-          ...(options?.fullName ? { data: { full_name: options.fullName } } : {}),
+          // `avatar_seed` : la marque tirée pendant le wizard (MIN-300). Elle
+          // ne peut pas s'écrire dans `user_avatars` maintenant — il n'y a pas
+          // encore de compte — donc elle voyage ici, et se pose à la première
+          // session (`claimAvatarSeed`).
+          data: {
+            ...(options?.fullName ? { full_name: options.fullName } : {}),
+            ...(options?.avatarSeed ? { avatar_seed: options.avatarSeed } : {}),
+          },
         },
       });
       if (error) throw error;

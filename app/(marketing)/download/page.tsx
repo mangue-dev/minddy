@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import { AppWindowMac, BellRing, Download, RefreshCw } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
@@ -13,6 +13,8 @@ import {
 import { Reveal, RevealGroup, RevealHeading } from "@/components/marketing/reveal";
 import { DesktopShowcase } from "@/components/marketing/desktop-showcase";
 import { SectionCta } from "@/components/marketing/section-cta";
+import { TrackedDownloadLink } from "@/components/marketing/tracked-download-link";
+import { IsoTile, type IsoTileName } from "@/components/marketing/iso-tile";
 
 /**
  * `/download` — l'app de bureau macOS (MIN-292).
@@ -42,12 +44,19 @@ export async function generateMetadata(): Promise<Metadata> {
   return publicPageMetadata({ routeKey: "download", locale: (await getLocale()) as Locale });
 }
 
-/** Ce que l'app apporte, dans l'ordre où on s'en aperçoit en l'utilisant. */
+/**
+ * Ce que l'app apporte, dans l'ordre où on s'en aperçoit en l'utilisant.
+ *
+ * Les icônes sont celles de la landing — couchées dans l'isométrie de l'app
+ * (`IsoTile`), et non une lucide de face dans une pastille arrondie. Cette page
+ * était la dernière du site à porter l'ancien dessin, celui qui ne dit rien de
+ * minddy ; un nom suffit ici, la résolution se fait dans le registre.
+ */
 const POINTS = [
-  { key: "window", icon: AppWindowMac },
-  { key: "notifications", icon: BellRing },
-  { key: "updates", icon: RefreshCw },
-] as const;
+  { key: "window", icon: "window" },
+  { key: "notifications", icon: "bell" },
+  { key: "updates", icon: "refresh" },
+] as const satisfies ReadonlyArray<{ key: string; icon: IsoTileName }>;
 
 /**
  * La version et le poids du `.dmg` Apple silicon, lus dans le flux.
@@ -134,17 +143,18 @@ export default async function DownloadPage() {
                 className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3"
               >
                 <Button asChild size="lg">
-                  <a href="/api/desktop/download">
+                  <TrackedDownloadLink arch="arm64" href="/api/desktop/download">
                     <Download data-icon="inline-start" />
                     {t("downloadButton")}
-                  </a>
+                  </TrackedDownloadLink>
                 </Button>
-                <a
+                <TrackedDownloadLink
+                  arch="x64"
                   href="/api/desktop/download?arch=x64"
                   className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
                 >
                   {t("downloadIntel")}
-                </a>
+                </TrackedDownloadLink>
               </Reveal>
 
               <Reveal as="p" delay={0.32} className="mt-4 text-xs text-muted-foreground">
@@ -216,24 +226,19 @@ export default async function DownloadPage() {
           </header>
 
           <RevealGroup as="ul" step={0.08} className="grid gap-10 sm:grid-cols-3">
-            {POINTS.map((point) => {
-              const Icon = point.icon;
-              return (
-                /* Un filet au-dessus de chaque colonne, et rien autour : trois
-                   traits qui répondent à la bande de faits sans la répéter en
-                   cartes. Trois cartes bordées de plus auraient fait de la page
-                   une grille de boîtes. */
-                <li key={point.key} className="border-t border-border pt-6">
-                  <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground">
-                    <Icon className="h-[1.15rem] w-[1.15rem]" />
-                  </span>
-                  <h3 className="mb-2 text-base font-medium">{t(`point_${point.key}_title`)}</h3>
-                  <p className="text-sm leading-relaxed text-pretty text-muted-foreground">
-                    {t(`point_${point.key}_body`)}
-                  </p>
-                </li>
-              );
-            })}
+            {POINTS.map((point) => (
+              /* Un filet au-dessus de chaque colonne, et rien autour : trois
+                 traits qui répondent à la bande de faits sans la répéter en
+                 cartes. Trois cartes bordées de plus auraient fait de la page
+                 une grille de boîtes. */
+              <li key={point.key} className="border-t border-border pt-6">
+                <IsoTile name={point.icon} className="mb-4 w-14" />
+                <h3 className="mb-2 text-base font-medium">{t(`point_${point.key}_title`)}</h3>
+                <p className="text-sm leading-relaxed text-pretty text-muted-foreground">
+                  {t(`point_${point.key}_body`)}
+                </p>
+              </li>
+            ))}
           </RevealGroup>
         </div>
       </section>

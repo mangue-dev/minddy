@@ -75,8 +75,16 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * Le lien d'un email d'invitation mène à l'INSCRIPTION (MIN-300), pas à la
+ * connexion : arriver par une invitation, c'est très majoritairement ne pas
+ * avoir de compte (MIN-197). L'écran ouvrait déjà l'onglet « inscription » dans
+ * ce cas ; maintenant que c'est un parcours à part, le lien y va directement.
+ * Le wizard porte le retour vers `/login` pour qui a déjà un compte, et le
+ * token le suit.
+ */
 export function invitationLink(token: string, origin: string = SITE_URL): string {
-  return `${origin.replace(/\/$/, "")}/login?invite=${encodeURIComponent(token)}`;
+  return `${origin.replace(/\/$/, "")}/signup?invite=${encodeURIComponent(token)}`;
 }
 
 /**

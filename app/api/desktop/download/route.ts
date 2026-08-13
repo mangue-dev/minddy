@@ -6,6 +6,8 @@ import {
   isMacArch,
   parseLatestMacFeed,
 } from "@/lib/desktop/update-feed";
+import { posthogCookieName, readPosthogDistinctId } from "@/lib/posthog-cookie";
+import { captureServerEvent } from "@/lib/server/posthog";
 
 /**
  * `/api/desktop/download` — la porte du `.dmg` (MIN-292).
@@ -24,6 +26,20 @@ import {
  * Pas d'authentification, évidemment — c'est un téléchargement public. Et pas de
  * cache CDN sur la redirection : elle change à chaque publication, et une
  * redirection périmée envoie tout le monde sur un 404.
+ *
+ * ## C'est ICI qu'on compte les téléchargements
+ *
+ * Et pas au clic, côté navigateur. Un clic est une INTENTION — il en part aussi
+ * du bandeau de l'accueil, des réglages, de la landing, et le compte des trois
+ * ne dira jamais combien de `.dmg` sont réellement partis. Cette route est le
+ * point de passage obligé : tout ce qui télécharge passe par elle, y compris un
+ * lien collé dans un message, et elle sait ce que le clic ne sait pas — quelle
+ * architecture, quelle version.
+ *
+ * Elle part sans condition de consentement, comme les autres événements serveur
+ * (voir lib/server/posthog.ts) : aucun cookie n'est POSÉ ici. Celui de PostHog
+ * est seulement LU s'il existe déjà, pour recoudre le téléchargement au reste de
+ * la visite ; sinon l'événement est anonyme et ne crée aucun profil de personne.
  */
 
 export const dynamic = "force-dynamic";
@@ -59,8 +75,34 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  captureDownload(request, { arch, version: release.version });
+
   return NextResponse.redirect(`${base}/${file}`, {
     status: 302,
     headers: { "Cache-Control": "no-store" },
+  });
+}
+
+/**
+ * L'événement du téléchargement — émis seulement quand un fichier part vraiment.
+ *
+ * `$process_person_profile: false` dans le cas anonyme : sans lui, chaque
+ * téléchargement sans cookie créerait une personne de plus dans PostHog, un
+ * fantôme d'un seul événement. Le compte, lui, reste exact — c'est ce qu'on
+ * cherche.
+ */
+function captureDownload(
+  request: NextRequest,
+  properties: { arch: string; version: string }
+): void {
+  const cookieName = posthogCookieName(process.env.NEXT_PUBLIC_POSTHOG_KEY);
+  const known = cookieName
+    ? readPosthogDistinctId(request.cookies.get(cookieName)?.value)
+    : null;
+
+  captureServerEvent({
+    distinctId: known ?? crypto.randomUUID(),
+    event: "desktop_download_started",
+    properties: known ? properties : { ...properties, $process_person_profile: false },
   });
 }

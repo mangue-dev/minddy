@@ -99,10 +99,11 @@ describe("métadonnées de page (MIN-95)", () => {
   });
 
   it("ne laisse traîner aucune clé `Meta` orpheline", () => {
-    // `description` (repli du root layout) et `signIn` (dont la description vit
-    // dans `Auth.loginSubtitle`, avec le reste de la page de connexion) sont les
-    // deux seules clés hors du schéma « une page = deux clés ».
-    const expected = new Set<string>(["description", "signIn"]);
+    // `description` (repli du root layout), `signIn` et `signUp` (dont les
+    // descriptions vivent dans `Auth.loginSubtitle` / `Auth.signupSubtitle`,
+    // avec le reste de leur écran) sont les seules clés hors du schéma « une
+    // page = deux clés ».
+    const expected = new Set<string>(["description", "signIn", "signUp"]);
     for (const key of META_PAGE_KEYS) {
       expected.add(key);
       expected.add(`${key}Description`);

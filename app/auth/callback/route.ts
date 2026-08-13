@@ -11,6 +11,8 @@ import {
 } from "@/lib/desktop/auth-link";
 import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
 import { attachPendingInvitations } from "@/lib/server/members";
+import { claimAvatarSeed } from "@/lib/server/avatar-seeds";
+import { getServiceClient } from "@/lib/supabase-service";
 
 function buildFailureRedirect(
   origin: string,
@@ -105,6 +107,33 @@ async function claimInvitations(user: User | null): Promise<void> {
 }
 
 /**
+ * L'avatar choisi pendant l'inscription devient celui du compte (MIN-300).
+ *
+ * Le wizard tire la marque dans le navigateur, avant qu'aucun compte n'existe :
+ * elle voyage dans `user_metadata.avatar_seed` et se pose ICI, à la première
+ * session. `claimAvatarSeed` n'écrase jamais une marque déjà en place, donc
+ * repasser par ce chemin à chaque connexion ne défait pas un « Nouvel avatar »
+ * fait depuis les réglages.
+ *
+ * Attendu, comme le rattachement des invitations et pour la même raison : /home
+ * demande l'avatar dès son premier rendu, et une écriture différée courrait
+ * contre cette lecture — la personne verrait une autre marque que celle qu'elle
+ * vient de choisir, jusqu'au prochain rechargement.
+ *
+ * Best-effort : une panne ici ne doit pas coûter la session qu'on vient
+ * d'établir.
+ */
+async function claimAvatarChoice(user: User | null): Promise<void> {
+  const seed = (user?.user_metadata as { avatar_seed?: unknown } | undefined)?.avatar_seed;
+  if (!user || typeof seed !== "string") return;
+  try {
+    await claimAvatarSeed(getServiceClient(), user.id, seed);
+  } catch (err) {
+    console.error("[auth/callback] claim avatar seed failed:", err);
+  }
+}
+
+/**
  * Exchanges the auth code (OAuth) or email OTP (confirmation / magic link) for a
  * session, writing the session cookies, then redirects to `next` (default /home).
  */
@@ -191,6 +220,7 @@ export async function GET(request: NextRequest) {
       }
       onAuthArrival(data.user, "oauth");
       await claimInvitations(data.user);
+      await claimAvatarChoice(data.user);
     } else if (tokenHash && otpType) {
       const { data, error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
@@ -210,6 +240,7 @@ export async function GET(request: NextRequest) {
       }
       onAuthArrival(data.user, otpType === "signup" ? "email_confirmation" : "otp");
       await claimInvitations(data.user);
+      await claimAvatarChoice(data.user);
     }
 
     return NextResponse.redirect(`${origin}${next}`);
