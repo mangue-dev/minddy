@@ -1655,18 +1655,89 @@ nav[aria-label="Navigation"]
    L'attribut est posé sur <html> par components/desktop-chrome.tsx, uniquement
    quand le pont existe. Dans un navigateur, rien de ce bloc ne s'applique. */
 
-/* L'en-tête de l'app — `.app-shell > div > header`, donc l'en-tête DU SHELL et
-   pas un <header> de page (ceux-là vivent dans <main>). C'est la grande zone
-   vide entre le fil d'Ariane et les actions : la prise naturelle. */
-html[data-desktop-app] .app-shell > div > header {
+/* ── LA BANDE, ET ELLE EST LA SEULE ──────────────────────────────────────────
+   MIN-292. La prise vivait dans l'en-tête du shell et dans la ligne de marque de
+   la barre latérale — c'est-à-dire dans les deux meubles que la moitié des
+   écrans n'ont pas. Un audit en a trouvé SIX sans aucune prise, et la fenêtre y
+   était strictement immobile :
+
+     mode zen (il retire l'en-tête ET la barre), pages légales lisibles dans
+     l'app, board public `/f/`, page publiée `/p/`, vue partagée `/share/`,
+     et `not-found`.
+
+   Chercher les écrans un par un pour leur ajouter une bande, c'est signer pour
+   recommencer au prochain. D'où l'inversion : **une seule bande, dans le layout
+   racine, sur tout ce que la fenêtre affiche.**
+
+   Elle fait la hauteur de l'en-tête de l'app (60 px, la ligne horizontale qui
+   traverse minddy — même hauteur que la ligne de marque et que le titre de la
+   barre secondaire). Ce n'est donc pas une bande de plus dans l'app : elle
+   recouvre exactement ce qui était DÉJÀ déplaçable, et ne change quelque chose
+   que là où il n'y avait rien.
+
+   Elle part de `top: 0` : les feux de circulation sont dessinés par macOS
+   PAR-DESSUS la vue web et c'est le système qui les sert, pas la page. */
+
+.desktop-drag-band {
+  display: none;
+}
+html[data-desktop-app] .desktop-drag-band {
+  display: block;
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 60px;
+  /* Sous les voiles de dialogue (50) : une bande qui déplacerait la fenêtre
+     par-dessus une modale ouverte serait une prise là où l'app dit « réponds
+     d'abord ». */
+  z-index: 30;
   -webkit-app-region: drag;
 }
 
-/* … sauf ce sur quoi on clique. Une zone `drag` avale l'événement : sans cette
-   exception, la palette, les compteurs et le bouton « Nouveau » deviendraient
-   des poignées de fenêtre. */
-html[data-desktop-app] .app-shell > div > header :is(a, button, input, select, textarea, [role="button"], [role="menuitem"], [role="combobox"], [tabindex]) {
+/* ⚠ **Une zone `drag` AVALE l'événement**, y compris pour ce qui est dessiné
+   par-dessus : les régions sont des rectangles envoyés au système, résolus
+   avant que la page ne voie quoi que ce soit. Sans cette exception globale, tout
+   ce qui se clique dans les 60 premiers pixels de n'importe quel écran
+   deviendrait une poignée de fenêtre — la palette, le bouton « Nouveau », les
+   onglets d'un board, le lien d'une page légale.
+
+   Globale, donc, et non scopée à la bande : `no-drag` sur un élément qui n'est
+   dans aucune région `drag` ne fait rien du tout. Le coût est nul, et la portée
+   est ce qui rend la règle vraie sans avoir à savoir QUI est en haut de l'écran.
+
+   Elle est écrite APRÈS la bande, et l'ordre du document compte autant que
+   celui de la feuille : Chromium parcourt l'arbre de mise en page et un
+   `no-drag` creuse le `drag` rencontré avant lui. C'est pourquoi la bande est
+   rendue avant `{children}` dans app/layout.tsx. */
+html[data-desktop-app]
+  :is(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    label,
+    summary,
+    [role="button"],
+    [role="link"],
+    [role="menuitem"],
+    [role="combobox"],
+    [role="tab"],
+    [role="option"],
+    [role="checkbox"],
+    [role="switch"],
+    [contenteditable="true"],
+    [tabindex]
+  ) {
   -webkit-app-region: no-drag;
+}
+
+/* L'en-tête du shell reste une prise à lui — `.app-shell > div > header`, donc
+   l'en-tête DU SHELL et pas un <header> de page (ceux-là vivent dans <main>).
+   La bande le couvre déjà sur ses 60 px ; cette règle-ci le suit s'il grandit,
+   et elle dit à qui lit le CSS que la grande zone vide entre le fil d'Ariane et
+   les actions est faite pour ça. */
+html[data-desktop-app] .app-shell > div > header {
+  -webkit-app-region: drag;
 }
 
 /* Les feux de circulation sont dessinés PAR-DESSUS la page, en haut à gauche.
@@ -1692,22 +1763,5 @@ html[data-desktop-app] .sidebar-brand-row[data-window-buttons] {
 /* La ligne de marque est aussi la prise de la fenêtre du côté de la barre
    latérale : c'est la seule bande horizontale libre qu'elle ait. */
 html[data-desktop-app] .sidebar-brand-row {
-  -webkit-app-region: drag;
-}
-html[data-desktop-app] .sidebar-brand-row :is(a, button, [role="button"], [tabindex]) {
-  -webkit-app-region: no-drag;
-}
-
-/* Les écrans d'authentification n'ont pas d'en-tête : sans cette bande, on ne
-   peut pas déplacer la fenêtre tant qu'on n'est pas connecté — soit exactement
-   au moment où on découvre l'app. Le bandeau est transparent, haut de la barre
-   de titre qu'on a retirée, et il ne recouvre rien de cliquable : dans l'app, le
-   logo de la page de connexion n'est plus un lien (il ne mènerait qu'ici). */
-html[data-desktop-app] .auth-shell::before {
-  content: "";
-  position: fixed;
-  inset: 0 0 auto 0;
-  height: 38px;
-  z-index: 40;
   -webkit-app-region: drag;
 }

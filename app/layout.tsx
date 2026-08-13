@@ -147,6 +147,24 @@ export default async function RootLayout({
       >
         <ThemeProvider defaultTheme={defaultTheme}>
           <NextIntlClientProvider messages={clientMessages}>
+            {/* La bande par laquelle on déplace la fenêtre de l'app de bureau
+                (MIN-292). Ici, et pas dans un shell : c'est la seule position du
+                dépôt d'où elle couvre TOUTES les configurations. Un audit en
+                avait trouvé cinq sans aucune prise — mode zen, pages légales,
+                board public `/f/`, page publiée `/p/`, vue partagée `/share/`,
+                plus `not-found` — parce que les prises vivaient dans l'en-tête
+                et la barre latérale, c'est-à-dire dans les deux meubles que ces
+                écrans n'ont pas.
+
+                **AVANT `{children}`, et ce n'est pas cosmétique** : Chromique
+                calcule les régions déplaçables en parcourant l'arbre de mise en
+                page dans l'ordre, et un `no-drag` rencontré PLUS TARD creuse le
+                `drag` rencontré avant. Placée en dernier, la bande reprendrait
+                aux boutons de l'en-tête le trou qu'ils viennent de se creuser.
+
+                Hors app de bureau, `globals.css` la laisse en `display: none` :
+                elle ne coûte rien à un navigateur. */}
+            <div aria-hidden className="desktop-drag-band" />
             {children}
             {/* Marque le document dans l'app de bureau (MIN-291) : c'est ce que
                 lisent les zones de déplacement de la fenêtre, qui n'ont pas

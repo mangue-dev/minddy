@@ -120,8 +120,13 @@ coin). Trois conséquences se tiennent ensemble :
 
 - macOS ne sait plus par où saisir la fenêtre. `-webkit-app-region` est du CSS,
   donc c'est la PAGE qui doit le dire (app/globals.css, section « app de
-  bureau ») : l'en-tête du shell, la ligne de marque, et une bande sur les
-  écrans d'authentification, qui n'ont pas d'en-tête.
+  bureau »). **Une seule bande, dans le layout racine**, haute comme l'en-tête
+  de l'app (60 px) et présente sur tout ce que la fenêtre affiche. La première
+  version accrochait la prise à l'en-tête du shell et à la ligne de marque —
+  c'est-à-dire aux deux meubles que six configurations n'ont pas : mode zen,
+  pages légales, board public, page publiée, vue partagée, `not-found`. La
+  fenêtre y était strictement immobile (MIN-292). Une zone `drag` avalant le
+  clic, la bande s'accompagne d'un `no-drag` GLOBAL sur tout ce qui s'active.
 - Les boutons du système n'existent plus d'eux-mêmes : ils s'allument à la main,
   et se posent **dans la ligne de marque de la barre latérale, à la place de la
   marque**, qui passe à droite. Pas dans une bande à eux, qui pousserait toute la

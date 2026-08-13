@@ -16,10 +16,9 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       {/* Le retour du navigateur système, dans l'app de bureau (MIN-291). Ne
           rend rien hors de l'app, et rien tant qu'aucun lien n'arrive. */}
       <DesktopAuthBridge />
-      {/* `auth-shell` : la seule prise de globals.css sur ces écrans — la bande
-          par laquelle on déplace la fenêtre de l'app de bureau, faute d'en-tête
-          où l'accrocher (MIN-291). Sans elle, la fenêtre est immobile tant qu'on
-          n'est pas connecté. */}
+      {/* La bande de déplacement de la fenêtre ne vit plus ici : elle est dans
+          le layout racine, donc sur TOUS les écrans (MIN-292). Ces écrans-là
+          n'étaient qu'un des cinq qui en manquaient. */}
       {fullBleed ? (
         <div className="auth-shell min-h-[100dvh] bg-background">{children}</div>
       ) : (

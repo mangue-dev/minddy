@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { mkdir, stat } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,6 +31,46 @@ const OUT_DIR = path.join(repo, "desktop", "dist");
 const MAX_BUNDLE_BYTES = 200_000;
 
 await mkdir(OUT_DIR, { recursive: true });
+
+/**
+ * LA VERSION DE L'APP EST CELLE DU DÉPÔT (MIN-292).
+ *
+ * Un seul numéro pour la web app et la coquille, et ce n'est pas une coquetterie
+ * de rangement : la coquille est une fenêtre sur `www.minddy.app`, donc « quelle
+ * version de minddy est-ce ? » n'a qu'une réponse honnête. Deux numéros
+ * distincts obligeraient à traduire de l'un à l'autre pour lire un rapport de
+ * bug — l'user agent de la fenêtre (`minddy-desktop/<version>`) et la fenêtre
+ * « À propos » portent tous deux ce nombre.
+ *
+ * **Il est recopié plutôt que dérivé à l'exécution** parce que c'est
+ * electron-builder qui le lit, dans `desktop/package.json`, et lui ne connaît
+ * que ce fichier. Le voir bouger dans un diff est donc normal, et c'est même
+ * l'intérêt : une publication l'accompagne, pas l'inverse.
+ *
+ * **Ce que ça ne déclenche pas** : une mise à jour chez les gens. Le flux
+ * n'annonce que ce qui a été publié (`latest-mac.yml`) ; monter ce numéro sans
+ * publier de binaire ne dit rien à personne.
+ */
+const repoPkgPath = path.join(repo, "package.json");
+const desktopPkgPath = path.join(repo, "desktop", "package.json");
+const { version } = JSON.parse(await readFile(repoPkgPath, "utf8"));
+const desktopPkgRaw = await readFile(desktopPkgPath, "utf8");
+const desktopPkg = JSON.parse(desktopPkgRaw);
+
+if (desktopPkg.version !== version) {
+  const previous = desktopPkg.version;
+  desktopPkg.version = version;
+  // Réécriture ciblée du fichier tel qu'il est écrit, indentation comprise :
+  // `JSON.stringify` reformaterait tout le fichier pour un seul champ.
+  await writeFile(
+    desktopPkgPath,
+    desktopPkgRaw.replace(
+      /"version":\s*"[^"]*"/,
+      `"version": ${JSON.stringify(version)}`
+    )
+  );
+  console.log(`[build:desktop] version ${previous} → ${version} (celle du dépôt)`);
+}
 
 const result = await build({
   entryPoints: [
