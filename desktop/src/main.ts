@@ -12,6 +12,7 @@ import {
 import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { isMarketingPath } from "@/lib/desktop/window-routes";
 import { buildAppMenu } from "./menu";
+import { startAutoUpdates } from "./updater";
 
 /**
  * La coquille de minddy (MIN-291) — §2 de docs/desktop-electron.md.
@@ -338,10 +339,24 @@ if (!app.requestSingleInstanceLock()) {
       ]);
     }
 
+    // La fenêtre « À propos ». Le panneau natif existe de toute façon (rôle
+    // `about` du menu) : sans ces options il annonce le nom et la version
+    // d'Electron, ce qui est vrai et ne renseigne personne. Le nom vient de
+    // `app.getName()`, donc de `setName` ci-dessous — pas d'une chaîne de plus.
+    app.setAboutPanelOptions({
+      applicationName: app.getName(),
+      applicationVersion: app.getVersion(),
+      copyright: "© 2026 mangue",
+      // `credits` est la seule ligne libre que macOS affiche ; `website` n'y
+      // existe pas (c'est une option Linux).
+      credits: DESKTOP_ORIGIN,
+    });
+
     hardenSession();
     registerIpc();
     mainWindow = createWindow();
     buildAppMenu(mainWindow);
+    startAutoUpdates();
     flushAuthLink();
 
     // macOS : cliquer l'icône du dock d'une app sans fenêtre visible la ramène.

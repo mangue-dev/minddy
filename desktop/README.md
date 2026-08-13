@@ -23,6 +23,9 @@ d'être vérifié en aller-retour plutôt que relu deux fois séparément.
 | `src/main.ts` | fenêtre, garde de navigation, `minddy://`, badge du dock, IPC |
 | `src/preload.ts` | **toute** la surface exposée à la page (5 membres) |
 | `src/menu.ts` | le menu applicatif — il sert surtout à RETIRER ⌘W et ⌘R |
+| `src/updater.ts` | les mises à jour, et le renoncement franc hors app empaquetée |
+| `electron-builder.yml` | **l'identité de l'app** : nom, icône, `minddy://`, signature |
+| `build/` | l'icône `.icns` et les entitlements — des sources, pas des artefacts |
 | `lib/desktop/*` (hors d'ici) | les décisions, pures et testées |
 
 ## Développer
@@ -71,8 +74,34 @@ accepter le callback **avec sa query** — `https://www.minddy.app/auth/callback
 lieu de revenir dans l'app. C'est un réglage de tableau de bord, il n'est pas
 dans le dépôt.
 
+## Empaqueter (MIN-292)
+
+```bash
+npm --prefix desktop run pack   # un .app NON signé, dans desktop/release/mac-*/
+npm --prefix desktop run dist   # les .dmg et .zip, signés et notarisés
+npm --prefix desktop run icon   # refaire build/icon.icns quand le logo change
+```
+
+**L'identité de l'app vit dans [electron-builder.yml](electron-builder.yml), et
+nulle part dans le code.** Le nom sous l'icône, celui de la barre de menus,
+l'icône, `CFBundleIdentifier` et le schéma `minddy://` sont lus dans
+l'`Info.plist` du bundle : rien de tout ça ne se corrige à l'exécution. C'est
+aussi ce qui rend le deep link d'authentification testable — hors bundle,
+LaunchServices inscrit `Electron.app`, pas nous.
+
+`app.setName("minddy")` (main.ts) ne fait pas double emploi : lui nomme le
+dossier de DONNÉES (`~/Library/Application Support/minddy/`), et il devait être
+posé avant qu'il existe des installations.
+
+**Le `.zip` accompagne le `.dmg` et n'est pas décoratif** : le `.dmg` sert au
+premier téléchargement, Squirrel.Mac ne sait lire que le `.zip`. Publier l'un
+sans l'autre donne une app qui s'installe et ne se met jamais à jour, sans rien
+dire. Et Squirrel **exige une app signée** — d'où le refus de
+`scripts/publish-desktop.mjs` devant un bundle non signé.
+
+La marche à marche du compte Apple, du certificat, de la notarisation et de la
+première publication : **[docs/desktop-signing.md](../docs/desktop-signing.md)**.
+
 ## Ce qui n'est pas fait ici
 
-Signature, notarisation, `.dmg`, mises à jour : **MIN-292**. L'agent qui tourne
-sur la machine : **MIN-293**. Tant que ces deux-là ne sont pas faits, ce dossier
-se lance depuis le dépôt et ne se distribue pas.
+L'agent qui tourne sur la machine : **MIN-293**.

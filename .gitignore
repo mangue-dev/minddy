@@ -41,3 +41,6 @@ supabase/.temp/
 # coquille de l'app de bureau (MIN-291) — le bundle esbuild et ses deps Electron
 /desktop/node_modules
 /desktop/dist
+# les binaires empaquetés (MIN-292). `desktop/build/`, lui, N'EST PAS ignoré :
+# l'icône `.icns` et les entitlements sont des sources, pas des artefacts.
+/desktop/release

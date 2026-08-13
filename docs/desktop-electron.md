@@ -401,6 +401,22 @@ avoir exactement ce genre de deuxième lecteur.
 
 ## 5. Distribuer sur macOS
 
+> **Construit en MIN-292.** Tout ce que ce paragraphe décrit est câblé :
+> [desktop/electron-builder.yml](../desktop/electron-builder.yml) porte
+> l'identité du bundle, le hardened runtime et la notarisation ;
+> [desktop/src/updater.ts](../desktop/src/updater.ts) les mises à jour ;
+> [scripts/publish-desktop.mjs](../scripts/publish-desktop.mjs) la publication du
+> flux ; `/download` la page. Ne restent que les gestes qui demandent un compte
+> Apple, et ils ont leur marche à marche :
+> **[docs/desktop-signing.md](desktop-signing.md)**.
+>
+> Une chose que ce cadrage n'avait pas dite, et qui compte : **l'IDENTITÉ de
+> l'app arrive ici et nulle part avant**. Tant qu'on lançait depuis le dépôt,
+> macOS lisait l'`Info.plist` d'`Electron.app` — icône Electron au dock,
+> « Electron » dans la barre de menus, et un `minddy://` qui n'atteignait
+> personne parce que LaunchServices inscrivait Electron.app. C'est le bundle qui
+> parle, pas le code.
+
 Rien d'ici n'est optionnel : hors App Store, macOS refuse de lancer une app non
 notarisée, et le message qu'il affiche fait fuir.
 

@@ -4106,7 +4106,10 @@
     "pages_publish_body": "A read-only link, a Markdown or PDF export, thirty days of history.",
     "shotAlt_pagesEditor": "A project wiki page, with the page tree on the left and its content on the right.",
     "navMenu_pages_title": "Pages",
-    "navMenu_pages_desc": "The project wiki, wired to tickets"
+    "navMenu_pages_desc": "The project wiki, wired to tickets",
+    "navMenu_download_title": "Mac app",
+    "navMenu_download_desc": "Its own window, native notifications",
+    "footerDownload": "Mac app"
   },
   "Pricing": {
     "metaTitle": "Pricing and plans",
@@ -4254,6 +4257,25 @@
     "faq_agents_a": "Claude Code, Claude Desktop, Codex, Cursor, Gemini CLI, VS Code and Windsurf are set up above, each with a line to paste. Others work too, as long as they can connect to a remote MCP server.",
     "faq_key_q": "Where do I create an API key?",
     "faq_key_a": "Nowhere: there is none. You approve minddy in your browser the first time, and you can revoke it from your account whenever you want. Nothing sensitive ends up in a configuration file."
+  },
+  "Download": {
+    "metaTitle": "minddy for Mac — the desktop app",
+    "metaDescription": "A real Mac app for minddy: its own window, native notifications, a numbered dock badge. Free, signed and notarised by Apple.",
+    "heroTitle": "minddy, in its own window",
+    "heroSubtitle": "A Mac app that opens where you left off, and rings without a browser tab.",
+    "downloadButton": "Download for Mac",
+    "downloadIntel": "Mac with an Intel chip",
+    "requirements": "macOS 11 or later. Free with every plan, the free one too.",
+    "point_window_title": "Its own window",
+    "point_window_body": "No address bar, no tabs. It opens on your work, and stays there.",
+    "point_notifications_title": "Native notifications",
+    "point_notifications_body": "Banners from macOS, and a dock badge that counts what you have not read.",
+    "point_updates_title": "It updates itself",
+    "point_updates_body": "New versions install on their own, the next time you quit the app.",
+    "noticeTitle": "One thing the app does not do",
+    "noticeBody": "Quit it and the notifications stop: macOS apps built this way have no push service. The website and the installed web app keep ringing, even closed. Keep one of them open if you want to be sure.",
+    "trustTitle": "Signed and notarised",
+    "trustBody": "Apple has checked this build. It opens with a double-click, without a warning to click through."
   },
   "Alternatives": {
     "compareTitle": "Side by side",

@@ -8,6 +8,7 @@ import {
   Boxes,
   Equal,
   FileText,
+  Laptop,
   LayoutGrid,
   MessagesSquare,
   Plug,
@@ -66,6 +67,12 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   // plan de la landing, et sa description dit « documentation » sans le mot :
   // c'est ce qui la distingue de l'entrée « Agents & MCP » juste au-dessus.
   { key: "mcp", href: "/mcp", icon: Terminal },
+  // L'app Mac (MIN-292), en dernier : c'est la seule entrée qui ne parle pas de
+  // ce que fait minddy mais de l'endroit d'où on s'en sert. Elle a sa place ici
+  // parce qu'elle est indexable et qu'un lien interne vaut plus qu'une ligne de
+  // sitemap — mais pas plus haut, sinon elle passerait pour la façon normale
+  // d'utiliser minddy, alors que le navigateur en reste le lieu.
+  { key: "download", href: "/download", icon: Laptop },
 ];
 
 /**

@@ -81,6 +81,18 @@ export const PUBLIC_ROUTES = [
     lastModified: "2026-08-10",
     priority: 0.9,
   },
+  // L'app de bureau (MIN-292). Elle a sa page et non un bouton sur la landing :
+  // ce qu'il faut dire ici — macOS seulement, et les notifications qui
+  // s'arrêtent quand l'app est quittée — ne tient pas sous un bouton, et le
+  // taire serait la seule malhonnêteté du site.
+  {
+    key: "download",
+    en: "/download",
+    fr: "/fr/telecharger",
+    namespace: "Download",
+    lastModified: "2026-08-13",
+    priority: 0.7,
+  },
   // Seule page dont le `lastModified` n'est PAS tenu à la main : ici,
   // « le contenu a changé » et « une entrée a été ajoutée » sont le même
   // événement, et la fraîcheur est ce que Perplexity regarde en premier.

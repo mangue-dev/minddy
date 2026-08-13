@@ -51,7 +51,8 @@ export type ProductEntryKey =
   | "pages"
   | "feedback"
   | "more"
-  | "mcp";
+  | "mcp"
+  | "download";
 
 export type ProductEntry = {
   /** Clé i18n : `navMenu_<key>_title` et `navMenu_<key>_desc`. */

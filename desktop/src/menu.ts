@@ -1,6 +1,7 @@
 import { Menu, app, shell, type BrowserWindow } from "electron";
 
 import { DESKTOP_ORIGIN } from "@/lib/desktop/config";
+import { checkForUpdatesFromMenu } from "./updater";
 
 /**
  * Le menu applicatif (MIN-291).
@@ -25,7 +26,17 @@ export function buildAppMenu(window: BrowserWindow): void {
           {
             label: app.name,
             submenu: [
+              // `about` ouvre le panneau natif, dont le contenu est posé par
+              // `app.setAboutPanelOptions` (main.ts). Sans ça, il affiche le nom
+              // et la version d'Electron.
               { role: "about" },
+              {
+                // La vérification DEMANDÉE : c'est la seule qui répond « vous
+                // êtes à jour », parce qu'ici quelqu'un a posé la question. Celle
+                // qui tourne toute seule, elle, se tait (updater.ts).
+                label: "Check for Updates…",
+                click: () => void checkForUpdatesFromMenu(),
+              },
               { type: "separator" },
               { role: "services" },
               { type: "separator" },

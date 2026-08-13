@@ -96,7 +96,7 @@ describe("French slug redirects in next.config.mjs", () => {
   });
 
   /** Même raison : la liste sert à poser l'en-tête de cache CDN. */
-  it("lists exactly the twelve public URLs for the CDN cache header", () => {
+  it("lists exactly the public URLs for the CDN cache header", () => {
     expect([...CONFIG_PUBLIC_ROUTE_PATHS].sort()).toEqual(
       [...PUBLIC_ROUTE_PATHS].sort(),
     );

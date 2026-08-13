@@ -4106,7 +4106,10 @@
     "pages_publish_body": "Un lien en lecture seule, un export Markdown ou PDF, trente jours d'historique.",
     "shotAlt_pagesEditor": "Une page du wiki d'un projet, avec l'arbre des pages à gauche et son contenu à droite.",
     "navMenu_pages_title": "Pages",
-    "navMenu_pages_desc": "Le wiki du projet, relié aux tickets"
+    "navMenu_pages_desc": "Le wiki du projet, relié aux tickets",
+    "navMenu_download_title": "App Mac",
+    "navMenu_download_desc": "Sa fenêtre, des notifications natives",
+    "footerDownload": "App Mac"
   },
   "Pricing": {
     "metaTitle": "Tarifs et plans",
@@ -4254,6 +4257,25 @@
     "faq_agents_a": "Claude Code, Claude Desktop, Codex, Cursor, Gemini CLI, VS Code et Windsurf sont réglés plus haut, chacun avec sa ligne à coller. Les autres marchent aussi, du moment qu'ils savent se connecter à un serveur MCP distant.",
     "faq_key_q": "Où crée-t-on une clé d'API ?",
     "faq_key_a": "Nulle part : il n'y en a pas. Vous autorisez minddy dans le navigateur à la première utilisation, et vous pouvez la révoquer depuis votre compte quand vous voulez. Rien de sensible ne finit dans un fichier de configuration."
+  },
+  "Download": {
+    "metaTitle": "minddy pour Mac — l'application de bureau",
+    "metaDescription": "Une vraie app Mac pour minddy : sa fenêtre, des notifications natives, une pastille chiffrée au dock. Gratuite, signée et notarisée par Apple.",
+    "heroTitle": "minddy, dans sa propre fenêtre",
+    "heroSubtitle": "Une app Mac qui rouvre là où vous vous étiez arrêté, et sonne sans onglet.",
+    "downloadButton": "Télécharger pour Mac",
+    "downloadIntel": "Mac à puce Intel",
+    "requirements": "macOS 11 ou plus récent. Gratuite avec tous les plans, gratuit compris.",
+    "point_window_title": "Sa propre fenêtre",
+    "point_window_body": "Ni barre d'adresse ni onglets. Elle s'ouvre sur votre travail, et y reste.",
+    "point_notifications_title": "Notifications natives",
+    "point_notifications_body": "Les bannières de macOS, et une pastille au dock qui compte ce que vous n'avez pas lu.",
+    "point_updates_title": "Elle se met à jour seule",
+    "point_updates_body": "Les nouvelles versions s'installent d'elles-mêmes, la prochaine fois que vous quittez l'app.",
+    "noticeTitle": "Ce que l'app ne fait pas",
+    "noticeBody": "Quittez-la et les notifications s'arrêtent : les apps Mac bâties ainsi n'ont pas de service de push. Le site et l'app web installée, eux, sonnent même fermés. Gardez-en un ouvert si vous voulez en être sûr.",
+    "trustTitle": "Signée et notarisée",
+    "trustBody": "Apple a vérifié cette version. Elle s'ouvre d'un double-clic, sans avertissement à écarter."
   },
   "Alternatives": {
     "compareTitle": "Côte à côte",

@@ -43,6 +43,7 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
       { href: "/#pages", labelKey: "navMenu_pages_title" },
       { href: "/#feedback", labelKey: "footerFeedback" },
       { href: "/#more", labelKey: "footerMore" },
+      { href: "/download", labelKey: "footerDownload" },
       { href: "/pricing", labelKey: "navPricing" },
     ],
   },

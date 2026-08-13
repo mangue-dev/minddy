@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Les entitlements du hardened runtime (MIN-292).
+
+  Le hardened runtime est obligatoire pour notariser, et il interdit par défaut
+  exactement ce dont V8 a besoin pour exister. Les trois clés ci-dessous sont le
+  minimum SANS LEQUEL CHROMIUM NE DÉMARRE PAS une fois l'app signée — et l'échec
+  n'arrive qu'après signature, jamais en développement.
+
+  Ce qui n'est PAS ici est un choix, pas un oubli :
+
+  - `com.apple.security.cs.disable-library-validation` : il faudra l'ajouter
+    quand l'agent local (MIN-293) lancera le binaire `opencode`, qui n'est pas
+    signé par nous. Pas avant : un entitlement ouvert « au cas où » est un
+    entitlement que personne ne relit ensuite.
+  - App Sandbox : jamais. Il interdirait précisément ce pour quoi cette app
+    existe (§4 du cadrage), et Apple ne l'exige que pour l'App Store, où on ne va
+    pas.
+-->
+<plist version="1.0">
+  <dict>
+    <!-- V8 compile à la volée : sans ça, la première page ne s'affiche pas. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <!-- Le JIT de V8 écrit dans des pages exécutables que le noyau n'a pas
+         validées. Même raison, une couche plus bas. -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!-- Electron passe par des variables d'environnement DYLD pour lancer ses
+         process fils (renderer, GPU, utilitaires). -->
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+  </dict>
+</plist>

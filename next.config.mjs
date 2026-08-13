@@ -19,6 +19,7 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
  */
 export const FRENCH_SLUG_REDIRECTS = [
   { source: "/fr/pricing", destination: "/fr/tarifs" },
+  { source: "/fr/download", destination: "/fr/telecharger" },
   { source: "/fr/changelog", destination: "/fr/nouveautes" },
   { source: "/fr/legal", destination: "/fr/mentions-legales" },
   { source: "/fr/terms", destination: "/fr/cgu" },
@@ -34,6 +35,7 @@ export const PUBLIC_ROUTE_PATHS = [
   "/",
   "/pricing",
   "/mcp",
+  "/download",
   "/changelog",
   "/alternatives/linear",
   "/alternatives/jira",
@@ -45,6 +47,7 @@ export const PUBLIC_ROUTE_PATHS = [
   "/fr",
   "/fr/tarifs",
   "/fr/mcp",
+  "/fr/telecharger",
   "/fr/nouveautes",
   "/fr/alternatives/linear",
   "/fr/alternatives/jira",

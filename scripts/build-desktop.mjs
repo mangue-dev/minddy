@@ -44,8 +44,12 @@ const result = await build({
   // Electron 43 embarque Node 24 — mesuré en MIN-290, et c'est aussi la cible du
   // bundle du harness de l'agent (§7.3).
   target: "node24",
-  // `electron` est fourni par le runtime, jamais par nous.
-  external: ["electron"],
+  // `electron` est fourni par le runtime, jamais par nous. `electron-updater`,
+  // lui, est une vraie dépendance npm : elle est empaquetée dans l'app par
+  // electron-builder (ses `node_modules` de production) et se charge par
+  // `require` à l'exécution. La bundler ici la ferait entrer deux fois — et
+  // surtout, elle lit `app-update.yml` par le chemin de son propre paquet.
+  external: ["electron", "electron-updater"],
   // Pas de minification : quand la coquille casse chez quelqu'un, la pile
   // d'appel est tout ce qu'on aura.
   minify: false,

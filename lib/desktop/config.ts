@@ -43,9 +43,10 @@ export const DESKTOP_ENTRY_PATH = "/home";
  * le changer plus tard déplacerait le dossier de tout le monde, et il faudrait
  * écrire une migration pour un simple renommage.
  *
- * Ce qu'il ne corrige PAS, et qui vient avec l'empaquetage (MIN-292) : le nom
- * dans la barre de menus et l'icône du dock, lus dans l'`Info.plist` du bundle.
- * En développement, macOS affiche « Electron », et c'est normal.
+ * Ce qu'il ne corrige PAS : le nom dans la barre de menus et l'icône du dock,
+ * lus dans l'`Info.plist` du bundle. Ceux-là sont posés par
+ * `desktop/electron-builder.yml` (MIN-292), donc par l'EMPAQUETAGE — d'où le
+ * fait qu'en développement macOS affiche « Electron », et que c'est normal.
  */
 export const DESKTOP_APP_NAME = "minddy";
 

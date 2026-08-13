@@ -124,6 +124,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
+    "@vercel/blob": "^2.8.0",
     "esbuild": "^0.28.1",
     "markdown-it": "^14.3.0",
     "playwright": "^1.62.0",

@@ -1,0 +1,119 @@
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  desktopFeedBaseUrl,
+  dmgForArch,
+  isMacArch,
+  parseLatestMacFeed,
+} from "./update-feed";
+
+/**
+ * Un `latest-mac.yml` RÉEL, tel qu'electron-builder l'écrit pour deux
+ * architectures — copié d'une sortie plutôt que réinventé, parce que c'est
+ * exactement la forme du fichier qui est le contrat ici.
+ */
+const FEED = `version: 1.2.0
+files:
+  - url: minddy-1.2.0-arm64.dmg
+    sha512: TFNQaGZ2VXpEZw==
+    size: 104857600
+  - url: minddy-1.2.0-arm64-mac.zip
+    sha512: TFNQaGZ2VXpEZw==
+    size: 101857600
+  - url: minddy-1.2.0.dmg
+    sha512: TFNQaGZ2VXpEZw==
+    size: 109857600
+  - url: minddy-1.2.0-mac.zip
+    sha512: TFNQaGZ2VXpEZw==
+    size: 106857600
+path: minddy-1.2.0-arm64.dmg
+sha512: TFNQaGZ2VXpEZw==
+releaseDate: '2026-08-13T09:12:44.113Z'
+`;
+
+describe("parseLatestMacFeed", () => {
+  it("lit la version et les quatre fichiers", () => {
+    const release = parseLatestMacFeed(FEED);
+    expect(release?.version).toBe("1.2.0");
+    expect(release?.files).toHaveLength(4);
+  });
+
+  it("déduit l'architecture du NOM — le manifeste ne la porte pas", () => {
+    const release = parseLatestMacFeed(FEED);
+    expect(release?.files.map((file) => [file.name, file.arch, file.kind])).toEqual([
+      ["minddy-1.2.0-arm64.dmg", "arm64", "dmg"],
+      ["minddy-1.2.0-arm64-mac.zip", "arm64", "zip"],
+      ["minddy-1.2.0.dmg", "x64", "dmg"],
+      ["minddy-1.2.0-mac.zip", "x64", "zip"],
+    ]);
+  });
+
+  // `path:` redit le premier fichier en fin de manifeste, mais sans la clé
+  // `url:` — il ne peut donc pas entrer. Le dédoublonnage, lui, garde la liste
+  // juste si un jour le générateur écrit la même entrée deux fois.
+  it("ne rend jamais deux fois le même fichier", () => {
+    const release = parseLatestMacFeed(FEED);
+    expect(release?.files.filter((f) => f.name === "minddy-1.2.0-arm64.dmg")).toHaveLength(1);
+    const twice = parseLatestMacFeed(
+      "version: 1.0.0\nfiles:\n  - url: minddy.dmg\n  - url: minddy.dmg\n"
+    );
+    expect(twice?.files).toHaveLength(1);
+  });
+
+  it("rend `null` sur un flux vide, tronqué, ou sans fichier lisible", () => {
+    expect(parseLatestMacFeed("")).toBeNull();
+    expect(parseLatestMacFeed("version: 1.2.0\n")).toBeNull();
+    expect(parseLatestMacFeed("files:\n  - url: minddy.dmg\n")).toBeNull();
+    expect(parseLatestMacFeed("<html>404</html>")).toBeNull();
+  });
+
+  it("ignore ce qui n'est ni `.dmg` ni `.zip` — un `.blockmap` n'est pas un livrable", () => {
+    const release = parseLatestMacFeed(
+      "version: 1.0.0\nfiles:\n  - url: minddy-1.0.0-arm64.dmg\n  - url: minddy-1.0.0-arm64.dmg.blockmap\n"
+    );
+    expect(release?.files.map((f) => f.name)).toEqual(["minddy-1.0.0-arm64.dmg"]);
+  });
+});
+
+describe("dmgForArch", () => {
+  it("sert le `.dmg`, jamais le `.zip` — celui-là est pour Squirrel", () => {
+    const release = parseLatestMacFeed(FEED)!;
+    expect(dmgForArch(release, "arm64")).toBe("minddy-1.2.0-arm64.dmg");
+    expect(dmgForArch(release, "x64")).toBe("minddy-1.2.0.dmg");
+  });
+
+  it("rend `null` quand l'architecture demandée n'a pas été publiée", () => {
+    const release = parseLatestMacFeed(
+      "version: 1.0.0\nfiles:\n  - url: minddy-1.0.0-arm64.dmg\n"
+    )!;
+    expect(dmgForArch(release, "x64")).toBeNull();
+  });
+});
+
+describe("isMacArch", () => {
+  it("n'accepte que les deux qu'on publie", () => {
+    expect(isMacArch("arm64")).toBe(true);
+    expect(isMacArch("x64")).toBe(true);
+    expect(isMacArch("universal")).toBe(false);
+    expect(isMacArch(null)).toBe(false);
+  });
+});
+
+describe("desktopFeedBaseUrl", () => {
+  const initial = process.env.MINDDY_DESKTOP_FEED_URL;
+  afterEach(() => {
+    if (initial === undefined) delete process.env.MINDDY_DESKTOP_FEED_URL;
+    else process.env.MINDDY_DESKTOP_FEED_URL = initial;
+  });
+
+  it("retire la barre oblique finale — les noms du manifeste sont relatifs", () => {
+    process.env.MINDDY_DESKTOP_FEED_URL = "https://blob.example.com/desktop/";
+    expect(desktopFeedBaseUrl()).toBe("https://blob.example.com/desktop");
+  });
+
+  it("rend `null` quand elle est absente ou vide, plutôt qu'une URL de rien", () => {
+    process.env.MINDDY_DESKTOP_FEED_URL = "   ";
+    expect(desktopFeedBaseUrl()).toBeNull();
+    delete process.env.MINDDY_DESKTOP_FEED_URL;
+    expect(desktopFeedBaseUrl()).toBeNull();
+  });
+});

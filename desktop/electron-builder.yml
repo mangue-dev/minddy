@@ -1,0 +1,95 @@
+# L'IDENTITÉ DE L'APP, ET SA DISTRIBUTION (MIN-292).
+#
+# Ce fichier est le seul endroit où minddy s'appelle « minddy » aux yeux de
+# macOS. Rien de ce qu'il pose ne se corrige à l'exécution : le nom sous l'icône,
+# celui de la barre de menus, l'icône elle-même, l'identifiant de signature et le
+# schéma `minddy://` sont lus dans l'`Info.plist` du bundle, une fois, au
+# lancement. Tant qu'on lançait depuis le dépôt, macOS lisait celui
+# d'`Electron.app` — d'où « Electron » partout, et un `minddy://` qui n'atteignait
+# personne (LaunchServices inscrivait Electron.app, pas nous).
+#
+# `app.setName("minddy")` (MIN-291) ne fait PAS double emploi : lui nomme le
+# dossier de données (`~/Library/Application Support/minddy/`, où vivront les
+# worktrees de l'agent local), et il devait être posé avant qu'il existe des
+# installations. Celui-ci nomme le bundle. Les deux disent le même mot, pour deux
+# raisons différentes.
+
+appId: app.minddy.desktop
+productName: minddy
+copyright: © 2026 mangue
+
+directories:
+  buildResources: build
+  output: release
+
+# Négations seulement : le défaut d'electron-builder embarque déjà `dist/`,
+# `package.json` et les dépendances de PRODUCTION (donc `electron-updater` et sa
+# transitivité), en élaguant les devDependencies — dont Electron et
+# electron-builder eux-mêmes. Lister `files` en positif obligerait à réénumérer
+# cette transitivité à la main, et à la tenir à jour.
+files:
+  # Les sources TypeScript : `dist/` est le bundle esbuild, il se suffit.
+  - "!src/**"
+  - "!tsconfig.json"
+  - "!electron-builder.yml"
+
+# C'est LUI qui écrit `CFBundleURLTypes`, et c'est ce qui rend le deep link
+# d'authentification testable pour la première fois : `app.setAsDefaultProtocolClient`
+# ne fait qu'ANNONCER un schéma que le bundle doit déjà déclarer.
+protocols:
+  - name: minddy
+    schemes:
+      - minddy
+
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.icns
+  # Electron 43 ne démarre plus en deçà (et Big Sur est la première version qui
+  # tourne sur Apple Silicon).
+  minimumSystemVersion: "11.0"
+  darkModeSupport: true
+  # Le `.dmg` sert au PREMIER téléchargement, le `.zip` aux mises à jour :
+  # Squirrel.Mac ne sait lire que le second. Publier l'un sans l'autre donne une
+  # app qui s'installe et ne se met jamais à jour, sans rien dire.
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  # Hardened runtime : Apple refuse de notariser sans. Les entitlements qui
+  # l'accompagnent sont dans build/entitlements.mac.plist, avec la raison de
+  # chacun.
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # `gatekeeperAssess` fait passer `spctl` PENDANT le build, avant notarisation —
+  # il échoue donc toujours à ce moment-là, et pour rien. La vraie vérification
+  # est `spctl -a -vvv` sur le `.dmg` agrafé (docs/desktop-signing.md).
+  gatekeeperAssess: false
+  # Notarisation par `notarytool`, puis agrafage du ticket, à partir de
+  # APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID. Sans certificat dans
+  # le trousseau, electron-builder saute la signature ET la notarisation en le
+  # disant : un `--dir` local reste possible.
+  notarize: true
+
+dmg:
+  # La fenêtre du `.dmg` : l'app à gauche, le lien vers /Applications à droite.
+  # C'est le geste que tout le monde connaît, et il ne se réinvente pas.
+  contents:
+    - x: 140
+      y: 190
+      type: file
+    - x: 400
+      y: 190
+      type: link
+      path: /Applications
+
+# Le flux de mise à jour. `generic` et non `github` : le dépôt est privé, et le
+# provider GitHub obligerait à embarquer un token dans une app distribuée.
+# electron-builder recopie ce bloc dans `app-update.yml` À L'INTÉRIEUR du bundle,
+# et c'est ce fichier-là que lit electron-updater — d'où le fait que l'URL soit
+# ici et nulle part dans le code.
+publish:
+  provider: generic
+  url: ${env.MINDDY_DESKTOP_FEED_URL}
+  channel: latest
