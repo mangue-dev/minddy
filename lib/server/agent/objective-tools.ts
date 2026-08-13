@@ -114,8 +114,18 @@ export async function resolveObjectiveRef(
     return { objective: { id: data.id as string, name: data.name as string } };
   }
 
-  const { data } = await query.ilike("name", raw);
-  const rows = data ?? [];
+  // Comparaison en MÉMOIRE, pas `ilike` : un nom est du texte, et `%`, `_` ou
+  // `*` y sont des caractères — passés à `ilike`, ils deviennent des jokers.
+  // « V_ » attacherait alors un ticket à « V1 » sans que personne ne le voie,
+  // et un nom qui contient `%` peut en désigner un autre que celui demandé.
+  // C'est déjà comme ça que le MCP résout une catégorie par son nom
+  // (`resolveCategoryRefs`), et un projet a une poignée d'objectifs.
+  const { data, error } = await query;
+  if (error) return { error: error.message };
+  const needle = raw.toLowerCase();
+  const rows = (data ?? []).filter(
+    (o) => String(o.name ?? "").trim().toLowerCase() === needle,
+  );
   if (rows.length === 0) {
     return {
       error: `No objective named "${raw}" in this project — list_objectives shows the ones that exist (match the name exactly, or pass the id).`,
@@ -154,7 +164,7 @@ function progressOf(
 
 async function listObjectives(ctx: ObjectiveToolContext): Promise<ToolOutcome> {
   const service = getServiceClient();
-  const [{ data, error }, { data: linked }] = await Promise.all([
+  const [{ data, error }, { data: linked, error: issuesError }] = await Promise.all([
     service
       .from("objectives")
       .select("id, name, description, status, lead_user_id, target_date")
@@ -169,6 +179,10 @@ async function listObjectives(ctx: ObjectiveToolContext): Promise<ToolOutcome> {
       .not("objective_id", "is", null),
   ]);
   if (error) return { result: { error: error.message }, success: false };
+  // La progression vient de CETTE requête-là : une lecture ratée rendrait tous
+  // les objectifs à 0 % — un chiffre faux, et rien pour le dire. Même refus
+  // franc que `minddy_list_objectives`.
+  if (issuesError) return { result: { error: issuesError.message }, success: false };
 
   const byObjective = new Map<string, Array<{ status: unknown; effort: unknown }>>();
   for (const issue of linked ?? []) {

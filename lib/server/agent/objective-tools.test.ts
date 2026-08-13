@@ -23,6 +23,10 @@ const OBJ_FOREIGN = "ffffffff-ffff-4fff-8fff-ffffffffffff";
  *  tranche pas, et où le tool doit rendre la main plutôt que choisir. */
 const OBJ_TWIN_1 = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const OBJ_TWIN_2 = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+/** Un nom qui contient un JOKER de `LIKE`, et un voisin que ce joker attrape :
+ *  le nom est du texte, et « % » y est un caractère comme un autre. */
+const OBJ_PERCENT = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const OBJ_PERCENT_NEIGHBOUR = "0e0e0e0e-0e0e-4e0e-8e0e-0e0e0e0e0e0e";
 
 const OBJECTIVES = [
   {
@@ -74,6 +78,26 @@ const OBJECTIVES = [
     lead_user_id: null,
     target_date: null,
     created_at: "2026-01-05",
+  },
+  {
+    id: OBJ_PERCENT,
+    project_id: "proj-1",
+    name: "Offline 100% du board",
+    description: null,
+    status: "planned",
+    lead_user_id: null,
+    target_date: null,
+    created_at: "2026-01-06",
+  },
+  {
+    id: OBJ_PERCENT_NEIGHBOUR,
+    project_id: "proj-1",
+    name: "Offline 100 pour cent du board",
+    description: null,
+    status: "planned",
+    lead_user_id: null,
+    target_date: null,
+    created_at: "2026-01-07",
   },
 ];
 
@@ -153,10 +177,16 @@ vi.mock("@/lib/supabase-service", () => {
     query.select = () => query;
     query.eq = eq;
     query.is = eq;
+    // `ilike` est un MOTIF, pas une égalité : `%` et `_` y sont des jokers (et
+    // PostgREST y traduit `*` en `%`). Le faux doit le dire, sans quoi il
+    // absoudrait un nom passé tel quel au motif.
     query.ilike = (column: string, value: string) => {
-      tests.push(
-        (row) => String(row[column] ?? "").toLowerCase() === value.toLowerCase(),
-      );
+      const pattern = value
+        .replace(/[.*+?^${}()|[\]\\]/g, (c) => (c === "*" ? "%" : `\\${c}`))
+        .replace(/%/g, ".*")
+        .replace(/_/g, ".");
+      const re = new RegExp(`^${pattern}$`, "i");
+      tests.push((row) => re.test(String(row[column] ?? "")));
       return query;
     };
     query.not = (column: string, _op: string, value: unknown) => {
@@ -212,7 +242,15 @@ describe("list_objectives", () => {
     const out = await executeObjectiveTool(ctx(), "list_objectives", {});
     expect(out.success).toBe(true);
     const { objectives } = out.result as { objectives: Array<{ id: string }> };
-    expect(objectives.map((o) => o.id)).toEqual([OBJ_A, OBJ_B, OBJ_TWIN_1, OBJ_TWIN_2]);
+    expect(objectives.map((o) => o.id)).toEqual([
+      OBJ_A,
+      OBJ_B,
+      OBJ_TWIN_1,
+      OBJ_TWIN_2,
+      OBJ_PERCENT,
+      OBJ_PERCENT_NEIGHBOUR,
+    ]);
+    expect(objectives.map((o) => o.id)).not.toContain(OBJ_FOREIGN);
   });
 
   it("pondère la progression par l'effort, pas par le nombre de tickets", async () => {
@@ -282,6 +320,22 @@ describe("read_objective", () => {
     const error = String((out.result as { error: string }).error);
     expect(error).toContain(OBJ_TWIN_1);
     expect(error).toContain(OBJ_TWIN_2);
+  });
+
+  // Un nom est du TEXTE : `%`, `_` et `*` y sont des caractères. Résolus par un
+  // motif `LIKE`, ils deviennent des jokers — l'un rend ambigu un nom qui ne
+  // l'est pas, l'autre attache silencieusement au mauvais objectif.
+  it("traite un nom comme du texte, jokers de LIKE compris", async () => {
+    const exact = await executeObjectiveTool(ctx(), "read_objective", {
+      objective: "Offline 100% du board",
+    });
+    expect(exact.success).toBe(true);
+    expect((exact.result as { objective: { id: string } }).objective.id).toBe(OBJ_PERCENT);
+
+    const wildcard = await executeObjectiveTool(ctx(), "read_objective", {
+      objective: "Vid_",
+    });
+    expect(wildcard.success).toBe(false);
   });
 
   it("renvoie vers list_objectives sur un nom inconnu", async () => {

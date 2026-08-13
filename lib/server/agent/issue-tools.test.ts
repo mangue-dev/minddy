@@ -707,3 +707,26 @@ describe("read_resource sur un texte trop long", () => {
     expect(result.content_note).toBeUndefined();
   });
 });
+
+/**
+ * LE TROU QUE MIN-287 A TROUVÉ AU PASSAGE : `search_pages` était servi au modèle
+ * et routé vers `executeIssueTool` par `ISSUE_TOOL_NAMES`, mais absent de son
+ * `switch` — chaque appel repartait en « Unknown issue tool ». Un tool servi et
+ * non routé ne se voit dans aucun test de schéma ni dans aucun test d'exécuteur :
+ * la faute n'existe qu'ENTRE les deux tables. D'où ce cas, qui les confronte.
+ */
+describe("routage — tout nom servi est un nom exécuté", () => {
+  it("chaque nom d'ISSUE_TOOL_NAMES a sa branche dans executeIssueTool", async () => {
+    const [{ ISSUE_TOOL_NAMES }, { readFile }] = await Promise.all([
+      import("./platform-tool-names"),
+      import("node:fs/promises"),
+    ]);
+    const source = await readFile(new URL("./issue-tools.ts", import.meta.url), "utf8");
+    const routed = new Set(
+      [...source.matchAll(/case "([a-z_]+)":/g)].map((m) => m[1]),
+    );
+    for (const name of ISSUE_TOOL_NAMES) {
+      expect(routed, `${name} est servi mais jamais routé`).toContain(name);
+    }
+  });
+});
