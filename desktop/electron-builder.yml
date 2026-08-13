@@ -66,10 +66,22 @@ mac:
   # il échoue donc toujours à ce moment-là, et pour rien. La vraie vérification
   # est `spctl -a -vvv` sur le `.dmg` agrafé (docs/desktop-signing.md).
   gatekeeperAssess: false
-  # Notarisation par `notarytool`, puis agrafage du ticket, à partir de
-  # APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID. Sans certificat dans
-  # le trousseau, electron-builder saute la signature ET la notarisation en le
-  # disant : un `--dir` local reste possible.
+  # Notarisation par `notarytool`, puis agrafage du ticket. **Un booléen, et rien
+  # d'autre** : la forme objet (`notarize: {teamId: …}`) est refusée par
+  # electron-builder 26, qui rend une erreur de schéma.
+  #
+  # Les identifiants se lisent dans l'ENVIRONNEMENT, jamais ici. Trois familles,
+  # essayées dans cet ordre (app-builder-lib, `MacTargetHelper.getNotarizeOptions`) :
+  # APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID, puis la clé d'API
+  # App Store Connect, puis **APPLE_KEYCHAIN_PROFILE** — celle qu'on utilise,
+  # parce qu'elle est la seule où le mot de passe ne quitte pas le trousseau
+  # (`xcrun notarytool store-credentials "minddy-notary"`).
+  #
+  # ⚠ **L'absence d'identifiants ne fait PAS échouer le build** : electron-builder
+  # écrit `skipped macOS notarization` en `warn` au milieu de cent lignes, et rend
+  # une app signée mais NON notarisée — que Gatekeeper refusera chez les gens.
+  # C'est pour ça que `scripts/publish-desktop.mjs` vérifie le ticket agrafé avant
+  # de publier : ce silence-là ne doit pas franchir la porte.
   notarize: true
 
 dmg:

@@ -22,11 +22,13 @@ import { put } from "@vercel/blob";
  * résout relativement à l'URL de base, et un suffixe aléatoire casserait le lien
  * entre le manifeste et les binaires qu'il annonce.
  *
- * **Deux refus, avant le premier octet envoyé.** Ils sont là parce que les deux
- * pannes correspondantes sont muettes : une app publiée sans signature
- * s'installe et ne se mettra JAMAIS à jour (Squirrel.Mac exige une app signée),
- * et un `app-update.yml` sans URL donne une app qui ne cherche nulle part. Dans
- * les deux cas rien ne casse à la publication, et tout est cassé chez les gens.
+ * **Trois refus, avant le premier octet envoyé.** Ils sont là parce que les trois
+ * pannes correspondantes sont MUETTES : une app non signée s'installe et ne se
+ * mettra jamais à jour (Squirrel.Mac exige une app signée) ; une app non
+ * notarisée ne s'ouvre chez personne, et le build ne fait qu'un `warn` quand il
+ * saute l'étape ; un `app-update.yml` sans URL donne une app qui ne cherche
+ * nulle part. Dans les trois cas rien ne casse à la publication, et tout est
+ * cassé chez les gens.
  */
 
 const exec = promisify(execFile);
@@ -93,7 +95,28 @@ for (const app of apps) {
   }
 }
 
-// Refus 2 — l'`app-update.yml` du bundle porte bien l'URL du flux. C'est le
+// Refus 2 — l'app est NOTARISÉE, et le ticket est agrafé.
+//
+// Signée ne suffit pas : Gatekeeper veut aussi qu'Apple ait regardé. Et le manque
+// ne se voit pas au build — quand les identifiants de `notarytool` manquent,
+// electron-builder écrit `skipped macOS notarization` en `warn` au milieu de cent
+// lignes et rend une app signée, non notarisée, d'apparence normale. Elle ne
+// s'ouvrirait chez personne. `stapler validate` est ce qui tranche : il lit le
+// ticket DANS le bundle, sans réseau, exactement comme le fera le Mac d'en face.
+for (const app of apps) {
+  try {
+    await exec("xcrun", ["stapler", "validate", app]);
+  } catch {
+    fail(
+      `${path.relative(repo, app)} n'a pas de ticket de notarisation agrafé. ` +
+        "macOS refusera de l'ouvrir. Le build a probablement écrit " +
+        "`skipped macOS notarization` — vérifier APPLE_KEYCHAIN_PROFILE, puis " +
+        "docs/desktop-signing.md §3."
+    );
+  }
+}
+
+// Refus 3 — l'`app-update.yml` du bundle porte bien l'URL du flux. C'est le
 // fichier que lit electron-updater, et il est écrit au moment de l'empaquetage :
 // un `MINDDY_DESKTOP_FEED_URL` absent CE jour-là ne se voit nulle part ailleurs.
 for (const app of apps) {
@@ -107,7 +130,44 @@ for (const app of apps) {
   }
 }
 
-const files = entries.filter((name) => PUBLISHED.test(name)).sort();
+// **C'est le MANIFESTE qui décide de ce qui part, pas le contenu du dossier.**
+// `desktop/release/` n'est pas nettoyé entre deux builds : les binaires d'une
+// version précédente y restent, et un balayage du dossier les republierait — du
+// poids mort dans le store, et un `.zip` d'une version que le flux n'annonce
+// plus. On ne pousse donc que ce que `latest-mac.yml` cite, plus ses blockmaps
+// (les deltas, qu'il ne cite pas mais qu'electron-updater va chercher à côté).
+//
+// La lecture des `url:` est volontairement minuscule et duplique trois lignes de
+// lib/desktop/update-feed.ts (l'autre lecteur du même fichier, côté site) :
+// importer du TypeScript du dépôt dans un script `.mjs` coûterait plus cher que
+// ces trois lignes-là.
+const manifest = await readFile(path.join(RELEASE_DIR, "latest-mac.yml"), "utf8");
+const referenced = [...manifest.matchAll(/^\s*-\s*url:\s*(.+)$/gm)].map((m) =>
+  m[1].trim().replace(/^['"]|['"]$/g, "")
+);
+if (referenced.length === 0) fail("latest-mac.yml n'annonce aucun fichier.");
+
+const missing = referenced.filter((name) => !entries.includes(name));
+if (missing.length > 0) {
+  fail(`le manifeste annonce des fichiers absents du dossier : ${missing.join(", ")}`);
+}
+
+const files = entries
+  .filter(
+    (name) =>
+      name === "latest-mac.yml" ||
+      referenced.includes(name) ||
+      (name.endsWith(".blockmap") && referenced.includes(name.slice(0, -".blockmap".length)))
+  )
+  .sort();
+
+const skipped = entries.filter((name) => PUBLISHED.test(name) && !files.includes(name));
+// Un plafond silencieux est un mensonge : on DIT ce qu'on laisse au sol.
+if (skipped.length > 0) {
+  console.log(
+    `[publish-desktop] ignorés (hors manifeste, sans doute d'un build précédent) : ${skipped.join(", ")}`
+  );
+}
 if (files.length === 0) fail("rien à publier dans desktop/release.");
 
 // Le manifeste EN DERNIER, toujours. Il est ce qui annonce une version ; le
