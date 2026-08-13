@@ -344,13 +344,13 @@ export function TaskItemView({
             }}
             searchValue={query}
             onSearchValueChange={setQuery}
-            tooltip={t("taskMenuAria")}
+            tooltip={t("taskActionsAria")}
             align="end"
             trigger={
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={t("taskMenuAria")}
+                aria-label={t("taskActionsAria")}
                 onMouseDown={(e) => e.preventDefault()}
                 className="size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
               >

@@ -354,8 +354,13 @@ export default function InboxPage() {
             {invitations.map((inv) => {
               const busy = invitationBusyId === inv.id;
               return (
-                <li key={inv.id} className="flex items-center gap-3 px-4 py-3">
-                  <span className="size-2 shrink-0 rounded-full bg-blue-500" aria-hidden />
+                <li key={inv.id} className="relative flex items-center gap-3 px-4 py-3">
+                  {/* Même point, même marge que les notifications : il marque le
+                      bord de la ligne sans en décaler le portrait. */}
+                  <span
+                    className="absolute left-1 top-1/2 size-2 -translate-y-1/2 rounded-full bg-blue-500"
+                    aria-hidden
+                  />
                   {/* Le portrait de qui invite, à la place de l'icône de type :
                       une invitation vient de quelqu'un, pas d'un système. */}
                   <UserAvatar
@@ -433,15 +438,18 @@ export default function InboxPage() {
                       type="button"
                       onClick={() => open(n)}
                       className={cn(
-                        "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
+                        "relative flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
                         "hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
                       )}
                     >
                       {/* Non lu : bleu ; JAUNE quand Numo attend une réponse —
-                          même langage que la liste des sessions d'agent. */}
+                          même langage que la liste des sessions d'agent.
+                          Le point vit dans la marge gauche de la ligne, pas dans
+                          son flux : sinon il repousse l'avatar de 20 px et toutes
+                          les lignes lues gardent ce vide au bord. */}
                       <span
                         className={cn(
-                          "size-2 shrink-0 rounded-full",
+                          "absolute left-1 top-1/2 size-2 -translate-y-1/2 rounded-full",
                           unread
                             ? n.type === "agent_question"
                               ? "bg-yellow-500"

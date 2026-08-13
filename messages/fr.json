@@ -1759,6 +1759,7 @@
     "markCompleted": "Marquer terminée",
     "cancelTask": "Marquer annulée",
     "taskMenuAria": "Changer l'état de la tâche",
+    "taskActionsAria": "Actions sur la tâche",
     "taskCheckboxAria": "Basculer la tâche « {text} »"
   },
   "Priority": {

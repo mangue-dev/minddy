@@ -1759,6 +1759,7 @@
     "markCompleted": "Mark as completed",
     "cancelTask": "Mark as cancelled",
     "taskMenuAria": "Change task state",
+    "taskActionsAria": "Task actions",
     "taskCheckboxAria": "Toggle task “{text}”"
   },
   "Priority": {
