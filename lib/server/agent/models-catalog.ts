@@ -12,6 +12,7 @@ import type { ModelReasoning } from "@/lib/agent-reasoning";
 import { getAppConfigValue } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { parseRecommendedModels } from "@/lib/recommended-models";
+import { dedupeModelVariants } from "@/lib/model-variants";
 import {
   getAgentProvider,
   normalizeBaseUrl,
@@ -89,8 +90,17 @@ const cache = new Map<string, { at: number; models: AgentModelEntry[] }>();
 /** Écarte les modèles non conversationnels (embeddings, audio, image…). */
 const NON_CHAT_RE = /(embedding|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
+/**
+ * La liste telle qu'on la PROPOSE : sans ses doublons de version, et rangée.
+ *
+ * Le dédoublonnage vaut pour les quatre stratégies et pas seulement pour
+ * OpenRouter : `/v1/models` d'OpenAI publie `gpt-4o` à côté de trois
+ * `gpt-4o-2024-…`, et celui d'Anthropic ne publie que des ids datés — auquel cas
+ * la règle ne retire rien, faute d'id nu en face. C'est exactement ce qu'on veut :
+ * elle ne range que là où il y a un doublon.
+ */
 function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
-  return models.sort((a, b) => a.id.localeCompare(b.id));
+  return dedupeModelVariants(models).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /**
@@ -106,6 +116,11 @@ function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
  *    par id de `NON_CHAT_RE` ne suffit pas et n'a jamais couru ici : `gpt-audio`
  *    et `gemini-3-pro-image` déclarent tous deux `tools`.
  * L'index, lui, les garde : un id collé à la main doit rester chiffrable.
+ *
+ * Les DOUBLONS DE VERSION (instantanés datés, pré-versions, tarif `:batch` —
+ * un tiers de la liste ici) tombent un cran plus loin, dans `sortById`, avec
+ * ceux des autres providers : même raison que les aiguillages, et même limite —
+ * on range ce qu'on PROPOSE, pas ce qu'on accepte.
  */
 async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
   const index = await listOpenRouterIndex(apiKey);
