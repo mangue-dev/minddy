@@ -74,6 +74,14 @@ describe("liveAfterEvent", () => {
     expect(next?.tools).toBe(0);
   });
 
+  it("les LÂCHE sur ce qui CLÔT le tour — la liste ne survit pas à la réponse", () => {
+    // La liste vivante appartient au tour en cours. Quand elle lui survivait, le fil
+    // la rangeait dans un tour NEUF (elle arrive après le résumé) et affichait un
+    // second accordéon sous la réponse, avec son propre chrono.
+    expect(liveAfterEvent(withFiles(["a.ts"]), "summary")).toBeNull();
+    expect(liveAfterEvent(withFiles(["a.ts"]), "quota_exhausted")).toBeNull();
+  });
+
   it("les LÂCHE sur `files_changed` : l'autorité est arrivée", () => {
     // Le passage de relais se décide ici, et pas sur une charge de purge : quand la
     // boucle tourne dans la microVM, l'event est posé après que le tour a rendu son

@@ -102,11 +102,23 @@ export function liveFromStream(
  * l'event est posé par la fonction APRÈS que le tour a rendu son rapport, et il n'y
  * a plus personne dans la VM pour diffuser l'oubli. Les deux listes se seraient
  * superposées jusqu'à la fin du run.
+ *
+ * Et sauf ce qui CLÔT LE TOUR (`summary`, `quota_exhausted`) : la liste vivante
+ * appartient au tour en cours, elle ne lui survit pas. Elle le faisait, le temps que
+ * le `files_changed` de fin de tour arrive — et le fil, qui range ce qui suit une
+ * réponse dans un tour NEUF, ouvrait un second accordéon sous celle-ci, chrono
+ * compris : le tour se lisait en double.
  */
+const CLOSES_TURN: ReadonlySet<AgentEventType> = new Set<AgentEventType>([
+  "files_changed",
+  "summary",
+  "quota_exhausted",
+]);
+
 export function liveAfterEvent(
   prev: AgentRunLive | null,
   type: AgentEventType,
 ): AgentRunLive | null {
-  if (!prev || prev.files.length === 0 || type === "files_changed") return null;
+  if (!prev || prev.files.length === 0 || CLOSES_TURN.has(type)) return null;
   return { ...prev, text: "", tools: 0, reasoningActive: false };
 }
