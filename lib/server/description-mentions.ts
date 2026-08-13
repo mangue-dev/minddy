@@ -8,6 +8,7 @@ import {
   projectMemberIds,
   type NotificationRow,
 } from "@/lib/server/notifications";
+import { notificationActorSource } from "@/lib/notification-actor";
 import type { Member } from "@/lib/types";
 
 /**
@@ -77,6 +78,11 @@ export async function notifyDescriptionMentions(
     objectiveId?: string;
     /** L'écriture est passée par le MCP : l'inbox nomme l'agent, pas la clé. */
     mcpKeyId?: string | null;
+    /** L'écriture est un geste de NOTRE agent hors MCP (le chat Numo, l'agent
+        de code) : l'inbox et la bannière nomment alors Numo. Sans ça, une
+        description réécrite par Numo annonçait « <le demandeur> vous a
+        mentionné » — d'une phrase que le demandeur n'a pas écrite. */
+    viaAssistant?: boolean;
   },
 ): Promise<void> {
   const { projectId, actorId, description } = params;
@@ -105,8 +111,7 @@ export async function notifyDescriptionMentions(
     issue_id: params.issueId ?? null,
     objective_id: params.objectiveId ?? null,
     actor_id: actorId,
-    via_mcp: !!params.mcpKeyId,
-    api_key_id: params.mcpKeyId ?? null,
+    ...notificationActorSource(params),
   }));
   await insertNotifications(service, rows);
 }

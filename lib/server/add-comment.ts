@@ -11,6 +11,7 @@ import {
   projectMemberIds,
   type NotificationRow,
 } from "@/lib/server/notifications";
+import { notificationActorSource } from "@/lib/notification-actor";
 import { isCommentVisibility, type CommentVisibility } from "@/lib/feedback/types";
 
 /**
@@ -184,6 +185,7 @@ export async function addCommentToIssue({
     }
   }
 
+  const actorSource = notificationActorSource({ viaAssistant, mcpKeyId });
   const rows: NotificationRow[] = [
     ...[...mentionSet].map((uid) => ({
       user_id: uid,
@@ -192,6 +194,7 @@ export async function addCommentToIssue({
       issue_id: issueId,
       comment_id: data.id as string,
       actor_id: actorId,
+      ...actorSource,
     })),
     ...[...commentSet].map((uid) => ({
       user_id: uid,
@@ -200,6 +203,7 @@ export async function addCommentToIssue({
       issue_id: issueId,
       comment_id: data.id as string,
       actor_id: actorId,
+      ...actorSource,
     })),
   ];
   await insertNotifications(service, rows);
@@ -340,6 +344,7 @@ export async function addCommentToObjective({
     }
   }
 
+  const actorSource = notificationActorSource({ viaAssistant, mcpKeyId });
   const rows: NotificationRow[] = [
     ...[...mentionSet].map((uid) => ({
       user_id: uid,
@@ -349,6 +354,7 @@ export async function addCommentToObjective({
       objective_id: objectiveId,
       comment_id: data.id as string,
       actor_id: actorId,
+      ...actorSource,
     })),
     ...[...commentSet].map((uid) => ({
       user_id: uid,
@@ -358,6 +364,7 @@ export async function addCommentToObjective({
       objective_id: objectiveId,
       comment_id: data.id as string,
       actor_id: actorId,
+      ...actorSource,
     })),
   ];
   await insertNotifications(service, rows);
@@ -524,6 +531,7 @@ export async function addCommentToFeedbackPost({
     }
   }
 
+  const actorSource = notificationActorSource({ viaAssistant, mcpKeyId });
   const rows: NotificationRow[] = [
     ...[...mentionSet].map((uid) => ({
       user_id: uid,
@@ -533,6 +541,7 @@ export async function addCommentToFeedbackPost({
       feedback_post_id: postId,
       comment_id: data.id as string,
       actor_id: actorId,
+      ...actorSource,
     })),
     ...[...commentSet].map((uid) => ({
       user_id: uid,
@@ -542,6 +551,7 @@ export async function addCommentToFeedbackPost({
       feedback_post_id: postId,
       comment_id: data.id as string,
       actor_id: actorId,
+      ...actorSource,
     })),
   ];
   await insertNotifications(service, rows);

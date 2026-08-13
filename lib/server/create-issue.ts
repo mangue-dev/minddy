@@ -22,6 +22,7 @@ import {
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { runSmartFill } from "@/lib/server/smart-fill";
 import { insertNotifications } from "@/lib/server/notifications";
+import { notificationActorSource } from "@/lib/notification-actor";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import { queuePageLinks } from "@/lib/server/page-links";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
@@ -552,10 +553,9 @@ export async function createIssueForProject({
           type: "assigned",
           issue_id: data.id as string,
           actor_id: actorId,
-          // Cf. update-issue : un ticket créé assigné depuis le MCP est l'œuvre
+          // Cf. update-issue : un ticket créé assigné par un agent est l'œuvre
           // de l'agent, la notification doit le nommer comme la timeline.
-          via_mcp: !!mcpKeyId,
-          api_key_id: mcpKeyId,
+          ...notificationActorSource({ viaAssistant, mcpKeyId }),
         },
       ]);
     }
@@ -568,6 +568,7 @@ export async function createIssueForProject({
       description: data.description as string | null,
       issueId: data.id as string,
       mcpKeyId,
+      viaAssistant,
     });
 
     // Les PAGES citées par cette description (MIN-279) : le ticket qui naît en

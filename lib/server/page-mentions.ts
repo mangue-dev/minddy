@@ -8,6 +8,7 @@ import {
   projectMemberIds,
   type NotificationRow,
 } from "@/lib/server/notifications";
+import { notificationActorSource } from "@/lib/notification-actor";
 import type { Member } from "@/lib/types";
 
 /**
@@ -66,16 +67,9 @@ export async function notifyPageMentions(
   });
   if (mentions.length === 0) return;
 
-  // QUI a cité, tel que la ligne le dira. `actor_id` reste le compte sous
-  // lequel l'écriture est passée — il faut bien un id —, mais quand le geste est
-  // celui de l'agent c'est l'AGENT que l'inbox nomme : la clé MCP quand il y en
-  // a une (« Claude Code (mcp) »), Numo sinon (le chat, l'agent de code). Sans
-  // ça, « Untel vous a mentionné » d'une phrase qu'Untel n'a jamais écrite.
-  const actorSource = params.mcpKeyId
-    ? { via_mcp: true, api_key_id: params.mcpKeyId }
-    : params.viaAssistant
-      ? { via_assistant: true }
-      : {};
+  // QUI a cité, tel que la ligne le dira — sans ça, « Untel vous a mentionné »
+  // d'une phrase qu'Untel n'a jamais écrite (cf. `notificationActorSource`).
+  const actorSource = notificationActorSource(params);
   const rows: NotificationRow[] = mentions.map((mention) => ({
     user_id: mention.userId,
     project_id: params.projectId,

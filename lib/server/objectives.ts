@@ -166,6 +166,7 @@ export async function createObjective({
     description: data.description as string | null,
     objectiveId: data.id as string,
     mcpKeyId,
+    viaAssistant,
   });
 
   // Et les pages qu'elle cite (MIN-279).
@@ -294,6 +295,7 @@ export async function updateObjective({
       previousDescription: objective.description as string | null,
       objectiveId,
       mcpKeyId,
+      viaAssistant,
     });
     // Les pages citées, réécrites en entier — cf. `updateIssueFields`.
     queuePageLinks(

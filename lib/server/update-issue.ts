@@ -23,6 +23,7 @@ import {
 } from "@/lib/server/issue-events";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import { insertNotifications } from "@/lib/server/notifications";
+import { notificationActorSource } from "@/lib/notification-actor";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
 import { queuePageLinks } from "@/lib/server/page-links";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
@@ -478,10 +479,9 @@ export async function updateIssueFields({
           issue_id: issueId,
           actor_id: actorId,
           // Même attribution que les événements produits juste au-dessus : une
-          // affectation venue du MCP est l'agent qui l'a faite, pas le compte
-          // dont il porte la clé.
-          via_mcp: !!mcpKeyId,
-          api_key_id: mcpKeyId,
+          // affectation venue d'un agent est l'agent qui l'a faite, pas le
+          // compte dont il porte la clé — le MCP par son nom, Numo sinon.
+          ...notificationActorSource({ viaAssistant, mcpKeyId }),
         },
       ]);
     }
@@ -496,6 +496,7 @@ export async function updateIssueFields({
         previousDescription: before.description as string | null,
         issueId,
         mcpKeyId,
+        viaAssistant,
       });
       // Et les PAGES qu'elle cite (MIN-279). Pas de diff ici, contrairement aux
       // mentions de personnes : les liens ne préviennent personne, ils décrivent

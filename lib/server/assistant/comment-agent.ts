@@ -367,6 +367,11 @@ export async function runCommentMention({
       issue_id: issueId,
       comment_id: replyId as string,
       actor_id: actorId,
+      // La ligne dit elle-même que c'est NUMO qui a écrit. L'inbox le savait
+      // déjà par le commentaire (`comments.via_assistant`) ; la notification
+      // poussée, elle, ne lit que cette ligne — sans ce drapeau, la bannière
+      // annonçait « <le demandeur> a commenté » au demandeur lui-même.
+      via_assistant: true,
     }));
     await insertNotifications(service, rows);
   } catch (err) {
@@ -590,6 +595,8 @@ export async function runObjectiveCommentMention({
       objective_id: objectiveId,
       comment_id: replyId as string,
       actor_id: actorId,
+      // Cf. le jumeau ticket : la ligne nomme Numo, sur les deux surfaces.
+      via_assistant: true,
     }));
     await insertNotifications(service, rows);
   } catch (err) {
@@ -850,6 +857,8 @@ export async function runFeedbackCommentMention({
       feedback_post_id: postId,
       comment_id: replyId as string,
       actor_id: actorId,
+      // Cf. le jumeau ticket : la ligne nomme Numo, sur les deux surfaces.
+      via_assistant: true,
     }));
     await insertNotifications(service, rows);
   } catch (err) {

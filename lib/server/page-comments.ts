@@ -9,6 +9,7 @@ import {
   projectMemberIds,
   type NotificationRow,
 } from "@/lib/server/notifications";
+import { notificationActorSource } from "@/lib/notification-actor";
 import { normalizeQuote } from "@/lib/page-comments";
 
 /**
@@ -173,11 +174,7 @@ export async function addPageComment({
     }
   }
 
-  const actorSource = mcpKeyId
-    ? { via_mcp: true, api_key_id: mcpKeyId }
-    : viaAssistant
-      ? { via_assistant: true }
-      : {};
+  const actorSource = notificationActorSource({ viaAssistant, mcpKeyId });
   const target = { page_id: pageId, block_id: anchor };
   const rows: NotificationRow[] = [
     ...[...mentionSet].map((uid) => ({
