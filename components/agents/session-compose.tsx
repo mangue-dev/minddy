@@ -35,6 +35,7 @@ import {
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { Project } from "@/lib/types";
+import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import { MentionLinksProvider } from "@/components/mention-links";
 import type { AssistantMention } from "@/lib/assistant-types";
@@ -152,6 +153,16 @@ export function SessionCompose({
   const t = useTranslations("Agent");
   const tAgents = useTranslations("Agents");
   const tNav = useTranslations("Nav");
+
+  /**
+   * Le FAB de Numo s'efface ici comme dans une conversation ouverte : ce volet
+   * porte le MÊME composer épinglé en bas, et le FAB tombe pile sur son bouton
+   * d'envoi. `AgentConversation` le déclarait déjà pour lui-même — mais la vue
+   * PAR DÉFAUT de la page Agents est cet écran-ci, pas une conversation, et le
+   * FAB y revenait donc dès qu'on arrivait sur la page.
+   */
+  useSuppressAssistantFab();
+
   const agentErrorMessage = useAgentErrorMessage();
   const queryClient = useQueryClient();
   const { projects } = useProjects();

@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
+import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
@@ -97,7 +98,7 @@ export function KanbanColumn({
   );
 
   return (
-    <div className="flex w-full shrink-0 snap-center flex-col desktop:w-[22rem]">
+    <div className={cn("flex flex-col", BOARD_COLUMN_CLASS)}>
       <div className="mb-2 flex items-center gap-2 px-1">
         <StatusIndicator status={status.value} className="size-4" />
         <h2 className="text-sm font-semibold">{ts(status.value)}</h2>

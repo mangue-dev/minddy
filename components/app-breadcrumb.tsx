@@ -15,6 +15,7 @@ import {
 import { ChevronsUpDown, ChevronLeft, Home } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
+import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import type { Project } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 
@@ -236,6 +237,16 @@ function MobileBreadcrumb({
   return (
     <div className="flex min-w-0 flex-1 items-center desktop:hidden">
       <div className="flex min-w-0 flex-1 justify-start">
+        {/* App de bureau, sous 1200 px : la barre latérale n'est plus rendue, et
+            les boutons macOS tombent pile sur le bouton retour ci-dessous — le
+            coin haut-gauche de la fenêtre, c'est cette ligne. Ce coin de garde
+            les pousse hors du chemin, et dessine les leurres quand un dialogue
+            retire les vrais (MIN-293). Ne rend rien ailleurs.
+
+            DANS la moitié gauche, et non avant elle : les deux moitiés sont des
+            `flex-1` de base nulle, donc le titre reste centré sur la fenêtre
+            quoi qu'on mette dedans. Posé au-dessus, il l'aurait décalé. */}
+        <HeaderWindowButtonsSlot />
         {backHref ? (
           <Button
             asChild

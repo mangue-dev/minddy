@@ -1749,19 +1749,53 @@ html[data-desktop-app] .app-shell > div > header {
 
    `data-window-buttons` est posé par components/app-sidebar.tsx quand les
    boutons sont là. En mode RAIL ils sont retirés (56 px ne les tiennent pas) et
-   l'attribut disparaît avec eux : la marque revient à gauche, à sa place.
-   `padding-left` = ce que les boutons occupent, RELEVÉ sur une capture d'écran
-   système plutôt que déduit : bord gauche à 19, trois pastilles de 14 px au pas
-   de 23, donc un bord droit à 79 — plus une marge. Le même chiffre vit dans
-   `WINDOW_BUTTONS_WIDTH` (components/app-sidebar.tsx), qui dessine les leurres
-   et reconnaît la sortie du pointeur vers les boutons. */
-html[data-desktop-app] .sidebar-brand-row[data-window-buttons] {
-  padding-left: 84px;
-  justify-content: flex-end;
+   l'attribut disparaît avec eux : la marque revient à gauche, à sa place. Sous
+   1200 px la barre n'est plus rendue du tout, et c'est l'en-tête qui leur garde
+   le coin (`HeaderWindowButtonsSlot`, components/desktop-window-buttons.tsx).
+
+   La place qu'ils occupent — bord gauche à 19, trois pastilles de 14 px au pas
+   de 23, donc un bord droit à 79, plus une marge — est RELEVÉE sur une capture
+   d'écran système plutôt que déduite, et vit dans `WINDOW_BUTTONS_WIDTH`
+   (components/desktop-window-buttons.tsx). Ce bloc-ci n'en a pas besoin : la
+   marque se cale sur le bord droit de la ligne, pas sur eux. */
+/* ── La marque GLISSE, elle ne se téléporte pas ───────────────────────────────
+   MIN-293. La place s'ouvre et se referme en cours de route — on passe en plein
+   écran, macOS emmène les boutons en haut de l'écran, et la ligne n'a plus rien
+   à leur garder ; le rail se replie, idem. La marque sautait alors d'un bord à
+   l'autre, sans transition, ce qui donne à toute la barre l'air de se recharger.
+
+   `justify-content` et `padding` ne s'animent pas (le second, si, mais il
+   pousserait la marque au lieu de la déplacer). D'où la mise en scène : la ligne
+   devient un CONTENEUR de requête, et la marque se translate de la largeur qui
+   reste — `100cqw` est la largeur de contenu de la ligne (hors gouttière), `100%`
+   celle de la marque elle-même. La différence est exactement le trajet, à toute
+   largeur de barre, sans un seul chiffre en dur et sans rien mesurer en JS.
+
+   L'animation n'est ARMÉE qu'une fois le premier état de la fenêtre reçu
+   (`data-window-buttons-ready`, posé par components/app-sidebar.tsx) : avant la
+   réponse du pont, la place vaut « fermée » par défaut, et animer ce
+   rattrapage-là ferait démarrer l'app sur un logo qui traverse sa barre. */
+html[data-desktop-app] .sidebar-brand-row {
+  container-type: inline-size;
+  /* La ligne de marque est aussi la prise de la fenêtre du côté de la barre
+     latérale : c'est la seule bande horizontale libre qu'elle ait. */
+  -webkit-app-region: drag;
 }
 
-/* La ligne de marque est aussi la prise de la fenêtre du côté de la barre
-   latérale : c'est la seule bande horizontale libre qu'elle ait. */
-html[data-desktop-app] .sidebar-brand-row {
-  -webkit-app-region: drag;
+html[data-desktop-app] .sidebar-brand-row[data-window-buttons] .sidebar-brand-mark {
+  transform: translateX(calc(100cqw - 100%));
+}
+
+html[data-desktop-app]
+  .sidebar-brand-row[data-window-buttons-ready]
+  .sidebar-brand-mark {
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-desktop-app]
+    .sidebar-brand-row[data-window-buttons-ready]
+    .sidebar-brand-mark {
+    transition: none;
+  }
 }

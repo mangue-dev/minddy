@@ -53,8 +53,26 @@ export const DESKTOP_APP_NAME = "minddy";
 /** Le schéma d'URL que macOS nous attribue (`minddy://auth?code=…`). */
 export const DESKTOP_PROTOCOL = "minddy";
 
-/** L'hôte du seul deep link qu'on traite : `minddy://auth`. */
+/** L'hôte du deep link d'authentification : `minddy://auth`. */
 export const DESKTOP_AUTH_HOST = "auth";
+
+/**
+ * L'hôte du deep link de RETOUR : `minddy://open?next=…` (MIN-293).
+ *
+ * Il ramène la fenêtre sur une page de l'app depuis le navigateur système —
+ * aujourd'hui la fin d'un paiement Stripe, demain tout aller-retour du même
+ * genre. Voir lib/desktop/open-link.ts.
+ */
+export const DESKTOP_OPEN_HOST = "open";
+
+/**
+ * La page de rebond que le navigateur système traverse pour rouvrir l'app.
+ *
+ * Elle existe parce qu'un tiers ne peut PAS nous renvoyer sur `minddy://` :
+ * Stripe (comme tout service sérieux) n'accepte qu'une URL http(s) en retour.
+ * On lui donne donc celle-ci, et c'est elle qui appelle le schéma.
+ */
+export const DESKTOP_RETURN_PATH = "/desktop/return";
 
 /**
  * Le marqueur que le `redirectTo` d'une demande d'authentification porte quand

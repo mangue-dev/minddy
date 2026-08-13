@@ -438,8 +438,15 @@ export function KanbanBoard({
 
 /**
  * Mobile-only pagination dots for the swipeable board: one dot per status column,
- * the active one widened. Tapping a dot scrolls that column into view. Hidden on
- * desktop (the full board is visible) and when there's only one column.
+ * the active one widened. Tapping a dot scrolls that column into view. Hidden
+ * when there's only one column.
+ *
+ * `sm:hidden` et non `desktop:hidden` (MIN-293) : ces points comptent des PAGES,
+ * et il n'y a une page par colonne qu'en dessous de 640 px, là où une colonne
+ * remplit la fenêtre (`BOARD_COLUMN_CLASS`). Au-dessus, deux ou trois colonnes
+ * tiennent ensemble, une page n'est plus une colonne — les points se mettraient
+ * à compter faux, et les derniers seraient inatteignables. Ce qui reste hors
+ * champ se lit alors au fondu des bords (`useScrollFade`).
  */
 function ColumnDots({
   statuses,
@@ -453,7 +460,7 @@ function ColumnDots({
   const ts = useTranslations("Status");
   if (statuses.length <= 1) return null;
   return (
-    <div className="flex shrink-0 items-center justify-center gap-1.5 pb-2 desktop:hidden">
+    <div className="flex shrink-0 items-center justify-center gap-1.5 pb-2 sm:hidden">
       {statuses.map((status, i) => (
         <button
           key={status.value}

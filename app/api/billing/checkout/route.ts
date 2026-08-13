@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { coerceBillingPlanId, type BillingInterval } from "@/lib/billing-plans";
+import { billingReturnUrl } from "@/lib/desktop/return-url";
 import {
   getBillingAccountForUser,
   shouldUseStripePlan,
@@ -75,13 +76,19 @@ export async function POST(request: NextRequest) {
   }
 
   const origin = request.nextUrl.origin;
+  // Le paiement s'ouvre dans le NAVIGATEUR même quand il part de l'app de
+  // bureau (une page de carte bancaire n'a rien à faire dans une fenêtre à
+  // nous). Sans ce rebond, il s'y terminait aussi : on repartait de Stripe vers
+  // sa page de facturation dans Safari, l'app toujours ouverte derrière et
+  // toujours sur l'ancien plan. Voir lib/desktop/open-link.ts.
+  const fromDesktop = (body as { desktop?: unknown })?.desktop === true;
   const session = await createStripeCheckoutSession({
     customerId,
     planId,
     interval,
     userId: user.id,
-    successUrl: `${origin}/billing?billing=success`,
-    cancelUrl: `${origin}/billing?billing=cancelled`,
+    successUrl: billingReturnUrl(origin, "/billing?billing=success", fromDesktop),
+    cancelUrl: billingReturnUrl(origin, "/billing?billing=cancelled", fromDesktop),
   });
 
   await upsertBillingAccount(user.id, {

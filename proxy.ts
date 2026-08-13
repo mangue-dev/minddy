@@ -45,6 +45,11 @@ const PUBLIC_ROUTES = new Set([
   // puis redirige vers le board public ; déconnecté, elle redirige sans SSO.
   // Elle sait donc gérer les deux cas — la protéger la cassait pour le second.
   "/feedback",
+  // `/desktop/return` (app/desktop/return/route.ts) rebondit le navigateur
+  // système vers `minddy://` après un détour par Stripe. Le navigateur qui en
+  // revient n'est pas forcément celui où l'on est connecté, et la page ne porte
+  // rien de personnel — la protéger la casserait pour tout le monde.
+  "/desktop/return",
   "/favicon.ico",
   "/icon",
   "/manifest.json",

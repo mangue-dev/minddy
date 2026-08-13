@@ -10,6 +10,7 @@ import type {
   BillingPlanId,
   UsageSegmentId,
 } from "@/lib/billing-plans";
+import { isDesktop } from "@/lib/desktop/bridge";
 import { trackEvent } from "./analytics";
 
 /** Fetchers client du billing (MIN-72) : statut de plan, usage, checkout, portal. */
@@ -63,7 +64,11 @@ export async function createCheckoutApi(
     await fetch("/api/billing/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planId, interval }),
+      // `desktop` : Stripe s'ouvre dans le navigateur système dans les deux cas,
+      // mais il doit RENVOYER dans l'app quand c'est d'elle qu'on est parti
+      // (MIN-293). Seule la page peut le constater — le serveur ne verrait qu'un
+      // user agent, et un user agent ne décide de rien ici.
+      body: JSON.stringify({ planId, interval, desktop: isDesktop() }),
     })
   );
   if (!url) throw new Error("Missing checkout URL");
@@ -74,7 +79,12 @@ export async function createCheckoutApi(
 export async function createPortalApi(): Promise<string> {
   trackEvent("billing_portal_opened", { current_plan_id: "unknown" });
   const { url } = await parseJson<{ url: string }>(
-    await fetch("/api/billing/portal", { method: "POST" })
+    await fetch("/api/billing/portal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // Le bouton « Retour » du portal Stripe, même histoire que le checkout.
+      body: JSON.stringify({ desktop: isDesktop() }),
+    })
   );
   return url;
 }

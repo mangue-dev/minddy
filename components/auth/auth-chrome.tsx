@@ -249,6 +249,13 @@ export function Field({
  * Dans l'app de bureau, le logo ne ramène nulle part : le site public n'y a pas
  * de place, et un lien qui rebondirait aussitôt vers ici vaut moins qu'une
  * marque posée (MIN-291).
+ *
+ * **Et il passe à DROITE.** Les boutons macOS sont dessinés par le système
+ * par-dessus la vue web, dans le coin haut-gauche, et aucun `z-index` ne passe
+ * devant : posée à `p-8`, la marque tombait dessous. Ces écrans-là n'ont pas de
+ * barre latérale pour leur faire une place dans sa ligne de marque, donc le coin
+ * leur revient en entier et c'est la marque qui bouge. Le geste est le même que
+ * dans la barre : une place échangée, rien de neuf à l'écran.
  */
 export function AuthColumn({
   inDesktopApp,
@@ -259,7 +266,9 @@ export function AuthColumn({
 }) {
   return (
     <div className="flex min-h-[100dvh] w-full flex-col p-8">
-      <LogoMark asLink={!inDesktopApp} />
+      <div className={cn("flex", inDesktopApp && "justify-end")}>
+        <LogoMark asLink={!inDesktopApp} />
+      </div>
       <div className="flex flex-1 items-center justify-center py-10">
         <div className="w-full max-w-[380px]">{children}</div>
       </div>

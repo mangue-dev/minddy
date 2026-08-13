@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { cn } from "mangue-ui";
+import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
 import { issueComparator, visibleStatuses } from "@/lib/view-filter";
 import { IssueCardBody } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
@@ -68,7 +70,7 @@ export function PublicBoard({
       {columns.map(({ status, items }) => (
         <div
           key={status.value}
-          className="flex w-full shrink-0 snap-center flex-col desktop:w-[22rem]"
+          className={cn("flex flex-col", BOARD_COLUMN_CLASS)}
         >
           <div className="mb-2 flex items-center gap-2 px-1">
             <StatusIndicator status={status.value} className="size-4" />

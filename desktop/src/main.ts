@@ -10,6 +10,7 @@ import {
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
+import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { buildAppMenu } from "./menu";
 import { startAutoUpdates } from "./updater";
@@ -96,6 +97,23 @@ const TRAFFIC_LIGHTS = { x: 19, y: 22 };
  * le renderer vient le chercher quand il s'abonne (`minddy:auth-link-ready`).
  */
 function receiveDeepLink(raw: string): void {
+  // `minddy://open?next=…` — le retour d'un détour par le navigateur (Stripe,
+  // MIN-293). Il ne demande RIEN au renderer : il change la page, ce que seul
+  // le main process peut faire de toute façon quand la fenêtre est en train de
+  // s'ouvrir. Chargement plein plutôt que navigation cliente, pour la même
+  // raison que le retour d'authentification : on revient d'un achat, l'abonnement
+  // a changé côté serveur, et un rendu neuf coûte moins qu'un raisonnement sur ce
+  // qui avait déjà été rendu avec l'ancien plan.
+  const next = parseDesktopOpenLink(raw);
+  if (next) {
+    const window = mainWindow;
+    if (!window) return;
+    window.show();
+    window.focus();
+    void window.loadURL(`${DESKTOP_ORIGIN}${next}`);
+    return;
+  }
+
   const link = parseDesktopAuthLink(raw);
   if (!link) return;
   pendingAuthLink = link;
@@ -200,8 +218,19 @@ function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
-    minWidth: 720,
-    minHeight: 480,
+    // **Le plancher n'est pas celui d'un site, c'est celui d'une FENÊTRE.** Un
+    // navigateur descend à 720×480 parce que quelqu'un peut vouloir y coller
+    // n'importe quoi ; une app installée, elle, n'a qu'un seul contenu, et le
+    // laisser se réduire à une colonne de board étirée sur toute la largeur
+    // n'aide personne — c'est une taille qu'on atteint en redimensionnant, pas
+    // une qu'on choisit.
+    //
+    // 960 : la barre latérale est repliée (elle revient à 1200), mais le board y
+    // tient DEUX colonnes (`BOARD_COLUMN_CLASS`, 640 px le seuil) et l'en-tête
+    // garde son fil d'Ariane à côté des boutons macOS. 640 : la conversation de
+    // Numo garde son fil au-dessus de son composer.
+    minWidth: 960,
+    minHeight: 640,
     // Pas de barre de titre : l'app a déjà la sienne, et une bande grise au
     // dessus n'apporterait rien. **Deux contreparties, à savoir plutôt qu'à
     // découvrir.** macOS ne sait plus par où saisir la fenêtre, et c'est la PAGE
@@ -339,7 +368,19 @@ function hardenSession(): void {
 // worktrees de l'agent local se rangeraient sous « Electron ». Le changer une
 // fois l'app installée chez des gens demanderait une migration de dossier pour
 // un simple renommage.
-app.setName(DESKTOP_APP_NAME);
+//
+// ⚠ **En développement, le nom CHANGE, et ce n'est pas cosmétique.** Le verrou
+// d'instance unique juste en dessous vit DANS `userData`, qui dérive de ce nom :
+// à nom égal, la coquille lancée par `npm run desktop:dev` demandait le même
+// verrou que l'app installée. Quand celle-ci tourne — c'est-à-dire toujours, sur
+// le poste où on développe — la coquille de dév quittait aussitôt, en silence et
+// avec un code 0, et l'app installée se contentait de passer au premier plan.
+// On croit alors avoir lancé la coquille : on regarde en fait la prod.
+//
+// Le profil séparé ne coûte rien : les cookies sont par ORIGINE, et une fenêtre
+// de dév pointée sur `localhost` n'aurait de toute façon pas la session de
+// `www.minddy.app`. Il faut s'y connecter une fois, et c'est tout.
+app.setName(app.isPackaged ? DESKTOP_APP_NAME : `${DESKTOP_APP_NAME}-dev`);
 
 // Instance unique : le deep link doit atteindre l'app DÉJÀ ouverte, pas en
 // lancer une seconde qui n'aurait ni sa session ni sa fenêtre.
@@ -374,6 +415,12 @@ if (!app.requestSingleInstanceLock()) {
 
     // `minddy://`. Hors app empaquetée (dev), macOS a besoin du binaire et du
     // chemin du projet pour savoir quoi relancer.
+    //
+    // ⚠ Le schéma est GLOBAL au système, lui, et le dernier inscrit gagne : une
+    // session de dév prend la main sur les `minddy://` de l'app installée, y
+    // compris son retour de paiement. C'est le prix à payer pour pouvoir tester
+    // un deep link en dév — mais si un lien ouvre la mauvaise fenêtre après
+    // coup, c'est ici qu'il faut regarder, pas dans le lien.
     if (app.isPackaged) {
       app.setAsDefaultProtocolClient(DESKTOP_PROTOCOL);
     } else {

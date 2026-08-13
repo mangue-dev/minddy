@@ -140,6 +140,40 @@ export function useAnyModalOpen(): boolean {
   );
 }
 
+/* ─── Qui héberge les boutons ──────────────────────────────────────────── */
+
+/**
+ * Le point de bascule de la mise en page (`--breakpoint-desktop` de mangue-ui).
+ * Sous cette largeur, l'AppShell ne rend plus les barres latérales : c'est
+ * l'en-tête qui se retrouve dans le coin haut-gauche, donc sous les boutons.
+ */
+const DESKTOP_BREAKPOINT_PX = 1200;
+
+/**
+ * La barre latérale est-elle rendue ? (≥ 1200 px)
+ *
+ * Ce qui en dépend : **qui héberge les boutons macOS**. Ils vivent dans la ligne
+ * de marque de la barre, mais l'AppShell la retire sous 1200 px — elle reste
+ * MONTÉE (`display: none`), ce qui est le piège : sans cette question, elle
+ * continuait de demander leur retrait quand son rail se repliait, et de leur
+ * réserver une place que personne ne voyait. Sous 1200 px, c'est l'en-tête qui
+ * les accueille.
+ *
+ * `false` au premier rendu, serveur comme client — il n'y a pas de `matchMedia`
+ * à interroger côté serveur, et le supposer ferait diverger l'hydratation.
+ */
+export function useWideLayout(): boolean {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT_PX}px)`);
+    const sync = () => setWide(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return wide;
+}
+
 /* ─── Ce que la ligne de marque doit montrer ───────────────────────────── */
 
 export interface WindowButtonsSlot {
@@ -147,10 +181,26 @@ export interface WindowButtonsSlot {
   reserved: boolean;
   /** Faut-il dessiner des LEURRES, les vrais étant retirés le temps d'un modal ? */
   decoy: boolean;
+  /**
+   * A-t-on reçu le premier état de la fenêtre ?
+   *
+   * Uniquement pour l'ANIMATION : la marque glisse d'un bord à l'autre quand la
+   * place s'ouvre ou se referme (plein écran, rail), et il ne faut pas qu'elle
+   * glisse au tout premier affichage — avant la réponse du pont, la place vaut
+   * « fermée » par défaut, et animer ce rattrapage-là ferait démarrer l'app sur
+   * un logo qui traverse sa barre.
+   */
+  ready: boolean;
 }
 
+const CLOSED: WindowButtonsSlot = { reserved: false, decoy: false, ready: false };
+
 /**
- * Ce que la barre latérale doit afficher à leur place.
+ * Ce que la surface qui les héberge doit afficher à leur place.
+ *
+ * `hosts` : cette surface est-elle celle qui les accueille en ce moment ? La
+ * barre latérale au-dessus de 1200 px, l'en-tête en dessous — voir
+ * `useWideLayout`. Une surface qui n'héberge pas ne réserve rien.
  *
  * Le point délicat, et c'est lui qui justifie ce crochet : **une boîte de
  * dialogue ne doit pas faire sauter la barre**. Retirer les boutons est
@@ -165,24 +215,73 @@ export interface WindowButtonsSlot {
  * passent sous le voile comme le reste de l'app, ce qui est exactement l'effet
  * qu'on cherchait au départ.
  *
- * Le gel compte : en plein écran il n'y a rien à réserver, et sans lui un
- * dialogue ouvert en plein écran ferait réapparaître la place.
+ * ⚠ **Le dégel ne peut pas suivre la fermeture du dialogue : il doit suivre le
+ * RETOUR des boutons.** C'est toute l'histoire du sursaut de ~50 ms qu'on voyait
+ * à la fermeture. Les deux nouvelles ne viennent pas du même endroit : le
+ * dialogue est parti du DOM (immédiat), les boutons reviennent du main process
+ * (un aller-retour IPC plus loin). Dégeler sur le premier, c'est lire `visible`
+ * alors qu'il vaut encore `false` — la place se referme, la marque saute à
+ * gauche, et l'IPC arrive juste après pour tout remettre. D'où `settling` : à la
+ * fermeture, on reste sur la valeur gelée jusqu'au PROCHAIN message du pont.
+ * Il arrive toujours — relâcher la demande la republie (`applyWindowButtons`).
  */
-export function useWindowButtonsSlot(): WindowButtonsSlot {
+export function useWindowButtonsSlot(hosts = true): WindowButtonsSlot {
   const [visible, setVisible] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [ready, setReady] = useState(false);
   const modal = useAnyModalOpen();
-  // Ce que valait la place juste avant que le dialogue ne s'ouvre.
+
+  // La fermeture du dialogue est-elle encore en train d'être digérée par le
+  // main process ? Ajusté PENDANT le rendu (et non dans un effet) : un effet
+  // s'exécute après la peinture, et la trame fautive serait déjà à l'écran.
+  const [settling, setSettling] = useState(true);
+  const [wasModal, setWasModal] = useState(false);
+  if (wasModal !== modal) {
+    setWasModal(modal);
+    if (!modal) setSettling(true);
+  }
+
+  // Ce que valait la place au dernier moment STABLE — ni dialogue ouvert, ni
+  // fermeture en cours de digestion.
   const frozen = useRef(false);
-  if (!modal) frozen.current = visible;
+  useEffect(() => {
+    if (!modal && !settling) frozen.current = visible;
+  }, [modal, settling, visible]);
 
   useEffect(() => {
     const bridge = getDesktopBridge();
     if (!bridge) return;
     // L'état courant est rejoué à l'abonnement : la fenêtre peut être en plein
     // écran au chargement, et personne n'aurait alors rien à annoncer.
-    return bridge.onWindowButtons(setVisible);
+    return bridge.onWindowButtons((next) => {
+      setVisible(next);
+      setSettling(false);
+      setStarted(true);
+    });
   }, []);
 
-  const reserved = modal ? frozen.current : visible;
-  return { reserved, decoy: reserved && !visible };
+  /**
+   * L'animation s'arme une IMAGE APRÈS la première position, jamais avec elle.
+   *
+   * Une transition part dès lors qu'elle est déclarée au moment où la propriété
+   * change : poser la durée et la position d'arrivée dans le même rendu ferait
+   * glisser la marque au démarrage de l'app, ce que ce drapeau est précisément
+   * là pour éviter. Deux `requestAnimationFrame` — le premier laisse React
+   * peindre la position, le second arme le mouvement pour la SUITE.
+   */
+  useEffect(() => {
+    if (!started) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setReady(true));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [started]);
+
+  if (!hosts) return CLOSED;
+  const reserved = modal || settling ? frozen.current : visible;
+  return { reserved, decoy: reserved && !visible, ready };
 }
