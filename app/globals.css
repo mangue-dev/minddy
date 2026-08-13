@@ -1679,10 +1679,13 @@ html[data-desktop-app] .app-shell > div > header :is(a, button, input, select, t
    `data-window-buttons` est posé par components/app-sidebar.tsx quand les
    boutons sont là. En mode RAIL ils sont retirés (56 px ne les tiennent pas) et
    l'attribut disparaît avec eux : la marque revient à gauche, à sa place.
-   `padding-left` = la position des boutons (desktop/src/main.ts, 19 px) plus
-   leur largeur — les deux chiffres se lisent ensemble. */
+   `padding-left` = ce que les boutons occupent, RELEVÉ sur une capture d'écran
+   système plutôt que déduit : bord gauche à 19, trois pastilles de 14 px au pas
+   de 23, donc un bord droit à 79 — plus une marge. Le même chiffre vit dans
+   `WINDOW_BUTTONS_WIDTH` (components/app-sidebar.tsx), qui dessine les leurres
+   et reconnaît la sortie du pointeur vers les boutons. */
 html[data-desktop-app] .sidebar-brand-row[data-window-buttons] {
-  padding-left: 78px;
+  padding-left: 84px;
   justify-content: flex-end;
 }
 

@@ -24,6 +24,7 @@ import { NewVersionBanner } from "@/components/new-version-banner";
 import { PushServiceWorker } from "@/components/push-service-worker";
 import { DesktopNotifications } from "@/components/desktop-notifications";
 import { DesktopAnalyticsPrompt } from "@/components/desktop-analytics-prompt";
+import { DesktopWindowButtons } from "@/components/desktop-window-buttons";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 
@@ -92,6 +93,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                                 fois dans l'app de bureau — le bandeau de site
                                 n'y va pas (MIN-291). */}
                             <DesktopAnalyticsPrompt />
+                            {/* Les boutons macOS sont natifs : rien ne passe
+                                devant eux, donc ils s'effacent le temps d'une
+                                boîte de dialogue (MIN-291). */}
+                            <DesktopWindowButtons />
                             {/* Suspense obligatoire : il lit `useSearchParams`,
                                 parce que la cible d'une notification vit dans la
                                 query (`?issue=…`). */}

@@ -199,6 +199,17 @@ function createWindow(): BrowserWindow {
   // place dans la ligne de marque, avant le premier affichage.
   applyWindowButtons(window);
 
+  // **La demande appartient à la PAGE, elle meurt avec elle.** Un rechargement,
+  // une reconnexion, une navigation pleine : le nouveau document n'a jamais rien
+  // demandé, mais l'ancien avait pu laisser une demande en cours — une boîte de
+  // dialogue ouverte au moment du rechargement, par exemple. Sans cette remise à
+  // zéro, les boutons restaient cachés POUR TOUJOURS, sans plus personne pour
+  // les rendre. Le renderer réaffirme ses raisons dès qu'il est monté.
+  window.webContents.on("did-start-loading", () => {
+    wantsWindowButtons = true;
+    applyWindowButtons(window);
+  });
+
   // Le plein écran retire les boutons sans passer par nous : la mise en page
   // doit l'apprendre, sinon elle garde les 78 px qu'elle leur réservait. En
   // sortir les remet — d'où l'application dans les deux sens, et la position

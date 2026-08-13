@@ -148,6 +148,26 @@ serait allé, et la mesure serait restée éteinte pour tout le monde sans que c
 soit un choix. Tant qu'aucune réponse n'est donnée, le consentement vaut `null`
 et PostHog reste sans cookie ni identité — rien n'est mesuré en douce.
 
+**Une boîte de dialogue les retire, sans que rien ne bouge.** Ils sont natifs, et
+aucun `z-index` ne passe devant : un dialogue les gardait en travers de son coin,
+par-dessus son propre voile. On les retire donc — mais la ligne de marque garde
+leur PLACE, figée à ce qu'elle valait à l'ouverture, et dessine trois pastilles
+inertes à l'identique
+([app-sidebar.tsx](../components/app-sidebar.tsx), `WindowButtonDecoys`). Elles
+passent sous le voile comme le reste de l'app. Sans ce leurre, la marque sautait
+d'un bout à l'autre de la barre à chaque ouverture de dialogue, pour un objet
+qu'on ne regarde même pas.
+
+Leur géométrie est **relevée sur une capture d'écran système décodée pixel par
+pixel**, et pas déduite : bords gauches à 19, 42 et 65, haut à 22, **14 px de
+diamètre**, donc 23 px de centre à centre. La première version reprenait
+l'origine donnée à `trafficLightPosition` et un pas supposé de 20 px — la seule
+des trois valeurs qui était juste était l'origine, et le décalage se voyait.
+
+Et la demande **appartient à la page** : elle meurt avec elle. Un rechargement
+alors qu'un dialogue est ouvert laissait sinon les boutons cachés pour toujours,
+sans plus personne pour les rendre.
+
 **Et en plein écran, on ne les cache jamais.** macOS les emmène en haut de
 l'écran, sous sa propre garde ; les masquer par-dessus retire le seul moyen d'en
 sortir à la souris. La page, elle, doit quand même l'apprendre pour ne pas leur

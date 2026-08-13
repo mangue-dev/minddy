@@ -9,7 +9,10 @@ import {
 } from "react";
 import Link from "next/link";
 import { APP_VERSION } from "@/lib/app-version";
-import { useWindowButtons } from "@/lib/use-window-buttons";
+import {
+  useHoldWindowButtons,
+  useWindowButtonsSlot,
+} from "@/lib/use-window-buttons";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -169,6 +172,59 @@ function SidebarBrand() {
     >
       <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[getAppEnv()])} />
     </Link>
+  );
+}
+
+
+/**
+ * La largeur que les boutons occupent dans la ligne de marque : de leur bord
+ * gauche (19) au bord droit de la dernière pastille (65 + 14 = 79), plus une
+ * marge. C'est ce que réserve `.sidebar-brand-row[data-window-buttons]` dans
+ * app/globals.css, et ce que la garde du rail reconnaît comme « le pointeur est
+ * parti sur les boutons ». Trois endroits, un seul chiffre.
+ */
+const WINDOW_BUTTONS_WIDTH = 84;
+
+/**
+ * Les LEURRES des boutons macOS (MIN-291).
+ *
+ * Trois pastilles inertes, dessinées exactement là où le système dessine les
+ * vraies, et seulement quand celles-ci sont retirées le temps d'une boîte de
+ * dialogue. Elles ne sont pas là pour tromper : elles sont là pour que **la
+ * barre ne saute pas**. Les vrais boutons sont natifs, rien ne passe devant eux,
+ * il faut donc les retirer ; mais laisser leur place se refermer ferait glisser
+ * la marque à chaque ouverture de dialogue, pour un objet qu'on ne regarde même
+ * pas. Les leurres, eux, passent sous le voile comme le reste de l'app.
+ *
+ * **La géométrie est RELEVÉE, pas déduite.** On a d'abord repris les chiffres
+ * qu'on donne à Electron (`trafficLightPosition`) et un pas supposé de 20 px :
+ * faux, et ça se voyait. Une capture d'écran système, décodée pixel par pixel,
+ * dit : bord gauche à 19, haut à 22, **14 px de diamètre**, **23 px de centre à
+ * centre** — soit 9 px entre deux pastilles. Le seul chiffre que
+ * `trafficLightPosition` donnait juste était son origine.
+ *
+ * Les couleurs sont celles du système, en dur : les mêmes en thème clair comme
+ * en sombre, et elles n'appartiennent pas à minddy.
+ *
+ * `aria-hidden` : un lecteur d'écran n'a rien à annoncer ici, et surtout pas
+ * trois boutons qui n'en sont pas.
+ */
+const DECOY_COLORS = ["#FF5F57", "#FEBC2E", "#28C840"];
+
+function WindowButtonDecoys() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute top-[22px] left-[19px] flex gap-[9px]"
+    >
+      {DECOY_COLORS.map((color) => (
+        <span
+          key={color}
+          className="size-3.5 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -689,7 +745,7 @@ export function AppSidebar({
    * un seul objet, et il faut les lire ensemble.
    */
   const leavesThroughWindowButtons = (e: { clientX: number; clientY: number }) =>
-    windowButtons && e.clientX <= 78 && e.clientY <= 60;
+    windowButtons.reserved && e.clientX <= WINDOW_BUTTONS_WIDTH && e.clientY <= 60;
 
   /**
    * Le pointeur est parti sur les boutons : on ne referme pas, et on attend de
@@ -736,11 +792,14 @@ export function AppSidebar({
    * les remet de côté — c'est le même geste que celui qui rend la navigation
    * lisible, et il vaut pour tout ce que la ligne de marque contient.
    *
-   * Ce qu'on rend, en revanche, suit ce que les boutons font VRAIMENT — le
-   * plein écran les emmène ailleurs sans que la page en sache rien. Voir
+   * Ce qu'on rend, en revanche, ne suit pas la demande mais le RÉSULTAT — le
+   * plein écran les emmène ailleurs sans que la barre en sache rien. Et une
+   * boîte de dialogue les retire sans que la place bouge : on dessine alors des
+   * leurres, sinon la marque sauterait à chaque ouverture. Voir
    * lib/use-window-buttons.ts.
    */
-  const windowButtons = useWindowButtons(!collapsed);
+  useHoldWindowButtons("rail", collapsed);
+  const windowButtons = useWindowButtonsSlot();
 
   // Deux largeurs, et c'est tout le mécanisme : celle que la barre OCCUPE dans
   // le flux, et celle qu'elle MESURE. En mode rail la première reste au rail
@@ -838,12 +897,13 @@ export function AppSidebar({
             `sidebar-brand-row` est la prise de app/globals.css, et
             `data-window-buttons` lui dit si les boutons sont là. */}
         <div
-          data-window-buttons={windowButtons ? "" : undefined}
+          data-window-buttons={windowButtons.reserved ? "" : undefined}
           className={cn(
-            "sidebar-brand-row flex h-[60px] shrink-0 items-center border-b border-border",
+            "sidebar-brand-row relative flex h-[60px] shrink-0 items-center border-b border-border",
             GUTTER,
           )}
         >
+          {windowButtons.decoy && <WindowButtonDecoys />}
           <SidebarBrand />
         </div>
 
