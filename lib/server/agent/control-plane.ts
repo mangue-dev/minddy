@@ -21,6 +21,7 @@ import { executeScratchpadTool, type ScratchpadToolContext } from "./scratchpad-
 import { agentRunTopic, broadcastToTopic } from "./live";
 import {
   appendEvent,
+  appendRunJournal,
   clearInterrupt,
   getRun,
   hasPendingRunMessages,
@@ -319,6 +320,24 @@ export async function handleControlPlaneRequest(opts: {
       if (!stamped.run) return { status: 409, body: { error: "run is no longer running" } };
       return ok();
     }
+  }
+
+  /**
+   * LE JOURNAL D'OPENCODE, EN APPEND (MIN-286, 2026-08-13).
+   *
+   * La microVM n'envoie que ce que `/sync/history` vient de rendre de NEUF ; la
+   * base garde le reste. C'est ce qui a remplacé « le checkpoint porte tout le
+   * journal », qui ne pouvait pas tenir : la sortie complète de chaque tool y
+   * passe, et le corps du plan de contrôle est plafonné.
+   */
+  if (method === "POST" && surface === "/journal") {
+    const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
+    const events = Array.isArray(body.events)
+      ? (body.events as Record<string, unknown>[])
+      : [];
+    if (!sessionId) return bad("journal: missing sessionId");
+    await appendRunJournal(runId, sessionId, events);
+    return ok({ appended: events.length });
   }
 
   if (method === "GET" && surface === "/messages") {

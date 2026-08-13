@@ -162,14 +162,16 @@ export const SUPERVISOR_TURN_SOFT_DEADLINE_MS = 12 * 60 * 60_000;
  *
  * Ce n'est plus une conversation sérialisée mais un **journal d'événements**
  * (sonde du lot 0) : la session repart avec son id, ses messages et son coût
- * cumulé sur une microVM qui n'a jamais vu la conversation. `seq` est le curseur
- * par agrégat, qui rend l'export incrémental — 5 events / 3,6 Ko pour un tour, là
- * où l'historique complet en pesait 61 Ko.
+ * cumulé sur une microVM qui n'a jamais vu la conversation.
+ *
+ * Ce que le checkpoint porte n'est QUE le pointeur — la session et le curseur par
+ * agrégat. Les events, eux, vivent dans `agent_run_journal` (MIN-286,
+ * 2026-08-13) : ils portent la sortie complète de chaque tool, et un checkpoint
+ * qui les charriait dépassait le plafond du plan de contrôle en une quinzaine de
+ * lectures de fichiers.
  */
 export interface OpencodeCheckpointState {
   sessionId: string;
-  /** Le journal, tel que `/sync/history` le rend (déjà normalisé en camelCase). */
-  events: Record<string, unknown>[];
   /** Dernier `seq` connu par agrégat — l'argument de la prochaine exportation. */
   seq: Record<string, number>;
 }
@@ -618,52 +620,54 @@ export async function runOpencodeTurn(
     let lastSteerAt = now();
 
     /**
-     * LE JOURNAL D'OPENCODE, TENU AU FIL DU TOUR — et pas seulement exporté à la
-     * fin. C'est ce qui rend la sauvegarde périodique possible : le curseur par
-     * agrégat avance ici, chaque export est incrémental, et la fin de tour lit
-     * le même accumulateur.
+     * LE CURSEUR DU JOURNAL D'OPENCODE — et RIEN QUE le curseur (MIN-286,
+     * 2026-08-13).
+     *
+     * Le superviseur n'accumule plus les events : il pousse chaque incrément dans
+     * `agent_run_journal` (`POST /journal`) et ne garde que la position par
+     * agrégat. Ce qu'il portait avant — le journal entier, réécrit à chaque
+     * sauvegarde — ne pouvait pas tenir : un `read` de 260 lignes pèse 22 Ko
+     * dedans, republié deux à trois fois par opencode, et le corps du plan de
+     * contrôle est plafonné à 3,2 Mo. Un tour de 31 minutes perdait donc TOUTE sa
+     * conversation, et le tour suivant repartait du ticket comme s'il n'avait
+     * jamais travaillé (mesuré le 2026-08-13, run `1e8775aa`).
      */
-    let journalEvents: Record<string, unknown>[] = [...(previous?.events ?? [])];
     let journalSeq: Record<string, number> = { ...(previous?.seq ?? {}) };
     /**
-     * LE JOURNAL A DÛ PARTIR pour que le checkpoint tienne dans son gabarit. Dit
-     * au fil par `vm-rest.ts` (`turnHistoryReset`) — sinon l'agent paraît avoir
-     * tout oublié sans raison au tour suivant.
+     * L'INCRÉMENT, DÉCOUPÉ POUR LE TRANSPORT. Le corps d'une requête reste
+     * plafonné par la plateforme : un round qui lit deux cents fichiers rendrait
+     * un seul export de plusieurs mégaoctets. On envoie donc par lots — et jamais
+     * un event à cheval sur deux lots, `/sync/replay` voulant une suite contiguë.
      */
-    let journalDropped: string[] = [];
+    const JOURNAL_BATCH_BYTES = 1_500_000;
+
     /**
-     * LE GABARIT DU CHECKPOINT, TENU ICI AUSSI (MIN-286).
-     *
-     * L'export est incrémental, l'ENVOI ne l'est pas : `syncHistory` ne rend que
-     * la suite, mais le checkpoint porte l'accumulateur ENTIER, et il remonte par
-     * le plan de contrôle, dont le corps est plafonné (`VM_MAX_CHECKPOINT_BYTES`,
-     * sous les 4 Mo de la plateforme). Le plan du lot 0 tenait ce plafond pour
-     * « sans objet » depuis que le checkpoint était devenu un journal append-only :
-     * c'est faux, un journal append-only se réécrit entier à chaque sauvegarde.
-     * Passé la barre, chaque `PUT /checkpoint` prenait un 413 — que
-     * `saveCheckpointQuietly` range en « panne passagère », donc sans 409 ni
-     * arrêt : le tour continuait des heures sans plus rien sauvegarder, sans
-     * battement de cœur, et rendait à la fin un rapport que le plan de contrôle
-     * refusait à son tour.
-     *
-     * On ne RABOTE pas : `/sync/replay` veut une suite de `seq` contiguë par
-     * agrégat, un trou en milieu de journal est irrejouable. On lâche donc tout, et
-     * on le dit — le tour suivant repart d'une session neuve, ce que la remise à
-     * blanc de `sessionId` déclenche à elle seule.
+     * Exporte ce qui est neuf et le POUSSE. Rend le pointeur que le checkpoint
+     * portera — la session et le curseur, quelques dizaines d'octets.
      */
     const syncJournal = async (): Promise<OpencodeCheckpointState> => {
       const fresh = await client.syncHistory(journalSeq);
-      journalEvents = [...journalEvents, ...fresh];
+      let batch: Record<string, unknown>[] = [];
+      let bytes = 0;
+      const flush = async () => {
+        if (batch.length === 0) return;
+        await cp.appendJournal(sessionId, batch);
+        batch = [];
+        bytes = 0;
+      };
+      for (const event of fresh) {
+        const size = JSON.stringify(event).length;
+        // Un event plus gros que le lot part SEUL : le découper serait le casser.
+        if (bytes > 0 && bytes + size > JOURNAL_BATCH_BYTES) await flush();
+        batch.push(event);
+        bytes += size;
+      }
+      await flush();
+      // Le curseur n'avance qu'une fois l'incrément ÉCRIT : un envoi qui lève
+      // laisse la position d'avant, et le passage suivant réexporte la même
+      // tranche plutôt que de laisser un trou dans le journal.
       journalSeq = lastSeqByAggregate(journalSeq, fresh);
-      const state = { sessionId, events: journalEvents, seq: journalSeq };
-      if (JSON.stringify(state).length <= job.checkpointMaxBytes) return state;
-      console.error(
-        `[supervisor] journal trop gros pour le checkpoint (${journalEvents.length} events) — remis à zéro`,
-      );
-      journalEvents = [];
-      journalSeq = {};
-      journalDropped = ["history"];
-      return { sessionId: "", events: [], seq: {} };
+      return { sessionId, seq: journalSeq };
     };
 
     /**
@@ -1410,7 +1414,9 @@ export async function runOpencodeTurn(
       ...(sessionError ? { errorMessage: cap(secrets.redact(sessionError), 1000) } : {}),
       costUsd,
       checkpoint,
-      checkpointDropped: journalDropped,
+      // Plus rien ne se lâche : le journal ne transite plus par le checkpoint,
+      // il est écrit en append au fil du tour (cf. `syncJournal`).
+      checkpointDropped: [],
       checkpointBytes: JSON.stringify(checkpoint).length,
       pushed,
       workBranch: job.workBranch,

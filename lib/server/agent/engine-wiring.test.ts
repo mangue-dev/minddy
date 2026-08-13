@@ -87,8 +87,15 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
    * déclare —, donc rien ne se voyait : ni erreur, ni type qui proteste, juste un
    * agent amnésique d'un tour à l'autre.
    */
-  it("descend le journal du tour précédent dans le job", () => {
-    expect(source).toContain("opencode: run.checkpoint.opencode");
+  /**
+   * MIN-286 (2026-08-13) — le journal ne descend plus depuis la LIGNE du run : il
+   * est rassemblé depuis `agent_run_journal`, où le superviseur l'écrit en append.
+   * La ligne n'en garde que le pointeur, parce qu'elle est relue à chaque appel du
+   * plan de contrôle et que le journal porte la sortie complète de chaque tool.
+   */
+  it("rassemble le journal du tour précédent depuis sa table", () => {
+    expect(source).toContain("events: await loadRunJournal(run.id, pointer.sessionId)");
+    expect(source).toContain("...(opencodeJournal ? { opencode: opencodeJournal } : {})");
   });
 
   it("n'amorce pas un tour REPRIS : sa demande arrive par le steering", () => {
@@ -96,7 +103,7 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
     // PAR-DESSUS l'historique restauré — l'agent relirait la consigne initiale
     // comme si elle venait d'arriver. C'est ce que `VmJob.opencodeInput` promet en
     // toutes lettres (« `prompt` est vide sur un tour REPRIS »).
-    expect(source).toContain("else if (run.checkpoint?.opencode?.events?.length)");
+    expect(source).toContain("else if (run.checkpoint?.opencode?.sessionId)");
   });
 });
 

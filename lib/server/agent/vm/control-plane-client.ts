@@ -84,6 +84,15 @@ export interface ControlPlaneClient {
    * conversation a été fermée sous elle, et l'appelant doit s'arrêter.
    */
   saveCheckpointQuietly(checkpoint: AgentCheckpoint): Promise<boolean>;
+  /**
+   * POUSSE UN INCRÉMENT DU JOURNAL D'OPENCODE (MIN-286, 2026-08-13).
+   *
+   * LÈVE en cas d'échec, contrairement aux surfaces de confort : ce qui se perd
+   * ici est la MÉMOIRE de la session, et le curseur du superviseur ne doit pas
+   * avancer sur un lot qui n'est pas écrit — sinon le journal garde un trou, et
+   * `/sync/replay` refuse une suite non contiguë.
+   */
+  appendJournal(sessionId: string, events: Record<string, unknown>[]): Promise<void>;
   pullSteering(): Promise<AgentUserMessage[]>;
   /**
    * REMET EN FILE ce qu'on a drainé sans avoir su le jouer — `pullSteering`
@@ -209,6 +218,11 @@ export function createControlPlaneClient(appOrigin: string): ControlPlaneClient 
         // contrôle les dérive de la ligne du run. La VM ne choisit pas qui paye
         // ce qu'elle dépense.
       }),
+
+    appendJournal: async (sessionId, events) => {
+      if (events.length === 0) return;
+      await request("POST", "/journal", { sessionId, events });
+    },
 
     saveCheckpointQuietly: async (checkpoint) => {
       try {

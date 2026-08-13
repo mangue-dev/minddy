@@ -52,6 +52,8 @@ const h = vi.hoisted(() => ({
     content: string;
     mentions: unknown;
   }>,
+  /** Les incréments de journal écrits (`POST /journal`). */
+  journal: [] as Array<{ runId: string; sessionId: string; events: unknown[] }>,
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
@@ -164,6 +166,11 @@ vi.mock("./runs", async (importOriginal) => ({
       h.requeued.push({ runId, userId, content, mentions: mentions ?? null });
     },
   ),
+  appendRunJournal: vi.fn(
+    async (runId: string, sessionId: string, events: Record<string, unknown>[]) => {
+      h.journal.push({ runId, sessionId, events });
+    },
+  ),
   readInterruptFlag: vi.fn(async () => true),
   clearInterrupt: vi.fn(async (runId: string) => {
     h.cleared.push(runId);
@@ -210,6 +217,7 @@ beforeEach(() => {
   h.issueCalls.length = 0;
   h.afterWork.length = 0;
   h.requeued.length = 0;
+  h.journal.length = 0;
   h.prIssueId = null;
   h.stampReturnsNull = false;
   h.stampFails = false;
@@ -641,5 +649,34 @@ describe("le checkpoint périodique fait aussi office de battement de cœur", ()
     h.stampFails = true;
     const res = await call("PUT", "/checkpoint", { checkpoint: { messages: [] } });
     expect(res.status).toBe(503);
+  });
+});
+
+/**
+ * MIN-286 (2026-08-13) — LE JOURNAL D'OPENCODE S'ÉCRIT EN APPEND.
+ *
+ * Il portait la sortie complète de chaque tool et voyageait dans le checkpoint :
+ * le plafond du corps tombait au bout d'une quinzaine de lectures de fichiers, et
+ * un tour de 31 minutes perdait toute sa conversation. La microVM n'envoie plus
+ * que ce qui est NEUF, et la ligne du run — relue à chaque appel de cette
+ * surface — n'en garde que le pointeur.
+ */
+describe("le journal de la session", () => {
+  it("écrit l'incrément sous le run de l'OIDC, pas sous celui du corps", async () => {
+    const res = await call("POST", "/journal", {
+      runId: "un-autre-run",
+      sessionId: "ses_1",
+      events: [{ seq: 1 }, { seq: 2 }],
+    });
+    expect(res.status).toBe(200);
+    expect(h.journal).toEqual([
+      { runId: RUN_ID, sessionId: "ses_1", events: [{ seq: 1 }, { seq: 2 }] },
+    ]);
+  });
+
+  it("refuse un lot sans session — il n'y aurait rien à rejouer", async () => {
+    const res = await call("POST", "/journal", { events: [{ seq: 1 }] });
+    expect(res.status).toBe(400);
+    expect(h.journal).toEqual([]);
   });
 });

@@ -1118,6 +1118,46 @@ route de steering répondait donc `ok` sur un message que **personne n'avait mis
 file** : bulle optimiste à l'écran, agent qui ne lit rien, message disparu au
 rechargement. Il lève maintenant, et le composer retire sa bulle en le disant.
 
+### 2.29 Le journal sort de la ligne du run — la mémoire d'une vraie session
+
+Le premier tour long qui réussit (2026-08-13, run `1e8775aa`, 31 minutes, 753
+events, 1,03 $) s'est terminé sur `turnHistoryReset` : **toute la conversation
+perdue**. Le tour suivant, celui qui devait juste ouvrir la pull request, est donc
+reparti du ticket — il a refait un plan, réexploré le dépôt, puis ouvert la PR.
+Vu de l'écran : « il recommence depuis le début ». Et il a lâché son journal une
+seconde fois, au bout de quatre minutes.
+
+**Ce que pèse vraiment un journal**, mesuré sur le checkpoint d'un tour de deux
+minutes : 226 events, **333 Ko**. Le détail explique tout — un
+`message.part.updated` de tool porte la **sortie complète** du tool (une lecture
+de 260 lignes = 22 Ko), et opencode republie le part à chaque changement d'état
+(`pending`, `running`, `completed`). Le plafond de 3,2 Mo tombe donc **au bout
+d'une quinzaine de lectures de fichiers**. Ce n'était pas un cas limite : c'était
+l'issue NORMALE de tout tour qui travaille.
+
+Deux plafonds, et le second ne se voyait pas :
+
+1. le **corps** du plan de contrôle (4,5 Mo côté plateforme, 3,2 chez nous) — un
+   journal append-only se réécrit entier à chaque sauvegarde ;
+2. la **ligne du run**, relue par `getRun` à **chaque appel** du plan de contrôle
+   (un par tool, par event, par ligne de ledger). Un journal de 333 Ko s'y payait
+   des centaines de fois par tour, en pure perte.
+
+D'où [`agent_run_journal`](../supabase/migrations/20261214090000_agent_run_journal.sql) :
+le journal s'écrit en **append**, un lot par sauvegarde, et la ligne du run n'en
+garde que le **pointeur** (`{sessionId, seq}`, quelques dizaines d'octets). Le
+superviseur pousse ses incréments (`POST /journal`, découpés à 1,5 Mo pour tenir
+dans un corps — jamais un event à cheval sur deux lots, `/sync/replay` voulant une
+suite contiguë), et la fonction rassemble le tout **une fois par tour** avant de
+le passer à la microVM.
+
+Trois conséquences, dont une qui n'était pas le but : la mémoire d'une session
+n'a plus de plafond de taille, le plan de contrôle cesse de transporter le journal
+à chaque appel de tool, et `turnHistoryReset` n'a plus de raison de se déclencher
+sur ce chemin. Le curseur, lui, **n'avance qu'une fois le lot écrit** : un envoi
+qui échoue fait réexporter la même tranche au passage suivant, plutôt que de
+laisser un trou définitif dans le journal.
+
 ---
 
 ---

@@ -159,7 +159,21 @@ export interface AgentCheckpoint {
    * son seul checkpoint, quel moteur l'a écrit — et c'est ce qui protège un run
    * dont la LIGNE dirait le contraire (cf. `effectiveEngine` dans execute.ts).
    */
-  opencode?: { sessionId: string; events: Record<string, unknown>[]; seq: Record<string, number> };
+  opencode?: {
+    sessionId: string;
+    /**
+     * Le curseur d'export par agrégat — l'argument de la prochaine exportation.
+     *
+     * LES EVENTS, EUX, NE SONT PLUS ICI (MIN-286, 2026-08-13). Ils vivent dans
+     * `agent_run_journal`, en append, pour deux raisons mesurées : le journal
+     * porte la sortie COMPLÈTE de chaque tool (22 Ko pour une lecture de 260
+     * lignes, republiée deux à trois fois), donc il dépassait le plafond de corps
+     * du plan de contrôle en une quinzaine de lectures — un tour de 31 minutes
+     * perdait toute sa conversation ; et cette ligne-ci est relue à CHAQUE appel
+     * du plan de contrôle, où le journal se payait des centaines de fois par tour.
+     */
+    seq: Record<string, number>;
+  };
 }
 
 export interface AgentRun {
@@ -1427,4 +1441,55 @@ export async function appendEvent(
   } catch (err) {
     console.error("[agent-runs] appendEvent failed:", (err as Error).message);
   }
+}
+
+/**
+ * LE JOURNAL D'UNE SESSION OPENCODE (MIN-286) — écrit en APPEND, jamais relu
+ * pour être réécrit.
+ *
+ * Un lot par export incrémental. C'est ce qui rend la mémoire d'une session
+ * indépendante de la taille d'un corps HTTP : le superviseur n'envoie que ce qui
+ * est neuf, et la table le garde.
+ */
+export async function appendRunJournal(
+  runId: string,
+  sessionId: string,
+  events: Record<string, unknown>[],
+): Promise<void> {
+  if (!sessionId || events.length === 0) return;
+  const service = getServiceClient();
+  const { error } = await service
+    .from("agent_run_journal")
+    .insert({ run_id: runId, session_id: sessionId, events: stripUnstorable(events) });
+  if (error) throw new Error(`agent_run_journal insert failed: ${error.message}`);
+}
+
+/**
+ * Le journal d'une session, rassemblé dans l'ordre d'écriture.
+ *
+ * Filtré sur la SESSION : une session remise à blanc (reprise impossible) écrit
+ * sous un id neuf, et les lots de l'ancienne ne doivent pas être rejoués par-
+ * dessus. La rétention les emportera avec le run.
+ */
+export async function loadRunJournal(
+  runId: string,
+  sessionId: string,
+): Promise<Record<string, unknown>[]> {
+  if (!sessionId) return [];
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("agent_run_journal")
+    .select("events")
+    .eq("run_id", runId)
+    .eq("session_id", sessionId)
+    .order("id", { ascending: true });
+  if (error) {
+    // Un journal illisible coûte la REPRISE, pas le tour : le superviseur
+    // repartira d'une session neuve, et il le dira au fil.
+    console.error("[agent-runs] loadRunJournal failed:", error.message);
+    return [];
+  }
+  return ((data ?? []) as Array<{ events: Record<string, unknown>[] }>).flatMap(
+    (row) => row.events ?? [],
+  );
 }

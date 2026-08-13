@@ -80,6 +80,8 @@ const h = {
   live: [] as Array<Record<string, unknown>>,
   /** Routes appelées sur le faux serveur, dans l'ordre. */
   routes: [] as string[],
+  /** Les incréments de journal POUSSÉS par le superviseur (`POST /journal`). */
+  journal: [] as Array<{ sessionId: string; events: Record<string, unknown>[] }>,
   /** Le journal que `/sync/history` rend. */
   history: [] as Record<string, unknown>[],
   /** Les checkpoints sauvegardés EN COURS DE TOUR (le battement de cœur). */
@@ -139,6 +141,9 @@ function cp(): ControlPlaneClient {
     },
     recordUsage: async (line) => {
       h.usage.push(line as unknown as Record<string, unknown>);
+    },
+    appendJournal: async (sessionId, events) => {
+      h.journal.push({ sessionId, events });
     },
     saveCheckpointQuietly: async (checkpoint) => {
       h.checkpoints.push(checkpoint as unknown as Record<string, unknown>);
@@ -379,11 +384,15 @@ function job(over: Partial<VmJob> = {}): VmJob {
   };
 }
 
-const run = (over: Partial<VmJob> = {}, moreDeps: Partial<SupervisorDeps> = {}) =>
+const run = (
+  over: Partial<VmJob> = {},
+  moreDeps: Partial<SupervisorDeps> = {},
+  moreCp: Partial<ControlPlaneClient> = {},
+) =>
   runOpencodeTurn(
     job(over),
     { prompt: "fais le ticket", anchorInstructions: "# Ancrage minddy\nMIN-42" },
-    cp(),
+    { ...cp(), ...moreCp },
     host(),
     { ...deps(), ...moreDeps },
   );
@@ -401,6 +410,7 @@ beforeEach(() => {
     { aggregate_id: "ses_neuve", seq: 4, type: "message.updated", data: {} },
   ];
   h.checkpoints = [];
+  h.journal = [];
   h.plansSynced = [];
   h.runClosed = false;
   h.replayed = null;
@@ -1449,11 +1459,11 @@ describe("la sauvegarde périodique", () => {
 
   it("n'exporte le journal qu'une fois : la sauvegarde n'en fait pas un doublon", async () => {
     h.tick = 130_000;
-    const report = await run();
-    const state = (report.checkpoint as { opencode?: { events: unknown[] } }).opencode;
-    // Deux events au journal du faux serveur, deux dans le checkpoint : le
-    // curseur d'export a bien avancé avec la sauvegarde périodique.
-    expect(state?.events).toHaveLength(2);
+    await run();
+    // Deux events au journal du faux serveur, deux poussés en tout — la
+    // sauvegarde périodique a bien fait avancer le curseur d'export, donc la fin
+    // de tour n'a plus rien de neuf à envoyer.
+    expect(h.journal.flatMap((batch) => batch.events)).toHaveLength(2);
   });
 
   it("s'arrête quand le plan de contrôle refuse la sauvegarde (run conclu ailleurs)", async () => {
@@ -1496,39 +1506,62 @@ describe("la reprise", () => {
   });
 
   /**
-   * MIN-286 — LE JOURNAL TIENT DANS LE GABARIT DU CHECKPOINT, ou il part.
+   * MIN-286 (2026-08-13) — LE JOURNAL NE PASSE PLUS PAR LE CHECKPOINT.
    *
-   * L'EXPORT est incrémental, l'ENVOI ne l'est pas : le checkpoint porte
-   * l'accumulateur entier, et il remonte par le plan de contrôle, dont le corps
-   * est plafonné. Le plan tenait ce plafond pour « sans objet » depuis que le
-   * checkpoint était devenu un journal append-only — mais un journal append-only
-   * se réécrit entier à chaque sauvegarde. Passé la barre, chaque `PUT` prenait un
-   * 413 rangé en panne passagère : plus de sauvegarde, plus de battement de cœur,
-   * et un rapport de fin de tour refusé à son tour.
+   * Il portait la sortie COMPLÈTE de chaque tool : une lecture de 260 lignes pèse
+   * 22 Ko dedans, republiée deux à trois fois par opencode. Le plafond du corps du
+   * plan de contrôle tombait donc au bout d'une quinzaine de lectures, et le tour
+   * lâchait toute sa conversation — mesuré sur un tour de 31 minutes qui a fini par
+   * repartir du ticket comme s'il n'avait jamais travaillé. Les events s'écrivent
+   * maintenant en APPEND (`POST /journal`), et le checkpoint n'en garde que le
+   * pointeur.
    */
-  it("LÂCHE le journal plutôt que de rendre un checkpoint qui ne remonte pas", async () => {
-    const fat = "x".repeat(4_000);
-    h.history = [
-      { aggregate_id: "ses_neuve", seq: 3, type: "message.created", data: { fat } },
-      { aggregate_id: "ses_neuve", seq: 4, type: "message.updated", data: { fat } },
-    ];
-    const report = await run({ checkpointMaxBytes: 5_000 });
-    const state = (report.checkpoint as { opencode?: { sessionId: string; events: unknown[] } })
-      .opencode;
-    expect(state?.events).toEqual([]);
-    // La session part AVEC : un id sans son journal n'existe sur aucun serveur
-    // neuf, et le tour suivant se ferait refuser son prompt. Il en crée une.
-    expect(state?.sessionId).toBe("");
-    // Et ça se DIT au fil (`vm-rest.ts` en tire `turnHistoryReset`) : sinon
-    // l'agent paraît avoir tout oublié sans raison au tour suivant.
-    expect(report.checkpointDropped).toEqual(["history"]);
+  it("POUSSE les events au lieu de les porter dans le checkpoint", async () => {
+    const report = await run();
+    // Ce que la microVM a envoyé : l'incrément, sous sa session.
+    expect(h.journal).toHaveLength(1);
+    expect(h.journal[0].sessionId).toBe(PARENT);
+    expect(h.journal[0].events).toHaveLength(2);
+    // Ce que le checkpoint porte : le pointeur, et rien d'autre.
+    const state = (report.checkpoint as { opencode?: Record<string, unknown> }).opencode;
+    expect(state).toEqual({ sessionId: PARENT, seq: { ses_neuve: 4 } });
+    expect(report.checkpointDropped).toEqual([]);
   });
 
-  it("garde le journal quand il tient", async () => {
-    const report = await run({ checkpointMaxBytes: 3_200_000 });
-    expect(report.checkpointDropped).toEqual([]);
-    const state = (report.checkpoint as { opencode?: { events: unknown[] } }).opencode;
-    expect(state?.events).toHaveLength(2);
+  it("découpe un incrément trop gros pour tenir dans une requête", async () => {
+    // Un round qui lit deux cents fichiers rend un seul export de plusieurs
+    // mégaoctets : le corps reste plafonné par la plateforme, donc on envoie par
+    // lots — et jamais un event à cheval sur deux, `/sync/replay` voulant une
+    // suite contiguë.
+    const fat = "x".repeat(900_000);
+    h.history = [
+      { aggregate_id: "ses_neuve", seq: 3, type: "message.updated", data: { fat } },
+      { aggregate_id: "ses_neuve", seq: 4, type: "message.updated", data: { fat } },
+      { aggregate_id: "ses_neuve", seq: 5, type: "message.updated", data: { fat } },
+    ];
+    await run();
+    expect(h.journal.length).toBeGreaterThan(1);
+    // Rien ne s'est perdu au découpage, et l'ordre est celui de l'export.
+    const sent = h.journal.flatMap((batch) => batch.events);
+    expect(sent).toHaveLength(3);
+    expect(sent.map((e) => (e as { seq: number }).seq)).toEqual([3, 4, 5]);
+  });
+
+  it("n'avance pas son curseur sur un incrément qu'il n'a pas su écrire", async () => {
+    // Le curseur commande le PROCHAIN export : avancé sur un lot perdu, il
+    // laisserait un trou définitif dans le journal — et `/sync/replay` refuse une
+    // suite non contiguë. Mieux vaut réexporter la même tranche.
+    const report = await run(
+      {},
+      {},
+      {
+        appendJournal: async () => {
+          throw new Error("plan de contrôle injoignable");
+        },
+      },
+    );
+    const state = (report.checkpoint as { opencode?: { seq?: Record<string, number> } }).opencode;
+    expect(state?.seq ?? {}).toEqual({});
   });
 
   it("normalise le curseur d'export", () => {

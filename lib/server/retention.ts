@@ -169,7 +169,8 @@ const TERMINAL_RUN_STATUSES = ["completed", "failed", "canceled"];
 /**
  * Traces des runs d'agent terminés depuis plus de `agentRunTrace` jours.
  *
- * Deux tables (`agent_run_events`, `agent_run_messages`) filtrées sur la même
+ * Trois tables (`agent_run_events`, `agent_run_messages`, `agent_run_journal`)
+ * filtrées sur la même
  * liste de runs : PostgREST ne sait pas joindre dans un DELETE, donc on résout
  * d'abord les identifiants. Le lot est borné — un balayage quotidien rattrape
  * le reste le lendemain, et une purge illimitée sur une base qui a accumulé des
@@ -193,7 +194,13 @@ async function purgeAgentRunTraces(service: Service, now: Date) {
   const messages = counted(
     await service.from("agent_run_messages").delete({ count: "exact" }).in("run_id", ids)
   );
-  return events + messages;
+  // Le journal d'opencode (MIN-286) : c'est de loin le plus lourd des trois — il
+  // porte la sortie complète de chaque tool. Sans cette ligne, il survivrait au
+  // fil qu'il accompagne.
+  const journal = counted(
+    await service.from("agent_run_journal").delete({ count: "exact" }).in("run_id", ids)
+  );
+  return events + messages + journal;
 }
 
 /** Codes d'autorisation OAuth expirés (usage unique, très court terme). */

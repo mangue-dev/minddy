@@ -192,6 +192,7 @@ import {
   readInterruptFlag,
   clearInterrupt,
   hasPendingRunMessages,
+  loadRunJournal,
   notifyAgentRun,
   type AgentRun,
   type AgentCheckpoint,
@@ -1250,7 +1251,7 @@ export async function executeAgentRun(
     };
     if (run.checkpoint?.messages?.length) {
       messages = run.checkpoint.messages;
-    } else if (run.checkpoint?.opencode?.events?.length) {
+    } else if (run.checkpoint?.opencode?.sessionId) {
       /**
        * UN TOUR REPRIS SOUS OPENCODE N'A PAS D'AMORCE À REFAIRE (MIN-286).
        *
@@ -1820,6 +1821,19 @@ export async function executeAgentRun(
      * constaté la mort de son process (`reapDeadVmRuns`, drain.ts).
      */
     if (run.loop_in_vm) {
+      /**
+       * LA MÉMOIRE DE LA SESSION, RASSEMBLÉE ICI ET NULLE PART AILLEURS. Une
+       * lecture par TOUR — la ligne du run, elle, est relue à chaque appel du
+       * plan de contrôle, et c'est pour ça que le journal en est sorti.
+       */
+      const pointer = run.checkpoint?.opencode;
+      const opencodeJournal = pointer?.sessionId
+        ? {
+            sessionId: pointer.sessionId,
+            events: await loadRunJournal(run.id, pointer.sessionId),
+            seq: pointer.seq ?? {},
+          }
+        : undefined;
       // `bootstrapMs` manque exprès : c'est `startVmLoop` qui le pose, parce que
       // c'est lui qui sait quand l'amorçage se termine (cf. `VmJob.bootstrapMs`).
       const job: Omit<VmJob, "bootstrapMs"> = {
@@ -1883,7 +1897,13 @@ export async function executeAgentRun(
          * lecture-ci manquait, donc rien ne se voyait — pas d'erreur, pas de type
          * qui proteste, juste un agent amnésique d'un tour à l'autre.
          */
-        ...(run.checkpoint?.opencode ? { opencode: run.checkpoint.opencode } : {}),
+        /**
+         * LE JOURNAL, RASSEMBLÉ DEPUIS SA TABLE (MIN-286, 2026-08-13). La ligne
+         * du run n'en porte que le pointeur : les events vivent en append dans
+         * `agent_run_journal`, parce qu'ils charrient la sortie complète de
+         * chaque tool et qu'un checkpoint ne pouvait pas les tenir.
+         */
+        ...(opencodeJournal ? { opencode: opencodeJournal } : {}),
         ...(opencodeInput ? { opencodeInput } : {}),
         instructions,
         usageSeqStart,
