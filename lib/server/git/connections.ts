@@ -194,8 +194,29 @@ export async function getUserConnection(
 }
 
 /**
+ * L'installation visée est déjà reliée à un AUTRE compte minddy (MIN-324).
+ *
+ * Le message ne nomme personne : l'appelant n'a pas à apprendre à qui appartient
+ * une installation qu'il ne détient pas. La route setup le traduit en `git=error`.
+ */
+export class GithubInstallationOwnedByAnotherUserError extends Error {
+  constructor() {
+    super("GitHub installation is already linked to another account");
+    this.name = "GithubInstallationOwnedByAnotherUserError";
+  }
+}
+
+/**
  * Upsert d'une connexion GitHub App (callback setup). installation_id est unique
  * globalement : on met à jour la ligne existante ou on insère. Renvoie l'id.
+ *
+ * **Une ligne existante ne change jamais de main** (MIN-324). La clé de conflit
+ * est le seul `installation_id`, et l'`update` réécrivait `user_id` : appelée
+ * avec un `installation_id` énuméré, la fonction réattribuait l'installation
+ * d'un autre locataire à l'appelant — donc ses dépôts privés. Un propriétaire
+ * différent lève désormais, et pour reprendre une installation il faut d'abord
+ * que son détenteur la déconnecte (la ligne disparaît, l'insert redevient
+ * possible).
  */
 export async function upsertGithubConnection(params: {
   userId: string;
@@ -209,15 +230,17 @@ export async function upsertGithubConnection(params: {
 
   const { data: existing } = await supabase
     .from("git_connections")
-    .select("id")
+    .select("id, user_id")
     .eq("installation_id", params.installationId)
     .maybeSingle();
 
   if (existing) {
+    if (existing.user_id !== params.userId) {
+      throw new GithubInstallationOwnedByAnotherUserError();
+    }
     await supabase
       .from("git_connections")
       .update({
-        user_id: params.userId,
         provider: "github",
         account_login: params.accountLogin,
         account_type: params.accountType,
@@ -250,6 +273,11 @@ export async function upsertGithubConnection(params: {
  * Upsert d'une connexion GitLab OAuth (callback). Dé-duplique par
  * (user_id, provider, provider_account_id) : reconnexion du même compte → update
  * des tokens. Renvoie l'id.
+ *
+ * La clé de conflit porte `user_id`, donc pas de vol par réattribution ici
+ * (MIN-324) : deux utilisateurs reliant le même compte GitLab obtiennent deux
+ * lignes distinctes, chacune avec ses propres jetons. Idem pour
+ * `upsertUserIdentity`, unique sur `(user_id, provider)`.
  */
 export async function upsertGitlabConnection(params: {
   userId: string;

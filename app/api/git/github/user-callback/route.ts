@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyGitLinkState } from "@/lib/server/git/link-state";
 import {
+  readForgeCallbackSession,
+  sessionMatchesState,
+} from "@/lib/server/git/callback-session";
+import {
   exchangeGithubUserCode,
   getGithubUserAccount,
 } from "@/lib/server/git/github-user-auth";
@@ -12,8 +16,9 @@ import { upsertUserIdentity } from "@/lib/server/git/user-identities";
  *
  * À ne pas confondre avec `/api/git/github/setup`, qui est la Setup URL de
  * l'INSTALLATION : ici l'utilisateur n'installe rien, il autorise minddy à
- * parler EN SON NOM. GitHub redirige avec `code` + notre `state` signé, seule
- * preuve de contexte (qui a initié, et d'où).
+ * parler EN SON NOM. GitHub redirige avec `code` + notre `state` signé, qui dit
+ * d'où l'on est parti. Sous quel compte minddy ranger le jeton, en revanche,
+ * c'est la SESSION qui le dit (MIN-324 — cf. callback-session.ts).
  */
 
 /**
@@ -36,16 +41,24 @@ function redirectTo(base: string, origin: string, outcome: "connected" | "error"
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
+  const { userId: sessionUserId, applyCookies } =
+    await readForgeCallbackSession(request);
   const state = verifyGitLinkState(searchParams.get("state"));
   const code = searchParams.get("code");
 
   // Sans state valide on ne sait pas où revenir : retour aux paramètres du compte.
   if (!state || state.provider !== "github") {
-    return redirectTo(DEFAULT_RETURN, origin, "error");
+    return applyCookies(redirectTo(DEFAULT_RETURN, origin, "error"));
   }
 
   const base = (state.origin && RETURN_TO[state.origin]) || DEFAULT_RETURN;
-  if (!code) return redirectTo(base, origin, "error");
+
+  // AVANT l'échange du `code` : un `state` qu'on nous a envoyé désigne l'attaquant,
+  // et brûler le code d'autorisation de la victime ne servirait à personne.
+  if (!sessionMatchesState(sessionUserId, state.userId)) {
+    return applyCookies(redirectTo(base, origin, "error"));
+  }
+  if (!code) return applyCookies(redirectTo(base, origin, "error"));
 
   try {
     const tokens = await exchangeGithubUserCode({
@@ -54,6 +67,7 @@ export async function GET(request: NextRequest) {
     });
     const account = await getGithubUserAccount(tokens.accessToken);
     await upsertUserIdentity({
+      // Égal à `sessionUserId` par la garde ci-dessus, et typé `string`.
       userId: state.userId,
       provider: "github",
       providerAccountId: String(account.id),
@@ -61,9 +75,9 @@ export async function GET(request: NextRequest) {
       accountAvatarUrl: account.avatarUrl,
       tokens,
     });
-    return redirectTo(base, origin, "connected");
+    return applyCookies(redirectTo(base, origin, "connected"));
   } catch (err) {
     console.error("[git/github/user-callback] failed:", err);
-    return redirectTo(base, origin, "error");
+    return applyCookies(redirectTo(base, origin, "error"));
   }
 }
