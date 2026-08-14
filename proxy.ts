@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { lookupCustomDomain } from "@/lib/custom-domain-lookup";
+import {
+  lookupCustomDomain,
+  lookupTokenProject,
+  type DomainTarget,
+  type PublicTokenKind,
+} from "@/lib/custom-domain-lookup";
 import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 import { detectFromAcceptLanguage } from "@/lib/accept-language";
 import {
@@ -83,6 +88,16 @@ const NOINDEX_PREFIXES = ["/share/", "/f/", "/p/"];
 const CUSTOM_HOST_PASS_PREFIXES = ["/f/", "/share/", "/p/", "/api/", "/auth/", "/_next/", "/.well-known/"];
 const CUSTOM_HOST_PASS_ROUTES = new Set(["/favicon.ico", "/icon", "/manifest.json"]);
 
+// Parmi ces préfixes passants, ceux dont le premier segment est un TOKEN, donc
+// désigne un contenu appartenant à un locataire (MIN-337). Sur le domaine d'un
+// client, seuls les tokens de SON projet passent : les autres sont des contenus
+// étrangers, servis sous son nom et derrière son certificat.
+const CUSTOM_HOST_TOKEN_PREFIXES: ReadonlyArray<{ prefix: string; kind: PublicTokenKind }> = [
+  { prefix: "/f/", kind: "feedback" },
+  { prefix: "/share/", kind: "share" },
+  { prefix: "/p/", kind: "page" },
+];
+
 // Pages publiques anonymes (board de feedback /f/, vues partagées /share/, site
 // marketing et pages légales) : on tague la requête pour que le root layout
 // bascule le thème par défaut sur "system" au lieu de "dark" (MIN-60). Le header
@@ -113,11 +128,58 @@ function hasPrefix(pathname: string, prefixes: readonly string[]): boolean {
 }
 
 /**
+ * Rien de ce qui sort d'un domaine client ne va dans un cache partagé (MIN-337).
+ *
+ * Ces pages sont personnalisées par cookie — l'identité de l'utilisateur final
+ * du board, son déverrouillage de vue partagée — et le `/` d'un domaine custom
+ * tombait sous l'en-tête de cache CDN posé sur `/` pour la landing, sans
+ * `Vary` : le CDN pouvait servir à un visiteur la page d'un autre. La cause est
+ * traitée en amont (les en-têtes de `next.config.mjs` sont désormais bornés aux
+ * hosts primaires) ; ceci est la ceinture, posée sur le seul chemin par lequel
+ * passe TOUTE requête d'un domaine client.
+ */
+function noSharedCache(response: NextResponse): NextResponse {
+  response.headers.set("Cache-Control", "private, no-store");
+  // L'en-tête que le CDN de Vercel lit en priorité, et que Next n'écrase jamais
+  // (voir le long commentaire de next.config.mjs, qui porte la mesure).
+  response.headers.set("Vercel-CDN-Cache-Control", "no-store");
+  return response;
+}
+
+/**
+ * Le chemin demandé désigne-t-il le contenu d'un AUTRE locataire ? (MIN-337)
+ *
+ * `/f/`, `/share/` et `/p/` sont passants sur un domaine client — le board a
+ * besoin de `/f/<son token>/…` pour ses onglets, et une vue partagée peut être
+ * ouverte depuis un board. Mais le token est un identifiant global : sans ce
+ * contrôle, `feedback.acme.com/f/<token d'un concurrent>` rendait le board du
+ * concurrent, sous le nom d'Acme.
+ *
+ * `false` sur un chemin sans token (`/_next/`, `/favicon.ico`…) : rien à
+ * rattacher à un locataire, rien à refuser.
+ */
+async function isForeignTenantPath(
+  pathname: string,
+  target: DomainTarget,
+): Promise<boolean> {
+  const match = CUSTOM_HOST_TOKEN_PREFIXES.find(({ prefix }) => pathname.startsWith(prefix));
+  if (!match) return false;
+
+  const token = pathname.slice(match.prefix.length).split("/")[0] ?? "";
+  if (!token) return true;
+
+  const projectId = await lookupTokenProject(match.kind, token);
+  // Token inconnu : 404 ici plutôt qu'un rendu qui 404era plus loin — et pas de
+  // différence observable entre « n'existe pas » et « appartient à un autre ».
+  return projectId !== target.projectId;
+}
+
+/**
  * Host custom → réécriture vers la page publique mappée (board de feedback ou
  * vue partagée) : `/` devient `/f/<token>` (resp. `/share/<token>`), les
  * sous-chemins sont préfixés (`/p/123` → `/f/<token>/p/123`), la query string
- * est préservée. Host inconnu (domaine encore attaché à Vercel mais mapping
- * supprimé) → 404 texte. Jamais d'auth Supabase ici : un domaine client ne
+ * est préservée. Host inconnu, ou domaine dont la propriété n'est pas encore
+ * vérifiée → 404 texte. Jamais d'auth Supabase ici : un domaine client ne
  * sert que du public.
  */
 async function proxyCustomHost(request: NextRequest, host: string): Promise<NextResponse> {
@@ -129,34 +191,44 @@ async function proxyCustomHost(request: NextRequest, host: string): Promise<Next
   // indexe le board sous le domaine du client. Les boards restent hors index
   // (décision de cadrage), donc on répond explicitement.
   if (pathname === "/robots.txt") {
-    return new NextResponse("User-agent: *\nDisallow: /\n", {
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
-    });
+    return noSharedCache(
+      new NextResponse("User-agent: *\nDisallow: /\n", {
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      }),
+    );
   }
   // Un domaine client n'a pas de sitemap : 404 franc plutôt que la réécriture
   // vers une route inexistante, qui produisait le même code mais en HTML.
   if (pathname === "/sitemap.xml") {
-    return new NextResponse("Not found", { status: 404 });
+    return noSharedCache(new NextResponse("Not found", { status: 404 }));
   }
+
+  // Le mapping est résolu AVANT les chemins passants : c'est lui qui nomme le
+  // locataire du domaine, et donc ce que les préfixes à token ont le droit de
+  // servir. Un host sans mapping vérifié ne sert plus rien du tout, assets
+  // compris — il n'y a aucune page à laquelle ils appartiendraient.
+  const target = await lookupCustomDomain(host);
+  if (!target) return noSharedCache(new NextResponse("Unknown domain", { status: 404 }));
 
   if (
     CUSTOM_HOST_PASS_ROUTES.has(pathname) ||
     CUSTOM_HOST_PASS_PREFIXES.some((prefix) => pathname.startsWith(prefix))
   ) {
+    if (await isForeignTenantPath(pathname, target)) {
+      return noSharedCache(new NextResponse("Not found", { status: 404 }));
+    }
     // Un host custom ne sert que du public → thème "system" (MIN-60). Inoffensif
     // sur /api, /_next… qui ne rendent pas le layout thémé.
-    return NextResponse.next(withRequestHeaders(request, { [PUBLIC_THEME_HEADER]: "1" }));
+    return noSharedCache(
+      NextResponse.next(withRequestHeaders(request, { [PUBLIC_THEME_HEADER]: "1" })),
+    );
   }
-
-  const target = await lookupCustomDomain(host);
-  if (!target) return new NextResponse("Unknown domain", { status: 404 });
 
   const base = target.kind === "feedback" ? `/f/${target.token}` : `/share/${target.token}`;
   const url = request.nextUrl.clone();
   url.pathname = pathname === "/" ? base : `${base}${pathname}`;
-  const response = NextResponse.rewrite(
-    url,
-    withRequestHeaders(request, { [PUBLIC_THEME_HEADER]: "1" }),
+  const response = noSharedCache(
+    NextResponse.rewrite(url, withRequestHeaders(request, { [PUBLIC_THEME_HEADER]: "1" })),
   );
   response.headers.set("X-Robots-Tag", "noindex");
   return response;

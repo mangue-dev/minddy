@@ -280,6 +280,7 @@
     "refresh": "Check status",
     "statusPending": "Waiting for DNS",
     "statusVerified": "Verified",
+    "pendingNotServing": "This domain serves nothing until it is verified.",
     "dnsIntro": "Add these records to your DNS provider, then check the status. Propagation can take a few minutes.",
     "dnsName": "Name",
     "dnsValue": "Value",

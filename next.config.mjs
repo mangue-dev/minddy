@@ -58,6 +58,26 @@ export const PUBLIC_ROUTE_PATHS = [
   "/fr/cookies",
 ];
 
+/**
+ * Les hosts qui servent minddy elle-même, en expression régulière — la forme
+ * qu'attend le `has: [{ type: "host" }]` d'une entrée de `headers()` (comparée
+ * ancrée, port retiré, en minuscules).
+ *
+ * Elle existe pour BORNER le cache CDN des pages publiques à ces hosts-là
+ * (MIN-337). Sur un domaine client, `/` sert un board de feedback personnalisé
+ * par cookie : il tombait sous le même en-tête, sans `Vary`, et le CDN pouvait
+ * servir à un visiteur la page d'un autre.
+ *
+ * Volontairement plus étroite que `isPrimaryHost` (lib/public-hosts.ts), qui
+ * accepte tout `*.minddy.app` : un sous-domaine minddy servant l'app un jour
+ * n'aurait ici que le cache en moins, quand l'inverse — un domaine client qui
+ * passerait la grille — est le défaut qu'on corrige. `feedback.minddy.app`, le
+ * domaine de dogfooding, est justement un `*.minddy.app` qui n'est PAS primaire.
+ * `lib/public-routes.test.ts` tient les deux en phase.
+ */
+export const PRIMARY_HOST_PATTERN =
+  "(?:www\\.|preview\\.)?minddy\\.app|localhost|[a-z0-9-]+\\.vercel\\.app";
+
 /** Sur Vercel, hors production (preview, deploys de branche). Pas en local. */
 const isVercelNonProduction =
   !!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production";
@@ -258,9 +278,18 @@ const nextConfig = {
     // le navigateur, lui, continuera de recevoir le `private, no-store` de Next
     // — ce qui est très bien, on veut un cache CDN partagé, pas un cache
     // navigateur qui figerait la page d'un visiteur qui vient de se connecter.
+    //
+    // ⚠ `has: host` — ces en-têtes ne valent QUE sur les hosts de minddy.
+    //
+    // Un domaine personnalisé (MIN-36) sert à sa racine un board de feedback ou
+    // une vue partagée, c'est-à-dire une page personnalisée par cookie. Sans
+    // cette condition, le `/` du client tombait sous la ligne ci-dessus : mis en
+    // cache par le CDN, sans `Vary`, donc servi à qui passe ensuite (MIN-337).
+    // Le proxy pose en plus `no-store` sur toute réponse d'un domaine client.
     headers.push(
       ...PUBLIC_ROUTE_PATHS.map((source) => ({
         source,
+        has: [{ type: "host", value: PRIMARY_HOST_PATTERN }],
         headers: [
           {
             key: "Cache-Control",

@@ -35,9 +35,15 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const row = resolved.share ? await getDomainForShare(resolved.share.id) : null;
   if (!row) return NextResponse.json({ configured, can_manage: resolved.isOwner, domain: null });
 
+  // Un domaine non vérifié ne sert RIEN depuis MIN-337 : la vérification est
+  // devenue le passage obligé, donc elle se retente à chaque ouverture de
+  // l'écran, sans attendre un clic sur « Vérifier le statut ». Le coût (un
+  // appel Vercel) ne concerne que les domaines en attente.
   const refresh = request.nextUrl.searchParams.get("refresh") === "1";
   const domain =
-    refresh && configured ? await refreshDomainStatus(row) : serializeDomainStatus(row);
+    configured && (refresh || row.status !== "verified")
+      ? await refreshDomainStatus(row)
+      : serializeDomainStatus(row);
   return NextResponse.json({ configured, can_manage: resolved.isOwner, domain });
 }
 

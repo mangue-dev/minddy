@@ -8,10 +8,12 @@ import {
   routeByPath,
 } from "./public-routes";
 import { PROTECTED_PREFIXES } from "./protected-prefixes";
-import {
+import nextConfig, {
   FRENCH_SLUG_REDIRECTS,
+  PRIMARY_HOST_PATTERN,
   PUBLIC_ROUTE_PATHS as CONFIG_PUBLIC_ROUTE_PATHS,
 } from "../next.config.mjs";
+import { isPrimaryHost } from "./public-hosts";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 
@@ -100,6 +102,51 @@ describe("French slug redirects in next.config.mjs", () => {
     expect([...CONFIG_PUBLIC_ROUTE_PATHS].sort()).toEqual(
       [...PUBLIC_ROUTE_PATHS].sort(),
     );
+  });
+});
+
+describe("CDN cache header vs custom domains", () => {
+  /**
+   * Le `/` d'un domaine personnalisé sert un board de feedback, personnalisé
+   * par cookie. Il tombait sous l'en-tête de cache CDN posé sur `/` pour la
+   * landing, sans `Vary` : le CDN pouvait servir à un visiteur la page d'un
+   * autre (MIN-337). La condition `has: host` est ce qui l'en sort — et elle
+   * n'apparaît nulle part dans les types.
+   */
+  const cacheEntries = async () =>
+    (await nextConfig.headers!()).filter((entry) =>
+      entry.headers.some((header) => header.key === "Vercel-CDN-Cache-Control"),
+    );
+
+  it("gates every public-cache header on a primary host", async () => {
+    const entries = await cacheEntries();
+    expect(entries.map((entry) => entry.source).sort()).toEqual(
+      [...PUBLIC_ROUTE_PATHS].sort(),
+    );
+    for (const entry of entries) {
+      expect(entry.has).toEqual([{ type: "host", value: PRIMARY_HOST_PATTERN }]);
+    }
+  });
+
+  it("matches only hosts that serve minddy itself", () => {
+    // Next compare la valeur ancrée, sur le host sans port et en minuscules.
+    const matches = (host: string) => new RegExp(`^${PRIMARY_HOST_PATTERN}$`).test(host);
+
+    for (const host of ["minddy.app", "www.minddy.app", "preview.minddy.app", "localhost"]) {
+      expect(matches(host)).toBe(true);
+      expect(isPrimaryHost(host)).toBe(true);
+    }
+    // Un domaine client, et le sous-domaine de dogfooding qui EST un domaine
+    // client (allowlisté par l'ops) : jamais de cache partagé.
+    process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST = "feedback.minddy.app";
+    try {
+      for (const host of ["feedback.acme.com", "acme.com", "feedback.minddy.app"]) {
+        expect(matches(host)).toBe(false);
+        expect(isPrimaryHost(host)).toBe(false);
+      }
+    } finally {
+      delete process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST;
+    }
   });
 });
 

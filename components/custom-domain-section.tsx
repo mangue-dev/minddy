@@ -178,6 +178,12 @@ export function CustomDomainSection({
 
           {!verified && (
             <>
+              {/* Le domaine ne sert rien tant qu'il n'est pas vérifié (MIN-337).
+                  Le dire ici, sinon la seule chose que l'utilisateur observe est
+                  un 404 sur un domaine qu'il vient de configurer. */}
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("pendingNotServing")}
+              </p>
               <p className="text-xs leading-relaxed text-muted-foreground">{t("dnsIntro")}</p>
               <DnsTable records={domain.dns} />
             </>
