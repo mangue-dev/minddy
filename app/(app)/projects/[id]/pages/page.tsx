@@ -60,16 +60,24 @@ export default function ProjectPagesPage() {
   if (loading) return null;
 
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center">
-      <EmptyScene
-        icon={FileText}
-        title={pages.length === 0 ? t("emptyTitle") : t("pickTitle")}
-      >
-        <Button onClick={() => void create()}>
-          <Plus className="size-4" />
-          {t("newPage")}
-        </Button>
-      </EmptyScene>
+    /* Le MÊME cadre que les quatre autres onglets du projet — tickets, triage,
+       objectifs, retours : une zone défilante en `px-6 py-8`, contenu borné à
+       `max-w-5xl` et centré horizontalement. L'état vide se calait ici au milieu
+       de la hauteur (`items-center`), et il était le seul : passer de Pages à
+       Objectifs faisait sauter l'illustration d'une centaine de pixels, sur des
+       écrans qui ne diffèrent que par leur icône et leur phrase. */
+    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+      <div className="mx-auto max-w-5xl">
+        <EmptyScene
+          icon={FileText}
+          title={pages.length === 0 ? t("emptyTitle") : t("pickTitle")}
+        >
+          <Button onClick={() => void create()}>
+            <Plus className="size-4" />
+            {t("newPage")}
+          </Button>
+        </EmptyScene>
+      </div>
     </div>
   );
 }

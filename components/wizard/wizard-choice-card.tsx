@@ -1,18 +1,15 @@
 "use client";
 
 import { cn } from "mangue-ui";
-import {
-  IsoIconScene,
-  type SceneIcon,
-} from "@/components/illustrations/iso-icon";
+import { IsoIcon, type SceneIcon } from "@/components/illustrations/iso-icon";
 
 /**
- * Une carte de choix de wizard : une scène isométrique, un libellé, une
+ * Une carte de choix de wizard : un bloc isométrique, un libellé, une
  * description quand l'option en demande une.
  *
- * C'est le dessin qui fait le choix, le libellé confirme — d'où la scène POSÉE
- * sur la carte plutôt qu'encadrée : aucun fond, aucun filet, le fond de la
- * carte court d'un bout à l'autre et l'illustration flotte dedans.
+ * C'est le dessin qui fait le choix, le libellé confirme — d'où l'illustration
+ * POSÉE sur la carte plutôt qu'encadrée : aucun fond, aucun filet, le fond de la
+ * carte court d'un bout à l'autre et le bloc flotte dedans.
  *
  * L'alignement du texte suit ce qu'il y a à lire. Un libellé seul se centre
  * sous son dessin ; dès qu'une description l'accompagne, tout passe à gauche —
@@ -55,7 +52,7 @@ export function WizardChoiceCard({
       {/* Une seule colonne, deux écarts explicites : autant d'air au-dessus du
           dessin qu'en dessous du texte, et un intervalle net entre les deux. */}
       <span className="flex flex-col gap-4 px-5 py-6">
-        <IsoIconScene
+        <IsoIcon
           icon={icon}
           // 200 ms, pas 500 : au-delà de ~300 ms un retour d'interaction cesse
           // d'être un retour et devient une animation qu'on regarde — et sur
@@ -63,7 +60,7 @@ export function WizardChoiceCard({
           // vraiment. C'est bien l'ENFANT qui bouge et pas la carte : un parent
           // qui grandit sous le curseur se retire de dessous et fait clignoter
           // son propre survol.
-          className="w-full max-w-60 self-center transition-transform duration-200 ease-out group-hover:scale-[1.04]"
+          className="w-full max-w-36 self-center transition-transform duration-200 ease-out group-hover:scale-[1.04]"
         />
         <span
           className={cn(
