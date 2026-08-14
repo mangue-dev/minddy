@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { AgentLiveEdit } from "./exec-tool";
+import type { AgentLiveEdit } from "./agent-contract";
 
 /**
  * Diffusion EN DIRECT d'une session de l'agent de code, sur le topic privé

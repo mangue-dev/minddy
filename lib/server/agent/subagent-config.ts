@@ -1,5 +1,5 @@
 import { isMultiplierWithinPlan } from "@/lib/model-multiplier";
-import type { FavoriteSubagentModel } from "@/lib/subagent-favorites";
+import type { FavoriteSubagentModel, SubagentThinkingEffort } from "@/lib/subagent-favorites";
 import type { AgentModelsCatalog } from "./models-catalog";
 
 /**
@@ -24,6 +24,50 @@ import type { AgentModelsCatalog } from "./models-catalog";
  * de modèle — n'a jamais eu besoin de la base ; ce qui l'avait, ce sont les
  * réglages, et ils se lisent AVANT, côté fonction, puis descendent dans le job.
  */
+
+/**
+ * LE VOCABULAIRE DES SESSIONS FILLES (MIN-286) — rapatrié ici quand `subagent.ts`
+ * est parti avec la boucle maison.
+ *
+ * Ce qui a disparu, c'est le REGISTRE : le plafond de parallélisme tenu en
+ * mémoire, l'exclusivité de l'écrivain, la livraison des rapports. Opencode tient
+ * tout cela lui-même — une fille est une session, ouverte par son tool `task`, et
+ * son modèle vient du NOM de l'agent (cf. dossier §2.14). Ce qui reste sont les
+ * trois mots dont la fonction et le superviseur ont encore besoin : le mode, la
+ * forme d'un favori, et la bande de seq où se compte sa dépense.
+ */
+
+/** Les deux mains d'une fille : lire pour rapporter, ou écrire du code. */
+export type SubagentMode = "explore" | "implement";
+
+/**
+ * Le niveau de réflexion d'une fille et la forme d'un favori vivent dans
+ * `lib/subagent-favorites.ts` : le dashboard admin ÉDITE ces favoris, et le client
+ * ne peut pas importer un module serveur. Ré-exportés pour que les appelants
+ * serveur gardent un seul point d'entrée.
+ */
+export type { FavoriteSubagentModel, SubagentThinkingEffort };
+
+/**
+ * Base de la bande de seq `ai_usage` des filles — au-dessus de tout ce que le
+ * parent peut atteindre, pour que les deux ne s'entrelacent jamais à l'affichage.
+ */
+export const SUBAGENT_USAGE_SEQ_BASE = 2_000_000_000;
+const SUBAGENT_SEQ_SPAN = 1_000;
+/** `ai_usage.seq` est un `integer` Postgres : hors bornes, l'INSERT est REJETÉ. */
+const MAX_PG_INT = 2_147_483_647;
+
+/**
+ * Seq de départ des lignes d'usage de la fille n° `slot` du run. L'espacement est
+ * BORNÉ : au-delà, on retombe sur le dernier slot représentable plutôt que d'écrire
+ * un entier hors bornes — deux filles partageraient alors une plage de seq (un
+ * ordre d'affichage ambigu), là où un dépassement perdrait la ligne d'usage entière.
+ */
+export function subagentUsageSeq(slot: number): number {
+  const s = Number.isFinite(slot) ? Math.max(0, Math.floor(slot)) : 0;
+  const room = MAX_PG_INT - SUBAGENT_USAGE_SEQ_BASE - SUBAGENT_SEQ_SPAN;
+  return SUBAGENT_USAGE_SEQ_BASE + Math.min(s * SUBAGENT_SEQ_SPAN, room);
+}
 
 /**
  * Plafond de rounds d'une fille, CUMULÉ sur toutes ses reprises — et non par

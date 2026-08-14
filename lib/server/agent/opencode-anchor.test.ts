@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { LEGACY_TOOL_NAMES, buildOpencodeAnchor } from "./opencode-anchor";
-import { buildAgentSystemPrompt } from "./prompt";
 
 /**
  * MIN-286 — l'ancrage minddy servi à opencode en `instructions`.
@@ -69,9 +68,8 @@ describe("buildOpencodeAnchor — aucun nom de tool de la boucle maison", () => 
 
 describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
   const text = buildOpencodeAnchor({ ...FULL, anchor: "issue", interactive: true });
-  const loop = buildAgentSystemPrompt({ ...FULL, anchor: "issue", interactive: true });
 
-  it("porte les règles dures mot pour mot, comme la boucle maison", () => {
+  it("porte les règles dures mot pour mot", () => {
     for (const rule of [
       "**You never change a ticket's status**",
       "**A plan that already exists is never rewritten whole.**",
@@ -84,9 +82,6 @@ describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
       "Never print secrets or the git remote URL.",
     ]) {
       expect(text, rule).toContain(rule);
-      // Le même texte des deux côtés : c'est ce qui rend la semaine de bascule
-      // lisible — un écart de comportement ne pourra pas venir de là.
-      expect(loop, rule).toContain(rule);
     }
   });
 

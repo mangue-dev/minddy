@@ -16,7 +16,7 @@ import {
   workflowSteps,
   type AgentAnchor,
 } from "./prompt";
-import type { FavoriteSubagentModel } from "./subagent";
+import type { FavoriteSubagentModel } from "./subagent-config";
 
 /**
  * L'ANCRAGE MINDDY SERVI À OPENCODE (MIN-286) — le texte que le superviseur écrit

@@ -1,3 +1,6 @@
+import { PR_BASE_TAG, readFileAtRef, readWorkFile, type RepoHost } from "./repo-host";
+import type { AgentAnchor } from "./prompt";
+
 /**
  * Instructions d'un dépôt (`AGENTS.md` / `CLAUDE.md`) — PUR et testable, comme
  * command-output.ts : `execute.ts` ne fait que lire les fichiers nommés ici et
@@ -194,4 +197,61 @@ function formatTouchedInstructions(
     block: `${LEAD[reason]}\n\n${blocks.join("\n\n")}`,
     bytes: spent,
   };
+}
+
+/**
+ * D'OÙ VIENNENT LES INSTRUCTIONS, SELON L'ANCRAGE (MIN-328).
+ *
+ * Une session d'écriture lit l'arbre de travail : c'est le dépôt de l'utilisateur,
+ * sur sa branche à lui. Une session de RELECTURE est checkoutée sur la TÊTE de la
+ * pull request — un fork, donc du contenu écrit par l'auteur de la PR, qui sur un
+ * dépôt public est n'importe qui. Son `AGENTS.md` arrivait dans le prompt sous la
+ * bannière « Follow them; they override the general conventions » : une prise de
+ * contrôle offerte à quiconque sait ouvrir une PR.
+ *
+ * Seule la BASE fait autorité, et elle est dans le clone sous le tag `pr-base`
+ * (cf. `clonePullRequest`). Pas de tag ramené → pas d'instructions : une relecture
+ * sans conventions est une relecture un peu moins fine, une relecture aux
+ * conventions de l'attaquant n'est plus une relecture.
+ */
+function readInstructionsFrom(
+  host: RepoHost,
+  anchor: AgentAnchor,
+  path: string,
+): Promise<string | null> {
+  const read =
+    anchor === "pr" ? readFileAtRef(host, PR_BASE_TAG, path) : readWorkFile(host, path);
+  return read.catch(() => null);
+}
+
+/** Lit un fichier d'instructions du dépôt, ou null (absent / illisible). */
+async function readInstructionFile(
+  host: RepoHost,
+  anchor: AgentAnchor,
+  path: string,
+): Promise<RepoInstructionFile | null> {
+  const content = await readInstructionsFrom(host, anchor, path);
+  return content?.trim() ? { path, content } : null;
+}
+
+/**
+ * Lit les instructions du dépôt (AGENTS.md / CLAUDE.md à la racine) et les emballe
+ * en un message délimité, ou null s'il n'y en a pas. Lu UNE fois à l'amorce (le
+ * checkpoint le transporte ensuite). C'est là qu'un repo déclare ses commandes de
+ * build/test, ses conventions et ses interdits — le carburant d'un diff correct.
+ * Celles des SOUS-DOSSIERS arrivent plus tard, à la première édition dedans
+ * (MIN-115) — cf. `collectTouchedInstructions`.
+ *
+ * `anchor` décide de la SOURCE, et pas seulement du ton : cf. `readInstructionsFrom`.
+ */
+export async function readRepoInstructions(
+  host: RepoHost,
+  anchor: AgentAnchor = "issue",
+): Promise<{ message: string; bytes: number } | null> {
+  const files: RepoInstructionFile[] = [];
+  for (const name of REPO_INSTRUCTION_FILES) {
+    const file = await readInstructionFile(host, anchor, name);
+    if (file) files.push(file);
+  }
+  return formatBootInstructions(files, { review: anchor === "pr" });
 }

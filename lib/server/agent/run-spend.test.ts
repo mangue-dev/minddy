@@ -256,31 +256,22 @@ describe("plafond de run et stamps d'erreur (execute.ts)", () => {
    * Trois lecteurs mélangeraient sinon deux populations : `recomputeChainSpend`,
    * `medianCostByIntent` et le coût exposé par l'API du run.
    */
-  it("le repos facture le compute AVANT de relire le ledger — sinon les deux moteurs divergent", () => {
-    const cost = initializerOf("restCostUsd");
-    const text = cost.getText();
-    expect(text, "`restCostUsd` doit facturer le compute du chunk").toContain(
-      "billSandboxCompute",
-    );
-    expect(text, "`restCostUsd` doit relire le ledger").toContain("spentFromLedger");
-
-    // L'ORDRE, et c'est tout le ticket : facturer après la relecture ne mettrait
-    // jamais le compute dans la colonne.
-    const positions = new Map<string, number>();
-    const visit = (node: ts.Node) => {
-      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-        const name = node.expression.text;
-        if (!positions.has(name)) positions.set(name, node.getStart());
-      }
-      ts.forEachChild(node, visit);
-    };
-    visit(cost);
-    expect(positions.get("billSandboxCompute")!).toBeLessThan(positions.get("spentFromLedger")!);
-
+  it("le repos facture le compute AVANT de relire le ledger", () => {
+    /**
+     * L'invariant a DÉMÉNAGÉ avec la boucle (MIN-286, 2026-08-14) : ce n'est plus
+     * la fonction qui conclut un tour, c'est `landVmTurn`. L'ordre, lui, ne change
+     * pas — facturer le compute APRÈS la relecture ne le mettrait jamais dans la
+     * colonne, et `cost_usd` afficherait moins que ce que le run a coûté.
+     */
+    const rest = readFileSync(join(process.cwd(), "lib/server/agent/vm-rest.ts"), "utf8");
+    const billAt = rest.indexOf("await recordSandboxUsage({");
+    const ledgerAt = rest.indexOf("await spentFromLedger(");
+    expect(billAt, "`landVmTurn` doit facturer le compute du tour").toBeGreaterThan(-1);
+    expect(ledgerAt, "`landVmTurn` doit relire le ledger").toBeGreaterThan(-1);
+    expect(billAt).toBeLessThan(ledgerAt);
     // Et le résultat est le MAX des deux minorants : le ledger est best-effort, la
     // colonne peut porter une ligne qu'il a ratée, et une dépense ne recule pas.
-    expect(text).toContain("Math.max");
-    expect([...valueReads(cost)]).toContain("newCost");
+    expect(rest).toContain("Math.max(run.cost_usd + report.costUsd, ledger ?? 0)");
   });
 
   it("plus aucun stamp n'écrit le cumul NU — c'est lui qui ignorait le compute", () => {

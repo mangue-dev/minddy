@@ -1,6 +1,6 @@
 import { agentVmUrl } from "../network-policy";
 import type { AgentCheckpoint } from "../runs";
-import type { AgentEventType, AgentLiveProgress, AgentUsageLine, PlanStep } from "../agent-loop";
+import type { AgentEventType, AgentLiveProgress, AgentUsageLine, PlanStep } from "../agent-contract";
 import type { VmToolResponse, VmTurnReport } from "./protocol";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
 

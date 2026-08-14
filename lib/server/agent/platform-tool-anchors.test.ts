@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { agentToolsFor } from "./tools";
-import { makeExecTool } from "./exec-tool";
-import type { RepoHost } from "./repo-host";
 import type { AgentAnchor } from "./prompt";
 import {
   anchorForRun,
@@ -15,7 +13,7 @@ import {
  *
  * Deux endroits décident de ce qu'un run peut appeler : celui qui l'ANNONCE au
  * modèle (`agentToolsFor`, dont la microVM tire ses fichiers de tools) et celui
- * qui le SERT (`runPlatformTool` / `makeExecTool`, par la table de
+ * qui le SERT (`runPlatformTool` du plan de contrôle, par la table de
  * `platform-tool-names.ts`). Tant qu'ils ne venaient pas de la même source, le
  * second était un routage par NOM : une session de relecture, dont tout ce
  * qu'elle lit vient d'un fork inconnu, appelait `create_routine` par un POST
@@ -102,75 +100,6 @@ describe("la table des tools par ancrage — annoncé et servi ne divergent pas"
     ]) {
       expect(PLATFORM_TOOLS_BY_ANCHOR.pr.has(name), `${name} refusé à une relecture`).toBe(true);
     }
-  });
-});
-
-/**
- * La précédence de l'ancrage doit rester CELLE d'`execute.ts` (« issue, sinon pr,
- * sinon carnet ») : deux réponses différentes à « quel ancrage ? » et le jeu
- * annoncé cesse d'être le jeu appliqué.
- */
-/**
- * L'AUTRE ROUTEUR. Le plan de contrôle sert la microVM d'opencode ; `makeExecTool`
- * sert les deux moteurs qui exécutent en direct (la boucle maison d'`execute.ts`,
- * reprise sur les vieux checkpoints, et `vm/turn.ts`). Il routait lui aussi sur le
- * seul nom : un tool non ANNONCÉ mais nommé par le modèle — un checkpoint d'avant,
- * une instruction glissée dans le dépôt relu — s'exécutait quand même.
- */
-describe("makeExecTool refuse un tool hors de l'ancrage", () => {
-  const host: RepoHost = {
-    exec: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
-    readFile: async () => null,
-    writeFile: async () => {},
-    mkdir: async () => {},
-  };
-  const called: string[] = [];
-  const handler = async (name: string) => {
-    called.push(name);
-    return { result: { ok: true }, success: true };
-  };
-  const execFor = (anchor: AgentAnchor) =>
-    makeExecTool({
-      host,
-      anchor,
-      createPr: null,
-      prTool: handler,
-      projectPrTool: handler,
-      // Câblés MALGRÉ l'ancrage : c'est tout le sujet — la garantie ne doit pas
-      // dépendre du fait qu'un appelant ait pensé à passer `null`.
-      issueTool: handler,
-      scratchpadTool: handler,
-      webSearch: null,
-      outputSeqBase: 0,
-      background: null,
-      instructions: { paths: [], bytes: 0 },
-      editedPaths: new Set<string>(),
-      subagents: null,
-      chunkRemainingMs: () => 120_000,
-    });
-
-  it("ne laisse pas une relecture écrire un ticket ni le carnet, handler câblé ou non", async () => {
-    called.length = 0;
-    const exec = execFor("pr");
-    for (const name of ["update_issue", "create_routine", "set_scratchpad", "create_page"]) {
-      const out = await exec(name, {}, "call-1");
-      expect(out.success, name).toBe(false);
-    }
-    expect(called).toEqual([]);
-  });
-
-  it("laisse passer ce que l'ancrage porte", async () => {
-    called.length = 0;
-    const exec = execFor("pr");
-    expect((await exec("read_issue", {}, "call-1")).success).toBe(true);
-    expect((await exec("comment_pr", { body: "x" }, "call-2")).success).toBe(true);
-    expect(called).toEqual(["read_issue", "comment_pr"]);
-
-    called.length = 0;
-    const issue = execFor("issue");
-    expect((await issue("update_issue", {}, "call-3")).success).toBe(true);
-    expect((await issue("set_scratchpad", {}, "call-4")).success).toBe(true);
-    expect(called).toEqual(["update_issue", "set_scratchpad"]);
   });
 });
 

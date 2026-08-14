@@ -1,15 +1,9 @@
-import {
-  changedFiles,
-  commitAndPush,
-  repoBackgroundRunner,
-  type RepoHost,
-  REPO_DIR,
-} from "../repo-host";
+import { changedFiles, commitAndPush, repoBackgroundRunner, type RepoHost, REPO_DIR } from "../repo-host";
 import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
 // La MÊME normalisation que la boucle maison : `update_plan` est un tool de
 // contrôle, et les deux moteurs doivent en tirer le même event `plan_update`.
-import { normalizePlan } from "../agent-loop";
-import { redactDeep, SecretRedactor, type RedactText } from "../redact";
+import { normalizePlan } from "../agent-contract";
+import { redactDeep, SecretRedactor } from "../redact";
 import { cap } from "../tool-summary";
 import type { AgentCheckpoint } from "../runs";
 import type { ControlPlaneClient } from "./control-plane-client";
@@ -22,12 +16,7 @@ import {
   type OpencodeEvent,
   type RoundUsage,
 } from "./opencode-events";
-import {
-  OPENCODE_ANCHOR_FILE,
-  OPENCODE_TOOL_DIR,
-  opencodeServerEnv,
-  subagentAgentTable,
-} from "./opencode-config";
+import { OPENCODE_ANCHOR_FILE, opencodeServerEnv, subagentAgentTable } from "./opencode-config";
 import { localToolsFor, opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-bridge";
 import { makeOpencodeDelivery, repoRelative, type OpencodeDelivery } from "./opencode-delivery";
@@ -36,13 +25,9 @@ import { decidePermission, editTargets } from "./opencode-permissions";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
 import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
-import { subagentUsageSeq } from "../subagent";
+import { subagentUsageSeq } from "../subagent-config";
 import type { VmJob, VmPushResult, VmTurnReport } from "./protocol";
-import {
-  parseAgentUserMessage,
-  promptWithMentions,
-  type AgentUserMessage,
-} from "@/lib/agent-mentions";
+import { parseAgentUserMessage, promptWithMentions, type AgentUserMessage } from "@/lib/agent-mentions";
 
 /**
  * LE SUPERVISEUR (MIN-286, lot 1) — ce que devient `runVmTurn` quand la boucle

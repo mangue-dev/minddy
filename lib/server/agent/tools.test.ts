@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agentToolsFor, subagentToolsFor, SUBAGENT_CONTROL_TOOLS } from "./tools";
+import { agentToolsFor, SUBAGENT_CONTROL_TOOLS } from "./tools";
 
 /**
  * MIN-115 : le jeu de tools d'un run n'est plus fixe. Les modèles `gpt-*`
@@ -13,40 +13,6 @@ const names = (opts: Parameters<typeof agentToolsFor>[0]) =>
   agentToolsFor(opts).map((t) => t.function.name);
 
 const STRING_EDIT = ["edit_file", "apply_edits", "write_file"];
-
-describe("agentToolsFor — interface d'édition", () => {
-  for (const anchor of ["issue", "notebook"] as const) {
-    it(`sert apply_patch SEUL à un modèle gpt-* (ancrage ${anchor})`, () => {
-      const served = names({ anchor, webSearch: true, model: "openai/gpt-5.6-luna" });
-      expect(served).toContain("apply_patch");
-      for (const tool of STRING_EDIT) expect(served).not.toContain(tool);
-    });
-
-    it(`laisse les autres modèles inchangés (ancrage ${anchor})`, () => {
-      const served = names({ anchor, webSearch: true, model: "deepseek/deepseek-v4-flash" });
-      expect(served).not.toContain("apply_patch");
-      for (const tool of STRING_EDIT) expect(served).toContain(tool);
-    });
-
-    it(`garde le reste du jeu dans les deux cas (ancrage ${anchor})`, () => {
-      for (const model of ["openai/gpt-5.6-luna", "deepseek/deepseek-v4-flash"]) {
-        const served = names({ anchor, webSearch: true, model });
-        for (const tool of ["read_file", "grep", "move_file", "delete_file", "run_command"]) {
-          expect(served).toContain(tool);
-        }
-        // Aucun doublon : un même nom servi deux fois est un tool-call ambigu.
-        expect(new Set(served).size).toBe(served.length);
-      }
-    });
-
-    it(`sans modèle connu, on reste sur l'édition par chaîne (ancrage ${anchor})`, () => {
-      const served = names({ anchor, webSearch: true });
-      expect(served).not.toContain("apply_patch");
-      expect(served).toContain("edit_file");
-    });
-  }
-});
-
 describe("agentToolsFor — web_search (inchangé)", () => {
   it("retire web_search hors OpenRouter, quelle que soit l'interface d'édition", () => {
     for (const model of ["openai/gpt-5.6-luna", "deepseek/deepseek-v4-flash"]) {
@@ -267,13 +233,6 @@ describe("agentToolsFor — les objectifs", () => {
     ).toMatch(/ONLY when the user asks/);
   });
 
-  // Une fille ne parle pas au ticket du parent ; l'objectif suit la même règle.
-  it("ne les sert JAMAIS à un sous-agent", () => {
-    for (const mode of ["explore", "implement"] as const) {
-      const served = subagentToolsFor(mode, { webSearch: true }).map((t) => t.function.name);
-      for (const tool of OBJECTIVE_TOOLS) expect(served).not.toContain(tool);
-    }
-  });
 });
 
 describe("agentToolsFor — read_resource et les images", () => {
@@ -321,84 +280,6 @@ const MINDDY_AND_CONTROL = [
   "agent_status",
   "list_agents",
 ];
-
-describe("subagentToolsFor — hiérarchie à un niveau", () => {
-  for (const mode of ["explore", "implement"] as const) {
-    it(`ne sert JAMAIS de tool de délégation ni de tool du parent (mode ${mode})`, () => {
-      const served = subagentToolsFor(mode, { webSearch: true }).map((t) => t.function.name);
-      for (const tool of MINDDY_AND_CONTROL) expect(served).not.toContain(tool);
-      // Un même nom servi deux fois est un tool-call ambigu.
-      expect(new Set(served).size).toBe(served.length);
-      expect(served.length).toBeGreaterThan(0);
-    });
-  }
-
-  it("sert les quatre lecteurs et RIEN d'autre en mode explore", () => {
-    const served = subagentToolsFor("explore", { webSearch: true }).map((t) => t.function.name);
-    expect(served.sort()).toEqual([...SUBAGENT_READERS].sort());
-  });
-
-  it("ajoute l'édition, run_command et web_search en mode implement", () => {
-    const served = subagentToolsFor("implement", { webSearch: true }).map((t) => t.function.name);
-    for (const tool of [...SUBAGENT_READERS, "edit_file", "apply_edits", "write_file", "move_file", "delete_file", "run_command", "web_search"]) {
-      expect(served).toContain(tool);
-    }
-  });
-
-  it("sert apply_patch SEUL à une fille qui tourne sur un gpt-*", () => {
-    const served = subagentToolsFor("implement", {
-      webSearch: false,
-      model: "openai/gpt-5.6-luna",
-    }).map((t) => t.function.name);
-    expect(served).toContain("apply_patch");
-    for (const tool of STRING_EDIT) expect(served).not.toContain(tool);
-    // Le modèle de la FILLE décide, pas celui du parent : elle peut tourner sur un
-    // gpt-* alors que son parent est sur DeepSeek.
-    expect(served).not.toContain("web_search");
-  });
-});
-
-describe("agentToolsFor — les tools de délégation du parent", () => {
-  it("sert les trois tools de suivi et de délégation", () => {
-    const served = names({ anchor: "issue", webSearch: true });
-    for (const tool of SUBAGENT_CONTROL_TOOLS) expect(served).toContain(tool);
-  });
-
-  const spawn = (subagentModels?: boolean) =>
-    agentToolsFor({ anchor: "issue", webSearch: true, subagentModels }).find(
-      (t) => t.function.name === "spawn_agent",
-    )!.function;
-
-  it("RETIRE le champ model quand le run ne peut pas en changer (BYOK non-OpenRouter)", () => {
-    // Règle du tout ou rien, comme `web_search` : un champ qui reviendrait toujours
-    // en erreur ne mérite pas d'être décrit — et la délégation, elle, reste offerte.
-    expect(Object.keys(spawn(false).parameters.properties)).not.toContain("model");
-    expect(spawn(false).description).toMatch(/always runs on your own model/);
-    expect(spawn(undefined).parameters.properties).not.toHaveProperty("model");
-
-    expect(Object.keys(spawn(true).parameters.properties)).toContain("model");
-    expect(spawn(true).description).not.toMatch(/always runs on your own model/);
-  });
-
-  it("garde task, mode et expected_output obligatoires dans les deux cas", () => {
-    for (const models of [true, false]) {
-      expect(spawn(models).parameters.required).toEqual(["task", "mode", "expected_output"]);
-    }
-  });
-
-  it("annonce le lancement asynchrone, le wakeup, l'absence d'attente et le gel des éditions", () => {
-    // Le modèle ne peut pas deviner ce contrat : s'il n'est pas écrit ici, il
-    // cherchera un `wait_agent`, ou pire, bouclera sur `agent_status`.
-    const description = spawn(true).description;
-    expect(description).toMatch(/IT DOES NOT BLOCK/);
-    expect(description).toMatch(/woken up/);
-    expect(description).toMatch(/NO tool to wait/);
-    expect(description).toMatch(/YOUR OWN editing tools are refused/);
-    expect(description).toMatch(/ability to delegate further/);
-    expect(description).toMatch(/report is ALL you get back/);
-  });
-});
-
 /**
  * MIN-168 : le jeu d'une session de RELECTURE. Ce qui compte ici n'est pas ce
  * qu'il contient mais ce qu'il ne contient PAS : la lecture seule d'une review
@@ -448,13 +329,10 @@ describe("agentToolsFor — ancrage pull request", () => {
     }
   });
 
-  it("offre les lecteurs, le shell, les lecteurs minddy et les trois écritures de PR", () => {
+  it("offre les lecteurs minddy et les trois écritures de PR", () => {
+    // Les lecteurs de fichiers et le shell sont RENDUS PAR OPENCODE depuis
+    // MIN-286 : ils ne sont plus déclarés ici, donc plus à vérifier ici.
     for (const tool of [
-      "read_file",
-      "list_dir",
-      "glob",
-      "grep",
-      "run_command",
       "search_issues",
       "read_issue",
       "read_resource",

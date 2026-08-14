@@ -1,5 +1,5 @@
 import { REPO_DIR, sq, type RepoHost } from "./repo-host";
-import type { PlatformToolHandler } from "./exec-tool";
+import type { PlatformToolHandler } from "./agent-contract";
 
 /**
  * Contrôle de CLÔTURE d'un plan (MIN-236) — le harness pose la question à la

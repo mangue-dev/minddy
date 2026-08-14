@@ -1,9 +1,7 @@
 import { HARNESS_DIR, type ChangedFile } from "../repo-host";
 import type { AgentCheckpoint } from "../runs";
-import type { AgentChatMessage } from "../agent-loop";
 import type { AgentAnchor } from "../prompt";
 import type { ScopedFavorite } from "../subagent-config";
-import type { AgentEngine } from "@/lib/agent-engines";
 import type { AgentProviderId } from "@/lib/agent-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { Locale } from "@/i18n/config";
@@ -113,14 +111,6 @@ export interface VmJob {
   /** Origine du plan de contrôle — le déploiement qui a lancé ce run, jamais la
    *  prod par défaut (cf. `agentControlOrigin`). */
   appOrigin: string;
-  /**
-   * LE HARNESS QUI JOUE CE TOUR (MIN-286) : la boucle maison, ou opencode piloté
-   * par le superviseur. Recopié de `agent_runs.agent_engine`, où il a été gelé au
-   * lancement (cf. `engine-flag.ts`) — et donc jamais relu ici : c'est
-   * `vm/main.ts` qui aiguille, sur ce champ et rien d'autre.
-   */
-  engine: AgentEngine;
-
   // ── Modèle ────────────────────────────────────────────────────────────────
   model: string;
   /** Base URL OpenAI-compatible. La CLÉ, elle, n'est pas ici : le firewall la
@@ -161,17 +151,10 @@ export interface VmJob {
   subagents: VmSubagentConfig;
 
   // ── L'état du tour ────────────────────────────────────────────────────────
-  /** Historique amorcé (tour froid) ou rehydraté depuis le checkpoint. */
-  messages: AgentChatMessage[];
   /**
    * L'ÉTAT D'OPENCODE du tour précédent (MIN-286) — le journal d'événements que
-   * le superviseur rejoue pour retrouver sa session.
-   *
-   * À côté de `messages` et non à sa place : les deux moteurs coexistent pendant
-   * la bascule (drapeau `agent_engine` par projet), et une ligne de run doit
-   * pouvoir repartir sur l'un comme sur l'autre. Un run mené par la boucle maison
-   * n'a pas ce champ, un run mené par opencode a un `messages` vide — et c'est
-   * exactement ce qui rend le drapeau réversible sans migration de données.
+   * le superviseur rejoue pour retrouver sa session. C'est LA mémoire d'un run :
+   * absent sur un tour froid, présent dès le deuxième.
    *
    * Ce n'est PAS une conversation sérialisée : c'est un journal append-only,
    * incrémental par `seq`, dont la sonde du lot 0 a montré qu'il restaure une
@@ -186,10 +169,8 @@ export interface VmJob {
   /**
    * CE QUE LE SUPERVISEUR POSTE, ET L'ANCRAGE QU'IL INJECTE (MIN-286).
    *
-   * Présent seulement sous `engine: "opencode"`, parce que les deux moteurs ne
-   * reçoivent pas la même chose : la boucle maison prend une CONVERSATION
-   * (`messages`, prompt système compris), opencode prend un prompt système à LUI
-   * plus nos `instructions`, et un message d'utilisateur.
+   * Opencode a son PROPRE prompt système ; ce qui vient de nous, c'est
+   * `anchorInstructions` (servi en `instructions`) et le message d'utilisateur.
    *
    * `anchorInstructions` est reconstruit à CHAQUE tour, et c'est un gain plutôt
    * qu'une redite : le fichier d'ancrage est relu par opencode à chaque démarrage,
@@ -200,21 +181,11 @@ export interface VmJob {
    * que le superviseur draine au démarrage (`pullSteering`). Un tour froid, lui,
    * porte ici le contexte du ticket et la demande du lanceur.
    */
-  opencodeInput?: { prompt: string; anchorInstructions: string };
+  opencodeInput: { prompt: string; anchorInstructions: string };
   instructions: { paths: string[]; bytes: number };
   usageSeqStart: number;
   /** Plafond restant, le plus serré du quota et du plafond de run. Absent = BYOK. */
   budgetUsd?: number;
-  /**
-   * Le tour reprend une conversation GARÉE en attente de ses sous-agents.
-   *
-   * Toujours faux dans la nouvelle forme, et le champ reste parce qu'il dit
-   * pourquoi : une fille ne se met plus jamais en attente d'un chunk suivant,
-   * puisqu'il n'y en a plus. Un run MIGRÉ dont le vieux checkpoint porte encore
-   * le drapeau repart donc sans lui — au pire un aller-retour au modèle de plus,
-   * pour lui faire constater qu'il n'attend personne.
-   */
-  parkedForSubagents: boolean;
   /** Fichiers édités que le type-check n'a pas encore vus (état de TOUR). */
   editedPaths: string[];
   repoTouched: boolean;
@@ -257,8 +228,6 @@ export interface VmJob {
   locale: Locale;
   /** Feature de ledger des appels LLM : `routine_code` pour un passage de routine. */
   feature: "agent_code" | "routine_code";
-  /** Sous quel gabarit la boucle rabote son checkpoint avant de le remonter. */
-  checkpointMaxBytes: number;
 }
 
 /** Ce qu'un push a produit, tel que `commitAndPush` le rend. */

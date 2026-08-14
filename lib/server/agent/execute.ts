@@ -3,105 +3,35 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
-import {
-  recordAiUsage,
-  spentFromLedger,
-  type AiUsageBillTo,
-} from "@/lib/server/ai-usage";
+import { recordAiUsage, spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 import { AGENT_MAX_CONTINUATIONS } from "@/lib/agent-models";
-import {
-  CHUNK_FLOOR_MS,
-  chunkSoftDeadlineMs,
-} from "./chunk-budget";
-import { planProviderStall } from "./retry";
-import {
-  resolveRepoCloneTarget,
-  type RepoCloneTarget,
-} from "./repo-access";
+import { CHUNK_FLOOR_MS, chunkSoftDeadlineMs } from "./chunk-budget";
+import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
-import {
-  getOrCreateAgentSandbox,
-  sandboxHost,
-  sandboxName,
-  type Sandbox,
-} from "./sandbox";
-import {
-  cloneRepo,
-  clonePullRequest,
-  commitAndPush,
-  revParseHead,
-  changedFiles,
-  repoBackgroundRunner,
-} from "./repo-host";
-import { liveEditHook, newLiveEditLog } from "./live-edits";
+import { getOrCreateAgentSandbox, sandboxHost, sandboxName, type Sandbox } from "./sandbox";
+import { cloneRepo, clonePullRequest, commitAndPush, revParseHead, repoBackgroundRunner } from "./repo-host";
+import { newLiveEditLog } from "./live-edits";
 import { BackgroundJobs } from "./background";
 import {
-  Subagents,
-  isResumableSubagent,
-  subagentUsageSeq,
-  MAX_SUBAGENTS_PER_CHUNK,
-  type SubagentRunner,
-  type SubagentRunResult,
-} from "./subagent";
-import {
   chunkFitsSubagentResume,
-  makeSubagentModelResolver,
   scopeSubagentModels,
   subagentRoundsLeft,
   SUBAGENT_MAX_ROUNDS,
   SUBAGENT_PARENT_RESERVE_MS,
-  SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS,
 } from "./subagent-config";
-import {
-  getSubagentFavorites,
-  maxParallelSubagents,
-} from "./subagent-app-config";
+import { getSubagentFavorites, maxParallelSubagents } from "./subagent-app-config";
 import { getAgentModelsForUser } from "./models-catalog";
-import { pruneToolOutputs } from "./prune";
 import { SecretRedactor } from "./redact";
-import {
-  fitCheckpoint,
-  MAX_CHECKPOINT_BYTES,
-} from "./checkpoint-fit";
-import { newPlanWriteSink, watchPlanWrites } from "./plan-closure";
 import { newVerificationSink } from "./diagnostics";
-import { gateCreatePr, gateWritePlan, makeDeliveryGate } from "./delivery-gate";
 import { toolOutputFileName } from "./command-output";
-import { usesApplyPatch } from "./patch";
-import {
-  REPO_INSTRUCTION_FILES,
-  type InstructionsState,
-} from "./repo-instructions";
-import {
-  runAgentLoop,
-  BUDGET_REFRESH_INTERVAL_MS,
-  type AgentChatMessage,
-  type EmitAgentEvent,
-  type EmitAgentLive,
-} from "./agent-loop";
-// Les 25 tools et leur routage vivent à part depuis MIN-224 : ce module-là
-// descend dans la microVM avec la boucle, celui-ci non.
-import {
-  makeExecTool,
-  readRepoInstructions,
-  type CreatePrHandler,
-  type WebSearchHandler,
-} from "./exec-tool";
+import { readRepoInstructions, REPO_INSTRUCTION_FILES, type InstructionsState } from "./repo-instructions";
+import type { AgentChatMessage, EmitAgentEvent, EmitAgentLive } from "./agent-contract";
+import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
 import { broadcastRunStream } from "./live";
+import { agentToolsFor } from "./tools";
+import { isWebSearchEnabled, MAX_WEB_SEARCHES_PER_TURN } from "@/lib/server/web-search";
 import {
-  agentToolsFor,
-  subagentToolsFor,
-} from "./tools";
-import {
-  isWebSearchEnabled,
-  runWebSearchTool,
-  MAX_WEB_SEARCHES_PER_TURN,
-  WEB_SEARCH_SEQ_BASE,
-} from "@/lib/server/web-search";
-import {
-  buildAgentSystemPrompt,
-  buildSubagentSystemPrompt,
   buildAgentContextMessage,
   buildNotebookContextMessage,
   buildInheritedPrMessage,
@@ -114,22 +44,9 @@ import {
 } from "./prompt";
 import { buildOpencodeAnchor } from "./opencode-anchor";
 import { promptWithMentions } from "@/lib/agent-mentions";
-import type { AgentEngine } from "@/lib/agent-engines";
-import {
-  loadPrReviewBoot,
-  loadPrRunContext,
-  pullRequestHeadRef,
-  pullRequestLocalBranch,
-} from "./pr-run";
-import {
-  executePrTool,
-  type PrToolContext,
-  type ReviewableFile,
-} from "./pr-tools";
-import {
-  executeProjectPrTool,
-  type ProjectPrToolContext,
-} from "./project-pr-tools";
+import { loadPrReviewBoot, loadPrRunContext, pullRequestHeadRef, pullRequestLocalBranch } from "./pr-run";
+import { type PrToolContext, type ReviewableFile } from "./pr-tools";
+import { type ProjectPrToolContext } from "./project-pr-tools";
 import {
   resolveAgentApiKey,
   getModelContextWindow,
@@ -137,59 +54,32 @@ import {
   getModelPricing,
   supportsImageInput,
 } from "./model";
-import {
-  agentSandboxName,
-  buildAgentNetworkPolicy,
-  AGENT_LLM_PLACEHOLDER_KEY,
-} from "./network-policy";
+import { agentSandboxName, buildAgentNetworkPolicy, AGENT_LLM_PLACEHOLDER_KEY } from "./network-policy";
 import { startVmLoop } from "./vm-launch";
-import {
-  VM_MAX_CHECKPOINT_BYTES,
-  type VmJob,
-} from "./vm/protocol";
-import {
-  mintRunKey,
-  revokeRunKey,
-  runKeyCapUsd,
-} from "./run-key";
+import { type VmJob } from "./vm/protocol";
+import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
 import { agentControlOrigin } from "./origin";
-import {
-  forgeFor,
-  type Forge,
-} from "./forge";
+import { forgeFor, type Forge } from "./forge";
 import { prStateFromRef } from "./pull-requests";
 import type { PullRequestRef } from "./pr";
-import { syncIssuePlanStates } from "./plan-sync";
-import {
-  executeIssueTool,
-  type IssueToolContext,
-} from "./issue-tools";
-import {
-  executeScratchpadTool,
-  type ScratchpadToolContext,
-} from "./scratchpad-tools";
+import { type IssueToolContext } from "./issue-tools";
+import { type ScratchpadToolContext } from "./scratchpad-tools";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import {
   notePrCommits as notePrCommitsOn,
   registerPr as registerPrOn,
   reopenIfRejectedWorkPushed as reopenIfRejectedWorkPushedOn,
-  openPullRequestAfterPush,
   resolveRunPrefs,
-  prRef,
   prTerm,
-  MERGED_DURING_TURN_STRINGS,
-  PUSH_FAILED_STRINGS,
   SANDBOX_USAGE_SEQ_BASE,
   type PrLandingContext,
 } from "./pr-landing";
 import {
   stampRun,
   appendEvent,
-  pullPendingMessages,
   previousRunSummaryForIssue,
   previousRunSummaryForPr,
   branchHasPriorRun,
-  readInterruptFlag,
   clearInterrupt,
   hasPendingRunMessages,
   loadRunJournal,
@@ -309,80 +199,32 @@ function slugForBranch(identifier: string): string {
   return identifier.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-
-
 /**
- * Dernier texte écrit par l'assistant dans un historique. Sert au rapport PARTIEL
- * d'un sous-agent coupé (MIN-112) : sa boucle n'a pas de `reply`, mais ce qu'elle a
- * écrit en dernier est souvent l'essentiel de ce qu'elle avait à dire. Le jeter
- * reviendrait à perdre le travail et l'argent déjà dépensés.
+ * UNE CONVERSATION QUE PLUS PERSONNE NE SAIT RELIRE (MIN-286) — le seul reste de
+ * la boucle maison après sa suppression.
+ *
+ * Les deux moteurs ne gardaient pas leur mémoire au même endroit :
+ * `checkpoint.messages` pour la boucle, `checkpoint.opencode` pour le journal
+ * d'événements. Un run mené par la boucle, repris aujourd'hui, part donc chez
+ * opencode avec un journal VIDE. Il n'y a rien à sauver là — le format n'a pas de
+ * traducteur, et en écrire un pour des conversations closes depuis le 10 août ne
+ * vaut pas son code.
+ *
+ * Ce qui n'est pas acceptable, en revanche, c'est de le taire : le modèle croirait
+ * poursuivre un échange qu'il n'a jamais lu, et l'utilisateur lirait un agent
+ * amnésique sans savoir pourquoi. On le DIT donc dans le prompt du tour — c'est
+ * exactement la place de la voix du harness, et le modèle en parle de lui-même.
  */
-/**
- * Budget d'historique qu'UNE fille suspendue a le droit d'emporter dans le
- * checkpoint (MIN-112). Le checkpoint entier est plafonné à `MAX_CHECKPOINT_BYTES`
- * (8 Mo) et le dépassement fait ÉCHOUER le tour : une fille bavarde ne doit pas
- * pouvoir tuer la session de son parent pour s'offrir une reprise.
- *
- * Ce budget-ci est par FILLE, et rien ne borne leur nombre à l'échelle du
- * checkpoint : six filles suspendues franchissent le plafond à elles seules. C'est
- * le premier palier de `fitCheckpoint` (MIN-217) qui rattrape ce cas — il lâche
- * ces historiques-là avant tout le reste, précisément parce qu'ils sont invisibles
- * à l'élagage et à la compaction, qui ne regardent que `messages`.
- */
-const SUBAGENT_HISTORY_MAX_BYTES = 1_500_000;
-
-/**
- * Prépare l'historique d'une fille pour le checkpoint, ou `null` s'il ne rentre
- * pas. On élague d'abord les sorties de tools périmées — le même traitement que la
- * boucle applique à son propre historique, et de loin le plus gros poste. Ce qui
- * reste au-dessus du budget n'est pas tronqué au hasard : un historique coupé au
- * milieu casse l'appariement tool_call ↔ tool_result et le round-trip échouerait
- * au provider. Mieux vaut renoncer à la reprise et livrer un rapport partiel.
- *
- * Les seuils sont ÉCRITS ICI, serrés, et pas ceux de la boucle : ce budget-ci se
- * compte en OCTETS de checkpoint, pas en fenêtre de modèle. Les défauts de
- * `prune.ts` ont été desserrés d'un ordre de grandeur (MIN-248) parce qu'ils
- * gouvernaient la mémoire du modèle ; les appliquer ici ferait renoncer à des
- * reprises qu'un élagage un peu plus franc sauve.
- */
-function capSubagentHistory(messages: AgentChatMessage[]): AgentChatMessage[] | null {
-  if (!messages.length) return null;
-  const trimmed = [...messages];
-  pruneToolOutputs(trimmed, { protectBytes: 40_000, minimumBytes: 20_000 });
-  return JSON.stringify(trimmed).length <= SUBAGENT_HISTORY_MAX_BYTES ? trimmed : null;
-}
-
-/**
- * QUEL MOTEUR DOIT JOUER CE TOUR (MIN-286) — la ligne du run, sauf si son
- * CHECKPOINT dit le contraire.
- *
- * La ligne suffirait si elle était toujours vraie, et elle ne l'est pas dans une
- * fenêtre précise : entre la migration qui a posé `agent_engine` (défaut
- * `opencode`) et le déploiement de ce code, la prod tournait encore sur la boucle
- * maison, qui n'écrit pas cette colonne — les runs de cette fenêtre portent donc
- * `opencode` sur leur ligne et une conversation de boucle dans leur checkpoint.
- * Repris tels quels, ils partiraient chez opencode avec un journal d'événements
- * vide : la conversation entière perdue, en silence, sur un run que l'utilisateur
- * croit poursuivre.
- *
- * Le checkpoint, lui, ne peut pas mentir : c'est le moteur qui l'a écrit. Une
- * conversation dans `messages` sans journal `opencode` a été jouée par la boucle,
- * et elle FINIT avec elle. Un run neuf n'a pas de checkpoint du tout et suit sa
- * ligne, donc opencode.
- *
- * Ce garde-fou coûte trois lignes et couvre plus que sa fenêtre : n'importe quelle
- * ligne mal étiquetée (rattrapage de données, SQL à la main) retombe sur le moteur
- * qui détient réellement l'historique.
- */
-function effectiveEngine(run: AgentRun): AgentEngine {
-  // PAS de liaison nommée `checkpoint` ici : `checkpoint-turn-state.test.ts` ancre
-  // ses lectures sur la PREMIÈRE déclaration de ce nom dans le fichier, qui est le
-  // checkpoint de fin de tour. L'ombrer lui ferait vérifier le mauvais objet — et
-  // il l'a dit tout de suite, ce qui est exactement ce qu'on lui demande.
+function priorConversationLost(run: AgentRun): boolean {
   const saved = run.checkpoint;
-  if (saved?.messages?.length && !saved.opencode) return "loop";
-  return run.agent_engine;
+  return !!saved?.messages?.length && !saved.opencode;
 }
+
+/** La phrase que le tour repris lit à la place de l'historique qu'il n'a plus. */
+const PRIOR_CONVERSATION_LOST_NOTE: Record<string, string> = {
+  fr: "Note : les tours précédents de cette session ont été joués par l'ancien moteur, dont l'historique n'est pas lisible ici. Tu ne vois pas cet échange — repars du ticket et de l'état du dépôt, et dis-le si ça change quelque chose.",
+  en: "Note: the earlier turns of this session ran on the previous engine, whose history cannot be read here. You cannot see that exchange — work from the issue and the state of the repository, and say so if it matters.",
+};
 
 /**
  * LE PROMPT D'UN TOUR OPENCODE, tiré de l'amorce (MIN-286).
@@ -730,10 +572,6 @@ export async function executeAgentRun(
   // Jobs de fond du chunk (MIN-114), visibles du `finally` : quel que soit le
   // chemin de sortie (fin de tour, erreur, interruption), rien ne survit au chunk.
   let backgroundJobs: BackgroundJobs | null = null;
-  // Sous-agents du chunk (MIN-112), visibles du `finally` : une fille laissée en vol
-  // continuerait d'appeler un modèle et d'écrire dans la sandbox après le retour de
-  // la fonction — au nom d'un tour qui n'existe plus.
-  let subagentRegistry: Subagents | null = null;
   /**
    * La boucle a-t-elle VRAIMENT été lancée dans la microVM (MIN-224) ? C'est ce
    * qui décide qui facture le compute de ce passage, et il n'y a pas de troisième
@@ -779,64 +617,6 @@ export async function executeAgentRun(
   };
 
   try {
-    /**
-     * ADMISSION (MIN-212) — un chunk trop court pour REPRENDRE une fille est refusé
-     * ici, avant l'event `running` et avant le réveil de la microVM : un chunk qui
-     * n'a rien à jouer ne doit rien coûter, ni en compute ni dans le fil.
-     *
-     * Ce qu'il évite. Le budget d'une fille reprise vaut `min(SUBAGENT_MAX_MS,
-     * restant du chunk − réserve du parent)`, planché à 1 s. Sur un chunk de fin de
-     * fenêtre de drain — 40 à 150 s, la NORME quand plusieurs runs se partagent les
-     * 270 s — elle repartait avec une seconde, jouait un round, se re-suspendait ;
-     * le parent, garé sur elle, rendait `suspended` sans dire un mot ; le chunk se
-     * re-queuait. Un round par chunk, chacun payant son réveil de microVM, jusqu'à
-     * ce que le garde-fou des 20 continuations tue le tour. C'est le jumeau
-     * TEMPOREL du zombie de l'axe rounds (cf. `subagentRoundsLeft`), et il se
-     * corrige du même côté : par le haut, en refusant, jamais en rendant « au moins
-     * un peu » à une boucle qui ne peut pas tourner.
-     */
-    if (
-      !run.loop_in_vm &&
-      !run.interrupt_requested &&
-      (run.checkpoint?.subagents ?? []).some(isResumableSubagent)
-    ) {
-      // Projection OPTIMISTE de quelques secondes : l'amorçage n'est pas encore
-      // consommé. L'écart ne joue que dans une bande étroite au-dessus du seuil, où
-      // la fille reçoit un peu moins que son minimum — dégradé, pas pathologique.
-      const projectedMs = chunkSoftDeadlineMs(opts.deadlineMs, 0);
-      // Un message utilisateur NON CONSOMMÉ passe devant : il DÉPARKE le parent, qui
-      // a donc du travail à jouer même sur un chunk court. Le faire attendre le
-      // prochain drain pour épargner un round de fille serait un mauvais échange —
-      // même arbitrage que le bloc `interrupt_requested` juste en dessous.
-      if (
-        !chunkFitsSubagentResume(projectedMs) &&
-        !(await hasPendingRunMessages(run.id).catch(() => true))
-      ) {
-        /**
-         * Re-queue TEL QUEL, et `continuations` n'est pas incrémenté : un chunk qui
-         * n'a rien joué n'est pas une continuation, et le compter comme telle
-         * recréerait exactement le zombie qu'on corrige — vingt refus et le
-         * garde-fou anti-runaway tuerait le tour. Le `checkpoint` n'est pas réécrit
-         * non plus (rien n'a bougé), et `attempts` repart à zéro : le budget de
-         * reprise sur crash sert aux chunks qui MEURENT, pas à ceux qui déclinent.
-         */
-        const deferStamp = {
-          status: "queued",
-          not_before: new Date(Date.now() + SUBAGENT_RESUME_DEFER_MS).toISOString(),
-          attempts: 0,
-        } satisfies Parameters<typeof stampRun>[1];
-        await stampRun(run.id, deferStamp);
-        // Event `status` neutre : invisible dans le fil (aucun `status: running`,
-        // donc rien à afficher), comptable en base — c'est lui qui répondra à
-        // « combien de chunks refuse-t-on, et avec quel budget ? ».
-        await emit("status", {
-          phase: "chunk_deferred",
-          reason: "subagent_resume",
-          budgetMs: projectedMs,
-        });
-        return "suspended";
-      }
-    }
 
     await emit("status", { status: "running", continuation: run.continuations });
 
@@ -1185,34 +965,6 @@ export async function executeAgentRun(
     // sur la même facture). Ailleurs le tool n'est pas offert (cf. agentToolsFor).
     // Plafond par chunk, et une ligne `web_search` au ledger par recherche.
     const webSearchAllowed = provider === "openrouter" && (await isWebSearchEnabled());
-    let webSearchesUsed = 0;
-    const webSearch: WebSearchHandler = webSearchAllowed
-      ? async (query: string) => {
-          if (webSearchesUsed >= MAX_WEB_SEARCHES_PER_TURN) {
-            return {
-              result: {
-                error: `Web search limit reached for this turn (${MAX_WEB_SEARCHES_PER_TURN} searches). Work with what you already found.`,
-              },
-              success: false,
-            };
-          }
-          // `seq` unique dans le run : le compteur repart à zéro à chaque chunk,
-          // d'où la tranche par continuation (même règle que sandbox_compute).
-          const seq =
-            WEB_SEARCH_SEQ_BASE +
-            run.continuations * MAX_WEB_SEARCHES_PER_TURN +
-            webSearchesUsed;
-          webSearchesUsed++;
-          return await runWebSearchTool({
-            query,
-            apiKey,
-            runId: run.run_id ?? run.id,
-            seq,
-            billTo: runBillTo,
-            projectId: run.project_id,
-          });
-        }
-      : null;
 
     // Le modèle du run VOIT-IL les images (MIN-111) ? Résolu ici, avant l'amorce,
     // pour la même raison que web_search : le prompt ne doit décrire que ce que le
@@ -1278,9 +1030,7 @@ export async function executeAgentRun(
       paths: [...(run.checkpoint?.instructions?.paths ?? [])],
       bytes: run.checkpoint?.instructions?.bytes ?? 0,
     };
-    if (run.checkpoint?.messages?.length) {
-      messages = run.checkpoint.messages;
-    } else if (run.checkpoint?.opencode?.sessionId) {
+    if (run.checkpoint?.opencode?.sessionId) {
       /**
        * UN TOUR REPRIS SOUS OPENCODE N'A PAS D'AMORCE À REFAIRE (MIN-286).
        *
@@ -1293,8 +1043,13 @@ export async function executeAgentRun(
        * lettres (« `prompt` est vide sur un tour REPRIS : la demande y arrive par
        * le steering »), et l'amorce coûterait en plus six appels de forge.
        *
-       * Le pendant de la branche du dessus, pour l'autre moteur : là-bas la
-       * conversation EST `checkpoint.messages`, ici elle n'y est jamais.
+       * ET C'EST LA SEULE MÉMOIRE QU'ON SACHE ENCORE LIRE. Un vieux checkpoint
+       * de la boucle maison porte sa conversation dans `messages` ; cette
+       * branche-ci ne le reconnaît pas, il retombe donc sur l'amorce FROIDE —
+       * contexte du ticket recomposé, plus la phrase de `priorConversationLost`
+       * qui dit au modèle ce qu'il ne voit pas. Le rejouer serait pire : il
+       * partirait en prompt, et l'agent relirait une conversation entière comme
+       * une consigne qui vient d'arriver.
        */
       messages = [];
     } else {
@@ -1321,31 +1076,6 @@ export async function executeAgentRun(
       if (prBoot?.headSha && prBoot.headSha !== run.pr_head_sha) {
         await stampRun(run.id, { pr_head_sha: prBoot.headSha });
       }
-      const system = buildAgentSystemPrompt({
-        locale: commentLocale,
-        anchor,
-        // Un passage de ROUTINE (MIN-185) : le prompt cesse de décrire
-        // `ask_user`, que le jeu de tools ne sert pas, et dit le mandat de PR.
-        interactive: !run.routine_id,
-        webSearch: webSearchAllowed,
-        webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
-        // Une étape de CHAÎNE (MIN-147) : c'est le seul run qui sert
-        // `report_verdict`, donc le seul dont le prompt en parle (MIN-245).
-        chain: !!run.chain_id,
-        applyPatch: usesApplyPatch(run.model),
-        images: imageInput,
-        // Une relecture ne délègue pas : le bloc ne doit pas exister, sans quoi
-        // le prompt décrirait des tools que le jeu de relecture n'a pas.
-        ...(writesToRepo
-          ? {
-              subagents: {
-                favorites: subagentFavorites,
-                models: subagentModels,
-                maxMultiplier: subagentScope.maxMultiplier,
-              },
-            }
-          : {}),
-      });
       const contextMsg = prRun
         ? buildPrReviewContextMessage({
             repo: { fullName: target.repoFullName },
@@ -1389,10 +1119,13 @@ export async function executeAgentRun(
               projectName: project.name,
               numoDefaultStatus,
             });
-      messages = [
-        { role: "system", content: system },
-        { role: "user", content: contextMsg },
-      ];
+      /**
+       * PAS DE MESSAGE `system` (MIN-286, 2026-08-14) : opencode a le sien, et le
+       * nôtre — l'ancrage minddy — descend par `instructions`, reconstruit à chaque
+       * tour. L'amorce n'assemble donc plus qu'un message UTILISATEUR, celui dont
+       * `userPromptFromMessages` tire le prompt du tour.
+       */
+      messages = [{ role: "user", content: contextMsg }];
       // Session FROIDE héritant d'une PR (MIN-68) : elle n'a aucun checkpoint, mais
       // la branche porte déjà du travail. On lui donne sa seule mémoire de ce passé —
       // résumé de la session précédente, PR, fil de review — pour qu'elle itère au
@@ -1453,43 +1186,43 @@ export async function executeAgentRun(
      * le message à poster. Composé ICI, dans la fonction, comme tout le reste de
      * l'amorçage — la microVM n'a ni le ticket, ni les favoris, ni la locale.
      *
-     * L'ancrage se reconstruit à chaque tour (cf. `VmJob.opencodeInput`) et prend
-     * les MÊMES arguments que le prompt système de la boucle maison : c'est ce qui
-     * garantit qu'un run basculé se comporte pareil, et c'est le critère de la
-     * semaine de bascule.
+     * L'ancrage se reconstruit à chaque tour (cf. `VmJob.opencodeInput`).
      *
      * Le prompt, lui, est ce que l'amorce a mis dans les messages UTILISATEUR :
      * contexte du ticket (ou de la pull request), travail hérité, instructions du
      * dépôt, demande du lanceur. Sur un tour repris, l'amorce n'a rien écrit —
      * l'historique vit dans le journal d'opencode — et le prompt vient du steering.
      */
-    const opencodeInput =
-      effectiveEngine(run) === "opencode"
-        ? {
-            anchorInstructions: buildOpencodeAnchor({
-              locale: commentLocale,
-              anchor,
-              interactive: !run.routine_id,
-              webSearch: webSearchAllowed,
-              webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
-              chain: !!run.chain_id,
-              images: imageInput,
-              // Même règle que le prompt système : une relecture ne délègue pas,
-              // et un tour sans place de fille ne doit pas lire une section qui
-              // décrit un tool que la config ne sert pas.
-              ...(writesToRepo && subagentMaxParallel > 0
-                ? {
-                    subagents: {
-                      favorites: subagentFavorites,
-                      models: subagentModels,
-                      maxMultiplier: subagentScope.maxMultiplier,
-                    },
-                  }
-                : {}),
-            }),
-            prompt: userPromptFromMessages(messages),
-          }
-        : undefined;
+    const opencodeInput = {
+      anchorInstructions: buildOpencodeAnchor({
+        locale: commentLocale,
+        anchor,
+        interactive: !run.routine_id,
+        webSearch: webSearchAllowed,
+        webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
+        chain: !!run.chain_id,
+        images: imageInput,
+        // Une relecture ne délègue pas, et un tour sans place de fille ne doit pas
+        // lire une section qui décrit un tool que la config ne sert pas.
+        ...(writesToRepo && subagentMaxParallel > 0
+          ? {
+              subagents: {
+                favorites: subagentFavorites,
+                models: subagentModels,
+                maxMultiplier: subagentScope.maxMultiplier,
+              },
+            }
+          : {}),
+      }),
+      /**
+       * Le tour repris d'une session jouée par l'ancien moteur lit d'abord ce
+       * qu'il a perdu (cf. `priorConversationLost`) : sans cette phrase, il
+       * répondrait à un message dont il ne voit pas le contexte.
+       */
+      prompt: priorConversationLost(run)
+        ? `${PRIOR_CONVERSATION_LOST_NOTE[commentLocale] ?? PRIOR_CONVERSATION_LOST_NOTE.en}\n\n${userPromptFromMessages(messages)}`
+        : userPromptFromMessages(messages),
+    };
 
     // État PR de la session, MUTÉ pendant le tour (create_pr, réouverture au push) :
     // la fin de tour lit l'état à jour, pas celui figé au claim.
@@ -1523,68 +1256,6 @@ export async function executeAgentRun(
     const registerPr = (pr: PullRequestRef, kind: "opened" | "reopened") =>
       registerPrOn(landing, pr, kind);
 
-    /**
-     * Tool `create_pr` : la création de PR est une DÉCISION (de l'agent ou de
-     * l'utilisateur), plus un automatisme de fin de tour. Pousse d'abord le travail
-     * du tour, puis : PR déjà vivante → no-op informatif (le push l'a mise à jour) ;
-     * PR refusée → réouverture (règle produit : on réitère la dernière PR, jamais de
-     * doublon) ; sinon → création. Une PR mergée n'est jamais réutilisée.
-     */
-    const createPr: CreatePrHandler = async ({ title, body }) => {
-      const prTitle =
-        title ||
-        (issue
-          ? `${issue.identifier}: ${issue.title}`
-          : // Run carnet : la première ligne de la note fait office de titre.
-            commitMessageFromReply(run.prompt ?? "", commitRef));
-      const fresh = (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
-      // `fresh` parle à la FORGE (ouvrir la PR) et reste ici ; le push, lui,
-      // s'exécute dans la microVM — token `repo-write`, scopé au dépôt (MIN-327).
-      const freshPush =
-        (await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null)) ?? vmTarget;
-      secrets.addAuthUrl(fresh.authUrl);
-      secrets.add(fresh.token);
-      secrets.addAuthUrl(freshPush.authUrl);
-      secrets.add(freshPush.token);
-      // Les jobs de fond meurent AVANT de stager, comme aux deux autres `git add -A`
-      // du chunk (fin de tour, push WIP) : un serveur de dev ou un watcher encore
-      // vivant réécrirait des fichiers pendant l'indexation. C'est `backgroundJobs`
-      // et pas `background` — la closure est construite AVANT le registre, seul le
-      // `let` du haut est lisible d'ici. Et on le DIT au modèle sur chacune des
-      // sorties : un serveur tué en silence lui laisse croire qu'il tourne (MIN-209).
-      const stoppedJobs = (await backgroundJobs?.stopAll().catch(() => 0)) ?? 0;
-      const jobsNote =
-        stoppedJobs === 0
-          ? ""
-          : `${stoppedJobs === 1 ? "1 background job was" : `${stoppedJobs} background jobs were`} stopped ` +
-            `before staging — nothing may write to the repository while it is being committed. Restart what you still need.`;
-      const andJobs = (text: string) => (jobsNote ? `${text} ${jobsNote}` : text);
-      let pushed: Awaited<ReturnType<typeof commitAndPush>>;
-      try {
-        pushed = await commitAndPush(host, {
-          authUrl: freshPush.authUrl,
-          workBranch,
-          baseBranch,
-          message: prTitle,
-        });
-      } catch (err) {
-        return {
-          result: { error: andJobs(`push failed: ${(err as Error).message}`) },
-          success: false,
-        };
-      }
-      // La moitié FORGE, partagée avec la nouvelle forme (MIN-224) : c'est là que
-      // vivent les quatre cas — rien à ouvrir, PR mergée, PR déjà vivante, PR
-      // refusée à rouvrir — et ils ne doivent pas exister en double.
-      return await openPullRequestAfterPush(landing, {
-        pushed,
-        prTitle,
-        body,
-        fresh,
-        jobsNote,
-        noteBranchPushed,
-      });
-    };
 
     /** Même implémentation partagée : la réouverture d'une PR refusée au push. */
     const reopenIfRejectedWorkPushed = (
@@ -1861,1142 +1532,116 @@ export async function executeAgentRun(
      * c'est son propre rapport de fin de tour, ou le chien de garde qui aura
      * constaté la mort de son process (`reapDeadVmRuns`, drain.ts).
      */
-    if (run.loop_in_vm) {
-      /**
-       * LA MÉMOIRE DE LA SESSION, RASSEMBLÉE ICI ET NULLE PART AILLEURS. Une
-       * lecture par TOUR — la ligne du run, elle, est relue à chaque appel du
-       * plan de contrôle, et c'est pour ça que le journal en est sorti.
-       */
-      const pointer = run.checkpoint?.opencode;
-      const opencodeJournal = pointer?.sessionId
-        ? {
-            sessionId: pointer.sessionId,
-            events: await loadRunJournal(run.id, pointer.sessionId),
-            seq: pointer.seq ?? {},
-          }
-        : undefined;
-      // `bootstrapMs` manque exprès : c'est `startVmLoop` qui le pose, parce que
-      // c'est lui qui sait quand l'amorçage se termine (cf. `VmJob.bootstrapMs`).
-      const job: Omit<VmJob, "bootstrapMs"> = {
-        runId: run.id,
-        ledgerRunId: run.run_id ?? run.id,
-        projectId: run.project_id,
-        appOrigin: agentControlOrigin(),
-        // Le moteur du tour (MIN-286) : celui de la ligne, sauf si le checkpoint
-        // dit le contraire — cf. `effectiveEngine`. C'est `vm/main.ts` qui aiguille
-        // dessus, et il ne le relit nulle part.
-        engine: effectiveEngine(run),
-        model: run.model,
-        baseUrl,
-        provider,
-        llmPlaceholderKey: AGENT_LLM_PLACEHOLDER_KEY,
-        reasoningLevel: run.reasoning_level,
-        contextWindow,
-        inputUsdPerMTok,
-        ...(modelPricing ? { pricing: modelPricing } : {}),
-        anchor,
-        writesToRepo,
-        interactive: !run.routine_id,
-        chain: !!run.chain_id,
-        imageInput,
-        webSearch: webSearchAllowed,
-        // Le plafond de recherches du tour part AVEC le job : la constante vit
-        // dans le module qui facture la recherche, et celui-là n'entre pas dans
-        // le bundle de la microVM (cf. `VmJob.webSearchMax`).
-        webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
-        subagents: {
-          models: subagentModels,
-          favorites: subagentFavorites,
-          /**
-           * UNE RELECTURE NE DÉLÈGUE PAS, et c'est ce plafond qui le dit sous
-           * opencode : la config sert le tool `task` dès qu'il est > 0
-           * ([opencode-config.ts](vm/opencode-config.ts), `primaryTools`). Les
-           * deux prompts posent déjà la même condition (l.1308 et l.1442) — le
-           * job, lui, l'avait perdue : le modèle recevait un tool de délégation
-           * que son ancrage ne décrit pas et que `PR_REVIEW_TOOLS` refuse, et
-           * une relecture pouvait ouvrir deux sessions filles qui ÉDITENT.
-           */
-          maxParallel: writesToRepo ? subagentMaxParallel : 0,
-          allowedIds: subagentScope.allowedIds,
-          abovePlanIds: subagentScope.abovePlanIds,
-          maxMultiplier: subagentScope.maxMultiplier,
-          ...(Object.keys(subagentPricing).length > 0 ? { pricing: subagentPricing } : {}),
-        },
-        // La conversation, pour la boucle maison. Sous opencode elle part VIDE et
-        // c'est `opencodeInput` qui porte le tour (cf. `VmJob.opencodeInput`) :
-        // l'historique, là-bas, est le journal d'événements du checkpoint.
-        messages: opencodeInput ? [] : messages,
-        /**
-         * LE JOURNAL D'OPENCODE DU TOUR PRÉCÉDENT — c'est LUI la mémoire d'un run
-         * mené par opencode, et il ne descendait pas dans la microVM (MIN-286).
-         *
-         * Le superviseur le rejoue (`/sync/replay`) pour retrouver sa session ;
-         * sans lui, `job.opencode` est `undefined`, il crée une session NEUVE, et
-         * le tour repart sans une ligne de sa conversation. Le chemin d'écriture
-         * était complet de bout en bout (le superviseur l'exporte, le plan de
-         * contrôle l'estampille, `AgentCheckpoint` le déclare) : seule cette
-         * lecture-ci manquait, donc rien ne se voyait — pas d'erreur, pas de type
-         * qui proteste, juste un agent amnésique d'un tour à l'autre.
-         */
-        /**
-         * LE JOURNAL, RASSEMBLÉ DEPUIS SA TABLE (MIN-286, 2026-08-13). La ligne
-         * du run n'en porte que le pointeur : les events vivent en append dans
-         * `agent_run_journal`, parce qu'ils charrient la sortie complète de
-         * chaque tool et qu'un checkpoint ne pouvait pas les tenir.
-         */
-        ...(opencodeJournal ? { opencode: opencodeJournal } : {}),
-        ...(opencodeInput ? { opencodeInput } : {}),
-        instructions,
-        usageSeqStart,
-        ...(budgetUsd !== undefined ? { budgetUsd } : {}),
-        parkedForSubagents: false,
-        editedPaths: [...(run.checkpoint?.editedPaths ?? [])],
-        repoTouched: run.checkpoint?.repoTouched === true,
-        prInlineComments: run.checkpoint?.prInlineComments ?? 0,
-        baseBranch,
-        workBranch,
-        // Le job PART dans la microVM : c'est `vmTarget`, jamais `target`
-        // (MIN-327). La boucle n'en fait que du `git` — et une relecture n'en
-        // reçoit qu'un token en lecture.
-        authUrl: vmTarget.authUrl,
-        commitRef,
-        filesFromSha,
-        locale: commentLocale,
-        feature: usageFeature,
-        // Le gabarit du checkpoint est PLUS SERRÉ ici : il devra remonter par le
-        // plan de contrôle, dont le corps est plafonné à 4,5 Mo par la plateforme
-        // (cf. `VM_MAX_CHECKPOINT_BYTES`). Un checkpoint qui ne remonte pas, c'est
-        // la conversation perdue en silence à la fin d'un tour de deux heures.
-        checkpointMaxBytes: VM_MAX_CHECKPOINT_BYTES,
-      };
-      const cmdId = await startVmLoop(sb, job, callStart);
-      await stampRun(run.id, {
-        loop_command_id: cmdId,
-        last_activity_at: new Date().toISOString(),
-      });
-      /**
-       * À PARTIR D'ICI, LE COMPUTE APPARTIENT À LA BOUCLE. Elle facturera le tour
-       * entier — amorçage compris, qu'on vient de lui passer. Le `finally` ne doit
-       * donc plus rien écrire, sous peine de compter deux fois la même microVM.
-       *
-       * Posé APRÈS le stamp, et pas avant : si celui-ci échoue, le tour part sans
-       * que son `loop_command_id` soit en base — le rapport de fin sera refusé en
-       * 409 et le chien de garde n'aura rien à interroger. Personne ne facturera
-       * cette microVM-là si ce n'est pas nous.
-       */
-      vmLoopLaunched = true;
-      return "detached";
-    }
-
-    // ── Sous-agents (MIN-112) ──────────────────────────────────────────────────
-    /** Chrono de la boucle : le budget restant du chunk borne chaque sous-agent. */
-    let loopStartedAt = Date.now();
-    const chunkRemainingMs = () => softDeadlineMs - (Date.now() - loopStartedAt);
-
     /**
-     * Instructions du dépôt (AGENTS.md / CLAUDE.md à la racine) pour un sous-agent
-     * qui ÉCRIT. Le parent les a reçues à son amorce ; une fille, non — son
-     * historique n'est que son prompt système et sa tâche. Sans elles, un
-     * `implement` écrirait du code en ignorant les conventions du dépôt : exactement
-     * ce que `withTouchedInstructions` existe pour éviter, sauf que le sous-agent
-     * n'a même pas la racine. Un `explore` n'en a pas besoin (il ne produit rien
-     * qui doive suivre une convention), donc il ne les paie pas.
-     *
-     * Lues UNE fois par chunk, à la première fille qui écrit (promesse mémoïsée) :
-     * deux allers-retours sandbox, pas deux par sous-agent.
+     * LA MÉMOIRE DE LA SESSION, RASSEMBLÉE ICI ET NULLE PART AILLEURS. Une
+     * lecture par TOUR — la ligne du run, elle, est relue à chaque appel du
+     * plan de contrôle, et c'est pour ça que le journal en est sorti.
      */
-    let repoInstructionsForSubagent: Promise<{ message: string; bytes: number } | null> | null =
-      null;
-    const subagentRepoInstructions = () => {
-      // L'ancrage de la MÈRE : une fille de relecture lit la base, comme elle.
-      repoInstructionsForSubagent ??= readRepoInstructions(host, anchor).catch(() => null);
-      return repoInstructionsForSubagent;
-    };
-
-    /**
-     * Les mains d'un sous-agent : un SECOND appel de `runAgentLoop`, dans la MÊME
-     * microVM, avec un jeu de tools restreint, son propre `messages`, et le
-     * `runId`/`billTo`/`projectId` du parent (facturation). Pas de nouveau moteur.
-     *
-     * Ce que la fille ne partage PAS avec son parent, et pourquoi :
-     *  - `emitLive` : `broadcastRunStream` diffuse sur le topic du RUN — une fille
-     *    qui streame son texte ÉCRASERAIT la bulle en cours d'écriture du parent. Le
-     *    fil la suit par ses events persistés, repliés, pas par le direct.
-     *  - `InstructionsState` : partager celui du parent marquerait un `AGENTS.md`
-     *    comme « déjà servi » alors qu'il ne l'a été qu'à la fille, dont le contexte
-     *    meurt avec elle — le parent ne le lirait jamais.
-     *  - `outputSeqBase` : deux exec-tools écriraient sinon le même `slug-<seq>.log`.
-     *  - `createPr`, les tools minddy, le registre de jobs de fond : ils appartiennent
-     *    au parent (et ne sont pas dans le schéma de la fille — c'est structurel).
-     */
-    const subagentRunner: SubagentRunner = {
-      run: async (job): Promise<SubagentRunResult> => {
-        /**
-         * PLUS DE ROUNDS : la fille a épuisé son plafond cumulé. On la COUPE ici,
-         * avec ce qu'elle a déjà écrit, plutôt que de la relancer.
-         *
-         * Sans ce retour, `maxRounds: Math.max(1, …)` lui rendait UN round à
-         * chaque reprise : elle en jouait un, la boucle suspendait aussitôt
-         * (`round >= maxRounds`), le parent se garait, le chunk se re-queuait —
-         * et ça recommençait. Un zombie à un round par chunk, chacun payant son
-         * réveil de microVM, jusqu'à ce que le garde-fou des 20 continuations
-         * tue le tour entier. Observé les 07/08 sur les deux passages de routine
-         * du projet minddy : dix-neuf chunks de 5 à 20 s pendant lesquels le
-         * parent n'a pas dit un mot, puis « tour trop long ».
-         *
-         * La coupure, elle, remonte au parent par `drainReports()` : il reprend
-         * la main dans le MÊME chunk, avec ce que sa fille avait trouvé.
-         */
-        const roundsLeft = subagentRoundsLeft(job.roundsSoFar);
-        if (roundsLeft <= 0) {
-          const partial = lastAssistantText(job.resumeMessages ?? []);
-          return {
-            report:
-              partial ||
-              `No report: the sub-agent hit its ${SUBAGENT_MAX_ROUNDS}-round limit before saying anything useful. Do the work yourself, or spawn one with a narrower task.`,
-            rounds: job.roundsSoFar ?? 0,
-            costUsd: job.costSoFar ?? 0,
-            status: "cut",
-          };
+    const pointer = run.checkpoint?.opencode;
+    const opencodeJournal = pointer?.sessionId
+      ? {
+          sessionId: pointer.sessionId,
+          events: await loadRunJournal(run.id, pointer.sessionId),
+          seq: pointer.seq ?? {},
         }
-
-        // Soft-deadline : tout ce qui reste au chunk MOINS la réserve du parent,
-        // plafonné. Une fille peut donc travailler ~3 min par chunk — et REPRENDRE
-        // au chunk suivant si elle n'a pas fini (cf. `resumeMessages`), ce qui la
-        // libère du plafond de 300 s de la fonction Vercel.
-        const budget = Math.min(
-          SUBAGENT_MAX_MS,
-          chunkRemainingMs() - SUBAGENT_PARENT_RESERVE_MS,
-        );
-        const model = job.model ?? run.model!;
-        // REPRISE : on repart de l'historique sauvé, sans réamorcer prompt système
-        // ni tâche (ils y sont déjà). Sinon, amorçage neuf.
-        const childMessages: AgentChatMessage[] = job.resumeMessages?.length
-          ? job.resumeMessages
-          : [
-              {
-                role: "system",
-                content: buildSubagentSystemPrompt({
-                  mode: job.mode,
-                  applyPatch: usesApplyPatch(model),
-                  webSearch: webSearchAllowed,
-                }),
-              },
-            ];
-        if (!job.resumeMessages?.length) {
-          // Conventions du dépôt, avant la tâche : une fille qui écrit doit les
-          // connaître, et le message doit précéder ce sur quoi elle va travailler.
-          if (job.mode === "implement") {
-            const repoInstructions = await subagentRepoInstructions();
-            if (repoInstructions) {
-              childMessages.push({ role: "user", content: repoInstructions.message });
-            }
-          }
-          childMessages.push({
-            role: "user",
-            content: `${job.prompt}\n\n## What your report must contain\n${job.expectedOutput}`,
-          });
-        }
-
-        // Events de la fille : types EXISTANTS (`thinking`, `tool_call`,
-        // `tool_result`, `status`) marqués `subagent_id` + `parent_call_id` — le
-        // CHECK de `agent_run_events.type` n'a pas à bouger, et le fil replie ces
-        // events sous la ligne `spawn_agent`. Les ids de tool-call sont PRÉFIXÉS :
-        // deux modèles peuvent rendre le même `call_1`, et le fil apparie par id.
-        const childEmit: EmitAgentEvent = (type, payload) => {
-          if (type === "tool_call") job.onRound();
-          const id = payload.id;
-          return emit(type, {
-            ...payload,
-            ...(typeof id === "string" ? { id: `${job.id}:${id}` } : {}),
-            subagent_id: job.id,
-            ...(job.parentCallId ? { parent_call_id: job.parentCallId } : {}),
-            subagent_mode: job.mode,
-          });
-        };
-
-        const result = await runAgentLoop({
-          messages: childMessages,
-          tools: subagentToolsFor(job.mode, { webSearch: webSearchAllowed, model }),
-          model,
-          apiKey,
-          baseUrl,
-          provider,
-          reasoningLevel: job.thinkingEffort ?? run.reasoning_level,
-          runId: run.run_id ?? run.id,
-          billTo: runBillTo,
-          // Un sous-agent se facture AVEC SA MÈRE : lancé par une routine, il
-          // s'écrit `routine_code` comme elle. Sa dépense est celle du passage.
-          feature: usageFeature,
-          projectId: run.project_id,
-          // Le ledger passe par la fonction : elle est DANS la fonction (MIN-224).
-          recordUsage: recordAiUsage,
-          softDeadlineMs: Math.max(1_000, budget),
-          // Budget d'usage : le RESTANT snapshoté à l'entrée du chunk, opposé au
-          // compteur PARTAGÉ du chunk. C'est ce partage qui fait le plafond : sans
-          // lui, cette fille-ci comparerait sa seule dépense au plafond commun, et
-          // ses cinq sœurs feraient de même, chacune dans son coin.
-          budgetUsd,
-          chunkSpend,
-          // Ce que la fille paie, dit au registre TOUT DE SUITE (MIN-220) : sa
-          // promesse peut ne pas rendre la main avant que le chunk ne la coupe, et
-          // sa dépense n'était alors imputée au run par personne.
-          onSpend: job.onSpend,
-          contextWindow: job.model ? null : contextWindow,
-          inputUsdPerMTok: job.model ? null : inputUsdPerMTok,
-          // Plafond CUMULATIF : une fille reprise ne repart pas avec quinze rounds
-          // neufs à chaque chunk, sinon le garde-fou anti-runaway ne borne rien.
-          // Toujours ≥ 1 ici : le cas « plafond atteint » est sorti plus haut, en
-          // coupure — c'est ce qui rendait ce `max` dangereux.
-          maxRounds: roundsLeft,
-          usageSeqStart: job.resumeUsageSeq ?? subagentUsageSeq(job.slot),
-          signal: job.signal,
-          emit: childEmit,
-          // Une fille lit le même `.git/config` que sa mère (MIN-239).
-          redact: secrets.redact,
-          execTool: makeExecTool({
-            host,
-            // L'ancrage de la MÈRE : une fille hérite du jeu de sa session (MIN-326).
-            anchor,
-            createPr: null,
-            // La pull request appartient au parent, comme le ticket et le carnet
-            // (et une fille n'a de toute façon aucun de ces tools dans son schéma).
-            prTool: null,
-            projectPrTool: null,
-            issueTool: null,
-            scratchpadTool: null,
-            webSearch,
-            outputSeqBase: SUBAGENT_OUTPUT_SEQ_BASE + job.slot * 1000,
-            background: null,
-            // Racine marquée VUE (elle vient d'être servie en message ci-dessus) ;
-            // le budget repart à zéro pour que la fille puisse charger les
-            // instructions des sous-dossiers qu'elle édite, comme le parent.
-            instructions: { paths: [...REPO_INSTRUCTION_FILES], bytes: 0 },
-            editedPaths,
-            verification,
-            subagents: null,
-            // L'horloge du CHUNK, pas celle de la fille : ce qui tue la fonction
-            // est la fin du chunk, et une commande lancée par une fille la tue
-            // aussi sûrement qu'une commande du parent.
-            chunkRemainingMs,
-            // Le MÊME registre que le parent, comme `editedPaths` juste au-dessus :
-            // la sandbox est PARTAGÉE (MIN-112), donc un fichier édité par une fille
-            // est un fichier édité par le tour — le `files_changed` de fin de tour
-            // ne les distingue pas non plus. Sans ça, une délégation d'une demi-heure
-            // ne montrait rien au fil, alors que c'est là qu'on regarde le plus.
-            onEdit: liveEditHook(liveEdits, emitLive),
-          }),
-        });
-
-        const rounds = (job.roundsSoFar ?? 0) + result.rounds;
-        const costUsd = (job.costSoFar ?? 0) + result.costUsd;
-
-        // SUSPENSION : la fille n'a pas fini, mais son état est sauvable — soit sa
-        // propre soft-deadline a sonné, soit le chunk se termine et le harness le
-        // lui a demandé (`isSuspending`). `result.messages` s'arrête au dernier
-        // round COMPLET (la boucle ne pousse jamais un round partiel), donc c'est un
-        // point de reprise sûr. Ce qui la rend possible : la microVM, elle, survit
-        // au chunk (snapshot persistant) — seule la mémoire de la boucle mourait.
-        if (result.status === "suspended" || job.isSuspending()) {
-          const saved = capSubagentHistory(result.messages);
-          if (saved) {
-            return { report: "", rounds, costUsd, status: "suspended", messages: saved, usageSeq: result.usageSeqEnd };
-          }
-          // Historique trop gros pour le checkpoint : on dégrade honnêtement en
-          // coupure — rapport partiel livré une fois, plutôt qu'une reprise promise
-          // qui ferait exploser `MAX_CHECKPOINT_BYTES` et tuerait le tour entier.
-          const partial = lastAssistantText(result.messages);
-          return {
-            report:
-              partial ||
-              "No report: the sub-agent was stopped and its state was too large to carry over to the next turn.",
-            rounds,
-            costUsd,
-            status: "cut",
-          };
-        }
-
-        // Le rapport : la réponse finale si la fille a conclu, sinon ce qu'elle a
-        // écrit en dernier. Un sous-agent coupé a souvent déjà dit l'essentiel — le
-        // jeter serait perdre le travail ET l'argent.
-        const report = result.reply?.trim() || lastAssistantText(result.messages);
-        const status: SubagentRunResult["status"] =
-          result.status === "completed" ? "done" : result.status === "error" ? "error" : "cut";
-        return {
-          report:
-            report ||
-            (result.errorMessage
-              ? `No report: the sub-agent's model failed (${cap(result.errorMessage, 300)}).`
-              : "No report: the sub-agent produced nothing before it stopped."),
-          rounds,
-          costUsd,
-          status,
-        };
-      },
-    };
-
-    const subagents = new Subagents(subagentRunner, {
-      maxParallel: subagentMaxParallel,
-      favorites: subagentFavorites,
-      ...(subagentModels
-        ? {
-            resolveModel: makeSubagentModelResolver({
-              favorites: subagentFavorites,
-              catalogIds: subagentScope.allowedIds,
-              abovePlanIds: subagentScope.abovePlanIds,
-              maxMultiplier: subagentScope.maxMultiplier,
-            }),
-          }
-        : {}),
-      // Une tranche par continuation : les ids ET les bandes de seq `ai_usage`
-      // restent uniques sur la vie du run, pas seulement du chunk.
-      seqBase: run.continuations * MAX_SUBAGENTS_PER_CHUNK,
-      budgetGuard: () => {
-        const left = chunkRemainingMs();
-        /**
-         * MÊME seuil que l'admission d'une REPRISE (MIN-212), et pour la même
-         * arithmétique : la fille reçoit `left − SUBAGENT_PARENT_RESERVE_MS`, donc
-         * opposer `left` au seul `SUBAGENT_MIN_MS` admettait un lancement 120 s trop
-         * tôt — et le `Math.max(1_000, budget)` du lanceur lui rendait alors UNE
-         * seconde. Le zombie temporel était refermé du côté de la reprise et resté
-         * ouvert du côté du lancement : la fille jouait un round non borné par cette
-         * seconde (il mord sur la réserve de finalisation du parent), se suspendait,
-         * et le chunk suivant était différé pour la reprendre pour de bon.
-         *
-         * `chunkFitsSubagentResume` plutôt qu'une comparaison écrite ici : c'est la
-         * doctrine de `chunk-budget.ts` — deux seuils posés à la main finissent
-         * toujours par diverger, et celui-ci avait déjà divergé.
-         */
-        return chunkFitsSubagentResume(left)
-          ? null
-          : `Not enough time left in this turn to delegate (${Math.max(0, Math.round(left / 1000))}s left, and delegating needs ${Math.round(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS / 1000)}s: the sub-agent's own work, plus the time I need to read its report and finish). One launched now would be cut off before it could report. Do what you can yourself and reply — you can delegate at the start of the next turn.`;
-      },
-    });
-    subagentRegistry = subagents;
-    subagents.restore(run.checkpoint?.subagents);
-    // Filles SUSPENDUES au chunk précédent : elles repartent MAINTENANT, avec leur
-    // historique, avant que la boucle du parent ne reprenne. Leurs rapports lui
-    // arriveront par le même wakeup que d'habitude.
-    const resumed = subagents.resumeSuspended();
-    if (resumed > 0) await emit("status", { phase: "subagent_resumed", count: resumed });
-
-    /** Le plan que ce chunk a écrit, noté au passage par `watchPlanWrites` : c'est
-     *  lui que la relecture rend au modèle (MIN-237) et que le contrôle de clôture
-     *  grep (MIN-236). Même découpage qu'`editedPaths` pour le type-check — le tool
-     *  mute, les crochets de fin de tour lisent. */
-    const planWrites = newPlanWriteSink();
-    /**
-     * Le dernier mot du harness : les quatre contrôles de fin de tour, leurs verrous
-     * et le budget de chacun, dans un module PARTAGÉ avec la microVM (MIN-240).
-     *
-     * Ils vivaient recopiés des deux côtés, ce qui rendait la garantie dépendante de
-     * `loop_in_vm` en pratique sinon en intention — et c'est comme ça que le même
-     * défaut de budget a affamé les deux crochets de plan dans les deux moteurs à la
-     * fois. Un seul exemplaire, un seul test.
-     */
-    const deliveryGate = makeDeliveryGate({
-      host,
-      emit,
-      editedPaths,
-      planWrites,
-      verification,
-      filesFromSha,
-      // Le verrou porte sur le TOUR, pas sur le chunk qui l'exécute : semé depuis le
-      // checkpoint (MIN-210), rendu à lui à la sortie.
-      repoTouched: run.checkpoint?.repoTouched === true,
-      logPrefix: "[agent-execute]",
-    });
-
-    // Chrono de la boucle : c'est depuis ici que se mesure le budget restant d'un
-    // sous-agent (`chunkRemainingMs`).
-    loopStartedAt = Date.now();
-
-    const result = await runAgentLoop({
-      messages,
-      tools: agentToolsFor({
-        anchor,
-        webSearch: webSearchAllowed,
-        webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
-        model: run.model,
-        images: imageInput,
-        subagentModels,
-        chain: !!run.chain_id,
-        // Un passage de ROUTINE (MIN-185) perd `ask_user` (personne devant
-        // l'écran) et `create_routine` (une routine ne s'auto-réplique pas).
-        interactive: !run.routine_id,
-      }),
+      : undefined;
+    // `bootstrapMs` manque exprès : c'est `startVmLoop` qui le pose, parce que
+    // c'est lui qui sait quand l'amorçage se termine (cf. `VmJob.bootstrapMs`).
+    const job: Omit<VmJob, "bootstrapMs"> = {
+      runId: run.id,
+      ledgerRunId: run.run_id ?? run.id,
+      projectId: run.project_id,
+      appOrigin: agentControlOrigin(),
       model: run.model,
-      apiKey,
       baseUrl,
       provider,
-      // Figé au lancement (MIN-122) : chaque chunk du run repart du même niveau.
+      llmPlaceholderKey: AGENT_LLM_PLACEHOLDER_KEY,
       reasoningLevel: run.reasoning_level,
-      runId: run.run_id ?? run.id,
-      billTo: runBillTo,
-      // La ligne de facture du run (MIN-185) : « Routines » et pas « Agents »
-      // quand ce run est un passage de routine.
-      feature: usageFeature,
-      projectId: run.project_id,
-      // Ancienne forme : la boucle tourne ICI, elle écrit donc au ledger en
-      // direct. Dans la nouvelle, ce même paramètre porte un POST vers le plan
-      // de contrôle — et c'est tout ce que la boucle sait de la différence.
-      recordUsage: recordAiUsage,
-      softDeadlineMs,
-      budgetUsd,
-      // Ce chunk relit déjà le quota à son entrée, donc au pire toutes les cinq
-      // minutes ; le crochet resserre à une. Le même dans les deux moteurs — c'est
-      // la nouvelle forme qui en avait le plus besoin (un tour dure des heures),
-      // mais un plafond qui ne se relit pas est le même défaut des deux côtés.
-      refreshBudgetUsd: maybeRefreshBudget,
-      chunkSpend,
       contextWindow,
       inputUsdPerMTok,
-      // Le token de forge ne sort ni dans un event ni dans le checkpoint (MIN-239).
-      redact: secrets.redact,
-      execTool: makeExecTool({
-        host,
-        anchor,
-        // Une relecture n'ouvre pas de pull request : le tool n'est pas dans son
-        // jeu, et le handler ne lui est pas non plus câblé (deux verrous, pas un).
-        // La PORTE (MIN-247) enveloppe le handler des DEUX moteurs, au même endroit
-        // et avec le même crochet : le premier appel rend le diff du tour au lieu
-        // d'ouvrir. Voir `gateCreatePr`.
-        createPr: writesToRepo ? gateCreatePr(createPr, deliveryGate, chunkRemainingMs) : null,
-        // Les tools de PLATEFORME sont INJECTÉS depuis MIN-224 (cf. `exec-tool.ts`) :
-        // ici les exécuteurs en direct, puisqu'on est dans la fonction ; dans la
-        // microVM, les mêmes noms partent au plan de contrôle.
-        prTool: prToolCtx ? (name, args) => executePrTool(prToolCtx, name, args) : null,
-        projectPrTool: projectPrToolCtx
-          ? (name, args) => executeProjectPrTool(projectPrToolCtx, name, args)
-          : null,
-        // Deux enveloppes, et l'ORDRE compte : `watchPlanWrites` note le plan écrit
-        // (MIN-236), puis `gateWritePlan` le relit — il lit le sink que la première
-        // vient de remplir. L'inverse contrôlerait le plan du tour précédent.
-        issueTool: gateWritePlan(
-          watchPlanWrites(
-            (name, args) => executeIssueTool(issueToolCtx, name, args),
-            planWrites,
-          ),
-          deliveryGate,
-          chunkRemainingMs,
-        ),
-        scratchpadTool: (name, args) => executeScratchpadTool(scratchpadToolCtx, name, args),
-        webSearch,
-        outputSeqBase: run.continuations * 1000,
-        background,
-        instructions,
-        editedPaths,
-        verification,
-        subagents,
-        chunkRemainingMs,
-        onEdit: liveEditHook(liveEdits, emitLive),
-      }),
-      pullSteering: () => pullPendingMessages(run.id),
-      // Wakeup des sous-agents (MIN-112) : drainé au sommet de chaque round, comme
-      // le steering. Le parent n'a jamais attendu — le rapport arrive tout seul.
-      pullSubagentReports: async () => subagents.drainReports(),
-      /**
-       * Dernière chance de livrer AVANT que le tour ne se termine. Si le budget
-       * tombe alors qu'une fille tourne encore, on la COUPE ICI plutôt qu'après la
-       * boucle : ses fichiers doivent être dans `editedPaths` et dans le diff avant
-       * que la porte de livraison ne parle — sinon un sous-agent casse les types en
-       * silence et le tour dit « c'est fait ».
-       */
-      awaitSubagents: async ({ budgetMs }) => {
-        const waited = await subagents.awaitReports(
-          Math.max(0, budgetMs - SUBAGENT_CUT_MARGIN_MS),
-          // L'utilisateur peut RÉVEILLER le parent pendant qu'il attend : son
-          // message rompt l'attente sans toucher aux filles, qui continuent.
-          () => hasPendingRunMessages(run.id),
-        );
-        if (waited.reports.length > 0 || waited.interrupted || subagents.pending() === 0) {
-          return waited;
-        }
-        // Plus de budget, et une fille travaille encore. On ne la TUE pas : on lui
-        // demande de sauver son état, et on SUSPEND le tour. Elle reprendra au chunk
-        // suivant, et c'est ce qui lui permet de dépasser les 300 s de la fonction.
-        await subagents.suspendAll().catch(() => 0);
-        // Celles qui n'ont pas su se sauver (historique trop gros, pas rendu la main
-        // à temps) sont coupées : leur rapport partiel part quand même.
-        const salvaged = subagents.drainReports();
-        if (subagents.suspendedCount() > 0) {
-          return { reports: salvaged, interrupted: false, suspend: true };
-        }
-        return { reports: salvaged, interrupted: false };
+      ...(modelPricing ? { pricing: modelPricing } : {}),
+      anchor,
+      writesToRepo,
+      interactive: !run.routine_id,
+      chain: !!run.chain_id,
+      imageInput,
+      webSearch: webSearchAllowed,
+      // Le plafond de recherches du tour part AVEC le job : la constante vit
+      // dans le module qui facture la recherche, et celui-là n'entre pas dans
+      // le bundle de la microVM (cf. `VmJob.webSearchMax`).
+      webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
+      subagents: {
+        models: subagentModels,
+        favorites: subagentFavorites,
+        /**
+         * UNE RELECTURE NE DÉLÈGUE PAS, et c'est ce plafond qui le dit sous
+         * opencode : la config sert le tool `task` dès qu'il est > 0
+         * ([opencode-config.ts](vm/opencode-config.ts), `primaryTools`). Les
+         * deux prompts posent déjà la même condition (l.1308 et l.1442) — le
+         * job, lui, l'avait perdue : le modèle recevait un tool de délégation
+         * que son ancrage ne décrit pas et que `PR_REVIEW_TOOLS` refuse, et
+         * une relecture pouvait ouvrir deux sessions filles qui ÉDITENT.
+         */
+        maxParallel: writesToRepo ? subagentMaxParallel : 0,
+        allowedIds: subagentScope.allowedIds,
+        abovePlanIds: subagentScope.abovePlanIds,
+        maxMultiplier: subagentScope.maxMultiplier,
+        ...(Object.keys(subagentPricing).length > 0 ? { pricing: subagentPricing } : {}),
       },
-      parkedForSubagents: run.checkpoint?.parkedForSubagents === true,
-      // « Interrompre la réponse en cours » : la boucle abandonne l'appel LLM en
-      // vol et renvoie `interrupted` (round partiel jeté).
-      checkInterrupt: () => readInterruptFlag(run.id),
-      // Ce qui fait qu'un « stop » accompagné d'un message n'est PAS un arrêt : la
-      // boucle consomme le drapeau et poursuit ce tour-ci avec la consigne (cf.
-      // `clearInterrupt` dans agent-loop.ts).
-      clearInterrupt: () => clearInterrupt(run.id),
-      // Miroir des états du checklist de l'agent vers le plan de l'issue liée.
-      // Run carnet : pas d'issue — le cochage du carnet passe par le tool dédié.
-      syncPlan: (steps) =>
-        run.issue_id ? syncIssuePlanStates(run.issue_id, steps) : Promise.resolve(),
-      emit,
-      emitLive,
-      usageSeqStart,
-    });
-
-    // Sous-agents encore en vol (MIN-112) : coupés ICI, avant TOUT le reste — avant
-    // `background.stopAll()`, avant le commit, avant la construction du checkpoint.
-    // Une fille laissée en vol écrirait dans la sandbox pendant le `git add -A`, et
-    // sa promesse mourrait de toute façon avec la fonction Vercel. Leur rapport
-    // PARTIEL entre dans `result.messages` (donc dans le checkpoint) : le chunk
-    // suivant le livre au parent, qui sait ainsi ce qui a été fait à moitié.
-    //
-    // Sur le chemin de fin de tour NORMAL il n'y a en général plus rien à couper :
-    // `awaitSubagents` a déjà attendu, livré et coupé au besoin. Ce qui atterrit ici
-    // ce sont les autres sorties — suspend, interruption, `ask_user`, budget épuisé.
-    // Le tour est SUSPENDU (re-queue immédiat) : les filles encore en vol sauvent
-    // leur état et repartiront au chunk suivant. Sur tout autre chemin de sortie —
-    // fin de tour, interruption, erreur, budget épuisé — le run s'arrête là, donc
-    // elles sont COUPÉES et leur rapport partiel est livré une bonne fois.
-    //
-    // D'où la lecture du drapeau d'interruption ICI (MIN-206), AVANT la décision, et
-    // pas seulement après le push WIP : un « Stop » cliqué pendant les quelques
-    // secondes de finalisation laissait des filles `suspended` — donc REPRENABLES —
-    // dans le checkpoint d'un tour que l'utilisateur croit arrêté. Il écrivait
-    // ensuite « fais plutôt X », et le tour suivant relançait la fille de la tâche
-    // ABANDONNÉE : elle repartait écrire dans la sandbox et brûler le quota, pendant
-    // que le parent, garé sur elle (`parkedForSubagents`), ne lisait pas la nouvelle
-    // consigne. Un tour arrêté n'a pas de suite : ses filles sont coupées.
-    const stopRequested = result.status === "suspended" && (await readInterruptFlag(run.id));
-    if (result.status === "suspended" && !stopRequested) {
-      await subagents.suspendAll().catch(() => 0);
-    } else {
-      await subagents
-        .cutAll(stopRequested ? "the turn was stopped" : "the parent chunk ended")
-        .catch(() => 0);
-    }
-    let subagentCost = 0;
-    for (const report of subagents.drainReports()) {
-      result.messages.push({ role: "user", content: report.text });
-      subagentCost += report.costUsd;
-      await emit("status", { phase: "subagent_report", id: report.id, partial: true });
-    }
-
-    // Ce que les filles ont dépensé sans que personne ne l'ait encore porté (MIN-202) :
-    // une SUSPENDUE n'est pas livrable, donc son chunk de dépense n'entrait dans aucun
-    // `newCost` et le plafond du run se rechargeait d'autant à chaque continuation.
-    // Appelé APRÈS le drain ci-dessus (idempotent : chaque record ne rend que son
-    // delta, `drainReports` ayant déjà marqué facturé ce qu'il a livré) mais AVANT
-    // `records()`, qui fige des COPIES — les marques posées après n'entreraient pas
-    // dans le checkpoint, et le chunk suivant repaierait ce qu'on vient d'imputer.
-    const unbilledSubagentCost = subagents.settleUnbilled();
-    const subagentRecords = subagents.records();
-    const newCost = run.cost_usd + result.costUsd + subagentCost + unbilledSubagentCost;
-    /**
-     * CE QUE LA COLONNE VAUT AU REPOS, et c'est le MÊME sens que sur le moteur en
-     * microVM (MIN-224) : la dépense du run relue au LEDGER, compute compris.
-     *
-     * Le cumul ci-dessus est un minorant à deux titres. Il ne connaît que le
-     * MODÈLE — la moitié compute de la facture était écrite après les stamps,
-     * depuis le `finally`, donc jamais dans la colonne. Et il repart de
-     * `run.cost_usd`, que le chunk PRÉCÉDENT n'a pas forcément écrite : un chunk
-     * mort sans stamper laisse sa part au ledger et nulle part ailleurs (le trou
-     * de MIN-215, mesuré à 0,165908 $ portés pour 0,236836 $ dépensés).
-     *
-     * D'où l'ordre : on FACTURE le compute de ce chunk, PUIS on relit. Le ledger
-     * est alors complet, et le `Math.max` ne sert plus qu'au cas où une insertion
-     * best-effort s'est perdue — deux minorants, le plus grand est le plus vrai,
-     * et une dépense affichée ne recule jamais.
-     *
-     * Ce que ça change ailleurs : `recomputeChainSpend` et `medianCostByIntent`
-     * lisent enfin la même population des deux côtés. Le PLAFOND de dépense, lui,
-     * ne bouge pas — il s'oppose au ledger depuis MIN-215 (`runSpentUsd`).
-     */
-    const restCostUsd = async (): Promise<number> => {
-      await billSandboxCompute();
-      const ledger = await spentFromLedger(run.run_id ?? run.id).catch(() => null);
-      return Math.max(newCost, ledger ?? 0);
-    };
-    // `lastFilesSha` amorcé pour TOUTES les mises au repos (ce checkpoint est réutilisé
-    // par les chemins WIP/interruption/erreur/budget) : sur le 1er chunk on fixe la
-    // baseline, jamais avancée en cours de tour — seule une fin de tour la fait
-    // progresser (plus bas). Un chunk ultérieur ne la réinitialise donc pas.
-    //
-    // Ce qui vaut pour le RUN, quelle que soit la sortie. L'état de TOUR, lui, est
-    // ajouté juste en dessous — et c'est ce qui sépare les deux objets (MIN-210).
-    const rawCheckpoint: AgentCheckpoint = {
-      messages: result.messages,
-      usageSeq: result.usageSeqEnd,
-      lastFilesSha: run.checkpoint?.lastFilesSha ?? baselineHead,
+      /**
+       * LE JOURNAL D'OPENCODE DU TOUR PRÉCÉDENT — c'est LUI la mémoire d'un run
+       * mené par opencode, et il ne descendait pas dans la microVM (MIN-286).
+       *
+       * Le superviseur le rejoue (`/sync/replay`) pour retrouver sa session ;
+       * sans lui, `job.opencode` est `undefined`, il crée une session NEUVE, et
+       * le tour repart sans une ligne de sa conversation. Le chemin d'écriture
+       * était complet de bout en bout (le superviseur l'exporte, le plan de
+       * contrôle l'estampille, `AgentCheckpoint` le déclare) : seule cette
+       * lecture-ci manquait, donc rien ne se voyait — pas d'erreur, pas de type
+       * qui proteste, juste un agent amnésique d'un tour à l'autre.
+       */
+      /**
+       * LE JOURNAL, RASSEMBLÉ DEPUIS SA TABLE (MIN-286, 2026-08-13). La ligne
+       * du run n'en porte que le pointeur : les events vivent en append dans
+       * `agent_run_journal`, parce qu'ils charrient la sortie complète de
+       * chaque tool et qu'un checkpoint ne pouvait pas les tenir.
+       */
+      ...(opencodeJournal ? { opencode: opencodeJournal } : {}),
+      opencodeInput,
       instructions,
-      ...(subagentRecords.length > 0 ? { subagents: subagentRecords } : {}),
-      // Tour GARÉ : le parent avait fini de parler et attend une fille suspendue.
-      // Le chunk suivant attendra donc AVANT de faire parler le modèle.
-      ...(result.status === "suspended" && subagents.suspendedCount() > 0
-        ? { parkedForSubagents: true }
-        : {}),
-      // Ancres déjà posées — par la relecture comme par les tools PR du projet :
-      // le plafond des 5 est par RUN, donc son compteur voyage avec le checkpoint
-      // (cf. `pr-tools.ts`). Les deux familles partagent l'objet `prInline`.
-      ...(prInline.used > 0 ? { prInlineComments: prInline.used } : {}),
+      usageSeqStart,
+      ...(budgetUsd !== undefined ? { budgetUsd } : {}),
+      editedPaths: [...(run.checkpoint?.editedPaths ?? [])],
+      repoTouched: run.checkpoint?.repoTouched === true,
+      prInlineComments: run.checkpoint?.prInlineComments ?? 0,
+      baseBranch,
+      workBranch,
+      // Le job PART dans la microVM : c'est `vmTarget`, jamais `target`
+      // (MIN-327). La boucle n'en fait que du `git` — et une relecture n'en
+      // reçoit qu'un token en lecture.
+      authUrl: vmTarget.authUrl,
+      commitRef,
+      filesFromSha,
+      locale: commentLocale,
+      feature: usageFeature,
     };
-    /**
-     * RABOTÉ AU GABARIT UNE FOIS POUR TOUTES (MIN-217), ici et pas sur un seul
-     * chemin : ce qui suit persiste cet objet sur SIX sorties (fin de tour, WIP,
-     * interruption, erreur LLM, budget épuisé, garde-fous anti-runaway), et un
-     * checkpoint hors gabarit est une impasse par quelque porte qu'il soit écrit —
-     * le tour suivant le rehydrate et rejoue la même fin. Seul le garde-fou le
-     * MESURAIT, et il le réécrivait quand même tel quel.
-     *
-     * No-op tant que le checkpoint tient (le cas normal) : `fitCheckpoint` rend
-     * alors l'objet d'entrée, sans copie. `fit.bytes` est la taille AVANT rabotage
-     * — c'est elle que le garde-fou juge, plus bas.
-     */
-    const fit = fitCheckpoint(rawCheckpoint);
-    const baseCheckpoint = fit.checkpoint;
-    /**
-     * Le rabotage est allé jusqu'au DERNIER palier : l'historique n'a pas pu
-     * traverser, le tour suivant repartira à froid. Dit ICI, une fois, plutôt que
-     * dans le seul garde-fou : n'importe laquelle des six sorties peut avoir eu à
-     * payer ce prix, et une conversation qui repart de zéro sans que rien ne le
-     * dise, c'est un agent qui semble avoir tout oublié sans raison.
-     *
-     * Les deux premiers paliers ne se disent pas : ils ne perdent que du
-     * re-demandable (une sortie de tool, une image) et laissent au modèle le
-     * marqueur qui explique comment y revenir.
-     */
-    if (fit.dropped.includes("history")) {
-      await emit("error", {
-        code: "turnHistoryReset",
-        message:
-          "This session's history grew too large to carry over and had to be reset. The work is kept; the next turn starts fresh.",
-        dropped: fit.dropped,
-      });
-    }
-    /**
-     * Ce que le TOUR emporte au chunk suivant (MIN-210) : les fichiers édités que le
-     * type-check n'a pas encore vus, et le verrou qui ouvre l'auto-relecture. Sans
-     * eux, un tour éclaté sur plusieurs chunks conclut avec un `Set` vide — pas de
-     * `tsc`, pas de diff relu, pas d'event `type_check`, et rien qui le dise.
-     *
-     * Clés OMISES quand elles ne portent rien : un checkpoint ne grossit pas d'un
-     * tableau vide, et l'absence se relit comme « ce tour n'a rien touché ».
-     */
-    const turnState: Pick<AgentCheckpoint, "editedPaths" | "repoTouched"> = {
-      ...(editedPaths.size > 0
-        ? { editedPaths: [...editedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX) }
-        : {}),
-      ...(deliveryGate.repoTouched() ? { repoTouched: true } : {}),
-    };
-    /**
-     * Le checkpoint des mises au repos qui NE terminent PAS le tour — suspend et
-     * re-queue, interruption, erreur, budget épuisé, garde-fous anti-runaway. Sur
-     * chacune, `lastFilesSha` reste à sa baseline : ce que le chunk vient d'éditer
-     * n'a été ni type-checké ni relu, et le tour suivant doit s'en charger.
-     *
-     * La fin de tour NATURELLE, elle, repart de `baseCheckpoint` (plus bas).
-     */
-    const checkpoint: AgentCheckpoint = { ...baseCheckpoint, ...turnState };
-    const nowIso = new Date().toISOString();
-
-    // Champs communs à toute mise au REPOS (fin de tour / interruption / erreur /
-    // budget épuisé) : run reprennable à chaud, microVM gardée chaude (le reaper la
-    // coupera après ~5 min d'inactivité), budget de tour remis à zéro.
-    const restFields = {
-      continuations: 0,
-      // `attempts` compte les claims d'un tour pour la reprise sur crash
-      // (`requeueStuckRuns`), et `claim_agent_run` l'incrémente à CHAQUE claim. Sans
-      // remise à zéro ici, il s'accumule sur la vie entière du run — or MIN-68 fait
-      // du multi-tours la vie normale d'un run (chaque reprise à chaud = un claim de
-      // plus). Passé le budget, un crash ne requeue plus : il marque `failed` ET
-      // efface le checkpoint → conversation morte pour de bon. Un tour qui arrive au
-      // repos est un tour SAIN : son successeur repart avec son budget entier.
-      attempts: 0,
-      window_started_at: null,
-      sandbox_id: sandboxName(sandbox),
-      sandbox_stopped_at: null,
-      last_activity_at: nowIso,
-      interrupt_requested: false,
-      // Chaque entrée au repos REMET l'attente à zéro — seul le tour terminé sur
-      // un ask_user (ci-dessous) la lève.
-      awaiting_input: false,
-    } satisfies Partial<Parameters<typeof stampRun>[1]>;
-
-    // Enregistre le REPOS. Il n'y a plus qu'UN repos (modèle conversationnel) :
-    // `completed` — la session attend le prochain message de l'utilisateur dans sa
-    // conversation, et ne bloque PLUS le ticket (seuls queued/running l'occupent).
-    // Elle reste reprennable à chaud depuis son composer (checkpoint + snapshot).
-    // Si un message de steering est arrivé APRÈS la dernière frontière de round
-    // (fenêtre de finalisation : commit+push), on RE-QUEUE au lieu de reposer →
-    // le drain relance la boucle qui le draine aussitôt.
-    // Renvoie `pending` : true = la session repart aussitôt (steering en file) —
-    // l'appelant s'en sert pour NE PAS notifier un repos qui n'en est pas un.
-    const restStamp = async (
-      extra: Partial<Parameters<typeof stampRun>[1]>,
-    ): Promise<boolean> => {
-      const pending = await hasPendingRunMessages(run.id);
-      await stampRun(run.id, {
-        status: pending ? "queued" : "completed",
-        ...restFields,
-        // Facturé puis relu ICI, à la dernière milliseconde : le compute de ce
-        // chunk comprend le commit et le push qui viennent de se jouer.
-        cost_usd: await restCostUsd(),
-        ...(pending ? { not_before: new Date().toISOString() } : {}),
-        ...extra,
-      });
-      return pending;
-    };
-
-    // ── Fin de tour NATURELLE : push du travail, PAS de PR automatique ────────
-    if (result.status === "completed") {
-      const reply = result.reply?.trim() ?? "";
-      const freshTarget = writesToRepo
-        ? await resolveRepoCloneTarget(run.project_id).catch(() => null)
-        : null;
-      // Le token de la FORGE (réouverture d'une PR refusée) reste `full` ; l'URL
-      // de PUSH, elle, part dans un `git push` qui s'exécute DANS la microVM —
-      // donc un token `repo-write`, scopé au dépôt (MIN-327).
-      const freshPushTarget = writesToRepo
-        ? await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null)
-        : null;
-      const authUrl = freshPushTarget?.authUrl ?? vmTarget.authUrl;
-      const token = freshTarget?.token ?? target.token;
-      secrets.addAuthUrl(authUrl);
-      secrets.add(token);
-
-      // Les jobs de fond meurent AVANT de stager : un serveur de dev ou un watcher
-      // encore vivant réécrirait des fichiers pendant le `git add -A`.
-      await background.stopAll().catch(() => 0);
-
-      // Pousse ce que le tour a changé — et RIEN si le tour n'a rien changé : la
-      // branche n'apparaît sur le dépôt qu'au premier vrai commit (MIN-123). Si la
-      // session suit une PR, GitHub la met à jour tout seul — aucune création ici :
-      // ouvrir une PR est la décision de l'agent (`create_pr`) ou de l'utilisateur.
-      //
-      // Une session de RELECTURE ne passe pas par là du tout (`writesToRepo`) :
-      // pas de commit, pas de push, pas de branche enregistrée, pas de PR
-      // rouverte, pas d'événement `files_changed`. C'est la moitié harnais de
-      // « aucune écriture dans le dépôt » — l'autre est le jeu de tools.
-      let pushError: string | null = null;
-      const pushed = writesToRepo
-        ? await commitAndPush(host, {
-            authUrl,
-            workBranch,
-            baseBranch,
-            message: commitMessageFromReply(reply, commitRef),
-          }).catch((err) => {
-            // Un rejet de push recopie l'URL de push, token compris (MIN-239) — et
-            // ce message-ci part dans un event ET dans `error_message`.
-            pushError = secrets.redact((err as Error).message);
-            console.error("[agent-execute] turn-end push failed:", pushError);
-            return null;
-          })
-        : null;
-      // Push raté → SIGNAL VISIBLE (event + error_message), le run reste au repos
-      // reprennable. Un rejet non-fast-forward n'est PAS transitoire (quelqu'un a
-      // poussé sur la branche de l'agent) : sans signal, chaque tour re-échouerait
-      // en silence et l'utilisateur croirait le travail livré alors que la branche
-      // distante ne le reçoit plus jamais.
-      if (pushError) {
-        await emit("error", {
-          message: (PUSH_FAILED_STRINGS[commentLocale] ?? PUSH_FAILED_STRINGS.en)(
-            cap(pushError, 300),
-          ),
-        });
-      }
-
-      await noteBranchPushed(pushed);
-      if (writesToRepo) await reopenIfRejectedWorkPushed(pushed, token);
-      // APRÈS la réouverture éventuelle : elle recale `prState` sur la base, donc
-      // un push qui ressuscite une PR refusée se raconte sur la bonne PR.
-      await notePrCommits(pushed);
-      // Le remote a reçu du travail mais la PR a été FUSIONNÉE pendant le tour
-      // (`refreshPrStateFromDb` dans le reopen vient de recaler l'état) : les
-      // commits sont préservés sur la branche mais n'appartiennent plus à aucune
-      // PR — on le dit, sinon l'utilisateur croit le travail en revue.
-      if (pushed?.remoteUpdated && prState.state === "merged" && prState.number != null) {
-        await emit("error", {
-          message: (MERGED_DURING_TURN_STRINGS[commentLocale] ?? MERGED_DURING_TURN_STRINGS.en)(
-            prRef(target.provider, prState.number),
-            prTerm(target.provider),
-          ),
-        });
-      }
-
-      // Diff par tour (MIN-46) : émet les fichiers que CE tour a changés, calculés par
-      // git dans la sandbox entre la baseline du tour et la tête poussée. Best-effort
-      // (n'affecte jamais le repos). `filesToSha` avance la baseline du prochain tour —
-      // persistée dans le checkpoint pour que le tour suivant diffe depuis ici.
-      let filesToSha = filesFromSha;
-      if (pushed?.headSha && pushed.headSha !== filesFromSha) {
-        const changed = await changedFiles(host, filesFromSha, pushed.headSha).catch(() => null);
-        if (changed && changed.files.length > 0) {
-          await emit("files_changed", { files: changed.files, truncated: changed.truncated });
-        }
-        filesToSha = pushed.headSha;
-      }
-      // PASSAGE DE RELAIS : la liste dérivée de git est posée (l'`await` ci-dessus
-      // l'a écrite en base), la provisoire n'a plus lieu d'être. Sans cet oubli, les
-      // deux se superposeraient dans le fil — la même liste deux fois, l'une sans
-      // ses compteurs de lignes. L'ordre compte : effacer AVANT d'émettre laisserait
-      // un trou, effacer après ne laisse qu'un remplacement.
-      if (liveEdits.clear()) {
-        emitLive({ text: "", tools: 0, reasoningActive: false, reasoningMs: 0 });
-      }
-
-      // `outcome` = la dernière réponse de la session : c'est elle qu'une future
-      // session froide recevra comme résumé du travail précédent.
-      //
-      // `baseCheckpoint` et pas `checkpoint` : le tour est FINI (MIN-210). Son
-      // type-check et son auto-relecture ont parlé, et `lastFilesSha` avance
-      // jusqu'à la tête poussée. Emporter `repoTouched` ici ferait relire au tour
-      // suivant un diff désormais vide, et `editedPaths` relancerait un `tsc` sur
-      // des fichiers déjà checkés.
-      const pending = await restStamp({
-        checkpoint: { ...baseCheckpoint, lastFilesSha: filesToSha },
-        outcome: reply ? cap(reply, 4000) : null,
-        // Tour terminé sur un ask_user → la session ATTEND la réponse : point
-        // jaune sur les surfaces tant que l'utilisateur n'a pas répondu.
-        ...(result.askedUser ? { awaiting_input: true } : {}),
-        ...(pushError ? { error_message: cap(pushError, 1000) } : {}),
-      });
-      // Inbox (MIN-82) : repos réel seulement — un re-queue immédiat (steering
-      // en file) n'est pas une fin de tour du point de vue de l'utilisateur.
-      if (!pending) {
-        await notifyAgentRun(run, result.askedUser ? "agent_question" : "agent_done");
-      }
-      return "completed";
-    }
-
-    // ── interrupted / erreur / suspended : push WIP + persiste le checkpoint ──
-    // Même règle qu'en fin de tour : rien ne tourne pendant qu'on stage. Et même
-    // exception : une session de relecture ne pousse pas plus à mi-tour qu'à la
-    // fin — son seul état durable est son checkpoint.
-    await background.stopAll().catch(() => 0);
-    const wipPushed = writesToRepo
-      ? await commitAndPush(host, {
-          // Le `git push` s'exécute dans la microVM : `vmTarget` (MIN-327).
-          authUrl: vmTarget.authUrl,
-          workBranch,
-          baseBranch,
-          message: `wip(${commitRef}): chunk ${run.continuations + 1}`,
-        }).catch((err) => {
-          // Un push raté ne doit pas perdre le checkpoint (l'état repo se re-poussera au chunk suivant).
-          console.error("[agent-execute] WIP push failed:", (err as Error).message);
-          return null;
-        })
-      : null;
-    await noteBranchPushed(wipPushed);
-    if (writesToRepo) await reopenIfRejectedWorkPushed(wipPushed, target.token);
-    await notePrCommits(wipPushed);
-
-    // Budget d'usage épuisé → REPOS, avec la carte qui dit pourquoi et ce qu'on peut
-    // faire. Le travail du chunk vient d'être poussé en WIP et le checkpoint est
-    // conservé : rien n'est perdu, la session repart d'ici quand le budget revient
-    // (rechargement, plan supérieur, ou clé perso).
-    //
-    // Volontairement PAS `restStamp` : celui-ci re-queue s'il reste des messages de
-    // steering en file, ce qui relancerait aussitôt un chunk sans budget. Le message
-    // en attente reste en file et sera drainé à la reprise.
-    if (result.status === "budget_exhausted") {
-      const quota = await checkAgentQuota(run.created_by ?? "").catch(() => null);
-      /**
-       * DEUX causes derrière la même frontière, et elles ne se disent pas
-       * pareil : le budget du COMPTE est à zéro (il faut attendre, monter de
-       * plan ou passer en BYOK), ou c'est le plafond posé sur CE run qui a
-       * mordu — le compte, lui, va très bien, et ce qui se règle est le plafond
-       * de la routine. Proposer un upgrade dans ce second cas ferait payer plus
-       * cher pour un budget dont il reste l'essentiel.
-       *
-       * On tranche par le plus SERRÉ des deux, à égalité l'account : un plafond
-       * qui vaut exactement le restant du compte veut dire que le compte est à
-       * zéro lui aussi.
-       */
-      const cappedByRun =
-        runCapRemainingUsd !== undefined &&
-        (accountRemainingUsd === undefined || runCapRemainingUsd < accountRemainingUsd);
-      await emit("quota_exhausted", {
-        spent: quota?.spent ?? null,
-        cap: quota?.cap ?? null,
-        resetsAt: quota?.resetsAt ?? null,
-        planId: quota?.planId ?? null,
-        // null = déjà au sommet de l'échelle : il ne reste qu'attendre, ou le BYOK.
-        nextPlanId: quota?.nextPlanId ?? null,
-        byok: quota?.mode === "byok",
-        cause: cappedByRun ? "run_cap" : "account",
-        // Le plafond, dans l'unité où il a été RÉGLÉ : un pourcentage du budget
-        // mensuel. Recalculé plutôt que relu sur la routine — c'est un affichage,
-        // il ne vaut pas une requête de plus.
-        capPercent:
-          cappedByRun && quota?.cap && run.budget_usd != null
-            ? Math.round((Number(run.budget_usd) / quota.cap) * 100)
-            : null,
-      });
-      await stampRun(run.id, { status: "completed", ...restFields, checkpoint });
-      await notifyAgentRun(run, "agent_failed");
-      return "completed";
-    }
-
-    // Erreur LLM fatale → REPOS reprennable. L'event d'erreur a déjà été émis par la
-    // boucle ; le checkpoint (dont un éventuel steering injecté ce round) est conservé
-    // → l'utilisateur peut renvoyer un message pour reprendre.
-    if (result.status === "error") {
-      const pending = await restStamp({
-        checkpoint,
-        error_message: result.errorMessage ? cap(result.errorMessage, 1000) : null,
-      });
-      if (!pending) await notifyAgentRun(run, "agent_failed");
-      return "completed";
-    }
-
-    // « Interrompre » → REPOS (round partiel déjà jeté par la boucle).
-    if (result.status === "interrupted") {
-      await clearInterrupt(run.id);
-      await restStamp({ checkpoint });
-      return "interrupted";
-    }
-
-    // suspended, mais une interruption a été demandée pendant le chunk → REPOS
-    // plutôt que re-queue (course : le drapeau est arrivé après le retour de boucle).
-    //
-    // UNION des deux lectures, et pas la seule réutilisation de `stopRequested` : le
-    // drapeau peut être arrivé pendant le push WIP, c'est-à-dire entre les deux — et
-    // c'est précisément la fenêtre pour laquelle ce test existe. Le relire ne coûte
-    // une requête que si le premier était faux, soit ce que faisait déjà ce chemin.
-    if (stopRequested || (await readInterruptFlag(run.id))) {
-      await clearInterrupt(run.id);
-      await restStamp({ checkpoint });
-      return "interrupted";
-    }
-
-    /**
-     * Le chunk n'a pas travaillé : il a attendu un fournisseur en panne (MIN-219).
-     * Ce n'est pas une continuation, c'est une ATTENTE — elle a son propre budget,
-     * son propre délai, et elle ne touche pas à celui du tour.
-     *
-     * Compté sur le checkpoint PRÉCÉDENT : c'est le seul état qui traverse un
-     * chunk. Un chunk qui avance en repose un neuf, sans ce champ — le compteur
-     * ne mesure donc que des pannes CONSÉCUTIVES, ce qui est bien ce qu'on veut
-     * borner (un hoquet toutes les dix minutes ne doit rien épuiser).
-     */
-    const providerStalled =
-      result.status === "suspended" && result.suspendReason === "transient_error";
-    const stall = providerStalled
-      ? planProviderStall(run.checkpoint?.providerRetries ?? 0)
-      : null;
-    const providerGaveUp = stall?.requeue === false;
-
-    // suspended — garde-fous anti-runaway PAR TOUR : au-delà, on REPOSE (avec un
-    // event d'erreur) au lieu d'échouer — la session reste reprennable.
-    //
-    // Une attente ne consomme PAS de continuation : le compteur borne les chunks
-    // qui ont fait parler le modèle, et celui-ci n'y est jamais arrivé. Le
-    // garde-fou d'horloge, lui, continue de courir (`window_started_at` est
-    // conservé de part et d'autre) — c'est lui le filet ultime d'un tour qui
-    // n'avance plus, attentes comprises.
-    const nextContinuations = run.continuations + (providerStalled ? 0 : 1);
-    const wallClock = run.window_started_at
-      ? Date.now() - Date.parse(run.window_started_at)
-      : Date.now() - callStart;
-    // La taille AVANT rabotage (MIN-217) : un tour dont l'état a explosé reste un
-    // tour qu'on arrête, même si `fitCheckpoint` a su le ramener au gabarit — le
-    // rabotage sert au tour SUIVANT, pas à absoudre celui-ci.
-    const checkpointTooBig = fit.bytes > MAX_CHECKPOINT_BYTES;
-
-    if (
-      providerGaveUp ||
-      nextContinuations > AGENT_MAX_CONTINUATIONS ||
-      wallClock > MAX_WALL_CLOCK_MS ||
-      checkpointTooBig
-    ) {
-      /**
-       * Un CODE, traduit par le fil — pas une phrase écrite ici.
-       *
-       * Celle d'avant (« Tour trop long (budget épuisé) — envoie un message pour
-       * continuer. ») était fausse deux fois : elle parlait de « budget épuisé »
-       * alors qu'aucun budget de dépense n'était en cause — ces trois garde-fous
-       * comptent des reprises, des minutes et des octets —, et elle sortait en
-       * français en dur, tutoyée, dans une app bilingue où tout le reste passe
-       * par next-intl.
-       *
-       * Trois codes plutôt qu'un : un tour qui a duré, un tour devenu trop
-       * volumineux et un fournisseur en panne ne se corrigent pas pareil — et le
-       * troisième ne se corrige pas du tout, il s'attend. Il passe DEVANT les
-       * deux autres : quand la patience du fournisseur s'épuise, c'est la panne
-       * qui arrête le tour, quoi qu'en disent les compteurs (MIN-219). Le tour
-       * mourait ici en annonçant une « limite de durée » qu'aucune horloge
-       * n'avait atteinte.
-       *
-       * « Envoyez un message pour en ouvrir un nouveau » ne promet plus rien que
-       * le code ne tienne (MIN-217) : le checkpoint qu'on persiste juste en
-       * dessous a été raboté au gabarit, donc le tour suivant repart pour de bon.
-       * Ce qu'il a coûté, s'il a coûté, a été dit plus haut par `historyReset`.
-       */
-      await emit("error", {
-        code: providerGaveUp
-          ? "providerUnavailable"
-          : checkpointTooBig
-            ? "turnTooBig"
-            : "turnTooLong",
-        // Repli pour un client qui ne connaîtrait pas le code (et trace lisible
-        // dans la table d'events) : en anglais, comme tout ce qui n'est pas de
-        // l'UI dans ce fichier.
-        message: providerGaveUp
-          ? "The model provider kept failing, so this turn was paused. Send a message to carry on."
-          : checkpointTooBig
-            ? "This turn grew too large to carry on. Send a message to start a fresh one."
-            : "This turn reached its time limit. Send a message to carry on.",
-      });
-      const pending = await restStamp({
-        checkpoint,
-        // Ce que le fournisseur a répondu en dernier, gardé sur la ligne du run :
-        // c'est la seule trace qui dise LAQUELLE des pannes (429, 502, réseau) a
-        // fini par arrêter le tour.
-        ...(providerGaveUp && result.errorMessage
-          ? { error_message: cap(result.errorMessage, 1000) }
-          : {}),
-      });
-      if (!pending) await notifyAgentRun(run, "agent_failed");
-      return "completed";
-    }
-
-    /**
-     * Panne du fournisseur : re-queue DIFFÉRÉ, et le compteur d'attente voyage
-     * avec le checkpoint (MIN-219). Le délai est la seule chose qui sépare une
-     * reprise d'un acharnement — le drain reclaim dans le même process, donc un
-     * `not_before` au présent renvoyait le chunk dans la même panne à la seconde
-     * près.
-     *
-     * SAUF si un message attend : l'utilisateur qui écrit pendant la panne est le
-     * seul signal qui vaille qu'on retente tout de suite, et le faire patienter
-     * dix minutes avant d'être seulement LU serait pire que le défaut d'origine.
-     * Le compteur, lui, monte quand même : la sortie de secours reste bornée.
-     */
-    if (stall?.requeue) {
-      const steering = await hasPendingRunMessages(run.id).catch(() => false);
-      const delayMs = steering ? 0 : stall.delayMs;
-      await stampRun(run.id, {
-        status: "queued",
-        checkpoint: { ...checkpoint, providerRetries: stall.retries },
-        sandbox_id: sandboxName(sandbox),
-        sandbox_stopped_at: null,
-        continuations: nextContinuations,
-        attempts: 0,
-        not_before: new Date(Date.now() + delayMs).toISOString(),
-        cost_usd: await restCostUsd(),
-      });
-      return "suspended";
-    }
-
-    // Continuation du MÊME tour : re-queue immédiat (window_started_at conservé).
+    const cmdId = await startVmLoop(sb, job, callStart);
     await stampRun(run.id, {
-      status: "queued",
-      checkpoint,
-      sandbox_id: sandboxName(sandbox),
-      sandbox_stopped_at: null,
-      continuations: nextContinuations,
-      attempts: 0,
-      not_before: nowIso,
-      cost_usd: await restCostUsd(),
+      loop_command_id: cmdId,
+      last_activity_at: new Date().toISOString(),
     });
-    return "suspended";
+    /**
+     * À PARTIR D'ICI, LE COMPUTE APPARTIENT À LA BOUCLE. Elle facturera le tour
+     * entier — amorçage compris, qu'on vient de lui passer. Le `finally` ne doit
+     * donc plus rien écrire, sous peine de compter deux fois la même microVM.
+     *
+     * Posé APRÈS le stamp, et pas avant : si celui-ci échoue, le tour part sans
+     * que son `loop_command_id` soit en base — le rapport de fin sera refusé en
+     * 409 et le chien de garde n'aura rien à interroger. Personne ne facturera
+     * cette microVM-là si ce n'est pas nous.
+     */
+    vmLoopLaunched = true;
+    return "detached";
   } catch (err) {
     // Substitué AVANT tout usage (MIN-239) : un `git clone` refusé recopie l'URL de
     // clone entière — token compris — dans son stderr, et ce message part dans
@@ -3089,14 +1734,6 @@ export async function executeAgentRun(
     if (!retryForPending) await notifyAgentRun(run, "agent_failed");
     return "completed";
   } finally {
-    // Filet des sous-agents (MIN-112), AVANT celui des jobs de fond : le chemin
-    // normal les a déjà coupés, mais pas le chemin d'ERREUR mid-tour ni celui d'une
-    // erreur d'amorçage. Une fille laissée en vol continuerait d'appeler un modèle
-    // (facturé) et d'écrire dans la sandbox au nom d'un tour terminé. Son rapport
-    // est perdu ici — c'est assumé : sur ce chemin il n'y a plus de checkpoint sain
-    // où le mettre.
-    if (subagentRegistry) await subagentRegistry.cutAll("the chunk failed").catch(() => 0);
-
     // Filet des jobs de fond (MIN-114) : les chemins de push les ont déjà tués, mais
     // pas le chemin d'ERREUR mid-tour — et un serveur laissé vivant tiendrait la
     // microVM éveillée jusqu'au reaper. Best-effort, jamais bloquant.

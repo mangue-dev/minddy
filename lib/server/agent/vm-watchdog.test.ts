@@ -32,11 +32,23 @@ const h = vi.hoisted(() => ({
   /** Les lignes de compute écrites — la moitié de la facture que personne
    *  d'autre ne tient sur ce chemin. */
   compute: [] as Array<Record<string, unknown>>,
+  /** Ce que le ledger répond ; `null` = la lecture a échoué. */
+  ledgerSpend: null as number | null,
+  /** L'ordre des deux gestes de facturation, pour garder « le compute d'abord ». */
+  order: [] as string[],
 }));
 
 vi.mock("@/lib/server/usage", () => ({
   recordSandboxUsage: vi.fn(async (params: Record<string, unknown>) => {
+    h.order.push("compute");
     h.compute.push(params);
+  }),
+}));
+
+vi.mock("@/lib/server/ai-usage", () => ({
+  spentFromLedger: vi.fn(async () => {
+    h.order.push("ledger");
+    return h.ledgerSpend;
   }),
 }));
 
@@ -106,6 +118,7 @@ const ROW = {
   continuations: 0,
   started_at: new Date(Date.now() - STARTED_MS_AGO).toISOString(),
   last_activity_at: new Date(Date.now() - STARTED_MS_AGO).toISOString(),
+  cost_usd: 0,
 };
 
 /** Une date vieille de `ms`, au format de la base. */
@@ -121,6 +134,8 @@ beforeEach(() => {
   h.revoked.length = 0;
   h.updates.length = 0;
   h.compute.length = 0;
+  h.order.length = 0;
+  h.ledgerSpend = null;
   h.rows = [{ ...ROW }];
 });
 
@@ -223,6 +238,47 @@ describe("reapDeadVmRuns", () => {
     // prérequis de la conclusion.
     expect(reaped).toBe(1);
     expect(h.compute).toHaveLength(0);
+  });
+
+  /**
+   * MIN-286 — la ligne du run disait « gratuit » un tour qui ne l'était pas.
+   *
+   * `cost_usd` n'est écrite que par les sorties SAINES : un tour dont le process
+   * meurt la laissait à sa valeur d'avant le tour, donc à zéro sur un premier
+   * tour. Mesuré en production pendant la fenêtre d'observation d'opencode :
+   * trois runs moissonnés, 0 sur la ligne, 0,159 $ au ledger. La facture et les
+   * plafonds étaient saufs (ils lisent déjà le ledger) ; ce qui mentait, c'est ce
+   * qu'un humain relit après l'incident.
+   */
+  it("recolle `cost_usd` au ledger sur un run moissonné", async () => {
+    h.alive = false;
+    h.ledgerSpend = 0.0678;
+    await reapDeadVmRuns(fakeService());
+    expect(h.updates).toContainEqual({ cost_usd: 0.0678 });
+    // Le compute de la microVM AVANT la relecture, sans quoi la somme relue
+    // n'emporterait pas la ligne qu'on vient d'écrire.
+    expect(h.order).toEqual(["compute", "ledger"]);
+  });
+
+  it("ne fait jamais RECULER la dépense affichée", async () => {
+    // Ledger et colonne sont deux minorants : le plus grand est le plus vrai. Un
+    // ledger en retard (une ligne pas encore écrite) ne doit pas effacer ce que la
+    // colonne portait déjà.
+    h.alive = false;
+    h.rows = [{ ...ROW, cost_usd: 0.5 }];
+    h.ledgerSpend = 0.01;
+    await reapDeadVmRuns(fakeService());
+    expect(h.updates).not.toContainEqual({ cost_usd: 0.01 });
+  });
+
+  it("ne touche pas à la colonne quand le ledger ne répond pas", async () => {
+    // `spentFromLedger` rend `null`, jamais 0, précisément pour qu'on ne confonde
+    // pas « lecture ratée » avec « ce run n'a rien dépensé ».
+    h.alive = false;
+    h.ledgerSpend = null;
+    const { reaped } = await reapDeadVmRuns(fakeService());
+    expect(reaped).toBe(1);
+    expect(h.updates.some((u) => "cost_usd" in u)).toBe(false);
   });
 
   it("ne facture rien sur un process VIVANT", async () => {

@@ -17,8 +17,8 @@ import { planReviewForTurn, PLAN_REVIEW_MIN_BUDGET_MS } from "./plan-review";
 import { planClosureForTurn, PLAN_CLOSURE_MIN_BUDGET_MS } from "./plan-closure";
 import { turnDiff, turnDiffStat, type RepoHost } from "./repo-host";
 import type { PlanWriteSink } from "./plan-closure";
-import type { PlatformToolHandler } from "./exec-tool";
-import type { EmitAgentEvent } from "./agent-loop";
+import type { PlatformToolHandler } from "./agent-contract";
+import type { EmitAgentEvent } from "./agent-contract";
 
 /**
  * LA PORTE DE LIVRAISON — le seul endroit où le harness vérifie quoi que ce soit

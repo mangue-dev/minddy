@@ -13,7 +13,7 @@ import { prStateFromRef, upsertPullRequest } from "./pull-requests";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import { getRun, stampRun, type AgentRun } from "./runs";
 import { isForgeApiError } from "./forge";
-import type { EmitAgentEvent } from "./agent-loop";
+import type { EmitAgentEvent } from "./agent-contract";
 import type { Forge } from "./forge";
 import type { PullRequestRef } from "./pr";
 import type { RepoCloneTarget } from "./repo-access";
