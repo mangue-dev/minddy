@@ -1360,6 +1360,24 @@ const servedAttachmentType = servedMimeType;
  * `read` et non `write` : joindre un fichier fait partie du geste de commenter,
  * qui demande la même chose.
  */
+/**
+ * Le fichier d'un corps multipart, ou `null`.
+ *
+ * Partagé par les deux routes de pièce jointe de PR — celle indexée par PR et
+ * sa façade par run — pour une raison de séquence : lire ce corps ramène tout
+ * en mémoire, donc ça ne se fait qu'APRÈS l'autorisation (MIN-348), et une
+ * garde qu'on doit refaire dans le bon ordre à deux endroits est une garde qui
+ * finit dans le mauvais à l'un des deux.
+ */
+export async function readUploadedFile(request: Request): Promise<File | null> {
+  try {
+    const entry = (await request.formData()).get("file");
+    return entry instanceof File ? entry : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function prAttachmentResponse(
   scope: PrScope,
   file: File,

@@ -38,7 +38,8 @@ const SWEEP = "20261220090000";
  * `20260926093000_definer_grants_sweep.sql` — une famille, pas une liste, parce
  * qu'une liste ne connaît pas les fonctions écrites après elle.
  */
-const POLICY_HELPERS = /^(can_access_project|is_project_member|is_project_owner|can_watch_.*)$/;
+const POLICY_HELPERS =
+  /^(can_access_project|is_project_member|is_project_owner|can_watch_.*|.*_quota_ok)$/;
 
 /** Les rôles qu'une policy a le droit de viser. `public` et `anon` : jamais. */
 const ALLOWED_POLICY_ROLES = new Set(["authenticated", "service_role"]);

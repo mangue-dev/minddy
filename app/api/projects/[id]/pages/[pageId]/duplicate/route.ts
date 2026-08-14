@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { duplicatePage } from "@/lib/server/pages";
+import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
@@ -23,6 +24,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
+
+  // Le geste le plus multiplicateur du wiki : une branche entière copiée par
+  // appel, corps compris. Plus serré que la création simple, pour la même
+  // raison qui le rend pratique (MIN-348).
+  const refused = rateLimitRefusal(auth.user.id, "page-duplicate", { limit: 10 });
+  if (refused) return refused;
 
   const result = await duplicatePage(pageId, auth.user.id);
   if (!result.ok) {

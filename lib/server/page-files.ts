@@ -10,6 +10,7 @@ import {
 } from "@/lib/page-files";
 import { resolveUploadedMimeType } from "@/lib/inline-safe";
 import { removeStorageObjects } from "@/lib/server/attachments";
+import { projectStorageAllowed } from "@/lib/server/storage-quota";
 
 /**
  * Les fichiers d'une page, côté serveur (MIN-280) : l'envoi, et le MÉNAGE.
@@ -83,6 +84,13 @@ export async function createPageFile(
   const size = args.data.byteLength;
   if (size === 0) throw new PageFileError("empty file", 400);
   if (size > MAX_PAGE_FILE_BYTES) throw new PageFileError("file too large", 413);
+
+  // Le quota du compte (MIN-348). Cette écriture-ci passe par le client de
+  // SERVICE, qui contourne la policy où le plafond est posé : sans ce relais,
+  // les fichiers de page seraient précisément la porte qui l'ignore.
+  if (!(await projectStorageAllowed(service, args.projectId))) {
+    throw new PageFileError("storage quota exceeded", 507);
+  }
 
   // Le type vient des OCTETS et non de l'annonce du navigateur (MIN-340) :
   // l'envoi d'un fichier de page passe par le serveur, donc on tient le contenu

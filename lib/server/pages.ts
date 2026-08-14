@@ -10,6 +10,7 @@ import {
   type Page,
   type PageWriteKind,
 } from "@/lib/pages";
+import { exceedsJsonDepth, MAX_PAGE_JSON_DEPTH } from "@/lib/json-depth";
 import { afterOrNow } from "@/lib/server/after-safe";
 import {
   notifyAgentPageWrite,
@@ -103,6 +104,7 @@ export type PageErrorKey =
   | "pageStale"
   | "pageNotEmpty"
   | "pageTooLarge"
+  | "pageTooDeep"
   | "noFieldsToUpdate"
   | "databaseError";
 
@@ -507,6 +509,9 @@ export async function createPage({
       : input.content;
 
   const content = readContent(raw);
+  if (content === "too-deep") {
+    return { ok: false, status: 400, errorKey: "pageTooDeep" };
+  }
   if (content === "too-large") {
     return { ok: false, status: 413, errorKey: "pageTooLarge" };
   }
@@ -728,6 +733,9 @@ export async function updatePage({
   if (typeof input.favorite === "boolean") patch.favorite = input.favorite;
 
   const content = readContent(input.content);
+  if (content === "too-deep") {
+    return { ok: false, status: 400, errorKey: "pageTooDeep" };
+  }
   if (content === "too-large") {
     return { ok: false, status: 413, errorKey: "pageTooLarge" };
   }
@@ -1217,10 +1225,16 @@ function readIcon(value: unknown): string | null {
  * `"too-large"` = refusé. Une valeur qui n'est pas un objet est ignorée plutôt
  * que refusée : c'est le même traitement qu'un statut inconnu ailleurs, et le
  * seul dommage possible est de ne pas écrire ce qu'on n'a pas su lire.
+ *
+ * La PROFONDEUR se mesure avant la taille, et l'ordre n'est pas cosmétique
+ * (MIN-348) : peser un document, c'est le sérialiser, et `JSON.stringify`
+ * descend l'arbre par la pile d'appels — sur un corps imbriqué dix mille fois,
+ * c'est le garde-fou qui tombe, pas ce qu'il devait arrêter.
  */
-function readContent(value: unknown): unknown | undefined | "too-large" {
+function readContent(value: unknown): unknown | undefined | "too-large" | "too-deep" {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== "object" || Array.isArray(value)) return undefined;
+  if (exceedsJsonDepth(value, MAX_PAGE_JSON_DEPTH)) return "too-deep";
   if (JSON.stringify(value).length > MAX_CONTENT_BYTES) return "too-large";
   return value;
 }

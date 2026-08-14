@@ -116,6 +116,22 @@ function cleanExcerpt(raw: string | null): string {
  * ne l'est pas, et `projectId` est alors obligatoire — la garde a été faite
  * avant, en TypeScript.
  */
+/**
+ * Le plafond de la chaîne cherchée (MIN-348).
+ *
+ * Elle part vers `websearch_to_tsquery` PUIS vers `ts_headline`, qui compare
+ * chaque lexème de la requête à chaque page candidate : le coût monte avec la
+ * longueur de ce qu'on tape, et rien ne bornait ce qu'un client peut envoyer.
+ * Deux cents caractères, c'est déjà plus long que toute recherche humaine — on
+ * TRONQUE plutôt que de refuser, parce qu'un collage accidentel doit rendre des
+ * résultats, pas une erreur.
+ */
+export const MAX_SEARCH_QUERY_LENGTH = 200;
+
+/** Le plafond du nombre de résultats — c'est le « 1–50 » que l'outil MCP
+    ANNONCE, et que son schéma ne faisait pas respecter (MIN-348). */
+export const MAX_SEARCH_LIMIT = 50;
+
 export async function runPageSearch(
   client: {
     rpc: (
@@ -130,9 +146,9 @@ export async function runPageSearch(
   }: { query: string; projectId?: string | null; limit?: number }
 ): Promise<{ ok: true; hits: PageSearchHit[] } | { ok: false }> {
   const { data, error } = await client.rpc("search_pages", {
-    p_query: query,
+    p_query: query.slice(0, MAX_SEARCH_QUERY_LENGTH),
     p_project_id: projectId,
-    p_limit: limit,
+    p_limit: Math.min(Math.max(1, Math.trunc(limit) || 1), MAX_SEARCH_LIMIT),
   });
   if (error) {
     console.error("[pages] search failed:", error.message);

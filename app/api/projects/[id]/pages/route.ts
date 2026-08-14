@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { createPage, listPages } from "@/lib/server/pages";
+import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -39,6 +40,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
+
+  // Créer une page écrit une ligne ET, en différé, monte un éditeur serveur
+  // pour en projeter le texte indexé : c'est la plus chère des écritures du
+  // wiki, et rien ne bornait la boucle qui en crée mille (MIN-348).
+  const refused = rateLimitRefusal(auth.user.id, "page-create", { limit: 30 });
+  if (refused) return refused;
 
   let body: unknown;
   try {

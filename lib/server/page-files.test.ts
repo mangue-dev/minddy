@@ -48,6 +48,8 @@ function fakeService(options: {
   pages?: { id: string; content: unknown }[];
   /** Faire échouer l'insertion de la ligne — la seule branche de rattrapage. */
   insertFails?: boolean;
+  /** Compte plein : ce que rend `project_storage_quota_ok` (MIN-348). */
+  quotaOk?: boolean;
 } = {}) {
   const files = options.files ?? [];
   const pages = options.pages ?? [];
@@ -143,8 +145,14 @@ function fakeService(options: {
     throw new Error(`table inattendue: ${table}`);
   };
 
+  // Le verdict de quota est en SQL ; le module n'en connaît que l'appel.
+  const rpc = async (name: string) => {
+    if (name !== "project_storage_quota_ok") throw new Error(`rpc inattendu: ${name}`);
+    return { data: options.quotaOk ?? true, error: null };
+  };
+
   return {
-    client: { from, storage } as unknown as SupabaseClient,
+    client: { from, storage, rpc } as unknown as SupabaseClient,
     files,
     uploaded,
     removed,
@@ -187,6 +195,16 @@ describe("createPageFile", () => {
     await expect(
       createPageFile(service.client, { ...args, data: Buffer.alloc(11 * 1024 * 1024) })
     ).rejects.toMatchObject({ status: 413 });
+    expect(service.uploaded).toEqual([]);
+  });
+
+  it("refuse quand le compte a rempli son quota, sans rien téléverser", async () => {
+    // Cette écriture-ci passe par le client de SERVICE, qui contourne la policy
+    // où le plafond est posé : sans ce relais, elle serait le trou (MIN-348).
+    const service = fakeService({ quotaOk: false });
+    await expect(createPageFile(service.client, args)).rejects.toMatchObject({
+      status: 507,
+    });
     expect(service.uploaded).toEqual([]);
   });
 

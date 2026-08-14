@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   BILLABLE_FEATURES,
@@ -86,6 +88,35 @@ describe("maxModelMultiplier", () => {
       const plan = BILLING_PLANS[i];
       if (plan.includedUsageUsd <= prev.includedUsageUsd) continue;
       expect(plan.maxModelMultiplier).toBeGreaterThan(prev.maxModelMultiplier);
+    }
+  });
+});
+
+/**
+ * MIN-348 — le plafond de stockage est le seul champ de plan que TypeScript
+ * n'applique pas : l'envoi part du navigateur droit vers le bucket, et c'est la
+ * policy SQL qui le refuse, en lisant `plan_storage_quotas`. Deux endroits pour
+ * un même nombre, donc, et une seule façon de les tenir d'accord : les comparer.
+ */
+describe("maxStorageBytes", () => {
+  const sql = readFileSync(
+    join(__dirname, "../supabase/migrations/20261229090000_storage_quota.sql"),
+    "utf8"
+  );
+
+  it("dit la même chose que le barème SQL de la migration", () => {
+    for (const plan of BILLING_PLANS) {
+      const seeded = new RegExp(`'${plan.id}',\\s*(\\d+)`).exec(sql);
+      expect(seeded, `le barème SQL ne connaît pas le plan ${plan.id}`).not.toBeNull();
+      expect(Number(seeded![1])).toBe(plan.maxStorageBytes);
+    }
+  });
+
+  it("monte avec le plan — un plan payant ne stocke jamais moins", () => {
+    for (let i = 1; i < BILLING_PLANS.length; i++) {
+      expect(BILLING_PLANS[i].maxStorageBytes).toBeGreaterThan(
+        BILLING_PLANS[i - 1].maxStorageBytes
+      );
     }
   });
 });

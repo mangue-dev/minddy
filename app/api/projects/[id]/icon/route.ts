@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { FaviconError } from "@/lib/server/favicon";
 import {
   clearProjectIcon,
@@ -42,6 +42,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   );
 
   if (isUpload) {
+    // La branche d'import est limitée depuis MIN-341 pour ses requêtes
+    // sortantes ; celle-ci l'est pour son CPU — 25 Mo décodés puis recompressés
+    // en WebP par appel, dans une fonction qui n'en fait rien d'autre (MIN-348).
+    const refused = rateLimitRefusal(auth.user.id, "icon-upload", { limit: 20 });
+    if (refused) return refused;
+
     let file: unknown;
     try {
       file = (await request.formData()).get("file");
@@ -87,13 +93,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   // Importer un favicon fait SORTIR une requête, et même plusieurs : la page,
   // puis chacune des icônes qu'elle déclare. La route est donc limitée en débit
   // comme link-preview, sur le même motif (MIN-341).
-  const rl = checkSessionRateLimit(auth.user.id, "icon-import", { limit: 10 });
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests", retry_after: rl.retryAfter },
-      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
-    );
-  }
+  const refusedImport = rateLimitRefusal(auth.user.id, "icon-import", { limit: 10 });
+  if (refusedImport) return refusedImport;
 
   try {
     const iconUrl = await importProjectIcon(id, siteUrl);

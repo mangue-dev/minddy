@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { authorizePrRequest, prAttachmentResponse } from "@/lib/server/agent/pr-actions";
+import {
+  authorizePrRequest,
+  prAttachmentResponse,
+  readUploadedFile,
+} from "@/lib/server/agent/pr-actions";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**
@@ -23,16 +27,10 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { prId } = await params;
 
-  let file: File | null = null;
-  try {
-    const form = await request.formData();
-    const entry = form.get("file");
-    if (entry instanceof File) file = entry;
-  } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
-  }
-  if (!file) return NextResponse.json({ error: "File required" }, { status: 400 });
-
+  // L'AUTORISATION D'ABORD (MIN-348). Lire le multipart, c'est ramener tout le
+  // corps en mémoire : le faire avant de savoir qui appelle offre à un anonyme
+  // la mémoire d'une fonction, autant de fois qu'il le veut, pour une requête
+  // qui finira en 401. L'ordre est le même sur la façade par run.
   const auth = await authorizePrRequest(request, prId);
   if (!auth.ok) return auth.response;
   // Même garde que les pièces jointes de ticket : la destination est un bucket
@@ -45,5 +43,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
     );
   }
+
+  const file = await readUploadedFile(request);
+  if (!file) return NextResponse.json({ error: "File required" }, { status: 400 });
   return prAttachmentResponse(auth.scope, file);
 }

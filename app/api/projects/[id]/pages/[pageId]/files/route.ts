@@ -6,6 +6,7 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { MAX_PAGE_FILE_BYTES, pageFileUrl } from "@/lib/page-files";
 import { createPageFile, PageFileError } from "@/lib/server/page-files";
+import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
@@ -34,6 +35,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!(await getProjectAccess(auth.user.id, projectId))) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
+
+  // Dix mégaoctets par appel, ramenés EN MÉMOIRE le temps de la requête : sans
+  // débit borné, une boucle suffit à remplir la fonction et le bucket (MIN-348).
+  // La garde est posée avant de lire le corps multipart, sinon elle arrive après
+  // la dépense qu'elle devait éviter.
+  const refused = rateLimitRefusal(auth.user.id, "page-file-upload", { limit: 20 });
+  if (refused) return refused;
 
   const service = getServiceClient();
   const { data: page } = await service
@@ -93,7 +101,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           ? "pageFileTooLarge"
           : e.status === 400
             ? "pageFileEmpty"
-            : "databaseError";
+            : e.status === 507
+              ? "storageQuotaFull"
+              : "databaseError";
       console.error("[api/pages/:id/files] upload failed:", e.message);
       return NextResponse.json({ error: t(key) }, { status: e.status });
     }

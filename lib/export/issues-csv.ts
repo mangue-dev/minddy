@@ -149,10 +149,36 @@ export const MAX_EXPORT_ISSUES = 20000;
 
 // ── Écriture ────────────────────────────────────────────────────────────────
 
-/** RFC 4180 : on ne met des guillemets que s'il en faut, et on double les siens. */
+/**
+ * Les premiers caractères qui font d'une cellule une FORMULE à l'ouverture.
+ *
+ * Excel, LibreOffice et Google Sheets lisent `=`, `+`, `-` et `@` en tête de
+ * cellule comme le début d'un calcul — et une formule s'exécute à l'ouverture
+ * du fichier, sans que personne ait cliqué. Une tabulation ou un retour chariot
+ * les rejoignent : ils sont mangés au parsing, et c'est le caractère suivant qui
+ * se retrouve en tête.
+ *
+ * Le contenu vient d'un titre ou d'une description de ticket, donc de
+ * n'importe qui ayant accès au projet : `=HYPERLINK(...)` dans un titre suffit à
+ * transformer l'export d'un collègue en piège (MIN-348).
+ */
+const FORMULA_LEAD = /^[=+\-@\t\r]/;
+
+/**
+ * L'apostrophe qui neutralise une formule. C'est la convention des tableurs
+ * eux-mêmes : ils l'écrivent à l'export et la mangent à la lecture, et
+ * `lib/import/normalize.ts` fait pareil — c'est ce qui garde l'aller-retour
+ * intact sur une description qui commence par une puce markdown.
+ */
+export const FORMULA_GUARD = "'";
+
+/** RFC 4180 : on ne met des guillemets que s'il en faut, et on double les siens.
+    Une cellule qu'un tableur lirait comme une formule est neutralisée d'abord,
+    et se retrouve donc toujours entre guillemets. */
 function csvCell(value: string): string {
-  if (!/[",\r\n]/.test(value) && value === value.trim()) return value;
-  return `"${value.replace(/"/g, '""')}"`;
+  const safe = FORMULA_LEAD.test(value) ? `${FORMULA_GUARD}${value}` : value;
+  if (!/[",\r\n]/.test(safe) && safe === value && safe === safe.trim()) return safe;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 /**
@@ -212,6 +238,9 @@ export function issuesCsvDoc(): IssuesCsvDoc {
     rules: [
       "RFC 4180: comma-separated, CRLF line endings, quotes doubled inside quoted cells.",
       "UTF-8 with a leading BOM, so spreadsheets read accents correctly.",
+      "A cell starting with =, +, -, @, a tab or a carriage return is prefixed with a " +
+        "single quote, the spreadsheet convention that keeps it text instead of a formula. " +
+        "Strip that leading quote when reading the value back — minddy's own importer does.",
       "The header row is always present, and the columns always come in the order above — " +
         "an export scoped to a single project still carries the Project column.",
       "Rows are ordered by project, then by issue number ascending.",

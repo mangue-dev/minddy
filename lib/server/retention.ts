@@ -3,7 +3,11 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { attachmentPaths, type TrashType } from "@/lib/server/trash";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
-import { removeStorageObjects } from "@/lib/server/attachments";
+import {
+  ORPHAN_ATTACHMENT_DAYS,
+  removeStorageObjects,
+  sweepOrphanAttachments,
+} from "@/lib/server/attachments";
 import {
   ORPHAN_PAGE_FILE_DAYS,
   sweepOrphanPageFiles,
@@ -101,6 +105,14 @@ export const RETENTION_DAYS = {
    * semaine couvre tous ces retours ; au-delà, plus personne ne revient.
    */
   orphanPageFiles: ORPHAN_PAGE_FILE_DAYS,
+  /**
+   * Objets du bucket `attachments` ORPHELINS (MIN-348) : téléversés en direct
+   * par le navigateur, puis jamais enregistrés — un composeur fermé, un onglet
+   * perdu. Même nature et même délai de grâce que les fichiers de page : ce
+   * n'est pas une durée de conservation, c'est le temps qu'on laisse à une
+   * ressource pour être finalement rattachée.
+   */
+  orphanAttachments: ORPHAN_ATTACHMENT_DAYS,
 } as const;
 
 export type RetentionKey = keyof typeof RETENTION_DAYS;
@@ -395,6 +407,11 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
     // deux fois les mêmes octets dans le rapport du cron.
     await step("orphan_page_files", () =>
       sweepOrphanPageFiles(service, cutoff(RETENTION_DAYS.orphanPageFiles, now))
+    ),
+    // Comme le balayage des fichiers de page, et pour la même raison : AVANT la
+    // corbeille, qui emporte elle-même les objets des lignes qu'elle purge.
+    await step("orphan_attachments", () =>
+      sweepOrphanAttachments(service, cutoff(RETENTION_DAYS.orphanAttachments, now))
     ),
     await step("trash", () => purgeTrash(service, now)),
   ];

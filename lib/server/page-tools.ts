@@ -94,6 +94,7 @@ const CODES: Record<PageErrorKey, PageToolCode> = {
   pageStale: "page_stale",
   pageNotEmpty: "page_not_empty",
   pageTooLarge: "page_too_large",
+  pageTooDeep: "page_too_large",
   noFieldsToUpdate: "invalid_params",
   databaseError: "database_error",
 };
@@ -114,6 +115,8 @@ const MESSAGES: Record<PageErrorKey, string> = {
     "Refused: that page is no longer empty. Only a page created and left blank " +
     "can be discarded; move a written page to the trash instead.",
   pageTooLarge: "The page body is too large; split it into subpages.",
+  pageTooDeep:
+    "The page body nests blocks too deeply; flatten it or split it into subpages.",
   noFieldsToUpdate: "Nothing to update: pass a title, an icon or a markdown body.",
   databaseError: "Database error.",
 };

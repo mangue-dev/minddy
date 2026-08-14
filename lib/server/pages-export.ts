@@ -31,6 +31,9 @@ export type PageExportResult =
   | { ok: true; fileName: string; contentType: string; body: Uint8Array }
   | { ok: false; status: number; errorKey: "pageNotFound" | "databaseError" };
 
+/** Combien de corps de page une lecture ramène à la fois (MIN-348). */
+const BODY_BATCH = 50;
+
 interface PageRow {
   id: string;
   parent_id: string | null;
@@ -84,9 +87,15 @@ export async function exportPage({
     };
   }
 
-  const { data, error } = await service
+  // Deux lectures, et c'est la borne du sujet (MIN-348). La première ne prend
+  // que le SQUELETTE — de quoi savoir qui descend de qui —, parce que la
+  // branche demandée peut être une page sur mille et qu'il n'y a aucune raison
+  // de faire descendre le corps des neuf cent quatre-vingt-dix-neuf autres. La
+  // seconde ne va chercher les corps que de la branche, et par lots : c'est
+  // aussi ce qui borne la taille d'UNE réponse PostgREST.
+  const { data: skeleton, error } = await service
     .from("pages")
-    .select("id, parent_id, title, icon, content, position")
+    .select("id, parent_id, title, icon, position")
     .eq("project_id", root.project_id as string)
     .is("deleted_at", null)
     .order("position", { ascending: true });
@@ -94,11 +103,32 @@ export async function exportPage({
     console.error("[pages-export] list failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  const all = (data ?? []) as unknown as PageRow[];
+  const all = (skeleton ?? []) as unknown as Omit<PageRow, "content">[];
   const inBranch = new Set([rootRow.id, ...descendantIds(all, rootRow.id)]);
+  const branchPages = all.filter((p) => inBranch.has(p.id));
+
+  const bodies = new Map<string, unknown>([[rootRow.id, rootRow.content]]);
+  for (let i = 0; i < branchPages.length; i += BODY_BATCH) {
+    const ids = branchPages
+      .slice(i, i + BODY_BATCH)
+      .map((p) => p.id)
+      .filter((id) => id !== rootRow.id);
+    if (ids.length === 0) continue;
+    const { data: rows, error: bodyError } = await service
+      .from("pages")
+      .select("id, content")
+      .in("id", ids);
+    if (bodyError) {
+      console.error("[pages-export] bodies failed:", bodyError.message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    for (const row of (rows ?? []) as { id: string; content: unknown }[]) {
+      bodies.set(row.id, row.content);
+    }
+  }
 
   const pages: ExportInputPage[] = [];
-  for (const page of all.filter((p) => inBranch.has(p.id))) {
+  for (const page of branchPages) {
     pages.push({
       id: page.id,
       // La racine de l'ARCHIVE est la page exportée : son parent réel n'a rien
@@ -109,7 +139,7 @@ export async function exportPage({
       markdown: await pageToMarkdownServer({
         title: page.title,
         icon: page.icon,
-        content: (page.content ?? null) as never,
+        content: (bodies.get(page.id) ?? null) as never,
       }),
     });
   }

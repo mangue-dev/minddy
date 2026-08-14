@@ -44,6 +44,11 @@ describe("RETENTION_DAYS", () => {
       90,
       "participants de board sans contribution : 90 jours",
     ],
+    [
+      "orphanAttachments",
+      7,
+      "objets téléversés puis jamais rattachés : 7 jours de grâce (MIN-348)",
+    ],
   ] as const)("%s vaut %i jours — %s", (key, days, _promise) => {
     expect(RETENTION_DAYS[key]).toBe(days);
   });

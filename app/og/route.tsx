@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { getClientIp } from "@/lib/server/request-ip";
+import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { MINDDY_LOGO_PATH, MINDDY_LOGO_VIEWBOX } from "@/lib/brand";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
@@ -42,9 +44,38 @@ function parseParams(request: NextRequest): { key: PublicRouteKey; locale: Local
   };
 }
 
+/**
+ * Combien de vignettes une même adresse IP peut faire RENDRE par minute.
+ *
+ * Le rendu satori d'un PNG de 1200×630 est, de loin, le calcul le plus cher que
+ * cette application offre sans authentification. La borne est haute parce que
+ * les scrapers légitimes (Slack, X, un client mail) tapent en rafale sur les
+ * douze adresses canoniques — mais elle existe, ce qui n'était pas le cas.
+ */
+const OG_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
+
 export async function GET(request: NextRequest) {
   const { key, locale } = parseParams(request);
   const route = routeByKey(key);
+
+  // La CLÉ DE CACHE, d'abord (MIN-348). Le contenu ne dépend que de deux
+  // paramètres, mais le CDN, lui, indexe sur l'URL entière : `?route=home&x=1`,
+  // `&x=2`, `&x=3`… sont autant d'entrées neuves, donc autant de rendus. Une
+  // adresse non canonique est donc renvoyée vers la canonique — 308, sans
+  // rendre l'image — et il ne reste qu'une douzaine d'URLs à rendre pour tout
+  // le site. Le limiteur ci-dessous ne garde plus que ces douze-là.
+  const canonical = `route=${key}&locale=${locale}`;
+  if (request.nextUrl.search.replace(/^\?/, "") !== canonical) {
+    const target = new URL(request.nextUrl);
+    target.search = canonical;
+    return NextResponse.redirect(target, {
+      status: 308,
+      headers: { "Cache-Control": "public, max-age=3600, s-maxage=86400" },
+    });
+  }
+
+  const refused = rateLimitRefusal(`ip:${getClientIp(request)}`, "og", OG_RATE_LIMIT);
+  if (refused) return refused;
 
   const messages = (await import(`../../messages/${locale}.json`)).default as Record<
     string,

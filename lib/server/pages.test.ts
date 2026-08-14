@@ -486,6 +486,25 @@ describe("updatePage", () => {
     expect(rowOf(sibling).parent_id).toBe(a);
   });
 
+  it("REFUSE un corps trop profond, là où le peser faisait tomber la requête", async () => {
+    // Le garde-fou de taille était `JSON.stringify(content).length` : sur ce
+    // document-ci il lève un RangeError avant d'avoir pu peser quoi que ce soit,
+    // et c'est la requête entière qui tombait (MIN-348).
+    const id = await create("A");
+    let bomb: unknown = {};
+    for (let i = 0; i < 100_000; i++) bomb = { type: "doc", content: [bomb] };
+
+    const result = await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      input: { content: bomb },
+    });
+
+    expect(result).toMatchObject({ ok: false, status: 400, errorKey: "pageTooDeep" });
+    // Rien n'a été écrit : la page garde sa version.
+    expect(rowOf(id).version).toBe(1);
+  });
+
   it("refuse une requête qui ne demande rien", async () => {
     const id = await create("A");
     const result = await updatePage({ pageId: id, actorId: ACTOR, input: {} });

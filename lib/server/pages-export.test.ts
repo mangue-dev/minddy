@@ -25,6 +25,11 @@ const rows = {
 
 let access: unknown = { isOwner: true };
 
+/** Ce que la base a été priée de rendre — l'objet du contrôle de MIN-348 : la
+    liste du projet ne demande PAS les corps, et ceux-ci ne sont lus que pour la
+    branche. */
+const reads = { selects: [] as string[], bodyIds: [] as string[][] };
+
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async () => access,
 }));
@@ -37,16 +42,26 @@ vi.mock("@/lib/server/pages-projection", () => ({
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: () => ({
-      select: () => ({
-        eq: (column: string) =>
-          column === "id"
-            ? { is: () => ({ maybeSingle: async () => ({ data: rows.root }) }) }
-            : {
-                is: () => ({
-                  order: async () => ({ data: rows.list, error: null }),
-                }),
-              },
-      }),
+      select: (columns: string) => {
+        reads.selects.push(columns);
+        return {
+          eq: (column: string) =>
+            column === "id"
+              ? { is: () => ({ maybeSingle: async () => ({ data: rows.root }) }) }
+              : {
+                  is: () => ({
+                    order: async () => ({ data: rows.list, error: null }),
+                  }),
+                },
+          in: async (_column: string, ids: string[]) => {
+            reads.bodyIds.push(ids);
+            return {
+              data: rows.list.filter((p) => ids.includes(p.id as string)),
+              error: null,
+            };
+          },
+        };
+      },
     }),
   }),
 }));
@@ -105,6 +120,26 @@ describe("exportPage", () => {
     // La racine de l'archive est la page exportée : son parent réel, qui n'est
     // pas de la branche, ne la fait pas descendre d'un cran.
     expect(Object.keys(entries).every((p) => p.startsWith("Guide/"))).toBe(true);
+  });
+
+  it("ne charge le corps que des pages de la branche", async () => {
+    access = { isOwner: true };
+    rows.list = branchRows();
+    reads.selects = [];
+    reads.bodyIds = [];
+    const result = await exportPage({ pageId: "root", actorId: "u", branch: true });
+    expect(result.ok).toBe(true);
+
+    // La liste du projet est un SQUELETTE : sans elle, exporter une page d'un
+    // wiki de mille documents en chargeait mille corps (MIN-348).
+    const listSelect = reads.selects.find(
+      (s) => s.includes("parent_id") && !s.includes("project_id")
+    );
+    expect(listSelect).toBeDefined();
+    expect(listSelect).not.toContain("content");
+    // Et les corps demandés sont ceux de la branche, la racine exceptée (elle
+    // est déjà lue). La voisine n'y est pas.
+    expect(reads.bodyIds.flat()).toEqual(["kid"]);
   });
 
   it("répond 404 à qui n'a pas accès au projet — jamais 403", async () => {

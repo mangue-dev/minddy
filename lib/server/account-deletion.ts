@@ -102,31 +102,47 @@ export interface DeletionResult {
   warnings: string[];
 }
 
-/** Liste récursivement les objets d'un préfixe (l'API Storage ne descend pas). */
+/** Ce qu'une page de `list()` ramène au plus (plafond de l'API Storage). */
+const LIST_PAGE = 1000;
+
+/**
+ * Liste récursivement les objets d'un préfixe (l'API Storage ne descend pas).
+ *
+ * PAGINÉ, et c'est la moitié qui manquait (MIN-348) : `list()` s'arrête à mille
+ * entrées et ne dit pas qu'il en reste — un dossier plus fourni que ça laissait
+ * donc des objets derrière, silencieusement, au moment précis où on efface un
+ * compte. On redemande tant qu'une page revient pleine.
+ */
 async function listPrefix(
   service: Service,
   bucket: string,
   prefix: string,
   depth = 0
 ): Promise<string[]> {
-  // Garde-fou : une arborescence de pièces jointes est plate ou presque, une
-  // récursion sans borne n'aurait ici qu'une cause — une boucle.
-  if (depth > 3) return [];
-
-  const { data, error } = await service.storage.from(bucket).list(prefix, { limit: 1000 });
-  if (error || !data) return [];
+  // Garde-fou : une arborescence de pièces jointes est plate ou presque
+  // (`projects/{id}/{uuid}/{fichier}` = quatre niveaux depuis la racine), une
+  // récursion plus profonde n'aurait ici qu'une cause — une boucle.
+  if (depth > 4) return [];
 
   const paths: string[] = [];
-  for (const entry of data) {
-    const full = prefix ? `${prefix}/${entry.name}` : entry.name;
-    // Un « dossier » Storage est une entrée sans métadonnées.
-    if (entry.id === null || entry.metadata === null) {
-      paths.push(...(await listPrefix(service, bucket, full, depth + 1)));
-    } else {
-      paths.push(full);
+  for (let offset = 0; ; offset += LIST_PAGE) {
+    const { data, error } = await service.storage
+      .from(bucket)
+      .list(prefix, { limit: LIST_PAGE, offset });
+    if (error || !data) return paths;
+
+    for (const entry of data) {
+      const full = prefix ? `${prefix}/${entry.name}` : entry.name;
+      // Un « dossier » Storage est une entrée sans métadonnées.
+      if (entry.id === null || entry.metadata === null) {
+        paths.push(...(await listPrefix(service, bucket, full, depth + 1)));
+      } else {
+        paths.push(full);
+      }
     }
+
+    if (data.length < LIST_PAGE) return paths;
   }
-  return paths;
 }
 
 /** Supprime un lot d'objets, sans jamais faire échouer l'effacement du compte. */

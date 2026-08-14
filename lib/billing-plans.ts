@@ -44,6 +44,21 @@ export interface BillingPlan {
    * où ça arrive, ces trois nombres se rejouent contre le nouveau baseline.
    */
   maxModelMultiplier: number;
+  /**
+   * Les OCTETS que les projets de ce compte peuvent tenir dans le storage —
+   * pièces jointes de ticket et fichiers de page confondus (MIN-348).
+   *
+   * Le seul plafond du produit que TypeScript ne fait pas respecter : l'envoi
+   * part du navigateur DIRECTEMENT vers le bucket, avec le JWT de son auteur, et
+   * ne traverse aucune de nos routes. C'est donc la policy `attachments insert`
+   * (migration 20261229090000) qui l'applique, en lisant la table
+   * `plan_storage_quotas`. Ces trois nombres et cette table-là doivent dire la
+   * même chose — `lib/billing-plans.test.ts` le vérifie en lisant le SQL.
+   *
+   * L'imputation suit celle de l'usage IA : ce qui compte, c'est le OWNER du
+   * projet où le fichier atterrit, pas le membre qui l'a déposé.
+   */
+  maxStorageBytes: number;
   /** null = illimité. */
   maxProjects: number | null;
   /** null = illimité. */
@@ -72,6 +87,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     priceEurMonthly: 0,
     includedUsageUsd: 0.5,
     maxModelMultiplier: 5,
+    maxStorageBytes: 1 * 1024 * 1024 * 1024, // 1 Go
     maxProjects: 2,
     maxIssuesPerProject: 300,
     allowAgents: false,
@@ -82,6 +98,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     priceEurMonthly: 8,
     includedUsageUsd: 5,
     maxModelMultiplier: 15,
+    maxStorageBytes: 20 * 1024 * 1024 * 1024, // 20 Go
     maxProjects: null,
     maxIssuesPerProject: null,
     allowAgents: true,
@@ -93,6 +110,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     priceEurMonthly: 20,
     includedUsageUsd: 15,
     maxModelMultiplier: 40,
+    maxStorageBytes: 100 * 1024 * 1024 * 1024, // 100 Go
     maxProjects: null,
     maxIssuesPerProject: null,
     allowAgents: true,

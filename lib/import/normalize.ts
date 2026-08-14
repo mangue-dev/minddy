@@ -30,11 +30,23 @@ export const normalizeToken = (value: string): string =>
     .replace(/\s+/g, " ")
     .trim();
 
+/**
+ * L'apostrophe de tête qu'un tableur (et notre propre export, MIN-348) pose
+ * devant une cellule que sa première lettre ferait passer pour une formule.
+ *
+ * On la retire à la lecture, exactement comme le tableur la retire à
+ * l'affichage : sans ça, une description qui commence par une puce markdown
+ * (`- …`) reviendrait d'un aller-retour avec une apostrophe en plus. Elle n'est
+ * retirée que devant l'un de ces caractères-là — une vraie apostrophe de texte
+ * (`'tis`) n'y ressemble pas et ne bouge pas.
+ */
+const ESCAPED_FORMULA = /^'(?=[=+\-@\t\r])/;
+
 /** All non-empty values of a row across these column indexes, in file order. */
 export function cells(row: string[], indexes: number[]): string[] {
   const values: string[] = [];
   for (const i of indexes) {
-    const value = (row[i] ?? "").trim();
+    const value = (row[i] ?? "").trim().replace(ESCAPED_FORMULA, "");
     if (value) values.push(value);
   }
   return values;

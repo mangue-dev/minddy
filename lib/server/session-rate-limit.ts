@@ -4,7 +4,13 @@
  *
  * This is intentionally in-memory: it resets on deploy, which is acceptable
  * for session-based routes.
+ *
+ * The key is a user id on authenticated routes, and `ip:<addr>`
+ * (`lib/server/request-ip.ts`) on the anonymous ones — a per-user window means
+ * nothing where there is no user.
  */
+
+import { NextResponse } from "next/server";
 
 const DEFAULT_WINDOW_MS = 60_000; // 1 minute
 
@@ -60,4 +66,25 @@ export function checkSessionRateLimit(
   }
 
   return { allowed: true, retryAfter: 0 };
+}
+
+/**
+ * Le limiteur ET son refus, en un appel : `null` = passe, sinon la 429 à rendre.
+ *
+ * La même dizaine de lignes était recopiée route par route (MIN-348 en a
+ * branché huit de plus) ; une garde qu'on recopie est une garde qu'on finit par
+ * poser à moitié — sans l'en-tête `Retry-After`, ou après le travail coûteux
+ * qu'elle devait éviter.
+ */
+export function rateLimitRefusal(
+  key: string,
+  routeKey: string,
+  config?: SessionRateLimitConfig
+): NextResponse | null {
+  const rate = checkSessionRateLimit(key, routeKey, config);
+  if (rate.allowed) return null;
+  return NextResponse.json(
+    { error: "Too many requests", retry_after: rate.retryAfter },
+    { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+  );
 }

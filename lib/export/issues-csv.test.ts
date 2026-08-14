@@ -51,6 +51,24 @@ describe("issues CSV export", () => {
     expect(body).toContain(",in_progress,urgent,s,");
   });
 
+  it("neutralises a cell a spreadsheet would run as a formula", () => {
+    // Le contenu vient d'un titre de ticket, donc de n'importe quel membre du
+    // projet : sans cette apostrophe, ouvrir l'export d'un collègue exécute ce
+    // qu'il a écrit (MIN-348).
+    const csv = buildIssuesCsv([
+      row({ title: '=HYPERLINK("http://evil","cliquez")', description: "- une puce" }),
+    ]);
+    const body = csv.split("\r\n")[1];
+    expect(body).toContain(`"'=HYPERLINK(""http://evil"",""cliquez"")"`);
+    // `-`, `+`, `@`, tabulation et retour chariot suivent la même règle.
+    expect(body).toContain(`"'- une puce"`);
+
+    for (const lead of ["+1", "@SUM(A1)", "\tcaché", "\rcaché"]) {
+      const cell = buildIssuesCsv([row({ title: lead })]).split("\r\n")[1];
+      expect(cell).toContain(`"'${lead}"`);
+    }
+  });
+
   it("names the file after the project it covers", () => {
     expect(exportFileName("MIN", "2026-08-04")).toBe("minddy-issues-min-2026-08-04.csv");
     expect(exportFileName(null, "2026-08-04")).toBe("minddy-issues-2026-08-04.csv");
@@ -125,6 +143,16 @@ describe("minddy export, read back by minddy", () => {
 
     expect(third.parentExternalKey).toBe("MIN-1");
     expect(result.warnings).toEqual([]);
+  });
+
+  it("gives back the text, not the apostrophe that protected it", () => {
+    // L'échappement anti-formule ne doit pas survivre à l'aller-retour : une
+    // description qui commence par une puce markdown revient telle quelle.
+    const csv = buildIssuesCsv([row({ title: "=1+1", description: "- une puce" })]);
+    const read = mapCsvToIssues(csv, undefined, TEAM);
+    if (!read.ok) throw new Error(`expected ok, got ${read.error}`);
+    expect(read.issues[0].title).toBe("=1+1");
+    expect(read.issues[0].description).toBe("- une puce");
   });
 
   it("does not carry the departure project's context into the arrival one", () => {

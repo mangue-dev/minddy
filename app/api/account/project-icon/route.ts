@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { FaviconError, resolveFavicon } from "@/lib/server/favicon";
 import {
   compressIconFile,
@@ -36,6 +36,11 @@ export async function POST(request: NextRequest) {
   );
 
   if (isUpload) {
+    // Même garde que la route projet : la compression d'une image est le seul
+    // travail de cet appel, et il est borné en débit (MIN-348).
+    const refused = rateLimitRefusal(auth.user.id, "icon-upload", { limit: 20 });
+    if (refused) return refused;
+
     let file: unknown;
     try {
       file = (await request.formData()).get("file");
@@ -79,13 +84,8 @@ export async function POST(request: NextRequest) {
 
   // Même motif que la route projet : une requête entrante en fait sortir
   // plusieurs (la page, puis ses icônes), donc un débit borné (MIN-341).
-  const rl = checkSessionRateLimit(auth.user.id, "icon-import", { limit: 10 });
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests", retry_after: rl.retryAfter },
-      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
-    );
-  }
+  const refusedImport = rateLimitRefusal(auth.user.id, "icon-import", { limit: 10 });
+  if (refusedImport) return refusedImport;
 
   try {
     const icon = await resolveFavicon(siteUrl);

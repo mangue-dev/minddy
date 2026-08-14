@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isInlineSafeMimeType, resolveUploadedMimeType } from "@/lib/inline-safe";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { projectStorageAllowed } from "@/lib/server/storage-quota";
 import type {
   Attachment,
   LinkResourceInput,
@@ -183,6 +184,11 @@ export async function uploadAttachment(
   // C'est ce type-là qui part dans l'entête de l'objet ET dans la ligne, pour
   // que les deux disent la même chose au moment de servir.
   const mime = resolveUploadedMimeType(args.mimeType, args.data).slice(0, 120);
+  // Le quota du compte (MIN-348) : cet envoi-ci part du client de SERVICE, qui
+  // ne voit pas la policy où le plafond est posé.
+  if (!(await projectStorageAllowed(service, args.projectId))) {
+    throw new Error("attachment upload refused: storage quota exceeded");
+  }
   const path = `projects/${args.projectId}/${crypto.randomUUID()}/${sanitizeKeyPart(
     args.fileName
   )}`;
@@ -672,4 +678,59 @@ export async function removeStorageObjects(
   } catch (e) {
     console.error("[attachments] storage cleanup failed:", (e as Error).message);
   }
+}
+
+/** Le délai de grâce d'un objet orphelin du bucket `attachments` (MIN-348).
+    Aligné sur celui des fichiers de page (ORPHAN_PAGE_FILE_DAYS) : c'est le même
+    genre d'accident — un envoi qui a réussi et une ligne qui n'est jamais
+    venue — et deux délais différents pour un même phénomène seraient deux
+    choses à retenir au lieu d'une. */
+export const ORPHAN_ATTACHMENT_DAYS = 7;
+
+/**
+ * Les objets du bucket que plus aucune ligne ne désigne, passé le délai.
+ *
+ * L'envoi d'une pièce jointe est DIRECT-TO-STORAGE : les octets partent du
+ * navigateur avant que la ressource soit enregistrée, et tout ce qui se passe
+ * entre les deux — un composeur fermé, un onglet perdu, une création annulée —
+ * laisse l'objet seul dans le bucket. Personne ne le montrait plus, personne ne
+ * le comptait, et rien ne le supprimait.
+ *
+ * Le tri est en SQL (`orphan_attachment_objects`) : la table des objets vit dans
+ * le schéma `storage`, que PostgREST n'expose pas, et « ce chemin n'est cité
+ * nulle part » est exactement ce qu'un anti-jointure sait faire et pas nous.
+ *
+ * Lot borné comme les autres purges du balayage nocturne ; le lendemain reprend
+ * la suite. Rend le nombre d'objets réellement effacés.
+ */
+export async function sweepOrphanAttachments(
+  service: SupabaseClient,
+  before: string,
+  limit = 500
+): Promise<number> {
+  const { data, error } = await service.rpc("orphan_attachment_objects", {
+    p_before: before,
+    p_limit: limit,
+  });
+  if (error) throw new Error(error.message);
+
+  const paths = ((data ?? []) as { name: string }[]).map((row) => row.name);
+  if (paths.length === 0) return 0;
+
+  // Pas `removeStorageObjects` : sa relecture « ce chemin est-il encore cité ? »
+  // vient d'être faite par la requête ci-dessus, sur les deux tables et en une
+  // fois. La refaire chemin par chemin coûterait la moitié du balayage.
+  let removed = 0;
+  for (let i = 0; i < paths.length; i += 100) {
+    const chunk = paths.slice(i, i + 100);
+    const { error: removeError } = await service.storage
+      .from("attachments")
+      .remove(chunk);
+    if (removeError) {
+      console.error("[attachments] orphan sweep failed:", removeError.message);
+      break;
+    }
+    removed += chunk.length;
+  }
+  return removed;
 }
