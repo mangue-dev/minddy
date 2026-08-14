@@ -11,8 +11,7 @@ import { AGENT_ENGINE, type AgentEngine } from "@/lib/agent-engines";
 // Type SEUL (donc effacé à la compilation) : `launch.ts` importe ce module, la
 // dépendance ne doit pas exister à l'exécution.
 import type { AgentLaunchIntent } from "./launch";
-import type { AgentChatMessage, AgentEventType } from "./agent-loop";
-import type { SubagentRecord } from "./subagent";
+import type { AgentChatMessage, AgentEventType } from "./agent-contract";
 import { broadcastRunEvent } from "./live";
 import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
@@ -93,22 +92,6 @@ export interface AgentCheckpoint {
    * re-serve jamais un `AGENTS.md` que le modèle a déjà lu.
    */
   instructions?: { paths: string[]; bytes: number };
-  /**
-   * Sous-agents de ce run (MIN-112), records sérialisés — rapport capé à
-   * `SUBAGENT_RECORD_REPORT_MAX_CHARS`. C'est ce qui permet à `agent_status` et
-   * `list_agents` de répondre HONNÊTEMENT après un suspend, au lieu de dire
-   * « inconnu » sur un sous-agent que l'agent vient de lancer. Un record restauré
-   * n'est plus rattaché à rien (une promesse ne survit pas à la fin d'une fonction
-   * Vercel) : `Subagents.restore` le déclare coupé et déjà livré.
-   */
-  subagents?: SubagentRecord[];
-  /**
-   * Le tour est GARÉ en attente de ses sous-agents (MIN-112) : le parent a déjà
-   * répondu, une fille suspendue reprendra au chunk suivant. Sans ce drapeau, le
-   * chunk repris ferait parler le modèle pour rien — un aller-retour payant par
-   * chunk d'attente, juste pour lui faire redire qu'il attend.
-   */
-  parkedForSubagents?: boolean;
   /**
    * Commentaires de ligne déjà posés par CE run sur sa pull request (MIN-168).
    * Le plafond est « 5 par run », pas « 5 par tour » : le compteur doit donc

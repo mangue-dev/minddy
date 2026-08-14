@@ -1,5 +1,5 @@
-import type { EmitAgentLive } from "./agent-loop";
-import type { AgentLiveEdit } from "./exec-tool";
+import type { EmitAgentLive } from "./agent-contract";
+import type { AgentLiveEdit } from "./agent-contract";
 import { CHANGED_FILES_CAP } from "./repo-host";
 
 /**

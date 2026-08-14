@@ -17,11 +17,13 @@ import { describe, expect, it } from "vitest";
  *     `loop_in_vm` est lue par les balayeurs (`reapDeadVmRuns` la veut vraie,
  *     `requeueStuckRuns` la veut fausse) : une ligne qui dirait `false` en jouant
  *     dans la VM se ferait voler son claim et ne serait jamais constatée morte.
- *  2. **Le moteur voyage jusqu'à la VM**, tel qu'il a été écrit à la création — un
- *     run déjà en vol garde le sien, et les deux moteurs ne relisent pas leur
- *     mémoire dans le même champ du checkpoint.
- *  3. **`vm/main.ts` aiguille sur ce champ**, et un job `opencode` sans son entrée
- *     LÈVE plutôt que de poster un tour vide.
+ *  2. **La fonction compose l'entrée d'opencode** — ancrage et prompt — et
+ *     rassemble la mémoire du tour précédent depuis `agent_run_journal`.
+ *  3. **`vm/main.ts` lève** plutôt que de poster un tour sans son entrée.
+ *
+ * Depuis la suppression de la boucle maison (2026-08-14), il n'y a plus de moteur
+ * à choisir : `agent_engine` reste écrite sur la ligne pour DIRE qui a joué un
+ * run, elle ne décide plus de rien.
  */
 
 function read(file: string): string {
@@ -50,30 +52,26 @@ describe("createRun écrit le moteur du run, sans drapeau", () => {
 describe("execute.ts passe le moteur et son entrée à la microVM", () => {
   const source = read("execute.ts");
 
-  it("recopie le moteur du run sur le job", () => {
-    expect(source).toContain("engine: effectiveEngine(run)");
-  });
-
-  it("laisse un checkpoint de la BOUCLE finir sur la boucle, quoi que dise la ligne", () => {
-    // Le cas réel : entre la migration (défaut `opencode`) et le déploiement de ce
-    // code, la prod tournait encore la boucle maison, qui n'écrit pas la colonne.
-    // Ces runs portent donc `opencode` sur leur ligne et une conversation de boucle
-    // dans leur checkpoint — repris chez opencode, ils repartiraient avec un journal
-    // vide, c'est-à-dire sans leur conversation, et sans que rien ne le dise.
-    expect(source).toContain("if (saved?.messages?.length && !saved.opencode) return");
-  });
-
-  it("compose l'ancrage et le prompt pour opencode, et pas pour l'autre moteur", () => {
-    expect(source).toContain('effectiveEngine(run) === "opencode"');
+  it("compose l'ancrage et le prompt du tour", () => {
     expect(source).toContain("buildOpencodeAnchor({");
-    expect(source).toContain("prompt: userPromptFromMessages(messages)");
+    expect(source).toContain("userPromptFromMessages(messages)");
   });
 
-  it("n'envoie pas la conversation en double", () => {
-    // Sous opencode, l'historique est le journal d'événements du checkpoint :
-    // envoyer AUSSI `messages` paierait le contexte du ticket deux fois, une fois
-    // en prompt et une fois en conversation morte.
-    expect(source).toContain("messages: opencodeInput ? [] : messages");
+  it("DIT au tour repris ce qu'il a perdu quand la boucle l'avait mené", () => {
+    // Une conversation écrite par la boucle maison vit dans `checkpoint.messages`,
+    // et plus personne ne sait la rejouer. Reprise en silence, elle ferait répondre
+    // le modèle à un message dont il ne voit pas le contexte : l'agent aurait l'air
+    // amnésique sans que rien n'explique pourquoi.
+    expect(source).toContain("function priorConversationLost");
+    expect(source).toContain("PRIOR_CONVERSATION_LOST_NOTE");
+    expect(source).toContain("priorConversationLost(run)");
+  });
+
+  it("n'envoie plus de conversation du tout à la microVM", () => {
+    // L'historique d'opencode est son journal d'événements. Un champ `messages`
+    // sur le job paierait le contexte du ticket deux fois, une fois en prompt et
+    // une fois en conversation morte.
+    expect(source).not.toContain("messages: opencodeInput");
   });
 
   /**
@@ -103,25 +101,26 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
     // PAR-DESSUS l'historique restauré — l'agent relirait la consigne initiale
     // comme si elle venait d'arriver. C'est ce que `VmJob.opencodeInput` promet en
     // toutes lettres (« `prompt` est vide sur un tour REPRIS »).
-    expect(source).toContain("else if (run.checkpoint?.opencode?.sessionId)");
+    expect(source).toContain("if (run.checkpoint?.opencode?.sessionId)");
   });
 });
 
-describe("vm/main.ts aiguille sur le moteur du job", () => {
+describe("vm/main.ts ne connaît plus qu'un moteur", () => {
   const source = read("vm/main.ts");
 
-  it("choisit le superviseur sur `job.engine`", () => {
-    expect(source).toContain('job.engine === "opencode"');
+  it("appelle le superviseur, sans aiguillage", () => {
     expect(source).toContain("runOpencodeTurn");
-    // L'autre moteur reste joignable : la bascule est réversible run par run.
-    expect(source).toContain("runVmTurn(job, cp, host)");
+    // L'aiguillage est parti avec la boucle : plus de `job.engine`, plus de
+    // second chemin à maintenir dans la microVM.
+    expect(source).not.toContain("job.engine");
+    expect(source).not.toContain("runVmTurn");
   });
 
   it("lève plutôt que de poster un tour vide", () => {
-    expect(source).toContain("engine=opencode job carries no opencodeInput");
+    expect(source).toContain("job carries no opencodeInput");
     // Le `try` global de `main` en fait un rapport d'erreur : ça se voit dans le
     // fil, au lieu d'un tour qui tourne sans savoir ce qu'on lui demande.
-    expect(source).toContain("report = job.engine");
+    expect(source).toContain("report = await runOpencodeTurnHere");
   });
 });
 

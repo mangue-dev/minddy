@@ -30,7 +30,7 @@ import { MAX_PLAN_LENGTH, appendToPlan, parsePlan } from "@/lib/plan";
 import { executePageTool } from "./page-tools";
 import { executeObjectiveTool, resolveObjectiveRef } from "./objective-tools";
 import { headTail } from "./prune";
-import type { AgentToolImage } from "./content";
+import type { AgentToolImage } from "./agent-contract";
 
 /**
  * Tools TICKET de l'agent de code : les tickets du PROJET du run. Servis aux deux

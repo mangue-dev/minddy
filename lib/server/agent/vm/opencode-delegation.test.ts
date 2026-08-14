@@ -6,7 +6,7 @@ import { newTurnStreamState, translateEvent, type OpencodeEvent } from "./openco
 import { decidePermission } from "./opencode-permissions";
 import { describeSpawn, markChildPayload, SubagentRegistry } from "./supervisor";
 import { subagentAgentName } from "./opencode-config";
-import { subagentUsageSeq } from "../subagent";
+import { subagentUsageSeq } from "../subagent-config";
 
 /**
  * MIN-286 lot 2, tâche 12 — LA DÉLÉGATION, jouée sur un tour réellement capturé.

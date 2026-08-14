@@ -35,7 +35,7 @@ function job(over: Partial<VmJob> = {}): VmJob {
     ledgerRunId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     projectId: "proj-1",
     appOrigin: "https://minddy.example",
-    engine: "opencode",
+    opencodeInput: { prompt: "vas-y", anchorInstructions: "# ancrage" },
     model: "deepseek/deepseek-v4-flash",
     baseUrl: "https://openrouter.ai/api/v1",
     provider: "openrouter",
@@ -58,10 +58,8 @@ function job(over: Partial<VmJob> = {}): VmJob {
       abovePlanIds: [],
       maxMultiplier: null,
     },
-    messages: [],
     instructions: { paths: [], bytes: 0 },
     usageSeqStart: 0,
-    parkedForSubagents: false,
     editedPaths: [],
     repoTouched: false,
     prInlineComments: 0,
@@ -73,7 +71,6 @@ function job(over: Partial<VmJob> = {}): VmJob {
     filesFromSha: "",
     locale: "fr",
     feature: "agent_code",
-    checkpointMaxBytes: 3_200_000,
     ...over,
   };
 }

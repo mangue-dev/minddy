@@ -28,7 +28,7 @@ import {
   stampRunResult,
   type AgentRun,
 } from "./runs";
-import type { EmitAgentEvent } from "./agent-loop";
+import type { EmitAgentEvent } from "./agent-contract";
 import type { VmTurnReport } from "./vm/protocol";
 
 /**

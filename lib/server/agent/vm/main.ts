@@ -4,7 +4,6 @@ import { createControlPlaneClient } from "./control-plane-client";
 import { localHost } from "./local-host";
 import { opencodeSupervisorDeps } from "./opencode-host";
 import { OPENCODE_PORT, runOpencodeTurn } from "./supervisor";
-import { runVmTurn } from "./turn";
 import { VM_JOB_PATH, type VmJob, type VmTurnReport } from "./protocol";
 
 /**
@@ -30,24 +29,19 @@ import { VM_JOB_PATH, type VmJob, type VmTurnReport } from "./protocol";
  */
 
 /**
- * L'AIGUILLAGE DES DEUX MOTEURS (MIN-286) — sur `job.engine`, et rien d'autre.
+ * IL N'Y A PLUS QU'UN MOTEUR (MIN-286) — opencode, et l'aiguillage du job a
+ * disparu avec la boucle maison.
  *
- * Le drapeau a été gelé sur la ligne du run au lancement
- * ([engine-flag.ts](../engine-flag.ts)) : ce qui est lu ici est donc ce qui a été
- * décidé au premier tour de la conversation, jamais l'état courant d'`app_config`.
- * C'est ce qui fait qu'une session ne change pas de moteur en cours de vie — les
- * deux gardent leur mémoire dans deux champs différents du checkpoint.
- *
- * Un job `opencode` SANS `opencodeInput` est une faute de la fonction, pas une
- * variante : on lève plutôt que de poster un tour vide, et le `try` de `main`
- * transforme cela en rapport d'erreur — c'est-à-dire en quelque chose qui se voit.
+ * Un job SANS `opencodeInput` est une faute de la fonction, pas une variante : on
+ * lève plutôt que de poster un tour vide, et le `try` de `main` transforme cela en
+ * rapport d'erreur — c'est-à-dire en quelque chose qui se voit.
  */
 async function runOpencodeTurnHere(
   job: VmJob,
   cp: ReturnType<typeof createControlPlaneClient>,
   host: ReturnType<typeof localHost>,
 ): Promise<VmTurnReport> {
-  if (!job.opencodeInput) throw new Error("engine=opencode job carries no opencodeInput");
+  if (!job.opencodeInput) throw new Error("job carries no opencodeInput");
   return await runOpencodeTurn(job, job.opencodeInput, cp, host, {
     ...opencodeSupervisorDeps(OPENCODE_PORT),
   });
@@ -61,17 +55,16 @@ async function main(): Promise<void> {
 
   let report: VmTurnReport;
   try {
-    report = job.engine === "opencode" ? await runOpencodeTurnHere(job, cp, host) : await runVmTurn(job, cp, host);
+    report = await runOpencodeTurnHere(job, cp, host);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[agent-vm] turn crashed:", message);
     await cp.emit("error", { message }).catch(() => {});
     /**
-     * LE RAPPORT DE SECOURS, et il ne porte AUCUN checkpoint. `runVmTurn` a levé,
-     * donc son historique est dans un état qu'on n'a aucune raison de croire
-     * cohérent — un `tool_call` sans son `tool_result` casserait le tour suivant
-     * au round-trip. Et il n'y a pas de « checkpoint du début » à lui opposer :
-     * `job.messages` EST le tableau que la boucle mute en place, pas une copie.
+     * LE RAPPORT DE SECOURS, et il ne porte AUCUN checkpoint. Le superviseur a
+     * levé, donc on n'a aucune raison de croire son pointeur de journal à jour —
+     * et un pointeur en avance sur ce qui a été écrit ferait repartir le tour
+     * suivant d'une session qu'il ne peut pas rejouer.
      *
      * Le dernier checkpoint PÉRIODIQUE, lui, a été écrit à une frontière de round
      * sûre. La fonction le garde tel quel (cf. `VmTurnReport.checkpoint`) : ce

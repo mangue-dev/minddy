@@ -1160,6 +1160,61 @@ laisser un trou définitif dans le journal.
 
 ---
 
+### 2.30 La fenêtre d'observation, relevée en base (2026-08-14)
+
+Premier relevé de la semaine d'observation, sur les **14 runs** de production
+depuis la bascule (2026-08-12 18 h → 2026-08-14 08 h), lus en base par l'API REST
+en clé service. Tous portent `agent_engine = opencode` : il n'y a plus qu'un
+moteur, et c'est bien lui qui joue.
+
+**La traçabilité tient, et elle se vérifie à l'arithmétique.** Pour chacun des
+onze runs sains, `agent_runs.cost_usd` est **exactement** la somme de ses lignes
+de ledger, `agent_code` + `sandbox_compute`, à l'arrondi près (0,038833 =
+0,029027 + 0,009806). Sur les **394 lignes** `agent_code` de la fenêtre :
+
+| Ce qu'on voulait ne pas perdre | Relevé |
+| --- | --- |
+| Coût réel, pas estimé | `estimated: false` sur **394/394** |
+| Réconciliation fournisseur | `generation_id` présent sur **394/394** |
+| Imputation à un humain | `user_id` présent sur **394/394** |
+| Deux modèles distincts facturés chacun à son prix | oui (`gpt-5.6-luna`, `deepseek-v4-flash`) |
+
+Total de la fenêtre : **1,42 $** sur la ligne des runs, **1,40 $** au ledger
+modèle, l'écart étant le compute de microVM, lui aussi au ledger.
+
+**Le seul défaut trouvé, et il est réel.** Les trois runs dont le process est mort
+(« The agent process stopped unexpectedly ») portent `cost_usd = 0` sur leur
+ligne, alors que le ledger porte leur dépense : **0,159 $** de modèle, **0,190 $**
+compute compris, invisibles sur la ligne. Les trois lignes ont été recollées à la
+main le 2026-08-14, au montant du ledger. La cause
+est dans `reapDeadVmRuns` ([drain.ts](../lib/server/agent/drain.ts)) : le chien de
+garde facturait bien le compute de la microVM, mais ne recollait jamais la
+**colonne** au ledger — ce que `landVmTurn` fait pourtant sur le chemin sain
+(`Math.max` du rapport de fin de tour). Ni la facture ni les plafonds n'étaient
+touchés (`finance.ts` lit le ledger, `control-plane.ts` et `execute.ts` prennent
+déjà le MAX des deux) : ce qui mentait, c'est **ce qu'un humain relit après un
+incident**. Le trou de MIN-216, sur le dernier chemin qui ne l'avait pas rebouché.
+
+Corrigé dans le même geste, avec ses trois tests
+([vm-watchdog.test.ts](../lib/server/agent/vm-watchdog.test.ts)) : le MAX, le
+non-recul quand le ledger est en retard, et l'**ordre** — la relecture du ledger
+vient APRÈS `recordSandboxUsage`, sans quoi la somme relue n'emporterait pas la
+ligne de compute qu'on vient d'écrire. Ce défaut n'est pas propre à opencode : le
+chien de garde est commun aux deux moteurs, la bascule l'a seulement rendu
+fréquent.
+
+**Deux erreurs de la fenêtre qui ne sont pas des défauts de harnais** : un
+`reasoning_effort` en double (run `c7465b6b`, 20 h 17), corrigé le soir même par
+`patchCompletionBody` ; et « No endpoints available matching your guardrail
+restrictions » sur `deepseek-v4-pro` — une politique de fournisseur OpenRouter,
+hors de notre code.
+
+**Ce que la fenêtre ne dit pas encore.** Elle a un jour et demi, pas une semaine,
+et les trois processus morts sont tous ANTÉRIEURS aux correctifs de §2.28 et
+§2.29 : les quatre runs du 2026-08-14 sont propres de bout en bout. C'est
+encourageant, ce n'est pas la preuve — il faut la suite de la semaine.
+`AGENT_SANDBOX_SNAPSHOT_ID` est en place sur Vercel (Production et Preview).
+
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un

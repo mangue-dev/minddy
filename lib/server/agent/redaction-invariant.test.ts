@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { AGENT_ENGINES, type AgentEngine } from "@/lib/agent-engines";
+import { LIVE_AGENT_ENGINES, type LiveAgentEngine } from "@/lib/agent-engines";
 import { redactDeep, SecretRedactor } from "./redact";
 
 /**
@@ -18,8 +18,9 @@ import { redactDeep, SecretRedactor } from "./redact";
  * n'était plus emprunté par personne. Personne ne l'a vu, parce qu'un secret qui
  * passe ne casse rien.
  *
- * D'où ce test, et sa forme : il itère sur `AGENT_ENGINES`. Un moteur DE PLUS sans
- * entrée dans la table ci-dessous fait tomber la suite — c'est exactement comme ça
+ * D'où ce test, et sa forme : il itère sur `LIVE_AGENT_ENGINES`, les moteurs qui
+ * peuvent encore jouer un tour. Un moteur DE PLUS sans entrée dans la table
+ * ci-dessous fait tomber la suite — c'est exactement comme ça
  * que celui-ci est passé, et c'est le seul endroit du dépôt qui le remarquerait.
  *
  * Lexical plutôt qu'à l'exécution, comme [engine-wiring.test.ts](engine-wiring.test.ts) :
@@ -34,19 +35,7 @@ function read(file: string): string {
 }
 
 /** Ce qui doit être vrai, pour chaque moteur, sur le chemin qui mène au modèle. */
-const CHECKS: Record<AgentEngine, Array<{ what: string; file: string; contains: string }>> = {
-  loop: [
-    {
-      what: "le message rendu au modèle est substitué",
-      file: "agent-loop.ts",
-      contains: "toolMessageContent(result, images, params.redact)",
-    },
-    {
-      what: "l'aperçu persisté dans l'event l'est aussi",
-      file: "agent-loop.ts",
-      contains: "previewResult(result, params.redact)",
-    },
-  ],
+const CHECKS: Record<LiveAgentEngine, Array<{ what: string; file: string; contains: string }>> = {
   opencode: [
     {
       what: "le corps sortant vers le fournisseur est substitué",
@@ -75,13 +64,13 @@ describe("chaque moteur substitue les secrets avant le modèle", () => {
   it("aucun moteur déclaré n'est laissé sans garde", () => {
     // Le cœur du test : ajouter un moteur sans dire ce qui le protège échoue ICI,
     // avec le nom du moteur, plutôt que six mois plus tard dans un audit.
-    for (const engine of AGENT_ENGINES) {
+    for (const engine of LIVE_AGENT_ENGINES) {
       expect(CHECKS[engine], `le moteur "${engine}" n'a aucune garde déclarée`).toBeTruthy();
       expect(CHECKS[engine].length).toBeGreaterThan(0);
     }
   });
 
-  for (const engine of AGENT_ENGINES) {
+  for (const engine of LIVE_AGENT_ENGINES) {
     for (const check of CHECKS[engine] ?? []) {
       it(`${engine} — ${check.what}`, () => {
         expect(read(check.file)).toContain(check.contains);

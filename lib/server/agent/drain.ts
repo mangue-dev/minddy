@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { recordSandboxUsage } from "@/lib/server/usage";
-import type { AiUsageBillTo } from "@/lib/server/ai-usage";
+import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 
 import { appendEvent, claimRun, notifyAgentRun, requeueStuckRuns, stampRun } from "./runs";
 import { SANDBOX_USAGE_SEQ_BASE } from "./pr-landing";
@@ -181,7 +181,7 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
   const { data } = await service
     .from("agent_runs")
     .select(
-      "id, sandbox_id, loop_command_id, created_by, project_id, issue_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at",
+      "id, sandbox_id, loop_command_id, created_by, project_id, issue_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at, cost_usd",
     )
     .eq("status", "running")
     .eq("loop_in_vm", true)
@@ -200,6 +200,7 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     continuations: number;
     started_at: string | null;
     last_activity_at: string | null;
+    cost_usd: number;
   }>;
 
   /**
@@ -330,6 +331,30 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
       }).catch((err) =>
         console.error("[agent-drain] vm compute metering failed:", (err as Error).message),
       );
+    }
+
+    /**
+     * LA COLONNE DE DÉPENSE, RECOLLÉE AU LEDGER — ce que `landVmTurn` fait sur le
+     * chemin sain (`vm-rest.ts`, le `Math.max` du rapport de fin de tour) et que
+     * personne ne faisait ici. `cost_usd` n'est écrite que par les sorties saines :
+     * un tour dont le process meurt laissait donc la ligne à ce qu'elle valait
+     * avant le tour, c'est-à-dire **zéro** sur un premier tour — alors que le
+     * ledger, lui, porte chaque round facturé avant l'accident.
+     *
+     * Mesuré en production sur la fenêtre d'observation d'opencode (MIN-286) :
+     * trois runs moissonnés, `cost_usd = 0` sur les trois, **0,159 $** au ledger.
+     * Rien n'était perdu pour la facture (`finance.ts` lit le ledger) ni pour les
+     * plafonds (`control-plane.ts` et `execute.ts` prennent déjà le MAX des deux),
+     * mais la ligne du run — ce qu'un humain relit après un incident — annonçait
+     * gratuit un tour qui ne l'était pas.
+     *
+     * APRÈS `recordSandboxUsage`, pour que la somme relue porte aussi le compute
+     * qu'on vient d'écrire. Et un MAX, pas une affectation : le ledger et la
+     * colonne sont deux minorants, une dépense affichée ne recule jamais.
+     */
+    const spent = await spentFromLedger(row.run_id ?? row.id).catch(() => null);
+    if (spent != null && spent > row.cost_usd) {
+      await service.from("agent_runs").update({ cost_usd: spent }).eq("id", row.id);
     }
 
     if (row.provider_key_id) {

@@ -40,7 +40,7 @@ import { gateCreatePr, gateWritePlan, makeDeliveryGate } from "./delivery-gate";
 import { testFailuresForTurn, typeErrorsForTurn } from "./diagnostics";
 import { turnDiffStat } from "./repo-host";
 import { newPlanWriteSink } from "./plan-closure";
-import { runAgentLoop, type AgentChatMessage } from "./agent-loop";
+import type { AgentChatMessage } from "./agent-contract";
 import type { RepoHost } from "./repo-host";
 
 /**
@@ -298,43 +298,6 @@ function seed(): AgentChatMessage[] {
   ];
 }
 
-describe("la fin d'un tour", () => {
-  /**
-   * L'INVARIANT QUI PROTÈGE TOUT LE RESTE (MIN-263). La boucle avait un crochet de
-   * fin de tour : le modèle répondait, le harness reprenait la parole, le tour
-   * repartait, et le modèle répondait une SECONDE fois — c'est cette réponse-là que
-   * l'utilisateur lisait. Trois tickets ont tenté de rendre ça vivable (la règle qui
-   * interdit de répondre au contrôle, puis le brouillon rendu au modèle) avant qu'on
-   * ne retire la cause. Le crochet n'existe plus ; ce test est ce qui empêche de le
-   * réintroduire sans s'en rendre compte.
-   */
-  it("se termine sur la réponse du modèle — le harness ne la rouvre pas", async () => {
-    const fetchMock = vi.fn(async () => new Response(sseText("Done.")));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await runAgentLoop({
-      messages: seed(),
-      tools: [],
-      model: "test/model",
-      apiKey: "sk-test",
-      baseUrl: "https://example.invalid/v1",
-      runId: "run_test",
-      billTo: { userId: "user_test" },
-      recordUsage: async () => {},
-      softDeadlineMs: 250_000,
-      emit: async () => {},
-      execTool: async () => ({ result: {}, success: true }),
-    });
-
-    expect(result.status).toBe("completed");
-    expect(result.reply).toBe("Done.");
-    // UN SEUL appel modèle : rien n'a été réinjecté derrière la réponse.
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    // Et rien n'a été poussé dans le fil après le message `user` d'origine.
-    expect(result.messages.filter((m) => m.role === "user")).toHaveLength(1);
-  });
-});
-
 /**
  * MIN-247, puis MIN-263 — LE PREMIER `create_pr` NE SOUMET PAS, ET C'EST LÀ QUE TOUT
  * SE VÉRIFIE.
@@ -420,61 +383,6 @@ describe("la porte de create_pr", () => {
  * Un résultat traverse `headTail(…, 6 000)`, qui élide le MILIEU — d'un diff, ça
  * coupe exactement ce qu'on donne à lire.
  */
-describe("le mot long d'un tool (followUp)", () => {
-  it("arrive au modèle en entier, APRÈS la réponse de tous les tool-calls du round", async () => {
-    const long = `LONG_${"x".repeat(20_000)}_END`;
-    let round = 0;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => {
-        // Round 1 : DEUX tool-calls, dont un qui porte un mot long. Round 2 : la réponse.
-        if (round++ === 0) {
-          return new Response(
-            sse([
-              {
-                delta: {
-                  tool_calls: [
-                    { index: 0, id: "c1", type: "function", function: { name: "a", arguments: "{}" } },
-                    { index: 1, id: "c2", type: "function", function: { name: "b", arguments: "{}" } },
-                  ],
-                },
-              },
-              { delta: {}, finish_reason: "tool_calls" },
-            ]),
-          );
-        }
-        return new Response(sseText("Done."));
-      }),
-    );
-
-    const result = await runAgentLoop({
-      messages: seed(),
-      tools: [],
-      model: "test/model",
-      apiKey: "sk-test",
-      baseUrl: "https://example.invalid/v1",
-      runId: "run_test",
-      billTo: { userId: "user_test" },
-      recordUsage: async () => {},
-      softDeadlineMs: 250_000,
-      emit: async () => {},
-      execTool: async (name) =>
-        name === "a" ? { result: { ok: true }, success: true, followUp: long } : { result: {}, success: true },
-    });
-
-    expect(result.status).toBe("completed");
-    const injected = result.messages.find((m) => m.role === "user" && m.content === long);
-    // En ENTIER : rien n'a été capé ni élidé au passage.
-    expect(injected).toBeDefined();
-    // Et après les DEUX réponses de tool : un message `user` intercalé casserait
-    // l'appariement tool_call ↔ tool_result.
-    const at = result.messages.indexOf(injected!);
-    const toolMessages = result.messages.filter((m) => m.role === "tool");
-    expect(toolMessages).toHaveLength(2);
-    for (const m of toolMessages) expect(result.messages.indexOf(m)).toBeLessThan(at);
-  });
-});
-
 describe("la porte de write_issue_plan", () => {
   const writer = () => {
     const calls: string[] = [];

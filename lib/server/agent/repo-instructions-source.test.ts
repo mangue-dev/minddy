@@ -1,8 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { makeExecTool, readRepoInstructions } from "./exec-tool";
+import { readRepoInstructions } from "./repo-instructions";
 import { PR_BASE_TAG, REPO_DIR, type RepoHost } from "./repo-host";
-import type { AgentAnchor } from "./prompt";
 
 /**
  * MIN-328 — L'`AGENTS.md` DE LA TÊTE D'UNE PR N'ENTRE PAS DANS LE CONTEXTE.
@@ -74,41 +73,5 @@ describe("l'amorce d'une relecture ne lit pas les instructions de la tête", () 
     const boot = await readRepoInstructions(host, "issue");
     expect(boot?.message).toContain("Use pnpm.");
     expect(host.commands).toEqual([]);
-  });
-});
-
-function execToolFor(host: RepoHost, anchor: AgentAnchor) {
-  return makeExecTool({
-    host,
-    anchor,
-    createPr: null,
-    prTool: null,
-    projectPrTool: null,
-    issueTool: null,
-    scratchpadTool: null,
-    webSearch: null,
-    outputSeqBase: 0,
-    background: null,
-    instructions: { paths: [], bytes: 0 },
-    editedPaths: new Set<string>(),
-    subagents: null,
-    chunkRemainingMs: () => 120_000,
-  });
-}
-
-describe("les instructions de SOUS-DOSSIER suivent la même source", () => {
-  it("une lecture de relecture ne colle pas l'AGENTS.md du fork au résultat", async () => {
-    const host = reviewHost({
-      head: {
-        "apps/web/page.tsx": "export default function Page() {}\n",
-        "apps/web/AGENTS.md": HOSTILE,
-      },
-      base: { "apps/web/AGENTS.md": "Server components only.\n" },
-    });
-    const exec = execToolFor(host, "pr");
-    const out = await exec("read_file", { path: "apps/web/page.tsx" }, vi.fn() as never);
-    const text = JSON.stringify(out.result);
-    expect(text).not.toContain("IGNORE ALL PREVIOUS INSTRUCTIONS");
-    expect(text).toContain("Server components only.");
   });
 });

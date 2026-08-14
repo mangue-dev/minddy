@@ -171,9 +171,10 @@ describe("le bundle VM n'atteint aucun secret", () => {
     // fait que la boucle prenne son écriture en paramètre plutôt qu'en import.
     const controlPlane = readFileSync(join(REPO, "lib/server/agent/control-plane.ts"), "utf8");
     expect(controlPlane).toContain('surface === "/usage"');
-    const loop = readFileSync(join(REPO, "lib/server/agent/agent-loop.ts"), "utf8");
-    expect(loop).toContain("recordUsage: RecordAgentUsage");
-    expect(loop).not.toContain('from "@/lib/server/ai-usage"');
+    // Et le fait que le harness prenne son écriture en PARAMÈTRE plutôt qu'en
+    // import : le superviseur reçoit `recordUsage`, il ne va pas le chercher.
+    const supervisor = readFileSync(join(REPO, "lib/server/agent/vm/supervisor.ts"), "utf8");
+    expect(supervisor).not.toContain('from "@/lib/server/ai-usage"');
   });
 
   it("part bien du point d'entrée que le build compile", () => {
@@ -188,10 +189,11 @@ describe("le bundle VM n'atteint aucun secret", () => {
   });
 
   it("ne compte pas un import de TYPE comme une arête du bundle", () => {
-    // Le garde-fou du garde-fou : `abandoned-spend.ts` importe `NormalizedUsage`
-    // d'`ai-usage.ts` en type seul. Si ce test-ci tombe, `breaches()` est devenu
-    // un `grep` déguisé et signalera des brèches qui n'existent pas.
-    const spend = join(REPO, "lib/server/agent/abandoned-spend.ts");
-    expect(runtimeImports(spend)).not.toContain("@/lib/server/ai-usage");
+    // Le garde-fou du garde-fou : `agent-contract.ts` importe `AiFeature` et
+    // `AiUsageBillTo` d'`ai-usage-shape.ts` en type seul, et rien d'autre. Si ce
+    // test-ci tombe, `breaches()` est devenu un `grep` déguisé et signalera des
+    // brèches qui n'existent pas.
+    const contract = join(REPO, "lib/server/agent/agent-contract.ts");
+    expect(runtimeImports(contract)).toEqual([]);
   });
 });

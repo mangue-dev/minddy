@@ -7,7 +7,7 @@ import { defaultLocale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 
 import { executeIssueTool, type IssueToolContext } from "./issue-tools";
-import type { AgentLiveEdit } from "./exec-tool";
+import type { AgentLiveEdit } from "./agent-contract";
 import { CHANGED_FILES_CAP } from "./repo-host";
 import {
   anchorForRun,
@@ -40,7 +40,7 @@ import {
   type AgentRun,
 } from "./runs";
 import type { AgentCheckpoint } from "./runs";
-import type { AgentEventType } from "./agent-loop";
+import type { AgentEventType } from "./agent-contract";
 import { parseAgentMentions } from "@/lib/agent-mentions";
 
 /**

@@ -13,7 +13,7 @@ import {
 } from "../delivery-gate";
 import { newPlanWriteSink, watchPlanWrites } from "../plan-closure";
 import { REPO_DIR, turnDiffStat, turnTouchedPaths, type RepoHost } from "../repo-host";
-import type { PlatformToolHandler } from "../exec-tool";
+import type { PlatformToolHandler } from "../agent-contract";
 
 /**
  * LES RÈGLES DE LIVRAISON, TENUES AU-DESSUS D'OPENCODE (MIN-286, lot 2, tâche 14).
