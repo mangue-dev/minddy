@@ -12,7 +12,8 @@ import {
 import { getSupabase } from "./supabase";
 import { sanitizeInternalRedirectPath } from "./auth-redirect";
 import { getDesktopBridge } from "./desktop/bridge";
-import { DESKTOP_CALLBACK_FLAG } from "./desktop/config";
+import { DESKTOP_CALLBACK_FLAG, DESKTOP_TURN_PARAM } from "./desktop/config";
+import { beginDesktopAuthTurn } from "./desktop/auth-turn";
 import type { DesktopAuthLink } from "./desktop/auth-link";
 import { clearPersistedQueryCache } from "./query-provider";
 import { useAnalytics } from "./use-analytics";
@@ -222,7 +223,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Le marqueur voyage jusqu'au provider et revient avec lui : c'est la
       // SEULE chose qui dira au callback que la session à ouvrir n'est pas celle
       // du navigateur qui l'appelle (MIN-291).
-      if (desktop) callbackUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
+      if (desktop) {
+        callbackUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
+        // Et avec lui le nonce du tour (MIN-345) : au retour, la fenêtre ne
+        // traitera le deep link que s'il rapporte celui-ci. Un `minddy://auth`
+        // reçu du système, lui, n'en portera aucun.
+        callbackUrl.searchParams.set(DESKTOP_TURN_PARAM, beginDesktopAuthTurn());
+      }
 
       const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider,

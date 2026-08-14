@@ -9,9 +9,11 @@ import { appPageMetadata } from "@/lib/app-metadata";
 /**
  * Atterrissage du lien de confirmation d'email (MIN-117).
  *
- * C'est `next=/auth/confirmed`, posé par le template GoTrue, qui amène ici :
- * `/auth/callback` a déjà vérifié le jeton (`verifyOtp`) et posé la session sur
- * CE navigateur. D'où le bouton unique vers `/login`, correct dans les deux
+ * C'est `next=/auth/confirmed`, posé par le template GoTrue, qui amène ici : le
+ * jeton a déjà été vérifié (`verifyOtp`) et la session posée sur CE navigateur
+ * — depuis MIN-345 par `/auth/confirm/complete`, au bout d'une confirmation
+ * explicite, et non plus par la navigation elle-même. D'où le bouton unique
+ * vers `/login`, correct dans les deux
  * cas — l'appareil qui vient de valider y trouve une session et bascule sur
  * `/home` ; un autre navigateur y trouve le formulaire de connexion.
  *

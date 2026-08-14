@@ -51,9 +51,20 @@ export function AccountDataSection() {
   const [preview, setPreview] = useState<DeletionPreview | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   const email = user?.email ?? "";
+  /**
+   * Le compte peut-il produire un mot de passe ? (MIN-345) Le serveur redemande
+   * une preuve avant d'effacer : le mot de passe quand il y en a un, une
+   * connexion récente sinon. L'écran doit demander la même chose, sinon il
+   * envoie un corps incomplet et récolte un 403 que personne ne comprend.
+   */
+  const providers = user?.app_metadata?.providers;
+  const hasPassword = Array.isArray(providers)
+    ? providers.includes("email")
+    : user?.app_metadata?.provider === "email";
 
   // L'aperçu est chargé au montage, pas à l'ouverture du dialogue : c'est ce
   // qu'on veut lire AVANT de cliquer, pas après.
@@ -105,7 +116,10 @@ export function AccountDataSection() {
       const response = await fetch("/api/account", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirm: confirmEmail.trim() }),
+        body: JSON.stringify({
+          confirm: confirmEmail.trim(),
+          ...(hasPassword ? { password: confirmPassword } : {}),
+        }),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
@@ -122,7 +136,10 @@ export function AccountDataSection() {
   };
 
   const ownedCount = preview?.ownedProjects.length ?? 0;
-  const canDelete = confirmEmail.trim().toLowerCase() === email.toLowerCase() && !!email;
+  const canDelete =
+    confirmEmail.trim().toLowerCase() === email.toLowerCase() &&
+    !!email &&
+    (!hasPassword || confirmPassword.length > 0);
 
   return (
     <>
@@ -161,6 +178,7 @@ export function AccountDataSection() {
               size="sm"
               onClick={() => {
                 setConfirmEmail("");
+                setConfirmPassword("");
                 setConfirmOpen(true);
               }}
             >
@@ -218,6 +236,24 @@ export function AccountDataSection() {
               placeholder={email}
             />
           </div>
+
+          {hasPassword ? (
+            <div className="space-y-1.5">
+              <label htmlFor="delete-confirm-password" className="text-sm font-medium">
+                {t("confirmPasswordLabel")}
+              </label>
+              <Input
+                id="delete-confirm-password"
+                type="password"
+                autoComplete="current-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder={t("confirmPasswordPlaceholder")}
+              />
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("confirmRecentSignInHint")}</p>
+          )}
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>{tc("cancel")}</AlertDialogCancel>

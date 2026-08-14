@@ -273,7 +273,10 @@
     "pageVersionNotFound": "That version of the page no longer exists.",
     "pageFileTooLarge": "This file is too large (10 MB max).",
     "pageFileEmpty": "This file is empty.",
-    "pageFileNotFound": "File not found."
+    "pageFileNotFound": "File not found.",
+    "reauthPasswordRequired": "Enter your password to confirm.",
+    "reauthPasswordInvalid": "That password is not right.",
+    "reauthTooOld": "Sign out and sign back in, then try again — deleting an account asks for a recent sign-in."
   },
   "CustomDomain": {
     "title": "Custom domain",
@@ -555,7 +558,13 @@
     "errorSamePassword": "This is already your password. Choose a different one.",
     "errorRateLimited": "Too many attempts. Wait a few minutes, then try again.",
     "errorSignupDisabled": "Sign-ups are closed at the moment.",
-    "errorUnexpected": "Something went wrong. Try again in a moment."
+    "errorUnexpected": "Something went wrong. Try again in a moment.",
+    "confirmSignInTitle": "Confirm this sign-in",
+    "confirmSignInBody": "You opened a sign-in link. minddy never opens a session from a link alone — confirm that you are the one who asked for it.",
+    "confirmSignInCta": "Sign me in",
+    "confirmSignInExpiredTitle": "This link is no longer active",
+    "confirmSignInExpiredBody": "It was already used, or too much time went by. Ask for a new one from the sign-in page.",
+    "confirmSignInExpiredCta": "Back to sign-in"
   },
   "BulkActions": {
     "selected": "{count, plural, one {# issue selected} other {# issues selected}}",
@@ -1345,7 +1354,9 @@
     "signIn": "Sign in",
     "signUp": "Sign up",
     "pages": "Pages",
-    "pagesDescription": "The project wiki: notes, write-ups and process docs, in a tree."
+    "pagesDescription": "The project wiki: notes, write-ups and process docs, in a tree.",
+    "confirmSignIn": "Confirm sign-in",
+    "confirmSignInDescription": "Confirm the sign-in link you just opened."
   },
   "Stats": {
     "title": "Statistics",
@@ -1990,7 +2001,10 @@
     "confirmDescription": "This cannot be undone. Your data will be deleted immediately.",
     "confirmDescriptionWithProjects": "This cannot be undone. {count, plural, one {The project you own will be deleted} other {The # projects you own will be deleted}}, along with their issues, files and their members' access.",
     "confirmLabel": "Type {email} to confirm",
-    "confirmButton": "Delete permanently"
+    "confirmButton": "Delete permanently",
+    "confirmPasswordLabel": "Your password",
+    "confirmPasswordPlaceholder": "Enter your password",
+    "confirmRecentSignInHint": "Signed in with Google or GitHub? Sign out and back in first — this asks for a recent sign-in."
   },
   "AccountSecurity": {
     "title": "Two-factor authentication",

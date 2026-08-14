@@ -154,7 +154,8 @@ ${
    - \`sub\` (requis) : l'identifiant stable de l'utilisateur chez nous
    - \`email\` (recommandé) : son email
    - \`name\` (optionnel) : son nom affiché
-   - \`exp\` (requis) : maintenant + 10 minutes maximum — le JWT ne sert qu'à la redirection
+   - \`exp\` (requis) : maintenant + 10 minutes maximum — le JWT ne sert qu'à la redirection, et minddy REFUSE tout \`exp\` au-delà
+   Signe un JWT NEUF à chaque clic : il est à usage unique, minddy le consomme à l'arrivée et un jeton rejoué est refusé (ne le mets donc jamais en cache, ni dans un lien qu'on garde).
 4. Le secret de signature n'est PAS dans ce prompt : il vit dans la variable d'environnement \`${SSO_ENV_VAR}\`, que je renseigne moi-même. Lis-la côté serveur (\`process.env.${SSO_ENV_VAR}\` ou l'équivalent du langage), ne l'écris jamais en dur, ne l'expose jamais au client, et si elle est absente, renonce à la pré-identification (redirection simple vers le board, étape 5) plutôt que de signer avec une valeur inventée.
 5. Utilisateur non connecté : redirige simplement vers \`${input.boardUrl}\` (sans paramètre \`sso\`) — il pourra se vérifier par email sur place.
 
@@ -202,7 +203,8 @@ ${
    - \`sub\` (required): the user's stable id on our side
    - \`email\` (recommended): their email
    - \`name\` (optional): their display name
-   - \`exp\` (required): now + 10 minutes max — the JWT only serves the redirect
+   - \`exp\` (required): now + 10 minutes max — the JWT only serves the redirect, and minddy REJECTS any \`exp\` beyond that
+   Sign a FRESH JWT on every click: it is single-use, minddy consumes it on arrival and a replayed token is refused (so never cache one, and never put one in a link people keep).
 4. The signing secret is NOT in this prompt: it lives in the \`${SSO_ENV_VAR}\` environment variable, which I set myself. Read it server-side (\`process.env.${SSO_ENV_VAR}\` or your language's equivalent), never hardcode it, never expose it to the client, and if it is missing, skip pre-identification (plain redirect to the board, step 5) rather than signing with a made-up value.
 5. Signed-out user: just redirect to \`${input.boardUrl}\` (no \`sso\` parameter) — they can verify by email on the board.
 

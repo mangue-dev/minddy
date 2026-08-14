@@ -35,9 +35,10 @@ describe("verifyFeedbackSsoJwt", () => {
       exp: NOW + 300,
     });
     const result = verifyFeedbackSsoJwt(token, SECRET, NOW);
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: true,
       claims: { externalId: "user-42", email: "jane@example.com", name: "Jane" },
+      expiresAt: NOW + 300,
     });
   });
 
@@ -94,6 +95,36 @@ describe("verifyFeedbackSsoJwt", () => {
     });
   });
 
+  /**
+   * Le plafond de durée de vie ne vivait que dans le signeur — du code que le
+   * client N'EXÉCUTE PAS, c'est son backend qui signe (MIN-345).
+   */
+  it("rejects a token whose exp is beyond the 10 min cap", () => {
+    const token = sign({ sub: "user-1", exp: NOW + 86_400 });
+    expect(verifyFeedbackSsoJwt(token, SECRET, NOW)).toEqual({
+      ok: false,
+      error: "ttl_too_long",
+    });
+  });
+
+  it("tolerates a signer's clock a minute ahead", () => {
+    const token = sign({ sub: "user-1", exp: NOW + SSO_MAX_TTL_SECONDS + 30 });
+    expect(verifyFeedbackSsoJwt(token, SECRET, NOW).ok).toBe(true);
+  });
+
+  /** L'identifiant de consommation dérive de la signature : deux jetons
+      distincts ne peuvent pas partager le sien, le même jeton le garde. */
+  it("derives a stable, per-token id to consume", () => {
+    const token = sign({ sub: "user-1", exp: NOW + 60 });
+    const other = sign({ sub: "user-2", exp: NOW + 60 });
+    const first = verifyFeedbackSsoJwt(token, SECRET, NOW);
+    const again = verifyFeedbackSsoJwt(token, SECRET, NOW + 1);
+    const second = verifyFeedbackSsoJwt(other, SECRET, NOW);
+    if (!first.ok || !again.ok || !second.ok) throw new Error("expected valid tokens");
+    expect(first.tokenId).toBe(again.tokenId);
+    expect(first.tokenId).not.toBe(second.tokenId);
+  });
+
   it("rejects malformed input", () => {
     expect(verifyFeedbackSsoJwt("not-a-jwt", SECRET, NOW)).toEqual({
       ok: false,
@@ -117,10 +148,22 @@ describe("signFeedbackSsoJwt", () => {
       SECRET,
       NOW
     );
-    expect(verifyFeedbackSsoJwt(token, SECRET, NOW)).toEqual({
+    expect(verifyFeedbackSsoJwt(token, SECRET, NOW)).toMatchObject({
       ok: true,
       claims: { externalId: "user-42", email: "jane@example.com", name: "Jane" },
     });
+  });
+
+  /** Deux jetons aux mêmes claims, signés dans la même seconde, doivent rester
+      DEUX jetons : sinon le double-clic passe pour un rejeu (MIN-345). */
+  it("never signs the same token twice for the same claims", () => {
+    const a = signFeedbackSsoJwt({ sub: "user-1" }, SECRET, NOW);
+    const b = signFeedbackSsoJwt({ sub: "user-1" }, SECRET, NOW);
+    expect(a).not.toBe(b);
+    const first = verifyFeedbackSsoJwt(a, SECRET, NOW);
+    const second = verifyFeedbackSsoJwt(b, SECRET, NOW);
+    if (!first.ok || !second.ok) throw new Error("expected valid tokens");
+    expect(first.tokenId).not.toBe(second.tokenId);
   });
 
   it("defaults exp to now + 10 min", () => {

@@ -85,6 +85,17 @@ export const DESKTOP_RETURN_PATH = "/desktop/return";
 export const DESKTOP_CALLBACK_FLAG = "desktop";
 
 /**
+ * Le marqueur du TOUR, dans la même URL (MIN-345).
+ *
+ * macOS livre à l'app tout ce qui porte notre schéma, quelle qu'en soit
+ * l'origine : un `minddy://auth?code=…` reçu du système connectait la fenêtre
+ * sans que rien ne rattache ce lien à une demande de l'app. Le nonce part avec
+ * la demande, traverse le provider et revient dans le deep link, où la fenêtre
+ * le compare à celui qu'elle a gardé. Sans correspondance, le lien est ignoré.
+ */
+export const DESKTOP_TURN_PARAM = "turn";
+
+/**
  * Le suffixe d'user agent de la fenêtre — `…Chrome/… minddy-desktop/1.0.0`.
  *
  * Il ne sert à AUCUNE décision de l'app (celles-là lisent la présence du pont,

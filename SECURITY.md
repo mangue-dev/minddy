@@ -42,6 +42,48 @@ sur Vercel (HTTPS natif, redirection HTTP→HTTPS gérée par la plateforme).
   privilège le plus élevé du produit. Lecture fail-closed, mémorisée 60 s.
   `/api/me/admin` est purement informatif : il dit à la barre latérale s'il faut
   afficher l'entrée, il n'ouvre rien.
+- **Un lien reçu n'ouvre pas de session (MIN-345).** Trois surfaces posaient une
+  session sur une simple navigation `GET`, sans rien qui prouve que la personne
+  ait demandé **ce** tour d'authentification — c'est la fixation de session :
+  l'attaquant demande un lien pour son compte, l'envoie, et lit ensuite tout ce
+  que sa victime y écrit. Chacune est traitée à sa mesure :
+  - **Lien e-mail** (`/auth/callback?token_hash=…`) : le jeton n'est plus
+    consommé sur la navigation. Il attend dans un cookie `httpOnly`
+    `SameSite=Lax` ([lib/auth-otp-pending.ts](lib/auth-otp-pending.ts)) et la
+    session ne naît que du `POST` de `/auth/confirm`. Pas de nonce dans le lien :
+    le gabarit GoTrue compose l'URL, et un mail s'ouvre légitimement sur un autre
+    appareil que celui qui l'a demandé (invitation, confirmation lue au
+    téléphone).
+  - **Tour OAuth** : inchangé, il était déjà lié à son initiateur — le
+    vérificateur PKCE est un cookie posé au départ, et l'échange échoue sans lui.
+  - **Deep link de bureau** (`minddy://auth`) : nonce tiré par l'app au départ du
+    tour ([lib/desktop/auth-turn.ts](lib/desktop/auth-turn.ts)), rapporté par le
+    lien, consommé au retour. Un lien que le système livre sans qu'on ait rien
+    demandé est ignoré ; un jeton de mail, qui ne peut pas porter de nonce, se
+    confirme à la main dans la fenêtre.
+  - **SSO de board** (`/f/<token>/sso?jwt=…`) : plafond de durée de vie imposé
+    **au vérificateur** (il ne vivait que dans notre signeur, que le client
+    n'exécute pas) et jeton **à usage unique**, consommé en base
+    ([lib/server/feedback/sso-replay.ts](lib/server/feedback/sso-replay.ts)).
+- **Origine des écritures.** Les routes d'API s'authentifient par cookie, et un
+  cookie part tout seul : une écriture qui **se déclare** d'une autre origine est
+  refusée en 403, dans `getAuthedUser` — global, pour la même raison que le refus
+  `aal2`. Une requête qui ne déclare **aucune** origine passe, à dessein : elle
+  ne peut pas venir d'une page tierce (le navigateur aurait posé l'en-tête), et
+  la refuser ferait tomber les appelants sans page (sondes, tests, CLI). Le
+  raisonnement complet et les deux niveaux de garde sont dans
+  [lib/server/same-origin.ts](lib/server/same-origin.ts). Deux surfaces sont plus
+  strictes et **exigent** l'en-tête, parce qu'elles ne sont atteintes que par un
+  formulaire de l'app : `/api/oauth/authorize` (consentement) et
+  `/auth/confirm/complete` (ouverture de session).
+- **Ré-authentification avant l'irréversible.** `DELETE /api/account` emporte en
+  cascade les projets possédés, leurs tickets, leurs fichiers et l'accès de leurs
+  membres : recopier son adresse protège de la maladresse, pas de quelqu'un
+  d'autre. La route redemande donc le mot de passe — ou, pour un compte OAuth qui
+  n'en a pas, une authentification datant de moins de 15 minutes, datée par le
+  claim `amr` du JWT ([lib/server/reauth.ts](lib/server/reauth.ts)). La
+  vérification du mot de passe est débitée par utilisateur, pour ne pas devenir
+  un oracle entre les mains d'une session volée.
 - **Politique de mot de passe :** longueur minimale 8, imposée côté client
   ([app/(auth)/login/page.tsx](<app/(auth)/login/page.tsx>)) ET côté serveur
   (Dashboard Supabase → Auth). Voir le bloc « Durcissement Auth » de

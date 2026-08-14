@@ -9,6 +9,7 @@ import {
   feedbackSessionCookieOptions,
   upsertFeedbackUser,
 } from "@/lib/server/feedback/identity";
+import { consumeSsoToken } from "@/lib/server/feedback/sso-replay";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 type RouteContext = { params: Promise<{ token: string }> };
@@ -16,9 +17,13 @@ type RouteContext = { params: Promise<{ token: string }> };
 /**
  * Atterrissage SSO du board public (MIN-37) : le backend du client signe un
  * JWT HS256 court avec le sso_secret du board et envoie l'utilisateur ici
- * (/f/<token>?sso=<jwt> redirige vers cette route). On vérifie, on upsert
- * l'identité, on pose le cookie de session et on repart vers le board — le
- * JWT ne reste jamais dans l'URL finale.
+ * (/f/<token>?sso=<jwt> redirige vers cette route). On vérifie, on consomme, on
+ * upsert l'identité, on pose le cookie de session et on repart vers le board —
+ * le JWT ne reste jamais dans l'URL finale.
+ *
+ * « On consomme » (MIN-345) : le jeton ne vaut qu'un passage. Il a beau ne
+ * jamais rester dans l'URL FINALE, il a traversé celle-ci — donc le `Referer`,
+ * l'historique du navigateur et le journal de qui se trouvait sur le chemin.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { token } = await params;
@@ -48,7 +53,23 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   const verified = verifyFeedbackSsoJwt(jwt, ctx.board.sso_secret);
-  if (!verified.ok) return NextResponse.redirect(failureUrl);
+  if (!verified.ok) {
+    console.error(`[feedback-sso] rejected jwt on board ${token}: ${verified.error}`);
+    return NextResponse.redirect(failureUrl);
+  }
+
+  // Usage unique (MIN-345) : la signature vérifiée ne dit que « ce jeton a été
+  // émis par le board », jamais « il n'a pas déjà servi ». Consommé AVANT
+  // d'ouvrir quoi que ce soit — un rejeu ne doit pas même toucher l'identité.
+  if (
+    !(await consumeSsoToken({
+      boardId: ctx.board.id,
+      tokenId: verified.tokenId,
+      expiresAt: verified.expiresAt,
+    }))
+  ) {
+    return NextResponse.redirect(failureUrl);
+  }
 
   const user = await upsertFeedbackUser({
     projectId: ctx.project.id,

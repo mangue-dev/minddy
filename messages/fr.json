@@ -273,7 +273,10 @@
     "pageVersionNotFound": "Cette version de la page n'existe plus.",
     "pageFileTooLarge": "Ce fichier est trop lourd (10 Mo maximum).",
     "pageFileEmpty": "Ce fichier est vide.",
-    "pageFileNotFound": "Fichier introuvable."
+    "pageFileNotFound": "Fichier introuvable.",
+    "reauthPasswordRequired": "Saisissez votre mot de passe pour confirmer.",
+    "reauthPasswordInvalid": "Ce mot de passe n'est pas le bon.",
+    "reauthTooOld": "Déconnectez-vous puis reconnectez-vous avant de recommencer — supprimer un compte demande une connexion récente."
   },
   "CustomDomain": {
     "title": "Domaine personnalisé",
@@ -555,7 +558,13 @@
     "errorSamePassword": "C’est déjà votre mot de passe. Choisissez-en un autre.",
     "errorRateLimited": "Trop de tentatives. Attendez quelques minutes, puis réessayez.",
     "errorSignupDisabled": "Les inscriptions sont fermées pour le moment.",
-    "errorUnexpected": "Une erreur est survenue. Réessayez dans un instant."
+    "errorUnexpected": "Une erreur est survenue. Réessayez dans un instant.",
+    "confirmSignInTitle": "Confirmer cette connexion",
+    "confirmSignInBody": "Vous venez d'ouvrir un lien de connexion. minddy n'ouvre jamais de session sur un lien seul — confirmez que c'est bien vous qui l'avez demandé.",
+    "confirmSignInCta": "Me connecter",
+    "confirmSignInExpiredTitle": "Ce lien n'est plus actif",
+    "confirmSignInExpiredBody": "Il a déjà servi, ou trop de temps a passé. Demandez-en un nouveau depuis la page de connexion.",
+    "confirmSignInExpiredCta": "Retour à la connexion"
   },
   "BulkActions": {
     "selected": "{count, plural, one {# ticket sélectionné} other {# tickets sélectionnés}}",
@@ -1345,7 +1354,9 @@
     "signIn": "Connexion",
     "signUp": "Inscription",
     "pages": "Pages",
-    "pagesDescription": "Le wiki du projet : notes, comptes-rendus et process, en arbre."
+    "pagesDescription": "Le wiki du projet : notes, comptes-rendus et process, en arbre.",
+    "confirmSignIn": "Confirmer la connexion",
+    "confirmSignInDescription": "Confirmez le lien de connexion que vous venez d'ouvrir."
   },
   "Stats": {
     "title": "Statistiques",
@@ -1990,7 +2001,10 @@
     "confirmDescription": "Cette action est irréversible. Vos données seront supprimées immédiatement.",
     "confirmDescriptionWithProjects": "Cette action est irréversible. {count, plural, one {Le projet dont vous êtes propriétaire sera supprimé} other {Les # projets dont vous êtes propriétaire seront supprimés}}, avec leurs tickets, leurs fichiers et l'accès de leurs membres.",
     "confirmLabel": "Saisissez {email} pour confirmer",
-    "confirmButton": "Supprimer définitivement"
+    "confirmButton": "Supprimer définitivement",
+    "confirmPasswordLabel": "Votre mot de passe",
+    "confirmPasswordPlaceholder": "Saisissez votre mot de passe",
+    "confirmRecentSignInHint": "Connecté avec Google ou GitHub ? Déconnectez-vous puis reconnectez-vous d'abord : ce geste demande une connexion récente."
   },
   "AccountSecurity": {
     "title": "Double authentification",

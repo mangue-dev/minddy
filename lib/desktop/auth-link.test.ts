@@ -111,6 +111,38 @@ describe("aller-retour serveur → app", () => {
   });
 });
 
+/**
+ * MIN-345 — le nonce du tour. Il n'a de valeur que s'il traverse INTACT les
+ * trois écritures d'URL qui séparent la demande de l'app du lien qu'elle reçoit.
+ */
+describe("nonce du tour", () => {
+  it("rapporte le nonce posé dans le redirectTo", () => {
+    const link = desktopAuthLinkFromCallback(
+      new URLSearchParams("code=abc&turn=n0nce")
+    );
+    expect(link).toEqual({ kind: "code", code: "abc", next: "/home", turn: "n0nce" });
+  });
+
+  it("survit à l'aller-retour serveur → app", () => {
+    const link: DesktopAuthLink = {
+      kind: "code",
+      code: "abc",
+      next: "/home",
+      turn: "n0nce",
+    };
+    expect(roundTrip(link)).toEqual(link);
+  });
+
+  it("laisse un lien du système sans nonce — c'est ce qui le trahit", () => {
+    expect(parseDesktopAuthLink("minddy://auth?code=abc")).toEqual({
+      kind: "code",
+      code: "abc",
+      next: "/home",
+      turn: undefined,
+    });
+  });
+});
+
 describe("parseDesktopAuthLink", () => {
   it("accepte la forme sans double barre oblique", () => {
     expect(parseDesktopAuthLink("minddy:auth?code=abc")).toEqual({

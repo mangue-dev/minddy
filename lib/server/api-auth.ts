@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { MFA_REQUIRED_CODE, needsMfaChallenge } from "@/lib/mfa";
+import { hasForeignOrigin, isMutatingMethod } from "@/lib/server/same-origin";
 
 /**
  * Anon Supabase client bound to the request cookies (RLS-enforced). Route
@@ -107,7 +108,18 @@ export function createSupabaseWithCookieSink(
 }
 
 export type AuthedResult =
-  | { ok: true; user: User; supabase: SupabaseClient }
+  | {
+      ok: true;
+      user: User;
+      supabase: SupabaseClient;
+      /**
+       * Les claims du JWT vérifié, tels quels. `user` en est une reconstruction
+       * partielle : ce qui n'appartient pas au compte mais à la SESSION — `aal`,
+       * `amr`, `session_id` — n'y figure pas, et c'est précisément ce que lit
+       * une garde de fraîcheur d'authentification (MIN-345).
+       */
+      claims: Record<string, unknown>;
+    }
   | { ok: false; response: NextResponse };
 
 /**
@@ -136,11 +148,36 @@ export type AuthedResult =
  *
  * `allowAal1` n'est là que pour la route de récupération (`/api/account/mfa/recover`),
  * le seul endroit qui doit répondre à quelqu'un qui n'a PLUS son téléphone.
+ *
+ * ## Origine de la requête (MIN-345)
+ *
+ * Ces routes s'authentifient par COOKIE, et un cookie part tout seul. Toute la
+ * protection CSRF tenait au `SameSite=Lax` de celui de Supabase — solide, mais
+ * seul : rien ici ne regardait d'où venait l'appel. Une écriture qui se déclare
+ * d'une autre origine est refusée, et le refus vit ICI pour la même raison que
+ * celui du second facteur — une liste de routes sensibles est une liste qu'on
+ * oublie de compléter.
+ *
+ * Ce qui n'est PAS refusé : une requête qui ne déclare aucune origine. Elle ne
+ * peut pas venir d'une page tierce (le navigateur l'aurait posée), et refuser
+ * ferait tomber les appelants sans page — sondes, tests, outils en ligne de
+ * commande. Le raisonnement complet est dans `lib/server/same-origin.ts`.
  */
 export async function getAuthedUser(
   request: NextRequest,
   options?: { allowAal1?: boolean }
 ): Promise<AuthedResult> {
+  if (isMutatingMethod(request.method) && hasForeignOrigin(request)) {
+    console.error(
+      `[api-auth] cross-origin ${request.method} refused: ` +
+        `${request.headers.get("origin") ?? request.headers.get("referer")}`
+    );
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
   const supabase = createSupabaseFromRequest(request);
   const { data, error } = await supabase.auth.getClaims();
   const claims = data?.claims;
@@ -188,5 +225,5 @@ export async function getAuthedUser(
     user_metadata: claims.user_metadata ?? {},
     created_at: "",
   } as unknown as User;
-  return { ok: true, user, supabase };
+  return { ok: true, user, supabase, claims: claims as unknown as Record<string, unknown> };
 }
