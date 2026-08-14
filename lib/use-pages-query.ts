@@ -57,6 +57,31 @@ function readPages(
   return queryClient.getQueryData<PageSummary[]>(pagesKey(projectId));
 }
 
+/**
+ * Faire taire la LISTE avant d'y écrire (MIN-346).
+ *
+ * Toutes les écritures de ce module posent la ligne dans le cache à la main.
+ * Une requête de liste PARTIE AVANT elles rend, elle, l'état d'avant — et
+ * react-query l'écrit par-dessus en arrivant. La page qu'on venait de créer
+ * disparaissait alors de l'arbre une fraction de seconde après y être apparue,
+ * sans erreur, sans toast : le bouton « + » avait l'air de ne rien faire.
+ *
+ * La fenêtre n'a rien de théorique, et elle est la PLUS LARGE sur l'app de
+ * bureau : le cache des pages est réhydraté depuis le disque
+ * (lib/query-provider.tsx), donc l'arbre est peint instantanément — prêt à
+ * cliquer — pendant que sa revalidation de montage est encore en vol.
+ *
+ * `cancelQueries` annule ce vol et rétablit l'état d'avant la requête : ce
+ * qu'on écrit juste après tient. Rien n'est perdu — la vérité du serveur
+ * revient par le refetch suivant, ou par le pont temps réel.
+ */
+async function hushPages(
+  queryClient: QueryClient,
+  projectId: string
+): Promise<void> {
+  await queryClient.cancelQueries({ queryKey: pagesKey(projectId) });
+}
+
 function writePages(
   queryClient: QueryClient,
   projectId: string,
@@ -148,6 +173,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
       const pid = projectId as string;
       const page = await createPageApi(pid, input);
       const { content: _content, ...summary } = page;
+      await hushPages(queryClient, pid);
       const current = readPages(queryClient, pid);
       // La ligne rendue par le serveur est posée dans le cache tout de suite :
       // la route qu'on ouvre juste après (une page neuve s'ouvre) doit trouver
@@ -179,6 +205,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   const updatePage = useCallback(
     async (pageId: string, input: UpdatePageInput) => {
       const pid = projectId as string;
+      await hushPages(queryClient, pid);
       const before = readPages(queryClient, pid);
       if (before) {
         // Le CORPS n'est pas dans la liste (le serveur ne l'envoie pas) : il
@@ -248,6 +275,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   const trashPage = useCallback(
     async (pageId: string) => {
       const pid = projectId as string;
+      await hushPages(queryClient, pid);
       const before = readPages(queryClient, pid);
       if (before) {
         // Récursif comme le serveur : la page ET ses descendants quittent
@@ -275,6 +303,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   const discardPage = useCallback(
     async (pageId: string) => {
       const pid = projectId as string;
+      await hushPages(queryClient, pid);
       const before = readPages(queryClient, pid);
       // La ligne quitte l'arbre TOUT DE SUITE : le geste qui l'appelle est un
       // départ, et voir une page fantôme dans la sidebar le temps d'un
