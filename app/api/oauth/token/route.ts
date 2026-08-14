@@ -12,6 +12,7 @@ import {
 } from "@/lib/server/oauth/grants";
 import { verifyPkceS256 } from "@/lib/server/oauth/crypto";
 import { isValidResource } from "@/lib/server/oauth/authorize-validation";
+import { oauthIssuer } from "@/lib/server/oauth/issuer";
 import { OAUTH_CORS_HEADERS, NO_STORE_HEADERS, corsPreflight } from "@/lib/server/oauth/cors";
 import { getClientIp } from "@/lib/server/request-ip";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
@@ -162,7 +163,9 @@ async function handleAuthorizationCode(
   if (!verifyPkceS256(code_verifier, claimed.code_challenge)) {
     return tokenError("invalid_grant", "PKCE verification failed.");
   }
-  const origin = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+  // L'origine attendue vient de l'environnement, jamais de la requête : c'est
+  // celle que les `.well-known` ont annoncée.
+  const origin = oauthIssuer();
   if (resource !== undefined && !isValidResource(resource, origin)) {
     return tokenError("invalid_target", `The resource parameter must be ${origin}/api/mcp.`);
   }
@@ -184,16 +187,22 @@ async function handleAuthorizationCode(
 async function handleRefreshToken(
   body: Record<string, string>
 ): Promise<NextResponse> {
-  const { refresh_token } = body;
+  const { refresh_token, client_id } = body;
   if (!refresh_token) {
     return tokenError("invalid_request", "refresh_token is required.");
   }
+  // RFC 6749 §6 : un client public présente son client_id. On l'exige, parce
+  // que c'est ce qui lie le token à son client — sans lui, tout client
+  // enregistré échange le refresh token d'un autre.
+  if (!client_id) {
+    return tokenError("invalid_request", "client_id is required.");
+  }
 
-  const pair = await rotateRefreshToken(refresh_token);
+  const pair = await rotateRefreshToken(refresh_token, client_id);
   if (pair) return tokenSuccess(pair);
 
   // Rotation manquée : rejeu d'un token N-1 ⇒ révocation du grant entier.
-  await handleRefreshReuse(refresh_token);
+  await handleRefreshReuse(refresh_token, client_id);
   return tokenError("invalid_grant", "Invalid, expired or rotated refresh token.");
 }
 

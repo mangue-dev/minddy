@@ -3,6 +3,7 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { clientIpFromHeaders } from "@/lib/server/request-ip";
 import { isCustomPublicHost, publicCookiePath } from "@/lib/server/custom-domains";
 import {
   SHARE_UNLOCK_COOKIE,
@@ -50,9 +51,9 @@ export async function unlockShareWithPassword({
       seul nom de cookie sert donc n'importe quel nombre de partages. */
   cookiePath: string;
 }): Promise<ShareUnlockResult> {
-  // Porte anonyme : on limite par IP visiteur (Vercel pose x-forwarded-for).
-  const forwarded = (await headers()).get("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() || "unknown";
+  // Porte anonyme : on limite par IP visiteur — celle du dernier relais de
+  // confiance, jamais la tête de `x-forwarded-for` (choisie par l'appelant).
+  const ip = clientIpFromHeaders(await headers());
   const { allowed } = checkSessionRateLimit(ip, `share-unlock:${token}`, {
     limit: 10,
   });

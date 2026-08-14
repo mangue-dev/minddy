@@ -9,7 +9,6 @@ import {
 } from "mangue-ui";
 import { appPageMetadata } from "@/lib/app-metadata";
 import { getClient } from "@/lib/server/oauth/clients";
-import { mapClientNameToAgent } from "@/lib/mcp-agents";
 import { OAuthSuccessCard } from "@/components/oauth/success-card";
 
 /**
@@ -85,10 +84,6 @@ export default async function OAuthSuccessPage({
   }
 
   return (
-    <OAuthSuccessCard
-      clientName={client.client_name}
-      agentId={mapClientNameToAgent(client.client_name)}
-      continueUrl={continueUrl}
-    />
+    <OAuthSuccessCard clientName={client.client_name} continueUrl={continueUrl} />
   );
 }

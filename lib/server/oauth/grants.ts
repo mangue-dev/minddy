@@ -141,9 +141,15 @@ export async function issueTokens(grantId: string): Promise<TokenPair | null> {
 }
 
 /** Rotation atomique du refresh token : le swap est keyed sur l'ANCIEN hash,
-    donc une seule rotation concurrente gagne. Expiry glissante +90 j. */
+    donc une seule rotation concurrente gagne. Expiry glissante +90 j.
+
+    Le `client_id` fait partie de la clé (RFC 6749 §6 : le client public le
+    présente, §10.4 : le serveur doit lier le token à son client). Sans lui,
+    n'importe quel client enregistré — et l'inscription est ouverte — échange
+    le refresh token d'un autre dès qu'il en intercepte un. */
 export async function rotateRefreshToken(
-  refreshToken: string
+  refreshToken: string,
+  clientId: string
 ): Promise<TokenPair | null> {
   const service = getServiceClient();
   const oldHash = sha256Hex(refreshToken);
@@ -162,6 +168,7 @@ export async function rotateRefreshToken(
       last_used_at: new Date(now).toISOString(),
     })
     .eq("refresh_token_hash", oldHash)
+    .eq("client_id", clientId)
     .is("revoked_at", null)
     .gt("refresh_token_expires_at", new Date(now).toISOString())
     .select("scope");
@@ -180,13 +187,19 @@ export async function rotateRefreshToken(
 }
 
 /** Rejeu d'un refresh token rotationné (génération N-1) : le grant entier est
-    révoqué — un tiers détient peut-être la paire courante (RFC 9700 §4.14). */
-export async function handleRefreshReuse(refreshToken: string): Promise<boolean> {
+    révoqué — un tiers détient peut-être la paire courante (RFC 9700 §4.14).
+    Lié au client lui aussi : la révocation est une arme, et le grant d'un
+    client n'est pas à la portée d'un autre. */
+export async function handleRefreshReuse(
+  refreshToken: string,
+  clientId: string
+): Promise<boolean> {
   const service = getServiceClient();
   const { data } = await service
     .from("oauth_grants")
     .select("id, user_id, api_key_id")
     .eq("prev_refresh_token_hash", sha256Hex(refreshToken))
+    .eq("client_id", clientId)
     .is("revoked_at", null)
     .maybeSingle();
   if (!data) return false;

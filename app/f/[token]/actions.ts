@@ -33,6 +33,7 @@ import {
 import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
 import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { clientIpFromHeaders } from "@/lib/server/request-ip";
 import type { FeedbackVoicePatch, SimilarPost } from "@/lib/feedback/types";
 
 /**
@@ -46,8 +47,7 @@ import type { FeedbackVoicePatch, SimilarPost } from "@/lib/feedback/types";
 const MIN_SUGGESTION_SIMILARITY = 0.4;
 
 async function clientIp(): Promise<string> {
-  const forwarded = (await headers()).get("x-forwarded-for");
-  return forwarded?.split(",")[0]?.trim() || "unknown";
+  return clientIpFromHeaders(await headers());
 }
 
 async function resolveBoard(token: string) {

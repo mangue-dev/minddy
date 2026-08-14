@@ -7,11 +7,17 @@ import { getClient, type OAuthClient } from "@/lib/server/oauth/clients";
  * entre la page de consentement (GET) et la route de décision (POST — qui
  * re-valide tout : les champs cachés d'un formulaire ne sont pas fiables).
  *
- * Deux familles d'échec :
- * - "fatal" (client inconnu, redirect_uri non enregistré) → afficher une
- *   erreur, NE JAMAIS rediriger (anti open-redirect) ;
- * - "error_redirect" (erreur protocolaire) → rediriger vers le redirect_uri
- *   validé avec ?error=…&state=… (RFC 6749 §4.1.2.1).
+ * Un seul verdict d'échec, et il ne redirige JAMAIS. La RFC autorise à
+ * renvoyer une erreur protocolaire au `redirect_uri` une fois celui-ci
+ * reconnu (§4.1.2.1) ; ici l'enregistrement dynamique de client est ouvert à
+ * tous, donc « URI enregistrée » ne veut rien dire de plus que « URI qu'un
+ * inconnu a déposée ». Rendre la redirection sur un paramètre invalide, c'est
+ * offrir un redirecteur ouvert permanent sous notre domaine, déclenchable par
+ * une simple URL — `?response_type=x` suffit. Une erreur de protocole se rend
+ * donc sur notre propre page.
+ *
+ * Reste une seule redirection vers le client, après validation COMPLÈTE : la
+ * décision de l'utilisateur (`code`, ou `error=access_denied` s'il refuse).
  */
 
 // base64url(sha256) = 43 caractères ; la RFC borne 43-128.
@@ -31,15 +37,18 @@ export type AuthorizeParams = Partial<
   >
 >;
 
+/** Motifs d'échec, tels qu'ils s'affichent : chacun a sa phrase sur la page
+    d'erreur (namespace i18n `OAuthConsent`). */
+export type AuthorizeFailure =
+  | "unknown_client"
+  | "invalid_redirect_uri"
+  | "unsupported_response_type"
+  | "invalid_code_challenge"
+  | "invalid_scope"
+  | "invalid_resource";
+
 export type AuthorizeValidation =
-  | { kind: "fatal"; reason: "unknown_client" | "invalid_redirect_uri" }
-  | {
-      kind: "error_redirect";
-      redirectUri: string;
-      state: string | null;
-      error: string;
-      errorDescription: string;
-    }
+  | { kind: "invalid"; reason: AuthorizeFailure }
   | {
       kind: "ok";
       client: OAuthClient;
@@ -73,40 +82,31 @@ export async function validateAuthorizeRequest(
   origin: string
 ): Promise<AuthorizeValidation> {
   const client = await getClient(params.client_id);
-  if (!client) return { kind: "fatal", reason: "unknown_client" };
+  if (!client) return { kind: "invalid", reason: "unknown_client" };
 
   const redirectUri = params.redirect_uri;
   // Comparaison STRICTE avec les URIs enregistrées — aucune normalisation.
   if (!redirectUri || !client.redirect_uris.includes(redirectUri)) {
-    return { kind: "fatal", reason: "invalid_redirect_uri" };
+    return { kind: "invalid", reason: "invalid_redirect_uri" };
   }
 
-  const state = params.state ?? null;
-  const err = (error: string, errorDescription: string): AuthorizeValidation => ({
-    kind: "error_redirect",
-    redirectUri,
-    state,
-    error,
-    errorDescription,
+  const err = (reason: AuthorizeFailure): AuthorizeValidation => ({
+    kind: "invalid",
+    reason,
   });
 
-  if (params.response_type !== "code") {
-    return err("unsupported_response_type", "Only response_type=code is supported.");
-  }
+  if (params.response_type !== "code") return err("unsupported_response_type");
   if (params.code_challenge_method && params.code_challenge_method !== "S256") {
-    return err("invalid_request", "Only the S256 code_challenge_method is supported.");
+    return err("invalid_code_challenge");
   }
   if (!params.code_challenge || !CHALLENGE_RE.test(params.code_challenge)) {
-    return err("invalid_request", "A valid S256 code_challenge is required (PKCE).");
+    return err("invalid_code_challenge");
   }
   if (params.scope !== undefined && params.scope !== "" && params.scope !== "minddy") {
-    return err("invalid_scope", "Only the 'minddy' scope is supported.");
+    return err("invalid_scope");
   }
   if (params.resource !== undefined && !isValidResource(params.resource, origin)) {
-    return err(
-      "invalid_target",
-      `The resource parameter must be ${origin}/api/mcp.`
-    );
+    return err("invalid_resource");
   }
 
   return {
@@ -116,7 +116,7 @@ export async function validateAuthorizeRequest(
     codeChallenge: params.code_challenge,
     scope: "minddy",
     resource: params.resource ?? null,
-    state,
+    state: params.state ?? null,
   };
 }
 

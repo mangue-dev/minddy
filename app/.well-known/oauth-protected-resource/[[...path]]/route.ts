@@ -1,8 +1,8 @@
 import {
   generateProtectedResourceMetadata,
-  getPublicOrigin,
   metadataCorsOptionsRequestHandler,
 } from "mcp-handler";
+import { mcpResourceUrl, oauthIssuer } from "@/lib/server/oauth/issuer";
 import { OAUTH_CORS_HEADERS } from "@/lib/server/oauth/cors";
 
 /**
@@ -11,12 +11,14 @@ import { OAUTH_CORS_HEADERS } from "@/lib/server/oauth/cors";
  * la forme avec chemin inséré `…/oauth-protected-resource/api/mcp` que les
  * clients spec-2025-06-18 construisent. On n'utilise PAS protectedResourceHandler
  * nu : à la racine il dériverait un `resource` sans /api/mcp.
+ *
+ * L'origine vient de l'environnement, jamais de `x-forwarded-host` : le
+ * `resource` annoncé ici est celui que les clients renverront au `/authorize`.
  */
-export function GET(request: Request) {
-  const origin = getPublicOrigin(request);
+export function GET() {
   const metadata = generateProtectedResourceMetadata({
-    authServerUrls: [origin],
-    resourceUrl: `${origin}/api/mcp`,
+    authServerUrls: [oauthIssuer()],
+    resourceUrl: mcpResourceUrl(),
     additionalMetadata: {
       scopes_supported: ["minddy"],
       bearer_methods_supported: ["header"],

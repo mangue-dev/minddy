@@ -1,26 +1,26 @@
 import { Bot, Check } from "lucide-react";
 import { cn } from "mangue-ui";
 import { MinddyLogo } from "@/components/minddy-logo";
-import { BrandLogo } from "@/components/brand-logo";
-import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 
 /**
- * Paire de logos des pages OAuth : minddy ⟷ agent, côte à côte, SANS
+ * Paire de logos des pages OAuth : minddy ⟷ l'application, côte à côte, SANS
  * containers (les marques respirent). Entre les deux : trois points en
  * connexion, remplacés par une coche sur l'état "success".
+ *
+ * En face de minddy, une silhouette générique et rien d'autre. Le composant
+ * rendait le vrai logo du vendeur deviné à partir du `client_name` — un champ
+ * libre, posé par le client lui-même à l'inscription, qui est ouverte à tous.
+ * Afficher la marque d'Anthropic parce qu'une application s'est appelée
+ * « Claude », c'est signer d'une identité que personne n'a vérifiée, sur
+ * l'écran précis où l'utilisateur décide à qui il donne son compte (MIN-346).
  */
 export function OAuthLogoPair({
-  agentId,
   state = "connect",
   className,
 }: {
-  /** Agent du registry deviné depuis le client_name ; null = client inconnu. */
-  agentId: string | null;
   state?: "connect" | "success";
   className?: string;
 }) {
-  const agent = isMcpAgentId(agentId) ? getMcpAgent(agentId) : null;
-
   return (
     <div className={cn("flex items-center justify-center gap-5", className)}>
       <MinddyLogo className="h-11 w-11 shrink-0 text-foreground" />
@@ -37,11 +37,7 @@ export function OAuthLogoPair({
         </span>
       )}
 
-      {agent ? (
-        <BrandLogo brand={agent} className="size-11 shrink-0" />
-      ) : (
-        <Bot className="size-11 shrink-0 text-muted-foreground" />
-      )}
+      <Bot className="size-11 shrink-0 text-muted-foreground" aria-hidden />
     </div>
   );
 }

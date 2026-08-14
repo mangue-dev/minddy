@@ -11,6 +11,7 @@ import {
 } from "@/lib/server/feedback/identity";
 import { consumeSsoToken } from "@/lib/server/feedback/sso-replay";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { getClientIp } from "@/lib/server/request-ip";
 
 type RouteContext = { params: Promise<{ token: string }> };
 
@@ -42,9 +43,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const jwt = request.nextUrl.searchParams.get("jwt");
   if (!jwt) return NextResponse.redirect(failureUrl);
 
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() || "unknown";
-  const rate = checkSessionRateLimit(ip, `feedback-sso:${token}`, { limit: 20 });
+  const rate = checkSessionRateLimit(getClientIp(request), `feedback-sso:${token}`, {
+    limit: 20,
+  });
   if (!rate.allowed) return NextResponse.redirect(failureUrl);
 
   const ctx = await getBoardByToken(token);

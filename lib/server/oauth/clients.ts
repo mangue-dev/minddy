@@ -100,22 +100,76 @@ export async function getClient(clientId: unknown): Promise<OAuthClient | null> 
   return (data as unknown as OAuthClient) ?? null;
 }
 
+/** Taille de page du balayage des grants — bornée par PostgREST de toute façon. */
+const GRANT_PAGE = 1000;
+
+/**
+ * Sélectionne, parmi des clients candidats, ceux qui n'ont AUCUN grant.
+ *
+ * L'ordre du raisonnement est le point sensible. La version d'origine lisait
+ * `select("client_id")` sur TOUT `oauth_grants` pour en faire l'ensemble « à
+ * garder » : au-delà de la limite implicite de PostgREST, la liste revient
+ * tronquée sans le dire, et tout grant non lu devient un client « orphelin »
+ * — donc supprimé, et la FK emportait alors les grants de tous ses
+ * utilisateurs. Un ensemble « à garder » construit par une lecture partielle
+ * ne peut pas servir à décider une suppression.
+ *
+ * Ici la lecture est bornée aux seuls candidats, paginée jusqu'à épuisement,
+ * et la moindre erreur ne rend rien : on ne supprime que ce dont on a la
+ * preuve positive qu'il est vide.
+ */
+export async function selectClientsWithoutGrants(
+  candidateIds: string[],
+  readGrantPage: (
+    ids: string[],
+    from: number,
+    to: number
+  ) => Promise<{ clientIds: string[] } | { failed: true }>
+): Promise<string[]> {
+  if (candidateIds.length === 0) return [];
+  const used = new Set<string>();
+  for (let from = 0; ; from += GRANT_PAGE) {
+    const page = await readGrantPage(candidateIds, from, from + GRANT_PAGE - 1);
+    if ("failed" in page) return [];
+    for (const id of page.clientIds) used.add(id);
+    // Page incomplète = fin du balayage. Tous les candidats déjà couverts =
+    // plus rien à apprendre.
+    if (page.clientIds.length < GRANT_PAGE) break;
+    if (used.size >= candidateIds.length) break;
+  }
+  return candidateIds.filter((id) => !used.has(id));
+}
+
 /** Hygiène DCR : purge opportuniste des clients de plus de 7 jours sans
     aucun grant (spam d'enregistrement). Fire-and-forget. */
 export function cleanupOrphanClients(): void {
   const service = getServiceClient();
   void (async () => {
     const cutoff = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
-    const { data: used } = await service.from("oauth_grants").select("client_id");
-    const keep = new Set((used ?? []).map((g) => g.client_id as string));
-    const { data: stale } = await service
+    const { data: stale, error: staleError } = await service
       .from("oauth_clients")
       .select("client_id")
       .lt("created_at", cutoff)
       .limit(200);
-    const doomed = (stale ?? [])
-      .map((c) => c.client_id as string)
-      .filter((id) => !keep.has(id));
+    if (staleError) {
+      console.error("[oauth/clients] cleanup scan:", staleError.message);
+      return;
+    }
+    const candidates = (stale ?? []).map((c) => c.client_id as string);
+
+    const doomed = await selectClientsWithoutGrants(candidates, async (ids, from, to) => {
+      const { data, error } = await service
+        .from("oauth_grants")
+        .select("client_id")
+        .in("client_id", ids)
+        .range(from, to);
+      if (error) {
+        console.error("[oauth/clients] cleanup grants:", error.message);
+        return { failed: true };
+      }
+      return { clientIds: (data ?? []).map((g) => g.client_id as string) };
+    });
+
     if (doomed.length > 0) {
       const { error } = await service
         .from("oauth_clients")

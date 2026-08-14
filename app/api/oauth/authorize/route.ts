@@ -5,6 +5,7 @@ import {
   validateAuthorizeRequest,
   type AuthorizeParams,
 } from "@/lib/server/oauth/authorize-validation";
+import { oauthIssuer } from "@/lib/server/oauth/issuer";
 import { ensureGrantWithActorKey } from "@/lib/server/oauth/grants";
 import { createAuthorizationCode } from "@/lib/server/oauth/codes";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
@@ -72,23 +73,13 @@ export async function POST(request: NextRequest) {
     resource: field("resource"),
   };
 
-  const origin = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
-  const validation = await validateAuthorizeRequest(params, origin);
-  if (validation.kind === "fatal") {
-    // Formulaire falsifié — pas de redirection vers une URI non enregistrée.
+  const validation = await validateAuthorizeRequest(params, oauthIssuer());
+  if (validation.kind === "invalid") {
+    // Formulaire falsifié, ou paramètre de protocole hors gabarit : on répond
+    // ici. Aucune erreur ne part vers le client — voir authorize-validation.
     return NextResponse.json(
       { error: "invalid_request", error_description: validation.reason },
       { status: 400, headers: NO_STORE }
-    );
-  }
-  if (validation.kind === "error_redirect") {
-    return NextResponse.redirect(
-      buildCallbackUrl(validation.redirectUri, {
-        error: validation.error,
-        error_description: validation.errorDescription,
-        state: validation.state,
-      }),
-      { status: 303, headers: NO_STORE }
     );
   }
 

@@ -10,11 +10,9 @@ import { AutoRedirect } from "@/components/oauth/auto-redirect";
  */
 export async function OAuthSuccessCard({
   clientName,
-  agentId,
   continueUrl,
 }: {
   clientName: string;
-  agentId: string | null;
   continueUrl: string;
 }) {
   const t = await getTranslations("OAuthConsent");
@@ -22,7 +20,7 @@ export async function OAuthSuccessCard({
   return (
     <Card className="w-full max-w-md rounded-2xl">
       <CardContent className="flex flex-col gap-6 px-8 py-8">
-        <OAuthLogoPair agentId={agentId} state="success" />
+        <OAuthLogoPair state="success" />
 
         <div className="flex flex-col gap-1 text-center">
           <h1 className="font-display text-xl font-semibold tracking-tight">
