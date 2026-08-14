@@ -1,6 +1,6 @@
 {
   "name": "minddy",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "private": true,
   "scripts": {
     "predev": "npm run build:pages-md",
@@ -10,7 +10,7 @@
     "build:agent-vm": "node scripts/build-agent-vm.mjs",
     "build:pages-md": "node scripts/build-pages-md.mjs",
     "desktop:dev": "node scripts/dev-desktop.mjs",
-  "desktop:check": "node scripts/desktop-fingerprint.mjs --explain",
+    "desktop:check": "node scripts/desktop-fingerprint.mjs --explain",
     "desktop:release": "npm --prefix desktop run dist && node scripts/publish-desktop.mjs",
     "start": "next start",
     "typecheck": "tsc --noEmit",
