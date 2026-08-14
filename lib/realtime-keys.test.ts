@@ -178,7 +178,7 @@ describe("aucune table diffusée sur project:{id} n'est sans réponse", () => {
 
 describe("le trigger des pages", () => {
   const sql = readFileSync(
-    path.join(MIGRATIONS, "20261228090000_pages_realtime.sql"),
+    path.join(MIGRATIONS, "20261231090000_pages_realtime.sql"),
     "utf8"
   );
 

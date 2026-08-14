@@ -1,5 +1,19 @@
 -- minddy — MIN-346 : une page qui bouge se voit tout de suite, dans l'autre fenêtre.
 --
+-- ── RENUMÉROTÉE le 2026-08-14 (MIN-297) : 20261228090000 → 20261231090000 ───
+--
+-- Ce fichier portait la MÊME version que `..._mfa_recovery_codes_scrypt.sql`.
+-- La version est la clé primaire du registre distant : le premier arrivé s'y
+-- inscrit, et le second est sauté EN SILENCE par `db push`, définitivement.
+-- C'est le scrypt qui s'est inscrit — donc ce fichier-ci n'a jamais tourné en
+-- production. Vérifié : ni `broadcast_page_row`, ni les trois triggers
+-- n'existaient sur la base, et le direct des pages était mort depuis MIN-346
+-- sans que rien ne le dise. `lib/schema-guardrails.test.ts` échouait là-dessus.
+--
+-- Il repart donc APRÈS la dernière migration appliquée, et non à sa date
+-- d'origine : `db push` n'aime pas les versions hors séquence, et le contenu
+-- est idempotent — l'ordre ne lui coûte rien.
+--
 -- La table `pages` (MIN-266) n'a JAMAIS rien diffusé. Ses quatre satellites,
 -- eux, l'ont fait au fil des lots : l'activité (20261203090000), les rétroliens
 -- (20261204090000), les commentaires (20261207090000). Le résultat était un
