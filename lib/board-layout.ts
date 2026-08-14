@@ -25,9 +25,39 @@
  * du sens quand une colonne remplissait l'écran (centre = début) ; avec deux ou
  * trois colonnes visibles, ça les laisserait à cheval sur les deux bords. Le
  * même changement ne change rien à un doigt sur un téléphone.
+ *
+ * ⚠ **Les fractions sont bornées par `max-desktop:`, et ce n'est pas décoratif.**
+ * Le partage ci-dessus ne vaut QUE sous 1200 px ; au-dessus, la colonne est fixe.
+ * Écrit sans borne — `sm:w-… lg:w-… desktop:w-[22rem]` — il débordait au-dessus
+ * du seuil : `lg:` s'appliquait toujours et la colonne prenait le TIERS de la
+ * fenêtre. Mesuré au navigateur : 472 px à 1440, 632 px à 1920, au lieu de 352
+ * dans les deux cas — des cartes de ticket étirées, exactement le défaut que ce
+ * partage devait corriger sous 1200 px.
+ *
+ * La cause est dans l'ORDRE des media queries, pas dans les largeurs. Tailwind
+ * trie les points de rupture par leur valeur, mais il ne sait pas comparer des
+ * unités différentes : les siens sont en `rem` (`sm` = 40rem, `lg` = 64rem),
+ * `--breakpoint-desktop` de mangue-ui est en `px` (1200px). Les `px` sortent donc
+ * EN BLOC avant les `rem`, et la feuille générée finit par
+ *
+ *     @media (width >= 1200px)  { … }   ← desktop, écrit en premier
+ *     @media (width >= 40rem)   { … }   ← sm
+ *     @media (width >= 64rem)   { … }   ← lg, écrit en DERNIER → il gagne
+ *
+ * À spécificité égale c'est le dernier qui l'emporte : au-dessus de 1200 px les
+ * trois règles s'appliquent, et `desktop:` perd. Aucune erreur, aucun
+ * avertissement — le mélange `px`/`rem` ne se lit nulle part dans les classes.
+ *
+ * `max-desktop:` rend les intervalles DISJOINTS (`(width < 1200px)` imbriqué
+ * autour de la fraction), donc l'ordre ne décide plus rien. C'est la parade qui
+ * tient quel que soit le tri : la garder en cas de refonte de ces classes, et
+ * s'en souvenir avant tout nouveau `desktop:` posé sur une propriété que `sm:`,
+ * `md:`, `lg:`, `xl:` ou `2xl:` posent déjà. [board-layout.test.ts](board-layout.test.ts)
+ * compile ces classes pour de vrai et relit la largeur qui gagne à cinq largeurs
+ * de fenêtre.
  */
 export const BOARD_COLUMN_CLASS =
-  "w-full shrink-0 snap-start sm:w-[calc((100%-0.75rem)/2)] lg:w-[calc((100%-1.5rem)/3)] desktop:w-[22rem]";
+  "w-full shrink-0 snap-start max-desktop:sm:w-[calc((100%-0.75rem)/2)] max-desktop:lg:w-[calc((100%-1.5rem)/3)] desktop:w-[22rem]";
 
 /**
  * La gouttière du défileur.

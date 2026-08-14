@@ -767,7 +767,12 @@ export const IssueCardBody = memo(function IssueCardBody({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-xl border border-border p-3 text-left shadow-sm",
+        // `shadow-xs` et non `shadow-sm` : une carte de board est POSÉE sur la
+        // colonne, elle ne flotte pas au-dessus. `shadow-sm` (l'ancien `shadow`
+        // de Tailwind 3, 3 px de flou à 10 % d'opacité) lui donnait un relief de
+        // popover, répété sur les N cartes visibles. Le relief franc reste ce
+        // qu'il a toujours dit : la carte qu'on TIENT (`shadow-lg` ci-dessous).
+        "flex flex-col gap-2 rounded-xl border border-border p-3 text-left shadow-xs",
         // Sélection groupée (MIN-75) : fond bleuté plutôt qu'un liseré.
         selected ? "bg-primary/10" : "bg-card",
         dragging && "cursor-grabbing shadow-lg"
@@ -1530,7 +1535,8 @@ export const IssueCard = memo(function IssueCard({
           />
         );
         // Agent en cours : liseré animé qui parcourt le bord (wrapper `AgentBeam`
-        // partagé). Le wrapper a `overflow: hidden` → on lui reporte le `shadow-sm`.
+        // partagé). Le wrapper a `overflow: hidden` → on lui reporte l'ombre de
+        // la carte, qu'il rognerait sinon. À garder alignée sur celle du corps.
         //
         // `keepMounted` n'est PAS décoratif ici (MIN-302) : sans lui, le type de
         // l'élément rendu à cette position change avec `agentActive`, et React
@@ -1543,7 +1549,7 @@ export const IssueCard = memo(function IssueCard({
           <AgentBeam
             active={agentActive}
             keepMounted
-            className="rounded-xl shadow-sm"
+            className="rounded-xl shadow-xs"
           >
             {body}
           </AgentBeam>
