@@ -33,7 +33,6 @@ import {
   type AgentRunTrigger,
 } from "./runs";
 import { drainAgentRuns } from "./drain";
-import { chainAgentDrain } from "./drain-chain";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
@@ -625,14 +624,18 @@ export async function continueOrLaunchAgentRun(
 }
 
 /**
- * Kick basse latence : draine après la réponse HTTP (même invocation), puis
- * auto-invoque si du travail reste. Ne lève jamais — le cron (toutes les 2 min) est le filet.
+ * Kick basse latence : lance les runs dus après la réponse HTTP, dans la même
+ * invocation. Ne lève jamais — le cron (toutes les 2 min) est le filet.
+ *
+ * Plus de chaînage derrière (MIN-225) : un lancement se compte en secondes, une
+ * fenêtre en absorbe donc tous les runs dus, et les deux chemins qui remettent un
+ * run en file — le steering et le repli de fournisseur — appellent ce kick-ci
+ * directement plutôt que d'attendre un tick.
  */
 export function kickAgentDrain(service: SupabaseClient): void {
   after(async () => {
     try {
-      const summary = await drainAgentRuns(service);
-      if (summary.claimed > 0) await chainAgentDrain({ supabase: service, chain: 0 });
+      await drainAgentRuns(service);
     } catch (err) {
       console.error("[agent-launch] kick drain failed:", (err as Error).message);
     }

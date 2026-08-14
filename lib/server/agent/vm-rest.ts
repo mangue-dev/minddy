@@ -169,7 +169,6 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   const restFields = {
     continuations: 0,
     attempts: 0,
-    window_started_at: null,
     cost_usd: newCost,
     /**
      * Le checkpoint n'est écrit que si le rapport en porte un. Un rapport de

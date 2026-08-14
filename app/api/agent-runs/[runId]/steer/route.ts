@@ -186,7 +186,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // que personne ne drainerait. Nouveau tour sur la même branche/PR.
     const stamped = await stampRun(
       runId,
-      { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
+      { status: "queued", not_before: new Date().toISOString() },
       { guard: RESUME_FROM },
     );
     if (!stamped) {
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (now && RESUME_FROM.includes(now.status)) {
       const stamped = await stampRun(
         runId,
-        { status: "queued", not_before: new Date().toISOString(), window_started_at: null },
+        { status: "queued", not_before: new Date().toISOString() },
         { guard: RESUME_FROM },
       );
       if (stamped) resumed = true;

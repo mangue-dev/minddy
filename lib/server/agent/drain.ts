@@ -5,13 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 
-import { appendEvent, claimRun, notifyAgentRun, requeueStuckRuns, stampRun } from "./runs";
+import { appendEvent, claimRun, notifyAgentRun, stampRun } from "./runs";
 import { SANDBOX_USAGE_SEQ_BASE } from "./pr-landing";
-// Le seuil d'admission d'un chunk ne se pose pas ici : il DÉRIVE de ce que le chunk
-// s'accorde une fois démarré, plus son amorçage (MIN-213). Deux chiffres écrits à la
-// main de part et d'autre de cette frontière se contredisaient — le drain admettait
-// 40 s là où le chunk s'en garantissait 45, avant même le réveil de la microVM.
-import { MIN_CHUNK_BUDGET_MS } from "./chunk-budget";
 import { executeAgentRun } from "./execute";
 import { isLoopCommandAlive, stopSandboxByName } from "./sandbox";
 import { revokeRunKey } from "./run-key";
@@ -33,6 +28,21 @@ import { currentDeploymentScope } from "./deployment";
  * plein chunk — checkpoint non écrit, tour perdu.
  */
 const DRAIN_TIME_BUDGET_MS = 270_000;
+/**
+ * CE QUE COÛTE UN LANCEMENT, et plus ce que coûtait un chunk (MIN-225).
+ *
+ * `executeAgentRun` n'exécute plus le tour : il réveille ou clone la microVM,
+ * écrit le job et le bundle, lance le superviseur en détaché et REND LA MAIN. Le
+ * seuil d'admission n'a donc plus à couvrir treize minutes de travail — seulement
+ * un amorçage, dont le clone est le poste le plus lourd (~22 s mesurées, MIN-222)
+ * et dont le timeout propre est de 180 s.
+ *
+ * Deux minutes : large pour un amorçage tiède, honnête sur un clone froid. En
+ * dessous, on préfère laisser le run à `queued` — le tick suivant le reprendra
+ * avec une fenêtre entière plutôt que de se faire tuer en plein `writeFiles`,
+ * qui laisserait une microVM debout et un run `running` sans process.
+ */
+const MIN_LAUNCH_BUDGET_MS = 120_000;
 /** Inactivité au-delà de laquelle on coupe la microVM d'un run au repos. */
 const SANDBOX_IDLE_REAP_MS = 5 * 60_000;
 /** Runs au repos dont la microVM peut être coupée. `completed` = le seul repos du
@@ -152,9 +162,9 @@ const VM_LOOP_UNLAUNCHED_AFTER_MS = 15 * 60_000;
 /**
  * LE CHIEN DE GARDE des runs dont la boucle vit dans la microVM (MIN-224).
  *
- * IL REMPLACE `requeueStuckRuns` POUR CES RUNS-LÀ, et ce n'est pas le même geste.
- * L'ancien présumait mort tout run `running` silencieux depuis vingt minutes,
- * puis lui volait son claim — une heuristique acceptable quand un chunk durait
+ * IL A REMPLACÉ le balayeur par présomption (retiré en MIN-225), et ce n'était
+ * pas le même geste. L'ancien déclarait mort tout run `running` silencieux depuis
+ * vingt minutes, puis lui volait son claim — une heuristique acceptable quand un chunk durait
  * cinq minutes, intenable quand un tour peut travailler des heures sans écrire un
  * event (un `npm test` qui dure, un modèle qui réfléchit). Celui-ci ne présume
  * rien : il DEMANDE à la plateforme si la commande vit encore, et la plateforme
@@ -184,7 +194,6 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
       "id, sandbox_id, loop_command_id, created_by, project_id, issue_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at, cost_usd",
     )
     .eq("status", "running")
-    .eq("loop_in_vm", true)
     .lt("last_activity_at", cutoff)
     .limit(50);
   const rows = (data ?? []) as Array<{
@@ -276,7 +285,6 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
       error_message: "The agent process stopped unexpectedly",
       continuations: 0,
       attempts: 0,
-      window_started_at: null,
       last_activity_at: new Date().toISOString(),
       interrupt_requested: false,
       loop_command_id: null,
@@ -294,7 +302,7 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
      *
      * Dans la nouvelle forme, le wall-clock de la VM est tenu par la boucle et
      * remonté dans son rapport de fin de tour (`vm-rest.ts`) — et la fonction ne
-     * facture plus rien de son côté (`execute.ts`, la garde `!run.loop_in_vm`).
+     * facture plus rien de son côté.
      * Un tour dont le process meurt ne rend jamais ce rapport : sans cette ligne,
      * le réveil, le clone et les heures de microVM sortent de tous les compteurs
      * en silence. C'est la moitié compute de la facture, sur le seul chemin où
@@ -386,20 +394,6 @@ function scopeToDeployment<Q>(query: Q, scope: string | null): Q {
     : q.eq("deployment_url", scope)) as Q;
 }
 
-/** True s'il existe au moins un run queued et dû maintenant, DANS LE PÉRIMÈTRE
- *  du déploiement courant (MIN-165) — un preview ne chaîne pas sur les runs de
- *  la prod, la prod ne chaîne pas sur ceux d'un preview. */
-export async function hasDueAgentWork(service: SupabaseClient): Promise<boolean> {
-  const { data } = await scopeToDeployment(
-    service
-      .from("agent_runs")
-      .select("id")
-      .eq("status", "queued")
-      .lte("not_before", new Date().toISOString()),
-    currentDeploymentScope(),
-  ).limit(1);
-  return ((data ?? []) as Array<{ id: string }>).length > 0;
-}
 
 export async function drainAgentRuns(
   service: SupabaseClient,
@@ -411,18 +405,19 @@ export async function drainAgentRuns(
 ): Promise<{ claimed: number }> {
   const deadline = Date.now() + (opts?.budgetMs ?? DRAIN_TIME_BUDGET_MS);
   // Périmètre du déploiement (MIN-165) : résolu UNE fois, il ne bouge pas d'un
-  // tour de boucle à l'autre. `requeueStuckRuns` et `reapIdleSandboxes` restent
-  // GLOBAUX : ni le requeue d'un claim mort ni la coupe d'une microVM au repos
-  // ne dépendent de la logique d'agent, et les scoper laisserait la VM d'un run
-  // preview tourner jusqu'au timeout de session.
+  // tour de boucle à l'autre. Les deux balayeurs restent GLOBAUX : ni le constat
+  // de décès ni la coupe d'une microVM au repos ne dépendent de la logique
+  // d'agent, et les scoper laisserait la VM d'un run preview tourner jusqu'au
+  // timeout de session.
   const scope = currentDeploymentScope();
   let claimed = 0;
 
-  await requeueStuckRuns(service);
-  // Le chien de garde de la NOUVELLE forme (MIN-224), à côté de l'ancien
-  // balayeur et pas à sa place : les deux populations coexistent le temps de la
-  // migration, et chacune a le sien. Best-effort — un constat de décès raté se
-  // rattrape au passage suivant, une exception ici tuerait le drain entier.
+  // LE chien de garde, et il n'y en a plus qu'un (MIN-225) : `requeueStuckRuns`
+  // présumait la mort d'un run après vingt minutes de silence, ce qui n'a aucun
+  // sens pour un tour qui vit dans la microVM et peut travailler une heure sans
+  // écrire un event. Celui-ci ne présume rien, il DEMANDE à la plateforme si le
+  // process vit. Best-effort — un constat de décès raté se rattrape au passage
+  // suivant, une exception ici tuerait le drain entier.
   await reapDeadVmRuns(service).catch((err) =>
     console.error("[agent-drain] vm watchdog failed:", (err as Error).message),
   );
@@ -431,7 +426,7 @@ export async function drainAgentRuns(
     console.error("[agent-drain] reap failed:", (err as Error).message),
   );
 
-  while (deadline - Date.now() >= MIN_CHUNK_BUDGET_MS) {
+  while (deadline - Date.now() >= MIN_LAUNCH_BUDGET_MS) {
     const { data } = await scopeToDeployment(
       service
         .from("agent_runs")
@@ -447,13 +442,12 @@ export async function drainAgentRuns(
 
     let didWork = false;
     for (const row of rows) {
-      if (deadline - Date.now() < MIN_CHUNK_BUDGET_MS) break;
+      if (deadline - Date.now() < MIN_LAUNCH_BUDGET_MS) break;
       const run = await claimRun(row.id);
       if (!run) continue; // course perdue (autre drain/cron)
       claimed++;
       didWork = true;
-      const chunkBudget = deadline - Date.now();
-      await executeAgentRun(run, { deadlineMs: chunkBudget });
+      await executeAgentRun(run, { deadlineMs: deadline - Date.now() });
     }
     if (!didWork) break;
   }

@@ -237,7 +237,7 @@ const LOOP_COMMAND_WAIT_MS = 5_000;
  * — absent de `ps`, plus un event dans le fil — rendait encore `exitCode: null`.
  * Lire ce champ seul faisait donc répondre « vivant » à ce chien de garde sur
  * TOUS les décès, et un run dont la boucle meurt restait `running` pour toujours :
- * `requeueStuckRuns` l'exclut par construction, `reapIdleSandboxes` ne ramasse que
+ * le balayeur d'inactivité ne ramasse que
  * les runs au repos, et la microVM tournait jusqu'aux 24 h de la session.
  *
  * `wait()` borné rend les trois réponses sans en inventer aucune :

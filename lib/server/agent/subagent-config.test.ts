@@ -18,14 +18,10 @@ vi.mock("@/lib/server/app-config", () => ({
 }));
 
 const {
-  chunkFitsSubagentResume,
   makeSubagentModelResolver,
   scopeSubagentModels,
   subagentRoundsLeft,
   SUBAGENT_MAX_ROUNDS,
-  SUBAGENT_MIN_MS,
-  SUBAGENT_PARENT_RESERVE_MS,
-  SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS,
 } = await import("./subagent-config");
 // Les deux lectures d'`app_config` vivent à part depuis MIN-224 (la boucle importe
 // `subagent-config.ts` dans la microVM, et ce qu'elle importe ne doit pas pouvoir
@@ -58,45 +54,6 @@ describe("subagentRoundsLeft", () => {
     expect(subagentRoundsLeft(SUBAGENT_MAX_ROUNDS + 7)).toBeLessThan(0);
   });
 });
-
-describe("chunkFitsSubagentResume", () => {
-  /** Le budget que le lanceur donne vraiment à une fille, cf. `execute.ts`. */
-  const budgetFor = (softDeadlineMs: number) => softDeadlineMs - SUBAGENT_PARENT_RESERVE_MS;
-
-  it("refuse un chunk trop court, accepte à partir de réserve + minimum", () => {
-    expect(chunkFitsSubagentResume(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS)).toBe(true);
-    expect(chunkFitsSubagentResume(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS - 1)).toBe(false);
-    // Ce que rend une fenêtre de drain de 270 s : plein au premier claim, court à
-    // la fin — et c'est ce cas-là, la norme, qui doit être refusé.
-    expect(chunkFitsSubagentResume(245_000)).toBe(true);
-    expect(chunkFitsSubagentResume(40_000)).toBe(false);
-    // Le plancher de 1 s qui a créé le bug, et le budget négatif qu'il masquait.
-    expect(chunkFitsSubagentResume(1_000)).toBe(false);
-    expect(chunkFitsSubagentResume(0)).toBe(false);
-    expect(chunkFitsSubagentResume(-50_000)).toBe(false);
-  });
-
-  it("admet EXACTEMENT ce que le `budgetGuard` de spawn_agent laisse déléguer", () => {
-    // L'invariant qui tient les deux bouts (MIN-212). L'admission décide « ce chunk
-    // peut-il reprendre une fille ? », `budgetGuard` décide « peut-on en lancer une
-    // maintenant ? » — et les deux doivent dire la même chose du même chunk. Si
-    // l'admission passait sous le compte, le chunk repartirait pour rendre une
-    // seconde à sa fille : un round par chunk, chacun payant son réveil de microVM.
-    expect(budgetFor(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS)).toBe(SUBAGENT_MIN_MS);
-    expect(budgetFor(SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS - 1)).toBeLessThan(SUBAGENT_MIN_MS);
-    // Le seuil que `budgetGuard` gardait AVANT — le minimum de la fille opposé au
-    // restant du CHUNK — laissait passer toute cette bande, et le lanceur y rendait
-    // la seconde du `Math.max(1_000, …)`. C'est elle que la garde doit refuser.
-    for (const left of [SUBAGENT_MIN_MS, 60_000, SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS - 1]) {
-      expect(left, "cas de non-régression mal choisi : l'ancienne garde le refusait déjà")
-        .toBeGreaterThanOrEqual(SUBAGENT_MIN_MS);
-      expect(chunkFitsSubagentResume(left), `un spawn à ${left} ms de restant doit être refusé`)
-        .toBe(false);
-      expect(budgetFor(left)).toBeLessThan(SUBAGENT_MIN_MS);
-    }
-  });
-});
-
 describe("getSubagentFavorites", () => {
   it("sert le repli écrit en code, en anglais et avec un use-case par entrée", async () => {
     const favorites = await getSubagentFavorites();
