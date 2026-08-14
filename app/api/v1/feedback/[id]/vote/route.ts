@@ -119,7 +119,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return publicApiError(500, "internal_error", "Something went wrong.");
   }
 
-  const voted = await votePost({ postId: post.id as string, userId: feedbackUser.id });
+  const voted = await votePost({
+    postId: post.id as string,
+    userId: feedbackUser.id,
+    projectId: auth.project.id,
+  });
   if (!voted) {
     return publicApiError(500, "internal_error", "Something went wrong.");
   }

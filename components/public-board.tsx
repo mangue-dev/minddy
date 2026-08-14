@@ -4,16 +4,27 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
-import { issueComparator, visibleStatuses } from "@/lib/view-filter";
+import { visibleStatuses } from "@/lib/view-filter";
 import { IssueCardBody } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { ChipRelation } from "@/components/relation-chips";
-import type { Category, Issue, Member, Objective, ViewConfig } from "@/lib/types";
+import type {
+  IssueCardCategory,
+  IssueCardIssue,
+  IssueCardObjective,
+  Member,
+  ViewConfig,
+} from "@/lib/types";
 
 /** One card of the public board, precomputed server-side (parent/relations
-    resolve against ALL project issues, which never reach the client). */
+    resolve against ALL project issues, which never reach the client).
+
+    `issue` est une PROJECTION, pas un `Issue` (MIN-342) : ce composant est le
+    seul destinataire client de la page partagée, donc tout ce qu'il déclare
+    finit dans le HTML lu par un anonyme. Voir
+    [lib/public-board-projection.ts](lib/public-board-projection.ts). */
 export interface PublicCard {
-  issue: Issue;
+  issue: IssueCardIssue;
   parentNumber?: number;
   relations?: ChipRelation[];
 }
@@ -33,12 +44,15 @@ export function PublicBoard({
   categories,
   objectives,
 }: {
+  /** Déjà TRIÉES côté serveur, dans l'ordre de la vue : le comparateur lit
+      `position`, `created_at` et `updated_at`, qu'une carte n'affiche pas et
+      qui n'ont donc plus à voyager. */
   cards: PublicCard[];
   config: ViewConfig;
   projectKey: string;
   members: Member[];
-  categories: Category[];
-  objectives: Objective[];
+  categories: IssueCardCategory[];
+  objectives: IssueCardObjective[];
 }) {
   const ts = useTranslations("Status");
 
@@ -55,15 +69,14 @@ export function PublicBoard({
     [objectives]
   );
 
-  const columns = useMemo(() => {
-    const cmp = issueComparator(config.sort);
-    return visibleStatuses(config).map((status) => ({
-      status,
-      items: cards
-        .filter((c) => c.issue.status === status.value)
-        .sort((a, b) => cmp(a.issue, b.issue)),
-    }));
-  }, [cards, config]);
+  const columns = useMemo(
+    () =>
+      visibleStatuses(config).map((status) => ({
+        status,
+        items: cards.filter((c) => c.issue.status === status.value),
+      })),
+    [cards, config]
+  );
 
   return (
     <div className="flex h-full snap-x snap-mandatory gap-3 overflow-x-auto desktop:snap-none">

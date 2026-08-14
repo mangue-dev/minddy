@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { Plug } from "lucide-react";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
-import type { Issue } from "@/lib/types";
+import type { IssueCardIssue } from "@/lib/types";
 import {
   Tooltip,
   TooltipContent,
@@ -18,7 +18,7 @@ export function IntegrationIndicator({
   className,
   iconClassName,
 }: {
-  issue: Issue;
+  issue: Pick<IssueCardIssue, "integration_id" | "project_id">;
   className?: string;
   iconClassName?: string;
 }) {

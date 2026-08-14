@@ -73,6 +73,9 @@ import { RELATION_TYPES } from "@/lib/relation-constants";
 import type {
   Category,
   Issue,
+  IssueCardCategory,
+  IssueCardIssue,
+  IssueCardObjective,
   IssueRelationType,
   IssueUpdateInput,
   Member,
@@ -288,7 +291,7 @@ function CategoryDisplay({
   categories,
   selectedIds,
 }: {
-  categories: Category[];
+  categories: IssueCardCategory[];
   selectedIds: string[];
 }) {
   const t = useTranslations("IssueUI");
@@ -316,7 +319,7 @@ function CategoryPick({
   onChange,
   projectId,
 }: {
-  categories: Category[];
+  categories: IssueCardCategory[];
   selectedIds: string[];
   onChange?: (ids: string[]) => void;
   /** Projet de la carte — ce que l'ajout rapide crée lui appartient. */
@@ -344,7 +347,7 @@ function CategoryPickMenu({
   projectId,
   display,
 }: {
-  categories: Category[];
+  categories: IssueCardCategory[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   projectId?: string | null;
@@ -507,7 +510,7 @@ function DueDatePick({
 
 /** Read-only objective indicator on the card — colored dot + name, shown on the
     bottom line (mirrors how the category is displayed). */
-function ObjectiveIndicator({ objective }: { objective: Objective }) {
+function ObjectiveIndicator({ objective }: { objective: IssueCardObjective }) {
   const tField = useTranslations("Field");
   return (
     <Tooltip>
@@ -657,15 +660,18 @@ export function IssueCardBody({
   pr,
   onOpenPr,
 }: {
-  issue: Issue;
+  /** La carte déclare ce qu'elle lit, pas ce qu'un ticket contient (MIN-342) :
+      un `Issue` complet reste assignable, et une surface publique peut n'en
+      passer qu'une projection sans que rien d'autre parte dans le HTML. */
+  issue: IssueCardIssue;
   projectKey: string;
   /** On the cross-project (global) boards, the issue's project — renders an
       origin-project chip at the top of the card. Omitted on project boards. */
   project?: Project;
   memberMap: Map<string, Member>;
-  categoryMap: Map<string, Category>;
+  categoryMap: Map<string, IssueCardCategory>;
   /** Objectives by id — the linked one shows as a bottom-line indicator. */
-  objectiveMap?: Map<string, Objective>;
+  objectiveMap?: Map<string, IssueCardObjective>;
   /** Parent issue's number — when set, the card is a sub-issue and shows the
       parent identifier + chevron before its own identifier. */
   parentNumber?: number;

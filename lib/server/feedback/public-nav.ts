@@ -29,10 +29,15 @@ export async function getPublicSiteTabs(params: {
   // reste isolée — pas d'onglets sur le board, pas de lien depuis les vues.
   if (!board?.enabled || !board.show_views) return [];
 
+  // `level = public` seulement (MIN-342) : une vue protégée par mot de passe ne
+  // dit rien d'elle-même sur sa propre page — pas même son nom — et l'annoncer
+  // ici, avec son token, rendrait cette discrétion sans objet. Elle reste
+  // atteignable par son lien, ce qui est le seul chemin qu'on lui connaît.
   const sharesRes = await service
     .from("view_shares")
     .select("token, views!inner (id, name, project_id)")
     .eq("views.project_id", params.projectId)
+    .eq("level", "public")
     .order("created_at", { ascending: true });
 
   const target = params.domainTarget ?? null;

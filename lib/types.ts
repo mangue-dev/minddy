@@ -912,6 +912,50 @@ export interface Issue {
 }
 
 /**
+ * Ce qu'une CARTE de ticket affiche, et rien de plus (MIN-342).
+ *
+ * `IssueCardBody` prenait un `Issue` entier. Sur les surfaces internes c'est
+ * sans conséquence — mais un composant serveur sérialise dans son HTML tout ce
+ * qu'il passe à un composant client, et sur `/share/[token]` cet HTML est lu
+ * par un anonyme : `plan`, `created_by`, `position`, `cycle_id` partaient avec,
+ * pour n'être jamais affichés.
+ *
+ * D'où ce type : la carte déclare ce qu'elle lit, un `Issue` complet lui reste
+ * assignable (les surfaces internes ne changent pas d'un caractère), et la
+ * surface publique construit une PROJECTION explicite — `toPublicIssue` dans
+ * [lib/public-board-projection.ts](lib/public-board-projection.ts).
+ */
+export interface IssueCardIssue {
+  id: string;
+  project_id: string;
+  number: number;
+  title: string;
+  description: string | null;
+  status: IssueStatus;
+  priority: IssuePriority;
+  effort: IssueEffort | null;
+  assignee_id: string | null;
+  objective_id: string | null;
+  due_date: string | null;
+  recurrence: RecurrenceCadence | null;
+  category_ids: string[];
+  /** Markdown du plan. Optionnel, et c'est le point : la carte n'en tire que
+      l'avancement (« 3/5 »), donc une projection publique l'omet — et le
+      document lui-même ne quitte jamais le serveur. */
+  plan?: string | null;
+  integration_id?: string | null;
+  remote_provider?: RepoProviderId | null;
+  remote_number?: number | null;
+  remote_url?: string | null;
+}
+
+/** L'objectif tel qu'une carte le montre : une pastille et un nom. */
+export type IssueCardObjective = Pick<Objective, "id" | "name" | "color">;
+
+/** La catégorie telle qu'une carte la montre : une pastille et un nom. */
+export type IssueCardCategory = Pick<Category, "id" | "name" | "color">;
+
+/**
  * Une récurrence active du projet, telle que la page « Récurrences » des
  * paramètres en a besoin (MIN-136) : de quoi la nommer, dire sa cadence, sa
  * prochaine échéance et qui la porte. Un seul ticket vivant par série porte

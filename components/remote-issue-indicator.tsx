@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { Github, Gitlab } from "lucide-react";
 import { getRepoProvider } from "@/lib/repo-providers";
-import type { Issue } from "@/lib/types";
+import type { IssueCardIssue } from "@/lib/types";
 import {
   Tooltip,
   TooltipContent,
@@ -24,7 +24,10 @@ export function RemoteIssueIndicator({
   className,
   iconClassName,
 }: {
-  issue: Issue;
+  issue: Pick<
+    IssueCardIssue,
+    "remote_provider" | "remote_number" | "remote_url"
+  >;
   className?: string;
   iconClassName?: string;
 }) {

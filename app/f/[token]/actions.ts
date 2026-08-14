@@ -85,7 +85,6 @@ export async function requestOtpAction(
   const result = await requestFeedbackOtp({
     boardId: ctx.board.id,
     email: trimmed,
-    projectName: ctx.project.name,
     ip: await clientIp(),
     locale,
   });
@@ -194,13 +193,15 @@ export async function togglePostVoteAction(
 ): Promise<{ ok: boolean; notAuthenticated?: boolean }> {
   const resolved = await resolveSession(token);
   if (!resolved) return { ok: false, notAuthenticated: true };
-  const { session } = resolved;
+  const { ctx, session } = resolved;
 
   const rate = checkSessionRateLimit(session.user.id, "feedback:vote", { limit: 60 });
   if (!rate.allowed) return { ok: false };
 
   const ok = vote
-    ? await votePost({ postId, userId: session.user.id })
+    ? // Le post se résout DANS le projet du board (MIN-342) : l'id vient du
+      // client, et sans ce garde-fou il désigne n'importe quel retour.
+      await votePost({ postId, userId: session.user.id, projectId: ctx.project.id })
     : await unvotePost({ postId, userId: session.user.id });
   if (ok) revalidatePath(`/f/${token}`, "layout");
   return { ok };
@@ -341,21 +342,33 @@ function isUuid(value: unknown): value is string {
 
 // ── Suggestions live (« ce post existe peut-être déjà ») ─────────────────────
 
+/**
+ * L'appel est FACTURÉ au propriétaire du board (MIN-131), donc il exige une
+ * identité de visiteur (MIN-342) : sans elle, un anonyme vidait le budget IA de
+ * quelqu'un d'autre à la frappe. Le composeur ouvert par un visiteur non
+ * identifié n'a simplement pas de suggestions — la porte OTP arrive de toute
+ * façon à l'envoi, et un tableau vide est déjà le cas nominal ici.
+ *
+ * Le quota vient avec : le plafond par identité, et le budget du propriétaire,
+ * comme la dictée juste au-dessus.
+ */
 export async function findSimilarPostsAction(
   token: string,
   title: string
 ): Promise<SimilarPost[]> {
-  const ctx = await resolveBoard(token);
-  if (!ctx) return [];
+  const resolved = await resolveSession(token);
+  if (!resolved) return [];
+  const { ctx, session } = resolved;
   const trimmed = title.trim();
   // ≥ 15 caractères : en dessous, l'embedding du titre seul est du bruit.
   if (trimmed.length < 15) return [];
 
-  const ip = await clientIp();
-  const rate = checkSessionRateLimit(ip, `feedback:similar:${ctx.board.id}`, {
+  const rate = checkSessionRateLimit(session.user.id, "feedback:similar", {
     limit: 30,
   });
   if (!rate.allowed) return [];
+
+  if (!(await ownerHasUsageBudget(ctx.project.id))) return [];
 
   // 5 s : le premier appel à froid (config + OpenRouter) peut dépasser 3 s,
   // et un échec ici est silencieux pour le visiteur.

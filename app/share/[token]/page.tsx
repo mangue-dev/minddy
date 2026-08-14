@@ -13,7 +13,12 @@ import type { ChipRelation } from "@/components/relation-chips";
 import { AppQueryProvider } from "@/lib/query-provider";
 import { displayName } from "@/lib/display-name";
 import { resolveRelations } from "@/lib/relation-constants";
-import { filterIssues, viewConfigOf } from "@/lib/view-filter";
+import {
+  publicCategoriesFor,
+  publicObjectivesFor,
+  toPublicIssue,
+} from "@/lib/public-board-projection";
+import { filterIssues, issueComparator, viewConfigOf } from "@/lib/view-filter";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
@@ -26,6 +31,8 @@ import { getServiceClient } from "@/lib/supabase-service";
 import type {
   Category,
   Issue,
+  IssueCardCategory,
+  IssueCardObjective,
   IssueRelation,
   Member,
   Objective,
@@ -86,13 +93,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 /** Everything the read-only board needs, filtered to what the view shows and
     sanitized for anonymous visitors (no emails — Member.email stays null and
-    full_name is pre-resolved through displayName). */
+    full_name is pre-resolved through displayName).
+
+    Tout ce qui sort d'ici est SÉRIALISÉ dans le HTML de la page (MIN-342) :
+    ce que ça rend passe donc par les projections de
+    [lib/public-board-projection.ts](lib/public-board-projection.ts), et jamais
+    par les lignes de base telles quelles. */
 async function loadBoardProps(ctx: PublicShareContext): Promise<{
   cards: PublicCard[];
   projectKey: string;
   members: Member[];
-  categories: Category[];
-  objectives: Objective[];
+  categories: IssueCardCategory[];
+  objectives: IssueCardObjective[];
 }> {
   const { view, project } = ctx;
   const service = getServiceClient();
@@ -122,9 +134,12 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
   // owner's id (shared team views fall back to whoever created the share),
   // exactly like on their own board.
   const config = viewConfigOf(view);
+  // Le tri appartient au serveur : le comparateur lit `position`, `created_at`
+  // et `updated_at`, trois champs qu'aucune carte n'affiche et qui n'ont donc
+  // aucune raison de traverser la frontière (MIN-342).
   const issues = filterIssues(allIssues, config, {
     myUserId: view.user_id ?? ctx.share.created_by,
-  });
+  }).sort(issueComparator(config.sort));
 
   // Parent identifiers and relation chips resolve against ALL issues (a filter
   // may hide the other end), mirroring KanbanBoard — resolved here so the full
@@ -140,7 +155,7 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
       })
       .filter((r): r is ChipRelation => r !== null);
     return {
-      issue,
+      issue: toPublicIssue(issue),
       parentNumber: parent?.number,
       relations: chips.length > 0 ? chips : undefined,
     };
@@ -168,12 +183,21 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
     };
   });
 
+  const visibleIssues = cards.map((c) => c.issue);
   return {
     cards,
     projectKey: project.key,
     members,
-    categories: (categoriesRes.data ?? []) as Category[],
-    objectives: (objectivesRes.data ?? []) as Objective[],
+    // Les tables du projet ne sortent pas en entier : seules les lignes qu'une
+    // carte visible cite peuvent être peintes, donc seules celles-là partent.
+    categories: publicCategoriesFor(
+      (categoriesRes.data ?? []) as Category[],
+      visibleIssues
+    ),
+    objectives: publicObjectivesFor(
+      (objectivesRes.data ?? []) as Objective[],
+      visibleIssues
+    ),
   };
 }
 

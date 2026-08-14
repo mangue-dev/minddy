@@ -518,10 +518,13 @@ function ComposerDialog({
   }, [open]);
 
   // Suggestion live « ce post existe peut-être déjà » — titre seul, debounce.
+  // Réservée aux visiteurs identifiés : l'embedding est facturé au propriétaire
+  // du board (MIN-342), et l'action le refuserait de toute façon — autant ne
+  // pas afficher un « recherche… » qui ne trouvera jamais rien.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const trimmed = title.trim();
-    if (!open || trimmed.length < SIMILAR_MIN_CHARS) {
+    if (!open || !identified || trimmed.length < SIMILAR_MIN_CHARS) {
       setSimilar([]);
       return;
     }
@@ -536,7 +539,7 @@ function ComposerDialog({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [title, token, open]);
+  }, [title, token, open, identified]);
 
   // ── Dictée (MIN-37) ────────────────────────────────────────────────────────
   // Une prise = deux étapes visibles : l'écoute (le micro passe en spinner),

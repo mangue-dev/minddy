@@ -39,7 +39,8 @@ export function useCategoryCreateOption({
   onCreated,
 }: {
   projectId?: string | null;
-  categories: Category[];
+  /** Les couleurs déjà prises — tout ce dont la création a besoin de la liste. */
+  categories: Pick<Category, "color">[];
   onCreated: (category: Category) => void;
 }): PickerCreateOption | undefined {
   const t = useTranslations("Picker");
