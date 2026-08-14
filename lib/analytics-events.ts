@@ -424,6 +424,10 @@ export interface AnalyticsEventProps {
   plan_cta_clicked: { plan_id: string; interval: string; current_plan_id: string };
   checkout_started: { plan_id: string; interval: string };
   billing_portal_opened: { current_plan_id: string };
+  // Résiliation et reprise DEPUIS l'app (MIN-296) : le geste ne passe plus par
+  // le portail Stripe, donc plus par `billing_portal_opened`.
+  subscription_canceled: NoProps;
+  subscription_resumed: NoProps;
   usage_viewed: NoProps;
   usage_history_filtered: { filter: string };
   plan_limit_hit: { limit_type: string; plan_id: string };
@@ -754,6 +758,8 @@ const EVENT_NAMES = [
   "plan_cta_clicked",
   "checkout_started",
   "billing_portal_opened",
+  "subscription_canceled",
+  "subscription_resumed",
   "usage_viewed",
   "usage_history_filtered",
   "plan_limit_hit",

@@ -4,7 +4,6 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -12,11 +11,12 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { motion, useReducedMotion } from "framer-motion";
-import { Button, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "mangue-ui";
+import { useReducedMotion } from "framer-motion";
+import { Button, cn } from "mangue-ui";
 import { ChevronLeft, type LucideIcon } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
@@ -178,10 +178,6 @@ function SettingsTabs({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const reduceMotion = useReducedMotion();
-  // `layoutId` est GLOBAL à framer-motion : deux rails montés en même temps
-  // (une transition de route qui superpose deux écrans) se voleraient la
-  // pastille. Un id par instance ferme la porte.
-  const pillId = `settings-tab-pill-${useId()}`;
 
   const visibleTabs = useMemo(() => tabs.filter((t) => !t.hidden), [tabs]);
   const validValues = useMemo(
@@ -304,16 +300,9 @@ function SettingsTabs({
   );
 
   return (
-    // La racine des Tabs est la RANGÉE de l'écran : le rail part dans la sidebar
-    // secondaire (par portail, donc toujours sous ce `Tabs` côté React — le
-    // contexte Radix passe, les flèches du clavier aussi) et les cartes restent
-    // à droite.
-    <Tabs
-      orientation="vertical"
-      value={activeTab}
-      onValueChange={setActiveTab}
-      className="flex h-full min-h-0 gap-0"
-    >
+    // La RANGÉE de l'écran : le rail part dans la sidebar secondaire (par
+    // portail, dans le châssis) et les cartes restent à droite.
+    <div className="flex h-full min-h-0">
       <SecondarySidebar
         title={title}
         hiddenOnMobile={mobileDetail}
@@ -359,70 +348,15 @@ function SettingsTabs({
             </ul>
           )
         ) : (
-        /* `variant="default"` : pastille pleine sur l'onglet actif. En `line`,
-            l'actif ne se distinguait que par un filet de 2 px sur son bord droit
-            — invisible à côté d'une colonne de cartes. La gouttière de 8 px et
-            les coins arrondis sont ceux des autres sidebars secondaires.
-
-            `flex-col` EN CLAIR, et pas via l'orientation des Tabs : mangue-ui
-            empile la liste avec `group-data-vertical/tabs:flex-col`, un
-            sélecteur de DESCENDANCE. Or le portail sort cette liste du DOM du
-            `<Tabs>` — le contexte React la suit, la variante CSS non, et les
-            onglets repartaient en ligne. Même raison pour le `w-full
-            justify-start` posé sur chaque onglet plus bas. */
-        <TabsList className="h-auto w-full flex-col items-stretch gap-1 rounded-none bg-transparent p-0 px-2 pt-2 pb-4">
-          {visibleTabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = tab.value === activeTab;
-            return (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                /* La pastille de l'onglet actif est dessinée ICI (voir plus bas),
-                   pas par `data-active:bg-*` : une classe ne peut pas glisser
-                   d'un onglet à l'autre, un élément partagé si. */
-                className={cn(
-                  "w-full justify-start gap-2 rounded-lg px-3 py-2.5",
-                  "data-active:bg-transparent dark:data-active:bg-transparent",
-                  "dark:data-active:border-transparent",
-                  "group-data-[variant=default]/tabs-list:data-active:shadow-none",
-                )}
-              >
-                {/* `layoutId` : une seule pastille montée à la fois, que
-                    framer-motion fait GLISSER vers le nouvel onglet au lieu de
-                    la faire disparaître ici et réapparaître là. */}
-                {active && (
-                  <motion.span
-                    layoutId={pillId}
-                    aria-hidden
-                    className="absolute inset-0 rounded-lg bg-muted"
-                    transition={
-                      reduceMotion
-                        ? { duration: 0 }
-                        : { type: "spring", stiffness: 500, damping: 40 }
-                    }
-                  />
-                )}
-                {/* Positionné, donc peint AU-DESSUS de la pastille (même pile,
-                    ordre du DOM) : sans ce span, l'absolu passerait par-dessus
-                    le libellé, qui n'est pas positionné. */}
-                <span className="relative flex min-w-0 flex-1 items-center gap-2">
-                  {Icon && <Icon className="h-4 w-4 shrink-0" />}
-                  <span className="truncate">{tab.label}</span>
-                  {tab.indicator && (
-                    <span className="ml-auto flex items-center" title={tab.indicator}>
-                      <span
-                        className="size-1.5 rounded-full bg-amber-500"
-                        aria-hidden
-                      />
-                      <span className="sr-only">{tab.indicator}</span>
-                    </span>
-                  )}
-                </span>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+          /* Des cartes à nous, et non les `Tabs` de mangue-ui : la sélection est
+             dessinée par une pastille qui GLISSE, que l'indicateur de la
+             bibliothèque doublait d'une capsule bordée. Cf. SidebarNavRail. */
+          <SidebarNavRail
+            label={title}
+            items={visibleTabs}
+            value={activeTab}
+            onValueChange={setActiveTab}
+          />
         )}
       </SecondarySidebar>
 
@@ -455,21 +389,20 @@ function SettingsTabs({
         >
           <div className={cn("mx-auto flex flex-col gap-4", SETTINGS_MAX_WIDTH)}>
             {topSlot}
-            {visibleTabs.map((tab) => (
-              <TabsContent
-                key={tab.value}
-                value={tab.value}
-                /* L'espacement vit désormais ENTRE les cartes : chaque groupe porte
-                   son propre cadre, l'ancien `space-y-10` (qui séparait des blocs
-                   sans bord) laisserait des trous. */
-                className="mt-0 flex flex-col gap-4"
-              >
-                {tab.content}
-              </TabsContent>
-            ))}
+            {/* Seul l'onglet ouvert est monté — c'est déjà ce que faisait
+                `TabsContent`, qui démonte les autres. La clé, elle, force un
+                remontage à chaque changement : un panneau ne doit pas hériter de
+                l'état de son voisin.
+
+                L'espacement vit ENTRE les cartes : chaque groupe porte son
+                propre cadre, un `space-y-10` (qui séparait des blocs sans bord)
+                laisserait des trous. */}
+            <div key={activeTab} className="flex flex-col gap-4">
+              {visibleTabs.find((tab) => tab.value === activeTab)?.content}
+            </div>
           </div>
         </div>
       </div>
-    </Tabs>
+    </div>
   );
 }

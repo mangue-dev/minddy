@@ -331,6 +331,32 @@ export async function cancelStripeSubscription(
   );
 }
 
+/**
+ * Résiliation à la FIN DE PÉRIODE, et son annulation (MIN-296).
+ *
+ * C'est la résiliation ordinaire, celle qu'on déclenche depuis l'app : la
+ * période déjà payée est due, on ne la reprend pas — on arrête le renouvellement.
+ * Son inverse (`resume: true`) remet l'abonnement en marche tant que la date
+ * n'est pas passée, et c'est la moitié qui rend le geste sans danger : une
+ * résiliation qu'on ne peut pas défaire ailleurs que chez Stripe n'est pas un
+ * geste réversible.
+ *
+ * À ne pas confondre avec `cancelStripeSubscription`, qui coupe SUR-LE-CHAMP —
+ * celle-là n'est appelée qu'à la suppression du compte, où il n'y a plus
+ * personne à qui laisser la fin de sa période.
+ */
+export async function setStripeCancelAtPeriodEnd(
+  subscriptionId: string,
+  cancel: boolean
+): Promise<StripeSubscription> {
+  const body = new URLSearchParams();
+  body.set("cancel_at_period_end", cancel ? "true" : "false");
+  return stripeRequest<StripeSubscription>(
+    `/v1/subscriptions/${subscriptionId}`,
+    body
+  );
+}
+
 /** Au-delà, on arrête de paginer. Cf. le commentaire de la fonction. */
 const BALANCE_TX_MAX_PAGES = 10;
 const BALANCE_TX_PAGE_SIZE = 100;

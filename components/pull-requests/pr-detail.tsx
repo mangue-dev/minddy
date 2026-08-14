@@ -44,6 +44,7 @@ import {
 import Link from "next/link";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
+import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
@@ -1465,8 +1466,8 @@ export function PrDetail({
             value={tab}
             onValueChange={(v) => setTab(v as "activity" | "commits" | "files")}
           >
-            <TabsList variant="line" className="justify-start p-0">
-              <TabsTrigger value="activity" className="gap-1.5">
+            <TabsList variant="line" className={TAB_LIST_DENSE}>
+              <TabsTrigger value="activity" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
                 {t("tabActivity")}
                 {conversationCount > 0 ? (
                   <span className="text-xs text-muted-foreground">{conversationCount}</span>
@@ -1474,13 +1475,13 @@ export function PrDetail({
               </TabsTrigger>
               {/* Les commits AVANT les fichiers, comme sur GitHub : on lit ce qui
                   compose la PR avant d'entrer dans le code qu'elle change. */}
-              <TabsTrigger value="commits" className="gap-1.5">
+              <TabsTrigger value="commits" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
                 {t("tabCommits")}
                 {commits.length > 0 ? (
                   <span className="text-xs text-muted-foreground">{commits.length}</span>
                 ) : null}
               </TabsTrigger>
-              <TabsTrigger value="files" className="gap-1.5">
+              <TabsTrigger value="files" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
                 {t("tabFiles")}
                 {files.length > 0 ? (
                   <span className="text-xs text-muted-foreground">{files.length}</span>

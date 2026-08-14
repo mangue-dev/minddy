@@ -73,6 +73,7 @@ import {
   restorePageVersionApi,
 } from "@/lib/pages-api";
 import { pageKey, pagesKey } from "@/lib/use-pages-query";
+import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { PageEditor } from "@/components/pages/page-editor";
 import { PageActivity, PageCommentBar } from "@/components/pages/page-activity";
 import { McpAvatar, NumoAvatar } from "@/components/actor-avatars";
@@ -214,9 +215,13 @@ export function PageHistorySheet({
             value={tab}
             onValueChange={(value) => setTab(value as "versions" | "activity")}
           >
-            <TabsList variant="line" className="w-full justify-start p-0">
-              <TabsTrigger value="activity">{t("historyTabActivity")}</TabsTrigger>
-              <TabsTrigger value="versions">{t("historyTabVersions")}</TabsTrigger>
+            <TabsList variant="line" className={TAB_LIST_DENSE}>
+              <TabsTrigger value="activity" className={TAB_TRIGGER_DENSE}>
+                {t("historyTabActivity")}
+              </TabsTrigger>
+              <TabsTrigger value="versions" className={TAB_TRIGGER_DENSE}>
+                {t("historyTabVersions")}
+              </TabsTrigger>
             </TabsList>
 
             {/* L'ACTIVITÉ (MIN-278) : les GESTES, là où l'onglet d'à côté rend

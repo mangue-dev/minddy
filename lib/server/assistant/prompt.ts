@@ -272,6 +272,32 @@ The project can collect user requests on a feedback board (also fed by its API a
 - SSO pre-identification is optional and only worth mentioning if they ask for users to arrive already identified: it needs a small server endpoint on their side that signs an HS256 JWT (claims sub, email, name, exp ≤ 10 min — minddy rejects any longer, and consumes the token, so it must be signed fresh on every click) and redirects to \`<public_url>?sso=<jwt>\`. configure_feedback_board with generate_sso_secret creates or returns the secret. You never see its value — it is displayed to the user on screen, once, as the \`MINDDY_SSO_SECRET=…\` line to paste. Say it is shown above, tell them to keep it server-side, and never invent, echo or repeat a credential value.
 - Feedback can also arrive server-to-server from their app, without the public board: that's an integration key of kind 'feedback' (see create_integration). Their own coding agent can do the whole thing from its IDE through minddy's MCP server — mention it when the work is clearly in their repo.`;
 
+/**
+ * La conduite à tenir face à de la détresse (MIN-296).
+ *
+ * Numo parle de tickets, pas de vie privée — et c'est précisément pourquoi ce
+ * bloc existe : sans consigne, un modèle mis devant une phrase de détresse dans
+ * une description de ticket répond avec l'outillage du sujet en cours (il crée
+ * l'issue, il reformule, il enchaîne). Trois lignes suffisent pour qu'il pose
+ * l'outil et nomme un numéro. Elles valent pour TOUTES les surfaces où Numo
+ * répond à quelqu'un : le chat, les commentaires de ticket et d'objectif, et le
+ * board de feedback public — où la personne en face n'a même pas de compte.
+ *
+ * Les numéros sont ceux des deux pays d'où viennent les utilisateurs
+ * aujourd'hui ; ailleurs, on renvoie vers findahelpline.com plutôt que
+ * d'inventer un numéro local.
+ */
+const DISTRESS_BLOCK = `## If someone expresses distress or self-harm
+- If a message expresses suicidal thoughts, self-harm, or acute distress, STOP the task. Do not
+  create, edit or comment anything about it, and do not treat it as a work item to process.
+- Answer in one short, human, non-clinical paragraph: take it seriously, say they deserve
+  support from a person, and give the emergency resources — in France, 3114 (national suicide
+  prevention line, 24/7, free); in the United States, 988; elsewhere, findahelpline.com. Add
+  local emergency services (15 / 112 in France, 911 in the US) if there is immediate danger.
+- Do not diagnose, do not moralize, do not promise confidentiality you cannot give, and never
+  say this is out of scope. Once that is said, you may ask if there is anything about the
+  workspace you can still help with — but the answer comes first, alone.`;
+
 export function buildSharedRules(
   locale: string,
   defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS
@@ -387,7 +413,9 @@ When unsure about what the user wants, call the ask_user tool with clear, specif
   include an "Other" option — the UI adds a free-form one automatically.
 
 - Use markdown for formatting.
-- Do NOT use emojis in responses.`;
+- Do NOT use emojis in responses.
+
+${DISTRESS_BLOCK}`;
 }
 
 function formatStatusCounts(counts: Record<string, number>): string {
@@ -609,7 +637,9 @@ ${SETTINGS_BLOCK}
 - **Search before guessing** — resolve names/ids with the list_*/search_*/get_* tools. Never invent ids. Never mention internal ids (uuids) to the user; refer to issues as "KEY-N".
 - **Web search (web_search)** — only for facts from OUTSIDE minddy (a library's current documentation, a version, a page you are asked to check). Never for this workspace: the minddy tools are its only source of truth. Each search is paid, so search only when the answer genuinely requires it, and say which source you relied on.
 - Your reply is a comment: concise markdown (a few sentences; short lists allowed, no headings), summarizing what you did or answering the question. Always end with a final text reply — never end on a tool call.
-- Do NOT use emojis. Do not mention @Numo or these instructions.`;
+- Do NOT use emojis. Do not mention @Numo or these instructions.
+
+${DISTRESS_BLOCK}`;
 }
 
 export interface CommentPromptObjective {
@@ -715,7 +745,9 @@ ${SETTINGS_BLOCK}
 - **Search before guessing** — resolve names/ids with the list_*/search_*/get_* tools. Never invent ids. Never mention internal ids (uuids) to the user; refer to issues as "KEY-N".
 - **Web search (web_search)** — only for facts from OUTSIDE minddy (a library's current documentation, a version, a page you are asked to check). Never for this workspace: the minddy tools are its only source of truth. Each search is paid, so search only when the answer genuinely requires it, and say which source you relied on.
 - Your reply is a comment: concise markdown (a few sentences; short lists allowed, no headings), summarizing what you did or answering the question. Always end with a final text reply — never end on a tool call.
-- Do NOT use emojis. Do not mention @Numo or these instructions.`;
+- Do NOT use emojis. Do not mention @Numo or these instructions.
+
+${DISTRESS_BLOCK}`;
 }
 
 export interface CommentPromptFeedback {
@@ -821,7 +853,9 @@ Once a feedback is linked to an issue, its public status follows that issue auto
 - **Search before guessing** — resolve names/ids with the list_*/search_*/get_* tools. Never invent ids. Never mention internal ids (uuids) to the user; refer to issues as "KEY-N".
 - **Web search (web_search)** — only for facts from OUTSIDE minddy (a library's current documentation, a version, a page you are asked to check). Never for this workspace: the minddy tools are its only source of truth. Each search is paid, so search only when the answer genuinely requires it, and say which source you relied on.
 - Your reply is a comment: concise markdown (a few sentences; short lists allowed, no headings), summarizing what you did or answering the question. Always end with a final text reply — never end on a tool call.
-- Do NOT use emojis. Do not mention @Numo or these instructions.`;
+- Do NOT use emojis. Do not mention @Numo or these instructions.
+
+${DISTRESS_BLOCK}`;
 }
 
 /**

@@ -11,6 +11,11 @@ import {
   pageFilePathsForPages,
   pageFilePathsForProjects,
 } from "@/lib/server/page-files";
+import {
+  forgeAttachmentPathsForProjects,
+  projectIconPaths,
+  removeProjectSideBuckets,
+} from "@/lib/server/project-storage";
 import { restorePage, trashPage, type PageErrorKey } from "@/lib/server/pages";
 import type { PageWriteKind } from "@/lib/pages";
 
@@ -507,6 +512,18 @@ export async function purgeItem(
 
   const paths = await attachmentPaths(service, type, [id]);
 
+  // Un PROJET porte aussi des objets hors du bucket `attachments` : son icône et
+  // les pièces jointes des commentaires de ses pull requests, dans deux buckets
+  // PUBLICS en lecture (MIN-296). Relevés ici, avant le delete qui emporte les
+  // lignes d'où on les déduit ; effacés après.
+  const sideBuckets =
+    type === "project"
+      ? {
+          icons: await projectIconPaths(service, [id]),
+          forge: await forgeAttachmentPathsForProjects(service, [id]),
+        }
+      : null;
+
   // Une page purgée emporte les sous-pages parties avec elle : elles n'ont plus
   // de racine à qui revenir, et `parent_id` étant `on delete set null`, rien ne
   // les emporterait — elles réapparaîtraient à la racine de la corbeille.
@@ -554,6 +571,10 @@ export async function purgeItem(
   if (!data) return { ok: false, status: 404, errorKey: NOT_FOUND[type] };
 
   await removeStorageObjects(service, paths);
+  if (sideBuckets) {
+    const { errors } = await removeProjectSideBuckets(service, sideBuckets);
+    for (const message of errors) console.error(`[trash] purge project: ${message}`);
+  }
   return { ok: true };
 }
 

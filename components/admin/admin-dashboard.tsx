@@ -1,16 +1,8 @@
 "use client";
 
-import { useCallback, useId, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { motion, useReducedMotion } from "framer-motion";
-import {
-  Button,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-  cn,
-} from "mangue-ui";
+import { Button, cn } from "mangue-ui";
 import { useTranslations } from "next-intl";
 import {
   Bot,
@@ -21,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { AdminOverviewDashboard } from "./admin-overview-dashboard";
 import { AdminUsersDashboard } from "./admin-users-dashboard";
@@ -78,11 +71,6 @@ export function AdminDashboard() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const reduceMotion = useReducedMotion();
-  // `layoutId` est GLOBAL à framer-motion : deux rails montés en même temps
-  // (une transition de route qui superpose deux écrans) se voleraient la
-  // pastille. Un id par instance ferme la porte.
-  const pillId = `admin-tab-pill-${useId()}`;
   const contentFade = useScrollFade<HTMLDivElement>();
 
   const requested = searchParams.get("tab");
@@ -93,6 +81,11 @@ export function AdminDashboard() {
   // ailleurs dans l'app. Une URL qui NOMME son onglet ouvre directement le
   // contenu : on arrive de la palette, d'un lien ou d'une notification push.
   const [mobileDetail, setMobileDetail] = useState(valid);
+
+  const items = useMemo(
+    () => TABS.map((tab) => ({ value: tab, label: t(`tabs.${tab}`), icon: ICONS[tab] })),
+    [t],
+  );
 
   const setActive = useCallback(
     (value: string) => {
@@ -107,67 +100,19 @@ export function AdminDashboard() {
   );
 
   return (
-    // La racine des Tabs est la RANGÉE de l'écran : le rail part dans la sidebar
-    // secondaire (par portail, donc toujours sous ce `Tabs` côté React — le
-    // contexte Radix passe, les flèches du clavier aussi) et le contenu reste à
-    // droite.
-    <Tabs
-      orientation="vertical"
-      value={active}
-      onValueChange={setActive}
-      className="flex h-full min-h-0 gap-0"
-    >
+    // La RANGÉE de l'écran : le rail part dans la sidebar secondaire (par
+    // portail, dans le châssis) et le contenu reste à droite.
+    <div className="flex h-full min-h-0">
       <SecondarySidebar title={t("pageTitle")} hiddenOnMobile={mobileDetail}>
-        {/* `flex-col` EN CLAIR, et pas via l'orientation des Tabs : mangue-ui
-            empile la liste avec `group-data-vertical/tabs:flex-col`, un
-            sélecteur de DESCENDANCE. Or le portail sort cette liste du DOM du
-            `<Tabs>` — le contexte React la suit, la variante CSS non, et les
-            onglets repartaient en ligne. Même raison pour le `w-full
-            justify-start` posé sur chaque onglet plus bas. */}
-        <TabsList className="h-auto w-full flex-col items-stretch gap-1 rounded-none bg-transparent p-0 px-2 pt-2 pb-4">
-          {TABS.map((tab) => {
-            const Icon = ICONS[tab];
-            const isActive = tab === active;
-            return (
-              <TabsTrigger
-                key={tab}
-                value={tab}
-                /* La pastille de l'onglet actif est dessinée ICI (voir plus bas),
-                   pas par `data-active:bg-*` : une classe ne peut pas glisser
-                   d'un onglet à l'autre, un élément partagé si. */
-                className={cn(
-                  "w-full justify-start gap-2 rounded-lg px-3 py-2.5",
-                  "data-active:bg-transparent dark:data-active:bg-transparent",
-                  "dark:data-active:border-transparent",
-                  "group-data-[variant=default]/tabs-list:data-active:shadow-none",
-                )}
-              >
-                {/* `layoutId` : une seule pastille montée à la fois, que
-                    framer-motion fait GLISSER vers le nouvel onglet au lieu de
-                    la faire disparaître ici et réapparaître là. */}
-                {isActive && (
-                  <motion.span
-                    layoutId={pillId}
-                    aria-hidden
-                    className="absolute inset-0 rounded-lg bg-muted"
-                    transition={
-                      reduceMotion
-                        ? { duration: 0 }
-                        : { type: "spring", stiffness: 500, damping: 40 }
-                    }
-                  />
-                )}
-                {/* Positionné, donc peint AU-DESSUS de la pastille (même pile,
-                    ordre du DOM) : sans ce span, l'absolu passerait par-dessus
-                    le libellé, qui n'est pas positionné. */}
-                <span className="relative flex min-w-0 flex-1 items-center gap-2">
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{t(`tabs.${tab}`)}</span>
-                </span>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+        {/* Des cartes à nous, et non les `Tabs` de mangue-ui : la sélection est
+            dessinée par une pastille qui GLISSE, que l'indicateur de la
+            bibliothèque doublait d'une capsule bordée. Cf. SidebarNavRail. */}
+        <SidebarNavRail
+          label={t("pageTitle")}
+          items={items}
+          value={active}
+          onValueChange={setActive}
+        />
       </SecondarySidebar>
 
       <div
@@ -199,21 +144,18 @@ export function AdminDashboard() {
           className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 md:px-6 md:pt-6"
         >
           <div className={cn("mx-auto flex flex-col gap-4", ADMIN_MAX_WIDTH)}>
-            <TabsContent value="overview" className="mt-0">
-              <AdminOverviewDashboard />
-            </TabsContent>
-            <TabsContent value="users" className="mt-0">
-              <AdminUsersDashboard />
-            </TabsContent>
-            <TabsContent value="finances" className="mt-0">
-              <AdminFinanceDashboard />
-            </TabsContent>
-            <TabsContent value="models" className="mt-0">
-              <AdminModelsDashboard />
-            </TabsContent>
+            {/* Seul le panneau ouvert est monté — c'est déjà ce que faisait
+                `TabsContent`, qui démonte les autres : chacun d'eux part
+                chercher ses chiffres au montage, et les quatre à la fois
+                réveilleraient tout le tableau de bord pour n'en montrer qu'un
+                quart. */}
+            {active === "overview" && <AdminOverviewDashboard />}
+            {active === "users" && <AdminUsersDashboard />}
+            {active === "finances" && <AdminFinanceDashboard />}
+            {active === "models" && <AdminModelsDashboard />}
           </div>
         </div>
       </div>
-    </Tabs>
+    </div>
   );
 }

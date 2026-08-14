@@ -153,7 +153,7 @@ export const PUBLIC_ROUTES = [
     en: "/privacy",
     fr: "/fr/confidentialite",
     namespace: "Privacy",
-    lastModified: "2026-08-06",
+    lastModified: "2026-08-14",
     priority: 0.3,
   },
   {

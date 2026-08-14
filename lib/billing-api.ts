@@ -75,6 +75,25 @@ export async function createCheckoutApi(
   return url;
 }
 
+/**
+ * Résilie l'abonnement à la fin de la période, ou le reprend (MIN-296) — sans
+ * quitter l'app : c'est ce qui met la résiliation au même nombre de gestes que
+ * la souscription.
+ */
+export async function setCancelAtPeriodEndApi(
+  cancel: boolean
+): Promise<boolean> {
+  trackEvent(cancel ? "subscription_canceled" : "subscription_resumed", {});
+  const { cancelAtPeriodEnd } = await parseJson<{ cancelAtPeriodEnd: boolean }>(
+    await fetch("/api/billing/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resume: !cancel }),
+    })
+  );
+  return cancelAtPeriodEnd;
+}
+
 /** Ouvre le portal Stripe (gérer / changer / annuler) → URL de redirection. */
 export async function createPortalApi(): Promise<string> {
   trackEvent("billing_portal_opened", { current_plan_id: "unknown" });

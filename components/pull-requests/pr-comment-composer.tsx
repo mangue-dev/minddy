@@ -38,6 +38,7 @@ import {
 } from "@/components/resources";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { Markdown } from "@/components/markdown";
+import { TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { usePrMembersQuery } from "@/lib/use-pr-members-query";
@@ -126,10 +127,14 @@ export function PrCommentComposer({
           className="gap-0"
         >
           <TabsList className={cn("mb-0 h-auto", line ? "m-2 mb-0" : "m-2.5 mb-0")}>
-            <TabsTrigger value="write" className="text-xs">
+            <TabsTrigger value="write" className={cn(TAB_TRIGGER_DENSE, "text-xs")}>
               {t("composerWrite")}
             </TabsTrigger>
-            <TabsTrigger value="preview" className="text-xs" disabled={!body}>
+            <TabsTrigger
+              value="preview"
+              className={cn(TAB_TRIGGER_DENSE, "text-xs")}
+              disabled={!body}
+            >
               {t("composerPreview")}
             </TabsTrigger>
           </TabsList>

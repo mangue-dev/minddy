@@ -2,6 +2,11 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { attachmentPaths, type TrashType } from "@/lib/server/trash";
+import {
+  forgeAttachmentPathsForProjects,
+  projectIconPaths,
+  removeProjectSideBuckets,
+} from "@/lib/server/project-storage";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
   ORPHAN_ATTACHMENT_DAYS,
@@ -374,10 +379,25 @@ async function purgeTrash(service: Service, now: Date) {
     if (ids.length === 0) continue;
 
     const paths = await attachmentPaths(service, type, ids);
+    // Un projet porte en plus son icône et les pièces jointes des commentaires
+    // de ses PR, dans deux buckets PUBLICS que rien ne cascade (MIN-296). Même
+    // règle que le reste : relevés avant le delete, effacés après.
+    const sideBuckets =
+      type === "project"
+        ? {
+            icons: await projectIconPaths(service, ids),
+            forge: await forgeAttachmentPathsForProjects(service, ids),
+          }
+        : null;
+
     deleted += counted(
       await service.from(table).delete({ count: "exact" }).in("id", ids)
     );
     await removeStorageObjects(service, paths);
+    if (sideBuckets) {
+      const { errors } = await removeProjectSideBuckets(service, sideBuckets);
+      for (const message of errors) console.error(`[retention] ${message}`);
+    }
   }
 
   return deleted;

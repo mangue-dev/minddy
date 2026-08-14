@@ -16,6 +16,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  cn,
   toast,
 } from "mangue-ui";
 import {
@@ -35,6 +36,7 @@ import {
   PropertyRow,
   StatusValue,
 } from "@/components/issue-property-fields";
+import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { SubIssuesSection } from "@/components/sub-issues-section";
 import { RelationsSection } from "@/components/relations-section";
 import { AgentChatModal } from "@/components/agent/agent-chat-modal";
@@ -906,11 +908,11 @@ export function IssueSidePanel({
               value={tab}
               onValueChange={(v) => setTab(v as "description" | "plan")}
             >
-              <TabsList variant="line" className="w-full justify-start p-0">
-                <TabsTrigger value="description">
+              <TabsList variant="line" className={TAB_LIST_DENSE}>
+                <TabsTrigger value="description" className={TAB_TRIGGER_DENSE}>
                   {tPlan("tabDescription")}
                 </TabsTrigger>
-                <TabsTrigger value="plan" className="gap-1.5">
+                <TabsTrigger value="plan" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
                   {tPlan("tabPlan")}
                   {progress.total > 0 && (
                     <span className="text-xs text-muted-foreground">

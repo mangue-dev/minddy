@@ -24,6 +24,11 @@ export default async function PrivacyPage() {
     { term: t("dataAccount"), desc: t("dataAccountDesc") },
     { term: t("dataContent"), desc: t("dataContentDesc") },
     { term: t("dataUsage"), desc: t("dataUsageDesc") },
+    // MIN-296 — le service de push de l'éditeur du navigateur est un
+    // destinataire à part entière (il reçoit l'adresse d'abonnement), et il
+    // n'était nommé nulle part. Le contenu, lui, lui est illisible : la charge
+    // utile est chiffrée avec les clés de l'appareil (RFC 8291).
+    { term: t("dataPush"), desc: t("dataPushDesc") },
     { term: t("dataAI"), desc: t("dataAIDesc") },
     { term: t("dataGit"), desc: t("dataGitDesc") },
     { term: t("dataKeys"), desc: t("dataKeysDesc") },

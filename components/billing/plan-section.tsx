@@ -2,8 +2,21 @@
 
 import { useCallback, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
-import { Button, cn, toast } from "mangue-ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+  cn,
+  toast,
+} from "mangue-ui";
 import {
   BILLING_PLANS,
   billingPlanRank,
@@ -13,8 +26,12 @@ import {
   type BillingPlanId,
 } from "@/lib/billing-plans";
 import { planFeatureLabels } from "@/lib/plan-features";
-import { useBillingSummary } from "@/lib/use-billing-query";
-import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
+import { billingStatusQueryKey, useBillingSummary } from "@/lib/use-billing-query";
+import {
+  createCheckoutApi,
+  createPortalApi,
+  setCancelAtPeriodEndApi,
+} from "@/lib/billing-api";
 
 /**
  * Les cartes de plans de la page billing (MIN-72, retours) — design calqué sur
@@ -24,6 +41,12 @@ import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
  *
  * Bascule mensuel / annuel (2 mois offerts) : n'affecte que le CHECKOUT (nouvel
  * abonnement). Un abonné actif change de formule/cadence via le Customer Portal.
+ *
+ * La RÉSILIATION, elle, ne passe plus par le portail (MIN-296) : « click-to-cancel »
+ * demande qu'elle ne coûte pas plus de gestes que la souscription, et souscrire
+ * tient en un bouton. Elle se fait donc ici, un bouton et une confirmation, à la
+ * fin de la période — et la même carte propose de revenir en arrière tant que
+ * cette date n'est pas passée.
  */
 
 const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {
@@ -42,10 +65,14 @@ export function PlanSection() {
   const t = useTranslations("Billing");
   const locale = useLocale();
   const { loading, status, planId } = useBillingSummary();
+  const queryClient = useQueryClient();
   const [submittingPlanId, setSubmittingPlanId] = useState<string | null>(null);
   const [interval, setInterval] = useState<BillingInterval>("month");
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
 
   const hasSubscription = !!status?.subscription;
+  const cancelPending = status?.subscription?.cancelAtPeriodEnd ?? false;
+  const periodEnd = status?.subscription?.currentPeriodEnd ?? null;
   const stripeConfigured = status?.stripeConfigured ?? false;
   const userRank = billingPlanRank(planId);
 
@@ -64,6 +91,24 @@ export function PlanSection() {
       setSubmittingPlanId(null);
     }
   }, []);
+
+  /** Résilier / reprendre, sans quitter l'app. */
+  const setCancel = useCallback(
+    async (cancel: boolean) => {
+      setSubmittingPlanId("free");
+      try {
+        await setCancelAtPeriodEndApi(cancel);
+        await queryClient.invalidateQueries({ queryKey: billingStatusQueryKey });
+        toast.success(cancel ? t("cancelDone") : t("resumeDone"));
+      } catch (error) {
+        toast.error((error as Error).message);
+      } finally {
+        setSubmittingPlanId(null);
+        setConfirmCancelOpen(false);
+      }
+    },
+    [queryClient, t]
+  );
 
   const startCheckout = useCallback(
     async (target: BillingPlanId, chosenInterval: BillingInterval) => {
@@ -113,6 +158,18 @@ export function PlanSection() {
         </div>
       </div>
 
+      {/* Résiliation en cours : la date compte plus que le mot, c'est elle qui
+          dit ce qui reste dû et jusqu'à quand l'accès tient. */}
+      {cancelPending && periodEnd && (
+        <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-center text-xs text-muted-foreground">
+          {t("cancelScheduled", {
+            date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
+              new Date(periodEnd)
+            ),
+          })}
+        </p>
+      )}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {BILLING_PLANS.map((plan) => {
           const isCurrent = plan.id === planId;
@@ -130,9 +187,14 @@ export function PlanSection() {
             ctaLabel = isFreeCard ? t("currentPlanBadge") : t("manageSubscription");
             if (!isFreeCard && hasSubscription) onAction = () => void openPortal(plan.id);
           } else if (isFreeCard) {
-            // Revenir à Free = annuler l'abonnement — flux géré dans le portal.
-            ctaLabel = t("cancelSubscription");
-            if (hasSubscription) onAction = () => void openPortal(plan.id);
+            // Revenir à Free = résilier. Deux gestes, ici, sans passer par
+            // Stripe (MIN-296) ; et si c'est déjà fait, le bouton défait.
+            ctaLabel = cancelPending ? t("resumeSubscription") : t("cancelSubscription");
+            if (hasSubscription) {
+              onAction = cancelPending
+                ? () => void setCancel(false)
+                : () => setConfirmCancelOpen(true);
+            }
           } else {
             ctaLabel = t("switchToPlan", { plan: t(PLAN_LABEL_KEYS[plan.id]) });
             if (hasSubscription) onAction = () => void openPortal(plan.id);
@@ -222,6 +284,34 @@ export function PlanSection() {
           );
         })}
       </div>
+
+      <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("cancelConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {periodEnd
+                ? t("cancelConfirmDescription", {
+                    date: new Intl.DateTimeFormat(locale, {
+                      dateStyle: "long",
+                    }).format(new Date(periodEnd)),
+                  })
+                : t("cancelConfirmDescriptionNoDate")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancelConfirmKeep")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void setCancel(true);
+              }}
+            >
+              {t("cancelConfirmAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
