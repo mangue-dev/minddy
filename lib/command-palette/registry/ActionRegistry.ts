@@ -6,7 +6,7 @@
  * all applicable actions from registered providers.
  *
  * Each <CommandPalette> builds its own instance from the `providers` prop
- * (plus the built-in calculator/execute providers) — no global singleton.
+ * (plus the built-in item-actions provider) — no global singleton.
  */
 
 import type { PaletteItem } from "../types";
@@ -184,12 +184,11 @@ export class ActionRegistry {
 
   /**
    * Determine the entity type for a palette item.
-   * Explicit entityType wins; calculator results are detected; favorites use
-   * their original category; otherwise the filter category routes the item.
+   * Explicit entityType wins; favorites use their original category;
+   * otherwise the filter category routes the item.
    */
   private getEntityType(item: PaletteItem): string {
     if (item.entityType) return item.entityType;
-    if ("calculatorResult" in item) return "calculator";
 
     const effectiveFilterCategory =
       "originalFilterCategory" in item

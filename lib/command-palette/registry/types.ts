@@ -185,8 +185,7 @@ export interface ContextualAction {
  * Provider that supplies actions for specific entity types.
  *
  * Entity resolution for an item:
- *   item.entityType ?? ("calculatorResult" in item → "calculator")
- *                   ?? item.filterCategory
+ *   item.entityType ?? item.filterCategory
  *
  * A provider handling "*" matches every entity type (used for fallbacks
  * like the built-in execute/favorite provider).

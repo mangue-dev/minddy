@@ -9,7 +9,6 @@
  * - Abbreviation matching (e.g. "ct" matches "Créer une tâche")
  * - Accent normalization ("creer" matches "Créer")
  * - Relevance scoring with context/usage/favorite boosts
- * - Inline calculator with dedicated result display
  * - Query history recall (ArrowUp in the empty field)
  */
 
@@ -18,7 +17,6 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import { usePaletteConfig } from "../config";
 import { ActionsPopover } from "../components/ActionsPopover";
-import { CalculatorResult } from "../components/CalculatorResult";
 import { Footer } from "../components/Footer";
 import { ResultsList, type ItemGroup } from "../components/ResultsList";
 import { SearchBar } from "../components/SearchBar";
@@ -29,7 +27,6 @@ import {
   type SearchContext,
   type UsageStats,
 } from "../search/engine";
-import { useCalculator } from "../hooks/useCalculator";
 import { useKeyboardNavigation } from "../hooks/useKeyboardNavigation";
 import { useMobileGestures, useIsTouchDevice } from "../hooks/useMobileGestures";
 import { eventKey } from "../hooks/usePalette";
@@ -106,7 +103,7 @@ export function SearchView({
   onHistoryReset,
   onQuerySubmit,
 }: SearchViewProps) {
-  const { t, registry, categories, categoryOrder, calculatorEnabled, shortcuts } =
+  const { t, registry, categories, categoryOrder, shortcuts } =
     usePaletteConfig();
 
   // Zustand selectors (prevent re-renders on unrelated state changes)
@@ -124,7 +121,6 @@ export function SearchView({
   // Debounce query for expensive scoring (50ms)
   const debouncedQuery = useDebouncedValue(query, 50);
 
-  const { calculate, mightBeCalculation } = useCalculator();
   const isTouchDevice = useIsTouchDevice();
 
   // Manual expansion in compact mode (ArrowDown)
@@ -268,49 +264,10 @@ export function SearchView({
     return scoredItems.map((s) => s.item);
   }, [items, debouncedQuery, categoryFilter, searchContext, usageStats, favorites, categories, findMatchingCategories]);
 
-  // Calculator state - shown as soon as the expression might be a calculation
-  const calculatorState = useMemo(() => {
-    if (!calculatorEnabled) return null;
-    if (!query.trim() || !mightBeCalculation(query)) return null;
-    const result = calculate(query);
-    return {
-      query,
-      result, // Can be null or success=false while incomplete
-      isValid: result?.success ?? false,
-    };
-  }, [calculatorEnabled, query, calculate, mightBeCalculation]);
-
-  // Calculator PaletteItem for registry integration
-  const calculatorItem = useMemo<PaletteItem | null>(() => {
-    if (!calculatorState) return null;
-    const result = calculatorState.result;
-    return {
-      id: "calculator-result",
-      title: result?.formatted || String(result?.result ?? "…"),
-      description: calculatorState.query,
-      filterCategory: "all",
-      icon: null,
-      keywords: [],
-      // calculatorResult routes the item to the CalculatorProvider
-      ...(result?.success && {
-        calculatorResult: {
-          expression: calculatorState.query,
-          result: result.formatted || String(result.result),
-          type: result.type,
-        },
-      }),
-    } as PaletteItem;
-  }, [calculatorState]);
-
-  // Compose final list: calculator + favorites group + category sort.
+  // Compose final list: favorites group + category sort.
   // IMPORTANT: items are sorted so activeIndex matches the visual position.
-  const itemsWithCalculator = useMemo(() => {
+  const orderedItems = useMemo(() => {
     let list = filteredItems;
-
-    // Calculator at the very top (index 0) for keyboard navigation
-    if (calculatorItem) {
-      list = [calculatorItem, ...list];
-    }
 
     // Favorites group when not searching
     if (!query.trim() && favorites.size > 0) {
@@ -343,19 +300,13 @@ export function SearchView({
       const orderB = categoryOrder[b.filterCategory] ?? 999;
       return orderA - orderB;
     });
-  }, [filteredItems, query, calculatorItem, favorites, categoryOrder]);
-
-  // Items without the calculator (it renders separately above the list)
-  const itemsForList = useMemo(() => {
-    if (!calculatorItem) return itemsWithCalculator;
-    return itemsWithCalculator.filter((item) => item.id !== "calculator-result");
-  }, [itemsWithCalculator, calculatorItem]);
+  }, [filteredItems, query, favorites, categoryOrder]);
 
   // Group items for the virtualized list
   const groups = useMemo<ItemGroup[]>(() => {
     const map = new Map<string, PaletteItem[]>();
 
-    for (const item of itemsForList) {
+    for (const item of orderedItems) {
       const cat = item.filterCategory;
       if (!map.has(cat)) {
         map.set(cat, []);
@@ -365,7 +316,6 @@ export function SearchView({
 
     const labelFor = (catId: string): string => {
       if (catId === "favorites") return t("categories.favorites");
-      if (catId === "all") return t("categories.calculator");
       return categories.find((c) => c.id === catId)?.label ?? t("categories.other");
     };
 
@@ -374,25 +324,18 @@ export function SearchView({
       category: labelFor(catId),
       items: groupItems,
     }));
-  }, [itemsForList, categories, t]);
+  }, [orderedItems, categories, t]);
 
   // Starting indices of each group for Cmd+Arrow navigation
-  // (offset by 1 when the calculator occupies index 0)
   const groupStartIndices = useMemo(() => {
     const indices: number[] = [];
-    let currentIndex = calculatorItem ? 1 : 0;
+    let currentIndex = 0;
     for (const group of groups) {
       indices.push(currentIndex);
       currentIndex += group.items.length;
     }
     return indices;
-  }, [groups, calculatorItem]);
-
-  // activeIndex for ResultsList (offset by 1 if calculator is at index 0)
-  const listActiveIndex = useMemo(() => {
-    if (!calculatorItem) return activeIndex;
-    return activeIndex - 1;
-  }, [activeIndex, calculatorItem]);
+  }, [groups]);
 
   // Compact mode: only show results when there's a query or manual expand
   const isExpanded = !compactMode || query.trim().length > 0 || isManuallyExpanded;
@@ -428,7 +371,7 @@ export function SearchView({
   // - history mode active (historyIndex >= 0)
   // - empty query at the first item (ArrowUp should recall history, not wrap)
   useKeyboardNavigation({
-    items: itemsWithCalculator,
+    items: orderedItems,
     actionContext: viewActionContext,
     onClose,
     onSelectItem: handleSelect,
@@ -453,11 +396,11 @@ export function SearchView({
 
   // Default action label for the highlighted item (footer hint)
   const defaultActionLabel = useMemo(() => {
-    const activeItem = itemsWithCalculator[activeIndex];
+    const activeItem = orderedItems[activeIndex];
     if (!activeItem) return undefined;
     const defaultAction = registry.getDefaultAction(activeItem, viewActionContext);
     return defaultAction?.label;
-  }, [registry, itemsWithCalculator, activeIndex, viewActionContext]);
+  }, [registry, orderedItems, activeIndex, viewActionContext]);
 
   const handleOpenActions = useCallback(
     (item: PaletteItem) => {
@@ -473,7 +416,7 @@ export function SearchView({
       if (eventKey(e) !== shortcuts.actionsKey) return;
       if (isActionsPopoverOpen) return;
 
-      const item = itemsWithCalculator[activeIndex];
+      const item = orderedItems[activeIndex];
       if (item && hasActions(item)) {
         e.preventDefault();
         selectItem(item);
@@ -483,7 +426,7 @@ export function SearchView({
 
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [shortcuts.actionsKey, isActionsPopoverOpen, itemsWithCalculator, activeIndex, hasActions, selectItem, openActionsForItem]);
+  }, [shortcuts.actionsKey, isActionsPopoverOpen, orderedItems, activeIndex, hasActions, selectItem, openActionsForItem]);
 
   // Touch handlers for an item
   const getTouchHandlers = useCallback(
@@ -549,29 +492,14 @@ export function SearchView({
       {/* Results - hidden in compact mode when no query */}
       {isExpanded && (
         <div className={styles.resultsContainer}>
-          {/* Calculator result - rendered above the list */}
-          {calculatorState && calculatorItem && (
-            <CalculatorResult
-              query={calculatorState.query}
-              result={calculatorState.result}
-              isActive={activeIndex === 0}
-              onSelect={() => handleSelect(calculatorItem)}
-              onOpenActions={() => handleOpenActions(calculatorItem)}
-              hasActions={calculatorState.isValid && hasActions(calculatorItem)}
-              isMobile={isTouchDevice}
-            />
-          )}
-
-          {/* Regular results list (empty state hidden when the calculator already answers) */}
           <ResultsList
             groups={groups}
-            activeIndex={listActiveIndex}
+            activeIndex={activeIndex}
             onSelect={handleSelect}
             onOpenActions={handleOpenActions}
             hasActions={hasActions}
             isMobile={isTouchDevice}
             getTouchHandlers={isTouchDevice ? getTouchHandlers : undefined}
-            emptyState={calculatorItem ? <div aria-hidden="true" /> : undefined}
           />
         </div>
       )}
@@ -581,9 +509,7 @@ export function SearchView({
         view="search"
         isMobile={isTouchDevice}
         hasActions={
-          itemsWithCalculator[activeIndex]
-            ? hasActions(itemsWithCalculator[activeIndex])
-            : false
+          orderedItems[activeIndex] ? hasActions(orderedItems[activeIndex]) : false
         }
         compactMode={compactMode}
         isExpanded={isExpanded}

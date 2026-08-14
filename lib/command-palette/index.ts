@@ -33,7 +33,6 @@ export type {
 } from "./registry/types";
 export { sortActions, actionRequiresForm } from "./registry/types";
 export { ActionRegistry, createActionRegistry } from "./registry/ActionRegistry";
-export { CalculatorProvider } from "./registry/providers/CalculatorProvider";
 export { ItemActionsProvider } from "./registry/providers/ItemActionsProvider";
 
 // === Search engine (usable standalone) ===
@@ -56,21 +55,6 @@ export {
   type ScoredSearchResult,
   type UsageStats,
 } from "./search/engine";
-
-// === Calculator (usable standalone) ===
-export {
-  parseExpression,
-  mightBeCalculation,
-  loadCalculatorLocale,
-  getDefaultLocale,
-  CALCULATOR_LOCALE_EN,
-  CALCULATOR_LOCALE_FR,
-} from "./calculator";
-export type {
-  CalculationResult,
-  CalculationType,
-  CalculatorLocaleConfig,
-} from "./calculator";
 
 // === i18n ===
 export { STRINGS_EN, STRINGS_FR, createTranslate, type PaletteStrings, type TranslateFn } from "./i18n";

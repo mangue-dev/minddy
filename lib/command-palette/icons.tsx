@@ -1,7 +1,7 @@
 /**
  * Internal icon set — minimal inline SVGs so the package has zero icon deps.
  * Items and actions supply their own icons; these only cover the chrome
- * (search field, popover, dropdowns, calculator actions…).
+ * (search field, popover, dropdowns…).
  */
 
 import type { SVGProps } from "react";

@@ -12,7 +12,6 @@ import { createContext, useContext, type ReactNode } from "react";
 import type { ActionRegistry } from "./registry/ActionRegistry";
 import type { TranslateFn } from "./i18n";
 import type { CategoryDefinition } from "./types";
-import type { CalculatorLocaleConfig } from "./calculator/types";
 
 // =============================================================================
 // TYPES
@@ -37,10 +36,6 @@ export interface ResolvedPaletteConfig {
   categoryOrder: Record<string, number>;
   /** Action registry for this palette instance. */
   registry: ActionRegistry;
-  /** Calculator enabled? */
-  calculatorEnabled: boolean;
-  /** Calculator locale config (derived from locale + overrides). */
-  calculatorLocale: CalculatorLocaleConfig;
   /** Keyboard shortcuts. */
   shortcuts: PaletteShortcuts;
   /** Footer logo (left slot). */
@@ -82,15 +77,15 @@ export function usePaletteConfig(): ResolvedPaletteConfig {
 // =============================================================================
 
 /**
- * Compute the grouping order map: favorites first, calculator ("all") next,
- * then categories in declaration order.
+ * Compute the grouping order map: favorites first, then categories in
+ * declaration order.
  */
 export function buildCategoryOrder(
   categories: CategoryDefinition[]
 ): Record<string, number> {
-  const order: Record<string, number> = { favorites: 0, all: 1 };
+  const order: Record<string, number> = { favorites: 0 };
   categories.forEach((cat, i) => {
-    if (cat.id !== "all") order[cat.id] = i + 2;
+    if (cat.id !== "all") order[cat.id] = i + 1;
   });
   return order;
 }

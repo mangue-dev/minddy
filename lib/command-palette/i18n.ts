@@ -16,7 +16,6 @@ export const STRINGS_EN: PaletteStrings = {
 
   // Groups / categories
   "categories.favorites": "Favorites",
-  "categories.calculator": "Calculator",
   "categories.other": "Other",
 
   // Results
@@ -49,19 +48,6 @@ export const STRINGS_EN: PaletteStrings = {
   "form.keys.enter": "↵",
   "form.keys.escape": "Esc",
 
-  // Calculator
-  "calculator.try": "Try:",
-  "calculator.hints.math": "2 + 2 × 10",
-  "calculator.hints.conversion": "5 km to m",
-  "calculator.hints.date": "today + 3d",
-  "calculator.hints.dateOps": "today + 2 weeks",
-  "calculator.hints.percentage": "15% of 200",
-  "calculator.copy": "Copy result",
-  "calculator.copyFull": "Copy expression = result",
-  "calculator.copyExpression": "Copy expression",
-  "calculator.copied": "Copied to clipboard",
-  "calculator.copyFailed": "Copy failed",
-
   // Default item actions
   "itemActions.open": "Open",
   "itemActions.favorite.add": "Add to favorites",
@@ -77,7 +63,6 @@ export const STRINGS_FR: PaletteStrings = {
 
   // Groups / categories
   "categories.favorites": "Favoris",
-  "categories.calculator": "Calculatrice",
   "categories.other": "Autre",
 
   // Results
@@ -109,19 +94,6 @@ export const STRINGS_FR: PaletteStrings = {
   "form.keys.tab": "Tab",
   "form.keys.enter": "↵",
   "form.keys.escape": "Échap",
-
-  // Calculator
-  "calculator.try": "Essayez :",
-  "calculator.hints.math": "2 + 2 × 10",
-  "calculator.hints.conversion": "5 km en m",
-  "calculator.hints.date": "ajd + 3j",
-  "calculator.hints.dateOps": "ajd + 2 semaines",
-  "calculator.hints.percentage": "15% de 200",
-  "calculator.copy": "Copier le résultat",
-  "calculator.copyFull": "Copier expression = résultat",
-  "calculator.copyExpression": "Copier l'expression",
-  "calculator.copied": "Copié dans le presse-papier",
-  "calculator.copyFailed": "Échec de la copie",
 
   // Default item actions
   "itemActions.open": "Ouvrir",

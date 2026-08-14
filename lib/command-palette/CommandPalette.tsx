@@ -2,7 +2,7 @@
  * CommandPalette - Main shell.
  *
  * A light view router over:
- * - SearchView: search, results, calculator, actions popover
+ * - SearchView: search, results, actions popover
  * - FormView: inline forms for actions that need input
  * - Custom views: host-provided views (e.g. an AI chat), reachable via Tab
  *
@@ -21,9 +21,7 @@ import {
 import { PaletteConfigProvider, buildCategoryOrder, type ResolvedPaletteConfig } from "./config";
 import { createTranslate, type PaletteStrings } from "./i18n";
 import { CheckIcon } from "./icons";
-import { loadCalculatorLocale } from "./calculator/locale-loader";
 import { createActionRegistry } from "./registry/ActionRegistry";
-import { CalculatorProvider } from "./registry/providers/CalculatorProvider";
 import { ItemActionsProvider } from "./registry/providers/ItemActionsProvider";
 import {
   configureSearchStorage,
@@ -37,7 +35,6 @@ import styles from "./styles/CommandPalette.module.css";
 import { FormView } from "./views/FormView";
 import { SearchView } from "./views/SearchView";
 import type { ActionExecutionContext, ActionProvider } from "./registry/types";
-import type { CalculatorLocaleConfig } from "./calculator/types";
 import type {
   CategoryDefinition,
   PaletteItem,
@@ -78,10 +75,6 @@ export interface CommandPaletteProps {
   strings?: PaletteStrings;
   /** Category definitions (tabs order, labels, boosts). */
   categories?: CategoryDefinition[];
-  /** Enable the inline calculator. Default true. */
-  calculator?: boolean;
-  /** Calculator locale overrides (keywords, formats). */
-  calculatorLocale?: Partial<CalculatorLocaleConfig>;
   /** localStorage key prefix for favorites/usage/history. Default "command-palette". */
   storagePrefix?: string;
   /** Actions popover shortcut key (with ⌘/Ctrl). Default "m". */
@@ -133,8 +126,6 @@ export function CommandPalette({
   locale = "en",
   strings,
   categories = [],
-  calculator = true,
-  calculatorLocale: calculatorLocaleOverrides,
   storagePrefix = "command-palette",
   actionsShortcutKey = "m",
   footerLogo,
@@ -170,20 +161,11 @@ export function CommandPalette({
   const registry = useMemo(() => {
     const reg = createActionRegistry();
     reg.register(ItemActionsProvider);
-    if (calculator) {
-      reg.register(CalculatorProvider);
-    }
     for (const provider of providers ?? []) {
       reg.register(provider);
     }
     return reg;
-  }, [providers, calculator]);
-
-  // === Calculator locale ===
-  const calculatorLocale = useMemo(
-    () => loadCalculatorLocale(locale, calculatorLocaleOverrides),
-    [locale, calculatorLocaleOverrides]
-  );
+  }, [providers]);
 
   // === Resolved config (context value) ===
   const config = useMemo<ResolvedPaletteConfig>(
@@ -193,12 +175,10 @@ export function CommandPalette({
       categories,
       categoryOrder: buildCategoryOrder(categories),
       registry,
-      calculatorEnabled: calculator,
-      calculatorLocale,
       shortcuts: { actionsKey: actionsShortcutKey.toLowerCase() },
       footerLogo,
     }),
-    [t, locale, categories, registry, calculator, calculatorLocale, actionsShortcutKey, footerLogo]
+    [t, locale, categories, registry, actionsShortcutKey, footerLogo]
   );
 
   // === Query history ===
