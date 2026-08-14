@@ -1,7 +1,7 @@
 import "server-only";
 
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { extractMetaContent, extractTitleText, parseAttributes, scanTags } from "@/lib/server/html-meta";
+import { SafeFetchError, assertPublicHttpUrl, safeFetch } from "@/lib/server/safe-fetch";
 import { withUrlScheme } from "@/lib/url-normalize";
 
 /**
@@ -11,14 +11,18 @@ import { withUrlScheme } from "@/lib/url-normalize";
  * trouver et télécharger l'image.
  *
  * Le serveur fetch une URL fournie par l'utilisateur : tout passe par
- * `guardedFetch`, qui n'accepte que http(s) vers des IP publiques (résolution
- * DNS vérifiée à chaque hop de redirect), avec timeout et plafond de taille.
+ * [safe-fetch.ts](./safe-fetch.ts), qui n'accepte que http(s) vers des IP
+ * publiques, **se connecte à l'adresse qu'il a validée** (anti-rebinding),
+ * revalide chaque redirection, et borne délai et octets lus. Et le HTML
+ * rapporté est analysé par [html-meta.ts](./html-meta.ts), dont chaque fonction
+ * est linéaire — une page hostile coûte le prix de sa taille, pas plus.
  */
 
 const MAX_ICON_BYTES = 512 * 1024; // 512 Ko
 const MAX_HTML_BYTES = 1024 * 1024; // 1 Mo — on ne lit le HTML que pour le <head>
 const MAX_REDIRECTS = 3;
 const FETCH_TIMEOUT_MS = 10_000;
+const USER_AGENT = "minddy-favicon/1.0 (+https://www.minddy.app)";
 
 /** MIME acceptés → extension stockée. Pas de SVG (script-capable). */
 export const ICON_MIME_EXT: Record<string, string> = {
@@ -38,108 +42,40 @@ export class FaviconError extends Error {
   }
 }
 
+/** Une URL irrécupérable reste irrécupérable ; tout le reste (site éteint,
+    corps démesuré, redirection sans fin) n'est qu'une absence de favicon. */
+function toFaviconError(err: unknown): FaviconError {
+  if (err instanceof FaviconError) return err;
+  if (err instanceof SafeFetchError && err.reason === "url") {
+    return new FaviconError("invalidUrl");
+  }
+  return new FaviconError("notFound");
+}
+
 export function iconExtFromContentType(contentType: string | null): string | null {
   if (!contentType) return null;
   const mime = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
   return ICON_MIME_EXT[mime] ?? null;
 }
 
-/** IPv4/IPv6 privées, loopback, link-local, CGNAT… — tout ce qui n'est pas
-    routable publiquement est refusé (anti-SSRF). */
-function isPrivateAddress(address: string): boolean {
-  if (isIP(address) === 4) {
-    const octets = address.split(".").map(Number);
-    const [a, b] = octets;
-    if (a === 0 || a === 10 || a === 127) return true;
-    if (a === 169 && b === 254) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
-    return false;
-  }
-  const lower = address.toLowerCase();
-  if (lower === "::" || lower === "::1") return true;
-  if (lower.startsWith("fe8") || lower.startsWith("fe9")) return true; // link-local
-  if (lower.startsWith("fea") || lower.startsWith("feb")) return true;
-  if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // ULA
-  if (lower.startsWith("::ffff:")) return isPrivateAddress(lower.slice(7));
-  return false;
-}
-
-/** Valide protocole + résolution DNS publique d'une URL. Lève FaviconError. */
-async function assertPublicHttpUrl(raw: string): Promise<URL> {
-  let url: URL;
+/** fetch guardé : protocole, IP publique épinglée, redirections revalidées,
+    plafond d'octets et délai global. */
+async function guardedFetch(
+  rawUrl: string | URL,
+  maxBytes: number,
+  onOverflow: "error" | "truncate" = "error"
+) {
   try {
-    url = new URL(raw);
-  } catch {
-    throw new FaviconError("invalidUrl");
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new FaviconError("invalidUrl");
-  }
-  const host = url.hostname;
-  if (isIP(host)) {
-    if (isPrivateAddress(host)) throw new FaviconError("invalidUrl");
-    return url;
-  }
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
-    throw new FaviconError("invalidUrl");
-  }
-  let addresses: { address: string }[];
-  try {
-    addresses = await lookup(host, { all: true });
-  } catch {
-    throw new FaviconError("invalidUrl");
-  }
-  if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address))) {
-    throw new FaviconError("invalidUrl");
-  }
-  return url;
-}
-
-/**
- * fetch guardé : chaque hop (URL initiale + redirects, max 3) est revalidé
- * contre `assertPublicHttpUrl`; timeout global. Renvoie la réponse finale et
- * l'URL finale (base de résolution des href relatifs).
- */
-async function guardedFetch(rawUrl: string): Promise<{ response: Response; finalUrl: URL }> {
-  let current = await assertPublicHttpUrl(rawUrl);
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const response = await fetch(current, {
-      redirect: "manual",
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { "user-agent": "minddy-favicon/1.0 (+https://www.minddy.app)" },
+    return await safeFetch(rawUrl, {
+      maxBytes,
+      onOverflow,
+      maxRedirects: MAX_REDIRECTS,
+      timeoutMs: FETCH_TIMEOUT_MS,
+      headers: { "user-agent": USER_AGENT },
     });
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      if (!location || hop === MAX_REDIRECTS) throw new FaviconError("notFound");
-      current = await assertPublicHttpUrl(new URL(location, current).toString());
-      continue;
-    }
-    return { response, finalUrl: current };
+  } catch (err) {
+    throw toFaviconError(err);
   }
-  throw new FaviconError("notFound");
-}
-
-/** Lit un corps de réponse avec plafond de taille (content-length menteur inclus). */
-async function readCapped(response: Response, cap: number): Promise<Buffer> {
-  const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > cap) throw new FaviconError("notFound");
-  const reader = response.body?.getReader();
-  if (!reader) throw new FaviconError("notFound");
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > cap) {
-      void reader.cancel();
-      throw new FaviconError("notFound");
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks);
 }
 
 interface IconCandidate {
@@ -151,26 +87,21 @@ interface IconCandidate {
 }
 
 /** Extrait les candidats `<link rel*="icon">` du HTML, triés du meilleur au
-    moins bon. Regex volontairement tolérante — on valide chaque candidat par
+    moins bon. Lecture volontairement tolérante — on valide chaque candidat par
     un vrai fetch derrière. */
 function parseIconLinks(html: string): IconCandidate[] {
   const candidates: IconCandidate[] = [];
-  const linkRe = /<link\b[^>]*>/gi;
-  for (const [tag] of html.matchAll(linkRe)) {
-    const attr = (name: string): string | null => {
-      const m = tag.match(new RegExp(`${name}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"));
-      return m ? (m[2] ?? m[3] ?? m[4] ?? null) : null;
-    };
-    const rel = attr("rel")?.toLowerCase() ?? "";
+  for (const tag of scanTags(html, "link")) {
+    const attributes = parseAttributes(tag);
+    const rel = attributes.get("rel")?.toLowerCase() ?? "";
     if (!rel.includes("icon")) continue;
-    const href = attr("href");
+    const href = attributes.get("href");
     if (!href) continue;
     const priority = rel.includes("apple-touch-icon") ? 3 : rel.includes("shortcut") ? 1 : 2;
-    const sizes = attr("sizes") ?? "";
-    const size = Math.max(
-      0,
-      ...[...sizes.matchAll(/(\d+)x\d+/gi)].map((m) => Number(m[1]))
-    );
+    let size = 0;
+    for (const match of (attributes.get("sizes") ?? "").matchAll(/(\d+)x\d+/gi)) {
+      size = Math.max(size, Number(match[1]));
+    }
     candidates.push({ href, priority, size });
   }
   return candidates.sort((a, b) => b.priority - a.priority || b.size - a.size);
@@ -178,18 +109,7 @@ function parseIconLinks(html: string): IconCandidate[] {
 
 /** Titre lisible d'une page : `og:title` s'il est là, sinon `<title>`. */
 function parsePageTitle(html: string): string | null {
-  const og = html.match(
-    /<meta\b[^>]*property\s*=\s*["']og:title["'][^>]*>/i
-  )?.[0];
-  const ogContent = og?.match(
-    /content\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i
-  );
-  const raw =
-    ogContent?.[2] ??
-    ogContent?.[3] ??
-    ogContent?.[4] ??
-    html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ??
-    null;
+  const raw = extractMetaContent(html, "og:title") ?? extractTitleText(html);
   if (raw == null) return null;
   const text = decodeBasicEntities(raw).replace(/\s+/g, " ").trim();
   return text || null;
@@ -215,13 +135,12 @@ export interface ResolvedIcon {
 /** Télécharge un candidat et le valide (MIME + taille). null si inutilisable. */
 async function tryFetchIcon(rawUrl: string): Promise<ResolvedIcon | null> {
   try {
-    const { response, finalUrl } = await guardedFetch(rawUrl);
+    const response = await guardedFetch(rawUrl, MAX_ICON_BYTES);
     if (!response.ok) return null;
     const contentType = response.headers.get("content-type");
     if (!iconExtFromContentType(contentType)) return null;
-    const bytes = await readCapped(response, MAX_ICON_BYTES);
-    if (bytes.byteLength === 0) return null;
-    return { url: finalUrl.toString(), contentType: contentType as string, bytes };
+    if (response.bytes.byteLength === 0) return null;
+    return { url: response.url.toString(), contentType: contentType as string, bytes: response.bytes };
   } catch {
     return null;
   }
@@ -257,10 +176,12 @@ export async function resolveLinkPreview(siteUrl: string): Promise<LinkPreview> 
   let candidates: IconCandidate[] = [];
   let title: string | null = null;
   try {
-    const { response, finalUrl } = await guardedFetch(normalized);
-    base = finalUrl;
+    // Une page trop grosse est COUPÉE, pas jetée : ce qu'on cherche (`<head>`)
+    // est en tête, et un site un peu gros n'a pas à perdre son titre.
+    const response = await guardedFetch(normalized, MAX_HTML_BYTES, "truncate");
+    base = response.url;
     if (response.ok) {
-      const html = (await readCapped(response, MAX_HTML_BYTES)).toString("utf8");
+      const html = response.bytes.toString("utf8");
       candidates = parseIconLinks(html);
       title = parsePageTitle(html);
     }
@@ -269,7 +190,7 @@ export async function resolveLinkPreview(siteUrl: string): Promise<LinkPreview> 
     // qui ne répond pas garde sa chance via /favicon.ico.
     if (err instanceof FaviconError && err.key === "invalidUrl") throw err;
     try {
-      base = await assertPublicHttpUrl(normalized);
+      base = (await assertPublicHttpUrl(normalized)).url;
     } catch {
       throw new FaviconError("invalidUrl");
     }
