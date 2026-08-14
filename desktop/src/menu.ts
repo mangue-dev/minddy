@@ -1,6 +1,7 @@
 import { Menu, app, shell, type BrowserWindow } from "electron";
 
-import { DESKTOP_ORIGIN } from "@/lib/desktop/config";
+import type { DesktopChannel } from "@/lib/desktop/channel";
+import { DESKTOP_STABLE_ORIGIN } from "@/lib/desktop/config";
 import { checkForUpdatesFromMenu } from "./updater";
 
 /**
@@ -16,8 +17,22 @@ import { checkForUpdatesFromMenu } from "./updater";
  * Le menu ne sert donc pas à ajouter : il sert à RETIRER, et à laisser en place
  * l'édition (couper/copier/coller, et surtout ⌘A / ⌘Z, qui sont des rôles natifs
  * sans lesquels rien ne fonctionne dans un champ) et la fenêtre.
+ *
+ * **Une exception, et une seule : le canal** (MIN-352). L'écran de réglages
+ * porte le même interrupteur, et c'est là qu'on le cherche — mais cet
+ * interrupteur-là est SERVI par l'origine qu'il commande. Si la preview ne
+ * charge pas, la fenêtre n'a plus d'écran de réglages du tout, et le menu est la
+ * seule chose qui reste pour revenir en production. C'est pour ce cas-là qu'il
+ * existe ici, pas pour le confort.
+ *
+ * Le menu se RECONSTRUIT à chaque bascule (`setChannel`, main.ts) : la coche est
+ * posée à la construction, elle ne se met pas à jour toute seule.
  */
-export function buildAppMenu(window: BrowserWindow): void {
+export function buildAppMenu(
+  window: BrowserWindow,
+  channel: DesktopChannel,
+  onChannelChange: (channel: DesktopChannel) => void
+): void {
   const isMac = process.platform === "darwin";
 
   const menu = Menu.buildFromTemplate([
@@ -36,6 +51,17 @@ export function buildAppMenu(window: BrowserWindow): void {
                 // qui tourne toute seule, elle, se tait (updater.ts).
                 label: "Check for Updates…",
                 click: () => void checkForUpdatesFromMenu(),
+              },
+              {
+                // Le canal, en clair : ce n'est pas « une bêta », c'est la même
+                // app servie par le dernier commit de `main`. Mêmes données,
+                // mêmes comptes — d'où l'absence d'avertissement ici, et la
+                // phrase complète dans les réglages, où il y a la place.
+                label: "Preview Latest Features",
+                type: "checkbox",
+                checked: channel === "preview",
+                click: (item) =>
+                  onChannelChange(item.checked ? "preview" : "stable"),
               },
               { type: "separator" },
               { role: "services" },
@@ -95,8 +121,10 @@ export function buildAppMenu(window: BrowserWindow): void {
       role: "help",
       submenu: [
         {
+          // Le SITE, pas l'origine active : ce lien mène à la vitrine, qui n'a
+          // pas de canal — et une preview de la landing n'intéresse personne.
           label: "minddy.app",
-          click: () => void shell.openExternal(DESKTOP_ORIGIN),
+          click: () => void shell.openExternal(DESKTOP_STABLE_ORIGIN),
         },
       ],
     },

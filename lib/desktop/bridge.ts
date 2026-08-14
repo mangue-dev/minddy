@@ -3,7 +3,7 @@
  *
  * Le renderer charge du code distant : il ne doit pouvoir appeler que ce qui est
  * exposé ici, nommément, par `contextBridge`. D'où la règle que ce fichier
- * s'impose : **il se lit en trente secondes**. Quatre membres, aucun qui rende
+ * s'impose : **il se lit en trente secondes**. Huit membres, aucun qui rende
  * un objet Node, aucun qui prenne un chemin de fichier, aucun qui exécute quoi
  * que ce soit.
  *
@@ -12,6 +12,7 @@
  */
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
+import type { DesktopChannel } from "@/lib/desktop/channel";
 
 export interface DesktopBridge {
   /** La version de la coquille (`app.getVersion()`), pour l'afficher. */
@@ -65,6 +66,18 @@ export interface DesktopBridge {
    * derrière le navigateur.
    */
   focus(): void;
+  /**
+   * Change de CANAL — la version de minddy que la fenêtre montre (MIN-352).
+   *
+   * En écriture seulement, et c'est voulu : la page n'a pas à demander dans quel
+   * canal elle est, elle le lit sur sa propre origine
+   * (`desktopChannelForOrigin`, lib/desktop/channel.ts). Un canal recopié ici
+   * serait un second état à tenir synchrone avec l'URL réellement chargée.
+   *
+   * L'appel ne rend pas la main : le main process retient le choix, puis
+   * recharge la fenêtre sur l'autre origine. Ce document-ci n'existe plus après.
+   */
+  setChannel(channel: DesktopChannel): void;
 }
 
 declare global {

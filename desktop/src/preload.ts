@@ -2,12 +2,13 @@ import { contextBridge, ipcRenderer } from "electron";
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
 import type { DesktopBridge } from "@/lib/desktop/bridge";
+import type { DesktopChannel } from "@/lib/desktop/channel";
 
 /**
  * LA SURFACE, en entier (MIN-291).
  *
  * Le renderer charge du code DISTANT. Ce fichier est la seule chose qu'il peut
- * atteindre au-delà du web, et il doit se lire en trente secondes : cinq
+ * atteindre au-delà du web, et il doit se lire en trente secondes : huit
  * membres, aucun qui rende un objet Node, aucun qui prenne un chemin de fichier,
  * aucun qui exécute quoi que ce soit. Tout passe par un message au main process,
  * qui reste libre de refuser — `openExternal` en particulier ne fait rien tant
@@ -80,6 +81,10 @@ const bridge: DesktopBridge = {
 
   focus() {
     ipcRenderer.send("minddy:focus");
+  },
+
+  setChannel(channel: DesktopChannel) {
+    ipcRenderer.send("minddy:set-channel", channel);
   },
 };
 

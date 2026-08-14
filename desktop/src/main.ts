@@ -13,6 +13,11 @@ import {
 
 import { parseDesktopAuthLink, type DesktopAuthLink } from "@/lib/desktop/auth-link";
 import {
+  desktopOriginForChannel,
+  parseDesktopChannel,
+  type DesktopChannel,
+} from "@/lib/desktop/channel";
+import {
   DESKTOP_APP_NAME,
   DESKTOP_ENTRY_PATH,
   DESKTOP_ORIGIN,
@@ -23,6 +28,7 @@ import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
 import { routeDisposition } from "@/lib/desktop/window-routes";
+import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
 import { buildAppMenu } from "./menu";
 import { startAutoUpdates } from "./updater";
 import { trace } from "./trace";
@@ -43,6 +49,71 @@ import { trace } from "./trace";
 /** Le lien d'auth reçu avant que la page ne soit prête à l'entendre. */
 let pendingAuthLink: DesktopAuthLink | null = null;
 let mainWindow: BrowserWindow | null = null;
+
+/**
+ * LE CANAL, et l'origine qui en découle (MIN-352).
+ *
+ * `DESKTOP_ORIGIN` n'est plus une constante pour cette fenêtre : elle en est le
+ * point de départ, remplacé au démarrage par ce que dit `channel.json`. Tout ce
+ * qui parle d'origine dans ce fichier — la garde de navigation, les
+ * chargements, la permission micro — lit `origin`, jamais la constante, sans
+ * quoi la moitié de l'app resterait branchée sur la production pendant que la
+ * fenêtre affiche la preview. Une garde de navigation qui compare à la mauvaise
+ * origine renvoie l'app entière au navigateur système : c'est le genre de faute
+ * qui ne se voit qu'au premier clic.
+ */
+let channel: DesktopChannel = "stable";
+let origin: string = DESKTOP_ORIGIN;
+
+/**
+ * Bascule le canal : on retient, puis on recharge.
+ *
+ * Un rechargement PLEIN, et pas une navigation cliente : on change d'origine,
+ * donc de document, de session et de bundle. Rien de ce qui était rendu ne vaut
+ * plus rien.
+ *
+ * ⚠ **La session ne suit pas.** Les cookies sont par origine : le premier
+ * passage sur la preview tombe sur l'écran de connexion, et c'est normal —
+ * `/home` s'en charge tout seul (le proxy y renvoie vers `/login` quand la
+ * session manque). Revenir au stable retrouve la session de production, restée
+ * intacte pendant tout ce temps.
+ */
+function setChannel(next: DesktopChannel): void {
+  if (next === channel) return;
+  writeDesktopChannel(next);
+  channel = next;
+  origin = desktopOriginForChannel(next);
+  trace("setChannel", { channel: next, origin });
+  // Les deux surfaces natives qui NOMMENT le canal se refont : sans ça, la coche
+  // du menu resterait sur celui qu'on vient de quitter et « À propos »
+  // annoncerait l'ancienne origine jusqu'au prochain lancement.
+  applyAboutPanel();
+  if (mainWindow) {
+    buildAppMenu(mainWindow, channel, setChannel);
+    goHome(mainWindow);
+    mainWindow.show();
+    mainWindow.focus();
+  }
+}
+
+/**
+ * La fenêtre « À propos ». Le panneau natif existe de toute façon (rôle `about`
+ * du menu) : sans ces options il annonce le nom et la version d'Electron, ce qui
+ * est vrai et ne renseigne personne. Le nom vient de `app.getName()`, donc de
+ * `setName` plus bas — pas d'une chaîne de plus.
+ */
+function applyAboutPanel(): void {
+  app.setAboutPanelOptions({
+    applicationName: app.getName(),
+    applicationVersion: app.getVersion(),
+    copyright: "© 2026 mangue",
+    // `credits` est la seule ligne libre que macOS affiche ; `website` n'y
+    // existe pas (c'est une option Linux). On y met l'origine ACTIVE et non la
+    // constante : sur le canal preview, c'est le seul endroit qui le dise sans
+    // qu'on ait à ouvrir un menu.
+    credits: origin,
+  });
+}
 
 /**
  * Les boutons macOS : ce que la PAGE demande, et ce qu'ils font VRAIMENT.
@@ -164,7 +235,7 @@ function receiveDeepLink(raw: string): void {
     if (!window) return;
     window.show();
     window.focus();
-    void window.loadURL(`${DESKTOP_ORIGIN}${next}`);
+    void window.loadURL(`${origin}${next}`);
     return;
   }
 
@@ -185,7 +256,7 @@ function flushAuthLink(): void {
 }
 
 function goHome(window: BrowserWindow): void {
-  void window.loadURL(`${DESKTOP_ORIGIN}${DESKTOP_ENTRY_PATH}`);
+  void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
 }
 
 /**
@@ -214,7 +285,7 @@ function goHome(window: BrowserWindow): void {
  */
 function guardNavigation(window: BrowserWindow): void {
   const guard = (event: { preventDefault: () => void }, url: string) => {
-    const decision = navigationDecision(url, DESKTOP_ORIGIN);
+    const decision = navigationDecision(url, origin);
     if (decision !== "allow") {
       event.preventDefault();
       // Un site tiers part au navigateur ; un schéma inconnu ne va nulle part.
@@ -259,7 +330,7 @@ function guardNavigation(window: BrowserWindow): void {
   });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
-    const decision = navigationDecision(url, DESKTOP_ORIGIN);
+    const decision = navigationDecision(url, origin);
     // Même une URL de chez nous : on ne fabrique pas de seconde fenêtre. Un
     // `target="_blank"` interne part au navigateur comme le reste — l'app a une
     // fenêtre, et une seule.
@@ -398,7 +469,7 @@ function createWindow(): BrowserWindow {
     powerMonitor.on(event, () => trace(`power:${event}`));
   }
 
-  void window.loadURL(`${DESKTOP_ORIGIN}${DESKTOP_ENTRY_PATH}`);
+  void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
   return window;
 }
 
@@ -412,7 +483,7 @@ function registerIpc(): void {
     // Le renderer ne décide PAS de ce qu'on donne au système : `open` sur un
     // `file://` ou sur un schéma inscrit par une autre app, c'est de
     // l'exécution. Seul ce que la garde accepte de laisser sortir sort.
-    if (navigationDecision(url, DESKTOP_ORIGIN) === "block") return;
+    if (navigationDecision(url, origin) === "block") return;
     void shell.openExternal(url);
   });
 
@@ -432,6 +503,13 @@ function registerIpc(): void {
   ipcMain.on("minddy:window-buttons-ready", (event) =>
     publishWindowButtons(undefined, event.sender)
   );
+
+  // Le canal, demandé par l'écran de réglages (MIN-352). Le renderer ne fait
+  // que PROPOSER une valeur : `parseDesktopChannel` la ramène à l'un des deux
+  // canaux, et tout ce qui n'est pas `"preview"` renvoie en production.
+  ipcMain.on("minddy:set-channel", (_event, next: unknown) => {
+    setChannel(parseDesktopChannel(next));
+  });
 
   ipcMain.on("minddy:focus", () => {
     if (!mainWindow) return;
@@ -531,7 +609,7 @@ function hardenSession(): void {
             requestingUrl: request.requestingUrl,
             mediaTypes: request.mediaTypes,
           },
-          DESKTOP_ORIGIN
+          origin
         );
         if (!allowed) {
           callback(false);
@@ -611,23 +689,17 @@ if (!app.requestSingleInstanceLock()) {
       ]);
     }
 
-    // La fenêtre « À propos ». Le panneau natif existe de toute façon (rôle
-    // `about` du menu) : sans ces options il annonce le nom et la version
-    // d'Electron, ce qui est vrai et ne renseigne personne. Le nom vient de
-    // `app.getName()`, donc de `setName` ci-dessous — pas d'une chaîne de plus.
-    app.setAboutPanelOptions({
-      applicationName: app.getName(),
-      applicationVersion: app.getVersion(),
-      copyright: "© 2026 mangue",
-      // `credits` est la seule ligne libre que macOS affiche ; `website` n'y
-      // existe pas (c'est une option Linux).
-      credits: DESKTOP_ORIGIN,
-    });
+    // Le canal AVANT la fenêtre : c'est lui qui dit quelle origine charger, et
+    // il n'y a pas de second chargement à espérer pour se rattraper.
+    channel = readDesktopChannel();
+    origin = desktopOriginForChannel(channel);
+    trace("channel", { channel, origin });
 
+    applyAboutPanel();
     hardenSession();
     registerIpc();
     mainWindow = createWindow();
-    buildAppMenu(mainWindow);
+    buildAppMenu(mainWindow, channel, setChannel);
     startAutoUpdates();
     flushAuthLink();
 

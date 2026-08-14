@@ -21,6 +21,7 @@ import {
 } from "@/components/settings-shell";
 import { AccountProfileSection } from "@/components/settings/account-profile-section";
 import { AccountSecuritySection } from "@/components/settings/account-security-section";
+import { AccountDesktopSection } from "@/components/settings/account-desktop-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
 import { AccountCyclesSection } from "@/components/settings/account-cycles-section";
 import { AccountAutomationsSection } from "@/components/settings/account-automations-section";
@@ -67,7 +68,14 @@ export default function AccountSettingsPage() {
       value: "preferences",
       label: t("preferencesTab"),
       icon: SlidersHorizontal,
-      content: <AccountPreferencesSection />,
+      // La carte de l'app de bureau se rend d'elle-même à `null` ailleurs
+      // (navigateur, dév) : elle n'a donc pas de condition ici.
+      content: (
+        <>
+          <AccountPreferencesSection />
+          <AccountDesktopSection />
+        </>
+      ),
     },
     {
       value: "cycles",

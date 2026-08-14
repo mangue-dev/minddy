@@ -10,15 +10,48 @@
 import { SITE_URL } from "@/lib/site";
 
 /**
- * L'origine que la fenêtre charge, et la SEULE dans laquelle elle navigue.
+ * L'origine de développement, ou `null` — `MINDDY_DESKTOP_ORIGIN`.
  *
- * `MINDDY_DESKTOP_ORIGIN` n'existe que pour développer contre `localhost` : en
- * production la coquille est signée et distribuée, l'origine y est en dur — une
- * app de bureau dont on peut détourner l'origine par une variable
- * d'environnement est une app dont on peut détourner l'écran de connexion.
+ * Elle n'existe que pour développer contre `localhost` : en production la
+ * coquille est signée et distribuée, les origines y sont en dur — une app de
+ * bureau dont on peut détourner l'origine par une variable d'environnement est
+ * une app dont on peut détourner l'écran de connexion.
+ *
+ * Quand elle est posée, elle gagne sur TOUT, canal compris : sur `localhost` il
+ * n'y a ni stable ni preview, il n'y a qu'un serveur de dév.
  */
-export const DESKTOP_ORIGIN: string =
-  process.env.MINDDY_DESKTOP_ORIGIN?.trim() || SITE_URL;
+export const DESKTOP_ORIGIN_OVERRIDE: string | null =
+  process.env.MINDDY_DESKTOP_ORIGIN?.trim() || null;
+
+/**
+ * L'origine du canal STABLE — celle que la fenêtre charge par défaut.
+ *
+ * Le canal, lui, se choisit à l'exécution : voir lib/desktop/channel.ts.
+ */
+export const DESKTOP_STABLE_ORIGIN: string = SITE_URL;
+
+/**
+ * L'origine du canal PREVIEW — le déploiement de branche `main` (MIN-352).
+ *
+ * En dur, comme sa voisine, et pour la même raison. Ce n'est pas un
+ * environnement à part : c'est le MÊME projet Supabase (mêmes comptes, mêmes
+ * données, mêmes clés publiques), servi par le dernier commit de `main` au lieu
+ * du dernier promu en production. D'où le fait qu'on puisse y basculer sans rien
+ * perdre — la seule chose qui ne suit pas, ce sont les cookies, qui sont par
+ * origine.
+ */
+export const DESKTOP_PREVIEW_ORIGIN = "https://preview.minddy.app";
+
+/**
+ * L'origine par DÉFAUT de la fenêtre — le dév s'il est demandé, le stable sinon.
+ *
+ * ⚠ Ce n'est pas forcément celle que la fenêtre charge : le canal choisi par la
+ * personne vit dans le main process (`desktop/src/channel-store.ts`) et se
+ * résout par `desktopOriginForChannel`. Cette constante-ci reste le point de
+ * départ, et ce que lisent les surfaces qui n'ont pas de canal (le lien du menu
+ * d'aide, par exemple).
+ */
+export const DESKTOP_ORIGIN: string = DESKTOP_ORIGIN_OVERRIDE ?? DESKTOP_STABLE_ORIGIN;
 
 /** Le schéma d'URL que macOS nous attribue (`minddy://auth?code=…`). */
 /**

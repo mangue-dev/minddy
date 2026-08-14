@@ -1,7 +1,8 @@
 # La coquille macOS de minddy
 
-Une seule fenêtre, qui charge `https://www.minddy.app`. **Aucun écran à elle,
-aucun rendu local** : livrer une feature de minddy ne demande pas de re-signer un
+Une seule fenêtre, qui charge `https://www.minddy.app` — ou
+`https://preview.minddy.app`, au choix de la personne (voir « Le canal »).
+**Aucun écran à elle, aucun rendu local** : livrer une feature de minddy ne demande pas de re-signer un
 binaire, et l'app de bureau dit toujours la même chose que le web.
 
 Cadrage complet : [docs/desktop-electron.md](../docs/desktop-electron.md) §2 et
@@ -21,7 +22,8 @@ d'être vérifié en aller-retour plutôt que relu deux fois séparément.
 | | |
 | --- | --- |
 | `src/main.ts` | fenêtre, garde de navigation, `minddy://`, badge du dock, IPC |
-| `src/preload.ts` | **toute** la surface exposée à la page (5 membres) |
+| `src/channel-store.ts` | le canal retenu sur disque (`userData/channel.json`) |
+| `src/preload.ts` | **toute** la surface exposée à la page (8 membres) |
 | `src/menu.ts` | le menu applicatif — il sert surtout à RETIRER ⌘W et ⌘R |
 | `src/updater.ts` | les mises à jour, et le renoncement franc hors app empaquetée |
 | `electron-builder.yml` | **l'identité de l'app** : nom, icône, `minddy://`, signature |
@@ -58,6 +60,39 @@ MINDDY_DESKTOP_ORIGIN=http://localhost:3000 npm start
 La variable n'existe que pour ça. En production l'origine est en dur : une app de
 bureau dont on détourne l'origine par une variable d'environnement est une app
 dont on détourne l'écran de connexion.
+
+## Le canal (MIN-352)
+
+La coquille charge l'une de DEUX origines, et rien d'autre :
+
+| Canal | Origine | Ce que c'est |
+| --- | --- | --- |
+| `stable` | `www.minddy.app` | la production — le défaut |
+| `preview` | `preview.minddy.app` | le dernier commit de `main`, avant promotion |
+
+**Les deux servent le même projet Supabase** : mêmes comptes, mêmes projets,
+mêmes tickets. Basculer ne duplique rien. La seule chose qui ne suit pas est la
+session — les cookies sont par origine, donc le premier passage sur la preview
+demande de se reconnecter une fois ; revenir au stable retrouve la session de
+production, restée intacte.
+
+Le choix se fait à **deux endroits, et c'est délibéré** : dans Compte →
+Préférences (là où on le cherche) et dans le menu `minddy` (la case « Preview
+Latest Features »). Le second n'est pas un doublon de confort : l'écran de
+réglages est SERVI par l'origine qu'il commande — si la preview ne charge pas, il
+n'y a plus d'écran de réglages du tout, et le menu est la seule chose qui reste
+pour revenir en production.
+
+Il est retenu dans `userData/channel.json`, donc **par machine et par profil**,
+jamais dans le compte : un réglage qui décide quelle page servir doit se lire
+avant d'avoir servi la moindre page. `MINDDY_DESKTOP_ORIGIN` gagne sur lui — sur
+`localhost` il n'y a pas deux canaux.
+
+Décisions dans [lib/desktop/channel.ts](../lib/desktop/channel.ts), testées.
+
+**Un prérequis côté Supabase**, le même qu'au paragraphe suivant : l'allowlist
+« Redirect URLs » doit aussi accepter `https://preview.minddy.app/auth/callback?**`,
+sans quoi Google, GitHub et les liens magiques échouent sur ce canal.
 
 ## L'authentification, en une phrase
 
