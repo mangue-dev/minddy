@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { userInProject } from "@/lib/server/tenancy";
 import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
 import { isDateOrNull } from "@/lib/issue-validation";
 import { isValidColor } from "@/lib/category-colors";
@@ -43,6 +44,7 @@ export type ObjectiveResult =
         | "noFieldsToUpdate"
         | "projectNotFound"
         | "objectiveNotFound"
+        | "notAProjectMember"
         | "databaseError";
       /** Verbatim DB message already meant for the user. */
       rawMessage?: string;
@@ -121,6 +123,23 @@ export async function createObjective({
   }
 
   const service = getServiceClient();
+
+  // Le RESPONSABLE est une référence sortante comme une autre (MIN-339) : sans
+  // cette garde, `lead_user_id` accepte n'importe quel compte de la plateforme
+  // et l'objectif affiche — sur l'écran de tout le projet — le nom de quelqu'un
+  // qui n'y est pas.
+  if (typeof row.lead_user_id === "string") {
+    const isMember = await userInProject(
+      service,
+      row.lead_user_id,
+      projectId,
+      access.project.owner_id
+    );
+    if (!isMember) {
+      return { ok: false, status: 400, errorKey: "notAProjectMember" };
+    }
+  }
+
   const { data, error } = await service
     .from("objectives")
     .insert(row)
@@ -256,6 +275,19 @@ export async function updateObjective({
   const access = await getProjectAccess(actorId, objective.project_id as string);
   if (!access) {
     return { ok: false, status: 404, errorKey: "objectiveNotFound" };
+  }
+
+  // Même garde qu'à la création (MIN-339).
+  if (typeof updates.lead_user_id === "string") {
+    const isMember = await userInProject(
+      service,
+      updates.lead_user_id,
+      objective.project_id as string,
+      access.project.owner_id
+    );
+    if (!isMember) {
+      return { ok: false, status: 400, errorKey: "notAProjectMember" };
+    }
   }
 
   const { data, error } = await service

@@ -1072,7 +1072,16 @@ export function rulesForProject(
 
 // ── Forçage par ticket ───────────────────────────────────────────────────────
 
-/** `issues.automation_override` : null = suit le projet. */
+/**
+ * `issues.automation_override` : null = suit le projet.
+ *
+ * ÉCRIT PAR LE PROPRIÉTAIRE DU PROJET, ET PAR PERSONNE D'AUTRE (MIN-339). Forcer
+ * un préréglage ici, c'est décider que des runs d'agent partiront — sur le
+ * quota, le plan et la clé BYOK du propriétaire, jamais sur ceux de qui a posé
+ * le forçage. La garde vit dans `updateIssueFields` (403 `ownerOnly`) : aucun
+ * écran n'écrit ce champ, seuls l'API et le serveur MCP le posent, donc c'est
+ * là — et nulle part ailleurs — qu'il faut la (re)trouver.
+ */
 export type AutomationOverride =
   | { disabled: true }
   | { preset: AutomationPresetId };

@@ -408,11 +408,17 @@ export async function getIssue(
 
   let duplicateOf: Record<string, unknown> | null = null;
   if (issue.duplicate_of_id) {
+    // `.eq("project_id")` obligatoire (MIN-339) : le MCP lit avec la clé
+    // service, donc RIEN d'autre ne borne cette jointure — un `duplicate_of_id`
+    // pointant ailleurs (ligne d'avant la garde d'écriture) ferait ressortir le
+    // titre d'un ticket d'un autre locataire. Et l'identifiant composé juste
+    // après avec la clé de CE projet serait faux par-dessus le marché.
     const { data } = await ctx.db
       .from("issues")
       .select("id, number, title")
       .is("deleted_at", null)
       .eq("id", issue.duplicate_of_id)
+      .eq("project_id", ctx.projectId)
       .maybeSingle();
     if (data) {
       duplicateOf = {
@@ -427,6 +433,7 @@ export async function getIssue(
   const { data: relationRows } = await ctx.db
     .from("issue_relations")
     .select("id, source_id, target_id, type")
+    .eq("project_id", ctx.projectId)
     .or(`source_id.eq.${issue.id},target_id.eq.${issue.id}`);
   const resolved = resolveRelations(
     issue.id as string,
@@ -438,6 +445,7 @@ export async function getIssue(
         .from("issues")
         .select("id, number, title, status")
         .is("deleted_at", null)
+        .eq("project_id", ctx.projectId)
         .in("id", otherIds)
     : { data: [] as Array<Record<string, unknown>> };
   const relatedMap = new Map(

@@ -32,6 +32,7 @@ import {
 } from "@/lib/server/smart-assign";
 import { ensureIssueLimit } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
+import { objectiveInProject } from "@/lib/server/tenancy";
 import { captureServerEvent } from "./posthog";
 
 /**
@@ -52,6 +53,7 @@ export type CreateIssueResult =
       errorKey?:
         | "titleRequired"
         | "parentIssueNotFound"
+        | "objectiveNotFound"
         | "nestingLimitedToOneLevel"
         | "planTooLong"
         | "invalidRecurrence"
@@ -258,6 +260,17 @@ export async function createIssueForProject({
   if (typeof row.assignee_id === "string") {
     const assigneeAccess = await getProjectAccess(row.assignee_id, projectId);
     if (!assigneeAccess) row.assignee_id = null;
+  }
+
+  // Même exigence pour l'OBJECTIF (MIN-339) : il doit vivre dans ce projet.
+  // Refus explicite, contrairement à l'assigné juste au-dessus — un assigné
+  // étranger arrive légitimement d'une copie inter-projets et se laisse tomber,
+  // là où un objectif étranger n'a aucun cas d'usage ET fait partir le trigger
+  // `SECURITY DEFINER` de recalcul de statut sur l'objectif d'un autre tenant.
+  if (typeof row.objective_id === "string") {
+    if (!(await objectiveInProject(service, row.objective_id, projectId))) {
+      return { ok: false, status: 400, errorKey: "objectiveNotFound" };
+    }
   }
 
   // Sub-issue: validate the parent (same project, top-level) and, unless an

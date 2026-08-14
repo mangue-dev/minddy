@@ -38,6 +38,12 @@ import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
 import { scheduleRemoteStatusPush } from "@/lib/server/git/issue-push";
 import { scheduleStatusAutomations } from "@/lib/server/automations/hooks";
 import { automationSourceOf, parseAutomationOverride } from "@/lib/automations";
+import {
+  cycleBelongsToUser,
+  issueInProject,
+  objectiveInProject,
+  userInProject,
+} from "@/lib/server/tenancy";
 import { captureServerEvent } from "./posthog";
 import { resolveIssueSource } from "./create-issue";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -71,6 +77,10 @@ export type UpdateIssueResult =
         | "planTooLong"
         | "noFieldsToUpdate"
         | "issueNotFound"
+        | "objectiveNotFound"
+        | "duplicateIssueNotFound"
+        | "notAProjectMember"
+        | "ownerOnly"
         | "databaseError";
       /** Verbatim DB message already meant for the user (P0001 trigger raise). */
       rawMessage?: string;
@@ -159,6 +169,9 @@ export async function updateIssueFields({
     }
     updates.effort = input.effort ?? null;
   }
+  // Les quatre références sortantes (assigné, objectif, doublon, cycle) ne sont
+  // que RECUEILLIES ici : leur appartenance se vérifie plus bas, une fois le
+  // projet du ticket connu (MIN-339).
   if ("assignee_id" in input) {
     updates.assignee_id =
       typeof input.assignee_id === "string" ? input.assignee_id : null;
@@ -253,6 +266,65 @@ export async function updateIssueFields({
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
 
+  /**
+   * LES RÉFÉRENCES SORTANTES, BORNÉES À LEUR PÉRIMÈTRE (MIN-339).
+   *
+   * Ici et pas plus haut : chacune se résout contre le projet du ticket, qu'on
+   * ne connaît qu'après l'instantané ci-dessus. Toutes tombent en 400 — une
+   * référence hors périmètre est une charge invalide, pas un ticket introuvable.
+   *
+   * Elles se vérifient à CHAQUE écriture, même quand la valeur ne change pas :
+   * la seule chose qui compte est ce que la ligne portera au retour, et un
+   * ticket qui pointait déjà ailleurs (ligne héritée d'avant ce contrôle) ne
+   * gagne pas le droit de continuer.
+   */
+  const projectId = before.project_id as string;
+  if (typeof updates.objective_id === "string") {
+    // Un objectif étranger n'est pas qu'une jointure de travers : le trigger
+    // `SECURITY DEFINER` qui recalcule le statut d'un objectif partirait alors
+    // sur celui d'un autre locataire.
+    if (!(await objectiveInProject(service, updates.objective_id, projectId))) {
+      return { ok: false, status: 400, errorKey: "objectiveNotFound" };
+    }
+  }
+  if (typeof updates.duplicate_of_id === "string") {
+    if (!(await issueInProject(service, updates.duplicate_of_id, projectId))) {
+      return { ok: false, status: 400, errorKey: "duplicateIssueNotFound" };
+    }
+  }
+  if (typeof updates.assignee_id === "string") {
+    // Refus explicite ici, là où la fabrique de tickets laisse tomber en
+    // silence : à la création l'assigné peut venir d'un autre projet (copie
+    // inter-projets), sur une édition c'est un geste, et un geste sans effet
+    // se raconte de travers dans l'UI comme dans la timeline.
+    const isMember = await userInProject(
+      service,
+      updates.assignee_id as string,
+      projectId,
+      beforeProject!.owner_id ?? null
+    );
+    if (!isMember) {
+      return { ok: false, status: 400, errorKey: "notAProjectMember" };
+    }
+  }
+  if (typeof updates.cycle_id === "string") {
+    // Un cycle est PERSONNEL : il n'a pas de projet, il a un propriétaire, et y
+    // ranger un ticket l'affecte à celui-ci (voir plus bas). Le seul cycle
+    // qu'on a le droit de remplir est donc le sien.
+    if (!(await cycleBelongsToUser(service, updates.cycle_id, actorId))) {
+      return { ok: false, status: 400, errorKey: "invalidCycle" };
+    }
+  }
+  if ("automation_override" in updates) {
+    // Forcer un préréglage d'automatisation, c'est engager le quota, le plan et
+    // la clé BYOK du PROPRIÉTAIRE du projet — les runs qui en découlent partent
+    // sur son budget. C'est donc à lui seul, et 403 : ce n'est pas une charge
+    // malformée, c'est un droit qu'on n'a pas.
+    if (beforeProject!.owner_id !== actorId) {
+      return { ok: false, status: 403, errorKey: "ownerOnly" };
+    }
+  }
+
   // Récurrence et échéance vont ensemble (MIN-136) : une cadence dit « et
   // après ? » d'une date qui doit exister — c'est elle qui porte la prochaine
   // occurrence. Poser une cadence sans échéance se refuse ; effacer l'échéance
@@ -310,19 +382,13 @@ export async function updateIssueFields({
   // Adding to a cycle ASSIGNS the issue to the cycle's owner as a side-effect
   // — never the other way around, and never a status bump (MIN-32). The SQL
   // trigger enforce_issue_cycle then keeps the pair consistent on every path.
+  // Le propriétaire, c'est l'appelant : la garde de tenancy ci-dessus n'accepte
+  // que son propre cycle, il n'y a donc plus de compte tiers à relire.
   if (typeof updates.cycle_id === "string") {
-    const { data: cycle } = await service
-      .from("cycles")
-      .select("id, user_id")
-      .eq("id", updates.cycle_id)
-      .maybeSingle();
-    if (!cycle) {
-      return { ok: false, status: 400, errorKey: "invalidCycle" };
-    }
     const finalAssignee =
       "assignee_id" in updates ? updates.assignee_id : before.assignee_id;
-    if (!("assignee_id" in input) && finalAssignee !== cycle.user_id) {
-      updates.assignee_id = cycle.user_id as string;
+    if (!("assignee_id" in input) && finalAssignee !== actorId) {
+      updates.assignee_id = actorId;
     }
   }
 

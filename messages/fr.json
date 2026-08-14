@@ -173,6 +173,8 @@
     "titleRequired": "Le titre est obligatoire.",
     "parentIssueNotFound": "Ticket parent introuvable.",
     "nestingLimitedToOneLevel": "Un sous-ticket ne peut pas avoir de sous-tickets.",
+    "duplicateIssueNotFound": "Le ticket dont celui-ci est un doublon n'est pas dans ce projet.",
+    "notAProjectMember": "Cette personne n'est pas membre du projet.",
     "invalidRequest": "Requête invalide.",
     "invitationNotFound": "Cette invitation n'est plus valide.",
     "invitationNotForYou": "Cette invitation ne vous est pas destinée.",

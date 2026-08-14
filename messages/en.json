@@ -173,6 +173,8 @@
     "titleRequired": "Title is required.",
     "parentIssueNotFound": "Parent issue not found.",
     "nestingLimitedToOneLevel": "A sub-issue can't have sub-issues.",
+    "duplicateIssueNotFound": "The issue this one duplicates isn't in this project.",
+    "notAProjectMember": "That person isn't a member of this project.",
     "invalidRequest": "Invalid request.",
     "invitationNotFound": "This invitation is no longer valid.",
     "invitationNotForYou": "This invitation isn't for you.",
