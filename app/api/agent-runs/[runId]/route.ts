@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getProjectAccess } from "@/lib/server/project-access";
+import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun, requestInterrupt, type AgentRun } from "@/lib/server/agent/runs";
 import { revokeRunKey } from "@/lib/server/agent/run-key";
 import { stopSandboxByName } from "@/lib/server/agent/sandbox";
@@ -10,9 +10,10 @@ import { getServiceClient } from "@/lib/supabase-service";
 /**
  * Une conversation de l'agent (MIN-46) : la LIRE, la RENOMMER, la SUPPRIMER.
  *
- * Les trois demandent la même chose — être membre du projet du run — et rendent
- * le même 404 quand on ne l'est pas : dire « interdit » apprendrait déjà qu'un run
- * porte cet identifiant.
+ * Les trois demandent la même chose — pouvoir lire ce run, c'est-à-dire être
+ * membre de son projet ET, sauf run partagé, en être le créateur (MIN-332,
+ * `canReadAgentRun`) — et rendent le même 404 quand on ne l'a pas : dire
+ * « interdit » apprendrait déjà qu'un run porte cet identifiant.
  *
  * La lecture ne rend que des colonnes client-safe (jamais le checkpoint ni le
  * sandbox_id).
@@ -63,8 +64,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const run = await getRun(runId);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  const access = await getProjectAccess(auth.user.id, run.project_id);
-  if (!access) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (!(await canReadAgentRun(auth.user.id, run))) {
+    return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  }
 
   return NextResponse.json({ run: sanitizeRun(run) });
 }
@@ -104,8 +106,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const run = await getRun(runId);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  const access = await getProjectAccess(auth.user.id, run.project_id);
-  if (!access?.isMember) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (!(await canReadAgentRun(auth.user.id, run))) {
+    return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  }
 
   const { error } = await getServiceClient()
     .from("agent_runs")
@@ -144,8 +147,9 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const run = await getRun(runId);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  const access = await getProjectAccess(auth.user.id, run.project_id);
-  if (!access?.isMember) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (!(await canReadAgentRun(auth.user.id, run))) {
+    return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  }
 
   // Le drapeau d'abord : si la boucle vit encore, elle le lira peut-être avant
   // qu'on ne lui coupe la machine, et s'arrêtera proprement.

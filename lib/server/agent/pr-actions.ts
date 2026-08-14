@@ -35,6 +35,7 @@ import {
   rememberPrReviewModel,
 } from "./model";
 import type { PrReviewRunSummary, PrReviewSession } from "@/lib/pr-review-session";
+import { canReadAgentRun } from "./run-access";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
@@ -252,6 +253,11 @@ export async function authorizePrRequest(
  *
  * `noPr` distingue « ce run n'a pas de PR » (réponse vide légitime sur les GET,
  * 400 sur les POST) de « run inconnu » (404).
+ *
+ * On passe par la MÊME garde que les autres routes du run (MIN-332) avant de
+ * résoudre sa PR : entrer par `runId` ne doit rien ouvrir de plus qu'entrer par
+ * `prId`, et un run qu'on n'a pas le droit de lire doit répondre « inconnu » —
+ * y compris sur l'existence du lien run → PR.
  */
 export async function authorizeRunPrRequest(
   request: NextRequest,
@@ -261,7 +267,9 @@ export async function authorizeRunPrRequest(
   if (!auth.ok) return { ok: false, response: auth.response };
 
   const run = await getRun(runId);
-  if (!run) return { ok: false, response: NextResponse.json({ error: "Run not found" }, { status: 404 }) };
+  if (!run || !(await canReadAgentRun(auth.user.id, run))) {
+    return { ok: false, response: NextResponse.json({ error: "Run not found" }, { status: 404 }) };
+  }
 
   const pr = await resolvePrForRun(run);
   if (!pr) {

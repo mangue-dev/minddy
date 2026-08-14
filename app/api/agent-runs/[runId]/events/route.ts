@@ -1,14 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getProjectAccess } from "@/lib/server/project-access";
+import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun } from "@/lib/server/agent/runs";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
  * Flux d'événements d'un run (MIN-46) pour le live view. `?after=<seq>` renvoie
  * les events strictement postérieurs (polling incrémental) ; sans lui, tous.
- * Lecture = membre du projet du run.
+ *
+ * Lecture = qui peut lire le run (MIN-332). Les events sont lus en clé service,
+ * donc la policy `agent_run_events_select` ne garde rien ici : c'est ce contrôle
+ * qui la remplace, et il doit dire la même chose qu'elle.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -21,8 +24,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const run = await getRun(runId);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  const access = await getProjectAccess(auth.user.id, run.project_id);
-  if (!access) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (!(await canReadAgentRun(auth.user.id, run))) {
+    return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  }
 
   const afterParam = request.nextUrl.searchParams.get("after");
   const after = afterParam != null ? Number(afterParam) : -1;

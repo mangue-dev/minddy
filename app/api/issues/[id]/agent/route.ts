@@ -10,10 +10,14 @@ import {
   type LaunchResult,
 } from "@/lib/server/agent/launch";
 import { parseAgentMentions } from "@/lib/agent-mentions";
+import { isSharedRun, type RunAnchors } from "@/lib/server/agent/run-access";
+
+/** Les colonnes de `RUN_COLUMNS` dont ce fichier a besoin pour trancher. */
+type RunRow = RunAnchors & { created_by: string | null } & Record<string, unknown>;
 
 /**
  * Runs de l'agent de code d'une issue (MIN-46).
- *  GET  → liste les runs de l'issue (colonnes client-safe) + sa pull request.
+ *  GET  → liste les runs de l'issue VISIBLES PAR L'APPELANT + sa pull request.
  *  POST → lance un run { prompt?, model? } (bouton « Lancer un agent »).
  * L'accès à l'issue est vérifié via le cookie client (RLS) ; `launchAgentRun`
  * fait ensuite les pré-checks (dépôt lié, quota/BYOK, run déjà actif).
@@ -27,8 +31,11 @@ type RouteContext = { params: Promise<{ id: string }> };
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+// `created_by`, `chain_id` et `routine_id` ne sont pas là pour être affichés :
+// ce sont les trois colonnes dont dépend la règle de visibilité (MIN-332), et
+// cette lecture se fait en clé service — sans elles, on ne pourrait pas trier.
 const RUN_COLUMNS =
-  "id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input";
+  "id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -58,7 +65,15 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   ]);
   const pullRequest =
     pickIssuePullRequests((prs ?? []) as IssuePrRow[])[id] ?? null;
-  return NextResponse.json({ runs: data ?? [], pullRequest });
+  // Le ticket est public, ses conversations ne le sont pas (MIN-332) : le panneau
+  // ne montre que MES runs, plus ceux que le projet a déclenchés (automatisation,
+  // routine) ou qui portent sur une PR. Le tri est ici parce que la lecture est
+  // en clé service — la policy `agent_runs_select`, qu'elle contourne, dit la
+  // même chose. Les trois colonnes de visibilité ressortent du payload aussitôt.
+  const runs = ((data ?? []) as unknown as RunRow[])
+    .filter((run) => isSharedRun(run) || run.created_by === auth.user.id)
+    .map(({ created_by: _c, chain_id: _ch, routine_id: _r, ...rest }) => rest);
+  return NextResponse.json({ runs, pullRequest });
 }
 
 // Bornes de longueur (MIN-118) : la consigne est persistée telle quelle dans

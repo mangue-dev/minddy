@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getProjectAccess } from "@/lib/server/project-access";
+import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun, requestInterrupt } from "@/lib/server/agent/runs";
 import { stopChainOnInterrupt } from "@/lib/server/automations/hooks";
 
@@ -10,7 +10,7 @@ import { stopChainOnInterrupt } from "@/lib/server/automations/hooks";
  * drapeau d'interruption : le chunk qui tourne abandonne l'appel LLM en cours (à la
  * frontière de round ou en plein stream) et revient AU REPOS. N'ANNULE PAS la
  * session, ne touche ni au checkpoint ni à la sandbox — tout reste reprennable.
- * (L'endpoint reste /stop côté client.) Membre du projet requis.
+ * (L'endpoint reste /stop côté client.) Réservé à qui peut lire le run (MIN-332).
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -25,8 +25,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const run = await getRun(runId);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  const access = await getProjectAccess(auth.user.id, run.project_id);
-  if (!access?.isMember) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (!(await canReadAgentRun(auth.user.id, run))) {
+    return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  }
 
   // On n'interrompt qu'un run qui TRAVAILLE ; au repos il n'y a rien à interrompre.
   const working = WORKING.includes(run.status);

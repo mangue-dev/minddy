@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getProjectAccess } from "@/lib/server/project-access";
+import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun } from "@/lib/server/agent/runs";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
@@ -56,8 +56,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const run = await getRun(runId);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  const access = await getProjectAccess(user.user.id, run.project_id);
-  if (!access) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (!(await canReadAgentRun(user.user.id, run))) {
+    return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  }
 
   if (!run.branch_name) {
     return NextResponse.json({ error: "This run has no diff" }, { status: 400 });

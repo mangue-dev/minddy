@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getProjectAccess } from "@/lib/server/project-access";
+import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import {
   activeRunForIssue,
   activeRunForRoutine,
@@ -33,7 +33,8 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
  *                            run re-`queued`, budget réinitialisé, drain kické.
  * Seule la DERNIÈRE run de l'issue est reprennable — les précédentes sont un
  * historique (voir le refus `supersededRun` plus bas).
- * Membre du projet requis. Un seul écrivain d'events = le claimer.
+ * Réservé à qui peut lire le run (MIN-332) — on ne parle pas à la conversation
+ * d'un autre. Un seul écrivain d'events = le claimer.
  */
 
 // Le kick de reprise draine le premier chunk dans after() : il lui faut la même
@@ -70,8 +71,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const run = await getRun(runId);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
-  const access = await getProjectAccess(auth.user.id, run.project_id);
-  if (!access?.isMember) return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  if (!(await canReadAgentRun(auth.user.id, run))) {
+    return NextResponse.json({ error: "Run not found" }, { status: 404 });
+  }
 
   if (!RESUMABLE.includes(run.status)) {
     return NextResponse.json({ error: "Run is not resumable" }, { status: 409 });

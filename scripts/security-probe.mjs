@@ -354,6 +354,97 @@ async function main() {
     `project_id ${afterHijack?.project_id}`,
   );
 
+  // 8. MIN-332 : une conversation avec Numo appartient à qui l'a eue.
+  //
+  // Bob devient MEMBRE du projet d'Alice — c'est tout le sujet : l'attaque n'est
+  // pas cross-tenant, elle est intra-projet. Alice ouvre une conversation sur un
+  // ticket que Bob voit, avec sa consigne, un événement et un message de
+  // steering. Bob ne doit rien en lire, sur AUCUNE des trois tables — la
+  // troisième, `agent_run_messages`, n'a jamais porté la restriction.
+  const { error: memberErr } = await service
+    .from("project_members")
+    .insert({ project_id: project.id, user_id: bob.id, role: "member" });
+  if (memberErr) throw new Error(`Bob membre : ${memberErr.message}`);
+
+  const { data: aliceRun, error: runErr } = await service
+    .from("agent_runs")
+    .insert({
+      project_id: project.id,
+      issue_id: issue.id,
+      created_by: alice.id,
+      status: "completed",
+      prompt: "secret d'Alice",
+    })
+    .select("id")
+    .single();
+  if (runErr) throw new Error(`run Alice : ${runErr.message}`);
+
+  const { error: evErr } = await service
+    .from("agent_run_events")
+    .insert({ run_id: aliceRun.id, seq: 0, type: "thinking", payload: {} });
+  if (evErr) throw new Error(`event Alice : ${evErr.message}`);
+  const { error: msgErr } = await service
+    .from("agent_run_messages")
+    .insert({ run_id: aliceRun.id, content: "steering d'Alice", created_by: alice.id });
+  if (msgErr) throw new Error(`message Alice : ${msgErr.message}`);
+
+  for (const [table, label] of [
+    ["agent_runs", "le run"],
+    ["agent_run_events", "ses événements"],
+    ["agent_run_messages", "ses messages"],
+  ]) {
+    const column = table === "agent_runs" ? "id" : "run_id";
+    const res = await rest(
+      `/rest/v1/${table}?${column}=eq.${aliceRun.id}&select=id`,
+      { bearer: bob.jwt },
+    );
+    check(
+      `conversation d'un coéquipier : ${label} illisible (0 ligne)`,
+      Array.isArray(res.payload) && res.payload.length === 0,
+      `status ${res.status}, ${Array.isArray(res.payload) ? res.payload.length : "?"} ligne(s)`,
+    );
+  }
+
+  // Témoin positif : la policy n'est pas simplement « tout refuser ». Un PASSAGE
+  // DE ROUTINE est un geste du PROJET — Bob doit le voir, bien qu'Alice en soit
+  // le `created_by` technique.
+  const { data: routine, error: routineErr } = await service
+    .from("agent_routines")
+    .insert({
+      project_id: project.id,
+      owner_id: alice.id,
+      title: "Probe routine",
+      prompt: "balayage",
+      frequency: "daily",
+    })
+    .select("id")
+    .single();
+  if (routineErr) throw new Error(`routine Alice : ${routineErr.message}`);
+
+  const { data: routineRun, error: routineRunErr } = await service
+    .from("agent_runs")
+    .insert({
+      project_id: project.id,
+      issue_id: null,
+      routine_id: routine.id,
+      created_by: alice.id,
+      status: "completed",
+      triggered_by: "routine",
+    })
+    .select("id")
+    .single();
+  if (routineRunErr) throw new Error(`run de routine : ${routineRunErr.message}`);
+
+  const routineRead = await rest(
+    `/rest/v1/agent_runs?id=eq.${routineRun.id}&select=id`,
+    { bearer: bob.jwt },
+  );
+  check(
+    "passage de routine lisible par un membre (témoin positif)",
+    Array.isArray(routineRead.payload) && routineRead.payload.length === 1,
+    `status ${routineRead.status}, ${Array.isArray(routineRead.payload) ? routineRead.payload.length : "?"} ligne(s)`,
+  );
+
   console.log(
     `\n${failures === 0 ? "✅ TOUT VERT" : `❌ ${failures} contrôle(s) en échec`}`,
   );

@@ -154,10 +154,47 @@ function pageIdOf(change: BroadcastChange): string | null {
   return typeof pageId === "string" ? pageId : null;
 }
 
+/**
+ * Runs de l'agent de code : le spinner « Numo travaille » de la barre latérale,
+ * la liste de la page Agents et le compteur de PR. Ces caches ne POLLENT que si
+ * une session travaille DÉJÀ — sans cet événement, un run lancé hors du composer
+ * (assistant Numo, @numo, autre onglet) n'apparaissait qu'au rechargement.
+ *
+ * DEUX TOPICS depuis MIN-332, et c'est la visibilité du run qui tranche : une
+ * conversation PERSONNELLE arrive sur `user:{id}` (son créateur, seul abonné),
+ * un run du PROJET — routine, automatisation, relecture de PR — sur
+ * `project:{id}`. Les caches à rafraîchir, eux, sont les mêmes des deux côtés :
+ * d'où cette fonction, appelée par les deux aiguilleurs.
+ *
+ * Le trigger ne diffuse que les transitions visibles, et ne pousse plus que
+ * l'id, le ticket, la routine et le statut (voir la migration).
+ */
+function keysForAgentRun(change: BroadcastChange): Invalidation[] {
+  const issueId = issueIdOf(change);
+  const routineId = routineIdOf(change);
+  // Un passage de ROUTINE (MIN-185) n'est pas une conversation : il sort de la
+  // liste des sessions (`.is("routine_id", null)` côté route), donc l'invalider
+  // ne rafraîchirait rien — c'est la liste des EXÉCUTIONS de sa routine qui doit
+  // bouger, et la liste des routines elle-même (son `last_run_at` et son alerte
+  // viennent de changer).
+  if (routineId) {
+    return [active(["routines", routineId, "runs"]), active(["routines"])];
+  }
+  return [
+    active(ALL_AGENT_SESSIONS_KEY),
+    active(ALL_PULL_REQUESTS_KEY),
+    ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
+  ];
+}
+
 function keysForUserEvent(change: BroadcastChange): Invalidation[] {
   switch (change.table) {
     case "notifications":
       return [active(["notifications"])];
+    // Mes conversations avec Numo (MIN-332) : elles n'existent plus que pour moi,
+    // donc leur écho passe par MON topic et non par celui du projet.
+    case "agent_runs":
+      return keysForAgentRun(change);
     // Ces deux tables sont exactement ce dont dépend l'avertissement Smart
     // Assign (réglage du projet, liste des membres) : la marque de la sidebar
     // et la bannière de l'accueil s'effacent donc dès que les règles sont
@@ -400,32 +437,11 @@ function keysForProjectEvent(
       const pageId = typeof record?.page_id === "string" ? record.page_id : null;
       return pageId ? [active(["page-backlinks", pageId])] : [];
     }
-    // Runs de l'agent de code : le spinner « Numo travaille » de la barre
-    // latérale, la liste de la page Agents et le compteur de PR. Ces caches ne
-    // POLLENT que si une session travaille DÉJÀ — sans cet événement, un run
-    // lancé hors du composer (assistant Numo, @numo, coéquipier, autre onglet)
-    // n'apparaissait qu'au rechargement de la page. Le trigger ne diffuse que
-    // les transitions visibles (voir 20260907090000_agent_runs_broadcast).
-    case "agent_runs": {
-      const issueId = issueIdOf(change);
-      const routineId = routineIdOf(change);
-      // Un passage de ROUTINE (MIN-185) n'est pas une conversation : il sort de
-      // la liste des sessions (`.is("routine_id", null)` côté route), donc
-      // l'invalider ne rafraîchirait rien — c'est la liste des EXÉCUTIONS de sa
-      // routine qui doit bouger, et la liste des routines elle-même (son
-      // `last_run_at` et son alerte viennent de changer).
-      if (routineId) {
-        return [
-          active(["routines", routineId, "runs"]),
-          active(["routines"]),
-        ];
-      }
-      return [
-        active(ALL_AGENT_SESSIONS_KEY),
-        active(ALL_PULL_REQUESTS_KEY),
-        ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
-      ];
-    }
+    // Runs de l'agent de code — ceux du PROJET (routine, automatisation,
+    // relecture de PR). Les conversations personnelles arrivent, elles, sur le
+    // topic utilisateur : même traitement, autre porte (MIN-332).
+    case "agent_runs":
+      return keysForAgentRun(change);
     // Chaînes d'automatisation (MIN-147). C'est la seule surface du produit où
     // la péremption est CERTAINE : une chaîne avance toute seule pendant
     // plusieurs minutes, sans que personne ne touche à rien — sans cet
@@ -488,6 +504,13 @@ const USER_SCOPE_KEYS: QueryKey[] = [
   ["me", "scratchpad"],
   ["me", "triage-counts"],
   ["billing"],
+  // Mes conversations avec Numo (MIN-332) : leur écho ne passe plus par le topic
+  // du projet, donc leur rattrapage après coupure ne peut plus passer par le
+  // sien non plus. En préfixe, comme côté projet — `["agent-runs"]` couvre
+  // `["agent-runs","issue",id]`.
+  ["agent-runs"],
+  ALL_AGENT_SESSIONS_KEY,
+  ALL_PULL_REQUESTS_KEY,
 ];
 const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["issues", projectId],
