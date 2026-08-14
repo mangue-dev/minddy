@@ -11,6 +11,32 @@
  */
 
 /**
+ * La graine de l'orbe d'un projet.
+ *
+ * `orb_seed` ne porte une valeur que si le tirage a été RELANCÉ au moins une
+ * fois ; sinon la graine reste l'identifiant du projet, comme depuis MIN-62.
+ * C'est ce qui permet d'ajouter la relance sans repeindre les projets
+ * existants — et ce qui rend ce petit résolveur obligatoire partout où une
+ * orbe se dessine : passer `project.id` en direct, c'est ignorer une relance.
+ */
+export function projectOrbSeed(project: {
+  id: string;
+  orb_seed: string | null;
+}): string {
+  return orbSeedOr(project.id, project.orb_seed);
+}
+
+/**
+ * La même règle, pour les surfaces qui ne portent pas la ligne de la base : le
+ * board public et les pilules de mention transportent un projet en camelCase,
+ * l'agent une projection réduite. Elles appellent ici plutôt que de recopier le
+ * `??` — qui dériverait le jour où la règle changerait.
+ */
+export function orbSeedOr(id: string, seed: string | null | undefined): string {
+  return seed || id;
+}
+
+/**
  * Teinte déterministe dans [0,360) à partir d'une graine (hachage djb2), pour
  * qu'un projet rende toujours le même dégradé. Miroir du `projectHue` d'AutoKap.
  */

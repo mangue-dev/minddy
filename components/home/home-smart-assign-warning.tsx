@@ -7,6 +7,7 @@ import { ChevronRight, TriangleAlert } from "lucide-react";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
+import { orbSeedOr } from "@/lib/project-orb-colors";
 
 /** Même courbe que l'onboarding et l'assistant de création : une seule entrée,
     courte, quand le résumé arrive — pour que l'avis se pose sous le composer au
@@ -70,7 +71,7 @@ export function HomeSmartAssignWarning() {
                 className="group flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-xs outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 <ProjectOrb
-                  seed={warning.projectId}
+                  seed={orbSeedOr(warning.projectId, project?.orb_seed)}
                   iconUrl={project?.icon_url}
                   className="size-4 rounded-[5px]"
                 />

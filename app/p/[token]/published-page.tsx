@@ -12,6 +12,7 @@ import { getPublicPageBundle } from "@/lib/server/page-publication";
 import { isShareUnlocked } from "@/lib/server/share-unlock";
 import { PublicPageShell } from "@/components/public-page-shell";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PublicPageBody } from "@/components/public-page-body";
 import { PagePasswordForm } from "./password-form";
 
@@ -104,7 +105,7 @@ export async function PublishedPage({
       heading={
         <div className="flex min-w-0 items-center gap-2">
           <ProjectOrb
-            seed={bundle.project.id}
+            seed={projectOrbSeed(bundle.project)}
             iconUrl={bundle.project.icon_url}
             className="size-5 rounded-[6px]"
           />

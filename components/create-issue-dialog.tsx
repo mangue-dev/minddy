@@ -31,6 +31,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import {
   AssigneeCompact,
   CategoriesCompact,
@@ -821,7 +822,7 @@ export function CreateIssueDialog({
                           key={p.id}
                           onSelect={() => void submit(createMore, p)}
                         >
-                          <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4" />
+                          <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4" />
                           <span className="truncate">{p.name}</span>
                         </DropdownMenuItem>
                       ))}

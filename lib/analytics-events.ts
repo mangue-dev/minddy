@@ -113,6 +113,8 @@ export interface AnalyticsEventProps {
   project_deleted: { project_id: string };
   project_updated: { field: string };
   project_icon_changed: { kind: "favicon" | "upload" | "orb" };
+  /** Relance du tirage de l'orbe générée (aucune propriété : c'est un geste). */
+  project_orb_rerolled: NoProps;
   project_setup_resumed: { step: string };
 
   // ── Tickets : création ──
@@ -557,6 +559,7 @@ const EVENT_NAMES = [
   "project_deleted",
   "project_updated",
   "project_icon_changed",
+  "project_orb_rerolled",
   "project_setup_resumed",
   // Tickets : création
   "issue_created",

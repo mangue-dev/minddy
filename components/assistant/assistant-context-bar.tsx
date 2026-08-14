@@ -25,6 +25,7 @@ import { SearchMenu } from "@/components/search-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
 import { ContextPill } from "@/components/assistant/context-pill";
 import { displayName } from "@/lib/display-name";
@@ -306,7 +307,7 @@ function AddContextButton({
                   onSelect={() => pick({ kind: "project", id: p.id, label: p.name })}
                   className="gap-2"
                 >
-                  <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-5" />
+                  <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-5" />
                   <span className="truncate">{p.name}</span>
                 </CommandItem>
               ))}

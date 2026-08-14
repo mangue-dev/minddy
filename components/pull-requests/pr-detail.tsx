@@ -46,6 +46,7 @@ import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
@@ -993,7 +994,7 @@ export function PrDetail({
             l'endroit où l'on veut savoir de quel dépôt on parle. */}
         {item.project ? (
           <ProjectOrb
-            seed={item.project.id}
+            seed={projectOrbSeed(item.project)}
             iconUrl={item.project.icon_url}
             className="size-4 shrink-0"
           />
@@ -1425,7 +1426,7 @@ export function PrDetail({
               {item.project ? (
                 <span className="inline-flex items-center gap-1.5">
                   <ProjectOrb
-                    seed={item.project.id}
+                    seed={projectOrbSeed(item.project)}
                     iconUrl={item.project.icon_url}
                     className="size-3.5"
                   />

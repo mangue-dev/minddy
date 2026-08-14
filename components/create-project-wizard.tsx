@@ -178,6 +178,10 @@ export function CreateProjectWizard({
   // Étape « Projet ». `draftId` est l'id du futur projet : la graine de l'orbe
   // doit être connue avant la création, sinon l'aperçu ment.
   const [draftId, setDraftId] = useState<string>(() => crypto.randomUUID());
+  // La graine de l'orbe si on l'a relancée ici — sinon l'id fait office, comme
+  // pour un projet qui n'a jamais relancé la sienne.
+  const [orbSeed, setOrbSeed] = useState<string | null>(null);
+  const previewOrbSeed = orbSeed ?? draftId;
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [keyTouched, setKeyTouched] = useState(false);
@@ -249,6 +253,7 @@ export function CreateProjectWizard({
     setClosePromptOpen(false);
     setJoinOpen(false);
     setDraftId(crypto.randomUUID());
+    setOrbSeed(null);
     setOrigin(null);
     setName("");
     setKey("");
@@ -275,6 +280,7 @@ export function CreateProjectWizard({
     if (!resume) return;
     const { draft } = resume;
     setDraftId(draft.id);
+    setOrbSeed(draft.orbSeed);
     setOrigin(draft.origin);
     setName(draft.name);
     setKey(draft.key);
@@ -313,6 +319,7 @@ export function CreateProjectWizard({
   /** L'état complet du wizard, tel qu'il s'enregistre. */
   const snapshot = (): ProjectDraftInput => ({
     id: draftId,
+    orbSeed,
     name: name.trim(),
     key,
     keyTouched,
@@ -561,6 +568,7 @@ export function CreateProjectWizard({
       // tient dans un cookie, jamais sur le compte.
       created = await createProject({
         id: draftId,
+        orb_seed: orbSeed,
         name: name.trim(),
         key,
         locale,
@@ -880,9 +888,10 @@ export function CreateProjectWizard({
         <ProjectIconPicker
           centered
           projectId={null}
-          seed={draftId}
+          seed={previewOrbSeed}
           iconUrl={iconPreviewUrl}
           onChanged={setIcon}
+          onSeedChanged={setOrbSeed}
         />
       ),
     },
@@ -1158,7 +1167,7 @@ export function CreateProjectWizard({
                 bordé pour rester lisible quand le favicon importé est rond ou
                 transparent. */}
             <ProjectOrb
-              seed={draftId}
+              seed={previewOrbSeed}
               iconUrl={iconPreviewUrl}
               className="size-10 rounded-[11px] border border-border"
             />

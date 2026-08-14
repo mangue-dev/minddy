@@ -194,6 +194,7 @@ export async function inviteMember({
       inviterName: displayName(named, ""),
       projectName: access.project.name,
       projectId: access.project.id,
+      projectOrbSeed: access.project.orb_seed,
       projectIconUrl: access.project.icon_url,
       token,
       locale,

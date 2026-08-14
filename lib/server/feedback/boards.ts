@@ -49,7 +49,13 @@ const BOARD_SELECT =
 
 export interface PublicBoardContext {
   board: FeedbackBoardRow;
-  project: { id: string; key: string; name: string; icon_url: string | null };
+  project: {
+    id: string;
+    key: string;
+    name: string;
+    icon_url: string | null;
+    orb_seed: string | null;
+  };
 }
 
 /**
@@ -97,7 +103,7 @@ export async function getBoardByToken(token: string): Promise<PublicBoardContext
 
   const { data: project } = await service
     .from("projects")
-    .select("id, key, name, icon_url")
+    .select("id, key, name, icon_url, orb_seed")
     .eq("id", board.project_id as string)
     .is("deleted_at", null)
     .maybeSingle();

@@ -684,6 +684,7 @@ export function AgentsPage() {
           key: issueDraft.projectKey,
           name: draftProject?.name ?? issueDraft.projectKey,
           icon_url: draftProject?.icon_url ?? null,
+          orb_seed: draftProject?.orb_seed ?? null,
         },
         working: false,
         lastCompletedAt: null,

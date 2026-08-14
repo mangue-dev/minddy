@@ -806,7 +806,13 @@ export interface PullRequestListItem {
   created_at: string;
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
-  project: { id: string; key: string; name: string; icon_url: string | null } | null;
+  project: {
+    id: string;
+    key: string;
+    name: string;
+    icon_url: string | null;
+    orb_seed: string | null;
+  } | null;
   /** Run canonique de la PR, ou null : une PR humaine n'en a aucun. */
   runId: string | null;
   /** Un run TRAVAILLE sur cette PR (queued/running) = « Numo retravaille ». */
@@ -1151,7 +1157,13 @@ export interface AgentSessionListItem {
   /** La pull request que cette conversation RELIT (MIN-168) — badge « Analyse de
    *  PR ». Distinct de `pr_number`, qui est la PR qu'un run de code a OUVERTE. */
   pullRequest: { id: string; number: number; title: string | null; url: string | null } | null;
-  project: { id: string; key: string; name: string; icon_url: string | null } | null;
+  project: {
+    id: string;
+    key: string;
+    name: string;
+    icon_url: string | null;
+    orb_seed: string | null;
+  } | null;
   /** CE run TRAVAILLE (queued/running) → spinner « Numo travaille ». */
   working: boolean;
   /**

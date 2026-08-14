@@ -30,6 +30,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { AutomationPresetPicker } from "@/components/automations/automation-preset-picker";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import {
   AUTOMATION_EFFORTS_META_KEY,
@@ -422,7 +423,7 @@ export function AccountAutomationsSection() {
               key={project.id}
               avatar={
                 <ProjectOrb
-                  seed={project.id}
+                  seed={projectOrbSeed(project)}
                   iconUrl={project.icon_url}
                   className="size-6 shrink-0"
                 />

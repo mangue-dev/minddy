@@ -6,6 +6,7 @@ import { Button, cn } from "mangue-ui";
 import { ChevronLeft, GitPullRequest } from "lucide-react";
 import { AgentConversation } from "@/components/agent/agent-conversation";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PR_STATE_STYLES, PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { agentSessionTitle } from "@/lib/agent-session-title";
@@ -93,7 +94,7 @@ export function AgentSessionDetail({
    */
   const projectOrb = (
     <ProjectOrb
-      seed={project.id}
+      seed={projectOrbSeed(project)}
       iconUrl={project.icon_url}
       className="size-4 shrink-0"
     />

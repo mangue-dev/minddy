@@ -36,6 +36,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { Markdown } from "@/components/markdown";
 import { ModelBadge } from "@/components/model-badge";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import {
   PR_STATE_STYLES,
   PrStateBadge,
@@ -124,7 +125,7 @@ export function RoutineDetail({
   routine: Routine;
   /** Le projet porteur — son orbe ouvre l'en-tête, comme sur une conversation :
    *  « de quel dépôt parle-t-on ? » est la question qu'on se pose en arrivant. */
-  project: { id: string; icon_url: string | null } | null;
+  project: { id: string; icon_url: string | null; orb_seed: string | null } | null;
   /** Les gestes (interrupteur, lancer, éditer, supprimer) sont au propriétaire
    *  seul — un bouton qui mène à un 403 ne s'affiche pas. */
   isOwner: boolean;
@@ -316,7 +317,7 @@ export function RoutineDetail({
               </Button>
               {project ? (
                 <ProjectOrb
-                  seed={project.id}
+                  seed={projectOrbSeed(project)}
                   iconUrl={project.icon_url}
                   className="size-4 shrink-0"
                 />
@@ -353,7 +354,7 @@ export function RoutineDetail({
         </Button>
         {project ? (
           <ProjectOrb
-            seed={project.id}
+            seed={projectOrbSeed(project)}
             iconUrl={project.icon_url}
             className="size-4 shrink-0"
           />

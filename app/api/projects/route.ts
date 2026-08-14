@@ -20,6 +20,8 @@ import { normalizeLanguage } from "@/lib/feedback/languages";
 const MAX_NAME_LENGTH = 200;
 const MAX_COLOR_LENGTH = 32;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** GET /api/projects — list the caller's accessible (owned + member) projects. */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -80,9 +82,15 @@ export async function POST(request: NextRequest) {
   // l'aperçu afficherait un dégradé, le projet créé un autre. Un uuid v4 tiré au
   // hasard n'entre en collision avec rien ; tout le reste est refusé.
   const id =
-    typeof input.id === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.id)
-      ? input.id
+    typeof input.id === "string" && UUID_RE.test(input.id) ? input.id : null;
+
+  // La graine de l'orbe suit la même règle que l'id, et pour la même raison :
+  // le wizard peut avoir relancé le tirage avant que le projet existe, et
+  // l'aperçu qu'il a montré doit être celui qu'on crée. Absente, la colonne
+  // reste nulle et c'est l'id qui sert.
+  const orbSeed =
+    typeof input.orb_seed === "string" && UUID_RE.test(input.orb_seed)
+      ? input.orb_seed
       : null;
 
   if (!name) {
@@ -109,6 +117,7 @@ export async function POST(request: NextRequest) {
     .from("projects")
     .insert({
       ...(id ? { id } : {}),
+      ...(orbSeed ? { orb_seed: orbSeed } : {}),
       owner_id: auth.user.id,
       name,
       key,

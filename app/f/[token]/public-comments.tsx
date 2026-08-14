@@ -9,6 +9,7 @@ import { AutoTextarea } from "@/components/auto-textarea";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { ProjectOrb } from "@/components/project-orb";
+import { orbSeedOr } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
 import {
   FEEDBACK_COMMENT_BODY_MAX,
@@ -329,7 +330,7 @@ function PublicCommentRow({
         {comment.isTeam ? (
           <>
             <ProjectOrb
-              seed={project.id}
+              seed={orbSeedOr(project.id, project.orbSeed)}
               iconUrl={project.iconUrl}
               className="size-6 rounded-[7px]"
             />

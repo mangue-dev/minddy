@@ -21,7 +21,8 @@ export interface MentionOption {
   id: string;
   /** Ce qui s'écrit après le « @ ». */
   label: string;
-  /** Membres : graine du portrait. */
+  /** Membres : graine du portrait. Projets : graine de l'orbe, quand le tirage
+      a été relancé (`projectOrbSeed`). */
   avatarSeed?: string;
   /** Projets : le favicon importé, quand il y en a un (sinon l'orbe). */
   iconUrl?: string | null;
@@ -67,7 +68,11 @@ export function MentionFigure({
   }
   if (option.type === "project") {
     return (
-      <ProjectOrb seed={option.id} iconUrl={option.iconUrl} className={className} />
+      <ProjectOrb
+        seed={option.avatarSeed ?? option.id}
+        iconUrl={option.iconUrl}
+        className={className}
+      />
     );
   }
   if (option.type === "objective") {

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { SITE_URL } from "@/lib/site";
-import { projectOrbGradient } from "@/lib/project-orb-colors";
+import { orbSeedOr, projectOrbGradient } from "@/lib/project-orb-colors";
 
 /**
  * L'email d'invitation à un projet (MIN-197) — Resend en fetch brut, comme
@@ -55,8 +55,12 @@ export interface SendInvitationEmailParams {
       retombe sur « Quelqu'un », dans la langue du mail. */
   inviterName: string;
   projectName: string;
-  /** Graine de l'orbe du projet — son id, comme dans l'app. */
+  /** Identifiant du projet — la graine de son orbe quand le tirage n'a jamais
+      été relancé (cf. `projectOrbSeed`). */
   projectId: string;
+  /** `projects.orb_seed` : la graine relancée, quand elle l'a été. Le mail doit
+      peindre la couleur de l'app, pas celle d'avant. */
+  projectOrbSeed?: string | null;
   /** L'icône importée du projet, quand il en a une (`projects.icon_url`) ;
       sinon l'orbe dégradé, exactement comme `<ProjectOrb>`. */
   projectIconUrl?: string | null;
@@ -99,7 +103,9 @@ function projectIconHtml(params: SendInvitationEmailParams): string {
     return `<img src="${escapeHtml(url)}" width="48" height="48" alt="" style="display:block;width:48px;height:48px;border:1px solid ${BORDER};border-radius:12px;object-fit:cover;" />`;
   }
 
-  const orb = projectOrbGradient(params.projectId);
+  const orb = projectOrbGradient(
+    orbSeedOr(params.projectId, params.projectOrbSeed),
+  );
   // Outlook ignore `border-radius` et `linear-gradient` : il lui reste l'aplat,
   // en carré. C'est la dégradation qu'on accepte — pas une case vide.
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="48" style="width:48px;border-collapse:separate;">

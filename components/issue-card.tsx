@@ -83,6 +83,7 @@ import type {
   Project,
 } from "@/lib/types";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
   SearchSelect,
@@ -781,7 +782,7 @@ export const IssueCardBody = memo(function IssueCardBody({
       {/* Cross-project boards only: the issue's origin project (orb + name). */}
       {project && (
         <div className="-mb-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <ProjectOrb seed={project.id} iconUrl={project.icon_url} className="size-3.5" />
+          <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-3.5" />
           <span className="truncate">{project.name}</span>
         </div>
       )}

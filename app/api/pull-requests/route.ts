@@ -72,7 +72,13 @@ export interface PullRequestListItem {
   created_at: string;
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
-  project: { id: string; key: string; name: string; icon_url: string | null } | null;
+  project: {
+    id: string;
+    key: string;
+    name: string;
+    icon_url: string | null;
+    orb_seed: string | null;
+  } | null;
   /**
    * Run CANONIQUE de la PR (le plus ancien), ou null : une PR humaine n'en a
    * aucun. C'est lui qui porte les deep-links `?run=` historiques.

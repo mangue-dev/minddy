@@ -469,6 +469,9 @@ export interface Project {
   /** Icon imported from the live site's favicon (public storage URL); the UI
       falls back to the generated orb when null. */
   icon_url: string | null;
+  /** Graine de l'orbe générée, quand le tirage a été relancé. `null` = jamais
+      relancé, et la graine reste l'id — toujours lire via `projectOrbSeed()`. */
+  orb_seed: string | null;
   /** Smart Assign: auto-assign unassigned issues past triage (opt-in, owner-set). */
   smart_assign_enabled: boolean;
   /** Automatically assign new issues to the project lead or available member. */
@@ -504,6 +507,9 @@ export interface Project {
 export interface CreateProjectInput {
   /** Id imposé par le client (wizard de création) — voir POST /api/projects. */
   id?: string;
+  /** Graine de l'orbe relancée pendant le wizard, si elle l'a été (sinon `null`
+      et c'est l'id qui sert). */
+  orb_seed?: string | null;
   name: string;
   key: string;
   color?: string | null;

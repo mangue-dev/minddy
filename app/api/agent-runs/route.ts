@@ -59,6 +59,7 @@ interface RunRow {
     key: string;
     name: string;
     icon_url: string | null;
+    orb_seed: string | null;
     /** Lu pour ÉCARTER les sessions d'un projet à la corbeille — jamais rendu. */
     deleted_at: string | null;
   } | null;
@@ -103,7 +104,13 @@ export interface AgentSessionListItem {
    * vit dans `pr_number` / `pr_url` / `pr_state`, et les deux ne se mélangent pas.
    */
   pullRequest: { id: string; number: number; title: string | null; url: string | null } | null;
-  project: { id: string; key: string; name: string; icon_url: string | null } | null;
+  project: {
+    id: string;
+    key: string;
+    name: string;
+    icon_url: string | null;
+    orb_seed: string | null;
+  } | null;
   /** CE run travaille (queued/running) → « Numo travaille ». */
   working: boolean;
   /**
@@ -125,7 +132,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url, deleted_at), pull_request:pull_requests(id, number, title, url)",
+      "id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
     )
     // Un passage de ROUTINE (MIN-185) n'est PAS une conversation : il vit dans
     // sa routine, sous « Exécutions précédentes », et nulle part ailleurs. Sans
@@ -185,6 +192,7 @@ export async function GET(request: NextRequest) {
           key: r.project.key,
           name: r.project.name,
           icon_url: r.project.icon_url,
+          orb_seed: r.project.orb_seed,
         }
       : null,
     working: WORKING_STATUSES.includes(r.status),

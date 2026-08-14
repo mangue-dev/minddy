@@ -8,6 +8,7 @@
 // ce que Numo a réellement vu, pas ce que la page publiait.
 
 import type { useTranslations } from "next-intl";
+import { orbSeedOr } from "@/lib/project-orb-colors";
 import type {
   AssistantPageContext,
   AssistantPinnedContext,
@@ -70,7 +71,11 @@ export function contextChips(
     t: Translate;
     scopeProjectId?: string | null;
     /** Résout un id de projet (nom + icône) via le contexte projets du client. */
-    project?: (id: string) => { name: string; icon_url: string | null } | undefined;
+    project?: (
+      id: string,
+    ) =>
+      | { name: string; icon_url: string | null; orb_seed: string | null }
+      | undefined;
   },
 ): AssistantContextChip[] {
   const { t } = opts;
@@ -86,7 +91,7 @@ export function contextChips(
       tooltip: project
         ? t("contextProjectTooltip", { name: project.name })
         : t("contextProject"),
-      avatarSeed: projectId,
+      avatarSeed: orbSeedOr(projectId, project?.orb_seed),
       iconUrl: project?.icon_url ?? null,
     });
   }
@@ -181,7 +186,7 @@ export function contextChips(
       ...(item.kind === "member"
         ? { avatarSeed: item.avatarSeed ?? item.id }
         : item.kind === "project"
-          ? { avatarSeed: item.id }
+          ? { avatarSeed: orbSeedOr(item.id, project?.orb_seed) }
           : {}),
       ...(item.kind === "project" ? { iconUrl: project?.icon_url ?? null } : {}),
       ...(item.kind === "objective" ? { color: item.color ?? null } : {}),

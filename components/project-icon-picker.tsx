@@ -10,7 +10,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { ImageUp, Trash2 } from "lucide-react";
+import { ImageUp, Shuffle, Trash2 } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
 import { DropOverlay, useFileDrop } from "@/components/resources";
 import {
@@ -18,6 +18,7 @@ import {
   importProjectIconApi,
   previewProjectIconApi,
   previewProjectIconFileApi,
+  regenerateProjectOrbApi,
   uploadProjectIconApi,
 } from "@/lib/projects-api";
 import {
@@ -37,6 +38,10 @@ import {
  * donc rien n'est stocké — on ne fait que résoudre le favicon ou compresser le
  * fichier pour l'aperçu, et `onChanged` rend de quoi rejouer le vrai import une
  * fois le projet créé (voir {@link ProjectIconChoice}).
+ *
+ * Sans icône importée, c'est l'orbe qu'on voit, et la seule prise qu'on a sur
+ * elle est de relancer son tirage — le bouton prend alors la place de
+ * « Retirer », qui n'aurait rien à retirer.
  *
  * L'envoi de fichier ne s'annonce pas : c'est l'APERÇU qui est le bouton. Au
  * survol il se couvre d'un voile et d'une icône, et le picker entier accepte le
@@ -58,13 +63,21 @@ export function ProjectIconPicker({
   seed,
   iconUrl,
   onChanged,
+  onSeedChanged,
   centered = false,
 }: {
   projectId: string | null;
-  /** Graine de l'orbe générée — l'id du projet, existant ou à venir. */
+  /** Graine de l'orbe générée — `projectOrbSeed(project)`, ou l'id du brouillon. */
   seed: string;
   iconUrl: string | null;
   onChanged: (choice: ProjectIconChoice) => void;
+  /**
+   * Le tirage a été relancé. Le projet existant n'en a pas besoin — le cache
+   * `projects` rafraîchi lui redescend la nouvelle graine — mais le BROUILLON
+   * si : rien n'est stocké tant que le projet n'existe pas, c'est au wizard de
+   * la retenir et de la poser à la création.
+   */
+  onSeedChanged?: (seed: string) => void;
   centered?: boolean;
 }) {
   const t = useTranslations("Projects");
@@ -75,8 +88,9 @@ export function ProjectIconPicker({
   const [importing, setImporting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [rerolling, setRerolling] = useState(false);
 
-  const busy = importing || uploading || removing;
+  const busy = importing || uploading || removing || rerolling;
 
   const refresh = () =>
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -148,6 +162,30 @@ export function ProjectIconPicker({
       toast.error((err as Error).message);
     } finally {
       setRemoving(false);
+    }
+  };
+
+  /**
+   * Relance le tirage de l'orbe. Sans projet, le tirage se fait ici et le
+   * wizard le garde ; avec un projet, c'est le serveur qui tire et qui écrit —
+   * une graine posée par le client serait une couleur que personne d'autre ne
+   * verrait tant que le cache n'a pas tourné.
+   */
+  const handleReroll = async () => {
+    if (busy) return;
+    if (projectId === null) {
+      onSeedChanged?.(crypto.randomUUID());
+      return;
+    }
+    setRerolling(true);
+    try {
+      const { orb_seed } = await regenerateProjectOrbApi(projectId);
+      onSeedChanged?.(orb_seed);
+      refresh();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setRerolling(false);
     }
   };
 
@@ -239,6 +277,28 @@ export function ProjectIconPicker({
     </Button>
   );
 
+  /** Relancer l'orbe : proposé SEULEMENT quand c'est elle qu'on voit. Avec une
+   *  icône importée par-dessus, le bouton promettrait un changement invisible.
+   *  Un geste, donc une icône — comme son voisin « Retirer ». */
+  const rerollButton = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label={t("orbRerollLabel")}
+          className="shrink-0"
+          disabled={busy}
+          onClick={() => void handleReroll()}
+        >
+          {rerolling ? <Spinner /> : <Shuffle />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{t("orbRerollLabel")}</TooltipContent>
+    </Tooltip>
+  );
+
   /** Retirer l'icône : un geste, pas un réglage — donc une icône, à côté de son
    *  voisin « Importer », et seulement quand il y a quelque chose à retirer.
    *  Le libellé passe en tooltip et en `aria-label`. */
@@ -285,7 +345,7 @@ export function ProjectIconPicker({
         <div className="flex w-full items-center gap-2">
           {input}
           {importButton}
-          {iconUrl && removeButton}
+          {iconUrl ? removeButton : rerollButton}
         </div>
         {dropOverlay}
       </div>
@@ -299,7 +359,7 @@ export function ProjectIconPicker({
       {preview}
       {input}
       {importButton}
-      {iconUrl && removeButton}
+      {iconUrl ? removeButton : rerollButton}
       {dropOverlay}
     </div>
   );

@@ -72,13 +72,15 @@ export function MentionChip({
   className,
 }: {
   type: MentionChipType;
-  /** Membre : user_id. Projet : id du projet — c'est la graine de son orbe.
+  /** Membre : user_id. Projet : id du projet — la graine de son orbe si elle
+      n'a jamais été relancée, sinon `avatarSeed` la porte.
       Forge : le login, qui est aussi la graine de son portrait de repli.
       Ticket et objectif : leur id. Numo n'a rien à identifier :
       `NUMO_MENTION_ID` fait l'affaire. */
   id: string;
   label: string;
-  /** Graine du portrait (elle n'est PAS toujours le user_id). */
+  /** Graine de la figure — le portrait d'un membre, l'orbe d'un projet. Elle
+      n'est PAS toujours l'id (un tirage relancé, justement). */
   avatarSeed?: string | null;
   /** Forge : le portrait servi par la forge — un vrai visage, pas une graine. */
   avatarUrl?: string | null;
@@ -134,7 +136,11 @@ export function MentionChip({
         // compte ici. `seed` reste le repli quand la forge n'en sert pas.
         <UserAvatar url={avatarUrl} seed={id} className="size-3.5" />
       ) : type === "project" ? (
-        <ProjectOrb seed={id} iconUrl={iconUrl} className="size-3.5 rounded-full" />
+        <ProjectOrb
+          seed={avatarSeed ?? id}
+          iconUrl={iconUrl}
+          className="size-3.5 rounded-full"
+        />
       ) : type === "numo" ? (
         // Le visage de l'assistant, exactement celui qui signe ses réponses —
         // nu, à l'encre de la pilule, qui est ici la couleur de marque.
@@ -191,7 +197,7 @@ export function MentionChip({
     "bg-(--mention-chip) text-(--mention-chip-ink)",
   );
 
-  const tone = toneStyle(type, id, color);
+  const tone = toneStyle(type, avatarSeed ?? id, color);
 
   if (!href)
     return (
@@ -251,7 +257,9 @@ export function MentionChip({
  */
 function mentionTone(
   type: MentionChipType,
-  id: string,
+  /** L'identité qui donne la teinte d'un projet : sa graine d'orbe, pour que la
+      pilule et l'orbe qu'elle porte restent de la même couleur. */
+  seed: string,
   color: string | null | undefined,
 ): string {
   switch (type) {
@@ -269,7 +277,7 @@ function mentionTone(
       // secondaire, donc une pilule grise — et c'est juste, il n'en a pas.
       return objectiveColor(color);
     case "project":
-      return `oklch(0.65 0.15 ${projectHue(id)})`;
+      return `oklch(0.65 0.15 ${projectHue(seed)})`;
   }
 }
 
@@ -287,10 +295,12 @@ function mentionTone(
  */
 function toneStyle(
   type: MentionChipType,
-  id: string,
+  /** Cf. `mentionTone` : la graine, pas l'id — un projet dont le tirage a été
+      relancé doit teindre sa pilule de sa NOUVELLE couleur. */
+  seed: string,
   color: string | null | undefined,
 ): CSSProperties {
-  const tone = mentionTone(type, id, color);
+  const tone = mentionTone(type, seed, color);
   return {
     "--mention-chip": `oklch(from ${tone} var(--mention-chip-l) c h / var(--mention-chip-a))`,
     "--mention-chip-hover": `oklch(from ${tone} var(--mention-chip-l) c h / var(--mention-chip-a-hover))`,

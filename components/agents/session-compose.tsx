@@ -14,6 +14,7 @@ import {
 } from "mangue-ui";
 import { Check, ChevronLeft, ChevronsUpDown, MessageSquare } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AgentEventFeed } from "@/components/agent/agent-event-feed";
 import { ModelCombobox } from "@/components/agent/model-combobox";
@@ -77,7 +78,7 @@ function ProjectSelect({
         >
           {selected ? (
             <ProjectOrb
-              seed={selected.id}
+              seed={projectOrbSeed(selected)}
               iconUrl={selected.icon_url}
               className="size-[18px] shrink-0"
             />
@@ -89,7 +90,7 @@ function ProjectSelect({
       <DropdownMenuContent align="start" className="w-56">
         {projects.map((p) => (
           <DropdownMenuItem key={p.id} onSelect={() => onChange(p.id)}>
-            <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4 shrink-0" />
+            <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4 shrink-0" />
             <span className="flex-1 truncate">{p.name}</span>
             <Check
               className={cn("size-4 shrink-0", p.id === value ? "opacity-100" : "opacity-0")}
@@ -322,7 +323,7 @@ export function SessionCompose({
             place — même taille, donc rien ne bouge quand il arrive. */}
         {selectedProject ? (
           <ProjectOrb
-            seed={selectedProject.id}
+            seed={projectOrbSeed(selectedProject)}
             iconUrl={selectedProject.icon_url}
             className="size-4 shrink-0"
           />

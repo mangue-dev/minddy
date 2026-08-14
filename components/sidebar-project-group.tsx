@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "mangue-ui";
 import { ChevronRight, Folder } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 
 /**
  * Un PROJET et ses lignes, replié ou non — la grammaire commune des colonnes de
@@ -40,6 +41,8 @@ export interface GroupProject {
   id: string;
   name: string;
   icon_url: string | null;
+  /** Graine de l'orbe si elle a été relancée — cf. `projectOrbSeed`. */
+  orb_seed: string | null;
 }
 
 export interface ProjectGroup<T> {
@@ -118,7 +121,7 @@ export function SidebarProjectGroup({
     <>
       {project ? (
         <ProjectOrb
-          seed={project.id}
+          seed={projectOrbSeed(project)}
           iconUrl={project.icon_url}
           className="size-4 shrink-0"
         />

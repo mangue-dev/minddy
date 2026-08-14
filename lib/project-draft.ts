@@ -73,8 +73,14 @@ export type DraftSeed =
   | { kind: "import" };
 
 export interface ProjectDraft {
-  /** Id du futur projet, tiré côté client : c'est la graine de l'orbe. */
+  /** Id du futur projet, tiré côté client : c'est la graine de l'orbe par défaut. */
   id: string;
+  /**
+   * La graine de l'orbe, si le tirage a été RELANCÉ pendant le wizard. `null` =
+   * jamais relancé, et c'est l'id qui sert (cf. `projectOrbSeed`). Elle est
+   * retenue ici pour que l'aperçu et le projet créé montrent la même couleur.
+   */
+  orbSeed: string | null;
   name: string;
   key: string;
   keyTouched: boolean;
@@ -116,6 +122,7 @@ export function projectDraftFromRow(row: ProjectDraftRow): ProjectDraft {
   const data = (row.data ?? {}) as Record<string, unknown>;
   return {
     id: row.id,
+    orbSeed: typeof data.orbSeed === "string" ? data.orbSeed : null,
     name: typeof row.name === "string" ? row.name : "",
     key: typeof data.key === "string" ? data.key : "",
     keyTouched: data.keyTouched === true,
@@ -144,6 +151,7 @@ export function projectDraftToRow(draft: ProjectDraftInput): {
     name: draft.name,
     step: draft.step,
     data: {
+      orbSeed: draft.orbSeed,
       key: draft.key,
       keyTouched: draft.keyTouched,
       origin: draft.origin,
@@ -159,6 +167,11 @@ export function projectDraftToRow(draft: ProjectDraftInput): {
 /** L'aperçu à montrer dans la barre latérale : l'icône choisie, ou rien. */
 export function draftIconUrl(draft: ProjectDraft): string | null {
   return draft.icon.kind === "none" ? null : draft.icon.previewUrl;
+}
+
+/** La graine de l'orbe du brouillon — le pendant de `projectOrbSeed`. */
+export function draftOrbSeed(draft: ProjectDraft): string {
+  return draft.orbSeed || draft.id;
 }
 
 function normalizeStep(value: unknown): ProjectWizardStep {

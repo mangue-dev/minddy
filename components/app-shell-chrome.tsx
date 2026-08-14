@@ -64,6 +64,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { NumoIcon } from "@/components/numo-icon";
 import {
   AppSidebar,
@@ -99,7 +100,7 @@ import type {
 } from "@/lib/types";
 import { usePageContentSearch } from "@/lib/use-page-search";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
-import { draftIconUrl } from "@/lib/project-draft";
+import { draftIconUrl, draftOrbSeed } from "@/lib/project-draft";
 
 /**
  * How many rows from OTHER projects the mobile surfaces get, per data group.
@@ -156,7 +157,7 @@ const ExportIssuesDialog = dynamic(
 function projectChip(project: Project) {
   return (
     <span className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
-      <ProjectOrb seed={project.id} iconUrl={project.icon_url} className="size-3.5" />
+      <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-3.5" />
       <span className="max-w-[9rem] truncate">{project.name}</span>
     </span>
   );
@@ -832,7 +833,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         items: projects.map((p) => ({
           key: `project-${p.id}`,
           label: p.name,
-          icon: projectOrbIcon(p.id, p.icon_url),
+          icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
           keywords: [p.key],
           contextId: p.id,
           onSelect: () => router.push(`/projects/${p.id}`),
@@ -1368,7 +1369,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             return {
               key: `project-${p.id}`,
               label: p.name,
-              icon: projectOrbIcon(p.id, p.icon_url),
+              icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
               href: `/projects/${p.id}`,
               ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
             };
@@ -1381,7 +1382,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             (d): AppNavItem => ({
               key: `project-draft-${d.id}`,
               label: d.name,
-              icon: projectOrbIcon(d.id, draftIconUrl(d)),
+              icon: projectOrbIcon(draftOrbSeed(d), draftIconUrl(d)),
               onClick: () => openProjectDraft(d),
               badge: draftBadge(tProjects("draftBadge")),
               // Au rail, la ligne se réduit à son orbe : sans la pastille de

@@ -7,7 +7,7 @@ import { agentSessionTitle } from "./agent-session-title";
  * Ce qui compte ici : un run = une conversation, donc un ticket en porte
  * plusieurs — et sans son identifiant devant, rien ne les distingue.
  */
-const project = { id: "p1", key: "MIN", name: "minddy", icon_url: null };
+const project = { id: "p1", key: "MIN", name: "minddy", icon_url: null, orb_seed: null };
 const issue = { id: "i1", number: 42, title: "La redirection après login boucle" };
 
 describe("agentSessionTitle", () => {

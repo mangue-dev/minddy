@@ -681,7 +681,13 @@ export async function syncRepoPullRequests(opts: {
 export interface VisibleRepo {
   provider: RepoProviderId;
   repoFullName: string;
-  project: { id: string; key: string; name: string; icon_url: string | null };
+  project: {
+    id: string;
+    key: string;
+    name: string;
+    icon_url: string | null;
+    orb_seed: string | null;
+  };
 }
 
 /**
@@ -697,7 +703,7 @@ export async function listVisibleRepos(
   const { data } = await supabase
     .from("project_git_links")
     .select(
-      "provider, repo_full_name, project:projects(id, key, name, icon_url, deleted_at)",
+      "provider, repo_full_name, project:projects(id, key, name, icon_url, orb_seed, deleted_at)",
     );
   return ((data ?? []) as unknown as Array<{
     provider: string;

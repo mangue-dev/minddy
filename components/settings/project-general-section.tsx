@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { removeMemberApi } from "@/lib/members-api";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ProjectIconPicker } from "@/components/project-icon-picker";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
@@ -193,7 +194,7 @@ export function ProjectGeneralSection({
                  `projects` rafraîchi rend la nouvelle icône — rien à retenir ici. */
               <ProjectIconPicker
                 projectId={project.id}
-                seed={project.id}
+                seed={projectOrbSeed(project)}
                 iconUrl={project.icon_url}
                 onChanged={() => {}}
               />

@@ -6,6 +6,7 @@ import { Button, cn, toast } from "mangue-ui";
 import { Play } from "lucide-react";
 
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
@@ -281,7 +282,7 @@ export function CreateRoutineWizard({
                     : "border-border hover:border-brand/40 hover:bg-muted/30",
                 )}
               >
-                <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-5 shrink-0" />
+                <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-5 shrink-0" />
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.name}</span>
               </button>
             ))}

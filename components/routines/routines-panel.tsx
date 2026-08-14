@@ -115,6 +115,7 @@ export function RoutinesPanel({
             name: project.name,
             key: project.key,
             icon_url: project.icon_url,
+            orb_seed: project.orb_seed,
           }
         : null;
     });
@@ -139,7 +140,13 @@ export function RoutinesPanel({
       .filter((p) => !seen.has(p.id) && canCreateIn(p.id))
       .map((p) => ({
         key: p.id,
-        project: { id: p.id, name: p.name, key: p.key, icon_url: p.icon_url },
+        project: {
+          id: p.id,
+          name: p.name,
+          key: p.key,
+          icon_url: p.icon_url,
+          orb_seed: p.orb_seed,
+        },
         items: [] as Routine[],
       }));
     return [...found, ...extra];

@@ -24,6 +24,7 @@ import { AssigneeCompact } from "@/components/issue-compact-fields";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
 import { CloseDraftDialog } from "@/components/close-draft-dialog";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -624,7 +625,7 @@ export function ObjectiveDialog({
                       menuLabel={t("createInOtherProject")}
                       menu={otherProjects.map((p) => (
                         <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>
-                          <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4" />
+                          <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4" />
                           <span className="truncate">{p.name}</span>
                         </DropdownMenuItem>
                       ))}

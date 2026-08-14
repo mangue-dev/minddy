@@ -15,6 +15,7 @@ import {
 import { ChevronsUpDown, ChevronLeft, Home } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import type { Project } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
@@ -33,7 +34,7 @@ function sectionKeyFor(pathname: string): string | null {
 function ProjectChip({ project, className }: { project: Project; className?: string }) {
   return (
     <ProjectOrb
-      seed={project.id}
+      seed={projectOrbSeed(project)}
       iconUrl={project.icon_url}
       className={cn("size-5", className)}
     />

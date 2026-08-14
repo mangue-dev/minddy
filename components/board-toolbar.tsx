@@ -70,6 +70,7 @@ import {
 } from "@/components/issue-context-menu";
 import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ShareViewDialog } from "@/components/share-view-dialog";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import {
@@ -309,7 +310,7 @@ function FiltersPopover({
                   setFilters({ ...f, project: toggle<string>(f.project, p.id) })
                 }
               >
-                <ProjectOrb seed={p.id} iconUrl={p.icon_url} className="size-4 shrink-0" />
+                <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4 shrink-0" />
                 <span className="truncate">{p.name}</span>
               </ToggleRow>
             ))}

@@ -9,6 +9,7 @@ import { ArrowLeft, Ban, ChevronUp, EyeOff, MessageSquare } from "lucide-react";
 import { Badge, Button, cn } from "mangue-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { ProjectOrb } from "@/components/project-orb";
+import { orbSeedOr } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
 import type { MessageKey } from "@/lib/i18n-keys";
 import {
@@ -285,7 +286,7 @@ function FeedbackCommentsBadge({
       icon={
         teamIsIn ? (
           <ProjectOrb
-            seed={project.id}
+            seed={orbSeedOr(project.id, project.orbSeed)}
             iconUrl={project.iconUrl}
             className="size-3.5 rounded-[4px]"
           />

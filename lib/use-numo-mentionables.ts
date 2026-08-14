@@ -18,6 +18,7 @@ import {
   useMentionSources,
 } from "@/lib/use-mention-sources";
 import { useProjects } from "@/lib/projects-context";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
 import type { GlobalBoardResponse, Member } from "@/lib/types";
@@ -90,6 +91,7 @@ export function useNumoMentionables(scopeProjectId: string | null): {
         type: "project" as const,
         id: p.id,
         label: p.name,
+        avatarSeed: projectOrbSeed(p),
         iconUrl: p.icon_url,
         keywords: [p.key],
       })),

@@ -2339,6 +2339,7 @@
     "iconUploadLabel": "Importer une image",
     "iconDropLabel": "Déposer l'image",
     "iconFileNotImage": "Choisissez un fichier image.",
+    "orbRerollLabel": "Nouvelle orbe",
     "wizardIconTitle": "Icône du projet",
     "wizardGitTitle": "Relier un dépôt",
     "wizardFinishTitle": "Finitions",

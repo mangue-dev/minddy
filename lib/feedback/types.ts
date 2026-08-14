@@ -283,6 +283,9 @@ export interface PublicProject {
   id: string;
   name: string;
   iconUrl: string | null;
+  /** Graine de l'orbe si le tirage a été relancé — sinon `null`, et c'est l'id
+      qui sert (`orbSeedOr`). */
+  orbSeed: string | null;
 }
 
 /** Onglet de navigation du site public (board + vues partagées du projet). */

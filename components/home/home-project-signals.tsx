@@ -8,6 +8,7 @@ import { ChevronRight } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import { useTriageCountsQuery } from "@/lib/use-triage-counts-query";
 import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 
 /** Même courbe que l'avis Smart Assign, juste à côté : les indications se posent
     sous le composer quand les chiffres arrivent, au lieu d'y apparaître d'un coup. */
@@ -25,6 +26,8 @@ type Signal = {
   projectId: string;
   projectName: string;
   iconUrl: string | null;
+  /** Déjà résolue (`projectOrbSeed`) : la ligne n'a plus le projet sous la main. */
+  orbSeed: string;
   /** Les deux moitiés de `ProjectTriageCount`, nommées comme les ONGLETS du
       projet : la file et sa destination portent le même mot, et la ligne se
       contente donc de le poser dans son href. */
@@ -66,6 +69,7 @@ export function HomeProjectSignals() {
             projectId: project.id,
             projectName: project.name,
             iconUrl: project.icon_url,
+            orbSeed: projectOrbSeed(project),
             kind,
             count: count[kind],
           });
@@ -103,7 +107,7 @@ export function HomeProjectSignals() {
             className="group flex items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
           >
             <ProjectOrb
-              seed={signal.projectId}
+              seed={signal.orbSeed}
               iconUrl={signal.iconUrl}
               className="size-5 rounded-[6px]"
             />

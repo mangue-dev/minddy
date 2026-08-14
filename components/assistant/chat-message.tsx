@@ -18,6 +18,7 @@ import { ToolCallList } from "./tool-call-display";
 import { ContextPill } from "./context-pill";
 import { contextChips } from "@/lib/assistant-context";
 import { useProjects } from "@/lib/projects-context";
+import { orbSeedOr } from "@/lib/project-orb-colors";
 import { MentionChip } from "@/components/mention-chip";
 import { useMentionLinks } from "@/components/mention-links";
 import { ResourcePills, type ResourceLike } from "@/components/resources";
@@ -165,7 +166,18 @@ function UserText({
             type={part.type}
             id={part.id}
             label={part.label}
-            avatarSeed={part.avatarSeed}
+            // Un projet cité porte l'orbe qu'il a AUJOURD'HUI : la graine comme
+            // le favicon se relisent dans le contexte projets, jamais dans le
+            // message — relancer le tirage doit repeindre les pilules déjà
+            // écrites, sinon la même mention a deux couleurs selon son âge.
+            avatarSeed={
+              part.type === "project"
+                ? orbSeedOr(
+                    part.id,
+                    projects.find((p) => p.id === part.id)?.orb_seed,
+                  )
+                : part.avatarSeed
+            }
             iconUrl={
               part.type === "project"
                 ? projects.find((p) => p.id === part.id)?.icon_url

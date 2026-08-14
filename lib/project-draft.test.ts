@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   draftIconUrl,
+  draftOrbSeed,
   projectDraftFromRow,
   projectDraftToRow,
   stepIndexOf,
@@ -10,6 +11,7 @@ import {
 
 const draft: ProjectDraftInput = {
   id: "11111111-1111-4111-8111-111111111111",
+  orbSeed: null,
   name: "Comète",
   key: "COM",
   keyTouched: true,
@@ -57,6 +59,9 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
     expect(back.seed).toBeNull();
     expect(back.icon).toEqual({ kind: "none" });
     expect(back.repo).toBeNull();
+    // Jamais relancée : l'orbe du brouillon reste celle de son id, et le projet
+    // créé gardera la même — c'est l'aperçu du wizard qui l'a promis.
+    expect(back.orbSeed).toBeNull();
     // Smart Assign est proposé ACTIVÉ par le wizard : un brouillon muet doit
     // retomber sur ce défaut-là, pas sur `false`.
     expect(back.smartAssignEnabled).toBe(true);
@@ -102,5 +107,20 @@ describe("draftIconUrl", () => {
     expect(
       draftIconUrl({ ...draft, icon: { kind: "none" }, updatedAt: "" }),
     ).toBeNull();
+  });
+});
+
+describe("draftOrbSeed", () => {
+  it("retombe sur l'id du brouillon tant que le tirage n'a pas été relancé", () => {
+    expect(draftOrbSeed({ ...draft, updatedAt: "" })).toBe(draft.id);
+  });
+
+  it("prend la graine relancée, et la fait survivre à un aller-retour en base", () => {
+    // Le point du test : le wizard montre une orbe AVANT que le projet existe.
+    // Si la graine ne traverse pas la table des brouillons, reprendre le
+    // brouillon rendrait une autre couleur que celle qu'on avait choisie.
+    const rerolled = { ...draft, orbSeed: "33333333-3333-4333-8333-333333333333" };
+    expect(draftOrbSeed({ ...rerolled, updatedAt: "" })).toBe(rerolled.orbSeed);
+    expect(projectDraftFromRow(rowFor(rerolled)).orbSeed).toBe(rerolled.orbSeed);
   });
 });

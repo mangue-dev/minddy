@@ -324,6 +324,7 @@ export interface PublicShareProject {
   name: string;
   owner_id: string;
   icon_url: string | null;
+  orb_seed: string | null;
 }
 
 /** Everything the public /share/[token] page needs to authorize a visitor. */
@@ -417,7 +418,7 @@ async function livePublicProject(
 ): Promise<PublicShareProject | null> {
   const { data } = await getServiceClient()
     .from("projects")
-    .select("id, key, name, owner_id, icon_url")
+    .select("id, key, name, owner_id, icon_url, orb_seed")
     .eq("id", projectId)
     .is("deleted_at", null)
     .maybeSingle();

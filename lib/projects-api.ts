@@ -121,6 +121,19 @@ export async function uploadProjectIconDataUrlApi(
   return uploadProjectIconApi(id, blob);
 }
 
+/**
+ * Relance le tirage de l'orbe générée (owner). L'orbe ne se choisit pas, elle
+ * se retire — même geste que « Nouvel avatar » sur un compte.
+ */
+export async function regenerateProjectOrbApi(
+  id: string
+): Promise<{ orb_seed: string }> {
+  trackEvent("project_orb_rerolled");
+  return parseJson<{ orb_seed: string }>(
+    await fetch(`/api/projects/${id}/orb`, { method: "POST" })
+  );
+}
+
 /** Retire l'icône du projet — retour à l'orbe générée (owner). */
 export async function clearProjectIconApi(id: string): Promise<void> {
   trackEvent("project_icon_changed", { kind: "orb" });
