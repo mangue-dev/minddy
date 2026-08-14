@@ -4,6 +4,15 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
+// Type seulement : l'import de valeur reste paresseux plus bas (`pr-actions`
+// tire tout le module des routes PR, et `next/server` avec lui).
+import type { PrScope } from "./pr-actions";
+import {
+  claimDenialNotice,
+  claimMemberMention,
+  isForgeAuthorMember,
+  MENTION_LIMIT_PER_AUTHOR,
+} from "./forge-mention-guard";
 
 /**
  * `@numo` écrit DEPUIS la forge (MIN-162).
@@ -32,7 +41,13 @@ import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
  *     projet qui lie le dépôt. Sans aucun des deux, il n'y a vraiment personne :
  *     on ne fait rien.
  *
- *  2. **Si ce message vient de nous.** Un commentaire posté depuis minddy revient
+ *  2. **Qui a le droit de le faire payer.** Le corps du commentaire vient de la
+ *     forge, où un dépôt public laisse écrire n'importe qui. L'auteur doit donc
+ *     être rattachable à un membre d'un projet qui lie ce dépôt, et son
+ *     déclenchement reste borné dans le temps — les deux gardes vivent dans
+ *     `forge-mention-guard.ts`, qui porte aussi le pourquoi du refus par défaut.
+ *
+ *  3. **Si ce message vient de nous.** Un commentaire posté depuis minddy revient
  *     par webhook quelques secondes plus tard : sans garde, la passe partirait
  *     deux fois. Trois filets, du plus sûr au plus large — l'auteur est le bot de
  *     l'App (écarté par l'appelant), l'écho reconnu sur l'événement que la route
@@ -43,24 +58,42 @@ import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
  * relecture, jamais un run de code — cf. `startNumoPrReview`.
  */
 
+/** Les projets qui ont voix au chapitre sur cette PR, dans l'ordre du payeur. */
+interface MentionScope {
+  /** Le compte minddy qui portera la relecture. */
+  userId: string;
+  /** Tous les projets concernés : c'est parmi LEURS membres qu'on cherche l'auteur. */
+  projectIds: string[];
+}
+
 /**
- * Le compte minddy qui portera la relecture. Deux chemins, dans cet ordre :
- * le owner du projet du TICKET lié quand il y en a un (c'est son projet qui est
- * concerné), sinon le owner d'un projet qui LIE LE DÉPÔT. Null seulement quand
- * plus personne ne connaît ce dépôt.
+ * Le compte minddy qui portera la relecture, et les projets où chercher l'auteur
+ * du commentaire. Deux chemins pour le payeur, dans cet ordre : le owner du
+ * projet du TICKET lié quand il y en a un (c'est son projet qui est concerné),
+ * sinon le owner d'un projet qui LIE LE DÉPÔT. Null seulement quand plus
+ * personne ne connaît ce dépôt.
+ *
+ * L'appartenance, elle, se juge sur TOUS ces projets et pas seulement celui du
+ * payeur : deux projets peuvent lier le même dépôt, et un membre de l'un comme
+ * de l'autre est chez lui sur cette pull request.
  */
-async function payerForPr(pr: PullRequestRow): Promise<string | null> {
+async function scopeForPr(pr: PullRequestRow): Promise<MentionScope | null> {
   const service = getServiceClient();
+  const ordered: Array<{ id: string; owner: string | null }> = [];
 
   if (pr.issue_id) {
     const { data } = await service
       .from("issues")
-      .select("projects(owner_id)")
+      .select("project_id, projects(owner_id)")
       .eq("id", pr.issue_id)
       .maybeSingle();
-    const owner = (data as { projects?: { owner_id?: string } | null } | null)?.projects
-      ?.owner_id;
-    if (owner) return owner;
+    const row = data as {
+      project_id?: string | null;
+      projects?: { owner_id?: string } | null;
+    } | null;
+    if (row?.project_id) {
+      ordered.push({ id: row.project_id, owner: row.projects?.owner_id ?? null });
+    }
   }
 
   // PR sans ticket : le dépôt reste rattaché à des projets, et l'un d'eux a un
@@ -69,15 +102,50 @@ async function payerForPr(pr: PullRequestRow): Promise<string | null> {
   // renvoyer la facture au hasard.
   const { data } = await service
     .from("project_git_links")
-    .select("created_at, projects(owner_id)")
+    .select("project_id, created_at, projects(owner_id)")
     .eq("provider", pr.provider)
     .eq("repo_full_name", pr.repo_full_name)
     .order("created_at", { ascending: true });
-  for (const row of (data ?? []) as Array<{ projects?: { owner_id?: string } | null }>) {
-    const owner = row.projects?.owner_id;
-    if (owner) return owner;
+  for (const row of (data ?? []) as Array<{
+    project_id?: string | null;
+    projects?: { owner_id?: string } | null;
+  }>) {
+    if (!row.project_id || ordered.some((p) => p.id === row.project_id)) continue;
+    ordered.push({ id: row.project_id, owner: row.projects?.owner_id ?? null });
   }
-  return null;
+
+  const userId = ordered.find((p) => p.owner)?.owner;
+  if (!userId) return null;
+  return { userId, projectIds: ordered.map((p) => p.id) };
+}
+
+/**
+ * Les deux refus, tels qu'ils s'écrivent sous le commentaire. En anglais comme
+ * le reste de ce que Numo dit à la forge (son prompt, ses erreurs d'outil) : ce
+ * fil est lu par des comptes de forge, pas par une session minddy dont on
+ * connaîtrait la langue.
+ */
+const DENIAL_BODIES = {
+  notMember: (login: string | null) =>
+    `${login ? `@${login} — ` : ""}I only take requests from members of the minddy ` +
+    `project this repository is linked to, with their git account connected in ` +
+    `minddy. Nothing was started.\n\n` +
+    `If you are on the team, connect your git account in minddy (Settings → ` +
+    `Git accounts) and mention me again.`,
+  throttled: `That's a lot of \`@numo\` on this repository in the last hour, so I ` +
+    `stopped there (${MENTION_LIMIT_PER_AUTHOR} reviews per person per hour). ` +
+    `Mention me again later, or start the review from minddy.`,
+} as const;
+
+/** Poste le refus sous la pull request. Best-effort : ne lève jamais. */
+async function replyOnPr(scope: PrScope, body: string): Promise<void> {
+  try {
+    await scope.forge.createPullRequestComment({ ...scope.call, body });
+  } catch (err) {
+    // Le refus lui-même n'a pas à faire échouer le webhook : la mention est déjà
+    // rejetée, ce commentaire n'est que la politesse qui l'explique.
+    console.warn("[pr-mention] refus non commenté :", (err as Error).message);
+  }
 }
 
 /**
@@ -103,14 +171,57 @@ export async function handleForgeNumoMention(opts: {
     });
     if (!pr) return;
 
-    const userId = await payerForPr(pr);
-    if (!userId) {
+    const target = await scopeForPr(pr);
+    if (!target) {
       // Plus AUCUN projet ne lie ce dépôt (liaison retirée depuis) : personne à
       // qui imputer la dépense, et aucun droit à lire. On le dit, plutôt que de
       // deviner un compte.
       console.warn(
         `[pr-mention] @numo ignoré sur ${opts.repoFullName}#${opts.prNumber} : aucun projet ne lie ce dépôt`,
       );
+      return;
+    }
+    const { userId, projectIds } = target;
+
+    // MIN-330 — l'autorisation AVANT le débit : un inconnu ne doit pas consommer
+    // le compteur d'un dépôt (ce serait un déni de service sur les membres), il
+    // a le sien, qui ne sert qu'à ne lui répondre qu'une fois.
+    const member = await isForgeAuthorMember({
+      provider: opts.provider,
+      projectIds,
+      authorLogin: opts.authorLogin,
+    });
+    const throttle = member
+      ? await claimMemberMention({
+          provider: opts.provider,
+          repoFullName: opts.repoFullName,
+          authorLogin: opts.authorLogin,
+        })
+      : { allowed: false, notify: false };
+
+    if (!member || !throttle.allowed) {
+      const notify = member
+        ? throttle.notify
+        : await claimDenialNotice({
+            provider: opts.provider,
+            repoFullName: opts.repoFullName,
+            authorLogin: opts.authorLogin,
+          });
+      console.warn(
+        `[pr-mention] @numo refusé sur ${opts.repoFullName}#${opts.prNumber} ` +
+          `(${opts.authorLogin ?? "auteur inconnu"}) : ${member ? "débit" : "non-membre"}`,
+      );
+      if (!notify) return;
+      // Résoudre la portée COÛTE un token de forge : on ne le fait que pour le
+      // seul refus qu'on commente, pas pour chacun d'eux.
+      const { resolvePrScope } = await import("./pr-actions");
+      const scope = await resolvePrScope(userId, pr);
+      if (scope) {
+        await replyOnPr(
+          scope,
+          member ? DENIAL_BODIES.throttled : DENIAL_BODIES.notMember(opts.authorLogin),
+        );
+      }
       return;
     }
 
