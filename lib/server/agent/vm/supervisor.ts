@@ -9,7 +9,7 @@ import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
 // La MÊME normalisation que la boucle maison : `update_plan` est un tool de
 // contrôle, et les deux moteurs doivent en tirer le même event `plan_update`.
 import { normalizePlan } from "../agent-loop";
-import { SecretRedactor, type RedactText } from "../redact";
+import { redactDeep, SecretRedactor, type RedactText } from "../redact";
 import { cap } from "../tool-summary";
 import type { AgentCheckpoint } from "../runs";
 import type { ControlPlaneClient } from "./control-plane-client";
@@ -1778,29 +1778,9 @@ export function lastSeqByAggregate(
  * Le token de forge ne sort ni dans un event ni dans le checkpoint (MIN-239) : il
  * est lisible dans `.git/config`, et trois tools l'en sortent. La substitution
  * s'applique aux CHAÎNES du payload, **en profondeur** — un `preview` de tool est
- * exactement là où il atterrissait.
- *
- * « En profondeur » était FAUX jusqu'à MIN-328 : le commentaire l'annonçait, le
- * code ne descendait que d'un niveau. Or les payloads d'opencode sont imbriqués
- * (`{ state: { output } }`, `{ parts: [{ text }] }`) — le secret passait, et se
- * persistait dans `agent_run_events`, relisible par tout membre du projet. Une
- * substitution qui ne descend pas est pire que pas de substitution : elle donne
- * l'apparence de la garantie.
+ * exactement là où il atterrissait. Elle vit dans `redact.ts` depuis MIN-343,
+ * où Numo la partage : une seule substitution, pas deux.
  */
-export function redactDeep(value: unknown, redact: RedactText): unknown {
-  if (typeof value === "string") return redact(value);
-  if (Array.isArray(value)) return value.map((item) => redactDeep(item, redact));
-  // `null` est un objet ; une Date, un Buffer et consorts n'ont rien à gagner à
-  // être recopiés champ à champ — seuls les objets simples sont descendus.
-  if (value === null || typeof value !== "object") return value;
-  if (Object.getPrototypeOf(value) !== Object.prototype) return value;
-  const out: Record<string, unknown> = {};
-  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-    out[key] = redactDeep(item, redact);
-  }
-  return out;
-}
-
 function redactPayload(
   payload: Record<string, unknown>,
   secrets: SecretRedactor,

@@ -23,9 +23,17 @@ const { removeStorageObjects } = await import("./attachments");
  * l'appelant qui viendra ensuite.
  */
 
+/** Depuis MIN-343, le goulot demande d'abord aux deux tables qui référencent le
+    bucket si une ligne nomme encore le chemin. Ici aucune ne le fait : le lot
+    passe entier, et c'est le null qui reste le sujet du fichier. */
+const noReference = () => ({
+  select: () => ({ in: async () => ({ data: [], error: null }) }),
+});
+
 function storageSpy() {
   const remove = vi.fn(async () => ({ data: null, error: null }));
   const service = {
+    from: noReference,
     storage: { from: () => ({ remove }) },
   } as unknown as SupabaseClient;
   return { service, remove };
@@ -55,6 +63,7 @@ describe("removeStorageObjects", () => {
 
   it("ne lève jamais : un ménage raté ne fait pas échouer l'écriture", async () => {
     const service = {
+      from: noReference,
       storage: {
         from: () => ({
           remove: async () => {

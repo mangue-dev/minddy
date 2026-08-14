@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
 import { SeedProposalCard } from "./seed-proposal-card";
+import { liveSecretOf, SecretCallout } from "./secret-callout";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { SeedProposal } from "@/lib/seed/types";
 import {
@@ -1441,6 +1442,18 @@ export function ToolCallList({
             t={t}
           />
         ))}
+      {/* L'identifiant vivant que le résultat vient d'apporter (MIN-343) : il
+          s'affiche EN PLUS de la ligne d'action, et seulement en direct — au
+          rechargement l'historique ne porte plus que `[redacted]`. */}
+      {items.map((item) => {
+        const secret =
+          item.status === "complete" && item.success !== false
+            ? liveSecretOf(item.name, item.result)
+            : null;
+        return secret ? (
+          <SecretCallout key={`secret-${item.id}`} envLine={secret.envLine} />
+        ) : null;
+      })}
       {seedCallouts.map((item) => {
         const seed = seedProposalOf(item.result)!;
         return (

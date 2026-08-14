@@ -53,6 +53,10 @@ function fakeStorage(options: { contentType?: string; infoFails?: boolean } = {}
         remove: async () => ({ error: null }),
       }),
     },
+    // MIN-343 : l'enregistrement demande au storage qui a téléversé l'objet, et
+    // le ménage demande aux tables qui le référence encore. Ici l'objet vient
+    // d'être créé par le serveur (aucun téléverseur) et rien ne le référence.
+    rpc: async () => ({ data: [], error: null }),
     from: () => ({
       insert: (batch: Record<string, unknown>[]) => {
         rows.push(...batch);
@@ -60,6 +64,7 @@ function fakeStorage(options: { contentType?: string; infoFails?: boolean } = {}
           select: async () => ({ data: batch.map((r) => ({ ...r, id: "row-1" })), error: null }),
         };
       },
+      select: () => ({ in: async () => ({ data: [], error: null }) }),
     }),
   } as unknown as SupabaseClient;
 

@@ -2952,7 +2952,12 @@
     "appendToPageFailed": "Nothing added to the page",
     "editingPageText": "Correcting the page…",
     "pageTextEdited": "Page corrected",
-    "editPageTextFailed": "Page not corrected"
+    "editPageTextFailed": "Page not corrected",
+    "secretShownOnce": "Credential — shown once, here only",
+    "secretStoreServerSide": "Copy it now into your server environment. It is not kept in this conversation and will not be shown again.",
+    "secretReveal": "Show credential",
+    "secretHide": "Hide credential",
+    "secretCopy": "Copy credential"
   },
   "Agents": {
     "title": "Numo agent",

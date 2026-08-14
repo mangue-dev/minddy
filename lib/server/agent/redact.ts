@@ -113,3 +113,30 @@ export class SecretRedactor {
 
 /** Ce que la boucle reçoit : de quoi substituer, sans rien savoir du registre. */
 export type RedactText = (text: string) => string;
+
+/**
+ * La substitution appliquée aux CHAÎNES d'une valeur quelconque, **en
+ * profondeur** — un `preview` de tool, un résultat d'outil de Numo, un payload
+ * d'event : tous sont des objets imbriqués, et c'est au fond qu'un secret se
+ * cache.
+ *
+ * « En profondeur » était FAUX jusqu'à MIN-328 : le commentaire l'annonçait, le
+ * code ne descendait que d'un niveau. Une substitution qui ne descend pas est
+ * pire que pas de substitution : elle donne l'apparence de la garantie.
+ *
+ * Ici plutôt que dans le superviseur (MIN-343) : Numo en a besoin aussi, et une
+ * SECONDE substitution écrite à côté serait la faute d'origine recommencée.
+ */
+export function redactDeep(value: unknown, redact: RedactText): unknown {
+  if (typeof value === "string") return redact(value);
+  if (Array.isArray(value)) return value.map((item) => redactDeep(item, redact));
+  // `null` est un objet ; une Date, un Buffer et consorts n'ont rien à gagner à
+  // être recopiés champ à champ — seuls les objets simples sont descendus.
+  if (value === null || typeof value !== "object") return value;
+  if (Object.getPrototypeOf(value) !== Object.prototype) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    out[key] = redactDeep(item, redact);
+  }
+  return out;
+}

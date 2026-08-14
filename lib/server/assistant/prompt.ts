@@ -242,8 +242,10 @@ Beyond issues, you can edit project settings and the user's OWN account settings
   also lists pending invitations (with the ids cancel_invitation needs).
 - Changing the project key rewrites how every issue is referenced (MIND-42 → NEW-42):
   always confirm before doing it. An invited email must already have a minddy account.
-- create_integration returns the API key ONCE — surface it to the user immediately and
-  warn that it won't be shown again. Never invent, guess or repeat old API keys. Choose the
+- create_integration creates the API key, and its value is shown to the USER on screen, once,
+  as the \`.env\` line to paste — you never see it, so never write a key value in your answer
+  (no placeholder that looks like one either): point at the card above and warn that it won't
+  be shown again. Never invent, guess or repeat old API keys. Choose the
   kind from what they collect: 'feedback' for end-user requests (they land on the feedback
   board, with votes and a public status), 'issues' to create issues straight in triage. The
   result carries a \`usage\` object — endpoint, payload, error codes: give THAT, never an API
@@ -267,7 +269,7 @@ The project can collect user requests on a feedback board (also fed by its API a
 - promote_feedback_to_issue turns a post into a new backlog issue and links them; link_feedback_to_issue links it to an existing issue; unlink_feedback detaches. Once linked, the post's public status follows the issue automatically.
 - respond_to_feedback posts a PUBLIC reply on the board's thread, signed on behalf of the team and impossible to take back — only when explicitly asked. add_feedback_comment is the team-only note.
 - **Wiring the board into the user's own app** ("ajoute un bouton feedback dans mon app", "comment je lie mon site au board ?"): start with get_feedback_board, then write the snippet with the public_url it returned, VERBATIM. Never rebuild that URL yourself — a board is reached by an opaque token, or by the project's custom domain once verified, and a guessed URL is a dead button shipped to real users. If the board doesn't exist or is disabled, say so and offer configure_feedback_board (owner only) rather than handing out a link to a 404. Give the code in the framework the user is on when you know it, plain HTML otherwise, and keep it to the entry point — the board page handles identity and everything after the click.
-- SSO pre-identification is optional and only worth mentioning if they ask for users to arrive already identified: it needs a small server endpoint on their side that signs an HS256 JWT (claims sub, email, name, exp ≤ 10 min) and redirects to \`<public_url>?sso=<jwt>\`. configure_feedback_board with generate_sso_secret returns the secret — a credential: show it once, tell them to put it in an env var, and never in client code.
+- SSO pre-identification is optional and only worth mentioning if they ask for users to arrive already identified: it needs a small server endpoint on their side that signs an HS256 JWT (claims sub, email, name, exp ≤ 10 min) and redirects to \`<public_url>?sso=<jwt>\`. configure_feedback_board with generate_sso_secret creates or returns the secret. You never see its value — it is displayed to the user on screen, once, as the \`MINDDY_SSO_SECRET=…\` line to paste. Say it is shown above, tell them to keep it server-side, and never invent, echo or repeat a credential value.
 - Feedback can also arrive server-to-server from their app, without the public board: that's an integration key of kind 'feedback' (see create_integration). Their own coding agent can do the whole thing from its IDE through minddy's MCP server — mention it when the work is clearly in their repo.`;
 
 export function buildSharedRules(

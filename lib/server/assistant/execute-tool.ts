@@ -215,6 +215,22 @@ export interface ToolExecution {
    */
   modelResult?: unknown;
   /**
+   * Les IDENTIFIANTS VIVANTS que `result` porte — une clé `mdy_` fraîchement
+   * créée, le secret SSO d'un board (MIN-343).
+   *
+   * Ils partent au navigateur avec le résultat, en direct, et ne vont NULLE PART
+   * ailleurs : la boucle les substitue avant d'écrire `assistant_messages` et
+   * avant de rendre la main au modèle. Un secret laissé dans l'historique serait
+   * rejoué au fournisseur à chaque tour, relisible en base, et repartirait dans
+   * l'export de compte — trois fuites pour une valeur qui ne sert qu'une fois,
+   * sous les yeux de son propriétaire.
+   *
+   * Corollaire assumé : le modèle ne voit jamais la valeur, donc ne peut pas la
+   * recopier dans sa réponse. C'est l'écran qui la montre (`SecretCallout`), et
+   * le prompt le lui dit.
+   */
+  secrets?: string[];
+  /**
    * Le tour s'arrête ici : la main passe à l'utilisateur, comme sur `ask_user`.
    * Ce que la boucle enchaînerait ne servirait à rien tant qu'il n'a pas
    * répondu à ce que ce résultat lui met sous les yeux.
@@ -1774,9 +1790,11 @@ export async function executeTool(
         return {
           result: {
             board: result.config,
-            // Only present when asked for. A credential: Numo surfaces it once.
+            // Only present when asked for. A credential: the SCREEN surfaces it
+            // once (MIN-343) — it never enters the conversation history.
             ...(result.sso_secret ? { sso_secret: result.sso_secret } : {}),
           },
+          secrets: result.sso_secret ? [result.sso_secret] : undefined,
           success: true,
         };
       }
@@ -2074,11 +2092,13 @@ export async function executeTool(
               name: result.integration.name,
               kind: result.integration.kind,
             },
-            // The plaintext key is returned ONCE — Numo must surface it now.
+            // The plaintext key is returned ONCE, to the SCREEN (MIN-343): the
+            // browser gets it live, the history never does.
             key: result.key,
             // …and a key is useless without the format that goes with it.
             usage: integrationUsage(kind, SITE_URL),
           },
+          secrets: [result.key],
           success: true,
         };
       }

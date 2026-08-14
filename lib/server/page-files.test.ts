@@ -80,6 +80,15 @@ function fakeService(options: {
           filters.before = value;
           return query;
         },
+        // MIN-343 : le ménage du bucket demande d'abord qui référence encore le
+        // chemin. Les lignes VIVANTES répondent — c'est ce qui rend l'ordre
+        // « la ligne d'abord, les octets ensuite » observable ici.
+        in: async (_column: string, paths: string[]) => ({
+          data: files
+            .filter((f) => paths.includes(f.storage_path))
+            .map((f) => ({ storage_path: f.storage_path })),
+          error: null,
+        }),
         limit: async () =>
           ({
             data: files.filter((f) =>
@@ -126,6 +135,10 @@ function fakeService(options: {
           }),
         }),
       };
+    }
+    // L'autre table qui référence le bucket : aucune ressource de ticket ici.
+    if (table === "attachments") {
+      return { select: () => ({ in: async () => ({ data: [], error: null }) }) };
     }
     throw new Error(`table inattendue: ${table}`);
   };

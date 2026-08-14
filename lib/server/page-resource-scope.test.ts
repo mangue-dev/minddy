@@ -27,6 +27,9 @@ function fakeService(livePageIds: string[]) {
   const pagesFilters: Record<string, unknown> = {};
 
   const client = {
+    // MIN-343 : l'insert demande aussi au storage qui a téléversé les fichiers
+    // du lot. Aucun téléverseur connu ici — ce fichier-ci parle des pages.
+    rpc: async () => ({ data: [], error: null }),
     from(table: string) {
       if (table === "pages") {
         const builder: Record<string, unknown> = {

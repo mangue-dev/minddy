@@ -9,6 +9,7 @@ import {
   type ToolExecution,
 } from "./execute-tool";
 import type { AssistantToolDef } from "./tools";
+import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
 import { stripModelSuffix } from "@/lib/ai-model-config";
 import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 
@@ -165,6 +166,10 @@ export async function processChat(
   // suffixe en cours de boucle si OpenRouter le refuse.
   let requestModel = context.model;
   const MAX_TOOL_ROUNDS = 6;
+  // Les identifiants vivants vus pendant le tour (MIN-343). Le registre est
+  // CUMULATIF à dessein : une clé rendue au round 1 doit rester substituée dans
+  // ce qu'un `list_integrations` du round 3 réécrirait.
+  const redactor = new SecretRedactor();
 
   while (continueLoop) {
     continueLoop = false;
@@ -407,8 +412,11 @@ export async function processChat(
           // Invalid JSON from LLM
         }
 
-        const { result, success, modelResult, pause }: ToolExecution =
+        const { result, success, modelResult, pause, secrets }: ToolExecution =
           await executeTool(acc.name, args, context);
+        // Le résultat COMPLET part au navigateur, secret compris : c'est le
+        // seul endroit où une clé fraîche doit apparaître, en direct, une fois
+        // (MIN-343). Rien de ce qui suit ne le reverra.
         emitter.emit("tool_result", {
           id: acc.id,
           name: acc.name,
@@ -417,13 +425,18 @@ export async function processChat(
         });
         if (pause) pausedByTool = true;
 
+        // La substitution, appliquée AVANT la base et AVANT le modèle. Elle est
+        // celle de l'agent (`redactDeep`), pas une seconde écrite à côté : un
+        // identifiant vivant peut être imbriqué n'importe où dans le résultat.
+        for (const secret of secrets ?? []) redactor.add(secret);
+
         // Ce que le MODÈLE relit n'est pas toujours ce que l'écran montre : une
         // proposition d'amorce (MIN-173) fait quarante titres qu'il vient
         // d'écrire, et que l'historique lui re-servirait à chaque tour. Le
         // résultat complet part alors sur la métadonnée, d'où le fil le relit
         // (`buildToolCallResultsFromMessages`), et `content` ne porte que ce que
         // le modèle a besoin de savoir.
-        const forModel = modelResult ?? result;
+        const forModel = redactDeep(modelResult ?? result, redactor.redact);
         await context.service.from("assistant_messages").insert({
           conversation_id: context.conversationId,
           role: "tool",
@@ -431,7 +444,9 @@ export async function processChat(
           tool_call_id: acc.id,
           tool_name: acc.name,
           metadata:
-            modelResult === undefined ? { success } : { success, result },
+            modelResult === undefined
+              ? { success }
+              : { success, result: redactDeep(result, redactor.redact) },
         });
 
         messages.push({

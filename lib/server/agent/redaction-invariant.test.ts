@@ -4,8 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { AGENT_ENGINES, type AgentEngine } from "@/lib/agent-engines";
-import { SecretRedactor } from "./redact";
-import { redactDeep } from "./vm/supervisor";
+import { redactDeep, SecretRedactor } from "./redact";
 
 /**
  * MIN-328 — LA SUBSTITUTION DES SECRETS, MOTEUR PAR MOTEUR.

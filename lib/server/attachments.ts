@@ -402,6 +402,62 @@ async function assertPagesInProject(
   }
 }
 
+/**
+ * QUI A TÉLÉVERSÉ L'OBJET (MIN-343).
+ *
+ * `parseResourcesInput` ne contrôle que le PRÉFIXE du chemin (`projects/{id}/`) :
+ * il dit dans quel projet le fichier vit, jamais à qui il appartient. Un membre
+ * pouvait donc enregistrer une ressource pointant sur le fichier d'un collègue —
+ * et la suppression, qui filtre bien sur `created_by`, effaçait alors l'objet
+ * d'un autre en croyant n'effacer que sa propre ligne.
+ *
+ * Le téléverseur, c'est le storage qui le sait : un envoi direct depuis le
+ * navigateur porte le JWT de son auteur, et `storage.objects.owner_id` le garde.
+ * Le schéma `storage` n'est pas exposé par PostgREST, d'où la fonction
+ * `attachment_object_owners` (SECURITY DEFINER, EXECUTE au seul rôle de service).
+ *
+ * Deux tolérances, dites plutôt que subies :
+ *
+ *  - **owner nul** — l'objet a été créé par minddy lui-même (envoi côté serveur
+ *    du MCP, copie inter-projets). Ces objets-là sont créés à côté de leur ligne,
+ *    et le vrai dégât — la destruction — est fermé de l'autre bout par
+ *    {@link removeStorageObjects}, qui ne retire plus un objet encore référencé.
+ *  - **objet absent** — une ligne qui nomme un objet inexistant ne sert rien et
+ *    ne détruit rien ; la refuser ferait tomber en silence des enregistrements
+ *    légitimes le jour où le storage répond avec un temps de retard.
+ */
+async function assertUploadedByActor(
+  service: SupabaseClient,
+  createdBy: string | null,
+  resources: ResourceInput[]
+): Promise<void> {
+  const paths = [
+    ...new Set(
+      resources
+        .filter((r) => !isLinkResource(r) && !isPageResource(r))
+        .map((r) => (r as { storage_path: string }).storage_path)
+    ),
+  ];
+  if (paths.length === 0) return;
+
+  const { data, error } = await service.rpc("attachment_object_owners", { paths });
+  if (error) throw new Error(`resource owner check failed: ${error.message}`);
+
+  const owners = new Map<string, string | null>();
+  for (const row of (data ?? []) as { name: string; owner_id: string | null }[]) {
+    owners.set(row.name, row.owner_id);
+  }
+  const stolen = paths.filter((p) => {
+    const owner = owners.get(p);
+    return owner != null && owner !== createdBy;
+  });
+  if (stolen.length > 0) {
+    throw new ResourceScopeError(
+      `file uploaded by someone else: ${stolen.join(", ")}`
+    );
+  }
+}
+
 /** Insert the rows for resources — files already uploaded to storage, links
     already resolved, pages cited by id (service client — callers have checked
     project access). The parent is an issue OR an objective OR a feedback post
@@ -412,6 +468,7 @@ export async function insertAttachments(
 ): Promise<Attachment[]> {
   if (args.resources.length === 0) return [];
   await assertPagesInProject(service, args.projectId, args.resources);
+  await assertUploadedByActor(service, args.createdBy, args.resources);
   const { data, error } = await service
     .from("attachments")
     .insert(args.resources.map((a) => attachmentRow(args, a)))
@@ -443,6 +500,18 @@ export async function insertAttachmentsFor(
   }
   for (const [projectId, resources] of byProject) {
     await assertPagesInProject(service, projectId, resources);
+  }
+  // Même garde qu'à l'unité, groupée par téléverseur : l'import n'écrit que des
+  // liens aujourd'hui, et c'est exactement le genre d'appelant qui recevrait des
+  // fichiers demain sans que personne pense à la garde.
+  const byActor = new Map<string | null, ResourceInput[]>();
+  for (const e of entries) {
+    const list = byActor.get(e.parent.createdBy) ?? [];
+    list.push(e.resource);
+    byActor.set(e.parent.createdBy, list);
+  }
+  for (const [createdBy, resources] of byActor) {
+    await assertUploadedByActor(service, createdBy, resources);
   }
   const { error } = await service
     .from("attachments")
@@ -528,8 +597,55 @@ export async function downloadAttachment(
 }
 
 /**
+ * Les chemins d'un lot que PLUS AUCUNE ligne ne nomme (MIN-343) — les seuls dont
+ * les octets peuvent partir.
+ *
+ * Un même objet peut être cité par deux lignes : deux tables le référencent
+ * (`attachments`, `page_files`), et rien n'empêche deux lignes de la même table
+ * de nommer le même chemin. Supprimer une ligne suffisait alors à emporter
+ * l'objet des autres — la ligne survivante devenait une pièce jointe morte, et
+ * dans le cas qui a ouvert ce ticket c'était le fichier d'un collègue.
+ *
+ * Appelé au goulot ci-dessous, donc valable pour les huit endroits qui font le
+ * ménage, et pas seulement pour celui où on a vu le défaut. L'ordre attendu est
+ * celui que tous respectent déjà : la LIGNE d'abord, les octets ensuite.
+ */
+async function unreferencedPaths(
+  service: SupabaseClient,
+  paths: string[]
+): Promise<string[]> {
+  const held = new Set<string>();
+  // Par tranches : un vidage de corbeille ou une purge de rétention en apporte
+  // des centaines, et une clause `in` illimitée finit par dépasser l'URL.
+  const CHUNK = 100;
+  for (let i = 0; i < paths.length; i += CHUNK) {
+    const slice = paths.slice(i, i + CHUNK);
+    for (const table of ["attachments", "page_files"] as const) {
+      const { data, error } = await service
+        .from(table)
+        .select("storage_path")
+        .in("storage_path", slice);
+      if (error) {
+        // On ne sait plus qui référence quoi : on ne supprime rien de cette
+        // tranche. Un orphelin coûte des octets, une suppression de trop coûte
+        // le fichier de quelqu'un.
+        console.error(`[attachments] reference check failed (${table}):`, error.message);
+        slice.forEach((p) => held.add(p));
+        continue;
+      }
+      for (const row of (data ?? []) as { storage_path: string | null }[]) {
+        if (row.storage_path) held.add(row.storage_path);
+      }
+    }
+  }
+  return paths.filter((p) => !held.has(p));
+}
+
+/**
  * Best-effort storage cleanup — a failure must never fail the business write
  * (the leftover is an orphan object, same class as an abandoned upload).
+ *
+ * Ne retire QUE les objets que plus aucune ligne ne nomme ({@link unreferencedPaths}).
  *
  * Les chemins vides sont écartés ICI, au goulot, parce qu'un seul null empoisonne
  * le LOT ENTIER : `storage.remove()` poste `{ prefixes: [...] }` et le service
@@ -546,8 +662,10 @@ export async function removeStorageObjects(
 ): Promise<void> {
   const cleaned = paths.filter((p): p is string => typeof p === "string" && p !== "");
   if (cleaned.length === 0) return;
+  const orphans = await unreferencedPaths(service, cleaned);
+  if (orphans.length === 0) return;
   try {
-    const { error } = await service.storage.from("attachments").remove(cleaned);
+    const { error } = await service.storage.from("attachments").remove(orphans);
     if (error) {
       console.error("[attachments] storage cleanup failed:", error.message);
     }

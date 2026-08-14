@@ -23,6 +23,7 @@ import {
   type NumoDefaultStatus,
 } from "@/lib/numo-default-status";
 import { executeTool } from "./execute-tool";
+import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
 import { ASSISTANT_TOOLS } from "./tools";
 import {
   buildCommentSystemPrompt,
@@ -895,6 +896,9 @@ async function runLoop(
   // Suivi des coûts : un run = ce @numo ; chaque round est un appel.
   const runId = newRunId();
   const usageRows: AiUsageInput[] = [];
+  // Les identifiants vivants qu'un tool aurait rendus (MIN-343) — cumulatifs sur
+  // le tour, comme dans la boucle du chat.
+  const redactor = new SecretRedactor();
   // Recherche web du tour : même run que les appels ci-dessus, plafonnée sur la
   // durée du @numo (ses lignes de ledger, elles, sont écrites au fil de l'eau).
   // Coupée côté admin, le tool n'est pas proposé du tout.
@@ -1034,7 +1038,7 @@ async function runLoop(
         } catch {
           // Invalid JSON from LLM
         }
-        const { result } = await executeTool(acc.name, args, {
+        const { result, secrets } = await executeTool(acc.name, args, {
           projectId: ctx.projectId,
           userId: ctx.userId,
           feedbackPostId: ctx.feedbackPostId ?? null,
@@ -1045,10 +1049,19 @@ async function runLoop(
           triggerSource: "mention",
           webSearch,
         });
+        // Ici le tour ne rend pas un écran mais un COMMENTAIRE : un identifiant
+        // vivant laissé dans le résultat, le modèle le recopierait dans un texte
+        // que tout le projet lit (MIN-343). Substitué, donc — et le secret est
+        // simplement perdu pour cette surface, ce qui est le bon compromis :
+        // une clé se crée depuis le chat ou les réglages, pas depuis un fil.
+        for (const secret of secrets ?? []) redactor.add(secret);
         messages.push({
           role: "tool",
           tool_call_id: acc.id,
-          content: serializeToolResult(result, 12000),
+          content: serializeToolResult(
+            redactDeep(result, redactor.redact),
+            12000
+          ),
         });
       }
       continueLoop = true;
