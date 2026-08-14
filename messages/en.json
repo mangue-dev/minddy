@@ -272,6 +272,7 @@
     "pageNotEmpty": "This page is no longer empty.",
     "pageTooLarge": "This page is too long to be saved.",
     "pageTooDeep": "This page nests blocks too deeply to be saved.",
+    "pageContentRefused": "This page contains a block or a link minddy cannot save.",
     "pageVersionNotFound": "That version of the page no longer exists.",
     "pageFileTooLarge": "This file is too large (10 MB max).",
     "pageFileEmpty": "This file is empty.",

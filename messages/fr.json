@@ -272,6 +272,7 @@
     "pageNotEmpty": "Cette page n’est plus vide.",
     "pageTooLarge": "Cette page est trop longue pour être enregistrée.",
     "pageTooDeep": "Cette page imbrique trop de blocs pour être enregistrée.",
+    "pageContentRefused": "Cette page contient un bloc ou un lien que minddy ne peut pas enregistrer.",
     "pageVersionNotFound": "Cette version de la page n'existe plus.",
     "pageFileTooLarge": "Ce fichier est trop lourd (10 Mo maximum).",
     "pageFileEmpty": "Ce fichier est vide.",

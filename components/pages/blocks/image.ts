@@ -1,6 +1,7 @@
 import { Node } from "@tiptap/core";
 import { ImageIcon } from "lucide-react";
 import { normalizePageFileSrc } from "@/lib/page-files";
+import { markdownLinkDestination } from "@/components/pages/blocks/escape";
 import type {
   MarkdownNode,
   MarkdownState,
@@ -188,7 +189,8 @@ export const imageBlock: PageBlock = {
   markdown: {
     sample: "![A screenshot](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/11111111-1111-4111-8111-111111111111)",
     toMarkdown: (state: MarkdownState, node: MarkdownNode) => {
-      const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
+      // Échappée, et refusée avec son protocole — cf. blocks/file.ts (MIN-350).
+      const src = markdownLinkDestination(node.attrs.src);
       const alt = typeof node.attrs.alt === "string" ? node.attrs.alt : "";
       // Un emplacement dont le téléversement n'a pas abouti n'écrit RIEN plutôt
       // qu'un `![](…)` vide : le markdown est ce que lit Numo, et une image sans

@@ -231,6 +231,26 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
 - **XSS :** le markdown (commentaires, descriptions) est rendu sans HTML brut
   (react-markdown sans `rehype-raw`, TipTap `html: false`) ; les posts du board
   de feedback sont en texte brut.
+- **Exception assumée : l'éditeur de PAGES est en `html: true`**
+  ([components/pages/page-extensions.ts](components/pages/page-extensions.ts)).
+  Markdown n'a ni dépliant ni sous-page ; les deux se projettent en HTML minimal
+  (`<details>`, `<div data-type="subpage">`), et sans cette option elles
+  repartiraient en texte échappé. Ce qui assainit, à sa place :
+  - le SCHÉMA. Le chemin de lecture est markdown-it → HTML → `parseHTML` de
+    ProseMirror, qui ne garde que les nœuds et attributs déclarés : un `<script>`
+    ou un `onerror=` n'a pas de nœud, il tombe. Rien n'est jamais rendu en
+    `dangerouslySetInnerHTML` ;
+  - la porte d'ÉCRITURE ([lib/page-content-schema.ts](lib/page-content-schema.ts),
+    MIN-350) : `page.content` est refusé s'il porte un type de nœud ou de marque
+    inconnu, ou un `src`/`href` dont le protocole n'est pas `http`, `https` ou
+    `mailto` — un `javascript:` sortait sinon dans le `href` d'une vraie ancre
+    (bloc fichier). Les attributs inconnus, eux, sont retirés ;
+  - la projection markdown échappe ce qu'elle interpole dans une balise ou dans
+    la destination d'un lien
+    ([components/pages/blocks/escape.ts](components/pages/blocks/escape.ts)).
+- **Le préfixe de stockage `projects/{id}/pages/…` n'est pas écrivable par le
+  client** ([20261230090000_pages_prefix_server_only.sql](supabase/migrations/20261230090000_pages_prefix_server_only.sql)) :
+  un fichier de page naît côté serveur, avec sa ligne `page_files`.
 
 ## 7. Rate limiting
 

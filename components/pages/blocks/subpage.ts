@@ -1,6 +1,7 @@
 import { Node } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { FileText } from "lucide-react";
+import { escapeHtmlAttribute } from "@/components/pages/blocks/escape";
 import type {
   MarkdownNode,
   MarkdownState,
@@ -268,7 +269,10 @@ function subpageMarkdownIt(md: MarkdownIt): void {
       const match = SUBPAGE_MD.exec(tokens[i].content.trim());
       if (!match) continue;
       const token = new state.Token("html_block", "", 0);
-      token.content = `<div data-type="subpage" data-page-id="${match[1]}"></div>\n`;
+      // Échappé : `[[page:a"b]]` est du markdown parfaitement écrivable, et
+      // recopié nu il ferme l'attribut qu'on fabrique (MIN-350).
+      token.content =
+        `<div data-type="subpage" data-page-id="${escapeHtmlAttribute(match[1])}"></div>\n`;
       token.block = true;
       tokens.splice(i - 1, 3, token);
     }

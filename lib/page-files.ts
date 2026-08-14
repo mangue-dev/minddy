@@ -30,6 +30,8 @@
  * copie qui se périme.
  */
 
+import { normalizePageUrl } from "@/lib/page-content-schema";
+
 /** Aligné sur les ressources de ticket, en plus serré : un corps de page en
     porte plusieurs, et 10 Mo est déjà une capture d'écran très généreuse. */
 export const MAX_PAGE_FILE_BYTES = 10 * 1024 * 1024;
@@ -104,20 +106,27 @@ export function pageFileProjectFromSrc(src: unknown): string | null {
 
 /**
  * L'adresse telle qu'on accepte de la RANGER : la forme relative pour nos
- * fichiers, la chaîne d'origine pour tout le reste.
+ * fichiers, la chaîne d'origine pour tout le reste — et `null` pour ce qu'on
+ * refuse.
  *
  * À appeler à la PORTE — quand une adresse entre dans un document depuis du
  * HTML ou du markdown (blocks/image.ts, blocks/file.ts). Reconnaître une
  * adresse absolue à la lecture répare l'usage ; la normaliser à l'entrée
  * l'empêche d'être écrite, et c'est la moitié qui compte : un `src` absolu
  * rangé dans un corps porte l'origine du poste qui a collé.
+ *
+ * Et depuis MIN-350, la porte TRIE aussi sur le protocole
+ * ({@link normalizePageUrl}) : un `javascript:` collé dans le `data-src` d'un
+ * bloc fichier finissait dans le `href` d'une vraie ancre, qu'un clic ordinaire
+ * suit vraiment (components/pages/blocks/file-view.tsx). Le garde-fou d'écriture
+ * (lib/server/pages.ts) refuse déjà de l'enregistrer ; celui-ci l'empêche
+ * d'exister dans l'éditeur, avant même la sauvegarde.
  */
 export function normalizePageFileSrc(src: unknown): string | null {
-  if (typeof src !== "string") return null;
-  const trimmed = src.trim();
-  if (!trimmed) return null;
-  const match = matchPageFileSrc(trimmed);
-  return match ? pageFileUrl(match[1], match[2]) : trimmed;
+  const safe = normalizePageUrl(src);
+  if (!safe) return null;
+  const match = matchPageFileSrc(safe);
+  return match ? pageFileUrl(match[1], match[2]) : safe;
 }
 
 /**
@@ -135,10 +144,15 @@ export function normalizePageFileSrc(src: unknown): string | null {
  *    message d'erreur là où il attendait son fichier.
  *
  * D'où la règle, ici et pas dans la vue : c'est une propriété de l'adresse.
+ *
+ * `null` quand l'adresse est refusée (MIN-350) : la vue n'affiche alors pas
+ * d'ancre du tout, plutôt qu'une ancre vers un protocole qu'on ne veut pas
+ * suivre.
  */
-export function fileDownloadHref(src: string): string {
+export function fileDownloadHref(src: string): string | null {
   const ours = normalizePageFileSrc(src);
-  if (!ours || !pageFileIdFromSrc(ours)) return src;
+  if (!ours) return null;
+  if (!pageFileIdFromSrc(ours)) return ours;
   return `${ours}?download=1`;
 }
 

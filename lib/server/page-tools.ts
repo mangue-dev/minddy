@@ -95,6 +95,7 @@ const CODES: Record<PageErrorKey, PageToolCode> = {
   pageNotEmpty: "page_not_empty",
   pageTooLarge: "page_too_large",
   pageTooDeep: "page_too_large",
+  pageContentRefused: "invalid_params",
   noFieldsToUpdate: "invalid_params",
   databaseError: "database_error",
 };
@@ -117,6 +118,9 @@ const MESSAGES: Record<PageErrorKey, string> = {
   pageTooLarge: "The page body is too large; split it into subpages.",
   pageTooDeep:
     "The page body nests blocks too deeply; flatten it or split it into subpages.",
+  pageContentRefused:
+    "The page body carries a block minddy does not know, or a link whose " +
+    "protocol it refuses (only http, https and mailto are stored).",
   noFieldsToUpdate: "Nothing to update: pass a title, an icon or a markdown body.",
   databaseError: "Database error.",
 };

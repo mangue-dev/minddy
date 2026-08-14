@@ -505,6 +505,68 @@ describe("updatePage", () => {
     expect(rowOf(id).version).toBe(1);
   });
 
+  it("REFUSE un `src` au protocole hostile, plutôt que de le ranger (MIN-350)", async () => {
+    // Le `src` d'un bloc fichier ressort dans le `href` d'une vraie ancre, que
+    // le clic ordinaire suit vraiment (components/pages/blocks/file-view.tsx).
+    // La porte est ici, sur le chemin de TOUTES les surfaces d'écriture.
+    const id = await create("A");
+    const result = await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      input: {
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "pageFile",
+              attrs: { src: "javascript:alert(1)", name: "x.pdf" },
+            },
+          ],
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      errorKey: "pageContentRefused",
+    });
+    expect(rowOf(id).version).toBe(1);
+  });
+
+  it("REFUSE un nœud que le schéma ne connaît pas, et nettoie les attributs de trop", async () => {
+    const id = await create("A");
+    const unknown = await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      input: {
+        content: { type: "doc", content: [{ type: "iframe", attrs: {} }] },
+      },
+    });
+    expect(unknown).toMatchObject({ ok: false, errorKey: "pageContentRefused" });
+
+    const cleaned = await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      input: {
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              attrs: { blockId: "b1", onclick: "alert(1)" },
+              content: [{ type: "text", text: "x" }],
+            },
+          ],
+        },
+      },
+    });
+    if (!cleaned.ok) throw new Error(`écriture refusée : ${cleaned.errorKey}`);
+    const paragraph = (rowOf(id).content as { content: { attrs: Record<string, unknown> }[] })
+      .content[0];
+    expect(paragraph.attrs).toEqual({ blockId: "b1" });
+  });
+
   it("refuse une requête qui ne demande rien", async () => {
     const id = await create("A");
     const result = await updatePage({ pageId: id, actorId: ACTOR, input: {} });

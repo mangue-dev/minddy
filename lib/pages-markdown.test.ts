@@ -322,6 +322,70 @@ describe("un document qui contient tout", () => {
   });
 });
 
+/* ── L'échappement de la projection (MIN-350) ─────────────────────────── */
+
+describe("ce qui a un sens dans une balise ou dans un lien", () => {
+  const PROJECT = "00000000-0000-4000-8000-000000000000";
+  const FILE = "22222222-2222-4222-8222-222222222222";
+
+  // Le dépliant projette du HTML : un `<` dans un résumé y refermerait la
+  // balise. Il ressort échappé — pas par blocks/details.ts, mais par le
+  // sérialiseur de TEXTE de tiptap-markdown, qui passe tout nœud texte par
+  // `escapeHTML` (cf. le commentaire de `summaryMarkdown`). Ce cas est ici pour
+  // que la garantie soit VÉRIFIÉE plutôt que supposée : elle tient à une
+  // dépendance, et c'est ce test qui le dira le jour où elle bougera.
+  it("échappe le `<` d'un résumé de dépliant, dans les deux sens", () => {
+    const json = bodyFromMarkdown(
+      "<details>\n<summary>A &lt;b&gt; x</summary>\n\nHidden\n\n</details>"
+    );
+    const summary = findNode(json, "detailsSummary");
+    expect((summary?.content?.[0] as { text?: string } | undefined)?.text).toBe(
+      "A <b> x"
+    );
+    const markdown = bodyToMarkdown(json);
+    expect(markdown).toContain("<summary>A &lt;b&gt; x</summary>");
+    expect(roundTrip(markdown)).toBe(markdown);
+  });
+
+  it("échappe le guillemet du nom d'un fichier qui entre par le markdown", () => {
+    // Le nom voyage dans un attribut HTML fabriqué à la main par la règle
+    // markdown-it du bloc : un guillemet nu l'aurait refermé, et le bloc serait
+    // revenu sans son nom.
+    const json = bodyFromMarkdown(
+      `[rap"port.pdf](/api/projects/${PROJECT}/pages/files/${FILE})`
+    );
+    expect(findNode(json, "pageFile")?.attrs?.name).toBe('rap"port.pdf');
+  });
+
+  it("n'écrit pas de lien vers un protocole refusé", () => {
+    // Les blocs sont fabriqués à la main : un tel `src` ne peut plus entrer par
+    // la lecture (lib/page-files.ts le refuse), et c'est justement le cas qu'on
+    // veut tenir — un corps hérité, écrit avant le garde-fou, ne ressort pas en
+    // lien cliquable dans un markdown qu'on exporte.
+    const doc = {
+      type: "doc",
+      content: [
+        { type: "pageFile", attrs: { src: "javascript:alert(1)", name: "x.pdf" } },
+        { type: "image", attrs: { src: "javascript:alert(1)", alt: "x" } },
+      ],
+    };
+    expect(bodyToMarkdown(doc)).not.toContain("javascript:");
+  });
+
+  it("échappe les parenthèses d'une adresse", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "pageFile",
+          attrs: { src: "https://exemple.org/a(b).pdf", name: "a(b).pdf" },
+        },
+      ],
+    };
+    expect(bodyToMarkdown(doc)).toContain("(https://exemple.org/a\\(b\\).pdf)");
+  });
+});
+
 /* ── L'origine, retirée à l'entrée (MIN-284) ──────────────────────────── */
 
 describe("l'adresse d'un fichier de page entrant avec une ORIGINE", () => {

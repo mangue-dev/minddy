@@ -34,6 +34,23 @@ const detailsMarkdown = {
   parse: {},
 };
 
+/**
+ * Le résumé s'écrit DANS une balise — et ce qu'on y pose est déjà ÉCHAPPÉ, sans
+ * qu'une ligne de ce fichier s'en charge (vérifié en MIN-350, et écrit ici parce
+ * que la lecture du code dit exactement le contraire).
+ *
+ * C'est tiptap-markdown qui le fait, sur TOUT nœud texte du document et pas
+ * seulement ici : son sérialiseur de texte passe par `escapeHTML`
+ * (`tiptap-markdown/src/extensions/nodes/text.js`), qui remplace `<` et `>` par
+ * leurs entités. Un résumé « A <b> x » sort donc en `A &lt;b&gt; x`, et la
+ * lecture le redécode en texte — la balise ne se referme pas, l'aller-retour
+ * revient identique, et `lib/pages-markdown.test.ts` le tient.
+ *
+ * La perte assumée qui reste, minuscule et de la même famille que les autres :
+ * un résumé dont le texte est littéralement `&lt;` revient en `<`. Rien ne
+ * distingue les deux dans la projection, ici pas plus qu'ailleurs — c'est le
+ * prix de `html: true`, qui est le prix du dépliant.
+ */
 const summaryMarkdown = {
   serialize(state: MarkdownState, node: MarkdownNode) {
     state.write("<summary>");

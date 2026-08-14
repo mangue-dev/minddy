@@ -11,6 +11,7 @@ import {
   type PageWriteKind,
 } from "@/lib/pages";
 import { exceedsJsonDepth, MAX_PAGE_JSON_DEPTH } from "@/lib/json-depth";
+import { checkPageContent } from "@/lib/page-content-schema";
 import { afterOrNow } from "@/lib/server/after-safe";
 import {
   notifyAgentPageWrite,
@@ -105,6 +106,7 @@ export type PageErrorKey =
   | "pageNotEmpty"
   | "pageTooLarge"
   | "pageTooDeep"
+  | "pageContentRefused"
   | "noFieldsToUpdate"
   | "databaseError";
 
@@ -515,6 +517,9 @@ export async function createPage({
   if (content === "too-large") {
     return { ok: false, status: 413, errorKey: "pageTooLarge" };
   }
+  if (content === "refused") {
+    return { ok: false, status: 400, errorKey: "pageContentRefused" };
+  }
 
   const row: Record<string, unknown> = {
     project_id: projectId,
@@ -738,6 +743,9 @@ export async function updatePage({
   }
   if (content === "too-large") {
     return { ok: false, status: 413, errorKey: "pageTooLarge" };
+  }
+  if (content === "refused") {
+    return { ok: false, status: 400, errorKey: "pageContentRefused" };
   }
 
   // La VERSION sur laquelle l'écriture s'appuie (MIN-271). Elle n'a de sens
@@ -1226,15 +1234,25 @@ function readIcon(value: unknown): string | null {
  * que refusée : c'est le même traitement qu'un statut inconnu ailleurs, et le
  * seul dommage possible est de ne pas écrire ce qu'on n'a pas su lire.
  *
- * La PROFONDEUR se mesure avant la taille, et l'ordre n'est pas cosmétique
- * (MIN-348) : peser un document, c'est le sérialiser, et `JSON.stringify`
- * descend l'arbre par la pile d'appels — sur un corps imbriqué dix mille fois,
- * c'est le garde-fou qui tombe, pas ce qu'il devait arrêter.
+ * Trois gardes, dans CET ordre, et l'ordre est le sujet :
+ *
+ * 1. la PROFONDEUR d'abord (MIN-348) — peser un document, c'est le sérialiser,
+ *    et `JSON.stringify` descend l'arbre par la pile d'appels : sur un corps
+ *    imbriqué dix mille fois, c'est le garde-fou qui tombe, pas ce qu'il devait
+ *    arrêter. La descente récursive du schéma tomberait de même ;
+ * 2. la TAILLE, avant de parcourir l'arbre nœud par nœud ;
+ * 3. le SCHÉMA (MIN-350) : types connus, attributs connus, adresses sans
+ *    protocole hostile (lib/page-content-schema.ts). Il rend le corps NETTOYÉ
+ *    de ses attributs inconnus — c'est cette valeur-là qui part en base.
  */
-function readContent(value: unknown): unknown | undefined | "too-large" | "too-deep" {
+function readContent(
+  value: unknown
+): unknown | undefined | "too-large" | "too-deep" | "refused" {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== "object" || Array.isArray(value)) return undefined;
   if (exceedsJsonDepth(value, MAX_PAGE_JSON_DEPTH)) return "too-deep";
   if (JSON.stringify(value).length > MAX_CONTENT_BYTES) return "too-large";
-  return value;
+  const checked = checkPageContent(value);
+  if (!checked.ok) return "refused";
+  return checked.content;
 }

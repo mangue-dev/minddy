@@ -1,6 +1,10 @@
 import { Node } from "@tiptap/core";
 import { Paperclip } from "lucide-react";
 import { normalizePageFileSrc, pageFileIdFromSrc } from "@/lib/page-files";
+import {
+  escapeHtmlAttribute,
+  markdownLinkDestination,
+} from "@/components/pages/blocks/escape";
 import type { PageFilePickStorage } from "@/components/pages/blocks/image";
 import type {
   MarkdownNode,
@@ -148,7 +152,10 @@ export const fileBlock: PageBlock = {
   markdown: {
     sample: "[report.pdf](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/22222222-2222-4222-8222-222222222222)",
     toMarkdown: (state: MarkdownState, node: MarkdownNode) => {
-      const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
+      // L'adresse est ÉCHAPPÉE, et une adresse au protocole refusé n'écrit rien
+      // du tout (MIN-350) : ce lien-là est cliquable partout où le markdown est
+      // rendu, et `[nom](javascript:…)` en est un.
+      const src = markdownLinkDestination(node.attrs.src);
       if (!src) return;
       const name =
         (typeof node.attrs.name === "string" && node.attrs.name.trim()) || "file";
@@ -181,16 +188,6 @@ interface MarkdownIt {
       after(after: string, name: string, fn: (state: MdCoreState) => void): void;
     };
   };
-}
-
-/** `&`, `<`, `"` dans un nom de fichier : rares, et suffisants pour casser la
-    balise qu'on fabrique. */
-function escapeAttribute(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 /**
@@ -226,8 +223,8 @@ function fileMarkdownIt(md: MarkdownIt): void {
 
       const token = new state.Token("html_block", "", 0);
       token.content =
-        `<div data-type="pageFile" data-src="${escapeAttribute(href as string)}" ` +
-        `data-name="${escapeAttribute(text.content)}"></div>\n`;
+        `<div data-type="pageFile" data-src="${escapeHtmlAttribute(href as string)}" ` +
+        `data-name="${escapeHtmlAttribute(text.content)}"></div>\n`;
       token.block = true;
       tokens.splice(i - 1, 3, token);
     }
