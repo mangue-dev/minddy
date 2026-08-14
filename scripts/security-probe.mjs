@@ -14,7 +14,11 @@
  *   - upload storage hors de son préfixe autorisé refusé ;
  *   - listing du bucket `project-icons` refusé pour anon (§4) ;
  *   - redirection d'une invitation vers le projet d'un autre refusée (MIN-325,
- *     migration 20261215090000).
+ *     migration 20261215090000) ;
+ *   - cloisonnement en base (MIN-338, migration 20261220090000) : déplacement
+ *     d'un ticket ou d'un objectif vers son propre projet refusé, hard delete
+ *     d'une page refusé, `get_ai_run_spend` refusé pour anon ET authenticated,
+ *     tables dont la policy était revenue sans clause `TO` illisibles pour anon.
  *
  * ⚠ Touche la PROD (le .env local pointe la prod). Décor jeté en clé service,
  * cleanup complet en `finally`. Exécution MANUELLE seulement — hors du
@@ -444,6 +448,109 @@ async function main() {
     Array.isArray(routineRead.payload) && routineRead.payload.length === 1,
     `status ${routineRead.status}, ${Array.isArray(routineRead.payload) ? routineRead.payload.length : "?"} ligne(s)`,
   );
+
+  // 9. MIN-338 : le cloisonnement en base.
+  //
+  // Bob est membre du projet d'Alice (§8) ET owner du sien : il a donc accès
+  // aux DEUX côtés. C'est ce qui rend le déplacement invisible à la RLS — un
+  // `with check` ne voit que la ligne nouvelle, et la destination lui est
+  // légitimement accessible. Seul le trigger de gel peut refuser.
+  for (const [table, id, label, subject] of [
+    ["issues", created.issueId, "d'un ticket", "le ticket"],
+    ["objectives", created.objectiveId, "d'un objectif", "l'objectif"],
+  ]) {
+    const move = await rest(`/rest/v1/${table}?id=eq.${id}`, {
+      method: "PATCH",
+      bearer: bob.jwt,
+      body: { project_id: bobProject.id },
+      headers: { Prefer: "return=representation" },
+    });
+    check(
+      `déplacement ${label} vers son propre projet refusé`,
+      !move.ok,
+      `status ${move.status}`,
+    );
+    const { data: still } = await service
+      .from(table)
+      .select("project_id")
+      .eq("id", id)
+      .single();
+    check(
+      `${subject} est resté dans son projet (témoin)`,
+      still?.project_id === project.id,
+      `project_id ${still?.project_id}`,
+    );
+  }
+
+  // Une page se supprime par la corbeille (clé service), pas par un DELETE
+  // PostgREST : `pages_delete` emportait l'historique et laissait les fichiers
+  // du bucket orphelins.
+  const { data: page, error: pageErr } = await service
+    .from("pages")
+    .insert({
+      project_id: project.id,
+      title: "Probe page",
+      content: { type: "doc", content: [] },
+      position: "a0",
+      created_by: alice.id,
+      updated_by: alice.id,
+    })
+    .select("id")
+    .single();
+  if (pageErr) throw new Error(`page Alice : ${pageErr.message}`);
+
+  const dropPage = await rest(`/rest/v1/pages?id=eq.${page.id}`, {
+    method: "DELETE",
+    bearer: bob.jwt,
+    headers: { Prefer: "return=representation" },
+  });
+  check(
+    "hard delete d'une page refusé",
+    !dropPage.ok || (Array.isArray(dropPage.payload) && dropPage.payload.length === 0),
+    `status ${dropPage.status}`,
+  );
+  const { data: pageStill } = await service
+    .from("pages")
+    .select("id")
+    .eq("id", page.id)
+    .maybeSingle();
+  check("la page est toujours là (témoin)", Boolean(pageStill), pageStill ? "" : "DISPARUE");
+
+  // `get_ai_run_spend` ne révoquait que « from public » — la forme précise que
+  // le balai de MIN-118 avait identifiée comme insuffisante.
+  for (const [who, bearer] of [
+    ["anon", undefined],
+    ["authenticated", bob.jwt],
+  ]) {
+    const res = await rest(`/rest/v1/rpc/get_ai_run_spend`, {
+      method: "POST",
+      bearer,
+      body: { p_run_id: aliceRun.id },
+    });
+    check(
+      `rpc get_ai_run_spend refusé (${who})`,
+      res.status === 401 || res.status === 403,
+      `status ${res.status}${res.status === 404 ? " — SIGNATURE À METTRE À JOUR" : ""}`,
+    );
+  }
+
+  // Les policies revenues sans clause `TO` retombaient sur le rôle `public`,
+  // donc sur `anon` : la clé publique du navigateur, sans aucune session.
+  for (const table of [
+    "agent_runs",
+    "agent_run_events",
+    "agent_run_messages",
+    "issue_events",
+    "page_files",
+    "saved_views",
+  ]) {
+    const res = await rest(`/rest/v1/${table}?select=id&limit=1`);
+    check(
+      `${table} illisible sans session (anon)`,
+      !res.ok || (Array.isArray(res.payload) && res.payload.length === 0),
+      `status ${res.status}, ${Array.isArray(res.payload) ? res.payload.length : "?"} ligne(s)`,
+    );
+  }
 
   console.log(
     `\n${failures === 0 ? "✅ TOUT VERT" : `❌ ${failures} contrôle(s) en échec`}`,

@@ -57,13 +57,24 @@ par ce chemin.
   `auth.uid()` et `can_access_project()`. Depuis MIN-118, toute policy vise
   explicitement le rôle `authenticated` (plus aucune sur le rôle `public`, qui
   aurait inclus `anon`) — garde structurelle documentée dans
-  [20260926091000_policy_tightening.sql](supabase/migrations/20260926091000_policy_tightening.sql).
+  [20260926091000_policy_tightening.sql](supabase/migrations/20260926091000_policy_tightening.sql),
+  rejouée par [20261220090000_tenant_isolation.sql](supabase/migrations/20261220090000_tenant_isolation.sql)
+  (MIN-338 : neuf policies écrites depuis étaient revenues sans clause `TO`).
+- **`project_id` est gelé** sur toute table cloisonnée que la RLS laisse mettre à
+  jour depuis le client. Un `with check` ne voit que la ligne NOUVELLE : il
+  vérifie que la destination m'est accessible, pas que je n'ai pas déplacé la
+  ligne. Un membre de deux projets pouvait donc sortir un ticket, un objectif ou
+  une page de l'un — sans corbeille et sans trace. C'est un trigger
+  `before update of project_id` (`public.freeze_project_id`), posé par une boucle
+  sur le catalogue, qui refuse (MIN-338).
 - **Binding d'auteur :** les inserts client exigent que l'auteur soit l'appelant
   — `created_by = auth.uid()` (`issues`, `issue_relations`), `author_id =
   auth.uid()` (`comments`). Pas d'usurpation d'auteur.
-- **Pas de hard delete PostgREST** sur `issues`/`objectives`/`attachments` : la
-  suppression passe par la corbeille et le nettoyage storage côté serveur
-  ([lib/server/trash.ts](lib/server/trash.ts)).
+- **Pas de hard delete PostgREST** sur `issues`/`objectives`/`attachments`/`pages` :
+  la suppression passe par la corbeille et le nettoyage storage côté serveur
+  ([lib/server/trash.ts](lib/server/trash.ts), [lib/server/pages.ts](lib/server/pages.ts)).
+  `pages_delete` avait rouvert cette porte — un DELETE direct emportait
+  l'historique de la page et laissait ses fichiers orphelins (MIN-338).
 - **Colonnes secrètes cloisonnées par privilèges colonne** (pas seulement par
   RLS, qui filtre les lignes et non les colonnes) : `git_connections`,
   `user_ai_keys`, `api_keys`, `oauth_grants`, `integrations`, `billing_accounts`
@@ -72,9 +83,9 @@ par ce chemin.
   [20260926090000_security_grants.sql](supabase/migrations/20260926090000_security_grants.sql).
   ⚠ Conséquence : une colonne AJOUTÉE plus tard à l'une de ces tables n'est pas
   lisible tant qu'un `grant select (col)` explicite ne l'ajoute pas.
-- **Fonctions SECURITY DEFINER :** réservées au `service_role`, sauf les cinq
-  aides de policy (`can_access_project`, `is_project_member`, `is_project_owner`,
-  `can_watch_agent_run`, `can_watch_numo_comment`) — elles ne répondent que sur
+- **Fonctions SECURITY DEFINER :** réservées au `service_role`, sauf les aides de
+  policy (`can_access_project`, `is_project_member`, `is_project_owner`, et la
+  famille `can_watch_*`) — elles ne répondent que sur
   l'accès de l'appelant, et les policies RLS ne peuvent pas les appeler sans
   EXECUTE. La règle est appliquée par une boucle sur `pg_proc`
   ([20260926093000_definer_grants_sweep.sql](supabase/migrations/20260926093000_definer_grants_sweep.sql)),
@@ -84,7 +95,10 @@ par ce chemin.
   donc chaque fonction naît avec un EXECUTE **explicite** pour ces deux rôles ;
   seul `revoke … from public, anon, authenticated` les retire. Neuf fonctions du
   repo (dashboard admin, coûts IA, usage, `claim_agent_run`) étaient de fait
-  appelables sans aucune session avec la seule clé anon publique.
+  appelables sans aucune session avec la seule clé anon publique. Le piège a
+  resservi : `get_ai_run_spend` (20261118090000) a été écrite avec cette forme-là
+  et laissée ouverte jusqu'à MIN-338 — d'où le balai rejoué, et le garde-fou
+  (§10) qui refuse désormais la forme insuffisante à l'écriture.
 
 ## 3. Chiffrement
 
@@ -254,8 +268,17 @@ question n'est pas de l'empêcher de mal faire, c'est de borner ce qu'elle tient
 - **Sonde anti cross-tenant** ([scripts/security-probe.mjs](scripts/security-probe.mjs)) :
   vérifie EN VRAI contre la prod que RLS + grants refusent les accès croisés
   (lecture/écriture d'un projet étranger, RPC definer, colonnes secrètes,
-  upload hors préfixe, listing de bucket). **Exécution manuelle** (touche la
+  upload hors préfixe, listing de bucket, déplacement d'une ligne vers son
+  propre projet, hard delete d'une page). **Exécution manuelle** (touche la
   prod) — hors du `include` de vitest.
+- **Garde-fou des migrations** ([lib/schema-guardrails.test.ts](lib/schema-guardrails.test.ts)),
+  lui dans la suite : il relit les migrations écrites depuis le dernier balai et
+  échoue si l'une crée une policy sans clause `TO`, une table sans RLS, une
+  definer qui ne se referme pas sur `anon`/`authenticated`, ou une policy UPDATE
+  sur une table cloisonnée sans le gel de `project_id`. C'est la réponse à ce qui
+  a produit MIN-338 : quatre régressions écrites de bonne foi, chacune juste
+  prise seule, par des gens qui n'avaient aucune raison d'ouvrir le fichier où la
+  règle était écrite.
 
 ## 11. Procédure d'incident (courte)
 
