@@ -676,8 +676,29 @@ export function AppSidebar({
   // Ceinture et bretelles : la navigation démonte la ligne qui avait le focus,
   // et un `blur` n'a alors personne à qui arriver. Sans cette remise à zéro, la
   // barre pourrait rester dépliée sur la page suivante.
+  //
+  // Le SURVOL part avec, et pour la même raison. La remise à zéro d'en dessous
+  // est branchée sur la sortie du mode rail : elle ne voit donc rien quand on va
+  // d'une page à barre secondaire à une AUTRE — `overlay` ne retombe jamais.
+  // C'est le trajet de la palette : on survole la barre, ⌘K passe son voile
+  // par-dessus (la barre n'est plus la cible du pointeur, son `pointerleave`
+  // peut ne jamais venir), on choisit une page au clavier, et on arrive primaire
+  // DÉPLIÉE par-dessus la secondaire, pointeur à l'autre bout de l'écran.
+  //
+  // Se replier en arrivant est de toute façon ce qu'on veut, y compris quand
+  // c'est un clic DANS la barre qui a navigué : c'est ce que dit déjà le
+  // commentaire de `onFocusCapture`, et `onPointerMove` rattrape au moindre
+  // mouvement le cas du pointeur resté dessus.
   const routeKey = usePathname();
-  useEffect(() => setFocusWithin(false), [routeKey]);
+  useEffect(() => {
+    setFocusWithin(false);
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    returnWatcher.current?.();
+    setHovered(false);
+  }, [routeKey]);
 
   // Même histoire pour le survol et le menu de compte, mais à la SORTIE du mode
   // rail : leurs poseurs sont branchés sur `overlay`. Quitter une page à barre
@@ -785,14 +806,58 @@ export function AppSidebar({
     returnWatcher.current = disarm;
   };
 
+  /**
+   * Arme le repli — et ne le REPOUSSE jamais s'il est déjà armé. Le délai est là
+   * pour tolérer un frôlement, pas pour se recharger : le filet ci-dessous
+   * appelle ceci à chaque `pointermove` hors de la barre, et un minuteur remis à
+   * zéro à chaque mouvement ne se déclencherait qu'à l'arrêt du pointeur.
+   */
+  const scheduleClose = () => {
+    if (closeTimer.current) return;
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = null;
+      setHovered(false);
+    }, RAIL_CLOSE_DELAY_MS);
+  };
+
   const closeRail = (e?: { clientX: number; clientY: number }) => {
     if (e && leavesThroughWindowButtons(e)) {
       watchPointerReturn();
       return;
     }
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setHovered(false), RAIL_CLOSE_DELAY_MS);
+    scheduleClose();
   };
+
+  /**
+   * Le filet : **`pointerleave` n'est pas garanti.** Il suppose que la barre est
+   * la cible du pointeur quand celui-ci s'en va — or un voile peut s'interposer
+   * pendant qu'on la survole (la palette, une boîte de dialogue), et le pointeur
+   * repart alors sans que la barre l'apprenne. `hovered` reste vrai, la primaire
+   * reste dépliée par-dessus la secondaire, et plus rien ne la referme tant
+   * qu'on n'est pas retourné la survoler pour en ressortir.
+   *
+   * Tant que la barre est dépliée PAR LE SURVOL, on vérifie donc à la source :
+   * un mouvement de pointeur hors de la barre la referme, d'où qu'il vienne.
+   *
+   * Rien à voir avec `onPointerMove` sur la barre, qui fait l'inverse (ouvrir) —
+   * et rien qui coûte : ni état ni rendu, un `contains` par mouvement, et
+   * seulement pendant que la barre est dépliée (MIN-323).
+   *
+   * ⚠ Ne casse pas MIN-291 : sur les boutons macOS natifs, la page ne reçoit
+   * AUCUN mouvement. Le guetteur de retour garde donc la main sur ce cas-là.
+   */
+  useEffect(() => {
+    if (!overlay || !hovered) return;
+    const onMove = (event: PointerEvent) => {
+      if (railRef.current?.contains(event.target as Node)) return;
+      scheduleClose();
+    };
+    document.addEventListener("pointermove", onMove);
+    return () => document.removeEventListener("pointermove", onMove);
+    // `scheduleClose` ne lit que des refs : sa fermeture peut être périmée sans
+    // que rien ne change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overlay, hovered]);
 
   const collapsed = overlay && !(hovered || focusWithin || menuOpen);
 
@@ -889,13 +954,25 @@ export function AppSidebar({
           overlay
             ? (e) => {
                 // Une perte de focus qui ne désigne AUCUNE nouvelle cible n'est
-                // pas une sortie de la barre (MIN-313) : c'est ce que produit
-                // la désactivation de la fenêtre — la barre de menus macOS, un
-                // ⌘Tab —, et c'est aussi ce que produisait un remplacement de
-                // nœud. Replier la barre là-dessus la referme sous un pointeur
-                // qui n'a pas bougé.
-                if (e.relatedTarget === null) return;
-                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                // pas forcément une sortie de la barre (MIN-313) : c'est ce que
+                // produit la désactivation de la fenêtre — la barre de menus
+                // macOS, un ⌘Tab. Replier là-dessus refermerait la barre sous un
+                // pointeur qui n'a pas bougé.
+                //
+                // Mais c'est AUSSI ce que produit un clic sur une zone non
+                // focusable de la page : le focus retombe sur le document, et
+                // s'en tenir à « pas de cible, on garde » laissait la barre
+                // dépliée par-dessus la secondaire pour de bon, après une
+                // simple tabulation dedans. Ce qui tranche entre les deux, c'est
+                // qui a la main : la fenêtre l'a encore, ou elle l'a perdue.
+                const next = e.relatedTarget as Node | null;
+                if (next === null) {
+                  if (!document.hasFocus()) return;
+                  if (e.currentTarget.contains(document.activeElement)) return;
+                  setFocusWithin(false);
+                  return;
+                }
+                if (!e.currentTarget.contains(next)) {
                   setFocusWithin(false);
                 }
               }
