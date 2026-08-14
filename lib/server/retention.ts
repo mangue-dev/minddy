@@ -54,6 +54,14 @@ export const RETENTION_DAYS = {
    */
   stripeWebhookPayload: 90,
   /**
+   * Accusés de livraison des webhooks de forge (MIN-333) — l'anti-rejeu de
+   * `forge_webhook_deliveries`. Contrairement à la ligne Stripe, celle-ci part
+   * ENTIÈREMENT : elle ne porte qu'un identifiant opaque, et une forge ne
+   * re-livre jamais au-delà de quelques heures. Sept jours laissent une marge
+   * confortable sans faire enfler une table qui grossit à chaque événement.
+   */
+  forgeWebhookDeliveries: 7,
+  /**
    * Corbeille (MIN-133). Le seul contenu utilisateur que ce balayage détruit —
    * et seulement parce que l'utilisateur l'a déjà supprimé une fois. La durée
    * est celle affichée sur chaque ligne de la corbeille : elle vit dans
@@ -254,6 +262,16 @@ async function stripPayloads(service: Service, now: Date) {
   return count ?? 0;
 }
 
+/** Accusés de livraison de webhook de forge au-delà de leur fenêtre de rejeu. */
+async function purgeForgeWebhookDeliveries(service: Service, now: Date) {
+  return counted(
+    await service
+      .from("forge_webhook_deliveries")
+      .delete({ count: "exact" })
+      .lt("received_at", cutoff(RETENTION_DAYS.forgeWebhookDeliveries, now))
+  );
+}
+
 /**
  * Versions de page expirées (MIN-277).
  *
@@ -367,6 +385,9 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
       purgeDormantFeedbackIdentities(service, now)
     ),
     await step("stripe_webhook_payloads", () => stripPayloads(service, now)),
+    await step("forge_webhook_deliveries", () =>
+      purgeForgeWebhookDeliveries(service, now)
+    ),
     await step("page_versions", () => purgePageVersions(service, now)),
     // AVANT la corbeille, et l'ordre a une raison : purger une page emporte ses
     // fichiers elle-même (lib/server/trash.ts). Passer d'abord ici évite de

@@ -19,6 +19,7 @@ import {
   getGitlabAuthorizeUrl,
   isGitlabConfigured,
 } from "@/lib/server/git/gitlab-app";
+import { ensureRepoWebhookSecret } from "@/lib/server/git/webhook-secret";
 import {
   backfillRemoteIssues,
   getIssueSyncLink,
@@ -325,11 +326,18 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         canWrite = level === "write";
       }
     } else {
-      // GitLab : le hook vit sur le dépôt, on le provisionne/bascule ici.
+      // GitLab : le hook vit sur le dépôt, on le provisionne/bascule ici. Son
+      // secret est propre à CE dépôt (MIN-333) et minté avant l'appel : le
+      // récepteur ne reconnaîtra le hook qu'à ce secret-là.
       try {
+        const secret = await ensureRepoWebhookSecret({
+          provider: "gitlab",
+          externalRepoId: link.externalRepoId,
+        });
         const token = await getGitlabAccessToken(link.connectionId);
         hookId = await ensureGitlabIssuesHook(token, link.externalRepoId, {
           enabled,
+          secret,
         });
       } catch (err) {
         console.error("[git-link] gitlab hook failed:", (err as Error).message);

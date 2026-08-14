@@ -13,6 +13,7 @@ import {
   gitlabHeaders,
   gitlabNextPage,
 } from "./gitlab-rest";
+import { ensureRepoWebhookSecret } from "./webhook-secret";
 
 /**
  * App OAuth GitLab + plomberie des tokens (MIN-47), portée d'AutoKap
@@ -466,23 +467,24 @@ interface GitlabHook {
  * commentaires de MR du journal d'activité et le direct des PR (MIN-161) — le
  * désactiver, c'est remettre `issues_events: false`, pas supprimer la ligne.
  *
- * Renvoie l'id du hook (stocké en `issue_sync_hook_id`), ou null si aucun
- * secret n'est déployé — sans secret le récepteur est fail-closed, un hook
- * serait ignoré de toute façon. Lève sur échec d'appel API.
+ * `opts.secret` est le secret PROPRE À CE DÉPÔT (MIN-333), minté par
+ * `ensureRepoWebhookSecret` : c'est l'appelant qui le fournit, parce que c'est
+ * lui qui sait dans quel ordre l'écrire (en base d'abord, chez GitLab ensuite).
+ *
+ * `opts.enabled` OMIS = on préserve `issues_events` tel quel et on ne crée
+ * rien : c'est la forme qu'utilise la rotation de secret, qui ne doit pas
+ * décider à la place du réglage du projet.
+ *
+ * Renvoie l'id du hook (stocké en `issue_sync_hook_id`), ou null quand il n'y
+ * avait rien à faire. Lève sur échec d'appel API.
  */
 export async function ensureGitlabIssuesHook(
   accessToken: string,
   projectId: string,
-  opts: { enabled: boolean },
+  opts: { enabled?: boolean; secret: string },
 ): Promise<string | null> {
   const webhookUrl = `${SITE_URL}/api/webhooks/gitlab`;
-  const secret = process.env.GITLAB_WEBHOOK_SECRET;
-  if (!secret) {
-    console.warn(
-      "[gitlab-app] GITLAB_WEBHOOK_SECRET is not set — hook not provisioned",
-    );
-    return null;
-  }
+  const secret = opts.secret;
 
   const base = `${GITLAB_API_BASE}/projects/${encodeURIComponent(projectId)}/hooks`;
   const listResponse = await fetch(base, { headers: gitlabHeaders(accessToken) });
@@ -510,8 +512,9 @@ export async function ensureGitlabIssuesHook(
   };
 
   if (!existing) {
-    // Rien à créer pour une simple désactivation.
-    if (!opts.enabled) return null;
+    // Rien à créer pour une simple désactivation — ni pour une rotation, qui
+    // n'a de sens que sur un hook déjà posé.
+    if (opts.enabled !== true) return null;
     return write(base, "POST", {
       url: webhookUrl,
       token: secret,
@@ -536,7 +539,9 @@ export async function ensureGitlabIssuesHook(
   await write(`${base}/${existing.id}`, "PUT", {
     url: webhookUrl,
     token: secret,
-    issues_events: opts.enabled,
+    // Omis = rotation de secret : le réglage du projet n'est pas la question,
+    // on repose ce que le hook portait déjà.
+    issues_events: opts.enabled ?? existing.issues_events ?? false,
     // Le hook est partagé avec la synchro des MR : on le préserve tel quel.
     merge_requests_events: existing.merge_requests_events ?? true,
     // Les notes, elles, s'ALIGNENT plutôt que se préserver : c'est ce passage
@@ -550,4 +555,45 @@ export async function ensureGitlabIssuesHook(
     enable_ssl_verification: true,
   });
   return String(existing.id);
+}
+
+/**
+ * Rotation d'un hook resté sur le secret global historique (MIN-333).
+ *
+ * Déclenchée par le récepteur, HORS chemin critique, au premier événement qui
+ * arrive avec `GITLAB_WEBHOOK_SECRET` : c'est le seul moment où l'on sait à la
+ * fois que ce dépôt est encore sur l'ancien secret et qu'il est vivant. Elle
+ * mint un secret propre au dépôt, réécrit le hook avec, et le repli s'éteint
+ * pour ce dépôt-là.
+ *
+ * L'ORDRE est le fond de l'affaire : le secret est écrit en base AVANT le hook.
+ * L'inverse laisserait une fenêtre où GitLab signe avec un secret que minddy ne
+ * connaît pas encore, donc des événements refusés en 401. Ici, la fenêtre est de
+ * l'autre côté — le repli couvre les événements en vol.
+ *
+ * Best-effort : un échec d'appel GitLab laisse le hook sur l'ancien secret, et
+ * l'événement suivant retentera. Le secret en base, lui, est déjà posé — c'est
+ * `ensureRepoWebhookSecret` qui le reprendra tel quel, sans en générer un
+ * second qui invaliderait ce qu'on vient d'écrire chez la forge.
+ */
+export async function rotateGitlabWebhookSecret(params: {
+  externalRepoId: string;
+  connectionId: string;
+}): Promise<void> {
+  try {
+    const secret = await ensureRepoWebhookSecret({
+      provider: "gitlab",
+      externalRepoId: params.externalRepoId,
+    });
+    const token = await getGitlabAccessToken(params.connectionId);
+    await ensureGitlabIssuesHook(token, params.externalRepoId, { secret });
+    console.info(
+      `[gitlab-app] webhook secret rotated for project ${params.externalRepoId}`,
+    );
+  } catch (err) {
+    console.error(
+      `[gitlab-app] webhook secret rotation failed for project ${params.externalRepoId}:`,
+      (err as Error).message,
+    );
+  }
 }

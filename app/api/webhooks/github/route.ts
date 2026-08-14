@@ -19,6 +19,7 @@ import {
 } from "@/lib/server/agent/pr-webhook-core";
 import { normalizeGithubIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
+import { isReplayedForgeDelivery } from "@/lib/server/git/webhook-dedup";
 import {
   findPullRequestByNumber,
   findPullRequestsByHeadSha,
@@ -91,7 +92,13 @@ import type { PrActionEventType } from "@/lib/pr-events";
  *
  * Fail-closed : signature invalide → 401. Secret non déployé → 503 sans rien
  * traiter (GitHub re-livrera une fois le secret en place), aligné sur le
- * récepteur GitLab.
+ * récepteur GitLab. Une livraison déjà vue (`X-GitHub-Delivery`) est acquittée
+ * sans être rejouée (MIN-333).
+ *
+ * Le secret, lui, est celui de l'App — pas celui d'un dépôt : contrairement à
+ * GitLab, l'endpoint est déclaré au niveau de l'App et son secret ne se lit que
+ * dans les réglages de l'App, jamais dans ceux d'un dépôt installé. C'est
+ * pourquoi seul le côté GitLab a eu besoin d'un secret par dépôt (MIN-333).
  */
 
 interface GithubActor {
@@ -635,6 +642,15 @@ export async function POST(request: NextRequest) {
   );
   if (!ok) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+  }
+
+  // Rejeu : la même livraison, déjà traitée (MIN-333). Après la vérification —
+  // marquer une livraison sans signature valide reviendrait à pouvoir faire
+  // taire l'événement réel qui la porte.
+  if (
+    await isReplayedForgeDelivery("github", request.headers.get("x-github-delivery"))
+  ) {
+    return NextResponse.json({ ok: true, duplicate: true });
   }
 
   const event = request.headers.get("x-github-event");

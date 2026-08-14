@@ -1,5 +1,5 @@
-import { timingSafeEqual } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
+import { afterOrNow } from "@/lib/server/after-safe";
 import { syncPrState, findRunsForPr, type SyncedPrRun } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import {
@@ -20,6 +20,14 @@ import {
 import { normalizeGitlabIssueEvent } from "@/lib/server/git/issue-sync-core";
 import { syncRemoteIssueEvent } from "@/lib/server/git/issue-sync";
 import {
+  legacyGitlabWebhookSecret,
+  loadWebhookSecrets,
+  verifyWebhookToken,
+} from "@/lib/server/git/webhook-secret";
+import { isReplayedForgeDelivery } from "@/lib/server/git/webhook-dedup";
+import { isForgeTokenCryptoConfigured } from "@/lib/server/git/token-crypto";
+import { rotateGitlabWebhookSecret } from "@/lib/server/git/gitlab-app";
+import {
   findPullRequestByNumber,
   resolveIssueForPr,
   upsertPullRequest,
@@ -39,6 +47,14 @@ import { getServiceClient } from "@/lib/supabase-service";
  *
  * On vérifie le secret (`X-Gitlab-Token`, comparaison à temps constant) puis on
  * traite le hook `Merge Request Hook` (object_kind `merge_request`) :
+ *
+ * Le secret est PROPRE AU DÉPÔT (MIN-333) : il est tiré des liaisons dont
+ * l'`external_repo_id` est celui de `project.id`, et de nulle autre. Un jeton
+ * volé chez un locataire ne signe donc rien chez un autre — c'est exactement ce
+ * que le secret global d'avant permettait, GitLab montrant le token d'un hook à
+ * qui peut l'éditer. Le repli sur `GITLAB_WEBHOOK_SECRET` ne sert que les hooks
+ * pas encore rotés, et déclenche leur rotation.
+ *
  *  - toute action utile → INGÈRE la MR dans `pull_requests` (MIN-143 : de Numo
  *    ou d'un humain, c'est le même fait du dépôt).
  *  - action `merge` / `close` / `reopen` / `open` → met à jour `agent_runs.pr_state`
@@ -83,8 +99,10 @@ import { getServiceClient } from "@/lib/supabase-service";
  * fait à la main sur gitlab.com par ce même compte n'est pas tracé — impossible à
  * distinguer de l'écho, même compromis que le filtre bot GitHub.
  *
- * Fail-closed intégral : token invalide → 401 ; secret non déployé → acquitté
- * SANS traitement (ce récepteur mute l'état, il n'accepte rien d'invérifiable).
+ * Fail-closed intégral : token invalide → 401 ; aucune matière à vérifier
+ * (ni chiffrement de secret configuré, ni repli) → 503 sans rien traiter, comme
+ * le récepteur GitHub. Une livraison déjà vue (`X-Gitlab-Event-UUID`) est
+ * acquittée sans être rejouée.
  */
 
 interface GitlabUserPayload {
@@ -485,36 +503,88 @@ async function handleIssue(payload: unknown): Promise<void> {
   await syncRemoteIssueEvent(remote);
 }
 
-/** Comparaison à temps constant du X-Gitlab-Token (secret partagé verbatim). */
-function tokenMatches(provided: string | null, secret: string): boolean {
-  if (!provided) return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(secret);
-  return a.length === b.length && timingSafeEqual(a, b);
+/**
+ * L'identifiant NUMÉRIQUE du dépôt, porté par tous les hooks GitLab
+ * (`project.id`). C'est lui la clé du secret et du routage (MIN-333) : un
+ * `path_with_namespace` se libère et se réattribue, un id non.
+ */
+function payloadRepoId(payload: unknown): string | null {
+  const id = (payload as { project?: { id?: unknown } } | null)?.project?.id;
+  return typeof id === "number" || (typeof id === "string" && id.trim())
+    ? String(id)
+    : null;
 }
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  const secret = process.env.GITLAB_WEBHOOK_SECRET;
 
-  // FAIL-CLOSED : ce récepteur MUTE l'état (pr_state, statut d'issue, activité).
-  // Sans secret déployé, on acquitte SANS traiter — sinon n'importe qui
-  // connaissant le chemin d'un dépôt lié pourrait forger un merge et passer une
-  // issue en done. (Le webhook GitHub historique est resté fail-open ; ici la
-  // variable est neuve, aucun déploiement existant à ne pas casser.)
-  if (!secret) {
-    console.warn("[webhooks/gitlab] GITLAB_WEBHOOK_SECRET is not set — payload ignored");
-    return NextResponse.json({ ok: true });
+  // Le corps est lu AVANT la vérification, et c'est nécessaire : le secret est
+  // propre au dépôt (MIN-333), et le seul endroit qui dise de quel dépôt il
+  // s'agit, c'est la charge utile. On n'en tire qu'un identifiant, aucun
+  // traitement — le corps reste invérifié jusqu'à `verifyWebhookToken`.
+  let payload: MergeRequestEvent & NoteEvent & EmojiEvent & PipelineEvent;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "invalid payload" }, { status: 400 });
   }
-  if (!tokenMatches(request.headers.get("x-gitlab-token"), secret)) {
+  const repoId = payloadRepoId(payload);
+  if (!repoId) {
+    return NextResponse.json({ error: "unknown project" }, { status: 400 });
+  }
+
+  // FAIL-CLOSED intégral : ce récepteur MUTE l'état (pr_state, statut d'issue,
+  // activité). Sans matière à vérifier, rien n'est traité — sinon n'importe qui
+  // connaissant le chemin d'un dépôt lié pourrait forger un merge et passer une
+  // issue en done. 503 plutôt que 200, comme le récepteur GitHub et comme
+  // SECURITY.md le promet : GitLab re-livrera une fois la configuration en place.
+  if (!isForgeTokenCryptoConfigured() && !legacyGitlabWebhookSecret()) {
+    console.error(
+      "[webhooks/gitlab] no webhook secret material configured — event refused",
+    );
+    return NextResponse.json(
+      { error: "webhook secret not configured" },
+      { status: 503 },
+    );
+  }
+
+  const candidates = await loadWebhookSecrets({
+    provider: "gitlab",
+    externalRepoId: repoId,
+  });
+  const verdict = verifyWebhookToken(
+    request.headers.get("x-gitlab-token"),
+    candidates,
+  );
+  // Un jeton reconnu par le secret d'un AUTRE dépôt ne l'est pas ici : les
+  // candidats sont ceux de ce dépôt-là, et d'eux seuls.
+  if (verdict === "rejected") {
     return NextResponse.json({ error: "invalid token" }, { status: 401 });
+  }
+  // Hook resté sur le secret global historique : on le rote hors chemin
+  // critique, et le repli s'éteint pour ce dépôt.
+  if (verdict === "legacy" && candidates.connectionId) {
+    afterOrNow(() =>
+      rotateGitlabWebhookSecret({
+        externalRepoId: repoId,
+        connectionId: candidates.connectionId as string,
+      }),
+    );
+  }
+
+  // Rejeu : la même livraison, déjà traitée. Après la vérification — marquer une
+  // livraison sans secret valide reviendrait à pouvoir faire taire l'événement
+  // réel qui la porte.
+  if (
+    await isReplayedForgeDelivery(
+      "gitlab",
+      request.headers.get("x-gitlab-event-uuid"),
+    )
+  ) {
+    return NextResponse.json({ ok: true, duplicate: true });
   }
 
   try {
-    const payload = JSON.parse(rawBody) as MergeRequestEvent &
-      NoteEvent &
-      EmojiEvent &
-      PipelineEvent;
     // Merge Requests (agent), Notes (commentaires de MR), Issues (synchro du
     // dépôt lié), Emoji et Pipeline (direct seul) — tout autre object_kind est
     // acquitté sans traitement.

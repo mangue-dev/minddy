@@ -93,17 +93,23 @@ const toTarget = (row: TargetRow): IssueSyncTarget => ({
  * Les liaisons ACTIVES d'un dépôt. Plusieurs projets peuvent lier le même dépôt
  * (via des connexions différentes) : le fan-out doit tous les servir, comme
  * `syncPrState` le fait pour les PR.
+ *
+ * Sur l'IDENTIFIANT NUMÉRIQUE du dépôt, pas sur son nom (MIN-333). Un nom de
+ * dépôt se libère chez la forge dès qu'on le renomme, et se réattribue à qui le
+ * demande : router sur lui, c'est accepter que le repreneur d'un nom hérite des
+ * tickets de son ancien porteur. L'id, lui, ne se réattribue jamais — et il est
+ * déjà stocké (`external_repo_id`) comme il est déjà porté par la charge utile.
  */
 export async function listIssueSyncTargets(params: {
   provider: RepoProviderId;
-  repoFullName: string;
+  repoId: string;
 }): Promise<IssueSyncTarget[]> {
   const service = getServiceClient();
   const { data, error } = await service
     .from("project_git_links")
     .select(TARGET_COLUMNS)
     .eq("provider", params.provider)
-    .eq("repo_full_name", params.repoFullName)
+    .eq("external_repo_id", params.repoId)
     .eq("issue_sync_enabled", true);
   if (error) {
     console.error("[issue-sync] targets lookup failed:", error.message);
@@ -366,7 +372,7 @@ async function applyRemoteLabels(
 export async function syncRemoteIssueEvent(remote: RemoteIssue): Promise<void> {
   const targets = await listIssueSyncTargets({
     provider: remote.provider,
-    repoFullName: remote.repoFullName,
+    repoId: remote.repoId,
   });
   for (const target of targets) {
     try {
@@ -378,6 +384,51 @@ export async function syncRemoteIssueEvent(remote: RemoteIssue): Promise<void> {
       );
     }
   }
+  await refreshRepoFullName(targets, remote.repoFullName);
+}
+
+/**
+ * Le nom du dépôt stocké suit celui que la forge vient d'annoncer.
+ *
+ * Depuis MIN-333 le nom ne ROUTE plus rien — c'est l'id qui le fait. Il ne sert
+ * plus qu'à s'afficher et à composer des URLs, et à ce titre il doit rester
+ * juste : un dépôt renommé chez la forge gardait sinon son ancien nom dans les
+ * réglages du projet et dans les liens des tickets importés, indéfiniment.
+ *
+ * Best-effort, et seulement quand il a bougé : ce chemin passe à chaque webhook.
+ */
+async function refreshRepoFullName(
+  targets: IssueSyncTarget[],
+  repoFullName: string,
+): Promise<void> {
+  const stale = targets.filter(
+    (t) => !!repoFullName && t.repoFullName !== repoFullName,
+  );
+  if (stale.length === 0) return;
+  const cut = repoFullName.lastIndexOf("/");
+  const patch: Record<string, unknown> = {
+    repo_full_name: repoFullName,
+    // Le propriétaire est ce qui précède le DERNIER `/` — la règle vaut pour les
+    // deux forges, y compris un groupe GitLab imbriqué (`groupe/sous-groupe`).
+    repo_owner: cut > 0 ? repoFullName.slice(0, cut) : null,
+    updated_at: new Date().toISOString(),
+  };
+  // `repo_name` n'a pas le même sens des deux côtés : chez GitHub c'est le
+  // dernier segment du chemin, chez GitLab le NOM d'affichage du projet, que la
+  // charge utile d'une issue ne porte pas. On ne réécrit donc que celui qu'on
+  // sait dire juste.
+  if (targets[0]?.provider === "github" && cut >= 0) {
+    patch.repo_name = repoFullName.slice(cut + 1);
+  }
+  const service = getServiceClient();
+  const { error } = await service
+    .from("project_git_links")
+    .update(patch)
+    .in(
+      "id",
+      stale.map((t) => t.linkId),
+    );
+  if (error) console.error("[issue-sync] repo rename failed:", error.message);
 }
 
 // --- Backfill à l'activation ------------------------------------------------

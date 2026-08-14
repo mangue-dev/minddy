@@ -95,6 +95,12 @@ par ce chemin.
   AES-256-GCM (enveloppe) avant écriture, jamais renvoyés par l'API :
   - tokens OAuth GitLab → `GIT_TOKEN_ENCRYPTION_SECRET` /
     `GITLAB_TOKEN_ENCRYPTION_SECRET`
+  - **secret de webhook GitLab, un par dépôt** (MIN-333) → même enveloppe et
+    même secret de dérivation que les tokens ci-dessus, rangé dans
+    `project_git_links.webhook_secret_encrypted`. Par dépôt et pas global :
+    GitLab affiche le token d'un hook à qui peut l'éditer, donc un secret unique
+    écrit chez chaque locataire laissait tout mainteneur d'un dépôt lié forger
+    des événements pour les dépôts des autres.
   - clés IA « BYOK » → `AI_KEY_ENCRYPTION_SECRET`
   - secrets SSO des boards de feedback → `FEEDBACK_SSO_ENCRYPTION_SECRET`
     (MIN-119). Chiffrés et non hachés parce qu'ils sont **partagés** avec le
@@ -176,7 +182,8 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
 | Surface | Protection |
 | --- | --- |
 | Crons (`/api/cron/*`) | `Authorization: Bearer ${CRON_SECRET}`, comparé en `timingSafeEqual` ([lib/server/cron-auth.ts](lib/server/cron-auth.ts)) |
-| Webhooks GitHub/GitLab | Signature HMAC (`timingSafeEqual`) ; **fail-closed** — secret absent → 503, rien traité |
+| Webhook GitHub | Signature HMAC de l'App (`timingSafeEqual`) ; **fail-closed** — secret absent → 503, rien traité ; anti-rejeu sur `X-GitHub-Delivery` |
+| Webhook GitLab | Jeton **propre au dépôt**, résolu sur `project.id` puis comparé en `timingSafeEqual` ; **fail-closed** — aucune matière à vérifier → 503, jeton refusé → 401 ; anti-rejeu sur `X-Gitlab-Event-UUID` |
 | Webhook Stripe | Signature Stripe vérifiée |
 | Webhook Supabase (nouvel utilisateur) | Secret partagé `x-minddy-webhook-secret` ; fail-closed 503 |
 | OAuth 2.1 / MCP (`/api/oauth/*`, `/api/mcp`) | Clients publics PKCE S256 obligatoire, tokens opaques hashés, codes à usage unique |
