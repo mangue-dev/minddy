@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -13,19 +14,6 @@ import {
 import type { Invitation, Member } from "@/lib/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-/** L'origine PUBLIQUE de la requête — celle que le navigateur a tapée, pas le
-    host interne derrière le proxy Vercel. Elle part dans le lien de l'email. */
-function publicOrigin(request: NextRequest): string {
-  const host =
-    request.headers.get("x-forwarded-host") ??
-    request.headers.get("host") ??
-    new URL(request.url).host;
-  const proto =
-    request.headers.get("x-forwarded-proto") ??
-    (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
 
 /** GET /api/projects/[id]/members — members + pending invitations (any accessible user). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -143,8 +131,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     actorId: auth.user.id,
     email: (body as { email?: unknown })?.email,
     // Le lien du mail doit ramener sur CE déploiement (dev, preview, prod) —
-    // sinon un test en local envoie l'invité sur la production.
-    origin: publicOrigin(request),
+    // sinon un test en local envoie l'invité sur la production. Il se lit dans
+    // l'ENVIRONNEMENT et pas dans la requête (MIN-351) : `X-Forwarded-Host` est
+    // choisi par l'appelant, et le jeton d'acceptation partait donc vers le
+    // domaine que celui-ci désignait, dans un e-mail expédié par nous.
+    origin: canonicalAppOrigin(),
     // On ne connaît pas la langue de l'invité : on prend celle de l'invitant,
     // qui est la personne dont il attend le message.
     locale: (await getLocale()) === "fr" ? "fr" : "en",

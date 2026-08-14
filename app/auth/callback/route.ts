@@ -14,6 +14,7 @@ import {
   parseOtpType,
 } from "@/lib/desktop/auth-link";
 import { buildAuthFailureRedirect, completeAuthArrival } from "@/lib/server/auth-arrival";
+import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 
 /**
  * Exchanges the auth code (OAuth) for a session, writing the session cookies,
@@ -115,13 +116,17 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // `Secure` sur les cookies de session : le paquet ne le pose pas
+      // (MIN-351, lib/session-cookies.ts). Ici comme dans `cookieOptions` —
+      // c'est cet adaptateur-ci qui écrit, et il reçoit ses options du client.
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+            cookieStore.set(name, value, { ...options, ...SESSION_COOKIE_OPTIONS })
           );
         },
       },

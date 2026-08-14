@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+
 /**
  * Server Supabase client (anon key, RLS-enforced) for RSC / server components.
  * Reads the session from the request cookies; `setAll` is a no-op because
@@ -13,6 +15,7 @@ export async function createServerSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return cookieStore.getAll();

@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth-otp-pending";
 import { isSameOriginRequest } from "@/lib/server/same-origin";
 import { buildAuthFailureRedirect, completeAuthArrival } from "@/lib/server/auth-arrival";
+import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 
 /**
  * Le geste qui ouvre la session, au bout du lien e-mail (MIN-345).
@@ -45,13 +46,16 @@ export async function POST(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // `Secure` sur les cookies de session (MIN-351, lib/session-cookies.ts) :
+      // c'est ici que la session s'ouvre au bout d'un lien e-mail.
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+            cookieStore.set(name, value, { ...options, ...SESSION_COOKIE_OPTIONS })
           );
         },
       },

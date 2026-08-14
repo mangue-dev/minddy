@@ -1,12 +1,19 @@
 import "server-only";
 
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { MFA_REQUIRED_CODE, needsMfaChallenge } from "@/lib/mfa";
 import { hasForeignOrigin, isMutatingMethod } from "@/lib/server/same-origin";
+import {
+  createCookieSink,
+  SESSION_COOKIE_OPTIONS,
+  type CookieSink,
+} from "@/lib/session-cookies";
+
+export { createCookieSink, type CookieSink };
 
 /**
  * Anon Supabase client bound to the request cookies (RLS-enforced). Route
@@ -19,6 +26,7 @@ export function createSupabaseFromRequest(request: NextRequest): SupabaseClient 
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -60,34 +68,11 @@ export function createSupabaseFromRequest(request: NextRequest): SupabaseClient 
  * D'où ce constructeur-ci, à réserver exactement à ça : **une surface publique
  * qui lit l'utilisateur connecté**. Elle doit passer sa réponse par
  * `applyCookies` avant de la rendre, sans quoi on est revenu au point de départ.
+ *
+ * Le report lui-même vit dans [lib/session-cookies.ts](../session-cookies.ts) :
+ * le proxy en a besoin AUSSI (MIN-351) et ne peut pas importer ce module-ci,
+ * qui est `server-only` et tire next-intl derrière lui.
  */
-export interface CookieSink {
-  /** Ce que `@supabase/ssr` appelle pour écrire — son `cookies.setAll`. */
-  collect: (cookies: { name: string; value: string; options: CookieOptions }[]) => void;
-  /** À appeler sur la réponse rendue — y compris une redirection. */
-  applyCookies: <T extends NextResponse>(response: T) => T;
-}
-
-/**
- * Le report en lui-même, sans Supabase : ce qu'on a reçu à écrire ressort sur la
- * réponse. Séparé pour être tenu par un test — c'est le maillon qui manquait, et
- * un maillon qu'on ne peut pas exercer est un maillon qui recassera.
- */
-export function createCookieSink(): CookieSink {
-  const pending: { name: string; value: string; options: CookieOptions }[] = [];
-  return {
-    collect(cookies) {
-      pending.push(...cookies);
-    },
-    applyCookies(response) {
-      for (const { name, value, options } of pending) {
-        response.cookies.set(name, value, options);
-      }
-      return response;
-    },
-  };
-}
-
 export function createSupabaseWithCookieSink(
   request: NextRequest
 ): CookieSink & { supabase: SupabaseClient } {
@@ -96,6 +81,7 @@ export function createSupabaseWithCookieSink(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll();

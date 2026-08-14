@@ -5,6 +5,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
+import { accessibleProjectIds } from "@/lib/server/project-access";
 import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
 
@@ -43,19 +44,43 @@ export async function GET(request: NextRequest) {
   // may not be able to read the actor's profile, and entity reads are simplest
   // server-side).
   const service = getServiceClient();
-  const issueIds = [...new Set(notifs.map((n) => n.issue_id).filter(Boolean))] as string[];
-  const objectiveIds = [...new Set(notifs.map((n) => n.objective_id).filter(Boolean))] as string[];
+
+  /**
+   * L'accès est reposé ICI, avant toute hydratation (MIN-351).
+   *
+   * La RLS garantit que ces lignes sont les miennes — pas que j'aie encore le
+   * droit de lire ce qu'elles DÉSIGNENT. Une notification est un fait daté ;
+   * l'hydratation, elle, va chercher en clé service des titres et des extraits
+   * de commentaires **vivants**. Retiré du projet, l'ancien membre gardait donc
+   * dans son inbox une fenêtre en lecture continue sur des tickets et des
+   * discussions devenus étrangers — leurs titres d'aujourd'hui, pas ceux du
+   * jour où il a été notifié.
+   *
+   * Une ligne sans `project_id` reste : elle ne désigne rien qui appartienne à
+   * un projet, il n'y a donc pas d'accès à revérifier.
+   */
+  const visible = await accessibleProjectIds(
+    auth.user.id,
+    [...new Set(notifs.map((n) => n.project_id).filter(Boolean))] as string[]
+  );
+  const readable = notifs.filter(
+    (n) => !n.project_id || visible.has(n.project_id as string)
+  );
+  if (readable.length === 0) return NextResponse.json([]);
+
+  const issueIds = [...new Set(readable.map((n) => n.issue_id).filter(Boolean))] as string[];
+  const objectiveIds = [...new Set(readable.map((n) => n.objective_id).filter(Boolean))] as string[];
   const feedbackPostIds = [
-    ...new Set(notifs.map((n) => n.feedback_post_id).filter(Boolean)),
+    ...new Set(readable.map((n) => n.feedback_post_id).filter(Boolean)),
   ] as string[];
-  const routineIds = [...new Set(notifs.map((n) => n.routine_id).filter(Boolean))] as string[];
+  const routineIds = [...new Set(readable.map((n) => n.routine_id).filter(Boolean))] as string[];
   const prIds = [
-    ...new Set(notifs.map((n) => n.pull_request_id).filter(Boolean)),
+    ...new Set(readable.map((n) => n.pull_request_id).filter(Boolean)),
   ] as string[];
-  const pageIds = [...new Set(notifs.map((n) => n.page_id).filter(Boolean))] as string[];
-  const projectIds = [...new Set(notifs.map((n) => n.project_id).filter(Boolean))] as string[];
-  const actorIds = [...new Set(notifs.map((n) => n.actor_id).filter(Boolean))] as string[];
-  const commentIds = [...new Set(notifs.map((n) => n.comment_id).filter(Boolean))] as string[];
+  const pageIds = [...new Set(readable.map((n) => n.page_id).filter(Boolean))] as string[];
+  const projectIds = [...new Set(readable.map((n) => n.project_id).filter(Boolean))] as string[];
+  const actorIds = [...new Set(readable.map((n) => n.actor_id).filter(Boolean))] as string[];
+  const commentIds = [...new Set(readable.map((n) => n.comment_id).filter(Boolean))] as string[];
 
   const [
     { data: issues },
@@ -138,7 +163,7 @@ export async function GET(request: NextRequest) {
   // découle (mention / réponse) — la ligne du commentaire reste la source de
   // vérité pour ce qui a été écrit, comme pour `via_assistant`.
   const keyActors = await resolveApiKeyActors([
-    ...notifs.map((n) => n.api_key_id as string | null),
+    ...readable.map((n) => n.api_key_id as string | null),
     ...(comments ?? []).map((c) => c.api_key_id),
   ]);
 
@@ -153,7 +178,7 @@ export async function GET(request: NextRequest) {
    * `data === null` = la lecture a ÉCHOUÉ, et non « rien de vivant » : on ne
    * filtre alors sur rien, plutôt que de vider l'inbox sur une erreur passagère.
    */
-  const targetAlive = (n: (typeof notifs)[number]): boolean =>
+  const targetAlive = (n: (typeof readable)[number]): boolean =>
     (!n.issue_id || !issues || issueMap.has(n.issue_id)) &&
     (!n.objective_id || !objectives || objectiveMap.has(n.objective_id)) &&
     (!n.feedback_post_id || !feedbackPosts || feedbackMap.has(n.feedback_post_id)) &&
@@ -167,7 +192,7 @@ export async function GET(request: NextRequest) {
     // l'inbox sans être détruite, et revient si la page est restaurée.
     (!n.page_id || !pages || pageMap.has(n.page_id));
 
-  const result: MyNotification[] = notifs.filter(targetAlive).map((n) => {
+  const result: MyNotification[] = readable.filter(targetAlive).map((n) => {
     const issue = n.issue_id ? issueMap.get(n.issue_id) : undefined;
     const objective = n.objective_id ? objectiveMap.get(n.objective_id) : undefined;
     const feedback = n.feedback_post_id ? feedbackMap.get(n.feedback_post_id) : undefined;

@@ -344,19 +344,20 @@ export default function InboxPage() {
               const busy = invitationBusyId === inv.id;
               return (
                 <li key={inv.id} className="relative flex items-center gap-3 px-4 py-3">
-                  {/* Même point, même marge que les notifications : il marque le
-                      bord de la ligne sans en décaler le portrait. */}
-                  <span
-                    className="absolute left-1 top-1/2 size-2 -translate-y-1/2 rounded-full bg-blue-500"
-                    aria-hidden
-                  />
                   {/* Le portrait de qui invite, à la place de l'icône de type :
-                      une invitation vient de quelqu'un, pas d'un système. */}
-                  <UserAvatar
-                    seed={inv.inviter_avatar_seed}
-                    className="size-8"
-                    title={inviterOf(inv)}
-                  />
+                      une invitation vient de quelqu'un, pas d'un système — et le
+                      même badge que les notifications non lues à son coin. */}
+                  <span className="relative shrink-0">
+                    <UserAvatar
+                      seed={inv.inviter_avatar_seed}
+                      className="size-8"
+                      title={inviterOf(inv)}
+                    />
+                    <span
+                      className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-blue-500 ring-2 ring-card"
+                      aria-hidden
+                    />
+                  </span>
                   {/* Le nom du projet suffit — sa clé ne dit rien à qui n'y est
                       pas encore entré. */}
                   <span className="min-w-0 flex-1">
@@ -433,21 +434,24 @@ export default function InboxPage() {
                     >
                       {/* Non lu : bleu ; JAUNE quand Numo attend une réponse —
                           même langage que la liste des sessions d'agent.
-                          Le point vit dans la marge gauche de la ligne, pas dans
-                          son flux : sinon il repousse l'avatar de 20 px et toutes
-                          les lignes lues gardent ce vide au bord. */}
-                      <span
-                        className={cn(
-                          "absolute left-1 top-1/2 size-2 -translate-y-1/2 rounded-full",
-                          unread
-                            ? n.type === "agent_question"
-                              ? "bg-yellow-500"
-                              : "bg-blue-500"
-                            : "bg-transparent"
+                          Le point est un BADGE posé au coin du portrait, pas une
+                          pastille placée avant lui : il ne prend aucune place
+                          dans le flux, donc rien ne se décale d'une ligne lue à
+                          une non lue. L'anneau le détache du portrait. */}
+                      <span className="relative shrink-0">
+                        <RowAvatar notification={n} unread={unread} />
+                        {unread && (
+                          <span
+                            className={cn(
+                              "absolute -right-0.5 -top-0.5 size-2.5 rounded-full ring-2 ring-card",
+                              n.type === "agent_question"
+                                ? "bg-yellow-500"
+                                : "bg-blue-500"
+                            )}
+                            aria-hidden
+                          />
                         )}
-                        aria-hidden
-                      />
-                      <RowAvatar notification={n} unread={unread} />
+                      </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline gap-2">
                           {n.issue_id && n.project_key && n.issue_number != null && (

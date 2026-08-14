@@ -1,6 +1,6 @@
 import "server-only";
 
-import { SITE_URL } from "@/lib/site";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
  * Issuer du serveur d'autorisation (RFC 8414) — et par ricochet la base du
@@ -12,15 +12,11 @@ import { SITE_URL } from "@/lib/site";
  * de récupérer les métadonnées avec l'en-tête voulu pour se faire annoncer un
  * `authorization_endpoint` et un `token_endpoint` chez soi, sous notre nom.
  *
- * Trois cas, dans cet ordre :
- * - `OAUTH_ISSUER` — l'échappatoire explicite (tunnel de dev, domaine d'essai) ;
- * - production Vercel — le domaine canonique, quel que soit l'alias emprunté ;
- * - preview Vercel — l'URL du déploiement, pour qu'un preview s'authentifie
- *   contre lui-même ; poste de dev — le localhost du serveur.
- *
- * Volontairement PAS `NEXT_PUBLIC_APP_URL` : elle vaut le domaine de prod
- * jusque sur un preview (voir `lib/server/agent/origin.ts`), et un issuer qui
- * ne désigne pas le déploiement qui l'a servi casse la découverte.
+ * `OAUTH_ISSUER` d'abord — l'échappatoire explicite (tunnel de dev, domaine
+ * d'essai) —, puis l'origine canonique de l'app
+ * ([app-origin.ts](../app-origin.ts)), qui porte les trois autres cas et sert
+ * aussi aux liens d'invitation : c'est la même question, « quelle adresse est
+ * la nôtre », et elle mérite une seule réponse.
  */
 export function oauthIssuer(): string {
   const explicit = process.env.OAUTH_ISSUER?.trim();
@@ -32,13 +28,7 @@ export function oauthIssuer(): string {
     }
   }
 
-  const vercelEnv = process.env.VERCEL_ENV?.trim();
-  if (vercelEnv === "production") return SITE_URL;
-
-  const vercelUrl = process.env.VERCEL_URL?.trim();
-  if (vercelUrl) return `https://${vercelUrl}`;
-
-  return `http://localhost:${process.env.PORT?.trim() || "3000"}`;
+  return canonicalAppOrigin();
 }
 
 /** URL canonique de la ressource MCP protégée (RFC 8707 / 9728). */

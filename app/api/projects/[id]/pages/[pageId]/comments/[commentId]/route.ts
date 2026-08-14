@@ -59,7 +59,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 /** DELETE — retirer son propre commentaire ; une racine emporte ses réponses
-    (cascade `parent_id`). L'auteur seul, par la policy. */
+    (cascade `parent_id`). L'auteur seul — par la policy ET par le filtre, comme
+    le `PATCH` juste au-dessus : il ne l'avait pas, et la règle ne se lisait donc
+    que dans la migration (MIN-351). */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { commentId } = await params;
   const auth = await getAuthedUser(request);
@@ -70,6 +72,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     .from("page_comments")
     .delete()
     .eq("id", commentId)
+    .eq("author_id", auth.user.id)
     .select("id")
     .maybeSingle();
 

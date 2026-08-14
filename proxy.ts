@@ -15,6 +15,7 @@ import {
 } from "@/lib/public-routes";
 import { isProtectedPath } from "@/lib/protected-prefixes";
 import { decodeJwtPayload, needsMfaChallenge } from "@/lib/mfa";
+import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 
 /**
  * Next 16 middleware (named `proxy`). Il fait quatre choses : router les
@@ -108,14 +109,35 @@ const PUBLIC_THEME_HEADER = "x-minddy-public";
 const LOCALE_HEADER = "x-minddy-locale";
 const ROUTE_HEADER = "x-minddy-route";
 
-/** Réécrit les en-têtes de la REQUÊTE (ce que lisent le layout et next-intl). */
+/** Le préfixe de tous les en-têtes que CE fichier pose, et que lui seul pose. */
+const TRUST_HEADER_PREFIX = "x-minddy-";
+
+/**
+ * Réécrit les en-têtes de la REQUÊTE (ce que lisent le layout et next-intl).
+ *
+ * Tout `x-minddy-*` ENTRANT part d'abord (MIN-351). Ces en-têtes sont des
+ * affirmations du proxy — « cette page est publique », « la langue de cette URL
+ * est le français » — et le layout les croit sur parole. Rien n'empêche un
+ * client de les envoyer lui-même : `curl -H 'x-minddy-public: 1'` sur une page
+ * de l'app, et le rendu bascule sur le décor du site public. On efface avant
+ * d'écrire, sur CHAQUE chemin qui rend, y compris ceux qui n'ajoutent rien —
+ * ne pas poser d'en-tête n'est pas la même chose que ne pas en avoir.
+ */
 function withRequestHeaders(
   request: NextRequest,
-  extra: Record<string, string>,
+  extra: Record<string, string> = {},
 ): { request: { headers: Headers } } {
   const headers = new Headers(request.headers);
+  for (const name of [...headers.keys()]) {
+    if (name.toLowerCase().startsWith(TRUST_HEADER_PREFIX)) headers.delete(name);
+  }
   for (const [name, value] of Object.entries(extra)) headers.set(name, value);
   return { request: { headers } };
+}
+
+/** `NextResponse.next()` avec les en-têtes de confiance nettoyés. */
+function nextClean(request: NextRequest, extra: Record<string, string> = {}): NextResponse {
+  return NextResponse.next(withRequestHeaders(request, extra));
 }
 
 function hasPrefix(pathname: string, prefixes: readonly string[]): boolean {
@@ -244,14 +266,30 @@ function isSupabaseGetSessionWarning(args: unknown[]): boolean {
  * Session courante, vérifiée LOCALEMENT (signature du JWT, aucun aller-retour
  * réseau vers GoTrue). L'avertissement « use getUser() » du SDK ne s'applique
  * pas ici : le middleware ne fait que router, il n'autorise aucune donnée.
+ *
+ * ## Elle ÉCRIT, et c'est tout l'objet du `sink` (MIN-293)
+ *
+ * Lire une session peut la renouveler : jeton d'accès expiré, GoTrue rend un
+ * couple neuf et **fait tourner** le jeton de rafraîchissement au passage.
+ * L'adaptateur d'ici avait un `setAll` vide — il DÉPENSAIT le jeton et jetait le
+ * couple neuf. Le navigateur gardait l'ancien, et le rafraîchissement suivant
+ * échouait en `refresh_token_not_found` : la déconnexion silencieuse, corrigée
+ * côté routes et restée vivante ici.
+ *
+ * Les deux appelants sont des pages PUBLIQUES (`/`, `/login`, `/signup`) : la
+ * branche « routes de l'app », plus bas, a son propre client qui écrit déjà.
+ * D'où l'obligation, pour eux, de passer **chaque** sortie par `applyCookies` —
+ * la redirection vers /home comprise.
  */
 async function readSession(request: NextRequest, url: string, key: string) {
+  const sink = createCookieSink();
   const supabase = createServerClient(url, key, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll() {},
+      setAll: sink.collect,
     },
   });
   const _w = console.warn;
@@ -263,7 +301,7 @@ async function readSession(request: NextRequest, url: string, key: string) {
     data: { session },
   } = await supabase.auth.getSession();
   console.warn = _w;
-  return session;
+  return { session, applyCookies: sink.applyCookies };
 }
 
 /**
@@ -367,8 +405,12 @@ export async function proxy(request: NextRequest) {
 
   // Supabase not configured (empty .env) → don't block navigation.
   if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.next();
+    return nextClean(request);
   }
+
+  // Ce que la lecture de session a éventuellement à écrire (MIN-293). Identité
+  // tant qu'aucune session n'a été lue — il n'y a alors rien à reporter.
+  let applySession = <T extends NextResponse>(response: T): T => response;
 
   // --- Site public localisé (les six pages de lib/public-routes.ts) ---------
   if (PUBLIC_ROUTE_PATHS.has(pathname)) {
@@ -380,9 +422,14 @@ export async function proxy(request: NextRequest) {
       // `auth.getUser()` — un aller-retour réseau vers GoTrue AVANT le premier
       // octet de la landing, ce qui la rendait aussi non cacheable. Ici il ne
       // coûte qu'une vérification de signature (MIN-88).
-      const session = await readSession(request, supabaseUrl, supabaseKey);
+      const { session, applyCookies } = await readSession(
+        request,
+        supabaseUrl,
+        supabaseKey,
+      );
+      applySession = applyCookies;
       if (session?.user) {
-        return NextResponse.redirect(new URL("/home", request.url));
+        return applySession(NextResponse.redirect(new URL("/home", request.url)));
       }
 
       // Visiteur francophone sur `/` → `/fr`. Le cookie d'abord (une préférence
@@ -408,12 +455,12 @@ export async function proxy(request: NextRequest) {
           // lancement, newsletter) qu'on cherche à mesurer.
           const target = request.nextUrl.clone();
           target.pathname = "/fr";
-          return NextResponse.redirect(target, 307);
+          return applySession(NextResponse.redirect(target, 307));
         }
       }
     }
 
-    return serveLocalizedPublicRoute(request, pathname);
+    return applySession(serveLocalizedPublicRoute(request, pathname));
   }
 
   // --- Autres routes publiques (login, assets de métadonnées, boards…) ------
@@ -424,16 +471,21 @@ export async function proxy(request: NextRequest) {
     // `/signup` suit la même règle : un compte connecté n'a pas de compte à
     // créer, et le wizard s'en irait de lui-même une frame plus tard.
     if (pathname === "/login" || pathname === "/signup") {
-      const session = await readSession(request, supabaseUrl, supabaseKey);
+      const { session, applyCookies } = await readSession(
+        request,
+        supabaseUrl,
+        supabaseKey,
+      );
+      applySession = applyCookies;
       if (session?.user && !awaitsMfaChallenge(session)) {
-        return NextResponse.redirect(new URL("/home", request.url));
+        return applySession(NextResponse.redirect(new URL("/home", request.url)));
       }
     }
 
     const isPublicSite = hasPrefix(pathname, PUBLIC_SITE_PREFIXES);
     const response = isPublicSite
-      ? NextResponse.next(withRequestHeaders(request, { [PUBLIC_THEME_HEADER]: "1" }))
-      : NextResponse.next({ request });
+      ? nextClean(request, { [PUBLIC_THEME_HEADER]: "1" })
+      : nextClean(request);
 
     // Boards de feedback et vues partagées : hors index quoi qu'il arrive. Le
     // `metadata.robots` des pages ne couvre que le HTML — pas les réponses
@@ -441,27 +493,28 @@ export async function proxy(request: NextRequest) {
     if (hasPrefix(pathname, NOINDEX_PREFIXES)) {
       response.headers.set("X-Robots-Tag", "noindex");
     }
-    return response;
+    return applySession(response);
   }
 
   // --- Tout ce qui n'est pas protégé part au rendu (et donc en 404) ---------
   if (!isProtectedPath(pathname)) {
-    return NextResponse.next({ request });
+    return nextClean(request);
   }
 
   // --- Routes de l'app : session obligatoire -------------------------------
-  let response = NextResponse.next({ request });
+  let response = nextClean(request);
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = nextClean(request);
         cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options)
+          response.cookies.set(name, value, { ...options, ...SESSION_COOKIE_OPTIONS })
         );
       },
     },
