@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { deviceLabelFromUserAgent } from "@/lib/device-label";
+import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import { PUSH_DEVICE_COLUMNS } from "@/lib/server/push/columns";
 import { resolveRegistrationState } from "@/lib/server/push/registration";
 import type { PushDevice } from "@/lib/types";
@@ -82,6 +83,16 @@ export async function POST(request: NextRequest) {
     typeof authSecret !== "string" ||
     !authSecret
   ) {
+    return NextResponse.json({ error: t("pushSubscriptionInvalid") }, { status: 400 });
+  }
+
+  // Un endpoint est une adresse que le serveur ira APPELER, à chaque
+  // notification, pour toujours. Le navigateur y met celle de son service de
+  // push ; le corps de la requête, lui, est écrit par qui veut — d'où le garde
+  // anti-SSRF sur l'adresse résolue (MIN-341), en plus du https.
+  try {
+    await assertPublicHttpUrl(endpoint);
+  } catch {
     return NextResponse.json({ error: t("pushSubscriptionInvalid") }, { status: 400 });
   }
 

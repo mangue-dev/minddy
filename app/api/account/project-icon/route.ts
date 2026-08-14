@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { FaviconError, resolveFavicon } from "@/lib/server/favicon";
 import {
   compressIconFile,
@@ -74,6 +75,16 @@ export async function POST(request: NextRequest) {
   const siteUrl = (body as { site_url?: unknown })?.site_url;
   if (typeof siteUrl !== "string" || !siteUrl.trim() || siteUrl.length > 2000) {
     return NextResponse.json({ error: t("iconInvalidUrl") }, { status: 400 });
+  }
+
+  // Même motif que la route projet : une requête entrante en fait sortir
+  // plusieurs (la page, puis ses icônes), donc un débit borné (MIN-341).
+  const rl = checkSessionRateLimit(auth.user.id, "icon-import", { limit: 10 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", retry_after: rl.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
   }
 
   try {

@@ -9,10 +9,12 @@ import {
 import {
   isWebhookEvent,
   isWebhookScope,
+  normalizeWebhookStatus,
   WEBHOOK_EVENTS,
   type WebhookEvent,
   type WebhookScope,
 } from "@/lib/server/webhooks";
+import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 
 /**
  * Gestion des intégrations d'un projet (API Feedback). Écritures via le
@@ -43,6 +45,13 @@ export interface IntegrationSummary {
   webhook_last_at: string | null;
 }
 
+/** Une ligne de la table, rendue à l'appelant : l'état de la dernière
+    livraison y remplace le code HTTP distant (MIN-341). */
+function toSummary(row: unknown): IntegrationSummary {
+  const raw = row as IntegrationSummary;
+  return { ...raw, webhook_last_status: normalizeWebhookStatus(raw.webhook_last_status) };
+}
+
 const MAX_NAME_LENGTH = 60;
 // Borne classique des URL (elle est persistée puis rejouée à chaque livraison).
 const MAX_WEBHOOK_URL_LENGTH = 2048;
@@ -60,7 +69,7 @@ export async function listIntegrations(
     console.error("[integrations] list failed:", error.message);
     return null;
   }
-  return (data ?? []) as unknown as IntegrationSummary[];
+  return (data ?? []).map(toSummary);
 }
 
 export async function createIntegration({
@@ -105,17 +114,29 @@ export async function createIntegration({
     console.error("[integrations] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, integration: data as unknown as IntegrationSummary, key };
+  return { ok: true, integration: toSummary(data), key };
 }
+
+/**
+ * Qui règle le webhook. Une destination de webhook est un canal de sortie
+ * permanent : tout ce qui passe par les événements d'issue du projet part à
+ * l'adresse qui y est écrite. Une injection de prompt dans un ticket suffirait
+ * à la faire écrire par l'agent — donc CHOISIR une adresse est un geste humain
+ * (MIN-341). L'agent garde ce qui ne crée pas de canal : éteindre le webhook,
+ * et régler les événements et la portée d'une destination déjà en place.
+ */
+export type WebhookActor = "human" | "agent";
 
 export async function updateIntegrationWebhook({
   projectId,
   integrationId,
   input,
+  actor,
 }: {
   projectId: string;
   integrationId: string;
   input: Record<string, unknown>;
+  actor: WebhookActor;
 }): Promise<
   | { ok: true; integration: IntegrationSummary }
   | {
@@ -125,6 +146,7 @@ export async function updateIntegrationWebhook({
         | "webhookInvalidUrl"
         | "webhookInvalidConfig"
         | "webhookIssuesOnly"
+        | "webhookHumanOnly"
         | "integrationNotFound"
         | "databaseError";
     }
@@ -139,10 +161,11 @@ export async function updateIntegrationWebhook({
     if (url.length > MAX_WEBHOOK_URL_LENGTH) {
       return { ok: false, status: 400, errorKey: "webhookInvalidUrl" };
     }
+    // Même garde que la livraison : une URL qu'on refuserait d'appeler n'a
+    // aucune raison d'être rangée. Le contrôle porte sur l'adresse résolue —
+    // `127.0.0.1`, le lien-local du service de métadonnées, le réseau interne.
     try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "https:" && parsed.protocol !== "http:")
-        throw new Error();
+      await assertPublicHttpUrl(url);
     } catch {
       return { ok: false, status: 400, errorKey: "webhookInvalidUrl" };
     }
@@ -170,7 +193,7 @@ export async function updateIntegrationWebhook({
   if (url) {
     const { data: existing, error: readError } = await service
       .from("integrations")
-      .select("kind")
+      .select("kind, webhook_url")
       .eq("id", integrationId)
       .eq("project_id", projectId)
       .maybeSingle();
@@ -185,6 +208,10 @@ export async function updateIntegrationWebhook({
       return { ok: false, status: 404, errorKey: "integrationNotFound" };
     if (existing.kind !== "issues") {
       return { ok: false, status: 400, errorKey: "webhookIssuesOnly" };
+    }
+    // Poser une destination, ou la déplacer : geste humain uniquement.
+    if (actor === "agent" && existing.webhook_url !== url) {
+      return { ok: false, status: 403, errorKey: "webhookHumanOnly" };
     }
   }
 
@@ -206,7 +233,7 @@ export async function updateIntegrationWebhook({
   }
   const row = (data ?? [])[0];
   if (!row) return { ok: false, status: 404, errorKey: "integrationNotFound" };
-  return { ok: true, integration: row as unknown as IntegrationSummary };
+  return { ok: true, integration: toSummary(row) };
 }
 
 export async function revokeIntegration({

@@ -154,11 +154,13 @@ function WebhookStatusDot({ integration }: { integration: Integration }) {
   const t = useTranslations("Settings");
   const format = useFormatter();
   if (!integration.webhook_url) return null;
+  // « acceptée » ou « refusée », jamais le code HTTP du destinataire : le
+  // serveur ne le rend plus (MIN-341), il ne fait pas un scanner de ports.
   const status = integration.webhook_last_status;
-  const healthy = !!status && /^2/.test(status);
+  const healthy = status === "ok";
   const label = status
     ? t("webhookLastDelivery", {
-        status,
+        status: t(healthy ? "webhookDeliveryOk" : "webhookDeliveryFailed"),
         date: integration.webhook_last_at
           ? format.dateTime(new Date(integration.webhook_last_at), {
               dateStyle: "medium",

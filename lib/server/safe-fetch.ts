@@ -78,6 +78,40 @@ function ipv6Groups(address: string): number[] | null {
   );
 }
 
+/**
+ * Les écritures anciennes d'une IPv4 : `2130706433`, `0177.0.0.1`, `0x7f.1`.
+ * `inet_aton` les accepte toutes — donc le résolveur du système aussi, et
+ * `curl`, et le navigateur — mais `isIP` n'en reconnaît aucune, si bien que le
+ * filtre les prendrait pour des noms d'hôte. On les ramène donc à la forme
+ * pointée AVANT de décider quoi que ce soit. Une à quatre parties, chacune en
+ * décimal, en octal (préfixe `0`) ou en hexadécimal (préfixe `0x`) ; la
+ * dernière absorbe les octets restants.
+ */
+export function legacyIpv4(host: string): string | null {
+  if (isIP(host)) return null;
+  const parts = host.split(".");
+  if (parts.length > 4) return null;
+  const values: number[] = [];
+  for (const part of parts) {
+    let value: number;
+    if (/^0[xX][0-9a-fA-F]+$/.test(part)) value = parseInt(part.slice(2), 16);
+    else if (/^0[0-7]+$/.test(part)) value = parseInt(part.slice(1), 8);
+    else if (/^(0|[1-9][0-9]*)$/.test(part)) value = Number(part);
+    else return null;
+    if (!Number.isSafeInteger(value) || value < 0) return null;
+    values.push(value);
+  }
+  // Toutes les parties sauf la dernière valent un octet ; la dernière porte le
+  // reste (`127.1` = `127.0.0.1`).
+  const last = values.pop()!;
+  if (values.some((v) => v > 0xff)) return null;
+  const rest = 4 - values.length;
+  if (last >= 2 ** (8 * rest)) return null;
+  const octets = [...values];
+  for (let i = rest - 1; i >= 0; i--) octets.push((last >>> (8 * i)) & 0xff);
+  return octets.join(".");
+}
+
 /** Une IPv4 embarquée dans deux groupes IPv6. */
 function embeddedIpv4(high: number, low: number): string {
   return [high >> 8, high & 0xff, low >> 8, low & 0xff].join(".");
@@ -94,7 +128,7 @@ export function isPrivateAddress(address: string): boolean {
   // Une adresse de lien porte parfois sa zone (`fe80::1%eth0`).
   const bare = address.split("%")[0];
 
-  const octets = ipv4Octets(bare);
+  const octets = ipv4Octets(legacyIpv4(bare) ?? bare);
   if (octets) {
     const [a, b, c] = octets;
     if (a === 0 || a === 10 || a === 127) return true;
@@ -105,6 +139,9 @@ export function isPrivateAddress(address: string): boolean {
     if (a === 192 && b === 0 && c === 0) return true; // IETF protocol assignments
     if (a === 192 && b === 0 && c === 2) return true; // TEST-NET-1
     if (a === 192 && b === 88 && c === 99) return true; // ancien relais 6to4
+    if (a === 192 && b === 31 && c === 196) return true; // AS112
+    if (a === 192 && b === 52 && c === 193) return true; // AMT
+    if (a === 192 && b === 175 && c === 48) return true; // AS112 direct delegation
     if (a === 198 && (b === 18 || b === 19)) return true; // benchmark
     if (a === 198 && b === 51 && c === 100) return true; // TEST-NET-2
     if (a === 203 && b === 0 && c === 113) return true; // TEST-NET-3
@@ -122,6 +159,12 @@ export function isPrivateAddress(address: string): boolean {
   if ((g0 & 0xfe00) === 0xfc00) return true; // ULA fc00::/7
   if (g0 === 0x2001 && g1 === 0x0db8) return true; // documentation
   if (g0 === 0x0100 && g1 === 0 && g2 === 0 && g3 === 0) return true; // discard
+  // Teredo (2001::/32) transporte DEUX IPv4 dans l'adresse, dont celle du
+  // client, obfusquée : plutôt que de les démêler, on refuse la plage — comme
+  // le reste de 2001::/23, qui n'est que de l'assignation protocolaire
+  // (ORCHIDv2, benchmark…), et 3fff::/20, la documentation moderne.
+  if (g0 === 0x2001 && (g1 & 0xfe00) === 0x0000) return true;
+  if ((g0 & 0xfff0) === 0x3ff0) return true;
   // IPv4 mappée (::ffff:a.b.c.d) et IPv4 compatible (::a.b.c.d), sous leur
   // forme pointée comme sous leur forme hexadécimale.
   if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0) {
@@ -150,9 +193,12 @@ export async function assertPublicHttpUrl(raw: string | URL): Promise<ValidatedT
     throw new SafeFetchError("url");
   }
   const host = url.hostname.replace(/^\[|\]$/g, "");
-  if (isIP(host)) {
-    if (isPrivateAddress(host)) throw new SafeFetchError("url");
-    return { url, address: host };
+  // `0177.0.0.1` n'est pas un nom d'hôte : c'est `127.0.0.1` écrit autrement, et
+  // le résolveur le sait. On décide donc sur l'adresse, et on s'y épingle.
+  const literal = isIP(host) ? host : legacyIpv4(host);
+  if (literal) {
+    if (isPrivateAddress(literal)) throw new SafeFetchError("url");
+    return { url, address: literal };
   }
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
     throw new SafeFetchError("url");
@@ -186,6 +232,15 @@ export interface SafeFetchOptions {
   maxRedirects?: number;
   /** En-têtes de requête, `user-agent` compris. */
   headers?: Record<string, string>;
+  /** `GET` par défaut. */
+  method?: "GET" | "POST";
+  /**
+   * Corps de requête (POST). Il n'est PAS rejoué sur une redirection : un
+   * appelant qui poste choisit `maxRedirects: 0` — suivre un 302 avec la même
+   * charge signée vers un hôte que l'appelant n'a pas choisi n'est pas ce
+   * qu'on veut d'un webhook.
+   */
+  body?: string;
 }
 
 export interface SafeResponse {
@@ -216,9 +271,14 @@ export async function safeFetch(
           // Pas de compression : on lit un plafond d'octets, et un corps
           // compressé mentirait sur ce qu'il coûte à décompresser.
           "accept-encoding": "identity",
+          ...(options.body === undefined
+            ? {}
+            : { "content-length": String(Buffer.byteLength(options.body)) }),
           ...options.headers,
         },
         signal,
+        method: options.method,
+        body: hop === 0 ? options.body : undefined,
       });
     } catch {
       throw new SafeFetchError("unreachable");

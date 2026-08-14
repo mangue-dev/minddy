@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { FaviconError } from "@/lib/server/favicon";
 import {
   clearProjectIcon,
@@ -81,6 +82,17 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const siteUrl = (body as { site_url?: unknown })?.site_url;
   if (typeof siteUrl !== "string" || !siteUrl.trim() || siteUrl.length > 2000) {
     return NextResponse.json({ error: t("iconInvalidUrl") }, { status: 400 });
+  }
+
+  // Importer un favicon fait SORTIR une requête, et même plusieurs : la page,
+  // puis chacune des icônes qu'elle déclare. La route est donc limitée en débit
+  // comme link-preview, sur le même motif (MIN-341).
+  const rl = checkSessionRateLimit(auth.user.id, "icon-import", { limit: 10 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", retry_after: rl.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
   }
 
   try {

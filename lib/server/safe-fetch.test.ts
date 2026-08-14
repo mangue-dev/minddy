@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { Readable } from "node:stream";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * MIN-336 — le filtre d'adresses est la moitié du garde-fou anti-SSRF (l'autre
@@ -8,10 +9,11 @@ import { describe, expect, it, vi } from "vitest";
  * et les plages non routables qu'on oublie d'écrire.
  */
 
+const pinnedRequest = vi.hoisted(() => vi.fn());
 vi.mock("server-only", () => ({}));
-vi.mock("./pinned-request", () => ({ pinnedRequest: vi.fn() }));
+vi.mock("./pinned-request", () => ({ pinnedRequest }));
 
-const { isPrivateAddress } = await import("./safe-fetch");
+const { isPrivateAddress, SafeFetchError, safeFetch } = await import("./safe-fetch");
 
 describe("isPrivateAddress — refusé", () => {
   it.each([
@@ -47,6 +49,20 @@ describe("isPrivateAddress — refusé", () => {
     ["64:ff9b::a00:1", "NAT64 — 10.0.0.1"],
     ["2002:a9fe:a9fe::1", "6to4 — 169.254.169.254"],
     ["fe80::1%eth0", "lien-local avec sa zone"],
+    // MIN-341 — les plages oubliées, et les écritures anciennes d'une IPv4.
+    ["192.31.196.1", "AS112"],
+    ["192.52.193.1", "AMT"],
+    ["192.175.48.1", "AS112, délégation directe"],
+    ["240.0.0.1", "réservé"],
+    ["2001::1", "Teredo, qui transporte deux IPv4"],
+    ["2001:20::1", "ORCHIDv2"],
+    ["3fff::1", "documentation moderne"],
+    ["2130706433", "127.0.0.1 en décimal"],
+    ["0177.0.0.1", "127.0.0.1 en octal"],
+    ["0x7f.0.0.1", "127.0.0.1 en hexadécimal"],
+    ["127.1", "127.0.0.1 en forme courte"],
+    ["2852039166", "169.254.169.254 en décimal"],
+    ["0xa9fea9fe", "169.254.169.254 en hexadécimal"],
   ])("refuse %s (%s)", (address) => {
     expect(isPrivateAddress(address)).toBe(true);
   });
@@ -64,7 +80,62 @@ describe("isPrivateAddress — accepté", () => {
     ["2606:4700::1111", "Cloudflare"],
     ["::ffff:5db8:d822", "IPv4 mappée publique — 93.184.216.34"],
     ["2002:5db8:d822::1", "6to4 sur une IPv4 publique"],
+    ["1568489506", "93.184.216.34 en décimal — une forme ancienne reste licite"],
+    ["exemple.com", "un nom d'hôte n'est pas une adresse"],
+    ["0x", "ni ça"],
   ])("accepte %s (%s)", (address) => {
     expect(isPrivateAddress(address)).toBe(false);
+  });
+});
+
+/**
+ * MIN-341 — le webhook sortant est le premier appelant à POSTER par ce chemin.
+ * Ce qui compte alors : la charge part une fois, à la destination validée, et
+ * une redirection ne la fait pas partir ailleurs — un 302 signé rejoué vers un
+ * hôte que l'owner n'a pas choisi serait exactement la fuite qu'on ferme.
+ */
+describe("safeFetch — POST", () => {
+  const stream = () => Readable.from([Buffer.from("")]);
+
+  beforeEach(() => pinnedRequest.mockReset());
+
+  it("passe la méthode, le corps et sa longueur", async () => {
+    pinnedRequest.mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      stream: stream(),
+      destroy: () => {},
+    });
+    const response = await safeFetch("https://93.184.216.34/hook", {
+      method: "POST",
+      body: '{"événement":"issue.created"}',
+      headers: { "content-type": "application/json" },
+      maxBytes: 1024,
+      maxRedirects: 0,
+    });
+    expect(response.ok).toBe(true);
+    const [, options] = pinnedRequest.mock.calls[0];
+    expect(options.method).toBe("POST");
+    expect(options.body).toBe('{"événement":"issue.created"}');
+    // Des octets, pas des caractères : « événement » en pèse deux de plus.
+    expect(options.headers["content-length"]).toBe("31");
+  });
+
+  it("ne suit pas la redirection quand elle est interdite", async () => {
+    pinnedRequest.mockResolvedValue({
+      status: 302,
+      headers: new Headers({ location: "http://169.254.169.254/" }),
+      stream: stream(),
+      destroy: () => {},
+    });
+    await expect(
+      safeFetch("https://93.184.216.34/hook", {
+        method: "POST",
+        body: "{}",
+        maxBytes: 1024,
+        maxRedirects: 0,
+      })
+    ).rejects.toBeInstanceOf(SafeFetchError);
+    expect(pinnedRequest).toHaveBeenCalledTimes(1);
   });
 });

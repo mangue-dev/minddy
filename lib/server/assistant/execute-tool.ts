@@ -64,6 +64,7 @@ import {
   revokeIntegration,
   updateIntegrationWebhook,
 } from "@/lib/server/integrations";
+import { normalizeWebhookStatus } from "@/lib/server/webhooks";
 import {
   integrationUsage,
   integrationWebhookDoc,
@@ -370,7 +371,14 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
   integrationNotFound: "Integration not found.",
   boardNotFound:
     "This project has no feedback board yet — pass enabled: true to create it.",
-  webhookInvalidUrl: "The webhook URL is invalid (must be http/https).",
+  webhookInvalidUrl:
+    "The webhook URL is invalid: it must be an http(s) URL, and it must point " +
+    "at a publicly reachable host (localhost and private addresses are refused).",
+  webhookHumanOnly:
+    "Choosing where a webhook delivers is the owner's own gesture: it is done " +
+    "in Settings → Integrations, not by an assistant. Relay that as-is. You " +
+    "can still turn the webhook off, or change the events and scope of the " +
+    "destination already in place.",
   webhookInvalidConfig: "The webhook events or scope are invalid.",
   smartAssignNotAllowed:
     "Smart Assign is not included in the owner's plan, so it cannot be turned on. Relay that as-is.",
@@ -868,7 +876,7 @@ export async function executeTool(
                     url: row.webhook_url,
                     events: row.webhook_events,
                     scope: row.webhook_scope,
-                    last_status: row.webhook_last_status,
+                    last_status: normalizeWebhookStatus(row.webhook_last_status),
                     last_at: row.webhook_last_at,
                   }
                 : null,
@@ -2084,6 +2092,7 @@ export async function executeTool(
           projectId,
           integrationId,
           input: args,
+          actor: "agent",
         });
         if (!result.ok) return settingsError(result.errorKey);
         return {

@@ -248,6 +248,10 @@ Beyond issues, you can edit project settings and the user's OWN account settings
   board, with votes and a public status), 'issues' to create issues straight in triage. The
   result carries a \`usage\` object — endpoint, payload, error codes: give THAT, never an API
   shape you remember. Tell them to keep the key server-side, in an env var.
+- WHERE a webhook delivers is not yours to set: it is a permanent outbound channel for
+  everything happening on the project, so the user chooses the URL themselves in
+  Settings → Integrations. update_integration_webhook only tunes what is already in
+  place (events, scope) or turns it off — asked for a new destination, say where to set it.
 - Account settings apply ONLY to the current user's own account (never anyone else):
   read them with get_account_settings, then update_account_settings for the display
   name, interface language, the status Numo-created issues land in, the two auto-assign

@@ -37,11 +37,15 @@ export interface PinnedRequestOptions {
   address: string;
   headers: Record<string, string>;
   signal: AbortSignal;
+  /** `GET` par défaut. */
+  method?: string;
+  /** Corps de requête, pour les méthodes qui en portent un. */
+  body?: string | Buffer;
 }
 
 export function pinnedRequest(
   url: URL,
-  { address, headers, signal }: PinnedRequestOptions
+  { address, headers, signal, method = "GET", body }: PinnedRequestOptions
 ): Promise<PinnedResponse> {
   const transport = url.protocol === "https:" ? https : http;
   const family = isIP(address);
@@ -67,7 +71,7 @@ export function pinnedRequest(
         hostname: url.hostname.replace(/^\[|\]$/g, ""),
         port: url.port || (url.protocol === "https:" ? 443 : 80),
         path: `${url.pathname}${url.search}`,
-        method: "GET",
+        method,
         headers,
         lookup,
         signal,
@@ -93,6 +97,7 @@ export function pinnedRequest(
       }
     );
     request.on("error", reject);
+    if (body !== undefined) request.write(body);
     request.end();
   });
 }

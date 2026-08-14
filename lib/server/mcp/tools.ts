@@ -4163,16 +4163,19 @@ export function registerMinddyTools(rawServer: McpServer): void {
     {
       title: "Configure integration webhook",
       description:
-        "Point an integration's outgoing webhook at an endpoint of the user's app: " +
-        "minddy then POSTs signed JSON there whenever a followed issue event " +
-        "happens, which is how the app learns that a human triaged what it pushed. " +
+        "Tune an integration's outgoing webhook — the signed JSON minddy POSTs to " +
+        "the user's app whenever a followed issue event happens, which is how the " +
+        "app learns that a human triaged what it pushed. This is the answer to " +
+        "'how do I know when the status changes' — never write a polling loop. " +
         "OWNER ONLY, and 'issues' keys ONLY — a 'feedback' key creates no issue, so " +
-        "it has no webhook and this is refused on one. This is the answer to 'how " +
-        "do I know when the status changes' — never write a polling loop. The " +
-        "result carries the full receiver contract (headers, signature, payload, " +
-        "delivery guarantees): implement the route against THAT. Pass url: null to " +
-        "turn the webhook off; the events and scope are kept. Read the current " +
-        "setup with minddy_list_integrations.",
+        "it has no webhook and this is refused on one. WHERE it delivers is NOT " +
+        "settable here: the destination is chosen by the user in Settings → " +
+        "Integrations, because it is a permanent outbound channel for everything " +
+        "that happens on the project. Pass the url already in place to change the " +
+        "events or the scope, or url: null to turn the webhook off. The result " +
+        "carries the full receiver contract (headers, signature, payload, delivery " +
+        "guarantees): implement the route against THAT. Read the current setup with " +
+        "minddy_list_integrations.",
       inputSchema: {
         project_id: PROJECT_ID,
         integration_id: z.string().uuid().describe("From minddy_list_integrations."),
@@ -4180,9 +4183,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .string()
           .nullable()
           .describe(
-            "HTTP(S) endpoint that receives the deliveries, or null to turn the " +
-              "webhook off. Must be reachable from the internet — a localhost URL " +
-              "is accepted and will simply never be delivered."
+            "The endpoint ALREADY configured (read it with " +
+              "minddy_list_integrations), or null to turn the webhook off. A new " +
+              "or different destination is refused: the user sets it themselves in " +
+              "Settings → Integrations."
           ),
         events: z
           .array(z.enum(WEBHOOK_EVENTS))
@@ -4216,11 +4220,24 @@ export function registerMinddyTools(rawServer: McpServer): void {
           webhook_events: args.events,
           webhook_scope: args.scope,
         },
+        actor: "agent",
       });
       if (!result.ok) {
         switch (result.errorKey) {
           case "webhookInvalidUrl":
-            return fail("invalid_params", "url must be an http(s) URL, or null.");
+            return fail(
+              "invalid_params",
+              "url must be an http(s) URL on a publicly reachable host, or null."
+            );
+          case "webhookHumanOnly":
+            return fail(
+              "forbidden",
+              "Choosing where a webhook delivers is the owner's own gesture, made " +
+                "in Settings → Integrations — a destination cannot be set or moved " +
+                "through this API. Relay that to the user as-is. Passing url: null " +
+                "to turn the webhook off, or changing the events and scope of the " +
+                "destination already in place, is still allowed."
+            );
           case "webhookInvalidConfig":
             return fail("invalid_params", "Unknown event or scope.");
           case "webhookIssuesOnly":

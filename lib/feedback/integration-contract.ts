@@ -119,10 +119,13 @@ export function integrationWebhookDoc(): IntegrationWebhookDoc {
       "when issues move, so you react to triage decisions instead of polling.",
     configure:
       "On an 'issues' key only — a 'feedback' key creates no issue, so it has no " +
-      "webhook. Per integration, and off by default: set it in the project's " +
-      "settings (Integrations → Webhook) or over MCP with " +
-      "minddy_configure_webhook. An empty url turns it off and keeps the events " +
-      "and scope for later.",
+      "webhook. Per integration, and off by default: the destination is set by " +
+      "the project owner, in the project's settings (Integrations → Webhook) — " +
+      "an outbound channel for everything happening on the project is a human " +
+      "choice, so no agent or API can point it somewhere new. " +
+      "minddy_configure_webhook tunes the events and the scope of the " +
+      "destination already in place, and an empty url turns it off, keeping " +
+      "them for later.",
     events: [
       { name: "issue.created", when: "An issue was created in the project." },
       {

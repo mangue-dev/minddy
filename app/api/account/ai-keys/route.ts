@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import { encryptUserAiKey, keyPrefix } from "@/lib/server/agent/byok-credentials";
 import {
   getAgentProvider,
@@ -71,12 +72,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unsupported provider" }, { status: 400 });
   }
 
-  // Base URL requise (et validée http(s)) pour le provider générique.
+  // Base URL requise pour le provider générique. Le serveur ira appeler cette
+  // adresse : elle passe donc le garde anti-SSRF (MIN-341), pas une regex —
+  // `http://169.254.169.254/` satisfait `^https?://.+` et vise le service de
+  // métadonnées du cloud.
   const def = getAgentProvider(provider)!;
   let baseUrl: string | null = null;
   if (def.requiresBaseUrl) {
     const raw = typeof body.base_url === "string" ? body.base_url.trim() : "";
     if (raw.length > MAX_BASE_URL_LENGTH || !/^https?:\/\/.+/i.test(raw)) {
+      return NextResponse.json({ error: "Invalid base URL" }, { status: 400 });
+    }
+    try {
+      await assertPublicHttpUrl(raw);
+    } catch {
       return NextResponse.json({ error: "Invalid base URL" }, { status: 400 });
     }
     baseUrl = normalizeBaseUrl(raw);

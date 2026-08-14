@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValue } from "@/lib/server/app-config";
+import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import { AGENT_MODEL_CONFIG_KEY, AGENT_ROOT_MODEL_FALLBACK } from "@/lib/agent-models";
 import { aiModelFallback, byokDefaultModelKey } from "@/lib/ai-model-config";
 import {
@@ -257,6 +258,18 @@ export async function getUserByok(userId: string): Promise<UserByok | null> {
   if (!apiKey) return null;
   const baseUrl = resolveProviderBaseUrl(row.provider, row.base_url);
   if (!baseUrl) return null;
+  // Une base URL custom est revalidée à CHAQUE usage, pas seulement à
+  // l'enregistrement (MIN-341) : entre les deux, le DNS du domaine appartient
+  // toujours à celui qui l'a saisi, et rien n'empêche qu'il pointe désormais
+  // sur le réseau interne. Une URL devenue irrésoluble tombe dans le même cas
+  // que les autres lignes inutilisables — on l'ignore.
+  if (row.base_url) {
+    try {
+      await assertPublicHttpUrl(baseUrl);
+    } catch {
+      return null;
+    }
+  }
   return { provider: row.provider as AgentProviderId, apiKey, baseUrl };
 }
 

@@ -136,8 +136,9 @@ export const MCP_SERVER_INSTRUCTIONS =
       "endpoints, payloads and error codes: write the key into the project's " +
       "server-side environment (never client-side, never committed) and implement " +
       "against that `usage`, not from memory. An 'issues' integration also runs " +
-      "the OTHER WAY: minddy_configure_webhook points it at an endpoint of their " +
-      "app, and " +
+      "the OTHER WAY: pointed at an endpoint of their app — a destination the " +
+      "user sets themselves in Settings → Integrations, minddy_configure_webhook " +
+      "only tuning what is already there — " +
       "minddy POSTs signed JSON there when issues are created, change status or " +
       "change fields — that is how the app learns a human triaged what it pushed, " +
       "so never write a polling loop. The `usage.webhook` of the created key, and " +

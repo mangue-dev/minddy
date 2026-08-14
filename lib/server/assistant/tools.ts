@@ -1236,7 +1236,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_integration_webhook",
       description:
-        "Point an integration's outgoing webhook at an endpoint of the user's app: minddy then POSTs signed JSON there whenever a followed issue event happens, which is how their app learns a human triaged what it pushed. OWNER ONLY, and 'issues' keys ONLY — a 'feedback' key creates no issue, so it has no webhook and this is refused on one. This is the answer to 'how do I know when the status changes' — never suggest polling. Users often create the integration before they have an endpoint, so this is the natural follow-up: ask for the URL when they have it. The result carries the full receiver contract (headers, HMAC verification, payload, delivery guarantees) — relay it, none of it is guessable, starting with the HMAC key, which is not the API key. Get the id via list_integrations. Pass webhook_url null to disable the webhook (keeping its event/scope config).",
+        "Tune an integration's outgoing webhook — the signed JSON minddy POSTs to the user's app whenever a followed issue event happens, which is how their app learns a human triaged what it pushed. OWNER ONLY, and 'issues' keys ONLY — a 'feedback' key creates no issue, so it has no webhook and this is refused on one. This is the answer to 'how do I know when the status changes' — never suggest polling. WHERE it delivers is not yours to set: the destination is a permanent outbound channel for everything happening on the project, so the user chooses it themselves in Settings → Integrations. Send back the webhook_url already in place to change the events or the scope, or null to turn the webhook off (its event/scope config is kept). The result carries the full receiver contract (headers, HMAC verification, payload, delivery guarantees) — relay it, none of it is guessable, starting with the HMAC key, which is not the API key. Get the id and the current URL via list_integrations.",
       parameters: {
         type: "object",
         properties: {
@@ -1247,7 +1247,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           webhook_url: {
             type: ["string", "null"],
             description:
-              "https/http URL to POST events to, or null to disable the webhook.",
+              "The URL already configured (from list_integrations), or null to disable the webhook. A new or different one is refused — the user sets the destination in Settings → Integrations.",
           },
           webhook_events: {
             type: "array",

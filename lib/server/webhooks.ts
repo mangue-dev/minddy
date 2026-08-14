@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { createHmac, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventRow } from "@/lib/server/issue-events";
+import { safeFetch } from "@/lib/server/safe-fetch";
 
 /**
  * Webhooks sortants des intégrations (API Feedback). Branchés sur insertEvents
@@ -14,6 +15,12 @@ import type { EventRow } from "@/lib/server/issue-events";
  * Signature : X-Minddy-Signature = sha256=HMAC_SHA256(corps, key_hash). Le
  * secret est l'empreinte sha256 hex de la clé API — le récepteur la recalcule
  * à partir de la clé qu'il détient déjà, minddy ne stockant jamais le clair.
+ *
+ * La livraison sort par `safeFetch` (MIN-341) : l'URL vient d'un utilisateur,
+ * elle ne doit pas pouvoir viser le réseau interne ni le service de métadonnées
+ * du cloud. Et ce qu'on garde de la réponse est un état, pas un code : le
+ * détail HTTP d'un hôte arbitraire, rendu à qui a réglé le webhook, ferait de
+ * la fonctionnalité un scanner de ports.
  */
 
 export const WEBHOOK_EVENTS = [
@@ -31,6 +38,23 @@ export const isWebhookScope = (v: unknown): v is WebhookScope =>
   typeof v === "string" && (WEBHOOK_SCOPES as readonly string[]).includes(v);
 
 const TIMEOUT_MS = 5000;
+/** On ne lit rien de la réponse : de quoi voir les en-têtes, et on coupe. */
+const MAX_RESPONSE_BYTES = 4096;
+
+/**
+ * Ce que l'UI et les agents apprennent d'une livraison : elle a été acceptée,
+ * ou non. Rien de plus — pas le code, pas le message. Les lignes écrites avant
+ * MIN-341 portent encore un code HTTP : elles sont ramenées ici, à la lecture,
+ * plutôt que réécrites en base.
+ */
+export type WebhookDeliveryStatus = "ok" | "failed";
+
+export function normalizeWebhookStatus(
+  stored: string | null,
+): WebhookDeliveryStatus | null {
+  if (!stored) return null;
+  return stored === "ok" || /^2\d\d$/.test(stored) ? "ok" : "failed";
+}
 
 interface Change {
   field: string;
@@ -86,13 +110,19 @@ async function deliver(
     "X-Minddy-Signature": `sha256=${signature}`,
   };
 
-  let status: string;
+  let status: WebhookDeliveryStatus;
+  // Aucune redirection : la charge est signée pour la destination que l'owner a
+  // réglée, et un 302 la ferait partir ailleurs — vers un hôte que personne n'a
+  // choisi, et qui n'aurait pas passé le contrôle d'adresse.
   const attempt = async () => {
-    const res = await fetch(integration.webhook_url, {
+    const res = await safeFetch(integration.webhook_url, {
       method: "POST",
       headers,
       body,
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      maxBytes: MAX_RESPONSE_BYTES,
+      onOverflow: "truncate",
+      maxRedirects: 0,
+      timeoutMs: TIMEOUT_MS,
     });
     return res.status;
   };
@@ -102,9 +132,9 @@ async function deliver(
     if (code === null || code >= 500) {
       code = await attempt().catch(() => null);
     }
-    status = code === null ? "unreachable" : String(code);
+    status = code !== null && code >= 200 && code < 300 ? "ok" : "failed";
   } catch {
-    status = "unreachable";
+    status = "failed";
   }
 
   await service
