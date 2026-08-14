@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useAuth } from "./auth-context";
 import {
   createProjectApi,
@@ -70,13 +70,33 @@ export function useProjectsQuery(): UseProjectsResult {
     void queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
   }, [queryClient]);
 
-  return {
-    projects: data ?? [],
-    loading: enabled && isPending,
-    error: error as Error | null,
-    createProject,
-    updateProject,
-    deleteProject,
-    refetch,
-  };
+  // Mémoïsé (MIN-315) : ce résultat est étalé dans la value de
+  // `ProjectsContext`, un littéral neuf à chaque rendu la rendait neuve aussi,
+  // et avec elle tout ce qui en descend — jusqu'aux cartes du board. `EMPTY`
+  // plutôt qu'un `?? []` inline, pour la même raison : le tableau de repli doit
+  // garder son identité tant qu'il n'y a pas de données.
+  return useMemo(
+    () => ({
+      projects: data ?? EMPTY,
+      loading: enabled && isPending,
+      error: error as Error | null,
+      createProject,
+      updateProject,
+      deleteProject,
+      refetch,
+    }),
+    [
+      data,
+      enabled,
+      isPending,
+      error,
+      createProject,
+      updateProject,
+      deleteProject,
+      refetch,
+    ]
+  );
 }
+
+/** Le tableau de repli, stable — cf. le `useMemo` ci-dessus. */
+const EMPTY: Project[] = [];

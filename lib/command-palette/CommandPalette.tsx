@@ -333,7 +333,15 @@ export function CommandPalette({
 
   return (
     <PaletteConfigProvider value={config}>
-      <div className={styles.overlay} onClick={handleOverlayClick}>
+      {/* `desktop-palette-overlay` est une classe GLOBALE, pas un module : c'est
+          app/globals.css qui la lit, pour creuser la région de glissement de la
+          fenêtre au-dessus de ce voile (MIN-308). Sans elle, « cliquer à côté
+          pour fermer » ne fermait rien dans les 60 px du haut — macOS avalait
+          le clic et la fenêtre se mettait à glisser. */}
+      <div
+        className={`${styles.overlay} desktop-palette-overlay`}
+        onClick={handleOverlayClick}
+      >
         <div
           className={`${styles.palette} ${compactMode ? styles.paletteCompact : ""} ${isSuccess ? styles.paletteSuccess : ""}`}
           role="dialog"

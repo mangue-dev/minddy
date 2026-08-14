@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { isPersistableKey } from "./query-provider";
+import {
+  agentRunDiffQueryKey,
+  agentRunDiffStatQueryKey,
+  agentRunQueryKey,
+  allAgentSessionsQueryKey,
+  issueAgentRunsQueryKey,
+} from "./use-agent-runs";
+import { agentActivityQueryKey } from "@/components/agent/agent-activity-context";
 
 // Le filtre de persistance décide ce qui part sur le disque (MIN-89). Un faux
 // positif ici, c'est soit le quota localStorage saturé par l'index du palette,
@@ -22,13 +30,24 @@ describe("isPersistableKey", () => {
   // exemple) ne filtre rien tout en ayant l'air de filtrer — c'est exactement
   // ce que ce test verrouille.
   it("exclut les flux d'agent — périmés en secondes", () => {
-    expect(isPersistableKey(["agent-run", "r1"])).toBe(false);
-    expect(isPersistableKey(["agent-runs", "issue", "i1"])).toBe(false);
+    expect(isPersistableKey(issueAgentRunsQueryKey("i1"))).toBe(false);
+    expect(isPersistableKey(agentRunQueryKey("r1"))).toBe(false);
     expect(isPersistableKey(["agent-run-events", "r1"])).toBe(false);
-    expect(isPersistableKey(["agent-run-pr", "r1"])).toBe(false);
-    expect(isPersistableKey(["agent-run-diff", "r1"])).toBe(false);
-    expect(isPersistableKey(["agent-sessions", "all"])).toBe(false);
-    expect(isPersistableKey(["agent-activity", "r1"])).toBe(false);
+    expect(isPersistableKey(agentRunDiffQueryKey("r1"))).toBe(false);
+    // Segment DISTINCT de ["agent-run-diff"] : la comparaison se fait segment
+    // par segment, donc le préfixe du diff ne l'attrapait pas (MIN-303).
+    expect(isPersistableKey(agentRunDiffStatQueryKey("r1"))).toBe(false);
+    expect(isPersistableKey(allAgentSessionsQueryKey)).toBe(false);
+  });
+
+  // Le sondage d'activité tourne toutes les 4 s quand un agent travaille : il
+  // était sérialisé sur le disque à chaque tick, parce que le filtre visait un
+  // ["agent-activity"] que personne ne pose (MIN-303). La clé est IMPORTÉE de
+  // son module, pas recopiée : c'est la seule façon que ce test prouve quelque
+  // chose. Écrite à la main, elle passait tout en ne filtrant rien.
+  it("exclut le sondage d'activité d'agent, sur sa vraie clé", () => {
+    expect(isPersistableKey(agentActivityQueryKey("p1"))).toBe(false);
+    expect(isPersistableKey(agentActivityQueryKey(null))).toBe(false);
   });
 
   it("exclut les pull requests et leurs commentaires", () => {

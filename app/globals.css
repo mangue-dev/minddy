@@ -652,8 +652,11 @@ nav[aria-label="Navigation"]
   }
 
   /* Un onglet est large mais bas. On ne l'étend donc qu'en HAUTEUR, et par
-     `::before` : son `::after` dessine déjà le trait de l'onglet actif. Les
-     onglets étant côte à côte, cette bande verticale ne recouvre aucun voisin. */
+     `::before` : le `::after` du déclencheur est réservé au trait de l'onglet
+     actif. Depuis mangue-ui 0.6.0 ce trait vit sur un indicateur glissant à
+     côté et non plus sur le déclencheur — on garde `::before` quand même, pour
+     rester indifférents au jour où il lui reviendra. Les onglets étant côte à
+     côte, cette bande verticale ne recouvre aucun voisin. */
   [data-slot="tabs-trigger"]::before {
     content: "";
     position: absolute;
@@ -1731,14 +1734,52 @@ html[data-desktop-app]
   -webkit-app-region: no-drag;
 }
 
-/* L'en-tête du shell reste une prise à lui — `.app-shell > div > header`, donc
-   l'en-tête DU SHELL et pas un <header> de page (ceux-là vivent dans <main>).
-   La bande le couvre déjà sur ses 60 px ; cette règle-ci le suit s'il grandit,
-   et elle dit à qui lit le CSS que la grande zone vide entre le fil d'Ariane et
-   les actions est faite pour ça. */
-html[data-desktop-app] .app-shell > div > header {
-  -webkit-app-region: drag;
+/* ⚠ **Les VOILES sont creusés, eux aussi** (MIN-308).
+
+   Le creusement ci-dessus ne vise que les éléments FOCUSABLES. Le contenu Radix
+   porte `tabindex="-1"`, il est donc pris ; mais les voiles, non — ils ne
+   portent qu'un `data-slot`, et celui de la palette vient de son propre paquet
+   et ne portait rien du tout. Or « cliquer à côté pour fermer » est un clic SUR
+   le voile : dans les 60 premiers pixels, il tombait dans la bande, macOS
+   l'avalait, et la fenêtre se mettait à glisser sous le curseur au lieu que le
+   dialogue se ferme. Déterministe, cent fois sur cent, et seulement au-dessus de
+   60 px.
+
+   Contrepartie assumée : voile ouvert, la bande ne déplace plus la fenêtre.
+   C'est le même choix que celui déjà fait pour la bande elle-même (`z-index: 30`,
+   sous les voiles à 50) — une prise là où l'app dit « réponds d'abord ». */
+html[data-desktop-app]
+  :is(
+    [data-slot="dialog-overlay"],
+    [data-slot="alert-dialog-overlay"],
+    [data-slot="sheet-overlay"],
+    [data-slot="side-panel-overlay"],
+    [data-slot="drawer-overlay"],
+    .desktop-palette-overlay
+  ) {
+  -webkit-app-region: no-drag;
 }
+
+/* ⚠ **Ni l'en-tête du shell ni la ligne de marque ne portent de prise** (MIN-309).
+
+   Elles en portaient une chacune, et les deux étaient REDONDANTES : la bande
+   ci-dessus est `position: fixed; inset: 0 0 auto 0; height: 60px`, elle couvre
+   déjà exactement la ligne de marque et les 60 premiers pixels de l'en-tête,
+   avec un rectangle qui ne bouge JAMAIS.
+
+   Les leurs, si. `.sidebar-brand-row` est enfant de la `motion.aside` dont
+   framer anime la largeur 56 ↔ 256 px à chaque survol de la barre, et l'en-tête
+   se décale avec la gouttière. Or la carte des régions est dérivée du layout :
+   Blink la recollecte en fin de layout et l'envoie au process navigateur, qui
+   seul arbitre si un `mousedown` appartient à la fenêtre ou à la page. Elle
+   était donc reconstruite et réexpédiée à chaque image de l'animation — une
+   trentaine de fois sur ProMotion pour un simple survol —, et pendant qu'elle
+   change elle est PÉRIMÉE : un arbitrage rendu sur une carte d'une image de
+   retard fait consommer par macOS un appui qui visait un contrôle.
+
+   Si un en-tête plus haut que 60 px doit redevenir saisissable un jour, poser la
+   prise sur un pseudo-élément `fixed` — pas sur l'en-tête, dont le rectangle
+   suit la largeur animée. */
 
 /* Les feux de circulation sont dessinés PAR-DESSUS la page, en haut à gauche.
    Plutôt que de descendre la colonne pour leur faire une bande à eux — ce qui
@@ -1760,8 +1801,3 @@ html[data-desktop-app] .sidebar-brand-row[data-window-buttons] {
   justify-content: flex-end;
 }
 
-/* La ligne de marque est aussi la prise de la fenêtre du côté de la barre
-   latérale : c'est la seule bande horizontale libre qu'elle ait. */
-html[data-desktop-app] .sidebar-brand-row {
-  -webkit-app-region: drag;
-}

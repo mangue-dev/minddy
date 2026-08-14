@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { getDesktopBridge } from "./desktop/bridge";
+import { trace } from "./desktop/trace";
 
 /**
  * Les boutons macOS : qui les retire, ce qu'ils font, et ce que la barre
@@ -29,7 +30,12 @@ import { getDesktopBridge } from "./desktop/bridge";
 const holds = new Set<string>();
 
 function pushToBridge(): void {
-  getDesktopBridge()?.setWindowButtonsVisible(holds.size === 0);
+  const wanted = holds.size === 0;
+  // Les deux bouts du pont sont tracés (MIN-307) : ce qu'on DEMANDE ici, ce qui
+  // REVIENT dans `useWindowButtonsSlot`. C'est l'écart entre les deux qui dit
+  // qu'un message s'est perdu ou est arrivé au mauvais moment.
+  trace("wb:push", { wanted, holds: [...holds].join("|") || "—" });
+  getDesktopBridge()?.setWindowButtonsVisible(wanted);
 }
 
 /**
@@ -50,6 +56,35 @@ export function useHoldWindowButtons(reason: string, active: boolean): void {
       pushToBridge();
     };
   }, [reason, active]);
+}
+
+/**
+ * Réaffirme, une fois par document, ce que CE document veut (MIN-304).
+ *
+ * **Une fenêtre sans feux est une fenêtre qu'on ne peut plus fermer ni réduire à
+ * la souris.** Or les deux moitiés de l'état ne vivent pas au même endroit :
+ * `wantsWindowButtons` est une variable du MAIN qui survit aux documents,
+ * `holds` est un module de la PAGE qui meurt avec elle. Le main remet sa moitié
+ * à `true` au début d'un chargement plein — mais son message part à l'ancien
+ * document, encore vivant, et le nouveau démarre avec un `holds` vide sans
+ * jamais rien pousser : `useHoldWindowButtons` sort sur `if (!active) return`.
+ * Personne, côté page, n'a alors de raison de les redemander, et ce qui répare
+ * n'est pas la navigation mais un cycle de raison — en pratique, ouvrir puis
+ * fermer la palette ⌘K.
+ *
+ * D'où cet appel INCONDITIONNEL au montage. Il coûte un message et referme le
+ * trou pour de bon : quel que soit l'état que le main a gardé, il vaut ensuite
+ * ce que ce document-ci demande, c'est-à-dire rien tant que rien n'est ouvert.
+ *
+ * ⚠ À monter au layout RACINE (components/desktop-chrome.tsx), surtout pas dans
+ * `DesktopWindowButtons` : celui-là ne vit que sous app/(app)/app-providers.tsx,
+ * donc il est absent de la connexion, de `/f/`, de `/p/` et de la page 404 —
+ * exactement les écrans qu'on atteint par un chargement plein.
+ */
+export function useAffirmWindowButtons(): void {
+  useEffect(() => {
+    pushToBridge();
+  }, []);
 }
 
 /* ─── Ce qui couvre l'app ──────────────────────────────────────────────── */
@@ -90,11 +125,46 @@ const MODAL_SELECTOR = [
  * `observe()`**. C'est le piège qui m'a coûté un tour : un second appel sur le
  * même nœud ne s'ajoute pas au premier, il REMPLACE ses options. L'examen est
  * reporté d'une image : une lecture du DOM par rafale, pas une par nœud inséré.
+ *
+ * **Ce qu'on a essayé et écarté (MIN-312), pour ne pas le réessayer.**
+ *
+ * L'idée était de scinder en deux observateurs — les attributs en `subtree`, la
+ * pose des portails en enfants DIRECTS de `<body>` sans `subtree` —, ce qui
+ * aurait supprimé l'allocation d'un `MutationRecord` par nœud inséré n'importe
+ * où dans l'app. Elle ne tient pas ici : **la palette ⌘K n'est pas portalisée**,
+ * elle est rendue en place dans l'arbre (lib/command-palette/CommandPalette.tsx),
+ * profondément sous `<body>`. Et son `aria-modal="true"` est posé AVANT
+ * l'insertion, donc aucun enregistrement d'attribut n'est émis non plus : un
+ * `childList` sans `subtree` serait resté muet sur elle, pour toujours.
+ *
+ * Restent les deux gestes qui, eux, tiennent :
+ *
+ * - **rien du tout hors de la coquille.** `useAnyModalOpen` n'a qu'un seul
+ *   consommateur, `DesktopWindowButtons`, qui ne sert qu'à retirer des boutons
+ *   natifs. Sur le web, l'observateur travaillait pour personne ;
+ * - **un `querySelector` par rafale UTILE.** Le cas dominant — la frappe dans
+ *   tiptap, le fil d'agent qui se remplit — n'insère que des nœuds de TEXTE, et
+ *   un nœud de texte ne peut porter ni `data-slot` ni `aria-modal`. On ne
+ *   traverse donc le document que si la rafale contient au moins un élément.
  */
 let modalOpen = false;
 let observer: MutationObserver | null = null;
 let scheduled = 0;
 const modalListeners = new Set<() => void>();
+
+/** Cette rafale peut-elle changer la réponse ? (cf. le commentaire ci-dessus) */
+function mayAffectModal(records: MutationRecord[]): boolean {
+  for (const record of records) {
+    if (record.type !== "childList") return true;
+    for (const node of record.addedNodes) {
+      if (node.nodeType === Node.ELEMENT_NODE) return true;
+    }
+    for (const node of record.removedNodes) {
+      if (node.nodeType === Node.ELEMENT_NODE) return true;
+    }
+  }
+  return false;
+}
 
 function readModalOpen(): void {
   const next = !!document.querySelector(MODAL_SELECTOR);
@@ -104,11 +174,14 @@ function readModalOpen(): void {
 }
 
 function subscribeModal(listener: () => void): () => void {
+  // Hors coquille, il n'y a pas de boutons natifs à retirer : rien à observer.
+  if (!getDesktopBridge()) return () => {};
+
   modalListeners.add(listener);
   if (!observer) {
     readModalOpen();
-    observer = new MutationObserver(() => {
-      if (scheduled) return;
+    observer = new MutationObserver((records) => {
+      if (scheduled || !mayAffectModal(records)) return;
       scheduled = requestAnimationFrame(() => {
         scheduled = 0;
         readModalOpen();
@@ -180,7 +253,10 @@ export function useWindowButtonsSlot(): WindowButtonsSlot {
     if (!bridge) return;
     // L'état courant est rejoué à l'abonnement : la fenêtre peut être en plein
     // écran au chargement, et personne n'aurait alors rien à annoncer.
-    return bridge.onWindowButtons(setVisible);
+    return bridge.onWindowButtons((next) => {
+      trace("wb:state", { visible: next });
+      setVisible(next);
+    });
   }, []);
 
   const reserved = modal ? frozen.current : visible;

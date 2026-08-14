@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useCallback,
@@ -129,7 +130,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, s) => {
       resolved = true;
       window.clearTimeout(timeoutId);
-      setSession(s);
+      // ⚠ Bail-out sur le JETON, pas sur l'objet (MIN-315). supabase-js ré-émet
+      // `SIGNED_IN` / `TOKEN_REFRESHED` au retour au premier plan et à chaque
+      // rafraîchissement de jeton, TOUJOURS avec des objets neufs. Or
+      // `AuthProvider` est le provider le plus haut de l'arbre : une session
+      // d'identité neuve re-rend tous ses consommateurs, et la cascade est
+      // vérifiable de bout en bout — `useProjectsQuery` lit `useAuth`, donc
+      // `ProjectsProvider` se re-rend, donc `CreateProvider`, donc le board,
+      // donc TOUTES les cartes. Et « au retour au premier plan » est le geste le
+      // plus fréquent dans une coquille de bureau.
+      setSession((prev) => (prev?.access_token === s?.access_token ? prev : s));
+      // ⚠ **Pas de bail-out sur `user`** : `refreshUser` et
+      // `updateUserMetadata` s'appuient sur l'identité neuve pour propager les
+      // métadonnées.
       setUser(s?.user ?? null);
       setLoading(false);
 
@@ -375,31 +388,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        loading,
-        signInWithPassword,
-        signUpWithPassword,
-        signInWithOAuth,
-        completeDesktopSignIn,
-        signOut,
-        updateUser,
-        updateUserMetadata,
-        refreshUser,
-        enrollTotp,
-        verifyTotp,
-        unenrollTotp,
-        firstTotpFactorId,
-        needsMfaChallenge,
-        signOutOtherSessions,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  // La value est MÉMOÏSÉE (MIN-315). Un littéral d'objet ici re-rendrait tous
+  // les consommateurs à chaque rendu de ce provider — et c'est le plus haut de
+  // l'arbre. Les handlers ci-dessus sont tous des `useCallback` : les seules
+  // dépendances qui bougent vraiment sont les trois états.
+  const value = useMemo(
+    () => ({
+      user,
+      session,
+      loading,
+      signInWithPassword,
+      signUpWithPassword,
+      signInWithOAuth,
+      completeDesktopSignIn,
+      signOut,
+      updateUser,
+      updateUserMetadata,
+      refreshUser,
+      enrollTotp,
+      verifyTotp,
+      unenrollTotp,
+      firstTotpFactorId,
+      needsMfaChallenge,
+      signOutOtherSessions,
+    }),
+    [
+      user,
+      session,
+      loading,
+      signInWithPassword,
+      signUpWithPassword,
+      signInWithOAuth,
+      completeDesktopSignIn,
+      signOut,
+      updateUser,
+      updateUserMetadata,
+      refreshUser,
+      enrollTotp,
+      verifyTotp,
+      unenrollTotp,
+      firstTotpFactorId,
+      needsMfaChallenge,
+      signOutOtherSessions,
+    ]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

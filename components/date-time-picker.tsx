@@ -374,12 +374,14 @@ export function DateTimePicker({
             style={{ position: "fixed", left: anchor?.x ?? 0, top: anchor?.y ?? 0 }}
           />
         </PopoverAnchor>
-      ) : showTooltip ? (
+      ) : (
+        // Le `TooltipTrigger` est là même sans info-bulle (MIN-313) : c'est
+        // l'ouverture qui varie, plus la forme de l'arbre. La variante
+        // « anchored » reste à part — elle n'a pas de déclencheur du tout, c'est
+        // une autre structure et pas une bascule d'exécution.
         <PopoverTrigger asChild>
           <TooltipTrigger asChild>{trigger}</TooltipTrigger>
         </PopoverTrigger>
-      ) : (
-        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       )}
       <PopoverContent
         align={variant === "field" || variant === "anchored" ? "start" : "end"}
@@ -505,9 +507,11 @@ export function DateTimePicker({
     </Popover>
   );
 
-  if (!showTooltip) return popover;
+  // Rendu inconditionnel, ouverture pilotée — même motif que `SearchMenu`, même
+  // raison (MIN-313) : une enveloppe conditionnelle change le type de la racine,
+  // donc remplace le nœud DOM et perd le focus qu'il portait.
   return (
-    <Tooltip>
+    <Tooltip open={showTooltip ? undefined : false}>
       {popover}
       <TooltipContent className="flex items-center gap-1.5">
         {tooltipText}

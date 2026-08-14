@@ -153,22 +153,26 @@ export function SearchMenu({
   }
 
   // Trigger-anchored mode.
+  //
+  // ⚠ Une seule forme, quel que soit `tooltip` (MIN-313). Envelopper
+  // conditionnellement changerait le TYPE de l'élément rendu à cette position,
+  // et React ne réconcilie pas deux types différents : il démonte le sous-arbre,
+  // en monte un neuf, le nœud DOM est remplacé et le focus qu'il portait retombe
+  // sur <body>. Aucun des ~30 sites d'appel ne fait aujourd'hui varier `tooltip`
+  // à l'exécution — c'est donc un fusil chargé sans détente, et la première fois
+  // qu'on rendra un `tooltip` conditionnel, le défaut apparaîtrait sans que rien
+  // ne le relie à ce changement-là. Ce qui varie ici est l'OUVERTURE.
   const popover = (
     <Popover open={open} onOpenChange={onOpenChange}>
-      {tooltip ? (
-        <PopoverTrigger asChild>
-          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-        </PopoverTrigger>
-      ) : (
-        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      )}
+      <PopoverTrigger asChild>
+        <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+      </PopoverTrigger>
       {content}
     </Popover>
   );
 
-  if (!tooltip) return popover;
   return (
-    <Tooltip>
+    <Tooltip open={tooltip ? undefined : false}>
       {popover}
       <TooltipContent className="flex items-center gap-1.5">
         {tooltip}

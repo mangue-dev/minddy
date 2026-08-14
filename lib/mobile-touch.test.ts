@@ -140,10 +140,19 @@ describe("cibles de toucher", () => {
     expect(switchUi).not.toContain("after:");
   });
 
-  it("l'onglet garde son `::after` à lui — d'où le `::before` de la règle", () => {
-    // Le trait de l'onglet actif est dessiné par un `after:`. Poser le nôtre au
-    // même endroit l'effacerait.
-    expect(read(UI("tabs"))).toContain("after:absolute after:bg-foreground");
+  it("la cible de l'onglet passe par `::before`, jamais par `::after`", () => {
+    // Le trait de l'onglet actif est dessiné par un `after:`, et on ne pose donc
+    // pas le nôtre au même endroit.
+    //
+    // Depuis mangue-ui 0.6.0 ce trait a DÉMÉNAGÉ : il n'est plus sur le
+    // déclencheur mais sur un indicateur qui glisse d'un onglet à l'autre
+    // (`data-slot="tabs-indicator"`, variante `line` — celle que minddy utilise
+    // partout). Le `::after` du déclencheur est donc libre aujourd'hui. **On
+    // garde `::before` quand même** : ça ne coûte rien, et ça nous laisse
+    // indifférents au jour où le trait lui reviendra.
+    const tabs = read(UI("tabs"));
+    expect(tabs).toContain('data-slot="tabs-indicator"');
+    expect(tabs).toMatch(/after:absolute .*after:bg-foreground/);
     expect(read(GLOBALS)).toContain('[data-slot="tabs-trigger"]::before');
   });
 

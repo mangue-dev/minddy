@@ -217,9 +217,28 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
 
   return (
     <AssistantChatContext.Provider value={value}>
-      {children}
+      <AssistantBusyContext.Provider value={isBusy}>
+        {children}
+      </AssistantBusyContext.Provider>
     </AssistantChatContext.Provider>
   );
+}
+
+/**
+ * « Numo travaille-t-il ? », et rien d'autre (MIN-323).
+ *
+ * Un contexte séparé parce que son seul consommateur est le FAB, qui n'a besoin
+ * QUE de ce booléen : abonné au contexte complet, il se re-rendait à chaque
+ * token SSE — `state` change à chaque fragment de réponse, donc la value aussi.
+ * Un booléen ne change, lui, que deux fois par tour.
+ *
+ * Ça ne mord que panneau FERMÉ : panneau ouvert, le FAB rend `null`. C'est
+ * précisément le cas où l'utilisateur regarde autre chose.
+ */
+const AssistantBusyContext = createContext(false);
+
+export function useAssistantBusy(): boolean {
+  return useContext(AssistantBusyContext);
 }
 
 export function useAssistantChatContext(): AssistantChatContextValue {

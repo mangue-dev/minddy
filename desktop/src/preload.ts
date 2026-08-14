@@ -17,11 +17,29 @@ import type { DesktopBridge } from "@/lib/desktop/bridge";
  * l'annotation ci-dessous est ce qui empêche cet objet de dériver du contrat.
  */
 
+/**
+ * La version, lue sur la ligne de commande du renderer (MIN-322).
+ *
+ * Elle DOIT être là avant le premier rendu — le pont est un objet figé, pas une
+ * promesse —, et un preload en `sandbox: true` n'a pas d'environnement à lire.
+ * Elle passait donc par un `ipcRenderer.sendSync`, qui arrête le renderer le
+ * temps de l'aller-retour, au démarrage. `additionalArguments` la met dans
+ * `process.argv` (cf. `webPreferences` dans main.ts) : elle est déjà là quand ce
+ * fichier s'exécute, sans un seul aller-retour.
+ *
+ * Le `sendSync` reste en secours, et lui seul : si le drapeau manque, une
+ * version vide s'afficherait dans les réglages sans que rien ne le dise.
+ */
+const VERSION_FLAG = "--minddy-version=";
+
+function readVersion(): string {
+  const flag = process.argv.find((arg) => arg.startsWith(VERSION_FLAG));
+  if (flag) return flag.slice(VERSION_FLAG.length);
+  return ipcRenderer.sendSync("minddy:version") as string;
+}
+
 const bridge: DesktopBridge = {
-  // Synchrone, et une seule fois au chargement du preload : un preload en
-  // `sandbox: true` n'a pas d'environnement à lire, et la version doit être là
-  // avant le premier rendu.
-  version: ipcRenderer.sendSync("minddy:version") as string,
+  version: readVersion(),
 
   openExternal(url: string) {
     ipcRenderer.send("minddy:open-external", url);

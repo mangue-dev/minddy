@@ -26,6 +26,8 @@ import {
 } from "./optimistic/issue-writes";
 import { adoptRemoteRow, remoteEchoOf } from "./optimistic/remote-echo";
 import { shouldCatchUpOnResume, wakeRealtime } from "./realtime-resume";
+import { createCatchUpQueue, type CatchUpQueue } from "./realtime-catch-up";
+import { trace } from "./desktop/trace";
 import type { Project } from "./types";
 
 /**
@@ -613,19 +615,35 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   /**
    * Rattrapage : tout ce qui est monté dans ces périmètres repart au serveur.
-   * Les doublons sont ignorés — deux projets partagent des clés-préfixes
-   * (["comments"], ["events"]…) et la même invalidation n'a pas à être jouée
-   * une fois par projet.
+   *
+   * Un seul parcours du cache, pas un par clé : le détail du pourquoi est dans
+   * lib/realtime-catch-up.ts. La couverture est identique à la boucle qu'il
+   * remplace — mêmes préfixes, requêtes inactives comprises —, ce qui change est
+   * le nombre de balayages (MIN-300), et le fait que la volée de rejoins qui
+   * suit une coupure n'en déclenche qu'un pour tout le monde (MIN-305).
    */
+  const catchUpQueue = useRef<CatchUpQueue | null>(null);
+  if (catchUpQueue.current === null) {
+    catchUpQueue.current = createCatchUpQueue((matches) => {
+      void queryClient.invalidateQueries({
+        predicate: (query) => matches(query.queryKey),
+      });
+    });
+  }
+  useEffect(() => {
+    const queue = catchUpQueue.current;
+    return () => queue?.cancel();
+  }, []);
   const catchUp = useCallback(
     (keys: QueryKey[]) => {
-      const seen = new Set<string>();
-      for (const key of keys) {
-        const hash = JSON.stringify(key);
-        if (seen.has(hash)) continue;
-        seen.add(hash);
-        void queryClient.invalidateQueries({ queryKey: key });
-      }
+      // Point d'appel de la trace (MIN-307) : une ligne `catchUp` suivie d'un
+      // `longtask` est LA signature de la vague d'invalidation, et `cache` dit
+      // combien de requêtes ont été parcourues. No-op trace éteinte.
+      trace("catchUp", {
+        keys: keys.length,
+        cache: queryClient.getQueryCache().getAll().length,
+      });
+      catchUpQueue.current?.push(keys);
     },
     [queryClient]
   );
@@ -737,15 +755,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     let probe: ReturnType<typeof setTimeout> | null = null;
 
     const resume = (hiddenForMs: number) => {
+      if (!shouldCatchUpOnResume({ hiddenForMs })) return;
       const realtime = getSupabase().realtime;
-      if (
-        !shouldCatchUpOnResume({
-          hiddenForMs,
-          socketConnected: realtime.isConnected(),
-        })
-      ) {
-        return;
-      }
       catchUp([...USER_SCOPE_KEYS, ...topicIds.flatMap(projectScopeKeys)]);
       if (probe) clearTimeout(probe);
       probe = wakeRealtime(realtime);

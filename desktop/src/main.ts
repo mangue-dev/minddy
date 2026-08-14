@@ -1,5 +1,13 @@
 import path from "node:path";
-import { BrowserWindow, app, ipcMain, session, shell } from "electron";
+import {
+  BrowserWindow,
+  app,
+  ipcMain,
+  powerMonitor,
+  session,
+  shell,
+  type WebContents,
+} from "electron";
 
 import { parseDesktopAuthLink, type DesktopAuthLink } from "@/lib/desktop/auth-link";
 import {
@@ -13,6 +21,7 @@ import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { buildAppMenu } from "./menu";
 import { startAutoUpdates } from "./updater";
+import { trace } from "./trace";
 
 /**
  * La coquille de minddy (MIN-291) — §2 de docs/desktop-electron.md.
@@ -44,6 +53,26 @@ let mainWindow: BrowserWindow | null = null;
 let wantsWindowButtons = true;
 let windowButtonsVisible = true;
 
+/**
+ * Ce qui a réellement été POSÉ sur la fenêtre, pour ne pas le reposer (MIN-311).
+ *
+ * `setWindowButtonVisibility` et `setWindowButtonPosition` ne sont pas des
+ * écritures d'état : Electron répond à chacune par un `RedrawTrafficLights()` —
+ * les trois `NSButton` replacés dans leur vue et la barre de titre re-mise en
+ * page, de l'AppKit synchrone sur le thread UI du process navigateur. Or la page
+ * appelle souvent : `useHoldWindowButtons("rail", …)` bascule à chaque survol de
+ * la barre latérale, et `"modal"` à chaque ouverture ET fermeture de dialogue,
+ * de palette ou de tiroir.
+ *
+ * ⚠ La déduplication ne peut PAS vivre côté page : le renderer refuse
+ * volontairement de dédupliquer parce que `useWindowButtonsSlot` a besoin de la
+ * réponse du pont. Elle porte donc sur les appels NATIFS seulement — la
+ * republication, elle, reste inconditionnelle.
+ *
+ * Remis à `null` sur `did-start-loading` : un document neuf repart de zéro.
+ */
+let appliedButtons: string | null = null;
+
 /** `target` n'est passé qu'au tout premier appel — `mainWindow` n'est affecté
  *  qu'au retour de `createWindow`, et les boutons s'allument avant. */
 function applyWindowButtons(target?: BrowserWindow): void {
@@ -53,20 +82,32 @@ function applyWindowButtons(target?: BrowserWindow): void {
   if (process.platform !== "darwin" || !window) return;
   const fullScreen = window.isFullScreen();
 
-  // ⚠ EN PLEIN ÉCRAN, ON NE LES CACHE JAMAIS. macOS les gère lui-même : ils
-  // glissent hors de l'écran avec la barre de menus et reviennent quand le
-  // pointeur monte en haut. Les masquer par-dessus, c'est retirer le SEUL moyen
-  // de sortir du plein écran à la souris — une fenêtre dont on ne peut plus
-  // sortir. Le mode rail n'a donc de prise sur eux qu'en fenêtré.
-  window.setWindowButtonVisibility(fullScreen || wantsWindowButtons);
-  if (!fullScreen && wantsWindowButtons) {
-    // Reposer la position APRÈS les avoir remontrés : la remise en visibilité
-    // recrée les boutons standard, et ils reviennent à leur coin d'origine si on
-    // ne le redit pas — c'est-à-dire par-dessus la barre latérale au lieu de
-    // dans sa ligne de marque.
-    window.setWindowButtonPosition(TRAFFIC_LIGHTS);
+  const applied = `${fullScreen}:${wantsWindowButtons}`;
+  trace("applyWindowButtons", {
+    fullScreen,
+    wants: wantsWindowButtons,
+    reposed: applied !== appliedButtons,
+  });
+  if (applied !== appliedButtons) {
+    appliedButtons = applied;
+    // ⚠ EN PLEIN ÉCRAN, ON NE LES CACHE JAMAIS. macOS les gère lui-même : ils
+    // glissent hors de l'écran avec la barre de menus et reviennent quand le
+    // pointeur monte en haut. Les masquer par-dessus, c'est retirer le SEUL
+    // moyen de sortir du plein écran à la souris — une fenêtre dont on ne peut
+    // plus sortir. Le mode rail n'a donc de prise sur eux qu'en fenêtré.
+    window.setWindowButtonVisibility(fullScreen || wantsWindowButtons);
+    if (!fullScreen && wantsWindowButtons) {
+      // Reposer la position APRÈS les avoir remontrés : la remise en visibilité
+      // recrée les boutons standard, et ils reviennent à leur coin d'origine si
+      // on ne le redit pas — c'est-à-dire par-dessus la barre latérale au lieu
+      // de dans sa ligne de marque.
+      window.setWindowButtonPosition(TRAFFIC_LIGHTS);
+    }
   }
 
+  // TOUJOURS republier, même quand rien n'a bougé côté natif : c'est cette
+  // réponse-là qu'attend `useWindowButtonsSlot` pour dégeler sa mise en page.
+  //
   // Ce qu'on annonce à la page est une autre question que ce qu'on montre : en
   // plein écran les boutons existent, mais PAS dans la ligne de marque — ils
   // sont passés sous la garde de macOS, en haut de l'écran. La barre latérale
@@ -74,10 +115,20 @@ function applyWindowButtons(target?: BrowserWindow): void {
   publishWindowButtons(wantsWindowButtons && !fullScreen);
 }
 
-/** Dit à la page ce qu'il en est, et le retient pour les abonnés à venir. */
-function publishWindowButtons(next = windowButtonsVisible): void {
+/**
+ * Dit à la page ce qu'il en est, et le retient pour les abonnés à venir.
+ *
+ * `to` cible UN abonné, pour le rejeu d'état demandé par `…-ready` : sans lui,
+ * l'arrivée d'un abonné tardif arrose tous les `ipcRenderer.on` du document —
+ * ses voisins compris, qui n'ont rien demandé (MIN-310).
+ */
+function publishWindowButtons(
+  next = windowButtonsVisible,
+  to?: WebContents
+): void {
   windowButtonsVisible = next;
-  mainWindow?.webContents.send("minddy:window-buttons-state", next);
+  trace("publishWindowButtons", { next, targeted: to != null });
+  (to ?? mainWindow?.webContents)?.send("minddy:window-buttons-state", next);
 }
 
 /**
@@ -231,6 +282,18 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
       sandbox: true,
       webviewTag: false,
+      // La version, par la ligne de commande plutôt que par un IPC SYNCHRONE
+      // (MIN-322) : `sendSync` arrête le renderer le temps de l'aller-retour, au
+      // démarrage — c'est-à-dire pile pendant le premier rendu. Le preload lit
+      // `process.argv`, qui est déjà là quand il s'exécute.
+      additionalArguments: [`--minddy-version=${app.getVersion()}`],
+      // Le correcteur orthographique passe par `NSSpellChecker` sur macOS, à
+      // chaque modification de texte, sur le thread UI du process navigateur —
+      // et aucune de ses suggestions n'est atteignable : `menu.ts` ne construit
+      // aucun menu contextuel et `main.ts` n'écoute jamais `context-menu`. Il ne
+      // restait que les soulignements rouges. Le rallumer un jour demande
+      // d'abord d'écrire ce menu ; c'est l'autre moitié du travail (MIN-322).
+      spellcheck: false,
       // La sonde de MIN-290 l'a mesuré : la WebSocket Supabase survit très bien
       // à sept minutes en arrière-plan avec l'étranglement ACTIF. On ne le coupe
       // donc pas — ce serait payer de la batterie pour un problème qu'on n'a pas.
@@ -251,7 +314,11 @@ function createWindow(): BrowserWindow {
   // zéro, les boutons restaient cachés POUR TOUJOURS, sans plus personne pour
   // les rendre. Le renderer réaffirme ses raisons dès qu'il est monté.
   window.webContents.on("did-start-loading", () => {
+    trace("did-start-loading", { url: window.webContents.getURL() });
     wantsWindowButtons = true;
+    // Le cache d'application natif porte sur la FENÊTRE, mais sa raison d'être
+    // est la demande de la page : un document neuf repart de zéro (MIN-311).
+    appliedButtons = null;
     applyWindowButtons(window);
   });
 
@@ -274,6 +341,17 @@ function createWindow(): BrowserWindow {
     event.preventDefault();
     window.hide();
   });
+
+  // Ce que la page ne peut pas connaître (MIN-307) : ⌘W et le feu rouge CACHENT
+  // la fenêtre, le même document vit donc des dizaines de cycles par jour, et
+  // c'est ce qui déclenche les reprises. `powerMonitor` porte la cause la plus
+  // fréquente des coupures de socket, dont la page ne voit que la conséquence.
+  window.on("show", () => trace("window:show"));
+  window.on("hide", () => trace("window:hide"));
+  window.on("blur", () => trace("window:blur"));
+  for (const event of ["suspend", "resume", "lock-screen", "unlock-screen"] as const) {
+    powerMonitor.on(event, () => trace(`power:${event}`));
+  }
 
   void window.loadURL(`${DESKTOP_ORIGIN}${DESKTOP_ENTRY_PATH}`);
   return window;
@@ -305,7 +383,10 @@ function registerIpc(): void {
     applyWindowButtons();
   });
 
-  ipcMain.on("minddy:window-buttons-ready", () => publishWindowButtons());
+  // Rejeu d'état, CIBLÉ sur l'abonné qui le demande (MIN-310).
+  ipcMain.on("minddy:window-buttons-ready", (event) =>
+    publishWindowButtons(undefined, event.sender)
+  );
 
   ipcMain.on("minddy:focus", () => {
     if (!mainWindow) return;
