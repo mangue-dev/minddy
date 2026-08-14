@@ -266,6 +266,15 @@ export async function handleControlPlaneRequest(opts: {
   surface: string;
   /** Corps JSON déjà parsé. `null` sur un GET. */
   body: Record<string, unknown> | null;
+  /**
+   * Nom de la microVM appelante, tel que la plateforme l'a signé. Le `runId`
+   * en est déjà dérivé — c'est ici la même chose vue depuis la BASE : la ligne
+   * du run doit reconnaître cette microVM comme la sienne (MIN-331). Aujourd'hui
+   * le nom est déterministe, donc l'égalité tient par construction ; le jour où
+   * elle cesserait de tenir, c'est une VM qui parle pour un run qu'elle
+   * n'exécute pas, et ce n'est pas une divergence à découvrir dans les logs.
+   */
+  sandboxName?: string;
 }): Promise<ControlPlaneResult> {
   const { runId, method, surface } = opts;
   const body = opts.body ?? {};
@@ -318,6 +327,13 @@ export async function handleControlPlaneRequest(opts: {
   // qui ne correspond à rien tombe ici, pas plus loin.
   const run = await getRun(runId);
   if (!run) return { status: 404, body: { error: "unknown run" } };
+
+  // La microVM du run est nommée une fois pour toutes et persistée : une autre
+  // n'a rien à écrire ici, même signée par la plateforme (MIN-331). `null` =
+  // run dont la VM n'est pas encore enregistrée, on laisse passer.
+  if (opts.sandboxName && run.sandbox_id && run.sandbox_id !== opts.sandboxName) {
+    return { status: 403, body: { error: "sandbox does not run this run" } };
+  }
 
   if (method === "POST" && surface === "/events") {
     const type = typeof body.type === "string" ? body.type : "";

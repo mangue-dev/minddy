@@ -884,3 +884,52 @@ describe("le journal de la session", () => {
     expect(h.journal).toEqual([]);
   });
 });
+
+/**
+ * MIN-331 — UNE MICROVM NE PARLE QUE POUR SON RUN, vu depuis la base.
+ *
+ * L'admission de la route (`admitSandboxCaller`) refuse déjà une sandbox d'un
+ * autre compte Vercel, et dérive le run du nom signé — donc le nom et le run
+ * s'accordent par construction. Ce contrôle-ci est l'autre moitié : la ligne du
+ * run doit RECONNAÎTRE cette microVM comme la sienne. Le jour où le nommage
+ * cesserait d'être déterministe, c'est ici que ça se dit, pas dans les logs.
+ */
+describe("la microVM appelante et le run qu'elle prétend exécuter", () => {
+  it("laisse passer la microVM enregistrée sur le run", async () => {
+    h.run = { ...h.run!, sandbox_id: `agent-${RUN_ID}` };
+    const res = await handleControlPlaneRequest({
+      runId: RUN_ID,
+      method: "POST",
+      surface: "/events",
+      body: { type: "assistant_message" },
+      sandboxName: `agent-${RUN_ID}`,
+    });
+    expect(res.status).toBe(200);
+    expect(h.events).toHaveLength(1);
+  });
+
+  it("refuse la microVM d'un AUTRE run, et n'écrit rien", async () => {
+    h.run = { ...h.run!, sandbox_id: `agent-${RUN_ID}` };
+    const res = await handleControlPlaneRequest({
+      runId: RUN_ID,
+      method: "POST",
+      surface: "/events",
+      body: { type: "assistant_message" },
+      sandboxName: "agent-99999999-8888-4777-8666-555555555555",
+    });
+    expect(res.status).toBe(403);
+    expect(h.events).toEqual([]);
+  });
+
+  it("laisse passer un run dont la microVM n'est pas encore enregistrée", async () => {
+    h.run = { ...h.run!, sandbox_id: null };
+    const res = await handleControlPlaneRequest({
+      runId: RUN_ID,
+      method: "POST",
+      surface: "/events",
+      body: { type: "assistant_message" },
+      sandboxName: `agent-${RUN_ID}`,
+    });
+    expect(res.status).toBe(200);
+  });
+});

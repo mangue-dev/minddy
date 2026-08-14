@@ -91,6 +91,77 @@ export function runIdFromSandboxName(name: string): string | null {
     : null;
 }
 
+/** Le locataire Vercel qui a le droit de parler au plan de contrôle : NOTRE team
+ *  et NOTRE projet, ceux-là mêmes qui créent les microVM des runs. */
+export interface ControlPlaneTenant {
+  teamId: string;
+  projectId: string;
+}
+
+/** Ce que la plateforme signe sur une requête forwardée (`ProxyMeta`), réduit à
+ *  ce dont l'admission a besoin. */
+export interface SandboxCaller {
+  teamId: string;
+  projectId: string;
+  sandboxName: string;
+}
+
+export type SandboxAdmission =
+  | { ok: true; runId: string }
+  | { ok: false; status: 403 | 503; error: string };
+
+/**
+ * Le locataire attendu, lu dans l'environnement. Mêmes variables que la création
+ * de microVM et que les domaines personnalisés (MIN-36) — pas une de plus à tenir.
+ *
+ * Et ce n'est pas qu'une économie de configuration : c'est la paire que
+ * `sandboxCredentials()` (sandbox.ts) présente pour CRÉER les microVM. On
+ * compare donc le locataire de l'appelant à celui qui l'a fait naître — une
+ * valeur fausse ne laisserait pas passer un intrus, elle empêcherait le run
+ * d'exister.
+ *
+ * `null` quand l'une manque, et l'appelant en fait un **503, pas un passe-droit** :
+ * un plan de contrôle qui ne sait pas qui il sert ne sert personne.
+ */
+export function resolveControlPlaneTenant(
+  env: Record<string, string | undefined> = process.env,
+): ControlPlaneTenant | null {
+  const teamId = env.VERCEL_TEAM_ID?.trim();
+  const projectId = env.VERCEL_PROJECT_ID?.trim();
+  return teamId && projectId ? { teamId, projectId } : null;
+}
+
+/**
+ * QUI A LE DROIT DE PARLER (MIN-331), et pourquoi la signature ne suffisait pas.
+ *
+ * `defineSandboxProxy` vérifie que le jeton est un OIDC **de Vercel** : signature
+ * contre le JWKS de `oidc.vercel.com`, `aud` égale à l'URL forwardée, fenêtre de
+ * validité. Aucune de ces trois vérifications ne dit **de quel compte** vient la
+ * VM : l'émetteur est commun à toute la plateforme, et l'`aud` est celle que
+ * l'appelant a lui-même posée dans le `forwardURL` de SA politique réseau. Un
+ * attaquant qui déploie chez lui, pointe son `forwardURL` sur notre origine et
+ * nomme sa sandbox `agent-<uuid d'un vrai run>` passait tout ça — et repartait
+ * avec le jeton de forge du run, son checkpoint et sa surface d'outils.
+ *
+ * Ce qui tranche, c'est le locataire : `team_id` et `project_id` sont posés par
+ * la plateforme, hors de portée de l'appelant. On exige les nôtres, puis
+ * seulement ensuite on lit le nom — car c'est ce nom qui, lui, désigne le run.
+ */
+export function admitSandboxCaller(
+  caller: SandboxCaller,
+  tenant: ControlPlaneTenant | null,
+): SandboxAdmission {
+  if (!tenant) {
+    return { ok: false, status: 503, error: "control plane tenant not configured" };
+  }
+  if (caller.teamId !== tenant.teamId || caller.projectId !== tenant.projectId) {
+    return { ok: false, status: 403, error: "foreign sandbox" };
+  }
+  const runId = runIdFromSandboxName(caller.sandboxName);
+  if (!runId) return { ok: false, status: 403, error: "not an agent sandbox" };
+  return { ok: true, runId };
+}
+
 export interface AgentNetworkPolicyInput {
   /**
    * Base URL OpenAI-compatible du provider du run (sans `/chat/completions`),

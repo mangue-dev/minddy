@@ -4,9 +4,11 @@ import type { NetworkPolicyRule } from "@vercel/sandbox";
 import {
   AGENT_LLM_PLACEHOLDER_KEY,
   AGENT_VM_PATH_PREFIX,
+  admitSandboxCaller,
   agentSandboxName,
   agentVmUrl,
   buildAgentNetworkPolicy,
+  resolveControlPlaneTenant,
   runIdFromSandboxName,
 } from "./network-policy";
 
@@ -162,6 +164,57 @@ describe("l'identité de la VM — le nom du sandbox EST le claim", () => {
     for (const suffix of ["../../x", "*", "' or 1=1 --", "not-a-uuid"]) {
       expect(runIdFromSandboxName(`agent-${suffix}`)).toBeNull();
     }
+  });
+});
+
+describe("l'admission du plan de contrôle — le locataire avant le nom (MIN-331)", () => {
+  const RUN = "11111111-2222-4333-8444-555555555555";
+  const TENANT = { teamId: "team_us", projectId: "prj_us" };
+  const OURS = { ...TENANT, sandboxName: agentSandboxName(RUN) };
+
+  it("laisse passer NOTRE microVM, et en rend le run", () => {
+    expect(admitSandboxCaller(OURS, TENANT)).toEqual({ ok: true, runId: RUN });
+  });
+
+  it("refuse une sandbox d'un autre compte Vercel, même parfaitement nommée", () => {
+    // L'attaque de MIN-331 : un OIDC valide, une `aud` que l'attaquant a posée
+    // lui-même dans son `forwardURL`, et le nom d'un vrai run de chez nous.
+    for (const foreign of [
+      { ...OURS, teamId: "team_attacker" },
+      { ...OURS, projectId: "prj_attacker" },
+      { teamId: "team_attacker", projectId: "prj_attacker", sandboxName: OURS.sandboxName },
+    ]) {
+      expect(admitSandboxCaller(foreign, TENANT)).toEqual({
+        ok: false,
+        status: 403,
+        error: "foreign sandbox",
+      });
+    }
+  });
+
+  it("refuse une sandbox à nous qui n'est pas celle d'un run", () => {
+    expect(admitSandboxCaller({ ...TENANT, sandboxName: "probe-min223" }, TENANT)).toEqual({
+      ok: false,
+      status: 403,
+      error: "not an agent sandbox",
+    });
+  });
+
+  it("ferme la porte quand le locataire attendu manque — 503, pas un passe-droit", () => {
+    expect(admitSandboxCaller(OURS, null)).toEqual({
+      ok: false,
+      status: 503,
+      error: "control plane tenant not configured",
+    });
+  });
+
+  it("lit le locataire dans l'environnement, et exige les DEUX variables", () => {
+    expect(
+      resolveControlPlaneTenant({ VERCEL_TEAM_ID: " team_us ", VERCEL_PROJECT_ID: "prj_us" }),
+    ).toEqual(TENANT);
+    expect(resolveControlPlaneTenant({ VERCEL_TEAM_ID: "team_us" })).toBeNull();
+    expect(resolveControlPlaneTenant({ VERCEL_PROJECT_ID: "prj_us" })).toBeNull();
+    expect(resolveControlPlaneTenant({ VERCEL_TEAM_ID: "", VERCEL_PROJECT_ID: "prj_us" })).toBeNull();
   });
 });
 
