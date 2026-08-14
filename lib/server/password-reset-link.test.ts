@@ -120,13 +120,14 @@ describe("le gabarit d'e-mail de réinitialisation", () => {
     expect(params.get("token_hash")).toBe(TOKEN_HASH);
   });
 
-  it("pointe tous ses liens au même endroit — bouton EN, bouton FR et repli", () => {
-    // Trois boutons/liens dans le corps bilingue, plus le repli en clair : un
-    // seul oublié et la moitié des destinataires part ailleurs.
+  it("pointe tous ses liens au même endroit — le bouton et le repli en clair", () => {
+    // Le corps n'a plus qu'un bouton : le texte est branché sur la langue du
+    // compte (`lib/auth-email-templates.test.ts`), pas dupliqué. Restent le
+    // bouton et le repli en clair, et un seul oublié envoie ailleurs.
     const hrefs = [...TEMPLATE.matchAll(/href="(\{\{ \.RedirectTo \}\}[^"]*)"/g)].map(
       (match) => match[1],
     );
-    expect(hrefs.length).toBeGreaterThanOrEqual(3);
+    expect(hrefs.length).toBeGreaterThanOrEqual(2);
     expect(new Set(hrefs).size).toBe(1);
   });
 });

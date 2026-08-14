@@ -3,12 +3,13 @@ import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
 import type { DesktopBridge } from "@/lib/desktop/bridge";
 import type { DesktopChannel } from "@/lib/desktop/channel";
+import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
 /**
  * LA SURFACE, en entier (MIN-291).
  *
  * Le renderer charge du code DISTANT. Ce fichier est la seule chose qu'il peut
- * atteindre au-delà du web, et il doit se lire en trente secondes : huit
+ * atteindre au-delà du web, et il doit se lire en trente secondes : dix
  * membres, aucun qui rende un objet Node, aucun qui prenne un chemin de fichier,
  * aucun qui exécute quoi que ce soit. Tout passe par un message au main process,
  * qui reste libre de refuser — `openExternal` en particulier ne fait rien tant
@@ -85,6 +86,23 @@ const bridge: DesktopBridge = {
 
   setChannel(channel: DesktopChannel) {
     ipcRenderer.send("minddy:set-channel", channel);
+  },
+
+  onUpdateStatus(handler: (status: DesktopUpdateStatus) => void) {
+    const listener = (_event: unknown, status: DesktopUpdateStatus) =>
+      handler(status);
+    ipcRenderer.on("minddy:update-status", listener);
+    // Même raison que pour les boutons macOS : le téléchargement a pu se
+    // terminer avant que cette page existe — elle se recharge à chaque bascule
+    // de canal, et la coquille vit des semaines. Le main process rejoue.
+    ipcRenderer.send("minddy:update-status-ready");
+    return () => {
+      ipcRenderer.removeListener("minddy:update-status", listener);
+    };
+  },
+
+  installUpdate() {
+    ipcRenderer.send("minddy:install-update");
   },
 };
 

@@ -27,10 +27,15 @@ import {
 import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
+import {
+  carrySessionCookies,
+  staleSessionCookies,
+} from "@/lib/desktop/session-carry";
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
+import { hideWindow } from "./hide-window";
 import { buildAppMenu } from "./menu";
-import { startAutoUpdates } from "./updater";
+import { replayUpdateStatus, requestInstall, startAutoUpdates } from "./updater";
 import { trace } from "./trace";
 
 /**
@@ -66,33 +71,88 @@ let channel: DesktopChannel = "stable";
 let origin: string = DESKTOP_ORIGIN;
 
 /**
- * Bascule le canal : on retient, puis on recharge.
+ * Bascule le canal : on emporte la session, on retient, puis on recharge.
  *
  * Un rechargement PLEIN, et pas une navigation cliente : on change d'origine,
  * donc de document, de session et de bundle. Rien de ce qui était rendu ne vaut
  * plus rien.
  *
- * ⚠ **La session ne suit pas.** Les cookies sont par origine : le premier
- * passage sur la preview tombe sur l'écran de connexion, et c'est normal —
- * `/home` s'en charge tout seul (le proxy y renvoie vers `/login` quand la
- * session manque). Revenir au stable retrouve la session de production, restée
- * intacte pendant tout ce temps.
+ * **La session SUIT, depuis MIN-353.** Les cookies restent par origine — c'est
+ * la coquille qui les recopie d'une jarre à l'autre, parce qu'elle a les deux
+ * sous la main et qu'elle sait quand la bascule a lieu (lib/desktop/session-carry.ts).
+ * Sans ça, chaque aller-retour retombait sur l'écran de connexion.
+ *
+ * ⚠ **Le report vient AVANT le chargement, et il faut l'attendre.** Poser les
+ * cookies pendant que la nouvelle origine charge, c'est courir contre elle : la
+ * requête de `/home` peut partir sans eux, le proxy la renvoie vers `/login`, et
+ * on se retrouve avec une session parfaitement valide sur un écran de connexion.
+ * D'où la fonction asynchrone, et le seul endroit du fichier qui attend quelque
+ * chose avant d'agir.
  */
-function setChannel(next: DesktopChannel): void {
+async function setChannel(next: DesktopChannel): Promise<void> {
   if (next === channel) return;
+  const from = origin;
+  const to = desktopOriginForChannel(next);
+  await carrySession(from, to);
+
   writeDesktopChannel(next);
   channel = next;
-  origin = desktopOriginForChannel(next);
+  origin = to;
   trace("setChannel", { channel: next, origin });
   // Les deux surfaces natives qui NOMMENT le canal se refont : sans ça, la coche
   // du menu resterait sur celui qu'on vient de quitter et « À propos »
   // annoncerait l'ancienne origine jusqu'au prochain lancement.
   applyAboutPanel();
   if (mainWindow) {
-    buildAppMenu(mainWindow, channel, setChannel);
+    buildAppMenu(mainWindow, channel, onChannelChange);
     goHome(mainWindow);
     mainWindow.show();
     mainWindow.focus();
+  }
+}
+
+/**
+ * Ce que le menu et le pont appellent : la bascule, sans sa promesse.
+ *
+ * Aucun des deux n'a de quoi attendre — un `click` de `MenuItem` et un
+ * `ipcMain.on` rendent `void` — et aucun des deux n'a rien à faire du résultat.
+ * Le `catch` est là pour que l'échec du report ne devienne jamais un rejet non
+ * attrapé : `carrySession` avale déjà les siens, celui-ci couvre le reste.
+ */
+function onChannelChange(next: DesktopChannel): void {
+  void setChannel(next).catch((error) => {
+    console.error("[channel] bascule impossible", error);
+  });
+}
+
+/**
+ * Recopie les cookies de session de l'origine qu'on quitte vers celle qu'on
+ * rejoint. Voir lib/desktop/session-carry.ts pour ce qui voyage et pourquoi.
+ *
+ * **Un échec ne doit pas retenir la bascule.** Le pire cas est celui d'avant :
+ * on arrive sur l'écran de connexion. Empêcher de changer de canal parce que la
+ * jarre a refusé une écriture, en revanche, laisserait quelqu'un coincé sur une
+ * preview cassée — le seul cas où il faut absolument pouvoir revenir.
+ */
+async function carrySession(from: string, to: string): Promise<void> {
+  if (from === to) return;
+  try {
+    const jar = session.defaultSession.cookies;
+    const carried = carrySessionCookies(await jar.get({ url: from }), to);
+    if (carried.length === 0) {
+      // Personne n'est connecté sur l'origine qu'on quitte : il n'y a rien à
+      // emporter, et surtout rien à effacer à l'arrivée — la session qui s'y
+      // trouve peut-être est la seule qui reste.
+      trace("carrySession", { from, to, carried: 0 });
+      return;
+    }
+    for (const name of staleSessionCookies(await jar.get({ url: to }), carried)) {
+      await jar.remove(to, name);
+    }
+    for (const cookie of carried) await jar.set(cookie);
+    trace("carrySession", { from, to, carried: carried.length });
+  } catch (error) {
+    console.error("[channel] session non reportée", error);
   }
 }
 
@@ -452,10 +512,13 @@ function createWindow(): BrowserWindow {
   window.on("leave-html-full-screen", () => applyWindowButtons());
   // La fenêtre se cache au lieu de mourir (cf. ⌘W dans menu.ts) : l'app reste
   // vivante, donc les notifications continuent d'arriver.
+  //
+  // ⚠ `hideWindow` et non `window.hide()` : en plein écran, cacher sans être
+  // sorti du Space laisse un bureau noir et vide au premier plan (MIN-353).
   window.on("close", (event) => {
     if (mainWindow !== window) return;
     event.preventDefault();
-    window.hide();
+    hideWindow(window);
   });
 
   // Ce que la page ne peut pas connaître (MIN-307) : ⌘W et le feu rouge CACHENT
@@ -508,8 +571,19 @@ function registerIpc(): void {
   // que PROPOSER une valeur : `parseDesktopChannel` la ramène à l'un des deux
   // canaux, et tout ce qui n'est pas `"preview"` renvoie en production.
   ipcMain.on("minddy:set-channel", (_event, next: unknown) => {
-    setChannel(parseDesktopChannel(next));
+    onChannelChange(parseDesktopChannel(next));
   });
+
+  // La mise à jour, telle que la barre latérale la montre (MIN-353). Rejeu
+  // CIBLÉ sur l'abonné qui le demande, comme pour les boutons macOS : la page a
+  // pu se monter longtemps après la fin du téléchargement.
+  ipcMain.on("minddy:update-status-ready", (event) =>
+    replayUpdateStatus(event.sender)
+  );
+
+  // Un clic sur la ligne ne relance PAS l'app : il rouvre la boîte native, qui
+  // demande le dernier oui (updater.ts).
+  ipcMain.on("minddy:install-update", () => requestInstall());
 
   ipcMain.on("minddy:focus", () => {
     if (!mainWindow) return;
@@ -699,8 +773,10 @@ if (!app.requestSingleInstanceLock()) {
     hardenSession();
     registerIpc();
     mainWindow = createWindow();
-    buildAppMenu(mainWindow, channel, setChannel);
-    startAutoUpdates();
+    buildAppMenu(mainWindow, channel, onChannelChange);
+    // La fenêtre est passée à l'updater pour que sa proposition d'installer
+    // s'attache à elle, plutôt que de flotter seule au milieu de l'écran.
+    startAutoUpdates(() => mainWindow);
     flushAuthLink();
 
     // macOS : cliquer l'icône du dock d'une app sans fenêtre visible la ramène.

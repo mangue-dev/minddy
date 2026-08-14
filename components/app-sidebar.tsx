@@ -9,6 +9,8 @@ import {
 } from "react";
 import Link from "next/link";
 import { APP_VERSION } from "@/lib/app-version";
+import { getDesktopBridge } from "@/lib/desktop/bridge";
+import { useDesktopUpdateStatus } from "@/lib/desktop/use-update-status";
 import {
   useHoldWindowButtons,
   useWideLayout,
@@ -22,6 +24,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import {
+  Button,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
@@ -55,6 +58,8 @@ import {
   Shield,
   Newspaper,
   Trash2,
+  ArrowDownToLine,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
@@ -530,6 +535,8 @@ function FooterRow({
   onClick,
   collapsed,
   active = false,
+  disabled = false,
+  iconClassName,
   trailingIcon: TrailingIcon,
 }: {
   icon: typeof Megaphone;
@@ -537,20 +544,37 @@ function FooterRow({
   onClick: () => void;
   collapsed: boolean;
   active?: boolean;
+  /**
+   * Une ligne qui ne fait que CONSTATER — le téléchargement d'une mise à jour en
+   * cours. Elle garde sa place, son infobulle et son libellé ; seul le geste
+   * disparaît.
+   *
+   * ⚠ `aria-disabled` et NON `disabled` : un bouton désactivé n'émet plus
+   * d'événement de pointeur, donc plus de `pointerenter` — et l'infobulle du
+   * mode rail, qui est le SEUL endroit où le libellé se lit quand la barre est
+   * repliée, ne s'ouvrirait jamais. On retire donc l'action (le `onClick` n'est
+   * pas branché) sans retirer la ligne au pointeur.
+   */
+  disabled?: boolean;
+  iconClassName?: string;
   trailingIcon?: typeof Megaphone;
 }) {
   const btn = (
     <button
       type="button"
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      aria-disabled={disabled || undefined}
       className={cn(
-        "flex h-9 items-center rounded-lg text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-foreground",
+        "flex h-9 items-center rounded-lg text-sm font-medium transition-colors",
+        disabled
+          ? "cursor-default"
+          : "hover:bg-sidebar-accent hover:text-foreground",
         active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground",
         ROW_PL,
         collapsed ? cn(ROW_BOX, "pr-[9px]") : "w-full gap-3 pr-3 text-left",
       )}
     >
-      <Icon className="size-[18px] shrink-0" />
+      <Icon className={cn("size-[18px] shrink-0", iconClassName)} />
       {/* `truncate` (donc pas de retour à la ligne) : le libellé reste monté
           pendant que la barre s'anime de 56 à 256 px, et sans lui « Partager un
           retour » se replie sur trois lignes dans les premières images du
@@ -575,6 +599,94 @@ function FooterRow({
   );
 }
 
+/**
+ * La mise à jour de l'app de bureau, dans la barre latérale (MIN-353).
+ *
+ * ## Pourquoi ici, et pas seulement dans la boîte native
+ *
+ * La boîte est un instant : elle s'ouvre à la fin du téléchargement, et qui
+ * répond « plus tard » n'a plus rien devant les yeux. Cet encart, lui, DURE tant
+ * que la version neuve attend sur le disque — c'est la même information, mais
+ * qu'on peut retrouver au lieu de la rattraper.
+ *
+ * ## Un encart, et pas une ligne de plus
+ *
+ * Il a d'abord été une ligne comme ses voisines (Corbeille, Partager un
+ * retour) : elle se voyait à peine. Une mise à jour n'est pas une destination de
+ * plus dans une liste de destinations, c'est la seule chose du pied qui DEMANDE
+ * quelque chose — d'où le cadre, le libellé qui nomme la version, et le bouton
+ * plein qui porte le verbe. La grammaire des lignes voisines dirait le
+ * contraire : « encore une entrée de menu, on verra plus tard ».
+ *
+ * ## Il ne rend rien la plupart du temps, et c'est le point
+ *
+ * Sur le web il n'y a pas de pont, donc jamais d'état autre qu'`idle`, donc
+ * jamais d'encart : rien à conditionner à `isDesktop()`, l'état suffit. Et dans
+ * l'app, l'absence de mise à jour est le cas de presque toujours — un pied de
+ * barre latérale qui porterait un cadre mort en permanence coûterait sa place à
+ * quelque chose d'utile.
+ *
+ * Le clic n'installe pas : il rouvre la boîte native, qui demande le dernier oui
+ * (`installUpdate`, lib/desktop/bridge.ts).
+ */
+function UpdateFooterCard({ collapsed }: { collapsed: boolean }) {
+  const t = useTranslations("Nav");
+  const status = useDesktopUpdateStatus();
+  if (status.state === "idle") return null;
+
+  const ready = status.state === "ready";
+  const install = () => getDesktopBridge()?.installUpdate();
+
+  // **Mode rail : 56 px, et le cadre n'y tient pas.** On retombe sur la
+  // grammaire des lignes voisines — une icône dans la boîte de 36, son
+  // infobulle, et le même geste. C'est le seul endroit de la barre où la forme
+  // change avec la largeur, parce que c'est le seul contenu du pied qui ne soit
+  // pas déjà une ligne.
+  if (collapsed) {
+    return (
+      <FooterRow
+        icon={ready ? ArrowDownToLine : Loader2}
+        // Repliée, la ligne n'a plus que son icône pour se distinguer de ses
+        // voisines : elle prend la couleur du bouton qu'elle remplace.
+        iconClassName={ready ? "text-primary" : "animate-spin"}
+        // ⚠ Les DEUX messages portent `{version}` : appelé sans ses valeurs,
+        // next-intl retombe en silence sur le chemin de la clé, et c'est lui
+        // qu'on lit à l'écran (cf. CLAUDE.md).
+        label={t(ready ? "updateReady" : "updateDownloading", {
+          version: status.version,
+        })}
+        collapsed
+        disabled={!ready}
+        onClick={install}
+      />
+    );
+  }
+
+  return (
+    <div className="mb-1 rounded-lg border border-border bg-sidebar-accent/50 p-2.5">
+      {/* `text-pretty` et pas de `truncate` : le numéro de version est la moitié
+          de la phrase, et il tomberait le premier. Deux lignes valent mieux
+          qu'un « Mettre à jour vers la ver… ». */}
+      <p className="flex items-start gap-1.5 text-pretty text-xs leading-snug text-muted-foreground">
+        {!ready && <Loader2 className="mt-px size-3 shrink-0 animate-spin" />}
+        <span className="min-w-0">
+          {t(ready ? "updateReady" : "updateDownloading", {
+            version: status.version,
+          })}
+        </span>
+      </p>
+      {/* Le bouton n'apparaît QUE quand il peut agir. Un bouton plein grisé
+          pendant le téléchargement attire l'œil sur un geste impossible — le
+          rouet du libellé dit déjà que quelque chose avance. */}
+      {ready && (
+        <Button size="sm" className="mt-2 w-full" onClick={install}>
+          {t("updateAction")}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function SidebarFooter({
   collapsed,
   onMenuOpenChange,
@@ -587,6 +699,11 @@ function SidebarFooter({
   const pathname = usePathname();
   return (
     <div className="flex flex-col gap-0.5">
+      {/* Au-dessus de ses voisines : c'est la seule des quatre choses du pied qui
+          apparaisse d'elle-même, et la seule qui disparaisse. La poser entre
+          deux lignes permanentes ferait sauter tout ce qui est en dessous à
+          chaque fois. */}
+      <UpdateFooterCard collapsed={collapsed} />
       <FooterRow
         icon={Trash2}
         label={t("trash")}

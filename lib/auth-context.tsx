@@ -17,6 +17,7 @@ import { DESKTOP_CALLBACK_FLAG, DESKTOP_TURN_PARAM } from "./desktop/config";
 import { beginDesktopAuthTurn } from "./desktop/auth-turn";
 import type { DesktopAuthLink } from "./desktop/auth-link";
 import { clearPersistedQueryCache } from "./query-provider";
+import { readInterfaceLocale } from "./interface-locale";
 import { useAnalytics } from "./use-analytics";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -223,6 +224,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             ...(options?.fullName ? { full_name: options.fullName } : {}),
             ...(options?.avatarSeed ? { avatar_seed: options.avatarSeed } : {}),
+            // `locale` : la langue de l'interface au moment de l'inscription.
+            // C'est ce que lira le template GoTrue de l'e-mail de confirmation
+            // — le tout premier envoi du compte, et le seul qui parte AVANT
+            // qu'une session ait pu recoller quoi que ce soit. Sans ce champ,
+            // cet e-mail-là sort en anglais quoi qu'il arrive.
+            locale: readInterfaceLocale(),
           },
         },
       });
@@ -350,6 +357,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     metaWriteChain.current = run.catch(() => {});
     return run;
   }, []);
+
+  // Recolle `user_metadata.locale` sur la langue de l'interface.
+  //
+  // Ce champ ne sert PAS à l'app — elle lit le cookie `NEXT_LOCALE`. Il sert
+  // aux e-mails d'authentification, rendus par GoTrue sans requête ni cookie :
+  // `user_metadata` est tout ce qu'il sait du destinataire (voir
+  // `lib/interface-locale.ts` et `supabase/email-templates/`). Le réglage de
+  // langue des préférences l'écrit déjà lui-même ; les autres chemins, non —
+  // le sélecteur du pied de page public, Numo réglant la langue côté serveur,
+  // une connexion OAuth, et tous les comptes créés avant que ce champ existe.
+  //
+  // D'où cette remise à niveau à chaque session : une écriture la toute
+  // première fois, plus rien ensuite (la comparaison coupe court). C'est ce
+  // qui répare le parc existant — mais seulement quand le compte rouvre l'app,
+  // ce qui laisse une réinitialisation de mot de passe demandée d'ici là partir
+  // en anglais.
+  useEffect(() => {
+    if (!user) return;
+    const wanted = readInterfaceLocale();
+    if (user.user_metadata?.locale === wanted) return;
+    void updateUserMetadata({ locale: wanted }).catch(() => {});
+  }, [user, updateUserMetadata]);
 
   const refreshUser = useCallback(async () => {
     const supabase = getSupabase();

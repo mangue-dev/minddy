@@ -2,6 +2,7 @@ import { Menu, app, shell, type BrowserWindow } from "electron";
 
 import type { DesktopChannel } from "@/lib/desktop/channel";
 import { DESKTOP_STABLE_ORIGIN } from "@/lib/desktop/config";
+import { hideWindow } from "./hide-window";
 import { checkForUpdatesFromMenu } from "./updater";
 
 /**
@@ -110,10 +111,11 @@ export function buildAppMenu(
         {
           // À la place de ⌘W : la fenêtre est unique, la faire disparaître sans
           // moyen de la rappeler serait une impasse. On la cache, et l'icône du
-          // dock la ramène.
+          // dock la ramène. `hideWindow` plutôt que `hide()` : en plein écran il
+          // faut refermer le Space avant, sinon il reste noir (MIN-353).
           label: "Close Window",
           accelerator: "CmdOrCtrl+W",
-          click: () => window.hide(),
+          click: () => hideWindow(window),
         },
       ],
     },

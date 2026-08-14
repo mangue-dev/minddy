@@ -3,7 +3,7 @@
  *
  * Le renderer charge du code distant : il ne doit pouvoir appeler que ce qui est
  * exposé ici, nommément, par `contextBridge`. D'où la règle que ce fichier
- * s'impose : **il se lit en trente secondes**. Huit membres, aucun qui rende
+ * s'impose : **il se lit en trente secondes**. Dix membres, aucun qui rende
  * un objet Node, aucun qui prenne un chemin de fichier, aucun qui exécute quoi
  * que ce soit.
  *
@@ -13,6 +13,7 @@
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
 import type { DesktopChannel } from "@/lib/desktop/channel";
+import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
 export interface DesktopBridge {
   /** La version de la coquille (`app.getVersion()`), pour l'afficher. */
@@ -78,6 +79,27 @@ export interface DesktopBridge {
    * recharge la fenêtre sur l'autre origine. Ce document-ci n'existe plus après.
    */
   setChannel(channel: DesktopChannel): void;
+  /**
+   * Où en est la mise à jour de la coquille (MIN-353). Rend son désabonnement,
+   * et rejoue l'état courant à l'abonnement — sans quoi une page montée après le
+   * téléchargement (c'est-à-dire toutes, une fois la fenêtre rechargée) ne
+   * saurait jamais qu'une version l'attend.
+   *
+   * Les valeurs et leurs règles sont dans `lib/desktop/update-status.ts`.
+   */
+  onUpdateStatus(handler: (status: DesktopUpdateStatus) => void): () => void;
+  /**
+   * DEMANDE l'installation de la mise à jour téléchargée.
+   *
+   * Ce n'est pas un ordre, et la nuance est tout l'intérêt du membre : le main
+   * process rouvre la boîte native — « Install and Relaunch » / « Later » — au
+   * lieu de relancer l'app sous les doigts de qui vient de cliquer. La page
+   * annonce et rappelle ; c'est le système qui demande le dernier oui, et lui
+   * seul sait si le fichier est encore là.
+   *
+   * Sans effet quand rien n'est prêt.
+   */
+  installUpdate(): void;
 }
 
 declare global {
