@@ -90,7 +90,7 @@ async function usageOf(row: AdminUserRpcRow) {
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  if (!isAdminUser(auth.user)) {
+  if (!(await isAdminUser(auth.user))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -154,7 +154,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export async function PATCH(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  if (!isAdminUser(auth.user)) {
+  if (!(await isAdminUser(auth.user))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

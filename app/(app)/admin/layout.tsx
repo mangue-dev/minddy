@@ -34,11 +34,12 @@ export default async function AdminLayout({
   }
 
   const user = {
+    id: claims.sub,
     email: typeof claims.email === "string" ? claims.email : undefined,
     app_metadata: claims.app_metadata ?? {},
-  } as Pick<User, "email" | "app_metadata">;
+  } as Pick<User, "id" | "email" | "app_metadata">;
 
-  if (!isAdminUser(user)) {
+  if (!(await isAdminUser(user))) {
     redirect("/home");
   }
 

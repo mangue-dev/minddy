@@ -11,5 +11,5 @@ import { isAdminUser } from "@/lib/server/admin";
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  return NextResponse.json({ isAdmin: isAdminUser(auth.user) });
+  return NextResponse.json({ isAdmin: await isAdminUser(auth.user) });
 }

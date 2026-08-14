@@ -27,9 +27,10 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
  * run FROIDE. Le message rejoint la file `agent_run_messages` ; la boucle le draine
  * à la frontière de round et l'injecte comme message `user`. Cas :
  *   • running / queued     → orientation à chaud (drainé au round suivant) ;
- *   • completed / canceled → nouveau tour : quota re-vérifié (chaque reprise est un
- *                            tour FACTURÉ — sans ce check, une session existante
- *                            contournerait le plafond mensuel pour toujours), puis
+ *   • completed / canceled → nouveau tour : quota re-vérifié sur l'APPELANT et sur
+ *                            le propriétaire (chaque reprise est un tour FACTURÉ —
+ *                            sans ce check, une session existante contournerait le
+ *                            plafond mensuel pour toujours), puis
  *                            run re-`queued`, budget réinitialisé, drain kické.
  * Seule la DERNIÈRE run de l'issue est reprennable — les précédentes sont un
  * historique (voir le refus `supersededRun` plus bas).
@@ -77,6 +78,29 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   if (!RESUMABLE.includes(run.status)) {
     return NextResponse.json({ error: "Run is not resumable" }, { status: 409 });
+  }
+
+  /**
+   * LE DROIT « AGENTS » SE VÉRIFIE SUR L'APPELANT (MIN-344), et à chaque message
+   * — pas seulement sur les reprises.
+   *
+   * Parler à un agent, c'est le faire travailler : un message allonge le tour en
+   * cours comme il en rouvre un terminé. Vérifié sur le seul PROPRIÉTAIRE du
+   * run, le droit se contournait en s'adressant à la conversation d'un autre —
+   * et `canReadAgentRun` ouvre à toute l'équipe les trois runs « du projet »
+   * (routine, chaîne, relecture de PR). Un membre dont le plan n'inclut pas les
+   * agents y avait donc un agent, payé par le compte d'à côté.
+   *
+   * Ici on ne regarde que le PLAN de l'appelant, pas son budget : le tour dépense
+   * la clé du propriétaire, et c'est son plafond à lui qui décide de la suite
+   * (contrôlé sur le chemin de reprise, plus bas).
+   */
+  const callerQuota = await checkAgentQuota(auth.user.id);
+  if (callerQuota.reason === "agents_not_in_plan") {
+    return NextResponse.json(
+      { error: "quotaExceeded", code: "quotaExceeded", quota: callerQuota },
+      { status: 402 },
+    );
   }
 
   // Sa PR est FUSIONNÉE → ce run est LIVRÉ, on ne le réveille pas (MIN-68). Sa
@@ -130,10 +154,26 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       }
     }
 
-    // Chaque reprise démarre un TOUR facturé — même contrôle qu'au lancement
-    // (BYOK = illimité ; clé plateforme = plafond mensuel). Quota vérifié sur le
-    // PROPRIÉTAIRE du run : c'est sa clé/son plafond que le tour consomme.
-    const quota = await checkAgentQuota(run.created_by ?? auth.user.id);
+    /**
+     * Une reprise démarre un TOUR facturé — même contrôle qu'au lancement (BYOK
+     * = tokens illimités ; clé plateforme = plafond mensuel). Deux budgets à
+     * regarder, et il en manquait un (MIN-344) :
+     *
+     *  • celui de l'APPELANT, qui déclenche la dépense (son droit « agents » est
+     *    déjà tombé plus haut ; ici c'est son plafond) ;
+     *  • celui du PROPRIÉTAIRE, dont la clé exécute le tour — le ledger impute au
+     *    `created_by` du run, délibérément (cf. `billToFor` dans
+     *    control-plane.ts : la microVM ne choisit pas qui paye).
+     *
+     * L'imputation, elle, ne bouge pas : elle suit la clé qui exécute. La
+     * déplacer vers l'appelant demanderait de changer de clé en cours de
+     * conversation, alors que le reste du tour continue sur le checkpoint et la
+     * sandbox du propriétaire.
+     */
+    const ownerId = run.created_by ?? auth.user.id;
+    const ownerQuota =
+      ownerId === auth.user.id ? null : await checkAgentQuota(ownerId);
+    const quota = !callerQuota.allowed ? callerQuota : (ownerQuota ?? callerQuota);
     if (!quota.allowed) {
       return NextResponse.json(
         { error: "quotaExceeded", code: "quotaExceeded", quota },

@@ -32,6 +32,12 @@ export interface AiKey {
   base_url: string | null;
   created_at: string;
   last_used_at: string | null;
+  /**
+   * Instant où le fournisseur a reconnu la clé (MIN-344). `null` = jamais
+   * confirmée : la clé est enregistrée, mais elle ne lève aucun plafond — le
+   * compte reste sur le quota minddy tant qu'elle ne répond pas.
+   */
+  validated_at: string | null;
 }
 
 export async function fetchAiKeysApi(): Promise<{ keys: AiKey[] }> {

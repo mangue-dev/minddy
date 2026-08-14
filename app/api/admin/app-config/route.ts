@@ -30,7 +30,7 @@ const MAX_VALUE_LENGTH = 10_000;
 async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  if (!isAdminUser(auth.user)) {
+  if (!(await isAdminUser(auth.user))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;

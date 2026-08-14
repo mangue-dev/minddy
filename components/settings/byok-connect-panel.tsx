@@ -193,6 +193,16 @@ export function ByokConnectPanel({
               {t("aiKeyRemove")}
             </Button>
           </div>
+          {/* MIN-344 : une clé que le fournisseur n'a jamais confirmée ne lève
+              aucun plafond. Le cas est rare (on refuse tout de suite une clé
+              refusée ; il ne reste que celles enregistrées pendant une panne du
+              fournisseur), mais il doit se LIRE — sinon le compte reste plafonné
+              sans que rien à l'écran ne l'explique. */}
+          {activeKey.validated_at ? null : (
+            <p className="text-xs text-amber-600 dark:text-amber-500">
+              {t("aiKeyUnconfirmed")}
+            </p>
+          )}
           {/* MIN-223 : dit ici parce que ça ne se corrige pas ailleurs — la clé
               de minddy est plafonnée par run côté fournisseur, celle-ci ne peut
               pas l'être : elle n'est pas sur notre compte. */}

@@ -45,7 +45,7 @@ async function requireAdmin(
 ): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
-  if (!isAdminUser(auth.user)) {
+  if (!(await isAdminUser(auth.user))) {
     return {
       ok: false,
       response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),

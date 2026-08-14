@@ -5,10 +5,12 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import { encryptUserAiKey, keyPrefix } from "@/lib/server/agent/byok-credentials";
+import { probeByokKey } from "@/lib/server/agent/byok-validate";
 import {
   getAgentProvider,
   isKnownAgentProvider,
   normalizeBaseUrl,
+  resolveProviderBaseUrl,
 } from "@/lib/agent-providers";
 
 /**
@@ -21,7 +23,8 @@ import {
  * perso (il appartenait au namespace de l'ancien provider).
  */
 
-const SANITIZED = "id, provider, key_prefix, base_url, created_at, last_used_at";
+const SANITIZED =
+  "id, provider, key_prefix, base_url, created_at, last_used_at, validated_at";
 
 // Bornes larges : une clé d'API réelle et une base URL tiennent très en dessous.
 const MAX_KEY_LENGTH = 1024;
@@ -91,6 +94,22 @@ export async function POST(request: NextRequest) {
     baseUrl = normalizeBaseUrl(raw);
   }
 
+  // La clé est PRÉSENTÉE au fournisseur avant d'être enregistrée (MIN-344) : sa
+  // seule présence en base levait tout plafond d'usage, y compris celui du
+  // compute de la microVM, que minddy paye. Un refus franc (401/403) est un fait
+  // qu'on rend à l'utilisateur tout de suite — enregistrer une clé morte ne lui
+  // rendrait service ni maintenant ni au premier run. Un verdict `unknown`
+  // (fournisseur injoignable) enregistre la clé SANS date de validation : elle ne
+  // lève rien, et `getUserByok` retentera au premier usage.
+  const effectiveBaseUrl = resolveProviderBaseUrl(provider, baseUrl);
+  const verdict = effectiveBaseUrl
+    ? await probeByokKey({ provider, apiKey: key, baseUrl: effectiveBaseUrl })
+    : "unknown";
+  if (verdict === "invalid") {
+    const t = await getTranslations("ApiErrors");
+    return NextResponse.json({ error: t("aiKeyRejected") }, { status: 400 });
+  }
+
   let encrypted: string;
   try {
     encrypted = encryptUserAiKey(key);
@@ -125,6 +144,7 @@ export async function POST(request: NextRequest) {
         key_encrypted: encrypted,
         key_prefix: keyPrefix(key),
         base_url: baseUrl,
+        validated_at: verdict === "valid" ? new Date().toISOString() : null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,provider" },

@@ -21,7 +21,7 @@ import { getFinanceSummary } from "@/lib/server/finance";
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  if (!isAdminUser(auth.user)) {
+  if (!(await isAdminUser(auth.user))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

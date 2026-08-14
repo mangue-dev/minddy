@@ -19,8 +19,9 @@ import { captureServerEvent, identifyServerUser } from "@/lib/server/posthog";
 
 /**
  * POST /api/stripe/webhook (MIN-72) — signature vérifiée (HMAC, tolérance
- * 300 s), idempotence par INSERT du `stripe_event_id` (PK) : un doublon viole
- * la contrainte et court-circuite. L'état d'abonnement est écrit dans
+ * 300 s), idempotence par INSERT du `stripe_event_id` (PK) : un doublon viole la
+ * contrainte, et c'est le `processed_at` de la ligne qui dit si l'événement a
+ * VRAIMENT été traité (MIN-344, cf. `claimStripeEvent`). L'état d'abonnement est écrit dans
  * `billing_accounts` via `syncSubscriptionToBillingAccount` ; le filet du
  * re-sync paresseux (billing-accounts.ts) couvre les events manqués.
  */
@@ -31,19 +32,69 @@ interface StripeInvoicePayload {
   metadata?: Record<string, string | undefined>;
 }
 
-/** true = event nouveau ; false = déjà traité (unique violation 23505). */
-async function tryRecordStripeEvent(event: StripeEvent): Promise<boolean> {
+/**
+ * L'IDEMPOTENCE EN DEUX TEMPS (MIN-344).
+ *
+ * La ligne était écrite avec son `processed_at` AVANT que l'événement soit
+ * traité : une panne transitoire au milieu (Stripe injoignable pour aller
+ * chercher l'abonnement, base indisponible une seconde) rendait un 500, Stripe
+ * rejouait — et le rejeu tombait sur une ligne « déjà traitée » et n'appelait
+ * plus rien. L'activation était perdue POUR TOUJOURS, sans une trace qui le
+ * dise : un abonnement payé, un compte resté au plan Free.
+ *
+ * Désormais la ligne est une RÉSERVATION (`processed_at` null) qu'on tamponne
+ * après coup. D'où trois issues au moment de la prendre :
+ *   • `fresh`     — à nous de traiter ;
+ *   • `done`      — un doublon d'un événement déjà mené à bien (Stripe rejoue
+ *                   volontiers), on court-circuite ;
+ *   • `inflight`  — une autre invocation l'a réservé à l'instant. On rend une
+ *                   erreur pour que Stripe rejoue plus tard plutôt que de
+ *                   traiter deux fois en parallèle.
+ *
+ * Une réservation ABANDONNÉE (invocation tuée entre les deux) resterait sinon
+ * bloquante à vie : passé `STALE_CLAIM_MS`, on la reprend.
+ */
+const STALE_CLAIM_MS = 5 * 60 * 1000;
+
+type ClaimOutcome = "fresh" | "done" | "inflight";
+
+async function claimStripeEvent(event: StripeEvent): Promise<ClaimOutcome> {
   const service = getServiceClient();
   const { error } = await service.from("stripe_webhook_events").insert({
     stripe_event_id: event.id,
     type: event.type,
     livemode: event.livemode,
     payload: event,
-    processed_at: new Date().toISOString(),
+    processed_at: null,
   });
-  if (!error) return true;
-  if ((error as { code?: string }).code === "23505") return false;
-  throw new Error(error.message);
+  if (!error) return "fresh";
+  if ((error as { code?: string }).code !== "23505") throw new Error(error.message);
+
+  // Déjà une ligne : traitée, ou réservée par quelqu'un d'autre.
+  const { data } = await service
+    .from("stripe_webhook_events")
+    .select("processed_at, created_at")
+    .eq("stripe_event_id", event.id)
+    .maybeSingle();
+  const row = data as { processed_at: string | null; created_at: string } | null;
+  if (!row) return "fresh"; // Course improbable (ligne effacée) : on refait.
+  if (row.processed_at) return "done";
+  const age = Date.now() - new Date(row.created_at).getTime();
+  return age > STALE_CLAIM_MS ? "fresh" : "inflight";
+}
+
+/** Tampon final : c'est LUI qui rend l'événement non rejouable. */
+async function markStripeEventProcessed(eventId: string): Promise<void> {
+  const service = getServiceClient();
+  const { error } = await service
+    .from("stripe_webhook_events")
+    .update({ processed_at: new Date().toISOString() })
+    .eq("stripe_event_id", eventId);
+  if (error) {
+    // Le traitement, lui, a réussi. Ne pas lever : un 500 ferait rejouer un
+    // événement dont l'effet est déjà en base, sans rien réparer.
+    console.error("[stripe-webhook] mark processed failed:", error.message);
+  }
 }
 
 async function handleCheckoutCompleted(
@@ -138,8 +189,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    if (!(await tryRecordStripeEvent(event))) {
+    const claim = await claimStripeEvent(event);
+    if (claim === "done") {
       return Response.json({ received: true, duplicate: true });
+    }
+    if (claim === "inflight") {
+      // 409 : Stripe rejoue sur tout ce qui n'est pas 2xx, et c'est ce qu'on
+      // veut — l'invocation en cours finira peut-être, mais si elle meurt, le
+      // rejeu reprendra la réservation périmée.
+      return Response.json({ error: "Event already in flight" }, { status: 409 });
     }
 
     switch (event.type) {
@@ -194,9 +252,13 @@ export async function POST(request: NextRequest) {
         break;
     }
 
+    await markStripeEventProcessed(event.id);
     return Response.json({ received: true });
   } catch (error) {
     console.error("[stripe-webhook] failed:", (error as Error).message);
+    // La réservation reste SANS tampon : le rejeu de Stripe la reprendra
+    // (immédiatement si elle est périmée, au prochain essai sinon). Rien n'est
+    // effacé — la ligne garde le payload, qui est la trace de l'incident.
     return Response.json({ error: (error as Error).message }, { status: 500 });
   }
 }

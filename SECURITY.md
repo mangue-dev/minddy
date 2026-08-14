@@ -30,6 +30,18 @@ sur Vercel (HTTPS natif, redirection HTTP→HTTPS gérée par la plateforme).
   faille classique de la liste de routes sensibles qu'on oublie de compléter.
   Seule `/api/account/mfa/recover` passe `allowAal1` (le cas « plus de
   téléphone »).
+- **Privilège admin (`/admin`, `/api/admin/*`) :** deux sources, et une seule
+  porte — `isAdminUser` ([lib/server/admin.ts](lib/server/admin.ts)), appelée
+  dans **chaque** handler exporté, jamais présumée d'un passage précédent.
+  (1) `app_metadata.role === "admin"`, non écrivable par l'utilisateur ;
+  (2) l'allowlist `ADMIN_EMAILS`, qui exige depuis MIN-344 que l'adresse soit
+  **confirmée** — vérifié sur `auth.users.email_confirmed_at` en clé de service,
+  jamais sur un claim (le `email_verified` de `user_metadata` est écrit par
+  l'utilisateur lui-même, donc forgeable). Sans cette exigence, s'inscrire avec
+  l'adresse d'un admin listé mais pas encore inscrit suffisait à obtenir le
+  privilège le plus élevé du produit. Lecture fail-closed, mémorisée 60 s.
+  `/api/me/admin` est purement informatif : il dit à la barre latérale s'il faut
+  afficher l'entrée, il n'ouvre rien.
 - **Politique de mot de passe :** longueur minimale 8, imposée côté client
   ([app/(auth)/login/page.tsx](<app/(auth)/login/page.tsx>)) ET côté serveur
   (Dashboard Supabase → Auth). Voir le bloc « Durcissement Auth » de
@@ -198,7 +210,7 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
 | Crons (`/api/cron/*`) | `Authorization: Bearer ${CRON_SECRET}`, comparé en `timingSafeEqual` ([lib/server/cron-auth.ts](lib/server/cron-auth.ts)) |
 | Webhook GitHub | Signature HMAC de l'App (`timingSafeEqual`) ; **fail-closed** — secret absent → 503, rien traité ; anti-rejeu sur `X-GitHub-Delivery` |
 | Webhook GitLab | Jeton **propre au dépôt**, résolu sur `project.id` puis comparé en `timingSafeEqual` ; **fail-closed** — aucune matière à vérifier → 503, jeton refusé → 401 ; anti-rejeu sur `X-Gitlab-Event-UUID` |
-| Webhook Stripe | Signature Stripe vérifiée |
+| Webhook Stripe | Signature Stripe vérifiée ; idempotence en **deux temps** (MIN-344) — la ligne `stripe_webhook_events` est une réservation, le `processed_at` n'est posé qu'après un traitement réussi, donc un échec transitoire reste rejouable |
 | Webhook Supabase (nouvel utilisateur) | Secret partagé `x-minddy-webhook-secret` ; fail-closed 503 |
 | OAuth 2.1 / MCP (`/api/oauth/*`, `/api/mcp`) | Clients publics PKCE S256 obligatoire, tokens opaques hashés, codes à usage unique |
 | Boards publics (`/f/<token>`, `/share/<token>`) | Servis côté serveur en clé service ; option mot de passe ; OTP email pour voter/commenter |

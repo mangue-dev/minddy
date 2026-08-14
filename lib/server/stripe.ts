@@ -251,15 +251,14 @@ export async function createStripeCustomer(params: {
   return stripeRequest<StripeCustomer>("/v1/customers", body);
 }
 
-export async function findStripeCustomerByEmail(
-  email: string
-): Promise<StripeCustomer | null> {
-  const encoded = encodeURIComponent(`email:'${email.replaceAll("'", "\\'")}'`);
-  const result = await stripeRequest<StripeList<StripeCustomer>>(
-    `/v1/customers/search?query=${encoded}`
-  );
-  return result.data[0] ?? null;
-}
+/*
+ * Il y avait ici un `findStripeCustomerByEmail`, dont le checkout se servait pour
+ * « retrouver » le client d'un compte sans référence enregistrée. Retiré par
+ * MIN-344, et pas seulement de son appelant : une adresse n'identifie personne
+ * chez Stripe, et rattacher un compte minddy au premier client qui porte la même
+ * lui ouvrait l'abonnement, les factures et le portail d'un autre. Le seul lien
+ * qui fasse foi est `billing_accounts.stripe_customer_id`, écrit par nous.
+ */
 
 export async function createStripeCheckoutSession(params: {
   customerId: string;

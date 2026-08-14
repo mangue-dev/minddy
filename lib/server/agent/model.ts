@@ -239,20 +239,76 @@ export interface UserByok {
 }
 
 /**
+ * Une clé non validée est-elle reconnue MAINTENANT ? (MIN-344)
+ *
+ * Le chemin normal pose `validated_at` à l'enregistrement. Restent deux cas où
+ * la colonne est nulle : les lignes antérieures à MIN-344, et celles enregistrées
+ * pendant une panne du fournisseur (verdict `unknown`). Plutôt que de les
+ * condamner, on retente ici — au premier usage — et on pose la date si la clé
+ * répond. Une clé qui ne répond pas reste inerte : le compte retombe sur la clé
+ * plateforme et son plafond, ce qui est exactement le comportement voulu.
+ *
+ * Le résultat NÉGATIF est mémorisé quelques minutes : sans ça, un compte à clé
+ * morte paierait un aller-retour réseau à chaque lecture d'endpoint — et il y en
+ * a plusieurs par run.
+ */
+const UNVALIDATED_TTL_MS = 5 * 60 * 1000;
+const unvalidatedProbes = new Map<string, number>();
+
+/** Purge de test — cache de process, pas un état partagé. */
+export function resetByokProbeCache(): void {
+  unvalidatedProbes.clear();
+}
+
+async function confirmsUnvalidatedKey(params: {
+  userId: string;
+  provider: AgentProviderId;
+  apiKey: string;
+  baseUrl: string;
+}): Promise<boolean> {
+  const lastFailure = unvalidatedProbes.get(params.userId);
+  if (lastFailure && Date.now() - lastFailure < UNVALIDATED_TTL_MS) return false;
+
+  const { probeByokKey } = await import("./byok-validate");
+  const verdict = await probeByokKey(params);
+  if (verdict !== "valid") {
+    unvalidatedProbes.set(params.userId, Date.now());
+    return false;
+  }
+  unvalidatedProbes.delete(params.userId);
+  await getServiceClient()
+    .from("user_ai_keys")
+    .update({ validated_at: new Date().toISOString() })
+    .eq("user_id", params.userId)
+    .eq("provider", params.provider);
+  return true;
+}
+
+/**
  * BYOK actif de l'utilisateur (un seul), déchiffré et résolu en endpoint, ou
  * null. Ignore une ligne dont la base URL n'est pas résoluble (generic sans URL)
  * ou dont la clé ne déchiffre plus (secret tourné → « reconfigure ta clé »).
+ *
+ * Ignore aussi — depuis MIN-344 — une clé que le fournisseur n'a jamais reconnue.
+ * Une clé inventée levait tous les plafonds d'usage sans avoir jamais fait
+ * tourner quoi que ce soit ; une ligne non validée ne vaut donc plus rien, ni
+ * ici ni dans `checkAgentQuota`.
  */
 export async function getUserByok(userId: string): Promise<UserByok | null> {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("user_ai_keys")
-    .select("provider, key_encrypted, base_url")
+    .select("provider, key_encrypted, base_url, validated_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const row = data as { provider: string; key_encrypted: string; base_url: string | null } | null;
+  const row = data as {
+    provider: string;
+    key_encrypted: string;
+    base_url: string | null;
+    validated_at: string | null;
+  } | null;
   if (!row) return null;
   const apiKey = decryptUserAiKey(row.key_encrypted);
   if (!apiKey) return null;
@@ -270,7 +326,14 @@ export async function getUserByok(userId: string): Promise<UserByok | null> {
       return null;
     }
   }
-  return { provider: row.provider as AgentProviderId, apiKey, baseUrl };
+  const provider = row.provider as AgentProviderId;
+  if (
+    !row.validated_at &&
+    !(await confirmsUnvalidatedKey({ userId, provider, apiKey, baseUrl }))
+  ) {
+    return null;
+  }
+  return { provider, apiKey, baseUrl };
 }
 
 /** True si l'utilisateur a un BYOK utilisable (→ usage illimité). */

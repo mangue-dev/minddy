@@ -11,7 +11,6 @@ import {
 import {
   createStripeCheckoutSession,
   createStripeCustomer,
-  findStripeCustomerByEmail,
   getStripePriceIdForPlan,
   isMissingCustomerError,
   isStripeConfigured,
@@ -65,11 +64,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Customer : réutilise celui du compte, sinon retrouve par email, sinon crée.
+  /**
+   * Customer : celui QU'ON A ÉCRIT pour ce compte, sinon un neuf. Jamais une
+   * recherche par adresse (MIN-344).
+   *
+   * L'e-mail n'identifie personne chez Stripe : rien n'y empêche deux clients de
+   * la porter, et surtout rien ne relie l'adresse d'un compte minddy au client
+   * Stripe qui la porte — un compte qui s'inscrit avec l'adresse d'un autre
+   * héritait de SON client, donc de son abonnement, de ses factures et du portail
+   * qui les ouvre. Le seul lien qui fasse foi est celui qu'on a écrit nous-mêmes
+   * dans `billing_accounts.stripe_customer_id`.
+   */
   let customerId = account?.stripe_customer_id ?? null;
-  if (!customerId && user.email) {
-    customerId = (await findStripeCustomerByEmail(user.email))?.id ?? null;
-  }
   if (!customerId) {
     customerId = (
       await createStripeCustomer({ email: user.email, userId: user.id })
