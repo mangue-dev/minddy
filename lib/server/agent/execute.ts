@@ -2111,6 +2111,8 @@ export async function executeAgentRun(
           redact: secrets.redact,
           execTool: makeExecTool({
             host,
+            // L'ancrage de la MÈRE : une fille hérite du jeu de sa session (MIN-326).
+            anchor,
             createPr: null,
             // La pull request appartient au parent, comme le ticket et le carnet
             // (et une fille n'a de toute façon aucun de ces tools dans son schéma).
@@ -2308,6 +2310,7 @@ export async function executeAgentRun(
       redact: secrets.redact,
       execTool: makeExecTool({
         host,
+        anchor,
         // Une relecture n'ouvre pas de pull request : le tool n'est pas dans son
         // jeu, et le handler ne lui est pas non plus câblé (deux verrous, pas un).
         // La PORTE (MIN-247) enveloppe le handler des DEUX moteurs, au même endroit

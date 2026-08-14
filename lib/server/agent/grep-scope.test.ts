@@ -94,6 +94,7 @@ describe("tool grep — ce que le modèle LIT", () => {
   const run = (h: RepoHost, args: Record<string, unknown>) =>
     makeExecTool({
       host: h,
+      anchor: "issue",
       createPr: null,
       prTool: null,
       projectPrTool: null,
@@ -186,6 +187,7 @@ describe("tools voisins — échec ≠ résultat vide", () => {
   const tool = (h: RepoHost, name: string, args: Record<string, unknown>) =>
     makeExecTool({
       host: h,
+      anchor: "issue",
       createPr: null,
       prTool: null,
       projectPrTool: null,

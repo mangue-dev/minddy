@@ -1,3 +1,5 @@
+import type { AgentAnchor } from "./prompt";
+
 /**
  * LES NOMS des tools de PLATEFORME — ticket, carnet, pull request.
  *
@@ -79,4 +81,88 @@ export const PROJECT_PR_TOOL_NAMES = new Set([
   "reply_pull_request_thread",
   "review_pull_request",
   "set_pull_request_state",
+]);
+
+/**
+ * L'ANCRAGE D'UN RUN, lu sur sa ligne (MIN-326).
+ *
+ * La même précédence qu'`execute.ts` (« `issue` ? "issue" : `prRun` ? "pr" :
+ * "notebook" »), et il faut qu'elle le reste : c'est cet ancrage qui décide à la
+ * fois de ce qu'on ANNONCE au modèle (`agentToolsFor`) et de ce qu'on lui SERT
+ * (`runPlatformTool`). Deux réponses différentes à « quel ancrage ? » et le jeu
+ * de tools annoncé cesse d'être celui qui est appliqué — précisément la
+ * divergence que la table ci-dessous existe pour empêcher.
+ */
+export function anchorForRun(run: {
+  issue_id: string | null;
+  pull_request_id: string | null;
+}): AgentAnchor {
+  if (run.issue_id) return "issue";
+  return run.pull_request_id ? "pr" : "notebook";
+}
+
+/** Tout tool de plateforme d'un run de TICKET ou de CARNET — les deux ancrages
+ *  ont exactement le même jeu (cf. `AGENT_TOOLS` / `NOTEBOOK_AGENT_TOOLS`). */
+const FULL_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
+  ...ISSUE_TOOL_NAMES,
+  ...SCRATCHPAD_TOOL_NAMES,
+  ...PROJECT_PR_TOOL_NAMES,
+  "create_pr",
+  "web_search",
+]);
+
+/**
+ * Ce qu'une RELECTURE de pull request peut appeler : les LECTEURS minddy, et les
+ * trois écritures sur la pull request relue. Rien d'autre — pas un tool ticket,
+ * pas le carnet, pas une page, pas un objectif, pas une routine, pas `create_pr`,
+ * et pas `web_search` (le jeu de relecture ne l'a jamais servi).
+ *
+ * `read_attachment` est le nom d'avant MIN-184 de `read_resource` : il n'est plus
+ * annoncé nulle part, mais un checkpoint repris rejoue l'ancien appel — il vit
+ * donc partout où `read_resource` vit, ici comme dans `ISSUE_TOOL_NAMES`.
+ */
+const PR_REVIEW_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
+  "search_issues",
+  "read_issue",
+  "read_feedback",
+  "read_resource",
+  "read_attachment",
+  "list_pages",
+  "read_page",
+  "list_objectives",
+  "read_objective",
+  ...PR_TOOL_NAMES,
+]);
+
+/**
+ * LE JEU D'OUTILS EST UNE PROPRIÉTÉ DU RUN, pas une liste que le prompt est prié
+ * de respecter (MIN-326).
+ *
+ * `runPlatformTool` routait sur le SEUL nom du tool : seules les deux familles PR
+ * regardaient un ancrage. Une session de relecture — celle dont tout le dépôt
+ * affirme qu'elle est en lecture seule, et la seule dont le contenu lu vient d'un
+ * fork inconnu — pouvait donc appeler `update_issue`, `set_scratchpad`,
+ * `create_page`, `create_routine` ou `create_pr` par un simple POST sur
+ * `/api/agent-vm/tool/<nom>` depuis son shell. Une instruction glissée dans un
+ * `AGENTS.md` suffisait à franchir l'ancrage, jusqu'à la ROUTINE planifiée, qui
+ * donne une persistance.
+ *
+ * Cette table est le verrou de CODE que la doctrine n'avait qu'en prompt. Elle
+ * est aussi la raison pour laquelle un tool neuf ne peut plus être ajouté sans
+ * décider de son ancrage : le test de `control-plane.test.ts` la confronte, nom
+ * par nom, à ce qu'`agentToolsFor` ANNONCE pour chaque ancrage — les deux ne
+ * peuvent plus diverger en silence.
+ */
+export const PLATFORM_TOOLS_BY_ANCHOR: Record<AgentAnchor, ReadonlySet<string>> = {
+  issue: FULL_PLATFORM_TOOL_NAMES,
+  notebook: FULL_PLATFORM_TOOL_NAMES,
+  pr: PR_REVIEW_PLATFORM_TOOL_NAMES,
+};
+
+/** TOUS les tools de plateforme, ancrages confondus — « ce nom est-il soumis à la
+ *  table ? ». Un nom qui n'y est pas n'est pas de plateforme (fichier, contrôle,
+ *  délégation) : son handler décide, comme avant. */
+export const PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
+  ...FULL_PLATFORM_TOOL_NAMES,
+  ...PR_REVIEW_PLATFORM_TOOL_NAMES,
 ]);

@@ -1316,6 +1316,38 @@ export async function bumpRunActivity(runId: string): Promise<void> {
 }
 
 /**
+ * QUELQU'UN D'AUTRE QUE SON CRÉATEUR A-T-IL PARLÉ À CE RUN ? (MIN-326)
+ *
+ * N'importe quel membre du projet peut reprendre un run à chaud
+ * ([steer](../../../app/api/agent-runs/[runId]/steer/route.ts)) : le tour repart
+ * alors sur la consigne d'un tiers, mais avec l'identité du CRÉATEUR — dont le
+ * carnet est personnel. C'est cette question-là que le plan de contrôle pose
+ * avant d'ouvrir le carnet.
+ *
+ * Elle porte sur la VIE DU RUN et pas sur le tour en cours : une consigne reste
+ * dans l'historique de la conversation et gouverne aussi les tours suivants.
+ *
+ * Une lecture en panne répond `true` — le carnet se ferme plutôt que de s'ouvrir
+ * sur un doute. C'est le seul sens sûr : le pire cas est un tool qui refuse, pas
+ * la note privée de quelqu'un réécrite par l'agent d'un collègue.
+ */
+export async function runSteeredByOther(runId: string, ownerId: string): Promise<boolean> {
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("agent_run_messages")
+    .select("id")
+    .eq("run_id", runId)
+    .not("created_by", "is", null)
+    .neq("created_by", ownerId)
+    .limit(1);
+  if (error) {
+    console.error("[agent-runs] runSteeredByOther failed:", error.message);
+    return true;
+  }
+  return (data ?? []).length > 0;
+}
+
+/**
  * Demande l'interruption de la réponse en cours (« Stop »). Ne pose le drapeau que
  * sur un run qui TRAVAILLE (queued/running) — le chunk actif le lit et suspend
  * proprement au repos. N'annule rien, ne touche ni checkpoint ni sandbox.

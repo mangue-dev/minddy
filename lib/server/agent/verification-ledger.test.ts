@@ -31,6 +31,7 @@ function fakeHost(exitCode = 0): RepoHost {
 function execToolFor(host: RepoHost, verification: VerificationSink) {
   return makeExecTool({
     host,
+    anchor: "issue",
     createPr: null,
     prTool: null,
     projectPrTool: null,

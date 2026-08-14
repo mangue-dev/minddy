@@ -31,6 +31,7 @@ function fakeHost(files: Record<string, string>): RepoHost & { files: Map<string
 function execToolFor(host: RepoHost) {
   return makeExecTool({
     host,
+    anchor: "issue",
     createPr: null,
     prTool: null,
     projectPrTool: null,

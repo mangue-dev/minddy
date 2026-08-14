@@ -2,10 +2,13 @@ import { RUN_COMMAND_TIMEOUT_MS, SUBAGENT_CONTROL_TOOLS } from "./tools";
 import { runCommandTimeoutMs } from "./chunk-budget";
 import {
   ISSUE_TOOL_NAMES,
+  PLATFORM_TOOL_NAMES,
+  PLATFORM_TOOLS_BY_ANCHOR,
   PR_TOOL_NAMES,
   PROJECT_PR_TOOL_NAMES,
   SCRATCHPAD_TOOL_NAMES,
 } from "./platform-tool-names";
+import type { AgentAnchor } from "./prompt";
 import {
   readWorkFile,
   readWorkFileWindow,
@@ -252,6 +255,18 @@ function subagentDenied(name: string, why: string): { result: unknown; success: 
  */
 export interface ExecToolConfig {
   host: RepoHost;
+  /**
+   * ANCRAGE du run (MIN-326) — ticket, carnet ou relecture de pull request. Il
+   * décide de ce que le routage de plateforme ACCEPTE, par la même table que le
+   * plan de contrôle (`PLATFORM_TOOLS_BY_ANCHOR`).
+   *
+   * Un jeu de tools n'est une garantie que si le routeur l'applique : le nom d'un
+   * tool non servi arrive quand même ici — un checkpoint d'avant, un modèle qui
+   * l'invente, une consigne glissée dans le dépôt qu'on relit — et il était
+   * exécuté sur son seul nom. Une relecture, dont tout ce qu'elle lit vient d'un
+   * fork inconnu, réécrivait ainsi le carnet de quelqu'un.
+   */
+  anchor: AgentAnchor;
   /** null = pas de livraison (jeu d'un sous-agent : la PR appartient au parent). */
   createPr: CreatePrHandler | null;
   /** Écritures sur la pull request RELUE (MIN-168). null hors session de
@@ -311,6 +326,7 @@ export interface ExecToolConfig {
 export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
   const {
     host,
+    anchor,
     createPr,
     prTool,
     projectPrTool,
@@ -438,6 +454,19 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     // que le branchement. La lecture et `run_command` restent ouverts.
     const locked = subagents?.writeLock(name);
     if (locked) return locked;
+    /**
+     * L'ANCRAGE AVANT LE NOM (MIN-326). Un tool de plateforme hors du jeu de cet
+     * ancrage est refusé ici, avant tout handler — c'est le pendant du refus du
+     * plan de contrôle, pour les tools que le moteur exécute en direct. Les tools
+     * de fichier et de contrôle ne sont pas concernés : ils ne sont pas dans la
+     * table, et c'est leur handler qui décide (une relecture n'a pas d'éditeur).
+     */
+    if (PLATFORM_TOOL_NAMES.has(name) && !PLATFORM_TOOLS_BY_ANCHOR[anchor].has(name)) {
+      return {
+        result: { error: `You do not have the ${name} tool in this session.` },
+        success: false,
+      };
+    }
     if (ISSUE_TOOL_NAMES.has(name)) {
       if (!issueTool) return subagentDenied(name, "minddy tickets belong to the parent session");
       return capTurnImages(await issueTool(name, args));

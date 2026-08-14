@@ -54,6 +54,10 @@ const h = vi.hoisted(() => ({
   }>,
   /** Les incréments de journal écrits (`POST /journal`). */
   journal: [] as Array<{ runId: string; sessionId: string; events: unknown[] }>,
+  /** Un TIERS a-t-il parlé à ce run ? (la question que pose le carnet, MIN-326) */
+  steeredByOther: false,
+  /** Les appels de tool carnet réellement EXÉCUTÉS. */
+  scratchpadCalls: [] as string[],
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
@@ -171,6 +175,7 @@ vi.mock("./runs", async (importOriginal) => ({
       h.journal.push({ runId, sessionId, events });
     },
   ),
+  runSteeredByOther: vi.fn(async () => h.steeredByOther),
   readInterruptFlag: vi.fn(async () => true),
   clearInterrupt: vi.fn(async (runId: string) => {
     h.cleared.push(runId);
@@ -187,7 +192,10 @@ vi.mock("./issue-tools", async (importOriginal) => ({
 
 vi.mock("./scratchpad-tools", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./scratchpad-tools")>()),
-  executeScratchpadTool: vi.fn(async () => ({ result: { ok: true }, success: true })),
+  executeScratchpadTool: vi.fn(async (_ctx: unknown, name: string) => {
+    h.scratchpadCalls.push(name);
+    return { result: { ok: true }, success: true };
+  }),
 }));
 
 vi.mock("@/lib/server/account-settings", () => ({
@@ -218,6 +226,8 @@ beforeEach(() => {
   h.afterWork.length = 0;
   h.requeued.length = 0;
   h.journal.length = 0;
+  h.scratchpadCalls.length = 0;
+  h.steeredByOther = false;
   h.prIssueId = null;
   h.stampReturnsNull = false;
   h.stampFails = false;
@@ -578,9 +588,112 @@ describe("les tools de plateforme", () => {
   });
 
   it("ne servent PAS les tools de fichier — ils s'exécutent dans la VM", async () => {
+    // 403 et pas 404 : le nom n'est pas dans le jeu de ce run, ce qui n'est pas la
+    // même chose que « ça n'existe pas » (MIN-326).
     for (const name of ["read_file", "edit_file", "run_command", "git_commit"]) {
-      expect((await call("POST", `/tool/${name}`, { args: {} })).status).toBe(404);
+      expect((await call("POST", `/tool/${name}`, { args: {} })).status).toBe(403);
     }
+  });
+});
+
+/**
+ * MIN-326 — L'ANCRAGE EST UN VERROU DE CODE, PAS UNE PHRASE DE PROMPT.
+ *
+ * `runPlatformTool` routait sur le seul NOM du tool. Une session de relecture —
+ * celle dont tout le dépôt affirme qu'elle est en lecture seule, et la seule dont
+ * le contenu lu vient d'un fork inconnu — pouvait donc écrire dans les tickets,
+ * le carnet, le wiki et jusque dans une ROUTINE planifiée, par un POST sur
+ * `/api/agent-vm/tool/<nom>` depuis son shell. Une instruction glissée dans un
+ * `AGENTS.md` suffisait.
+ */
+describe("l'ancrage du run ferme la surface `/tool/`", () => {
+  /** Une session de relecture : `issue_id` nul, une pull request ancrée. */
+  const review = () => {
+    h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
+  };
+
+  it("refuse à une RELECTURE toute écriture minddy, et n'écrit RIEN", async () => {
+    review();
+    for (const name of [
+      "create_issue",
+      "update_issue",
+      "write_issue_plan",
+      "create_page",
+      "create_objective",
+      "create_routine",
+      "set_scratchpad",
+      "read_scratchpad",
+      "create_pr",
+    ]) {
+      const res = await call("POST", `/tool/${name}`, {
+        args: { title: "x" },
+        pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
+      });
+      expect(res.status, name).toBe(403);
+    }
+    expect(h.issueCalls).toEqual([]);
+    expect(h.scratchpadCalls).toEqual([]);
+    expect(h.prLandings).toEqual([]);
+  });
+
+  it("laisse à la relecture ses LECTEURS et les écritures de sa pull request", async () => {
+    review();
+    expect((await call("POST", "/tool/read_issue", { args: {} })).status).toBe(200);
+    expect((await call("POST", "/tool/read_page", { args: { page: "p" } })).status).toBe(200);
+    // `comment_pr` part chez la forge : ce qui compte ici est qu'il ne soit pas refusé
+    // en amont — l'exécution est couverte par `pr-tools.test.ts`.
+    expect((await call("POST", "/tool/comment_pr", { args: { body: "ok" } })).status).not.toBe(403);
+  });
+
+  it("refuse les pull requests DU PROJET à une relecture — elle n'a que la sienne", async () => {
+    review();
+    for (const name of ["list_pull_requests", "review_pull_request", "set_pull_request_state"]) {
+      expect((await call("POST", `/tool/${name}`, { args: { pull_request: 3 } })).status, name).toBe(
+        403,
+      );
+    }
+  });
+
+  it("ne retire rien à un run de TICKET — c'est le risque de régression", async () => {
+    for (const name of ["create_issue", "update_issue", "create_routine", "create_page"]) {
+      expect((await call("POST", `/tool/${name}`, { args: {} })).status, name).toBe(200);
+    }
+    expect((await call("POST", "/tool/set_scratchpad", { args: { content: "x" } })).status).toBe(200);
+    expect(h.scratchpadCalls).toEqual(["set_scratchpad"]);
+  });
+});
+
+/**
+ * MIN-326 — LE CARNET EST PERSONNEL, ET IL EST CELUI DU CRÉATEUR DU RUN.
+ *
+ * N'importe quel membre du projet peut reprendre un run à chaud (`/steer`) : les
+ * tools carnet, eux, sont câblés sur `run.created_by`. Un collègue pilotait donc
+ * un agent branché sur la note privée de quelqu'un d'autre — qu'il pouvait lire,
+ * et réécrire en entier.
+ */
+describe("le carnet se ferme dès qu'un tiers a parlé au run", () => {
+  it("refuse les tools carnet sur un run repris par quelqu'un d'autre", async () => {
+    h.steeredByOther = true;
+    for (const name of [
+      "read_scratchpad",
+      "set_scratchpad",
+      "add_scratchpad_tasks",
+      "update_scratchpad_task",
+    ]) {
+      expect((await call("POST", `/tool/${name}`, { args: {} })).status, name).toBe(403);
+    }
+    expect(h.scratchpadCalls).toEqual([]);
+  });
+
+  it("laisse les tools TICKET ouverts sur ce même run — l'acteur y est le lanceur, pas une note privée", async () => {
+    h.steeredByOther = true;
+    expect((await call("POST", "/tool/update_issue", { args: {} })).status).toBe(200);
+  });
+
+  it("refuse le carnet d'un run sans propriétaire", async () => {
+    h.run = { ...h.run, created_by: null };
+    expect((await call("POST", "/tool/read_scratchpad", { args: {} })).status).toBe(403);
+    expect(h.scratchpadCalls).toEqual([]);
   });
 });
 

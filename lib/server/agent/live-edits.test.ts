@@ -31,6 +31,7 @@ function execToolFor(files: Record<string, string>) {
   const seen: AgentLiveEdit[][] = [];
   const exec = makeExecTool({
     host: fakeHost(files),
+    anchor: "issue",
     createPr: null,
     prTool: null,
     projectPrTool: null,

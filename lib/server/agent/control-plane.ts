@@ -10,7 +10,9 @@ import { executeIssueTool, type IssueToolContext } from "./issue-tools";
 import type { AgentLiveEdit } from "./exec-tool";
 import { CHANGED_FILES_CAP } from "./repo-host";
 import {
+  anchorForRun,
   ISSUE_TOOL_NAMES,
+  PLATFORM_TOOLS_BY_ANCHOR,
   PR_TOOL_NAMES,
   PROJECT_PR_TOOL_NAMES,
   SCRATCHPAD_TOOL_NAMES,
@@ -80,6 +82,15 @@ export interface ControlPlaneResult {
 
 const ok = (body: unknown = { ok: true }): ControlPlaneResult => ({ status: 200, body });
 const bad = (message: string): ControlPlaneResult => ({ status: 400, body: { error: message } });
+/**
+ * CE RUN N'A PAS LE DROIT, et c'est un 403 — jamais un 404 (MIN-326). Le 404 dit
+ * « ça n'existe pas », ce qui est faux d'un tool parfaitement vivant sur un autre
+ * ancrage : il envoie diagnostiquer un tool manquant là où le refus est la règle.
+ */
+const forbidden = (message: string): ControlPlaneResult => ({
+  status: 403,
+  body: { error: message },
+});
 
 /**
  * Plafond de corps du plan de contrôle, MESURÉ (2026-08-07) : un POST forwardé
@@ -464,6 +475,14 @@ export async function handleControlPlaneRequest(opts: {
  * Les tools de FICHIER (`read_file`, `edit_file`, `run_command`…) ne passent
  * délibérément pas par ici : ils s'exécuteront DANS la VM, c'est tout le sujet de
  * MIN-224.
+ *
+ * LE NOM NE SUFFIT PAS À ROUTER (MIN-326). Ce qu'un run a le droit d'appeler est
+ * une propriété de SON ANCRAGE, lue sur sa ligne et opposée ici à la table de
+ * `platform-tool-names.ts` — la même que celle qui décide de ce qu'on annonce au
+ * modèle. Sans ce passage, une session de relecture, dont tout ce qu'elle lit
+ * vient d'un fork inconnu, écrivait dans les tickets et le carnet du projet par
+ * un simple POST depuis son shell : « relecture = zéro écriture » n'était qu'une
+ * phrase de prompt, et une injection suffisait à la franchir.
  */
 async function runPlatformTool(
   run: AgentRun,
@@ -472,7 +491,30 @@ async function runPlatformTool(
 ): Promise<ControlPlaneResult> {
   const args = (body.args ?? {}) as Record<string, unknown>;
 
+  const anchor = anchorForRun(run);
+  if (!PLATFORM_TOOLS_BY_ANCHOR[anchor].has(name)) {
+    return forbidden(`${name} is not available in this session (anchor: ${anchor})`);
+  }
+
   if (SCRATCHPAD_TOOL_NAMES.has(name)) {
+    /**
+     * LE CARNET EST PERSONNEL, et il est celui du CRÉATEUR du run. Or n'importe
+     * quel membre du projet peut reprendre un run à chaud (`/steer`) : sans cette
+     * garde, un collègue pilotait un agent branché sur le carnet de quelqu'un
+     * d'autre — il le lisait, et pouvait le réécrire en entier (`set_scratchpad`).
+     *
+     * La règle porte sur la VIE DU RUN, pas sur le tour : la consigne d'un tiers
+     * reste dans l'historique et gouverne les tours suivants. Un run touché par
+     * un autre que son créateur perd donc son carnet jusqu'au bout.
+     */
+    if (!run.created_by) return forbidden(`${name}: this run has no owner, so it has no notebook`);
+    const { runSteeredByOther } = await import("./runs");
+    if (await runSteeredByOther(run.id, run.created_by)) {
+      return forbidden(
+        `${name}: this session has been steered by someone other than its owner, ` +
+          `so the notebook is closed for the rest of it`,
+      );
+    }
     const ctx: ScratchpadToolContext = { userId: run.created_by };
     return ok(await executeScratchpadTool(ctx, name, args));
   }
@@ -498,7 +540,12 @@ async function runPlatformTool(
     return await runCreatePr(run, args, body);
   }
 
-  return { status: 404, body: { error: `unknown platform tool: ${name}` } };
+  /**
+   * Inatteignable par la VM : la table ci-dessus a déjà refusé tout nom qu'elle ne
+   * porte pas. On n'arrive ici qu'en ajoutant un nom à la table sans lui câbler
+   * d'exécuteur — un défaut de NOTRE côté, qui doit se voir comme tel.
+   */
+  return { status: 500, body: { error: `platform tool allowed but not routed: ${name}` } };
 }
 
 /**
@@ -566,6 +613,15 @@ async function runPrTool(
  *
  * Le compteur d'ancres fait le même aller-retour que là-haut, et c'est le MÊME
  * plafond : « 5 par run », toutes pull requests confondues.
+ *
+ * CE QUE LE CORPS PEUT DIRE, ET CE QU'IL NE PEUT PAS (audit MIN-326). Le seul
+ * identifiant que le modèle choisit est le NUMÉRO de pull request, et il est
+ * résolu contre le dépôt du PROJET DU RUN (`repo()` part de `run.project_id`) :
+ * une VM ne peut donc pas désigner la pull request d'un autre projet, quel que
+ * soit le numéro qu'elle envoie. Reste `prInlineComments`, qui est un COMPTEUR et
+ * pas un identifiant : une VM qui le renvoie à zéro s'offre des ancres en plus.
+ * C'est le prix assumé de le faire voyager (cf. `tool-bridge.ts`) — le plafond
+ * borne du bruit, pas un droit.
  */
 async function runProjectPrTool(
   run: AgentRun,
@@ -642,6 +698,14 @@ async function runWebSearch(
  * `create_pr`, MOITIÉ FORGE. La VM a déjà poussé (elle a le dépôt) ; ce qui reste
  * — PR mergée, PR déjà vivante, PR refusée à rouvrir, création — vit ici, dans
  * l'implémentation partagée avec l'ancienne forme.
+ *
+ * CE QUE LE CORPS PEUT DIRE (audit MIN-326) : le dépôt vient de `run.project_id`,
+ * la base de `run.base_branch`, le ticket de l'ancrage du run — aucun des trois
+ * n'est reçu. La VM ne choisit que la BRANCHE DE TÊTE, et il faut qu'elle la
+ * choisisse : `create_pr` EST son premier push, donc `branch_name` est encore nul
+ * sur la ligne (MIN-123). Ce qu'elle peut en faire reste borné au dépôt du projet
+ * — ouvrir une pull request depuis une autre branche de CE dépôt, ce qu'un `git
+ * push` depuis le même shell permettrait de toute façon.
  */
 async function runCreatePr(
   run: AgentRun,

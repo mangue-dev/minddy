@@ -413,6 +413,8 @@ export async function runVmTurn(
         redact: secrets.redact,
         execTool: makeExecTool({
           host,
+          // L'ancrage de la MÈRE : une fille hérite du jeu de sa session (MIN-326).
+          anchor: job.anchor,
           createPr: null,
           prTool: null,
           projectPrTool: null,
@@ -606,6 +608,7 @@ export async function runVmTurn(
     redact: secrets.redact,
     execTool: makeExecTool({
       host,
+      anchor: job.anchor,
       // La PORTE de MIN-247, câblée ICI AUSSI et avec le même crochet : le premier
       // `create_pr` d'un tour qui a touché le dépôt rend le diff au lieu de pousser.
       // La garantie ne doit pas dépendre de `loop_in_vm` — cf. `gateCreatePr`.
