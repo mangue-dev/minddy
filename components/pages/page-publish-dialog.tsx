@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -118,7 +119,8 @@ export function PagePublishDialog({
   const submitPassword = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = password.trim();
-    if (!trimmed) return;
+    // Le serveur refuse en dessous (MIN-347) : le formulaire le dit avant.
+    if (trimmed.length < MIN_SHARE_PASSWORD_LENGTH) return;
     update.mutate({ level: "password", password: trimmed });
   };
 
@@ -168,26 +170,33 @@ export function PagePublishDialog({
             </div>
 
             {level === "password" && (
-              <form onSubmit={submitPassword} className="flex items-center gap-2">
-                <Input
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={
-                    serverLevel === "password"
-                      ? t("changePasswordPlaceholder")
-                      : t("passwordPlaceholder")
-                  }
-                />
-                <Button
-                  type="submit"
-                  variant="outline"
-                  disabled={update.isPending || !password.trim()}
-                >
-                  {update.isPending && <Spinner />}
-                  {tc("save")}
-                </Button>
+              <form onSubmit={submitPassword} className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={MIN_SHARE_PASSWORD_LENGTH}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={
+                      serverLevel === "password"
+                        ? t("changePasswordPlaceholder")
+                        : t("passwordPlaceholder")
+                    }
+                  />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    disabled={
+                      update.isPending ||
+                      password.trim().length < MIN_SHARE_PASSWORD_LENGTH
+                    }
+                  >
+                    {update.isPending && <Spinner />}
+                    {tc("save")}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">{t("passwordMinHint")}</p>
               </form>
             )}
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Spinner } from "mangue-ui";
 import { useAuth } from "@/lib/auth-context";
-import { mfaVerifyErrorKey } from "@/lib/mfa";
+import { RECOVERY_CODE_LENGTH, mfaVerifyErrorKey } from "@/lib/mfa";
 import { OtpInput } from "@/components/otp-input";
 
 /**
@@ -147,8 +147,8 @@ export function MfaChallenge({
               className="h-10 bg-card font-mono uppercase tracking-widest"
               autoComplete="off"
               autoFocus
-              maxLength={9}
-              placeholder="XXXX-XXXX"
+              maxLength={14}
+              placeholder="XXXX-XXXX-XXXX"
               value={recoveryCode}
               onChange={(e) => setRecoveryCode(e.target.value)}
             />
@@ -159,7 +159,7 @@ export function MfaChallenge({
           <Button
             type="submit"
             variant="destructive"
-            disabled={busy || recoveryCode.trim().length < 8}
+            disabled={busy || recoveryCode.trim().length < RECOVERY_CODE_LENGTH}
             className="h-10 w-full justify-center gap-2"
           >
             {busy && <Spinner />}

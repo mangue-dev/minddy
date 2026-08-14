@@ -114,21 +114,36 @@ export function mfaVerifyErrorKey(error: unknown): MfaErrorKey {
 }
 
 /**
- * Format d'un code de récupération : deux groupes de quatre caractères en
+ * Format d'un code de récupération : TROIS groupes de quatre caractères en
  * Crockford base32 (sans I, L, O, U — les confusions à l'oral et à la copie).
- * ~40 bits par code, dix codes : rien à deviner, et c'est lisible sur un papier.
+ *
+ * Douze caractères, donc 60 bits par code (MIN-347). Les deux groupes d'origine
+ * n'en portaient que 40 : assez contre une devinette en ligne, pas assez contre
+ * une base qui fuit — 2⁴⁰ empreintes se balaient hors ligne en quelques
+ * secondes sur une carte graphique. L'entropie et le KDF vont ensemble : le
+ * hachage lent de [lib/server/mfa.ts](server/mfa.ts) rend le balayage coûteux,
+ * ces 20 bits de plus le rendent inutile. Un groupe de plus à recopier est le
+ * prix, sur un geste qu'on fait une fois dans sa vie.
  */
 export const RECOVERY_CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-const RECOVERY_CODE_RE = /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/;
+/** Caractères significatifs d'un code, tirets exclus. */
+export const RECOVERY_CODE_LENGTH = 12;
+const RECOVERY_CODE_RE =
+  /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/;
+
+/** Découpe en groupes de quatre : la seule forme sous laquelle un code circule. */
+export function formatRecoveryCode(raw: string): string {
+  return (raw.match(/.{1,4}/g) ?? []).join("-");
+}
 
 /**
- * Normalise ce que la personne a tapé : majuscules, tiret rétabli, espaces et
+ * Normalise ce que la personne a tapé : majuscules, tirets rétablis, espaces et
  * séparations parasites retirés. Renvoie `null` si ça ne peut pas être un code —
  * ce qui évite d'aller taper la base pour une saisie manifestement à côté.
  */
 export function normalizeRecoveryCode(input: string): string | null {
   const cleaned = input.toUpperCase().replace(/[^0-9A-Z]/g, "");
-  if (cleaned.length !== 8) return null;
-  const formatted = `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
+  if (cleaned.length !== RECOVERY_CODE_LENGTH) return null;
+  const formatted = formatRecoveryCode(cleaned);
   return RECOVERY_CODE_RE.test(formatted) ? formatted : null;
 }

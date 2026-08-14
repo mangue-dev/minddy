@@ -1,13 +1,14 @@
 import "server-only";
 
-import { randomInt, timingSafeEqual } from "node:crypto";
+import { randomBytes, randomInt, scryptSync, timingSafeEqual } from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { sha256Hex } from "@/lib/server/oauth/crypto";
 import {
   MFA_ENABLED_CLAIM,
   RECOVERY_CODE_ALPHABET,
   RECOVERY_CODE_COUNT,
+  RECOVERY_CODE_LENGTH,
+  formatRecoveryCode,
   normalizeRecoveryCode,
 } from "@/lib/mfa";
 
@@ -131,13 +132,69 @@ export async function disableMfa(userId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Un code au format `XXXX-XXXX`, tiré avec `randomInt` (CSPRNG). */
+/** Un code au format `XXXX-XXXX-XXXX`, tiré avec `randomInt` (CSPRNG). */
 function generateRecoveryCode(): string {
   let out = "";
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < RECOVERY_CODE_LENGTH; i++) {
     out += RECOVERY_CODE_ALPHABET[randomInt(RECOVERY_CODE_ALPHABET.length)];
   }
-  return `${out.slice(0, 4)}-${out.slice(4)}`;
+  return formatRecoveryCode(out);
+}
+
+/**
+ * Hachage d'un code de récupération : scrypt, SALÉ PAR CODE (MIN-347).
+ *
+ * C'était un sha256 nu, sur l'argument — écrit dans la migration — qu'un code
+ * porte assez d'entropie pour qu'il n'y ait « rien à deviner par force brute
+ * hors ligne ». L'argument tenait pour un mot de passe ; il ne tient pas ici :
+ * les codes viennent d'un alphabet connu, d'une longueur connue, et une base
+ * qui fuit se balaie hors ligne à quelques milliards d'empreintes par seconde.
+ * Sans sel, les dix codes du compte se cassent d'ailleurs dans le MÊME balayage.
+ * Et ce sont les codes qui CONTOURNENT le second facteur : ils valent le
+ * facteur lui-même.
+ *
+ * Format stocké : `scrypt$<N>$<selHex>$<empreinteHex>`. Le `N` est dans la
+ * ligne pour que durcir le paramètre demain ne rende pas illisibles les codes
+ * frappés aujourd'hui — la vérification lit celui de la ligne, jamais une
+ * constante d'ici.
+ */
+const SCRYPT_N = 1 << 14;
+const SCRYPT_KEYLEN = 32;
+
+function hashRecoveryCode(code: string): string {
+  const salt = randomBytes(16);
+  const hash = scryptSync(code, salt, SCRYPT_KEYLEN, { N: SCRYPT_N, r: 8, p: 1 });
+  return `scrypt$${SCRYPT_N}$${salt.toString("hex")}$${hash.toString("hex")}`;
+}
+
+/**
+ * Le code correspond-il à cette ligne ? Faux sur tout ce qui n'est pas au
+ * format ci-dessus — un reliquat de l'ancien sha256 nu ne peut donc plus être
+ * consommé, il est mort à la lecture (il n'en existe aucun en base, la migration
+ * qui accompagne ce changement les efface).
+ */
+function recoveryCodeMatches(code: string, stored: string): boolean {
+  const parts = stored.split("$");
+  if (parts.length !== 4 || parts[0] !== "scrypt") return false;
+  const cost = Number(parts[1]);
+  // `N` doit être une puissance de deux ≥ 2 ; borné pour qu'une ligne trafiquée
+  // ne se transforme pas en déni de service (scrypt à N=2³⁰ ne rend pas la main).
+  if (!Number.isInteger(cost) || cost < 2 || cost > 1 << 20 || (cost & (cost - 1)) !== 0) {
+    return false;
+  }
+  let expected: Buffer;
+  let computed: Buffer;
+  try {
+    expected = Buffer.from(parts[3], "hex");
+    computed = scryptSync(code, Buffer.from(parts[2], "hex"), expected.length, {
+      N: cost,
+      r: 8,
+      p: 1,
+    });
+  } catch {
+    return false;
+  }
+  return expected.length > 0 && timingSafeEqual(computed, expected);
 }
 
 /**
@@ -158,20 +215,24 @@ export async function issueRecoveryCodes(userId: string): Promise<string[]> {
   if (purgeError) throw new Error(purgeError.message);
 
   const { error } = await service.from("mfa_recovery_codes").insert(
-    list.map((code) => ({ user_id: userId, code_hash: sha256Hex(code) }))
+    list.map((code) => ({ user_id: userId, code_hash: hashRecoveryCode(code) }))
   );
   if (error) throw new Error(error.message);
   return list;
 }
 
 /**
- * Consomme un code. Le `update … is null` fait la course pour nous : deux envois
- * simultanés du même code ne peuvent pas réussir tous les deux, c'est Postgres
- * qui tranche, pas l'ordre d'arrivée dans le handler.
+ * Consomme un code.
  *
- * La comparaison finale passe par `timingSafeEqual` bien que le hash soit déjà
- * une empreinte : ça ne coûte rien et ça évite d'avoir à raisonner sur ce que la
- * requête d'index a pu laisser filtrer.
+ * Le sel par code coûte la requête d'index : on ne peut plus demander « la ligne
+ * dont l'empreinte vaut ceci », il faut dériver contre chaque ligne encore
+ * consommable. Dix lignes au plus, dix scrypt au pire — de l'ordre d'une demi-
+ * seconde sur un geste qu'on fait une fois. C'est le prix du sel, et il est payé
+ * ici plutôt que par la personne dont la base a fuité.
+ *
+ * La marque `used_at` reste posée par un `update … is null` : c'est lui qui fait
+ * la course, deux envois simultanés du même code ne peuvent pas réussir tous les
+ * deux, et c'est Postgres qui tranche — pas l'ordre d'arrivée dans le handler.
  */
 export async function consumeRecoveryCode(
   userId: string,
@@ -180,20 +241,26 @@ export async function consumeRecoveryCode(
   const code = normalizeRecoveryCode(input);
   if (!code) return false;
 
-  const hash = sha256Hex(code);
   const service = getServiceClient();
   const { data, error } = await service
     .from("mfa_recovery_codes")
-    .update({ used_at: new Date().toISOString() })
+    .select("id, code_hash")
     .eq("user_id", userId)
-    .eq("code_hash", hash)
-    .is("used_at", null)
-    .select("code_hash")
-    .maybeSingle();
+    .is("used_at", null);
   if (error) throw new Error(error.message);
-  if (!data) return false;
 
-  const a = Buffer.from(data.code_hash as string);
-  const b = Buffer.from(hash);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const row = ((data ?? []) as { id: string; code_hash: string }[]).find((r) =>
+    recoveryCodeMatches(code, r.code_hash)
+  );
+  if (!row) return false;
+
+  const { data: claimed, error: claimError } = await service
+    .from("mfa_recovery_codes")
+    .update({ used_at: new Date().toISOString() })
+    .eq("id", row.id)
+    .is("used_at", null)
+    .select("id")
+    .maybeSingle();
+  if (claimError) throw new Error(claimError.message);
+  return !!claimed;
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { hasStrongSecret, requireSecret } from "@/lib/server/env-secrets";
 
 import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
 
@@ -28,18 +29,13 @@ import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
  */
 
 function getSsoEncryptionSecret(): string {
-  const secret = process.env.FEEDBACK_SSO_ENCRYPTION_SECRET;
-  if (!secret) {
-    throw new Error(
-      "Missing FEEDBACK_SSO_ENCRYPTION_SECRET for feedback board SSO secret encryption"
-    );
-  }
-  return secret;
+  // Absent OU trop court : le même refus (MIN-347).
+  return requireSecret("FEEDBACK_SSO_ENCRYPTION_SECRET");
 }
 
-/** Le secret de chiffrement est-il déployé ? (garde de configuration.) */
+/** Le secret de chiffrement est-il déployé, et utilisable ? (garde de config.) */
 export function isSsoCryptoConfigured(): boolean {
-  return !!process.env.FEEDBACK_SSO_ENCRYPTION_SECRET;
+  return hasStrongSecret("FEEDBACK_SSO_ENCRYPTION_SECRET");
 }
 
 export function encryptBoardSsoSecret(plain: string): string {

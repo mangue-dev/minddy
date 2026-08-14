@@ -6,8 +6,14 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { clientIpFromHeaders } from "@/lib/server/request-ip";
 import { isCustomPublicHost, publicCookiePath } from "@/lib/server/custom-domains";
 import {
+  clearShareUnlockFailures,
+  recordShareUnlockFailure,
+  shareUnlockAttemptsLeft,
+} from "@/lib/server/share-unlock-attempts";
+import {
   SHARE_UNLOCK_COOKIE,
   getPublicShareTarget,
+  unlockCookieMatches,
   unlockCookieValue,
   verifySharePassword,
 } from "@/lib/server/view-shares";
@@ -26,6 +32,14 @@ import {
  *
  * Ce qui reste à l'appelant : la redirection. Elle dépend de la route, et
  * `redirect()` lève — l'appeler ici masquerait le résultat de cette fonction.
+ *
+ * ── Deux compteurs, pas un (MIN-347) ──────────────────────────────────────
+ *
+ * La limite en mémoire coupe le martèlement pour rien, mais elle ne voit qu'une
+ * instance et repart à zéro à chaque déploiement : sur la seule porte du produit
+ * dont le secret est un mot de passe choisi à la main, ce n'était pas un frein,
+ * c'était un délai. Les échecs sont donc rangés en base
+ * ([share-unlock-attempts.ts](./share-unlock-attempts.ts)), et lus AVANT scrypt.
  */
 
 /** Clé du namespace i18n PublicShare, rendue sous le formulaire. */
@@ -69,13 +83,22 @@ export async function unlockShareWithPassword({
     return { ok: true };
   }
 
+  // Deuxième ligne, celle qui survit à un déploiement : les échecs rangés en
+  // base. Elle se lit APRÈS la résolution du partage — sans partage, il n'y a
+  // rien à compter — mais AVANT scrypt, qui est ce qu'on refuse de payer.
+  if (!(await shareUnlockAttemptsLeft(share.id, ip))) {
+    return { ok: false, error: "tooManyAttempts" };
+  }
+
   if (
     typeof password !== "string" ||
     password.length > MAX_PASSWORD_LENGTH ||
     !verifySharePassword(password, share.password_salt, share.password_hash)
   ) {
+    recordShareUnlockFailure(share.id, ip);
     return { ok: false, error: "wrongPassword" };
   }
+  clearShareUnlockFailures(share.id, ip);
 
   (await cookies()).set(
     SHARE_UNLOCK_COOKIE,
@@ -110,5 +133,5 @@ export async function isShareUnlocked(share: {
   if (share.level === "public") return true;
   if (!share.password_hash) return false;
   const cookie = (await cookies()).get(SHARE_UNLOCK_COOKIE)?.value;
-  return cookie === unlockCookieValue(share.token, share.password_hash);
+  return unlockCookieMatches(cookie, share.token, share.password_hash);
 }

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
+import { hasStrongSecret, requireSecret } from "@/lib/server/env-secrets";
 
 /**
  * Chiffrement au repos des tokens de forge (MIN-47, généralisé en MIN-144).
@@ -22,23 +23,14 @@ import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
  * une enveloppe corrompue se traduise par une invite de reconnexion en amont.
  */
 function getForgeTokenSecret(): string {
-  const secret =
-    process.env.GIT_TOKEN_ENCRYPTION_SECRET ||
-    process.env.GITLAB_TOKEN_ENCRYPTION_SECRET;
-  if (!secret) {
-    throw new Error(
-      "Missing GIT_TOKEN_ENCRYPTION_SECRET (or GITLAB_TOKEN_ENCRYPTION_SECRET) for forge token encryption",
-    );
-  }
-  return secret;
+  // Le repli sur l'ancien nom vit dans la spec du secret (`aliases`), avec la
+  // longueur minimale — absent OU trop court, même refus (MIN-347).
+  return requireSecret("GIT_TOKEN_ENCRYPTION_SECRET");
 }
 
-/** Un secret de chiffrement est-il déployé ? (garde de configuration.) */
+/** Un secret de chiffrement est-il déployé, et utilisable ? (garde de config.) */
 export function isForgeTokenCryptoConfigured(): boolean {
-  return !!(
-    process.env.GIT_TOKEN_ENCRYPTION_SECRET ||
-    process.env.GITLAB_TOKEN_ENCRYPTION_SECRET
-  );
+  return hasStrongSecret("GIT_TOKEN_ENCRYPTION_SECRET");
 }
 
 export function encryptForgeToken(plain: string): string {

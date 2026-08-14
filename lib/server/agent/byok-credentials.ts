@@ -1,4 +1,5 @@
 import "server-only";
+import { requireSecret } from "@/lib/server/env-secrets";
 
 import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
 
@@ -15,11 +16,9 @@ import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
  * tourné se traduit par « reconfigure ta clé » en amont plutôt qu'un crash.
  */
 function getAiKeySecret(): string {
-  const secret = process.env.AI_KEY_ENCRYPTION_SECRET;
-  if (!secret) {
-    throw new Error("Missing AI_KEY_ENCRYPTION_SECRET for BYOK key encryption");
-  }
-  return secret;
+  // Absent OU trop court : le même refus (MIN-347). Une clé AES dérivée d'un
+  // secret de trois caractères ne vaut pas mieux que ces trois caractères.
+  return requireSecret("AI_KEY_ENCRYPTION_SECRET");
 }
 
 export function encryptUserAiKey(plain: string): string {

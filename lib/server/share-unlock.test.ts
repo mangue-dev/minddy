@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { readFileSync } from "node:fs";
+
 import { hashSharePassword, unlockCookieValue } from "@/lib/server/view-shares";
 
 /**
@@ -10,6 +12,11 @@ import { hashSharePassword, unlockCookieValue } from "@/lib/server/view-shares";
  * ne pose pas de cookie, un bon en pose un lié à CE partage, et le cookie
  * cesse de valoir dès que le mot de passe change — sans qu'aucune session ne
  * soit tenue nulle part.
+ *
+ * MIN-347 y ajoute les deux freins qui manquaient : le cookie se compare en
+ * temps constant (c'était un `===`), et les échecs se comptent en BASE — le
+ * compteur en mémoire repartait à zéro à chaque déploiement, sur la seule porte
+ * du produit dont le secret tient dans un mot de passe choisi à la main.
  */
 
 const target = { current: null as unknown };
@@ -28,6 +35,16 @@ vi.mock("next/headers", () => ({
 
 vi.mock("@/lib/server/session-rate-limit", () => ({
   checkSessionRateLimit: () => ({ allowed: rateAllowed }),
+}));
+
+let attemptsLeft = true;
+const recordFailure = vi.fn();
+const clearFailures = vi.fn();
+
+vi.mock("@/lib/server/share-unlock-attempts", () => ({
+  shareUnlockAttemptsLeft: async () => attemptsLeft,
+  recordShareUnlockFailure: (...args: unknown[]) => recordFailure(...args),
+  clearShareUnlockFailures: (...args: unknown[]) => clearFailures(...args),
 }));
 
 vi.mock("@/lib/server/custom-domains", () => ({
@@ -50,6 +67,7 @@ function passwordShare() {
   return {
     kind: "page" as const,
     share: {
+      id: "share-1",
       token: "tok",
       level: "password" as const,
       password_salt: salt,
@@ -62,6 +80,9 @@ beforeEach(() => {
   cookieJar.clear();
   setCookie.mockClear();
   rateAllowed = true;
+  attemptsLeft = true;
+  recordFailure.mockClear();
+  clearFailures.mockClear();
   target.current = passwordShare();
 });
 
@@ -73,6 +94,19 @@ describe("unlockShareWithPassword", () => {
       cookiePath: "/p/tok",
     });
     expect(result).toEqual({ ok: false, error: "wrongPassword" });
+    expect(setCookie).not.toHaveBeenCalled();
+    // L'échec est rangé en base : c'est lui qui survit au déploiement suivant.
+    expect(recordFailure).toHaveBeenCalledWith("share-1", "203.0.113.7");
+  });
+
+  it("s'arrête sur le compteur PERSISTANT, avant de dériver quoi que ce soit", async () => {
+    attemptsLeft = false;
+    const result = await unlockShareWithPassword({
+      token: "tok",
+      password: "ouvre-toi",
+      cookiePath: "/p/tok",
+    });
+    expect(result).toEqual({ ok: false, error: "tooManyAttempts" });
     expect(setCookie).not.toHaveBeenCalled();
   });
 
@@ -109,12 +143,20 @@ describe("unlockShareWithPassword", () => {
       unlockCookieValue("tok", hash)
     );
     expect(await isShareUnlocked(passwordShare().share)).toBe(true);
+    // Se tromper avant de trouver ne laisse pas de dette.
+    expect(clearFailures).toHaveBeenCalledWith("share-1", "203.0.113.7");
   });
 
   it("laisse passer un partage devenu public : il n'y a plus rien à ouvrir", async () => {
     target.current = {
       kind: "page" as const,
-      share: { token: "tok", level: "public", password_salt: null, password_hash: null },
+      share: {
+        id: "share-1",
+        token: "tok",
+        level: "public",
+        password_salt: null,
+        password_hash: null,
+      },
     };
     expect(
       await unlockShareWithPassword({ token: "tok", password: "", cookiePath: "/p/tok" })
@@ -147,5 +189,27 @@ describe("isShareUnlocked", () => {
         password_hash: next.hash,
       })
     ).toBe(false);
+  });
+});
+
+describe("la comparaison du cookie", () => {
+  it("ne passe plus par un `===` sur le secret", () => {
+    // Test structurel : la comparaison en temps constant ne se voit pas à
+    // l'exécution, seul le code dit si elle est là. Ce qui est gardé, c'est
+    // qu'aucun `===` ne revienne un jour sur la valeur du cookie.
+    const source = readFileSync("lib/server/share-unlock.ts", "utf8");
+    expect(source).not.toMatch(/cookie\s*===/);
+    expect(source).toContain("unlockCookieMatches");
+  });
+
+  it("refuse une valeur de la bonne longueur mais fausse, et une trop courte", async () => {
+    const { share } = passwordShare();
+    const good = unlockCookieValue("tok", hash);
+    cookieJar.set("mdy_share_unlock", `${good.slice(0, -1)}${good.at(-1) === "0" ? "1" : "0"}`);
+    expect(await isShareUnlocked(share)).toBe(false);
+    cookieJar.set("mdy_share_unlock", good.slice(0, 10));
+    expect(await isShareUnlocked(share)).toBe(false);
+    cookieJar.set("mdy_share_unlock", "");
+    expect(await isShareUnlocked(share)).toBe(false);
   });
 });

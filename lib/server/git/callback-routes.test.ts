@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *     `return` du fichier.
  */
 
-process.env.GIT_STATE_SECRET = "test-git-state-secret";
+process.env.GIT_STATE_SECRET = "test-git-state-secret-long-enough-32";
 
 const getClaims = vi.fn();
 

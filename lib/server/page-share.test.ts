@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
+
 /**
  * MIN-283 — publier, re-régler, dépublier. Les gardes d'abord :
  *
@@ -96,6 +98,49 @@ describe("upsertPageShare", () => {
       await upsertPageShare({ pageId: "page-1", actorId: "u", level: "password" })
     ).toEqual({ ok: false, status: 400, errorKey: "passwordRequired" });
     expect(writes).toHaveLength(0);
+  });
+
+  it("refuse un mot de passe trop court plutôt que de le hacher (MIN-347)", async () => {
+    // Aucune longueur minimale : « a » était un réglage acceptable, c'est-à-dire
+    // un partage annoncé comme protégé et ouvert de fait.
+    expect(
+      await upsertPageShare({
+        pageId: "page-1",
+        actorId: "u",
+        level: "password",
+        password: "a".repeat(MIN_SHARE_PASSWORD_LENGTH - 1),
+      })
+    ).toEqual({ ok: false, status: 400, errorKey: "passwordTooShort" });
+    expect(writes).toHaveLength(0);
+
+    const ok = await upsertPageShare({
+      pageId: "page-1",
+      actorId: "u",
+      level: "password",
+      password: "a".repeat(MIN_SHARE_PASSWORD_LENGTH),
+    });
+    expect(ok.ok).toBe(true);
+  });
+
+  it("dit la même longueur à l'écran qu'elle n'en exige", async () => {
+    // Le chiffre est en toutes lettres dans les messages (un placeholder appelé
+    // sans ses valeurs afficherait le chemin de sa clé) : c'est ce test qui
+    // tient les deux ensemble.
+    const [en, fr] = await Promise.all([
+      import("@/messages/en.json"),
+      import("@/messages/fr.json"),
+    ]);
+    for (const messages of [en.default, fr.default]) {
+      expect(messages.ApiErrors.passwordTooShort).toContain(
+        String(MIN_SHARE_PASSWORD_LENGTH)
+      );
+      expect(messages.ShareView.passwordMinHint).toContain(
+        String(MIN_SHARE_PASSWORD_LENGTH)
+      );
+      expect(messages.PublishPage.passwordMinHint).toContain(
+        String(MIN_SHARE_PASSWORD_LENGTH)
+      );
+    }
   });
 
   it("publie la page seule par défaut : la branche ne suit pas", async () => {

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   MFA_ENABLED_CLAIM,
+  RECOVERY_CODE_ALPHABET,
+  RECOVERY_CODE_LENGTH,
   decodeJwtPayload,
   hasMfaEnabled,
   needsMfaChallenge,
@@ -74,19 +76,27 @@ describe("decodeJwtPayload", () => {
 });
 
 describe("normalizeRecoveryCode", () => {
-  it("rattrape la casse, les espaces et le tiret manquant", () => {
-    expect(normalizeRecoveryCode("abcd-2345")).toBe("ABCD-2345");
-    expect(normalizeRecoveryCode("ABCD2345")).toBe("ABCD-2345");
-    expect(normalizeRecoveryCode(" abcd 2345 ")).toBe("ABCD-2345");
+  it("rattrape la casse, les espaces et les tirets manquants", () => {
+    expect(normalizeRecoveryCode("abcd-2345-6789")).toBe("ABCD-2345-6789");
+    expect(normalizeRecoveryCode("ABCD23456789")).toBe("ABCD-2345-6789");
+    expect(normalizeRecoveryCode(" abcd 2345 6789 ")).toBe("ABCD-2345-6789");
   });
 
   it("rejette ce qui ne peut pas être un code", () => {
     expect(normalizeRecoveryCode("")).toBeNull();
-    expect(normalizeRecoveryCode("ABCD-234")).toBeNull();
-    expect(normalizeRecoveryCode("ABCD-23456")).toBeNull();
+    expect(normalizeRecoveryCode("ABCD-2345-678")).toBeNull();
+    expect(normalizeRecoveryCode("ABCD-2345-67890")).toBeNull();
+    // Le format court d'avant MIN-347 : 40 bits, il n'en existe plus en base.
+    expect(normalizeRecoveryCode("ABCD-2345")).toBeNull();
     // I, L, O et U ne sont pas dans l'alphabet : les accepter reviendrait à
     // interroger la base pour une saisie qui ne peut rien matcher.
-    expect(normalizeRecoveryCode("ABCI-2345")).toBeNull();
-    expect(normalizeRecoveryCode("ABCO-2345")).toBeNull();
+    expect(normalizeRecoveryCode("ABCI-2345-6789")).toBeNull();
+    expect(normalizeRecoveryCode("ABCO-2345-6789")).toBeNull();
+  });
+
+  it("porte 60 bits — le KDF lent ne rattrape pas une entropie manquante", () => {
+    expect(RECOVERY_CODE_LENGTH).toBe(12);
+    expect(RECOVERY_CODE_ALPHABET.length).toBe(32);
+    expect(RECOVERY_CODE_LENGTH * Math.log2(RECOVERY_CODE_ALPHABET.length)).toBe(60);
   });
 });

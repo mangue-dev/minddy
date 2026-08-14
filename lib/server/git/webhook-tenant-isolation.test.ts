@@ -21,7 +21,7 @@ import type { RemoteIssue } from "@/lib/server/git/issue-sync-core";
  * est cherché par id de dépôt, et le fan-out aussi.
  */
 
-process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes";
+process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes-32ch";
 
 interface Row extends Record<string, unknown> {}
 

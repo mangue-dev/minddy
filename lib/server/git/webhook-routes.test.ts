@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *  · livraison déjà vue → acquittée sans être rejouée.
  */
 
-process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes";
+process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes-32ch";
 
 interface Row extends Record<string, unknown> {}
 
@@ -186,7 +186,7 @@ beforeEach(() => {
   verifyGithubSignature.mockReturnValue(true);
   linkRows = [link()];
   deliveries = [];
-  process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes";
+  process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes-32ch";
   delete process.env.GITLAB_WEBHOOK_SECRET;
   process.env.GITHUB_WEBHOOK_SECRET = "github-app-secret";
 });

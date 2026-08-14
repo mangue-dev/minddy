@@ -8,6 +8,7 @@ import {
 } from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
+import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
 import type { PageShare, View, ViewShare } from "@/lib/types";
 import type { Page } from "@/lib/pages";
 
@@ -42,6 +43,7 @@ export type ViewShareResult =
       errorKey:
         | "viewNotFound"
         | "passwordRequired"
+        | "passwordTooShort"
         | "globalViewsNotShareable"
         | "databaseError";
     };
@@ -54,6 +56,41 @@ export const SHARE_UNLOCK_COOKIE = "mdy_share_unlock";
 export function unlockCookieValue(token: string, passwordHash: string): string {
   return sha256Hex(`${token}:${passwordHash}`);
 }
+
+/**
+ * Le cookie présenté ouvre-t-il CE partage ? En temps constant (MIN-347).
+ *
+ * La valeur du cookie EST le secret qui donne accès : la comparer avec `===`
+ * s'arrête au premier octet qui diffère, et cette durée-là se mesure. C'était la
+ * seule comparaison de secret du dépôt qui n'était pas en temps constant, sur
+ * une porte anonyme qu'on peut interroger autant qu'on veut.
+ *
+ * Longueurs comparées d'abord : `timingSafeEqual` LÈVE sur deux tampons de
+ * tailles différentes, et la longueur attendue est publique (64 caractères hex).
+ */
+export function unlockCookieMatches(
+  cookie: string | null | undefined,
+  token: string,
+  passwordHash: string
+): boolean {
+  if (!cookie) return false;
+  const provided = Buffer.from(cookie);
+  const expected = Buffer.from(unlockCookieValue(token, passwordHash));
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
+}
+
+/** Longueur minimale d'un mot de passe de partage (MIN-347).
+
+    Un partage protégé est une porte ANONYME : personne n'est identifié derrière,
+    et le seul secret est ce mot de passe-là. Il n'en avait aucune, donc « 1 »
+    était un réglage acceptable — c'est-à-dire un partage annoncé comme protégé
+    et ouvert de fait. Huit caractères contre un scrypt salé, avec le compteur
+    persistant de `share_unlock_attempts` par-dessus : c'est ce qui rend le
+    balayage en ligne sans objet.
+
+    La valeur vit dans un module isomorphe : les dialogues l'annoncent, cette
+    fonction la fait respecter. */
+export { MIN_SHARE_PASSWORD_LENGTH };
 
 export function hashSharePassword(password: string): { salt: string; hash: string } {
   const salt = randomBytes(16).toString("hex");
@@ -216,6 +253,9 @@ export async function upsertViewShare({
   if (level === "password") {
     const trimmed = password?.trim();
     if (trimmed) {
+      if (trimmed.length < MIN_SHARE_PASSWORD_LENGTH) {
+        return { ok: false, status: 400, errorKey: "passwordTooShort" };
+      }
       ({ salt: password_salt, hash: password_hash } = hashSharePassword(trimmed));
     } else if (existing?.password_hash && existing.password_salt) {
       ({ password_salt, password_hash } = existing);
@@ -392,7 +432,11 @@ export type PageShareResult =
       ok: false;
       status: number;
       /** Key into the ApiErrors i18n namespace. */
-      errorKey: "pageNotFound" | "passwordRequired" | "databaseError";
+      errorKey:
+        | "pageNotFound"
+        | "passwordRequired"
+        | "passwordTooShort"
+        | "databaseError";
     };
 
 /** La ligne de partage rendue au propriétaire : le lien et ses réglages. */
@@ -490,6 +534,9 @@ export async function upsertPageShare({
   if (level === "password") {
     const trimmed = password?.trim();
     if (trimmed) {
+      if (trimmed.length < MIN_SHARE_PASSWORD_LENGTH) {
+        return { ok: false, status: 400, errorKey: "passwordTooShort" };
+      }
       ({ salt: password_salt, hash: password_hash } = hashSharePassword(trimmed));
     } else if (existing?.password_hash && existing.password_salt) {
       ({ password_salt, password_hash } = existing);

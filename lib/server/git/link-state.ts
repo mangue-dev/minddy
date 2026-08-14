@@ -1,6 +1,7 @@
 import "server-only";
 
 import crypto from "node:crypto";
+import { requireSecret } from "@/lib/server/env-secrets";
 
 /**
  * `state` signé pour les flux de connexion git (MIN-47), porté d'AutoKap
@@ -37,11 +38,9 @@ interface GitLinkStatePayload {
 }
 
 function getStateSecret(): string {
-  const value = process.env.GIT_STATE_SECRET;
-  if (!value) {
-    throw new Error("Missing GIT_STATE_SECRET");
-  }
-  return value;
+  // Absent OU trop court : le même refus (MIN-347). Un HMAC à secret court est
+  // un `state` forgeable, donc une installation attribuée au projet d'un autre.
+  return requireSecret("GIT_STATE_SECRET");
 }
 
 function sign(body: string, secret: string): string {
