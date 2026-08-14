@@ -7,8 +7,34 @@
   restauration soient possibles. Toute modification ici doit être recollée
   là-bas, et l'inverse.
 
-  Sujet à poser au-dessus du corps :
-      Confirmez votre adresse e-mail · Confirm your email
+  Sujet à poser au-dessus du corps — le champ « Subject » du dashboard passe par
+  le MÊME moteur de template que le corps, donc il se branche pareil :
+      {{ if eq (printf "%v" (index .Data "locale")) "fr" }}Confirmez votre adresse e-mail{{ else }}Confirm your email{{ end }}
+  (à recopier tel quel, sans échapper les guillemets — l'échappement ne concerne
+  que `supabase/config.toml`, en local. Vérifier sur un envoi réel : un sujet
+  qui ressortirait littéral se répare en revenant au bilingue
+  « Confirmez votre adresse e-mail · Confirm your email ».)
+
+  UNE SEULE LANGUE PAR ENVOI. L'e-mail parlait les deux à la fois, l'une sous
+  l'autre : c'est le seul endroit du produit où l'utilisateur lisait une langue
+  qu'il n'a pas choisie. La langue vient de `user_metadata.locale`, le même
+  champ que lit `lib/server/account-settings.ts` — GoTrue expose les métadonnées
+  du compte sous `{{ .Data }}` dans ses templates.
+
+  `index .Data "locale"` plutôt que `.Data.locale`, et `printf "%v"` autour :
+  sur un compte SANS ce champ (comptes d'avant MIN-3xx), `.Data.locale` vaut
+  `nil` et `eq nil "fr"` FAIT ÉCHOUER le rendu du template Go
+  (« incompatible types for comparison ») — donc l'e-mail entier. Passé par
+  `printf`, l'absence vaut `"<nil>"`, la comparaison est fausse, et l'anglais
+  sort : le défaut du produit (`i18n/config.ts`).
+
+  Ce qui remplit ce champ, côté app (`lib/interface-locale.ts`) :
+    — à l'inscription, la langue de l'interface part dans `signUp({ data })` ;
+    — à chaque session, `AuthProvider` recolle le champ sur le cookie
+      `NEXT_LOCALE` s'il en diverge. Un compte ancien se répare donc tout seul
+      à sa prochaine ouverture de l'app — mais tant qu'il ne l'a pas ouverte,
+      sa réinitialisation de mot de passe part en anglais. C'est le seul défaut
+      connu de la bascule, et il s'éteint de lui-même.
 
   Le lien est à JETON, pas à `{{ .ConfirmationURL }}` : celui-ci renvoie sur
   `?code=…`, dont l'échange exige le `code_verifier` du localStorage du
@@ -33,14 +59,15 @@
     #f5f7fb --background   #ffffff --card       #0a0a0a --foreground
     #606369 --muted-fg     #d9dce5 --border     #000000 --brand
 -->
+{{ $fr := eq (printf "%v" (index .Data "locale")) "fr" }}
 <!doctype html>
-<html lang="en">
+<html lang="{{ if $fr }}fr{{ else }}en{{ end }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="supported-color-schemes" content="light dark" />
-    <title>Confirm your email</title>
+    <title>{{ if $fr }}Confirmez votre e-mail{{ else }}Confirm your email{{ end }}</title>
     <style>
       @media (prefers-color-scheme: dark) {
         .m-bg    { background-color: #070809 !important; }
@@ -70,7 +97,7 @@
   >
     <!-- Texte de prévisualisation (la ligne grise à côté de l'objet), masqué dans le corps -->
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-      One click and your minddy account is active. Un clic et votre compte minddy est actif.
+      {{ if $fr }}Un clic et votre compte minddy est actif.{{ else }}One click and your minddy account is active.{{ end }}
     </div>
 
     <table
@@ -106,19 +133,21 @@
                   minddy
                 </p>
 
-                <!-- ─────────── English ─────────── -->
                 <h1
                   class="m-title"
                   style="margin:0 0 10px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:30px;color:#0a0a0a;"
                 >
-                  Confirm your email
+                  {{ if $fr }}Confirmez votre e-mail{{ else }}Confirm your email{{ end }}
                 </h1>
                 <p
                   class="m-text"
                   style="margin:0 0 24px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:24px;color:#606369;"
                 >
-                  One click and your minddy account is active. This link works from any
-                  device — open it on your phone if that is easier.
+                  {{ if $fr }}Un clic et votre compte minddy est actif. Ce lien fonctionne
+                  depuis n'importe quel appareil — ouvrez-le sur votre téléphone si c'est
+                  plus simple.{{ else }}One click and your minddy account is active. This
+                  link works from any device — open it on your phone if that is
+                  easier.{{ end }}
                 </p>
 
                 <table role="presentation" border="0" cellpadding="0" cellspacing="0">
@@ -127,43 +156,7 @@
                       <a
                         href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed"
                         style="display:inline-block;padding:13px 26px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;border-radius:12px;"
-                        >Confirm my email</a
-                      >
-                    </td>
-                  </tr>
-                </table>
-
-                <!-- Filet -->
-                <div
-                  class="m-hr"
-                  style="border-top:1px solid #d9dce5;font-size:0;line-height:0;margin:36px 0;"
-                >
-                  &nbsp;
-                </div>
-
-                <!-- ─────────── Français ─────────── -->
-                <h1
-                  class="m-title"
-                  style="margin:0 0 10px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:30px;color:#0a0a0a;"
-                >
-                  Confirmez votre e-mail
-                </h1>
-                <p
-                  class="m-text"
-                  style="margin:0 0 24px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:24px;color:#606369;"
-                >
-                  Un clic et votre compte minddy est actif. Ce lien fonctionne depuis
-                  n'importe quel appareil — ouvrez-le sur votre téléphone si c'est plus
-                  simple.
-                </p>
-
-                <table role="presentation" border="0" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td align="center" bgcolor="#000000" style="border-radius:12px;">
-                      <a
-                        href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed"
-                        style="display:inline-block;padding:13px 26px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;border-radius:12px;"
-                        >Confirmer mon e-mail</a
+                        >{{ if $fr }}Confirmer mon e-mail{{ else }}Confirm my email{{ end }}</a
                       >
                     </td>
                   </tr>
@@ -180,8 +173,9 @@
                   class="m-foot"
                   style="margin:0 0 8px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#606369;"
                 >
-                  Button not working? Copy this link into your browser.<br />
-                  Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur.
+                  {{ if $fr }}Le bouton ne fonctionne pas ? Copiez ce lien dans votre
+                  navigateur.{{ else }}Button not working? Copy this link into your
+                  browser.{{ end }}
                 </p>
                 <p
                   style="margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;word-break:break-all;"
@@ -203,8 +197,9 @@
                   class="m-foot"
                   style="margin:0 0 6px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#606369;"
                 >
-                  Didn't create a minddy account? You can ignore this email.<br />
-                  Vous n'êtes pas à l'origine de cette demande ? Ignorez cet e-mail.
+                  {{ if $fr }}Vous n'êtes pas à l'origine de cette demande ? Ignorez cet
+                  e-mail.{{ else }}Didn't create a minddy account? You can ignore this
+                  email.{{ end }}
                 </p>
                 <p
                   class="m-foot"

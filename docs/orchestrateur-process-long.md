@@ -367,6 +367,38 @@ fin de tour peut être aussi gros qu'un checkpoint de fin de chunk.
 
 ---
 
+### 7 bis. Ce qui a réellement été supprimé (MIN-225, 2026-08-14)
+
+**Le tableau ci-dessus a été écrit avant le passage à opencode, et la moitié de
+ses lignes a été emportée par ce virage plutôt que par ce ticket** — la boucle
+maison entière est partie en MIN-286 (dossier `harness-opencode.md` §2.31), avec
+`agent-loop.ts`, `subagent.ts`, `exec-tool.ts`, `checkpoint-fit.ts` et le reste.
+Ce qui restait de la machinerie de DÉCOUPAGE, et qui est parti ici :
+
+| Ce qui disparaît | Ce qui le remplace |
+| --- | --- |
+| `chunk-budget.ts` **en entier** (et non « sauf une fonction ») | `runCommandTimeoutMs` n'a plus d'appelant : son consommateur était `exec-tool.ts`, et opencode exécute le shell lui-même |
+| `drain-chain.ts`, `MAX_DRAIN_CHAIN`, le paramètre `?chain=N` | rien : un lancement se compte en secondes, une fenêtre absorbe tous les runs dus, et les deux chemins qui remettent un run en file appellent `kickAgentDrain` directement |
+| `requeueStuckRuns`, `STUCK_RUNNING_MS`, `MAX_CRASH_ATTEMPTS` | `reapDeadVmRuns`, qui ne présume pas la mort après vingt minutes de silence : il DEMANDE à la plateforme si le process vit |
+| le plancher d'amorçage (`CHUNK_FLOOR_MS`) et l'admission de reprise de fille (`chunkFitsSubagentResume`, `SUBAGENT_PARENT_RESERVE_MS`, `SUBAGENT_MIN_MS`) | rien : ils protégeaient un chunk de la mort de sa fonction, et la fonction ne porte plus le tour |
+| `MIN_CHUNK_BUDGET_MS` (40 s, dérivé du chunk) | `MIN_LAUNCH_BUDGET_MS` (120 s), dimensionné sur ce que coûte un **lancement** : le clone d'un dépôt froid, pas treize minutes de travail |
+| `maxDuration = 800` sur la route de cron | `300`, le défaut — le handler ne fait plus que lancer, et garder 800 mentirait sur son métier |
+| `window_started_at` (écrite, jamais lue) | rien ; la **colonne** reste en base, cf. ci-dessous |
+
+**Deux lignes du tableau original étaient fausses, et le sont restées** :
+`planProviderStall` **survit** (il est appelé par `landVmTurn`, cf. le plan de
+MIN-225), et `claimRun` **survit** — le CAS reste la seule protection contre un
+double lancement.
+
+**Les colonnes ne sont PAS supprimées, et c'est délibéré.** `continuations` et
+`attempts` sont encore LUES (bandes de seq du ledger, borne de re-queue sur
+erreur) ; `window_started_at` ne l'est plus, mais un `drop column` doit suivre le
+déploiement du code qui a cessé de l'écrire, jamais le précéder — sinon toute
+écriture de la version en vol échoue à la seconde où la migration passe. Trois
+colonnes inertes ne coûtent rien ; la fenêtre entre migration et déploiement, si.
+
+---
+
 ## Question ouverte tranchée : une région EU est-elle bloquante ?
 
 **Non — et il y a quand même une ligne à corriger, indépendamment du chantier.**
