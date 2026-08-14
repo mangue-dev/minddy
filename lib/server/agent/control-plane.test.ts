@@ -68,6 +68,15 @@ vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   spentFromLedger: vi.fn(async () => h.ledgerSpent),
 }));
 
+// Le tarif du modèle sort du process (index OpenRouter) : on le fige, sinon le
+// plafond calculé dépendrait du catalogue du jour.
+vi.mock("./openrouter-index", () => ({
+  getOpenRouterModelInfo: vi.fn(async () => ({
+    pricing: { inputUsdPerMTok: 0.3, outputUsdPerMTok: 1.2 },
+    cachePricing: null,
+  })),
+}));
+
 vi.mock("./quota", () => ({
   checkAgentQuota: vi.fn(async () => {
     if (!h.quota) throw new Error("facturation injoignable");
@@ -416,6 +425,11 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
     await call("POST", "/usage", {
       feature: "agent_code",
       cost: 0.42,
+      // Les tokens accompagnent le montant, comme sur toute vraie ligne de
+      // fournisseur : au-dessus du plancher, c'est ce qui rend le montant
+      // vérifiable (MIN-329).
+      promptTokens: 1_000_000,
+      completionTokens: 100_000,
       billTo: { userId: "quelquun-dautre" },
       userId: "quelquun-dautre",
       runId: OTHER_RUN,
@@ -425,6 +439,68 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
     // …et sous l'identifiant de facturation du run, pas sous celui du corps.
     expect(h.recorded[0].runId).toBe("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
     expect(h.recorded[0].cost).toBe(0.42);
+  });
+
+  /**
+   * MIN-329 — le montant n'est pas une déclaration.
+   *
+   * Le corps de `/usage` vient d'une boucle pilotée par un modèle qui lit du
+   * contenu tiers : une injection suffisait à y poster un `cost` négatif, et
+   * cette ligne-là faisait DESCENDRE la consommation du mois du compte.
+   */
+  it("REFUSE un cost négatif, et n'écrit AUCUNE ligne", async () => {
+    const res = await call("POST", "/usage", { feature: "agent_code", cost: -500 });
+    expect(res.status).toBe(400);
+    expect(h.recorded).toHaveLength(0);
+    // Le refus se trace sur le run : une dépense qui n'entre nulle part doit se
+    // lire là où le trou s'est fait.
+    expect(h.events).toEqual([{ runId: RUN_ID, type: "error" }]);
+  });
+
+  it("refuse un montant impossible ou démesuré", async () => {
+    for (const cost of [Number.NaN, Number.POSITIVE_INFINITY, 10_000]) {
+      expect((await call("POST", "/usage", { feature: "agent_code", cost })).status).toBe(400);
+    }
+    expect(h.recorded).toHaveLength(0);
+  });
+
+  it("refuse un compteur de tokens négatif", async () => {
+    const res = await call("POST", "/usage", {
+      feature: "agent_code",
+      cost: 0.01,
+      promptTokens: -1_000,
+    });
+    expect(res.status).toBe(400);
+    expect(h.recorded).toHaveLength(0);
+  });
+
+  it("écrit NOTRE montant quand les tokens ne peuvent pas justifier le sien", async () => {
+    const res = await call("POST", "/usage", {
+      feature: "agent_code",
+      cost: 40,
+      promptTokens: 100_000,
+      completionTokens: 10_000,
+    });
+    expect(res.status).toBe(200);
+    // 100k × 0,30 $ + 10k × 1,20 $ par million = 0,042 $, et la ligne se dit
+    // calculée : ce chiffre-là n'a pas été relevé chez le fournisseur.
+    expect(h.recorded[0].cost).toBe(0.042);
+    expect(h.recorded[0].estimated).toBe(true);
+  });
+
+  it("le total d'un compte ne peut donc que MONTER après un tour", async () => {
+    // La somme du ledger est faite sur `cost` : il suffit qu'aucune ligne écrite
+    // ne soit négative pour qu'elle ne redescende jamais.
+    for (const cost of [-1, -0.000001, Number.NaN, 1e9, 0.02]) {
+      await call("POST", "/usage", { feature: "agent_code", cost, completionTokens: 100_000 });
+    }
+    expect(h.recorded).toHaveLength(1);
+    expect(h.recorded.every((line) => (line.cost ?? 0) >= 0)).toBe(true);
+  });
+
+  it("range la ligne dans SA bande de seq, quel que soit l'index envoyé", async () => {
+    await call("POST", "/usage", { feature: "agent_code", cost: 0.01, seq: -42 });
+    expect(h.recorded[0].seq).toBe(0);
   });
 
   it("refuse une feature hors du périmètre de l'agent", async () => {
@@ -521,6 +597,21 @@ describe("steering et interruption — inchangés côté base", () => {
         mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }],
       },
     ]);
+  });
+
+  /**
+   * MIN-329 — la remise en file est bornée comme l'écriture qui l'a produite.
+   * Sans borne, la surface écrivait en base autant de messages que la VM en
+   * envoyait, de la taille qu'elle voulait — et chacun revenait dans le prompt du
+   * tour suivant.
+   */
+  it("bornent le nombre et la taille de ce qui revient en file", async () => {
+    const res = await call("POST", "/messages", {
+      messages: Array.from({ length: 80 }, () => "x".repeat(9_000)),
+    });
+    expect(res.body).toEqual({ requeued: 50 });
+    expect(h.requeued).toHaveLength(50);
+    expect(h.requeued.every((m) => m.content.length === 4_000)).toBe(true);
   });
 
   it("l'EFFACENT sur DELETE — et seulement pour LEUR run", async () => {

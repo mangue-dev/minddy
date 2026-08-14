@@ -52,6 +52,19 @@ import type { VmTurnReport } from "./vm/protocol";
  * bascule du cadrage (« le fil raconte la même chose sur le même ticket »).
  */
 
+/**
+ * LE MÉTRAGE COMPUTE EST UNE DURÉE, PAS UNE DÉCLARATION (MIN-329).
+ *
+ * `report.sandboxMs` est un nombre que la microVM envoie et qui devient
+ * directement des dollars sur le compte du propriétaire du run
+ * (`recordSandboxUsage` : minutes × tarif). Une VM dont la boucle a été détournée
+ * facturait donc ce qu'elle voulait à quelqu'un d'autre. Aucune VM ne vit plus
+ * longtemps que son propre timeout (`SANDBOX_TIMEOUT_MS`, sandbox.ts, 24 h) :
+ * au-delà, ce n'est plus une horloge, et on coupe. Recopié plutôt qu'importé —
+ * `sandbox.ts` tire le SDK Vercel, qui n'a rien à faire dans ce chemin-ci.
+ */
+const MAX_SANDBOX_MS = 24 * 60 * 60_000;
+
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
 }
@@ -82,7 +95,10 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
    *
    * Écrit AVANT le reste : le reste peut échouer, cette ligne-là ne doit pas.
    */
-  if (report.sandboxMs > 0) {
+  const sandboxMs = Number.isFinite(report.sandboxMs)
+    ? Math.min(Math.max(0, report.sandboxMs), MAX_SANDBOX_MS)
+    : 0;
+  if (sandboxMs > 0) {
     await recordSandboxUsage({
       runId: run.run_id ?? run.id,
       // La bande de seq est celle des lignes `sandbox_compute` ; un tour = une
@@ -93,7 +109,7 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
       billTo,
       feature: run.routine_id ? "routine_compute" : "sandbox_compute",
       projectId: run.project_id,
-      durationMs: report.sandboxMs,
+      durationMs: sandboxMs,
     }).catch(() => {});
   }
 

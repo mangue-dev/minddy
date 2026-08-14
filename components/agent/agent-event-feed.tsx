@@ -706,6 +706,10 @@ const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   // MIN-286 : la base a refusé la mémoire du tour (un octet nul dans la sortie
   // d'une commande). Le travail, lui, est poussé sur la branche.
   checkpointRefused: "errorCheckpointRefused",
+  // MIN-329 : la microVM a annoncé une dépense impossible (montant négatif, hors
+  // bornes). La ligne n'est pas écrite, et le fil le dit plutôt que de laisser un
+  // trou muet dans les compteurs.
+  usageRejected: "errorUsageRejected",
 };
 
 function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {

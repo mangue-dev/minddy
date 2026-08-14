@@ -18,6 +18,11 @@ import {
   SCRATCHPAD_TOOL_NAMES,
 } from "./platform-tool-names";
 import { WEB_SEARCH_SEQ_BASE } from "@/lib/server/web-search";
+import {
+  checkUsageClaim,
+  USAGE_COST_FLOOR_USD,
+  type UsageModelPricing,
+} from "./usage-claim";
 import type { VmTurnReport } from "./vm/protocol";
 import { executeScratchpadTool, type ScratchpadToolContext } from "./scratchpad-tools";
 import { agentRunTopic, broadcastToTopic } from "./live";
@@ -117,6 +122,16 @@ const VM_ALLOWED_FEATURES = new Set<AiFeature>([
   "pr_review",
 ]);
 
+/**
+ * Ce qu'une remise en file peut porter (MIN-329) — les mêmes bornes que la porte
+ * d'entrée des messages ([app/api/agent-runs/[runId]/steer/route.ts](../../../app/api/agent-runs/[runId]/steer/route.ts),
+ * `MAX_LEN`), puisqu'on n'y remet que ce qui en est venu. Le nombre est large
+ * exprès : un tour draine rarement plus de deux ou trois messages, et la borne
+ * n'est là que pour qu'il y en ait une.
+ */
+const MAX_MESSAGE_LEN = 4000;
+const MAX_REQUEUED_MESSAGES = 50;
+
 /** Qui paye ce que ce run dépense — SA ligne, pas ce que la VM raconte. */
 function billToFor(run: AgentRun): AiUsageBillTo {
   return run.created_by
@@ -126,6 +141,44 @@ function billToFor(run: AgentRun): AiUsageBillTo {
 
 function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+/**
+ * Un INDEX d'appel, jamais autre chose (MIN-329). `seq` range les lignes d'un run
+ * en bandes (les appels du modèle, `web_search`, `sandbox_compute`) : un nombre
+ * négatif ou démesuré ne fait pas perdre d'argent, il fait atterrir une ligne
+ * dans la bande d'une autre feature — donc un total juste, rangé au mauvais
+ * endroit, ce qui est plus difficile à voir qu'une erreur franche.
+ */
+const MAX_SEQ = 100_000;
+function seqField(raw: unknown, max = MAX_SEQ): number {
+  const n = num(raw);
+  if (n === null) return 0;
+  return Math.min(Math.max(0, Math.round(n)), max);
+}
+
+/**
+ * Le tarif du modèle, DEMANDÉ SEULEMENT QUAND IL PEUT CHANGER LA RÉPONSE.
+ *
+ * Le plafond calculé ne mord jamais sous `USAGE_COST_FLOOR_USD` (cf.
+ * `checkUsageClaim`), et l'écrasante majorité des lignes est à quelques
+ * millièmes de dollar. Aller lire l'index OpenRouter pour chacune d'elles serait
+ * une requête réseau par round de modèle pour un verdict connu d'avance.
+ */
+async function usagePricingFor(
+  model: string | null,
+  cost: unknown,
+): Promise<UsageModelPricing | null> {
+  if (!model || typeof cost !== "number" || !(cost > USAGE_COST_FLOOR_USD)) return null;
+  try {
+    const { getOpenRouterModelInfo } = await import("./openrouter-index");
+    return await getOpenRouterModelInfo(model);
+  } catch (err) {
+    // Un index injoignable ne doit pas faire perdre la ligne : sans tarif, seules
+    // les bornes dures s'appliquent — c'est exactement ce que rend `null`.
+    console.error("[agent-control-plane] pricing read failed:", (err as Error).message);
+    return null;
+  }
 }
 
 const LIVE_FILE_STATUSES = new Set(["added", "modified", "deleted", "renamed"]);
@@ -279,24 +332,46 @@ export async function handleControlPlaneRequest(opts: {
   if (method === "POST" && surface === "/usage") {
     const feature = body.feature as AiFeature;
     if (!VM_ALLOWED_FEATURES.has(feature)) return bad(`usage: feature not allowed (${feature})`);
+    const model = typeof body.model === "string" ? body.model : run.model;
+    /**
+     * LE MONTANT N'EST PAS UNE DÉCLARATION (MIN-329) : borné, puis plafonné par
+     * ce que les tokens rapportés peuvent coûter au tarif du modèle. Un `cost`
+     * négatif remettait la consommation du mois à neuf, pour tout le compte.
+     */
+    const claim = checkUsageClaim(body, await usagePricingFor(model, body.cost));
+    if (!claim.ok) {
+      // ÇA SE TRACE, et pas seulement dans les logs : une ligne refusée est une
+      // dépense qui n'entre nulle part, et ce trou-là doit être lisible sur le
+      // run où il s'est fait — c'est ce qui distingue « la VM a menti » d'un
+      // compteur qui dérive sans raison apparente.
+      console.error(`[agent-control-plane] usage refusée sur ${runId} — ${claim.reason}`);
+      await appendEvent(runId, "error", { code: "usageRejected", reason: claim.reason });
+      return bad(`usage: ${claim.reason}`);
+    }
+    if (claim.clampedFrom !== undefined) {
+      console.error(
+        `[agent-control-plane] usage plafonnée sur ${runId} — ${claim.clampedFrom} $ ` +
+          `annoncés, ${claim.cost} $ écrits (${model})`,
+      );
+    }
     await recordAiUsage({
       // Même identifiant de facturation que la boucle d'aujourd'hui : la ligne de
       // ledger d'un run repris doit tomber sous le même `run_id`, sinon le plafond
       // du run ne voit plus la moitié de sa dépense.
       runId: run.run_id ?? run.id,
-      seq: num(body.seq) ?? 0,
+      seq: seqField(body.seq),
       feature,
       billTo: billToFor(run),
-      model: typeof body.model === "string" ? body.model : run.model,
+      model,
       ...(typeof body.provider === "string" ? { provider: body.provider } : {}),
       generationId: typeof body.generationId === "string" ? body.generationId : null,
-      promptTokens: num(body.promptTokens),
-      completionTokens: num(body.completionTokens),
-      totalTokens: num(body.totalTokens),
-      cachedTokens: num(body.cachedTokens),
-      cacheWriteTokens: num(body.cacheWriteTokens),
-      cost: num(body.cost),
-      ...(body.estimated === true ? { estimated: true } : {}),
+      promptTokens: claim.promptTokens,
+      completionTokens: claim.completionTokens,
+      totalTokens: claim.totalTokens,
+      cachedTokens: claim.cachedTokens,
+      cacheWriteTokens: claim.cacheWriteTokens,
+      cost: claim.cost,
+      ...(claim.estimated ? { estimated: true } : {}),
       projectId: run.project_id,
     });
     return ok();
@@ -372,22 +447,30 @@ export async function handleControlPlaneRequest(opts: {
    * exactement comme s'il venait d'être écrit.
    */
   if (method === "POST" && surface === "/messages") {
-    const messages = Array.isArray(body.messages)
-      ? body.messages.flatMap((message) => {
-          if (typeof message === "string") {
-            return message.trim().length > 0 ? [{ text: message }] : [];
-          }
-          if (
-            message &&
-            typeof message === "object" &&
-            typeof (message as { text?: unknown }).text === "string" &&
-            (message as { text: string }).text.trim().length > 0
-          ) {
-            return [message as { text: string; mentions?: unknown }];
-          }
-          return [];
-        })
-      : [];
+    const messages = (Array.isArray(body.messages) ? body.messages : [])
+      .flatMap((message) => {
+        const text =
+          typeof message === "string"
+            ? message
+            : message &&
+                typeof message === "object" &&
+                typeof (message as { text?: unknown }).text === "string"
+              ? (message as { text: string }).text
+              : null;
+        if (text === null || text.trim().length === 0) return [];
+        // BORNÉ COMME À L'ÉCRITURE (MIN-329). Ce qu'on remet en file a été écrit
+        // par un humain via `/steer`, qui coupe à `MAX_MESSAGE_LEN` — donc rien
+        // d'honnête ne dépasse ici. Sans la borne, la surface écrivait en base
+        // autant de messages que la VM en envoyait, de la taille qu'elle voulait,
+        // et chacun revenait ensuite dans le prompt du tour suivant.
+        return [
+          {
+            text: text.slice(0, MAX_MESSAGE_LEN),
+            mentions: (message as { mentions?: unknown })?.mentions,
+          },
+        ];
+      })
+      .slice(0, MAX_REQUEUED_MESSAGES);
     for (const message of messages) {
       await insertRunMessage(runId, null, message.text, parseAgentMentions(message.mentions));
     }
@@ -582,7 +665,7 @@ async function runPrTool(
 
   const forge = forgeFor(target.provider);
   const call = { token: target.token, repoFullName: target.repoFullName, number: prRun.number };
-  const inline = { used: num(body.prInlineComments) ?? 0 };
+  const inline = { used: seqField(body.prInlineComments) };
   const { locale } = await runPrefsFor(run);
   const outcome = await executePrTool(
     {
@@ -637,7 +720,7 @@ async function runProjectPrTool(
     import("./repo-access"),
   ]);
   const { locale } = await runPrefsFor(run);
-  const inline = { used: num(body.prInlineComments) ?? 0 };
+  const inline = { used: seqField(body.prInlineComments) };
   const outcome = await executeProjectPrTool(
     {
       projectId: run.project_id,
@@ -687,7 +770,9 @@ async function runWebSearch(
     runId: run.run_id ?? run.id,
     // La bande de seq des recherches est à elle ; le compteur repart du tour, et
     // deux recherches d'un même tour ne se marchent pas dessus.
-    seq: WEB_SEARCH_SEQ_BASE + run.continuations * 100 + (num(args.seq) ?? 0),
+    // L'index reste DANS sa bande : 99 recherches par tour, et pas de nombre
+    // reçu qui aille se ranger dans la bande d'une autre feature (MIN-329).
+    seq: WEB_SEARCH_SEQ_BASE + run.continuations * 100 + seqField(args.seq, 99),
     billTo: billToFor(run),
     projectId: run.project_id,
   });

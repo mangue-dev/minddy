@@ -181,6 +181,22 @@ describe("le métrage de la microVM change de main", () => {
     await landVmTurn(run(), report({ sandboxMs: 0 }));
     expect(h.sandboxUsage).toHaveLength(0);
   });
+
+  /**
+   * MIN-329 — cette durée devient directement des dollars sur le compte du
+   * propriétaire du run, et elle est envoyée par la microVM. Aucune VM ne vit
+   * plus longtemps que son propre timeout : au-delà, ce n'est plus une horloge.
+   */
+  it("coupe une durée que la VM ne peut pas avoir vécue", async () => {
+    await landVmTurn(run(), report({ sandboxMs: 1_000 * 24 * 60 * 60_000 }));
+    expect(h.sandboxUsage[0]).toMatchObject({ durationMs: 24 * 60 * 60_000 });
+  });
+
+  it("n'écrit rien sur une durée impossible", async () => {
+    await landVmTurn(run(), report({ sandboxMs: Number.NaN }));
+    await landVmTurn(run(), report({ sandboxMs: -60_000 }));
+    expect(h.sandboxUsage).toHaveLength(0);
+  });
 });
 
 describe("les quatre sorties, et elles quittent toutes `running`", () => {
