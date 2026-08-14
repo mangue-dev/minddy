@@ -542,7 +542,7 @@
     "passwordRuleLower": "Une minuscule",
     "passwordRuleUpper": "Une majuscule",
     "passwordRuleDigit": "Un chiffre",
-    "errorWeakPassword": "Ce mot de passe est trop courant — choisissez-en un moins prévisible.",
+    "errorWeakPassword": "Ce mot de passe est trop courant : choisissez-en un moins prévisible.",
     "errorUserExists": "Un compte existe déjà avec cette adresse. Connectez-vous plutôt.",
     "errorInvalidCredentials": "Adresse e-mail ou mot de passe incorrect.",
     "errorEmailNotConfirmed": "Cette adresse n’est pas encore confirmée. Ouvrez le lien qu'on vous a envoyé.",
@@ -1219,7 +1219,7 @@
     "linePrReviewed": "Votre pull request a été relue",
     "linePrMerged": "Votre pull request a été fusionnée",
     "linePrOpened": "Une pull request vient de s'ouvrir",
-    "lineAutomationPaused": "L'automatisation attend ton feu vert",
+    "lineAutomationPaused": "L'automatisation attend votre feu vert",
     "lineAutomationStopped": "L'automatisation s'est arrêtée",
     "lineRoutineDone": "La routine a terminé son exécution",
     "linePageMention": "{actor} vous a mentionné dans cette page",
@@ -1298,7 +1298,7 @@
     "changeObjectiveAria": "Changer l'objectif",
     "issueCreatedToast": "Ticket créé.",
     "smartFillChip": "Smart-fill",
-    "smartFillOffHint": "Coupé pour ce ticket — vous renseignez ses propriétés vous-même. Réactivez pour laisser Smart-fill le faire.",
+    "smartFillOffHint": "Coupé pour ce ticket : vous renseignez ses propriétés vous-même. Réactivez pour laisser Smart-fill le faire.",
     "smartFillOnHint": "Actif : Smart-fill lit le ticket et pose sa priorité, son effort, ses catégories et son objectif à votre place. Coupez pour les renseigner vous-même.",
     "smartFillPendingToast": "Smart-fill remplit le ticket, il apparaîtra dans quelques secondes.",
     "newIssueTitle": "Nouveau ticket",
@@ -1979,7 +1979,7 @@
     "gitIdentityRevokedToast": "Autorisation révoquée.",
     "gitConnectionsTitle": "Comptes git connectés",
     "gitConnectionsDesc": "Les comptes GitHub et GitLab que vous avez connectés, réutilisables sur tous vos projets.",
-    "gitConnectionsHelp": "Deux niveaux par compte. La CONNEXION donne à minddy l'accès aux dépôts, et se réutilise sur tous vos projets. L'AUTORISATION, elle, fait partir vos gestes sur une pull request; approuver, commenter, résoudre un fil, fusionner; sous votre nom plutôt que sous celui de minddy. Chez GitLab les deux n'en font qu'une : le compte connecté est déjà le vôtre.",
+    "gitConnectionsHelp": "Deux niveaux par compte. La CONNEXION donne à minddy l'accès aux dépôts, et se réutilise sur tous vos projets. L'AUTORISATION, elle, fait partir vos gestes sur une pull request (approuver, commenter, résoudre un fil, fusionner) sous votre nom plutôt que sous celui de minddy. Chez GitLab les deux n'en font qu'une : le compte connecté est déjà le vôtre.",
     "gitConnectionsEmpty": "Aucun compte git connecté.",
     "gitConnectionUsedBy": "{count, plural, one {# projet} other {# projets}}",
     "gitDisconnect": "Déconnecter",
@@ -2024,7 +2024,7 @@
     "keyboardSectionTitle": "Clavier",
     "keyboardSectionDesc": "Comment un message part, dans les commentaires comme dans le composer de Numo.",
     "sendShortcutTitle": "Envoyer un message avec",
-    "sendShortcutDesc": "Maj + Entrée saute toujours à la ligne. {mod} + Entrée envoie dans les deux réglages. Les formulaires qui portent une description — un nouveau ticket, un nouvel objectif — restent sur {mod} + Entrée, pour qu'Entrée y commence encore un paragraphe.",
+    "sendShortcutDesc": "Maj + Entrée saute toujours à la ligne. {mod} + Entrée envoie dans les deux réglages. Les formulaires qui portent une description (un nouveau ticket, un nouvel objectif) restent sur {mod} + Entrée, pour qu'Entrée y commence encore un paragraphe.",
     "sendShortcutModEnter": "{mod} + Entrée",
     "sendShortcutEnter": "Entrée",
     "desktopAppLabel": "App de bureau",
@@ -2136,7 +2136,7 @@
     "errorReplyIncomplete": "La réponse du modèle n'est jamais arrivée en entier; son travail est gardé, et rien n'a été commité. Envoyez un message pour poursuivre.",
     "errorProviderUnavailable": "Le fournisseur du modèle a échoué de façon répétée, ce tour est donc en pause; son travail est gardé. Envoyez un message pour poursuivre.",
     "errorTurnLost": "Le processus de ce tour s'est arrêté avant d'avoir fini; la session a été restaurée depuis sa dernière sauvegarde. Envoyez un message pour poursuivre.",
-    "errorCheckpointRefused": "La mémoire de ce tour n'a pas pu être enregistrée ; la session repart de son état précédent. Son travail est poussé sur la branche — envoyez un message pour poursuivre.",
+    "errorCheckpointRefused": "La mémoire de ce tour n'a pas pu être enregistrée ; la session repart de son état précédent. Son travail est poussé sur la branche : envoyez un message pour poursuivre.",
     "errorToolLoop": "Le modèle répétait la même étape sans rien apprendre de neuf : ce tour a été arrêté; son travail est gardé, et la suite ne vous a pas été facturée. Envoyez un message pour le remettre sur une autre piste.",
     "runCapTitle": "Ce passage a atteint son plafond de dépense",
     "runCapReached": "Sa routine autorise {percent} % du budget mensuel par passage.",
@@ -3444,7 +3444,7 @@
       },
       "recommended_models": {
         "label": "Modèles conseillés",
-        "desc": "La courte liste sur laquelle s'ouvre le picker de modèle, partout dans l'app, avant qu'on ait tapé quoi que ce soit. Elle ne cache rien : la recherche atteint toujours le catalogue entier, et une dernière ligne en montre plus. L'ordre est calculé selon le prix, le moins cher d'abord — vous ne choisissez donc QUE les modèles conseillés. Un modèle au-delà du plafond du plan Pro (×40) n'est lançable par personne."
+        "desc": "La courte liste sur laquelle s'ouvre le picker de modèle, partout dans l'app, avant qu'on ait tapé quoi que ce soit. Elle ne cache rien : la recherche atteint toujours le catalogue entier, et une dernière ligne en montre plus. L'ordre est calculé selon le prix, le moins cher d'abord : vous ne choisissez donc QUE les modèles conseillés. Un modèle au-delà du plafond du plan Pro (×40) n'est lançable par personne."
       },
       "byok_default_model_openai": {
         "label": "Défaut OpenAI"
@@ -4368,7 +4368,7 @@
     "faq_key_a": "Nulle part : il n'y en a pas. Vous autorisez minddy dans le navigateur à la première utilisation, et vous pouvez la révoquer depuis votre compte quand vous voulez. Rien de sensible ne finit dans un fichier de configuration."
   },
   "Download": {
-    "metaTitle": "minddy pour Mac — l'application de bureau",
+    "metaTitle": "minddy pour Mac : l'application de bureau",
     "metaDescription": "Une vraie app Mac pour minddy : sa fenêtre, des notifications natives, une pastille chiffrée au dock. Gratuite, signée et notarisée par Apple.",
     "eyebrow": "Pour macOS",
     "heroTitle": "minddy, dans sa",
@@ -4377,7 +4377,7 @@
     "downloadButton": "Télécharger pour Mac",
     "downloadIntel": "Mac à puce Intel",
     "requirements": "Gratuite avec tous les plans, gratuit compris.",
-    "platformNote": "macOS uniquement pour l'instant — il n'y a pas de version Windows ni Linux. Sur ces machines, minddy s'utilise dans le navigateur.",
+    "platformNote": "macOS uniquement pour l'instant : il n'y a pas de version Windows ni Linux. Sur ces machines, minddy s'utilise dans le navigateur.",
     "specVersion": "Version",
     "specVersionUnknown": "La dernière",
     "specSize": "Téléchargement",

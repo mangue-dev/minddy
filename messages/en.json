@@ -542,7 +542,7 @@
     "passwordRuleLower": "One lowercase letter",
     "passwordRuleUpper": "One uppercase letter",
     "passwordRuleDigit": "One digit",
-    "errorWeakPassword": "This password is too common — pick a less predictable one.",
+    "errorWeakPassword": "This password is too common: pick a less predictable one.",
     "errorUserExists": "An account already exists with this address. Sign in instead.",
     "errorInvalidCredentials": "Wrong email or password.",
     "errorEmailNotConfirmed": "This address isn’t confirmed yet. Open the link we sent you.",
@@ -1298,7 +1298,7 @@
     "changeObjectiveAria": "Change objective",
     "issueCreatedToast": "Issue created.",
     "smartFillChip": "Smart-fill",
-    "smartFillOffHint": "Off for this issue — you set its properties yourself. Turn back on to let Smart-fill do it.",
+    "smartFillOffHint": "Off for this issue: you set its properties yourself. Turn back on to let Smart-fill do it.",
     "smartFillOnHint": "On: Smart-fill reads the issue and sets its priority, effort, categories and objective for you. Turn off to set them yourself.",
     "smartFillPendingToast": "Smart-fill is filling the issue in, it will show up in a few seconds.",
     "newIssueTitle": "New issue",
@@ -1979,7 +1979,7 @@
     "gitIdentityRevokedToast": "Authorization revoked.",
     "gitConnectionsTitle": "Connected git accounts",
     "gitConnectionsDesc": "The GitHub and GitLab accounts you've connected, reusable across all your projects.",
-    "gitConnectionsHelp": "Two levels per account. The CONNECTION grants minddy access to repositories, and is reused across all your projects. The AUTHORIZATION sends your pull request actions; approving, commenting, resolving threads, merging; under your name rather than minddy's. On GitLab the two are one: the connected account is already yours.",
+    "gitConnectionsHelp": "Two levels per account. The CONNECTION grants minddy access to repositories, and is reused across all your projects. The AUTHORIZATION sends your pull request actions (approving, commenting, resolving threads, merging) under your name rather than minddy's. On GitLab the two are one: the connected account is already yours.",
     "gitConnectionsEmpty": "No git account connected yet.",
     "gitConnectionUsedBy": "{count, plural, one {# project} other {# projects}}",
     "gitDisconnect": "Disconnect",
@@ -2024,7 +2024,7 @@
     "keyboardSectionTitle": "Keyboard",
     "keyboardSectionDesc": "How a message leaves your hands, in comments and in Numo's composer.",
     "sendShortcutTitle": "Send a message with",
-    "sendShortcutDesc": "Shift + Enter always adds a line break. {mod} + Enter sends in both settings. Forms that carry a description — a new issue, a new objective — keep {mod} + Enter, so Enter can still start a paragraph there.",
+    "sendShortcutDesc": "Shift + Enter always adds a line break. {mod} + Enter sends in both settings. Forms that carry a description (a new issue, a new objective) keep {mod} + Enter, so Enter can still start a paragraph there.",
     "sendShortcutModEnter": "{mod} + Enter",
     "sendShortcutEnter": "Enter",
     "desktopAppLabel": "Desktop app",
@@ -2136,7 +2136,7 @@
     "errorReplyIncomplete": "The model's reply never came through in full; its work is kept, and nothing was committed. Send a message to carry on.",
     "errorProviderUnavailable": "The model provider kept failing, so this turn was paused; its work is kept. Send a message to carry on.",
     "errorTurnLost": "This turn's process stopped before it could finish; the session was restored from its last save. Send a message to carry on.",
-    "errorCheckpointRefused": "This turn's memory could not be saved, so the session picks up from its previous state. Its work is pushed on the branch — send a message to carry on.",
+    "errorCheckpointRefused": "This turn's memory could not be saved, so the session picks up from its previous state. Its work is pushed on the branch: send a message to carry on.",
     "errorToolLoop": "The model kept repeating the same step without learning anything new, so this turn was stopped; its work is kept, and you were not charged for the rest. Send a message to point it elsewhere.",
     "runCapTitle": "This run reached its spending cap",
     "runCapReached": "Its routine lets one run spend up to {percent}% of your monthly usage.",
@@ -3444,7 +3444,7 @@
       },
       "recommended_models": {
         "label": "Recommended models",
-        "desc": "The short list the model picker opens on, everywhere in the app — before anyone types. It hides nothing: searching still reaches the whole catalogue, and a last line opens up more. Order is computed from price, cheapest first, so you only pick WHICH models to recommend. A model above the Pro plan cap (×40) is launchable by nobody."
+        "desc": "The short list the model picker opens on, everywhere in the app, before anyone types. It hides nothing: searching still reaches the whole catalogue, and a last line opens up more. Order is computed from price, cheapest first, so you only pick WHICH models to recommend. A model above the Pro plan cap (×40) is launchable by nobody."
       },
       "byok_default_model_openai": {
         "label": "OpenAI default"
@@ -3465,7 +3465,7 @@
       },
       "smart_fill_model": {
         "label": "Smart-fill model",
-        "desc": "Reads a new issue's title and description and fills its fields. Someone is waiting on it — pick a fast model."
+        "desc": "Reads a new issue's title and description and fills its fields. Someone is waiting on it: pick a fast model."
       },
       "conversation_title_model": {
         "label": "Conversation titles",
@@ -4368,7 +4368,7 @@
     "faq_key_a": "Nowhere: there is none. You approve minddy in your browser the first time, and you can revoke it from your account whenever you want. Nothing sensitive ends up in a configuration file."
   },
   "Download": {
-    "metaTitle": "minddy for Mac — the desktop app",
+    "metaTitle": "minddy for Mac: the desktop app",
     "metaDescription": "A real Mac app for minddy: its own window, native notifications, a numbered dock badge. Free, signed and notarised by Apple.",
     "eyebrow": "For macOS",
     "heroTitle": "minddy, in its",
@@ -4377,7 +4377,7 @@
     "downloadButton": "Download for Mac",
     "downloadIntel": "Mac with an Intel chip",
     "requirements": "Free with every plan, the free one too.",
-    "platformNote": "macOS only for now — there is no Windows or Linux version. On those, minddy runs in the browser.",
+    "platformNote": "macOS only for now: there is no Windows or Linux version. On those, minddy runs in the browser.",
     "specVersion": "Version",
     "specVersionUnknown": "Latest",
     "specSize": "Download",
