@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isInlineSafeMimeType, resolveUploadedMimeType } from "@/lib/inline-safe";
 import { getProjectAccess } from "@/lib/server/project-access";
 import type {
   Attachment,
@@ -177,7 +178,11 @@ export async function uploadAttachment(
     data: Buffer;
   }
 ): Promise<Attachment> {
-  const mime = args.mimeType?.trim().slice(0, 120) || "application/octet-stream";
+  // Le type est déduit des OCTETS, pas de ce que l'appelant annonce (MIN-340) :
+  // ici on tient le contenu, donc on n'a aucune raison de le croire sur parole.
+  // C'est ce type-là qui part dans l'entête de l'objet ET dans la ligne, pour
+  // que les deux disent la même chose au moment de servir.
+  const mime = resolveUploadedMimeType(args.mimeType, args.data).slice(0, 120);
   const path = `projects/${args.projectId}/${crypto.randomUUID()}/${sanitizeKeyPart(
     args.fileName
   )}`;
@@ -445,16 +450,66 @@ export async function insertAttachmentsFor(
   if (error) throw new Error(`resources insert failed: ${error.message}`);
 }
 
-/** Short-lived signed URL on the private bucket (service role bypasses the
-    absence of a storage select policy). Null when the object is missing. */
+/**
+ * Le type MIME que le BUCKET servira pour cet objet — celui posé à l'envoi, et
+ * donc la seule vérité sur ce que le navigateur recevra.
+ *
+ * Il est demandé au storage et non lu sur la ligne : le `mime_type` d'une ligne
+ * est ce que le client a DÉCLARÉ au moment de l'enregistrement, sans rapport
+ * obligé avec l'entête que l'objet porte (une ressource de ticket monte
+ * directement du navigateur au bucket, l'entête comprise). Rendre `""` en cas
+ * d'échec ferme la porte : hors allowlist, donc `attachment`.
+ */
+async function storedContentType(
+  service: SupabaseClient,
+  storagePath: string
+): Promise<string> {
+  try {
+    const { data } = await service.storage.from("attachments").info(storagePath);
+    return data?.contentType ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Short-lived signed URL on the private bucket (service role bypasses the
+ * absence of a storage select policy). Null when the object is missing.
+ *
+ * Le SEUL goulot par lequel un fichier privé devient une URL — d'où la garde
+ * `inline` ici et non chez les cinq appelants (MIN-340) : ce qui n'est pas dans
+ * l'allowlist ({@link isInlineSafeMimeType}) repart en `attachment`, quoi qu'ait
+ * demandé l'appelant. Une disposition « pièce jointe » ne rend jamais rien, donc
+ * n'exécute jamais rien, et elle laisse l'image s'afficher dans un `<img>` — la
+ * disposition ne gouverne que la navigation.
+ *
+ * `mimeType` est le type que l'appelant tient DÉJÀ pour ce fichier (la ligne
+ * `page_files`, dont le type est sniffé à l'envoi) : le passer évite l'aller-
+ * retour `info()`. Sans lui, on va le demander au storage.
+ */
 export async function signedAttachmentUrl(
   service: SupabaseClient,
   storagePath: string,
-  { download = false, expiresIn = 600 }: { download?: string | boolean; expiresIn?: number } = {}
+  {
+    download = false,
+    expiresIn = 600,
+    mimeType,
+  }: {
+    download?: string | boolean;
+    expiresIn?: number;
+    /** Type de confiance, quand l'appelant en tient un (voir ci-dessus). */
+    mimeType?: string | null;
+  } = {}
 ): Promise<string | null> {
+  let disposition: string | boolean = download;
+  if (!disposition) {
+    const type = mimeType ?? (await storedContentType(service, storagePath));
+    if (!isInlineSafeMimeType(type)) disposition = true;
+  }
+
   const { data, error } = await service.storage
     .from("attachments")
-    .createSignedUrl(storagePath, expiresIn, download ? { download } : undefined);
+    .createSignedUrl(storagePath, expiresIn, disposition ? { download: disposition } : undefined);
   if (error || !data?.signedUrl) return null;
   return data.signedUrl;
 }

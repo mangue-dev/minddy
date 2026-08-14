@@ -43,6 +43,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const download = request.nextUrl.searchParams.get("download") === "1";
   const url = await signedAttachmentUrl(service, file.storage_path, {
     download: download ? file.file_name : false,
+    // Le type de la LIGNE fait foi ici : il a été déduit des octets à l'envoi
+    // (lib/server/page-files.ts), l'envoi d'un fichier de page passant par le
+    // serveur. Hors allowlist, la signature repartira en « pièce jointe »
+    // (MIN-340) — un `.png` qui contient du HTML ne s'ouvre pas.
+    mimeType: file.mime_type,
   });
   if (!url) return notFound;
 

@@ -8,6 +8,7 @@ import {
   pageFileStoragePrefix,
   sanitizeFileKey,
 } from "@/lib/page-files";
+import { resolveUploadedMimeType } from "@/lib/inline-safe";
 import { removeStorageObjects } from "@/lib/server/attachments";
 
 /**
@@ -83,7 +84,12 @@ export async function createPageFile(
   if (size === 0) throw new PageFileError("empty file", 400);
   if (size > MAX_PAGE_FILE_BYTES) throw new PageFileError("file too large", 413);
 
-  const mime = args.mimeType.trim().slice(0, 120) || "application/octet-stream";
+  // Le type vient des OCTETS et non de l'annonce du navigateur (MIN-340) :
+  // l'envoi d'un fichier de page passe par le serveur, donc on tient le contenu
+  // — et un `.png` qui est en réalité du HTML n'a aucune raison de repartir
+  // étiqueté `image/png`. Le type retenu part dans l'entête de l'objet ET dans
+  // la ligne, qui devient la source de confiance de la porte de lecture.
+  const mime = resolveUploadedMimeType(args.mimeType, args.data).slice(0, 120);
   const fileName = args.fileName.trim().slice(0, 200) || "fichier";
   const path = `${pageFileStoragePrefix(args.projectId, args.pageId)}/${crypto.randomUUID()}/${sanitizeFileKey(fileName)}`;
 

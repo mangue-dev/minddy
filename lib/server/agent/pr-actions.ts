@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getTranslations } from "next-intl/server";
 
+import { resolveUploadedMimeType, servedMimeType } from "@/lib/inline-safe";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents } from "@/lib/server/issue-events";
@@ -1329,8 +1330,9 @@ function sanitizeKeyPart(name: string): string {
 }
 
 /**
- * Les types servis TELS QUELS depuis le bucket public. Tout le reste est stocké
- * en `application/octet-stream`.
+ * Le type sous lequel le fichier sera SERVI depuis le bucket public. Tout ce qui
+ * sort de l'allowlist ([lib/inline-safe.ts](../../inline-safe.ts)) est stocké en
+ * `application/octet-stream`.
  *
  * Le type déclaré vient du client, et l'URL rendue ici est PUBLIQUE, stable et
  * portée par le domaine de notre projet Supabase. Un `text/html` s'y ouvrirait
@@ -1338,26 +1340,8 @@ function sanitizeKeyPart(name: string): string {
  * n'importe quel compte ayant accès à une PR y hébergerait une page de
  * hameçonnage à notre nom. La garde d'accès à la PR décide QUI peut écrire ;
  * elle ne dit rien de CE QUI est servi.
- *
- * Ce qui reste inline est ce que le composer affiche vraiment — les images
- * bitmap — plus les deux formats qu'on ouvre sans y penser. Le reste se
- * télécharge, ce qu'un lien de pièce jointe fait déjà.
  */
-const INLINE_SAFE_ATTACHMENT_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "image/avif",
-  "application/pdf",
-  "text/plain",
-]);
-
-/** Le type sous lequel le fichier sera SERVI (cf. la liste ci-dessus). */
-function servedAttachmentType(declared: string): string {
-  const type = declared.split(";")[0].trim().toLowerCase();
-  return INLINE_SAFE_ATTACHMENT_TYPES.has(type) ? type : "application/octet-stream";
-}
+const servedAttachmentType = servedMimeType;
 
 /**
  * Héberge un fichier destiné à un commentaire de pull request (MIN-162) et rend
@@ -1388,12 +1372,15 @@ export async function prAttachmentResponse(
   }
 
   const name = (file.name || "fichier").slice(-200);
-  const contentType = servedAttachmentType(file.type || "");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  // Les octets d'abord, l'annonce ensuite : un `.png` qui contient du HTML se
+  // fait démasquer avant de passer par l'allowlist (MIN-340).
+  const contentType = servedAttachmentType(resolveUploadedMimeType(file.type, bytes));
   const path = `${scope.pr.id}/${crypto.randomUUID()}/${sanitizeKeyPart(name)}`;
   const service = getServiceClient();
   const { error } = await service.storage
     .from(FORGE_ATTACHMENTS_BUCKET)
-    .upload(path, await file.arrayBuffer(), { contentType });
+    .upload(path, bytes, { contentType });
   if (error) {
     console.error("[pr-actions] forge attachment upload failed:", error.message);
     return NextResponse.json({ error: "Upload failed" }, { status: 502 });

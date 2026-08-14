@@ -2,7 +2,8 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { signedAttachmentUrl } from "@/lib/server/attachments";
-import { isImageMime, pageFileIdFromSrc } from "@/lib/page-files";
+import { isInlineSafeMimeType } from "@/lib/inline-safe";
+import { pageFileIdFromSrc } from "@/lib/page-files";
 import { descendantIds } from "@/lib/pages";
 import {
   getPublicPageShareByToken,
@@ -212,7 +213,12 @@ export async function signPublicFileUrls(
         // fichier qu'on vient chercher, et son bloc est un bouton de
         // téléchargement (blocks/file-view.tsx). La disposition se décide à la
         // SIGNATURE : l'ajouter en paramètre après coup ne signerait rien.
-        download: isImageMime(row.mime_type) ? false : row.file_name,
+        //
+        // « Image » au sens de l'allowlist et non du préfixe `image/` : une page
+        // publiée est lisible par n'importe qui, et un `image/svg+xml` est un
+        // document exécutable, pas une image (MIN-340).
+        download: isInlineSafeMimeType(row.mime_type) ? false : row.file_name,
+        mimeType: row.mime_type,
       });
       if (url) signed.set(row.id, url);
     })
