@@ -80,6 +80,12 @@ export interface AssistantChatState {
   activeToolCalls: ActiveToolCall[];
   toolCallResults: Map<string, ToolCallResult>;
   conversationId: string | null;
+  /**
+   * Le projet de la conversation vivante (`null` = conversation globale). Figé
+   * à sa création, il voyage avec elle : c'est LUI qui fixe la portée de Numo,
+   * plus l'URL du moment (MIN-353, cf. lib/assistant-scope.ts).
+   */
+  conversationProjectId: string | null;
   error: string | null;
 }
 
@@ -90,6 +96,7 @@ const initialState: AssistantChatState = {
   activeToolCalls: [],
   toolCallResults: new Map(),
   conversationId: null,
+  conversationProjectId: null,
   error: null,
 };
 
@@ -97,7 +104,11 @@ const initialState: AssistantChatState = {
 
 type Action =
   | { type: "START_STREAMING" }
-  | { type: "SET_CONVERSATION_ID"; conversationId: string }
+  | {
+      type: "SET_CONVERSATION_ID";
+      conversationId: string;
+      projectId: string | null;
+    }
   | { type: "CONTENT_DELTA"; delta: string }
   | { type: "TOOL_CALL_START"; id: string; name: string }
   | { type: "TOOL_CALL_ARGS_DELTA"; id: string; delta: string }
@@ -129,6 +140,7 @@ type Action =
       type: "LOAD_HISTORY";
       messages: AssistantMessage[];
       conversationId: string;
+      projectId: string | null;
     }
   | { type: "RESET" };
 
@@ -147,7 +159,11 @@ function reducer(
       };
 
     case "SET_CONVERSATION_ID":
-      return { ...state, conversationId: action.conversationId };
+      return {
+        ...state,
+        conversationId: action.conversationId,
+        conversationProjectId: action.projectId,
+      };
 
     case "CONTENT_DELTA":
       return {
@@ -291,6 +307,7 @@ function reducer(
         messages: action.messages,
         toolCallResults: buildToolCallResultsFromMessages(action.messages),
         conversationId: action.conversationId,
+        conversationProjectId: action.projectId,
       };
 
     case "RESET":
@@ -349,6 +366,15 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   // current one without re-creating sendMessage on every render.
   const onToolResultRef = useRef(options?.onToolResult);
   onToolResultRef.current = options?.onToolResult;
+  // La conversation vivante, lisible SANS attendre un rendu. Le chemin de reprise
+  // (flux coupé en vol) s'exécute dans la closure de l'envoi : il y lisait
+  // `state.conversationId`, donc `null` pour une conversation qui venait tout
+  // juste de naître — le tour partait alors en erreur au lieu de basculer sur le
+  // suivi côté serveur, et le fil semblait perdu.
+  const liveConvRef = useRef<{ id: string | null; projectId: string | null }>({
+    id: null,
+    projectId: null,
+  });
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -358,7 +384,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   }, []);
 
   const startPolling = useCallback(
-    (conversationId: string) => {
+    (conversationId: string, projectId: string | null) => {
       stopPolling();
       dispatch({ type: "GENERATING_SERVER" });
 
@@ -377,6 +403,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               type: "LOAD_HISTORY",
               messages,
               conversationId,
+              projectId,
             });
             dispatch({ type: "DONE" });
             return;
@@ -390,6 +417,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               type: "LOAD_HISTORY",
               messages,
               conversationId,
+              projectId,
             });
             dispatch({
               type: "ERROR",
@@ -519,7 +547,16 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               try {
                 const data = JSON.parse(line.slice(6));
                 if (eventType === "tool_call_start") toolCalls += 1;
-                handleSSEEvent(eventType, data, dispatch, onToolResultRef.current);
+                handleSSEEvent(eventType, data, dispatch, {
+                  projectId: projectId ?? null,
+                  onConversationId: (id) => {
+                    liveConvRef.current = {
+                      id,
+                      projectId: projectId ?? null,
+                    };
+                  },
+                  onToolResult: onToolResultRef.current,
+                });
               } catch {
                 // Skip malformed data
               }
@@ -538,8 +575,13 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
 
-        // Connection lost - check if server is still processing
-        const convId = state.conversationId;
+        // Connection lost - check if server is still processing. Le ref, pas
+        // `state` : une conversation née pendant CET envoi n'existe pas encore
+        // dans la closure, et c'est justement celle qu'on perdrait.
+        const convId = liveConvRef.current.id ?? state.conversationId;
+        const convProjectId = liveConvRef.current.id
+          ? liveConvRef.current.projectId
+          : (projectId ?? null);
         if (convId) {
           try {
             const { status } = await fetchConversationStatus(
@@ -547,7 +589,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               tApi("statusFetchFailed")
             );
             if (status === "generating") {
-              startPolling(convId);
+              startPolling(convId, convProjectId);
               return;
             }
             if (status === "idle") {
@@ -557,6 +599,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
                 type: "LOAD_HISTORY",
                 messages,
                 conversationId: convId,
+                projectId: convProjectId,
               });
               dispatch({ type: "DONE" });
               return;
@@ -576,12 +619,17 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     [state.conversationId, startPolling, stopPolling, tApi]
   );
 
+  /** `projectId` = la portée de CETTE conversation, telle qu'elle est en base.
+   *  L'appelant la connaît toujours (la liste d'historique la porte, comme le
+   *  pointeur de conversation ouverte) : c'est elle qui fixe la portée à la
+   *  reprise, au lieu du projet de l'URL du moment (MIN-353). */
   const loadConversation = useCallback(
-    async (conversationId: string) => {
+    async (conversationId: string, projectId: string | null) => {
       stopPolling();
       // Cancel any in-flight send so its later SSE chunks don't dispatch on
       // top of the conversation we are about to load.
       abortRef.current?.abort();
+      liveConvRef.current = { id: conversationId, projectId };
       trackEvent("assistant_conversation_loaded", {});
       try {
         const messages = await fetchConversationMessages(conversationId);
@@ -589,6 +637,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           type: "LOAD_HISTORY",
           messages,
           conversationId,
+          projectId,
         });
 
         // Check if server is still generating for this conversation
@@ -597,7 +646,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           tApi("statusFetchFailed")
         );
         if (status === "generating") {
-          startPolling(conversationId);
+          startPolling(conversationId, projectId);
         } else if (status === "error") {
           dispatch({
             type: "ERROR",
@@ -618,6 +667,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   const reset = useCallback(() => {
     abortRef.current?.abort();
     stopPolling();
+    liveConvRef.current = { id: null, projectId: null };
     trackEvent("assistant_conversation_new", {});
     dispatch({ type: "RESET" });
   }, [stopPolling]);
@@ -640,18 +690,28 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 
 // ── SSE event dispatcher ───────────────────────────────────────────────
 
+interface SSEContext {
+  /** La portée de l'envoi en cours — celle que porte la conversation créée. */
+  projectId: string | null;
+  onConversationId?: (conversationId: string) => void;
+  onToolResult?: (name: string, success: boolean, result: unknown) => void;
+}
+
 function handleSSEEvent(
   eventType: string,
   data: Record<string, unknown>,
   dispatch: React.Dispatch<Action>,
-  onToolResult?: (name: string, success: boolean, result: unknown) => void
+  ctx: SSEContext
 ) {
+  const { projectId, onConversationId, onToolResult } = ctx;
   switch (eventType) {
     case "conversation_id":
       dispatch({
         type: "SET_CONVERSATION_ID",
         conversationId: data.conversationId as string,
+        projectId,
       });
+      onConversationId?.(data.conversationId as string);
       break;
     case "content_delta":
       dispatch({ type: "CONTENT_DELTA", delta: data.delta as string });

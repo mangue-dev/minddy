@@ -833,7 +833,11 @@ function PageSurface({
           {/* Ce que « confier une tâche » veut dire quand elle sort d'une page
               plutôt que du carnet : le prompt nomme la page, et la navigation
               attend que ce qui est en attente soit écrit (MIN-274). */}
-          <PageTaskSurface pageTitle={title} flush={flush}>
+          <PageTaskSurface
+            projectId={projectId}
+            pageTitle={title}
+            flush={flush}
+          >
             <PageEditor
               initialContent={(page.content as JSONContent | null) ?? null}
               onChange={(content) => {

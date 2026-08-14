@@ -286,8 +286,8 @@ export const AssistantShell = forwardRef<
   );
 
   const handleSelectConversation = useCallback(
-    (conversationId: string) => {
-      loadConversation(conversationId);
+    (conversationId: string, conversationProjectId: string | null) => {
+      loadConversation(conversationId, conversationProjectId);
     },
     [loadConversation]
   );
@@ -459,10 +459,9 @@ export const AssistantShell = forwardRef<
     <div className="flex h-full flex-col bg-muted/30">
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         <ConversationList
-          projectId={projectId}
           activeConversationId={state.conversationId}
-          onSelect={(id) => {
-            handleSelectConversation(id);
+          onSelect={(id, convProjectId) => {
+            handleSelectConversation(id, convProjectId);
             setMobileSidebarOpen(false);
           }}
           onNew={() => {
@@ -508,10 +507,9 @@ export const AssistantShell = forwardRef<
           className="flex max-h-[360px] w-72 flex-col gap-0 overflow-y-auto p-1.5"
         >
           <ConversationList
-            projectId={projectId}
             activeConversationId={state.conversationId}
-            onSelect={(id) => {
-              handleSelectConversation(id);
+            onSelect={(id, convProjectId) => {
+              handleSelectConversation(id, convProjectId);
               setHistoryOpen(false);
             }}
             onNew={() => {

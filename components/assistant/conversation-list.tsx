@@ -23,10 +23,20 @@ interface ConversationWithProject extends Conversation {
   project?: { name: string } | null;
 }
 
+/**
+ * L'historique de Numo : TOUTES les conversations de l'utilisateur, projets
+ * confondus, chacune sous-titrée de son projet.
+ *
+ * Pas de filtre par portée, et c'est délibéré (MIN-353) : la conversation ouverte
+ * porte sa propre portée et ne suit plus l'URL, donc filtrer sur l'URL rendrait
+ * injoignable la première conversation qu'on cherche — celle qu'on vient de
+ * quitter en changeant de page.
+ */
 interface ConversationListProps {
-  projectId?: string | null;
   activeConversationId: string | null;
-  onSelect: (conversationId: string) => void;
+  /** `projectId` = la portée de la conversation choisie, telle qu'elle est en
+   *  base. C'est elle qui devient celle de Numo à l'ouverture (MIN-353). */
+  onSelect: (conversationId: string, projectId: string | null) => void;
   onNew: () => void;
   refreshKey?: number;
   /** Hide the inline "new conversation" button (useful when the host UI
@@ -65,7 +75,6 @@ const BUCKET_ORDER: Bucket[] = [
 ];
 
 export function ConversationList({
-  projectId,
   activeConversationId,
   onSelect,
   onNew,
@@ -85,7 +94,7 @@ export function ConversationList({
   useEffect(() => {
     let active = true;
 
-    void fetchConversations(projectId).then((data) => {
+    void fetchConversations().then((data) => {
       if (active) {
         setConversations(data);
         setLoaded(true);
@@ -95,7 +104,7 @@ export function ConversationList({
     return () => {
       active = false;
     };
-  }, [projectId, refreshKey]);
+  }, [refreshKey]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!pendingDelete) return;
@@ -165,7 +174,7 @@ export function ConversationList({
                 <Button
                   key={conv.id}
                   type="button"
-                  onClick={() => onSelect(conv.id)}
+                  onClick={() => onSelect(conv.id, conv.project_id)}
                   variant="ghost"
                   className={cn(
                     "group h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-sm font-normal text-foreground",
@@ -175,7 +184,7 @@ export function ConversationList({
                   )}
                 >
                   <span className="flex-1 truncate">
-                    {!projectId && conv.project?.name && (
+                    {conv.project?.name && (
                       <span className="block truncate text-2xs text-muted-foreground/60">
                         {conv.project.name}
                       </span>
