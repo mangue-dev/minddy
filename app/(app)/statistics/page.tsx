@@ -38,7 +38,7 @@ import type { StatsCycles } from "@/lib/types";
  */
 
 /** Section « Rythme de travail » : tickets par cycle, cadence de complétion vs
- *  échéance, et durée moyenne de complétion par effort. Rendue seulement si au
+ *  échéance, et durée médiane de complétion par effort. Rendue seulement si au
  *  moins une des trois mesures a de la donnée. */
 function RhythmSection({ cycles }: { cycles: StatsCycles }) {
   const t = useTranslations("Stats");

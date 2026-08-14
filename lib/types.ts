@@ -339,12 +339,14 @@ export interface StatsWeek {
   previous: number;
 }
 
-/** Temps moyen de complétion pour un niveau d'effort (MIN-58). */
+/** Temps médian de complétion pour un niveau d'effort (MIN-58). */
 export interface StatsCycleEffort {
   effort: "xs" | "s" | "m" | "l" | "xl";
-  /** Moyenne du « cycle time » (premier in_progress → done), en secondes. */
-  avgSeconds: number;
-  /** Nombre de tickets terminés dans cette moyenne. */
+  /** Médiane du « cycle time » (premier in_progress → done), en secondes : un
+   *  ticket laissé ouvert trois semaines la décale d'un rang, pas de trois
+   *  semaines — ce que la moyenne ne sait pas faire sur une traîne longue. */
+  medianSeconds: number;
+  /** Nombre de tickets terminés dans cette médiane. */
   sample: number;
 }
 
@@ -359,7 +361,7 @@ export interface StatsCycles {
   avgIssuesPerCycle: number | null;
   /** Nombre de cycles démarrés pris en compte. */
   cycleCount: number;
-  /** Durée moyenne de complétion par effort (xs→xl), efforts sans échantillon
+  /** Durée médiane de complétion par effort (xs→xl), efforts sans échantillon
    *  omis. */
   byEffort: StatsCycleEffort[];
 }
