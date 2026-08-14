@@ -58,6 +58,8 @@ const h = vi.hoisted(() => ({
   steeredByOther: false,
   /** Les appels de tool carnet réellement EXÉCUTÉS. */
   scratchpadCalls: [] as string[],
+  /** Le PROFIL de token demandé à `resolveRepoCloneTarget`, appel par appel. */
+  repoAccessAsked: [] as string[],
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
@@ -115,13 +117,16 @@ vi.mock("./vm-rest", () => ({
 }));
 
 vi.mock("./repo-access", () => ({
-  resolveRepoCloneTarget: vi.fn(async () => ({
-    provider: "github",
-    repoFullName: "org/repo",
-    token: "tok",
-    authUrl: "https://x-access-token:tok@github.com/org/repo.git",
-    defaultBranch: "main",
-  })),
+  resolveRepoCloneTarget: vi.fn(async (_projectId: string, access = "full") => {
+    h.repoAccessAsked.push(access);
+    return {
+      provider: "github",
+      repoFullName: "org/repo",
+      token: `tok-${access}`,
+      authUrl: `https://x-access-token:tok-${access}@github.com/org/repo.git`,
+      defaultBranch: "main",
+    };
+  }),
 }));
 
 vi.mock("./forge", async (importOriginal) => ({
@@ -236,6 +241,7 @@ beforeEach(() => {
   h.requeued.length = 0;
   h.journal.length = 0;
   h.scratchpadCalls.length = 0;
+  h.repoAccessAsked.length = 0;
   h.steeredByOther = false;
   h.prIssueId = null;
   h.stampReturnsNull = false;
@@ -751,6 +757,43 @@ describe("l'ancrage du run ferme la surface `/tool/`", () => {
     }
     expect((await call("POST", "/tool/set_scratchpad", { args: { content: "x" } })).status).toBe(200);
     expect(h.scratchpadCalls).toEqual(["set_scratchpad"]);
+  });
+});
+
+/**
+ * MIN-327 — LE TOKEN DE FORGE QU'UNE MICROVM REÇOIT DÉPEND DE SON ANCRAGE.
+ *
+ * `/repo-auth` rendait un token frais à n'importe quelle VM, sans regarder
+ * l'ancrage. Une relecture — le seul dont tout le contenu vient d'un fork
+ * inconnu — en obtenait un EN ÉCRITURE, qui atterrissait dans son `.git/config` :
+ * une injection depuis le fork suffisait à le lire et à l'exfiltrer, et il
+ * ouvrait alors tous les dépôts privés de l'installation.
+ */
+describe("le token de forge remis à la microVM", () => {
+  it("refuse tout token à une session de RELECTURE", async () => {
+    h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
+    const res = await call("POST", "/repo-auth");
+    expect(res.status).toBe(403);
+    // Et rien n'a été minté : le refus est en amont de la forge, pas un token
+    // qu'on fabriquerait pour le jeter.
+    expect(h.repoAccessAsked).toEqual([]);
+  });
+
+  it("rend au run de TICKET un token de dépôt, pas le token de la fonction", async () => {
+    const res = await call("POST", "/repo-auth");
+    expect(res.status).toBe(200);
+    // `repo-write` : la VM clone, fetch et pousse. Elle ne merge pas une pull
+    // request et n'en approuve pas une — ces gestes-là repassent par `/tool/`.
+    expect(h.repoAccessAsked).toEqual(["repo-write"]);
+    expect(res.body).toEqual({
+      authUrl: "https://x-access-token:tok-repo-write@github.com/org/repo.git",
+    });
+  });
+
+  it("rend le même token restreint à un run de CARNET", async () => {
+    h.run = { ...h.run, issue_id: null, pull_request_id: null };
+    expect((await call("POST", "/repo-auth")).status).toBe(200);
+    expect(h.repoAccessAsked).toEqual(["repo-write"]);
   });
 });
 

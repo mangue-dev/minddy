@@ -47,12 +47,12 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
  * PLAN DE CONTRÔLE de la microVM (MIN-223) — la seule surface par laquelle une
  * boucle qui vit dans la VM touchera la base, le ledger, les tickets et le carnet.
  *
- * CE QUI FAIT QUE ÇA TIENT, et c'est une seule idée. La VM ne porte aucun jeton :
- * le firewall de Vercel Sandbox forwarde ses requêtes vers notre route en y
- * ajoutant un OIDC signé par la plateforme, dont le claim `sandbox_name` vaut
- * `agent-<run.id>`. **Le `runId` est donc un paramètre d'ENTRÉE de ce module,
- * dérivé de ce claim — jamais lu dans le corps de la requête.** Tout le reste en
- * découle :
+ * CE QUI FAIT QUE ÇA TIENT, et c'est une seule idée. La VM ne porte aucun jeton
+ * POUR PARLER ICI : le firewall de Vercel Sandbox forwarde ses requêtes vers notre
+ * route en y ajoutant un OIDC signé par la plateforme, dont le claim
+ * `sandbox_name` vaut `agent-<run.id>`. **Le `runId` est donc un paramètre
+ * d'ENTRÉE de ce module, dérivé de ce claim — jamais lu dans le corps de la
+ * requête.** Tout le reste en découle :
  *
  * - une VM ne peut écrire d'events que sur SON run, pas parce qu'on le vérifie,
  *   parce qu'elle ne peut rien prétendre d'autre ;
@@ -74,6 +74,15 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
  * l'état de push du tour. Plus `/rest`, la fin de tour, et `/repo-auth`, qui rend
  * un token de forge frais à une VM qui travaille depuis plus longtemps que le
  * sien.
+ *
+ * LE SEUL SECRET QUE LA VM DÉTIENT, ET IL FAUT LE DIRE (MIN-327). « La microVM ne
+ * détient aucun secret » était écrit ici et dans `network-policy.ts`, et c'était
+ * faux : le token de forge est dans son `.git/config` depuis le clone, par
+ * construction — c'est ce avec quoi elle pousse. La phrase juste est plus étroite :
+ * la VM ne détient aucun secret **de minddy** (ni clé LLM, ni clé Supabase, ni
+ * jeton d'identité), et le seul qu'elle porte est scopé au dépôt du projet, avec
+ * le pouvoir minimal de son ancrage (`RepoTokenAccess` dans `repo-access.ts`).
+ * L'affirmation trop large est ce qui a dispensé d'y regarder pendant deux tickets.
  *
  * LA COUPURE QUI GUIDE TOUT ÇA : la microVM a le DÉPÔT, la fonction a la FORGE et
  * la BASE. `create_pr` est coupé exactement là — la VM pousse, la fonction ouvre.
@@ -533,8 +542,32 @@ export async function handleControlPlaneRequest(opts: {
     // tour qui vit dans la VM peut durer plus longtemps que le token
     // d'installation qui a cloné le dépôt, et un push qui échoue en 401 à la
     // troisième heure serait le travail du tour perdu jusqu'au tour suivant.
+    /**
+     * ET UNE RELECTURE N'EN REÇOIT PAS (MIN-327).
+     *
+     * La surface délivrait un token neuf à n'importe quelle VM, sans regarder
+     * l'ancrage : une session de relecture — la seule dont tout le contenu vient
+     * d'un fork inconnu — en obtenait un EN ÉCRITURE, qui atterrissait dans son
+     * `.git/config`. Une injection de prompt depuis le fork suffisait à le lire
+     * et à l'exfiltrer.
+     *
+     * Or une relecture ne pousse jamais : `writesToRepo` est faux dans
+     * `execute.ts`, et côté VM `repoAuthUrl()` n'est appelé QUE depuis `pushWork`.
+     * Refuser ici ne lui retire donc rien — et son clone, lui, part avec un token
+     * `repo-read` (cf. `RepoTokenAccess`).
+     *
+     * Le refus est BRUYANT plutôt que silencieux : c'est une frontière, elle doit
+     * se voir dans un log. Le client du plan de contrôle le tolère (il retombe
+     * sur l'URL que son job porte).
+     */
+    if (anchorForRun(run) === "pr") {
+      return forbidden("a review session never pushes, so it gets no repository token");
+    }
     const { resolveRepoCloneTarget } = await import("./repo-access");
-    const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
+    // `repo-write` et non `full` : ce token descend dans la microVM, où `git` est
+    // son seul consommateur. Il clone, il fetch, il pousse — il ne merge pas une
+    // pull request et n'en approuve pas une.
+    const target = await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null);
     if (!target) return { status: 404, body: { error: "no repository linked" } };
     return ok({ authUrl: target.authUrl });
   }

@@ -130,3 +130,43 @@ describe("la substitution descend dans les payloads imbriqués", () => {
     expect(out).toEqual({ n: 3, ok: true, nothing: null, when: undefined });
   });
 });
+
+/**
+ * MIN-327 — DEUX TOKENS DANS LE MÊME TOUR, DONC DEUX À SUBSTITUER.
+ *
+ * Depuis que le token de la microVM n'est plus celui de la fonction (`vmTarget`
+ * contre `target` dans `execute.ts`), le registre de secrets doit porter les
+ * DEUX : c'est celui de la VM qui est dans `.git/config` et que `git remote -v`
+ * sort, c'est celui de la fonction qui apparaît dans un message d'erreur de la
+ * forge. En enregistrer un seul rendrait la substitution vraie sur la moitié des
+ * chemins — le mode d'échec exact de MIN-328, où un secret qui passe ne casse
+ * rien et ne se voit nulle part.
+ *
+ * Lexical, comme le reste du fichier : le chemin réel demande une microVM.
+ */
+describe("le registre porte le token de la VM comme celui de la fonction", () => {
+  const source = read("execute.ts");
+
+  it("enregistre le token que la microVM détient", () => {
+    expect(source).toContain("secrets.addAuthUrl(vmTarget.authUrl)");
+    expect(source).toContain("secrets.add(vmTarget.token)");
+  });
+
+  it("enregistre toujours celui de la fonction", () => {
+    expect(source).toContain("secrets.addAuthUrl(target.authUrl)");
+    expect(source).toContain("secrets.add(target.token)");
+  });
+
+  it("ne laisse aucune URL de clone descendre dans la VM sans venir de `vmTarget`", () => {
+    // Les trois gestes qui écrivent une URL token-authentifiée DANS la microVM :
+    // le clone d'un run ordinaire, celui d'une relecture, et le job de la boucle.
+    // `target.authUrl` y serait le bug d'origine — un token de fonction dans un
+    // `.git/config` que le modèle peut lire.
+    for (const geste of [
+      "await cloneRepo(sandboxHost(fresh), {\n          authUrl: vmTarget.authUrl,",
+      "authUrl: vmTarget.authUrl,\n            baseBranch,",
+    ]) {
+      expect(source).toContain(geste);
+    }
+  });
+});

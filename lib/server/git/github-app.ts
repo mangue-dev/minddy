@@ -116,27 +116,100 @@ export interface InstallationToken {
   expiresAt: string;
 }
 
-// Cache in-process des tokens d'installation, par installationId. Les tokens
-// GitHub valent ~1h ; réutilisés jusqu'à SAFETY_WINDOW_MS avant expiry. Best-effort.
+/**
+ * DE QUOI RESTREINDRE LE TOKEN QU'ON MINTE (MIN-327).
+ *
+ * Sans ces deux champs, `POST /access_tokens` rend le token MAXIMAL de
+ * l'installation : **tous** ses dépôts, **toutes** ses permissions. C'est ce
+ * token-là qui partait dans le `.git/config` de la microVM de l'agent — donc
+ * lisible par le modèle, donc exfiltrable par une injection, donc une clé sur
+ * tous les dépôts privés du compte pour un projet qui n'en a lié qu'un.
+ *
+ * Les deux champs sont indépendants et se cumulent :
+ *
+ * - `repositories` réduit la PORTÉE. Ce sont les noms COURTS (`minddy`), jamais
+ *   `owner/name` — GitHub répond 422 sur un slash. C'est la restriction qui
+ *   compte : elle transforme « tous les dépôts » en « celui que le projet a lié ».
+ * - `permissions` réduit le POUVOIR, et il n'est jamais qu'un sous-ensemble de
+ *   ce que l'installation a déjà accepté. Demander une permission qu'elle n'a
+ *   pas est un 422 — d'où la règle : ne narrower qu'avec `contents`, la seule
+ *   que l'App déclare depuis son premier jour (cf. `.env.example`). Une
+ *   permission ajoutée plus tard n'est pas rétroactive, et un mint qui la
+ *   demanderait casserait les installations existantes.
+ */
+export interface InstallationTokenScope {
+  /** Noms COURTS des dépôts (`name`), jamais `owner/name`. */
+  repositories?: string[];
+  /** Sous-ensemble des permissions de l'installation (voir ci-dessus). */
+  permissions?: Record<string, "read" | "write">;
+}
+
+// Cache in-process des tokens d'installation, par installationId ET PAR PORTÉE.
+// Les tokens GitHub valent ~1h ; réutilisés jusqu'à SAFETY_WINDOW_MS avant expiry.
+// Best-effort.
+//
+// La portée fait partie de la clé, et c'est structurel : sans elle, le premier
+// mint large d'un process resservirait son token à un appelant qui a demandé un
+// token restreint — la restriction serait vraie sur le fil et fausse en mémoire,
+// exactement le genre de garde qui a l'air posé et ne l'est pas.
+//
+// SUR LA DURÉE DE VIE (MIN-327) : GitHub la fixe à 1 h et n'accepte aucun
+// paramètre pour la raccourcir. Ce qu'on peut réduire, ce n'est donc pas le
+// TEMPS pendant lequel le token vaut, c'est ce qu'il OUVRE — la portée et les
+// permissions ci-dessus. Un token de microVM survit à son tour dans le pire cas
+// une heure, sur un seul dépôt, avec `contents` pour seule permission.
 const SAFETY_WINDOW_MS = 5 * 60_000;
 const installationTokenCache = new Map<string, InstallationToken>();
 
+/** Clé de cache STABLE pour un couple (installation, portée) : les listes sont
+ *  triées, donc deux appels équivalents dans un ordre différent se partagent
+ *  bien le même token. */
+function installationTokenCacheKey(
+  installationId: number | string,
+  scope: InstallationTokenScope | undefined,
+): string {
+  const repos = [...(scope?.repositories ?? [])].sort().join(",");
+  const perms = Object.entries(scope?.permissions ?? {})
+    .map(([name, level]) => `${name}:${level}`)
+    .sort()
+    .join(",");
+  return `${installationId}|${repos}|${perms}`;
+}
+
 /**
- * Échange le JWT d'app contre un token d'installation scopé aux dépôts de
- * l'installation. Réutilise un token encore valide depuis le cache in-process.
+ * Échange le JWT d'app contre un token d'installation, restreint à `scope` quand
+ * on lui en donne une (cf. `InstallationTokenScope` : SANS elle, le token vaut
+ * sur tous les dépôts de l'installation). Réutilise un token encore valide depuis
+ * le cache in-process, à portée égale.
  */
 export async function getInstallationToken(
   installationId: number | string,
+  scope?: InstallationTokenScope,
 ): Promise<InstallationToken> {
-  const key = String(installationId);
+  const key = installationTokenCacheKey(installationId, scope);
   const cached = installationTokenCache.get(key);
   if (cached && Date.parse(cached.expiresAt) - Date.now() > SAFETY_WINDOW_MS) {
     return cached;
   }
 
+  const payload: Record<string, unknown> = {};
+  if (scope?.repositories?.length) payload.repositories = scope.repositories;
+  if (scope?.permissions && Object.keys(scope.permissions).length > 0) {
+    payload.permissions = scope.permissions;
+  }
+
   const response = await fetch(
     `${GITHUB_API_BASE}/app/installations/${installationId}/access_tokens`,
-    { method: "POST", headers: githubHeaders(mintAppJwt()) },
+    {
+      method: "POST",
+      headers: {
+        ...githubHeaders(mintAppJwt()),
+        ...(Object.keys(payload).length > 0
+          ? { "Content-Type": "application/json" }
+          : {}),
+      },
+      ...(Object.keys(payload).length > 0 ? { body: JSON.stringify(payload) } : {}),
+    },
   );
 
   const data = (await response.json()) as {
@@ -156,6 +229,12 @@ export async function getInstallationToken(
     installationTokenCache.set(key, minted);
   }
   return minted;
+}
+
+/** Vide le cache de tokens d'installation. Réservé aux tests — un token qui
+ *  survit d'un cas au suivant masquerait la portée demandée par le second. */
+export function __clearInstallationTokenCacheForTests(): void {
+  installationTokenCache.clear();
 }
 
 export interface InstallationRepo {

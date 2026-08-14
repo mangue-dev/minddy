@@ -7,9 +7,9 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  * sandbox — comme `command-guard.ts` et `repo-path.ts`, c'est de la logique qui
  * garde quelque chose qu'on ne peut pas rattraper après coup.
  *
- * LE PRINCIPE, ET IL EST INHABITUEL : **la microVM ne détient aucun secret.** Ni
- * clé LLM, ni clé Supabase, ni jeton d'identité. Ce n'est pas une discipline de
- * code, c'est la plateforme :
+ * LE PRINCIPE, ET IL EST INHABITUEL : **la microVM ne détient aucun secret DE
+ * MINDDY.** Ni clé LLM, ni clé Supabase, ni jeton d'identité. Ce n'est pas une
+ * discipline de code, c'est la plateforme :
  *
  * - le firewall de Vercel Sandbox termine le TLS de la VM et **pose lui-même**
  *   l'en-tête `authorization` sur la requête de complétion (`transform`), après
@@ -21,6 +21,24 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  *   ajoutant un OIDC signé par la plateforme, dont le claim `sandbox_name` vaut
  *   `agent-<run.id>`. **Une VM ne peut donc rien prétendre d'autre que son propre
  *   run** — ce qu'un jeton porté dans la VM n'aurait pas su garantir.
+ *
+ * LE SECRET QU'ELLE DÉTIENT QUAND MÊME, et la phrase ci-dessus disait le contraire
+ * (MIN-327). **Le token de forge est dans la VM**, dans le `remote.origin.url` que
+ * `git clone` a écrit dans `.git/config`. Ce n'est pas rattrapable par une
+ * politique réseau : c'est ce avec quoi la VM clone et pousse, elle ne peut pas
+ * travailler sans. Ce qui est rattrapable, et qui l'est depuis MIN-327, c'est ce
+ * que ce token OUVRE :
+ *
+ * - il est scopé AU DÉPÔT que le projet a lié (`repositories` au mint), là où il
+ *   valait sur tous les dépôts de l'installation ;
+ * - son pouvoir est celui de l'ANCRAGE du run : `contents: write` pour un run qui
+ *   pousse, `contents: read` pour une relecture, qui n'écrit rien dans le dépôt et
+ *   dont le contenu vient d'un fork inconnu (`RepoTokenAccess`, repo-access.ts) ;
+ * - et il ne remonte pas dans les journaux : la substitution de `redact.ts` le
+ *   retire de tout ce qui SORT de la boucle, avant même que le modèle le voie.
+ *
+ * L'affirmation trop large, elle, n'était pas neutre : elle a dispensé de regarder
+ * ce que ce token-là ouvrait vraiment.
  *
  * DEUX CHOIX QUI ONT L'AIR DE DÉTAILS ET N'EN SONT PAS.
  *

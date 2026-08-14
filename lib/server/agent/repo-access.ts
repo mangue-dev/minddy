@@ -17,9 +17,60 @@ import { GITLAB_HOST } from "@/lib/server/git/gitlab-rest";
  * plutôt que getProjectLink(), car ce dernier ne renvoie pas l'installation_id
  * nécessaire au mint du token. À ré-appeler pour obtenir un token frais avant
  * chaque opération réseau (clone/push) d'un run long.
+ *
+ * DEPUIS MIN-327, le token n'est plus « celui de l'installation » : il est scopé
+ * AU DÉPÔT du lien, et son pouvoir dépend de qui va le détenir — voir
+ * `RepoTokenAccess` ci-dessous. C'est le même appel, avec un argument de plus,
+ * parce que la question « que peut ce token ? » ne doit pas se poser loin de
+ * l'endroit qui le fabrique.
  */
 
 export type RepoProvider = "github" | "gitlab";
+
+/**
+ * CE QUE LE TOKEN A LE DROIT DE FAIRE (MIN-327), et qui le détiendra.
+ *
+ * Trois profils, et la ligne qui compte passe entre le premier et les deux
+ * autres : `full` reste dans la FONCTION, `repo-write` et `repo-read` descendent
+ * dans la MICROVM, où `git clone` les écrit dans `.git/config` et où le modèle
+ * lance du shell.
+ *
+ * - `full` — le token maximal de l'installation SUR LE DÉPÔT LIÉ. Ouvrir une PR,
+ *   commenter, relire, merger, fermer une issue : tout ce qui parle à l'API de
+ *   la forge depuis nos routes. Il ne sort jamais du process.
+ * - `repo-write` — `contents: write`, rien d'autre. C'est tout ce dont `git`
+ *   a besoin (clone, fetch, ls-remote, push) et c'est tout ce que la microVM
+ *   d'un run de ticket ou de carnet reçoit : le token qu'elle porte ne peut plus
+ *   merger une PR, ni approuver, ni commenter — ces gestes-là passent par le
+ *   plan de contrôle, qui les rejoue côté fonction sous l'ancrage du run.
+ * - `repo-read` — `contents: read`. La RELECTURE, le seul ancrage dont le
+ *   contenu vient d'un fork inconnu. Elle n'écrit rien dans le dépôt
+ *   (`writesToRepo` dans execute.ts) : lui donner de quoi pousser était une
+ *   contradiction, et une injection depuis le fork suffisait à la récolter.
+ *
+ * **GitLab ne connaît pas cette distinction, et c'est assumé.** Le token est
+ * l'access token OAuth de la connexion, de portée `api` sur le compte entier
+ * (cf. `GITLAB_OAUTH_SCOPES`) : GitLab n'offre aucun down-scoping d'un token
+ * OAuth au moment de l'usage, et les project access tokens — le seul mécanisme
+ * à portée réduite — sont des jetons PERSISTANTS à créer, suivre et révoquer,
+ * pour une durée minimale d'un jour. Le profil est donc SANS EFFET côté GitLab,
+ * et une relecture GitLab tourne avec un token qui peut écrire. C'est dit ici,
+ * dans SECURITY.md et dans l'UI de liaison — comme l'absence d'identité de bot
+ * (MIN-146), c'est une contrainte de la plateforme, pas un oubli.
+ */
+export type RepoTokenAccess = "full" | "repo-write" | "repo-read";
+
+/** Les permissions GitHub demandées au mint, par profil. `full` ne narrowe rien
+ *  (le token garde celles de l'installation) — la restriction qui compte pour lui
+ *  est la portée par dépôt, posée dans tous les cas. */
+const GITHUB_PERMISSIONS_BY_ACCESS: Record<
+  RepoTokenAccess,
+  Record<string, "read" | "write"> | undefined
+> = {
+  full: undefined,
+  "repo-write": { contents: "write" },
+  "repo-read": { contents: "read" },
+};
 
 export interface RepoCloneTarget {
   provider: RepoProvider;
@@ -54,6 +105,7 @@ const GIT_LINK_COLUMNS =
  */
 export async function resolveRepoCloneTarget(
   projectId: string,
+  access: RepoTokenAccess = "full",
 ): Promise<RepoCloneTarget | null> {
   const supabase = getServiceClient();
   const { data } = await supabase
@@ -63,7 +115,7 @@ export async function resolveRepoCloneTarget(
     .maybeSingle();
 
   if (!data) return null;
-  return targetFromLink(data as GitLinkRow);
+  return targetFromLink(data as GitLinkRow, access);
 }
 
 /**
@@ -164,7 +216,10 @@ export async function resolveProjectLinkForRepo(opts: {
  * l'API qui est faux. En attendant une identité de service GitLab, la liaison
  * le dit dans l'UI (`gitAgentActsAs`) plutôt que de le taire.
  */
-async function targetFromLink(row: GitLinkRow): Promise<RepoCloneTarget> {
+async function targetFromLink(
+  row: GitLinkRow,
+  access: RepoTokenAccess = "full",
+): Promise<RepoCloneTarget> {
   if (!row.repo_full_name) {
     throw new Error("Project git link is missing repo_full_name");
   }
@@ -173,7 +228,18 @@ async function targetFromLink(row: GitLinkRow): Promise<RepoCloneTarget> {
     if (row.installation_id == null) {
       throw new Error("GitHub link is missing its installation id");
     }
-    const { token } = await getInstallationToken(row.installation_id);
+    /**
+     * LA PORTÉE PAR DÉPÔT EST POSÉE DANS TOUS LES CAS (MIN-327), profil compris.
+     *
+     * Le nom COURT, pas `owner/name` : c'est ce que `repositories` attend, et un
+     * slash y vaut 422. On le tient du lien lui-même — le projet a lié un dépôt,
+     * il n'y a rien à deviner.
+     */
+    const repoName = row.repo_full_name.split("/").pop() ?? row.repo_full_name;
+    const { token } = await getInstallationToken(row.installation_id, {
+      repositories: [repoName],
+      permissions: GITHUB_PERMISSIONS_BY_ACCESS[access],
+    });
     return {
       provider: "github",
       repoFullName: row.repo_full_name,

@@ -885,6 +885,31 @@ export async function executeAgentRun(
     }
     const anchor: AgentAnchor = issue ? "issue" : prRun ? "pr" : "notebook";
     /**
+     * LE TOKEN QUI DESCEND DANS LA MICROVM, et il n'est plus celui d'au-dessus
+     * (MIN-327).
+     *
+     * `target` reste le token de la FONCTION : il ouvre des PR, commente, relit,
+     * merge, et il ne sort jamais du process. Celui-ci part dans le `.git/config`
+     * de la VM, là où le modèle lance du shell — il n'a donc que ce que `git`
+     * demande, et rien de plus :
+     *
+     * - un run de ticket ou de carnet POUSSE → `contents: write` ;
+     * - une RELECTURE ne pousse rien (`writesToRepo` ci-dessous) et son contenu
+     *   vient d'un fork inconnu → `contents: read`. C'est le cœur du ticket : elle
+     *   recevait un token en écriture, sur tous les dépôts de l'installation.
+     *
+     * Le mint peut échouer (forge en panne entre les deux appels) : on retombe sur
+     * `target` plutôt que de faire mourir le tour. C'est le pire cas, et il est
+     * celui d'avant.
+     */
+    const vmTarget =
+      (await resolveRepoCloneTarget(
+        run.project_id,
+        anchor === "pr" ? "repo-read" : "repo-write",
+      ).catch(() => null)) ?? target;
+    secrets.addAuthUrl(vmTarget.authUrl);
+    secrets.add(vmTarget.token);
+    /**
      * Le harnais écrit-il dans le DÉPÔT pour cette session ? Faux pour une
      * relecture, et c'est la moitié harnais de la garantie « aucune écriture » —
      * l'autre moitié étant le jeu de tools, qui n'a aucune édition. Une phrase de
@@ -978,9 +1003,10 @@ export async function executeAgentRun(
     // Nom déterministe → même microVM/snapshot d'un tour à l'autre.
     const { sandbox: sb } = await getOrCreateAgentSandbox({
       name: agentSandboxName(run.id),
-      // MIN-223 : la microVM ne détient aucun secret. Reposée à chaque réveil —
-      // la politique survit à la reprise, mais avec la clé d'HIER dedans, et
-      // celle-là est révoquée à la mise au repos.
+      // MIN-223 : la microVM ne détient aucun secret DE MINDDY (le token de forge,
+      // lui, est dans son `.git/config` par construction — cf. `vmTarget`).
+      // Reposée à chaque réveil — la politique survit à la reprise, mais avec la
+      // clé d'HIER dedans, et celle-là est révoquée à la mise au repos.
       networkPolicy: buildAgentNetworkPolicy({
         baseUrl,
         llmKey: vmKey,
@@ -1012,7 +1038,10 @@ export async function executeAgentRun(
               return null;
             });
           await clonePullRequest(sandboxHost(fresh), {
-            authUrl: target.authUrl,
+            // `vmTarget` : ce que le clone écrit dans `.git/config` reste lisible
+            // pour toute la vie de la microVM. Pour une relecture, c'est un token
+            // en LECTURE, sur le seul dépôt lié (MIN-327).
+            authUrl: vmTarget.authUrl,
             baseBranch,
             headRef: pullRequestHeadRef(prRun.provider, prRun.number),
             headBranch: prRun.headBranch,
@@ -1023,7 +1052,7 @@ export async function executeAgentRun(
         }
         const committer = await resolveCommitterIdentity(target);
         await cloneRepo(sandboxHost(fresh), {
-          authUrl: target.authUrl,
+          authUrl: vmTarget.authUrl,
           baseBranch,
           workBranch,
           committer,
@@ -1509,8 +1538,14 @@ export async function executeAgentRun(
           : // Run carnet : la première ligne de la note fait office de titre.
             commitMessageFromReply(run.prompt ?? "", commitRef));
       const fresh = (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
+      // `fresh` parle à la FORGE (ouvrir la PR) et reste ici ; le push, lui,
+      // s'exécute dans la microVM — token `repo-write`, scopé au dépôt (MIN-327).
+      const freshPush =
+        (await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null)) ?? vmTarget;
       secrets.addAuthUrl(fresh.authUrl);
       secrets.add(fresh.token);
+      secrets.addAuthUrl(freshPush.authUrl);
+      secrets.add(freshPush.token);
       // Les jobs de fond meurent AVANT de stager, comme aux deux autres `git add -A`
       // du chunk (fin de tour, push WIP) : un serveur de dev ou un watcher encore
       // vivant réécrirait des fichiers pendant l'indexation. C'est `backgroundJobs`
@@ -1527,7 +1562,7 @@ export async function executeAgentRun(
       let pushed: Awaited<ReturnType<typeof commitAndPush>>;
       try {
         pushed = await commitAndPush(host, {
-          authUrl: fresh.authUrl,
+          authUrl: freshPush.authUrl,
           workBranch,
           baseBranch,
           message: prTitle,
@@ -1920,7 +1955,10 @@ export async function executeAgentRun(
         prInlineComments: run.checkpoint?.prInlineComments ?? 0,
         baseBranch,
         workBranch,
-        authUrl: target.authUrl,
+        // Le job PART dans la microVM : c'est `vmTarget`, jamais `target`
+        // (MIN-327). La boucle n'en fait que du `git` — et une relecture n'en
+        // reçoit qu'un token en lecture.
+        authUrl: vmTarget.authUrl,
         commitRef,
         filesFromSha,
         locale: commentLocale,
@@ -2612,7 +2650,13 @@ export async function executeAgentRun(
       const freshTarget = writesToRepo
         ? await resolveRepoCloneTarget(run.project_id).catch(() => null)
         : null;
-      const authUrl = freshTarget?.authUrl ?? target.authUrl;
+      // Le token de la FORGE (réouverture d'une PR refusée) reste `full` ; l'URL
+      // de PUSH, elle, part dans un `git push` qui s'exécute DANS la microVM —
+      // donc un token `repo-write`, scopé au dépôt (MIN-327).
+      const freshPushTarget = writesToRepo
+        ? await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null)
+        : null;
+      const authUrl = freshPushTarget?.authUrl ?? vmTarget.authUrl;
       const token = freshTarget?.token ?? target.token;
       secrets.addAuthUrl(authUrl);
       secrets.add(token);
@@ -2728,7 +2772,8 @@ export async function executeAgentRun(
     await background.stopAll().catch(() => 0);
     const wipPushed = writesToRepo
       ? await commitAndPush(host, {
-          authUrl: target.authUrl,
+          // Le `git push` s'exécute dans la microVM : `vmTarget` (MIN-327).
+          authUrl: vmTarget.authUrl,
           workBranch,
           baseBranch,
           message: `wip(${commitRef}): chunk ${run.continuations + 1}`,

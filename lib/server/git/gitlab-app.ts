@@ -29,6 +29,27 @@ import {
 // `api` est le seul scope nécessaire — et le seul qui marche. Il donne l'accès
 // complet read+write à l'API (fichiers/arbre/compare, commits, merge requests,
 // webhooks), l'équivalent GitLab de Contents R/W + Pull-requests R/W du GitHub App.
+//
+// ET C'EST UNE PORTÉE QU'ON NE SAIT PAS RÉDUIRE (MIN-327), à dire plutôt qu'à
+// laisser deviner. Le token qu'on remet à la microVM de l'agent est CET access
+// token : `api`, sur le COMPTE ENTIER de la personne qui a lié le dépôt — pas sur
+// le seul dépôt du projet. Côté GitHub, le mint accepte `repositories` et
+// `permissions` et l'agent y reçoit un token scopé au dépôt, en écriture ou en
+// lecture selon son ancrage (`RepoTokenAccess`, lib/server/agent/repo-access.ts) ;
+// GitLab n'a **aucun** équivalent :
+//
+//   - un token OAuth ne se down-scope pas au moment de l'usage — le scope est
+//     figé à l'autorisation, et `read_repository` seul ne suffirait pas au reste
+//     du travail de l'agent (MR, discussions, compare) ;
+//   - le seul mécanisme à portée réduite, le *project access token*, est un jeton
+//     PERSISTANT à créer, stocker, suivre et révoquer, d'une durée minimale d'un
+//     jour. On échangerait un token d'une heure trop large contre un token d'un
+//     jour bien scopé, plus tout un cycle de vie à tenir juste.
+//
+// Conséquence assumée, du même genre que l'absence d'identité de bot (MIN-146) :
+// une session de RELECTURE GitLab tourne avec un token qui peut écrire, là où son
+// équivalent GitHub n'a que `contents: read`. C'est écrit ici, dans SECURITY.md,
+// et l'UI de liaison dit déjà sous quel compte l'agent agit.
 export const GITLAB_OAUTH_SCOPES = "api";
 
 // Rafraîchir quand l'access token est dans cette fenêtre d'expiry.

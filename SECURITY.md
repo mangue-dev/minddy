@@ -183,7 +183,49 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
 | Boards publics (`/f/<token>`, `/share/<token>`) | Servis côté serveur en clé service ; option mot de passe ; OTP email pour voter/commenter |
 | API intégration (`/api/v1/*`) | Clé API d'intégration (sha256), scopée au projet |
 
-## 9. Outillage
+## 9. L'agent de code — ce que sa microVM détient
+
+La microVM d'un run (Vercel Sandbox) exécute du shell décidé par un modèle, avec
+un réseau sortant ouvert. On la considère **compromise par hypothèse** : la
+question n'est pas de l'empêcher de mal faire, c'est de borner ce qu'elle tient.
+
+- **Aucun secret de minddy.** Ni clé LLM (le firewall pose l'en-tête
+  `authorization` *après* la sortie de la VM), ni clé Supabase, ni jeton
+  d'identité : le plan de contrôle reconnaît la VM par l'OIDC que la plateforme
+  signe, et le locataire (`team_id`/`project_id`) est vérifié avant le nom
+  (MIN-331). Voir [lib/server/agent/network-policy.ts](lib/server/agent/network-policy.ts).
+- **Un seul secret, et il est structurel : le token de forge.** `git clone`
+  l'écrit dans `.git/config` — c'est ce avec quoi la VM clone et pousse, elle ne
+  peut pas travailler sans. Ce qui est borné, c'est ce qu'il ouvre
+  ([lib/server/agent/repo-access.ts](lib/server/agent/repo-access.ts),
+  `RepoTokenAccess`) :
+
+  | Qui le détient | Portée | Pouvoir |
+  | --- | --- | --- |
+  | Nos routes (PR, review, merge, issues) | le dépôt lié | permissions de l'installation |
+  | microVM d'un run de ticket / carnet | le dépôt lié | `contents: write` (clone + push) |
+  | microVM d'une **relecture** de pull request | le dépôt lié | `contents: read` |
+
+  La relecture est le seul ancrage dont le contenu vient d'un **fork inconnu** :
+  elle n'écrit rien dans le dépôt, et `/repo-auth` lui **refuse** tout token
+  frais. Avant MIN-327, le token minté n'était scopé à rien — il valait sur tous
+  les dépôts de l'installation — et une relecture en recevait un en écriture.
+- **⚠ GitLab n'a pas cette gradation.** Le token remis est l'access token OAuth
+  de la connexion, de portée `api` sur le compte entier : GitLab ne sait pas
+  down-scoper un token OAuth à l'usage, et son seul mécanisme à portée réduite
+  (project access token) est un jeton persistant d'au moins un jour. Une
+  relecture GitLab tourne donc avec un token qui peut écrire. Contrainte de la
+  plateforme, assumée et dite — comme l'absence d'identité de bot (MIN-146).
+- **Le token ne remonte pas dans les journaux.** La substitution de
+  [lib/server/agent/redact.ts](lib/server/agent/redact.ts) le retire de tout ce
+  qui sort de la boucle (sortie de tool, message d'erreur, checkpoint) *avant* le
+  modèle : `git remote -v` et `cat .git/config` rendent `[redacted]`.
+- **Ce qui reste possible**, et qui est borné ailleurs : exfiltrer le **contenu**
+  du dépôt (réseau ouvert, assumé — une liste blanche casserait `npm install`
+  chez nos utilisateurs), et dépenser hors ledger sur la route LLM créditée
+  (bornée par la clé par run à plafond dur, tenue par le fournisseur).
+
+## 10. Outillage
 
 - **CI GitHub** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : tests,
   typecheck et audit sur chaque pull request et chaque push, dans un runner
@@ -208,7 +250,7 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
   upload hors préfixe, listing de bucket). **Exécution manuelle** (touche la
   prod) — hors du `include` de vitest.
 
-## 10. Procédure d'incident (courte)
+## 11. Procédure d'incident (courte)
 
 En cas de compromission suspectée :
 
