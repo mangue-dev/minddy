@@ -14,6 +14,7 @@ import { HomeProjectSignals } from "@/components/home/home-project-signals";
 import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { OnboardingCard } from "@/components/home/onboarding-card";
 import { DesktopInstallBanner } from "@/components/home/desktop-install-banner";
+import { HomeTip } from "@/components/home/home-tip";
 
 /** Display name from Supabase auth metadata (display_name → full_name → name),
     never the raw email — mirrors the sidebar account button. */
@@ -177,6 +178,13 @@ export default function HomePage() {
             elle ne paraît pas du tout pendant l'onboarding, cette branche ne
             s'affichant qu'après (MIN-292). */}
         <DesktopInstallBanner />
+        {/* TOUT EN BAS, collée au pied de la page : l'astuce du jour. Elle
+            n'appartient pas à la file au-dessus — rien ne l'attend, rien ne s'y
+            répond, et c'est justement pour ça qu'elle peut rester là tous les
+            jours sans peser. Elle apprend un geste de l'app à qui n'a rien
+            demandé ; la seule place honnête pour ça est celle qu'on ne regarde
+            qu'une fois le reste lu. */}
+        <HomeTip />
       </div>
     </section>
   );

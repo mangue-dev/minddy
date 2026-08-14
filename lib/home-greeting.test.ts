@@ -93,10 +93,17 @@ describe("catalogue", () => {
     ).values(),
   ];
 
+  // `Home` ne porte plus seulement des chaînes depuis qu'il tient aussi le
+  // vivier d'astuces (`Home.tips`, un objet). D'où la valeur en `unknown`, puis
+  // le filtre sur le type : les `toBeTypeOf("string")` plus bas restent ainsi
+  // des tests de présence de la clé, et non des lectures de sous-objet.
   const message = (
     catalog: typeof en | typeof fr,
     key: string,
-  ): string | undefined => (catalog.Home as Record<string, string>)[key];
+  ): string | undefined => {
+    const value = (catalog.Home as Record<string, unknown>)[key];
+    return typeof value === "string" ? value : undefined;
+  };
 
   it("porte les deux formes de chaque formule, en anglais et en français", () => {
     for (const variant of variants) {
