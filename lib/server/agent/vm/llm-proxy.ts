@@ -12,6 +12,7 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage-shape";
 import type { NormalizedUsage } from "@/lib/server/ai-usage";
+import type { RedactText } from "../redact";
 
 /**
  * LE PROXY LOCAL DU SUPERVISEUR (MIN-286, lot 2) — les quarante lignes qui
@@ -133,6 +134,24 @@ export interface LlmProxyOptions {
   port?: number;
   /** Injecté pour les tests : le fournisseur, sans réseau. */
   fetchImpl?: typeof fetch;
+  /**
+   * LA SUBSTITUTION DES SECRETS, AVANT LE MODÈLE (MIN-328) — et c'est ICI qu'elle
+   * doit vivre sous ce moteur.
+   *
+   * L'invariant de MIN-239 (« le modèle ne voit plus le token du tout ») tenait
+   * parce que la boucle maison fabriquait elle-même chaque message `role:"tool"`
+   * et le substituait au passage. Opencode, lui, exécute ses tools DANS la
+   * microVM et construit le corps de la requête sans repasser par nous : un
+   * `bash("cat .git/config")` remontait donc au modèle intact, qui pouvait
+   * ensuite le recopier dans un fichier, un commit ou sa réponse.
+   *
+   * Ce proxy est le SEUL point de passage obligé entre opencode et le
+   * fournisseur : la substitution posée sur le corps sortant vaut pour toutes les
+   * sorties de tools, présentes et à venir, sans rien savoir d'elles. Elle porte
+   * sur le JSON sérialisé — un token de forge est alphanumérique, il ne subit
+   * aucun échappement JSON et se retrouve tel quel dans la chaîne.
+   */
+  redact?: RedactText;
 }
 
 /**
@@ -350,6 +369,11 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
         // Un corps qu'on ne sait pas lire se relaie TEL QUEL : un round qui part
         // sans notre complément vaut infiniment mieux qu'un round qui ne part pas.
       }
+      // APRÈS le complément, et sur le corps ENTIER : les sorties de tools
+      // d'opencode entrent dans ce corps sans être jamais passées par nous
+      // (MIN-328). Le corps qu'on ne sait pas lire est substitué lui aussi — la
+      // substitution est textuelle, elle n'a pas besoin de comprendre la forme.
+      if (opts.redact) body = opts.redact(body);
     }
 
     const headers: Record<string, string> = { ...extraHeaders(job) };

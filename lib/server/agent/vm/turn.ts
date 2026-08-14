@@ -327,7 +327,8 @@ export async function runVmTurn(
    */
   let repoInstructionsForSubagent: Promise<{ message: string; bytes: number } | null> | null = null;
   const subagentRepoInstructions = () => {
-    repoInstructionsForSubagent ??= readRepoInstructions(host).catch(() => null);
+    // L'ancrage de la MÈRE : une fille de relecture lit la base, comme elle.
+    repoInstructionsForSubagent ??= readRepoInstructions(host, job.anchor).catch(() => null);
     return repoInstructionsForSubagent;
   };
 

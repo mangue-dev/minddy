@@ -1382,7 +1382,13 @@ export async function executeAgentRun(
       // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après le contexte.
       // La racine est TOUJOURS marquée vue, trouvée ou non : ce qui suit ne recharge
       // que les sous-dossiers, à la première édition dedans (MIN-115).
-      const repoInstructions = await readRepoInstructions(host);
+      //
+      // L'ANCRAGE DÉCIDE DE LA SOURCE (MIN-328) : sur une relecture, le clone est
+      // sur la TÊTE de la pull request — le dépôt de l'auteur, pas celui du projet.
+      // Les instructions sont alors lues à la base (`pr-base`), ou pas du tout.
+      // `prRun` et pas `anchor` : c'est le CLONE qui décide, et c'est `prRun` qui
+      // fait cloner sur la tête (cf. `onCreate`).
+      const repoInstructions = await readRepoInstructions(host, prRun ? "pr" : anchor);
       instructions.paths.push(...REPO_INSTRUCTION_FILES);
       if (repoInstructions) {
         messages.push({ role: "user", content: repoInstructions.message });
@@ -1964,7 +1970,8 @@ export async function executeAgentRun(
     let repoInstructionsForSubagent: Promise<{ message: string; bytes: number } | null> | null =
       null;
     const subagentRepoInstructions = () => {
-      repoInstructionsForSubagent ??= readRepoInstructions(host).catch(() => null);
+      // L'ancrage de la MÈRE : une fille de relecture lit la base, comme elle.
+      repoInstructionsForSubagent ??= readRepoInstructions(host, anchor).catch(() => null);
       return repoInstructionsForSubagent;
     };
 

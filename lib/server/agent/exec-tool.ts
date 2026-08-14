@@ -10,6 +10,7 @@ import {
 } from "./platform-tool-names";
 import type { AgentAnchor } from "./prompt";
 import {
+  readFileAtRef,
   readWorkFile,
   readWorkFileWindow,
   writeWorkFile,
@@ -20,6 +21,7 @@ import {
   globRepo,
   writeToolOutput,
   REPO_DIR,
+  PR_BASE_TAG,
   type GrepOutputMode,
   type RepoHost,
 } from "./repo-host";
@@ -396,7 +398,7 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
     const block = await collectTouchedInstructions(
       paths.filter(Boolean),
       instructions,
-      (path) => readWorkFile(host, path).catch(() => null),
+      (path) => readInstructionsFrom(host, anchor, path),
       reason,
     ).catch((err) => {
       console.error("[agent-execute] subdir instructions failed:", (err as Error).message);
@@ -993,17 +995,39 @@ export function makeExecTool(cfg: ExecToolConfig): ExecuteAgentTool {
 }
 
 
+/**
+ * D'OÙ VIENNENT LES INSTRUCTIONS, SELON L'ANCRAGE (MIN-328).
+ *
+ * Une session d'écriture lit l'arbre de travail : c'est le dépôt de l'utilisateur,
+ * sur sa branche à lui. Une session de RELECTURE est checkoutée sur la TÊTE de la
+ * pull request — un fork, donc du contenu écrit par l'auteur de la PR, qui sur un
+ * dépôt public est n'importe qui. Son `AGENTS.md` arrivait dans le prompt sous la
+ * bannière « Follow them; they override the general conventions » : une prise de
+ * contrôle offerte à quiconque sait ouvrir une PR.
+ *
+ * Seule la BASE fait autorité, et elle est dans le clone sous le tag `pr-base`
+ * (cf. `clonePullRequest`). Pas de tag ramené → pas d'instructions : une relecture
+ * sans conventions est une relecture un peu moins fine, une relecture aux
+ * conventions de l'attaquant n'est plus une relecture.
+ */
+function readInstructionsFrom(
+  host: RepoHost,
+  anchor: AgentAnchor,
+  path: string,
+): Promise<string | null> {
+  const read =
+    anchor === "pr" ? readFileAtRef(host, PR_BASE_TAG, path) : readWorkFile(host, path);
+  return read.catch(() => null);
+}
+
 /** Lit un fichier d'instructions du dépôt, ou null (absent / illisible). */
 async function readInstructionFile(
   host: RepoHost,
+  anchor: AgentAnchor,
   path: string,
 ): Promise<RepoInstructionFile | null> {
-  try {
-    const content = await readWorkFile(host, path);
-    return content?.trim() ? { path, content } : null;
-  } catch {
-    return null;
-  }
+  const content = await readInstructionsFrom(host, anchor, path);
+  return content?.trim() ? { path, content } : null;
 }
 
 /**
@@ -1013,14 +1037,17 @@ async function readInstructionFile(
  * build/test, ses conventions et ses interdits — le carburant d'un diff correct.
  * Celles des SOUS-DOSSIERS arrivent plus tard, à la première édition dedans
  * (MIN-115) — cf. `makeExecTool`.
+ *
+ * `anchor` décide de la SOURCE, et pas seulement du ton : cf. `readInstructionsFrom`.
  */
 export async function readRepoInstructions(
   host: RepoHost,
+  anchor: AgentAnchor = "issue",
 ): Promise<{ message: string; bytes: number } | null> {
   const files: RepoInstructionFile[] = [];
   for (const name of REPO_INSTRUCTION_FILES) {
-    const file = await readInstructionFile(host, name);
+    const file = await readInstructionFile(host, anchor, name);
     if (file) files.push(file);
   }
-  return formatBootInstructions(files);
+  return formatBootInstructions(files, { review: anchor === "pr" });
 }

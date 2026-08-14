@@ -226,6 +226,55 @@ describe("le relais, monté pour de vrai", () => {
     }
   });
 
+  /**
+   * MIN-328 — LE SEUL POINT DE PASSAGE OBLIGÉ ENTRE OPENCODE ET LE MODÈLE.
+   *
+   * MIN-239 promettait que le modèle ne voit jamais le token de forge : la boucle
+   * maison fabriquait chaque message `role:"tool"` et le substituait au passage.
+   * Opencode exécute ses tools dans la microVM et construit le corps sans repasser
+   * par nous — un `bash("cat .git/config")` remontait donc intact. La substitution
+   * revient ici, où tout passe, quelle que soit la sortie de tool.
+   */
+  it("substitue les secrets du corps sortant, sorties de tools comprises", async () => {
+    const TOKEN = "ghs_16C7e42F292c6912E7710c838347Ae178B4a";
+    let seenBody = "";
+    const upstream = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seenBody = String(init?.body ?? "");
+      return new Response(sse([{ id: "gen-1", model: "m", choices: [{ delta: {} }] }]), {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      });
+    }) as typeof fetch;
+
+    const proxy = await startLlmProxy({
+      job: JOB,
+      fetchImpl: upstream,
+      redact: (text) => text.split(TOKEN).join("[redacted]"),
+    });
+    try {
+      await fetch(`${proxy.url}/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model: "m",
+          messages: [
+            {
+              role: "tool",
+              content: `url = https://x-access-token:${TOKEN}@github.com/org/repo.git`,
+            },
+          ],
+        }),
+      });
+      expect(seenBody).not.toContain(TOKEN);
+      expect(seenBody).toContain("[redacted]");
+      // Le complément du corps est toujours là : substituer ne remplace pas le
+      // reste du travail du proxy.
+      expect(JSON.parse(seenBody).usage).toEqual({ include: true });
+    } finally {
+      await proxy.close();
+    }
+  });
+
   it("rend une erreur JSON quand le fournisseur est injoignable", async () => {
     // Une panne du proxy doit se dire au client (opencode retente), pas faire
     // tomber le process qui tient tout le tour.

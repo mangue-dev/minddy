@@ -12,6 +12,7 @@ import {
   projectPrSection,
   rulesTail,
   shellOutputNote,
+  untrustedContentSection,
   workflowSteps,
   type AgentAnchor,
 } from "./prompt";
@@ -195,7 +196,7 @@ ${workflowSteps({
   failedEditAdvice: `If an \`edit\` fails because \`oldString\` wasn't found, re-read the file and copy the exact current text.`,
 })}
 
-${askingSection({ routine, n })}${chainSection(input.chain === true)}${rulesTail(replyLanguage)}`;
+${askingSection({ routine, n })}${chainSection(input.chain === true)}${untrustedContentSection({ notebook })}${rulesTail(replyLanguage)}`;
 }
 
 /**

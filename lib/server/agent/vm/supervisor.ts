@@ -9,7 +9,7 @@ import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
 // La MÊME normalisation que la boucle maison : `update_plan` est un tool de
 // contrôle, et les deux moteurs doivent en tirer le même event `plan_update`.
 import { normalizePlan } from "../agent-loop";
-import { SecretRedactor } from "../redact";
+import { SecretRedactor, type RedactText } from "../redact";
 import { cap } from "../tool-summary";
 import type { AgentCheckpoint } from "../runs";
 import type { ControlPlaneClient } from "./control-plane-client";
@@ -251,7 +251,11 @@ export async function runOpencodeTurn(
 
   // Le proxy AVANT le serveur : sa `baseURL` entre dans la config du tour, donc
   // elle doit être connue avant qu'opencode ne lise son environnement.
-  const proxy = await (deps.startProxy ?? ((j: VmJob) => startLlmProxy({ job: j })))(job);
+  // `secrets.redact` est une lambda liée au registre, qui est MUTABLE : le token
+  // re-minté avant un push (cf. `pushWork`) est substitué par le proxy dès qu'il
+  // est enregistré, sans que le proxy ait à être reconstruit.
+  const proxy = await (deps.startProxy ??
+    ((j: VmJob) => startLlmProxy({ job: j, redact: secrets.redact })))(job);
   /**
    * Le pont de tools, ouvert AVANT le serveur pour la même raison que le proxy :
    * son adresse entre dans l'environnement d'opencode, donc elle doit exister
@@ -655,7 +659,15 @@ export async function runOpencodeTurn(
         batch = [];
         bytes = 0;
       };
-      for (const event of fresh) {
+      for (const raw of fresh) {
+        /**
+         * LE JOURNAL EST SUBSTITUÉ COMME LE FIL (MIN-328). Il porte la sortie
+         * COMPLÈTE de chaque tool — un `cat .git/config`, un `git remote -v` —,
+         * il est écrit dans `agent_run_journal`, et il est rejoué dans la session
+         * au tour suivant : un secret qui y entre est persisté en base ET remis
+         * devant le modèle. Le fil d'events l'était depuis MIN-239, pas lui.
+         */
+        const event = redactDeep(raw, secrets.redact) as Record<string, unknown>;
         const size = JSON.stringify(event).length;
         // Un event plus gros que le lot part SEUL : le découper serait le casser.
         if (bytes > 0 && bytes + size > JOURNAL_BATCH_BYTES) await flush();
@@ -1765,18 +1777,35 @@ export function lastSeqByAggregate(
 /**
  * Le token de forge ne sort ni dans un event ni dans le checkpoint (MIN-239) : il
  * est lisible dans `.git/config`, et trois tools l'en sortent. La substitution
- * s'applique aux CHAÎNES du payload, en profondeur — un `preview` de tool est
+ * s'applique aux CHAÎNES du payload, **en profondeur** — un `preview` de tool est
  * exactement là où il atterrissait.
+ *
+ * « En profondeur » était FAUX jusqu'à MIN-328 : le commentaire l'annonçait, le
+ * code ne descendait que d'un niveau. Or les payloads d'opencode sont imbriqués
+ * (`{ state: { output } }`, `{ parts: [{ text }] }`) — le secret passait, et se
+ * persistait dans `agent_run_events`, relisible par tout membre du projet. Une
+ * substitution qui ne descend pas est pire que pas de substitution : elle donne
+ * l'apparence de la garantie.
  */
+export function redactDeep(value: unknown, redact: RedactText): unknown {
+  if (typeof value === "string") return redact(value);
+  if (Array.isArray(value)) return value.map((item) => redactDeep(item, redact));
+  // `null` est un objet ; une Date, un Buffer et consorts n'ont rien à gagner à
+  // être recopiés champ à champ — seuls les objets simples sont descendus.
+  if (value === null || typeof value !== "object") return value;
+  if (Object.getPrototypeOf(value) !== Object.prototype) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    out[key] = redactDeep(item, redact);
+  }
+  return out;
+}
+
 function redactPayload(
   payload: Record<string, unknown>,
   secrets: SecretRedactor,
 ): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(payload)) {
-    out[key] = typeof value === "string" ? secrets.redact(value) : value;
-  }
-  return out;
+  return redactDeep(payload, secrets.redact) as Record<string, unknown>;
 }
 
 /** Le dépôt, tel que le serveur doit le voir. Une seule définition. */

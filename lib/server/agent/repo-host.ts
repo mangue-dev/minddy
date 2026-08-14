@@ -653,6 +653,40 @@ export async function readWorkFile(host: RepoHost, relPath: string): Promise<str
 }
 
 /**
+ * Le même fichier, mais tel qu'il est À UNE RÉFÉRENCE GIT — pas dans l'arbre de
+ * travail (MIN-328).
+ *
+ * Une session de RELECTURE est checkoutée sur la TÊTE de la pull request, qui sur
+ * un fork appartient à l'auteur de la PR — c'est-à-dire, sur un dépôt public, à
+ * n'importe qui. Lire les instructions du dépôt là-dedans revenait à laisser un
+ * inconnu écrire dans le prompt système de la session. Seule la BASE fait
+ * autorité, et c'est ce que le tag `pr-base` désigne.
+ *
+ * `git show` plutôt qu'un checkout : rien ne bouge dans l'arbre, donc le
+ * `git diff pr-base` de la relecture reste exactement le changement de la PR.
+ * Rend null si la ref ou le chemin n'existe pas — c'est le cas normal (pas
+ * d'`AGENTS.md`, ou ancrage de base non ramené), et il vaut mieux une relecture
+ * sans conventions qu'une relecture aux conventions de l'attaquant.
+ */
+export async function readFileAtRef(
+  host: RepoHost,
+  ref: string,
+  relPath: string,
+): Promise<string | null> {
+  // La ref vient de nous (`PR_BASE_TAG`), le chemin vient d'un nom de fichier
+  // d'instructions calculé par `instructionFilesFor` — les deux passent quand
+  // même par `sq`, comme tout ce qui entre dans un shell ici.
+  const cleaned = relPath.trim().replace(/^\.\//, "");
+  if (!cleaned || cleaned.startsWith("/") || cleaned.split("/").includes("..")) return null;
+  try {
+    const res = await host.exec(`git show ${sq(`${ref}:${cleaned}`)}`, { timeoutMs: 20_000 });
+    return res.exitCode === 0 ? res.stdout : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Dépose une sortie de tool trop longue dans TOOL_OUTPUT_DIR et renvoie son chemin
  * ABSOLU (celui que le modèle repassera à `read_file`/`grep`). Ne passe PAS par
  * `writablePath` : on écrit volontairement hors du dépôt, et `name` est un simple

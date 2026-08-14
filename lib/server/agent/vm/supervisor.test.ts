@@ -1528,6 +1528,43 @@ describe("la reprise", () => {
     expect(report.checkpointDropped).toEqual([]);
   });
 
+  /**
+   * MIN-328 — LE JOURNAL EST SUBSTITUÉ, LUI AUSSI.
+   *
+   * Il porte la sortie COMPLÈTE de chaque tool : un `cat .git/config`, un
+   * `git remote -v`. Il s'écrit dans `agent_run_journal` — persisté, relu par
+   * l'équipe — et il est rejoué dans la session au tour suivant, donc devant le
+   * modèle. Le fil d'events était substitué depuis MIN-239 ; celui-ci ne l'était
+   * pas, et c'est le plus gros des deux.
+   */
+  it("substitue le token de forge dans le journal qu'il pousse, à tous les niveaux", async () => {
+    // Un vrai token d'installation : le registre ignore ce qui fait moins de 12
+    // caractères (cf. `MIN_SECRET_LENGTH`), et `ghs_SECRET` n'en fait que dix.
+    const TOKEN = "ghs_16C7e42F292c6912E7710c838347Ae178B4a";
+    h.history = [
+      {
+        aggregate_id: "ses_neuve",
+        seq: 3,
+        type: "message.part.updated",
+        data: {
+          part: {
+            state: {
+              // Trois niveaux, et un tableau au passage : exactement la forme des
+              // parts d'opencode, et exactement ce que l'ancienne substitution à
+              // un seul niveau laissait passer.
+              output: `url = https://x-access-token:${TOKEN}@github.com/org/repo.git`,
+              metadata: { lines: [`remote.origin.url=${TOKEN}`] },
+            },
+          },
+        },
+      },
+    ];
+    await run({ authUrl: `https://x-access-token:${TOKEN}@github.com/org/repo.git` });
+    const sent = JSON.stringify(h.journal.flatMap((batch) => batch.events));
+    expect(sent).not.toContain(TOKEN);
+    expect(sent).toContain("[redacted]");
+  });
+
   it("découpe un incrément trop gros pour tenir dans une requête", async () => {
     // Un round qui lit deux cents fichiers rend un seul export de plusieurs
     // mégaoctets : le corps reste plafonné par la plateforme, donc on envoie par
