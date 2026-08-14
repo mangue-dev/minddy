@@ -16,6 +16,7 @@ import { SecondarySidebarProvider } from "@/lib/secondary-sidebar-context";
 import { ZenModeProvider } from "@/lib/zen-mode-context";
 import { UndoProvider } from "@/lib/undo/undo-context";
 import { BulkActionsProvider } from "@/lib/bulk-actions-context";
+import { CurrentViewProvider } from "@/lib/current-view-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
 import { KeyboardCheatsheet } from "@/components/keyboard-cheatsheet";
@@ -75,7 +76,15 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                           <UndoProvider>
                             <CreateProvider>
                               <BulkActionsProvider>
-                                <AppShellChrome>{children}</AppShellChrome>
+                                {/* « Enregistrer la vue actuelle » (⌘K) part de
+                                    l'adresse ; les surfaces dont la sélection
+                                    n'y vit pas (une conversation de /agents, la
+                                    PR ouverte, la vue active d'un board) la
+                                    publient ici. Au-dessus du shell, donc :
+                                    c'est la palette qui lit. */}
+                                <CurrentViewProvider>
+                                  <AppShellChrome>{children}</AppShellChrome>
+                                </CurrentViewProvider>
                               </BulkActionsProvider>
                             </CreateProvider>
                             <AssistantPanel />

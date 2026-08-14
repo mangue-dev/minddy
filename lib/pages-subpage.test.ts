@@ -25,7 +25,7 @@
 //    le serveur vient de le retirer, et le lire comme un geste de
 //    l'utilisateur corbeillerait la page une seconde fois, en boucle.
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Editor, type JSONContent } from "@tiptap/core";
 import { Document } from "@tiptap/extension-document";
 import { Text } from "@tiptap/extension-text";
@@ -144,6 +144,22 @@ describe("appendSubpage", () => {
 
 /* ─── La détection, sur un VRAI éditeur ────────────────────────────────────── */
 
+/**
+ * Les éditeurs ouverts par le fichier. Un `Editor` TipTap monte un `DOMObserver`
+ * de ProseMirror qui se replanifie par `setTimeout` : sans `destroy()`, ce
+ * minuteur survit au fichier et se réveille une fois le `document` de jsdom
+ * démonté — `ReferenceError: document is not defined`, remonté par vitest comme
+ * une erreur non gérée de la SUITE, attribuée au fichier qui tournait à cet
+ * instant. Il faut assez de charge pour que le minuteur rate sa fenêtre, d'où
+ * une erreur qui n'apparaissait qu'un jour sur deux. C'est le fichier qui ouvre
+ * qui ferme.
+ */
+const openEditors: Editor[] = [];
+
+afterEach(() => {
+  for (const editor of openEditors.splice(0)) editor.destroy();
+});
+
 /** L'éditeur d'une page, monté sur le vrai registre, sans une ligne de React. */
 function makeEditor(content: JSONContent) {
   const removed = vi.fn<(ids: string[]) => void>();
@@ -153,6 +169,7 @@ function makeEditor(content: JSONContent) {
     extensions: [Document, Text, ...blockExtensions({ headless: true })] as never,
   });
   editor.storage.subpage.removed = removed;
+  openEditors.push(editor);
   return { editor, removed };
 }
 

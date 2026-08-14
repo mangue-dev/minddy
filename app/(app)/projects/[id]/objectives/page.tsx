@@ -24,6 +24,8 @@ import {
   useAssistantContext,
   useAssistantPanel,
 } from "@/lib/assistant-panel-context";
+import { usePublishCurrentView } from "@/lib/current-view-context";
+import { buildViewHref } from "@/lib/saved-view-href";
 import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-query";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -386,6 +388,27 @@ function ObjectivesInner() {
     setMobileDetail(true);
     router.replace(pathname);
   }, [openParam, objectives, pathname, router]);
+
+  // « Enregistrer la vue actuelle » (⌘K) : l'objectif ouvert dans le volet de
+  // droite est une SÉLECTION dans la page, pas une surimpression — elle fait
+  // donc partie de la vue. Elle sort de l'adresse dès que `?open=` est consommé
+  // ci-dessus, d'où cette publication ; `?open=` est aussi ce qui la rétablit.
+  //
+  // Le nom proposé PORTE LE PROJET, et ce n'est pas cosmétique : le champ
+  // arrive pré-rempli et pré-sélectionné, donc Entrée l'accepte tel quel — et
+  // l'enregistrement écrase la vue homonyme. « Objectifs » tout court, c'est le
+  // même nom sur chaque projet : enregistrer les objectifs d'un deuxième projet
+  // aurait remplacé ceux du premier, sans un mot.
+  usePublishCurrentView({
+    href: buildViewHref(pathname, searchParams.toString(), {
+      open: selected?.id ?? null,
+    }),
+    label: project
+      ? selected
+        ? `${project.name} · ${selected.name}`
+        : `${project.name} · ${t("title")}`
+      : t("title"),
+  });
 
   // Objective creation is keyboard-driven by the app-wide `O` shortcut now
   // (see CreateProvider) — no page-local `C` handler.

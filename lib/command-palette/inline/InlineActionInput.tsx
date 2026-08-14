@@ -29,6 +29,7 @@ import { Kbd } from "../components/Kbd";
 import styles from "../styles/InlineActionInput.module.css";
 import { InlineSelect, type SelectOption } from "./InlineSelect";
 import { InlineTextInput } from "./InlineTextInput";
+import { autoFocusFieldIndex } from "./auto-focus";
 import type { FormFieldSpec } from "../registry/types";
 import type { ReactNode } from "react";
 
@@ -96,18 +97,13 @@ export function InlineActionInput({
     return fieldConfig.options.filter((opt) => matchesSearch(query, opt.label));
   }, [activeField, fields]);
 
-  // First unfilled field index for autofocus
-  const firstUnfilledFieldIndex = useMemo(() => {
-    for (let i = 0; i < fields.length; i++) {
-      const field = fields[i];
-      const value = values[field.spec.key];
-      const hasValue = typeof value === "string" && value.trim() !== "";
-      if (!hasValue) {
-        return i;
-      }
-    }
-    return -1; // All fields filled, no autofocus needed
-  }, [fields, values]);
+  // Le champ qui prend le curseur à l'ouverture : le premier à remplir, et à
+  // défaut le premier tout court — un formulaire entièrement pré-rempli est une
+  // proposition, pas un formulaire fini (cf. auto-focus.ts).
+  const autoFocusIndex = useMemo(
+    () => autoFocusFieldIndex(fields.map((f) => f.spec.key), values),
+    [fields, values]
+  );
 
   // Scroll active option into view
   useEffect(() => {
@@ -402,7 +398,7 @@ export function InlineActionInput({
     const { spec, label, placeholder, options, disabled, isLoading } = fieldConfig;
     const value = values[spec.key];
 
-    const shouldAutoFocus = index === firstUnfilledFieldIndex;
+    const shouldAutoFocus = index === autoFocusIndex;
 
     // Select if: type select, has options, or is loading (will have options)
     const isSelect = spec.type === "select" || (options && options.length > 0) || isLoading;

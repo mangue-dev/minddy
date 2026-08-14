@@ -34,6 +34,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar";
 import { PULL_REQUESTS_PAGE, useAllPullRequestsQuery } from "@/lib/use-agent-runs";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
+import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { prIdentifier } from "@/lib/repo-providers";
@@ -485,6 +486,14 @@ export function PullRequestsPage() {
   const selectedId =
     clicked ?? deepLinkedByRun?.prId ?? (fetching ? null : (filtered[0]?.prId ?? null));
   const selected = filtered.find((p) => p.prId === selectedId) ?? null;
+
+  // « Enregistrer la vue actuelle » (⌘K) : la PR ouverte est une sélection de
+  // la page, dérivée plutôt que poussée dans l'adresse — `?pr=` est justement
+  // ce qui la rétablit (et l'épingle côté serveur, même vieille de six mois).
+  usePublishCurrentView({
+    href: selected ? `/pull-requests?pr=${encodeURIComponent(selected.prId)}` : "/pull-requests",
+    label: selected ? `${t("title")} · ${selected.title}` : t("title"),
+  });
 
   // Publie la PR sélectionnée à Numo : il résout « cette PR », la lit
   // (read_pull_request) et peut lancer des changements sur l'issue liée.

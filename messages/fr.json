@@ -269,7 +269,9 @@
     "pageVersionNotFound": "Cette version de la page n'existe plus.",
     "pageFileTooLarge": "Ce fichier est trop lourd (10 Mo maximum).",
     "pageFileEmpty": "Ce fichier est vide.",
-    "pageFileNotFound": "Fichier introuvable."
+    "pageFileNotFound": "Fichier introuvable.",
+    "invalidViewHref": "Cet écran ne peut pas être enregistré.",
+    "savedViewNameTaken": "Vous avez déjà une vue portant ce nom."
   },
   "CustomDomain": {
     "title": "Domaine personnalisé",
@@ -1537,7 +1539,16 @@
     "adminDashboard": "Administration",
     "syncPrompt": "Copier le prompt de sync git",
     "syncPromptCopied": "Prompt de sync git copié",
-    "syncPromptText": "Synchronise le dépôt git local avec `origin` pour qu'ils soient strictement identiques (0 commit en avance, 0 en retard sur la branche courante).\n\n1. `git fetch --all --prune`, puis compare la branche locale à son upstream.\n2. En cas de divergence, rebase mes commits locaux au-dessus de l'upstream (historique linéaire, aucun merge commit).\n3. Vérifie l'historique obtenu avant de pousser, puis push en fast-forward. N'utilise `--force-with-lease` que si c'est indispensable, et préviens-moi avant.\n4. Termine en confirmant l'état : 0 en avance / 0 en retard.\n\nNe touche pas à mes fichiers non commités ; en cas de conflit de rebase, arrête-toi et montre-moi le conflit."
+    "syncPromptText": "Synchronise le dépôt git local avec `origin` pour qu'ils soient strictement identiques (0 commit en avance, 0 en retard sur la branche courante).\n\n1. `git fetch --all --prune`, puis compare la branche locale à son upstream.\n2. En cas de divergence, rebase mes commits locaux au-dessus de l'upstream (historique linéaire, aucun merge commit).\n3. Vérifie l'historique obtenu avant de pousser, puis push en fast-forward. N'utilise `--force-with-lease` que si c'est indispensable, et préviens-moi avant.\n4. Termine en confirmant l'état : 0 en avance / 0 en retard.\n\nNe touche pas à mes fichiers non commités ; en cas de conflit de rebase, arrête-toi et montre-moi le conflit.",
+    "savedViews": "Vues enregistrées",
+    "saveCurrentView": "Enregistrer la vue actuelle",
+    "saveViewNamePlaceholder": "Ma semaine",
+    "viewSaved": "« {name} » enregistrée",
+    "renameSavedView": "Renommer",
+    "savedViewRenamed": "« {name} » renommée",
+    "deleteSavedView": "Oublier cette vue",
+    "savedViewDeleted": "« {name} » oubliée",
+    "nameThisView": "Donner un nom à la vue"
   },
   "Keyboard": {
     "then": "puis",

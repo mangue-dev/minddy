@@ -1153,6 +1153,21 @@ export interface ViewUpdateInput {
   display?: ViewDisplay;
 }
 
+/**
+ * Une VUE ENREGISTRÉE — un écran retenu depuis la palette de commandes, à ne
+ * pas confondre avec `View` juste au-dessus (les filtres d'un kanban). Celle-ci
+ * ne connaît qu'une adresse interne, et elle est strictement personnelle.
+ */
+export interface SavedView {
+  id: string;
+  user_id: string;
+  name: string;
+  /** Chemin absolu interne, query comprise (`/projects/x/objectives?open=y`). */
+  href: string;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Public-link sharing level of a view — "private" = no share row exists. */
 export type ViewShareLevel = "private" | "password" | "public";
 

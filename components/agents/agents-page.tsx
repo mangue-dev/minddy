@@ -43,6 +43,7 @@ import { useProjects } from "@/lib/projects-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
+import { usePublishCurrentView } from "@/lib/current-view-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   FREE_COMPOSE_PARAM,
@@ -719,6 +720,10 @@ export function AgentsPage() {
   }, [issueParam]);
   useEffect(() => {
     if (!runParam) return;
+    // L'onglet suit : `?run=` DÉSIGNE une conversation, et on peut y arriver
+    // depuis les routines (une vue enregistrée, un lien). Sans ça, la session
+    // se sélectionnait sous un onglet qui ne la montre pas.
+    setTab("sessions");
     setSelectedKey(runParam);
     setMobileDetail(true);
   }, [runParam]);
@@ -739,7 +744,6 @@ export function AgentsPage() {
     if (tabParam !== "routines") return;
     setTab("routines");
   }, [tabParam]);
-
   // Un brouillon POSÉ ouvre son volet, même si l'URL, elle, ne bouge pas :
   // `router.push` vers l'adresse COURANTE est inerte, donc les effets de params
   // ci-dessus ne rejouent pas. C'est exactement le cas d'une deuxième note lancée
@@ -829,6 +833,29 @@ export function AgentsPage() {
             : {}),
         }
       : null,
+  );
+
+  // « Enregistrer la vue actuelle » (⌘K). Cette page NETTOIE volontairement son
+  // adresse dès qu'on choisit une ligne (cf. `selectReal` : pousser l'adresse
+  // courante serait inerte, la navigation suivante vers la même conversation ne
+  // ferait plus rien) — l'URL ne dit donc jamais ce qu'on regarde. Elle le
+  // publie ici, avec les paramètres qui savent le rétablir : `?run=` pour une
+  // conversation, `?tab=routines&routine=` pour une routine. Le composer vierge
+  // n'est la vue de rien : on retient alors la page nue.
+  usePublishCurrentView(
+    tab === "routines"
+      ? {
+          href: selectedRoutineId
+            ? `/agents?tab=routines&routine=${encodeURIComponent(selectedRoutineId)}`
+            : "/agents?tab=routines",
+          label: t("tabRoutines"),
+        }
+      : realSelected && !composeSelected
+        ? {
+            href: `/agents?run=${encodeURIComponent(realSelected.runId)}`,
+            label: agentSessionTitle(realSelected, t("freeSessionTitle")),
+          }
+        : { href: "/agents", label: t("title") }
   );
 
   // Garde une sélection valide : quand la session sélectionnée disparaît (ou qu'un

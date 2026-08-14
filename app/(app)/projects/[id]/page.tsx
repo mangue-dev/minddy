@@ -30,6 +30,8 @@ import { useObjectivesQuery, objectiveProgress } from "@/lib/use-objectives-quer
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import { useBoardViews } from "@/lib/use-board-views";
+import { usePublishCurrentView } from "@/lib/current-view-context";
+import { buildViewHref } from "@/lib/saved-view-href";
 import { ME_ASSIGNEE, filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { STATUSES, issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
 import {
@@ -328,6 +330,23 @@ function ProjectBoard() {
   const openIssue = openIssueId
     ? issues.find((i) => i.id === openIssueId) ?? null
     : null;
+
+  // « Enregistrer la vue actuelle » (⌘K) : la vue active d'un board vit dans
+  // localStorage, pas dans l'adresse — sans cette publication, la vue
+  // enregistrée rouvrirait le board sur la vue mémorisée du moment, pas sur
+  // celle qu'on regardait. `?view=` est justement l'instruction qui la rétablit
+  // (cf. useBoardViews). Le ticket ouvert dans le panneau latéral, lui, ne part
+  // pas avec : une vue enregistrée retient la page, pas ce qui est posé devant.
+  usePublishCurrentView(
+    activeView && project
+      ? {
+          href: buildViewHref(pathname, searchParams.toString(), {
+            view: activeView.id,
+          }),
+          label: `${project.name} · ${activeView.name}`,
+        }
+      : null
+  );
 
   // Publish what this board is showing to Numo (open issue > objective > tab),
   // so "ce ticket" / "cet objectif" / "cette vue" resolve without searching.

@@ -35,6 +35,11 @@ export const InlineTextInput = forwardRef<HTMLTextAreaElement, InlineTextInputPr
       if (el && autoFocus && !autoFocusHandledRef.current) {
         autoFocusHandledRef.current = true;
         el.focus({ preventScroll: true });
+        // Un champ pré-rempli arrive avec une PROPOSITION (le nom actuel d'une
+        // vue qu'on renomme, celui qu'on suggère à l'enregistrement) : on la
+        // sélectionne, pour que la première frappe la remplace au lieu de s'y
+        // coller — et Entrée l'accepte telle quelle.
+        if (el.value) el.select();
       }
     }, [ref, autoFocus]);
 
