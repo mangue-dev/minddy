@@ -39,7 +39,7 @@ import {
 import { NumoFace } from "@/components/numo-face";
 import { objectiveColor } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
-import { projectHue } from "@/lib/project-orb-colors";
+import { projectOrbBaseColor } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
 
 /** L'id de la pseudo-entité « Numo » dans les listes de mentions : l'assistant
@@ -277,7 +277,10 @@ function mentionTone(
       // secondaire, donc une pilule grise — et c'est juste, il n'en a pas.
       return objectiveColor(color);
     case "project":
-      return `oklch(0.65 0.15 ${projectHue(seed)})`;
+      // L'aplat EXACT de l'orbe, pas une approximation : la pilule et la
+      // pastille qu'elle porte sont côte à côte, un écart de clarté entre les
+      // deux se verrait.
+      return projectOrbBaseColor(seed);
   }
 }
 

@@ -2,7 +2,7 @@
 
 import { useState, type ComponentType } from "react";
 import { cn } from "mangue-ui";
-import { projectHue } from "@/lib/project-orb-colors";
+import { projectOrbStyle } from "@/lib/project-orb-colors";
 
 /**
  * Safari's accelerated compositing clips a filtered child — here the blurred
@@ -19,9 +19,12 @@ const ROUNDED_CLIP_IN_SAFARI = {
 
 /**
  * A project's icon: the imported favicon when `iconUrl` is set (MIN-62), else a
- * deterministic gradient "orb" keyed off a stable seed (the project id).
+ * deterministic gradient "orb" keyed off a stable seed (`projectOrbSeed`).
  * Layered OKLCH gradients — a base fill, a blurred offset conic for organic
- * depth, and a glassy radial highlight — give the orb a subtle sphere feel. No
+ * depth, and a glassy radial highlight — give the orb a subtle sphere feel.
+ * Everything the layers need (both hues, chroma, lightness, the conic's angle
+ * and the highlight's centre) is drawn from the seed by `projectOrbStyle`: seven
+ * traits, so that two seeds landing on nearby hues still read as two orbs. No
  * initials, exactly like AutoKap's ProjectOrb. A broken image URL falls back to
  * the orb.
  *
@@ -38,8 +41,16 @@ export function ProjectOrb({
   className?: string;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const hue = projectHue(seed);
-  const hue2 = (hue + 40) % 360;
+  const { hue, hue2, chroma, lightness, angle, highlightX, highlightY } =
+    projectOrbStyle(seed);
+  // Les trois clartés du dégradé gardent l'écart de l'original (±0,07 autour de
+  // l'aplat) : c'est lui qui donne le relief. C'est le CENTRE qui bouge d'une
+  // graine à l'autre, pas l'amplitude — une orbe plate et une orbe contrastée
+  // ne se liraient plus comme la même famille d'objets.
+  const light = lightness + 0.07;
+  const deep = lightness - 0.07;
+  const soft = Math.max(0.06, chroma - 0.03);
+  const vivid = chroma + 0.03;
 
   if (iconUrl && failedUrl !== iconUrl) {
     return (
@@ -73,13 +84,13 @@ export function ProjectOrb({
       {/* Base color fill */}
       <span
         className="absolute inset-0"
-        style={{ background: `oklch(0.65 0.15 ${hue})` }}
+        style={{ background: `oklch(${lightness} ${chroma} ${hue})` }}
       />
       {/* Offset conic gradient for organic depth */}
       <span
         className="absolute inset-[-50%]"
         style={{
-          background: `conic-gradient(from 135deg, oklch(0.72 0.12 ${hue}) 0%, oklch(0.58 0.18 ${hue2}) 25%, oklch(0.72 0.12 ${hue}) 50%, oklch(0.65 0.15 ${hue2}) 75%, oklch(0.72 0.12 ${hue}) 100%)`,
+          background: `conic-gradient(from ${angle}deg, oklch(${light} ${soft} ${hue}) 0%, oklch(${deep} ${vivid} ${hue2}) 25%, oklch(${light} ${soft} ${hue}) 50%, oklch(${lightness} ${chroma} ${hue2}) 75%, oklch(${light} ${soft} ${hue}) 100%)`,
           filter: "blur(4px)",
         }}
       />
@@ -87,7 +98,7 @@ export function ProjectOrb({
       <span
         className="absolute inset-0"
         style={{
-          background: `radial-gradient(ellipse 70% 50% at 40% 30%, oklch(0.95 0.02 ${hue} / 40%) 0%, transparent 70%)`,
+          background: `radial-gradient(ellipse 70% 50% at ${highlightX}% ${highlightY}%, oklch(0.95 0.02 ${hue} / 40%) 0%, transparent 70%)`,
         }}
       />
     </span>

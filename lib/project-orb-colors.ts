@@ -5,7 +5,7 @@
  * Le hachage vit ICI plutôt que dans `components/project-orb.tsx` parce qu'il a
  * désormais deux lecteurs : le composant, côté client, et l'email d'invitation,
  * côté serveur (MIN-197). Un module « use client » n'exporte vers le serveur que
- * des références client — `projectHue` importée de là lèverait à l'appel. Et
+ * des références client — `projectOrbStyle` importée de là lèverait à l'appel. Et
  * recopier le hachage le ferait dériver en silence : le même projet n'aurait
  * plus la même couleur dans le mail et dans l'app.
  */
@@ -37,15 +37,100 @@ export function orbSeedOr(id: string, seed: string | null | undefined): string {
 }
 
 /**
- * Teinte déterministe dans [0,360) à partir d'une graine (hachage djb2), pour
- * qu'un projet rende toujours le même dégradé. Miroir du `projectHue` d'AutoKap.
+ * Hachage 32 bits d'une graine, SALÉ — la même graine et deux sels différents
+ * donnent deux valeurs sans rapport l'une avec l'autre.
+ *
+ * C'est ce qui permet de tirer plusieurs traits indépendants d'une seule graine.
+ * Le djb2 d'avant n'en donnait qu'un (`hash % 360`), et il ne se resalait pas :
+ * ses bits de poids faible portaient déjà toute l'information, en tirer une
+ * seconde valeur aurait donné une teinte et une saturation corrélées.
+ *
+ * FNV-1a, puis l'avalanche finale de murmur3 : sans elle, deux uuid ne différant
+ * que par leurs derniers caractères sortent voisins, ce qui est exactement le
+ * cas d'usage ici (des graines tirées à la suite).
  */
-export function projectHue(seed: string): number {
-  let hash = 0;
+function hash32(seed: string, salt: number): number {
+  let h = (2166136261 ^ Math.imul(salt, 0x9e3779b1)) >>> 0;
   for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+    h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
   }
-  return ((hash % 360) + 360) % 360;
+  h ^= h >>> 16;
+  h = Math.imul(h, 2246822507);
+  h ^= h >>> 13;
+  h = Math.imul(h, 3266489909);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+/**
+ * Un réel de `[min, max)` tiré de la graine sur le sel donné.
+ *
+ * Arrondi à trois décimales : ces valeurs partent dans des `style` en ligne, et
+ * un flottant complet y écrirait dix-sept chiffres pour une teinte qu'aucun œil
+ * ne distingue au millième. Trois décimales laissent bien plus de nuances que
+ * l'écran n'en rend.
+ */
+function pick(seed: string, salt: number, min: number, max: number): number {
+  const value = min + (hash32(seed, salt) / 4294967296) * (max - min);
+  return Math.round(value * 1000) / 1000;
+}
+
+/**
+ * Le dessin complet d'une orbe, tiré de sa graine.
+ *
+ * **Sept traits, pas un.** La version d'origine ne tirait que la TEINTE : tout
+ * le reste — saturation, clarté, écart entre les deux teintes, orientation du
+ * conique, place du reflet — était écrit en dur. Deux orbes ne se distinguaient
+ * donc que par leur position sur la roue, et l'œil ne sépare pas deux teintes à
+ * moins d'une soixantaine de degrés : une relance sur trois retombait sur
+ * quelque chose de très proche. En faisant varier les sept, deux tirages
+ * voisins en teinte restent séparés par leur profondeur, leur orientation ou
+ * leur éclat.
+ *
+ * Les bornes sont resserrées exprès. La clarté reste dans une bande qui se lit
+ * sur fond clair COMME sur fond sombre, et la saturation ne descend pas là où
+ * l'orbe virerait au gris — c'est une pastille de 14 à 20 px, pas une image.
+ */
+export interface ProjectOrbStyle {
+  /** Teinte de base, [0,360). */
+  hue: number;
+  /** Seconde teinte du dégradé — de l'analogue au presque complémentaire. */
+  hue2: number;
+  /** Saturation OKLCH de l'aplat. */
+  chroma: number;
+  /** Clarté OKLCH de l'aplat. */
+  lightness: number;
+  /** Orientation du dégradé conique, en degrés. */
+  angle: number;
+  /** Centre du reflet, en pourcentage de la pastille. */
+  highlightX: number;
+  highlightY: number;
+}
+
+export function projectOrbStyle(seed: string): ProjectOrbStyle {
+  const hue = pick(seed, 1, 0, 360);
+  // L'écart signé entre les deux teintes : au-delà de ~30° il se voit, au-delà
+  // de ~170° les deux se croisent de l'autre côté de la roue et l'écart
+  // rétrécit à nouveau.
+  const spread =
+    pick(seed, 2, 30, 170) * (hash32(seed, 3) % 2 === 0 ? 1 : -1);
+  return {
+    hue,
+    hue2: ((hue + spread) % 360 + 360) % 360,
+    chroma: pick(seed, 4, 0.1, 0.185),
+    lightness: pick(seed, 5, 0.56, 0.74),
+    angle: pick(seed, 6, 0, 360),
+    highlightX: pick(seed, 7, 22, 62),
+    highlightY: pick(seed, 8, 18, 46),
+  };
+}
+
+/**
+ * La couleur d'aplat de l'orbe, en OKLCH — ce qu'on peint quand on veut LA
+ * couleur du projet sans son dégradé : le fond d'une pilule de mention.
+ */
+export function projectOrbBaseColor(seed: string): string {
+  const { lightness, chroma, hue } = projectOrbStyle(seed);
+  return `oklch(${lightness} ${chroma} ${hue})`;
 }
 
 /**
@@ -91,11 +176,10 @@ export function projectOrbGradient(seed: string): {
   from: string;
   to: string;
 } {
-  const hue = projectHue(seed);
-  const hue2 = (hue + 40) % 360;
+  const { hue, hue2, chroma, lightness } = projectOrbStyle(seed);
   return {
-    base: oklchToHex(0.65, 0.15, hue),
-    from: oklchToHex(0.72, 0.12, hue),
-    to: oklchToHex(0.58, 0.18, hue2),
+    base: oklchToHex(lightness, chroma, hue),
+    from: oklchToHex(lightness + 0.07, Math.max(0.06, chroma - 0.03), hue),
+    to: oklchToHex(lightness - 0.07, chroma + 0.03, hue2),
   };
 }
