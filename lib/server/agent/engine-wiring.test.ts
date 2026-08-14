@@ -14,9 +14,9 @@ import { describe, expect, it } from "vitest";
  * étant faux, et chacun, faux, fait mentir la bascule plutôt que de la casser :
  *
  *  1. **Le moteur est écrit sur la ligne, et la microVM avec lui.** La colonne
- *     `loop_in_vm` est lue par les balayeurs (`reapDeadVmRuns` la veut vraie,
- *     `requeueStuckRuns` la veut fausse) : une ligne qui dirait `false` en jouant
- *     dans la VM se ferait voler son claim et ne serait jamais constatée morte.
+ *     `loop_in_vm` est lue par le chien de garde (`reapDeadVmRuns` la veut vraie) :
+ *     une ligne qui dirait `false` en jouant dans la VM ne serait jamais constatée
+ *     morte.
  *  2. **La fonction compose l'entrée d'opencode** — ancrage et prompt — et
  *     rassemble la mémoire du tour précédent depuis `agent_run_journal`.
  *  3. **`vm/main.ts` lève** plutôt que de poster un tour sans son entrée.

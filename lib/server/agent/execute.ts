@@ -4,8 +4,6 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import { recordAiUsage, spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
-import { AGENT_MAX_CONTINUATIONS } from "@/lib/agent-models";
-import { CHUNK_FLOOR_MS, chunkSoftDeadlineMs } from "./chunk-budget";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
@@ -13,13 +11,7 @@ import { getOrCreateAgentSandbox, sandboxHost, sandboxName, type Sandbox } from 
 import { cloneRepo, clonePullRequest, commitAndPush, revParseHead, repoBackgroundRunner } from "./repo-host";
 import { newLiveEditLog } from "./live-edits";
 import { BackgroundJobs } from "./background";
-import {
-  chunkFitsSubagentResume,
-  scopeSubagentModels,
-  subagentRoundsLeft,
-  SUBAGENT_MAX_ROUNDS,
-  SUBAGENT_PARENT_RESERVE_MS,
-} from "./subagent-config";
+import { scopeSubagentModels } from "./subagent-config";
 import { getSubagentFavorites, maxParallelSubagents } from "./subagent-app-config";
 import { getAgentModelsForUser } from "./models-catalog";
 import { SecretRedactor } from "./redact";
@@ -143,35 +135,18 @@ const CHECKPOINT_EDITED_PATHS_MAX = 200;
     `attempts` (incrémenté à chaque claim) n'est pas remis à zéro sur ce chemin,
     donc une erreur persistante s'arrête après ce nombre de claims. */
 const MAX_ERROR_REQUEUE_ATTEMPTS = 2;
-/**
- * Wall-clock max d'UN sous-agent (MIN-112). Sa soft-deadline effective est
- * `min(ça, budget restant du chunk − SUBAGENT_PARENT_RESERVE_MS)`.
- *
- * Pas « la moitié du restant » : le parent n'a pas besoin de la moitié du chunk
- * pour lire un rapport et conclure — il lui faut une RÉSERVE, pas une part. La
- * moitié plafonnait une fille à ~2 min sur un chunk de 250 s, ce qui coupait net
- * toute tâche déléguée un peu sérieuse.
- */
+/** Wall-clock max d'UN sous-agent (MIN-112) — une borne de coût par tâche
+ *  déléguée, plus une part d'un chunk qui n'existe plus (MIN-225). */
 const SUBAGENT_MAX_MS = 600_000;
 /** Marge gardée pour couper les filles et livrer leur rapport partiel DANS le tour
  *  (avant le type-check, qui doit voir leurs fichiers). */
 const SUBAGENT_CUT_MARGIN_MS = 10_000;
 /**
- * Délai posé sur un chunk REFUSÉ à l'admission (MIN-212) : le temps que le drain
- * affamé qui vient de le claim finisse sa fenêtre sans le reprendre. Le prochain
- * drain — 270 s depuis un lancement, 760 s au cron — le reprendra à budget plein.
- */
-const SUBAGENT_RESUME_DEFER_MS = 30_000;
-// `SUBAGENT_MAX_ROUNDS`/`subagentRoundsLeft` et les deux bornes de TEMPS d'une
-// fille (`SUBAGENT_PARENT_RESERVE_MS`, `SUBAGENT_MIN_MS`, d'où
-// `chunkFitsSubagentResume`) vivent dans `subagent-config.ts` : un plafond atteint
-// doit COUPER la fille ou REFUSER le chunk, jamais lui rendre un round ni une
-// seconde — et cette arithmétique-là mérite un test à elle (cf. l'historique du
-// zombie à un round par chunk, sur l'axe rounds puis sur l'axe temps).
-/**
  * Base des seq de fichiers de sortie d'un sous-agent, hors de la bande du parent
- * (`run.continuations * 1000`, soit au plus ~20 000 avec AGENT_MAX_CONTINUATIONS).
- * Sans ça, deux exec-tools d'un même chunk écriraient le même `slug-<seq>.log`
+ * (`run.continuations * 1000` ; le compteur ne bouge plus depuis MIN-225, un tour
+ * ne se découpant plus, mais la bande reste celle-là pour qu'un run migré ne
+ * collisionne pas avec les lignes de son passé).
+ * Sans ça, deux tools d'un même tour écriraient le même `slug-<seq>.log`
  * (cf. `toolOutputFileName`) et le second écraserait la sortie du premier.
  */
 const SUBAGENT_OUTPUT_SEQ_BASE = 500_000;
@@ -639,7 +614,6 @@ export async function executeAgentRun(
         ...(pending ? { not_before: new Date().toISOString() } : {}),
         continuations: 0,
         attempts: 0,
-        window_started_at: null,
         last_activity_at: new Date().toISOString(),
         interrupt_requested: false,
       });
@@ -877,51 +851,6 @@ export async function executeAgentRun(
       await revokeRunKey(run.provider_key_id);
     }
 
-    /**
-     * AMORÇAGE TROP LONG (MIN-213) — le budget qu'il reste VRAIMENT, une fois la
-     * microVM debout, relu contre le plancher que le chunk s'accorde.
-     *
-     * `MIN_CHUNK_BUDGET_MS` réserve une indemnité d'amorçage à l'admission, mais un
-     * réveil n'est borné par rien (le clone a 180 s de timeout à lui seul) : c'est une
-     * moyenne, pas une garantie. Sans cette relecture, un amorçage qui déborde laisse
-     * la boucle prendre quand même son plancher, puis pousser — et la fonction est
-     * tuée en plein travail. Le run reste alors `running` vingt minutes
-     * (`STUCK_RUNNING_MS`) sans un event, et si la VM avait déjà édité six fichiers,
-     * le chunk suivant repart d'un historique qui les ignore.
-     *
-     * Le re-queue est IMMÉDIAT (`not_before` = maintenant) et il est sûr : la microVM
-     * est chaude et déjà persistée juste au-dessus, donc le chunk suivant repart
-     * dessus sans re-payer le clone. Et le drain qui vient de nous claim ne peut pas
-     * boucler dessus — son propre seuil est plus HAUT que ce plancher, il sortira de
-     * sa boucle au même tour.
-     *
-     * Mêmes invariants que le refus d'admission de MIN-212 : ni `continuations`
-     * (rien n'a été joué) ni `checkpoint` (rien n'a bougé) ne sont touchés, et
-     * `attempts` repart à zéro — le budget de reprise sur crash sert aux chunks qui
-     * MEURENT, pas à ceux qui rendent la main.
-     */
-    const afterSetupMs = opts.deadlineMs - (Date.now() - callStart);
-    // Sans objet pour un run `loop_in_vm` (MIN-224) : ce qui reste à la FONCTION
-    // n'a plus à couvrir un tour, seulement trois écritures et un lancement. Un
-    // amorçage qui déborde n'y met rien en danger.
-    if (!run.loop_in_vm && afterSetupMs < CHUNK_FLOOR_MS) {
-      await stampRun(run.id, {
-        status: "queued",
-        not_before: new Date().toISOString(),
-        attempts: 0,
-        last_activity_at: new Date().toISOString(),
-      });
-      // Event `status` neutre, invisible dans le fil (pas de `sandbox_ready` émis :
-      // il ferait dire à la conversation que l'agent travaille alors qu'il rend la
-      // main). Comptable en base, comme `subagent_resume` : c'est lui qui dira
-      // combien d'amorçages débordent, et de combien.
-      await emit("status", {
-        phase: "chunk_deferred",
-        reason: "cold_setup",
-        budgetMs: afterSetupMs,
-      });
-      return "suspended";
-    }
 
     // La machine est là. C'est la seule chose que le fil ne pouvait pas deviner :
     // entre le `status: running` du haut de ce chunk et le premier pas de l'agent,
@@ -1275,9 +1204,6 @@ export async function executeAgentRun(
       getModelPricing(run.model, provider, apiKey).catch(() => null),
     ]);
 
-    // Budget du chunk : temps restant du drain − marge, borné par la config.
-    const softDeadlineMs = chunkSoftDeadlineMs(opts.deadlineMs, Date.now() - callStart);
-
     // Contextes des tools métier, construits côte à côte : les deux jeux sont
     // servis quel que soit l'ancrage (MIN-125). Ce que l'ancrage décide encore,
     // c'est `anchorIssueId` — la cible par défaut des tools ticket.
@@ -1425,13 +1351,6 @@ export async function executeAgentRun(
     // ticket à moitié fait sans explication lisible — c'est le quota, global et
     // visible, qui borne la dépense.
     //
-    // Calculé AVANT `subagentRunner`, et pas juste avant la boucle : la closure du
-    // runner le LIT, et `resumeSuspended()` l'appelle SYNCHRONEMENT — une fille
-    // reprise n'a aucun `await` avant l'objet passé à `runAgentLoop`. Déclaré plus
-    // bas, `budgetUsd` était alors dans sa zone morte temporelle, et la reprise
-    // mourait sur un `ReferenceError` (MIN-169). L'invariant — rien de ce que la
-    // closure capture ne se déclare après elle — est tenu par
-    // `subagent-runner-init.test.ts`.
     /** Ce qu'il reste du budget d'usage du COMPTE. `undefined` en BYOK. */
     const accountRemainingUsd =
       quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined;
@@ -1496,22 +1415,6 @@ export async function executeAgentRun(
           : Math.max(0, Number(run.budget_usd) - Math.max(run.cost_usd, spent ?? 0));
       return minDefined(account, fromRun) ?? null;
     };
-    /**
-     * Ce que le chunk a dépensé, TOUTES boucles confondues — le compteur que
-     * `budgetUsd` plafonne (MIN-202). Un seul objet pour le parent et ses filles :
-     * elles tournent dans le même process, chacune l'incrémente en payant, et le
-     * plafond est donc opposé à la dépense RÉELLE du passage.
-     *
-     * Le scalaire seul ne bornait rien : recopié à chaque fille, il donnait à
-     * chacune le droit de dépenser le plafond entier. Six filles en parallèle plus
-     * le parent, et une routine réglée à 15 % d'un plan Go (0,75 $) pouvait en
-     * prendre 5,25 $ — tout le mois de l'utilisateur en un passage.
-     *
-     * Déclaré ICI, au-dessus de `subagentRunner`, pour la même raison que
-     * `budgetUsd` : la closure le lit et `resumeSuspended()` l'appelle
-     * synchronement (cf. `subagent-runner-init.test.ts`).
-     */
-    const chunkSpend = { usd: 0 };
 
     /**
      * ── LA BIFURCATION (MIN-224) ────────────────────────────────────────────
@@ -1684,7 +1587,6 @@ export async function executeAgentRun(
           error_message: cap(message, 1000),
           continuations: 0,
           attempts: 0,
-          window_started_at: null,
           last_activity_at: new Date().toISOString(),
           interrupt_requested: false,
           // Rien n'a été dépensé DANS ce chunk (l'amorçage n'appelle pas le
@@ -1724,7 +1626,6 @@ export async function executeAgentRun(
           { attempts: 0 }),
       error_message: cap(message, 1000),
       continuations: 0,
-      window_started_at: null,
       sandbox_id: sandboxName(sandbox),
       sandbox_stopped_at: null,
       last_activity_at: new Date().toISOString(),

@@ -1,7 +1,6 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -205,7 +204,6 @@ export interface AgentRun {
   attempts: number;
   not_before: string;
   started_at: string | null;
-  window_started_at: string | null;
   run_id: string | null;
   cost_usd: number;
   outcome: string | null;
@@ -264,13 +262,13 @@ export interface AgentRun {
   loop_in_vm: boolean;
   /**
    * La commande Vercel Sandbox qui PORTE la boucle, lancée en `detached: true`
-   * (MIN-224). Null hors `loop_in_vm`.
+   * (MIN-224). Null tant que la boucle n'a pas démarré.
    *
    * C'est le constat de vie du tour : la fonction rend la main tout de suite, et
    * ce qui reste pour savoir si le process travaille encore, c'est cet id — que
    * `Sandbox.getCommand()` sait interroger. Le chien de garde s'en sert à la
-   * place du vol de claim de `requeueStuckRuns` : plus une présomption après
-   * vingt minutes de silence, un constat, et il est exact.
+   * place d'une présomption après vingt minutes de silence : un constat, et il
+   * est exact.
    */
   loop_command_id: string | null;
   /**
@@ -278,10 +276,9 @@ export interface AgentRun {
    * `opencode`, le serveur headless piloté par notre superviseur.
    *
    * FIGÉ AU LANCEMENT depuis `app_config` (cf. `engine-flag.ts`), pour la même
-   * raison que `loop_in_vm` — en plus serré : les deux moteurs gardent leur
-   * mémoire dans DEUX champs différents du checkpoint (`messages` d'un côté,
-   * `opencode` de l'autre), donc un run qui changerait de moteur en cours de vie
-   * ne perdrait pas un réglage, il perdrait la conversation.
+   * raison que `loop_in_vm` : elle DIT ce qui a joué ce run, elle ne décide plus
+   * rien. La boucle maison est partie en MIN-225 ; les lignes qui portent `loop`
+   * restent lisibles, et c'est tout ce qu'on leur demande.
    */
   agent_engine: AgentEngine;
   created_at: string;
@@ -289,19 +286,6 @@ export interface AgentRun {
 }
 
 const ACTIVE_STATUSES: AgentRunStatus[] = ["queued", "running"];
-/**
- * Un run 'running' plus vieux que ce seuil est présumé bloqué (fonction morte).
- *
- * DOIT rester au-dessus de la durée d'un chunk SAIN, sinon le sweeper vole un run
- * en pleine exécution : deux fonctions travailleraient alors sur la même sandbox,
- * et le second checkpoint écraserait le premier. Depuis que le cron tourne en
- * fonctions de 800 s (Fluid, plan Pro), un chunk sain va jusqu'à ~13 min — d'où 20,
- * qui garde une marge nette tout en récupérant un vrai crash bien avant qu'un
- * humain ne s'en aperçoive.
- */
-const STUCK_RUNNING_MS = 20 * 60_000;
-const MAX_CRASH_ATTEMPTS = 2;
-
 export interface CreateRunInput {
   projectId: string;
   /** Null = run carnet (MIN-84) ou run de pull request (MIN-168), sans ticket. */
@@ -393,9 +377,8 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
    * (`checkpoint.messages` contre `checkpoint.opencode`), donc une conversation qui
    * changerait de moteur en cours de vie ne perdrait pas un réglage : elle perdrait
    * son historique. La colonne est par ailleurs lue par les BALAYEURS
-   * (`reapDeadVmRuns` la veut vraie, `requeueStuckRuns` la veut fausse) — une ligne
-   * qui dirait `false` en jouant dans la VM se ferait voler son claim par le second
-   * et ne serait jamais constatée morte par le premier.
+   * (`reapDeadVmRuns` la veut vraie) — une ligne qui dirait `false` en jouant dans
+   * la VM ne serait jamais constatée morte.
    */
   const engine = AGENT_ENGINE;
   const loopInVm = true;
@@ -898,7 +881,6 @@ export interface StampFields {
   cost_usd?: number;
   outcome?: string | null;
   error_message?: string | null;
-  window_started_at?: string | null;
   last_activity_at?: string;
   interrupt_requested?: boolean;
   sandbox_stopped_at?: string | null;
@@ -1048,60 +1030,6 @@ export async function notifyAgentRun(
   }
 }
 
-/**
- * Récupère les runs `running` bloqués (fonction morte : started_at trop vieux) :
- * requeue tant qu'il reste des tentatives, sinon échoue. À appeler en tête de
- * chaque drain (filet ultime, comme AutoKap).
- *
- * NE TOUCHE PAS AUX RUNS `loop_in_vm` (MIN-224), et pas par prudence : leur tour
- * n'a PAS de plafond de durée. Une boucle qui vit dans la microVM peut travailler
- * une heure sans écrire un event — un `npm test` qui dure, un modèle qui réfléchit
- * — et ce balayeur-ci la déclarerait morte à vingt minutes, puis volerait son
- * claim. Deux boucles tourneraient alors sur la même microVM, et le second
- * checkpoint écraserait le premier. Pour ces runs-là, c'est `reapDeadVmRuns`
- * ([drain.ts](drain.ts)) qui décide, et il ne présume rien : il DEMANDE à la
- * plateforme si le process vit encore.
- */
-export async function requeueStuckRuns(service: SupabaseClient): Promise<void> {
-  const cutoff = new Date(Date.now() - STUCK_RUNNING_MS).toISOString();
-  const { data } = await service
-    .from("agent_runs")
-    .select("id, attempts, created_by, project_id, issue_id")
-    .eq("status", "running")
-    .eq("loop_in_vm", false)
-    .lt("started_at", cutoff);
-  const rows = (data ?? []) as Array<{
-    id: string;
-    attempts: number;
-    created_by: string | null;
-    project_id: string;
-    issue_id: string | null;
-  }>;
-  for (const row of rows) {
-    if (row.attempts < MAX_CRASH_ATTEMPTS) {
-      await service
-        .from("agent_runs")
-        .update({ status: "queued", not_before: new Date().toISOString() })
-        .eq("id", row.id)
-        .eq("status", "running");
-    } else {
-      // Passe par `stampRun` et non par un `.update()` brut : c'est lui qui
-      // porte l'analytics de fin ET le crochet de chaîne (MIN-147). Un run de
-      // chaîne abandonné par le balayeur doit arrêter sa chaîne, pas la laisser
-      // attendre un événement qui ne viendra jamais.
-      await stampRun(
-        row.id,
-        {
-          status: "failed",
-          error_message: "Agent run stuck (exceeded max attempts)",
-          checkpoint: null,
-        },
-        { guard: ["running"] },
-      );
-      await notifyAgentRun(row, "agent_failed");
-    }
-  }
-}
 
 /** Run affecté par une synchro PR (pour aligner le statut d'issue côté appelant).
     `issueId` null = run carnet : aucune issue à aligner. */

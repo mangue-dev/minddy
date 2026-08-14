@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * MIN-224 — le chien de garde ne PRÉSUME pas, il constate.
  *
  * CE QU'IL REMPLACE, et pourquoi le remplacement n'est pas cosmétique.
- * `requeueStuckRuns` déclarait mort tout run `running` silencieux depuis vingt
+ * Le balayeur par présomption (retiré en MIN-225) déclarait mort tout run
+ * `running` silencieux depuis vingt
  * minutes, puis lui volait son claim. C'était tenable tant qu'un chunk durait
  * cinq minutes. Un tour qui vit dans la microVM peut travailler des heures sans
  * écrire un event — un `npm test` qui dure, un modèle qui réfléchit — et le vieux
@@ -72,7 +73,6 @@ vi.mock("./runs", async (importOriginal) => ({
   notifyAgentRun: vi.fn(async (_run: unknown, type: string) => {
     h.notifications.push(type);
   }),
-  requeueStuckRuns: vi.fn(async () => {}),
   claimRun: vi.fn(async () => null),
 }));
 

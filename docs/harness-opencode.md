@@ -1217,6 +1217,71 @@ encourageant, ce n'est pas la preuve — il faut la suite de la semaine.
 
 ---
 
+### 2.31 La suppression de la boucle maison (2026-08-14)
+
+Décidée par Clément **sans attendre la fin de la semaine d'observation** : les
+quatre runs du 14 sont propres, et une boucle qu'on garde « au cas où » est une
+boucle qu'il faut continuer de faire compiler.
+
+**Ce qui est parti** — 83 fichiers touchés, **18 100 lignes en moins** :
+
+| Ce qui disparaît | Pourquoi |
+| --- | --- |
+| `agent-loop.ts` (2 305 l.), `tool-loop.ts`, `compact.ts`, `checkpoint-fit.ts` | la boucle, sa détection de cycles, sa compaction, son rabotage de checkpoint |
+| `vm/turn.ts` (+ son test) | la boucle jouée DANS la microVM ; `vm/main.ts` n'aiguille plus |
+| `subagent.ts` (1 066 l.), `subagent-templates.ts` | le registre des filles — opencode ouvre ses sessions lui-même (§2.14) |
+| `exec-tool.ts` (1 053 l.), `patch.ts` | l'exécuteur des 25 tools et l'édition par enveloppe : opencode rend les siens |
+| les 15 tools génériques de `tools.ts`, `subagentToolsFor` | annoncés à personne — le pont ne sert que le domaine et le local |
+| `buildAgentSystemPrompt`, `buildSubagentSystemPrompt` (`prompt.ts`) | le prompt de la boucle ; l'ancrage d'opencode garde les fragments |
+| `caching.ts`, `abandoned-spend.ts` | le cache de prompt et l'estimation d'un round coupé : le proxy fait mieux (§2.23) |
+| ~1 100 lignes d'`execute.ts` | la boucle en fonction, ses sous-agents, ses handlers `create_pr`/`web_search` |
+
+**Ce qui est resté, et ce n'est pas de la nostalgie** : `edit.ts` (le moteur
+d'édition sert aussi `minddy_edit_issue_text`, côté MCP), `prune.ts` /
+`content.ts` (leurs helpers de troncature sont lus par cinq tools de domaine),
+`retry.ts` (le repli de fournisseur, encore joué par `landVmTurn`), et
+`agent-contract.ts` — un module NEUF, où les types que la boucle hébergeait sans
+les posséder ont déménagé : event, ligne d'usage, charge de direct, étape de plan.
+
+**Trois choses trouvées en coupant, et aucune n'était dans le plan :**
+
+1. **Le prompt système de la boucle était construit à chaque tour froid, puis
+   jeté.** `userPromptFromMessages` ne garde que les messages `user` ; le message
+   `system` composé juste au-dessus ne partait nulle part. Il n'a jamais rien
+   coûté au modèle — seulement à nous, à chaque amorce.
+2. **Un run hérité aurait posté sa conversation entière comme prompt.** L'amorce
+   faisait `messages = run.checkpoint.messages` quand le checkpoint en portait ;
+   sous opencode, ce tableau devient le PROMPT du tour. Un vieux run repris aurait
+   relu sa propre conversation comme une consigne qui vient d'arriver. La branche
+   est retirée : un checkpoint de boucle n'est plus reconnu, le tour retombe sur
+   l'amorce froide.
+3. **Et il le DIT.** `priorConversationLost` ajoute une phrase au prompt du tour
+   repris : « les tours précédents ont été joués par l'ancien moteur, tu ne vois
+   pas cet échange ». Écrire un traducteur de format pour des conversations closes
+   depuis le 10 août ne valait pas son code ; le taire aurait donné un agent
+   amnésique sans explication, ce qui est le défaut que ce chantier a passé son
+   temps à corriger.
+
+**Une régression antérieure, constatée au passage** : `collectTouchedInstructions`
+(MIN-115, les `AGENTS.md` de sous-dossier servis à la première lecture dedans)
+**n'a plus aucun appelant** depuis la bascule — c'était l'exec-tool qui les
+collait au résultat, et opencode lit les fichiers lui-même. Le module est gardé,
+sa politique est intacte ; ce qui manque est le câblage sur le pont. Ce n'est pas
+la suppression qui l'a causé, elle l'a rendu visible.
+
+**Ce que les tests deviennent.** 4 559 cas au vert, contre 4 973 avant. Les cas
+partis testaient la boucle (son streaming, ses reprises de filles, ses tools
+d'édition) ; ceux qui gardaient une doctrine encore vivante ont été REPOINTÉS
+plutôt que supprimés — la porte de livraison garde ses 32 cas purs,
+`repo-instructions-source.test.ts` (MIN-328, le prompt d'un fork) vise désormais
+`repo-instructions.ts`, `run-spend.test.ts` vise `landVmTurn`, et
+`platform-tool-anchors.test.ts` (MIN-326) confronte l'annonce à la table sans
+passer par l'exécuteur. `AGENT_ENGINES` garde ses deux valeurs — des centaines de
+lignes de runs portent `loop` — mais un `LIVE_AGENT_ENGINES` les distingue de ce
+qui peut encore JOUER : c'est sur celui-là que compte le garde-fou des secrets.
+
+---
+
 ## 3. L'inventaire de parité — nos 51 tools, un par un
 
 Source : [tools.ts](../lib/server/agent/tools.ts) (1 801 lignes). 51 tools servis,
