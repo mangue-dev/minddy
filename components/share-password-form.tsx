@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Spinner } from "mangue-ui";
 import { Lock } from "lucide-react";
-import { IsoIconScene } from "@/components/illustrations/iso-icon";
+import { IsoIcon } from "@/components/illustrations/iso-icon";
 
 /** Clé du namespace PublicShare rendue sous le champ. */
 export type ShareUnlockState = {
@@ -46,7 +46,7 @@ export function SharePasswordForm({
       action={formAction}
       className="flex w-full max-w-xs flex-col items-center gap-4"
     >
-      <IsoIconScene icon={Lock} className="w-56" />
+      <IsoIcon icon={Lock} className="w-28" />
       <p className="text-center text-sm font-medium">
         {title ?? t("protectedTitle")}
       </p>

@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button, Spinner, cn } from "mangue-ui";
 import { Check, Github, Mail } from "lucide-react";
 import { MinddyLogo } from "@/components/minddy-logo";
-import { IsoIconTile } from "@/components/marketing/iso-tile";
+import { IsoIcon } from "@/components/illustrations/iso-icon";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
@@ -322,12 +322,12 @@ export function PasswordRules({ password }: { password: string }) {
 /**
  * L'icône d'un e-mail parti — l'écran « regardez votre boîte mail ».
  *
- * Couchée dans le plan isométrique (`IsoIconTile`), comme les états vides de
- * l'app et les cartes de la landing (MIN-254), et non une lucide de face dans
- * une pastille ronde : cette pastille-là est le dessin le plus neutre possible,
- * donc celui qui ne dit rien de minddy. Cet écran est le dernier du parcours
+ * Posée sur son bloc isométrique (`IsoIcon`), comme les états vides de l'app et
+ * les cartes de la landing (MIN-254), et non une lucide de face dans une
+ * pastille ronde : cette pastille-là est le dessin le plus neutre possible, donc
+ * celui qui ne dit rien de minddy. Cet écran est le dernier du parcours
  * d'inscription, et le seul qui n'ait qu'une image à montrer.
  */
 export function MailGlyph() {
-  return <IsoIconTile icon={Mail} className="mx-auto w-24" />;
+  return <IsoIcon icon={Mail} className="mx-auto w-24" />;
 }

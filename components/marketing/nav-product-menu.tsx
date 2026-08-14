@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { NumoFace } from "@/components/numo-face";
-import { IsoIconTile } from "./iso-tile";
+import { IsoIcon } from "@/components/illustrations/iso-icon";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
@@ -187,20 +187,20 @@ export function NavProductMenu({
                     tabIndex={open ? undefined : -1}
                     className="group flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/70 focus-visible:bg-muted/70 focus-visible:outline-none"
                   >
-                    {/* Les icônes de l'APPLICATION, couchées dans son plan
+                    {/* Les icônes de l'APPLICATION, posées sur son bloc
                         isométrique (MIN-254). C'était jusqu'ici une pastille
                         grise avec une icône lucide dedans — le dessin le plus
                         neutre possible, donc celui qui ne disait rien de minddy,
                         dans ce qui est souvent le premier écran du produit que
                         voit un visiteur. Elles gardent la teinte de marque à
-                        tous les états : ce sont ses deux nuances (la face et son
-                        épaisseur) qui portent le relief, les repeindre au survol
-                        l'écraserait. */}
+                        tous les états : ce sont ses trois valeurs (les trois
+                        faces du solide) qui portent le relief, les repeindre au
+                        survol l'écraserait. */}
                     {Icon ? (
-                      <IsoIconTile icon={Icon} className="w-11 shrink-0" />
+                      <IsoIcon icon={Icon} className="w-11 shrink-0" />
                     ) : (
-                      /* Numo porte son visage : il n'y a rien à coucher dans le
-                         plan, c'est déjà un dessin de marque. */
+                      /* Numo porte son visage : il n'y a rien à poser sur un
+                         bloc, c'est déjà un dessin de marque. */
                       <span className="flex w-11 shrink-0 items-center justify-center text-muted-foreground">
                         <NumoFace className="h-4 w-auto" />
                       </span>
