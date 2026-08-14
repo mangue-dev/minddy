@@ -49,7 +49,11 @@ npm run deploy -- patch   # non-interactive: bump patch (or minor/major/none)
 `npm run deploy` (see [`deploy.sh`](deploy.sh)):
 
 1. Checks the working tree is clean.
-2. Runs `npm run typecheck` (aborts on failure).
+2. Replays the CI gates as a last net (tests, `node scripts/audit.mjs`,
+   typecheck) and refuses to deploy a commit whose CI is red. The gates of
+   record live in [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which
+   runs them on every pull request in a throwaway runner with no secrets — see
+   [`CONTRIBUTING.md`](CONTRIBUTING.md).
 3. Bumps the version (`patch`/`minor`/`major`, or `none`) — commits
    `chore: bump version to X` and tags `vX`. The tag is for release tracking
    only; minddy is private, nothing is published to npm.

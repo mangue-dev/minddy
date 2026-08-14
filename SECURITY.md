@@ -185,10 +185,23 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
 
 ## 9. Outillage
 
-- **Pipeline de deploy** ([deploy.sh](deploy.sh)) : `npm run test` +
-  `npm audit --omit=dev --audit-level=high` + `npm run typecheck` avant tout
-  push. Une vuln high/critical bloque le deploy. (Pas de CI GitHub — ce script
-  EST le pipeline.)
+- **CI GitHub** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : tests,
+  typecheck et audit sur chaque pull request et chaque push, dans un runner
+  jetable **sans aucun secret** (déclencheur `pull_request`, jamais
+  `pull_request_target` ; `permissions: contents: read`). C'est ce qui permet
+  d'ouvrir le dépôt aux contributions : avant MIN-335, `deploy.sh` était le seul
+  pipeline, donc le code d'une PR ne pouvait être vérifié qu'en l'exécutant sur
+  le poste du mainteneur, à côté du `.env` de production. Le dépôt exécute du
+  code au premier `install` et au premier `vitest` — c'est dit dans
+  [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Gate de vulnérabilités** ([scripts/audit.mjs](scripts/audit.mjs)) : seuil
+  high/critical sur les **trois** lockfiles (`pnpm-lock.yaml` — celui qui
+  installe réellement —, `package-lock.json`, `desktop/package-lock.json`),
+  **arbre entier**. `--omit=dev` a été retiré : `esbuild` produit les bundles
+  livrés et `tailwindcss` le CSS servi, sans être des `dependencies`.
+- **Pipeline de deploy** ([deploy.sh](deploy.sh)) : rejoue ces mêmes gates, plus
+  le verdict de la CI pour le commit déployé. Dernier filet, pas source de
+  vérité.
 - **Sonde anti cross-tenant** ([scripts/security-probe.mjs](scripts/security-probe.mjs)) :
   vérifie EN VRAI contre la prod que RLS + grants refusent les accès croisés
   (lecture/écriture d'un projet étranger, RPC definer, colonnes secrètes,

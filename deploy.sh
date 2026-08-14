@@ -14,7 +14,9 @@ IS the deploy trigger — there is no explicit `vercel deploy` step.
 
 Pipeline:
   1. Verify the working tree is clean.
-  2. Run `npm run typecheck` (aborts on failure).
+  2. Last-net gates (abort on failure): tests, dependency audit (3 lockfiles),
+     typecheck, and the CI verdict for HEAD if `gh` is available. The gates of
+     record live in .github/workflows/ci.yml — this script only repeats them.
   3. Bump the version (patch/minor/major) or skip — commit + tag the bump.
   3b. Desktop app: republish ONLY if the macOS shell actually changed.
   4. Push the current branch (usually `main`) → Vercel preview deploy.
@@ -66,22 +68,55 @@ if ! git ls-remote --exit-code --heads origin production >/dev/null 2>&1; then
   exit 1
 fi
 
-# 2. Gates de qualité — set -e aborte le deploy si l'une échoue. Pas de CI
-# GitHub dans ce repo : ce script EST le pipeline, c'est ici que la suite de
-# tests et l'audit de sécurité doivent barrer la route (MIN-118).
+# 2. Gates de qualité — set -e aborte le deploy si l'une échoue.
+#
+# Depuis MIN-335, la VÉRITÉ vient de la CI GitHub ([.github/workflows/ci.yml]) :
+# elle joue les mêmes gates dans un runner jetable, sur chaque PR et chaque push.
+# Ce script n'est plus le pipeline, il en est le DERNIER FILET — celui qui couvre
+# le commit local pas encore poussé, et celui qui refuse de mettre en production
+# un commit dont la CI est rouge.
+#
+# La distinction compte pour une raison de sécurité, pas de confort : tout ce qui
+# suit s'exécute ICI, sur une machine dont le `.env` porte la clé `service_role`
+# de production. Ne JAMAIS faire de ce script le lieu où l'on vérifie du code
+# qu'on n'a pas écrit (une PR d'un contributeur) — c'est le rôle de la CI, et
+# c'est dit dans [CONTRIBUTING.md].
 
-# 2a. Suite de tests vitest (jamais exécutée par le pipeline jusqu'ici).
+# 2a. Suite de tests vitest.
 echo "→ Running tests..."
 npm run test
 
-# 2b. Audit des dépendances de PROD : toute vuln high/critical bloque le deploy.
-# `--omit=dev` : les outils de build/test ne sont pas exposés en prod.
-echo "→ Running npm audit (prod deps, high+)..."
-npm audit --omit=dev --audit-level=high
+# 2b. Audit des dépendances : toute vuln high/critical bloque le deploy.
+# Les trois lockfiles du dépôt, arbre entier — le pourquoi est dans le script.
+echo "→ Running dependency audit (3 lockfiles, high+)..."
+node scripts/audit.mjs
 
 # 2c. Typecheck.
 echo "→ Running typecheck..."
 npm run typecheck
+
+# 2d. La CI du commit qu'on s'apprête à mettre en production. Best-effort :
+# `gh` n'est pas une dépendance du dépôt, et une CI en cours ne doit pas bloquer
+# un déploiement décidé en connaissance de cause. Une CI ROUGE, si.
+if command -v gh >/dev/null 2>&1; then
+  CI_STATE=$(gh run list --commit "$(git rev-parse HEAD)" --workflow CI \
+    --limit 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null || echo "")
+  case "$CI_STATE" in
+    failure|cancelled|timed_out)
+      echo "Error: la CI est $CI_STATE sur $(git rev-parse --short HEAD)."
+      echo "  → gh run list --commit $(git rev-parse HEAD)"
+      exit 1
+      ;;
+    success)
+      echo "→ CI: green on $(git rev-parse --short HEAD)"
+      ;;
+    *)
+      echo "→ CI: pas de verdict pour $(git rev-parse --short HEAD) (jamais poussé, ou en cours) — on continue."
+      ;;
+  esac
+else
+  echo "→ CI: gh absent, verdict non consulté — on continue."
+fi
 
 # 3. Version bump (patch/minor/major or none).
 CURRENT_VERSION=$(node -p "require('./package.json').version")

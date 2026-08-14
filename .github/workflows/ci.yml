@@ -1,0 +1,101 @@
+name: CI
+
+# Ce workflow est le pipeline de vérité (MIN-335). Avant lui, `deploy.sh` ÉTAIT
+# le pipeline : tests, audit et typecheck tournaient sur le poste du mainteneur,
+# à côté d'un `.env` qui porte la clé `service_role` de production. Le code d'une
+# pull request s'exécutant au premier `pnpm install` / `vitest`, ouvrir le dépôt
+# aux contributions revenait à offrir cette clé.
+#
+# Ici, le même code tourne dans un runner jetable qui ne voit AUCUN secret :
+#
+#   - `pull_request` (et pas `pull_request_target`) : le job s'exécute avec le
+#     `GITHUB_TOKEN` en lecture seule d'un fork, sans accès aux secrets du dépôt.
+#     `pull_request_target`, lui, tournerait dans le contexte du dépôt de base
+#     AVEC ses secrets, en checkoutant le code du contributeur — c'est
+#     exactement l'inverse de ce qu'on veut. Ne pas le réintroduire.
+#   - `permissions: contents: read` : le jeton du job ne peut rien écrire.
+#   - aucun `secrets.*` n'apparaît dans ce fichier, et il ne doit jamais en
+#     apparaître. Un job qui a besoin d'un secret est un job qui ne doit pas
+#     tourner sur du code de PR.
+#
+# Complément côté réglages GitHub (pas versionnable) : Settings → Actions →
+# « Require approval for all external contributors », pour qu'aucune PR de fork
+# ne démarre un job sans relecture humaine.
+
+on:
+  pull_request:
+  push:
+    branches: [main, production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Rien d'autre. Pas de clé Supabase, pas de token : la suite et le typecheck
+  # sont purs, et le build de la projection des pages (voir plus bas) aussi.
+  CI: "true"
+
+jobs:
+  checks:
+    name: Tests & typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # pnpm est le gestionnaire qui installe RÉELLEMENT ce dépôt (node_modules
+      # est un store pnpm) ; `package-lock.json` est tenu en second pour les
+      # outils qui n'en lisent qu'un. La CI installe donc par pnpm, sinon elle
+      # vérifierait un arbre que personne n'exécute.
+      #
+      # pnpm 10 n'exécute pas les scripts de build des dépendances hors de
+      # `pnpm.onlyBuiltDependencies` (ici : esbuild seul). C'est ce qui borne ce
+      # qu'un paquet compromis peut faire à l'installation.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      # `vitest` construit d'abord le bundle de la projection des pages
+      # (test/build-pages-md-setup.ts) : c'est du code du dépôt exécuté avant le
+      # premier test, et c'est précisément pour ça qu'il doit tourner ici.
+      - name: Tests
+        run: pnpm run test
+
+  audit:
+    name: Audit des dépendances
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      # Pas d'installation : l'audit lit les lockfiles, il n'a pas besoin de
+      # l'arbre. Les trois lockfiles du dépôt sont couverts par ce script.
+      - name: Audit (high+)
+        run: node scripts/audit.mjs
