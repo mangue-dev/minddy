@@ -1,0 +1,29 @@
+-- MIN-325 : une invitation ne se redirige plus vers le projet d'un autre.
+--
+-- `project_invitations_update_invitee` (20260704120000) laissait l'invité
+-- modifier SA ligne d'invitation, et sa clause `with check` ne contraignait que
+-- `invited_user_id`. Toutes les autres colonnes étaient libres — `project_id`
+-- compris. D'où l'attaque, entièrement en libre-service :
+--
+--   1. l'attaquant crée un projet à lui (il en est owner, donc l'insert
+--      d'invitation passe) et s'y invite lui-même par PostgREST ;
+--   2. il UPDATE la ligne pour poser `project_id` = l'UUID du projet visé —
+--      `invited_user_id` n'a pas bougé, la policy passe ;
+--   3. il accepte par PATCH /api/projects/invitations, qui crée l'appartenance
+--      sur le `project_id` tel qu'il est en base : le voilà membre chez la
+--      victime, sans que personne n'ait rien fait.
+--
+-- La policy est du code mort côté application : TOUTES les écritures dans
+-- `project_invitations` passent par des routes en clé service (la route
+-- d'acceptation et `lib/server/members.ts`), qui contournent RLS. Aucun appel
+-- client n'écrit dans cette table. La supprimer ne retire donc rien à
+-- l'application, seulement à l'attaquant.
+--
+-- Les autres policies de la table restent : `project_invitations_update_owner`
+-- exige `is_project_owner(project_id)` dans son `using` ET dans son
+-- `with check` — un owner ne peut donc pas déplacer une invitation vers un
+-- projet qu'il ne possède pas (le même défaut par l'autre porte).
+--
+-- Idempotent — safe to re-run.
+
+drop policy if exists project_invitations_update_invitee on public.project_invitations;

@@ -12,7 +12,9 @@
  *   - `select=access_token_encrypted` sur git_connections refusé (§2), colonne
  *     autorisée toujours lisible (témoin positif — on n'a pas cassé les lectures légitimes) ;
  *   - upload storage hors de son préfixe autorisé refusé ;
- *   - listing du bucket `project-icons` refusé pour anon (§4).
+ *   - listing du bucket `project-icons` refusé pour anon (§4) ;
+ *   - redirection d'une invitation vers le projet d'un autre refusée (MIN-325,
+ *     migration 20261215090000).
  *
  * ⚠ Touche la PROD (le .env local pointe la prod). Décor jeté en clé service,
  * cleanup complet en `finally`. Exécution MANUELLE seulement — hors du
@@ -295,6 +297,61 @@ async function main() {
     "listing bucket project-icons refusé pour anon",
     !listIcons.ok || (Array.isArray(iconRows) && iconRows.length === 0),
     `status ${listIcons.status}, ${Array.isArray(iconRows) ? iconRows.length : "?"} entrée(s)`,
+  );
+
+  // 7. MIN-325 : une invitation ne se redirige pas vers le projet d'un autre.
+  // Bob crée un projet à lui, s'y invite lui-même (les deux gestes lui sont
+  // permis, il en est owner), puis tente de déplacer la ligne vers le projet
+  // d'Alice. C'était le trou : `project_invitations_update_invitee` ne
+  // contraignait que `invited_user_id`, donc l'UPDATE passait, et accepter
+  // l'invitation inscrivait Bob chez Alice. Les deux portes doivent refuser —
+  // celle de l'invité (policy supprimée) comme celle de l'owner (son
+  // `with check` exige d'être owner du NOUVEAU project_id).
+  const { data: bobProject, error: bobProjErr } = await service
+    .from("projects")
+    .insert({ owner_id: bob.id, name: "Probe B", key: "PRBB" })
+    .select("id")
+    .single();
+  if (bobProjErr) throw new Error(`projet Bob : ${bobProjErr.message}`);
+
+  const { data: selfInvite, error: inviteErr } = await service
+    .from("project_invitations")
+    .insert({
+      project_id: bobProject.id,
+      invited_email: `probe-b-${stamp}@minddy-probe.invalid`,
+      invited_user_id: bob.id,
+      invited_by: bob.id,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+  if (inviteErr) throw new Error(`invitation Bob : ${inviteErr.message}`);
+
+  const hijack = await rest(`/rest/v1/project_invitations?id=eq.${selfInvite.id}`, {
+    method: "PATCH",
+    bearer: bob.jwt,
+    body: { project_id: project.id },
+    headers: { Prefer: "return=representation" },
+  });
+  // Refus = status d'erreur OU zéro ligne modifiée (plus aucune policy UPDATE
+  // ne s'applique à l'invité : la ligne est invisible à l'écriture).
+  check(
+    "redirection d'une invitation vers un projet étranger refusée",
+    !hijack.ok || (Array.isArray(hijack.payload) && hijack.payload.length === 0),
+    `status ${hijack.status}, ${Array.isArray(hijack.payload) ? hijack.payload.length : "?"} ligne(s)`,
+  );
+
+  // Témoin : la ligne n'a pas bougé en base (une policy permissive rendrait le
+  // contrôle ci-dessus vert si PostgREST cachait la représentation).
+  const { data: afterHijack } = await service
+    .from("project_invitations")
+    .select("project_id")
+    .eq("id", selfInvite.id)
+    .single();
+  check(
+    "l'invitation pointe toujours son projet d'origine (témoin)",
+    afterHijack?.project_id === bobProject.id,
+    `project_id ${afterHijack?.project_id}`,
   );
 
   console.log(

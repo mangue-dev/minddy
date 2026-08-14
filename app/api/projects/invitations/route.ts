@@ -103,7 +103,9 @@ export async function PATCH(request: NextRequest) {
   const service = getServiceClient();
   const { data: invitation } = await service
     .from("project_invitations")
-    .select("id, project_id, invited_by, invited_user_id, status, expires_at")
+    .select(
+      "id, project_id, invited_by, invited_user_id, invited_email, status, expires_at"
+    )
     .eq("id", invitationId)
     .maybeSingle();
 
@@ -122,9 +124,44 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: t("invitationNotForYou") }, { status: 403 });
   }
 
+  // Garde en profondeur (MIN-325). La ligne d'invitation était modifiable par
+  // son invité via PostgREST — `project_id` compris — ce qui suffisait à
+  // rediriger une invitation vers le projet d'un autre et à s'y inscrire par
+  // cette route. La policy fautive est supprimée (20261215090000), mais une
+  // policy se réintroduit par distraction : on revérifie ici que la ligne EST
+  // celle que l'application a écrite.
+  //
+  //   - l'adresse invitée est celle du compte : une invitation naît soit avec
+  //     l'`invited_user_id` du compte qui porte cette adresse, soit rattachée
+  //     plus tard sur l'email VÉRIFIÉ de la session — dans les deux cas les
+  //     deux colonnes désignent la même personne, et une divergence ne peut
+  //     venir que d'une écriture qui n'est pas la nôtre ;
+  //   - qui invite possède le projet : inviter est réservé au owner
+  //     (`inviteMember`), donc un `invited_by` qui n'est pas l'owner du
+  //     `project_id` de la ligne signe exactement l'invitation détournée.
+  const sessionEmail = auth.user.email?.trim().toLowerCase();
+  const invitedEmail = (invitation.invited_email as string | null)
+    ?.trim()
+    .toLowerCase();
+  if (!sessionEmail || !invitedEmail || sessionEmail !== invitedEmail) {
+    return NextResponse.json({ error: t("invitationNotForYou") }, { status: 403 });
+  }
+
   const now = new Date().toISOString();
 
   if (action === "accept") {
+    const { data: project } = await service
+      .from("projects")
+      .select("owner_id")
+      .eq("id", invitation.project_id)
+      .maybeSingle();
+    if (!project || project.owner_id !== invitation.invited_by) {
+      return NextResponse.json(
+        { error: t("invitationNotForYou") },
+        { status: 403 }
+      );
+    }
+
     const { error: memberError } = await service
       .from("project_members")
       .upsert(
