@@ -31,10 +31,15 @@ import {
 } from "@/components/scratchpad/task-surface";
 
 export function PageTaskSurface({
+  projectId,
   pageTitle,
   flush,
   children,
 }: {
+  /** Le projet de la page. Passé À L'OUVERTURE de Numo (MIN-353) : une portée
+   *  imposée, sans quoi la passation continuerait la conversation ouverte —
+   *  peut-être globale, ou celle d'un autre projet — au lieu d'ouvrir un fil ici. */
+  projectId: string;
   /** Le titre AFFICHÉ de la page — donc celui qu'on vient peut-être de taper. */
   pageTitle: string;
   /** Écrire ce qui est en attente. À attendre avant toute navigation. */
@@ -72,11 +77,12 @@ export function PageTaskSurface({
         // soit parti avant que Numo ne relise la page.
         void flush();
         openAssistant({
+          projectId,
           prompt: t("promotePrompt", { note, page: pageTitle }),
         });
       },
     }),
-    [t, pageTitle, flush, router, openAssistant]
+    [t, projectId, pageTitle, flush, router, openAssistant]
   );
 
   return <TaskSurfaceProvider value={surface}>{children}</TaskSurfaceProvider>;

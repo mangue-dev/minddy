@@ -233,6 +233,8 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
       event.clientY,
       container
     );
+    /** La boîte défilante sous le pointeur, tenue à jour par `pointermove`. */
+    let pointerScroller: HTMLElement | null = anchorScroller;
     let anchorX = event.clientX;
     let anchorY = event.clientY;
     let pointerX = anchorX;
@@ -261,6 +263,20 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
         containerBox
       );
 
+      // ⚠ **LIRE AVANT D'ÉCRIRE** (MIN-320). Les styles de l'overlay étaient
+      // posés en premier, puis venaient les N `getBoundingClientRect()` des
+      // cartes : l'ordre exactement inverse de celui qui évite un reflow. Les
+      // mesures d'abord, l'écriture ensuite — un seul layout par image.
+      const touched = new Set<string>();
+      if (box) {
+        for (const el of container.querySelectorAll<HTMLElement>(ITEM_SELECTOR)) {
+          const id = el.dataset.issueId;
+          if (!id) continue;
+          const rect = visibleRect(el, container, clippers);
+          if (rect && overlaps(rect, box)) touched.add(id);
+        }
+      }
+
       const overlay = overlayRef.current;
       if (overlay) {
         if (box) {
@@ -273,21 +289,39 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
         }
       }
 
-      const touched = new Set<string>();
-      if (box) {
-        for (const el of container.querySelectorAll<HTMLElement>(ITEM_SELECTOR)) {
-          const id = el.dataset.issueId;
-          if (!id) continue;
-          const rect = visibleRect(el, container, clippers);
-          if (rect && overlaps(rect, box)) touched.add(id);
-        }
-      }
       emit(additive ? new Set([...baseline, ...touched]) : touched);
     };
 
+    /**
+     * Le défilement automatique aux bords, en LISANT PUIS ÉCRIVANT (MIN-320).
+     *
+     * La version d'avant alternait : lecture de rect → écriture de `scrollLeft`
+     * → relecture → `document.elementFromPoint` (qui force une mise à jour de
+     * style ET de layout, puisqu'une écriture vient de les invalider) → remontée
+     * des ancêtres avec `getComputedStyle().overflowY` et lectures de
+     * `scrollHeight`/`clientHeight` par niveau → écriture de `scrollTop`. Deux à
+     * trois layouts forcés par image, pointeur immobile compris, pendant tout le
+     * geste.
+     *
+     * Ce qui reste ici est une phase de lecture puis une phase d'écriture. La
+     * résolution du scroller sous le pointeur, elle, a quitté la boucle : elle
+     * ne peut changer qu'au mouvement du pointeur, donc elle vit dans son
+     * gestionnaire (`pointerScroller`).
+     */
     const autoScroll = () => {
       const containerBox = rectOf(container);
       const dx = edgeVelocity(pointerX, containerBox.left, containerBox.right);
+
+      // Le curseur est peut-être sorti du board : on continue alors de faire
+      // défiler la colonne d'où l'on est parti, ce qui est l'intention.
+      const scroller = pointerScroller ?? anchorScroller;
+      const scrollerBox = scroller ? rectOf(scroller) : null;
+      const dy = scrollerBox
+        ? edgeVelocity(pointerY, scrollerBox.top, scrollerBox.bottom)
+        : 0;
+
+      if (dx === 0 && dy === 0) return;
+
       if (dx !== 0) {
         const before = container.scrollLeft;
         container.scrollLeft = before + dx;
@@ -297,20 +331,14 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
           dirty = true;
         }
       }
-      // Le curseur est peut-être sorti du board : on continue alors de faire
-      // défiler la colonne d'où l'on est parti, ce qui est l'intention.
-      const scroller =
-        scrollableAt(pointerX, pointerY, container) ?? anchorScroller;
-      if (!scroller) return;
-      const scrollerBox = rectOf(scroller);
-      const dy = edgeVelocity(pointerY, scrollerBox.top, scrollerBox.bottom);
-      if (dy === 0) return;
-      const before = scroller.scrollTop;
-      scroller.scrollTop = before + dy;
-      const applied = scroller.scrollTop - before;
-      if (applied !== 0) {
-        if (scroller === anchorScroller) anchorY -= applied;
-        dirty = true;
+      if (dy !== 0 && scroller) {
+        const before = scroller.scrollTop;
+        scroller.scrollTop = before + dy;
+        const applied = scroller.scrollTop - before;
+        if (applied !== 0) {
+          if (scroller === anchorScroller) anchorY -= applied;
+          dirty = true;
+        }
       }
     };
 
@@ -337,6 +365,12 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
       (e: PointerEvent) => {
         pointerX = e.clientX;
         pointerY = e.clientY;
+        // La boîte défilante sous le pointeur est résolue ICI et pas dans la
+        // boucle (MIN-320) : elle ne peut changer qu'au mouvement du pointeur,
+        // et sa résolution coûte un `elementFromPoint` plus une remontée
+        // d'ancêtres en `getComputedStyle` — c'est-à-dire un layout forcé, qui
+        // tombait sinon à chaque image, y compris pointeur immobile.
+        pointerScroller = scrollableAt(pointerX, pointerY, container);
         if (!started) {
           if (Math.hypot(pointerX - anchorX, pointerY - anchorY) < START_DISTANCE) {
             return;

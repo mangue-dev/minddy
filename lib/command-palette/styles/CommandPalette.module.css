@@ -9,6 +9,12 @@
    OVERLAY
    ============================================================================= */
 
+/*
+ * Pas de `backdrop-filter` ici (MIN-323) : un `blur(0.5px)` plein écran est un
+ * calque de composition et un filtre GPU sur toute la fenêtre, pour un flou que
+ * personne ne voit. Et ne pas le remplacer par un fond : `.overlay` n'a
+ * volontairement AUCUN `background`, en poser un serait un changement de design.
+ */
 .overlay {
   position: fixed;
   inset: 0;
@@ -17,7 +23,6 @@
   align-items: flex-start;
   justify-content: center;
   padding-top: 15vh;
-  backdrop-filter: blur(0.5px);
   animation: overlayFadeIn 150ms ease-out;
 }
 

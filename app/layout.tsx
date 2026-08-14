@@ -4,8 +4,6 @@ import { Inter, Instrument_Serif } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider } from "mangue-ui/components/theme-provider";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DesktopChrome } from "@/components/desktop-chrome";
 import { LazyToaster } from "@/components/lazy-toaster";
@@ -182,8 +180,6 @@ export default async function RootLayout({
             <PostHogInit />
           </NextIntlClientProvider>
         </ThemeProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

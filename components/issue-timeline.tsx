@@ -568,7 +568,7 @@ export function CommentBlock({
             qu'ils sont internes ; publiés, ils se retirent comme le reste — il
             faut bien que quelqu'un puisse dépublier ce qu'un agent a publié. */}
         {(canEdit || canDelete) && !editing && !working && (
-          <DropdownMenu modal={false}>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"

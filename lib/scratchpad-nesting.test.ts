@@ -6,7 +6,7 @@
 // à l'écran, une sous-tâche a la même tête qu'elle soit imbriquée ou non, et les
 // deux défauts corrigés ici (liste « lâche », arbre aplati au collage) ne se
 // lisaient que dans le markdown, c'est-à-dire chez l'agent qui le reçoit.
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
@@ -23,8 +23,24 @@ import {
 import { taskLinesMarkdown } from "@/lib/scratchpad";
 import { parsePlan } from "@/lib/plan";
 
+/**
+ * Les éditeurs ouverts par le fichier. Un `Editor` TipTap monte un
+ * `DOMObserver` de ProseMirror qui se replanifie par `setTimeout` ; sans
+ * `destroy()`, ce minuteur survit au fichier et se réveille une fois le
+ * `document` de jsdom démonté — `ReferenceError: document is not defined`,
+ * remonté par vitest comme une erreur non gérée de la SUITE, sur le fichier qui
+ * tournait à cet instant. Il ne se déclenchait pas toujours : il lui fallait
+ * assez de charge pour que le minuteur rate sa fenêtre. C'est le fichier qui
+ * ouvre qui ferme.
+ */
+const openEditors: Editor[] = [];
+
+afterEach(() => {
+  for (const editor of openEditors.splice(0)) editor.destroy();
+});
+
 function makeEditor(content = "") {
-  return new Editor({
+  const editor = new Editor({
     element: document.createElement("div"),
     content,
     extensions: [
@@ -35,6 +51,8 @@ function makeEditor(content = "") {
       Markdown.configure({ html: false, linkify: true }),
     ] as never,
   });
+  openEditors.push(editor);
+  return editor;
 }
 
 function md(editor: Editor): string {

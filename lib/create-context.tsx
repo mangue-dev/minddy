@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -325,10 +326,19 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [projects.length, openCreateIssue]);
 
+  // Value mémoïsée (MIN-315) : ce provider est traversé par la cascade qui part
+  // d'`AuthProvider`, et ses consommateurs descendent jusqu'aux cartes du board.
+  const value = useMemo(
+    () => ({
+      openCreateIssue,
+      openCreateObjective,
+      canCreate: projects.length > 0,
+    }),
+    [openCreateIssue, openCreateObjective, projects.length]
+  );
+
   return (
-    <CreateContext.Provider
-      value={{ openCreateIssue, openCreateObjective, canCreate: projects.length > 0 }}
-    >
+    <CreateContext.Provider value={value}>
       {children}
       {target && (
         <>

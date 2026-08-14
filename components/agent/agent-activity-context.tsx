@@ -40,14 +40,36 @@ type ActivityPayload = {
   pullRequests?: Record<string, IssuePr>;
 };
 
-async function fetchAgentActivity(
+/**
+ * La clé du sondage. Exportée parce qu'elle est un CONTRAT avec le filtre de
+ * persistance (lib/query-provider.tsx) : recopiée à la main là-bas, elle avait
+ * divergé sans que rien ne le dise, et le sondage partait sur le disque à chaque
+ * tick (MIN-303).
+ */
+export const agentActivityQueryKey = (projectId: string | null | undefined) =>
+  ["agent-active-issues", projectId ?? "__global__"] as const;
+
+/**
+ * ⚠ Une requête en échec LÈVE. Elle ne rend pas des listes vides.
+ *
+ * Rendre `{ workingIssueIds: [], … }` sur `!res.ok` stockait l'échec comme un
+ * SUCCÈS : pour react-query la vérité devenait « aucun agent ne travaille,
+ * aucune session, aucune PR », et tous les halos s'éteignaient d'un coup pour
+ * se rallumer au tick suivant. Un aller-retour complet pour une coupure réseau
+ * passagère — et, tant que la carte de ticket enveloppait son corps dans un
+ * `AgentBeam` sans `keepMounted`, un démontage de tout ce corps à chaque
+ * bascule (MIN-301, MIN-302).
+ *
+ * En levant, react-query garde les données précédentes et retente.
+ */
+export async function fetchAgentActivity(
   projectId: string | null | undefined,
 ): Promise<Required<ActivityPayload>> {
   const url = projectId
     ? `/api/projects/${projectId}/agent-runs`
     : `/api/agent-activity`;
   const res = await fetch(url);
-  if (!res.ok) return { workingIssueIds: [], sessionIssueIds: [], pullRequests: {} };
+  if (!res.ok) throw new Error(`agent-activity ${res.status}`);
   const data = (await res.json()) as ActivityPayload;
   return {
     workingIssueIds: data.workingIssueIds ?? [],
@@ -65,7 +87,7 @@ export function AgentActivityProvider({
   children: ReactNode;
 }) {
   const { data } = useQuery({
-    queryKey: ["agent-active-issues", projectId ?? "__global__"],
+    queryKey: agentActivityQueryKey(projectId),
     queryFn: () => fetchAgentActivity(projectId),
     // Rapide tant qu'un agent travaille ; lent sinon (les sessions au repos sont
     // stables jusqu'à une action utilisateur).

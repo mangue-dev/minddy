@@ -39,7 +39,7 @@ export function AssistantPanel() {
   const effectivePageContext = activePageContext ?? ambientContext;
   // Scope of the live conversation — resolved and owned by the chat provider,
   // which keeps it (and the conversation) alive across open/close cycles.
-  const { scopeProjectId } = useAssistantChatContext();
+  const { scopeProjectId, scopeSwitchPending } = useAssistantChatContext();
   const { projects } = useProjects();
 
   // Display mode: session-local, defaults to compact. (No persisted user
@@ -83,6 +83,11 @@ export function AssistantPanel() {
   // Re-running on `shellReady` flips ensures we don't fire against a null ref.
   useEffect(() => {
     if (!isOpen || !pendingOptions || !shellReady) return;
+    // Ces options imposent une portée que la conversation vivante ne porte pas :
+    // le provider est en train de lui substituer un fil neuf. Envoyer ici partirait
+    // dans celle qui s'en va (MIN-353). Cet effet rejoue quand la bascule est faite
+    // — `pendingOptions` n'a pas bougé, et le garde ci-dessous n'a rien consommé.
+    if (scopeSwitchPending) return;
     const handle = shellRef.current;
     if (!handle) return;
     if (dispatchedOptionsRef.current === pendingOptions) return;
@@ -115,6 +120,7 @@ export function AssistantPanel() {
     pendingOptions,
     shellReady,
     scopeProjectId,
+    scopeSwitchPending,
     clearPendingOptions,
   ]);
 
@@ -152,11 +158,15 @@ export function AssistantPanel() {
         <SheetTitle className="sr-only">{t("title")}</SheetTitle>
         <div className="h-full overflow-hidden">
           {/*
-            Keying on the scope repart d'une vue neuve quand la portée change
-            (navigation entre projets, panneau ouvert) : brouillon, popover
-            d'historique et scroll ne traînent pas d'un projet à l'autre. La
-            CONVERSATION, elle, vit dans AssistantChatProvider — ce remontage
-            ne la touche pas.
+            Keying on the scope repart d'une vue neuve quand la portée change :
+            brouillon, popover d'historique et scroll ne traînent pas d'un projet
+            à l'autre. La CONVERSATION, elle, vit dans AssistantChatProvider —
+            ce remontage ne la touche pas.
+
+            Depuis MIN-353 la portée est celle de la CONVERSATION : ce remontage
+            ne se produit donc plus qu'en ouvrant une autre conversation ou en en
+            commençant une neuve — plus du tout en naviguant, ce qui était
+            justement le geste qui faisait disparaître le fil.
           */}
           <AssistantShell
             key={scopeProjectId ?? "__global__"}

@@ -212,7 +212,9 @@ export function PageToc({
           // 12 px de rayon, 6 px de rembourrage : le rayon CONCENTRIQUE d'une
           // ligne est donc de 6 px (`rounded-md` plus bas). Une valeur libre
           // ferait deux courbes qui ne s'emboîtent pas.
-          "rounded-xl border border-border bg-popover/95 p-1.5 shadow-lg backdrop-blur-sm",
+          // `bg-popover/95` masque déjà tout : le flou était du travail GPU
+          // pour un effet qu'on ne voit pas (MIN-323).
+          "rounded-xl border border-border bg-popover/95 p-1.5 shadow-lg",
           "pointer-events-none translate-x-1 opacity-0",
           "transition-[opacity,transform] duration-200 ease-out",
           "group-hover/toc:pointer-events-auto group-hover/toc:translate-x-0 group-hover/toc:opacity-100",

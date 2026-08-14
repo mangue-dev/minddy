@@ -12,7 +12,7 @@ import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeam } from "@/components/agent-beam";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
-import { useAssistantChatContext } from "@/lib/assistant-chat-context";
+import { useAssistantBusy } from "@/lib/assistant-chat-context";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { useZenMode } from "@/lib/zen-mode-context";
 import {
@@ -36,7 +36,10 @@ const HIDDEN_ROUTES = ["/pull-requests"];
 
 export function AssistantFab() {
   const { isOpen, toggle, fabSuppressed } = useAssistantPanel();
-  const { isBusy } = useAssistantChatContext();
+  // Le booléen seul, pas tout le contexte de conversation (MIN-323) : `state`
+  // change à chaque token SSE, et le FAB se re-rendait à cette cadence-là
+  // pour lire une valeur qui ne bouge que deux fois par tour.
+  const isBusy = useAssistantBusy();
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");
@@ -99,7 +102,10 @@ export function AssistantFab() {
                   className={cn(
                     "relative inline-flex items-center justify-center rounded-full",
                     "h-10 w-10 md:h-11 md:w-11",
-                    "bg-card/95 supports-backdrop-filter:backdrop-blur-md",
+                    // Pas de `backdrop-blur` : `bg-card/95` masque déjà
+                    // entièrement ce qu'il y a derrière. Le flou coûtait un
+                    // calque de composition pour un effet invisible (MIN-323).
+                    "bg-card/95",
                     "ring-1 ring-foreground/10 hover:ring-foreground/20",
                     "text-foreground",
                     "shadow-[0_8px_24px_-12px_rgba(0,0,0,0.25),0_2px_6px_-2px_rgba(0,0,0,0.1)]",
@@ -109,7 +115,11 @@ export function AssistantFab() {
                     "cursor-pointer",
                   )}
                 >
-                  <NumoIcon className="size-5 text-foreground" />
+                  {/* `animated={false}` (MIN-323) : le visage animait des
+                      attributs SVG en boucle, y compris masqué sous 1200 px
+                      (`max-desktop:hidden` masque sans démonter). Le signal
+                      d'activité passe déjà par l'`AgentBeam` ci-dessus. */}
+                  <NumoIcon animated={false} className="size-5 text-foreground" />
                 </motion.button>
               </TooltipTrigger>
               <TooltipContent

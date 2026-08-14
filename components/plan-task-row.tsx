@@ -73,7 +73,7 @@ export function TaskRow({
         <Markdown className="[&_p]:my-0">{task.text}</Markdown>
       </div>
 
-      <DropdownMenu modal={false}>
+      <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"

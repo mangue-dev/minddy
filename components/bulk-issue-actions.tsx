@@ -77,8 +77,10 @@ export function BulkIssueActions({
       onLink,
     });
 
+  // Pas de `backdrop-blur` : `bg-background/95` masque déjà entièrement le fond,
+  // le flou ne se voyait pas et coûtait un calque de composition (MIN-323).
   return (
-    <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl backdrop-blur-md">
+    <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl">
       <span className="px-3 text-sm font-medium whitespace-nowrap">
         {t("selected", { count })}
       </span>

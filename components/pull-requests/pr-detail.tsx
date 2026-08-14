@@ -1142,7 +1142,7 @@ export function PrDetail({
                   devient un bouton simple — un chevron qui n'ouvre qu'une ligne
                   est une fausse promesse. */}
               {canComment ? (
-                <DropdownMenu modal={false}>
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
                       {aiReviewActive ? <Spinner /> : null}
@@ -1205,7 +1205,7 @@ export function PrDetail({
                 relecture de Numo, puis fermer, détaché parce qu'il termine la
                 PR. Rien n'est retiré au passage — l'écran étroit perd la place,
                 pas les actions. */}
-            <DropdownMenu modal={false}>
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
@@ -1295,7 +1295,7 @@ export function PrDetail({
                   </Button>
                 )}
                 {otherMethods.length > 0 || checksFailing ? (
-                  <DropdownMenu modal={false}>
+                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         size="sm"

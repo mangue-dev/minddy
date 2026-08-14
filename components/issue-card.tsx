@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -106,6 +106,7 @@ import {
   buildIssueVerifyPrompt,
 } from "@/lib/issue-prompt";
 import { useAskNumoTarget } from "@/lib/ask-numo-context";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import { useCategoryCreateOption } from "@/lib/use-picker-create";
 import { useAuth } from "@/lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -126,7 +127,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/** Strip common markdown so the description preview reads as plain text. */
+/**
+ * Strip common markdown so the description preview reads as plain text.
+ *
+ * ⚠ Appelé sur une TRANCHE de la description, jamais sur elle entière
+ * (MIN-316) : huit expressions régulières dont une non ancrée
+ * (```` ```[\s\S]*?``` ````) sur un corps de plusieurs kilo-octets, à chaque
+ * rendu de chaque carte — pour un aperçu rendu en `line-clamp-3`.
+ */
 function plainPreview(md: string): string {
   return md
     .replace(/```[\s\S]*?```/g, " ")
@@ -154,6 +162,9 @@ const TRIGGER_CLASS_LG =
   "-m-1.5 flex min-w-0 items-center rounded-md p-1.5 outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
 
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+
+/** Menu fermé : identité stable, pour ne pas rendre un tableau neuf par rendu. */
+const NO_ACTIONS: ContextMenuAction[] = [];
 
 function StatusPick({
   value,
@@ -640,7 +651,14 @@ function PrPick({
 }
 
 /** Presentational card body — shared by the sortable card and the drag overlay. */
-export function IssueCardBody({
+/**
+ * ⚠ Mémoïsé (MIN-316). La carte exécute une quinzaine de crochets, et le board
+ * en rend N : sans `memo`, un seul rendu de provider ou un franchissement de
+ * seuil de scroll les rejouait toutes. **Pour que ça morde, les props doivent
+ * être stables** — c'est tout l'objet des callbacks à argument-ticket et du menu
+ * paresseux ci-dessous.
+ */
+export const IssueCardBody = memo(function IssueCardBody({
   issue,
   projectKey,
   project,
@@ -712,7 +730,18 @@ export function IssueCardBody({
     issue.objective_id && objectiveMap
       ? objectiveMap.get(issue.objective_id) ?? null
       : null;
-  const description = issue.description ? plainPreview(issue.description) : "";
+  // Mémoïsé, et sur les 400 premiers caractères : trois lignes tronquées n'en
+  // demandent pas plus, et le reste du corps ne sera jamais lu (MIN-316).
+  // Les listes des pickers, mémoïsées (MIN-316) : `[...map.values()]` est un
+  // tableau neuf à chaque rendu, donc un `options` neuf pour chaque picker, donc
+  // toutes leurs icônes JSX refabriquées — pour des menus FERMÉS.
+  const memberList = useMemo(() => [...memberMap.values()], [memberMap]);
+  const categoryList = useMemo(() => [...categoryMap.values()], [categoryMap]);
+
+  const description = useMemo(
+    () => (issue.description ? plainPreview(issue.description.slice(0, 400)) : ""),
+    [issue.description]
+  );
 
   const setStatus = onUpdate
     ? (status: IssueStatus) => onUpdate({ status })
@@ -826,7 +855,7 @@ export function IssueCardBody({
           ) : null}
           <AssigneePick
             assignee={assignee}
-            members={[...memberMap.values()]}
+            members={memberList}
             onChange={setAssignee}
           />
         </span>
@@ -850,7 +879,7 @@ export function IssueCardBody({
         <PriorityPick value={issue.priority} onChange={setPriority} />
         <EffortPick value={issue.effort} onChange={setEffort} />
         <CategoryPick
-          categories={[...categoryMap.values()]}
+          categories={categoryList}
           selectedIds={issue.category_ids}
           onChange={onSetCategories}
           projectId={issue.project_id}
@@ -877,9 +906,9 @@ export function IssueCardBody({
       )}
     </div>
   );
-}
+});
 
-export function IssueCard({
+export const IssueCard = memo(function IssueCard({
   issue,
   projectId,
   projectKey,
@@ -887,18 +916,17 @@ export function IssueCard({
   memberMap,
   categoryMap,
   objectiveMap,
-  parentNumber,
+  parent,
   relations,
   candidateIssues,
-  onOpenParent,
+  onOpenIssue,
   onOpenRelated,
   onAddRelation,
   onOpenPlan,
-  onOpen,
   onUpdateIssue,
   onSetCategories,
   onDelete,
-  extraActions,
+  buildMenuActions,
   inCurrentCycle,
   selected,
   dragging,
@@ -912,11 +940,14 @@ export function IssueCard({
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
   objectiveMap?: Map<string, Objective>;
-  parentNumber?: number;
+  /** Le ticket PARENT, quand celui-ci est un sous-ticket : la carte affiche son
+      identifiant et un chevron avant le sien, et le clic l'ouvre. L'objet
+      plutôt que son seul numéro — c'est ce qui permet de lier `onOpenIssue`
+      DANS la carte, donc de garder les props stables (MIN-316). */
+  parent?: Issue | null;
   relations?: ChipRelation[];
   /** All project issues — candidates for the "add relation" picker. */
   candidateIssues?: Issue[];
-  onOpenParent?: () => void;
   onOpenRelated?: (issueId: string) => void;
   /** Adds a relation from this issue (source) to the picked target. When set,
       the right-click menu gains the three "mark as…" relation actions. */
@@ -925,16 +956,20 @@ export function IssueCard({
     type: IssueRelationType,
     targetId: string
   ) => void;
-  onOpenPlan?: () => void;
-  onOpen: () => void;
+  onOpenPlan?: (issue: Issue) => void;
+  /** Ouvre le panneau du ticket. **Prend le ticket en argument**, comme
+      `onUpdateIssue` le fait déjà : une fléchée liée par la colonne serait neuve
+      à chaque rendu et traverserait `memo` sans le voir (MIN-316). */
+  onOpenIssue: (issue: Issue) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
   /** Corbeille : quand le board le câble, le clic droit gagne « Déplacer vers
       la corbeille » (confirmation avant, comme dans le panneau d'issue). */
-  onDelete?: () => Promise<void>;
-  /** Board-provided right-click actions appended to the menu (e.g. the cycle
-      add/remove actions — MIN-32). */
-  extraActions?: ContextMenuAction[];
+  onDelete?: (issueId: string) => Promise<void>;
+  /** Actions de clic droit fournies par le board (ajout/retrait de cycle —
+      MIN-32). **Une fabrique, pas un tableau** : elle n'est appelée qu'à
+      l'OUVERTURE du menu (MIN-316). */
+  buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** The issue belongs to MY current cycle — forwarded to the card body. */
   inCurrentCycle?: boolean;
   selected?: boolean;
@@ -971,6 +1006,31 @@ export function IssueCard({
   // n'a ouverte — une PR humaine, ou une PR rattachée à la main (MIN-163).
   const pr = useIssuePr(issue.id);
   const router = useRouter();
+
+  // Les liaisons de la carte, faites ICI plutôt que par la colonne (MIN-316).
+  // Les props reçues prennent le ticket en argument et sont donc stables d'un
+  // rendu à l'autre ; ce sont ces crochets-là qui les referment sur `issue` sans
+  // casser la mémoïsation de la carte.
+  const openIssue = useCallback(() => onOpenIssue(issue), [onOpenIssue, issue]);
+
+  // Idem pour le menu de raccourcis (MIN-316) : trois tableaux neufs par rendu.
+  const cardMemberList = useMemo(() => [...memberMap.values()], [memberMap]);
+  const cardCategoryList = useMemo(
+    () => [...categoryMap.values()],
+    [categoryMap]
+  );
+  const cardObjectiveList = useMemo(
+    () => (objectiveMap ? [...objectiveMap.values()] : []),
+    [objectiveMap]
+  );
+  const openParent = useMemo(
+    () => (parent ? () => onOpenIssue(parent) : undefined),
+    [onOpenIssue, parent]
+  );
+  const openPlan = useMemo(
+    () => (onOpenPlan ? () => onOpenPlan(issue) : undefined),
+    [onOpenPlan, issue]
+  );
   const openPr = pr
     ? () => router.push(`/pull-requests?pr=${pr.prId}`)
     : undefined;
@@ -1205,19 +1265,26 @@ export function IssueCard({
     toast.success(t("promptCopied"));
   };
 
+  // ⚠ Des enveloppes STABLES, pas les handlers eux-mêmes (MIN-316).
+  //
+  // `useAgentMenuActions` a ses onze paramètres en dépendances de son `useMemo`.
+  // Les handlers ci-dessus sont fabriqués dans le corps du composant : passés
+  // tels quels, le mémo ne tombait jamais juste et refabriquait ~20 objets
+  // d'action et ~16 icônes JSX par carte et par rendu — pour un menu FERMÉ.
+  // `useStableCallback` fige leur identité sans figer ce qu'ils font.
   const agentActions = useAgentMenuActions({
     agentsEnabled,
     hasSession: agentHasSession,
     hasPlan: issueHasPlan,
-    onCopyPrompt: () => void copyPrompt(),
-    onCopyPlanPrompt: () => void copyPlanPrompt(),
-    onCopyVerifyPrompt: () => void copyVerifyPrompt(),
-    onCopyCustomPrompt: () => setCustomTarget("copy"),
-    onImplementWithAgent: startNewAgentSession,
-    onWritePlanWithAgent: writePlanWithAgent,
-    onVerifyWithAgent: verifyWithAgent,
-    onCustomWithAgent: () => setCustomTarget("launch"),
-    onOpenSession: openAgentSession,
+    onCopyPrompt: useStableCallback(() => void copyPrompt()),
+    onCopyPlanPrompt: useStableCallback(() => void copyPlanPrompt()),
+    onCopyVerifyPrompt: useStableCallback(() => void copyVerifyPrompt()),
+    onCopyCustomPrompt: useStableCallback(() => setCustomTarget("copy")),
+    onImplementWithAgent: useStableCallback(() => startNewAgentSession()),
+    onWritePlanWithAgent: useStableCallback(() => writePlanWithAgent()),
+    onVerifyWithAgent: useStableCallback(() => verifyWithAgent()),
+    onCustomWithAgent: useStableCallback(() => setCustomTarget("launch")),
+    onOpenSession: useStableCallback(() => openAgentSession()),
   });
 
   // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
@@ -1227,7 +1294,7 @@ export function IssueCard({
   // frappée là-dedans ne doit pas ouvrir un picker sur le ticket en dessous.
   const { containerProps, menuState, openField, closeMenu } =
     useIssueFieldShortcuts(!isDragging && !customTarget, {
-      " ": onOpen,
+      " ": openIssue,
       "shift+p": () => void copyPrompt(),
       "shift+a": launchAgent,
     });
@@ -1243,7 +1310,7 @@ export function IssueCard({
   const handleDelete = async () => {
     if (!onDelete) return;
     try {
-      await onDelete();
+      await onDelete(issue.id);
       toast.success(t("issueDeletedToast"));
     } catch (e) {
       toast.error((e as Error).message);
@@ -1267,7 +1334,24 @@ export function IssueCard({
     [setNodeRef, shortcutsRef, askNumoRef]
   );
 
-  const menuActions: ContextMenuAction[] = [
+  /**
+   * Le menu du clic droit, construit SEULEMENT quand il s'ouvre (MIN-316).
+   *
+   * Il coûte une vingtaine d'objets d'action, autant d'icônes JSX et une
+   * douzaine d'appels de traduction — par carte, et il était refait à chaque
+   * rendu de chaque carte du board, alors qu'un menu fermé ne rend rien du tout
+   * (`IssueContextMenu` sort sur `position === null`).
+   */
+  const lastMenuActions = useRef<ContextMenuAction[]>(NO_ACTIONS);
+  const menuActions = useMemo<ContextMenuAction[]>(() => {
+    // ⚠ Fermé, on rend la DERNIÈRE liste construite, pas un tableau vide.
+    // `IssueContextMenu` ne démonte pas son contenu à la fermeture — Radix le
+    // garde monté le temps de son animation de sortie (`data-closed:animate-out`
+    // dans mangue-ui) —, donc le vider ici viderait le menu À L'ÉCRAN avant
+    // qu'il ne disparaisse. Avant la première ouverture, la liste est vide et
+    // rien n'a jamais été rendu : c'est là que l'économie se fait.
+    if (!menuPosition) return lastMenuActions.current;
+    return [
     // Prompt et agent : deux sous-menus « Générer un plan » / « Implémenter le
     // ticket », partagés avec le panneau latéral. L'agent de code travaille sur
     // la PAGE Agents ; ⇧P et ⇧A restent sur la branche « implémenter ».
@@ -1339,7 +1423,7 @@ export function IssueCard({
           },
         ]
       : []),
-    ...(extraActions ?? []),
+      ...(buildMenuActions?.(issue) ?? []),
     ...(onDelete
       ? [
           {
@@ -1359,8 +1443,26 @@ export function IssueCard({
             onSelect: () => setConfirmDelete(true),
           },
         ]
-      : []),
-  ];
+        : []),
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    menuPosition,
+    agentActions,
+    agentsEnabled,
+    pr,
+    openPr,
+    onAddRelation,
+    issue,
+    objectiveMap,
+    buildMenuActions,
+    onDelete,
+    t,
+    tAgent,
+    tRel,
+    tCommon,
+  ]);
+  lastMenuActions.current = menuActions;
 
   return (
     <div
@@ -1379,7 +1481,7 @@ export function IssueCard({
           onSelect(issue.id);
           return;
         }
-        onOpen();
+        openIssue();
       }}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -1414,11 +1516,11 @@ export function IssueCard({
             memberMap={memberMap}
             categoryMap={categoryMap}
             objectiveMap={objectiveMap}
-            parentNumber={parentNumber}
+            parentNumber={parent?.number}
             relations={relations}
-            onOpenParent={onOpenParent}
+            onOpenParent={openParent}
             onOpenRelated={onOpenRelated}
-            onOpenPlan={onOpenPlan}
+            onOpenPlan={openPlan}
             pr={pr}
             onOpenPr={openPr}
             onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
@@ -1429,8 +1531,20 @@ export function IssueCard({
         );
         // Agent en cours : liseré animé qui parcourt le bord (wrapper `AgentBeam`
         // partagé). Le wrapper a `overflow: hidden` → on lui reporte le `shadow-sm`.
+        //
+        // `keepMounted` n'est PAS décoratif ici (MIN-302) : sans lui, le type de
+        // l'élément rendu à cette position change avec `agentActive`, et React
+        // ne réconcilie pas deux types différents — il démonte le sous-arbre et
+        // en monte un neuf. Or ce sous-arbre est le corps entier de la carte et
+        // ses six pickers : à chaque bascule du halo, leurs états locaux
+        // meurent, un picker ouvert s'efface sans animation de sortie, et le
+        // focus retombe sur <body>.
         return (
-          <AgentBeam active={agentActive} className="rounded-xl shadow-sm">
+          <AgentBeam
+            active={agentActive}
+            keepMounted
+            className="rounded-xl shadow-sm"
+          >
             {body}
           </AgentBeam>
         );
@@ -1478,12 +1592,12 @@ export function IssueCard({
         state={menuState}
         onClose={closeMenu}
         issue={issue}
-        members={[...memberMap.values()]}
-        categories={[...categoryMap.values()]}
-        objectives={objectiveMap ? [...objectiveMap.values()] : []}
+        members={cardMemberList}
+        categories={cardCategoryList}
+        objectives={cardObjectiveList}
         onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
         onSetCategories={(ids) => onSetCategories(issue.id, ids)}
       />
     </div>
   );
-}
+});

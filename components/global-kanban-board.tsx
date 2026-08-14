@@ -29,7 +29,8 @@ import { issueComparator } from "@/lib/view-filter";
 import { resolveRelations } from "@/lib/relation-constants";
 import { displayRank, dragBundle, planBoardMove } from "@/lib/board-drag";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import { BOARD_FADE_RAMP, BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
+import { BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
+import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
@@ -268,10 +269,7 @@ export function GlobalKanbanBoard({
 
   // Fade the left/right edges of the board while more columns lie off-screen
   // — same affordance as the project board.
-  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>(
-    "x",
-    BOARD_FADE_RAMP
-  );
+  const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>("x");
 
   // Le fondu des bords et le lasso veulent le même nœud. Fusion mémoïsée : une
   // nouvelle identité à chaque rendu les ferait détacher puis rattacher.
@@ -366,40 +364,43 @@ export function GlobalKanbanBoard({
           onLink={bulkLink}
         />
       )}
-      <div
-        ref={setScrollerRef}
-        onScroll={scrollProps.onScroll}
-        onPointerDown={onMarqueePointerDown}
-        style={scrollProps.style}
-        className={cn("h-full min-h-0", BOARD_SCROLLER_CLASS)}
-      >
-        {columns.map(({ status, items }) => (
-          <GlobalKanbanColumn
-            key={status.value}
-            status={status}
-            issues={items}
-            projectMap={projectMap}
-            issueMap={issueMap}
-            relationsByIssue={relationsByIssue}
-            issuesByProject={issuesByProject}
-            memberMapByProject={memberMapByProject}
-            categoryMapByProject={categoryMapByProject}
-            objectiveMapByProject={objectiveMapByProject}
-            onOpenIssue={onOpenIssue}
-            onOpenIssueById={onOpenIssueById}
-            onOpenPlan={onOpenPlan}
-            onUpdateIssue={onUpdateIssue}
-            onSetCategories={onSetCategories}
-            onCreateIssue={onCreateIssue}
-            onAddRelation={onAddRelation}
-            onDeleteIssue={onDeleteIssue}
-            buildMenuActions={buildMenuActions}
-            currentCycleId={currentCycleId}
-            selectedIds={selectedIds}
-            draggingIds={draggingIds}
-            onSelect={toggleSelection}
-          />
-        ))}
+      {/* Fondu de bord À CÔTÉ du scroller, pas dessus (MIN-319). */}
+      <div className="relative flex h-full min-h-0 flex-col">
+        <div
+          ref={setScrollerRef}
+          onScroll={scrollProps.onScroll}
+          onPointerDown={onMarqueePointerDown}
+          className={cn("h-full min-h-0", BOARD_SCROLLER_CLASS)}
+        >
+          {columns.map(({ status, items }) => (
+            <GlobalKanbanColumn
+              key={status.value}
+              status={status}
+              issues={items}
+              projectMap={projectMap}
+              issueMap={issueMap}
+              relationsByIssue={relationsByIssue}
+              issuesByProject={issuesByProject}
+              memberMapByProject={memberMapByProject}
+              categoryMapByProject={categoryMapByProject}
+              objectiveMapByProject={objectiveMapByProject}
+              onOpenIssue={onOpenIssue}
+              onOpenIssueById={onOpenIssueById}
+              onOpenPlan={onOpenPlan}
+              onUpdateIssue={onUpdateIssue}
+              onSetCategories={onSetCategories}
+              onCreateIssue={onCreateIssue}
+              onAddRelation={onAddRelation}
+              onDeleteIssue={onDeleteIssue}
+              buildMenuActions={buildMenuActions}
+              currentCycleId={currentCycleId}
+              selectedIds={selectedIds}
+              draggingIds={draggingIds}
+              onSelect={toggleSelection}
+            />
+          ))}
+        </div>
+        <ScrollFadeEdges edges={edges} axis="x" />
       </div>
 
       <MarqueeOverlay overlayRef={marqueeOverlayRef} />

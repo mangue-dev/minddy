@@ -216,13 +216,7 @@ export function IssueContextMenu({
   searchable?: boolean;
 }) {
   return (
-    <DropdownMenu
-      open={!!position}
-      onOpenChange={(open) => !open && onClose()}
-      // Non modal : la sélection d'une relation enchaîne sur le picker de cible
-      // (un autre popover) sans que le verrou de focus/pointeur ne subsiste.
-      modal={false}
-    >
+    <DropdownMenu open={!!position} onOpenChange={(open) => !open && onClose()}>
       <DropdownMenuTrigger asChild>
         <span
           aria-hidden
@@ -288,10 +282,7 @@ export function IssueActionsMenu({
     onOpenChange?.(next);
   };
   return (
-    // Non modal, comme le menu contextuel : les actions enchaînent sur d'autres
-    // couches (confirmation de suppression, conversation de l'agent) sans que le
-    // verrou de focus/pointeur du menu ne leur survive.
-    <DropdownMenu open={open} onOpenChange={change} modal={false}>
+    <DropdownMenu open={open} onOpenChange={change}>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent align={align} side="bottom" className="min-w-56">
         <ActionMenuBody actions={actions} open={open} searchable={searchable} />

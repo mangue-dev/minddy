@@ -31,7 +31,9 @@ export function MobileNavActions() {
           contexte : le contexte de la page se lit dans le panneau (la puce
           au-dessus du composer), pas sur le bouton qui l'ouvre. */}
       <MobileNavItem label={tk("navAssistant")} onClick={() => toggle()}>
-        <NumoIcon className="size-[22px] text-foreground" />
+        {/* Statique : une animation d'attributs SVG en boucle sur une barre
+            de navigation ne dit rien, et tourne même masquée (MIN-323). */}
+        <NumoIcon animated={false} className="size-[22px] text-foreground" />
       </MobileNavItem>
 
       {/* Hairline divider (matches mangue-ui's internal PileDivider). */}

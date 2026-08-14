@@ -35,7 +35,7 @@ import {
 export function ScratchpadTaskSurface({ children }: { children: ReactNode }) {
   const t = useTranslations("Scratchpad");
   const { close } = useScratchpad();
-  const openAssistant = useAssistantPanel().open;
+  const { open: openAssistant, routeProjectId } = useAssistantPanel();
   const launchNote = useLaunchAgentNote();
 
   const surface = useMemo<TaskSurface>(
@@ -43,15 +43,21 @@ export function ScratchpadTaskSurface({ children }: { children: ReactNode }) {
       copyPrompt: (markdown) =>
         buildScratchpadPrompt(markdown, { section: true }),
       launchAgent: (markdown) => launchNote(markdown, { section: true }),
-      // Pas de projectId : le panneau suit la route, donc le projet courant si
-      // on en consulte un, et en mode global Numo demande lequel — le carnet,
-      // lui, est cross-projet.
+      // Le projet de la ROUTE, donc le projet courant si on en consulte un, et
+      // le mode global sinon — où Numo demande lequel. Le carnet est
+      // cross-projet, il n'en impose aucun de son côté.
+      //
+      // Passé explicitement depuis MIN-353 : omettre `projectId` ne veut plus
+      // dire « suis la route », mais « ne touche pas à la conversation ouverte ».
       promote: (note) => {
         close();
-        openAssistant({ prompt: t("promotePrompt", { note }) });
+        openAssistant({
+          projectId: routeProjectId,
+          prompt: t("promotePrompt", { note }),
+        });
       },
     }),
-    [t, close, openAssistant, launchNote]
+    [t, close, openAssistant, routeProjectId, launchNote]
   );
 
   return <TaskSurfaceProvider value={surface}>{children}</TaskSurfaceProvider>;

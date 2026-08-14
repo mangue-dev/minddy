@@ -11,6 +11,8 @@ import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
 import { useGlobalBoardQuery } from "@/lib/use-global-board-query";
 import { useBoardViews } from "@/lib/use-board-views";
+import { usePublishCurrentView } from "@/lib/current-view-context";
+import { buildViewHref } from "@/lib/saved-view-href";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { STATUSES } from "@/lib/issue-constants";
 import {
@@ -151,7 +153,15 @@ function GlobalBoardInner() {
     if (rawViewParam === "cycle") {
       switchCycleMode(true);
       consumeViewParam();
+      return;
     }
+    // `?view=<id>` désigne une VUE, donc pas le cycle — et le mode cycle, lui,
+    // est mémorisé (localStorage). Sans cette sortie, une vue enregistrée
+    // ouverte alors que le cycle était en mémoire sélectionnait bien la vue
+    // dessous, mais affichait le cycle par-dessus : le raccourci n'emmenait pas
+    // là où il disait. C'est le même geste que le clic sur une pastille de vue
+    // dans la barre d'outils, qui quitte le cycle avant de sélectionner.
+    if (rawViewParam) switchCycleMode(false);
   }, [rawViewParam, switchCycleMode, consumeViewParam]);
 
   const {
@@ -359,6 +369,17 @@ function GlobalBoardInner() {
   const cycleFullyCompleted =
     cycleIssues.length > 0 &&
     cycleIssues.every((i) => ["done", "canceled", "duplicate"].includes(i.status));
+
+  // « Enregistrer la vue actuelle » (⌘K) : le mode cycle et la vue active sont
+  // deux états gardés hors de l'adresse (localStorage), et `?view=` les
+  // rétablit tous les deux — "cycle" est l'instruction que cette page consomme
+  // en mode cycle, un id de vue sinon.
+  usePublishCurrentView({
+    href: buildViewHref(pathname, searchParams.toString(), {
+      view: cycleMode ? "cycle" : activeViewId,
+    }),
+    label: cycleMode ? tBoard("cycleTab") : (activeView?.name ?? t("allTitle")),
+  });
 
   // Numo rides along: the cycle while it's on screen ("remplis mon cycle"),
   // otherwise the active global view so "cette vue" resolves to it.

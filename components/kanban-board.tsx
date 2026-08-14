@@ -29,7 +29,8 @@ import { resolveRelations } from "@/lib/relation-constants";
 import { issueComparator } from "@/lib/view-filter";
 import { displayRank, dragBundle, planBoardMove } from "@/lib/board-drag";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import { BOARD_FADE_RAMP, BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
+import { BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
+import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { KanbanColumn } from "@/components/kanban-column";
 import { IssueCardBody } from "@/components/issue-card";
 import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
@@ -232,10 +233,7 @@ export function KanbanBoard({
   );
 
   // Fade the left/right edges of the board while more columns lie off-screen.
-  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>(
-    "x",
-    BOARD_FADE_RAMP
-  );
+  const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>("x");
 
   // Mobile: track which column is snapped into view to drive the dot indicator.
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -252,8 +250,19 @@ export function KanbanBoard({
 
   const updateActiveColumn = useCallback(
     (el: HTMLDivElement) => {
+      // Les pastilles sont `sm:hidden` (cf. `ColumnDots`) : au-dessus de 640 px
+      // il n'y a rien à montrer, et surtout rien à mettre en ÉTAT —
+      // `setActiveColumn` re-rend tout le board, donc toutes ses cartes, à
+      // chaque franchissement de seuil de colonne pendant le défilement
+      // horizontal (MIN-317). Le voisin immédiat a déjà été corrigé pour ce
+      // motif exact : `scrollProps.onScroll` (lib/use-scroll-fade.ts), dont le
+      // commentaire dit que ça « faisait sauter toute l'interface ».
+      if (window.innerWidth >= 640) {
+        setActiveColumn((prev) => (prev === 0 ? prev : 0));
+        return;
+      }
       if (el.scrollWidth <= el.clientWidth + 1) {
-        setActiveColumn(0);
+        setActiveColumn((prev) => (prev === 0 ? prev : 0));
         return;
       }
       const stride = el.scrollWidth / columnCount;
@@ -261,7 +270,7 @@ export function KanbanBoard({
         columnCount - 1,
         Math.max(0, Math.round(el.scrollLeft / stride))
       );
-      setActiveColumn(idx);
+      setActiveColumn((prev) => (prev === idx ? prev : idx));
     },
     [columnCount]
   );
@@ -361,44 +370,51 @@ export function KanbanBoard({
           active={activeColumn}
           onSelect={scrollToColumn}
         />
-        <div
-          ref={setScrollerRef}
-          onScroll={(e) => {
-            scrollProps.onScroll();
-            updateActiveColumn(e.currentTarget);
-          }}
-          onPointerDown={onMarqueePointerDown}
-          style={scrollProps.style}
-          className={cn("min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
-        >
-          {columns.map(({ status, items }) => (
-            <KanbanColumn
-              key={status.value}
-              status={status}
-              issues={items}
-              issueMap={issueMap}
-              relationsByIssue={relationsByIssue}
-              candidateIssues={allIssues}
-              projectId={projectId}
-              projectKey={projectKey}
-              memberMap={memberMap}
-              categoryMap={categoryMap}
-              objectiveMap={objectiveMap}
-              onOpenIssue={onOpenIssue}
-              onOpenIssueById={onOpenIssueById}
-              onOpenPlan={onOpenPlan}
-              onCreateIssue={onCreateIssue}
-              onUpdateIssue={onUpdateIssue}
-              onSetCategories={onSetCategories}
-              onAddRelation={onAddRelation}
-              onDeleteIssue={onDeleteIssue}
-              buildMenuActions={buildMenuActions}
-              currentCycleId={currentCycleId}
-              selectedIds={selectedIds}
-              draggingIds={draggingIds}
-              onSelect={toggleSelection}
-            />
-          ))}
+        {/* Le fondu de bord est dessiné À CÔTÉ du scroller (MIN-319) : un
+            `mask-image` posé dessus le fait re-compositer à chaque image de
+            défilement — et c'était ici un masque À L'INTÉRIEUR d'un masque,
+            puisque chaque colonne en portait un aussi. D'où ce parent
+            `relative`, et l'absence de `scrollProps.style` sur le défileur. */}
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <div
+            ref={setScrollerRef}
+            onScroll={(e) => {
+              scrollProps.onScroll();
+              updateActiveColumn(e.currentTarget);
+            }}
+            onPointerDown={onMarqueePointerDown}
+            className={cn("min-h-0 flex-1", BOARD_SCROLLER_CLASS)}
+          >
+            {columns.map(({ status, items }) => (
+              <KanbanColumn
+                key={status.value}
+                status={status}
+                issues={items}
+                issueMap={issueMap}
+                relationsByIssue={relationsByIssue}
+                candidateIssues={allIssues}
+                projectId={projectId}
+                projectKey={projectKey}
+                memberMap={memberMap}
+                categoryMap={categoryMap}
+                objectiveMap={objectiveMap}
+                onOpenIssue={onOpenIssue}
+                onOpenIssueById={onOpenIssueById}
+                onOpenPlan={onOpenPlan}
+                onCreateIssue={onCreateIssue}
+                onUpdateIssue={onUpdateIssue}
+                onSetCategories={onSetCategories}
+                onAddRelation={onAddRelation}
+                onDeleteIssue={onDeleteIssue}
+                buildMenuActions={buildMenuActions}
+                currentCycleId={currentCycleId}
+                selectedIds={selectedIds}
+                draggingIds={draggingIds}
+                onSelect={toggleSelection}
+              />
+            ))}
+          </div>
+          <ScrollFadeEdges edges={edges} axis="x" />
         </div>
       </div>
 

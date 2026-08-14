@@ -76,17 +76,25 @@ const PERSIST_BUSTER = "v1";
  *
  * Les préfixes ci-dessous sont les VRAIES clés (cf. lib/use-agent-runs.ts) :
  * s'en écarter donnerait une liste qui ne filtre rien tout en prétendant le
- * contraire.
+ * contraire. C'est arrivé trois fois d'un coup (MIN-303) — `["agent-activity"]`
+ * pour `["agent-active-issues"]`, un `["agent-run-pr"]` qui ne désigne aucune
+ * query du dépôt, et un `["agent-run-diff"]` qui ne couvre PAS
+ * `["agent-run-diff-stat"]` (la comparaison est segment par segment, pas
+ * caractère par caractère). Le sondage d'activité, qui tourne toutes les 4
+ * secondes quand un agent travaille, était donc sérialisé sur le disque à
+ * chaque tick. **Toute entrée ajoutée ici se vérifie contre sa vraie clé, et
+ * son test dans lib/query-persist.test.ts se lit comme une preuve, pas comme
+ * une redite de cette liste.**
  */
 const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["me", "search-index"],
   ["agent-run"], // ["agent-run", runId]
   ["agent-runs"], // ["agent-runs", "issue", issueId]
   ["agent-run-events"],
-  ["agent-run-pr"],
   ["agent-run-diff"],
+  ["agent-run-diff-stat"], // segment distinct : ["agent-run-diff"] ne le couvre pas
   ["agent-sessions"], // ["agent-sessions", "all"]
-  ["agent-activity"],
+  ["agent-active-issues"], // components/agent/agent-activity-context.tsx
   ["pull-requests"], // ["pull-requests", "all"]
   ["pr-comments"],
   ["pr-review-comments"],

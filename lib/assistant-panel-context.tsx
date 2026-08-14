@@ -22,8 +22,17 @@ import { trackEvent } from "@/lib/analytics";
 
 export interface OpenAssistantOptions {
   /**
-   * Override the project scope. `undefined` = follow the current route,
-   * `null` = explicit global mode, `string` = explicit project id.
+   * Portée IMPOSÉE à Numo. `null` = mode global explicite, `string` = ce projet.
+   *
+   * `undefined` = ne rien imposer : la conversation ouverte garde la sienne, et
+   * s'il n'y en a pas, on suit la route (MIN-353, cf. lib/assistant-scope.ts).
+   * Ça n'est PAS « suivre la route » : depuis que la conversation porte sa
+   * portée, une navigation ne la déplace plus. Une surface qui veut vraiment la
+   * route passe `routeProjectId` — c'est ce que fait le carnet.
+   *
+   * Une portée imposée que la conversation ouverte ne peut pas porter ouvre un
+   * fil neuf : c'est le « Demander à Numo » d'un tableau ou d'un retour, un geste
+   * sur une chose précise, qui n'a rien à faire dans la conversation d'à côté.
    */
   projectId?: string | null;
   /** Auto-send a one-shot message right after opening. */

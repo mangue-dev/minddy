@@ -64,6 +64,8 @@ import { matchesFilter } from "@/components/sidebar-filter-field";
 import { SearchMenu } from "@/components/search-menu";
 import { SearchSelect, checkedProps } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import { usePublishCurrentView } from "@/lib/current-view-context";
+import { buildViewHref } from "@/lib/saved-view-href";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
@@ -877,6 +879,26 @@ export function FeedbackTeamPage() {
   // « promeus-le », « réponds-lui » sur ce post sans le chercher — comme le
   // panneau d'issue publie l'issue ouverte.
   const selectedPost = posts.find((p) => p.id === selectedId) ?? null;
+
+  // « Enregistrer la vue actuelle » (⌘K) : le retour ouvert à droite est une
+  // sélection de la page, mais `?post=` est consommé puis effacé de l'adresse
+  // (même idiome que `?open=` des objectifs) — sans cette publication, la vue
+  // enregistrée rouvrirait la liste sur son premier élément.
+  //
+  // Le nom proposé porte le PROJET, comme sur les objectifs : le champ arrive
+  // pré-sélectionné, Entrée l'accepte, et « Retours » tout court est le même
+  // nom sur chaque projet — la deuxième vue écraserait la première.
+  usePublishCurrentView({
+    href: buildViewHref(pathname, searchParams.toString(), {
+      post: selectedPost?.id ?? null,
+    }),
+    label: project
+      ? selectedPost
+        ? `${project.name} · ${selectedPost.title}`
+        : `${project.name} · ${t("title")}`
+      : t("title"),
+  });
+
   useAssistantContext(
     project
       ? selectedPost
@@ -938,15 +960,22 @@ export function FeedbackTeamPage() {
   //
   // Le filtre repasse à « tous » : le retour visé peut être livré, décliné ou
   // écarté, et le lien doit l'ouvrir quel que soit son état.
+  //
+  // On ATTEND que la liste porte le retour visé, comme la page des objectifs
+  // attend le sien. À froid (onglet neuf, vue enregistrée, notification suivie
+  // depuis un lien), `posts` est encore vide : l'effet de garde juste au-dessus
+  // remettait la sélection à zéro au rendu suivant — et `?post=` avait déjà été
+  // effacé de l'adresse, donc plus rien ne pouvait la rétablir. Le lien
+  // retombait sur le premier retour de la liste.
   useEffect(() => {
-    if (postParam) {
-      setState("all");
-      setOnlyToReview(false);
-      setSelectedId(postParam);
-      setMobileDetail(true);
-      router.replace(pathname);
-    }
-  }, [postParam, pathname, router]);
+    if (!postParam) return;
+    if (!posts.some((p) => p.id === postParam)) return;
+    setState("all");
+    setOnlyToReview(false);
+    setSelectedId(postParam);
+    setMobileDetail(true);
+    router.replace(pathname);
+  }, [postParam, posts, pathname, router]);
 
   // Invalide la liste ET tous les détails du projet (préfixe) : un merge/undo
   // change aussi le post canonique, pas seulement celui qu'on regarde. Le

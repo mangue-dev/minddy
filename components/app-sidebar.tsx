@@ -300,26 +300,34 @@ function SidebarRow({
     );
   }
 
-  if (collapsed || item.shortcut) {
-    row = (
-      <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
-        <TooltipTrigger asChild>{row}</TooltipTrigger>
-        <TooltipContent
-          side="right"
-          className="flex items-center gap-2"
-        >
-          <span>{item.tooltip ?? item.label}</span>
-          {item.shortcut && (
-            <>
-              <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
-              <span>{tk("then")}</span>
-              <Kbd size="sm">{item.shortcut}</Kbd>
-            </>
-          )}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
+  // ⚠ Le `<Tooltip>` est rendu INCONDITIONNELLEMENT, et c'est son OUVERTURE qui
+  // varie (MIN-313). Envelopper conditionnellement changerait le TYPE de
+  // l'élément rendu à cette position, et React ne réconcilie pas deux types
+  // différents : il démonte le sous-arbre et en monte un neuf, donc le nœud DOM
+  // est remplacé et le focus qu'il portait retombe sur <body>. Ici la détente
+  // est quotidienne — `collapsed` bascule à chaque survol de la barre : on
+  // clique une entrée de projet, `onFocusCapture` ne retient que le focus
+  // clavier, le pointeur part, 150 ms plus tard la ligne focalisée est
+  // remplacée, et la tabulation repart du haut du document.
+  row = (
+    <Tooltip
+      delayDuration={TOOLTIP_DELAY_MS}
+      disableHoverableContent
+      open={collapsed || item.shortcut ? undefined : false}
+    >
+      <TooltipTrigger asChild>{row}</TooltipTrigger>
+      <TooltipContent side="right" className="flex items-center gap-2">
+        <span>{item.tooltip ?? item.label}</span>
+        {item.shortcut && (
+          <>
+            <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
+            <span>{tk("then")}</span>
+            <Kbd size="sm">{item.shortcut}</Kbd>
+          </>
+        )}
+      </TooltipContent>
+    </Tooltip>
+  );
 
   if (!item.contextActions?.length) return row;
   return (
@@ -552,15 +560,19 @@ function FooterRow({
       {!collapsed && TrailingIcon && <TrailingIcon className="size-4 shrink-0" />}
     </button>
   );
-  if (collapsed) {
-    return (
-      <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
-        <TooltipTrigger asChild>{btn}</TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
-      </Tooltip>
-    );
-  }
-  return btn;
+  // Même motif que `SidebarRow` : rendu inconditionnel, ouverture pilotée. Une
+  // enveloppe conditionnelle change le type de la racine, donc remplace le nœud
+  // et perd le focus à chaque bascule du rail (MIN-313).
+  return (
+    <Tooltip
+      delayDuration={TOOLTIP_DELAY_MS}
+      disableHoverableContent
+      open={collapsed ? undefined : false}
+    >
+      <TooltipTrigger asChild>{btn}</TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 function SidebarFooter({
@@ -698,6 +710,11 @@ export function AppSidebar({
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
+    // Le guetteur de retour de pointeur est DÉSARMÉ ici (MIN-314) : la barre
+    // vient de reprendre la main, il n'a plus rien à trancher. Sans ça, il
+    // restait branché et refermait le rail au premier mouvement de souris —
+    // parfois des minutes plus tard, sans rapport avec le geste qui l'a armé.
+    returnWatcher.current?.();
     setHovered(true);
   };
 
@@ -730,15 +747,42 @@ export function AppSidebar({
   const watchPointerReturn = () => {
     returnWatcher.current?.();
     const onMove = (event: PointerEvent) => {
-      returnWatcher.current = null;
+      disarm();
       if (railRef.current?.contains(event.target as Node)) return;
       closeRail();
     };
-    document.addEventListener("pointermove", onMove, { once: true });
-    returnWatcher.current = () => {
+    /**
+     * Le repli de SECOURS (MIN-314). Le guetteur ci-dessus n'a aucune borne :
+     * il attend un `pointermove` qui peut ne jamais venir — le feu rouge CACHE
+     * la fenêtre au lieu de la détruire (desktop/src/main.ts), elle est donc
+     * rangée rail déplié et rouverte telle quelle, guetteur toujours armé. Une
+     * séquence entièrement au clavier laissait ensuite la barre dépliée
+     * par-dessus la secondaire, jusqu'au premier mouvement de souris.
+     *
+     * ⚠ **Pas un minuteur.** Ce serait rouvrir le défaut que MIN-291 a fermé :
+     * un rail qui se referme sous un pointeur en route vers les boutons. On
+     * s'accroche à ce qui dit que le geste est FINI — la fenêtre a perdu la
+     * main, ou elle n'est plus visible.
+     */
+    const onGiveUp = () => {
+      disarm();
+      closeRail();
+    };
+    const onVisibility = () => {
+      if (document.hidden) onGiveUp();
+    };
+
+    const disarm = () => {
       document.removeEventListener("pointermove", onMove);
+      window.removeEventListener("blur", onGiveUp);
+      document.removeEventListener("visibilitychange", onVisibility);
       returnWatcher.current = null;
     };
+
+    document.addEventListener("pointermove", onMove, { once: true });
+    window.addEventListener("blur", onGiveUp);
+    document.addEventListener("visibilitychange", onVisibility);
+    returnWatcher.current = disarm;
   };
 
   const closeRail = (e?: { clientX: number; clientY: number }) => {
@@ -819,7 +863,11 @@ export function AppSidebar({
         // le pointeur était donc déjà dessus et aucun `pointerenter` ne viendra.
         // Le moindre mouvement rattrape cet état, au lieu d'attendre une sortie
         // et une rentrée.
-        onPointerMove={overlay ? openRail : undefined}
+        //
+        // Débranché dès que la barre est ouverte (MIN-323) : `openRail` n'a
+        // alors plus rien à faire, et sans cette garde chaque mouvement de
+        // pointeur sur une barre dépliée traversait un `setState`.
+        onPointerMove={overlay && !hovered ? openRail : undefined}
         // L'ÉVÉNEMENT est passé, et il compte : c'est l'endroit de la sortie
         // qui dit si le pointeur part sur les boutons macOS (cf. closeRail).
         onPointerLeave={overlay ? (e) => closeRail(e) : undefined}
@@ -840,6 +888,13 @@ export function AppSidebar({
         onBlurCapture={
           overlay
             ? (e) => {
+                // Une perte de focus qui ne désigne AUCUNE nouvelle cible n'est
+                // pas une sortie de la barre (MIN-313) : c'est ce que produit
+                // la désactivation de la fenêtre — la barre de menus macOS, un
+                // ⌘Tab —, et c'est aussi ce que produisait un remplacement de
+                // nœud. Replier la barre là-dessus la referme sous un pointeur
+                // qui n'a pas bougé.
+                if (e.relatedTarget === null) return;
                 if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
                   setFocusWithin(false);
                 }

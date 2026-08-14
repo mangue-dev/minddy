@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { memo, useCallback } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
@@ -17,12 +17,18 @@ import type {
   Objective,
 } from "@/lib/types";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
-export function KanbanColumn({
+/**
+ * ⚠ Mémoïsée (MIN-316). Le board rejouait ses colonnes — donc toutes leurs
+ * cartes — à chaque rendu du board, y compris pour un état qui ne les
+ * concerne pas. Ses props doivent rester stables pour que ça morde.
+ */
+export const KanbanColumn = memo(function KanbanColumn({
   status,
   issues,
   issueMap,
@@ -84,7 +90,7 @@ export function KanbanColumn({
   onSelect: (issueId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
-  const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
+  const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>();
   const t = useTranslations("Board");
   const ts = useTranslations("Status");
 
@@ -105,64 +111,66 @@ export function KanbanColumn({
         <span className="text-xs text-muted-foreground">{issues.length}</span>
       </div>
 
-      <div
-        ref={setScrollRef}
-        onScroll={scrollProps.onScroll}
-        style={scrollProps.style}
-        className={cn(
-          "no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors",
-          isOver && "bg-muted/50"
-        )}
-      >
-        <SortableContext
-          items={issues.map((i) => i.id)}
-          strategy={verticalListSortingStrategy}
+      {/* Le fondu de bord est dessiné À CÔTÉ du scroller, jamais dessus : un
+          `mask-image` sur un conteneur qui défile le fait re-compositer à
+          chaque image (MIN-319). D'où ce parent `relative`. */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={setScrollRef}
+          onScroll={scrollProps.onScroll}
+          className={cn(
+            "no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors",
+            isOver && "bg-muted/50"
+          )}
         >
-          {issues.map((issue) => {
-            const parent = issue.parent_id
-              ? issueMap.get(issue.parent_id) ?? null
-              : null;
-            return (
-              <IssueCard
-                key={issue.id}
-                issue={issue}
-                projectId={projectId}
-                projectKey={projectKey}
-                memberMap={memberMap}
-                categoryMap={categoryMap}
-                objectiveMap={objectiveMap}
-                parentNumber={parent?.number}
-                relations={relationsByIssue.get(issue.id)}
-                candidateIssues={candidateIssues}
-                onOpenParent={parent ? () => onOpenIssue(parent) : undefined}
-                onOpenRelated={onOpenIssueById}
-                onAddRelation={onAddRelation}
-                onOpenPlan={() => onOpenPlan(issue)}
-                onOpen={() => onOpenIssue(issue)}
-                onUpdateIssue={onUpdateIssue}
-                onSetCategories={onSetCategories}
-                onDelete={
-                  onDeleteIssue ? () => onDeleteIssue(issue.id) : undefined
-                }
-                selected={selectedIds.has(issue.id)}
-                dragging={draggingIds?.has(issue.id)}
-                onSelect={onSelect}
-                extraActions={buildMenuActions?.(issue)}
-                inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}
-              />
-            );
-          })}
-        </SortableContext>
+          <SortableContext
+            items={issues.map((i) => i.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {issues.map((issue) => {
+              const parent = issue.parent_id
+                ? issueMap.get(issue.parent_id) ?? null
+                : null;
+              return (
+                <IssueCard
+                  key={issue.id}
+                  issue={issue}
+                  projectId={projectId}
+                  projectKey={projectKey}
+                  memberMap={memberMap}
+                  categoryMap={categoryMap}
+                  objectiveMap={objectiveMap}
+                  parent={parent}
+                  relations={relationsByIssue.get(issue.id)}
+                  candidateIssues={candidateIssues}
+                  onOpenRelated={onOpenIssueById}
+                  onAddRelation={onAddRelation}
+                  onOpenPlan={onOpenPlan}
+                  onOpenIssue={onOpenIssue}
+                  onUpdateIssue={onUpdateIssue}
+                  onSetCategories={onSetCategories}
+                  onDelete={onDeleteIssue}
+                  selected={selectedIds.has(issue.id)}
+                  dragging={draggingIds?.has(issue.id)}
+                  onSelect={onSelect}
+                  buildMenuActions={buildMenuActions}
+                  inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}
+                />
+              );
+            })}
+          </SortableContext>
 
-        <button
-          type="button"
-          onClick={() => onCreateIssue(status.value)}
-          className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
-        >
-          <Plus className="size-4" />
-          {t("newIssue")}
-        </button>
+          <button
+            type="button"
+            onClick={() => onCreateIssue(status.value)}
+            className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
+          >
+            <Plus className="size-4" />
+            {t("newIssue")}
+          </button>
+        </div>
+        <ScrollFadeEdges edges={edges} />
       </div>
     </div>
   );
-}
+});

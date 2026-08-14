@@ -40,19 +40,28 @@ export const ZOMBIE_PROBE_MS = 3_000;
 /**
  * Faut-il rattraper les caches au retour ?
  *
- * Une socket tombée est un oui sans condition, quelle qu'ait été la durée : ce
- * qui est tombé a forcément laissé passer des événements. Sinon on s'en remet à
- * la durée, parce qu'une socket peut se dire ouverte tout en étant morte (le
- * navigateur ne l'apprend qu'en écrivant dedans).
+ * **Une seule condition, la durée.** L'état de la socket ne participe plus.
+ *
+ * Il l'a fait : « une socket tombée est un oui sans condition, quelle qu'ait été
+ * la durée ». Cette branche-là n'avait aucun plancher, et `isConnected()` est
+ * faux pendant TOUTE reconnexion phoenix en cours (backoff 1 → 2 → 5 → 10 s).
+ * Sur macOS, une fenêtre entièrement recouverte passe en occlusion et émet un
+ * `visibilitychange` : une occlusion d'une demi-seconde — une autre fenêtre qui
+ * passe devant, un changement d'espace — suffisait alors à déclencher le
+ * rattrapage complet de tous les périmètres, si la socket se trouvait en backoff
+ * à cet instant. Deux événements indépendants, dont aucun n'est provoqué par
+ * l'utilisateur, mais qui tombent pendant qu'il travaille (MIN-306).
+ *
+ * ⚠ **Ce n'est pas un oubli, et ça ne creuse aucun trou de fraîcheur** : un canal
+ * tombé puis rejoint rattrape déjà son propre périmètre de lui-même, à la
+ * re-souscription (voir `openScope` dans lib/realtime-provider.tsx). Rétablir un
+ * « oui sans condition » ici ne rendrait rien, et rouvrirait le défaut.
  */
 export function shouldCatchUpOnResume({
   hiddenForMs,
-  socketConnected,
 }: {
   hiddenForMs: number;
-  socketConnected: boolean;
 }): boolean {
-  if (!socketConnected) return true;
   return hiddenForMs >= RESUME_AFTER_HIDDEN_MS;
 }
 

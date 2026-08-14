@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { useProjectsQuery, type UseProjectsResult } from "./use-projects-query";
 import {
   useProjectDrafts,
@@ -57,21 +64,44 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     setCreateOpen(true);
   }, []);
 
+  /**
+   * ⚠ Stable, et pas une fléchée inline (MIN-315).
+   *
+   * Son identité est dans les dépendances de `commandGroups` ET de `sections`
+   * dans components/app-shell-chrome.tsx, donc de `paletteGroups` : une fléchée
+   * neuve à chaque rendu refabrique les trois. C'est le piège que
+   * components/mobile-account.tsx documente déjà mot pour mot.
+   */
+  const openCreateProject = useCallback(() => {
+    setResume(null);
+    setCreateOpen(true);
+  }, []);
+
+  // Value mémoïsée : un littéral re-rendrait tous les consommateurs à chaque
+  // rendu, et ce provider est re-rendu par `AuthProvider` au-dessus de lui.
+  const value = useMemo(
+    () => ({
+      ...projects,
+      openCreateProject,
+      projectDrafts: drafts,
+      saveProjectDraft: saveDraft,
+      deleteProjectDraft: deleteDraft,
+      openProjectDraft,
+      resumeProjectDraft,
+    }),
+    [
+      projects,
+      openCreateProject,
+      drafts,
+      saveDraft,
+      deleteDraft,
+      openProjectDraft,
+      resumeProjectDraft,
+    ]
+  );
+
   return (
-    <ProjectsContext.Provider
-      value={{
-        ...projects,
-        openCreateProject: () => {
-          setResume(null);
-          setCreateOpen(true);
-        },
-        projectDrafts: drafts,
-        saveProjectDraft: saveDraft,
-        deleteProjectDraft: deleteDraft,
-        openProjectDraft,
-        resumeProjectDraft,
-      }}
-    >
+    <ProjectsContext.Provider value={value}>
       {children}
       <CreateProjectWizard
         open={createOpen}

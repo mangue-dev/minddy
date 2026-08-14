@@ -30,31 +30,23 @@ export const BOARD_COLUMN_CLASS =
   "w-full shrink-0 snap-start sm:w-[calc((100%-0.75rem)/2)] lg:w-[calc((100%-1.5rem)/3)] desktop:w-[22rem]";
 
 /**
- * La gouttière du défileur, et le FONDU de ses bords — les deux se lisent
- * ensemble, et c'est tout l'objet de cette constante.
+ * La gouttière du défileur.
  *
- * **La gouttière** valait 16 px en compact contre 24 en large. C'est-à-dire que
- * le seul cas où la barre latérale ne pousse plus le board vers l'intérieur
- * était aussi celui qui lui donnait le moins de marge : la colonne de gauche
- * démarrait au bord de la fenêtre. Elle passe donc à 24 px dès qu'il y a plus
- * d'une colonne, c'est-à-dire dès `sm` — même chiffre partout, sauf sur un
- * téléphone où 24 px de chaque côté seraient pris sur la carte.
+ * Elle valait 16 px en compact contre 24 en large. C'est-à-dire que le seul cas
+ * où la barre latérale ne pousse plus le board vers l'intérieur était aussi
+ * celui qui lui donnait le moins de marge : la colonne de gauche démarrait au
+ * bord de la fenêtre. Elle passe donc à 24 px dès qu'il y a plus d'une colonne,
+ * c'est-à-dire dès `sm` — même chiffre partout, sauf sur un téléphone où 24 px
+ * de chaque côté seraient pris sur la carte.
  *
- * **Le fondu**, lui, est ÉTEINT tant que le board se feuillette une colonne à la
- * fois. `useScrollFade` pose un dégradé de 2 rem sur les bords ; c'est un indice
- * utile quand les colonnes défilent librement, mais sous 640 px la colonne est
- * accrochée (`snap`) et donc immobile : le dégradé se posait à demeure sur ses
- * 32 premiers pixels, et le contenu restait délavé sans que rien ne bouge
- * jamais. Ce qui déborde de l'écran s'y lit aux points de pagination, pas au
- * fondu.
- *
- * La rampe passe par une variable CSS plutôt que par un test de largeur en JS :
- * le dégradé est calculé dans un `style` en ligne, mais il peut lire une
- * propriété personnalisée posée par une classe — et une propriété à `0px` est un
- * dégradé sans rampe, donc pas de fondu du tout. `--board-fade` est aussi la
- * gouttière : le fondu recouvre exactement la marge, et pas la colonne.
+ * ⚠ **Le fondu de bord ne se règle plus ici** (MIN-319). Il passait par un
+ * `mask-image` posé SUR ce défileur, avec une rampe en variable CSS
+ * (`--board-fade`) que cette classe éteignait sous 640 px. Un masque sur un
+ * conteneur qui défile le fait re-compositer à chaque image — et c'était ici un
+ * masque à l'intérieur d'un masque, chaque colonne en portant un aussi. Le
+ * fondu est désormais un calque dessiné À CÔTÉ du défileur
+ * (`components/scroll-fade-edges.tsx`), piloté par les `edges` que rend
+ * `useScrollFade` : rien n'est posé sur le contenu, donc rien à re-compositer.
  */
-export const BOARD_FADE_RAMP = "var(--board-fade)";
-
 export const BOARD_SCROLLER_CLASS =
-  "flex gap-3 overflow-x-auto px-4 [--board-fade:0px] snap-x snap-mandatory sm:px-6 sm:[--board-fade:1.5rem] desktop:snap-none";
+  "flex gap-3 overflow-x-auto px-4 snap-x snap-mandatory sm:px-6 desktop:snap-none";

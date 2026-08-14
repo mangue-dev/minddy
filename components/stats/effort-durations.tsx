@@ -6,24 +6,29 @@ import { durationParts, fmtNum } from "@/lib/stats-derive";
 import type { StatsCycleEffort } from "@/lib/types";
 
 /**
- * Durée moyenne de complétion par effort (MIN-85).
+ * Durée médiane de complétion par effort (MIN-85).
  *
  * Anciennement cinq boîtes juxtaposées, chacune avec sa propre échelle
  * implicite : on ne pouvait pas voir qu'un L prend six fois plus qu'un S. Ici,
  * une barre par effort sur une échelle commune (le plus long = 100 %), donc la
  * comparaison est immédiate — c'est tout l'intérêt de la mesure.
+ *
+ * Ces durées sont des médianes, pas des moyennes : sur un échantillon de dix
+ * tickets, un seul démarré avant des vacances suffit à faire dire à la moyenne
+ * qu'un M prend trois semaines. Une barre qui ne décrit plus le cas courant ne
+ * se compare plus à rien.
  */
 export function EffortDurations({ byEffort }: { byEffort: StatsCycleEffort[] }) {
   const t = useTranslations("Stats");
   const locale = useLocale();
 
-  const max = byEffort.reduce((m, e) => Math.max(m, e.avgSeconds), 0);
+  const max = byEffort.reduce((m, e) => Math.max(m, e.medianSeconds), 0);
 
   return (
     <div className="flex flex-col gap-3">
       {byEffort.map((e) => {
-        const parts = durationParts(e.avgSeconds);
-        const width = max > 0 ? (e.avgSeconds / max) * 100 : 0;
+        const parts = durationParts(e.medianSeconds);
+        const width = max > 0 ? (e.medianSeconds / max) * 100 : 0;
         return (
           <div key={e.effort} className="flex items-center gap-3">
             <span className="w-7 shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-center text-xs font-semibold text-muted-foreground">

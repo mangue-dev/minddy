@@ -37,10 +37,10 @@ import {
   type SVGProps,
 } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast, useTheme } from "mangue-ui";
-import { Copy, UserRound, Triangle, ClipboardCopy, SunMoon, Sun, Moon, Monitor, Trash2, CircleDashed, SignalHigh, IterationCw, Link2, Target } from "lucide-react";
+import { Copy, UserRound, Triangle, ClipboardCopy, SunMoon, Sun, Moon, Monitor, Trash2, CircleDashed, SignalHigh, IterationCw, Link2, Target, Bookmark, BookmarkPlus, Pencil } from "lucide-react";
 import {
   CommandPalette as CommandPaletteShell,
   type ActionProvider,
@@ -67,6 +67,8 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { useAuth } from "@/lib/auth-context";
+import { useCurrentView } from "@/lib/current-view-context";
+import { useSavedViewsQuery } from "@/lib/use-saved-views-query";
 import { useProjects } from "@/lib/projects-context";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import {
@@ -89,6 +91,7 @@ import { useAnalytics } from "@/lib/use-analytics";
 import type {
   Issue,
   Member,
+  SavedView,
   SearchIndexIssue,
   SearchIndexResponse,
 } from "@/lib/types";
@@ -108,6 +111,11 @@ const GROUP_BOOSTS: Record<string, number> = {
   // les avoir demandées, c'est déjà avoir dit lesquelles.
   "settings-project": 135,
   "settings-account": 130,
+  // Les vues enregistrées passent devant tout : ce sont les seules lignes que
+  // l'utilisateur a lui-même fabriquées pour y revenir vite. Le boost suit la
+  // position du groupe (cf. `categories`), pour qu'une recherche ne les
+  // renvoie pas là où l'affichage ne les met plus.
+  views: 320,
   account: 100,
   issues: 80,
   objectives: 80,
@@ -205,10 +213,18 @@ export function CommandPalette({
   const tCycles = useTranslations("Cycles");
   const tNav = useTranslations("Nav");
   const pathname = usePathname();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { user, updateUserMetadata } = useAuth();
   const { projects } = useProjects();
   const { theme, setTheme } = useTheme();
+
+  // Vues enregistrées : l'écran courant, retenu sous un nom, ré-ouvrable depuis
+  // n'importe quel appareil. La liste ne se charge qu'à l'ouverture de la
+  // palette — fermée, elle ne rend rien, et c'est le seul endroit qui la lit.
+  const { savedViews, createSavedView, renameSavedView, deleteSavedView } =
+    useSavedViewsQuery(open);
+  const currentView = useCurrentView();
 
   // Sélection groupée (MIN-75) : une board publie sa sélection via le contexte.
   // La pill « Actions » ouvre ⌘K en MODE BULK — la palette affiche alors les
@@ -330,10 +346,24 @@ export function CommandPalette({
     if (!open) setBulkMode(false);
   }, [open]);
 
-  // Les groupes cmdk deviennent les catégories de la palette (ordre préservé).
+  // Les groupes cmdk deviennent les catégories de la palette (ordre préservé),
+  // plus « Vues enregistrées », qui n'existe QUE dans la palette : ni la nav
+  // mobile ni la sidebar ne servent ces lignes.
+  //
+  // Elle passe EN TÊTE, et c'est la position qui compte : à requête vide, la
+  // liste suit l'ordre des catégories (`buildCategoryOrder`), pas les
+  // `searchBoost` — ceux-là ne classent qu'une recherche en cours. En queue,
+  // les vues enregistrées se retrouvaient sous les tickets et les pages, donc
+  // sous des milliers de lignes : l'inverse exact d'un accès rapide qu'on s'est
+  // fabriqué soi-même.
   const categories = useMemo<CategoryDefinition[]>(
-    () =>
-      groups.map((g, i) => {
+    () => [
+      {
+        id: "views",
+        label: tNav("savedViews"),
+        searchBoost: GROUP_BOOSTS.views,
+      },
+      ...groups.map((g, i) => {
         const id = g.key ?? g.heading ?? `group-${i}`;
         return {
           id,
@@ -341,7 +371,8 @@ export function CommandPalette({
           searchBoost: GROUP_BOOSTS[id] ?? 0,
         };
       }),
-    [groups]
+    ],
+    [groups, tNav]
   );
 
   const isFr = locale.startsWith("fr");
@@ -399,8 +430,56 @@ export function CommandPalette({
       entityType: "theme",
     });
 
+    // Les vues enregistrées, EN PREMIER dans leur groupe — c'est ce qu'on vient
+    // y chercher. Enter ouvre l'adresse retenue ; ⌘; donne renommer et oublier.
+    // (Le tri d'affichage ne classe que les catégories entre elles : dans un
+    // groupe, l'ordre du tableau est l'ordre à l'écran.)
+    for (const view of savedViews) {
+      mapped.push({
+        id: `saved-view-${view.id}`,
+        title: view.name,
+        icon: <Bookmark className="size-4" />,
+        filterCategory: "views",
+        entityType: "saved-view",
+        // Pas d'étoile : une vue enregistrée EST déjà un raccourci qu'on s'est
+        // fabriqué. La mettre en favori épinglerait un signet sur un signet — et
+        // laisserait son id dans le compte une fois la vue oubliée.
+        favoritable: false,
+        data: view,
+        execute: () => {
+          track("saved_view_opened", {});
+          router.push(view.href);
+        },
+      });
+    }
+
+    // « Enregistrer la vue actuelle » ferme le groupe : on l'utilise une fois
+    // par vue, quand on rouvre les vues tous les jours. Pas d'`execute` → la
+    // sélectionner ouvre le champ de nom inline (provider "saved-view-actions"),
+    // comme les champs du mode groupé. L'écran n'est lu qu'à la validation.
+    mapped.push({
+      id: "cmd-save-view",
+      title: tNav("saveCurrentView"),
+      keywords: [
+        "vue",
+        "view",
+        "enregistrer",
+        "sauvegarder",
+        "save",
+        "bookmark",
+        "favori",
+        "signet",
+        "raccourci",
+        "shortcut",
+      ],
+      icon: <BookmarkPlus className="size-4" />,
+      filterCategory: "views",
+      entityType: "save-view",
+      favoritable: false,
+    });
+
     return mapped;
-  }, [groups, themeLabel, track]);
+  }, [groups, themeLabel, track, savedViews, router, tNav]);
 
   // === Actions contextuelles des tickets (⌘; / →) ===
   // Chaque action ouvre un formulaire inline à un champ : le select s'ouvre
@@ -704,6 +783,120 @@ export function CommandPalette({
       ],
     };
   }, [theme, setTheme, tNav, themeLabel]);
+
+  // === Vues enregistrées : enregistrer, renommer, oublier ===
+  // Un seul provider pour les deux lignes du groupe, parce qu'elles sont les
+  // deux faces du même geste : « Enregistrer la vue actuelle » demande un nom,
+  // une vue enregistrée se renomme ou s'oublie.
+  const savedViewProvider = useMemo<ActionProvider>(() => {
+    // Le formulaire inline s'affiche « <libellé de l'action> : <champ> ». Le
+    // libellé du CHAMP sert de texte de substitution (il l'emporte sur
+    // `placeholder`), donc on y met l'exemple — « Enregistrer la vue actuelle :
+    // Nom de la vue » redisait deux fois la même chose, et la question posée
+    // n'était nulle part.
+    const nameField = (initial?: string) => ({
+      fields: [
+        {
+          key: "name",
+          type: "text" as const,
+          label: tNav("saveViewNamePlaceholder"),
+        },
+      ],
+      ...(initial ? { prefilledValues: { name: initial } } : {}),
+    });
+
+    return {
+      id: "saved-view-actions",
+      handles: ["save-view", "saved-view"],
+      priority: 60,
+      getActions: (item): ContextualAction[] => {
+        if (item.entityType === "save-view") {
+          return [
+            {
+              id: "saved-view.create",
+              // Pas « Enregistrer la vue actuelle » : ça, c'est le nom de la
+              // LIGNE qu'on vient de choisir. Une fois dedans, l'écran ne
+              // répète pas le geste, il pose la question qui reste.
+              label: tNav("nameThisView"),
+              icon: BookmarkPlus,
+              category: "primary",
+              requiresForm: {
+                // `getActions` s'exécute à l'ouverture du menu : le nom proposé
+                // est celui de l'écran À CET INSTANT, pas celui d'un rendu
+                // précédent.
+                ...nameField(currentView.resolveLabel() ?? undefined),
+                onSubmit: async (values): Promise<ActionResult> => {
+                  // L'adresse est résolue MAINTENANT, dans le gestionnaire : la
+                  // page a pu changer de sélection depuis l'ouverture de ⌘K.
+                  const href = currentView.resolveHref();
+                  try {
+                    const view = await createSavedView({
+                      name: String(values.name ?? ""),
+                      href,
+                    });
+                    toast.success(tNav("viewSaved", { name: view.name }));
+                  } catch (err) {
+                    toast.error((err as Error).message);
+                    return { success: false, closeMenu: false };
+                  }
+                  return { success: true, closeMenu: true };
+                },
+              },
+            },
+          ];
+        }
+
+        const view = item.data as SavedView | undefined;
+        if (!view) return [];
+
+        return [
+          {
+            id: "saved-view.rename",
+            label: tNav("renameSavedView"),
+            icon: Pencil,
+            category: "secondary",
+            priority: 10,
+            requiresForm: {
+              ...nameField(view.name),
+              onSubmit: async (values): Promise<ActionResult> => {
+                try {
+                  const next = await renameSavedView(
+                    view.id,
+                    String(values.name ?? "")
+                  );
+                  toast.success(tNav("savedViewRenamed", { name: next.name }));
+                } catch (err) {
+                  toast.error((err as Error).message);
+                  return { success: false, closeMenu: false };
+                }
+                // closeMenu:false → retour à la liste, la ligne porte le
+                // nouveau nom.
+                return { success: true, closeMenu: false };
+              },
+            },
+          },
+          {
+            id: "saved-view.delete",
+            label: tNav("deleteSavedView"),
+            icon: Trash2,
+            category: "danger",
+            priority: 0,
+            execute: async (): Promise<ActionResult> => {
+              try {
+                await deleteSavedView(view.id);
+                track("saved_view_deleted", {});
+                toast.success(tNav("savedViewDeleted", { name: view.name }));
+              } catch (err) {
+                toast.error((err as Error).message);
+                return { success: false, closeMenu: false };
+              }
+              return { success: true, closeMenu: false };
+            },
+          },
+        ];
+      },
+    };
+  }, [currentView, createSavedView, renameSavedView, deleteSavedView, track, tNav]);
 
   // === Sélection groupée (MIN-75) : options comme lignes normales de la palette ===
   // En mode bulk, `bulkItems` REMPLACE la liste habituelle. Numo et Supprimer
@@ -1030,8 +1223,8 @@ export function CommandPalette({
   }, [bulkRequest, tIssueUI, tStatus, tPriority, tField]);
 
   const providers = useMemo(
-    () => [issueProvider, themeProvider, bulkFieldProvider],
-    [issueProvider, themeProvider, bulkFieldProvider]
+    () => [issueProvider, themeProvider, savedViewProvider, bulkFieldProvider],
+    [issueProvider, themeProvider, savedViewProvider, bulkFieldProvider]
   );
 
   // En mode bulk, la palette affiche les options de la sélection à la place du

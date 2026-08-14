@@ -38,7 +38,7 @@ interface RawCycleStats {
   cycle_count: number | null;
   by_effort: Array<{
     effort: StatsCycleEffort["effort"];
-    avg_seconds: number | null;
+    median_seconds: number | null;
     sample: number | null;
   }>;
 }
@@ -52,15 +52,24 @@ function num(value: unknown): number | null {
   return typeof n === "number" && Number.isFinite(n) ? n : null;
 }
 
-/** Mappe la sortie brute du RPC cycles vers la forme cliente (MIN-58). */
+/**
+ * Mappe la sortie brute du RPC cycles vers la forme cliente (MIN-58).
+ *
+ * `median_seconds` est lu sans repli sur l'ancien `avg_seconds` : entre le
+ * déploiement du code et celui de la migration, la fonction en base rend encore
+ * des moyennes, et une moyenne affichée sous un libellé « médiane » serait un
+ * chiffre faux qui ne se voit pas. Une ligne sans médiane est donc écartée — la
+ * section disparaît le temps que la migration passe, comme quand le RPC lui-même
+ * n'est pas encore déployé.
+ */
 function toCycles(raw: RawCycleStats | null): StatsCycles {
   const byEffort = (raw?.by_effort ?? [])
-    .map((r) => ({
-      effort: r.effort,
-      avgSeconds: num(r.avg_seconds) ?? 0,
-      sample: num(r.sample) ?? 0,
-    }))
-    .filter((r) => r.sample > 0 && EFFORT_ORDER.has(r.effort))
+    .flatMap<StatsCycleEffort>((r) => {
+      const medianSeconds = num(r.median_seconds);
+      const sample = num(r.sample) ?? 0;
+      if (medianSeconds === null || sample <= 0 || !EFFORT_ORDER.has(r.effort)) return [];
+      return [{ effort: r.effort, medianSeconds, sample }];
+    })
     .sort((a, b) => (EFFORT_ORDER.get(a.effort)! - EFFORT_ORDER.get(b.effort)!));
   return {
     avgCompletionOffsetDays: num(raw?.avg_completion_offset_days),

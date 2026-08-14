@@ -127,17 +127,24 @@ export function ActionsPopover({
       const top = rect.bottom - FOOTER_HEIGHT;
       const left = rect.right - POPOVER_WIDTH - RIGHT_OFFSET;
 
-      setPosition({ top, left });
+      // Bail-out d'identité : sans lui, chaque mesure repose un objet neuf,
+      // donc un rendu, même quand rien n'a bougé.
+      setPosition((prev) =>
+        prev && prev.top === top && prev.left === left ? prev : { top, left }
+      );
     };
 
     updatePosition();
+    // ⚠ **Pas d'écouteur de `scroll` en capture** (MIN-318). L'ancre est
+    // `styles.searchView`, dans la modale FIXE de la palette : elle ne bouge pas
+    // au défilement de la page. Le seul défilement qui atteignait cet écouteur
+    // était celui, animé, du `scrollIntoView({ behavior: "smooth" })` d'un peu
+    // plus bas — qui émet ~60 événements par seconde, tous captés. Chaque flèche
+    // pressée dans le menu ouvrait donc une boucle lecture-de-géométrie /
+    // écriture-d'état pendant ~300 ms. Le geste juste est de le SUPPRIMER, pas
+    // de le throttler.
     window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
+    return () => window.removeEventListener("resize", updatePosition);
   }, [isOpen, anchorRef]);
 
   // Focus input when popover opens
@@ -231,27 +238,25 @@ export function ActionsPopover({
   useEffect(() => {
     if (!isOpen) return;
 
+    // Ce qu'il faut ignorer, c'est l'événement qui vient d'OUVRIR le popover :
+    // il est encore en cours de propagation quand cet effet s'exécute, et un
+    // écouteur posé sur `document` pendant sa remontée le reçoit. On le
+    // reconnaît à son horodatage — `e.timeStamp` et `performance.now()`
+    // partagent la même origine —, plutôt qu'en attendant 100 ms en espérant
+    // qu'il soit passé. Un chrono en dur ne dit pas ce qu'il attend, et il a
+    // tort dans les deux sens : trop long si le geste suivant arrive vite, trop
+    // court si le fil principal est occupé.
+    const openedAt = performance.now();
+
     const handleClickOutside = (e: MouseEvent) => {
+      if (e.timeStamp <= openedAt) return;
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
 
-    // Track whether listener was actually added to prevent orphan listeners
-    let listenerAdded = false;
-
-    // Delay adding listener to prevent immediate close
-    const timer = setTimeout(() => {
-      listenerAdded = true;
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-      if (listenerAdded) {
-        document.removeEventListener("mousedown", handleClickOutside);
-      }
-    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
 
   // Keyboard navigation
