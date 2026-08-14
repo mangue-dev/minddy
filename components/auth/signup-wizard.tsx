@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button, Input, Spinner } from "mangue-ui";
-import { ArrowLeft, Check, Shuffle, UserPlus } from "lucide-react";
+import { ArrowLeft, Shuffle, UserPlus } from "lucide-react";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
 import { UserAvatar } from "@/components/user-avatar";
 import {
@@ -15,6 +15,7 @@ import {
   Field,
   MailGlyph,
   OAuthButtons,
+  PasswordRules,
   SignupLegalNotice,
   useInDesktopApp,
   type OAuthProvider,
@@ -24,7 +25,7 @@ import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { useAnalytics } from "@/lib/use-analytics";
 import { errorReason } from "@/lib/analytics-sanitize";
 import { authErrorMessage } from "@/lib/auth-errors";
-import { MIN_PASSWORD_LENGTH, checkPassword } from "@/lib/password-policy";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
 import {
   SIGNUP_STEPS,
   nextSignupStep,
@@ -64,44 +65,6 @@ const ISSUE_KEYS = {
   passwordPolicy: "passwordPolicy",
   passwordMismatch: "passwordMismatch",
 } as const;
-
-/**
- * Les exigences du mot de passe, cochées à la frappe.
- *
- * Elles étaient tenues par Supabase seul : on tapait, on cliquait, et le serveur
- * répondait en anglais une liste de conditions qu'on n'avait jamais vues. Les
- * mêmes règles sont maintenant évaluées ici ([password-policy.ts](../../lib/password-policy.ts)),
- * et le bouton reste grisé tant qu'elles ne sont pas toutes tenues : le refus du
- * serveur devient un filet, plus un mode de dialogue.
- *
- * `aria-live` sur la liste : la coche est une information visuelle, et sans elle
- * un lecteur d'écran n'entendrait jamais que la règle vient d'être satisfaite.
- */
-function PasswordRules({ password }: { password: string }) {
-  const t = useTranslations("Auth");
-  return (
-    <ul className="space-y-1.5" aria-live="polite">
-      {checkPassword(password).map(({ id, met }) => (
-        <li
-          key={id}
-          className={`flex items-center gap-2 text-xs transition-colors ${
-            met ? "text-foreground" : "text-muted-foreground"
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
-              met ? "border-transparent bg-emerald-600 text-white" : "border-border"
-            }`}
-          >
-            {met && <Check className="size-3" strokeWidth={3} />}
-          </span>
-          {t(id, { min: MIN_PASSWORD_LENGTH })}
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
   const t = useTranslations("Auth");

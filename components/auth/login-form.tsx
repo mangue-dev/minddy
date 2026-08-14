@@ -55,6 +55,12 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   const signUpHref = `/signup${preserveAuthParams(searchParams)}`;
 
   const [email, setEmail] = useState(invite?.invitedEmail ?? "");
+  // L'adresse en cours de saisie voyage jusqu'à l'écran de demande — c'est un
+  // paramètre d'URL, donc calculé au rendu à partir de l'état du champ.
+  const forgotPasswordHref = `/forgot-password${preserveAuthParams(
+    searchParams,
+    email.trim() ? { email: email.trim() } : undefined
+  )}`;
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   // Provider en cours de redirection — la page part vers Google/GitHub, donc cet
@@ -260,6 +266,19 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </Field>
+
+            {/* Le seul chemin de retour pour un compte sans Google ni GitHub
+                (MIN-297). Sous le champ, aligné à droite : c'est là qu'on le
+                cherche, et c'est le moment où l'on découvre qu'on a oublié.
+                L'adresse déjà tapée le suit, pour ne pas la retaper. */}
+            <div className="flex justify-end">
+              <Link
+                href={forgotPasswordHref}
+                className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                {t("forgotPasswordLink")}
+              </Link>
+            </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 

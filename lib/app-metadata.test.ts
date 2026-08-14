@@ -35,6 +35,8 @@ const META_PAGE_KEYS = [
   "oauthSuccess",
   "emailConfirmed",
   "confirmSignIn",
+  "forgotPassword",
+  "resetPassword",
 ] as const;
 
 /** Chemins de toutes les feuilles de route rendues en HTML (`page.tsx`). */

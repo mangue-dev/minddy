@@ -570,7 +570,25 @@
     "confirmSignInCta": "Me connecter",
     "confirmSignInExpiredTitle": "Ce lien n'est plus actif",
     "confirmSignInExpiredBody": "Il a déjà servi, ou trop de temps a passé. Demandez-en un nouveau depuis la page de connexion.",
-    "confirmSignInExpiredCta": "Retour à la connexion"
+    "confirmSignInExpiredCta": "Retour à la connexion",
+    "forgotPasswordLink": "Mot de passe oublié ?",
+    "forgotTitle": "Mot de passe oublié",
+    "forgotSubtitle": "Indiquez votre adresse : on vous envoie un lien pour en choisir un nouveau.",
+    "forgotSubmit": "Envoyer le lien",
+    "forgotSentTitle": "Vérifiez votre boîte mail",
+    "forgotSentBody": "Si un compte existe pour {email}, un lien vient d'y partir. Il est valable une heure et ne sert qu'une fois.",
+    "forgotBackToLogin": "Retour à la connexion",
+    "confirmResetTitle": "Réinitialiser votre mot de passe",
+    "confirmResetBody": "Vous venez d'ouvrir un lien de réinitialisation. minddy n'ouvre jamais de session sur un lien seul — confirmez que c'est bien vous qui l'avez demandé.",
+    "confirmResetCta": "Choisir un nouveau mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "resetTitle": "Choisissez un nouveau mot de passe",
+    "resetSubtitle": "Il doit remplir les conditions ci-dessous.",
+    "resetSubmit": "Enregistrer et continuer",
+    "resetDone": "Votre mot de passe a été changé.",
+    "resetExpiredTitle": "Ce lien n'est plus actif",
+    "resetExpiredBody": "Il a déjà servi, ou trop de temps a passé. Demandez-en un nouveau, il arrive en quelques secondes.",
+    "resetExpiredCta": "Demander un nouveau lien"
   },
   "BulkActions": {
     "selected": "{count, plural, one {# ticket sélectionné} other {# tickets sélectionnés}}",
@@ -1423,7 +1441,11 @@
     "pages": "Pages",
     "pagesDescription": "Le wiki du projet : notes, comptes-rendus et process, en arbre.",
     "confirmSignIn": "Confirmer la connexion",
-    "confirmSignInDescription": "Confirmez le lien de connexion que vous venez d'ouvrir."
+    "confirmSignInDescription": "Confirmez le lien de connexion que vous venez d'ouvrir.",
+    "forgotPassword": "Mot de passe oublié",
+    "forgotPasswordDescription": "Recevez un lien pour choisir un nouveau mot de passe.",
+    "resetPassword": "Nouveau mot de passe",
+    "resetPasswordDescription": "Choisissez le mot de passe de votre compte minddy."
   },
   "Stats": {
     "title": "Statistiques",

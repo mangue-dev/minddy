@@ -30,6 +30,13 @@ interface AuthContextValue {
     password: string,
     options?: { fullName?: string; avatarSeed?: string }
   ) => Promise<{ requiresEmailConfirmation: boolean }>;
+  /**
+   * Envoie le lien de réinitialisation de mot de passe (MIN-297). Ne dit JAMAIS
+   * si l'adresse a un compte : GoTrue répond de la même façon dans les deux cas,
+   * et l'écran affiche la même phrase — un formulaire qui distingue les deux est
+   * un révélateur de comptes.
+   */
+  sendPasswordReset: (email: string) => Promise<void>;
   /** Wired for later — OAuth buttons aren't shown in the v1 foundations UI. */
   signInWithOAuth: (
     provider: "google" | "github",
@@ -225,6 +232,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const sendPasswordReset = useCallback(async (email: string) => {
+    // Même URL que la confirmation d'inscription, et pour les mêmes raisons :
+    // c'est l'ORIGINE qui se joue ici (dev, preview ou prod), et le marqueur
+    // `desktop=1` fait repasser le jeton à l'app au lieu de connecter le
+    // navigateur système (MIN-291). La DESTINATION finale, elle, est posée par
+    // le gabarit d'e-mail — `next=/reset-password` (MIN-117, MIN-297) : rien de
+    // ce qu'on ajoute ici en query ne survit à l'allowlist de GoTrue.
+    const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
+    if (getDesktopBridge()) callbackUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
+    const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
+      redirectTo: callbackUrl.toString(),
+    });
+    if (error) throw error;
+  }, []);
+
   const signInWithOAuth = useCallback(
     async (provider: "google" | "github", redirectAfter?: string) => {
       const desktop = getDesktopBridge();
@@ -406,6 +428,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signInWithPassword,
       signUpWithPassword,
+      sendPasswordReset,
       signInWithOAuth,
       completeDesktopSignIn,
       signOut,
@@ -425,6 +448,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signInWithPassword,
       signUpWithPassword,
+      sendPasswordReset,
       signInWithOAuth,
       completeDesktopSignIn,
       signOut,

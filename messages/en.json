@@ -570,7 +570,25 @@
     "confirmSignInCta": "Sign me in",
     "confirmSignInExpiredTitle": "This link is no longer active",
     "confirmSignInExpiredBody": "It was already used, or too much time went by. Ask for a new one from the sign-in page.",
-    "confirmSignInExpiredCta": "Back to sign-in"
+    "confirmSignInExpiredCta": "Back to sign-in",
+    "forgotPasswordLink": "Forgot your password?",
+    "forgotTitle": "Forgot your password",
+    "forgotSubtitle": "Enter your address and we'll send you a link to pick a new one.",
+    "forgotSubmit": "Send the link",
+    "forgotSentTitle": "Check your inbox",
+    "forgotSentBody": "If an account exists for {email}, a link is on its way. It lasts an hour and works once.",
+    "forgotBackToLogin": "Back to sign in",
+    "confirmResetTitle": "Reset your password",
+    "confirmResetBody": "You just opened a password reset link. minddy never opens a session on a link alone — confirm that you are the one who asked for it.",
+    "confirmResetCta": "Choose a new password",
+    "newPassword": "New password",
+    "resetTitle": "Choose a new password",
+    "resetSubtitle": "It has to meet the requirements below.",
+    "resetSubmit": "Save and continue",
+    "resetDone": "Your password has been changed.",
+    "resetExpiredTitle": "This link is no longer active",
+    "resetExpiredBody": "It has already been used, or too much time has passed. Ask for a new one — it arrives in seconds.",
+    "resetExpiredCta": "Ask for a new link"
   },
   "BulkActions": {
     "selected": "{count, plural, one {# issue selected} other {# issues selected}}",
@@ -1423,7 +1441,11 @@
     "pages": "Pages",
     "pagesDescription": "The project wiki: notes, write-ups and process docs, in a tree.",
     "confirmSignIn": "Confirm sign-in",
-    "confirmSignInDescription": "Confirm the sign-in link you just opened."
+    "confirmSignInDescription": "Confirm the sign-in link you just opened.",
+    "forgotPassword": "Forgot your password",
+    "forgotPasswordDescription": "Get a link to choose a new password.",
+    "resetPassword": "New password",
+    "resetPasswordDescription": "Choose the password for your minddy account."
   },
   "Stats": {
     "title": "Statistics",

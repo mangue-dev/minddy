@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, Spinner, cn } from "mangue-ui";
-import { Github, Mail } from "lucide-react";
+import { Check, Github, Mail } from "lucide-react";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { IsoIconTile } from "@/components/marketing/iso-tile";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
+import { MIN_PASSWORD_LENGTH, checkPassword } from "@/lib/password-policy";
 import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
 
 /**
@@ -273,6 +274,48 @@ export function AuthColumn({
         <div className="w-full max-w-[380px]">{children}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Les exigences du mot de passe, cochées à la frappe.
+ *
+ * Elles étaient tenues par Supabase seul : on tapait, on cliquait, et le serveur
+ * répondait en anglais une liste de conditions qu'on n'avait jamais vues. Les
+ * mêmes règles sont maintenant évaluées ici ([password-policy.ts](../../lib/password-policy.ts)),
+ * et le bouton reste grisé tant qu'elles ne sont pas toutes tenues : le refus du
+ * serveur devient un filet, plus un mode de dialogue.
+ *
+ * `aria-live` sur la liste : la coche est une information visuelle, et sans elle
+ * un lecteur d'écran n'entendrait jamais que la règle vient d'être satisfaite.
+ *
+ * Partagée par les deux écrans qui posent un mot de passe (MIN-297) : le wizard
+ * d'inscription et la définition d'un nouveau mot de passe. Les mêmes règles y
+ * sont exigées, elles doivent y être DITES de la même façon.
+ */
+export function PasswordRules({ password }: { password: string }) {
+  const t = useTranslations("Auth");
+  return (
+    <ul className="space-y-1.5" aria-live="polite">
+      {checkPassword(password).map(({ id, met }) => (
+        <li
+          key={id}
+          className={`flex items-center gap-2 text-xs transition-colors ${
+            met ? "text-foreground" : "text-muted-foreground"
+          }`}
+        >
+          <span
+            aria-hidden="true"
+            className={`flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+              met ? "border-transparent bg-emerald-600 text-white" : "border-border"
+            }`}
+          >
+            {met && <Check className="size-3" strokeWidth={3} />}
+          </span>
+          {t(id, { min: MIN_PASSWORD_LENGTH })}
+        </li>
+      ))}
+    </ul>
   );
 }
 

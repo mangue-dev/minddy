@@ -50,6 +50,10 @@ export interface AnalyticsEventProps {
   signup_submitted: NoProps;
   signup_succeeded: { requires_email_confirmation: boolean };
   signup_failed: { reason: string };
+  /** Parcours « mot de passe oublié » (MIN-297) : demandé, échoué, terminé. */
+  password_reset_requested: NoProps;
+  password_reset_failed: { reason: string };
+  password_reset_completed: NoProps;
   user_signed_out: NoProps;
 
   // ── Onboarding (MIN-74) ──
@@ -525,6 +529,9 @@ const EVENT_NAMES = [
   "signup_submitted",
   "signup_succeeded",
   "signup_failed",
+  "password_reset_requested",
+  "password_reset_failed",
+  "password_reset_completed",
   "user_signed_out",
   // Onboarding
   "onboarding_viewed",

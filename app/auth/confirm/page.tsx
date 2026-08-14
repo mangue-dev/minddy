@@ -37,6 +37,15 @@ export default async function ConfirmSignInPage() {
   const t = await getTranslations("Auth");
   const pending = decodePendingOtp((await cookies()).get(AUTH_PENDING_COOKIE)?.value);
 
+  // Un lien de réinitialisation demande le même GESTE, mais ne promet pas la
+  // même chose (MIN-297) : « Me connecter » sous un mail intitulé « Réinitialiser
+  // votre mot de passe » ferait douter de la page au moment précis où l'on
+  // demande de faire confiance.
+  const recovery = pending?.type === "recovery";
+  const title = recovery ? "confirmResetTitle" : "confirmSignInTitle";
+  const body = recovery ? "confirmResetBody" : "confirmSignInBody";
+  const cta = recovery ? "confirmResetCta" : "confirmSignInCta";
+
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
       <Card className="w-full max-w-md rounded-2xl">
@@ -51,10 +60,10 @@ export default async function ConfirmSignInPage() {
 
           <div className="flex flex-col gap-1.5">
             <h1 className="font-display text-xl font-semibold tracking-tight">
-              {pending ? t("confirmSignInTitle") : t("confirmSignInExpiredTitle")}
+              {pending ? t(title) : t("confirmSignInExpiredTitle")}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {pending ? t("confirmSignInBody") : t("confirmSignInExpiredBody")}
+              {pending ? t(body) : t("confirmSignInExpiredBody")}
             </p>
           </div>
 
@@ -64,7 +73,7 @@ export default async function ConfirmSignInPage() {
             // se posent sans qu'aucun script n'ait à exister.
             <form action="/auth/confirm/complete" method="post" className="w-full">
               <Button type="submit" className="h-10 w-full justify-center">
-                {t("confirmSignInCta")}
+                {t(cta)}
               </Button>
             </form>
           ) : (

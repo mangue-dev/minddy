@@ -43,7 +43,9 @@ export type MetaPageKey =
   | "oauthAuthorize"
   | "oauthSuccess"
   | "emailConfirmed"
-  | "confirmSignIn";
+  | "confirmSignIn"
+  | "forgotPassword"
+  | "resetPassword";
 
 /**
  * @param scope Contexte dynamique accolé au titre — le nom du projet sur les

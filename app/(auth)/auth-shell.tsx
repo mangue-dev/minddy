@@ -23,12 +23,21 @@ import { DesktopAuthBridge } from "@/components/desktop-auth-bridge";
  * dont la hauteur change à chaque étape — sans le masquer, et sans avoir à le
  * mesurer.
  */
+/** Les écrans qui portent leur propre colonne pleine hauteur (`AuthColumn`). */
+const FULL_BLEED_ROUTES = new Set([
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+]);
+
 export function AuthShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  // Connexion et inscription posent elles-mêmes leur colonne : la marque en
-  // haut à gauche de la FENÊTRE, le contenu au centre. Les écrans OAuth
-  // (consentement / succès) sont de simples cartes centrées.
-  const fullBleed = pathname === "/login" || pathname === "/signup";
+  // Connexion, inscription et les deux écrans de mot de passe oublié (MIN-297)
+  // posent eux-mêmes leur colonne : la marque en haut à gauche de la FENÊTRE, le
+  // contenu au centre. Les écrans OAuth (consentement / succès) sont de simples
+  // cartes centrées.
+  const fullBleed = FULL_BLEED_ROUTES.has(pathname);
 
   return (
     <AuthProvider>
