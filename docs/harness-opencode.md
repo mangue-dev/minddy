@@ -1391,6 +1391,52 @@ chemin d'exfiltration le plus court n'est pas `curl`, c'est `git add -A` → com
 ([secret-scan.ts](../lib/server/agent/secret-scan.ts), MIN-360) qui le garde ; ce
 ticket-ci ne portait que sur ce qu'on **stocke**.
 
+### 2.32 Les permissions, figées en sondes — et quatre mesures de plus (MIN-362)
+
+L'audit local du 2026-08-14 avait levé ses dix-huit inconnues avec des sondes
+**jetables**, consignées dans un `.md`. Elles sont maintenant exécutables, et
+elles se relancent au prochain bump d'`OPENCODE_VERSION` :
+
+| Sonde | Ce qu'elle garde | Coût |
+| --- | --- | --- |
+| [opencode-permissions.probe.test.ts](../lib/server/agent/vm/opencode-permissions.probe.test.ts) (`MDY_OPENCODE_PERMS_PROBE=1`) | l'ordre des règles, le motif d'un « toujours », la cascade de refus, la grammaire des motifs, le jeu de tools, le ruleset de session, le magasin V2, et les 30 commandes de shell | ~2 min, **aucun modèle** |
+| [opencode-wait.probe.test.ts](../lib/server/agent/vm/opencode-wait.probe.test.ts) (`MDY_OPENCODE_WAIT_PROBE=1`) | l'absence de timeout, la mort du process pendant une attente, la question qui ne termine pas le tour, et — sous `MDY_OPENCODE_WAIT_LIVE=1` — la même attente avec un **vrai** fournisseur | ~50 s, +2 min et ~0,003 $ pour le cas live |
+| [worktree-hooks.git.test.ts](../lib/server/agent/worktree-hooks.git.test.ts) | `core.hooksPath` du dépôt principal **s'applique** au commit d'un worktree ; notre fin de tour, elle, est de la plomberie | ordinaire, dans `npm test` |
+
+Le décor est partagé : [opencode-probe-rig.ts](../lib/server/agent/vm/opencode-probe-rig.ts),
+un faux fournisseur OpenAI-compatible qui **scripte** les appels de tool — c'est
+ce qui rend la mesure déterministe et gratuite.
+
+**Ce que ces sondes ont ajouté à l'audit**, et qui change des lignes de code :
+
+1. **La grammaire des motifs n'est pas la même selon la permission.** `edit`
+   matche des chemins **relatifs au dépôt**, sans expansion de `~` ;
+   `external_directory` matche des dossiers **absolus**, avec `~` expansé. Le
+   corollaire est dur : `permission.edit = {"~/.ssh/*": "deny"}` — la façon
+   dont n'importe qui écrirait la protection — **n'empêche rien et ne demande
+   rien**. Écrit `"../.ssh/*"`, le même refus mord. Une ACL de chemins pour le
+   run local doit donc se construire en relatif, ou ne pas se construire.
+2. **Le catalogue REST n'est pas celui du modèle.** Un `deny` nu retire bien le
+   tool de ce qui est **offert au modèle** (mesuré dans le corps de requête du
+   fournisseur), mais `/experimental/tool` continue de le lister. La mesure de
+   l'audit était juste ; l'endroit où la lire ne l'était pas.
+3. **Un ruleset de session en `action: "allow"` est une vraie ACL** (inconnue du
+   §9 de l'audit) : il lève l'`ask` de la config sans amputer le jeu de tools —
+   là où le `deny` de session, lui, ampute. C'est la seule forme d'autorisation
+   par session qui ne coûte pas un tool.
+4. **Le système V2 n'est branché sur rien** : ni `/api/session/:id/permission`,
+   ni `/api/permission/request`, ni `/api/permission/saved` ne voient passer
+   quoi que ce soit — même après un « toujours ». La seule persistance native
+   offerte reste donc inutilisable en 1.18.16.
+5. **Une attente longue survit avec un vrai fournisseur** : 120 s de demande
+   pendante sur un round Haiku via le proxy, et le tour repart quand on répond.
+   Le faux fournisseur ne pouvait pas le dire — il avait fini son flux avant.
+6. **`core.hooksPath` traverse les worktrees.** Le `config` du dépôt principal
+   est partagé (seul `extensions.worktreeConfig` le découpe) : un `git commit`
+   depuis le worktree d'un run exécute le `pre-commit` de l'utilisateur, husky
+   compris. Ce n'est pas notre chemin — `commitTurnAndPush` est de la plomberie
+   — mais tout ce qui commiterait autrement dans un worktree doit le savoir.
+
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un
