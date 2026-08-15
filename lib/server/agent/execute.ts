@@ -1663,7 +1663,28 @@ export async function executeAgentRun(
      * rapport de fin de tour ou le chien de garde, exactement comme dans le cloud.
      */
     if (localTurn) {
-      opts.onLocalAssignment?.(job);
+      /**
+       * ⚠ **`layout` EST RETIRÉ ICI, À LA MAIN, ET C'EST LE CŒUR DE L'AFFAIRE.**
+       *
+       * Le type de `onLocalAssignment` dit `Omit<VmJob, "layout" | "bootstrapMs">`,
+       * et c'est **une fiction de compilateur** : l'objet ci-dessus porte bien un
+       * `layout: cloudLayout()` à l'exécution, parce qu'il fallait bien en poser
+       * un pour satisfaire `VmJob`. Envoyé tel quel, il donnait à la machine les
+       * chemins `/vercel/sandbox` — c'est-à-dire un dossier qui n'existe pas
+       * chez elle, et surtout un layout que le serveur n'a AUCUN moyen de
+       * connaître.
+       *
+       * Le parseur de la coquille l'a refusé, et il a eu raison : `"layout" in
+       * job` est chez lui un refus sec ([lib/desktop/local-turn.ts](../../desktop/local-turn.ts)),
+       * précisément parce que `repoDir` est la racine de sécurité de toutes les
+       * écritures du modèle et qu'elle ne se reçoit pas d'ailleurs.
+       *
+       * La leçon vaut d'être écrite : **un `Omit<>` sur une frontière réseau ne
+       * retire rien.** Ce qui a rattrapé la faute, c'est la garde d'en face, pas
+       * le type.
+       */
+      const { layout: _cloudLayout, ...assignment } = job;
+      opts.onLocalAssignment?.(assignment);
       await stampRun(run.id, { last_activity_at: new Date().toISOString() });
       // Le drapeau de boucle partie n'est PAS posé ici : il dit « une microVM
       // tourne, et c'est la boucle qui la facturera ». Il n'y en a aucune, et la

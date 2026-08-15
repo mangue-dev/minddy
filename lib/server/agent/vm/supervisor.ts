@@ -1,5 +1,6 @@
 import {
   changedFiles,
+  workingTreeChangedFiles,
   commitAndPush,
   readWorkFile,
   repoBackgroundRunner,
@@ -1807,7 +1808,32 @@ export async function runOpencodeTurn(
     await background.stopAll().catch(() => 0);
     let pushed: VmPushResult | null = null;
     let pushError: string | undefined;
-    if (job.writesToRepo) {
+    /**
+     * ─────────────────────────────────────────────────────────────────────────
+     * EN MODE DÉPÔT COURANT, LE TOUR NE COMMITE RIEN (MIN-293, décision D2bis-B).
+     *
+     * L'audit laissait le livrable ouvert : le tour poussait une branche à chaque
+     * fin de tour, comme dans le cloud. **Sur le disque de quelqu'un, c'est le
+     * mauvais geste** — l'agent édite là où l'humain travaille, et il n'a aucune
+     * raison de décider tout seul que ce travail-là part sur une forge. La branche
+     * arrivait d'ailleurs sans exister localement (commit dans un index jetable,
+     * poussé par sha), donc on la lisait dans l'interface sans pouvoir la trouver
+     * dans son propre `git branch` : une branche qu'on n'a pas demandée, à un
+     * endroit qu'on ne voit pas.
+     *
+     * **Le livrable devient l'arbre de travail.** L'agent édite, le fil dit ce
+     * qui a bougé, et l'humain relit dans son éditeur puis commite lui-même —
+     * c'est le produit de Claude Code, et c'est cohérent avec la décision D2 qui
+     * fait du dépôt courant le défaut.
+     *
+     * ⚠ **CE QUE ÇA COÛTE, ET IL FAUT LE DIRE** : « le produit est identique,
+     * seule la machine change » est encore un peu moins vrai. La pull request
+     * cesse d'être la fin d'un tour pour devenir un GESTE EXPLICITE — le tool
+     * `create_pr`, que le modèle sert toujours et qui pousse quand on le lui
+     * demande. Rien de la machinerie de MIN-358 ne meurt : elle change
+     * simplement de déclencheur.
+     */
+    if (job.writesToRepo && !current) {
       try {
         pushed = await pushWork(commitMessageFromReply(reply, job.commitRef));
       } catch (err) {
@@ -1831,10 +1857,24 @@ export async function runOpencodeTurn(
           ? "error"
           : "completed";
 
+    /**
+     * CE QUE LE TOUR A CHANGÉ — et ça ne se lit plus au même endroit selon le
+     * mode (MIN-293). En clone, c'est le diff entre la baseline et ce qu'on vient
+     * de pousser. En dépôt courant, il n'y a rien à pousser : c'est le diff entre
+     * la baseline et **l'arbre de travail**, borné au périmètre du tour — sans
+     * quoi les fichiers que l'humain avait déjà en cours remonteraient au fil
+     * comme si l'agent les avait touchés.
+     */
     const changed =
-      status === "completed" && pushed?.headSha && pushed.headSha !== filesFromSha
-        ? await changedFiles(host, filesFromSha, pushed.headSha).catch(() => null)
-        : null;
+      status !== "completed"
+        ? null
+        : current
+          ? await workingTreeChangedFiles(host, filesFromSha, (await turnScope()).paths).catch(
+              () => null,
+            )
+          : pushed?.headSha && pushed.headSha !== filesFromSha
+            ? await changedFiles(host, filesFromSha, pushed.headSha).catch(() => null)
+            : null;
 
     // Le MÊME constructeur que la sauvegarde périodique : seul le sha des
     // fichiers change, et il ne change qu'ici (c'est le push qui l'a bougé).

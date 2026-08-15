@@ -95,15 +95,13 @@ export function opencodeDecision(
   return { action: "install", why };
 }
 
-/** La commande d'installation. Une seule écriture, lue par la coquille. */
-export function opencodeInstallArgs(wanted: string = OPENCODE_VERSION): string[] {
-  return ["i", "--no-audit", "--no-fund", "--silent", `opencode-ai@${wanted}`];
-}
-
-/** Le chemin du manifeste dont on lit la version posée. */
-export function opencodeManifestPath(installDir: string): string {
-  return `${installDir.replace(/\/+$/, "")}/node_modules/opencode-ai/package.json`;
-}
+/**
+ * La commande d'installation et les chemins du dossier vivent dans
+ * [opencode-version.ts](../server/agent/vm/opencode-version.ts) depuis MIN-293 :
+ * le harness les pose aussi, et deux écritures d'une même commande finissent par
+ * ne plus poser les mêmes drapeaux. Ceux-là comptent — `--prefix` est ce qui
+ * empêche `npm` de remonter l'arborescence et d'installer dans le home.
+ */
 
 /** La version lue dans ce manifeste, ou `null` si le paquet est là sans elle. */
 export function readOpencodeManifestVersion(raw: string): string | null {

@@ -1139,7 +1139,14 @@ export function AgentEventFeed({
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
             <span className="text-shimmer">
-              {startingSandbox ? t("openingSandbox") : t("working")}
+              {startingSandbox
+                ? // Un tour local n'ouvre AUCUNE sandbox (MIN-293) : entre le
+                  // lancement et le premier pas, ce qui se passe est le
+                  // téléchargement du harness et l'ouverture du dépôt sur la
+                  // machine. Dire « sandbox » ici serait faux, et ce serait la
+                  // première chose que l'utilisateur lit d'un run local.
+                  t(localExec ? "openingLocalTurn" : "openingSandbox")
+                : t("working")}
             </span>
           </div>
         ) : emptyAtRest ? (

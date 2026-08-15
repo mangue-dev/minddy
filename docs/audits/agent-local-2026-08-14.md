@@ -841,7 +841,38 @@ courant, cette frontière n'existe plus du tout. Et deux trous du §4 deviennent
 directs au lieu d'exiger un `git -C` : écrire dans `.git/hooks/` par le shell, et
 `git config core.hooksPath`. **Ils passent de « majeur » à « bloquant v1 ».**
 
-### D2bis. Ce qui reste à trancher : le livrable en mode courant
+### D2bis. Le livrable en mode courant — **TRANCHÉ (2026-08-15) : B**
+
+> **Décision du PO, prise en voyant le premier vrai tour local.** L'agent avait
+> édité `test.txt` dans le dépôt courant *et* poussé une branche
+> `minddy/agent/note-…` sur la forge. Verdict : *« il ne faut pas qu'il crée une
+> branche en mode local, puisqu'il édite en local. »*
+>
+> **Le tour ne commite rien et ne pousse rien** ([supervisor.ts](../../lib/server/agent/vm/supervisor.ts),
+> fin de tour). Son livrable est l'arbre de travail : l'agent édite, le fil dit ce
+> qui a bougé (lu dans l'arbre, borné au périmètre du tour), et l'humain relit
+> dans son éditeur puis commite lui-même.
+>
+> **Ce qui a emporté la décision n'est pas la théorie, c'est ce qu'on voyait à
+> l'écran** : la branche était poussée par sha depuis un index jetable, donc elle
+> n'existait nulle part en local. On la lisait dans l'interface sans pouvoir la
+> retrouver dans son propre `git branch` — une branche qu'on n'a pas demandée, à
+> un endroit qu'on ne voit pas.
+>
+> **Ce que ça coûte, et c'est un cinquième écart au critère du §4** : la pull
+> request cesse d'être la fin d'un tour pour devenir un **geste explicite** —
+> `create_pr`, toujours servi, qui pousse quand on le lui demande. Aucune ligne de
+> la machinerie de MIN-358 ne meurt : elle change de déclencheur.
+>
+> **Ce que ça supprime en prime** : le chevauchement avec le travail de l'humain
+> (`current_repo_overlap`) ne peut plus arriver tout seul. Sans commit
+> automatique, plus rien n'emporte les fichiers de quelqu'un dans une pull request
+> qu'il n'a pas demandée — c'était le trou que le §D2 disait « non optionnel » et
+> qu'aucune astuce ne refermait.
+>
+> L'option **C** (worktree dédié dès qu'une PR est demandée) reste ouverte et
+> devient le prolongement naturel : c'est le même geste explicite, avec un dossier
+> à part.
 
 Trois formes, à choisir avant le lot de livraison.
 

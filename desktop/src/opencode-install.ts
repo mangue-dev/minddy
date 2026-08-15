@@ -1,15 +1,19 @@
 import { spawn } from "node:child_process";
-import { accessSync, constants, readFileSync } from "node:fs";
+import { accessSync, constants, readFileSync, writeFileSync } from "node:fs";
 
+import { childEnv } from "@/lib/desktop/child-env";
 import {
-  OPENCODE_VERSION,
   opencodeBin,
   opencodeDecision,
-  opencodeInstallArgs,
-  opencodeManifestPath,
   readOpencodeManifestVersion,
   type OpencodeDecision,
 } from "@/lib/desktop/opencode-install";
+import {
+  OPENCODE_INSTALL_MANIFEST,
+  opencodeInstallArgs,
+  opencodeInstallManifestPath,
+  opencodePackageManifestPath,
+} from "@/lib/server/agent/vm/opencode-version";
 
 /**
  * LE `fs` ET LE `spawn` DU PRÉ-VOL OPENCODE (MIN-293) — et rien d'autre.
@@ -55,7 +59,7 @@ export function readOpencodeFacts(installDir: string): {
   let installedVersion: string | null = null;
   try {
     installedVersion = readOpencodeManifestVersion(
-      readFileSync(opencodeManifestPath(installDir), "utf8"),
+      readFileSync(opencodePackageManifestPath(installDir), "utf8"),
     );
   } catch {
     // Pas de paquet : `installedVersion` reste `null`, et la décision le lit.
@@ -84,14 +88,27 @@ export function installOpencode(opts: {
   npmPath: string;
   timeoutMs?: number;
 }): Promise<string | null> {
+  /**
+   * ⚠ **LE `package.json` AVANT L'INSTALL** (MIN-293). Sans lui, `npm` remonte
+   * l'arborescence jusqu'au premier qu'il trouve et installe DEDANS, en rendant
+   * 0 — mesuré : 144 Mo dans `~/node_modules` et ce dossier-ci resté vide. Le
+   * `--prefix` de `opencodeInstallArgs` ferme la même porte une seconde fois.
+   */
+  try {
+    writeFileSync(opencodeInstallManifestPath(opts.installDir), OPENCODE_INSTALL_MANIFEST, "utf8");
+  } catch (error) {
+    return Promise.resolve(`could not prepare ${opts.installDir}: ${(error as Error).message}`);
+  }
+
   return new Promise((resolve) => {
-    const child = spawn(opts.npmPath, opencodeInstallArgs(OPENCODE_VERSION), {
+    const child = spawn(opts.npmPath, opencodeInstallArgs(opts.installDir), {
       cwd: opts.installDir,
       stdio: ["ignore", "ignore", "pipe"],
       // Un `npm` qui hériterait de l'environnement d'Electron peut trouver un
       // `NODE_OPTIONS` ou un `ELECTRON_RUN_AS_NODE` qui ne le concernent pas et
-      // le font échouer d'une façon incompréhensible.
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined, NODE_OPTIONS: undefined },
+      // le font échouer d'une façon incompréhensible. Même fabrique que le
+      // harness, pour que la règle n'ait qu'une écriture.
+      env: childEnv(process.env),
     });
 
     let stderr = "";
@@ -113,7 +130,25 @@ export function installOpencode(opts: {
     });
     child.on("exit", (code) => {
       clearTimeout(timer);
-      resolve(code === 0 ? null : `opencode install failed (exit ${code}): ${stderr.slice(-500)}`);
+      if (code !== 0) {
+        resolve(`opencode install failed (exit ${code}): ${stderr.slice(-500)}`);
+        return;
+      }
+      /**
+       * **UN `npm` QUI REND 0 NE PROUVE PAS QUE LE BINAIRE EST LÀ**, et c'est
+       * exactement ce qui est arrivé : install « réussie », dossier vide, et le
+       * pré-vol qui annonçait « prêt » au lanceur. Un pré-vol qui ment est pire
+       * que pas de pré-vol — il déplace la panne trois étages plus bas, dans un
+       * `spawn ENOENT` que le harness lit comme une lenteur.
+       */
+      if (!isExecutable(opencodeBin(opts.installDir))) {
+        resolve(
+          `opencode install reported success but ${opencodeBin(opts.installDir)} is missing — ` +
+            `npm may have installed into a parent package instead of ${opts.installDir}`,
+        );
+        return;
+      }
+      resolve(null);
     });
   });
 }

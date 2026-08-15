@@ -52,12 +52,33 @@ function closesTurn(it: FeedItem): it is TurnCloser {
 }
 
 /**
- * Items qu'un tour ARRÊTÉ garde SOUS son déroulé replié, jamais dedans : ce qu'il
- * a poussé (fichiers changés) et ce qui explique son arrêt (erreur du harnais).
- * Ce sont les deux seules choses qu'on veut lire sans avoir à déplier.
+ * Items qui CONCLUENT le tour qui vient de finir — ils arrivent APRÈS le résumé,
+ * donc après que le tour s'est refermé, et se rangent SOUS lui.
+ *
+ * ⚠ **Cette liste doit être tenue à jour, et l'oublier ne se voit pas d'un type.**
+ * Un event de fin de tour qui n'y est pas devient du TRAVAIL : il rouvre un tour à
+ * lui tout seul, et comme rien ne le conclut jamais, ce tour fantôme s'affiche
+ * « Tour interrompu » sous celui qui vient de réussir. C'est arrivé avec
+ * `current_repo_overlap` (MIN-358) : le défaut ne se voyait qu'en mode dépôt
+ * courant, c'est-à-dire uniquement sur un run local, et il faisait passer un tour
+ * abouti pour un tour coupé.
+ */
+function concludesTurn(it: FeedItem): boolean {
+  return (
+    it.kind === "files" ||
+    // Ce que le commit a emporté du travail de l'humain : une conclusion SUR le
+    // tour, au même titre que sa liste de fichiers.
+    (it.kind === "note" && it.variant === "currentRepoOverlap")
+  );
+}
+
+/**
+ * Items qu'un tour ARRÊTÉ garde SOUS son déroulé replié, jamais dedans : ce qui
+ * conclut le tour, et ce qui explique son arrêt (erreur du harnais). Ce sont les
+ * seules choses qu'on veut lire sans avoir à déplier.
  */
 function staysBelowTurn(it: FeedItem): boolean {
-  return it.kind === "files" || (it.kind === "note" && it.variant === "error");
+  return concludesTurn(it) || (it.kind === "note" && it.variant === "error");
 }
 
 export function buildBlocks(items: FeedItem[], active: boolean): Block[] {
@@ -76,14 +97,16 @@ export function buildBlocks(items: FeedItem[], active: boolean): Block[] {
   };
 
   for (const it of items) {
-    // Bloc « fichiers changés » : rattaché au tour qu'il clôt (rendu sous sa réponse).
-    // Sans tour immédiatement avant (résumé lâche, ou tour actif) → item libre.
-    if (it.kind === "files") {
+    // Ce qui CONCLUT un tour (fichiers changés, chevauchement avec le travail de
+    // l'humain) : rattaché au tour qu'il clôt, rendu sous sa réponse. Sans tour
+    // immédiatement avant (résumé lâche, ou tour actif) → item libre.
+    if (concludesTurn(it)) {
       // Jamais la liste du tour EN COURS sous le tour PRÉCÉDENT : le direct
       // devance les events (il ne passe pas par la base), donc `work` peut être
       // encore vide quand la première édition arrive — et le bloc se serait rangé
       // sous la réponse d'avant.
-      const turn = work.length === 0 && !it.live ? lastTurn() : null;
+      const live = it.kind === "files" && it.live;
+      const turn = work.length === 0 && !live ? lastTurn() : null;
       if (turn) turn.files.push(it);
       else work.push(it);
       continue;

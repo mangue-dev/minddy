@@ -10,6 +10,7 @@ import {
 import path from "node:path";
 import { app, session, utilityProcess, type UtilityProcess } from "electron";
 
+import { childEnv } from "@/lib/desktop/child-env";
 import {
   HARNESS_BUNDLE_PATH,
   HARNESS_DIR_NAME,
@@ -78,6 +79,21 @@ import { trace } from "./trace";
  *    fenêtre d'autorisation ne s'ouvre même pas.** Le refus est muet, exactement
  *    comme celui du micro avant MIN-294.
  *
+ * ## Ce que le fork rend au harness, mesuré et non déduit
+ *
+ * Sonde du 2026-08-15, sur Electron 43.4.0 : un enfant d'`utilityProcess.fork`
+ * reçoit `process.argv = [<Electron Helper>, <module>, ...args]` — **exactement
+ * la convention de `child_process.fork`**. Le harness lit donc bien son job en
+ * `process.argv[2]` ([vm/main.ts](../../lib/server/agent/vm/main.ts)), et rien
+ * n'est décalé. Mesuré aussi : `stdio: "pipe"` donne bien les deux flux, le code
+ * de sortie remonte, et le `cwd` est respecté.
+ *
+ * ⚠ Et un piège qui s'est présenté dans la foulée : `env` **refuse toute valeur
+ * qui n'est pas une chaîne**, avec un message qui ne nomme pas la clé
+ * (`TypeError: Invalid value for env`). D'où `childEnv`
+ * ([child-env.ts](../../lib/desktop/child-env.ts)), qui RETIRE au lieu de poser
+ * `undefined`.
+ *
  * ## Rien ici ne laisse un tour sans journal
  *
  * Chaque refus passe par `openRunLog` ou `noteLauncherFailure` avant de rendre.
@@ -106,12 +122,26 @@ interface LiveTurn {
  */
 const live = new Map<string, LiveTurn>();
 
-/** Ce que le lanceur rend à son appelant. */
+/**
+ * Ce que le lanceur rend à son appelant.
+ *
+ * `skipped` n'est PAS un refus, et c'est la distinction qui manquait : un run
+ * qui n'est plus en file est un run dont le tour tourne DÉJÀ — le message de
+ * l'utilisateur sera pris par la boucle en vol, il n'y a rien à lancer et rien à
+ * dire. Le confondre avec un échec faisait surgir une alerte à chaque relance de
+ * la conversation.
+ */
 export type LocalTurnResult =
   | { readonly status: "started"; readonly runId: string; readonly logPath: string }
+  | { readonly status: "skipped"; readonly reason: "not_queued" }
   | {
       readonly status: "refused";
-      readonly reason: LocalTurnRefusal | HarnessRefusal | "no_npm" | "install_failed";
+      readonly reason:
+        | LocalTurnRefusal
+        | HarnessRefusal
+        | "no_npm"
+        | "install_failed"
+        | "server";
       readonly message: string;
     };
 
@@ -141,14 +171,39 @@ export async function startLocalTurn(opts: {
     return refuse("already_running", localTurnRefusalMessage("already_running", ""));
   }
 
-  const raw = await fetchJson(`${opts.origin}/api/desktop/local-turn`, {
+  const answer = await fetchJson(`${opts.origin}/api/desktop/local-turn`, {
     method: "POST",
     body: JSON.stringify({ runId: opts.runId, deviceId: opts.deviceId }),
   });
-  const assignment = parseLocalTurnAssignment(raw);
+
+  /**
+   * ⚠ **CE QUE LE SERVEUR A RÉPONDU, DIT TEL QUEL.**
+   *
+   * La première version écrasait tout échec HTTP en « cette version de l'app ne
+   * sait pas lire ce tour, mets-la à jour » — un message faux dans la quasi-
+   * totalité des cas, et qui envoyait chercher au pire endroit. Un 409
+   * « ce déploiement ne sait pas frapper de clé plafonnée », un 404, un 401 de
+   * session expirée : trois pannes distinctes, un seul mensonge.
+   *
+   * Le motif `server` porte donc le statut ET la phrase du serveur, et
+   * `assignment_invalid` retrouve son sens exact — le corps est arrivé, et il
+   * n'a pas la forme attendue.
+   */
+  if (!answer.ok) {
+    // Le tour tourne déjà : il n'y a rien à lancer, et rien à dire.
+    if (answer.status === 409 && /not queued/i.test(answer.error)) {
+      trace("local-turn:skipped", { runId: opts.runId });
+      return { status: "skipped", reason: "not_queued" };
+    }
+    const message = `minddy refused to prepare this turn (${answer.status}): ${answer.error}`;
+    noteLauncherFailure(message);
+    return refuse("server", message);
+  }
+
+  const assignment = parseLocalTurnAssignment(answer.body);
   if (!assignment) {
     const message = localTurnRefusalMessage("assignment_invalid", "");
-    noteLauncherFailure(`${message}\n${JSON.stringify(raw)?.slice(0, 500) ?? ""}`);
+    noteLauncherFailure(`${message}\n${JSON.stringify(answer.body)?.slice(0, 800) ?? ""}`);
     return refuse("assignment_invalid", message);
   }
   return runAssignment(assignment, opts.origin);
@@ -281,15 +336,11 @@ export async function runAssignment(
     // bloquer sur un tube plein, et un tour dure des heures.
     stdio: "pipe",
     serviceName: `minddy-agent-${assignment.runId.slice(0, 8)}`,
-    env: {
-      ...process.env,
-      // Le harness est un bundle Node ordinaire : il n'a rien à hériter de ce
-      // qu'Electron pose pour ses propres process fils, et un `NODE_OPTIONS`
-      // traînant dans l'environnement d'un éditeur le ferait échouer d'une façon
-      // qui ne parle de rien.
-      NODE_OPTIONS: undefined,
-      ELECTRON_RUN_AS_NODE: undefined,
-    },
+    // ⚠ `childEnv`, et surtout pas `{ ...process.env, X: undefined }` :
+    // `utilityProcess.fork` REFUSE une valeur qui n'est pas une chaîne, et il le
+    // dit sans nommer la clé (`TypeError: Invalid value for env`). Le fork tombe
+    // alors avant que le harness ait démarré, là où il n'y a encore rien à lire.
+    env: childEnv(process.env),
   });
 
   child.stdout?.on("data", (chunk: Buffer) => log.write(chunk.toString("utf8"), "out"));
@@ -385,9 +436,9 @@ async function ensureBundle(
   origin: string,
   jobProtocol: number,
 ): Promise<BundleReady | BundleRefused> {
-  const raw = await fetchJson(`${origin}${HARNESS_MANIFEST_PATH}`);
-  if (raw === null) return { ok: false, reason: "manifest_unreachable" };
-  const manifest = parseHarnessManifest(raw);
+  const answer = await fetchJson(`${origin}${HARNESS_MANIFEST_PATH}`);
+  if (!answer.ok) return { ok: false, reason: "manifest_unreachable" };
+  const manifest = parseHarnessManifest(answer.body);
   if (!manifest) return { ok: false, reason: "manifest_invalid" };
 
   const file = path.join(harnessDir(), harnessBundleFileName(manifest.sha256));
@@ -395,8 +446,9 @@ async function ensureBundle(
   if (decision.action === "refuse") return { ok: false, reason: decision.reason };
   if (decision.action === "reuse") return { ok: true, path: file, manifest };
 
-  const body = await fetchText(`${origin}${HARNESS_BUNDLE_PATH}`);
-  if (body === null) return { ok: false, reason: "download_failed" };
+  const download = await fetchText(`${origin}${HARNESS_BUNDLE_PATH}`);
+  if (!download.ok) return { ok: false, reason: "download_failed" };
+  const body = download.body;
   if (Buffer.byteLength(body, "utf8") > HARNESS_MAX_BYTES) {
     return { ok: false, reason: "download_failed" };
   }
@@ -548,33 +600,49 @@ function sha256Of(body: string): string {
  * authentifiées, et le seul appelant légitime est quelqu'un de connecté dans
  * cette fenêtre.
  */
-async function fetchText(url: string, init?: RequestInit): Promise<string | null> {
+/** Ce qu'une requête rend : le corps, ou le STATUT et la phrase du serveur. */
+type Fetched<T> = { ok: true; body: T } | { ok: false; status: number; error: string };
+
+async function fetchText(url: string, init?: RequestInit): Promise<Fetched<string>> {
   try {
     const response = await session.defaultSession.fetch(url, {
       ...init,
       headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
     });
+    const text = await response.text();
     if (!response.ok) {
-      console.error(`[launcher] ${url} → ${response.status}`);
-      return null;
+      console.error(`[launcher] ${url} → ${response.status} ${text.slice(0, 300)}`);
+      return { ok: false, status: response.status, error: serverError(text) };
     }
-    return await response.text();
+    return { ok: true, body: text };
   } catch (error) {
     console.error(`[launcher] ${url} injoignable`, error);
-    return null;
+    // `0` : rien n'a répondu. Le distinguer d'un vrai statut évite de faire
+    // passer une coupure réseau pour un refus du serveur.
+    return { ok: false, status: 0, error: (error as Error).message };
   }
 }
 
-async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
-  const body = await fetchText(url, init);
-  if (body === null) return null;
+async function fetchJson(url: string, init?: RequestInit): Promise<Fetched<unknown>> {
+  const text = await fetchText(url, init);
+  if (!text.ok) return text;
   try {
-    return JSON.parse(body);
+    return { ok: true, body: JSON.parse(text.body) };
   } catch {
-    // Une page HTML (portail captif, proxy d'entreprise) arrive ici, et le
-    // parseur d'en face la refusera en le disant.
-    return null;
+    // Une page HTML (portail captif, proxy d'entreprise) arrive ici.
+    return { ok: false, status: 200, error: "the answer was not JSON" };
   }
+}
+
+/** La phrase du serveur, tirée de son `{ error }` — sinon le corps, borné. */
+function serverError(text: string): string {
+  try {
+    const parsed = JSON.parse(text) as { error?: unknown };
+    if (typeof parsed.error === "string" && parsed.error) return parsed.error;
+  } catch {
+    // Pas du JSON : une page d'erreur, un proxy. Le début du corps dit déjà tout.
+  }
+  return text.slice(0, 200) || "no answer body";
 }
 
 function refuse(

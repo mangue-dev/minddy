@@ -154,6 +154,26 @@ describe("POST /api/desktop/local-turn", () => {
     expect(h.calls).toEqual(["claim", "prepare", "lease"]);
   });
 
+  it("rend une affectation que la COQUILLE sait lire — l'aller-retour complet", async () => {
+    /**
+     * Le test qui manquait, et qui aurait coûté moins cher qu'un essai en vrai.
+     *
+     * Les deux moitiés du contrat vivent dans deux mondes qui ne se compilent pas
+     * ensemble : la route est du serveur, le parseur est celui de la coquille
+     * (dont le type-graphe ne peut pas atteindre `vm/protocol.ts`). Rien, à part
+     * ce test, ne dit qu'ils parlent de la même chose — et la première fois qu'ils
+     * ont divergé, le refus disait « mets l'app à jour ».
+     */
+    const { parseLocalTurnAssignment } = await import("@/lib/desktop/local-turn");
+    const body = await (await POST({ runId: "run-1" })).json();
+    const parsed = parseLocalTurnAssignment(body);
+
+    expect(parsed, "la coquille refuserait cette affectation").not.toBeNull();
+    expect(parsed?.runId).toBe("run-1");
+    expect(parsed?.repoFullName).toBe("mangue-dev/minddy");
+    expect(parsed?.job.controlToken).toBe("bail.hs256");
+  });
+
   it("refuse un run qui n'est pas local, SANS le claim", async () => {
     h.run = row({ local_exec: false });
     expect((await POST({ runId: "run-1" })).status).toBe(409);
@@ -258,11 +278,29 @@ describe("la préparation locale d'`execute.ts`", () => {
 
   it("rend l'affectation au lieu de lancer la boucle", () => {
     const local = source.slice(source.indexOf("if (localTurn) {"));
-    expect(local.slice(0, 400)).toContain("opts.onLocalAssignment?.(job)");
+    expect(local).toContain("opts.onLocalAssignment?.(assignment)");
     // La boucle de microVM vient APRÈS, et n'est donc jamais atteinte.
-    expect(local.indexOf("opts.onLocalAssignment?.(job)")).toBeLessThan(
+    expect(local.indexOf("opts.onLocalAssignment?.(assignment)")).toBeLessThan(
       local.indexOf("startVmLoop("),
     );
+  });
+
+  /**
+   * ⚠ **LE DÉFAUT QUI A COÛTÉ UN TEST EN VRAI.**
+   *
+   * Le type de `onLocalAssignment` dit `Omit<VmJob, "layout" | "bootstrapMs">`,
+   * et un `Omit<>` ne retire RIEN à l'exécution : l'objet portait toujours son
+   * `layout: cloudLayout()`, et la machine recevait des chemins `/vercel/sandbox`.
+   * La coquille l'a refusé — sa garde `"layout" in job` est là pour ça — mais le
+   * message disait « mets l'app à jour », donc la faute a cherché au mauvais
+   * endroit pendant tout un test.
+   *
+   * Un `Omit<>` sur une frontière RÉSEAU est une note d'intention, pas un
+   * retrait. Ce qui le fait est ce `rest` de destructuration, et c'est lui qu'on
+   * garde ici.
+   */
+  it("RETIRE le layout du cloud avant de rendre l'affectation", () => {
+    expect(source).toContain("const { layout: _cloudLayout, ...assignment } = job;");
   });
 
   it("laisse le harness résoudre la baseline du diff qu'il est seul à connaître", () => {

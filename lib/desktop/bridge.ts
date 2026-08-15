@@ -159,9 +159,16 @@ export interface DesktopBridge {
   startLocalRun(input: { runId: string }): Promise<LocalRunStart>;
 }
 
-/** Ce que rend une demande de tour local. Le motif est fait pour un journal. */
+/**
+ * Ce que rend une demande de tour local. Le motif est fait pour un journal.
+ *
+ * `skipped` n'est pas un échec : le tour de ce run tourne déjà, le message part
+ * dans la boucle en vol, il n'y a rien à lancer et rien à dire. Le confondre avec
+ * un refus faisait surgir une alerte à chaque relance de la conversation.
+ */
 export type LocalRunStart =
   | { status: "started"; runId: string; logPath: string }
+  | { status: "skipped"; reason: string }
   | { status: "refused"; reason: string; message: string };
 
 declare global {

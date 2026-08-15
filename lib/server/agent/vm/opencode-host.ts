@@ -5,7 +5,14 @@ import { dirname } from "node:path";
 import type { HarnessLayout } from "../harness-layout";
 import { forgetHarnessChild, noteHarnessChild } from "./child-registry";
 import { OpencodeClient } from "./opencode-client";
-import { opencodeBin, OPENCODE_VERSION } from "./opencode-version";
+import {
+  OPENCODE_INSTALL_MANIFEST,
+  OPENCODE_VERSION,
+  opencodeBin,
+  opencodeInstallArgs,
+  opencodeInstallManifestPath,
+  opencodePackageManifestPath,
+} from "./opencode-version";
 import type { SupervisorDeps } from "./supervisor";
 
 /**
@@ -69,10 +76,7 @@ async function exists(path: string): Promise<boolean> {
  */
 async function installedVersion(installDir: string): Promise<string | null> {
   try {
-    const manifest = await readFile(
-      `${installDir}/node_modules/opencode-ai/package.json`,
-      "utf8",
-    );
+    const manifest = await readFile(opencodePackageManifestPath(installDir), "utf8");
     const version = (JSON.parse(manifest) as { version?: string }).version;
     return typeof version === "string" ? version : null;
   } catch {
@@ -102,12 +106,21 @@ async function ensureInstalled(installDir: string): Promise<void> {
     );
   }
   await mkdir(installDir, { recursive: true });
+  /**
+   * ⚠ **LE `package.json` AVANT L'INSTALL, ET CE N'EST PAS DÉCORATIF** (MIN-293).
+   *
+   * Sans lui, `npm` REMONTE l'arborescence jusqu'au premier `package.json` qu'il
+   * trouve et installe DEDANS — en rendant 0. Mesuré sur un Mac : 144 Mo posés
+   * dans `~/node_modules`, `opencode-ai` ajouté aux dépendances du home, et ce
+   * dossier-ci laissé vide. Le détail et les deux garde-fous sont dans
+   * [opencode-version.ts](opencode-version.ts).
+   */
+  await writeFile(opencodeInstallManifestPath(installDir), OPENCODE_INSTALL_MANIFEST, "utf8");
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(
-      "npm",
-      ["i", "--no-audit", "--no-fund", "--silent", `opencode-ai@${OPENCODE_VERSION}`],
-      { cwd: installDir, stdio: ["ignore", "ignore", "pipe"] },
-    );
+    const child = spawn("npm", opencodeInstallArgs(installDir), {
+      cwd: installDir,
+      stdio: ["ignore", "ignore", "pipe"],
+    });
     let err = "";
     child.stderr?.on("data", (chunk: Buffer) => {
       err += chunk.toString();
@@ -119,6 +132,19 @@ async function ensureInstalled(installDir: string): Promise<void> {
         : reject(new Error(`opencode install failed (exit ${code}): ${err.slice(-500)}`)),
     );
   });
+
+  /**
+   * **UN `npm` QUI REND 0 NE PROUVE PAS QUE LE BINAIRE EST LÀ** (MIN-293) — c'est
+   * exactement ce qui est arrivé. On relit donc le disque, et on lève ici plutôt
+   * que de laisser `spawn` échouer en `ENOENT` trois lignes plus loin, où le
+   * message ne nomme plus la cause.
+   */
+  if (!(await exists(opencodeBin(installDir)))) {
+    throw new Error(
+      `opencode install reported success but ${opencodeBin(installDir)} is missing — ` +
+        `check that npm installed into ${installDir} and not into a parent package`,
+    );
+  }
 }
 
 /**
@@ -174,7 +200,27 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
       };
       child.stdout?.on("data", log("out"));
       child.stderr?.on("data", log("err"));
-      child.on("error", (err) => console.error("[opencode] spawn failed:", err.message));
+
+      /**
+       * ⚠ **UN SPAWN QUI ÉCHOUE EST UN FAIT, PAS UNE LENTEUR** (MIN-293).
+       *
+       * Avant, l'échec ne faisait qu'une ligne de `console.error` et la fonction
+       * rendait quand même son `stop` : le superviseur partait alors attendre un
+       * serveur qui n'existerait jamais, en annonçant « still waiting for the
+       * server (15 s… 30 s… 45 s) » jusqu'à son plafond. Le seul message que
+       * l'utilisateur voyait parlait donc de LENTEUR, pour un binaire absent.
+       *
+       * `spawn` et `error` sont exclusifs et exactement l'un des deux arrive :
+       * on attend celui qui vient, et on LÈVE sur l'échec. Le tour se termine
+       * alors en erreur, avec la vraie cause, dans la seconde.
+       */
+      await new Promise<void>((resolve, reject) => {
+        child.once("spawn", resolve);
+        child.once("error", (err) =>
+          reject(new Error(`opencode could not start (${bin}): ${err.message}`)),
+        );
+      });
+      child.on("error", (err) => console.error("[opencode] runtime error:", err.message));
       return {
         stop: async () => {
           // Désinscrit d'abord, quel que soit l'état : à partir d'ici, ce pid est

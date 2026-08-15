@@ -26,6 +26,7 @@ import {
   type AgentEnvironment,
 } from "@/components/agent/environment-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
+import { playLocalRunHere } from "@/lib/local-run-here";
 import { launchNotebookAgentApi, type AgentRunSummary } from "@/lib/agent-api";
 import { agentRunQueryKey, allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
 import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
@@ -250,6 +251,19 @@ export function SessionCompose({
   // le hook suit `projectId` et l'environnement retombe au cloud dès que le
   // dossier du projet choisi n'est pas prêt.
   const localRepo = useLocalRepo(projectId || null);
+
+  /**
+   * LE TOUR LOCAL PART D'ICI (MIN-293), et un refus se DIT.
+   *
+   * Un tour local qui ne démarre pas est la panne la plus silencieuse du
+   * chantier : la conversation s'ouvre, le fil attend, et rien n'arrive. Le
+   * message vient du lanceur — il nomme le geste qui répare (attacher un
+   * dossier, installer Node, mettre l'app à jour).
+   */
+  const playHere = async (runId: string, local: boolean | undefined) => {
+    const result = await playLocalRunHere(runId, local);
+    if (result && !result.ok) toast.error(result.message);
+  };
   const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
   useEffect(() => {
     if (!localRepo.ready) setEnvironment("cloud");
@@ -297,6 +311,9 @@ export function SessionCompose({
        * La conversation s'ouvre donc directement sur son fil.
        */
       queryClient.setQueryData(agentRunQueryKey(run.id), { run });
+      // Le tour part sur cette machine (MIN-293) : sans cet appel, le run reste
+      // `queued` — le drain ne prend jamais un run local — et rien ne le dit.
+      await playHere(run.id, run.local_exec);
       onLaunched(run);
       // Ce projet devient le défaut du prochain composer (mémoire d'appareil).
       rememberAgentProject(projectId);

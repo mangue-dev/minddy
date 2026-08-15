@@ -2234,6 +2234,7 @@
     "prMerged": "PR merged",
     "working": "The Numo agent is working…",
     "openingSandbox": "Opening the sandbox…",
+    "openingLocalTurn": "Starting the turn on your Mac…",
     "commitLabel": "Commit",
     "viewPullRequest": "View pull request",
     "noActivity": "No activity yet.",

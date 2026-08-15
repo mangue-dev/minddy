@@ -614,10 +614,73 @@ export async function changedFiles(
   toSha: string,
 ): Promise<{ files: ChangedFile[]; truncated: boolean }> {
   if (!fromSha || !toSha || fromSha === toSha) return { files: [], truncated: false };
+  return diffToChangedFiles(host, fromSha, sq(toSha), "");
+}
+
+/**
+ * LES MÊMES FICHIERS CHANGÉS, MAIS DANS L'ARBRE DE TRAVAIL (MIN-293).
+ *
+ * En mode dépôt courant, **le tour ne commite plus** : son livrable est ce qu'il
+ * a laissé sur le disque de l'utilisateur (décision D2bis-B). Il n'y a donc pas
+ * de second sha à differ — on compare la baseline du tour à l'arbre, et on
+ * ajoute les fichiers NON SUIVIS, que `git diff` ne voit pas et qui sont
+ * pourtant le cas le plus courant d'un agent qui crée un fichier.
+ *
+ * `scope` borne aux chemins du tour : sans lui, les 20 fichiers sales de
+ * l'utilisateur remonteraient dans le fil comme si l'agent les avait touchés.
+ */
+export async function workingTreeChangedFiles(
+  host: RepoHost,
+  fromSha: string,
+  scope?: TurnScope,
+): Promise<{ files: ChangedFile[]; truncated: boolean }> {
+  if (!fromSha) return { files: [], truncated: false };
+  const only = pathspec(scope);
+  const tracked = await diffToChangedFiles(host, fromSha, "", only);
+
+  // Les non-suivis, que `git diff` ignore par construction. `--porcelain` les
+  // marque `??`, et ils comptent tous pour « ajouté ».
+  let untracked: string[] = [];
+  try {
+    const status = await host.exec(`git status --porcelain --untracked-files=all${only}`, {
+      timeoutMs: 30_000,
+    });
+    if (status.exitCode === 0) {
+      untracked = status.stdout
+        .split("\n")
+        .filter((line) => line.startsWith("?? "))
+        .map((line) => line.slice(3).trim())
+        .filter(Boolean);
+    }
+  } catch {
+    // Best-effort, comme tout ce fichier : un `git status` qui échoue ne doit pas
+    // faire tomber un tour abouti.
+  }
+
+  const seen = new Set(tracked.files.map((f) => f.path));
+  const files = [
+    ...tracked.files,
+    ...untracked
+      .filter((path) => !seen.has(path))
+      .map((path): ChangedFile => ({ path, status: "added", additions: 0, deletions: 0 })),
+  ].sort((a, b) => a.path.localeCompare(b.path));
+
+  const truncated = tracked.truncated || files.length > CHANGED_FILES_CAP;
+  return { files: truncated ? files.slice(0, CHANGED_FILES_CAP) : files, truncated };
+}
+
+/** Le corps commun : deux passes `git diff`, une liste de `ChangedFile`. */
+async function diffToChangedFiles(
+  host: RepoHost,
+  fromSha: string,
+  target: string,
+  only: string,
+): Promise<{ files: ChangedFile[]; truncated: boolean }> {
+  const to = target ? ` ${target}` : "";
   try {
     const [nameStatus, numstat] = await Promise.all([
-      host.exec(`git diff --name-status --find-renames ${sq(fromSha)} ${sq(toSha)}`),
-      host.exec(`git diff --numstat --find-renames ${sq(fromSha)} ${sq(toSha)}`),
+      host.exec(`git diff --name-status --find-renames ${sq(fromSha)}${to}${only}`),
+      host.exec(`git diff --numstat --find-renames ${sq(fromSha)}${to}${only}`),
     ]);
     if (nameStatus.exitCode !== 0) return { files: [], truncated: false };
 

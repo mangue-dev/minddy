@@ -58,6 +58,7 @@ import {
   type AgentEnvironment,
 } from "./environment-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
+import { playLocalRunHere } from "@/lib/local-run-here";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentDiffSheet } from "./agent-diff-sheet";
 import { SubagentActivityBar } from "./subagent-activity-bar";
@@ -499,6 +500,19 @@ export function AgentConversation({
   // attaché à ce projet sur CETTE machine : ailleurs, il n'y a pas de choix à
   // offrir, et un chip grisé promettrait une bascule qui n'existe pas.
   const localRepo = useLocalRepo(projectId);
+
+  /**
+   * LE TOUR LOCAL PART D'ICI (MIN-293), et un refus se DIT.
+   *
+   * Un tour local qui ne démarre pas est la panne la plus silencieuse du
+   * chantier : la conversation s'ouvre, le fil attend, et rien n'arrive. Le
+   * message vient du lanceur — il nomme le geste qui répare (attacher un
+   * dossier, installer Node, mettre l'app à jour).
+   */
+  const playHere = async (runId: string, local: boolean | undefined) => {
+    const result = await playLocalRunHere(runId, local);
+    if (result && !result.ok) toast.error(result.message);
+  };
   const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
   // Le dossier a disparu sous l'attachement (déplacé, disque démonté, dépôt
   // re-lié) : on retombe sur le cloud plutôt que de lancer vers un chemin mort.
@@ -543,6 +557,12 @@ export function AgentConversation({
       setSelectedId(started.id);
       setComposing(false);
       onLaunched?.(started);
+      // LE TOUR PART SUR CETTE MACHINE (MIN-293), et c'est ici que ça se décide :
+      // le drain laisse les runs locaux tranquilles, donc sans cet appel le run
+      // resterait `queued` sans que personne le joue — et sans un mot pour le
+      // dire. `started.local_exec` et non le chip : le serveur revalide la
+      // demande, et un run refusé pour sa nature repart dans le cloud.
+      await playHere(started.id, started.local_exec);
       await refreshRuns();
     } catch (err) {
       // Refusé (quota, pas de dépôt, une session tourne déjà…) : la session n'existe
@@ -567,6 +587,9 @@ export function AgentConversation({
     setPendingMessages((p) => [...p, { text, mentions }]);
     try {
       await steerAgentRunApi(liveRun.id, text, mentions);
+      // Un message au repos REMET le run en file : le tour suivant a besoin du
+      // même coup de pouce que le premier (cf. `playLocalRunHere`).
+      await playHere(liveRun.id, liveRun.local_exec);
       await Promise.all([
         refreshRuns(),
         queryClient.invalidateQueries({ queryKey: ["agent-run-events", liveRun.id] }),

@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { OPENCODE_VERSION } from "@/lib/server/agent/vm/opencode-version";
 import {
+  OPENCODE_INSTALL_MANIFEST,
+  opencodeInstallArgs,
+  opencodeInstallManifestPath,
+  opencodePackageManifestPath,
+} from "@/lib/server/agent/vm/opencode-version";
+import {
   opencodeBin,
   opencodeDecision,
-  opencodeInstallArgs,
   opencodeInstallNote,
-  opencodeManifestPath,
   opencodeRefusalMessage,
   readOpencodeManifestVersion,
 } from "./opencode-install";
@@ -101,15 +105,46 @@ describe("les chemins et la commande", () => {
     // Deux lecteurs, un seul chemin : si celui-ci diverge, la coquille installe
     // 144 Mo à côté de ce que le harness cherche, et personne ne le dit.
     expect(opencodeBin("/data/opencode")).toBe("/data/opencode/node_modules/.bin/opencode");
-    expect(opencodeManifestPath("/data/opencode")).toBe(
+    expect(opencodePackageManifestPath("/data/opencode")).toBe(
       "/data/opencode/node_modules/opencode-ai/package.json",
     );
-    expect(opencodeManifestPath("/data/opencode/")).toBe(opencodeManifestPath("/data/opencode"));
+    expect(opencodePackageManifestPath("/data/opencode/")).toBe(
+      opencodePackageManifestPath("/data/opencode"),
+    );
   });
 
   it("épingle la version dans la commande", () => {
-    expect(opencodeInstallArgs(WANTED)).toContain(`opencode-ai@${WANTED}`);
-    expect(opencodeInstallArgs()).toContain(`opencode-ai@${OPENCODE_VERSION}`);
+    expect(opencodeInstallArgs("/data/opencode", WANTED)).toContain(`opencode-ai@${WANTED}`);
+    expect(opencodeInstallArgs("/data/opencode")).toContain(`opencode-ai@${OPENCODE_VERSION}`);
+  });
+
+  /**
+   * ⚠ **LE DÉFAUT QUI A COÛTÉ UN TEST EN VRAI, ET 144 Mo DANS UN HOME.**
+   *
+   * `npm install` avec un `cwd` sur un dossier sans `package.json` **remonte
+   * l'arborescence** jusqu'au premier qu'il trouve et installe dedans, en rendant
+   * **0**. Mesuré : parti de `~/Library/Application Support/minddy-dev/opencode`,
+   * npm est allé jusqu'à `/Users/<moi>/package.json`, a posé 144 Mo dans
+   * `~/node_modules` et s'est ajouté aux dépendances du home. Le dossier
+   * d'installation est resté vide, et le harness a attendu un serveur qui
+   * n'existerait jamais.
+   *
+   * Dans la microVM ça marchait par CHANCE : `/vercel/oc` n'a aucun ancêtre qui
+   * porte un `package.json`. L'hypothèse n'était écrite nulle part.
+   */
+  it("dit à npm OÙ installer, au lieu de le laisser chercher", () => {
+    const args = opencodeInstallArgs("/data/opencode");
+    expect(args).toContain("--prefix");
+    expect(args[args.indexOf("--prefix") + 1]).toBe("/data/opencode");
+  });
+
+  it("pose un `package.json` dans le dossier — la porte fermée une seconde fois", () => {
+    expect(opencodeInstallManifestPath("/data/opencode")).toBe("/data/opencode/package.json");
+    const manifest = JSON.parse(OPENCODE_INSTALL_MANIFEST) as Record<string, unknown>;
+    expect(manifest.private).toBe(true);
+    // Un humain qui tombe sur ce dossier dans `~/Library/Application Support/`
+    // doit comprendre d'où il vient sans rien ouvrir d'autre.
+    expect(String(manifest.description)).toMatch(/minddy/i);
   });
 });
 

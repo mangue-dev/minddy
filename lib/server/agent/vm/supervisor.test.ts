@@ -1975,6 +1975,54 @@ describe("le mode dépôt courant", () => {
     for (const forbidden of ["git add", "git commit -m", "git checkout", "git config"]) {
       expect(h.exec.some((c) => c.includes(forbidden))).toBe(false);
     }
+  });
+
+  /**
+   * MIN-293, décision D2bis-B — **LE TOUR NE COMMITE RIEN, ET NE POUSSE RIEN.**
+   *
+   * Il poussait une branche à chaque fin de tour, comme dans le cloud. Sur le
+   * disque de quelqu'un c'est le mauvais geste : l'agent édite là où l'humain
+   * travaille, et rien ne l'autorise à décider seul que ce travail part sur une
+   * forge. La branche arrivait en plus sans exister localement (commit dans un
+   * index jetable, poussé par sha) — on la lisait dans l'interface sans pouvoir
+   * la trouver dans son propre `git branch`.
+   *
+   * Le livrable est désormais l'arbre de travail.
+   */
+  it("ne COMMITE ni ne POUSSE en fin de tour — le livrable est l'arbre", async () => {
+    h.pushed = true;
+    const report = await run({ repoMode: "current" });
+
+    expect(report.status).toBe("completed");
+    expect(report.pushed).toBeNull();
+    for (const geste of ["commit-tree", "read-tree", "git push"]) {
+      expect(h.exec.some((c) => c.includes(geste)), geste).toBe(false);
+    }
+  });
+
+  it("dit quand même au fil ce qu'il a changé, lu dans l'ARBRE", async () => {
+    // Sans commit, il n'y a pas de second sha à differ : `files_changed` vient
+    // de l'arbre de travail, borné au périmètre du tour — sans quoi les fichiers
+    // que l'humain avait déjà en cours remonteraient comme s'ils étaient de lui.
+    h.pushed = true;
+    await run({ repoMode: "current" });
+    expect(h.exec.some((c) => c.includes("git status --porcelain --untracked-files=all"))).toBe(
+      true,
+    );
+  });
+
+  /**
+   * ET LA PULL REQUEST RESTE POSSIBLE — elle devient un GESTE, pas la fin d'un
+   * tour. C'est la contrepartie assumée de la décision, et la machinerie de
+   * MIN-358 ne meurt pas : elle change de déclencheur.
+   */
+  it("pousse par l'index jetable quand on DEMANDE une pull request", async () => {
+    h.pushed = true;
+    await run({ repoMode: "current" });
+    const out = (await h.supervisorTools.create_pr({ title: "MIN-42: le titre" })) as {
+      success: boolean;
+    };
+    expect(out.success).toBe(true);
     // Le commit passe par l'index jetable, et le push par le SHA — jamais `HEAD`,
     // qui est celui de l'utilisateur.
     expect(h.exec.some((c) => c.includes("read-tree"))).toBe(true);
