@@ -24,11 +24,17 @@
  */
 import { Sandbox } from "@vercel/sandbox";
 
-import {
-  OPENCODE_BIN,
-  OPENCODE_INSTALL_DIR,
-  OPENCODE_VERSION,
-} from "../lib/server/agent/vm/opencode-version";
+import { opencodeBin, OPENCODE_VERSION } from "../lib/server/agent/vm/opencode-version";
+import { cloudLayout } from "../lib/server/agent/harness-layout";
+
+/**
+ * Le dossier d'installation, pris au layout du CLOUD (MIN-354) : ce script cuit
+ * l'image d'une microVM, et une microVM a toujours ce layout-là. Le prendre à la
+ * source plutôt que de le réécrire est ce qui garantit que le binaire cuit est à
+ * l'endroit exact où le harness ira le chercher au réveil.
+ */
+const { opencodeDir: OPENCODE_INSTALL_DIR } = cloudLayout();
+const OPENCODE_BIN = opencodeBin(OPENCODE_INSTALL_DIR);
 
 /** Le runtime du snapshot DOIT être celui des runs (`SANDBOX_RUNTIME`). */
 const RUNTIME = "node24";
@@ -64,7 +70,7 @@ async function main(): Promise<void> {
     console.log(tools.stdout.split("\n").join(" · "));
 
     // Emplacement d'accueil du dépôt (créé une fois pour éviter un mkDir au boot).
-    await sandbox.runCommand("mkdir", ["-p", "/vercel/sandbox/repo"]);
+    await sandbox.runCommand("mkdir", ["-p", cloudLayout().repoDir]);
 
     /**
      * OPENCODE, cuit ici une fois pour toutes.
@@ -73,7 +79,7 @@ async function main(): Promise<void> {
      * réseau à une commande dont on ne veut que le contenu du dossier, et que
      * l'audit d'un binaire épinglé ne nous apprendrait rien qu'on puisse faire.
      * Aucune installation en `--global` : le harness cherche le binaire à un
-     * chemin précis (`OPENCODE_BIN`), et c'est ce chemin-là qui doit exister au
+     * chemin précis (`opencodeBin`), et c'est ce chemin-là qui doit exister au
      * réveil, pas un lien dans un `PATH` que la microVM ne garantit pas.
      */
     console.log(`\n⏳ npm i opencode-ai@${OPENCODE_VERSION} dans ${OPENCODE_INSTALL_DIR}…`);

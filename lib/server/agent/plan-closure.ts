@@ -1,4 +1,4 @@
-import { REPO_DIR, sq, type RepoHost } from "./repo-host";
+import { sq, type RepoHost } from "./repo-host";
 import type { PlatformToolHandler } from "./agent-contract";
 
 /**
@@ -297,7 +297,7 @@ export async function planClosureForTurn(host: RepoHost, plan: string): Promise<
   if (needles.length === 0) return null;
   try {
     const res = await host.exec(buildClosureCommand(needles.map((n) => n.needle)), {
-      cwd: REPO_DIR,
+      cwd: host.layout.repoDir,
       timeoutMs: PLAN_CLOSURE_TIMEOUT_MS,
     });
     // La commande sort en 0 quoi qu'il arrive (`|| true`) : un dépôt absent ou un

@@ -5,7 +5,7 @@ import {
   SCRATCHPAD_TOOL_NAMES,
 } from "../platform-tool-names";
 import { agentToolsFor, type AgentToolDef } from "../tools";
-import { OPENCODE_TOOL_DIR } from "./opencode-config";
+import { opencodeToolDir } from "./opencode-config";
 import type { VmJob } from "./protocol";
 
 /**
@@ -40,7 +40,7 @@ import type { VmJob } from "./protocol";
  *    est chargé comme `.opencode/tool/` du projet (mesuré : servi ET appelé).
  *    C'est indispensable, pas une préférence : dans le dépôt, ils entreraient
  *    dans le `git add -A` de fin de tour et se retrouveraient commités chez
- *    l'utilisateur. D'où `OPENCODE_TOOL_DIR`, sous `HARNESS_DIR`.
+ *    l'utilisateur. D'où `opencodeToolDir`, sous le harness du run.
  * 4. **`process.env` est lisible depuis un tool** (mesuré) — c'est par là que
  *    l'adresse du superviseur descend, sans qu'aucune valeur ne soit écrite en
  *    dur dans le code généré.
@@ -373,7 +373,7 @@ export interface OpencodeToolFile {
  */
 export function opencodeToolFiles(job: VmJob): OpencodeToolFile[] {
   return bridgedToolsFor(job).map((def) => ({
-    path: `${OPENCODE_TOOL_DIR}/${def.function.name}.ts`,
+    path: `${opencodeToolDir(job.layout)}/${def.function.name}.ts`,
     content: renderOpencodeTool(def),
   }));
 }

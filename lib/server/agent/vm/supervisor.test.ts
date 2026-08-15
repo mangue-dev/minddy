@@ -5,12 +5,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runOpencodeTurn, lastSeqByAggregate, type SupervisorDeps } from "./supervisor";
 import { OpencodeClient } from "./opencode-client";
 import { takeGeneration, type CapturedGeneration } from "./llm-proxy";
-import { OPENCODE_ANCHOR_FILE, OPENCODE_TOOL_DIR } from "./opencode-config";
+import { opencodeAnchorFile, opencodeToolDir } from "./opencode-config";
+import { cloudLayout } from "../harness-layout";
+
+/** Le layout du run testé — celui d'une microVM (MIN-354). */
+const LAYOUT = cloudLayout();
+const ANCHOR_FILE = opencodeAnchorFile(LAYOUT);
+const TOOL_DIR = opencodeToolDir(LAYOUT);
 import { SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge } from "./tool-bridge";
 import type { ControlPlaneClient } from "./control-plane-client";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
-import type { VmJob } from "./protocol";
+import { VM_PROTOCOL_VERSION, type VmJob } from "./protocol";
 
 /**
  * MIN-286 lot 1 — le superviseur, joué de bout en bout sur un FAUX serveur
@@ -180,6 +186,10 @@ function cp(): ControlPlaneClient {
 /** Le dépôt : seuls `commitAndPush` et `changedFiles` le touchent ici. */
 function host() {
   return {
+    // Le host porte son layout depuis MIN-354 : c'est de lui que viennent le
+    // dépôt (chemins relatifs des éditions) et le dossier de sorties de tools
+    // (les trois fichiers d'un job de fond).
+    layout: LAYOUT,
     exec: vi.fn(async (command: string) => {
       h.exec.push(command);
       // Le lanceur d'un job de fond rend son PID sur stdout (`background.ts`).
@@ -197,6 +207,7 @@ function host() {
     }),
     writeFiles: vi.fn(async () => {}),
     readFile: vi.fn(async () => null),
+    mkdir: vi.fn(async () => {}),
   } as never;
 }
 
@@ -298,7 +309,7 @@ function deps(): SupervisorDeps {
       h.files.push({ path, content });
     },
     client: (baseUrl) =>
-      new OpencodeClient({ baseUrl, directory: "/vercel/sandbox/repo", fetchImpl: fakeFetch() }),
+      new OpencodeClient({ baseUrl, directory: LAYOUT.repoDir, fetchImpl: fakeFetch() }),
     /**
      * Le proxy, en mémoire : il rend ce que `h.generations` déclare et applique
      * le MÊME appariement que le vrai (`takeGeneration`), qui est testé à part
@@ -318,15 +329,19 @@ function deps(): SupervisorDeps {
       },
     }),
     // Le pont de tools est le VRAI ([tool-bridge.ts](tool-bridge.ts)), sur un
-    // port libre : en production il en tient un fixe (4097), et deux tests qui
-    // tournent en parallèle se le disputeraient. On ne l'intercepte que pour
-    // GARDER les tools que le superviseur exécute lui-même : `create_pr` n'est
-    // appelable que par le modèle, et aucun modèle ne tourne ici.
+    // port éphémère — comme en production depuis MIN-354, où plus aucun port
+    // n'est écrit en dur. On ne l'intercepte que pour GARDER les tools que le
+    // superviseur exécute lui-même : `create_pr` n'est appelable que par le
+    // modèle, et aucun modèle ne tourne ici.
     startToolBridge: async (opts) => {
       h.supervisorTools = (opts.supervisorTools ?? {}) as typeof h.supervisorTools;
       return await startToolBridge(opts);
     },
     toolBridgePort: 0,
+    // Le port du serveur : le faux client ne l'écoute pas, mais il est
+    // OBLIGATOIRE depuis MIN-354 — un défaut fixe est exactement la collision
+    // entre deux runs qu'on vient de supprimer.
+    opencodePort: 4096,
     // Le vrai plafond est à 60 s : ce test-ci vérifie ce qui se passe QUAND il
     // tombe, pas combien de temps il dure.
     bootTimeoutMs: 300,
@@ -336,6 +351,8 @@ function deps(): SupervisorDeps {
 
 function job(over: Partial<VmJob> = {}): VmJob {
   return {
+    protocolVersion: VM_PROTOCOL_VERSION,
+    layout: LAYOUT,
     runId: "11111111-2222-4333-8444-555555555555",
     ledgerRunId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     projectId: "proj-1",
@@ -457,9 +474,9 @@ function permissionFrame(
 describe("le décor, posé avant le premier octet de serveur", () => {
   it("écrit l'ancrage et les 32 tools de domaine hors du dépôt", async () => {
     await run();
-    const anchor = h.files.find((f) => f.path === OPENCODE_ANCHOR_FILE);
+    const anchor = h.files.find((f) => f.path === ANCHOR_FILE);
     expect(anchor?.content).toContain("Ancrage minddy");
-    const tools = h.files.filter((f) => f.path.startsWith(OPENCODE_TOOL_DIR));
+    const tools = h.files.filter((f) => f.path.startsWith(TOOL_DIR));
     expect(tools.length).toBeGreaterThan(30);
     expect(tools.some((f) => f.path.endsWith("/read_issue.ts"))).toBe(true);
     for (const f of h.files) expect(f.path.startsWith("/vercel/sandbox/repo/")).toBe(false);
@@ -1224,7 +1241,7 @@ describe("la forge", () => {
     // tool n'est ni servi au modèle (`agentToolsFor` à l'ancrage `pr`) ni routé.
     await run({ writesToRepo: false, anchor: "pr" });
     expect(h.supervisorTools.create_pr).toBeUndefined();
-    const files = h.files.filter((f) => f.path.startsWith(OPENCODE_TOOL_DIR));
+    const files = h.files.filter((f) => f.path.startsWith(TOOL_DIR));
     expect(files.some((f) => f.path.endsWith("/create_pr.ts"))).toBe(false);
     // Les trois écritures de la relecture, elles, restent servies : elles
     // s'exécutent côté fonction, qui a la forge (pr-tools.ts).
@@ -1352,7 +1369,7 @@ describe("les jobs de fond", () => {
 
   it("sert `run_background` au modèle et l'exécute dans la microVM", async () => {
     await run();
-    const files = h.files.filter((f) => f.path.startsWith(OPENCODE_TOOL_DIR));
+    const files = h.files.filter((f) => f.path.startsWith(TOOL_DIR));
     expect(files.some((f) => f.path.endsWith("/run_background.ts"))).toBe(true);
 
     const out = (await background()({ action: "start", command: "npm run dev" })) as {
@@ -1418,7 +1435,7 @@ describe("les jobs de fond", () => {
     // Une relecture tient dans une session : rien à lancer, rien à laisser vivant.
     await run({ writesToRepo: false, anchor: "pr" });
     expect(h.supervisorTools.run_background).toBeUndefined();
-    const files = h.files.filter((f) => f.path.startsWith(OPENCODE_TOOL_DIR));
+    const files = h.files.filter((f) => f.path.startsWith(TOOL_DIR));
     expect(files.some((f) => f.path.endsWith("/run_background.ts"))).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { changedFiles, commitAndPush, repoBackgroundRunner, type RepoHost, REPO_DIR } from "../repo-host";
+import { changedFiles, commitAndPush, repoBackgroundRunner, type RepoHost } from "../repo-host";
 import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
 // La MÊME normalisation que la boucle maison : `update_plan` est un tool de
 // contrôle, et les deux moteurs doivent en tirer le même event `plan_update`.
@@ -16,7 +16,7 @@ import {
   type OpencodeEvent,
   type RoundUsage,
 } from "./opencode-events";
-import { OPENCODE_ANCHOR_FILE, opencodeServerEnv, subagentAgentTable } from "./opencode-config";
+import { opencodeAnchorFile, opencodeServerEnv, subagentAgentTable } from "./opencode-config";
 import { localToolsFor, opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-bridge";
 import { makeOpencodeDelivery, repoRelative, type OpencodeDelivery } from "./opencode-delivery";
@@ -82,8 +82,19 @@ import { parseAgentUserMessage, promptWithMentions, type AgentUserMessage } from
  */
 export const OPENCODE_BOOT_TIMEOUT_MS = 5 * 60_000;
 
-/** Le port local du serveur opencode dans la microVM. Rien d'autre n'écoute là. */
-export const OPENCODE_PORT = 4096;
+/**
+ * LE PORT DU SERVEUR OPENCODE — un argument, plus une constante (MIN-354).
+ *
+ * Il valait 4096 en dur, et c'était vrai tant que le harness était seul dans une
+ * microVM créée pour lui. Sur un ordinateur, deux runs simultanés se
+ * disputeraient la même socket et le second mourrait sur un `listen` refusé — à
+ * un endroit qui ne ressemble en rien à sa cause. `main.ts` le réserve au
+ * système avant de démarrer ([free-port.ts](free-port.ts)).
+ *
+ * OBLIGATOIRE dans `SupervisorDeps`, et pas optionnel avec un repli à 4096 : un
+ * défaut fixe est exactement la collision qu'on vient de supprimer, avec en plus
+ * l'assurance que personne ne la verrait venir.
+ */
 
 /** Cadence du direct — la même que la boucle maison (`emitLive`, 250 ms). */
 export const LIVE_INTERVAL_MS = 250;
@@ -190,7 +201,13 @@ export interface SupervisorDeps {
     supervisorTools?: Record<string, SupervisorTool>;
     port?: number;
   }): Promise<ToolBridge>;
-  /** 0 = port libre. Les tests s'en servent pour ne pas se disputer 4097. */
+  /** Le port réservé du serveur opencode (cf. le bloc ci-dessus). */
+  opencodePort: number;
+  /**
+   * Le port du pont de tools. ABSENT = éphémère, choisi par le système, et c'est
+   * le cas de production : le pont rend son URL, personne n'a à connaître son
+   * numéro. Un test peut en imposer un.
+   */
   toolBridgePort?: number;
   now?(): number;
   /** Attente du démarrage. Réglable pour qu'un test ne poireaute pas 60 s. */
@@ -229,7 +246,7 @@ export async function runOpencodeTurn(
   secrets.addAuthUrl(authUrl);
 
   // ── Le décor, posé avant le premier octet de serveur ───────────────────────
-  await deps.writeFile(OPENCODE_ANCHOR_FILE, input.anchorInstructions);
+  await deps.writeFile(opencodeAnchorFile(job.layout), input.anchorInstructions);
   for (const file of opencodeToolFiles(job)) {
     await deps.writeFile(file.path, file.content);
   }
@@ -446,7 +463,7 @@ export async function runOpencodeTurn(
         return { result: { ok: true }, success: true };
       },
     },
-    port: deps.toolBridgePort ?? OPENCODE_PORT + 1,
+    ...(deps.toolBridgePort != null ? { port: deps.toolBridgePort } : {}),
   });
 
   const env = {
@@ -458,11 +475,11 @@ export async function runOpencodeTurn(
   /**
    * DÉMARRÉ DANS LE `try`, et ce n'est pas un détail de forme : le proxy et le
    * pont écoutent déjà. Un serveur qui ne démarre pas laisserait sinon leurs deux
-   * sockets ouvertes, et le pont tient un port FIXE — le tour suivant du même
-   * process se ferait refuser son `listen` et mourrait de ça, pas de sa cause.
+   * sockets ouvertes, et un process qui enchaînerait deux tours se ferait refuser
+   * son `listen` et mourrait de ça, pas de sa cause.
    */
   let server: { stop(): Promise<void> } | null = null;
-  const client = deps.client(`http://127.0.0.1:${OPENCODE_PORT}`);
+  const client = deps.client(`http://127.0.0.1:${deps.opencodePort}`);
 
   /**
    * LE LEDGER DU TOUR, DÉCLARÉ HORS DU `try` — pour que le chemin d'EXCEPTION
@@ -961,7 +978,7 @@ export async function runOpencodeTurn(
         }
 
         if (out.permission) {
-          const verdict = decidePermission(out.permission, {
+          const verdict = decidePermission(out.permission, job.layout.repoDir, {
             names: new Set(agentTable.keys()),
             running: subagents.running,
             pending: pendingTasks.size,
@@ -1006,7 +1023,7 @@ export async function runOpencodeTurn(
             // round (ni texte, ni réflexion), donc rien d'autre ne ferait partir
             // une charge de direct avant le round suivant.
             const live = targets
-              .map(({ path, status }) => ({ path: repoRelative(path), status }))
+              .map(({ path, status }) => ({ path: repoRelative(job.layout.repoDir, path), status }))
               .filter((edit) => edit.path);
             if (live.length > 0 && !child) {
               liveEdits.note(live);
@@ -1773,5 +1790,3 @@ function redactPayload(
   return redactDeep(payload, secrets.redact) as Record<string, unknown>;
 }
 
-/** Le dépôt, tel que le serveur doit le voir. Une seule définition. */
-export const OPENCODE_DIRECTORY = REPO_DIR;

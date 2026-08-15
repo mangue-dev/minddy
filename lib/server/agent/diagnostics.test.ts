@@ -15,6 +15,7 @@ import {
   TYPE_ERRORS_MAX_CHARS,
 } from "./diagnostics";
 import type { RepoHost } from "./repo-host";
+import { cloudLayout } from "./harness-layout";
 
 /**
  * MIN-110 — le type-check de fin de tour. La partie sandbox (lancer `tsc` dans la
@@ -291,6 +292,7 @@ describe("testRunnerBin", () => {
 /** Host de papier : un `package.json` et un `test -x` qu'on décide. */
 function hostWith(pkg: string | null, binPresent = true): RepoHost {
   return {
+    layout: cloudLayout(),
     exec: async () => ({ exitCode: binPresent ? 0 : 1, stdout: "", stderr: "" }),
     readFile: async () => pkg,
     writeFile: async () => {},

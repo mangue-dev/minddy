@@ -8,6 +8,7 @@ import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
 import { getOrCreateAgentSandbox, sandboxHost, sandboxName, type Sandbox } from "./sandbox";
+import { cloudLayout } from "./harness-layout";
 import { cloneRepo, clonePullRequest, commitAndPush, revParseHead, repoBackgroundRunner } from "./repo-host";
 import { newLiveEditLog } from "./live-edits";
 import { BackgroundJobs } from "./background";
@@ -48,7 +49,7 @@ import {
 } from "./model";
 import { agentSandboxName, buildAgentNetworkPolicy, AGENT_LLM_PLACEHOLDER_KEY } from "./network-policy";
 import { startVmLoop } from "./vm-launch";
-import { type VmJob } from "./vm/protocol";
+import { VM_PROTOCOL_VERSION, type VmJob } from "./vm/protocol";
 import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
 import { agentControlOrigin } from "./origin";
 import { forgeFor, type Forge } from "./forge";
@@ -791,7 +792,7 @@ export async function executeAgentRun(
               console.error(`[agent] merge base unreadable for PR #${prRun.number}:`, err);
               return null;
             });
-          await clonePullRequest(sandboxHost(fresh), {
+          await clonePullRequest(sandboxHost(fresh, cloudLayout()), {
             // `vmTarget` : ce que le clone écrit dans `.git/config` reste lisible
             // pour toute la vie de la microVM. Pour une relecture, c'est un token
             // en LECTURE, sur le seul dépôt lié (MIN-327).
@@ -805,7 +806,7 @@ export async function executeAgentRun(
           return;
         }
         const committer = await resolveCommitterIdentity(target);
-        await cloneRepo(sandboxHost(fresh), {
+        await cloneRepo(sandboxHost(fresh, cloudLayout()), {
           authUrl: vmTarget.authUrl,
           baseBranch,
           workBranch,
@@ -820,7 +821,7 @@ export async function executeAgentRun(
      * lecture d'`AGENTS.md`, l'écriture du bundle) et c'est la boucle, dans la
      * microVM, qui reprend les mêmes gestes sur le disque local.
      */
-    const host = sandboxHost(sb);
+    const host = sandboxHost(sb, cloudLayout());
 
     // Persiste l'identité du Sandbox + la base AVANT la boucle (reprise si crash).
     // sandbox_stopped_at:null → la microVM est de nouveau vivante (le reaper l'ignore).
@@ -1451,6 +1452,14 @@ export async function executeAgentRun(
     // `bootstrapMs` manque exprès : c'est `startVmLoop` qui le pose, parce que
     // c'est lui qui sait quand l'amorçage se termine (cf. `VmJob.bootstrapMs`).
     const job: Omit<VmJob, "bootstrapMs"> = {
+      protocolVersion: VM_PROTOCOL_VERSION,
+      /**
+       * OÙ CE TOUR TRAVAILLE (MIN-354). Une microVM est créée pour un run et
+       * pour lui seul : son layout est celui du cloud, sans autre choix à faire.
+       * Ce qui change, c'est que le harness l'APPREND au lieu de le supposer —
+       * et c'est ce qui permettra à un autre lanceur d'en poser un autre.
+       */
+      layout: cloudLayout(),
       runId: run.id,
       ledgerRunId: run.run_id ?? run.id,
       projectId: run.project_id,

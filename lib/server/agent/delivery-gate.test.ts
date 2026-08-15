@@ -42,6 +42,7 @@ import { turnDiffStat } from "./repo-host";
 import { newPlanWriteSink } from "./plan-closure";
 import type { AgentChatMessage } from "./agent-contract";
 import type { RepoHost } from "./repo-host";
+import { cloudLayout } from "./harness-layout";
 
 /**
  * MIN-263 — LE HARNESS NE VÉRIFIE PLUS QU'À LA LIVRAISON.
@@ -60,6 +61,7 @@ import type { RepoHost } from "./repo-host";
 /** Host inerte : les quatre contrôles sont moqués, `turnDiff` peut rendre du vide. */
 function fakeHost(): RepoHost {
   return {
+    layout: cloudLayout(),
     exec: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     readFile: async () => null,
     writeFile: async () => {},

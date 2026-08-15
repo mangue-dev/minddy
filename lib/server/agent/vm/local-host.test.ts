@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { localHost } from "./local-host";
+import { cloudLayout } from "../harness-layout";
 
 /**
  * MIN-224 — les mains LOCALES du harness, celles qui remplacent l'aller-retour
@@ -23,7 +24,12 @@ import { localHost } from "./local-host";
  */
 
 let dir: string;
-const host = localHost();
+/**
+ * Le host connaît son layout depuis MIN-354 : le `cwd` par défaut de `exec` est
+ * `layout.repoDir`, et non plus une constante. Ces cas passent tous un `cwd`
+ * explicite (le dossier temporaire), donc seul le contrat compte ici.
+ */
+const host = localHost(cloudLayout());
 
 beforeAll(() => {
   dir = mkdtempSync(path.join(tmpdir(), "minddy-local-host-"));

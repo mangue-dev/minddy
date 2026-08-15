@@ -30,7 +30,11 @@ vi.mock("../repo-host", async (importOriginal) => ({
 
 import { makeOpencodeDelivery, repoRelative } from "./opencode-delivery";
 import { typeErrorsForTurn, testFailuresForTurn } from "../diagnostics";
-import { REPO_DIR, turnDiffStat, type RepoHost } from "../repo-host";
+import { turnDiffStat, type RepoHost } from "../repo-host";
+import { cloudLayout, layoutForRoot } from "../harness-layout";
+
+/** Le dépôt du run testé — celui que le host inerte ci-dessous déclare. */
+const REPO_DIR = cloudLayout().repoDir;
 
 /**
  * MIN-286 lot 2, tâche 14 — LES RÈGLES DE LIVRAISON, DANS LE MONDE D'OPENCODE.
@@ -51,6 +55,7 @@ import { REPO_DIR, turnDiffStat, type RepoHost } from "../repo-host";
 /** Host inerte : les contrôles sont moqués, rien n'a besoin de tourner. */
 function fakeHost(): RepoHost {
   return {
+    layout: cloudLayout(),
     exec: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     readFile: async () => null,
     writeFile: async () => {},
@@ -299,13 +304,36 @@ describe("le contrôle du plan, accroché au geste", () => {
   });
 });
 
-describe("repoRelative", () => {
+/**
+ * `repoRelative` PREND SON DÉPÔT EN ARGUMENT (MIN-354), et c'est ce qui lui rend
+ * un sens hors microVM : `metadata.filepath` d'opencode est ABSOLU, donc comparé
+ * à `/vercel/sandbox/repo` sur une machine où le dépôt vit ailleurs, il rendait
+ * `""` sur CHAQUE édition — donc plus aucun fichier dans le type-check ciblé de
+ * la porte de livraison, ni dans le mode `related` du runner de tests, et une
+ * porte qui laisse tout passer sans rien vérifier.
+ *
+ * Rejoué sur deux racines pour la même raison que `repo-path.test.ts` : ce qui
+ * est vérifié est une propriété, pas un préfixe.
+ */
+describe.each([
+  ["microVM", cloudLayout()],
+  ["poste de travail", layoutForRoot("/Users/dev/minddy/runs/r-3", "/Users/dev/oc")],
+])("repoRelative (%s)", (_name, layout) => {
+  const repo = layout.repoDir;
+
   it("rend le chemin du dépôt, laisse un relatif tel quel, refuse le dehors", () => {
-    expect(repoRelative(`${REPO_DIR}/lib/x.ts`)).toBe("lib/x.ts");
-    expect(repoRelative("lib/x.ts")).toBe("lib/x.ts");
-    expect(repoRelative("./lib/x.ts")).toBe("lib/x.ts");
-    expect(repoRelative(REPO_DIR)).toBe("");
-    expect(repoRelative("/etc/passwd")).toBe("");
-    expect(repoRelative("  ")).toBe("");
+    expect(repoRelative(repo, `${repo}/lib/x.ts`)).toBe("lib/x.ts");
+    expect(repoRelative(repo, "lib/x.ts")).toBe("lib/x.ts");
+    expect(repoRelative(repo, "./lib/x.ts")).toBe("lib/x.ts");
+    expect(repoRelative(repo, repo)).toBe("");
+    expect(repoRelative(repo, "/etc/passwd")).toBe("");
+    expect(repoRelative(repo, "  ")).toBe("");
+  });
+
+  it("ne prend pas le dépôt d'un AUTRE run pour le sien", () => {
+    // Deux runs sur une machine sont deux dossiers frères : celui du voisin est
+    // « le dehors », exactement comme `/etc`.
+    const other = layoutForRoot("/Users/dev/minddy/runs/r-4", "/Users/dev/oc").repoDir;
+    expect(repoRelative(repo, `${other}/lib/x.ts`)).toBe("");
   });
 });

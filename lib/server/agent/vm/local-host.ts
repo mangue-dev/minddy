@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
-import { REPO_DIR, type RepoHost, type ShellOptions, type ShellResult } from "../repo-host";
+import type { HarnessLayout } from "../harness-layout";
+import type { RepoHost, ShellOptions, ShellResult } from "../repo-host";
 
 /**
  * Les mêmes quatre primitives que `sandboxHost`, mais SUR PLACE (MIN-224) : la
@@ -55,14 +56,14 @@ const KILL_GRACE_MS = 2_000;
  * - un `signal` déjà abandonné rend tout de suite, sans lancer le process. C'est
  *   ce que l'abandon d'un sous-agent attend.
  */
-function execLocal(command: string, opts?: ShellOptions): Promise<ShellResult> {
+function execLocal(defaultCwd: string, command: string, opts?: ShellOptions): Promise<ShellResult> {
   return new Promise((resolve, reject) => {
     if (opts?.signal?.aborted) {
       resolve({ exitCode: 130, stdout: "", stderr: "aborted" });
       return;
     }
     const child = spawn("sh", ["-c", command], {
-      cwd: opts?.cwd ?? REPO_DIR,
+      cwd: opts?.cwd ?? defaultCwd,
       env: opts?.env ? { ...process.env, ...opts.env } : process.env,
       // Groupe de process à part : un `npm test` qui a lui-même lancé des enfants
       // ne doit pas leur survivre quand on le tue. `-pid` frappe le groupe entier.
@@ -141,10 +142,17 @@ function execLocal(command: string, opts?: ShellOptions): Promise<ShellResult> {
   });
 }
 
-/** Les mains locales du harness sur le dépôt de la microVM. */
-export function localHost(): RepoHost {
+/**
+ * Les mains locales du harness sur le dépôt du run.
+ *
+ * `layout` vient du JOB depuis MIN-354 : le harness ne décide plus où il
+ * travaille, il l'apprend — et deux runs sur une même machine ont deux layouts
+ * disjoints, donc deux dépôts, deux dossiers de sorties et deux harness.
+ */
+export function localHost(layout: HarnessLayout): RepoHost {
   return {
-    exec: execLocal,
+    layout,
+    exec: (command, opts) => execLocal(layout.repoDir, command, opts),
     readFile: async (absPath: string): Promise<string | null> => {
       try {
         return await readFile(absPath, "utf8");

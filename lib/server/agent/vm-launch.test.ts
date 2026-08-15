@@ -7,7 +7,13 @@ import { join } from "node:path";
 import ts from "typescript-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { VM_BUNDLE_PATH, VM_JOB_PATH, type VmJob } from "./vm/protocol";
+import { vmBundlePath, vmJobPath, VM_PROTOCOL_VERSION, type VmJob } from "./vm/protocol";
+import { cloudLayout, layoutForRoot } from "./harness-layout";
+
+/** Le layout d'un run en microVM — celui que la fonction pose sur chaque job. */
+const LAYOUT = cloudLayout();
+const BUNDLE_PATH = vmBundlePath(LAYOUT);
+const JOB_PATH = vmJobPath(LAYOUT);
 
 /**
  * MIN-224 — L'AMORÇAGE DE LA MICROVM EST DU COMPUTE, ET IL DOIT ÊTRE FACTURÉ.
@@ -63,7 +69,7 @@ const sandbox = () =>
       h.writes.push(files);
       // L'écriture du bundle ne DORT pas, elle AVANCE l'horloge : même effet sur
       // ce que `startVmLoop` mesure, sans dépendre de l'ordonnanceur.
-      if (files.some((f) => f.path === VM_BUNDLE_PATH)) h.nowMs += h.bundleWriteMs;
+      if (files.some((f) => f.path.endsWith("/main.js"))) h.nowMs += h.bundleWriteMs;
     }),
     runCommand: vi.fn(async (params: { cmd: string; args: string[] }) => {
       h.ranCommand = params;
@@ -75,13 +81,15 @@ const { startVmLoop } = await import("./vm-launch");
 
 /** Le job tel qu'il a ATTERRI sur le disque de la microVM. */
 function writtenJob(): VmJob {
-  const file = h.writes.flat().find((f) => f.path === VM_JOB_PATH);
+  const file = h.writes.flat().find((f) => f.path === JOB_PATH);
   expect(file, "aucun job écrit dans la microVM").toBeDefined();
   return JSON.parse(file!.content) as VmJob;
 }
 
 const jobInput = (): Omit<VmJob, "bootstrapMs"> =>
   ({
+    protocolVersion: VM_PROTOCOL_VERSION,
+    layout: LAYOUT,
     runId: "run-1",
     workBranch: "minddy/agent/min-42",
     messages: [],
@@ -120,13 +128,61 @@ describe("startVmLoop pose la durée de l'amorçage dans le job", () => {
 
   it("écrit le bundle D'ABORD, le job ENSUITE", async () => {
     await startVmLoop(sandbox(), jobInput(), Date.now());
-    expect(h.writes.map((w) => w.map((f) => f.path))).toEqual([[VM_BUNDLE_PATH], [VM_JOB_PATH]]);
+    expect(h.writes.map((w) => w.map((f) => f.path))).toEqual([[BUNDLE_PATH], [JOB_PATH]]);
   });
 
   it("lance le bundle en détaché et rend l'identifiant de la commande", async () => {
     const cmdId = await startVmLoop(sandbox(), jobInput(), Date.now());
     expect(cmdId).toBe("cmd-42");
-    expect(h.ranCommand).toMatchObject({ cmd: "node", args: [VM_BUNDLE_PATH] });
+    expect(h.ranCommand).toMatchObject({ cmd: "node", args: [BUNDLE_PATH, JOB_PATH] });
+  });
+
+  /**
+   * LE CHEMIN DU JOB PART EN ARGUMENT (MIN-354), et c'est la seule information
+   * que le harness ne peut pas apprendre du job : le layout est DEDANS. Sans cet
+   * argument, un harness lancé hors microVM irait chercher son job dans
+   * `/vercel/sandbox/harness`, qui n'existe pas — et mourrait là, avant tout le
+   * reste. C'est la panne mesurée à l'ouverture du dossier.
+   */
+  it("passe au harness le chemin de son job", async () => {
+    await startVmLoop(sandbox(), jobInput(), Date.now());
+    expect(h.ranCommand).toMatchObject({ args: [BUNDLE_PATH, JOB_PATH] });
+  });
+
+  /**
+   * ET TOUT SUIT LE LAYOUT DU JOB, sans exception : un layout ailleurs déplace
+   * les trois écritures ET le lancement. Un seul chemin resté en dur ferait
+   * écrire le bundle à un endroit et le chercher à un autre.
+   */
+  it("écrit et lance là où le job le dit, quelle que soit la racine", async () => {
+    const root = "/Users/dev/Library/Application Support/minddy/runs/r-9";
+    const layout = layoutForRoot(root, "/Users/dev/oc");
+    const job = { ...jobInput(), layout } as Omit<VmJob, "bootstrapMs">;
+    await startVmLoop(sandbox(), job, Date.now());
+    expect(h.writes.flat().map((f) => f.path)).toEqual([
+      `${root}/harness/main.js`,
+      `${root}/harness/job.json`,
+    ]);
+    expect(h.ranCommand).toMatchObject({
+      args: [`${root}/harness/main.js`, `${root}/harness/job.json`],
+      cwd: `${root}/harness`,
+    });
+  });
+
+  /**
+   * ET UN LAYOUT INUTILISABLE FAIT ÉCHOUER L'AMORÇAGE ICI, pas dans la VM.
+   *
+   * Le harness le refuserait aussi (`parseVmJob`), mais seulement après le
+   * réveil de la microVM et le clone du dépôt : un tour lancé pour rien, dont la
+   * cause n'apparaît qu'au bout d'une minute. `repoDir` est en plus la racine de
+   * sécurité des garde-fous d'écriture — elle se contrôle là où on l'écrit.
+   */
+  it("refuse d'écrire un job dont le layout ne tient pas", async () => {
+    const layout = { ...LAYOUT, repoDir: "repo" };
+    const job = { ...jobInput(), layout } as Omit<VmJob, "bootstrapMs">;
+    await expect(startVmLoop(sandbox(), job, Date.now())).rejects.toThrow(/absolute/i);
+    expect(h.writes).toEqual([]);
+    expect(h.ranCommand).toBeNull();
   });
 });
 

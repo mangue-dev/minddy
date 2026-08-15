@@ -11,6 +11,7 @@ import {
 import { grepPathspecs, globPathspecs, expandBraces } from "./git-pathspec";
 import { isInvalidRegexError, looksLikeIntendedAlternation } from "./grep-pattern";
 import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
+import type { HarnessLayout } from "./harness-layout";
 
 /**
  * Les MAINS de l'agent sur le dépôt — clone, lecture, édition, recherche, jobs de
@@ -37,29 +38,16 @@ import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 
 /** Runtime de la microVM. */
 export const SANDBOX_RUNTIME = "node24";
-/** Où le dépôt est cloné dans la microVM. */
-export const REPO_DIR = "/vercel/sandbox/repo";
-/** Home par défaut du Sandbox (parent de REPO_DIR). */
-export const SANDBOX_HOME = "/vercel/sandbox";
+
 /**
- * Où le harness dépose les sorties de tools trop longues pour le modèle (MIN-107).
- * DÉLIBÉRÉMENT hors de REPO_DIR : le `git add -A` de fin de tour ne le voit pas,
- * donc rien de tout ça n'atterrit jamais dans un commit ou une PR. Le nettoyage
- * est celui de la microVM (snapshot expiré) — rien à gérer.
- */
-export const TOOL_OUTPUT_DIR = "/vercel/sandbox/tool-output";
-/**
- * Où vit le HARNESS lui-même quand la boucle tourne dans la microVM (MIN-224) —
- * bundle et payload du tour.
+ * Dossiers LISIBLES hors dépôt (read_file / grep / list_dir). Jamais writables.
  *
- * Hors de `REPO_DIR`, pour la même raison que `TOOL_OUTPUT_DIR` et c'est encore
- * plus vrai ici : le `git add -A` de fin de tour emporterait sinon le code du
- * harness — et le payload, qui porte l'historique de la conversation — dans un
- * commit du dépôt de l'utilisateur, puis dans sa pull request.
+ * Une FONCTION du layout depuis MIN-354, et plus une constante : ces dossiers
+ * sont ceux DU RUN, et deux runs sur une même machine n'ont pas les mêmes.
  */
-export const HARNESS_DIR = "/vercel/sandbox/harness";
-/** Dossiers LISIBLES hors dépôt (read_file / grep / list_dir). Jamais writables. */
-const READABLE_DIRS = [TOOL_OUTPUT_DIR];
+function readableDirs(layout: HarnessLayout): string[] {
+  return [layout.toolOutputDir];
+}
 
 export interface ShellResult {
   exitCode: number;
@@ -79,7 +67,18 @@ export interface ShellOptions {
  * passe par là — c'est ce qui rend le reste du fichier indépendant du transport.
  */
 export interface RepoHost {
-  /** `sh -c <command>`. `cwd` vaut REPO_DIR par défaut (les tools opèrent dans le dépôt). */
+  /**
+   * OÙ CE HOST TRAVAILLE (MIN-354). Un host, c'est un disque — et depuis que ce
+   * disque peut être celui d'un Mac partagé par deux runs, son adresse est une
+   * VALEUR du run et non plus une constante de module.
+   *
+   * Elle voyage ici plutôt qu'en argument des trente fonctions ci-dessous, qui
+   * prennent déjà le host en premier paramètre : c'est le même fait, dit une
+   * fois. `layout.repoDir` est en particulier la racine de sécurité que
+   * `resolveWithin` et `assertNotGit` comparent.
+   */
+  readonly layout: HarnessLayout;
+  /** `sh -c <command>`. `cwd` vaut `layout.repoDir` par défaut (les tools opèrent dans le dépôt). */
   exec(command: string, opts?: ShellOptions): Promise<ShellResult>;
   /** Contenu utf8, ou null si le fichier n'existe pas. */
   readFile(absPath: string): Promise<string | null>;
@@ -123,7 +122,7 @@ export function historySince(now: Date = new Date()): string {
 }
 
 /**
- * Clone le dépôt (shallow) sur `baseBranch` dans REPO_DIR puis se place sur
+ * Clone le dépôt (shallow) sur `baseBranch` dans le dépôt du layout puis se place sur
  * `workBranch` : reprise de la branche distante si elle existe déjà (le run a
  * poussé du WIP à un chunk précédent), sinon création depuis la base. `authUrl`
  * porte un token d'installation éphémère — jamais persisté hors de la microVM.
@@ -147,14 +146,18 @@ export async function cloneRepo(
     committer: { name: string; email: string };
   },
 ): Promise<void> {
-  const wipe = await host.exec(`rm -rf ${sq(REPO_DIR)}`, { cwd: SANDBOX_HOME });
+  const { root, repoDir } = host.layout;
+  // La racine du run est créée ici, et pas seulement nettoyée : sur une microVM
+  // elle existe déjà (c'est le home du Sandbox), sur une machine ordinaire non.
+  await host.mkdir(root).catch(() => {});
+  const wipe = await host.exec(`rm -rf ${sq(repoDir)}`, { cwd: root });
   if (wipe.exitCode !== 0) throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
 
   const since = historySince();
   const clone = await host.exec(
     `git clone --shallow-since=${sq(since)} --single-branch --branch ${sq(opts.baseBranch)}` +
-      ` ${sq(opts.authUrl)} ${sq(REPO_DIR)}`,
-    { cwd: SANDBOX_HOME, timeoutMs: 180_000 },
+      ` ${sq(opts.authUrl)} ${sq(repoDir)}`,
+    { cwd: root, timeoutMs: 180_000 },
   );
   if (clone.exitCode !== 0) throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
 
@@ -226,12 +229,14 @@ export async function clonePullRequest(
     baseSha?: string | null;
   },
 ): Promise<void> {
-  const wipe = await host.exec(`rm -rf ${sq(REPO_DIR)}`, { cwd: SANDBOX_HOME });
+  const { root, repoDir } = host.layout;
+  await host.mkdir(root).catch(() => {});
+  const wipe = await host.exec(`rm -rf ${sq(repoDir)}`, { cwd: root });
   if (wipe.exitCode !== 0) throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
 
   const clone = await host.exec(
-    `git clone --depth 1 --branch ${sq(opts.baseBranch)} ${sq(opts.authUrl)} ${sq(REPO_DIR)}`,
-    { cwd: SANDBOX_HOME, timeoutMs: 180_000 },
+    `git clone --depth 1 --branch ${sq(opts.baseBranch)} ${sq(opts.authUrl)} ${sq(repoDir)}`,
+    { cwd: root, timeoutMs: 180_000 },
   );
   if (clone.exitCode !== 0) throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
 
@@ -615,41 +620,46 @@ export const GLOB_MAX_FILES = 100;
 
 /**
  * Chemin absolu et VALIDÉ d'un fichier du dépôt. Résout `..` et rejette toute
- * sortie de REPO_DIR.
+ * sortie du dépôt du run.
  *
  * DÉFENSE EN PROFONDEUR, et elle garde exactement le même sens depuis MIN-224 :
  * c'est une fonction de CHEMIN, appliquée aux arguments du modèle avant de
  * toucher le disque. Que le harness tourne dans la machine qu'il garde ne change
  * rien à ce qu'elle refuse — la microVM reste la vraie frontière, mais un
  * `../../x` ne doit jamais y toucher autre chose que le dépôt.
+ *
+ * La racine vient du host depuis MIN-354, et c'est le seul changement : sur une
+ * machine où le dépôt n'est plus sous `/vercel`, une racine en dur ne refusait
+ * pas trop peu — elle refusait TOUT, chaque chemin réel sortant d'une racine
+ * qui n'existe pas.
  */
-function repoPath(relPath: string): string {
-  return resolveWithin(REPO_DIR, relPath);
+function repoPath(host: RepoHost, relPath: string): string {
+  return resolveWithin(host.layout.repoDir, relPath);
 }
 
 /**
- * Chemin de LECTURE : le dépôt, plus les dossiers nommés de READABLE_DIRS (sorties
+ * Chemin de LECTURE : le dépôt, plus les dossiers lisibles du run (sorties
  * de tools déposées, MIN-107). Réservé aux tools qui LISENT — les écritures
  * passent par `writablePath` et restent enfermées dans le dépôt.
  */
-function readablePath(path: string): string {
-  return resolveReadable(REPO_DIR, READABLE_DIRS, path);
+function readablePath(host: RepoHost, path: string): string {
+  return resolveReadable(host.layout.repoDir, readableDirs(host.layout), path);
 }
 
 /**
  * Comme repoPath mais pour les ÉCRITURES : refuse en plus `.git/` (écrire un hook
  * ou config = escalade possible — exfiltration du token d'installation, backdoor).
  */
-function writablePath(relPath: string): string {
-  const abs = repoPath(relPath);
-  assertNotGit(REPO_DIR, abs, relPath);
+function writablePath(host: RepoHost, relPath: string): string {
+  const abs = repoPath(host, relPath);
+  assertNotGit(host.layout.repoDir, abs, relPath);
   return abs;
 }
 
 /** Lit le contenu BRUT d'un fichier du dépôt (utf8), ou null s'il n'existe pas.
     Sert à l'édition (`edit_file`), qui a besoin du contenu exact non annoté. */
 export async function readWorkFile(host: RepoHost, relPath: string): Promise<string | null> {
-  return host.readFile(repoPath(relPath));
+  return host.readFile(repoPath(host, relPath));
 }
 
 /**
@@ -687,10 +697,10 @@ export async function readFileAtRef(
 }
 
 /**
- * Dépose une sortie de tool trop longue dans TOOL_OUTPUT_DIR et renvoie son chemin
- * ABSOLU (celui que le modèle repassera à `read_file`/`grep`). Ne passe PAS par
- * `writablePath` : on écrit volontairement hors du dépôt, et `name` est un simple
- * nom de fichier (tout séparateur est neutralisé ici).
+ * Dépose une sortie de tool trop longue dans le dossier de sorties du run et
+ * renvoie son chemin ABSOLU (celui que le modèle repassera à `read_file`/`grep`).
+ * Ne passe PAS par `writablePath` : on écrit volontairement hors du dépôt, et
+ * `name` est un simple nom de fichier (tout séparateur est neutralisé ici).
  */
 export async function writeToolOutput(
   host: RepoHost,
@@ -698,8 +708,9 @@ export async function writeToolOutput(
   content: string,
 ): Promise<string> {
   const safe = name.replace(/[^A-Za-z0-9._-]/g, "-").replace(/^\.+$/, "output") || "output";
-  const abs = `${TOOL_OUTPUT_DIR}/${safe}`;
-  await host.mkdir(TOOL_OUTPUT_DIR).catch(() => {});
+  const dir = host.layout.toolOutputDir;
+  const abs = `${dir}/${safe}`;
+  await host.mkdir(dir).catch(() => {});
   await host.writeFile(abs, content);
   return abs;
 }
@@ -712,17 +723,17 @@ const BACKGROUND_START_TIMEOUT_MS = 20_000;
 const BACKGROUND_PROBE_TIMEOUT_MS = 30_000;
 
 /**
- * Les trois fichiers d'un job, dans TOOL_OUTPUT_DIR — donc HORS du dépôt (le
- * `git add -A` de fin de tour ne les voit jamais) et dans un dossier LISIBLE par
- * `read_file`/`grep` : le log complet d'un serveur reste consultable même quand la
- * sonde n'en a renvoyé que la queue (MIN-107).
+ * Les trois fichiers d'un job, dans le dossier de sorties du run — donc HORS du
+ * dépôt (le `git add -A` de fin de tour ne les voit jamais) et dans un dossier
+ * LISIBLE par `read_file`/`grep` : le log complet d'un serveur reste consultable
+ * même quand la sonde n'en a renvoyé que la queue (MIN-107).
  */
-function backgroundPaths(jobId: string): BackgroundPaths {
+function backgroundPaths(layout: HarnessLayout, jobId: string): BackgroundPaths {
   const safe = jobId.replace(/[^A-Za-z0-9._-]/g, "-") || "job";
   return {
-    log: `${TOOL_OUTPUT_DIR}/${safe}.log`,
-    pid: `${TOOL_OUTPUT_DIR}/${safe}.pid`,
-    exit: `${TOOL_OUTPUT_DIR}/${safe}.exit`,
+    log: `${layout.toolOutputDir}/${safe}.log`,
+    pid: `${layout.toolOutputDir}/${safe}.pid`,
+    exit: `${layout.toolOutputDir}/${safe}.exit`,
   };
 }
 
@@ -734,8 +745,8 @@ export async function startBackground(
   host: RepoHost,
   opts: { jobId: string; command: string; cwd?: string },
 ): Promise<{ pid: number; logPath: string }> {
-  const p = backgroundPaths(opts.jobId);
-  const launcher = backgroundStartScript(p, opts.command, TOOL_OUTPUT_DIR);
+  const p = backgroundPaths(host.layout, opts.jobId);
+  const launcher = backgroundStartScript(p, opts.command, host.layout.toolOutputDir);
 
   const res = await host.exec(launcher, {
     cwd: opts.cwd,
@@ -759,7 +770,7 @@ export async function readBackgroundSince(
   host: RepoHost,
   opts: { jobId: string; pid: number; offset: number; maxBytes: number },
 ): Promise<BackgroundChunk> {
-  const p = backgroundPaths(opts.jobId);
+  const p = backgroundPaths(host.layout, opts.jobId);
   const offset = Math.max(0, Math.floor(opts.offset));
   const maxBytes = Math.max(1, Math.floor(opts.maxBytes));
   const res = await host.exec(backgroundProbeScript(p, opts.pid, offset, maxBytes), {
@@ -801,16 +812,16 @@ export interface ReadWindow {
  * `limit` fenêtrent ; par défaut les `READ_MAX_LINES` premières lignes. Les
  * lignes très longues sont tronquées. Renvoie null si le fichier n'existe pas.
  *
- * Accepte, en plus des chemins du dépôt, les sorties de tools déposées dans
- * TOOL_OUTPUT_DIR (MIN-107) : c'est ainsi que le modèle relit la sortie complète
- * d'un `run_command` trop long.
+ * Accepte, en plus des chemins du dépôt, les sorties de tools déposées dans le
+ * dossier de sorties du run (MIN-107) : c'est ainsi que le modèle relit la sortie
+ * complète d'un `run_command` trop long.
  */
 export async function readWorkFileWindow(
   host: RepoHost,
   relPath: string,
   opts?: { offset?: number; limit?: number },
 ): Promise<ReadWindow | null> {
-  const raw = await host.readFile(readablePath(relPath));
+  const raw = await host.readFile(readablePath(host, relPath));
   if (raw === null) return null;
 
   const lines = raw.split("\n");
@@ -845,7 +856,7 @@ export async function writeWorkFile(
   relPath: string,
   content: string,
 ): Promise<void> {
-  const abs = writablePath(relPath);
+  const abs = writablePath(host, relPath);
   const dir = abs.slice(0, abs.lastIndexOf("/"));
   if (dir) await host.mkdir(dir).catch(() => {});
   await host.writeFile(abs, content);
@@ -857,8 +868,8 @@ export async function writeWorkFile(
  * que le commit/PR capture le renommage.
  */
 export async function moveWorkFile(host: RepoHost, from: string, to: string): Promise<void> {
-  const src = writablePath(from);
-  const dst = writablePath(to);
+  const src = writablePath(host, from);
+  const dst = writablePath(host, to);
   const dstDir = dst.slice(0, dst.lastIndexOf("/"));
   const cmd = [
     `set -e`,
@@ -874,7 +885,7 @@ export async function moveWorkFile(host: RepoHost, from: string, to: string): Pr
 
 /** Supprime un fichier suivi (git rm) ou neuf. Refuse hors dépôt / `.git/`. */
 export async function deleteWorkFile(host: RepoHost, relPath: string): Promise<void> {
-  const abs = writablePath(relPath);
+  const abs = writablePath(host, relPath);
   const cmd = [
     `test -e ${sq(abs)} || { echo "file not found" >&2; exit 3; }`,
     `git rm -f ${sq(abs)} 2>/dev/null || rm -f ${sq(abs)}`,
@@ -883,8 +894,8 @@ export async function deleteWorkFile(host: RepoHost, relPath: string): Promise<v
   if (res.exitCode !== 0) throw new Error(res.stderr.trim() || res.stdout.trim() || "delete failed");
 }
 
-/** Liste le contenu d'un dossier du dépôt — ou de TOOL_OUTPUT_DIR, pour retrouver
-    les sorties déposées (noms, dossiers suffixés `/`). */
+/** Liste le contenu d'un dossier du dépôt — ou du dossier de sorties du run, pour
+    retrouver les sorties déposées (noms, dossiers suffixés `/`). */
 /**
  * Contenu d'un dossier, ou `null` s'il n'a pas pu être LU (chemin absent, pas un
  * dossier, droits) — MIN-226, même règle que `grep` : un échec ne se rend pas
@@ -893,7 +904,7 @@ export async function deleteWorkFile(host: RepoHost, relPath: string): Promise<v
  * la conclusion qu'il n'y a rien à y chercher.
  */
 export async function listDir(host: RepoHost, relPath = "."): Promise<string | null> {
-  const res = await host.exec(`ls -1Ap ${sq(readablePath(relPath))}`);
+  const res = await host.exec(`ls -1Ap ${sq(readablePath(host, relPath))}`);
   return res.exitCode === 0 ? res.stdout : null;
 }
 
@@ -965,7 +976,7 @@ export interface GrepResult {
 export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepResult> {
   // Le `path` vise-t-il un dossier lisible HORS dépôt (une sortie de tool déposée,
   // MIN-107) ? git grep n'y voit rien — on passe au grep du système.
-  const outside = opts.path ? readableOutsideRepo(opts.path) : null;
+  const outside = opts.path ? readableOutsideRepo(host, opts.path) : null;
   if (outside) return grepOutside(host, opts, outside);
 
   const specs = grepPathspecs(opts.path, opts.glob).map(sq);
@@ -1064,9 +1075,10 @@ function capGrepLines(output: string, headLimit?: number): string {
 
 /** Chemin absolu validé s'il vise un dossier lisible hors dépôt, sinon null.
     Lève si un `..` tentait d'en sortir. */
-function readableOutsideRepo(path: string): string | null {
-  if (!READABLE_DIRS.some((dir) => path === dir || path.startsWith(`${dir}/`))) return null;
-  return readablePath(path);
+function readableOutsideRepo(host: RepoHost, path: string): string | null {
+  const dirs = readableDirs(host.layout);
+  if (!dirs.some((dir) => path === dir || path.startsWith(`${dir}/`))) return null;
+  return readablePath(host, path);
 }
 
 /**
@@ -1182,7 +1194,7 @@ export function repoBackgroundRunner(host: RepoHost): BackgroundJobRunner {
       startBackground(host, {
         jobId,
         command,
-        cwd: workdir ? resolveWithin(REPO_DIR, workdir) : undefined,
+        cwd: workdir ? resolveWithin(host.layout.repoDir, workdir) : undefined,
       }),
     read: ({ jobId, pid, offset }) =>
       readBackgroundSince(host, { jobId, pid, offset, maxBytes: BACKGROUND_FETCH_BYTES }),

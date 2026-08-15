@@ -6,6 +6,7 @@ import { getRun } from "@/lib/server/agent/runs";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 import { getAgentSandboxByName, sandboxHost } from "@/lib/server/agent/sandbox";
+import { cloudLayout } from "@/lib/server/agent/harness-layout";
 import { readWorkingDiff, resolveBaseRef } from "@/lib/server/agent/working-diff";
 
 /**
@@ -127,7 +128,7 @@ async function readLiveDiff(
   try {
     const sandbox = await getAgentSandboxByName(sandboxId);
     if (!sandbox) return null;
-    const host = sandboxHost(sandbox);
+    const host = sandboxHost(sandbox, cloudLayout());
     const baseRef = await resolveBaseRef(host, baseBranch);
     if (!baseRef) return null;
     return await readWorkingDiff(host, baseRef, { patches });

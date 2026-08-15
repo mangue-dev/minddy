@@ -1,4 +1,4 @@
-import { CHANGED_FILES_CAP, REPO_DIR, sq, type RepoHost } from "./repo-host";
+import { CHANGED_FILES_CAP, sq, type RepoHost } from "./repo-host";
 
 /**
  * LE DIFF DU TOUR EN COURS, LU DANS LA SANDBOX — la seule source qui sache ce que
@@ -13,7 +13,7 @@ import { CHANGED_FILES_CAP, REPO_DIR, sq, type RepoHost } from "./repo-host";
  * Le fil disait « app/foo.tsx modifié » et la seule surface capable de montrer
  * ce changement ne le connaissait pas.
  *
- * Ici, on lit le dépôt là où il vit : `/vercel/sandbox/repo`, dans la microVM du
+ * Ici, on lit le dépôt là où il vit (`host.layout.repoDir`), dans la microVM du
  * run. `git diff origin/<base>` y couvre TOUT — les commits des tours précédents
  * ET l'arbre de travail non committé — donc la même chose que le compare de la
  * forge, plus ce qui n'est pas encore parti. Une seule source pendant le tour,
@@ -289,7 +289,7 @@ export async function resolveBaseRef(
   host: RepoHost,
   baseBranch: string | null,
 ): Promise<string | null> {
-  const shell: ShellOpts = { cwd: REPO_DIR, timeoutMs: 15_000 };
+  const shell: ShellOpts = { cwd: host.layout.repoDir, timeoutMs: 15_000 };
   const ref = await resolveBaseTip(host, baseBranch, shell);
   if (!ref) return null;
   return await mergeBaseWithHead(host, ref, shell);
@@ -347,7 +347,7 @@ export async function readWorkingDiff(
   opts: { patches: boolean },
 ): Promise<WorkingDiff> {
   const ref = sq(baseRef);
-  const shell: ShellOpts = { cwd: REPO_DIR, timeoutMs: 30_000 };
+  const shell: ShellOpts = { cwd: host.layout.repoDir, timeoutMs: 30_000 };
   try {
     const [nameStatus, numstat, patch, untrackedPatch] = await Promise.all([
       run(host, `git diff --name-status --find-renames ${ref}`, shell),

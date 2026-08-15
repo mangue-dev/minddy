@@ -10,10 +10,10 @@ import {
   schemaExpression,
   SUPERVISOR_URL_ENV,
 } from "./opencode-tools";
-import { OPENCODE_TOOL_DIR } from "./opencode-config";
-import { REPO_DIR } from "../repo-host";
+import { opencodeToolDir } from "./opencode-config";
+import { cloudLayout } from "../harness-layout";
 import { agentToolsFor, type AgentToolDef } from "../tools";
-import type { VmJob } from "./protocol";
+import { VM_PROTOCOL_VERSION, type VmJob } from "./protocol";
 
 /**
  * MIN-286 lot 1 — les tools de domaine, rendus pour opencode.
@@ -29,8 +29,14 @@ import type { VmJob } from "./protocol";
  * rend TOUT obligatoire), et un tool posé hors du dépôt est bien chargé.
  */
 
+/** Les chemins du run, dérivés du layout que le job porte (MIN-354). */
+const LAYOUT = cloudLayout();
+const TOOL_DIR = opencodeToolDir(LAYOUT);
+
 function job(over: Partial<VmJob> = {}): VmJob {
   return {
+    protocolVersion: VM_PROTOCOL_VERSION,
+    layout: LAYOUT,
     runId: "11111111-2222-4333-8444-555555555555",
     ledgerRunId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     projectId: "proj-1",
@@ -238,7 +244,7 @@ describe("où les fichiers sont posés", () => {
       (t) => t.function.name,
     );
     expect(new Set(files.map((f) => f.path))).toEqual(
-      new Set(names.map((n) => `${OPENCODE_TOOL_DIR}/${n}.ts`)),
+      new Set(names.map((n) => `${TOOL_DIR}/${n}.ts`)),
     );
     expect(files).toHaveLength(names.length);
   });
@@ -261,18 +267,18 @@ describe("où les fichiers sont posés", () => {
         "update_plan",
       ]);
       expect(opencodeToolFiles(job({ anchor })).map((f) => f.path)).toContain(
-        `${OPENCODE_TOOL_DIR}/run_background.ts`,
+        `${TOOL_DIR}/run_background.ts`,
       );
     }
     expect(localToolsFor(job({ anchor: "pr" }))).toEqual([]);
     expect(opencodeToolFiles(job({ anchor: "pr" })).map((f) => f.path)).not.toContain(
-      `${OPENCODE_TOOL_DIR}/run_background.ts`,
+      `${TOOL_DIR}/run_background.ts`,
     );
   });
 
   it("HORS du dépôt — sinon le `git add -A` de fin de tour les commite", () => {
     for (const f of opencodeToolFiles(job())) {
-      expect(f.path.startsWith(`${REPO_DIR}/`)).toBe(false);
+      expect(f.path.startsWith(`${LAYOUT.repoDir}/`)).toBe(false);
     }
   });
 });
