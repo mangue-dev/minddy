@@ -79,6 +79,39 @@ export function admitLocalRun(opts: { keyMode: "platform" | "byok" }): LocalRunA
   return { ok: true };
 }
 
+/**
+ * LE DRAPEAU DEMANDÉ PAR LA PAGE SURVIT-IL AU LANCEMENT ? (MIN-359)
+ *
+ * `localExec` arrive dans le corps d'un POST : c'est une DEMANDE, pas un fait.
+ * Cette fonction est le seul endroit qui la transforme en valeur écrite sur la
+ * ligne — et elle ne la laisse passer que pour un run dont le contexte vient
+ * de la personne qui lance, sur sa propre machine.
+ *
+ * **Le prédicat est la SOURCE DU DÉCLENCHEMENT, jamais `job.interactive`** (qui
+ * vaut `!run.routine_id`, donc vrai pour une relecture de PR déclenchée par
+ * webhook). Un run d'automatisation, de routine ou de chaîne part d'un texte que
+ * minddy n'a pas écrit ; dans une microVM jetable, une injection de prompt coûte
+ * une VM, sur le Mac de quelqu'un c'est un shell.
+ *
+ * ⚠ **Ce n'est que la moitié étroite de l'invariant du §7 de l'audit.** L'ancrage
+ * `pr` est exclu ici par construction — `launchPrReviewRun` est un chemin à part
+ * qui ne passe pas ce drapeau du tout — mais les mentions externes et le board
+ * public arrivent par d'autres portes. Le prédicat complet, écrit une fois pour
+ * toutes les entrées, appartient à MIN-360.
+ */
+export function localExecRequested(input: {
+  localExec?: boolean;
+  triggeredBy: "button" | "chat" | "mention" | "automation" | "routine";
+  routineId?: string | null;
+  chainId?: string | null;
+}): boolean {
+  if (input.localExec !== true) return false;
+  if (input.routineId || input.chainId) return false;
+  // `mention` est exclu volontairement : une mention peut venir d'un commentaire
+  // de forge recopié par un webhook, et rien à cet endroit ne distingue les deux.
+  return input.triggeredBy === "button" || input.triggeredBy === "chat";
+}
+
 /** L'échec est DIT, jamais rendu en jeton vide : l'appelant doit pouvoir choisir
  *  entre « ce run n'est pas local » et « ce déploiement ne sait pas signer ». */
 export type IssueLocalExecTokenResult =

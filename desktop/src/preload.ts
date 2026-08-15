@@ -104,6 +104,30 @@ const bridge: DesktopBridge = {
   installUpdate() {
     ipcRenderer.send("minddy:install-update");
   },
+
+  // LE DOSSIER LOCAL (MIN-359). Les trois seuls membres qui ATTENDENT une
+  // réponse, d'où `invoke` là où tout le reste `send` : lire un attachement,
+  // c'est relire le disque, et la page ne peut rien afficher avant.
+  //
+  // Aucun ne prend de chemin : `chooseLocalRepo` ouvre le panneau système, et
+  // c'est le seul endroit d'où un chemin entre dans l'app.
+  localRepo(input) {
+    return ipcRenderer.invoke("minddy:local-repo:read", input) as Promise<
+      Awaited<ReturnType<DesktopBridge["localRepo"]>>
+    >;
+  },
+
+  chooseLocalRepo(input) {
+    return ipcRenderer.invoke("minddy:local-repo:choose", input) as Promise<
+      Awaited<ReturnType<DesktopBridge["chooseLocalRepo"]>>
+    >;
+  },
+
+  forgetLocalRepo(input) {
+    return ipcRenderer.invoke("minddy:local-repo:forget", input) as Promise<
+      Awaited<ReturnType<DesktopBridge["forgetLocalRepo"]>>
+    >;
+  },
 };
 
 contextBridge.exposeInMainWorld("minddy", bridge);

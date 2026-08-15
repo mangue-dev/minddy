@@ -50,6 +50,9 @@ function sanitizeRun(run: AgentRun) {
     created_at: run.created_at,
     updated_at: run.updated_at,
     awaiting_input: run.awaiting_input,
+    // L'environnement de la conversation (MIN-359), figé au lancement : c'est
+    // lui que le chip verrouillé du composer et la note du fil lisent.
+    local_exec: run.local_exec,
     // Stampé par trigger DB (hors du type AgentRun) — parité avec RUN_COLUMNS de
     // /api/issues/[id]/agent pour que le client réutilise AgentRunSummary tel quel.
     completed_at: (run as AgentRun & { completed_at?: string | null }).completed_at ?? null,

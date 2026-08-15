@@ -2306,7 +2306,19 @@
     "composeNoRepo": "None of your projects has a repository connected. The agent clones a repository to work in: link one in a project's settings.",
     "reasoningMinimal": "Minimal",
     "reasoningXhigh": "Very deep",
-    "reasoningMax": "Maximum"
+    "reasoningMax": "Maximum",
+    "environment": "Environment",
+    "environmentCloud": "In the cloud",
+    "environmentCloudHint": "A throwaway machine, on a fresh clone of the repository.",
+    "environmentLocal": "My machine",
+    "environmentLocalHint": "The agent works in {folder}, on this Mac.",
+    "environmentLocalAttach": "Pick the folder to work in.",
+    "environmentLocked": "A conversation doesn't change environment: pick it on the first message.",
+    "localRunNote": "This conversation runs on your machine, in the folder attached to the project.",
+    "localRepoMissing": "That folder is gone. Pick it again, or move back to the cloud.",
+    "localRepoNotGit": "That folder isn't a git repository.",
+    "localRepoNoRemote": "That repository has no remote, so there's no telling which one it is.",
+    "localRepoWrongRepo": "That's another repository than the one this project is linked to."
   },
   "Projects": {
     "newProject": "New project",
@@ -2722,7 +2734,14 @@
     "importQuitTitle": "Discard this import?",
     "importQuitDescription": "The file and the mapping you adjusted will be lost. Nothing has been imported yet.",
     "importQuitConfirm": "Discard",
-    "importValueToPlace": "Not matched yet"
+    "importValueToPlace": "Not matched yet",
+    "localRepoTitle": "Local folder",
+    "localRepoDesc": "The copy of the repository the agent opens when a conversation runs on this Mac.",
+    "localRepoEmpty": "No folder attached yet. The agent runs in the cloud.",
+    "localRepoAttach": "Attach a folder",
+    "localRepoChange": "Change",
+    "localRepoDetach": "Detach",
+    "localRepoWarning": "An agent running here reads and writes in this folder with your own account, and what it reads goes into the conversation thread — so it reaches minddy. The folder is attached on this Mac only: nobody else on the project sees it."
   },
   "Seed": {
     "emptyBoardCta": "Chat with Numo",

@@ -34,6 +34,11 @@ import {
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
 import { hideWindow } from "./hide-window";
+import {
+  attachLocalRepo,
+  describeLocalRepo,
+  detachLocalRepo,
+} from "./local-repo";
 import { buildAppMenu } from "./menu";
 import { replayUpdateStatus, requestInstall, startAutoUpdates } from "./updater";
 import { trace } from "./trace";
@@ -590,6 +595,50 @@ function registerIpc(): void {
     mainWindow.show();
     mainWindow.focus();
   });
+
+  // LE DOSSIER LOCAL D'UN PROJET (MIN-359) — les trois premiers `handle` du
+  // fichier, et c'est la nature de ces gestes qui l'impose : ils RENDENT quelque
+  // chose (l'état du dossier, relu sur le disque), là où tout le reste du pont
+  // est un ordre sans réponse. `send` obligerait à réinventer une corrélation
+  // pour appareiller la réponse à sa demande.
+  //
+  // Le renderer ne nomme jamais un dossier : il donne un id de projet et le
+  // `owner/repo` contre lequel valider, et le chemin ne peut entrer que par le
+  // panneau système ouvert ici (`attachLocalRepo`).
+  ipcMain.handle("minddy:local-repo:read", (_event, input: unknown) => {
+    const parsed = localRepoRequest(input);
+    if (!parsed) return { status: "none" };
+    return describeLocalRepo(parsed.projectId, { fullName: parsed.fullName });
+  });
+
+  ipcMain.handle("minddy:local-repo:choose", async (_event, input: unknown) => {
+    const parsed = localRepoRequest(input);
+    if (!parsed) return { status: "none" };
+    return attachLocalRepo(parsed.projectId, { fullName: parsed.fullName }, mainWindow);
+  });
+
+  ipcMain.handle("minddy:local-repo:forget", (_event, input: unknown) => {
+    const projectId = readString((input as { projectId?: unknown } | null)?.projectId);
+    if (!projectId) return { status: "none" };
+    return detachLocalRepo(projectId);
+  });
+}
+
+function readString(value: unknown): string | null {
+  // Les deux champs sont courts par nature (un uuid, un `owner/repo`) : au-delà
+  // de la marge, le corps est forgé et ne mérite pas d'aller plus loin.
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed && trimmed.length <= 256 ? trimmed : null;
+}
+
+/** Ce que le renderer a le droit d'envoyer, ramené à ça ou à rien. */
+function localRepoRequest(input: unknown): { projectId: string; fullName: string } | null {
+  if (typeof input !== "object" || input === null) return null;
+  const { projectId, fullName } = input as { projectId?: unknown; fullName?: unknown };
+  const id = readString(projectId);
+  const name = readString(fullName);
+  return id && name ? { projectId: id, fullName: name } : null;
 }
 
 /**

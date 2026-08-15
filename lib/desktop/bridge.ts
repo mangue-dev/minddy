@@ -3,9 +3,16 @@
  *
  * Le renderer charge du code distant : il ne doit pouvoir appeler que ce qui est
  * exposé ici, nommément, par `contextBridge`. D'où la règle que ce fichier
- * s'impose : **il se lit en trente secondes**. Dix membres, aucun qui rende
- * un objet Node, aucun qui prenne un chemin de fichier, aucun qui exécute quoi
+ * s'impose : **il se lit en trente secondes**. Treize membres, aucun qui rende
+ * un objet Node, aucun qui PRENNE un chemin de fichier, aucun qui exécute quoi
  * que ce soit.
+ *
+ * ⚠ L'asymétrie de la dernière règle est le cœur du dossier local (MIN-359), et
+ * elle est délibérée : `localRepo` **rend** un chemin, pour qu'un écran puisse
+ * dire quel dossier est attaché. Aucun membre n'en **accepte** un. Un chemin ne
+ * peut donc entrer dans l'app que par un panneau système, c'est-à-dire par un
+ * geste humain — le code distant ne peut pas désigner `~/.ssh` en écrivant une
+ * chaîne.
  *
  * L'implémentation vit dans desktop/src/preload.ts et n'a pas le droit d'en
  * exposer davantage ; ce type est ce que les deux côtés relisent.
@@ -13,6 +20,7 @@
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
 import type { DesktopChannel } from "@/lib/desktop/channel";
+import type { LocalRepoState } from "@/lib/desktop/local-repo";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
 export interface DesktopBridge {
@@ -100,6 +108,35 @@ export interface DesktopBridge {
    * Sans effet quand rien n'est prêt.
    */
   installUpdate(): void;
+  /**
+   * Le dossier de CETTE machine attaché à un projet (MIN-359), **revalidé à
+   * chaque appel** contre le dépôt que le projet a lié.
+   *
+   * Un chemin retenu ne prouve rien — le dossier a pu être déplacé, le disque
+   * démonté, le dépôt re-lié ailleurs. Répondre « attaché » sur la foi du
+   * fichier de réglages ferait partir un run vers un dossier qui n'existe plus,
+   * et la panne n'apparaîtrait qu'au premier tour, sur la machine, sans log.
+   *
+   * `fullName` est le `owner/repo` du projet : c'est la page qui le connaît (le
+   * main process n'a pas de session), et c'est bien elle qui décide contre quoi
+   * on valide. Ce n'est pas une frontière de sécurité — le dossier vient d'un
+   * geste humain dans un panneau système — mais un garde-fou d'inattention.
+   */
+  localRepo(input: { projectId: string; fullName: string }): Promise<LocalRepoState>;
+  /**
+   * Ouvre le panneau système et attache le dossier choisi à ce projet.
+   *
+   * **C'est le SEUL chemin par lequel un chemin de fichier entre dans l'app.**
+   * Un dossier refusé (pas un dépôt, pas le bon) n'est pas rangé : l'appel rend
+   * le verdict pour que l'écran le dise, et l'attachement précédent reste en
+   * place. Une annulation rend l'état courant, comme si rien ne s'était passé.
+   */
+  chooseLocalRepo(input: {
+    projectId: string;
+    fullName: string;
+  }): Promise<LocalRepoState>;
+  /** Oublie le dossier attaché à ce projet. Rend l'état d'après. */
+  forgetLocalRepo(input: { projectId: string }): Promise<LocalRepoState>;
 }
 
 declare global {

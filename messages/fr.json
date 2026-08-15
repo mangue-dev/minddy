@@ -2306,7 +2306,19 @@
     "composeNoRepo": "Aucun de vos projets n'a de dépôt connecté. L'agent clone un dépôt pour travailler : liez-en un dans les réglages d'un projet.",
     "reasoningMinimal": "Minimal",
     "reasoningXhigh": "Très poussé",
-    "reasoningMax": "Maximum"
+    "reasoningMax": "Maximum",
+    "environment": "Environnement",
+    "environmentCloud": "Dans le cloud",
+    "environmentCloudHint": "Une machine jetable, sur un clone neuf du dépôt.",
+    "environmentLocal": "Ma machine",
+    "environmentLocalHint": "L'agent travaille dans {folder}, sur ce Mac.",
+    "environmentLocalAttach": "Choisir le dossier de travail.",
+    "environmentLocked": "Une conversation ne change pas d'environnement : il se choisit au premier message.",
+    "localRunNote": "Cette conversation tourne sur votre machine, dans le dossier attaché au projet.",
+    "localRepoMissing": "Ce dossier n'est plus là. Choisissez-le à nouveau, ou repassez dans le cloud.",
+    "localRepoNotGit": "Ce dossier n'est pas un dépôt git.",
+    "localRepoNoRemote": "Ce dépôt n'a aucun remote : impossible de dire lequel c'est.",
+    "localRepoWrongRepo": "C'est un autre dépôt que celui lié à ce projet."
   },
   "Projects": {
     "newProject": "Nouveau projet",
@@ -2722,7 +2734,14 @@
     "importQuitTitle": "Abandonner cet import ?",
     "importQuitDescription": "Le fichier et la correspondance que vous avez réglée seront perdus. Rien n'a encore été importé.",
     "importQuitConfirm": "Abandonner",
-    "importValueToPlace": "Pas encore placée"
+    "importValueToPlace": "Pas encore placée",
+    "localRepoTitle": "Dossier local",
+    "localRepoDesc": "La copie du dépôt que l'agent ouvre quand une conversation tourne sur ce Mac.",
+    "localRepoEmpty": "Aucun dossier attaché. L'agent tourne dans le cloud.",
+    "localRepoAttach": "Attacher un dossier",
+    "localRepoChange": "Changer",
+    "localRepoDetach": "Détacher",
+    "localRepoWarning": "Un agent qui tourne ici lit et écrit dans ce dossier avec votre compte, et ce qu'il lit part dans le fil de la conversation — donc chez minddy. Le dossier n'est attaché que sur ce Mac : personne d'autre dans le projet ne le voit."
   },
   "Seed": {
     "emptyBoardCta": "Discuter avec Numo",

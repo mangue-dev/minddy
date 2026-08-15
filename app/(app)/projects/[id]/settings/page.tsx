@@ -26,6 +26,7 @@ import { ProjectIntegrations } from "@/components/project-integrations";
 import { ProjectFeedbackSettings } from "@/components/project-feedback-settings";
 import { ProjectGeneralSection } from "@/components/settings/project-general-section";
 import { ProjectGitSection } from "@/components/settings/project-git-section";
+import { ProjectLocalRepoSection } from "@/components/settings/project-local-repo-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
@@ -168,7 +169,15 @@ export default function ProjectSettingsPage() {
       value: "git",
       label: t("gitTab"),
       icon: GitBranch,
-      content: <ProjectGitSection projectId={project.id} />,
+      content: (
+        <>
+          <ProjectGitSection projectId={project.id} />
+          {/* Le dossier de CETTE machine (MIN-359) : sous le dépôt lié, parce
+              qu'il n'a de sens qu'une fois le dépôt choisi — et invisible hors
+              de l'app de bureau, où il n'y aurait rien à attacher. */}
+          <ProjectLocalRepoSection projectId={project.id} />
+        </>
+      ),
     },
     {
       value: "import",

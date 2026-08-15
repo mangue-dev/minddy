@@ -4,3 +4,16 @@
    clé, même sens, l'une ne va pas sans l'autre. macOS lit celle-ci quand le Mac
    est réglé en français, la base anglaise partout ailleurs. */
 "NSMicrophoneUsageDescription" = "minddy se sert du micro pour transformer ce que vous dites en texte — dicter un ticket, une note, un message à Numo. Rien n'est enregistré tant que vous ne lancez pas une dictée vous-même.";
+
+/* Les dossiers protégés par TCC (MIN-359).
+
+   Même règle que ci-dessus : chaque clé double une entrée d'`extendInfo`, et
+   c'est cette phrase-là que lit quelqu'un dont le Mac est en français. Elles
+   nomment toutes le MÊME geste — l'agent ouvre le dossier que la personne a
+   attaché elle-même — parce que c'est le seul, et qu'une phrase par dossier qui
+   dirait autre chose donnerait à croire qu'il y en a plusieurs. */
+"NSDocumentsFolderUsageDescription" = "minddy en a besoin pour ouvrir le dossier de projet que vous avez attaché, quand vous demandez à un agent de travailler sur ce Mac plutôt que dans le cloud.";
+"NSDesktopFolderUsageDescription" = "minddy en a besoin pour ouvrir le dossier de projet que vous avez attaché, quand vous demandez à un agent de travailler sur ce Mac plutôt que dans le cloud.";
+"NSDownloadsFolderUsageDescription" = "minddy en a besoin pour ouvrir le dossier de projet que vous avez attaché, quand vous demandez à un agent de travailler sur ce Mac plutôt que dans le cloud.";
+"NSRemovableVolumesUsageDescription" = "minddy en a besoin pour ouvrir un dossier de projet que vous avez attaché sur un disque externe, quand vous demandez à un agent de travailler sur ce Mac plutôt que dans le cloud.";
+"NSNetworkVolumesUsageDescription" = "minddy en a besoin pour ouvrir un dossier de projet que vous avez attaché sur un partage réseau, quand vous demandez à un agent de travailler sur ce Mac plutôt que dans le cloud.";

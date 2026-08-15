@@ -33,6 +33,7 @@ import {
   type AgentRunTrigger,
 } from "./runs";
 import { drainAgentRuns } from "./drain";
+import { localExecRequested } from "./local-exec";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
@@ -173,6 +174,15 @@ export interface LaunchAgentInput {
    * ce cas : un titre écrit une fois vaut mieux qu'un titre repayé chaque matin.
    */
   title?: string | null;
+  /**
+   * La conversation demande à tourner sur la MACHINE de l'utilisateur (MIN-359).
+   *
+   * Une DEMANDE, venue du corps d'un POST : `localExecRequested`
+   * ([local-exec.ts](local-exec.ts)) décide si elle survit, et `createRun` la
+   * fige sur la ligne. Il n'y a pas d'autre entrée, et rien ne la bascule
+   * ensuite — même doctrine que le moteur et la microVM (cf. `createRun`).
+   */
+  localExec?: boolean;
 }
 
 /**
@@ -405,6 +415,11 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       prNumber: inherited?.prNumber ?? null,
       prUrl: inherited?.prUrl ?? null,
       prState: inherited?.prState ?? null,
+      // L'ENVIRONNEMENT (MIN-359), figé ici comme le moteur et la microVM. Le
+      // chemin `pr` n'y passe jamais : c'est `launchPrReviewRun`, une fonction à
+      // part, et c'est ainsi que « un run de relecture ne part pas en local »
+      // est une propriété du code plutôt qu'un `if` à ne pas oublier.
+      localExec: localExecRequested(input),
     });
   } catch (err) {
     // Course perdue contre un lancement concurrent (double-clic, deux onglets) :
