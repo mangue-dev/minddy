@@ -1168,6 +1168,11 @@ export function AgentEventFeed({
   // Le tour actif (accordéon ouvert « Travaille depuis X ») porte déjà le signal
   // « travaille » → on ne montre l'indicateur du bas que sans tour actif encore.
   const hasActiveTurn = blocks.some((b) => b.type === "turn" && b.active);
+  // Dès que l'agent émet du texte, l'interface a déjà quelque chose de plus
+  // juste à montrer que « travaille ». On ne se limite PAS à `isLiveAnswer` :
+  // après un appel d'outil, le texte final garde la trace de cet outil et n'est
+  // donc pas marqué comme une réponse finale par le regroupement du fil.
+  const agentTextStreaming = liveItems.some((item) => item.kind === "message");
   /**
    * L'agent est parti mais rien n'est encore visible de lui. Deux moments très
    * différents sous cette même apparence, et c'est l'event `sandbox_ready` qui les
@@ -1179,8 +1184,15 @@ export function AgentEventFeed({
    *    réponse finale). Là, « travaille » est la vérité.
    * Dès qu'un pas paraît, le tour actif prend le relais et porte le chrono.
    */
-  const startingSandbox = active && !hasActiveTurn && !sandboxReady;
-  const workingSilently = active && !hasActiveTurn && sandboxReady;
+  // En local il n'existe aucune sandbox à attendre : dès l'envoi, la requête et
+  // les pré-vols du processus Mac font déjà partie du travail du tour. Garder
+  // « démarrage de la session » jusqu'au premier delta du modèle faisait passer
+  // son temps de réflexion (et les premiers deltas non affichables) pour du boot.
+  // Le cloud conserve, lui, sa vraie frontière explicite `sandbox_ready`.
+  const runtimeReady = sandboxReady || localExec;
+  const startingSandbox = active && !hasActiveTurn && !runtimeReady;
+  const workingSilently =
+    active && !hasActiveTurn && !agentTextStreaming && runtimeReady;
   // Rien du tout, et personne au travail : la session n'a rien à raconter.
   const emptyAtRest =
     !active && blocks.length === 0 && displayPending.length === 0 && !loading;

@@ -28,7 +28,6 @@ import { NextRequest } from "next/server";
 const h = vi.hoisted(() => ({
   run: null as Record<string, unknown> | null,
   claimed: true,
-  keyMode: "platform" as "platform" | "byok",
   prepares: true,
   calls: [] as string[],
 }));
@@ -58,13 +57,12 @@ vi.mock("@/lib/server/agent/runs", () => ({
   }),
 }));
 
-vi.mock("@/lib/server/agent/model", () => ({
-  resolveAgentApiKey: vi.fn(async () => ({ mode: h.keyMode })),
-}));
-
 vi.mock("@/lib/server/agent/execute", () => ({
   executeAgentRun: vi.fn(
-    async (_run: unknown, opts: { onLocalAssignment?: (job: unknown) => void }) => {
+    async (
+      _run: unknown,
+      opts: { onLocalAssignment?: (job: unknown, meta: { repoFullName: string }) => void },
+    ) => {
       h.calls.push("prepare");
       if (!h.prepares) return "failed";
       opts.onLocalAssignment?.({
@@ -73,7 +71,7 @@ vi.mock("@/lib/server/agent/execute", () => ({
         model: "anthropic/claude-sonnet-5",
         repoMode: "clone",
         authUrl: "https://x-access-token:ghs_x@github.com/mangue-dev/minddy.git",
-      });
+      }, { repoFullName: "mangue-dev/minddy" });
       return "detached";
     },
   ),
@@ -89,14 +87,6 @@ vi.mock("@/lib/server/agent/local-exec", async (importOriginal) => {
     }),
   };
 });
-
-vi.mock("@/lib/server/agent/repo-access", () => ({
-  resolveRepoCloneTarget: vi.fn(async () => ({
-    repoFullName: "mangue-dev/minddy",
-    provider: "github",
-    token: "ghs_x",
-  })),
-}));
 
 async function POST(body: unknown) {
   const route = await import("@/app/api/desktop/local-turn/route");
@@ -114,6 +104,7 @@ function row(over: Record<string, unknown> = {}) {
     id: "run-1",
     project_id: "proj-1",
     created_by: "user-1",
+    key_mode: "platform",
     status: "queued",
     local_exec: true,
     triggered_by: "chat",
@@ -127,7 +118,6 @@ function row(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   h.run = row();
   h.claimed = true;
-  h.keyMode = "platform";
   h.prepares = true;
   h.calls.length = 0;
 });
@@ -199,7 +189,7 @@ describe("POST /api/desktop/local-turn", () => {
   });
 
   it("refuse un run BYOK avant tout claim — il n'a littéralement aucun plafond", async () => {
-    h.keyMode = "byok";
+    h.run = row({ key_mode: "byok" });
     const response = await POST({ runId: "run-1" });
     expect(response.status).toBe(409);
     expect((await response.json()).error).toContain("byok");
@@ -278,9 +268,9 @@ describe("la préparation locale d'`execute.ts`", () => {
 
   it("rend l'affectation au lieu de lancer la boucle", () => {
     const local = source.slice(source.indexOf("if (localTurn) {"));
-    expect(local).toContain("opts.onLocalAssignment?.(assignment)");
+    expect(local).toContain("opts.onLocalAssignment?.(assignment, { repoFullName: target.repoFullName })");
     // La boucle de microVM vient APRÈS, et n'est donc jamais atteinte.
-    expect(local.indexOf("opts.onLocalAssignment?.(assignment)")).toBeLessThan(
+    expect(local.indexOf("opts.onLocalAssignment?.(assignment, { repoFullName: target.repoFullName })")).toBeLessThan(
       local.indexOf("startVmLoop("),
     );
   });
@@ -332,6 +322,22 @@ describe("la préparation locale d'`execute.ts`", () => {
     // avant le claim. Une seconde résolution de jeton ne change donc pas leurs
     // droits et ajoute seulement une attente au lancement.
     expect(source).toContain("const vmTarget = localTurn\n      ? target");
+  });
+
+  it("ne minte pas de clé fournisseur avant de rendre un job local", () => {
+    expect(source).toContain('if (keyMode === "platform" && !localTurn)');
+  });
+
+  it("rend l'identité du dépôt avec l'affectation sans la résoudre une seconde fois", () => {
+    expect(source).toContain("{ repoFullName: target.repoFullName }");
+  });
+
+  it("recouvre l'event de démarrage et ne publie pas de sandbox cloud en local", () => {
+    expect(source).toContain("if (!localTurn) await runningEvent");
+    expect(source).toContain('if (sandbox) await emit("status", { phase: "sandbox_ready" })');
+    const localStart = source.indexOf("if (localTurn) {");
+    const local = source.slice(localStart, source.indexOf("if (!sandbox) throw", localStart));
+    expect(local).not.toContain("last_activity_at: new Date().toISOString()");
   });
 
   it("ne recharge pas les ressources du ticket pour une reprise opencode", () => {

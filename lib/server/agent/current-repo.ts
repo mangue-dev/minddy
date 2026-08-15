@@ -241,6 +241,8 @@ export interface CurrentRepoState {
   resumed: boolean;
   /** Fichiers déjà modifiés dans son arbre de travail quand le tour a commencé. */
   dirty: number;
+  /** L'instantané déjà lu pour calculer `dirty`, réutilisé par le superviseur. */
+  state: RepoState;
 }
 
 /**
@@ -263,7 +265,15 @@ export interface CurrentRepoState {
  */
 export async function prepareCurrentRepo(
   host: RepoHost,
-  opts: { runId: string; authUrl: string; workBranch: string },
+  opts: {
+    runId: string;
+    authUrl: string;
+    workBranch: string;
+    remoteWorkMayExist?: boolean;
+    /** Branche de base choisie au lancement : une branche cloud est ramenée
+     * avant d'ouvrir OpenCode, sans jamais déplacer le HEAD de l'utilisateur. */
+    baseBranch?: string;
+  },
 ): Promise<CurrentRepoState> {
   const { repoDir } = host.layout;
   const toplevel = await host.exec(`git rev-parse --show-toplevel && pwd -P`, {
@@ -284,8 +294,40 @@ export async function prepareCurrentRepo(
   }
 
   const ref = runWorkRef(opts.runId);
-  let parent = await revParse(host, ref);
-  if (!parent) {
+  const base = opts.baseBranch?.trim() ?? "";
+  const baseRef = `refs/minddy/run/${opts.runId.replace(/[^A-Za-z0-9_-]/g, "-") || "run"}/base`;
+  // Une branche proposée comme locale par le picker doit rester locale : la
+  // télécharger à nouveau coûtait ~1 s à chaque conversation, puis le code
+  // repartait malgré tout de HEAD. Les deux refs sont indépendantes, donc lues
+  // en parallèle.
+  const [localBase, localRunParent] = await Promise.all([
+    base ? revParse(host, `refs/heads/${base}`) : Promise.resolve(""),
+    revParse(host, ref),
+  ]);
+
+  let baseParent = localBase;
+  if (base && !baseParent) {
+    // La branche n'existe que dans le cloud : on la ramène sous une ref privée à
+    // minddy, sans déplacer HEAD ni les refs de l'utilisateur.
+    const fetched = await host.exec(
+      `git fetch --no-tags --quiet ${sq(opts.authUrl)}` +
+        ` ${sq(`+refs/heads/${base}:${baseRef}`)}`,
+      { timeoutMs: 120_000 },
+    );
+    if (fetched.exitCode !== 0) {
+      throw new Error(
+        `could not synchronize base branch ${base}: ` +
+          `${(fetched.stderr || fetched.stdout).trim().slice(0, 300)}`,
+      );
+    }
+    baseParent = await revParse(host, baseRef);
+    if (!baseParent) {
+      throw new Error(`could not resolve synchronized base branch ${base}`);
+    }
+  }
+
+  let parent = localRunParent;
+  if (!parent && opts.remoteWorkMayExist !== false) {
     // Le run a-t-il déjà poussé, d'ici ou d'une autre machine ? On ramène son tip
     // sous NOTRE ref — jamais sous `refs/heads/` ni `refs/remotes/origin/`, qui
     // appartiennent tous les deux à l'utilisateur.
@@ -301,14 +343,20 @@ export async function prepareCurrentRepo(
   // ce point, c'est un run qui commence — et il commence sur le HEAD de
   // l'utilisateur (cf. l'en-tête, choix nº 1).
   const resumed = Boolean(parent);
-  if (!parent) parent = await revParse(host, "HEAD");
+  // Ces trois lectures ne dépendent pas les unes des autres. Les sérialiser
+  // ajoutait trois forks de shell au chemin critique de chaque tour local.
+  const [head, branchResult, state] = await Promise.all([
+    parent ? Promise.resolve(parent) : baseParent ? Promise.resolve(baseParent) : revParse(host, "HEAD"),
+    host.exec(`git branch --show-current`).catch(() => null),
+    readRepoState(host),
+  ]);
+  parent = head;
   if (!parent) {
     throw new Error(`local repository unusable: ${repoDir} has no commit to build on`);
   }
 
-  const branch = (await host.exec(`git branch --show-current`).catch(() => null))?.stdout.trim() ?? "";
-  const dirty = (await readRepoState(host)).size;
-  return { parent, branch, resumed, dirty };
+  const branch = branchResult?.stdout.trim() ?? "";
+  return { parent, branch, resumed, dirty: state.size, state };
 }
 
 /** Le sha d'une ref, ou "" si elle n'existe pas. Ne lève jamais. */

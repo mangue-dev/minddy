@@ -7,6 +7,67 @@
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
 
+/* Le shell reste une application de bureau dès 768 px : header complet, palette
+   de recherche et navigation latérale. Sous ce seuil seulement, la pilule de
+   navigation mobile prend le relais. Les écrans 768–1199 px utilisent le
+   panneau latéral escamoté (voir AppShellChrome), plutôt que l'interface mobile.
+   Cette redéfinition, après les tokens de mangue-ui, aligne `desktop:` et
+   `max-desktop:` sur le même seuil. */
+@theme {
+  --breakpoint-desktop: 768px;
+  --breakpoint-wide: 1200px;
+}
+
+/* `mangue-ui` est aussi compilé par Turbopack comme une dépendance : selon le
+   cache de développement, ses utilitaires `desktop:` peuvent conserver le
+   seuil publié (1200 px) alors que ceux de l'application ont déjà lu le thème
+   ci-dessus. Le shell ne peut pas se retrouver coupé en deux : cette couche
+   force les trois primitives du chrome dans la tranche intermédiaire, avec une
+   spécificité supérieure aux utilitaires de la bibliothèque.
+
+   Elle est volontairement limitée à `.app-shell` : les pages publiques gardent
+   leurs propres adaptations, et cette règle n'élargit pas arbitrairement toute
+   l'interface. */
+@media (768px <= width < 1200px) {
+  .app-shell .desktop\:flex {
+    display: flex !important;
+  }
+
+  .app-shell .desktop\:hidden {
+    display: none !important;
+  }
+
+  /* Le conteneur de sidebar est lui-même enfant direct du shell : il n'est pas
+     couvert par le sélecteur descendant ci-dessus. */
+  .app-shell > .desktop\:flex {
+    display: flex !important;
+  }
+}
+
+/* Dans l'app Electron, la bande fixe qui permet de déplacer la fenêtre couvre
+   les 60 premiers pixels (dont le bord gauche du header). Quand le panneau de
+   navigation compact est rangé, sa lisière doit passer AU-DESSUS de cette bande
+   et redevenir une zone web ; autrement un survol du coin haut-gauche ne peut
+   jamais rappeler la navigation. Une fois ouverte, elle repasse sous le panneau
+   lui-même et ne bloque aucun contrôle. */
+html[data-desktop-app] .zen-nav-hotzone {
+  -webkit-app-region: no-drag;
+}
+
+/* mangue-ui donne aux options de menu une cible tactile plus haute jusqu'à
+   1199 px (`max-[1199px]:py-2.5`). L'application reste cependant desktop dès
+   768 px : dans cette tranche, les menus doivent retrouver leur densité de
+   bureau (le `py-1.5` d'origine). La règle est hors layer et `!important` pour
+   couvrir aussi les utilitaires déjà compilés dans la dépendance. */
+@media (width >= 768px) {
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-radio-item"],
+  [data-slot="dropdown-menu-sub-trigger"] {
+    padding-block: 0.375rem !important;
+  }
+}
+
 /* ── Les flèches d'Inter, que Google ne sert pas ──────────────────────────────
    `next/font/google` ne charge d'Inter que les sous-ensembles publiés par
    Google, et AUCUN ne couvre le bloc des flèches : la plage latine y met « ↑ »
@@ -464,8 +525,8 @@ nav[aria-label="Navigation"]
   --mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);
 }
 
-/* 1200px = `--breakpoint-desktop` (mangue-ui), le point où la pilule apparaît. */
-@media (width < 1200px) {
+/* 768px = `--breakpoint-desktop`, le point où la pilule apparaît. */
+@media (width < 768px) {
   .app-shell main {
     padding-bottom: var(--mobile-nav-clearance);
   }
@@ -1826,7 +1887,7 @@ html[data-desktop-app]
    `data-window-buttons` est posé par components/app-sidebar.tsx quand les
    boutons sont là. En mode RAIL ils sont retirés (56 px ne les tiennent pas) et
    l'attribut disparaît avec eux : la marque revient à gauche, à sa place. Sous
-   1200 px la barre n'est plus rendue du tout, et c'est l'en-tête qui leur garde
+   768 px la barre n'est plus rendue du tout, et c'est l'en-tête qui leur garde
    le coin (`HeaderWindowButtonsSlot`, components/desktop-window-buttons.tsx).
 
    La place qu'ils occupent — bord gauche à 19, trois pastilles de 14 px au pas

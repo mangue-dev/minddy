@@ -135,6 +135,13 @@ interface ChatInputProps {
    */
   contextSlot?: ReactNode;
   /**
+   * Place la rangée de contexte dans un bandeau derrière le haut du composer.
+   * Les conversations de l'agent y regroupent les choix qui déterminent son
+   * espace de travail (projet, environnement et branche), sans voler de place
+   * à la zone où l'on écrit.
+   */
+  contextPlacement?: "inside" | "above";
+  /**
    * Les entités citables par « @ » dans le texte. Vide/absent = pas de
    * mentions du tout (les composers hors Numo). La liste peut arriver après
    * coup : `onMentionQuery` prévient l'hôte dès qu'une mention se tape, ce qui
@@ -199,6 +206,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       className,
       hideAttach = false,
       contextSlot,
+      contextPlacement = "inside",
       mentionables,
       onMentionQuery,
       commands,
@@ -222,6 +230,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const { user } = useAuth();
     const userId = user?.id;
     const uploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
+    // L'agent accepte un message qui l'oriente pendant qu'il travaille
+    // (`sendWhileStreaming`) : ses fichiers doivent rester joignables dans ce
+    // même cas. Le chat Numo, lui, garde son bouton masqué tant qu'il génère.
+    const canAttach = !hideAttach && (!isStreaming || !!sendWhileStreaming);
     const drop = useFileDrop((files) => {
       if (userId) uploads.addFiles(files);
     });
@@ -789,7 +801,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             s'allume ou s'éteint — sinon l'éditeur perd le focus (le FocusScope du
             Sheet le repose alors sur la coquille) et le texte tapé pendant la
             réponse disparaît. */}
-        <AgentBeam active={!!beam} keepMounted className="rounded-2xl">
+        {contextSlot && contextPlacement === "above" ? (
+          <div className="relative z-0 mx-3 -mb-7 flex min-h-[70px] items-start rounded-t-[1.5rem] bg-muted/60 px-2 pt-2 dark:bg-muted/35">
+            {contextSlot}
+          </div>
+        ) : null}
+        <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-2xl">
         <div
           className={cn(
             "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all",
@@ -799,9 +816,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 ? "border-brand/40 ring-2 ring-brand/10"
                 : "border-border"
           )}
-          {...(hideAttach ? {} : drop.handlers)}
+          {...(canAttach ? drop.handlers : {})}
         >
-          <DropOverlay show={drop.dragging} />
+          <DropOverlay show={canAttach && drop.dragging} />
           {/* Rangée de contexte (pilules + bouton @), fournie par l'hôte. Elle
               défile à l'horizontale et garde donc sa propre rangée : les
               pièces jointes, elles, s'empilent en dessous. Emboîtement
@@ -809,7 +826,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               --radius + 8px = 24px), donc une pilule en rounded-md
               (--radius - 2px = 14px) + les 10px (p-2.5) qui la séparent du
               bord === 24px. */}
-          {contextSlot}
+          {contextPlacement === "inside" ? contextSlot : null}
           {uploads.pending.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2.5">
               <ResourcePills
@@ -849,7 +866,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               }}
               onClick={refreshMention}
               onPaste={(e) => {
-                if (!hideAttach && userId && e.clipboardData.files.length > 0) {
+                if (canAttach && userId && e.clipboardData.files.length > 0) {
                   e.preventDefault();
                   uploads.addFiles(e.clipboardData.files);
                 }
@@ -874,7 +891,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 l'agent ils précèdent donc le sélecteur de modèle, comme demandé
                 par MIN-369. */}
             <div className="flex min-w-0 items-center gap-1.5">
-              {!isStreaming && !hideAttach && (
+              {canAttach && (
                 <>
                   <input
                     ref={fileInputRef}

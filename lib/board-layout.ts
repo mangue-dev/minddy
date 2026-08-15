@@ -1,6 +1,6 @@
 /**
  * La largeur d'une colonne de board, et pourquoi elle n'est pas `w-full` sous
- * 1200 px (MIN-293).
+ * 1200 px (MIN-293), indépendamment du seuil du chrome desktop.
  *
  * Le board était un empilement de colonnes PLEINE LARGEUR qu'on feuilletait au
  * doigt, une par écran. C'est juste sur un téléphone ; ça ne l'est plus dès
@@ -26,7 +26,7 @@
  * trois colonnes visibles, ça les laisserait à cheval sur les deux bords. Le
  * même changement ne change rien à un doigt sur un téléphone.
  *
- * ⚠ **Les fractions sont bornées par `max-desktop:`, et ce n'est pas décoratif.**
+ * ⚠ **Les fractions sont bornées par `max-wide:`, et ce n'est pas décoratif.**
  * Le partage ci-dessus ne vaut QUE sous 1200 px ; au-dessus, la colonne est fixe.
  * Écrit sans borne — `sm:w-… lg:w-… desktop:w-[22rem]` — il débordait au-dessus
  * du seuil : `lg:` s'appliquait toujours et la colonne prenait le TIERS de la
@@ -37,10 +37,10 @@
  * La cause est dans l'ORDRE des media queries, pas dans les largeurs. Tailwind
  * trie les points de rupture par leur valeur, mais il ne sait pas comparer des
  * unités différentes : les siens sont en `rem` (`sm` = 40rem, `lg` = 64rem),
- * `--breakpoint-desktop` de mangue-ui est en `px` (1200px). Les `px` sortent donc
+ * `--breakpoint-wide` est en `px` (1200px). Les `px` sortent donc
  * EN BLOC avant les `rem`, et la feuille générée finit par
  *
- *     @media (width >= 1200px)  { … }   ← desktop, écrit en premier
+ *     @media (width >= 1200px)  { … }   ← wide, écrit en premier
  *     @media (width >= 40rem)   { … }   ← sm
  *     @media (width >= 64rem)   { … }   ← lg, écrit en DERNIER → il gagne
  *
@@ -48,7 +48,7 @@
  * trois règles s'appliquent, et `desktop:` perd. Aucune erreur, aucun
  * avertissement — le mélange `px`/`rem` ne se lit nulle part dans les classes.
  *
- * `max-desktop:` rend les intervalles DISJOINTS (`(width < 1200px)` imbriqué
+ * `max-wide:` rend les intervalles DISJOINTS (`(width < 1200px)` imbriqué
  * autour de la fraction), donc l'ordre ne décide plus rien. C'est la parade qui
  * tient quel que soit le tri : la garder en cas de refonte de ces classes, et
  * s'en souvenir avant tout nouveau `desktop:` posé sur une propriété que `sm:`,
@@ -57,7 +57,7 @@
  * de fenêtre.
  */
 export const BOARD_COLUMN_CLASS =
-  "w-full shrink-0 snap-start max-desktop:sm:w-[calc((100%-0.75rem)/2)] max-desktop:lg:w-[calc((100%-1.5rem)/3)] desktop:w-[22rem]";
+  "w-full shrink-0 snap-start max-wide:sm:w-[calc((100%-0.75rem)/2)] max-wide:lg:w-[calc((100%-1.5rem)/3)] wide:w-[22rem]";
 
 /**
  * La gouttière du défileur.
@@ -79,4 +79,4 @@ export const BOARD_COLUMN_CLASS =
  * `useScrollFade` : rien n'est posé sur le contenu, donc rien à re-compositer.
  */
 export const BOARD_SCROLLER_CLASS =
-  "flex gap-3 overflow-x-auto px-4 snap-x snap-mandatory sm:px-6 desktop:snap-none";
+  "flex gap-3 overflow-x-auto px-4 snap-x snap-mandatory sm:px-6 wide:snap-none";

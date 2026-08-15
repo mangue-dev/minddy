@@ -25,7 +25,7 @@ import {
  * changer de place dans le DOM sans quitter son composant : la sélection, les
  * filtres et les requêtes restent là où on les lit.
  *
- * Sous `desktop` (1200 px) rien de tout cela ne s'applique : la barre reste où
+ * Sous `desktop` (768 px) rien de tout cela ne s'applique : la barre reste où
  * elle est écrite, dans la page, et le comportement mobile ne bouge pas.
  */
 interface SecondarySidebar {

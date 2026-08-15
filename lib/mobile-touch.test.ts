@@ -175,6 +175,16 @@ describe("cibles de toucher", () => {
     }
     expect(css).toContain("min-height: 44px;");
   });
+
+  it("les options de dropdown redeviennent compactes dès 768 px", () => {
+    const css = read(GLOBALS);
+    expect(css).toContain("@media (width >= 768px)");
+    expect(css).toContain('[data-slot="dropdown-menu-item"]');
+    expect(css).toContain("padding-block: 0.375rem !important;");
+    // La dépendance conserve son réglage tactle à 1200 px : l'override ci-dessus
+    // est donc nécessaire pour le seuil réel de l'application.
+    expect(read(UI("dropdown-menu"))).toContain("max-[1199px]:py-2.5");
+  });
 });
 
 describe("retour au toucher", () => {

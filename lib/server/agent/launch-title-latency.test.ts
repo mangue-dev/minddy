@@ -19,4 +19,11 @@ describe("lancement sans attendre le titre de session", () => {
     expect(source).toContain("void generatedTitle");
     expect(source).toContain('.is("title", null)');
   });
+
+  it("sort les écritures secondaires du chemin critique local", () => {
+    const localBookkeeping = source.slice(source.indexOf("if (run.local_exec) {"));
+    expect(localBookkeeping).toContain("after(() => {");
+    expect(localBookkeeping).toContain("void recordLaunch().catch");
+    expect(source).toContain("if (!run.local_exec) kickAgentDrain(service)");
+  });
 });

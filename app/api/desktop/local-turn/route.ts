@@ -6,8 +6,6 @@ import { rowMayRunLocally } from "@/lib/server/agent/local-exec-scope";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { claimRun, getRun } from "@/lib/server/agent/runs";
 import { executeAgentRun } from "@/lib/server/agent/execute";
-import { resolveAgentApiKey } from "@/lib/server/agent/model";
-import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import type { VmJob } from "@/lib/server/agent/vm/protocol";
 
 /**
@@ -55,6 +53,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
+  const timings: Record<string, number> = {};
+  const mark = (name: string) => {
+    timings[name] = Date.now() - startedAt;
+  };
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
@@ -68,6 +71,7 @@ export async function POST(request: NextRequest) {
   if (!run || !(await canReadAgentRun(auth.user.id, run))) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
+  mark("run-and-access");
 
   if (!run.local_exec) {
     return NextResponse.json({ error: "this run does not execute locally" }, { status: 409 });
@@ -81,22 +85,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `third-party context: ${scope.reason}` }, { status: 409 });
   }
   /**
-   * L'ADMISSION, et elle relit le MODE DE CLÉ plutôt que de le supposer : le BYOK
-   * est refusé en local parce que la clé est celle de l'utilisateur, sur SON
-   * compte, et qu'OpenRouter n'émet de clé plafonnée que sur le compte qui
-   * détient la clé de provisioning. Un run BYOK local n'a donc littéralement
-   * aucun plafond — ni clé plafonnable, ni `budgetUsd`, ni compute de microVM.
-   *
-   * Une lecture de plus que `executeAgentRun`, assumée : elle doit avoir lieu
-   * AVANT le claim, sinon on met un run en `running` pour le refuser ensuite.
+   * L'ADMISSION lit le mode FIGÉ SUR LE RUN. `launchAgentRun` l'a résolu avant
+   * `createRun` et les chunks suivants doivent précisément garder ce choix :
+   * refaire ici toute la résolution du provider ajoutait un aller-retour avant
+   * le claim sans produire une vérité plus fraîche.
    */
-  const keyMode = await resolveAgentApiKey(run.created_by ?? "")
-    .then((endpoint) => endpoint.mode)
-    .catch(() => null);
-  if (!keyMode) {
-    return NextResponse.json({ error: "no model endpoint for this account" }, { status: 503 });
-  }
-  const admission = admitLocalRun({ keyMode });
+  const admission = admitLocalRun({ keyMode: run.key_mode });
   if (!admission.ok) {
     return NextResponse.json({ error: `refused: ${admission.reason}` }, { status: 409 });
   }
@@ -113,18 +107,24 @@ export async function POST(request: NextRequest) {
   if (!claimed) {
     return NextResponse.json({ error: "run is not queued" }, { status: 409 });
   }
+  mark("claimed");
 
   // Un objet et non un `let` : `tsc` ne suit pas une affectation faite depuis un
   // rappel, et réduirait la variable à `null` juste après.
-  const prepared: { job: Omit<VmJob, "layout" | "bootstrapMs"> | null } = { job: null };
+  const prepared: {
+    job: Omit<VmJob, "layout" | "bootstrapMs"> | null;
+    repoFullName: string | null;
+  } = { job: null, repoFullName: null };
   const outcome = await executeAgentRun(claimed, {
     // Pas de deadline utile : la fonction ne fait plus tourner de boucle depuis
     // MIN-225, et la branche locale ne réveille aucune microVM.
     deadlineMs: 120_000,
-    onLocalAssignment: (job) => {
+    onLocalAssignment: (job, meta) => {
       prepared.job = job;
+      prepared.repoFullName = meta.repoFullName;
     },
   });
+  mark("prepared");
 
   if (!prepared.job) {
     // `executeAgentRun` a déjà mis le run au repos et raconté l'échec au fil : on
@@ -132,27 +132,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `turn not prepared (${outcome})` }, { status: 409 });
   }
 
+  // Cette identité doit exister avant d'émettre le bail : émettre un jeton
+  // incrémente sa génération et révoque le précédent. Ne faisons pas cette
+  // écriture irréversible pour une affectation incomplète.
+  if (!prepared.repoFullName) {
+    return NextResponse.json({ error: "prepared turn has no repository identity" }, { status: 409 });
+  }
+
   const lease = await issueLocalExecToken(run.id);
   if (!lease.ok) {
     console.error(`[desktop-local-turn] ${runId} : bail refusé (${lease.error})`);
     return NextResponse.json({ error: `lease refused: ${lease.error}` }, { status: 503 });
   }
+  mark("leased");
 
   /**
    * Le `owner/repo` du projet part avec l'affectation : c'est contre lui que la
    * machine revalide le dossier attaché, **au moment du tour**. L'attachement a pu
    * être fait il y a un mois, et un chemin retenu ne prouve rien.
    */
-  const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
-  if (!target) {
-    return NextResponse.json({ error: "project has no linked repository" }, { status: 409 });
-  }
-
+  // `executeAgentRun` vient de résoudre cette même cible pour construire le job.
+  // La faire refrapper la forge ici créait un second token uniquement pour relire
+  // le `owner/repo`. Le callback rend maintenant cette donnée non secrète avec le job.
   return NextResponse.json(
     {
       runId: run.id,
       projectId: run.project_id,
-      repoFullName: target.repoFullName,
+      repoFullName: prepared.repoFullName,
+      diagnostics: { ...timings, total: Date.now() - startedAt },
       // Le bail voyage DANS le job (`controlToken`), et pas à côté : un job local
       // est, par définition, un job qui porte un jeton (`isLocalJob`). Une seconde
       // vérité sur le même fait finirait par diverger.

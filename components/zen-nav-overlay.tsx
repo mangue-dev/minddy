@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
+import { WINDOW_BUTTONS_WIDTH } from "@/components/desktop-window-buttons";
 import { useHoldWindowButtons, useWideLayout } from "@/lib/use-window-buttons";
 
 /**
@@ -34,7 +35,7 @@ const HOTZONE = 12;
  *
  * D'où le second rôle de ce composant : tant que le bloc est rangé, il tient les
  * boutons retirés ; le survol qui ramène la barre les ramène avec elle, à leur
- * place, sur sa ligne de marque. Sous 1200 px on ne les retire pas — l'AppShell
+ * place, sur sa ligne de marque. Sous 768 px on ne les retire pas — l'AppShell
  * n'y rend plus les barres latérales, et le mode zen n'a pas de header pour les
  * accueillir : les cacher là fermerait la fenêtre à double tour.
  */
@@ -92,6 +93,15 @@ export function ZenNavOverlay({
         setOpen(true);
         return;
       }
+      // Une sidebar secondaire est téléportée dans le panneau. Elle se trouve
+      // bien sous `panel` dans le DOM final, même si React ne la considère pas
+      // comme un descendant pour ses événements. Tester cette appartenance
+      // avant la géométrie évite que le filtre de sa bande haute referme la nav
+      // lors d'un décalage de coordonnées (notamment dans l'app de bureau).
+      if (target && el.contains(target)) {
+        setOpen(true);
+        return;
+      }
       // La zone testée est celle du bloc OUVERT, pas le rectangle qu'il occupe à
       // l'instant : pendant son entrée, un pointeur qui file vers l'endroit où
       // il arrive serait « dehors » et le renverrait aussitôt. On la calcule sur
@@ -110,10 +120,27 @@ export function ZenNavOverlay({
     // Quitter la FENÊTRE par le haut ou par la droite ne produit plus aucun
     // `pointermove` : sans ceci le bloc resterait ouvert derrière un autre
     // onglet, pour se découvrir déplié au retour.
-    document.documentElement.addEventListener("pointerleave", closePanel);
+    const onDocumentLeave = (e: PointerEvent) => {
+      // Les boutons de fenêtre macOS sont natifs : y entrer fait quitter le DOM
+      // sans `pointermove` exploitable. Ils occupent ce coin précis ; garder le
+      // panneau ouvert permet d'achever le geste au lieu de le refermer sous le
+      // pointeur. Dès qu'il revient dans la page, `onMove` reprend la décision.
+      // Même protection pendant la traversée de la bande haute du panneau : le
+      // grip de déplacement de la fenêtre peut engloutir le mouvement suivant,
+      // particulièrement si le pointeur va vite. Sans ce filet, la nav se
+      // referme avant même que le curseur atteigne son filtre ou ses contrôles.
+      if (
+        (e.clientX <= WINDOW_BUTTONS_WIDTH || e.clientX <= width) &&
+        e.clientY <= 60
+      ) {
+        return;
+      }
+      closePanel();
+    };
+    document.documentElement.addEventListener("pointerleave", onDocumentLeave);
     return () => {
       document.removeEventListener("pointermove", onMove);
-      document.documentElement.removeEventListener("pointerleave", closePanel);
+      document.documentElement.removeEventListener("pointerleave", onDocumentLeave);
     };
   }, [open, width, closePanel]);
 
@@ -149,7 +176,7 @@ export function ZenNavOverlay({
           React suffisent — elle est vide, aucun portail n'y atterrit. */}
       <div
         aria-hidden
-        className="absolute inset-y-0 left-0 z-30"
+        className={`zen-nav-hotzone absolute inset-y-0 left-0 ${shown ? "z-30" : "z-[41]"}`}
         style={{ width: HOTZONE }}
         onPointerEnter={openPanel}
         onPointerMove={openPanel}

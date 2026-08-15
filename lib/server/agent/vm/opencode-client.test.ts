@@ -47,6 +47,21 @@ describe("le piège des deux générations d'API", () => {
     await client.createSession();
     expect(seen).toContain("directory=%2Fvercel%2Fsandbox%2Frepo");
   });
+
+  it("amorce le catalogue avec le modèle et le dossier du run", async () => {
+    let seen = "";
+    const client = clientWith((url) => {
+      seen = url;
+      return new Response('[{"id":"read"}]', { status: 200 });
+    });
+    await client.warmTools("openai/gpt-oss-20b");
+    const url = new URL(seen);
+    expect(url.pathname).toBe("/experimental/tool");
+    expect(url.searchParams.get("provider")).toBe("minddy");
+    expect(url.searchParams.get("model")).toBe("openai/gpt-oss-20b");
+    expect(url.searchParams.get("agent")).toBe("build");
+    expect(url.searchParams.get("directory")).toBe("/vercel/sandbox/repo");
+  });
 });
 
 describe("le piège du snake_case", () => {

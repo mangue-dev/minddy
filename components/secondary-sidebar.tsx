@@ -8,7 +8,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { cn, useIsMobileLayout } from "mangue-ui";
+import { cn, useMediaQuery } from "mangue-ui";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { transitions } from "@/lib/motion";
@@ -33,10 +33,10 @@ const useIsoLayoutEffect =
  *
  * Deux rendus, un seul composant :
  *
- * - **≥ 1200 px** : téléportée dans le châssis, pleine hauteur, à gauche du
+ * - **≥ 768 px** : téléportée dans le châssis, pleine hauteur, à gauche du
  *   header. Sa ligne de titre fait la hauteur du header et porte la même
  *   bordure basse — une seule ligne horizontale traverse l'écran.
- * - **< 1200 px** : rendue sur place, exactement comme avant — colonne de la
+ * - **< 768 px** : rendue sur place, exactement comme avant — colonne de la
  *   page à partir de `md`, page entière en dessous, `hiddenOnMobile` la cédant
  *   au détail. Le mobile ne bouge pas.
  */
@@ -85,7 +85,7 @@ export function SecondarySidebar({
   children: ReactNode;
 }) {
   const { slot, register } = useSecondarySidebar();
-  const isMobileLayout = useIsMobileLayout();
+  const isMobileLayout = useMediaQuery("(max-width: 767px)");
   // Rien au rendu serveur : la place à prendre dans le châssis y est réservée
   // par la route (routeHasSecondaryNav), et rendre la barre ici avant de savoir
   // où elle va ferait diverger l'hydratation.

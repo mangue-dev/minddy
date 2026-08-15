@@ -238,7 +238,7 @@ function MobileBreadcrumb({
   return (
     <div className="flex min-w-0 flex-1 items-center desktop:hidden">
       <div className="flex min-w-0 flex-1 justify-start">
-        {/* App de bureau, sous 1200 px : la barre latérale n'est plus rendue, et
+        {/* Mode mobile, sous 768 px : la barre latérale n'est plus rendue, et
             les boutons macOS tombent pile sur le bouton retour ci-dessous — le
             coin haut-gauche de la fenêtre, c'est cette ligne. Ce coin de garde
             les pousse hors du chemin, et dessine les leurres quand un dialogue
@@ -302,7 +302,7 @@ export function AppBreadcrumb() {
 
   return (
     <>
-      {/* Desktop (≥1200px): the full animated trail. */}
+      {/* Desktop (≥768px): the full animated trail. */}
       <nav className="hidden min-w-0 items-center gap-2 desktop:flex">
         <Link
           href="/home"
@@ -385,7 +385,7 @@ export function AppBreadcrumb() {
         </BreadcrumbLevel>
       </nav>
 
-      {/* Mobile (<1200px): two-stage back + current level. */}
+      {/* Mobile (<768px): two-stage back + current level. */}
       <MobileBreadcrumb
         project={project}
         section={section}

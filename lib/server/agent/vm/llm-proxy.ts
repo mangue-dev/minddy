@@ -162,6 +162,10 @@ export interface LlmProxyOptions {
    * avoir lieu.
    */
   apiKey?: () => Promise<string | null>;
+  /** Ouvre le port pendant le mint ; chaque relais attend tout de même la clé. */
+  deferApiKey?: boolean;
+  /** Jalons locaux de diagnostic, sans corps, URL ni secret. */
+  onTiming?: (stage: string) => void;
   /**
    * LA SUBSTITUTION DES SECRETS, AVANT LE MODÈLE (MIN-328) — et c'est ICI qu'elle
    * doit vivre sous ce moteur.
@@ -451,7 +455,10 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
    * compute de microVM, dernier filet dans le cloud, vaut structurellement zéro
    * sur la machine de quelqu'un. Mieux vaut un tour qui ne part pas et le dit.
    */
-  const apiKey = opts.apiKey ? await requireApiKey(opts.apiKey) : null;
+  const apiKeyPromise = opts.apiKey
+    ? requireApiKey(opts.apiKey)
+    : Promise.resolve<string | null>(null);
+  const apiKey = opts.deferApiKey ? null : await apiKeyPromise;
 
   const server = createServer((req, res) => {
     void relay(req, res).catch((err) => {
@@ -518,13 +525,16 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
     // Sans clé — le cas de la microVM — c'est le placeholder d'opencode qui part,
     // et le firewall le remplace après la sortie : la ligne ci-dessous est la
     // SEULE différence entre les deux mondes.
-    if (apiKey) headers.authorization = `Bearer ${apiKey}`;
+    const relayKey = apiKey ?? (opts.apiKey ? await apiKeyPromise : null);
+    if (relayKey) headers.authorization = `Bearer ${relayKey}`;
 
+    opts.onTiming?.("llm-upstream-request");
     const upstream = await http(route.url, {
       method: "POST",
       headers,
       ...(body === undefined ? {} : { body }),
     });
+    opts.onTiming?.("llm-upstream-headers");
 
     const out: Record<string, string> = {};
     upstream.headers.forEach((value, key) => {
@@ -547,9 +557,14 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
     const sniffer = new GenerationSniffer();
     const reader = upstream.body.getReader();
     const decoder = new TextDecoder();
+    let firstChunk = true;
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
+      if (firstChunk) {
+        firstChunk = false;
+        opts.onTiming?.("llm-upstream-first-byte");
+      }
       // On ÉCRIT D'ABORD : le flux du modèle ne doit pas attendre notre lecture.
       res.write(value);
       if (sniff) sniffer.push(decoder.decode(value, { stream: true }));

@@ -15,7 +15,7 @@ import { BOARD_COLUMN_CLASS } from "./board-layout";
  * palier — et la seule qui compte est la dernière qui s'applique. Or l'ordre
  * d'écriture des media queries n'est pas celui des classes : Tailwind trie les
  * points de rupture par valeur mais ne compare pas `px` et `rem`, si bien que le
- * `desktop:` de mangue-ui (1200px) sort AVANT les `sm:`/`lg:` du cœur (40rem,
+ * `wide:` de l'application (1200px) sort AVANT les `sm:`/`lg:` du cœur (40rem,
  * 64rem). Une colonne peut donc être trois fois plus large que ce que le fichier
  * annonce, sans que rien ne l'annonce nulle part — c'est arrivé, et ça se lisait
  * en cartes de ticket étirées au-dessus de 1200 px.
@@ -35,7 +35,7 @@ const REM = 16;
 
 /**
  * Compile les classes avec le VRAI thème : les points de rupture de Tailwind plus
- * ceux de mangue-ui (`--breakpoint-desktop`), qui sont tout l'enjeu.
+ * celui de l'application (`--breakpoint-wide`), qui est tout l'enjeu.
  *
  * Les `@import` de `tokens.css` sont retirés plutôt que résolus : ils tirent
  * `tw-animate-css`, dont l'export ne se résout que par la condition `style` que
@@ -61,6 +61,7 @@ async function buildCss(candidates: string[]): Promise<string> {
       '@import "tailwindcss/theme.css" layer(theme);',
       '@import "tailwindcss/utilities.css" layer(utilities);',
       tokens,
+      "@theme { --breakpoint-wide: 1200px; }",
     ].join("\n"),
     { base: process.cwd(), loadStylesheet },
   );

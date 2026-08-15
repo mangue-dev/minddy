@@ -451,33 +451,48 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   }
 
   if (issueId) {
-    // Trace dans le journal d'activité de l'issue : qui a lancé l'agent + le modèle.
-    await insertEvents(service, [
-      {
-        issue_id: issueId,
-        actor_id: input.userId,
-        type: "agent_launched",
-        to_value: model,
-        // Acteur TECHNIQUE vs acteur AFFICHÉ (MIN-147) : le run part sous le
-        // compte qui paye et dont vient la clé, mais c'est l'automatisation que
-        // la timeline doit nommer — même vocabulaire que `via_smart_assign`.
-        ...(input.triggeredBy === "automation" ? { via_automation: true } : {}),
-      },
-    ]);
+    const recordLaunch = async () => {
+      // Trace dans le journal d'activité de l'issue : qui a lancé l'agent + le modèle.
+      await insertEvents(service, [
+        {
+          issue_id: issueId,
+          actor_id: input.userId,
+          type: "agent_launched",
+          to_value: model,
+          // Acteur TECHNIQUE vs acteur AFFICHÉ (MIN-147) : le run part sous le
+          // compte qui paye et dont vient la clé, mais c'est l'automatisation que
+          // la timeline doit nommer — même vocabulaire que `via_smart_assign`.
+          ...(input.triggeredBy === "automation" ? { via_automation: true } : {}),
+        },
+      ]);
 
-    // Agent lancé → l'issue passe « en cours » (MIN-46). Deux exceptions :
-    //  • run qui n'est pas du travail neuf (`intent` `plan`, `verify` ou
-    //    `custom` — cadrer avant, contrôler après, consigne libre) : le ticket
-    //    garde son statut, quel qu'il soit ;
-    //  • la run hérite d'une PR encore en revue (open/draft) — c'est SON état qui
-    //    gouverne le statut (in_review), on ne le fait pas régresser le temps d'une
-    //    itération. Une PR refusée (closed → issue `todo`) repasse bien « en cours ».
-    if (
-      intentStartsWork(input.intent) &&
-      inherited?.prState !== "open" &&
-      inherited?.prState !== "draft"
-    ) {
-      await syncIssueStatusOnAgentStart({ issueId, actorId: input.userId });
+      // Agent lancé → l'issue passe « en cours » (MIN-46). Deux exceptions :
+      //  • run qui n'est pas du travail neuf (`intent` `plan`, `verify` ou
+      //    `custom` — cadrer avant, contrôler après, consigne libre) : le ticket
+      //    garde son statut, quel qu'il soit ;
+      //  • la run hérite d'une PR encore en revue (open/draft) — c'est SON état qui
+      //    gouverne le statut (in_review), on ne le fait pas régresser le temps d'une
+      //    itération. Une PR refusée (closed → issue `todo`) repasse bien « en cours ».
+      if (
+        intentStartsWork(input.intent) &&
+        inherited?.prState !== "open" &&
+        inherited?.prState !== "draft"
+      ) {
+        await syncIssueStatusOnAgentStart({ issueId, actorId: input.userId });
+      }
+    };
+
+    if (run.local_exec) {
+      // Le renderer doit recevoir l'id au plus vite pour réclamer le tour à
+      // Electron. Ces deux écritures ne construisent ni le job ni son bail : on
+      // les garde dans la durée de la route, mais hors du chemin de la réponse.
+      after(() => {
+        void recordLaunch().catch((err) =>
+          console.error("[agent-launch] local launch bookkeeping failed:", (err as Error).message),
+        );
+      });
+    } else {
+      await recordLaunch();
     }
 
     // Un lancement MANUEL, quel que soit son mode, dit que quelqu'un prend le
@@ -490,7 +505,9 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     if (input.triggeredBy !== "automation") handOffToHuman(issueId);
   }
 
-  kickAgentDrain(service);
+  // Le drain exclut déjà `local_exec`, mais le réveiller lançait tout de même une
+  // invocation serverless qui ne pouvait prendre ce run.
+  if (!run.local_exec) kickAgentDrain(service);
   return { ok: true, run };
 }
 

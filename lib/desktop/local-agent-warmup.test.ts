@@ -26,4 +26,16 @@ describe("pré-chauffage de l'agent local", () => {
     expect(source).toContain("const active = opencodePreflights.get(installDir);");
     expect(source).toContain("const task = ensureOpencodeOnce(installDir).finally(");
   });
+
+  it("masque le pré-vol machine derrière la préparation du job serveur", () => {
+    const start = source.indexOf("export async function startLocalTurn");
+    const end = source.indexOf("export function prewarmLocalAgent", start);
+    const launch = source.slice(start, end);
+
+    expect(launch.indexOf("bundle: ensureBundle(opts.origin)")).toBeLessThan(
+      launch.indexOf("const answer = await fetchJson"),
+    );
+    expect(launch).toContain("machinePreflight, requestedAt");
+    expect(source).toContain("validatePreflightBundle(");
+  });
 });

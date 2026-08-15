@@ -13,6 +13,7 @@ import {
   opencodeInstallArgs,
   opencodeInstallManifestPath,
   opencodePackageManifestPath,
+  opencodePluginManifestPath,
 } from "@/lib/server/agent/vm/opencode-version";
 
 /**
@@ -57,6 +58,7 @@ export function readOpencodeFacts(installDir: string): {
 } {
   const npmPath = npmOnPath();
   let installedVersion: string | null = null;
+  let pluginVersion: string | null = null;
   try {
     installedVersion = readOpencodeManifestVersion(
       readFileSync(opencodePackageManifestPath(installDir), "utf8"),
@@ -64,9 +66,17 @@ export function readOpencodeFacts(installDir: string): {
   } catch {
     // Pas de paquet : `installedVersion` reste `null`, et la décision le lit.
   }
+  try {
+    pluginVersion = readOpencodeManifestVersion(
+      readFileSync(opencodePluginManifestPath(installDir), "utf8"),
+    );
+  } catch {
+    // Une installation antérieure à ce cache n'avait que le binaire.
+  }
   return {
     decision: opencodeDecision({
       installedVersion,
+      pluginVersion,
       binaryPresent: isExecutable(opencodeBin(installDir)),
       npmAvailable: npmPath !== null,
     }),

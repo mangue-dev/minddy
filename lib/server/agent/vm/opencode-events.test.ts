@@ -612,6 +612,43 @@ describe("les garde-fous et les questions", () => {
     expect(out.permission?.filepath).toBe(".env.local");
   });
 
+  it("retrouve la RACINE d'une lecture dans le part du tool quand son pattern est vide", () => {
+    const state = newTurnStreamState();
+    translateEvent(
+      {
+        type: "message.part.updated",
+        properties: {
+          sessionID: "ses_1",
+          part: {
+            type: "tool",
+            tool: "read",
+            callID: "call_root",
+            state: {
+              status: "running",
+              input: { filePath: "/Users/dev/project", offset: 0, limit: 200 },
+            },
+          },
+        },
+      },
+      state,
+    );
+    const out = translateEvent(
+      {
+        type: "permission.asked",
+        properties: {
+          id: "per_root",
+          sessionID: "ses_1",
+          permission: "read",
+          patterns: [""],
+          metadata: {},
+          tool: { messageID: "msg_1", callID: "call_root" },
+        },
+      },
+      state,
+    );
+    expect(out.permission?.filepath).toBe("/Users/dev/project");
+  });
+
   it("ne prend pas le joker d'un `always` pour un chemin", () => {
     const state = newTurnStreamState();
     const out = translateEvent(

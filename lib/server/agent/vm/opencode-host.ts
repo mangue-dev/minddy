@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { HarnessLayout } from "../harness-layout";
@@ -12,6 +12,7 @@ import {
   opencodeInstallArgs,
   opencodeInstallManifestPath,
   opencodePackageManifestPath,
+  opencodePluginManifestPath,
 } from "./opencode-version";
 import type { SupervisorDeps } from "./supervisor";
 
@@ -74,9 +75,9 @@ async function exists(path: string): Promise<boolean> {
  * binaire natif à chaque tour pour apprendre un numéro qui est écrit dans un
  * fichier de 2 Ko, c'est cher pour la même réponse.
  */
-async function installedVersion(installDir: string): Promise<string | null> {
+async function packageVersion(manifestPath: string): Promise<string | null> {
   try {
-    const manifest = await readFile(opencodePackageManifestPath(installDir), "utf8");
+    const manifest = await readFile(manifestPath, "utf8");
     const version = (JSON.parse(manifest) as { version?: string }).version;
     return typeof version === "string" ? version : null;
   } catch {
@@ -97,8 +98,17 @@ async function installedVersion(installDir: string): Promise<string | null> {
  * fois, jusqu'à ce que le snapshot soit rejoué).
  */
 async function ensureInstalled(installDir: string): Promise<void> {
-  const found = await installedVersion(installDir);
-  if (found === OPENCODE_VERSION && (await exists(opencodeBin(installDir)))) return;
+  const [found, plugin] = await Promise.all([
+    packageVersion(opencodePackageManifestPath(installDir)),
+    packageVersion(opencodePluginManifestPath(installDir)),
+  ]);
+  if (
+    found === OPENCODE_VERSION &&
+    plugin === OPENCODE_VERSION &&
+    (await exists(opencodeBin(installDir)))
+  ) {
+    return;
+  }
   if (found && found !== OPENCODE_VERSION) {
     console.log(
       `[opencode] version ${found} installée, ${OPENCODE_VERSION} attendue — réinstallation ` +
@@ -147,6 +157,27 @@ async function ensureInstalled(installDir: string): Promise<void> {
   }
 }
 
+async function prepareToolRuntime(layout: HarnessLayout): Promise<void> {
+  const runtimeDir = `${layout.harnessDir}/config/opencode`;
+  await mkdir(runtimeDir, { recursive: true });
+  // OpenCode demande à son gestionnaire de paquets de « préparer » chaque
+  // dossier qui porte des tools. Lier uniquement node_modules ne suffit pas :
+  // voyant un manifeste différent et aucun lock, npm remplaçait le lien par
+  // une copie de 61 Mo. Les trois entrées décrivent maintenant exactement le
+  // même projet déjà installé ; la préparation devient un no-op local.
+  for (const [name, type] of [
+    ["package.json", "file"],
+    ["package-lock.json", "file"],
+    ["node_modules", "dir"],
+  ] as const) {
+    try {
+      await symlink(`${layout.opencodeDir}/${name}`, `${runtimeDir}/${name}`, type);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+  }
+}
+
 /**
  * Les dépendances RÉELLES du superviseur : un serveur qu'on démarre, des fichiers
  * qu'on écrit, un client HTTP.
@@ -166,6 +197,7 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
   return {
     startServer: async (env) => {
       await ensureInstalled(layout.opencodeDir);
+      await prepareToolRuntime(layout);
       const bin = opencodeBin(layout.opencodeDir);
       const child = spawn(bin, ["serve", "--port", String(port), "--hostname", "127.0.0.1"], {
         // L'environnement du harness PLUS celui du tour : `opencodeServerEnv` ne

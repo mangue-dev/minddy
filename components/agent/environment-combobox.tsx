@@ -73,6 +73,7 @@ export function EnvironmentCombobox({
   onAttach,
   disabled,
   disabledTooltip,
+  bare = false,
 }: {
   value: AgentEnvironment;
   onChange: (value: AgentEnvironment) => void;
@@ -86,6 +87,8 @@ export function EnvironmentCombobox({
   disabled?: boolean;
   /** Tooltip du chip verrouillé (environnement figé pour la conversation). */
   disabledTooltip?: string;
+  /** Variante sans contour, pour la barre de contexte au-dessus du composer. */
+  bare?: boolean;
 }) {
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
@@ -104,7 +107,10 @@ export function EnvironmentCombobox({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex cursor-not-allowed">
-            <span className="pointer-events-none flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 text-xs font-medium text-foreground/45">
+            <span className={cn(
+              "pointer-events-none flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground/45",
+              bare ? "bg-transparent" : "border border-border/60 bg-muted/40",
+            )}>
               <Icon className="size-3.5 shrink-0" />
               <span className="max-w-40 truncate">{label}</span>
             </span>
@@ -137,7 +143,10 @@ export function EnvironmentCombobox({
           aria-expanded={open}
           aria-label={t("environment")}
           disabled={disabled}
-          className="h-8 shrink-0 gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
+          className={cn(
+            "h-8 shrink-0 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground/80",
+            bare ? "bg-transparent hover:bg-accent/50" : "border border-border/60 bg-muted/50 hover:bg-muted",
+          )}
         >
           <Icon className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="max-w-40 truncate">{label}</span>

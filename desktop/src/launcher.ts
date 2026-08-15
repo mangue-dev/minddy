@@ -188,6 +188,19 @@ export async function startLocalTurn(opts: {
     return refuse("already_running", localTurnRefusalMessage("already_running", ""));
   }
 
+  const requestedAt = Date.now();
+  // Le manifeste et le binaire ne dépendent pas du job. Les démarrer avant le
+  // POST masque leur coût derrière la préparation serveur (contexte, quota,
+  // cible Git), puis `runAssignment` confronte tout de même le protocole reçu.
+  const machinePreflight: LocalMachinePreflight = {
+    bundle: ensureBundle(opts.origin),
+    opencode: ensureOpencode(localOpencodeDir(app.getPath("userData"))),
+  };
+  // Un refus serveur peut rendre avant ces promesses. Leur erreur restera
+  // observable si le job les attend, mais ne devient pas un rejet non géré si
+  // aucun job n'est finalement attribué.
+  void machinePreflight.bundle.catch(() => {});
+  void machinePreflight.opencode.catch(() => {});
   const answer = await fetchJson(`${opts.origin}/api/desktop/local-turn`, {
     method: "POST",
     body: JSON.stringify({ runId: opts.runId, deviceId: opts.deviceId }),
@@ -223,7 +236,22 @@ export async function startLocalTurn(opts: {
     noteLauncherFailure(`${message}\n${JSON.stringify(answer.body)?.slice(0, 800) ?? ""}`);
     return refuse("assignment_invalid", message);
   }
-  return runAssignment(assignment, opts.origin);
+  const serverDiagnostics =
+    typeof answer.body === "object" && answer.body !== null &&
+    typeof (answer.body as Record<string, unknown>).diagnostics === "object"
+      ? ((answer.body as Record<string, unknown>).diagnostics as Record<string, unknown>)
+      : undefined;
+  const assignmentReadyMs = Date.now() - requestedAt;
+  trace("local-turn:assignment-ready", {
+    runId: opts.runId,
+    elapsedMs: assignmentReadyMs,
+  });
+  return runAssignment(assignment, opts.origin, {
+    machinePreflight,
+    requestedAt,
+    assignmentReadyMs,
+    serverDiagnostics,
+  });
 }
 
 /**
@@ -278,6 +306,12 @@ export function prewarmLocalAgent(origin: string): Promise<void> {
 export async function runAssignment(
   assignment: LocalTurnAssignment,
   origin: string,
+  opts: {
+    machinePreflight?: LocalMachinePreflight;
+    requestedAt?: number;
+    assignmentReadyMs?: number;
+    serverDiagnostics?: Record<string, unknown>;
+  } = {},
 ): Promise<LocalTurnResult> {
   const userData = app.getPath("userData");
 
@@ -298,9 +332,11 @@ export async function runAssignment(
   //    l'installation d'opencode — particulièrement visible au premier token.
   //    On garde les refus et leur ordre d'affichage ci-dessous : seul le temps
   //    d'attente se recouvre.
-  const bundlePromise = ensureBundle(origin, assignment.job.protocolVersion);
+  const bundlePromise = opts.machinePreflight
+    ? validatePreflightBundle(origin, opts.machinePreflight.bundle, assignment.job.protocolVersion)
+    : ensureBundle(origin, assignment.job.protocolVersion);
   const opencodeDir = localOpencodeDir(userData);
-  const opencodePromise = ensureOpencode(opencodeDir);
+  const opencodePromise = opts.machinePreflight?.opencode ?? ensureOpencode(opencodeDir);
 
   // Le protocole confronté est celui du JOB qu'on va lui donner, jamais une
   // constante compilée dans l'app : la coquille ne parle pas le protocole, elle
@@ -335,6 +371,12 @@ export async function runAssignment(
     },
     localTurnSecrets(job),
   );
+  if (opts.assignmentReadyMs != null) {
+    log.write(`[desktop-timing] assignment-ready +${opts.assignmentReadyMs}ms\n`, "out");
+  }
+  if (opts.serverDiagnostics) {
+    log.write(`[server-timing] ${JSON.stringify(opts.serverDiagnostics)}\n`, "out");
+  }
   if (opencode.note) log.write(`${opencode.note}\n`, "out");
 
   try {
@@ -431,7 +473,11 @@ export async function runAssignment(
     root: layout.root,
     harnessDir: layout.harnessDir,
   });
-  trace("local-turn:started", { runId: assignment.runId, root: layout.root });
+  trace("local-turn:started", {
+    runId: assignment.runId,
+    root: layout.root,
+    ...(opts.requestedAt ? { startupMs: Date.now() - opts.requestedAt } : {}),
+  });
 
   // Le ménage APRÈS le fork, jamais avant (cf. `staleBundles`).
   pruneBundles(bundle.path);
@@ -494,6 +540,29 @@ export function sweepOrphanTurns(): void {
 
 type BundleReady = { ok: true; path: string; manifest: HarnessManifest };
 type BundleRefused = { ok: false; reason: HarnessRefusal };
+type OpencodePreflight = ReturnType<typeof ensureOpencode>;
+type LocalMachinePreflight = {
+  bundle: Promise<BundleReady | BundleRefused>;
+  opencode: OpencodePreflight;
+};
+
+/**
+ * Confronte au job le bundle récupéré pendant le POST serveur. Un fichier qui a
+ * disparu ou changé entre les deux est retéléchargé depuis un manifeste frais ;
+ * l'empreinte sera encore recalculée juste avant le fork.
+ */
+async function validatePreflightBundle(
+  origin: string,
+  prepared: Promise<BundleReady | BundleRefused>,
+  jobProtocol: number,
+): Promise<BundleReady | BundleRefused> {
+  const bundle = await prepared;
+  if (!bundle.ok) return bundle;
+  const decision = bundleDecision(bundle.manifest, measure(bundle.path), jobProtocol);
+  if (decision.action === "reuse") return bundle;
+  if (decision.action === "refuse") return { ok: false, reason: decision.reason };
+  return ensureBundle(origin, jobProtocol);
+}
 
 /**
  * Le bundle du tour, téléchargé si besoin. **Le manifeste est demandé à CHAQUE
@@ -720,7 +789,12 @@ async function fetchJson(url: string, init?: RequestInit): Promise<Fetched<unkno
     return { ok: true, body: JSON.parse(text.body) };
   } catch {
     // Une page HTML (portail captif, proxy d'entreprise) arrive ici.
-    return { ok: false, status: 200, error: "the answer was not JSON" };
+    const preview = text.body.replace(/\s+/g, " ").trim().slice(0, 240);
+    return {
+      ok: false,
+      status: 200,
+      error: `the answer was not JSON${preview ? `: ${preview}` : " (empty body)"}`,
+    };
   }
 }
 

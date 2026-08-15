@@ -257,6 +257,14 @@ export interface VmJob {
   baseBranch: string;
   workBranch: string;
   /**
+   * La branche de travail peut-elle déjà exister sur le remote ?
+   *
+   * Faux sur le premier tour d'un run neuf : le mode dépôt courant part alors de
+   * HEAD sans tenter un fetch réseau impossible. Absent vaut vrai pour garder un
+   * harness ancien conservateur et ne jamais perdre une reprise distante.
+   */
+  remoteWorkMayExist?: boolean;
+  /**
    * DANS QUEL DÉPÔT CE TOUR ÉCRIT (MIN-358, décision D2).
    *
    * - `clone` : un clone créé pour ce tour, à nous seuls (la microVM, et le mode

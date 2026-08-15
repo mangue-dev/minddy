@@ -55,6 +55,8 @@ export { OPENCODE_VERSION, opencodeBin };
 export interface OpencodeFacts {
   /** La version écrite dans `node_modules/opencode-ai/package.json`, ou `null`. */
   readonly installedVersion: string | null;
+  /** Version du runtime des tools, installé au même endroit que le binaire. */
+  readonly pluginVersion: string | null;
   /** Le binaire existe-t-il, et est-il exécutable ? */
   readonly binaryPresent: boolean;
   /** Un `npm` a-t-il été trouvé sur le `PATH` ? */
@@ -89,7 +91,13 @@ export function opencodeDecision(
   facts: OpencodeFacts,
   wanted: string = OPENCODE_VERSION,
 ): OpencodeDecision {
-  if (facts.binaryPresent && facts.installedVersion === wanted) return { action: "ready" };
+  if (
+    facts.binaryPresent &&
+    facts.installedVersion === wanted &&
+    facts.pluginVersion === wanted
+  ) {
+    return { action: "ready" };
+  }
   if (!facts.npmAvailable) return { action: "refuse", reason: "no_npm" };
   const why = facts.installedVersion && facts.installedVersion !== wanted ? "version" : "missing";
   return { action: "install", why };

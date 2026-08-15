@@ -58,6 +58,10 @@ export function BranchCombobox({
   lockedBranch,
   workBranch,
   workBranchTooltip,
+  bare = false,
+  localBranches,
+  localLabel,
+  cloudLabel,
 }: {
   /** Ancrage ISSUE du listing (sessions de ticket). Exclusif avec `projectId`. */
   issueId?: string | null;
@@ -89,6 +93,12 @@ export function BranchCombobox({
   workBranch?: string | null;
   /** Tooltip du chip dédoublé (remplace `disabledTooltip` quand `workBranch` existe). */
   workBranchTooltip?: string;
+  /** Variante sans contour, pour la barre de contexte au-dessus du composer. */
+  bare?: boolean;
+  /** Présentes seulement en environnement local : refs/heads du checkout attaché. */
+  localBranches?: readonly string[];
+  localLabel?: string;
+  cloudLabel?: string;
 }) {
   // Chip verrouillé avec une branche connue → aucun listing à charger : on ne
   // paie l'appel provider que quand le picker est interactif (ou qu'il faut
@@ -105,14 +115,21 @@ export function BranchCombobox({
 
   const results = useMemo(() => {
     const q = query.trim();
-    if (!q) return branches.slice(0, MAX_RESULTS);
-    return branches
-      .map((b) => ({ b, score: commandFilter(b, q) }))
+    const local = localBranches ?? [];
+    // Une branche peut exister aux deux endroits. Elle reste locale dans le
+    // menu : la sélectionner n'exige alors aucun téléchargement supplémentaire.
+    const entries = [
+      ...local.map((branch) => ({ branch, source: "local" as const })),
+      ...branches.filter((branch) => !local.includes(branch)).map((branch) => ({ branch, source: "cloud" as const })),
+    ];
+    if (!q) return entries.slice(0, MAX_RESULTS);
+    return entries
+      .map((entry) => ({ entry, score: commandFilter(entry.branch, q) }))
       .filter((r) => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, MAX_RESULTS)
-      .map((r) => r.b);
-  }, [branches, query]);
+      .map((r) => r.entry);
+  }, [branches, localBranches, query]);
 
   const select = (next: string) => {
     // Choisir la branche par défaut = suivre le défaut ("").
@@ -130,7 +147,10 @@ export function BranchCombobox({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex cursor-not-allowed">
-            <span className="pointer-events-none flex h-8 shrink items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 text-xs font-medium text-foreground/45">
+            <span className={cn(
+              "pointer-events-none flex h-8 shrink items-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground/45",
+              bare ? "bg-transparent" : "border border-border/60 bg-muted/40",
+            )}>
               <GitBranch className="size-3.5 shrink-0" />
               {workBranch ? (
                 <>
@@ -170,7 +190,10 @@ export function BranchCombobox({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="h-8 shrink gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
+          className={cn(
+            "h-8 shrink gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground/80",
+            bare ? "bg-transparent hover:bg-accent/50" : "border border-border/60 bg-muted/50 hover:bg-muted",
+          )}
         >
           <GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="max-w-[9rem] truncate">
@@ -188,15 +211,22 @@ export function BranchCombobox({
           {/* `p-1` : mêmes 8px de retrait des QUATRE côtés que le picker de
               modèle — ceux du champ de recherche juste au-dessus. */}
           <CommandList className="p-1">
-            {results.map((b) => {
-              const selected = value === b || (!value && b === defaultBranch);
+            {results.map(({ branch, source }, index) => {
+              const selected = value === branch || (!value && branch === defaultBranch);
+              const previousSource = results[index - 1]?.source;
               return (
-                <CommandItem key={b} value={b} onSelect={() => select(b)}>
+                <div key={`${source}:${branch}`}>
+                  {localBranches && source !== previousSource ? (
+                    <div className="px-2 pb-1 pt-2 text-[11px] font-medium text-muted-foreground">
+                      {source === "local" ? localLabel : cloudLabel}
+                    </div>
+                  ) : null}
+                  <CommandItem value={branch} onSelect={() => select(branch)}>
                   <GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 truncate" title={b}>
-                    {b}
+                  <span className="flex-1 truncate" title={branch}>
+                    {branch}
                   </span>
-                  {b === defaultBranch ? (
+                  {branch === defaultBranch ? (
                     <span className="shrink-0 text-xs text-muted-foreground/70">
                       {defaultHint}
                     </span>
@@ -204,7 +234,8 @@ export function BranchCombobox({
                   <Check
                     className={cn("size-4 shrink-0", selected ? "opacity-100" : "opacity-0")}
                   />
-                </CommandItem>
+                  </CommandItem>
+                </div>
               );
             })}
             {results.length === 0 ? (

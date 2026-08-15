@@ -63,6 +63,14 @@ const HEALTH_PROBE_TIMEOUT_MS = 2_000;
 /** Cadence des lignes de journal pendant l'attente du démarrage. */
 const HEALTH_PROGRESS_INTERVAL_MS = 15_000;
 
+/**
+ * Le process local passe de « connexion refusée » à prêt en moins d'une seconde.
+ * À 200 ms, la boucle ajoutait jusqu'à 200 ms de latence pure après ce moment.
+ * 50 ms reste dérisoire en nombre de sondes (une vingtaine au pire à froid) et
+ * rend le démarrage visiblement plus réactif.
+ */
+const HEALTH_RETRY_MS = 50;
+
 export class OpencodeHttpError extends Error {
   constructor(
     readonly status: number,
@@ -150,7 +158,7 @@ export class OpencodeClient {
         announced = waited;
         console.log(`[opencode] still waiting for the server (${Math.round(waited / 1000)} s)`);
       }
-      await sleep(200);
+      await sleep(HEALTH_RETRY_MS);
     }
     return false;
   }
@@ -161,6 +169,23 @@ export class OpencodeClient {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(title ? { title } : {}),
     });
+  }
+
+  /**
+   * Force le chargement du catalogue avant le prompt.
+   *
+   * OpenCode construit sinon les tools, leurs schémas et la configuration du
+   * modèle au premier prompt. Sur le chemin local mesuré, ce travail retardait
+   * le premier appel fournisseur d'environ 800 ms. La route est précisément
+   * celle que l'interface OpenCode utilise pour exposer le catalogue ; lire le
+   * corps jusqu'au bout garantit que le chargement est réellement terminé.
+   */
+  async warmTools(model: string, provider = "minddy", agent = "build"): Promise<void> {
+    const query = new URLSearchParams({ provider, model, agent });
+    const route = this.legacy(`/experimental/tool?${query.toString()}`);
+    const res = await this.http(route);
+    const body = await res.text();
+    if (!res.ok) throw new OpencodeHttpError(res.status, route, body);
   }
 
   /**

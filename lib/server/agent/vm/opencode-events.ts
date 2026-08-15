@@ -365,6 +365,12 @@ export interface TurnStreamState {
   billed: Set<string>;
   /** `callID` déjà annoncés : `running` peut se répéter. */
   announced: Set<string>;
+  /**
+   * Arguments complets du tool, indexés par appel. Une permission `read` sur la
+   * RACINE publie `patterns: [""]` (`relative(root, root)`), donc son seul chemin
+   * exploitable est celui du part `running` qui la précède.
+   */
+  toolInputByCall: Map<string, Record<string, unknown>>;
 }
 
 export function newTurnStreamState(): TurnStreamState {
@@ -376,6 +382,7 @@ export function newTurnStreamState(): TurnStreamState {
     reasoningStart: new Map(),
     billed: new Set(),
     announced: new Set(),
+    toolInputByCall: new Map(),
   };
 }
 
@@ -470,6 +477,7 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
         opencodeName,
         (stateNode.input ?? {}) as Record<string, unknown>,
       );
+      if (callId && Object.keys(input).length > 0) state.toolInputByCall.set(callId, input);
 
       /**
        * LE RATTACHEMENT D'UNE FILLE, à lire sur TOUS les statuts du part `task`.
@@ -653,9 +661,16 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       if (!id) return { sessionId, events: [] };
       const metadata = (props.metadata ?? {}) as Record<string, unknown>;
       const tool = (props.tool ?? {}) as Record<string, unknown>;
+      const callId = String(tool.callID ?? "");
       const files = permissionFiles(metadata);
       const url = permissionUrl(props, metadata);
-      const filepath = permissionPath(props, metadata);
+      const eventPath = permissionPath(props, metadata);
+      const rememberedPath = state.toolInputByCall.get(callId)?.path;
+      const filepath =
+        eventPath ||
+        (String(props.permission ?? "") === "read" && typeof rememberedPath === "string"
+          ? rememberedPath.trim()
+          : "");
       return {
         sessionId,
         events: [],
@@ -663,7 +678,7 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
           id,
           sessionId,
           permission: String(props.permission ?? ""),
-          callId: String(tool.callID ?? ""),
+          callId,
           ...(typeof metadata.command === "string" ? { command: metadata.command } : {}),
           ...(filepath ? { filepath } : {}),
           ...(files.length > 0 ? { files } : {}),

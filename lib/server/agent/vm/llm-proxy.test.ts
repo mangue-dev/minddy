@@ -437,6 +437,38 @@ describe("le relais, monté pour de vrai", () => {
     ).rejects.toThrow(/503/);
   });
 
+  it("peut ouvrir le port pendant le mint mais attend la clé avant tout relais", async () => {
+    let release!: (key: string) => void;
+    const key = new Promise<string>((resolve) => {
+      release = resolve;
+    });
+    let seenAuth = "";
+    const upstream = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seenAuth = ((init?.headers ?? {}) as Record<string, string>).authorization ?? "";
+      return new Response(sse([]), { status: 200 });
+    }) as typeof fetch;
+
+    const proxy = await startLlmProxy({
+      job: JOB,
+      fetchImpl: upstream,
+      apiKey: () => key,
+      deferApiKey: true,
+    });
+    try {
+      const relayed = fetch(`${proxy.url}/chat/completions`, {
+        method: "POST",
+        body: "{}",
+      });
+      await Promise.resolve();
+      expect(seenAuth).toBe("");
+      release("sk-plafonnee");
+      expect((await relayed).status).toBe(200);
+      expect(seenAuth).toBe("Bearer sk-plafonnee");
+    } finally {
+      await proxy.close();
+    }
+  });
+
   it("rend une erreur JSON quand le fournisseur est injoignable", async () => {
     // Une panne du proxy doit se dire au client (opencode retente), pas faire
     // tomber le process qui tient tout le tour.

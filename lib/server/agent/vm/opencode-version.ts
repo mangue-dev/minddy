@@ -85,6 +85,7 @@ export function opencodeInstallArgs(
     "--no-fund",
     "--silent",
     `opencode-ai@${version}`,
+    `@opencode-ai/plugin@${version}`,
   ];
 }
 
@@ -111,4 +112,9 @@ export function opencodeInstallManifestPath(installDir: string): string {
 /** Le manifeste du paquet INSTALLÉ, d'où l'on relit la version réellement posée. */
 export function opencodePackageManifestPath(installDir: string): string {
   return `${installDir.replace(/\/+$/, "")}/node_modules/opencode-ai/package.json`;
+}
+
+/** Le runtime TypeScript des tools, partagé au lieu d'être réinstallé par run. */
+export function opencodePluginManifestPath(installDir: string): string {
+  return `${installDir.replace(/\/+$/, "")}/node_modules/@opencode-ai/plugin/package.json`;
 }

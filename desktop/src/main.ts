@@ -47,6 +47,7 @@ import {
   attachLocalRepo,
   describeLocalRepo,
   detachLocalRepo,
+  localBranches,
 } from "./local-repo";
 import { buildAppMenu } from "./menu";
 import { replayUpdateStatus, requestInstall, startAutoUpdates } from "./updater";
@@ -643,6 +644,11 @@ function registerIpc(): void {
     return detachLocalRepo(projectId);
   });
 
+  ipcMain.handle("minddy:local-repo:branches", (_event, input: unknown) => {
+    const parsed = localRepoRequest(input);
+    return parsed ? localBranches(parsed.projectId, { fullName: parsed.fullName }) : [];
+  });
+
   /**
    * LE DÉCLENCHEUR DE TOUR LOCAL (MIN-293) — **coquille de dév uniquement**.
    *
@@ -810,6 +816,14 @@ function hardenSession(): void {
 // de dév pointée sur `localhost` n'aurait de toute façon pas la session de
 // `www.minddy.app`. Il faut s'y connecter une fois, et c'est tout.
 app.setName(app.isPackaged ? DESKTOP_APP_NAME : `${DESKTOP_APP_NAME}-dev`);
+
+// Banc de test Electron uniquement : permet à Playwright de lancer une seconde
+// coquille avec une COPIE du profil connecté, sans prendre le verrou ni toucher
+// aux données de la fenêtre de développement utilisée par la personne. Une app
+// packagée ignore toujours cette variable, même si son environnement la porte.
+if (!app.isPackaged && process.env.MINDDY_DESKTOP_TEST_USER_DATA?.trim()) {
+  app.setPath("userData", process.env.MINDDY_DESKTOP_TEST_USER_DATA.trim());
+}
 
 // Instance unique : le deep link doit atteindre l'app DÉJÀ ouverte, pas en
 // lancer une seconde qui n'aurait ni sa session ni sa fenêtre.

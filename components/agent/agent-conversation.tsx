@@ -16,7 +16,7 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { GitPullRequest } from "lucide-react";
+import { ChevronsUpDown, GitPullRequest } from "lucide-react";
 import { cumulativeBranchFiles, changeTotals } from "@/lib/agent-changed-files";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
@@ -67,6 +67,9 @@ import { turnSubagents } from "@/lib/agent-subagents";
 import { livePlan } from "@/lib/agent-plan";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
+import { useProjects } from "@/lib/projects-context";
+import { ProjectOrb } from "@/components/project-orb";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import { MentionLinksProvider } from "@/components/mention-links";
@@ -172,6 +175,11 @@ export function AgentConversation({
   const t = useTranslations("Agent");
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
+  const { projects } = useProjects();
+  const project = useMemo(
+    () => projects.find((candidate) => candidate.id === projectId) ?? null,
+    [projects, projectId],
+  );
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId);
 
   /**
@@ -931,7 +939,32 @@ export function AgentConversation({
                       : t("pastRunPlaceholder")
               }
               contextSlot={
-                <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto px-2.5 pt-2.5">
+                <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+                  {project ? (
+                    <button
+                      type="button"
+                      disabled
+                      aria-label={project.name}
+                      className="flex h-8 shrink items-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground/45"
+                    >
+                      <ProjectOrb
+                        seed={projectOrbSeed(project)}
+                        iconUrl={project.icon_url}
+                        className="size-3.5 shrink-0 grayscale"
+                      />
+                      <span className="max-w-[10rem] truncate">{project.name}</span>
+                      <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
+                    </button>
+                  ) : null}
+                  {liveRun.local_exec ? (
+                    <EnvironmentCombobox
+                      value="local"
+                      onChange={() => {}}
+                      disabled
+                      disabledTooltip={t("environmentLocked")}
+                      bare
+                    />
+                  ) : null}
                   <BranchCombobox
                     issueId={issueId}
                     value=""
@@ -953,17 +986,11 @@ export function AgentConversation({
                           })
                         : undefined
                     }
+                    bare
                   />
-                  {liveRun.local_exec ? (
-                    <EnvironmentCombobox
-                      value="local"
-                      onChange={() => {}}
-                      disabled
-                      disabledTooltip={t("environmentLocked")}
-                    />
-                  ) : null}
                 </div>
               }
+              contextPlacement="above"
               leadingControls={
                 <>
                   {/* Modèle figé pour la session : picker verrouillé + tooltip. */}
@@ -1003,7 +1030,7 @@ export function AgentConversation({
               initialValue={initialComposeText}
               placeholder={t("composePlaceholder")}
               contextSlot={
-                <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto px-2.5 pt-2.5">
+                <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
                   <BranchCombobox
                     issueId={issueId}
                     value={baseBranch}
@@ -1016,6 +1043,10 @@ export function AgentConversation({
                     disabled={launching || inheritedWork != null}
                     disabledTooltip={inheritedWork ? t("branchInherited") : undefined}
                     lockedBranch={inheritedWork?.base_branch}
+                    localBranches={environment === "local" ? localRepo.branches : undefined}
+                    localLabel={t("branchLocalGroup")}
+                    cloudLabel={t("branchCloudGroup")}
+                    bare
                   />
                   {localRepo.linked ? (
                     <EnvironmentCombobox
@@ -1033,10 +1064,12 @@ export function AgentConversation({
                         });
                       }}
                       disabled={launching || localRepo.busy}
+                      bare
                     />
                   ) : null}
                 </div>
               }
+              contextPlacement="above"
               leadingControls={
                 <>
                   <ModelCombobox

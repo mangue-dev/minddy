@@ -80,8 +80,8 @@ export interface HarnessManifest {
  */
 let cached: Promise<{ source: string; manifest: HarnessManifest }> | null = null;
 
-function load(): Promise<{ source: string; manifest: HarnessManifest }> {
-  cached ??= readFile(LOCAL_BUNDLE_PATH, "utf8").then(
+function readBundle(): Promise<{ source: string; manifest: HarnessManifest }> {
+  return readFile(LOCAL_BUNDLE_PATH, "utf8").then(
     (source) => ({
       source,
       manifest: {
@@ -101,6 +101,14 @@ function load(): Promise<{ source: string; manifest: HarnessManifest }> {
       );
     },
   );
+}
+
+function load(): Promise<{ source: string; manifest: HarnessManifest }> {
+  // En développement, `build:agent-vm` réécrit ce fichier sans recharger le
+  // module Next. Garder la promesse en cache faisait donc exécuter l'ancien
+  // harness pendant des heures et rendait tout benchmark local mensonger.
+  if (process.env.NODE_ENV === "development") return readBundle();
+  cached ??= readBundle();
   return cached;
 }
 

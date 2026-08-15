@@ -1,4 +1,5 @@
 import { dialog, type BrowserWindow } from "electron";
+import { execFileSync } from "node:child_process";
 
 import { readGitFacts, realRepoPath } from "@/lib/desktop/git-config";
 import {
@@ -97,4 +98,23 @@ export async function attachLocalRepo(
 export function detachLocalRepo(projectId: string): LocalRepoState {
   writeLocalRepos(withoutLocalRepo(readLocalRepos(), projectId));
   return { status: "none" };
+}
+
+/** Branches locales, lues sans laisser la page désigner un chemin de disque. */
+export function localBranches(projectId: string, expected: ExpectedRepo): string[] {
+  const state = describeLocalRepo(projectId, expected);
+  if (state.status !== "ready") return [];
+  try {
+    return execFileSync(
+      "git",
+      ["for-each-ref", "--format=%(refname:short)", "refs/heads"],
+      { cwd: state.path, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    )
+      .split("\n")
+      .map((branch) => branch.trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+  } catch {
+    return [];
+  }
 }

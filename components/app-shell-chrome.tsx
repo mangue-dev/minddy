@@ -6,7 +6,15 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { AppShell, Header, MobileNav, Spinner, cn, toast } from "mangue-ui";
+import {
+  AppShell,
+  Header,
+  MobileNav,
+  Spinner,
+  cn,
+  toast,
+  useMediaQuery,
+} from "mangue-ui";
 import {
   Home,
   ChevronLeft,
@@ -334,6 +342,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Mode zen (MIN-134) : la palette est le seul interrupteur, et la seule sortie
   // avec le rechargement — elle reste donc montée, quoi qu'on masque autour.
   const { zen, toggle: toggleZen } = useZenMode();
+  // Entre le téléphone et le bureau large, on conserve le chrome desktop mais
+  // on rend les 256 px de la barre : le panneau du zen revient au survol du
+  // bord gauche, sans pousser le contenu ni activer la barre mobile.
+  const compactDesktop = useMediaQuery(
+    "(min-width: 768px) and (max-width: 1199px)",
+  );
 
   // Command palette open state — shared by the header search pill and the
   // global shortcuts (⌘K / ⌘P / F, handled inside <CommandPalette>).
@@ -1492,7 +1506,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       // barre secondaire.
       sidebar={
         <div className="relative flex h-full">
-          {zen ? (
+          {zen || compactDesktop ? (
             <ZenNavOverlay
               width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
             >

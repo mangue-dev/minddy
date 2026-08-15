@@ -496,7 +496,10 @@ export async function executeAgentRun(
      * `layout` et `bootstrapMs` en sont absents : ils appartiennent à la machine
      * (cf. [lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
      */
-    onLocalAssignment?: (job: Omit<VmJob, "layout" | "bootstrapMs">) => void;
+    onLocalAssignment?: (
+      job: Omit<VmJob, "layout" | "bootstrapMs">,
+      meta: { repoFullName: string },
+    ) => void;
   },
 ): Promise<ExecuteOutcome> {
   const callStart = Date.now();
@@ -581,6 +584,9 @@ export async function executeAgentRun(
    * qu'une microVM a été réveillée pour rien. Voir le `finally`.
    */
   let vmLoopLaunched = false;
+  /** Un tour local ne démarre jamais de microVM. Calculé avant le premier event
+   *  pour pouvoir recouvrir son écriture avec toute la préparation du job. */
+  const localTurn = run.local_exec === true;
 
   /**
    * LE MÉTRAGE COMPUTE DU CHUNK, appelable AVANT la mise au repos (MIN-224).
@@ -618,8 +624,11 @@ export async function executeAgentRun(
   };
 
   try {
-
-    await emit("status", { status: "running", continuation: run.continuations });
+    const runningEvent = emit("status", { status: "running", continuation: run.continuations });
+    // Le cloud doit montrer l'ouverture de la sandbox avant de la réveiller. En
+    // local, l'UI connaît déjà le statut via le claim : on laisse cette écriture
+    // se faire pendant les lectures de contexte, puis on la rejoint avant retour.
+    if (!localTurn) await runningEvent;
 
     if (!run.created_by) throw new Error("Run has no owner");
     if (!run.model) throw new Error("Run has no model");
@@ -645,10 +654,6 @@ export async function executeAgentRun(
       });
       return "interrupted";
     }
-
-    /** Un tour local ne démarre jamais de microVM : ce fait est aussi utile
-     *  pendant la préparation, où il évite une seconde résolution de jeton. */
-    const localTurn = run.local_exec === true;
 
     // Ces lectures sont indépendantes. Les sérialiser retardait le job local
     // avant même que le Mac puisse démarrer opencode, alors que le premier token
@@ -679,6 +684,12 @@ export async function executeAgentRun(
     secrets.addAuthUrl(target.authUrl);
     secrets.add(target.token);
     const forge = forgeFor(target.provider);
+    // Cette identité peut demander la forge au premier tour du process. Elle ne
+    // dépend d'aucun autre contexte : la démarrer ici la recouvre avec le quota,
+    // les préférences, le ticket et la construction du prompt.
+    const committerPromise = run.pull_request_id
+      ? Promise.resolve({ name: "minddy agent", email: "agent@minddy.app" })
+      : resolveCommitterIdentity(target);
 
     // Ancrage du run, à TROIS valeurs : ticket minddy, CARNET (MIN-84, la note du
     // lanceur est l'instruction), ou PULL REQUEST (MIN-168 — une session de
@@ -792,7 +803,10 @@ export async function executeAgentRun(
      */
     let vmKeyHash: string | null = null;
     let vmKey = apiKey;
-    if (keyMode === "platform") {
+    // En local, la clé ne doit jamais entrer dans le job : le proxy la demande
+    // une seule fois à `/llm-key`, qui la minte et persiste son hash. La minter
+    // aussi ici créait puis révoquait une clé avant le premier token.
+    if (keyMode === "platform" && !localTurn) {
       const minted = await mintRunKey({
         runId: run.id,
         capUsd: runKeyCapUsd({
@@ -958,7 +972,7 @@ export async function executeAgentRun(
     // affichait « travaille » alors que personne ne travaillait encore. Cet event
     // ferme cette fenêtre : avant lui « ouverture de la sandbox », après lui le
     // travail (cf. `sandboxReady` dans components/agent/agent-event-feed.tsx).
-    await emit("status", { phase: "sandbox_ready" });
+    if (sandbox) await emit("status", { phase: "sandbox_ready" });
 
     // La branche est-elle DÉJÀ sur le remote ? Vrai quand la run hérite d'une
     // lignée (`launchAgentRun` ne transmet que des branches poussées) ou qu'un
@@ -1671,6 +1685,10 @@ export async function executeAgentRun(
       prInlineComments: run.checkpoint?.prInlineComments ?? 0,
       baseBranch,
       workBranch,
+      // Un premier tour dont aucune branche n'a encore été stampée ne peut pas
+      // exister sur le remote. Le harness peut alors partir directement de HEAD
+      // au lieu de payer un `git fetch` voué à répondre « ref inexistante ».
+      remoteWorkMayExist: run.branch_name != null || run.continuations > 0,
       /**
        * LA FONCTION NE SAIT PRODUIRE QU'UN CLONE (MIN-358). C'est elle qui a
        * créé la microVM et cloné dedans ; le mode `current` appartient à un
@@ -1684,7 +1702,7 @@ export async function executeAgentRun(
        */
       committer: prRun
         ? { name: "minddy agent", email: "agent@minddy.app" }
-        : await resolveCommitterIdentity(target),
+        : await committerPromise,
       // Le job PART dans la microVM : c'est `vmTarget`, jamais `target`
       // (MIN-327). La boucle n'en fait que du `git` — et une relecture n'en
       // reçoit qu'un token en lecture.
@@ -1739,8 +1757,11 @@ export async function executeAgentRun(
        * le type.
        */
       const { layout: _cloudLayout, ...assignment } = job;
-      opts.onLocalAssignment?.(assignment);
-      await stampRun(run.id, { last_activity_at: new Date().toISOString() });
+      opts.onLocalAssignment?.(assignment, { repoFullName: target.repoFullName });
+      // Le claim initial (ou le steer d'une reprise) a déjà rafraîchi l'activité.
+      // On rejoint seulement l'event démarré au début : dans la pratique il est
+      // terminé depuis longtemps, sans ajouter une nouvelle écriture SQL.
+      await runningEvent;
       // Le drapeau de boucle partie n'est PAS posé ici : il dit « une microVM
       // tourne, et c'est la boucle qui la facturera ». Il n'y en a aucune, et la
       // garde `!sandbox` de `billSandboxCompute` — celle qui existait déjà —

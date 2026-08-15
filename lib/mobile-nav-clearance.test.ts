@@ -56,17 +56,23 @@ describe("dégagement de la barre de navigation mobile", () => {
       "--mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);",
     );
     // La réserve de l'AppShell est bien celle qu'on écrase, sur le <main> du
-    // shell et sous le même point de rupture (1200px = --breakpoint-desktop).
+    // shell et sous le même point de rupture (768px = --breakpoint-desktop).
     expect(css).toMatch(
-      /@media \(width < 1200px\) \{\s*\.app-shell main \{\s*padding-bottom: var\(--mobile-nav-clearance\);/,
+      /@media \(width < 768px\) \{\s*\.app-shell main \{\s*padding-bottom: var\(--mobile-nav-clearance\);/,
     );
   });
 
-  it("le point de rupture `desktop` de mangue-ui vaut toujours 1200px", () => {
-    // La règle ci-dessus l'écrit en dur : une media query ne lit pas de variable.
-    expect(read(join(REPO, "node_modules/mangue-ui/src/styles/tokens.css"))).toContain(
-      "--breakpoint-desktop: 1200px;",
+  it("l'application redéfinit `desktop` à 768 px", () => {
+    expect(read(GLOBALS)).toMatch(
+      /@theme \{\s*--breakpoint-desktop: 768px;/,
     );
+  });
+
+  it("force le chrome desktop entre 768 et 1200 px, même si la dépendance est mise en cache", () => {
+    const css = read(GLOBALS);
+    expect(css).toContain("@media (768px <= width < 1200px)");
+    expect(css).toContain(".app-shell .desktop\\:flex");
+    expect(css).toContain(".app-shell .desktop\\:hidden");
   });
 
   it("le shell porte la classe sur laquelle la règle s'accroche", () => {

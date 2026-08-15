@@ -287,20 +287,20 @@ export function useAnyModalOpen(): boolean {
 /* ─── Qui héberge les boutons ──────────────────────────────────────────── */
 
 /**
- * Le point de bascule de la mise en page (`--breakpoint-desktop` de mangue-ui).
+ * Le point de bascule de la mise en page (`--breakpoint-desktop` de l'app).
  * Sous cette largeur, l'AppShell ne rend plus les barres latérales : c'est
  * l'en-tête qui se retrouve dans le coin haut-gauche, donc sous les boutons.
  */
-const DESKTOP_BREAKPOINT_PX = 1200;
+const DESKTOP_BREAKPOINT_PX = 768;
 
 /**
- * La barre latérale est-elle rendue ? (≥ 1200 px)
+ * La barre latérale est-elle rendue ? (≥ 768 px)
  *
  * Ce qui en dépend : **qui héberge les boutons macOS**. Ils vivent dans la ligne
- * de marque de la barre, mais l'AppShell la retire sous 1200 px — elle reste
+ * de marque de la barre, mais l'AppShell la retire sous 768 px — elle reste
  * MONTÉE (`display: none`), ce qui est le piège : sans cette question, elle
  * continuait de demander leur retrait quand son rail se repliait, et de leur
- * réserver une place que personne ne voyait. Sous 1200 px, c'est l'en-tête qui
+ * réserver une place que personne ne voyait. Sous 768 px, c'est l'en-tête qui
  * les accueille.
  *
  * `false` au premier rendu, serveur comme client — il n'y a pas de `matchMedia`
@@ -343,7 +343,7 @@ const CLOSED: WindowButtonsSlot = { reserved: false, decoy: false, ready: false 
  * Ce que la surface qui les héberge doit afficher à leur place.
  *
  * `hosts` : cette surface est-elle celle qui les accueille en ce moment ? La
- * barre latérale au-dessus de 1200 px, l'en-tête en dessous — voir
+ * barre latérale au-dessus de 768 px, l'en-tête en dessous — voir
  * `useWideLayout`. Une surface qui n'héberge pas ne réserve rien.
  *
  * Le point délicat, et c'est lui qui justifie ce crochet : **une boîte de

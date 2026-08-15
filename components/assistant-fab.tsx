@@ -73,7 +73,7 @@ export function AssistantFab() {
             // `assistant-fab-anchor` ré-ancre le FAB au coin du shell centré
             // sur ultrawide (≥2200px) — voir globals.css `.ultrawide-canvas`.
             "assistant-fab-anchor",
-            // Hidden below the 1200px mobile cutover — there the assistant is
+            // Hidden below the 768px mobile cutover — there the assistant is
             // reached from the mobile navbar's Numo button (single entry point),
             // and the FAB would overlap the bottom nav.
             "max-desktop:hidden",
@@ -116,7 +116,7 @@ export function AssistantFab() {
                   )}
                 >
                   {/* `animated={false}` (MIN-323) : le visage animait des
-                      attributs SVG en boucle, y compris masqué sous 1200 px
+                      attributs SVG en boucle, y compris masqué sous 768 px
                       (`max-desktop:hidden` masque sans démonter). Le signal
                       d'activité passe déjà par l'`AgentBeam` ci-dessus. */}
                   <NumoIcon animated={false} className="size-5 text-foreground" />

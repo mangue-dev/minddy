@@ -6,6 +6,7 @@ import {
   opencodeInstallArgs,
   opencodeInstallManifestPath,
   opencodePackageManifestPath,
+  opencodePluginManifestPath,
 } from "@/lib/server/agent/vm/opencode-version";
 import {
   opencodeBin,
@@ -31,6 +32,7 @@ const WANTED = "1.18.16";
 function facts(over: Partial<Parameters<typeof opencodeDecision>[0]> = {}) {
   return {
     installedVersion: WANTED,
+    pluginVersion: WANTED,
     binaryPresent: true,
     npmAvailable: true,
     ...over,
@@ -59,6 +61,13 @@ describe("opencodeDecision", () => {
 
   it("réinstalle quand le manifeste dit la bonne version mais que le binaire manque", () => {
     expect(opencodeDecision(facts({ binaryPresent: false }), WANTED)).toEqual({
+      action: "install",
+      why: "missing",
+    });
+  });
+
+  it("installe le runtime des tools une fois s'il manque à une ancienne installation", () => {
+    expect(opencodeDecision(facts({ pluginVersion: null }), WANTED)).toEqual({
       action: "install",
       why: "missing",
     });
@@ -111,11 +120,17 @@ describe("les chemins et la commande", () => {
     expect(opencodePackageManifestPath("/data/opencode/")).toBe(
       opencodePackageManifestPath("/data/opencode"),
     );
+    expect(opencodePluginManifestPath("/data/opencode")).toBe(
+      "/data/opencode/node_modules/@opencode-ai/plugin/package.json",
+    );
   });
 
   it("épingle la version dans la commande", () => {
     expect(opencodeInstallArgs("/data/opencode", WANTED)).toContain(`opencode-ai@${WANTED}`);
     expect(opencodeInstallArgs("/data/opencode")).toContain(`opencode-ai@${OPENCODE_VERSION}`);
+    expect(opencodeInstallArgs("/data/opencode", WANTED)).toContain(
+      `@opencode-ai/plugin@${WANTED}`,
+    );
   });
 
   /**

@@ -82,17 +82,17 @@ function ProjectSelect({
         <button
           type="button"
           disabled={disabled}
-          className="flex h-8 shrink items-center gap-2 rounded-lg border border-border px-2 text-sm font-medium transition-colors hover:bg-accent/50 disabled:opacity-50"
+          className="flex h-8 shrink items-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50 disabled:opacity-50"
         >
           {selected ? (
             <ProjectOrb
               seed={projectOrbSeed(selected)}
               iconUrl={selected.icon_url}
-              className="size-[18px] shrink-0"
+              className="size-3.5 shrink-0"
             />
           ) : null}
           <span className="max-w-[10rem] truncate">{selected?.name ?? placeholder}</span>
-          <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
+          <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
@@ -409,25 +409,9 @@ export function SessionCompose({
                 {t("composeNoRepo")}
               </p>
             ) : (
-              <div className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-muted-foreground">
-                {t.rich("composeWorkingIn", {
-                  project: () => (
-                    <ProjectSelect
-                      projects={launchable}
-                      value={projectId}
-                      onChange={(id) => {
-                        setProjectId(id);
-                        // La branche appartient au dépôt du projet : changer de
-                        // projet invalide le choix précédent.
-                        setBaseBranch("");
-                      }}
-                      placeholder={t("composeProjectPlaceholder")}
-                      emptyLabel={t("composeProjectEmpty")}
-                      disabled={launching}
-                    />
-                  ),
-                })}
-              </div>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {t("composeGreetingPrompt")}
+              </p>
             )}
           </div>
         )}
@@ -454,40 +438,61 @@ export function SessionCompose({
             initialValue={initialText}
             placeholder={t("composePlaceholderFree")}
             contextSlot={
-              projectId ? (
-                <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto px-2.5 pt-2.5">
-                  <BranchCombobox
-                    projectId={projectId}
-                    value={baseBranch}
-                    onChange={setBaseBranch}
-                    defaultLabel={t("branchDefault")}
-                    defaultHint={t("branchDefaultHint")}
-                    placeholder={t("branchSearchPlaceholder")}
-                    emptyLabel={t("branchSearchEmpty")}
-                    loadingLabel={t("branchSearchLoading")}
-                    disabled={launching}
-                  />
-                  {localRepo.linked ? (
-                    <EnvironmentCombobox
-                      value={environment}
-                      onChange={setEnvironment}
-                      localAvailable={localRepo.available}
-                      folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
-                      needsAttach={localRepo.state?.status !== "ready"}
-                      onAttach={() => {
-                        void localRepo.attach().then((next) => {
-                          if (next?.status === "ready") setEnvironment("local");
-                          else if (next && next.status === "invalid") {
-                            toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
-                          }
-                        });
-                      }}
-                      disabled={launching || localRepo.busy}
+              <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+                <ProjectSelect
+                  projects={launchable}
+                  value={projectId}
+                  onChange={(id) => {
+                    setProjectId(id);
+                    // La branche appartient au dépôt du projet : changer de
+                    // projet invalide le choix précédent.
+                    setBaseBranch("");
+                  }}
+                  placeholder={t("composeProjectPlaceholder")}
+                  emptyLabel={t("composeProjectEmpty")}
+                  disabled={launching}
+                />
+                {projectId ? (
+                  <>
+                    {localRepo.linked ? (
+                      <EnvironmentCombobox
+                        value={environment}
+                        onChange={setEnvironment}
+                        localAvailable={localRepo.available}
+                        folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
+                        needsAttach={localRepo.state?.status !== "ready"}
+                        onAttach={() => {
+                          void localRepo.attach().then((next) => {
+                            if (next?.status === "ready") setEnvironment("local");
+                            else if (next && next.status === "invalid") {
+                              toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
+                            }
+                          });
+                        }}
+                        disabled={launching || localRepo.busy}
+                        bare
+                      />
+                    ) : null}
+                    <BranchCombobox
+                      projectId={projectId}
+                      value={baseBranch}
+                      onChange={setBaseBranch}
+                      defaultLabel={t("branchDefault")}
+                      defaultHint={t("branchDefaultHint")}
+                      placeholder={t("branchSearchPlaceholder")}
+                      emptyLabel={t("branchSearchEmpty")}
+                      loadingLabel={t("branchSearchLoading")}
+                      disabled={launching}
+                      localBranches={environment === "local" ? localRepo.branches : undefined}
+                      localLabel={t("branchLocalGroup")}
+                      cloudLabel={t("branchCloudGroup")}
+                      bare
                     />
-                  ) : null}
-                </div>
-              ) : null
+                  </>
+                ) : null}
+              </div>
             }
+            contextPlacement="above"
             leadingControls={
               <>
                 <ModelCombobox

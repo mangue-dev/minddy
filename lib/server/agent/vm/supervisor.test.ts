@@ -1105,6 +1105,17 @@ describe("les garde-fous", () => {
     expect(result?.payload.reason).toBe("forbidden_command");
   });
 
+  it("reprend une fois après la cascade qu'un refus applique aux tools parallèles", async () => {
+    h.extraFrames = [
+      parentRound("msg_refus", "tool-calls"),
+      permissionFrame("bash", { command: "git reset --hard" }),
+    ];
+    await run();
+    expect(h.permissionReplies[0].reply).toBe("reject");
+    expect(h.prompts).toHaveLength(2);
+    expect(h.prompts[1]).toContain("cancelled the other parallel tool calls");
+  });
+
   it("refuse une écriture dans `.git/`, qu'opencode exécuterait sans rien dire", async () => {
     h.extraFrames = [
       permissionFrame("edit", { filepath: "/vercel/sandbox/repo/.git/config" }),
@@ -1321,7 +1332,9 @@ describe("les sessions filles", () => {
     // attend son `summary`, qui ne part qu'à la fin du tour — l'effacer ici
     // ferait disparaître la réponse pendant l'export et le push.
     await run();
-    const cleared = h.live.filter((l) => l.text === "");
+    // La première charge vide ALLUME désormais la réflexion dès que le prompt
+    // est accepté ; seule celle qui l'éteint est une purge de fin de round.
+    const cleared = h.live.filter((l) => l.text === "" && l.reasoningActive === false);
     expect(cleared.length).toBe(1);
     expect(h.live.at(-1)?.text).toBe("fini");
   });

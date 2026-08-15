@@ -490,6 +490,20 @@ export async function runOpencodeTurn(
   const timing = (stage: string) =>
     console.log(`[agent-timing] ${stage} +${now() - startedAt}ms`);
   timing("supervisor-start");
+  let firstLivePublished = false;
+  let firstVisibleTextSignal = false;
+  let firstVisibleTextPublished = false;
+  const publishLive: typeof cp.emitLive = (progress) => {
+    if (!firstLivePublished) {
+      firstLivePublished = true;
+      timing("first-live-published");
+    }
+    if (!firstVisibleTextPublished && progress.text.trim().length > 0) {
+      firstVisibleTextPublished = true;
+      timing("first-visible-text-published");
+    }
+    cp.emitLive(progress);
+  };
   const previous = job.opencode;
 
   const secrets = new SecretRedactor();
@@ -504,6 +518,23 @@ export async function runOpencodeTurn(
    * `.env`, la portée de `webfetch`, et le refus d'une permission inconnue.
    */
   const local = isLocalJob(job);
+
+  // Le mint plafonné est le seul aller-retour obligatoire avant d'ouvrir le
+  // proxy local. Il n'a besoin ni du dépôt ni des fichiers du harness : le
+  // démarrer dès l'entrée recouvre sa latence avec toute cette préparation.
+  const localLlmKeyPromise = local
+    ? (() => {
+        timing("llm-key-requested");
+        return cp.llmKey().then((key) => {
+          timing("llm-key-ready");
+          return key;
+        });
+      })()
+    : null;
+  // Un dépôt invalide peut faire sortir avant que le proxy rejoigne la clé.
+  // L'erreur reste portée par la promesse originale si elle est attendue, mais
+  // ne devient pas un rejet non géré sur ce chemin de sortie précoce.
+  void localLlmKeyPromise?.catch(() => {});
 
   /**
    * CE QU'UNE CHAÎNE DEVIENT AVANT DE QUITTER LA MACHINE (MIN-361).
@@ -552,8 +583,10 @@ export async function runOpencodeTurn(
         runId: job.runId,
         authUrl,
         workBranch: job.workBranch,
+        remoteWorkMayExist: job.remoteWorkMayExist,
+        baseBranch: job.baseBranch,
       });
-      stateAtStart = await readRepoState(host);
+      stateAtStart = current.state;
     } catch (err) {
       return failed((err as Error).message);
     }
@@ -561,7 +594,9 @@ export async function runOpencodeTurn(
     // l'utilisateur avait sous les doigts et ce qu'il avait en cours quand le
     // tour a commencé. C'est ce qui permettra de relire un tour dont la pull
     // request contient des commits que personne n'attribue à l'agent.
-    await cp
+    // Informatif et invisible dans le fil : ne bloque ni l'écriture de la config
+    // ni le mint de clé derrière un aller-retour vers le plan de contrôle.
+    void cp
       .emit("status", {
         phase: "current_repo",
         branch: current.branch,
@@ -600,7 +635,10 @@ export async function runOpencodeTurn(
       startLlmProxy({
         job: j,
         redact: secrets.redact,
-        ...(isLocalJob(j) ? { apiKey: () => cp.llmKey() } : {}),
+        onTiming: timing,
+        ...(isLocalJob(j)
+          ? { apiKey: () => localLlmKeyPromise!, deferApiKey: true }
+          : {}),
       })))(job);
 
   // Le proxy AVANT le serveur : sa `baseURL` entre dans la config du tour, donc
@@ -1045,6 +1083,18 @@ export async function runOpencodeTurn(
     }
     timing("opencode-healthy");
 
+    // OpenCode charge paresseusement le catalogue (et la configuration modèle)
+    // au premier prompt. On l'amorce dès que le serveur répond et on recouvre ce
+    // coût avec la création/reprise de session et le mint de la clé locale.
+    // Un endpoint de confort qui échoue ne doit toutefois jamais refuser le run :
+    // le prompt sait effectuer lui-même exactement le même chargement.
+    const warmToolsPromise = client
+      .warmTools(job.model)
+      .then(() => timing("opencode-tools-ready"))
+      .catch((err) => {
+        console.warn("[supervisor] opencode tool warm-up failed:", (err as Error).message);
+      });
+
     // ── La session : reprise par le journal, ou neuve ────────────────────────
     let sessionId = previous?.sessionId ?? "";
     if (previous?.events?.length) {
@@ -1085,6 +1135,11 @@ export async function runOpencodeTurn(
     }
     timing(previous?.sessionId ? "opencode-session-resumed" : "opencode-session-created");
 
+    // Le serveur et la session ont été amorcés pendant le mint. On garde le
+    // refus AVANT le prompt — aucun appel fournisseur ne part sans clé — mais
+    // une clé lente ne sérialise plus tout le démarrage d'OpenCode derrière elle.
+    await Promise.all([warmToolsPromise, ...(localLlmKeyPromise ? [localLlmKeyPromise] : [])]);
+
     // ── Le flux, traduit au fil de l'eau ─────────────────────────────────────
     const state = newTurnStreamState();
     const turnLedger = new TurnLedger(job, sessionId, subagents);
@@ -1108,6 +1163,8 @@ export async function runOpencodeTurn(
     let lastParentFinish: string | null = null;
     /** Une annonce d'action textuelle ne se répare qu'une fois : jamais de boucle. */
     let repairedPreamble = false;
+    let repairedPermissionCascade = false;
+    let rejectedPermissionThisRound = false;
     /**
      * LA RÉFLEXION EN COURS, telle que le direct la raconte (MIN-122).
      *
@@ -1502,6 +1559,24 @@ export async function runOpencodeTurn(
        );
        awaitingFirstModelSignal = true;
        timing("prompt-accepted");
+       /**
+        * Un provider peut streamer d'abord du raisonnement ou les arguments d'un
+        * tool qu'OpenCode ne transforme en event qu'une fois le bloc terminé.
+        * GPT-OSS-20B l'a fait pendant 48 s alors qu'OpenRouter avait livré son
+        * premier token en moins d'une seconde. À ce stade le prompt EST accepté
+        * et le round travaille réellement : quitter « démarrage de la session »
+        * pour l'indicateur de réflexion décrit donc la réalité, sans inventer de
+        * texte ni doubler le stream final.
+        */
+       if (reasoningSince === null) reasoningSince = now();
+       publishLive({
+         text: "",
+         tools: toolsSeen,
+         reasoningActive: true,
+         // Non nul : ce n'est plus l'état « démarrage », le round a commencé.
+         reasoningMs: 1,
+         ...liveEdits.payload(),
+       });
     };
 
     /**
@@ -1669,6 +1744,10 @@ export async function runOpencodeTurn(
         // se compte et se facture — mais dans sa bande à elle, et sans jamais
         // parler au nom de la mère (cf. `Translation.sessionId`).
         const child = !!out.sessionId && out.sessionId !== sessionId;
+        if (!child && !firstVisibleTextSignal && liveTextOf(state, sessionId).trim().length > 0) {
+          firstVisibleTextSignal = true;
+          timing("first-visible-text-signal");
+        }
 
         /**
          * LE GARDE-FOU, RÉPONDU AVANT TOUT LE RESTE — un tool suspendu attend, et
@@ -1716,6 +1795,7 @@ export async function runOpencodeTurn(
           if (verdict.reason && out.permission.callId) {
             refusedCalls.set(out.permission.callId, verdict.reason);
           }
+          if (verdict.reply === "reject") rejectedPermissionThisRound = true;
           /**
            * UNE DÉLÉGATION AUTORISÉE OUVRE UN CRÉDIT, jusqu'à ce que sa fille
            * existe. C'est ce qui rend le plafond de simultané opérant sur le seul
@@ -1789,7 +1869,7 @@ export async function runOpencodeTurn(
             if (live.length > 0 && !child) {
               liveEdits.note(live);
               lastLiveAt = 0;
-              cp.emitLive({
+              publishLive({
                 text: outward(liveTextOf(state, sessionId)),
                 tools: toolsSeen,
                 reasoningActive: false,
@@ -1963,7 +2043,7 @@ export async function runOpencodeTurn(
           if (!child && out.usage.finish === "tool-calls") {
             reasoningSince = null;
             lastLiveAt = 0;
-            cp.emitLive({
+            publishLive({
               text: "",
               // `tools: 0` comme le `clearLive` de la boucle maison : la charge de
               // purge ne décrit plus rien, et un compteur non nul y ferait lire
@@ -2024,13 +2104,19 @@ export async function runOpencodeTurn(
         if (!child && out.reasoning) {
           reasoningSince = out.reasoning.active ? (out.reasoning.startedAt || now()) : null;
         }
+        // Le signal optimiste posé à l'acceptation du prompt ne doit pas rester
+        // allumé sous le texte d'un modèle qui ne publie aucun part de
+        // raisonnement explicite. Dès qu'il écrit, l'écriture est l'état juste.
+        if (!child && out.liveText !== undefined && out.reasoning === undefined) {
+          reasoningSince = null;
+        }
         const liveDue =
           !child &&
           (out.liveText !== undefined || out.reasoning !== undefined) &&
           now() - lastLiveAt >= LIVE_INTERVAL_MS;
         if (liveDue) {
           lastLiveAt = now();
-          cp.emitLive({
+          publishLive({
             text: outward(liveTextOf(state, sessionId)),
             tools: toolsSeen,
             reasoningActive: reasoningSince !== null,
@@ -2112,6 +2198,28 @@ export async function runOpencodeTurn(
             continue;
           }
           /**
+           * OpenCode 1.18.16 fait d'un `reject` un refus de TOUTES les demandes
+           * parallèles, puis met la session au repos. Ce n'est pas une réponse du
+           * modèle : c'est une frontière de permission. On lui rend UNE chance
+           * de lire les erreurs et de choisir une autre voie ; bornée à une fois,
+           * elle ne transforme pas un garde-fou en boucle de tentatives.
+           */
+          if (
+            rejectedPermissionThisRound &&
+            !repairedPermissionCascade &&
+            lastParentFinish === "tool-calls"
+          ) {
+            repairedPermissionCascade = true;
+            rejectedPermissionThisRound = false;
+            awaitingFirstModelSignal = true;
+            timing("permission-cascade-retry");
+            await client.promptAsync(
+              sessionId,
+              "One or more tool permissions were refused and OpenCode cancelled the other parallel tool calls. Read the tool errors, continue with a safe alternative, and do not repeat the refused action.",
+            );
+            continue;
+          }
+          /**
            * GPT-5.6 Luna a été observé terminant un round `stop` par « Je vais
            * inventorier… puis vérifier… », sans aucun appel de tool. Une couche
            * OpenAI-compatible avait aplati ce qui était sémantiquement une
@@ -2136,7 +2244,7 @@ export async function runOpencodeTurn(
             reasoningSince = null;
             lastLiveAt = 0;
             toolsSeen = 0;
-            cp.emitLive({
+            publishLive({
               text: "",
               tools: 0,
               reasoningActive: false,

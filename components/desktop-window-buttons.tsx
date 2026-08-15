@@ -90,7 +90,7 @@ export function WindowButtonDecoys() {
 }
 
 /**
- * La place des boutons macOS DANS L'EN-TÊTE, sous 1200 px (MIN-293).
+ * La place des boutons macOS DANS L'EN-TÊTE, sous 768 px (MIN-293).
  *
  * Sous cette largeur l'AppShell ne rend plus les barres latérales : le coin
  * haut-gauche de la fenêtre n'est plus la ligne de marque, c'est l'en-tête — et

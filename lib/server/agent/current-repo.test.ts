@@ -214,6 +214,68 @@ describe("préparer le dépôt courant", () => {
     expect(fetched).not.toContain("refs/remotes/");
     expect(fetched).not.toContain(":refs/heads/");
   });
+
+  it("ne contacte pas le remote au premier tour d'un run neuf", async () => {
+    const { host, commands } = fakeHost([
+      [/show-toplevel/, { stdout: `${LAYOUT.repoDir}\n${LAYOUT.repoDir}\n` }],
+      [/rev-parse --verify.*HEAD/, { stdout: "cafe1234\n" }],
+      [/rev-parse --verify/, { exitCode: 1 }],
+    ]);
+
+    await prepareCurrentRepo(host, {
+      runId: RUN_ID,
+      authUrl: "file:///o",
+      workBranch: "minddy/agent/neuve",
+      remoteWorkMayExist: false,
+    });
+
+    expect(commands.some((command) => command.startsWith("git fetch"))).toBe(false);
+  });
+
+  it("synchronise une branche cloud choisie sous une ref privée avant le tour", async () => {
+    const { host, commands } = fakeHost([
+      [/show-toplevel/, { stdout: `${LAYOUT.repoDir}\n${LAYOUT.repoDir}\n` }],
+      [/rev-parse --verify.*HEAD/, { stdout: "cafe1234\n" }],
+      [/refs\/minddy\/run\/.*\/base/, { stdout: "remote-base\n" }],
+      [/rev-parse --verify/, { exitCode: 1 }],
+    ]);
+
+    await prepareCurrentRepo(host, {
+      runId: RUN_ID,
+      authUrl: "file:///o",
+      workBranch: "minddy/agent/neuve",
+      remoteWorkMayExist: false,
+      baseBranch: "release/next",
+    });
+
+    const fetched =
+      commands.find(
+        (command) =>
+          command.startsWith("git fetch") && command.includes("refs/heads/release/next"),
+      ) ?? "";
+    expect(fetched).toContain(`refs/minddy/run/${RUN_ID}/base`);
+    expect(fetched).not.toContain("refs/remotes/");
+    expect(fetched).not.toContain(":refs/heads/");
+  });
+
+  it("part directement d'une branche locale choisie sans contacter le remote", async () => {
+    const { host, commands } = fakeHost([
+      [/show-toplevel/, { stdout: `${LAYOUT.repoDir}\n${LAYOUT.repoDir}\n` }],
+      [/refs\/heads\/main/, { stdout: "local-main\n" }],
+      [/rev-parse --verify/, { exitCode: 1 }],
+    ]);
+
+    const prepared = await prepareCurrentRepo(host, {
+      runId: RUN_ID,
+      authUrl: "file:///o",
+      workBranch: "minddy/agent/neuve",
+      remoteWorkMayExist: false,
+      baseBranch: "main",
+    });
+
+    expect(prepared.parent).toBe("local-main");
+    expect(commands.some((command) => command.startsWith("git fetch"))).toBe(false);
+  });
 });
 
 describe("le commit par index temporaire", () => {

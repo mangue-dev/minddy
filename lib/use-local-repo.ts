@@ -26,11 +26,21 @@ export function useLocalRepo(projectId: string | null) {
   const fullName = link?.repo_full_name ?? null;
   const [state, setState] = useState<LocalRepoState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [branches, setBranches] = useState<string[]>([]);
+
+  // La page est servie à distance, le preload ne l'est pas : une coquille déjà
+  // ouverte peut donc précéder ce membre. Elle reste locale, simplement sans le
+  // nouveau listing, plutôt que de faire échouer toute la lecture d'attachement.
+  const readBranches = useCallback((bridge: NonNullable<ReturnType<typeof getDesktopBridge>>) => {
+    if (!projectId || !fullName || !bridge.localRepoBranches) return Promise.resolve([]);
+    return bridge.localRepoBranches({ projectId, fullName });
+  }, [projectId, fullName]);
 
   useEffect(() => {
     const bridge = getDesktopBridge();
     if (!bridge || !projectId || !fullName) {
       setState(null);
+      setBranches([]);
       return;
     }
     // La réponse d'un projet qu'on vient de quitter ne doit pas s'afficher sur
@@ -39,15 +49,28 @@ export function useLocalRepo(projectId: string | null) {
     void bridge
       .localRepo({ projectId, fullName })
       .then((next) => {
-        if (alive) setState(next);
+        if (!alive) return;
+        setState(next);
+        if (next.status !== "ready") {
+          setBranches([]);
+          return;
+        }
+        void readBranches(bridge).then((names) => {
+          if (alive) setBranches(names);
+        }).catch(() => {
+          if (alive) setBranches([]);
+        });
       })
       .catch(() => {
-        if (alive) setState({ status: "none" });
+        if (alive) {
+          setState({ status: "none" });
+          setBranches([]);
+        }
       });
     return () => {
       alive = false;
     };
-  }, [projectId, fullName]);
+  }, [projectId, fullName, readBranches]);
 
   /** Ouvre le panneau système. Rend le verdict, pour que l'appelant le dise. */
   const attach = useCallback(async (): Promise<LocalRepoState | null> => {
@@ -58,14 +81,17 @@ export function useLocalRepo(projectId: string | null) {
       const next = await bridge.chooseLocalRepo({ projectId, fullName });
       // Un dossier REFUSÉ n'est pas rangé côté app : on ne l'affiche donc pas
       // comme l'état courant, on le rend à l'appelant qui en fera un message.
-      if (next.status === "ready") setState(next);
+      if (next.status === "ready") {
+        setState(next);
+        setBranches(await readBranches(bridge).catch(() => []));
+      }
       return next;
     } catch {
       return null;
     } finally {
       setBusy(false);
     }
-  }, [projectId, fullName, busy]);
+  }, [projectId, fullName, busy, readBranches]);
 
   const detach = useCallback(async () => {
     const bridge = getDesktopBridge();
@@ -88,6 +114,8 @@ export function useLocalRepo(projectId: string | null) {
     state,
     /** Le dossier est attaché ET encore valide : le run local est possible. */
     ready: state?.status === "ready",
+    /** Branches déjà présentes dans le checkout attaché à cette machine. */
+    branches,
     /** Le projet a un dépôt lié : sans ça, il n'y a rien à attacher. */
     linked: !!fullName,
     busy,

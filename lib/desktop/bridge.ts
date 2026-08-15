@@ -137,6 +137,8 @@ export interface DesktopBridge {
   }): Promise<LocalRepoState>;
   /** Oublie le dossier attaché à ce projet. Rend l'état d'après. */
   forgetLocalRepo(input: { projectId: string }): Promise<LocalRepoState>;
+  /** Les branches déjà présentes dans le dépôt attaché. */
+  localRepoBranches?(input: { projectId: string; fullName: string }): Promise<string[]>;
   /**
    * FORCE UN TOUR SUR CETTE MACHINE (MIN-293) — **coquille de DÉV uniquement**.
    *

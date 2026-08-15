@@ -996,7 +996,7 @@ export function AppSidebar({
    * leurres, sinon la marque sauterait à chaque ouverture. Voir
    * lib/use-window-buttons.ts.
    *
-   * ⚠ **Et seulement quand la barre est RENDUE.** Sous 1200 px l'AppShell la
+   * ⚠ **Et seulement quand la barre est RENDUE.** Sous 768 px l'AppShell la
    * cache, mais elle reste montée : sans `wide`, elle continuait de demander le
    * retrait des boutons dès que son rail — invisible — se repliait, et de leur
    * garder une place que personne ne regardait. Le coin revient alors à
