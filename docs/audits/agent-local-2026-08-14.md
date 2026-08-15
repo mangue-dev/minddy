@@ -50,10 +50,24 @@ toutes dans le sens défavorable.**
 | 17 | Il n'y a **pas de tool `list`** | `list: "allow"` ([opencode-config.ts:331](../../lib/server/agent/vm/opencode-config.ts#L331)) est un no-op. |
 | 18 | `OPENCODE_SHELL_CWD` **n'existe pas dans le binaire** (0 occurrence) | [opencode-config.ts:645](../../lib/server/agent/vm/opencode-config.ts#L645) est du code mort, et tout raisonnement sur un shell persistant entre rounds est sans fondement. |
 
-> Ces mesures doivent devenir des **sondes pérennes** `*.probe.test.ts` — la
-> convention existe déjà dans le dépôt (`opencode-abort`, `opencode-images`,
-> `opencode-packaging`, `opencode-tools`), et c'est le seul moyen de ne pas
-> tout remesurer à la main au prochain bump de [opencode-version.ts:23](../../lib/server/agent/vm/opencode-version.ts#L23).
+> **FAIT (MIN-362, 2026-08-15) : ce tableau n'est plus la source.** Les mesures
+> vivent en sondes pérennes, et c'est là qu'il faut les lire et les relancer —
+> [opencode-permissions.probe.test.ts](../../lib/server/agent/vm/opencode-permissions.probe.test.ts)
+> (`MDY_OPENCODE_PERMS_PROBE=1`, aucun modèle dépensé),
+> [opencode-wait.probe.test.ts](../../lib/server/agent/vm/opencode-wait.probe.test.ts)
+> (`MDY_OPENCODE_WAIT_PROBE=1`) et, pour git,
+> [worktree-hooks.git.test.ts](../../lib/server/agent/worktree-hooks.git.test.ts),
+> qui tourne avec `npm test`. Elles **corrigent** deux lignes de ce tableau, et
+> il faut lire la correction avant de s'appuyer dessus :
+>
+> - **ligne 9** — `~` n'est expansé et `*` ne traverse les `/` que sur
+>   `external_directory`. Les motifs d'`edit` sont **relatifs au dépôt**, sans
+>   `~` : un `edit: {"~/.ssh/*": "deny"}` ne refuse rien et ne demande rien ;
+> - **ligne 12** — le `deny` nu retire le tool de ce qui est **offert au
+>   modèle**, mais `/experimental/tool` continue de le lister.
+>
+> Le détail, avec ce qu'elles ont ajouté au §9, est au
+> [§2.32 du dossier opencode](../harness-opencode.md).
 
 ---
 
@@ -474,6 +488,14 @@ réponses déjà écrites : les **tests structurels** qui lisent la source
 `lib/i18n-contract.test.ts` : l'écran d'opt-in et les cartes d'approbation sont des
 chaînes à double catalogue.
 
+> **FAIT (MIN-362) : la matrice est exécutable.**
+> [local-surface-coverage.test.ts](../../lib/server/agent/local-surface-coverage.test.ts)
+> exige qu'une surface nommée hors de `lib/**` soit atteinte par un test de
+> `lib/`, tient l'inventaire de `desktop/src/` — un fichier de plus doit dire où
+> vivent ses décisions — et impose le patron `<module>.ts` / `<module>.test.ts`
+> dans `lib/desktop/`. C'est là que le lanceur devra s'inscrire : sa décision
+> descend dans `lib/desktop/`, la coquille ne garde que le `fork`.
+
 ### L'ordre de bataille, et la frontière avec MIN-294
 
 MIN-293 (xl, plan `null`, zéro sous-issue) **bloque** MIN-294. Mais sans MIN-294,
@@ -499,16 +521,26 @@ Et corriger l'attribution : la présence, le claim et le repli appartiennent à
 
 ## 9. Ce qu'il reste à mesurer avant de s'engager
 
-- `action: "allow"` en **ruleset de session** (le `deny` ampute le tool — le
-  `allow` n'a pas été exercé avec preuve d'exécution).
-- Le **système de permissions V2** et son magasin `/api/permission/saved` — la
-  seule persistance native offerte, que les tools de 1.18.16 n'empruntent pas.
-- Une attente longue avec un **vrai fournisseur** (le faux terminait son flux
-  avant l'exécution des tools).
+Quatre de ces sept points ont été mesurés depuis (MIN-362, 2026-08-15) et sont
+devenus des sondes ; les trois qui restent sont ceux qui portent encore un risque.
+
+- ✅ `action: "allow"` en **ruleset de session** : c'est une **vraie ACL** — il
+  lève l'`ask` de la config **sans** amputer le jeu de tools, là où le `deny` de
+  session l'ampute. La seule autorisation par session qui ne coûte pas un tool.
+- ✅ Le **système de permissions V2** : rien n'y passe. Ni
+  `/api/session/:id/permission`, ni `/api/permission/request`, ni
+  `/api/permission/saved` ne voient quoi que ce soit, même après un « toujours ».
+  La seule persistance native offerte est **inutilisable en 1.18.16**.
+- ✅ Une attente longue avec un **vrai fournisseur** : elle tient. 120 s de
+  demande pendante sur un round Haiku passé par le proxy, et le tour repart quand
+  on répond (`MDY_OPENCODE_WAIT_LIVE=1`).
+- ✅ Qu'un `core.hooksPath` posé sur le dépôt principal s'applique **depuis un
+  worktree** : **oui**. Le `config` est partagé par tous les worktrees, donc un
+  `git commit` lancé là exécute le `pre-commit` de l'utilisateur. Notre fin de
+  tour n'est pas concernée (plomberie), mais rien d'autre ne doit commiter
+  autrement. → [worktree-hooks.git.test.ts](../../lib/server/agent/worktree-hooks.git.test.ts)
 - `sandbox-exec` sous `utilityProcess.fork` : **la mesure qui change la valeur de
-  tout le reste** (§2).
-- Qu'un `core.hooksPath` posé sur le dépôt principal s'applique bien **depuis un
-  worktree**.
+  tout le reste** (§2). Toujours ouverte.
 - La présence de `OPENROUTER_PROVISIONING_KEY` **en production** — si elle manque,
   le chemin local est mort-né.
 - Les sites d'appel de `skill`, `lsp`, `doom_loop`, `plan_enter`/`plan_exit`.
