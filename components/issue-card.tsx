@@ -3,7 +3,6 @@
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   ConfirmDeleteDialog,
@@ -70,6 +69,7 @@ import {
   agentPlanPromptVariant,
 } from "@/lib/agent-launch-prompt";
 import { RELATION_TYPES } from "@/lib/relation-constants";
+import { NO_LAYOUT_ANIMATION, type CardDragData } from "@/lib/board-dnd";
 import type {
   Category,
   Issue,
@@ -992,8 +992,19 @@ export const IssueCard = memo(function IssueCard({
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: issue.id });
+  // Le sortable ne sert plus qu'à DEUX choses : saisir la carte, et être une
+  // cible de survol. Il n'anime plus rien — ni décalage pendant le glisser
+  // (`NO_SHIFT_STRATEGY`), ni FLIP après le dépôt (`animateLayoutChanges`).
+  // Ce FLIP était le doublon : le cache optimiste replace déjà la carte à son
+  // arrivée, et dnd-kit rejouait par-dessus le trajet depuis l'ancienne place —
+  // deux animations pour un déplacement, d'où le sursaut au lâcher.
+  // `columnStatus` est ce que la détection de collision lit pour rattacher une
+  // carte à sa colonne (lib/board-dnd.ts).
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
+    id: issue.id,
+    data: { columnStatus: issue.status } satisfies CardDragData,
+    animateLayoutChanges: NO_LAYOUT_ANIMATION,
+  });
   const agentActive = useAgentActive(issue.id);
   // Une run d'agent est ACTIVE sur l'issue → l'action OUVRE sa conversation. Sinon
   // (aucune run, ou toutes terminées) elle en LANCE une nouvelle, à froid (MIN-68).
@@ -1476,7 +1487,6 @@ export const IssueCard = memo(function IssueCard({
       // Ce que le lasso du board cherche dans le DOM, et ce qu'il évite comme
       // point de départ — une carte n'est pas du fond (cf. marquee-selection).
       data-issue-id={issue.id}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
       {...hoverProps}

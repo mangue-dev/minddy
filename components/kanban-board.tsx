@@ -6,15 +6,14 @@ import {
   DndContext,
   DragOverlay,
   MouseSensor,
-  closestCorners,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { cn, toast } from "mangue-ui";
-import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
-import type { IssueStatus } from "@/lib/issue-constants";
+import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
 import type {
   Category,
   Issue,
@@ -27,7 +26,9 @@ import type {
 } from "@/lib/types";
 import { resolveRelations } from "@/lib/relation-constants";
 import { issueComparator } from "@/lib/view-filter";
-import { displayRank, dragBundle, planBoardMove } from "@/lib/board-drag";
+import { displayRank } from "@/lib/board-drag";
+import { boardCollision } from "@/lib/board-dnd";
+import { useBoardDrop } from "@/lib/use-board-drop";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
@@ -43,8 +44,6 @@ import {
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
-
-const STATUS_VALUES = new Set<string>(STATUSES.map((s) => s.value));
 
 export function KanbanBoard({
   issues,
@@ -149,21 +148,19 @@ export function KanbanBoard({
     return map;
   }, [issues, relations, allIssueMap]);
 
-  const columns = useMemo(() => {
-    const cmp = issueComparator(sort);
-    return statuses.map((status) => ({
-      status,
-      items: issues.filter((i) => i.status === status.value).sort(cmp),
-    }));
-  }, [issues, statuses, sort]);
+  const comparator = useMemo(() => issueComparator(sort), [sort]);
+  const columns = useMemo(
+    () =>
+      statuses.map((status) => ({
+        status,
+        items: issues.filter((i) => i.status === status.value).sort(comparator),
+      })),
+    [issues, statuses, comparator]
+  );
 
   // L'ordre de lecture du board — l'ordre dans lequel un paquet glissé atterrit.
   const rank = useMemo(() => displayRank(columns), [columns]);
 
-  const [activeId, setActiveId] = useState<string | null>(null);
-  // Les tickets que le glisser en cours embarque (la carte saisie, ou toute la
-  // sélection quand elle en fait partie) — ils s'estompent tous, pas juste elle.
-  const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSelection = useCallback((issueId: string) => {
     setSelectedIds((current) => {
@@ -220,7 +217,18 @@ export function KanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, onAddRelation, clearSelection]);
-  const activeIssue = activeId ? issues.find((i) => i.id === activeId) ?? null : null;
+  // Le glisser : le paquet embarqué, le repère de dépôt, et le plan d'écriture
+  // — tous trois issus du même calcul (cf. lib/use-board-drop.ts).
+  const drop = useBoardDrop({
+    columns,
+    comparator,
+    manual: sort === "manual",
+    issueMap,
+    selectedIds,
+    rank,
+  });
+  const { preview, draggingIds, activeId } = drop;
+  const activeIssue = activeId ? issueMap.get(activeId) ?? null : null;
   const activeParent =
     activeIssue?.parent_id ? issueMap.get(activeIssue.parent_id) ?? null : null;
 
@@ -283,54 +291,19 @@ export function KanbanBoard({
     el.scrollTo({ left: index * stride, behavior: "smooth" });
   }, []);
 
-  const endDrag = useCallback(() => {
-    setActiveId(null);
-    setDraggingIds(new Set());
-  }, []);
-
-  const handleDragStart = (event: DragStartEvent) => {
-    const id = String(event.active.id);
-    setActiveId(id);
-    setDraggingIds(
-      new Set(dragBundle(id, selectedIds, issueMap, rank).map((i) => i.id))
-    );
-  };
+  const handleDragStart = (event: DragStartEvent) => drop.start(event);
+  const handleDragMove = (event: DragMoveEvent) => drop.track(event);
 
   const handleDragEnd = (event: DragEndEvent) => {
-    endDrag();
-    const { active, over } = event;
-    if (!over || over.id === active.id) return;
+    // Le repère montrait déjà CE plan-là : on l'écrit tel quel (MIN-75 pour le
+    // paquet, `previewBoardMove` pour la place).
+    const planned = drop.plan(event);
+    drop.end();
+    if (!planned) return;
 
-    // Toute la sélection suit dès que la carte saisie en fait partie (MIN-75).
-    const bundle = dragBundle(String(active.id), selectedIds, issueMap, rank);
-    if (bundle.length === 0) return;
-
-    // Target status: dropping on a column area vs. onto a card.
-    let targetStatus: IssueStatus;
-    let overIssue: Issue | null = null;
-    if (STATUS_VALUES.has(String(over.id))) {
-      targetStatus = String(over.id) as IssueStatus;
-    } else {
-      overIssue = issueMap.get(String(over.id)) ?? null;
-      if (!overIssue) return;
-      targetStatus = overIssue.status;
-    }
-
-    const moves = planBoardMove({
-      bundle,
-      targetStatus,
-      overIssueId: overIssue?.id ?? null,
-      columnItems: issues
-        .filter((i) => i.status === targetStatus)
-        .sort((a, b) => a.position - b.position),
-      manual: sort === "manual",
-      now: Date.now(),
-    });
-    if (moves.length === 0) return;
-
-    void Promise.all(moves.map((m) => onMove(m.issue.id, m.patch))).catch((err) =>
-      toast.error((err as Error).message)
-    );
+    void Promise.all(
+      planned.moves.map((m) => onMove(m.issue.id, m.patch))
+    ).catch((err) => toast.error((err as Error).message));
   };
 
   return (
@@ -340,10 +313,15 @@ export function KanbanBoard({
     <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={boardCollision}
       onDragStart={handleDragStart}
+      // `onDragMove` et pas seulement `onDragOver` : le côté du dépôt (avant ou
+      // après la carte survolée) change SANS que la cible change, et c'est
+      // justement ce que le repère doit suivre.
+      onDragMove={handleDragMove}
+      onDragOver={handleDragMove}
       onDragEnd={handleDragEnd}
-      onDragCancel={endDrag}
+      onDragCancel={drop.end}
     >
       <div className="flex h-full flex-col">
         {/* Mobile: dots reflect / control the snapped column (one status per swipe). */}
@@ -410,6 +388,9 @@ export function KanbanBoard({
                 currentCycleId={currentCycleId}
                 selectedIds={selectedIds}
                 draggingIds={draggingIds}
+                dropPreview={
+                  preview?.status === status.value ? preview : undefined
+                }
                 onSelect={toggleSelection}
               />
             ))}

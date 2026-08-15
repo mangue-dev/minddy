@@ -1,10 +1,16 @@
 "use client";
 
-import { memo, useCallback, useMemo } from "react";
+import { Fragment, memo, useCallback, useMemo, useRef } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
+import { NO_SHIFT_STRATEGY } from "@/lib/board-dnd";
+import type { DropPreview } from "@/lib/board-drag";
+import {
+  BoardDropIndicator,
+  useRevealDropIndicator,
+} from "@/components/board-drop-indicator";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
@@ -58,6 +64,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   onSetCategories,
   selectedIds,
   draggingIds,
+  dropPreview,
   onSelect,
   onCreateIssue,
   onAddRelation,
@@ -87,6 +94,8 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   selectedIds: Set<string>;
   /** Les tickets embarqués par le glisser en cours — estompés avec la carte saisie. */
   draggingIds?: Set<string>;
+  /** Le repère de dépôt, quand c'est CETTE colonne que le glisser vise. */
+  dropPreview?: DropPreview;
   onSelect: (issueId: string) => void;
   /** Absent → no "new issue" footer (cycle mode — a create wouldn't join the cycle). */
   onCreateIssue?: (status: IssueStatus) => void;
@@ -109,13 +118,16 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   const t = useTranslations("Board");
   const ts = useTranslations("Status");
 
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const setScrollRef = useCallback(
     (node: HTMLDivElement | null) => {
+      scrollerRef.current = node;
       setNodeRef(node);
       fadeRef(node);
     },
     [setNodeRef, fadeRef]
   );
+  useRevealDropIndicator(scrollerRef, dropPreview);
 
   /**
    * Les handlers du board cross-projet prennent le projet en DERNIER argument, et
@@ -168,18 +180,22 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
       {/* Le fondu de bord est dessiné À CÔTÉ du scroller, jamais dessus : un
           `mask-image` sur un conteneur qui défile le fait re-compositer à
           chaque image (MIN-319). D'où ce parent `relative`. */}
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div
+        className={cn(
+          "relative flex min-h-0 flex-1 flex-col rounded-xl transition-colors",
+          // Le fond, son arrondi et la raison de les tenir HORS du défileur :
+          // cf. KanbanColumn (un arrondi sur ce qui défile rogne le contenu).
+          (dropPreview || isOver) && "bg-muted/50"
+        )}
+      >
         <div
           ref={setScrollRef}
           onScroll={scrollProps.onScroll}
-          className={cn(
-            "no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors",
-            isOver && "bg-muted/50"
-          )}
+          className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2"
         >
           <SortableContext
             items={issues.map((i) => i.id)}
-            strategy={verticalListSortingStrategy}
+            strategy={NO_SHIFT_STRATEGY}
           >
             {issues.map((issue) => {
               const project = projectMap.get(issue.project_id);
@@ -189,33 +205,47 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
                 ? issueMap.get(issue.parent_id) ?? null
                 : null;
               return (
-                <IssueCard
-                  key={issue.id}
-                  issue={issue}
-                  projectId={pid}
-                  projectKey={project?.key ?? ""}
-                  project={project}
-                  memberMap={memberMapByProject.get(pid) ?? EMPTY_MEMBERS}
-                  categoryMap={categoryMapByProject.get(pid) ?? EMPTY_CATEGORIES}
-                  objectiveMap={objectiveMapByProject.get(pid) ?? EMPTY_OBJECTIVES}
-                  parent={parent}
-                  relations={relationsByIssue?.get(issue.id)}
-                  candidateIssues={issuesByProject?.get(pid)}
-                  onOpenRelated={onOpenIssueById}
-                  onAddRelation={bound.onAddRelation}
-                  onOpenPlan={onOpenPlan}
-                  onOpenIssue={onOpenIssue}
-                  onUpdateIssue={bound.onUpdateIssue}
-                  onSetCategories={bound.onSetCategories}
-                  onDelete={bound.onDelete}
-                  selected={selectedIds.has(issue.id)}
-                  dragging={draggingIds?.has(issue.id)}
-                  onSelect={onSelect}
-                  buildMenuActions={buildMenuActions}
-                  inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}
-                />
+                <Fragment key={issue.id}>
+                  {dropPreview?.beforeIssueId === issue.id && (
+                    <BoardDropIndicator count={dropPreview.count} />
+                  )}
+                  <IssueCard
+                    issue={issue}
+                    projectId={pid}
+                    projectKey={project?.key ?? ""}
+                    project={project}
+                    memberMap={memberMapByProject.get(pid) ?? EMPTY_MEMBERS}
+                    categoryMap={
+                      categoryMapByProject.get(pid) ?? EMPTY_CATEGORIES
+                    }
+                    objectiveMap={
+                      objectiveMapByProject.get(pid) ?? EMPTY_OBJECTIVES
+                    }
+                    parent={parent}
+                    relations={relationsByIssue?.get(issue.id)}
+                    candidateIssues={issuesByProject?.get(pid)}
+                    onOpenRelated={onOpenIssueById}
+                    onAddRelation={bound.onAddRelation}
+                    onOpenPlan={onOpenPlan}
+                    onOpenIssue={onOpenIssue}
+                    onUpdateIssue={bound.onUpdateIssue}
+                    onSetCategories={bound.onSetCategories}
+                    onDelete={bound.onDelete}
+                    selected={selectedIds.has(issue.id)}
+                    dragging={draggingIds?.has(issue.id)}
+                    onSelect={onSelect}
+                    buildMenuActions={buildMenuActions}
+                    inCurrentCycle={
+                      !!currentCycleId && issue.cycle_id === currentCycleId
+                    }
+                  />
+                </Fragment>
               );
             })}
+            {/* `beforeIssueId === null` : le paquet se pose en fin de colonne. */}
+            {dropPreview && dropPreview.beforeIssueId === null && (
+              <BoardDropIndicator count={dropPreview.count} />
+            )}
           </SortableContext>
 
           {onCreateIssue && (

@@ -1,10 +1,16 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { Fragment, memo, useCallback, useRef } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext } from "@dnd-kit/sortable";
 import { cn } from "mangue-ui";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
+import { NO_SHIFT_STRATEGY } from "@/lib/board-dnd";
+import type { DropPreview } from "@/lib/board-drag";
+import {
+  BoardDropIndicator,
+  useRevealDropIndicator,
+} from "@/components/board-drop-indicator";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
@@ -51,6 +57,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   currentCycleId,
   selectedIds,
   draggingIds,
+  dropPreview,
   onSelect,
 }: {
   status: StatusMeta;
@@ -87,6 +94,8 @@ export const KanbanColumn = memo(function KanbanColumn({
   /** Les tickets embarqués par le glisser en cours — estompés comme la carte
       saisie, pour qu'on voie ce que le paquet contient. */
   draggingIds?: Set<string>;
+  /** Le repère de dépôt, quand c'est CETTE colonne que le glisser vise. */
+  dropPreview?: DropPreview;
   onSelect: (issueId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
@@ -94,14 +103,18 @@ export const KanbanColumn = memo(function KanbanColumn({
   const t = useTranslations("Board");
   const ts = useTranslations("Status");
 
-  // dnd-kit needs the droppable node; useScrollFade needs it to measure scroll.
+  // dnd-kit needs the droppable node; useScrollFade needs it to measure scroll;
+  // le repère de dépôt s'y fait défiler quand il tombe hors du champ de vision.
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const setScrollRef = useCallback(
     (node: HTMLDivElement | null) => {
+      scrollerRef.current = node;
       setNodeRef(node);
       fadeRef(node);
     },
     [setNodeRef, fadeRef]
   );
+  useRevealDropIndicator(scrollerRef, dropPreview);
 
   return (
     <div className={cn("flex flex-col", BOARD_COLUMN_CLASS)}>
@@ -114,50 +127,72 @@ export const KanbanColumn = memo(function KanbanColumn({
       {/* Le fondu de bord est dessiné À CÔTÉ du scroller, jamais dessus : un
           `mask-image` sur un conteneur qui défile le fait re-compositer à
           chaque image (MIN-319). D'où ce parent `relative`. */}
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div
+        className={cn(
+          "relative flex min-h-0 flex-1 flex-col rounded-xl transition-colors",
+          // Le fond s'allume sur la colonne qui RECEVRA, pas sur celle que le
+          // pointeur effleure : survoler une carte ne fait pas de sa colonne
+          // un `isOver`, et le fond clignotait d'une carte à l'autre.
+          //
+          // ⚠ Le fond ET son arrondi sont ICI, pas sur le défileur : un
+          // `rounded-xl` posé sur un conteneur qui défile ROGNE son contenu
+          // dans les quatre arcs de coin. Le point du repère de dépôt s'y
+          // faisait grignoter dès que le trait tombait en haut de colonne
+          // (PR 66). Même boîte, même arrondi à l'écran, mais le découpage du
+          // défileur redevient carré.
+          (dropPreview || isOver) && "bg-muted/50"
+        )}
+      >
         <div
           ref={setScrollRef}
           onScroll={scrollProps.onScroll}
-          className={cn(
-            "no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors",
-            isOver && "bg-muted/50"
-          )}
+          className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2"
         >
           <SortableContext
             items={issues.map((i) => i.id)}
-            strategy={verticalListSortingStrategy}
+            strategy={NO_SHIFT_STRATEGY}
           >
             {issues.map((issue) => {
               const parent = issue.parent_id
                 ? issueMap.get(issue.parent_id) ?? null
                 : null;
               return (
-                <IssueCard
-                  key={issue.id}
-                  issue={issue}
-                  projectId={projectId}
-                  projectKey={projectKey}
-                  memberMap={memberMap}
-                  categoryMap={categoryMap}
-                  objectiveMap={objectiveMap}
-                  parent={parent}
-                  relations={relationsByIssue.get(issue.id)}
-                  candidateIssues={candidateIssues}
-                  onOpenRelated={onOpenIssueById}
-                  onAddRelation={onAddRelation}
-                  onOpenPlan={onOpenPlan}
-                  onOpenIssue={onOpenIssue}
-                  onUpdateIssue={onUpdateIssue}
-                  onSetCategories={onSetCategories}
-                  onDelete={onDeleteIssue}
-                  selected={selectedIds.has(issue.id)}
-                  dragging={draggingIds?.has(issue.id)}
-                  onSelect={onSelect}
-                  buildMenuActions={buildMenuActions}
-                  inCurrentCycle={!!currentCycleId && issue.cycle_id === currentCycleId}
-                />
+                <Fragment key={issue.id}>
+                  {dropPreview?.beforeIssueId === issue.id && (
+                    <BoardDropIndicator count={dropPreview.count} />
+                  )}
+                  <IssueCard
+                    issue={issue}
+                    projectId={projectId}
+                    projectKey={projectKey}
+                    memberMap={memberMap}
+                    categoryMap={categoryMap}
+                    objectiveMap={objectiveMap}
+                    parent={parent}
+                    relations={relationsByIssue.get(issue.id)}
+                    candidateIssues={candidateIssues}
+                    onOpenRelated={onOpenIssueById}
+                    onAddRelation={onAddRelation}
+                    onOpenPlan={onOpenPlan}
+                    onOpenIssue={onOpenIssue}
+                    onUpdateIssue={onUpdateIssue}
+                    onSetCategories={onSetCategories}
+                    onDelete={onDeleteIssue}
+                    selected={selectedIds.has(issue.id)}
+                    dragging={draggingIds?.has(issue.id)}
+                    onSelect={onSelect}
+                    buildMenuActions={buildMenuActions}
+                    inCurrentCycle={
+                      !!currentCycleId && issue.cycle_id === currentCycleId
+                    }
+                  />
+                </Fragment>
               );
             })}
+            {/* `beforeIssueId === null` : le paquet se pose en fin de colonne. */}
+            {dropPreview && dropPreview.beforeIssueId === null && (
+              <BoardDropIndicator count={dropPreview.count} />
+            )}
           </SortableContext>
 
           <button
