@@ -521,9 +521,9 @@ describe("un run qui ne vit pas dans une microVM", () => {
     expect(JSON.stringify(env)).not.toContain("/vercel/");
   });
 
-  it("donne au shell d'opencode le dépôt DE CE RUN", () => {
-    expect(opencodeServerEnv(local()).OPENCODE_SHELL_CWD).toBe(LOCAL.repoDir);
-  });
+  // MIN-363 : `OPENCODE_SHELL_CWD` a été retiré — la variable n'existe pas dans
+  // le binaire (0 occurrence en 1.18.16). Ce qui donne son dépôt au serveur est
+  // le `directory` du client, pas l'environnement. Rien à assurer ici.
 
   it("fait lire l'ancrage là où le superviseur l'écrit", () => {
     expect(buildOpencodeConfig(local()).instructions).toEqual([opencodeAnchorFile(LOCAL)]);
@@ -533,7 +533,7 @@ describe("un run qui ne vit pas dans une microVM", () => {
     const other = layoutForRoot("/Users/dev/Library/Application Support/minddy/runs/r-8", "/Users/dev/oc");
     const mine = opencodeServerEnv(local());
     const theirs = opencodeServerEnv(job({ layout: other }));
-    for (const key of ["OPENCODE_DB", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "OPENCODE_SHELL_CWD"] as const) {
+    for (const key of ["OPENCODE_DB", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME"] as const) {
       expect(mine[key]).not.toBe(theirs[key]);
     }
   });

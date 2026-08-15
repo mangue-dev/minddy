@@ -285,9 +285,38 @@ un token éphémère, fait travailler le modèle, pousse une branche et ouvre un
 request, et rend son rapport au plan de contrôle.
 
 **Ce qui doit changer pour que ce même tour se joue sur un Mac : le lanceur, et
-trois verrous.** Le reste — la boucle, les tools, le ledger, le fil, la PR — ne
-bouge pas d'une ligne, et c'est ce qui rend le chantier raisonnable : *le produit
-est identique, seule la machine change*.
+trois verrous.** Le reste — la boucle, les tools, le ledger, le fil — ne bouge
+presque pas, et c'est ce qui rend le chantier raisonnable.
+
+> ### ⚠ Le critère de bascule a changé (MIN-363)
+>
+> Ce paragraphe disait *« le produit est identique, seule la machine change »*,
+> §4.3 le répétait en toutes lettres (« C'est le critère de bascule »), et MIN-293
+> le portait comme critère d'acceptation. **Il est mort.** L'audit du 2026-08-14
+> l'a mesuré, et le code écrit depuis l'a confirmé. Le laisser là serait un piège
+> pour le prochain qui ouvre ce dossier : il découperait des lots sur une promesse
+> que le dépôt contredit déjà.
+>
+> **Le critère qui le remplace :** *le run local rend le même TRAVAIL — même fil,
+> mêmes events, même ledger, même pull request — et les écarts qu'il porte sont
+> ceux de la liste ci-dessous, nommés, assumés, et dits dans l'interface là où
+> l'utilisateur les rencontre.* Un écart qui n'est pas dans cette liste est un
+> défaut ; un écart qui y est mais que l'interface tait est un défaut aussi.
+>
+> | L'écart | Pourquoi il est irréductible |
+> | --- | --- |
+> | **Le diff en direct tombe** | [`/api/agent-runs/[runId]/diff`](<../app/api/agent-runs/[runId]/diff/route.ts>) lit la **microVM** par RPC pendant que le tour tourne — c'est le seul endroit qui sache ce que l'agent vient d'écrire. Le backend n'a **aucun accès** au disque de l'utilisateur : sur un run local, il ne reste que la forge, donc le travail **poussé**. Pendant le tour, la vue diff montre l'état d'avant ; au premier tour, elle ne montre rien (la branche n'existe pas encore). Ce n'est pas une régression à réparer, c'est une conséquence de la topologie. |
+> | **Le type-check peut se taire** | `detectTypeChecker` ([diagnostics.ts](../lib/server/agent/diagnostics.ts)) exige un `./node_modules/.bin/tsc` **exécutable** et rend `null` sinon — sans lever, par conception. Sur un dépôt de l'utilisateur dont les dépendances ne sont pas installées, la porte de livraison ne dit rien plutôt que de dire « ça compile ». Un silence qui ressemble à un feu vert. |
+> | **La fin de tour change de forme** | En mode dépôt courant (D2 de l'audit, [current-repo.ts](../lib/server/agent/current-repo.ts)), on ne touche ni à l'index, ni au HEAD, ni à l'arbre de l'utilisateur : le commit se fabrique dans un index jetable, s'accroche à `refs/minddy/run/<id>/work` et part par sha. **Aucune branche locale n'est créée**, `git add -A` n'existe plus, et un fichier que l'humain édite en même temps que l'agent se dit au fil au lieu de se trancher. Même PR à l'arrivée, chemin différent. |
+> | **Le confinement n'existe plus** | §4.4 ci-dessous, et l'audit §2 le chiffre : sur trente commandes visant un dossier hors dépôt, **vingt ne publient qu'une permission `bash`**, que `command-guard` — qui ne vise que git — laisse passer. Les approbations d'opencode sont un **anti-accident**, pas une frontière. Une carte « l'agent veut sortir du dossier » branchée sur `external_directory` seul enseignerait une garantie fausse. |
+>
+> Deux paragraphes de ce §4 ont été écrits **avant** ces décisions et ne décrivent
+> plus le produit : **§4.3** (le worktree dédié — renversé par D2 : le défaut est
+> le dépôt courant, le worktree devient une option) et **§4.5** (le repli cloud en
+> cours de conversation — annulé par D1 : l'environnement se choisit avant le
+> premier tour et ne change plus). Ils sont conservés pour le raisonnement qu'ils
+> portent ; la décision qui fait foi est celle de
+> [l'audit §12](audits/agent-local-2026-08-14.md).
 
 ### 4.1 Verrou 1 — prouver quel run on est
 
@@ -366,9 +395,12 @@ Deux conséquences que le worktree ne résout pas, et qu'il faut traiter :
    recopier des secrets dans un répertoire où un modèle exécute du shell est une
    décision, pas un défaut.
 
-Le reste ne change pas : le tour se termine par un push et une pull request, avec
-un token de forge frais demandé au plan de contrôle (`/repo-auth`). **Le produit
-est le même** — même fil, mêmes events, même PR. C'est le critère de bascule.
+Le tour se termine par un push et une pull request, avec un token de forge frais
+demandé au plan de contrôle (`/repo-auth`) : **c'est le travail rendu qui est le
+même** — même fil, mêmes events, même PR. Le CHEMIN, lui, n'est pas le même, et
+c'est le critère réécrit en tête de §4 qui le dit : pas de diff en direct pendant
+le tour, un type-check qui peut se taire, et une fin de tour qui, en mode dépôt
+courant, ne passe plus par l'index ni par une branche locale.
 
 ### 4.4 Ce qu'on perd : le confinement
 

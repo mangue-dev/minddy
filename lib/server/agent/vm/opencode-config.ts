@@ -54,10 +54,21 @@ import { isLocalJob, type VmJob } from "./protocol";
  *    raison d'être après le `generation_id`.
  *
  * 4. **`tools: { x: false }` n'ENLÈVE pas le tool intégré `x`** : il le sert quand
- *    même et pose une permission `deny` (mesuré sur `todowrite`, toujours servi).
- *    Ce qui retire vraiment un intégré, c'est le jeu de tools de l'AGENT
- *    (`agent.<id>.tools`) — d'où les deux, posés ensemble : la carte globale pour
- *    la permission, le jeu de l'agent pour l'absence.
+ *    même et pose une permission `deny`. Ce qui retire vraiment un intégré, c'est
+ *    le jeu de tools de l'AGENT (`agent.<id>.tools`) — d'où les deux, posés
+ *    ensemble : la carte globale pour la permission, le jeu de l'agent pour
+ *    l'absence.
+ *
+ *    ⚠ **La conclusion « toujours servi » était fausse** (MIN-362, MIN-363), et
+ *    la correction tient à ce qu'il y a DEUX catalogues, qui ne disent pas la
+ *    même chose. Un `deny` NU retire bel et bien le tool de ce qui est **offert
+ *    au modèle** — mesuré dans le corps de la requête au fournisseur : `websearch`
+ *    et `todowrite` n'y sont pas « refusés », ils n'y sont pas. Ce qui continue de
+ *    les lister, c'est `GET /experimental/tool`, le catalogue REST — celui que
+ *    lisent nos sondes, pas celui que lit le modèle. La mesure était juste ;
+ *    l'endroit où la lire ne l'était pas
+ *    ([opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts),
+ *    docs/harness-opencode.md §2.32).
  *
  * 5. **`agent.<id>.prompt` REMPLACE le prompt système intégré**, et les
  *    `instructions` sont des CHEMINS DE FICHIER dont le contenu est ajouté au
@@ -366,7 +377,17 @@ function permissions(job: VmJob): Record<string, PermissionRule> {
     read: local ? "ask" : "allow",
     glob: "allow",
     grep: "allow",
-    list: "allow",
+    /**
+     * ⚠ IL N'Y A PAS DE `list` ICI, ET C'EST DÉLIBÉRÉ (MIN-363).
+     *
+     * La ligne `list: "allow"` a vécu là ; elle ne réglait rien. **Il n'existe
+     * pas de tool `list` en 1.18.16.** Relevé sur `GET /experimental/tool` d'un
+     * serveur nu (agent `build`, modèle non-`gpt-*`, donc sans `apply_patch`) :
+     * `invalid question bash read glob grep edit write task webfetch todowrite
+     * skill`, et rien d'autre. C'est `read` sur un répertoire qui liste
+     * (docs/harness-opencode.md §3.1). Une ACL posée sur une action qui n'existe
+     * pas ne se voit jamais échouer : elle se relit comme une garantie.
+     */
     // Chaque commande passe par nous : c'est là que `command-guard` s'exécute.
     bash: "ask",
     edit: write,
@@ -750,8 +771,22 @@ export function opencodeServerEnv(
     OPENCODE_DISABLE_MODELS_FETCH: "1",
     OPENCODE_DISABLE_LSP_DOWNLOAD: "1",
     OPENCODE_DISABLE_EMBEDDED_WEB_UI: "1",
-    // Le shell d'opencode est PERSISTANT et démarre où on le lui dit : le dépôt.
-    OPENCODE_SHELL_CWD: job.layout.repoDir,
+    /**
+     * ⚠ IL N'Y A PAS D'`OPENCODE_SHELL_CWD` ICI, ET C'EST UNE CORRECTION (MIN-363).
+     *
+     * Cette clé a vécu là, avec un commentaire qui disait « le shell d'opencode
+     * est PERSISTANT et démarre où on le lui dit : le dépôt ». La variable
+     * n'existe pas : **zéro occurrence** dans `opencode-darwin-arm64` en 1.18.16
+     * (relevé au `strings`, à comparer aux 6 d'`OPENCODE_PURE` et aux 7 de
+     * `OPENCODE_DISABLE_PROJECT_CONFIG` juste au-dessus, qui, eux, sont lus).
+     *
+     * Ce qui donne au serveur son dépôt, c'est le `directory` du client
+     * ([opencode-host.ts](opencode-host.ts)) — il voyage en query sur chaque
+     * route. Le `cwd` du shell, lui, n'est tenu par rien de notre côté : il n'y a
+     * donc **aucun raisonnement à fonder sur un shell persistant qui resterait
+     * dans le dépôt entre deux rounds**. Le seul endroit où une intention de
+     * chemin se déclare de façon fiable est le paramètre `workdir` du tool `bash`.
+     */
   };
 }
 

@@ -1,8 +1,9 @@
-import { Menu, app, shell, type BrowserWindow } from "electron";
+import { Menu, app, clipboard, shell, type BrowserWindow } from "electron";
 
 import type { DesktopChannel } from "@/lib/desktop/channel";
 import { DESKTOP_STABLE_ORIGIN } from "@/lib/desktop/config";
 import { hideWindow } from "./hide-window";
+import { diagnosticReport } from "./run-log";
 import { checkForUpdatesFromMenu } from "./updater";
 
 /**
@@ -122,6 +123,26 @@ export function buildAppMenu(
     {
       role: "help",
       submenu: [
+        {
+          /**
+           * LE RAPPORT DE DIAGNOSTIC (MIN-363), et il va au PRESSE-PAPIER.
+           *
+           * C'est le geste qui rend soluble le premier ticket de support de
+           * l'agent local : quand un tour rate avant que le harness ait parlé,
+           * rien n'a été publié côté serveur — le journal du process est la
+           * seule chose qui parle ([run-log.ts](run-log.ts)).
+           *
+           * **Jamais d'envoi automatique.** Le rapport porte un chemin de dépôt,
+           * donc un nom d'utilisateur et l'arborescence d'une machine : c'est
+           * exactement ce qu'on n'expédie pas sans que quelqu'un l'ait relu.
+           * Ici, dans Help, plutôt que dans les réglages : c'est là qu'on le
+           * cherche quand l'app va mal, et le menu reste atteignable même si la
+           * page ne charge pas — la raison même pour laquelle le canal y est.
+           */
+          label: "Copy Diagnostic Report",
+          click: () => clipboard.writeText(diagnosticReport()),
+        },
+        { type: "separator" },
         {
           // Le SITE, pas l'origine active : ce lien mène à la vitrine, qui n'a
           // pas de canal — et une preview de la landing n'intéresse personne.
