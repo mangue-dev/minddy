@@ -17,6 +17,7 @@ import {
   Cloud,
   CloudOff,
   GitCommit,
+  Laptop,
 } from "lucide-react";
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
@@ -835,6 +836,7 @@ export function AgentEventFeed({
   pendingUserMessages = [],
   onOpenFile,
   hiddenQuestionEventId,
+  localExec = false,
 }: {
   /**
    * Session à suivre, ou `null` quand elle n'existe pas ENCORE : le POST de
@@ -862,6 +864,17 @@ export function AgentEventFeed({
    * conversation à la place du composer → son item du fil est masqué ici.
    */
   hiddenQuestionEventId?: string | null;
+  /**
+   * Ce run tourne sur la MACHINE de l'utilisateur (MIN-359).
+   *
+   * Le fil le dit en tête, une fois, avant le premier message : **un run local
+   * n'est pas un run cloud avec un autre disque.** Il ouvre un vrai dossier, il
+   * n'a pas de diff en direct (la route lit la microVM par RPC), et ce que
+   * l'agent y lit remonte dans ce fil-là. Une bascule d'environnement qui ne se
+   * lirait qu'en survolant un chip du composer serait une bascule que personne
+   * ne voit.
+   */
+  localExec?: boolean;
   /**
    * Messages que l'utilisateur vient d'envoyer, pas encore revenus du serveur.
    * Un message de steering ne devient un event `user_message` que lorsque la BOUCLE
@@ -1080,6 +1093,14 @@ export function AgentEventFeed({
           Largeur bornée + centrée, avec le MÊME retrait horizontal (px-3) que le
           composer `ChatInput` → messages et input strictement à la même largeur. */}
       <div className="mx-auto flex w-full max-w-[800px] flex-col gap-3 px-3">
+        {/* La marque du run local, en tête et une seule fois — avant même la
+            bulle de lancement, parce qu'elle qualifie tout ce qui suit. */}
+        {localExec ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Laptop className="size-3 shrink-0" />
+            {t("localRunNote")}
+          </div>
+        ) : null}
         {blocks.map((block) =>
           block.type === "turn" ? (
             <TurnGroup

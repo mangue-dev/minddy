@@ -48,7 +48,15 @@ describe("le bundle de la projection markdown des pages", () => {
     ).toMatch(/typeof window === ["']undefined["']/);
   });
 
-  it("se charge et projette dans la condition de Vercel", () => {
+  // 20 s, et ce n'est pas une assertion de performance — c'est ce que ce cas
+  // COÛTE : un process Node de plus, un `require` d'un bundle de 1,1 Mo et un
+  // DOM jsdom monté de zéro. Le défaut de 5 s tenait tant que la suite ne
+  // chargeait pas la machine ailleurs ; le premier test qui lance des
+  // sous-process en parallèle (`lib/desktop/git-config.git.test.ts`, MIN-359) le
+  // faisait dépasser une fois sur deux, et le message parlait d'un délai, pas de
+  // ce qui l'avait consommé. Un cas dont l'échec dépend de ses VOISINS
+  // n'apprend rien sur ce qu'il teste.
+  it("se charge et projette dans la condition de Vercel", { timeout: 20_000 }, () => {
     // Le graphe entier passé au `require` d'un Node sans interop ESM — le piège
     // déjà pris avec jsdom, et celui qui écarte `serverExternalPackages` :
     // `tiptap-markdown` et `@tiptap/extension-unique-id` publient un point

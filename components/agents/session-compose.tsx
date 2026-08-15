@@ -20,6 +20,12 @@ import { AgentEventFeed } from "@/components/agent/agent-event-feed";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
+import {
+  EnvironmentCombobox,
+  LOCAL_REPO_ERROR_KEYS,
+  type AgentEnvironment,
+} from "@/components/agent/environment-combobox";
+import { useLocalRepo } from "@/lib/use-local-repo";
 import { launchNotebookAgentApi, type AgentRunSummary } from "@/lib/agent-api";
 import { agentRunQueryKey, allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
 import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
@@ -238,6 +244,17 @@ export function SessionCompose({
   const selectedProject = launchable.find((p) => p.id === projectId) ?? null;
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId || null);
 
+  // OÙ LA CONVERSATION TOURNE (MIN-359) — même règle que dans une conversation
+  // de ticket : le chip n'existe que si un dossier est attaché à CE projet sur
+  // cette machine. Le projet changeant ici (le composer en propose plusieurs),
+  // le hook suit `projectId` et l'environnement retombe au cloud dès que le
+  // dossier du projet choisi n'est pas prêt.
+  const localRepo = useLocalRepo(projectId || null);
+  const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
+  useEffect(() => {
+    if (!localRepo.ready) setEnvironment("cloud");
+  }, [localRepo.ready]);
+
   const launch = async (
     message: string,
     _attachments: unknown[] = [],
@@ -265,6 +282,9 @@ export function SessionCompose({
         reasoningLevel,
         baseBranch: baseBranch || undefined,
         mentions,
+        // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
+        // le dossier a pu disparaître (ou le projet changer).
+        localExec: environment === "local" && localRepo.ready,
       });
       /**
        * Amorce le cache de la session AVANT de rendre la main.
@@ -438,6 +458,25 @@ export function SessionCompose({
                     emptyLabel={t("branchSearchEmpty")}
                     loadingLabel={t("branchSearchLoading")}
                     disabled={launching}
+                  />
+                ) : null}
+                {localRepo.state ? (
+                  <EnvironmentCombobox
+                    value={environment}
+                    onChange={setEnvironment}
+                    folder={
+                      localRepo.state.status === "ready" ? localRepo.state.folder : null
+                    }
+                    needsAttach={localRepo.state.status !== "ready"}
+                    onAttach={() => {
+                      void localRepo.attach().then((next) => {
+                        if (next?.status === "ready") setEnvironment("local");
+                        else if (next && next.status === "invalid") {
+                          toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
+                        }
+                      });
+                    }}
+                    disabled={launching || localRepo.busy}
                   />
                 ) : null}
               </>

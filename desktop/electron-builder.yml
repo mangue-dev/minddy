@@ -93,11 +93,53 @@ mac:
   # La version française est dans `build/fr.lproj/InfoPlist.strings`, posée par
   # `extraResources` juste en dessous. Celle-ci reste la base, servie à tous les
   # autres.
+  #
+  # LES DOSSIERS PROTÉGÉS PAR TCC (MIN-359, décision D4).
+  #
+  # `~/Documents`, `~/Desktop` et `~/Downloads` sont des emplacements COURANTS
+  # pour un dépôt, et un volume externe l'est pour qui manque de place. Sans ces
+  # phrases, macOS refuse la lecture **et la fenêtre de demande ne s'ouvre même
+  # pas** : le refus est muet, exactement comme celui du micro avant MIN-294.
+  # C'est une panne qui n'arrive qu'après empaquetage, chez l'utilisateur, sans
+  # log — le pire endroit pour la découvrir.
+  #
+  # ⚠ **Ces clés changent l'empreinte de republication** (scripts/desktop-fingerprint.mjs,
+  # `PACKAGING_INPUTS`), donc republication + renotarisation. L'objection ne tient
+  # pas pour ce lot : MIN-359 touche déjà `desktop/src/main.ts` et `preload.ts`,
+  # donc l'empreinte bouge de toute façon. Les ajouter ici est gratuit ; les
+  # ajouter plus tard coûterait une seconde publication.
+  #
+  # **Ce qui reste à mesurer, et qui ne change pas la décision :** une sélection
+  # par `dialog.showOpenDialog` vaut consentement explicite et POURRAIT suffire à
+  # ouvrir le chemin sans invite. Non vérifié — la sonde de MIN-359 n'a pas abouti
+  # (cf. le commentaire du ticket). Même si elle suffit, ces phrases restent le
+  # filet du cas où elle ne suffit PAS, et le cas où elle ne suffit pas est muet.
+  # La question qui compte davantage — le droit descend-il jusqu'aux shells du
+  # modèle, petits-enfants du bundle ? — appartient au lanceur (MIN-293).
+  #
+  # `NSNetworkVolumesUsageDescription` est là bien qu'aucun document ne la
+  # demande : un dépôt sur un partage réseau est rare, mais il échouerait dans le
+  # même silence, et la ligne coûte une phrase.
   extendInfo:
     NSMicrophoneUsageDescription: >-
       minddy uses your microphone to turn what you say into text — dictating an
       issue, a note or a message to Numo. Nothing is recorded unless you start a
       dictation yourself.
+    NSDocumentsFolderUsageDescription: >-
+      minddy needs this to open the project folder you attached, when you ask an
+      agent to work on this Mac rather than in the cloud.
+    NSDesktopFolderUsageDescription: >-
+      minddy needs this to open the project folder you attached, when you ask an
+      agent to work on this Mac rather than in the cloud.
+    NSDownloadsFolderUsageDescription: >-
+      minddy needs this to open the project folder you attached, when you ask an
+      agent to work on this Mac rather than in the cloud.
+    NSRemovableVolumesUsageDescription: >-
+      minddy needs this to open a project folder you attached on an external
+      disk, when you ask an agent to work on this Mac rather than in the cloud.
+    NSNetworkVolumesUsageDescription: >-
+      minddy needs this to open a project folder you attached on a network
+      share, when you ask an agent to work on this Mac rather than in the cloud.
   # Les `.lproj` d'Electron sont des dossiers VIDES : ils ne servent qu'à
   # déclarer les langues du bundle. Y déposer un `InfoPlist.strings`, c'est
   # traduire la phrase ci-dessus pour qui a réglé son Mac en français — la seule

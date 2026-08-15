@@ -34,7 +34,11 @@ import { describe, expect, it } from "vitest";
 const VERCEL_NODE_FLAG = "--no-experimental-require-module";
 
 describe("le DOM serveur de la projection des pages", () => {
-  it("se charge avec l'interop require(ESM) coupée, comme sur Vercel", () => {
+  // 20 s pour la même raison que son voisin `pages-md-bundle.test.ts` : le coût
+  // de ce cas est un process Node de plus qui charge jsdom, et rien d'autre.
+  // Sous le défaut de 5 s, il échouait quand la suite chargeait la machine
+  // ailleurs — un échec qui parle d'un délai et jamais de ce qui l'a consommé.
+  it("se charge avec l'interop require(ESM) coupée, comme sur Vercel", { timeout: 20_000 }, () => {
     const load = () =>
       execFileSync(
         process.execPath,

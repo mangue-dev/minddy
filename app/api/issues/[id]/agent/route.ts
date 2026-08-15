@@ -35,7 +35,7 @@ export const maxDuration = 300;
 // ce sont les trois colonnes dont dépend la règle de visibilité (MIN-332), et
 // cette lecture se fait en clé service — sans elles, on ne pourrait pas trier.
 const RUN_COLUMNS =
-  "id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input";
+  "id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -121,6 +121,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     reasoningLevel?: string;
     intent?: AgentLaunchIntent;
     mentions?: unknown;
+    /** La conversation démarre sur la MACHINE de l'utilisateur (MIN-359). Une
+     *  demande, que `localExecRequested` valide côté serveur. */
+    localExec?: unknown;
   };
   let body: LaunchBody = {};
   try {
@@ -163,6 +166,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         ? body.intent
         : "implement",
     promptMentions: parseAgentMentions(body.mentions),
+    localExec: body.localExec === true,
   });
   if (!result.ok) return launchErrorResponse(result);
   return NextResponse.json({ run: result.run });

@@ -52,6 +52,12 @@ import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
 import { BranchCombobox } from "./branch-combobox";
 import { ReasoningCombobox } from "./reasoning-combobox";
+import {
+  EnvironmentCombobox,
+  LOCAL_REPO_ERROR_KEYS,
+  type AgentEnvironment,
+} from "./environment-combobox";
+import { useLocalRepo } from "@/lib/use-local-repo";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentDiffSheet } from "./agent-diff-sheet";
 import { SubagentActivityBar } from "./subagent-activity-bar";
@@ -488,6 +494,18 @@ export function AgentConversation({
   // Seul un BYOK générique sans défaut résoluble impose de choisir un modèle.
   const modelRequired = provider === "generic" && !defaultModel && !model;
 
+  // OÙ LA CONVERSATION TOURNE (MIN-359), figé au lancement comme ses trois
+  // voisins. Le chip n'existe que dans l'app de bureau ET quand un dossier est
+  // attaché à ce projet sur CETTE machine : ailleurs, il n'y a pas de choix à
+  // offrir, et un chip grisé promettrait une bascule qui n'existe pas.
+  const localRepo = useLocalRepo(projectId);
+  const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
+  // Le dossier a disparu sous l'attachement (déplacé, disque démonté, dépôt
+  // re-lié) : on retombe sur le cloud plutôt que de lancer vers un chemin mort.
+  useEffect(() => {
+    if (!localRepo.ready) setEnvironment("cloud");
+  }, [localRepo.ready]);
+
   const launch = async (message: string, _attachments: unknown[] = [], mentions: AssistantMention[] = []) => {
     // La phase compose n'existe que pour un ancrage ISSUE (celui des sessions
     // sans ticket vit dans SessionCompose, avant toute run) : sans issue, rien
@@ -515,6 +533,9 @@ export function AgentConversation({
         reasoningLevel,
         intent: composeIntent,
         mentions,
+        // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
+        // le dossier a pu disparaître.
+        localExec: environment === "local" && localRepo.ready,
       });
       // La session neuve devient la session ouverte → bascule live immédiate. Son
       // `prompt` porte le même texte : le fil affiche la MÊME bulle, sans coupure.
@@ -720,6 +741,7 @@ export function AgentConversation({
             pendingUserMessages={pendingMessages}
             onOpenFile={openDiff}
             hiddenQuestionEventId={activeQuestion?.eventId}
+            localExec={liveRun.local_exec === true}
             className="h-full py-4"
           />
         ) : launchText ? (
@@ -874,6 +896,18 @@ export function AgentConversation({
                         : undefined
                     }
                   />
+                  {/* L'environnement, figé pour la conversation (MIN-359) — et
+                      le seul des quatre chips qui ne se montre que s'il vaut
+                      autre chose que le défaut : sur les milliers de runs cloud,
+                      un chip « dans le cloud » n'apprend rien à personne. */}
+                  {liveRun.local_exec ? (
+                    <EnvironmentCombobox
+                      value="local"
+                      onChange={() => {}}
+                      disabled
+                      disabledTooltip={t("environmentLocked")}
+                    />
+                  ) : null}
                 </>
               }
               />
@@ -927,6 +961,29 @@ export function AgentConversation({
                     disabledTooltip={inheritedWork ? t("branchInherited") : undefined}
                     lockedBranch={inheritedWork?.base_branch}
                   />
+                  {/* Où le tour part (MIN-359). Rendu SEULEMENT quand un dossier
+                      est attaché à ce projet sur cette machine : dans un
+                      navigateur, ou pour un membre qui n'a rien attaché, le
+                      choix n'existe pas et il ne doit rien y avoir à lire. */}
+                  {localRepo.state ? (
+                    <EnvironmentCombobox
+                      value={environment}
+                      onChange={setEnvironment}
+                      folder={
+                        localRepo.state.status === "ready" ? localRepo.state.folder : null
+                      }
+                      needsAttach={localRepo.state.status !== "ready"}
+                      onAttach={() => {
+                        void localRepo.attach().then((next) => {
+                          if (next?.status === "ready") setEnvironment("local");
+                          else if (next && next.status === "invalid") {
+                            toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
+                          }
+                        });
+                      }}
+                      disabled={launching || localRepo.busy}
+                    />
+                  ) : null}
                 </>
               }
             />

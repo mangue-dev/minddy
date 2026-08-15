@@ -40,6 +40,12 @@ const repo = path.resolve(dir, "..");
 const PACKAGING_INPUTS = [
   "desktop/electron-builder.yml",
   "desktop/build/entitlements.mac.plist",
+  // Les traductions de l'`Info.plist`, posées par `extraResources` (MIN-359).
+  // Elles n'entrent pas par esbuild et ne sont nommées dans aucun fichier
+  // TypeScript : sans cette ligne, corriger la phrase française d'une demande
+  // d'autorisation produisait une app DIFFÉRENTE que l'empreinte déclarait « à
+  // jour ». C'est exactement le mensonge que ce script existe pour empêcher.
+  "desktop/build/fr.lproj",
   // La source Icon Composer est un DOSSIER (`icon.json` + le SVG) : elle est
   // dépliée fichier par fichier, cf. `expandDirectories`.
   "desktop/build/icon.icon",

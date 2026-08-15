@@ -101,6 +101,16 @@ export interface AgentRunSummary {
   /** Le dernier tour s'est terminé sur un ask_user : la run ATTEND la réponse de
    *  l'utilisateur → point JAUNE (mêmes règles de lecture que le non-lu). */
   awaiting_input: boolean;
+  /**
+   * La conversation tourne sur la MACHINE de l'utilisateur (MIN-359), et non
+   * dans une microVM. FIGÉ au lancement, comme le modèle, le raisonnement et la
+   * branche : le chip du composer est verrouillé dessus et le fil le dit.
+   *
+   * Optionnel parce que les runs d'avant MIN-355 n'en portent pas et parce que
+   * les listes légères (page Agents) ne le sélectionnent pas — absent vaut
+   * « dans le cloud », ce qu'ont été tous les runs jusqu'ici.
+   */
+  local_exec?: boolean;
 }
 
 /**
@@ -241,6 +251,9 @@ export async function launchAgentRunApi(
      *  `implement` la passe « en cours » côté serveur. */
     intent?: "implement" | "plan" | "verify" | "custom";
     mentions?: AssistantMention[];
+    /** La conversation démarre sur la MACHINE (MIN-359) : choisi au premier
+     *  message, figé ensuite. Le serveur revalide (`localExecRequested`). */
+    localExec?: boolean;
   },
 ): Promise<{ run: AgentRunSummary }> {
   // Le prompt n'est JAMAIS envoyé — seulement sa présence et sa longueur.
@@ -252,6 +265,9 @@ export async function launchAgentRunApi(
     scope: "issue",
     has_prompt: !!body.prompt,
     prompt_length_bucket: lengthBucket(body.prompt),
+    // Où le tour part (MIN-359). Le chemin, lui, ne sort JAMAIS du poste : c'est
+    // un booléen, comme le reste de ce qu'on mesure ici.
+    local_exec: !!body.localExec,
   });
   return parseJson(
     await fetch(`/api/issues/${issueId}/agent`, {
@@ -291,6 +307,9 @@ export async function launchNotebookAgentApi(body: {
   /** Niveau de raisonnement choisi au lancement (MIN-122). Absent = défaut perso. */
   reasoningLevel?: ReasoningLevel;
   baseBranch?: string;
+  /** La conversation démarre sur la MACHINE (MIN-359) : choisi au premier
+   *  message, figé ensuite. Le serveur revalide (`localExecRequested`). */
+  localExec?: boolean;
 }): Promise<{ run: AgentRunSummary }> {
   trackEvent("agent_launched", {
     model: body.model ?? "default",
@@ -300,6 +319,7 @@ export async function launchNotebookAgentApi(body: {
     scope: "notebook",
     has_prompt: !!body.prompt,
     prompt_length_bucket: lengthBucket(body.prompt),
+    local_exec: !!body.localExec,
   });
   return parseJson(
     await fetch(`/api/agent-runs`, {
