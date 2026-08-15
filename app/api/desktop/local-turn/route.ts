@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { admitLocalRun, issueLocalExecToken } from "@/lib/server/agent/local-exec";
@@ -7,6 +8,65 @@ import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { claimRun, getRun } from "@/lib/server/agent/runs";
 import { executeAgentRun } from "@/lib/server/agent/execute";
 import type { VmJob } from "@/lib/server/agent/vm/protocol";
+
+type LocalProjectCatalogRow = {
+  id: string;
+  name: string;
+  key: string;
+  repoFullName: string | null;
+};
+
+/**
+ * Le serveur connaît les projets accessibles, la machine connaît les chemins.
+ * Cette moitié sans chemin est jointe dans le lanceur avant que le job local ne
+ * soit écrit ; l'agent peut alors retrouver un projet cité par son nom et n'a
+ * plus à demander où il est sur le poste.
+ */
+async function localProjectCatalog(
+  supabase: SupabaseClient,
+): Promise<LocalProjectCatalogRow[]> {
+  try {
+    const [{ data: projects, error: projectsError }, { data: links, error: linksError }] =
+      await Promise.all([
+        supabase
+          .from("projects")
+          .select("id, name, key")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: true }),
+        supabase.from("project_git_links").select("project_id, repo_full_name"),
+      ]);
+    if (projectsError || linksError) {
+      console.error(
+        "[desktop-local-turn] project catalogue failed:",
+        projectsError?.message ?? linksError?.message,
+      );
+      return [];
+    }
+    const repoByProject = new Map(
+      (links ?? []).flatMap((link) =>
+        typeof link.project_id === "string" && typeof link.repo_full_name === "string"
+          ? [[link.project_id, link.repo_full_name] as const]
+          : [],
+      ),
+    );
+    return (projects ?? []).flatMap((project) =>
+      typeof project.id === "string" && typeof project.name === "string" && typeof project.key === "string"
+        ? [{
+            id: project.id,
+            name: project.name,
+            key: project.key,
+            repoFullName: repoByProject.get(project.id) ?? null,
+          }]
+        : [],
+    );
+  } catch (error) {
+    console.error(
+      "[desktop-local-turn] project catalogue failed:",
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  }
+}
 
 /**
  * `POST /api/desktop/local-turn` — **LE DÉCLENCHEUR DE TOUR LOCAL (MIN-293).**
@@ -60,6 +120,10 @@ export async function POST(request: NextRequest) {
   };
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
+  // La RLS applique exactement le même périmètre que la liste de projets de
+  // l'interface. Ce travail recouvre la préparation du tour et ne contient pas
+  // de chemin local.
+  const projectsPromise = localProjectCatalog(auth.supabase);
 
   const body = (await request.json().catch(() => null)) as { runId?: unknown } | null;
   const runId = typeof body?.runId === "string" ? body.runId.trim() : "";
@@ -145,6 +209,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `lease refused: ${lease.error}` }, { status: 503 });
   }
   mark("leased");
+  const projects = await projectsPromise;
 
   /**
    * Le `owner/repo` du projet part avec l'affectation : c'est contre lui que la
@@ -160,6 +225,7 @@ export async function POST(request: NextRequest) {
       projectId: run.project_id,
       repoFullName: prepared.repoFullName,
       localWorktree: run.local_worktree === true,
+      projects,
       diagnostics: { ...timings, total: Date.now() - startedAt },
       // Le bail voyage DANS le job (`controlToken`), et pas à côté : un job local
       // est, par définition, un job qui porte un jeton (`isLocalJob`). Une seconde

@@ -2316,6 +2316,37 @@ describe("un tour sur la machine de quelqu'un", () => {
     expect(h.journal).toEqual([]);
   });
 
+  it("liste les projets et leurs dossiers locaux sans appeler le plan de contrôle", async () => {
+    await runLocal({
+      localProjects: [
+        {
+          id: "proj-voisin",
+          name: "Voisin",
+          key: "VOI",
+          repoFullName: "mangue-dev/voisin",
+          localPath: "/Users/testeur/Projets/voisin",
+        },
+      ],
+    });
+    const out = (await h.supervisorTools.list_projects({})) as {
+      success: boolean;
+      result: { projects: Array<Record<string, unknown>> };
+    };
+    expect(out).toEqual({
+      success: true,
+      result: {
+        projects: [
+          expect.objectContaining({
+            id: "proj-voisin",
+            name: "Voisin",
+            local_path: "/Users/testeur/Projets/voisin",
+          }),
+        ],
+      },
+    });
+    expect(h.toolCalls.some((call) => call.name === "list_projects")).toBe(false);
+  });
+
   it("…là où un tour de microVM l'exporte, comme avant", async () => {
     // Le contre-exemple compte autant : la décision porte sur le chemin LOCAL,
     // et un journal cloud qui disparaîtrait coûterait la mémoire de la session.

@@ -45,7 +45,7 @@ import { killTargets, readHarnessChildren } from "@/lib/server/agent/vm/child-re
 import { OPENCODE_VERSION } from "@/lib/server/agent/vm/opencode-version";
 import { vmBundlePath, vmJobPath } from "@/lib/server/agent/harness-layout";
 import { installOpencode, readOpencodeFacts } from "./opencode-install";
-import { describeLocalRepo } from "./local-repo";
+import { describeLocalRepo, localProjectsFor } from "./local-repo";
 import { prepareLocalWorktree } from "@/lib/desktop/local-worktree";
 import { noteLauncherFailure, openRunLog, type RunLog } from "./run-log";
 import { trace } from "./trace";
@@ -386,7 +386,12 @@ export async function runAssignment(
     repoPath: worktree?.ok ? worktree.path : repo.path,
     isolated,
   });
-  const job = assignmentToJob(assignment, { layout, appOrigin: origin, isolated });
+  const job = assignmentToJob(assignment, {
+    layout,
+    appOrigin: origin,
+    isolated,
+    localProjects: localProjectsFor(assignment.projects),
+  });
 
   const log = openRunLog(
     {

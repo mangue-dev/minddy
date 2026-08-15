@@ -1016,6 +1016,24 @@ export async function runOpencodeTurn(
         }
         return { result: { ok: true }, success: true };
       },
+      // Les chemins ont été joints par l'app de bureau au job local. Ils ne
+      // passent jamais par le plan de contrôle ; le tool reste donc entièrement
+      // local et n'existe même pas sur un run cloud.
+      ...(isLocalJob(job)
+        ? {
+            list_projects: async () => ({
+              result: {
+                projects: (job.localProjects ?? []).map((project) => ({
+                  id: project.id,
+                  name: project.name,
+                  key: project.key,
+                  local_path: project.localPath,
+                })),
+              },
+              success: true,
+            })
+          }
+        : {}),
     },
     ...(deps.toolBridgePort != null ? { port: deps.toolBridgePort } : {}),
   });

@@ -293,16 +293,23 @@ describe("où les fichiers sont posés", () => {
    * retrait coûtait était le premier écart de parité du dossier — un agent local
    * ne pouvait ni lancer un serveur, ni aller voir sa page rendre.
    */
-  it("`run_background` est servi sur un tour LOCAL comme ailleurs", () => {
+  it("un tour local reçoit le catalogue de projets avec ses chemins", () => {
     const local = job({ controlToken: "bail-hs256" });
-    expect(localToolsFor(local).map((t) => t.function.name)).toEqual(
-      localToolsFor(job()).map((t) => t.function.name),
-    );
+    expect(localToolsFor(local).map((t) => t.function.name)).toEqual([
+      "run_background",
+      "update_plan",
+      "list_projects",
+    ]);
     expect(localToolsFor(local).map((t) => t.function.name)).toContain("run_background");
+    expect(localToolsFor(local).map((t) => t.function.name)).toContain("list_projects");
     expect(opencodeToolFiles(local).map((f) => f.path)).toContain(
       `${TOOL_DIR}/run_background.ts`,
     );
-    // Et rien d'autre ne bouge : le drapeau local ne retire plus aucun tool.
+    expect(opencodeToolFiles(local).map((f) => f.path)).toContain(
+      `${TOOL_DIR}/list_projects.ts`,
+    );
+    // Les tools de domaine restent identiques : le catalogue ne quitte jamais
+    // le harness pour le plan de contrôle.
     expect(domainToolsFor(local).map((t) => t.function.name)).toEqual(
       domainToolsFor(job()).map((t) => t.function.name),
     );

@@ -38,6 +38,17 @@ describe("agentToolsFor — web_search (inchangé)", () => {
   });
 });
 
+describe("agentToolsFor — projets locaux", () => {
+  it("ne sert la découverte des chemins que sur la machine de l'utilisateur", () => {
+    expect(names({ anchor: "issue", webSearch: true })).not.toContain("list_projects");
+    const local = agentToolsFor({ anchor: "issue", webSearch: true, local: true }).find(
+      (tool) => tool.function.name === "list_projects",
+    );
+    expect(local?.function.description).toContain("local_path");
+    expect(local?.function.description).toContain("without asking the user");
+  });
+});
+
 /**
  * MIN-125 : les tools minddy ne sont plus découpés par ancrage. Les DEUX ancrages
  * servent les douze — tickets ET carnet — et l'ancrage ne décide plus que de la

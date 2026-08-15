@@ -130,6 +130,16 @@ export interface VmSubagentConfig {
   pricing?: Record<string, VmModelPricing>;
 }
 
+/** Projet connu de cette machine pendant un tour local. */
+export interface VmLocalProject {
+  id: string;
+  name: string;
+  key: string;
+  repoFullName: string | null;
+  /** `null` signifie que ce projet n'a aucun dossier local valide sur ce Mac. */
+  localPath: string | null;
+}
+
 /**
  * LE JOB D'UN TOUR. Écrit en JSON sous `layout.harnessDir` — hors du dépôt, pour
  * que le `git add -A` de fin de tour n'emporte jamais l'historique de la
@@ -278,6 +288,11 @@ export interface VmJob {
    * worktree dédié une option d'une conversation locale.
    */
   repoMode: "clone" | "current";
+  /**
+   * Catalogue joint par l'app de bureau, uniquement pour les tours locaux.
+   * Les chemins ne traversent jamais le plan de contrôle ni la base.
+   */
+  localProjects?: readonly VmLocalProject[];
   /**
    * IDENTITÉ GIT DES COMMITS DE L'AGENT (MIN-358). Elle voyage depuis que le
    * clone ne l'écrit plus dans `.git/config` : elle se pose par `git -c`, sur la

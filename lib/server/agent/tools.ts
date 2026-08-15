@@ -1147,6 +1147,21 @@ const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
   },
 });
 
+/**
+ * Le catalogue appartient à la machine : le serveur ne voit ni ne stocke les
+ * chemins. Il n'est donc servi qu'au run local, où le lanceur a pu joindre les
+ * projets accessibles avec les dossiers qu'il a validés sur ce Mac.
+ */
+const LIST_LOCAL_PROJECTS_TOOL: AgentToolDef = {
+  type: "function",
+  function: {
+    name: "list_projects",
+    description:
+      "List the projects you can access on this Mac. Each row has id, name and key, plus local_path when that project's linked repository has a valid local folder attached on this computer; local_path is null when it does not. Use this first when the user mentions another project: if it has a local_path, you can inspect that folder directly without asking the user for its location.",
+    parameters: { type: "object", properties: {} },
+  },
+};
+
 /** Jeu complet d'un run de TICKET. */
 export const AGENT_TOOLS: AgentToolDef[] = [
   ...CORE_TOOLS,
@@ -1369,12 +1384,13 @@ export function agentToolsFor(opts: {
    */
   local?: boolean;
 }): AgentToolDef[] {
-  const tools =
+  const baseTools =
     opts.anchor === "issue"
       ? AGENT_TOOLS
       : opts.anchor === "pr"
         ? PR_REVIEW_TOOLS
         : NOTEBOOK_AGENT_TOOLS;
+  const tools = opts.local ? [...baseTools, LIST_LOCAL_PROJECTS_TOOL] : baseTools;
   return tools
     .filter((t) => {
       const name = t.function.name;
@@ -1492,4 +1508,3 @@ const SUBAGENT_READ_TOOLS: ReadonlySet<string> = new Set([
   "glob",
   "grep",
 ]);
-

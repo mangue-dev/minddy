@@ -10,6 +10,7 @@ import {
   type ExpectedRepo,
   type LocalRepoState,
 } from "@/lib/desktop/local-repo";
+import type { LocalProject, LocalTurnProject } from "@/lib/desktop/local-turn";
 import { readLocalRepos, writeLocalRepos } from "./repo-store";
 
 /**
@@ -52,6 +53,22 @@ export function describeLocalRepo(
   const stored = readLocalRepos()[projectId];
   if (!stored) return { status: "none" };
   return stateFor(stored, expected);
+}
+
+/**
+ * Les dossiers prêts parmi les projets connus du lanceur. Cette revalidation est
+ * importante : un ancien attachement ne doit pas faire croire au modèle qu'il
+ * peut ouvrir un dossier déplacé, démonté ou relié à un autre dépôt.
+ */
+export function localProjectsFor(projects: readonly LocalTurnProject[]): LocalProject[] {
+  return projects.map((project) => {
+    if (!project.repoFullName) return { ...project, localPath: null };
+    const state = describeLocalRepo(project.id, { fullName: project.repoFullName });
+    return {
+      ...project,
+      localPath: state.status === "ready" ? state.path : null,
+    };
+  });
 }
 
 /**

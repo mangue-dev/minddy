@@ -155,7 +155,12 @@ export interface ToolBridgeOptions {
  * qui n'est pas là-dedans est un passe-plat, et c'est le cas le plus fréquent :
  * lire un ticket ou écrire une page n'a besoin d'aucun état de tour.
  */
-const SUPERVISOR_ONLY = new Set(["create_pr", "run_background", "update_plan"]);
+const SUPERVISOR_ONLY = new Set([
+  "create_pr",
+  "run_background",
+  "update_plan",
+  "list_projects",
+]);
 
 /** Démarre le pont. Le superviseur l'ouvre AVANT le serveur opencode. */
 export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBridge> {

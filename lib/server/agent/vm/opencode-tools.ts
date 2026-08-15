@@ -148,6 +148,9 @@ export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
 export const LOCAL_TOOL_NAMES: ReadonlySet<string> = new Set([
   "run_background",
   "update_plan",
+  // Le catalogue des projets porte des chemins, donc il ne peut être résolu que
+  // dans le harness local où l'app de bureau l'a construit.
+  "list_projects",
 ]);
 
 /**

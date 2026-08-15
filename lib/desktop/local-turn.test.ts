@@ -68,6 +68,26 @@ describe("parseLocalTurnAssignment", () => {
     expect(parsed?.repoFullName).toBe("mangue-dev/minddy");
   });
 
+  it("lit le catalogue de projets sans jamais y accepter de chemin", () => {
+    const parsed = parseLocalTurnAssignment(
+      assignment({
+        projects: [
+          { id: "proj-1", name: "Minddy", key: "MIN", repoFullName: "mangue-dev/minddy" },
+        ],
+      }),
+    );
+    expect(parsed?.projects).toEqual([
+      { id: "proj-1", name: "Minddy", key: "MIN", repoFullName: "mangue-dev/minddy" },
+    ]);
+    expect(
+      parseLocalTurnAssignment(
+        assignment({
+          projects: [{ id: "proj-1", name: "Minddy", key: "MIN", repoFullName: "/Users/x" }],
+        }),
+      ),
+    ).toBeNull();
+  });
+
   it("REFUSE un `layout` posé par le serveur", () => {
     // Le serveur ne connaît aucun chemin de cette machine. Un layout venu de lui
     // désignerait un dossier que personne n'a choisi — et `repoDir` est la racine
@@ -215,6 +235,26 @@ describe("assignmentToJob", () => {
 
   it("pose le layout de la machine, et lui seul", () => {
     expect(job.layout).toEqual(layout);
+  });
+
+  it("joint les chemins locaux seulement quand la machine les a validés", () => {
+    const withProjects = assignmentToJob(parseLocalTurnAssignment(assignment())!, {
+      layout,
+      appOrigin: "http://localhost:3000",
+      localProjects: [
+        {
+          id: "proj-2",
+          name: "Autre projet",
+          key: "AUT",
+          repoFullName: "mangue-dev/autre",
+          localPath: "/Users/clement/Projets/autre",
+        },
+      ],
+    });
+    expect(withProjects.localProjects).toEqual([
+      expect.objectContaining({ localPath: "/Users/clement/Projets/autre" }),
+    ]);
+    expect(job.localProjects).toBeUndefined();
   });
 });
 

@@ -103,6 +103,7 @@ export interface LocalJob extends AssignedJob {
   readonly layout: HarnessLayout;
   readonly appOrigin: string;
   readonly repoMode: "clone" | "current";
+  readonly localProjects?: readonly LocalProject[];
   readonly bootstrapMs: 0;
 }
 
@@ -131,8 +132,29 @@ export interface LocalTurnAssignment {
   readonly repoFullName: string;
   /** Le checkout isolé est une décision figée au lancement de la session. */
   readonly localWorktree: boolean;
+  /**
+   * Les projets que le lanceur peut lire. Le serveur ne met ici AUCUN chemin :
+   * la coquille les rejoint avec ses propres attachements locaux avant de poser
+   * le job. Cette liste sert à ce qu'un agent local puisse résoudre « le projet
+   * X » sans demander où il se trouve sur le Mac.
+   */
+  readonly projects: readonly LocalTurnProject[];
   /** Le job, moins les trois champs que seule la machine peut remplir. */
   readonly job: AssignedJob;
+}
+
+/** Identité non sensible d'un projet, transmise par le serveur à la machine. */
+export interface LocalTurnProject {
+  readonly id: string;
+  readonly name: string;
+  readonly key: string;
+  /** Nécessaire pour revalider le dossier que la machine a retenu. */
+  readonly repoFullName: string | null;
+}
+
+/** Projet remis au harness local ; seul ce type peut porter un chemin de disque. */
+export interface LocalProject extends LocalTurnProject {
+  readonly localPath: string | null;
 }
 
 /**
@@ -171,9 +193,9 @@ export type LocalTurnRefusal =
  */
 export function parseLocalTurnAssignment(raw: unknown): LocalTurnAssignment | null {
   if (typeof raw !== "object" || raw === null) return null;
-  const { runId, projectId, repoFullName, localWorktree, job } = raw as Record<string, unknown>;
+  const { runId, projectId, repoFullName, localWorktree, projects, job } = raw as Record<string, unknown>;
   if (!isNonEmptyString(runId) || !isNonEmptyString(projectId)) return null;
-  if (!isNonEmptyString(repoFullName)) return null;
+  if (!isRepoFullName(repoFullName)) return null;
   // Un serveur déployé juste avant la migration ne connaît pas encore ce champ.
   // Son absence retombe sur le comportement historique, sûr (checkout courant) ;
   // seule une valeur présente mais mal formée est un contrat incohérent.
@@ -197,13 +219,40 @@ export function parseLocalTurnAssignment(raw: unknown): LocalTurnAssignment | nu
   if ("layout" in (job as object)) return null;
   if (typed.runId !== runId) return null;
 
+  const parsedProjects = parseLocalTurnProjects(projects);
+  if (!parsedProjects) return null;
+
   return {
     runId,
     projectId,
     repoFullName,
     localWorktree: localWorktree === true,
+    projects: parsedProjects,
     job: job as AssignedJob,
   };
+}
+
+function parseLocalTurnProjects(value: unknown): readonly LocalTurnProject[] | null {
+  // Une app plus ancienne peut encore parler à un serveur qui ne renvoie pas le
+  // catalogue : le run reste utilisable, seulement sans cet outil de découverte.
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) return null;
+  const projects: LocalTurnProject[] = [];
+  for (const item of value) {
+    if (typeof item !== "object" || item === null) return null;
+    const row = item as Record<string, unknown>;
+    if (!isNonEmptyString(row.id) || !isNonEmptyString(row.name) || !isNonEmptyString(row.key)) {
+      return null;
+    }
+    if (row.repoFullName !== null && !isRepoFullName(row.repoFullName)) return null;
+    projects.push({
+      id: row.id,
+      name: row.name,
+      key: row.key,
+      repoFullName: row.repoFullName ?? null,
+    });
+  }
+  return projects;
 }
 
 /** Le dossier qui porte les racines de run — le seul que le ménage parcourt. */
@@ -258,7 +307,12 @@ export function localLayout(opts: {
  */
 export function assignmentToJob(
   assignment: LocalTurnAssignment,
-  machine: { layout: HarnessLayout; appOrigin: string; isolated?: boolean },
+  machine: {
+    layout: HarnessLayout;
+    appOrigin: string;
+    isolated?: boolean;
+    localProjects?: readonly LocalProject[];
+  },
 ): LocalJob {
   return {
     ...assignment.job,
@@ -269,6 +323,9 @@ export function assignmentToJob(
     // exactement cela : il n'est pas un clone réseau, mais le harnais peut y
     // committer et pousser sans emporter le WIP du checkout attaché.
     repoMode: machine.isolated ? "clone" : "current",
+    // Les chemins viennent exclusivement de l'app de bureau. Ils ne remontent
+    // jamais au serveur et ne sont donc jamais partagés avec l'équipe.
+    ...(machine.localProjects?.length ? { localProjects: machine.localProjects } : {}),
     // Pas de microVM, donc pas de compute d'amorçage à facturer (cf. en-tête).
     bootstrapMs: 0,
   };
@@ -346,6 +403,13 @@ export function localTurnRefusalMessage(reason: LocalTurnRefusal, repoFullName: 
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+/** Un `owner/repo` (ou chemin GitLab) n'est jamais un chemin absolu de Mac. */
+function isRepoFullName(value: unknown): value is string {
+  if (!isNonEmptyString(value)) return false;
+  const trimmed = value.trim();
+  return !trimmed.startsWith("/") && trimmed.split("/").length >= 2 && !trimmed.includes("\\");
 }
 
 function trimSlashes(value: string): string {
