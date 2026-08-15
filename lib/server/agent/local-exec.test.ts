@@ -12,6 +12,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   /** La ligne, réduite à ce que le bail regarde. `null` = run introuvable. */
   row: { local: true, gen: 0 } as { local: boolean; gen: number } | null,
+  /** D'OÙ VIENT LE CONTEXTE DU RUN (MIN-360) — ce que le second rideau relit. */
+  scope: {
+    triggered_by: "button",
+    routine_id: null,
+    chain_id: null,
+    pull_request_id: null,
+  } as {
+    triggered_by: string | null;
+    routine_id: string | null;
+    chain_id: string | null;
+    pull_request_id: string | null;
+  } | null,
 }));
 
 vi.mock("./runs", () => ({
@@ -20,6 +32,7 @@ vi.mock("./runs", () => ({
     h.row.gen += 1;
     return h.row.gen;
   }),
+  runLocalExecScopeRow: vi.fn(async () => h.scope),
 }));
 
 import { admitLocalRun, issueLocalExecToken } from "./local-exec";
@@ -29,6 +42,7 @@ const RUN_ID = "11111111-2222-4333-8444-555555555555";
 
 beforeEach(() => {
   h.row = { local: true, gen: 0 };
+  h.scope = { triggered_by: "button", routine_id: null, chain_id: null, pull_request_id: null };
   process.env.SUPABASE_SERVICE_ROLE_KEY ||= "service-role-key-de-test";
 });
 
@@ -50,6 +64,38 @@ describe("le bail d'exécution locale", () => {
     // la refusera à l'appel suivant, sans qu'on ait rien eu à rappeler.
     expect(second.gen).toBe(first.gen + 1);
     expect(h.row?.gen).toBe(second.gen);
+  });
+
+  /**
+   * MIN-360 — LE SECOND RIDEAU, À L'ENDROIT QUI COMPTE.
+   *
+   * `createRun` est le seul écrivain de `local_exec` et applique déjà
+   * l'invariant. Ce contrôle-ci est ce qui fait que **sans jeton, aucune machine
+   * ne peut jouer ce run** : une colonne écrite par une migration, un
+   * back-office ou un chemin de lancement futur ne suffit pas à ouvrir la porte.
+   */
+  it("refuse un bail à un run dont le contexte vient d'ailleurs", async () => {
+    for (const scope of [
+      { pull_request_id: "pr-1" },
+      { routine_id: "r-1" },
+      { chain_id: "c-1" },
+      { triggered_by: "mention" },
+    ]) {
+      h.scope = {
+        triggered_by: "button",
+        routine_id: null,
+        chain_id: null,
+        pull_request_id: null,
+        ...scope,
+      };
+      expect(await issueLocalExecToken(RUN_ID)).toEqual({
+        ok: false,
+        error: "third_party_context",
+      });
+      // Et le bail précédent n'a pas été révoqué au passage : on refuse AVANT
+      // d'incrémenter, sinon un refus casserait la machine en place.
+      expect(h.row?.gen).toBe(0);
+    }
   });
 
   it("refuse de donner un bail à un run de microVM", async () => {

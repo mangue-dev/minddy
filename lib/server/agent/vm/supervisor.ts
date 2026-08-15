@@ -1,4 +1,20 @@
-import { changedFiles, commitAndPush, repoBackgroundRunner, type RepoHost } from "../repo-host";
+import {
+  changedFiles,
+  commitAndPush,
+  readWorkFile,
+  repoBackgroundRunner,
+  sq,
+  turnDiff,
+  type RepoHost,
+} from "../repo-host";
+import { REPO_INSTRUCTION_FILES } from "../repo-instructions";
+import {
+  formatSecretFindings,
+  isSecretFile,
+  scanDiff,
+  scanSecrets,
+  type SecretFinding,
+} from "../secret-scan";
 import {
   commitTurnAndPush,
   dropIgnoredPaths,
@@ -32,6 +48,7 @@ import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-br
 import { makeOpencodeDelivery, repoRelative, type OpencodeDelivery } from "./opencode-delivery";
 import { newLiveEditLog } from "../live-edits";
 import { decidePermission, editTargets } from "./opencode-permissions";
+import { refineLocalVerdict } from "./local-guard";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
 import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
@@ -114,6 +131,14 @@ export const OPENCODE_BOOT_TIMEOUT_MS = 5 * 60_000;
 
 /** Cadence du direct — la même que la boucle maison (`emitLive`, 250 ms). */
 export const LIVE_INTERVAL_MS = 250;
+
+/**
+ * Bornes du scan de secrets avant push (MIN-360). Elles ne servent qu'à ce qu'un
+ * tour de refonte ne paie pas le scan en minutes : un secret est court, et il est
+ * en tête d'un fichier bien plus souvent qu'à sa fin.
+ */
+const SECRET_SCAN_MAX_BYTES = 2_000_000;
+const SECRET_SCAN_MAX_FILES = 200;
 
 /**
  * Cadence de sondage du « Stop » et de la file de steering.
@@ -241,6 +266,40 @@ export interface SupervisorInput {
 }
 
 /**
+ * LES CONVENTIONS DU DÉPÔT, TROUVÉES PLUTÔT QU'AUTO-DÉCOUVERTES (MIN-360).
+ *
+ * Opencode allait chercher `AGENTS.md` et `CLAUDE.md` tout seul, en remontant
+ * depuis le dépôt. C'est la MÊME remontée qui ramassait les plugins et les tools
+ * d'un `.opencode/`, c'est-à-dire du code arbitraire écrit par quiconque peut
+ * committer — et c'est cette remontée qu'on vient de couper
+ * (`OPENCODE_DISABLE_PROJECT_CONFIG`, cf. [opencode-config.ts](opencode-config.ts)).
+ *
+ * On rend donc le seul morceau qui n'exécute rien, et on le rend NOMMÉ : la racine
+ * du dépôt, ces deux fichiers-là. Ce qu'on perd au passage, et qu'il vaut mieux
+ * écrire : les fichiers de sous-dossiers, qu'opencode collait au fur et à mesure.
+ * Le harness maison les servait paresseusement
+ * ([repo-instructions.ts](../repo-instructions.ts)) ; ce chemin-ci ne les a plus,
+ * et c'est le prix de la fermeture.
+ *
+ * Best-effort de bout en bout : une sonde muette rend une liste vide, jamais une
+ * erreur — un tour ne s'arrête pas parce qu'un `ls` n'a pas répondu.
+ */
+async function repoInstructionFiles(host: RepoHost): Promise<string[]> {
+  const names = REPO_INSTRUCTION_FILES;
+  try {
+    // `ls` sort en 1 dès qu'un des noms manque, mais liste quand même les autres
+    // sur stdout : c'est la sortie qui fait foi, pas le code de retour.
+    const res = await host.exec(`ls -1 ${names.map(sq).join(" ")} 2>/dev/null`, {
+      timeoutMs: 30_000,
+    });
+    const found = new Set(res.stdout.split("\n").map((line) => line.trim()).filter(Boolean));
+    return names.filter((name) => found.has(name)).map((name) => `${host.layout.repoDir}/${name}`);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * JOUE LE TOUR. Ne lève pas sur un échec de travail (push raté, serveur qui ne
  * démarre pas) : ces échecs se DISENT dans le rapport — même règle que
  * `runVmTurn`, et pour la même raison : un tour qui a écrit du code et n'a pas su
@@ -260,6 +319,15 @@ export async function runOpencodeTurn(
   const secrets = new SecretRedactor();
   let authUrl = job.authUrl;
   secrets.addAuthUrl(authUrl);
+
+  /**
+   * CE TOUR JOUE-T-IL SUR LA MACHINE DE QUELQU'UN ? (MIN-360)
+   *
+   * Lu une fois, ici, et passé partout : c'est le drapeau qui décide de trois
+   * garde-fous que la microVM n'avait pas besoin de porter — la lecture des
+   * `.env`, la portée de `webfetch`, et le refus d'une permission inconnue.
+   */
+  const local = isLocalJob(job);
 
   /** Ce qu'on rend quand le tour n'a pas pu commencer (ou s'est cassé en vol). */
   const failed = (message: string, costUsd = 0): VmTurnReport => ({
@@ -453,7 +521,59 @@ export async function runOpencodeTurn(
    * une heure. Le registre de secrets est cumulatif — le token du clone reste
    * lisible dans `.git/config` longtemps après avoir été remplacé ici.
    */
+  /**
+   * LE SCAN DE SECRETS, ET IL EST DUR (MIN-360) — il LÈVE, donc rien n'est commité
+   * et rien n'est poussé.
+   *
+   * Ce qui le rend nécessaire tient en une phrase : la fin de tour publie une pull
+   * request **sans humain devant l'écran**, et la porte de livraison
+   * ([delivery-gate.ts](../delivery-gate.ts)) est une porte de QUALITÉ — rien n'y
+   * cherchait une fuite. Tant que le dépôt était un clone jetable, le seul secret à
+   * portée était celui du dépôt ; en mode dépôt courant, le `.env` réel de
+   * l'utilisateur est à côté des fichiers du tour.
+   *
+   * DEUX SOURCES, parce qu'aucune ne suffit :
+   *
+   * 1. **le diff** ([secret-scan.ts](../secret-scan.ts) n'y lit que les lignes
+   *    AJOUTÉES : un secret déjà présent dans le dépôt bloquerait sinon tous les
+   *    tours qui touchent à ce fichier, pour toujours) ;
+   * 2. **les fichiers NEUFS**, qui n'apparaissent dans aucun `git diff` tant qu'ils
+   *    ne sont pas suivis — et un `.env` recopié est exactement ça.
+   *
+   * Le refus revient au modèle comme une erreur de tool sur `create_pr`, et se
+   * publie au fil par `pushError` en fin de tour. Aucun des deux n'est un silence.
+   */
+  async function assertNoSecretsPushed(): Promise<void> {
+    const scope = current ? (await turnScope()).paths : undefined;
+    const { diff, porcelain } = await turnDiff(host, filesFromSha, scope);
+    const findings: SecretFinding[] = scanDiff(diff.slice(0, SECRET_SCAN_MAX_BYTES));
+
+    const untracked = porcelain
+      .split("\n")
+      .filter((line) => line.startsWith("??"))
+      .map((line) => line.slice(3).trim())
+      // Un chemin non-ASCII sort CITÉ de `git status --porcelain` (le `-z` seul ne
+      // cite pas, cf. current-repo.ts). On le laisse tomber plutôt que de le
+      // déciter à la main : c'est le scan d'un fichier neuf qu'on perd, pas le
+      // diff, et une désérialisation approximative ferait ouvrir un mauvais chemin.
+      .filter((path) => path && !path.startsWith('"'))
+      .slice(0, SECRET_SCAN_MAX_FILES);
+    for (const path of untracked) {
+      // Un fichier de la famille dotenv se refuse sur son NOM : son contenu n'a
+      // pas à ressembler à quoi que ce soit pour ne pas partir dans une PR.
+      if (isSecretFile(path)) {
+        findings.push({ kind: "environment file", file: path, sample: path });
+        continue;
+      }
+      const content = await readWorkFile(host, path).catch(() => null);
+      if (content) findings.push(...scanSecrets(content.slice(0, SECRET_SCAN_MAX_BYTES), path));
+    }
+
+    if (findings.length > 0) throw new Error(formatSecretFindings(findings));
+  }
+
   async function pushWork(message: string): Promise<VmPushResult> {
+    await assertNoSecretsPushed();
     authUrl = (await cp.repoAuthUrl()) ?? authUrl;
     secrets.addAuthUrl(authUrl);
     if (!current) {
@@ -615,7 +735,10 @@ export async function runOpencodeTurn(
   });
 
   const env = {
-    ...opencodeServerEnv(job, { baseUrl: proxy.url }),
+    ...opencodeServerEnv(job, {
+      baseUrl: proxy.url,
+      repoInstructionFiles: await repoInstructionFiles(host),
+    }),
     // L'adresse du pont, lue par les 32 tools générés (cf. `SUPERVISOR_URL_ENV`).
     [SUPERVISOR_URL_ENV]: bridge.url,
   };
@@ -1114,12 +1237,31 @@ export async function runOpencodeTurn(
         }
 
         if (out.permission) {
-          const verdict = decidePermission(out.permission, job.layout.repoDir, {
-            names: new Set(agentTable.keys()),
-            running: subagents.running,
-            pending: pendingTasks.size,
-            maxParallel: job.subagents.maxParallel,
-          });
+          let verdict = decidePermission(
+            out.permission,
+            job.layout.repoDir,
+            {
+              names: new Set(agentTable.keys()),
+              running: subagents.running,
+              pending: pendingTasks.size,
+              maxParallel: job.subagents.maxParallel,
+            },
+            { local },
+          );
+          /**
+           * PUIS LE DISQUE ET LE RÉSOLVEUR (MIN-360), et sur le chemin local
+           * seulement. Deux garde-fous ne se décident pas sur une chaîne : un
+           * lien symbolique posé dans le dépôt (`ln -s`, que rien n'empêche) et
+           * un domaine public qui résout vers la boucle locale.
+           *
+           * Le sens est à sens unique — `refineLocalVerdict` ne peut que refuser
+           * ce qui était autorisé —, et il est appliqué AVANT les effets de bord
+           * du verdict : une écriture refusée ici ne doit pas entrer dans le
+           * périmètre du tour.
+           */
+          if (local) {
+            verdict = await refineLocalVerdict(out.permission, verdict, job.layout.repoDir);
+          }
           if (verdict.reason && out.permission.callId) {
             refusedCalls.set(out.permission.callId, verdict.reason);
           }

@@ -5,8 +5,9 @@ import {
   resolveLocalExecSecret,
   signLocalExecToken,
 } from "./local-exec-token";
+import { rowMayRunLocally, localRunScope, type LocalRunContext } from "./local-exec-scope";
 import { runKeyMintingEnabled } from "./run-key";
-import { bumpLocalExecGen } from "./runs";
+import { bumpLocalExecGen, runLocalExecScopeRow } from "./runs";
 
 /**
  * LE BAIL D'EXÉCUTION LOCALE (MIN-355) — l'émission du jeton, moitié base.
@@ -80,43 +81,30 @@ export function admitLocalRun(opts: { keyMode: "platform" | "byok" }): LocalRunA
 }
 
 /**
- * LE DRAPEAU DEMANDÉ PAR LA PAGE SURVIT-IL AU LANCEMENT ? (MIN-359)
+ * LE DRAPEAU DEMANDÉ PAR LA PAGE SURVIT-IL AU LANCEMENT ? (MIN-359, MIN-360)
  *
  * `localExec` arrive dans le corps d'un POST : c'est une DEMANDE, pas un fait.
- * Cette fonction est le seul endroit qui la transforme en valeur écrite sur la
- * ligne — et elle ne la laisse passer que pour un run dont le contexte vient
- * de la personne qui lance, sur sa propre machine.
+ * Cette fonction la confronte à ce que le run EST — et la nature du run, elle,
+ * est tranchée une fois pour toutes par
+ * [local-exec-scope.ts](local-exec-scope.ts), qui est aussi ce que `createRun`
+ * applique à l'écriture de la colonne et ce que l'émission du bail revérifie.
  *
- * **Le prédicat est la SOURCE DU DÉCLENCHEMENT, jamais `job.interactive`** (qui
- * vaut `!run.routine_id`, donc vrai pour une relecture de PR déclenchée par
- * webhook). Un run d'automatisation, de routine ou de chaîne part d'un texte que
- * minddy n'a pas écrit ; dans une microVM jetable, une injection de prompt coûte
- * une VM, sur le Mac de quelqu'un c'est un shell.
- *
- * ⚠ **Ce n'est que la moitié étroite de l'invariant du §7 de l'audit.** L'ancrage
- * `pr` est exclu ici par construction — `launchPrReviewRun` est un chemin à part
- * qui ne passe pas ce drapeau du tout — mais les mentions externes et le board
- * public arrivent par d'autres portes. Le prédicat complet, écrit une fois pour
- * toutes les entrées, appartient à MIN-360.
+ * Trois lectures du même invariant, une seule rédaction : c'est ce qui a manqué
+ * en MIN-359, où le prédicat ne connaissait ni l'ancrage `pr` ni les portes
+ * d'entrée qui n'existaient pas encore.
  */
-export function localExecRequested(input: {
-  localExec?: boolean;
-  triggeredBy: "button" | "chat" | "mention" | "automation" | "routine";
-  routineId?: string | null;
-  chainId?: string | null;
-}): boolean {
+export function localExecRequested(
+  input: { localExec?: boolean } & LocalRunContext,
+): boolean {
   if (input.localExec !== true) return false;
-  if (input.routineId || input.chainId) return false;
-  // `mention` est exclu volontairement : une mention peut venir d'un commentaire
-  // de forge recopié par un webhook, et rien à cet endroit ne distingue les deux.
-  return input.triggeredBy === "button" || input.triggeredBy === "chat";
+  return localRunScope(input).ok;
 }
 
 /** L'échec est DIT, jamais rendu en jeton vide : l'appelant doit pouvoir choisir
  *  entre « ce run n'est pas local » et « ce déploiement ne sait pas signer ». */
 export type IssueLocalExecTokenResult =
   | { ok: true; token: string; gen: number; expiresInSeconds: number }
-  | { ok: false; error: "not_configured" | "not_local" };
+  | { ok: false; error: "not_configured" | "not_local" | "third_party_context" };
 
 /**
  * Émet le jeton du prochain tour local d'un run — 15 minutes glissantes.
@@ -134,6 +122,22 @@ export async function issueLocalExecToken(
     // déploiement qui ne sait pas signer ne délivre rien, et il le dit.
     console.error("[agent-local-exec] SUPABASE_SERVICE_ROLE_KEY manquante — aucun jeton local");
     return { ok: false, error: "not_configured" };
+  }
+  /**
+   * L'INVARIANT, REVÉRIFIÉ SUR LA LIGNE (MIN-360) — et avant le bail, jamais
+   * après : émettre, c'est révoquer, donc un refus qui arriverait ensuite aurait
+   * déjà cassé le run en cours.
+   *
+   * `createRun` est le seul écrivain de `local_exec` et applique déjà la règle. Ce
+   * contrôle-ci n'est donc pas une redite mais un second rideau, à l'endroit qui
+   * compte : **sans jeton, aucune machine ne peut jouer ce run.** Une colonne
+   * écrite par une migration, un back-office ou un chemin de lancement futur ne
+   * suffit pas à ouvrir la porte.
+   */
+  const row = await runLocalExecScopeRow(runId);
+  if (row && !rowMayRunLocally(row).ok) {
+    console.error(`[agent-local-exec] run ${runId} : contexte tiers, aucun jeton local`);
+    return { ok: false, error: "third_party_context" };
   }
   const gen = await bumpLocalExecGen(runId);
   if (gen === null) return { ok: false, error: "not_local" };

@@ -12,6 +12,7 @@ import { AGENT_ENGINE, type AgentEngine } from "@/lib/agent-engines";
 import type { AgentLaunchIntent } from "./launch";
 import type { AgentChatMessage, AgentEventType } from "./agent-contract";
 import { broadcastRunEvent } from "./live";
+import { localRunScope } from "./local-exec-scope";
 import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
@@ -449,10 +450,26 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       deployment_url: currentDeploymentScope(),
       loop_in_vm: loopInVm,
       agent_engine: engine,
-      // L'ENVIRONNEMENT D'EXÉCUTION (MIN-355), posé ici et jamais ailleurs — même
-      // doctrine que les deux lignes du dessus. La génération du bail, elle, part
-      // à zéro : elle ne devient quelque chose qu'à l'émission du premier jeton.
-      local_exec: input.localExec === true,
+      /**
+       * L'ENVIRONNEMENT D'EXÉCUTION (MIN-355), posé ici et jamais ailleurs — même
+       * doctrine que les deux lignes du dessus. La génération du bail, elle, part
+       * à zéro : elle ne devient quelque chose qu'à l'émission du premier jeton.
+       *
+       * ET L'INVARIANT DES RUNS À CONTENU TIERS, APPLIQUÉ ICI (MIN-360). C'est
+       * l'unique écrivain de la colonne : y poser la règle est ce qui la rend
+       * vraie de toutes les portes d'entrée, y compris celle que personne n'a
+       * encore écrite. Un run de relecture, de routine, de chaîne ou déclenché par
+       * une mention lit du texte que minddy n'a pas écrit — en microVM une
+       * injection coûte une VM jetable, sur le Mac de quelqu'un c'est un shell.
+       */
+      local_exec:
+        input.localExec === true &&
+        localRunScope({
+          triggeredBy: input.triggeredBy,
+          routineId: input.routineId,
+          chainId: input.chainId,
+          pullRequestId: input.pullRequestId,
+        }).ok,
     })
     .select("*")
     .single();
@@ -506,6 +523,28 @@ export async function getRun(runId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service.from("agent_runs").select("*").eq("id", runId).maybeSingle();
   return (data as AgentRun | null) ?? null;
+}
+
+/**
+ * DE QUOI JUGER LA NATURE D'UN RUN (MIN-360) — les quatre colonnes qui disent d'où
+ * son contexte vient, et rien d'autre.
+ *
+ * Lu par l'émission du bail ([local-exec.ts](local-exec.ts)), qui doit pouvoir
+ * refuser AVANT de révoquer. `null` quand la ligne a disparu : l'appelant en tire
+ * ce qu'il veut, et le bail, lui, échouera de toute façon un peu plus loin.
+ */
+export async function runLocalExecScopeRow(runId: string): Promise<{
+  triggered_by: string | null;
+  routine_id: string | null;
+  chain_id: string | null;
+  pull_request_id: string | null;
+} | null> {
+  const { data } = await getServiceClient()
+    .from("agent_runs")
+    .select("triggered_by, routine_id, chain_id, pull_request_id")
+    .eq("id", runId)
+    .maybeSingle();
+  return (data as Awaited<ReturnType<typeof runLocalExecScopeRow>>) ?? null;
 }
 
 /**

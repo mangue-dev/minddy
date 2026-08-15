@@ -135,6 +135,11 @@ const h = {
   exec: [] as string[],
   /** Ce que le proxy local a vu passer chez le fournisseur. */
   generations: [] as CapturedGeneration[],
+  /** Le diff que `git diff` rend — vide sauf quand un test veut y mettre un
+   *  secret (MIN-360 : le scan qui refuse le push). */
+  diff: "",
+  /** Les fichiers de conventions présents à la racine du dépôt (MIN-360). */
+  repoInstructions: [] as string[],
 };
 
 function cp(): ControlPlaneClient {
@@ -198,6 +203,11 @@ function host() {
       h.exec.push(command);
       // Le lanceur d'un job de fond rend son PID sur stdout (`background.ts`).
       if (command.includes("setsid")) return { exitCode: 0, stdout: "4242\n", stderr: "" };
+      // MIN-360 : la sonde des `AGENTS.md` / `CLAUDE.md` de la racine, qu'on rend
+      // explicitement depuis qu'`OPENCODE_DISABLE_PROJECT_CONFIG` les retire.
+      if (command.startsWith("ls -1")) {
+        return { exitCode: h.repoInstructions.length ? 0 : 1, stdout: h.repoInstructions.join("\n"), stderr: "" };
+      }
       // `commitAndPush` enchaîne add / commit / push / rev-parse ; `changedFiles`
       // fait un diff. Ce qui compte est que le superviseur les appelle, pas ce
       // que git répond — la mécanique est testée chez `repo-host`.
@@ -217,7 +227,7 @@ function host() {
       if (command.includes("push") && !h.pushed) {
         return { exitCode: 1, stdout: "", stderr: "remote rejected" };
       }
-      if (command.includes("diff")) return { exitCode: 0, stdout: "", stderr: "" };
+      if (command.includes("diff")) return { exitCode: 0, stdout: h.diff, stderr: "" };
       return { exitCode: 0, stdout: "", stderr: "" };
     }),
     writeFiles: vi.fn(async () => {}),
@@ -465,6 +475,8 @@ beforeEach(() => {
   h.supervisorTools = {};
   h.toolCalls = [];
   h.exec = [];
+  h.diff = "";
+  h.repoInstructions = [];
 });
 
 /** Une demande de permission, telle qu'opencode la publie sur le flux. */
@@ -508,6 +520,28 @@ describe("le décor, posé avant le premier octet de serveur", () => {
     // phrase au modèle au lieu d'appeler quoi que ce soit.
     expect(h.env[SUPERVISOR_URL_ENV]).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
     expect(h.env.OPENCODE_CONFIG_CONTENT).not.toContain("ghs_SECRET");
+  });
+
+  /**
+   * MIN-360 — les deux écoutilles ferment l'auto-découverte de plugins et de
+   * config depuis le dépôt, c'est-à-dire de l'exécution de code arbitraire écrit
+   * par quiconque peut committer. Ce qu'elles emportent au passage — les
+   * conventions du dépôt — est rendu NOMMÉ, et sans rien exécuter.
+   */
+  it("rend les conventions du dépôt qu'il vient de retirer à l'auto-découverte", async () => {
+    h.repoInstructions = ["AGENTS.md"];
+    await run();
+    expect(h.env.OPENCODE_PURE).toBe("1");
+    expect(h.env.OPENCODE_DISABLE_PROJECT_CONFIG).toBe("1");
+    expect(JSON.parse(h.env.OPENCODE_CONFIG_CONTENT).instructions).toEqual([
+      ANCHOR_FILE,
+      `${LAYOUT.repoDir}/AGENTS.md`,
+    ]);
+  });
+
+  it("n'invente aucun fichier de conventions quand le dépôt n'en a pas", async () => {
+    await run();
+    expect(JSON.parse(h.env.OPENCODE_CONFIG_CONTENT).instructions).toEqual([ANCHOR_FILE]);
   });
 
   it("arrête toujours le serveur, même quand le tour échoue", async () => {
@@ -740,6 +774,42 @@ describe("le tour", () => {
     // Le travail reste dans la microVM et le tour suivant le repoussera : un
     // échec de push n'est pas une raison de perdre l'état du tour.
     expect(report.checkpoint).toBeTruthy();
+  });
+
+  /**
+   * MIN-360 — LA FIN DE TOUR PUBLIE SANS HUMAIN DEVANT L'ÉCRAN.
+   *
+   * La porte de livraison est une porte de QUALITÉ : rien n'y cherchait une
+   * fuite. Le scan est DUR — il lève avant le commit —, donc ce test garde deux
+   * choses à la fois : que rien ne part, et que le tour ne meurt pas de ça.
+   */
+  it("refuse de pousser un diff qui ajoute une vraie clé, et le DIT", async () => {
+    h.diff = [
+      "diff --git a/lib/x.ts b/lib/x.ts",
+      "+++ b/lib/x.ts",
+      "+const key = 'ghp_0123456789abcdefghijklmnopqrstuvwxyz';",
+    ].join("\n");
+    const report = await run();
+    expect(report.pushError).toMatch(/credential/i);
+    expect(report.pushError).toContain("lib/x.ts");
+    // Rien n'est parti, et rien n'a même été commité.
+    expect(report.pushed).toBeNull();
+    expect(h.exec.some((c) => c.includes("push"))).toBe(false);
+    // Le tour, lui, garde son état : le modèle a travaillé, la mémoire reste.
+    expect(report.status).toBe("completed");
+    expect(report.checkpoint).toBeTruthy();
+  });
+
+  it("laisse partir un diff qui ne fait que NOMMER la variable", async () => {
+    h.diff = [
+      "+++ b/.env.example",
+      "+GITHUB_TOKEN=",
+      "+++ b/lib/x.ts",
+      "+const key = process.env.GITHUB_TOKEN;",
+    ].join("\n");
+    const report = await run();
+    expect(report.pushError).toBeUndefined();
+    expect(report.pushed?.committed).toBe(true);
   });
 });
 

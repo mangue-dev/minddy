@@ -313,6 +313,101 @@ describe("le reste", () => {
   });
 
   it("laisse passer ce qui n'est pas gardé (la config l'a déjà tranché)", () => {
-    expect(decide(ask({ permission: "webfetch" }))).toEqual({ reply: "once" });
+    expect(decide(ask({ permission: "webfetch", url: "https://example.com" }))).toEqual({
+      reply: "once",
+    });
+  });
+});
+
+/**
+ * MIN-360 — CE QUE LE CHEMIN LOCAL CHANGE, ET LUI SEUL.
+ *
+ * Trois verdicts basculent quand le tour joue sur la machine de quelqu'un, et la
+ * moitié de ce bloc sert à garder l'autre moitié : **rien ne bascule en microVM**.
+ * Le clone y est jetable, la boucle locale n'y porte que nos deux serveurs, et
+ * faire payer un aller-retour de permission à chaque lecture de 100 % des runs
+ * cloud pour un risque qui n'existe pas serait le mauvais échange.
+ */
+describe("le chemin local (MIN-360)", () => {
+  const local = (a: PermissionAsk) => decidePermission(a, REPO, undefined, { local: true });
+
+  describe("les lectures", () => {
+    it("refuse la famille dotenv — c'est le vrai `.env` de l'utilisateur", () => {
+      for (const path of [`${REPO}/.env`, `${REPO}/.env.local`, `${REPO}/apps/web/.env`]) {
+        const verdict = local(ask({ permission: "read", filepath: path }));
+        expect(verdict.reply, path).toBe("reject");
+        expect(verdict.reason).toBe("secret_file_read");
+      }
+    });
+
+    it("renvoie vers le `.env.example`, qui reste lisible", () => {
+      const verdict = local(ask({ permission: "read", filepath: `${REPO}/.env` }));
+      expect(verdict.message).toMatch(/\.env\.example/);
+      expect(local(ask({ permission: "read", filepath: `${REPO}/.env.example` }))).toEqual({
+        reply: "once",
+      });
+    });
+
+    it("laisse passer tout le reste", () => {
+      for (const path of [`${REPO}/lib/x.ts`, `${REPO}/README.md`, `${REPO}/lib/env.ts`]) {
+        expect(local(ask({ permission: "read", filepath: path })), path).toEqual({ reply: "once" });
+      }
+    });
+
+    it("refuse une lecture dont il ne sait pas lire le chemin", () => {
+      expect(local(ask({ permission: "read" })).reply).toBe("reject");
+    });
+  });
+
+  describe("les fetchs", () => {
+    it("refuse la boucle locale, le lien-local et le réseau de l'utilisateur", () => {
+      for (const url of [
+        "http://127.0.0.1:4096/v1/chat/completions", // le proxy LLM, donc la clé
+        "http://localhost:3000",
+        "http://[::1]:9000/",
+        "http://169.254.169.254/latest/meta-data/",
+        "http://192.168.1.1/admin",
+        "http://nas.local/volume1",
+      ]) {
+        const verdict = local(ask({ permission: "webfetch", url }));
+        expect(verdict.reply, url).toBe("reject");
+        expect(verdict.reason).toBe("private_fetch");
+      }
+    });
+
+    it("laisse passer une URL publique", () => {
+      expect(local(ask({ permission: "webfetch", url: "https://example.com/docs" }))).toEqual({
+        reply: "once",
+      });
+    });
+
+    it("refuse un fetch dont il ne sait pas lire l'URL", () => {
+      expect(local(ask({ permission: "webfetch" })).reply).toBe("reject");
+    });
+  });
+
+  describe("la permission inconnue", () => {
+    it("passe en microVM, refuse sur une machine", () => {
+      // `lsp`, `skill`, `doom_loop`, `plan_enter` — et tout ce qu'une montée de
+      // version ajoutera sans que personne ne l'ait lu.
+      for (const permission of ["lsp", "skill", "doom_loop", "plan_enter"]) {
+        expect(decide(ask({ permission })), permission).toEqual({ reply: "once" });
+        const verdict = local(ask({ permission }));
+        expect(verdict.reply, permission).toBe("reject");
+        expect(verdict.reason).toBe("unknown_permission");
+        // Le refus NOMME la permission : c'est ce qui le rend réparable, et ce
+        // qui fait qu'une montée de version se voit dans `agent_run_events`.
+        expect(verdict.message).toContain(permission);
+      }
+    });
+  });
+
+  it("ne change RIEN aux verdicts qui existaient déjà", () => {
+    expect(local(ask({ command: "npm test" }))).toEqual({ reply: "once" });
+    expect(local(ask({ command: "git push" })).reply).toBe("reject");
+    expect(local(ask({ permission: "edit", filepath: `${REPO}/lib/x.ts` }))).toEqual({
+      reply: "once",
+    });
+    expect(local(ask({ permission: "edit", filepath: "/etc/passwd" })).reply).toBe("reject");
   });
 });
