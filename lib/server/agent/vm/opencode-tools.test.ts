@@ -278,6 +278,28 @@ describe("où les fichiers sont posés", () => {
     );
   });
 
+  /**
+   * MIN-293 — ET JAMAIS SUR LA MACHINE DE QUELQU'UN.
+   *
+   * Les jobs de fond partent en `setsid`, **expressément pour survivre au
+   * shell** : c'est ce qui permet à un serveur de dev de tenir entre deux
+   * `run_command`. Ce qui les tue est le `stopAll` de fin de tour, et ce
+   * `stopAll` ne tourne jamais quand le harness est tué net (⌘Q, plantage du
+   * main process). Dans une microVM la machine meurt avec eux ; sur un Mac, le
+   * `npm run dev` reste vivant, port 3000 tenu, sans même une fenêtre à fermer.
+   */
+  it("`run_background` disparaît d'un tour LOCAL — rien de lancé ne doit survivre", () => {
+    const local = job({ controlToken: "bail-hs256" });
+    expect(localToolsFor(local).map((t) => t.function.name)).toEqual(["update_plan"]);
+    expect(opencodeToolFiles(local).map((f) => f.path)).not.toContain(
+      `${TOOL_DIR}/run_background.ts`,
+    );
+    // Et rien d'autre ne bouge : c'est un retrait, pas un régime à part.
+    expect(domainToolsFor(local).map((t) => t.function.name)).toEqual(
+      domainToolsFor(job()).map((t) => t.function.name),
+    );
+  });
+
   it("HORS du dépôt — sinon le `git add -A` de fin de tour les commite", () => {
     for (const f of opencodeToolFiles(job())) {
       expect(f.path.startsWith(`${LAYOUT.repoDir}/`)).toBe(false);

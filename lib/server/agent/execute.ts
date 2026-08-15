@@ -472,7 +472,22 @@ export function commitMessageFromReply(reply: string, identifier: string): strin
 
 export async function executeAgentRun(
   run: AgentRun,
-  opts: { deadlineMs: number },
+  opts: {
+    deadlineMs: number;
+    /**
+     * LE TOUR EST PRÉPARÉ, PAS LANCÉ (MIN-293) — appelé quand `run.local_exec`,
+     * juste avant que la fonction rende `"detached"`.
+     *
+     * Un rappel plutôt qu'un élargissement d'`ExecuteOutcome` : le drain est
+     * l'autre appelant, il ne le passe pas, et il ne doit rien avoir à relire. Il
+     * ne draine d'ailleurs jamais un run local (cf. `claimableRuns`, drain.ts) —
+     * le rappel n'a donc qu'un seul appelant, la route de déclenchement.
+     *
+     * `layout` et `bootstrapMs` en sont absents : ils appartiennent à la machine
+     * (cf. [lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
+     */
+    onLocalAssignment?: (job: Omit<VmJob, "layout" | "bootstrapMs">) => void;
+  },
 ): Promise<ExecuteOutcome> {
   const callStart = Date.now();
   /**
@@ -753,10 +768,45 @@ export async function executeAgentRun(
       }
     }
 
+    /**
+     * ─────────────────────────────────────────────────────────────────────────
+     * LE TOUR JOUE-T-IL SUR UNE MACHINE ? (MIN-293)
+     *
+     * À partir d'ici, et jusqu'au lancement, la fonction fait exactement le même
+     * travail dans les deux cas — c'est le même tour, avec le même contexte, le
+     * même modèle et le même plafond. **Trois choses seulement disparaissent, et
+     * chacune parce qu'elle demande un DISQUE que le serveur n'a pas :**
+     *
+     * 1. **la microVM** — on n'en réveille aucune, donc rien n'est cloné, aucune
+     *    politique réseau n'est posée, et `billSandboxCompute` ne facture rien
+     *    (sa garde `!sandbox` suffit, elle était déjà là) ;
+     * 2. **la baseline du diff** (`revParseHead`) — c'est le HEAD d'une machine
+     *    que la fonction n'a jamais vue. Le job part avec `""`, et **le harness
+     *    la résout lui-même** : `job.filesFromSha || current?.parent`
+     *    ([supervisor.ts](vm/supervisor.ts)), écrit pour ce cas exact en MIN-358 ;
+     * 3. **la lecture d'`AGENTS.md`** — le message dédié qu'on injecte au modèle
+     *    ne peut pas être fabriqué ici. Ce n'est PAS une perte de contexte :
+     *    `instructions.paths` est une constante (`REPO_INSTRUCTION_FILES`), elle
+     *    part telle quelle, et opencode charge ces fichiers **depuis le disque**
+     *    par sa propre clé `instructions` ([opencode-config.ts](vm/opencode-config.ts)).
+     *    Le modèle les lit donc quand même ; c'est l'emballage minddy qui manque,
+     *    et le compte d'octets qui reste à zéro.
+     *
+     * Les jobs de fond suivent : `run_background` n'est pas servi sur une machine
+     * (cf. `agentToolsFor`), et le registre de cette fonction n'a jamais servi
+     * qu'à un `stopAll` de filet dans le chemin détaché.
+     *
+     * ⚠ **La fonction ne LANCE rien dans ce cas** : elle prépare et rend
+     * l'affectation par `onLocalAssignment`. La présence, le claim et
+     * l'aiguillage appartiennent à MIN-294 ; ici, le seul appelant est la route
+     * de déclenchement de dév.
+     */
+    const localTurn = run.local_exec === true;
+
     // Sandbox : réveille la microVM (filesystem restauré depuis le snapshot
     // persistant → reprise rapide) ; sinon `onCreate` clone la branche de travail.
     // Nom déterministe → même microVM/snapshot d'un tour à l'autre.
-    const { sandbox: sb } = await getOrCreateAgentSandbox({
+    const { sandbox: sb } = localTurn ? { sandbox: null } : await getOrCreateAgentSandbox({
       name: agentSandboxName(run.id),
       // MIN-223 : la microVM ne détient aucun secret DE MINDDY (le token de forge,
       // lui, est dans son `.git/config` par construction — cf. `vmTarget`).
@@ -822,8 +872,14 @@ export async function executeAgentRun(
      * seul chemin ; dans la nouvelle, la fonction n'en garde que l'amorçage (une
      * lecture d'`AGENTS.md`, l'écriture du bundle) et c'est la boucle, dans la
      * microVM, qui reprend les mêmes gestes sur le disque local.
+     *
+     * `null` SUR UN TOUR LOCAL (MIN-293) : le dépôt est sur un disque que la
+     * fonction ne peut pas atteindre. Les trois appelants sont gardés un par un
+     * plutôt que par un hôte factice — un hôte qui rendrait des réponses vides
+     * ferait passer « je ne peux pas lire » pour « il n'y a rien à lire », et
+     * c'est exactement la distinction qui compte pour `AGENTS.md`.
      */
-    const host = sandboxHost(sb, cloudLayout());
+    const host = sb ? sandboxHost(sb, cloudLayout()) : null;
 
     // Persiste l'identité du Sandbox + la base AVANT la boucle (reprise si crash).
     // sandbox_stopped_at:null → la microVM est de nouveau vivante (le reaper l'ignore).
@@ -835,8 +891,11 @@ export async function executeAgentRun(
     // sur le dépôt. Le nom, lui, est déterministe — un chunk suivant le retrouve
     // sans avoir besoin de le relire en base.
     await stampRun(run.id, {
-      sandbox_id: sandboxName(sandbox),
-      sandbox_stopped_at: null,
+      // Un tour local n'a pas de microVM à nommer, et lui en écrire une serait
+      // pire qu'inutile : `handleControlPlaneRequest` compare `sandbox_id` au nom
+      // signé de l'appelant, et le chien de garde interroge la plateforme sur ce
+      // nom-là. Une valeur inventée ferait mentir les deux.
+      ...(sandbox ? { sandbox_id: sandboxName(sandbox), sandbox_stopped_at: null } : {}),
       base_branch: baseBranch,
       // MIN-223 : de quoi révoquer la clé du run quand la VM sera mise au repos.
       // Écrit MÊME quand le mint a échoué (null) — sinon on garderait le hash
@@ -889,7 +948,12 @@ export async function executeAgentRun(
     // du chunk. `filesFromSha` est le point depuis lequel la fin de tour diffe — le
     // dernier sha émis (persisté dans le checkpoint, survit aux chunks WIP), ou ce
     // baseline au tout premier chunk du run (« rien de changé encore »).
-    const baselineHead = await revParseHead(host);
+    //
+    // ⚠ SUR UN TOUR LOCAL (MIN-293), c'est le HEAD d'une machine que la fonction
+    // n'a jamais vue : le job part avec `""`, et le harness la résout lui-même
+    // (`job.filesFromSha || current?.parent`, supervisor.ts, écrit pour ce cas
+    // exact en MIN-358).
+    const baselineHead = host ? await revParseHead(host) : "";
     const filesFromSha = run.checkpoint?.lastFilesSha ?? baselineHead;
 
     // Recherche web : réservée aux runs qui parlent à OpenRouter (quota minddy ou
@@ -1082,7 +1146,14 @@ export async function executeAgentRun(
       // Les instructions sont alors lues à la base (`pr-base`), ou pas du tout.
       // `prRun` et pas `anchor` : c'est le CLONE qui décide, et c'est `prRun` qui
       // fait cloner sur la tête (cf. `onCreate`).
-      const repoInstructions = await readRepoInstructions(host, prRun ? "pr" : anchor);
+      //
+      // `null` SUR UN TOUR LOCAL : le disque est ailleurs. Le modèle lit quand
+      // même ces fichiers — opencode les charge par sa propre clé `instructions`,
+      // qui reçoit `instructions.paths` juste en dessous — et c'est l'emballage
+      // minddy qui manque, pas le contenu.
+      const repoInstructions = host
+        ? await readRepoInstructions(host, prRun ? "pr" : anchor)
+        : null;
       instructions.paths.push(...REPO_INSTRUCTION_FILES);
       if (repoInstructions) {
         messages.push({ role: "user", content: repoInstructions.message });
@@ -1334,11 +1405,14 @@ export async function executeAgentRun(
     // façon en fin de chunk (`finally`) : un processus oublié mangerait la microVM
     // jusqu'au reaper, et serait encore là au tour suivant sans que le modèle le
     // sache. Le registre ne survit pas au chunk — c'est assumé, et le tool le dit.
-    const background = new BackgroundJobs(
-      repoBackgroundRunner(host),
-      run.continuations * 1000,
-    );
-    backgroundJobs = background;
+    //
+    // AUCUN SUR UN TOUR LOCAL (MIN-293) : `run_background` n'est pas servi sur
+    // une machine (cf. `agentToolsFor`), et ce registre-ci n'a de toute façon
+    // jamais servi qu'au `stopAll` de filet du `finally` depuis que la boucle
+    // vit dans la microVM.
+    backgroundJobs = host
+      ? new BackgroundJobs(repoBackgroundRunner(host), run.continuations * 1000)
+      : null;
 
     // Fichiers édités depuis le dernier type-check (MIN-110). Vidé à chaque check :
     // un tour qui ne touche à rien après coup n'en relance pas un second. PARTAGÉ
@@ -1565,7 +1639,44 @@ export async function executeAgentRun(
       locale: commentLocale,
       feature: usageFeature,
     };
-    const cmdId = await startVmLoop(sb, job, callStart);
+    /**
+     * LE TOUR PART SUR UNE MACHINE (MIN-293) — et la fonction s'arrête ici.
+     *
+     * Elle a fait tout son travail : le contexte, le modèle, le plafond, le bail
+     * de dépense, la branche, l'identité de committer, l'URL de push. Ce qu'elle
+     * ne peut pas faire, c'est écrire sur un disque qu'elle ne voit pas — donc
+     * elle REND le job au lieu de le poser.
+     *
+     * **`layout` en est absent, et c'est l'invariant du lot** : le serveur
+     * possède tout ce qui concerne le run, la machine possède tout ce qui
+     * concerne le disque (cf. [lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
+     * `bootstrapMs` aussi : il n'y a pas de microVM dont il faudrait facturer le
+     * réveil.
+     *
+     * PAS DE `loop_command_id` : il n'y a aucune commande de plateforme à
+     * interroger. Le chien de garde le sait depuis MIN-355 et donne à un run
+     * local la borne des deux heures plutôt que celle des quinze minutes
+     * (`reapDeadVmRuns`, drain.ts) — c'est la première des sept casses de
+     * l'audit, et elle est réglée là-bas, pas ici.
+     *
+     * Le run reste `running` : il l'est. Ce qui le sortira de là, c'est son
+     * rapport de fin de tour ou le chien de garde, exactement comme dans le cloud.
+     */
+    if (localTurn) {
+      opts.onLocalAssignment?.(job);
+      await stampRun(run.id, { last_activity_at: new Date().toISOString() });
+      // Le drapeau de boucle partie n'est PAS posé ici : il dit « une microVM
+      // tourne, et c'est la boucle qui la facturera ». Il n'y en a aucune, et la
+      // garde `!sandbox` de `billSandboxCompute` — celle qui existait déjà —
+      // suffit. Poser les deux donnerait deux raisons de ne pas facturer la même
+      // chose, donc un jour deux raisons qui divergent.
+      return "detached";
+    }
+
+    // `sandbox` et non `sb` : le compilateur sait qu'il est non nul ici, la
+    // branche locale étant sortie juste au-dessus.
+    if (!sandbox) throw new Error("no sandbox to start the loop in");
+    const cmdId = await startVmLoop(sandbox, job, callStart);
     await stampRun(run.id, {
       loop_command_id: cmdId,
       last_activity_at: new Date().toISOString(),

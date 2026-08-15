@@ -24,9 +24,11 @@ import {
   DESKTOP_PROTOCOL,
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
+import { deviceIdForUserData } from "@/lib/desktop/device-id";
 import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
+import { quitDecision, quitPrompt } from "@/lib/desktop/quit-guard";
 import {
   carrySessionCookies,
   staleSessionCookies,
@@ -34,6 +36,12 @@ import {
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
 import { hideWindow } from "./hide-window";
+import {
+  runningTurns,
+  startLocalTurn,
+  stopAllLocalTurns,
+  sweepOrphanTurns,
+} from "./launcher";
 import {
   attachLocalRepo,
   describeLocalRepo,
@@ -629,6 +637,32 @@ function registerIpc(): void {
     if (!projectId) return { status: "none" };
     return detachLocalRepo(projectId);
   });
+
+  /**
+   * LE DÉCLENCHEUR DE TOUR LOCAL (MIN-293) — **coquille de dév uniquement**.
+   *
+   * MIN-294 porte la présence, le claim et l'aiguillage : c'est LUI qui fera
+   * arriver un run sur cette machine, par une boucle de réclamation dans le main
+   * process. Sans lui, aucun run n'atteint jamais le Mac — et un lot qu'on ne
+   * peut vérifier qu'après le suivant ne se livre pas. D'où ce membre, qui est
+   * **exactement la fonction que cette boucle appellera** : seul l'appelant
+   * changera.
+   *
+   * ⚠ **Refusé dans l'app empaquetée**, et ce n'est pas de la prudence
+   * décorative. Le renderer charge du code DISTANT : lui laisser déclencher un
+   * fork de harness, même borné par ce que le serveur accepte de servir (session
+   * de l'utilisateur, run marqué local, run qui lui appartient), serait la
+   * première surface du pont à EXÉCUTER quelque chose. Le pont se lit en trente
+   * secondes précisément parce qu'aucun de ses membres ne fait ça.
+   */
+  ipcMain.handle("minddy:local-run:start", async (_event, input: unknown) => {
+    if (app.isPackaged) {
+      return { status: "refused", reason: "dev_only", message: "Local runs are driven by minddy itself." };
+    }
+    const runId = readString((input as { runId?: unknown } | null)?.runId);
+    if (!runId) return { status: "refused", reason: "assignment_invalid", message: "no run id" };
+    return startLocalTurn({ origin, runId, deviceId: deviceIdForUserData(app.getPath("userData")) });
+  });
 }
 
 function readString(value: unknown): string | null {
@@ -835,6 +869,18 @@ if (!app.requestSingleInstanceLock()) {
     startAutoUpdates(() => mainWindow);
     flushAuthLink();
 
+    /**
+     * LES ORPHELINS D'UN PLANTAGE PRÉCÉDENT (MIN-293).
+     *
+     * `before-quit` couvre le ⌘Q ; il ne couvre ni une app tuée net, ni un
+     * redémarrage du Mac au milieu d'un tour. Le serveur opencode, lui, survit à
+     * la mort du harness — 143 Mo en mémoire, le port tenu, **et le tour suivant
+     * qui échoue sur un `listen` refusé**, à un endroit qui ne ressemble en rien
+     * à sa cause. Le registre d'enfants est sur le disque : on le relit ici, une
+     * fois, au démarrage.
+     */
+    sweepOrphanTurns();
+
     // macOS : cliquer l'icône du dock d'une app sans fenêtre visible la ramène.
     app.on("activate", () => {
       if (!mainWindow) return;
@@ -850,9 +896,43 @@ if (!app.requestSingleInstanceLock()) {
     if (process.platform !== "darwin") app.quit();
   });
 
-  // ⌘Q : là, on ferme pour de bon. Sans ça le handler `close` de la fenêtre
-  // cacherait la fenêtre au lieu de laisser l'app quitter.
-  app.on("before-quit", () => {
+  /**
+   * ⌘Q : là, on ferme pour de bon. Sans ça le handler `close` de la fenêtre
+   * cacherait la fenêtre au lieu de laisser l'app quitter.
+   *
+   * ⚠ **ET DEPUIS MIN-293, IL POSE UNE QUESTION.** Ce geste ne détruisait qu'une
+   * fenêtre — la coquille est une vue sur une origine, quitter ne perdait rien
+   * qu'un rechargement ne rende. Dès qu'un tour joue ICI, le même geste devient
+   * **la principale cause de perte d'un tour**, et d'une perte qui coûte : des
+   * heures de travail derrière, une pull request devant.
+   *
+   * Ce qu'on n'offre PAS, et c'est le cœur de la décision : « quitter en laissant
+   * tourner ». Un harness détaché garderait vivants un token de forge
+   * `contents: write` et une clé de modèle **sans plus aucune interface pour les
+   * arrêter**, et un process réparenté à `launchd` perdrait son processus
+   * responsable TCC — la fenêtre d'autorisation de macOS ne s'ouvrirait même plus.
+   * Le tour meurt avec l'app, et la boîte dit où la session repart.
+   */
+  app.on("before-quit", (event) => {
+    const prompt = quitPrompt(runningTurns());
+    if (prompt) {
+      // ⚠ `showMessageBoxSync`, et c'est le seul appel synchrone de ce fichier.
+      // `before-quit` n'est annulable que PENDANT son handler : une boîte
+      // asynchrone rendrait la main avant la réponse, l'app aurait déjà quitté,
+      // et la question n'aurait servi qu'à faire clignoter une fenêtre.
+      const response = mainWindow
+        ? dialog.showMessageBoxSync(mainWindow, { type: "warning", ...prompt, buttons: [...prompt.buttons] })
+        : dialog.showMessageBoxSync({ type: "warning", ...prompt, buttons: [...prompt.buttons] });
+      if (quitDecision(response) === "stay") {
+        event.preventDefault();
+        trace("before-quit:stay", { running: runningTurns().length });
+        return;
+      }
+    }
+    // Les tours d'abord, la fenêtre ensuite : `stopLocalTurn` écrit le mot de la
+    // fin dans le journal de chacun, et c'est la seule ligne qui distingue
+    // « quelqu'un a quitté » de « le harness a planté » dans un rapport.
+    stopAllLocalTurns();
     const window = mainWindow;
     mainWindow = null;
     window?.destroy();

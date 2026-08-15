@@ -3,6 +3,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { HarnessLayout } from "../harness-layout";
+import { forgetHarnessChild, noteHarnessChild } from "./child-registry";
 import { OpencodeClient } from "./opencode-client";
 import { opencodeBin, OPENCODE_VERSION } from "./opencode-version";
 import type { SupervisorDeps } from "./supervisor";
@@ -23,8 +24,17 @@ import type { SupervisorDeps } from "./supervisor";
  *    (`UND_ERR_SOCKET` en ~25 s, zéro ligne de sortie, `detached: true` n'y change
  *    rien). Ici on n'est plus dans une commande RPC : on est DANS la microVM, dans
  *    le process node du harness, qui vit tant que le tour vit. `spawn` d'un
- *    enfant ordinaire suffit donc, et l'enfant meurt avec nous — ce qui est
- *    exactement la garantie qu'on veut : pas de serveur orphelin entre deux tours.
+ *    enfant ordinaire suffit donc.
+ *
+ *    ⚠ **CORRECTION (MIN-293) : « l'enfant meurt avec nous » était faux.** Cette
+ *    ligne disait la garantie qu'on voulait, pas celle qu'on avait. Sur POSIX un
+ *    enfant n'est pas tué quand son parent meurt, il est réparenté ; ce qui tue
+ *    celui-ci, c'est le `finally` du superviseur — donc rien du tout quand le
+ *    harness est tué net. Dans une microVM, sans conséquence : la machine meurt à
+ *    la fin du tour. **Sur un Mac, c'est 143 Mo et un port tenu, et le tour
+ *    suivant échoue sur un `listen` refusé.** D'où l'inscription au registre
+ *    ci-dessous, que le lanceur relit pour finir le travail
+ *    ([child-registry.ts](child-registry.ts)).
  * 2. **L'installation coûte 10,6 s / 351 Mo, le démarrage 1,3 s.** D'où la forme :
  *    on installe SEULEMENT si le binaire manque. Cuit dans
  *    `AGENT_SANDBOX_SNAPSHOT_ID` par
@@ -139,6 +149,20 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
         stdio: ["ignore", "pipe", "pipe"],
       });
       /**
+       * INSCRIT AVANT DE SERVIR (MIN-293), et c'est l'ordre qui fait la garantie :
+       * un process tué entre son `spawn` et son inscription est exactement
+       * l'orphelin qu'on cherche à ne plus produire. Sans effet en microVM — le
+       * lanceur qui relit ce fichier est celui du Mac, et une VM jetable n'a rien
+       * à nettoyer.
+       */
+      if (child.pid) {
+        noteHarnessChild(layout.harnessDir, {
+          pid: child.pid,
+          kind: "opencode",
+          label: `opencode serve --port ${port}`,
+        });
+      }
+      /**
        * LES DEUX TUBES SONT LUS, et pas par curiosité : un enfant dont personne
        * ne lit la sortie finit par bloquer sur un tube plein — un serveur qui
        * journalise pendant des heures y arrive. On les préfixe et on les laisse
@@ -153,6 +177,10 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
       child.on("error", (err) => console.error("[opencode] spawn failed:", err.message));
       return {
         stop: async () => {
+          // Désinscrit d'abord, quel que soit l'état : à partir d'ici, ce pid est
+          // notre affaire et plus celle du lanceur. Un pid recyclé par le système
+          // entre deux tours désignerait sinon le process de quelqu'un d'autre.
+          if (child.pid) forgetHarnessChild(layout.harnessDir, child.pid);
           if (child.exitCode !== null || child.signalCode !== null) return;
           /**
            * `SIGTERM` puis, s'il s'accroche, `SIGKILL`. Le serveur tient une base

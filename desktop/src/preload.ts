@@ -128,6 +128,15 @@ const bridge: DesktopBridge = {
       Awaited<ReturnType<DesktopBridge["forgetLocalRepo"]>>
     >;
   },
+
+  // LE DÉCLENCHEUR DE TOUR LOCAL (MIN-293), refusé dans l'app EMPAQUETÉE — la
+  // condition vit dans le main process, pas ici : un preload est du code qu'on
+  // livre, et une garde écrite du côté qui demande n'en est pas une.
+  startLocalRun(input) {
+    return ipcRenderer.invoke("minddy:local-run:start", input) as Promise<
+      Awaited<ReturnType<DesktopBridge["startLocalRun"]>>
+    >;
+  },
 };
 
 contextBridge.exposeInMainWorld("minddy", bridge);

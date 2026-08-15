@@ -89,6 +89,40 @@ export interface HarnessLayout {
   opencodeDir: string;
 }
 
+/**
+ * LE BUNDLE DU HARNESS ET LE JOB DU TOUR — deux fonctions PURES du layout.
+ *
+ * Elles vivaient dans [vm/protocol.ts](vm/protocol.ts), qui les re-exporte encore
+ * pour ses lecteurs historiques. Elles sont ici depuis MIN-293 pour une raison de
+ * GRAPHE : le lanceur de l'app de bureau a besoin de ces deux chemins, et
+ * `protocol.ts` type-importe `../runs`, qui est `server-only` — l'y suivre
+ * ferait entrer la moitié du serveur dans le type-check de la coquille, qui
+ * n'a ni `global.d.ts` ni les mêmes réglages, et le casserait sur des fichiers
+ * qui n'ont rien à voir avec elle.
+ *
+ * Ce module-ci n'a AUCUN import, et c'est exactement pourquoi il est le bon
+ * endroit : il est déjà lu par la fonction, par le bundle de la microVM et par un
+ * script `tsx` lancé à la main. La coquille est le quatrième lecteur, et le
+ * dernier qui pouvait encore faire tomber cette propriété.
+ */
+
+/** Le bundle du harness, écrit avant chaque tour à côté de son job. */
+export function vmBundlePath(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/main.js`;
+}
+
+/**
+ * Le job du tour, écrit à côté du bundle.
+ *
+ * Une FONCTION du layout, mais le harness ne peut pas s'en servir pour trouver
+ * son propre job : le layout est DANS le job. Cet œuf et cette poule se résolvent
+ * par l'argument de ligne de commande que le lanceur passe — c'est la seule
+ * information dont le harness ait besoin avant de savoir quoi que ce soit d'autre.
+ */
+export function vmJobPath(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/job.json`;
+}
+
 /** La racine du disque d'un run en microVM. Une VM par run : elle suffit à elle seule. */
 export const CLOUD_SANDBOX_ROOT = "/vercel/sandbox";
 

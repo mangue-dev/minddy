@@ -48,23 +48,19 @@ import type { Locale } from "@/i18n/config";
  */
 export const VM_PROTOCOL_VERSION = 2;
 
-/** Le bundle du harness, écrit par la fonction avant chaque tour. */
-export function vmBundlePath(layout: HarnessLayout): string {
-  return `${layout.harnessDir}/main.js`;
-}
-
 /**
- * Le job du tour, écrit à côté du bundle.
+ * `vmBundlePath` et `vmJobPath` vivent désormais dans
+ * [harness-layout.ts](../harness-layout.ts) et sont re-exportés ici pour leurs
+ * lecteurs historiques.
  *
- * Une FONCTION du layout, mais le harness ne peut pas s'en servir pour trouver
- * son propre job : le layout est DANS le job. Cet œuf et cette poule se
- * résolvent par l'argument de ligne de commande que le lanceur passe
- * ([vm-launch.ts](../vm-launch.ts)) — c'est la seule information dont le harness
- * a besoin avant de savoir quoi que ce soit d'autre.
+ * Ce n'est pas du rangement : ce fichier type-importe `../runs`, qui est
+ * `server-only`, et le lanceur de l'app de bureau a besoin de ces deux
+ * chemins-là. L'y suivre ferait entrer la moitié du serveur dans le type-check
+ * de la coquille — mesuré : il tombe alors sur une quarantaine de fichiers qui
+ * n'ont rien à voir avec elle. `harness-layout.ts`, lui, n'a aucun import, et
+ * c'est ce qui en fait le seul module que les deux côtés peuvent lire.
  */
-export function vmJobPath(layout: HarnessLayout): string {
-  return `${layout.harnessDir}/job.json`;
-}
+export { vmBundlePath, vmJobPath } from "../harness-layout";
 
 /**
  * Plafond du checkpoint qu'une boucle en VM peut REMONTER (MIN-221 §2).

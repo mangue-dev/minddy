@@ -458,11 +458,28 @@ export async function drainAgentRuns(
   );
 
   while (deadline - Date.now() >= MIN_LAUNCH_BUDGET_MS) {
+    /**
+     * ⚠ **LE DRAIN NE PREND JAMAIS UN RUN LOCAL** (MIN-293).
+     *
+     * `agent_runs.local_exec` est figé au lancement et dit « ce tour joue sur la
+     * machine de quelqu'un » ([local-exec-scope.ts](local-exec-scope.ts)). Sans
+     * cette ligne, le drain le claim comme les autres et le fait tourner dans une
+     * microVM : l'utilisateur a demandé sa machine, il obtient le cloud, **et
+     * rien ne le lui dit**. C'est le défaut exact que ce chantier combat partout
+     * ailleurs — quelque chose qui se dégrade sans qu'on le sache.
+     *
+     * Le corollaire est assumé et il appartient à MIN-294 : tant que la présence
+     * et le claim n'existent pas, un run local qu'aucune machine ne réclame reste
+     * `queued`. C'est un run en attente, pas un run trahi — et le repli vers le
+     * cloud, quand il existera, se décidera AVANT le premier tour (décision D1),
+     * jamais en le jouant au mauvais endroit en silence.
+     */
     const { data } = await scopeToDeployment(
       service
         .from("agent_runs")
         .select("id")
         .eq("status", "queued")
+        .not("local_exec", "is", true)
         .lte("not_before", new Date().toISOString()),
       scope,
     )

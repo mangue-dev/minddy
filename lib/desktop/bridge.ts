@@ -137,7 +137,32 @@ export interface DesktopBridge {
   }): Promise<LocalRepoState>;
   /** Oublie le dossier attaché à ce projet. Rend l'état d'après. */
   forgetLocalRepo(input: { projectId: string }): Promise<LocalRepoState>;
+  /**
+   * FORCE UN TOUR SUR CETTE MACHINE (MIN-293) — **coquille de DÉV uniquement**.
+   *
+   * C'est le seul membre du pont qui fasse EXÉCUTER quelque chose, et il est le
+   * seul à porter une condition d'existence : dans l'app empaquetée il rend
+   * toujours `{ status: "refused", reason: "dev_only" }`. La raison n'est pas
+   * décorative — le renderer charge du code distant, et le pont se lit en trente
+   * secondes précisément parce qu'aucun de ses membres ne lance de process.
+   *
+   * Il existe parce que la présence, le claim et l'aiguillage appartiennent à
+   * MIN-294 : sans eux aucun run n'atteint jamais la machine, et un lot qu'on ne
+   * peut vérifier qu'après le suivant ne se livre pas. Ce que ce membre appelle
+   * est **exactement** la fonction que la boucle de réclamation de MIN-294
+   * appellera depuis le main process ; seul l'appelant changera, et ce membre-ci
+   * disparaîtra avec lui.
+   *
+   * Il ne prend PAS de chemin, comme le reste du pont : le dossier vient de
+   * l'attachement du projet, donc d'un panneau système.
+   */
+  startLocalRun(input: { runId: string }): Promise<LocalRunStart>;
 }
+
+/** Ce que rend une demande de tour local. Le motif est fait pour un journal. */
+export type LocalRunStart =
+  | { status: "started"; runId: string; logPath: string }
+  | { status: "refused"; reason: string; message: string };
 
 declare global {
   interface Window {

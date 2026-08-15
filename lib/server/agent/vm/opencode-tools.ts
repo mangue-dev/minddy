@@ -6,7 +6,7 @@ import {
 } from "../platform-tool-names";
 import { agentToolsFor, type AgentToolDef } from "../tools";
 import { opencodeToolDir } from "./opencode-config";
-import type { VmJob } from "./protocol";
+import { isLocalJob, type VmJob } from "./protocol";
 
 /**
  * LES TOOLS DE DOMAINE, ÉCRITS POUR OPENCODE (MIN-286, lot 1) — les ~35 tools
@@ -190,6 +190,11 @@ function toolsFor(job: VmJob): AgentToolDef[] {
     subagentModels: job.subagents.models,
     chain: job.chain,
     interactive: job.interactive,
+    // MIN-293 : `run_background` n'est pas servi sur une machine. La condition
+    // est posée ICI, dans la seule fabrique de tools du harness, et pas une
+    // deuxième fois dans `localToolsFor` — le pont n'écrit que ce qui est servi,
+    // et le superviseur ne câble que ce que le pont a écrit.
+    local: isLocalJob(job),
   });
 }
 

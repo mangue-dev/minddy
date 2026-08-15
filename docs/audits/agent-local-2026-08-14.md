@@ -340,6 +340,23 @@ Bundle **téléchargé par tour** depuis l'origine du canal actif — l'embarque
 ferait entrer dans l'empreinte de republication et coûterait une notarisation à
 chaque mouvement de `protocol.ts`.
 
+> **FAIT (MIN-293, 2026-08-15).** Le lanceur est
+> [desktop/src/launcher.ts](../../desktop/src/launcher.ts) et ses décisions vivent
+> dans `lib/desktop/` avec leurs tests. Deux choses valent d'être retenues du
+> raisonnement, parce qu'elles ne se lisent pas dans le code :
+>
+> - **le choix d'`utilityProcess.fork` ne se joue pas sur la version de Node.**
+>   Un process détaché la donnerait aussi. Il se joue sur deux propriétés qu'il
+>   n'a pas : il meurt avec l'app, et **il garde son processus responsable TCC** —
+>   réparenté à `launchd`, il le perd, et la fenêtre d'autorisation macOS ne
+>   s'ouvre même plus ;
+> - **l'empreinte du bundle n'est pas une précaution de transport.** TLS garantit
+>   déjà ce qu'on télécharge. Ce qu'elle garde, c'est le fichier **une fois posé
+>   sur le disque** : il vit sous `userData`, inscriptible par le modèle sous le
+>   même UID, et un tour qui le réécrit capterait au tour suivant le bail, la clé
+>   et l'`authUrl`. D'où le manifeste séparé des octets, et une revérification
+>   **à un cheveu du `fork`**, pas seulement au téléchargement.
+
 **Découverte : un PULL avec bail**, pas le push du §4.5. La présence devient
 **émergente** — une machine qui ne réclame plus n'est plus là — là où le push
 demande un heartbeat, une course entre machines et une invalidation, pour le même
@@ -372,6 +389,36 @@ faut écrire la question.
    `VM_JOB_PATH`, `OPENCODE_DB_PATH`, `OPENCODE_ANCHOR_FILE`, les XDG et
    `TOOL_OUTPUT_DIR` sont des constantes **globales**. Le layout doit être un
    objet **par run**, pas une variable d'environnement posée une fois.
+
+> **FAIT (MIN-293, 2026-08-15). Le lanceur existe, et les sept sont soldées.**
+> Ce qu'elles sont devenues, une par une — et deux d'entre elles l'étaient déjà :
+>
+> | # | Où elle est traitée |
+> | --- | --- |
+> | 1 | **Déjà réglée en MIN-355.** `reapDeadVmRuns` donne à un run local la borne des **deux heures** (celle de la microVM injoignable) et non celle des quinze minutes du « jamais lancé » — un run local n'a ni sandbox ni `loop_command_id`, il n'y a personne à interroger, et un Mac qui dort quatre minutes ne doit pas perdre son tour ([drain.ts](../../lib/server/agent/drain.ts)). |
+> | 2 | **Déjà réglée en MIN-360.** `billableSandboxMs` rend **0** dès que la LIGNE se dit locale ([vm-rest.ts](../../lib/server/agent/vm-rest.ts)), et `reapDeadVmRuns` ne facture rien non plus sur ce chemin. La borne est serveur, jamais un chiffre que le harness rendrait. |
+> | 3 | **La perte produit assumée du chantier**, dite en tête du §4 de [desktop-electron.md](../desktop-electron.md) avec ses trois voisines. Rien n'est réparé : la route lit la microVM par RPC, et le backend n'a aucun accès au disque de l'utilisateur. |
+> | 4 | **Réglée.** Le harness inscrit ses enfants à longue vie dans `<harnessDir>/children.json` **avant** qu'ils servent ([vm/child-registry.ts](../../lib/server/agent/vm/child-registry.ts)) et les désinscrit quand il les arrête lui-même ; le lanceur relit ce fichier à la fin d'un tour, à un ⌘Q, et **au démarrage de l'app** pour les orphelins d'un plantage. Le commentaire d'`opencode-host.ts` qui disait « l'enfant meurt avec nous » est corrigé : c'était vrai du chemin heureux et faux du reste. |
+> | 5 | **Déjà réglée en MIN-354** : `reservePort()` demande le port au noyau, le pont de tools écoute sur `0`. |
+> | 6 | **Tranchée : `run_background` n'est pas servi sur une machine** (`agentToolsFor({ local })`, [tools.ts](../../lib/server/agent/tools.ts)). Un `setsid` existe pour survivre au shell, et `stopAll` ne tourne pas sur un ⌘Q. Le coût est réel — le modèle ne peut plus lancer un serveur de dév pour aller voir sa page rendre — et c'est la contrepartie de la seule promesse tenable sur la machine de quelqu'un : *rien de ce que l'agent a lancé ne vous survit*. Réouvrable le jour où le registre d'enfants couvrira aussi les jobs de fond. |
+> | 7 | **Déjà réglée en MIN-354** (`HarnessLayout` par run), et la coquille en est le premier client hors microVM : `localLayout` pose une racine par identifiant sous `userData` ([lib/desktop/local-turn.ts](../../lib/desktop/local-turn.ts)). |
+>
+> **Et deux choses que la mesure a ajoutées à cette liste :**
+>
+> - **`npm` n'est pas garanti.** `ensureInstalled` shell-out `npm i opencode-ai@…`,
+>   or **Electron embarque Node, pas npm**. Sur un Mac sans Command Line Tools il
+>   n'y en a pas, et l'installation ne peut pas avoir lieu. Traité par un refus
+>   **dit avant le fork**, avec l'incantation qui le répare
+>   ([lib/desktop/opencode-install.ts](../../lib/desktop/opencode-install.ts)) ;
+>   embarquer le binaire est un lot à part.
+> - **Le type-graphe de `vm/protocol.ts` ne passe pas la frontière.** Il
+>   type-importe `../runs`, qui est `server-only` : la coquille qui l'importerait
+>   ferait entrer la moitié du serveur dans son type-check, qui n'a ni `global.d.ts`
+>   ni les mêmes réglages, et tombe alors sur une quarantaine de fichiers. D'où le
+>   déménagement de `vmBundlePath`/`vmJobPath` vers `harness-layout.ts` (aucun
+>   import, déjà lu par trois mondes) et un job structurel côté coquille, dont le
+>   contrat est revérifié dans `lib/desktop/local-turn.test.ts` — le seul endroit
+>   où les deux graphes ont le droit de se rencontrer.
 
 **TCC n'est traité nulle part.** Le bundle ne porte aucune `NS…FolderUsageDescription` :
 dès que l'agent lit `~/Documents`, `~/Desktop`, `~/Downloads` ou iCloud Drive,

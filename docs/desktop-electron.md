@@ -430,6 +430,39 @@ formellement dépréciée mais bien vivante.
 
 ### 4.5 Comment un run arrive sur ta machine
 
+> **Le lanceur existe depuis MIN-293, et sa forme n'est pas celle décrite plus
+> bas.** Ce paragraphe reste pour son raisonnement ; ce qui a été construit tient
+> en un invariant et trois surfaces.
+>
+> **L'invariant : le serveur possède tout ce qui concerne le RUN, la machine
+> possède tout ce qui concerne le DISQUE.** Le serveur ne connaît aucun chemin de
+> cet ordinateur — un chemin de home ne veut rien dire ailleurs, et le ranger côté
+> base le publierait, faux, à tous les membres du projet. La machine, elle, ne
+> fabrique aucun champ de run. Le contrat qui les relie est un `VmJob` **amputé de
+> son `layout`**, c'est-à-dire du seul champ qui parle de disque
+> ([lib/desktop/local-turn.ts](../lib/desktop/local-turn.ts)).
+>
+> **Et une règle qui en découle, plus simple que n'importe quel arbitrage : la
+> machine ne parle qu'à l'origine qui lui a donné son travail.** Le manifeste du
+> harness, ses octets, l'affectation et le plan de contrôle viennent tous de
+> l'origine du canal actif, ou d'aucune. C'est ce qui empêche une coquille en
+> preview de jouer un tour avec le harness de production — le contrat typé
+> divergerait en silence — et c'est aussi ce qui fait marcher le développement
+> contre `localhost`.
+>
+> | Surface | Ce qu'elle fait |
+> | --- | --- |
+> | `GET /api/desktop/harness` | le manifeste : empreinte, taille, version de protocole, version d'opencode. Demandé à **chaque** tour, deux cents octets. |
+> | `GET /api/desktop/harness/bundle` | les octets, quand l'empreinte a changé. Un fichier par empreinte sous `userData/harness/`. |
+> | `POST /api/desktop/local-turn` | le déclencheur : admettre, claim, préparer, monter le bail, rendre l'affectation. **C'est exactement ce que la boucle de réclamation de MIN-294 fera** — seul l'appelant changera. |
+>
+> Trois différences avec ce qui suit, et chacune vient d'une décision prise
+> depuis : **le repli cloud n'existe pas en cours de conversation** (D1 :
+> l'environnement se choisit avant le premier tour) ; **la présence n'est pas un
+> heartbeat** mais un pull avec bail, une machine qui ne réclame plus n'étant plus
+> là (§5) ; et **le drain ne prend jamais un run local** — sans quoi l'utilisateur
+> demande sa machine, obtient le cloud, et rien ne le lui dit.
+
 Le lanceur est le seul morceau réellement neuf.
 
 - L'app de bureau **annonce sa présence** (un heartbeat par utilisateur, sur le

@@ -1,0 +1,278 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
+
+/**
+ * MIN-293 — LE DÉCLENCHEUR DE TOUR LOCAL, exercé sur la vraie route.
+ *
+ * Ce qui est tenu ici est **l'ORDRE des gardes**, et ça ne se déduit d'aucun
+ * type. Chacune protège quelque chose de différent, et une seule inversion suffit
+ * à la rendre inopérante :
+ *
+ *  - un run refusé par sa NATURE (ancrage `pr`, webhook, routine, chaîne) ne doit
+ *    jamais être claim : le claim le passe en `running`, et un run `running` que
+ *    personne ne joue est un run mort jusqu'au chien de garde ;
+ *  - un run BYOK ne doit jamais être claim non plus, pour la même raison ;
+ *  - le BAIL est monté EN DERNIER, parce qu'émettre c'est révoquer : le monter
+ *    avant la préparation tuerait un tour en cours pour découvrir ensuite qu'on
+ *    ne sait pas en préparer un nouveau.
+ *
+ * `app/**` est hors du périmètre de `vitest.config.ts`, mais un test de `lib/`
+ * peut aller le chercher — même doctrine que `local-exec-admission.test.ts`. Ne
+ * sont moqués que les modules qui SORTENT du process : la base, la forge, la
+ * préparation du tour.
+ */
+
+const h = vi.hoisted(() => ({
+  run: null as Record<string, unknown> | null,
+  claimed: true,
+  keyMode: "platform" as "platform" | "byok",
+  prepares: true,
+  calls: [] as string[],
+}));
+
+/**
+ * **Le mint est une CONDITION D'EXISTENCE du chemin local**, pas un réglage :
+ * sans `OPENROUTER_PROVISIONING_KEY`, la clé qui descendrait sur la machine
+ * serait la clé plateforme — non plafonnée, partagée avec Numo, la transcription
+ * et les embeddings. Le déploiement qui ne sait pas frapper de clé plafonnée
+ * refuse le run, et le test le vérifie plus bas.
+ */
+process.env.OPENROUTER_PROVISIONING_KEY ||= "cle-de-provisioning-de-test";
+
+vi.mock("@/lib/server/api-auth", () => ({
+  getAuthedUser: vi.fn(async () => ({ ok: true as const, user: { id: "user-1" } })),
+}));
+
+vi.mock("@/lib/server/agent/run-access", () => ({
+  canReadAgentRun: vi.fn(async () => true),
+}));
+
+vi.mock("@/lib/server/agent/runs", () => ({
+  getRun: vi.fn(async () => h.run),
+  claimRun: vi.fn(async () => {
+    h.calls.push("claim");
+    return h.claimed ? h.run : null;
+  }),
+}));
+
+vi.mock("@/lib/server/agent/model", () => ({
+  resolveAgentApiKey: vi.fn(async () => ({ mode: h.keyMode })),
+}));
+
+vi.mock("@/lib/server/agent/execute", () => ({
+  executeAgentRun: vi.fn(
+    async (_run: unknown, opts: { onLocalAssignment?: (job: unknown) => void }) => {
+      h.calls.push("prepare");
+      if (!h.prepares) return "failed";
+      opts.onLocalAssignment?.({
+        protocolVersion: 2,
+        runId: "run-1",
+        model: "anthropic/claude-sonnet-5",
+        repoMode: "clone",
+        authUrl: "https://x-access-token:ghs_x@github.com/mangue-dev/minddy.git",
+      });
+      return "detached";
+    },
+  ),
+}));
+
+vi.mock("@/lib/server/agent/local-exec", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/server/agent/local-exec")>();
+  return {
+    ...actual,
+    issueLocalExecToken: vi.fn(async () => {
+      h.calls.push("lease");
+      return { ok: true as const, token: "bail.hs256", gen: 3, expiresInSeconds: 900 };
+    }),
+  };
+});
+
+vi.mock("@/lib/server/agent/repo-access", () => ({
+  resolveRepoCloneTarget: vi.fn(async () => ({
+    repoFullName: "mangue-dev/minddy",
+    provider: "github",
+    token: "ghs_x",
+  })),
+}));
+
+async function POST(body: unknown) {
+  const route = await import("@/app/api/desktop/local-turn/route");
+  return route.POST(
+    new NextRequest("https://minddy.test/api/desktop/local-turn", {
+      method: "POST",
+      headers: { origin: "https://minddy.test", "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+function row(over: Record<string, unknown> = {}) {
+  return {
+    id: "run-1",
+    project_id: "proj-1",
+    created_by: "user-1",
+    status: "queued",
+    local_exec: true,
+    triggered_by: "chat",
+    routine_id: null,
+    chain_id: null,
+    pull_request_id: null,
+    ...over,
+  };
+}
+
+beforeEach(() => {
+  h.run = row();
+  h.claimed = true;
+  h.keyMode = "platform";
+  h.prepares = true;
+  h.calls.length = 0;
+});
+
+describe("POST /api/desktop/local-turn", () => {
+  it("rend l'affectation, bail compris, et dans le bon ordre", async () => {
+    const response = await POST({ runId: "run-1" });
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body).toMatchObject({
+      runId: "run-1",
+      projectId: "proj-1",
+      repoFullName: "mangue-dev/minddy",
+    });
+    // Le bail voyage DANS le job, jamais à côté : un job local EST un job qui
+    // porte un jeton (`isLocalJob`), et une seconde vérité finirait par diverger.
+    expect(body.job.controlToken).toBe("bail.hs256");
+    // Et le layout n'est PAS posé par le serveur — il ne connaît aucun chemin de
+    // cette machine.
+    expect(body.job).not.toHaveProperty("layout");
+
+    // Émettre, c'est révoquer : le bail vient APRÈS la préparation.
+    expect(h.calls).toEqual(["claim", "prepare", "lease"]);
+  });
+
+  it("refuse un run qui n'est pas local, SANS le claim", async () => {
+    h.run = row({ local_exec: false });
+    expect((await POST({ runId: "run-1" })).status).toBe(409);
+    expect(h.calls).toEqual([]);
+  });
+
+  it("refuse un run à CONTEXTE TIERS avant tout claim", async () => {
+    // Un run d'ancrage `pr`, de webhook, de routine ou de chaîne lit du texte
+    // d'attaquant potentiel. En microVM, une injection coûte une VM jetable ; en
+    // local, c'est un shell sur la machine du développeur.
+    for (const over of [
+      { pull_request_id: "pr-1" },
+      { routine_id: "rt-1" },
+      { chain_id: "ch-1" },
+      { triggered_by: "mention" },
+      { triggered_by: "automation" },
+    ]) {
+      h.calls.length = 0;
+      h.run = row(over);
+      expect((await POST({ runId: "run-1" })).status).toBe(409);
+      expect(h.calls, JSON.stringify(over)).toEqual([]);
+    }
+  });
+
+  it("refuse un run BYOK avant tout claim — il n'a littéralement aucun plafond", async () => {
+    h.keyMode = "byok";
+    const response = await POST({ runId: "run-1" });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toContain("byok");
+    expect(h.calls).toEqual([]);
+  });
+
+  it("refuse quand ce déploiement ne sait pas frapper de clé plafonnée", async () => {
+    // Dans une microVM jetable, la dégradation vers la clé plateforme est
+    // assumée. Sur la machine de quelqu'un, cette clé-là est NON PLAFONNÉE et
+    // partagée avec Numo, la transcription et les embeddings.
+    const saved = process.env.OPENROUTER_PROVISIONING_KEY;
+    delete process.env.OPENROUTER_PROVISIONING_KEY;
+    try {
+      const response = await POST({ runId: "run-1" });
+      expect(response.status).toBe(409);
+      expect((await response.json()).error).toContain("no_mint");
+      expect(h.calls).toEqual([]);
+    } finally {
+      process.env.OPENROUTER_PROVISIONING_KEY = saved;
+    }
+  });
+
+  it("ne monte AUCUN bail quand la préparation échoue", async () => {
+    // Le contraire tuerait le tour précédent de ce run (émettre, c'est révoquer)
+    // pour rendre un jeton que personne ne peut utiliser.
+    h.prepares = false;
+    expect((await POST({ runId: "run-1" })).status).toBe(409);
+    expect(h.calls).toEqual(["claim", "prepare"]);
+  });
+
+  it("rend 409 quand le run n'était plus claimable — une autre machine a gagné", async () => {
+    h.claimed = false;
+    expect((await POST({ runId: "run-1" })).status).toBe(409);
+    expect(h.calls).toEqual(["claim"]);
+  });
+
+  it("rend 404 sur un run inconnu, sans dire qu'il est inconnu", async () => {
+    h.run = null;
+    expect((await POST({ runId: "run-1" })).status).toBe(404);
+  });
+
+  it("refuse un corps sans identifiant", async () => {
+    expect((await POST({})).status).toBe(400);
+  });
+});
+
+/**
+ * ET LA MOITIÉ SERVEUR DE LA MÊME DÉCISION : **le drain ne prend jamais un run
+ * local.**
+ *
+ * Sans cette ligne, l'utilisateur demande sa machine, obtient le cloud, et rien
+ * ne le lui dit — le défaut exact que ce chantier combat partout ailleurs. Lu
+ * dans la SOURCE parce que la requête est une chaîne de `postgrest` : l'exercer
+ * demanderait une base, et ce qui compte est qu'elle soit là.
+ */
+describe("le drain laisse les runs locaux à leur machine", () => {
+  it("exclut `local_exec` de la file qu'il claim", () => {
+    const source = readFileSync(join(__dirname, "drain.ts"), "utf8");
+    expect(source).toContain('.not("local_exec", "is", true)');
+  });
+});
+
+/**
+ * ET LA BRANCHE D'`execute.ts`, lue dans la source pour la raison qu'explique
+ * `engine-wiring.test.ts` : l'exercer demanderait une base, une forge, un
+ * catalogue de modèles et une microVM. Ce qu'on tient ici est ce qui se
+ * casserait en silence — une branche locale qui réveillerait quand même une
+ * machine, ou qui lancerait la boucle au lieu de rendre l'affectation.
+ */
+describe("la préparation locale d'`execute.ts`", () => {
+  const source = readFileSync(join(__dirname, "execute.ts"), "utf8");
+
+  it("ne réveille aucune microVM sur un tour local", () => {
+    expect(source).toContain("localTurn ? { sandbox: null } : await getOrCreateAgentSandbox(");
+  });
+
+  it("rend l'affectation au lieu de lancer la boucle", () => {
+    const local = source.slice(source.indexOf("if (localTurn) {"));
+    expect(local.slice(0, 400)).toContain("opts.onLocalAssignment?.(job)");
+    // La boucle de microVM vient APRÈS, et n'est donc jamais atteinte.
+    expect(local.indexOf("opts.onLocalAssignment?.(job)")).toBeLessThan(
+      local.indexOf("startVmLoop("),
+    );
+  });
+
+  it("laisse le harness résoudre la baseline du diff qu'il est seul à connaître", () => {
+    expect(source).toContain('const baselineHead = host ? await revParseHead(host) : "";');
+  });
+
+  it("n'écrit AUCUN nom de microVM sur la ligne d'un run local", () => {
+    // `handleControlPlaneRequest` compare `sandbox_id` au nom signé de
+    // l'appelant, et le chien de garde interroge la plateforme sur ce nom-là :
+    // une valeur inventée ferait mentir les deux.
+    expect(source).toContain("...(sandbox ? { sandbox_id: sandboxName(sandbox)");
+  });
+});

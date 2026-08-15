@@ -10,10 +10,6 @@
 
   Ce qui n'est PAS ici est un choix, pas un oubli :
 
-  - `com.apple.security.cs.disable-library-validation` : il faudra l'ajouter
-    quand l'agent local (MIN-293) lancera le binaire `opencode`, qui n'est pas
-    signé par nous. Pas avant : un entitlement ouvert « au cas où » est un
-    entitlement que personne ne relit ensuite.
   - App Sandbox : jamais. Il interdirait précisément ce pour quoi cette app
     existe (§4 du cadrage), et Apple ne l'exige que pour l'App Store, où on ne va
     pas.
@@ -40,6 +36,39 @@
          electron-builder.yml : l'entitlement ouvre la porte, la phrase dit
          pourquoi. Il manque l'une des deux, il ne se passe rien. -->
     <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <!-- L'AGENT LOCAL (MIN-293), et c'est l'entitlement le plus cher du fichier.
+
+         Le tour lance `opencode`, un binaire natif de 144 Mo installé par
+         `npm i` sur la machine et **que nous ne signons pas**. Sous hardened
+         runtime, le noyau refuse de charger dans un process signé par nous du
+         code signé par quelqu'un d'autre : sans cette clé, `opencode serve` ne
+         démarre pas une fois l'app empaquetée — et, comme le micro avant
+         MIN-294, l'échec n'arrive JAMAIS en développement, où la coquille tourne
+         sous Electron.app.
+
+         ⚠ CE QU'ELLE OUVRE, ET IL FAUT LE LIRE ENTIER.
+
+         Seule, elle dit « ce process peut charger du code non validé ».
+         **Combinée à `com.apple.security.cs.allow-dyld-environment-variables`,
+         trois lignes plus haut, elle fait de minddy un véhicule d'héritage
+         TCC** : un process lancé depuis l'app hérite de ses autorisations
+         (Documents, Bureau, Téléchargements, micro), et `DYLD_INSERT_LIBRARIES`
+         devient un moyen de faire charger n'importe quelle bibliothèque par un
+         binaire qui les porte. La seconde clé n'est pas retirable — Electron en
+         a besoin pour ses propres process fils (renderer, GPU) — donc la
+         combinaison est le prix du lot, pas un accident à corriger.
+
+         Ce qui la rend tenable est ailleurs, et ne tient pas dans un plist : le
+         tour meurt avec l'app (`before-quit` demande, MIN-293), rien de ce qu'il
+         lance ne lui survit (`run_background` est retiré du chemin local, le
+         registre d'enfants finit le travail), et le harness lui-même est vérifié
+         à l'empreinte avant chaque fork. Retirer l'un de ces trois-là sans
+         retirer cette clé serait le vrai défaut.
+
+         ⚠ Elle change l'empreinte de republication (scripts/desktop-fingerprint.mjs,
+         `PACKAGING_INPUTS`) : republication + renotarisation. -->
+    <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
   </dict>
 </plist>

@@ -1,8 +1,6 @@
 import "server-only";
 
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
+import { harnessBundleSource } from "./harness-bundle";
 import { assertUsableLayout } from "./harness-layout";
 import { vmBundlePath, vmJobPath, type VmJob } from "./vm/protocol";
 import type { Sandbox } from "./sandbox";
@@ -30,29 +28,17 @@ import type { Sandbox } from "./sandbox";
  */
 
 /**
- * Où le bundle est lu, côté fonction. Produit par `prebuild`
- * (`scripts/build-agent-vm.mjs`) et embarqué dans la fonction par
- * `outputFileTracingIncludes` (next.config.mjs) — il est lu par CHEMIN, donc
- * invisible du traceur d'imports de Next, et cette ligne de config est ce qui
- * l'empêche de manquer en production.
+ * OÙ LE BUNDLE SE LIT, ET POURQUOI PLUS ICI (MIN-293).
+ *
+ * La lecture mémoïsée et son message d'erreur vivaient dans ce fichier, qui en
+ * était le seul lecteur. Il y en a un second depuis que la machine de
+ * l'utilisateur le télécharge, et il a besoin d'une chose de plus : l'EMPREINTE.
+ * Les deux sont donc rassemblés dans [harness-bundle.ts](harness-bundle.ts) —
+ * une seule lecture, un seul cache, un seul message quand `npm run build:agent-vm`
+ * n'a pas tourné. Deux copies auraient fini par servir deux bundles différents à
+ * la microVM et au Mac, ce qui est exactement le genre d'écart qui ne se voit
+ * qu'en production.
  */
-const LOCAL_BUNDLE_PATH = path.join(process.cwd(), ".agent-vm", "main.js");
-
-/**
- * Le bundle est le même pour tous les runs d'un déploiement : on le lit UNE fois
- * par instance de fonction. Une invocation qui sert cinq lancements ne relit pas
- * 280 Ko cinq fois.
- */
-let cachedBundle: Promise<string> | null = null;
-function bundleSource(): Promise<string> {
-  cachedBundle ??= readFile(LOCAL_BUNDLE_PATH, "utf8").catch((err) => {
-    cachedBundle = null;
-    throw new Error(
-      `agent VM bundle missing at ${LOCAL_BUNDLE_PATH} — run \`npm run build:agent-vm\` (it is wired as \`prebuild\`): ${(err as Error).message}`,
-    );
-  });
-  return cachedBundle;
-}
 
 /**
  * Écrit le harness dans la microVM et lance le tour. Rend l'identifiant de la
@@ -90,7 +76,7 @@ export async function startVmLoop(
    */
   assertUsableLayout(job.layout);
 
-  const bundle = await bundleSource();
+  const bundle = await harnessBundleSource();
 
   /**
    * LES CHEMINS VIENNENT DU JOB, et c'est lui qui les porte parce que c'est lui

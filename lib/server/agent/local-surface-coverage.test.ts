@@ -75,6 +75,27 @@ const SURFACES_HORS_LIB = [
     pourquoi: "le téléchargement de l'app de bureau — le seul binaire que le dépôt sert.",
     reachedBy: "@/app/api/desktop/download/route",
   },
+  {
+    file: "app/api/desktop/harness/route.ts",
+    pourquoi:
+      "le MANIFESTE du harness (MIN-293) : son empreinte est ce qui décide si la machine " +
+      "forke ou refuse, et elle doit décrire les octets que la route voisine sert.",
+    reachedBy: "@/app/api/desktop/harness/route",
+  },
+  {
+    file: "app/api/desktop/harness/bundle/route.ts",
+    pourquoi:
+      "les OCTETS du harness — le seul code non signé par Apple que l'app de bureau exécute.",
+    reachedBy: "@/app/api/desktop/harness/bundle/route",
+  },
+  {
+    file: "app/api/desktop/local-turn/route.ts",
+    pourquoi:
+      "le déclencheur d'un tour local (MIN-293) : quatre gardes dont l'ORDRE est la " +
+      "garantie — un run refusé par sa nature ou par son mode de clé ne doit jamais " +
+      "être claim, et le bail se monte en dernier parce qu'émettre c'est révoquer.",
+    reachedBy: "@/app/api/desktop/local-turn/route",
+  },
 ] as const;
 
 describe("les surfaces du chantier local qui vivent hors de `lib/**`", () => {
@@ -117,6 +138,14 @@ const COQUILLE = {
   "run-log.ts":
     "le `fs` du journal d'un tour local et le ramassage du rapport de diagnostic ; " +
     "nommage, rotation, en-tête, substitution et forme du rapport dans @/lib/desktop/run-log",
+  "launcher.ts":
+    "le `utilityProcess.fork`, le `fetch` de session, le `fs` et le registre des tours vivants ; " +
+    "le contrat d'affectation et le layout dans @/lib/desktop/local-turn, l'empreinte du harness " +
+    "dans @/lib/desktop/harness-bundle, la question du ⌘Q dans @/lib/desktop/quit-guard, " +
+    "et ce qu'on tue dans @/lib/server/agent/vm/child-registry",
+  "opencode-install.ts":
+    "le `spawn` de `npm i` et la recherche dans le PATH ; faut-il installer, quelle commande " +
+    "et quel refus dans @/lib/desktop/opencode-install",
   "trace.ts": "une ligne de journal, sans décision",
 } as const;
 
