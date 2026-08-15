@@ -10,6 +10,20 @@ export interface NativePushContent {
   url: string | null;
 }
 
+/**
+ * Le volet macOS qui laisse l'utilisateur lever un refus déjà prononcé.
+ *
+ * Le bundle id est fixé par le MAIN process, jamais fourni par la page distante.
+ * `id` sélectionne directement l'app au lieu de déposer la personne devant la
+ * liste entière des notifications.
+ */
+export function nativeNotificationSettingsUrl(bundleId: string): string {
+  return (
+    "x-apple.systempreferences:com.apple.Notifications-Settings.extension" +
+    `?id=${encodeURIComponent(bundleId)}`
+  );
+}
+
 export function nativePushContent(input: unknown): NativePushContent | null {
   if (!input || typeof input !== "object") return null;
   const payload = input as Record<string, unknown>;

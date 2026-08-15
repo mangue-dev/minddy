@@ -22,6 +22,7 @@ import {
 } from "@/lib/desktop/channel";
 import {
   DESKTOP_APP_NAME,
+  DESKTOP_BUNDLE_ID,
   DESKTOP_ENTRY_PATH,
   DESKTOP_ORIGIN,
   DESKTOP_PROTOCOL,
@@ -31,7 +32,10 @@ import { deviceIdForUserData } from "@/lib/desktop/device-id";
 import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
-import { nativePushContent } from "@/lib/desktop/native-push";
+import {
+  nativeNotificationSettingsUrl,
+  nativePushContent,
+} from "@/lib/desktop/native-push";
 import { quitDecision, quitPrompt } from "@/lib/desktop/quit-guard";
 import {
   carrySessionCookies,
@@ -626,6 +630,13 @@ function registerIpc(): void {
       apnsRegistration = null;
       await setNativePushAllowed(app.getPath("userData"), false);
     }
+  });
+
+  ipcMain.on("minddy:push:open-settings", () => {
+    if (process.platform !== "darwin") return;
+    // Aucun URL venu de la page distante ne traverse ce canal : le main
+    // process construit lui-même la destination système et cible cette app.
+    void shell.openExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
   });
 
   ipcMain.on("minddy:window-buttons", (_event, visible: unknown) => {

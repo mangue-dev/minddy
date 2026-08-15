@@ -83,6 +83,9 @@ export const DESKTOP_ENTRY_PATH = "/home";
  */
 export const DESKTOP_APP_NAME = "minddy";
 
+/** L'identifiant signé du bundle macOS (`appId` dans electron-builder.yml). */
+export const DESKTOP_BUNDLE_ID = "app.minddy.desktop";
+
 /** Le schéma d'URL que macOS nous attribue (`minddy://auth?code=…`). */
 export const DESKTOP_PROTOCOL = "minddy";
 

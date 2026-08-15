@@ -74,6 +74,10 @@ const bridge: DesktopBridge = {
     return ipcRenderer.invoke("minddy:push:unregister") as Promise<void>;
   },
 
+  openNotificationSettings() {
+    ipcRenderer.send("minddy:push:open-settings");
+  },
+
   setWindowButtonsVisible(visible: boolean) {
     ipcRenderer.send("minddy:window-buttons", visible);
   },

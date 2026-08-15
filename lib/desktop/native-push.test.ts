@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { nativePushContent, nativePushTarget } from "./native-push";
+import {
+  nativeNotificationSettingsUrl,
+  nativePushContent,
+  nativePushTarget,
+} from "./native-push";
+
+describe("nativeNotificationSettingsUrl", () => {
+  it("cible directement la fiche de l'app dans les notifications macOS", () => {
+    expect(nativeNotificationSettingsUrl("app.minddy.desktop")).toBe(
+      "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=app.minddy.desktop"
+    );
+  });
+});
 
 describe("nativePushContent", () => {
   it("lit le titre, le corps et la destination APNs", () => {

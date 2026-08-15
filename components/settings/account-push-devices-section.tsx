@@ -11,7 +11,7 @@ import {
   Switch,
   toast,
 } from "mangue-ui";
-import { BellRing, Monitor, Send, Smartphone, Trash2 } from "lucide-react";
+import { BellRing, Monitor, Send, Settings2, Smartphone, Trash2 } from "lucide-react";
 
 import {
   deletePushDeviceApi,
@@ -74,6 +74,7 @@ export function AccountPushDevicesSection() {
   /** Comme les capacités du navigateur, lue après le montage (voir l'effet). */
   const [inDesktopApp, setInDesktopApp] = useState(false);
   const [nativeDesktopPush, setNativeDesktopPush] = useState(false);
+  const [nativeNotificationSettings, setNativeNotificationSettings] = useState(false);
   const [thisEndpoint, setThisEndpoint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
@@ -85,7 +86,9 @@ export function AccountPushDevicesSection() {
     setPermission(pushPermission());
     setNeedsInstall(isIOS() && !isStandalone());
     setInDesktopApp(isDesktop());
-    setNativeDesktopPush(!!getDesktopBridge()?.registerForPushNotifications);
+    const desktop = getDesktopBridge();
+    setNativeDesktopPush(!!desktop?.registerForPushNotifications);
+    setNativeNotificationSettings(!!desktop?.openNotificationSettings);
     if (isPushSupported()) void currentEndpoint().then(setThisEndpoint);
   }, []);
 
@@ -234,7 +237,7 @@ export function AccountPushDevicesSection() {
       : permission === "unsupported"
         ? t("unsupportedHint")
         : permission === "denied"
-          ? t("deniedHint")
+          ? t(nativeNotificationSettings ? "macDeniedHint" : "deniedHint")
           : needsInstall
             ? t("iosInstallHint")
             : null;
@@ -252,15 +255,30 @@ export function AccountPushDevicesSection() {
           label={t("enableLabel")}
           hint={blocked ?? t(nativeDesktopPush ? "enableDescNative" : "enableDesc")}
           control={
-            blocked ? undefined : (
+            blocked && !nativeNotificationSettings ? undefined : (
               <>
-                {busy && <Spinner />}
-                <Switch
-                  id="push-this-device"
-                  checked={on}
-                  disabled={busy || permission === null}
-                  onCheckedChange={(v) => void toggleThisDevice(v)}
-                />
+                {nativeNotificationSettings && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => getDesktopBridge()?.openNotificationSettings?.()}
+                  >
+                    <Settings2 className="size-4" />
+                    {t("macSettingsButton")}
+                  </Button>
+                )}
+                {!blocked && (
+                  <>
+                    {busy && <Spinner />}
+                    <Switch
+                      id="push-this-device"
+                      checked={on}
+                      disabled={busy || permission === null}
+                      onCheckedChange={(v) => void toggleThisDevice(v)}
+                    />
+                  </>
+                )}
               </>
             )
           }

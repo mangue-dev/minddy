@@ -55,6 +55,8 @@ export interface DesktopBridge {
   } | null>;
   /** Retire l'inscription APNs de cette installation. */
   unregisterForPushNotifications?(): Promise<void>;
+  /** Ouvre directement la fiche Notifications de minddy dans Réglages Système. */
+  openNotificationSettings?(): void;
   /**
    * DEMANDE que les boutons macOS (fermer / réduire / plein écran) soient
    * montrés ou cachés.
