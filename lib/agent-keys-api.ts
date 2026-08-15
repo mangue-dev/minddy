@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReasoningLevel } from "./agent-reasoning";
+import type { AiSurface, ByokFeatureModels } from "./ai-surfaces";
 import { trackEvent } from "./analytics";
 
 /**
@@ -38,6 +39,10 @@ export interface AiKey {
    * compte reste sur le quota minddy tant qu'elle ne répond pas.
    */
   validated_at: string | null;
+  enabled_surfaces: AiSurface[];
+  feature_models: ByokFeatureModels;
+  /** Défauts effectifs admin/provider, secrets exclus. */
+  resolved_feature_models?: ByokFeatureModels;
 }
 
 export async function fetchAiKeysApi(): Promise<{ keys: AiKey[] }> {
@@ -65,6 +70,20 @@ export async function addAiKeyApi(input: {
 export async function deleteAiKeyApi(): Promise<void> {
   trackEvent("ai_key_removed", {});
   await parseJson(await fetch("/api/account/ai-keys", { method: "DELETE" }));
+}
+
+/** Met à jour les surfaces et/ou modèles de la clé active, jamais son secret. */
+export async function updateAiKeyPreferencesApi(patch: {
+  enabled_surfaces?: AiSurface[];
+  feature_models?: ByokFeatureModels;
+}): Promise<{ key: AiKey }> {
+  return parseJson(
+    await fetch("/api/account/ai-keys", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  );
 }
 
 export interface AgentPreferences {

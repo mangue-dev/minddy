@@ -39,6 +39,7 @@ import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
 import { agentRunTitleSource } from "./run-title";
 import type { AssistantMention } from "@/lib/assistant-types";
+import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 
 /**
  * Point d'entrée UNIQUE pour démarrer un run FROID (MIN-46 + MIN-68). Appelé par
@@ -283,7 +284,8 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       : input.routineId
         ? activeRunForRoutine(input.routineId)
         : Promise.resolve(null);
-  const quotaPromise = checkAgentQuota(input.userId);
+  const aiSurface = input.chainId || input.routineId ? "automations" : "agent";
+  const quotaPromise = checkAgentQuota(input.userId, aiSurface);
 
   const link = await linkPromise;
   if (!link) return { ok: false, error: "noRepo" };
@@ -335,7 +337,11 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 
   let model: string;
   try {
-    const resolved = await resolveAgentModel({ perRunModel: input.model, userId: input.userId });
+    const resolved = await resolveAgentModel({
+      perRunModel: input.model,
+      userId: input.userId,
+      surface: aiSurface,
+    });
     model = resolved.model;
     // Plafond de modèle du plan (quota minddy uniquement) : il porte sur ce que
     // l'utilisateur a CHOISI — pas sur les défauts de minddy, dont l'instance
@@ -575,15 +581,23 @@ async function launchPrReviewRun(
   const quota = await checkAgentQuota(input.userId);
   if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
 
-  const { model, chosenByUser } = await resolvePrReviewModel({
+  const resolvedReview = await resolvePrReviewModel({
     perCall: input.model,
     userId: input.userId,
   });
-  // La review tourne sur la clé plateforme, donc sur le quota minddy : le
-  // plafond de modèle du plan s'y applique, BYOK ou pas.
-  if (chosenByUser) {
+  const model =
+    !resolvedReview.chosenByUser && quota.mode === "byok"
+      ? (
+          await resolveAiRuntime({
+            userId: input.userId,
+            modelKey: "pr_review_model",
+            surface: "agent",
+          })
+        ).model
+      : resolvedReview.model;
+  if (resolvedReview.chosenByUser && quota.mode === "platform") {
     try {
-      await ensureModelInPlan({ userId: input.userId, model, mode: "platform" });
+      await ensureModelInPlan({ userId: input.userId, model, mode: quota.mode });
     } catch (err) {
       if (isPlanLimitError(err) && err.code === "model_above_plan") {
         const p = err.params ?? {};

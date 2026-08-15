@@ -2071,7 +2071,7 @@
     "mcpDialogDone": "It's connected",
     "cyclesTab": "Cycles",
     "inboxTab": "Inbox",
-    "agentTab": "Numo agent",
+    "agentTab": "AI",
     "dataTab": "Data",
     "agentModelTitle": "Default agent model",
     "agentModelDesc": "You can pick a different model at each launch.",
@@ -2080,11 +2080,21 @@
     "agentReasoningTitle": "Default reasoning level",
     "agentReasoningDesc": "How long the model thinks before it acts. You can pick a different level at each launch.",
     "aiProviderTitle": "AI provider",
-    "aiProviderDesc": "The Numo agent uses minddy's quota, or your own provider key.",
+    "aiProviderDesc": "AI features use minddy's quota, or your own provider key.",
     "aiProviderMinddy": "Minddy quota",
     "aiProviderMinddyHint": "Runs on minddy's key, within your plan's monthly usage budget. No key to add.",
     "aiProviderGeneric": "Generic (OpenAI-compatible)",
-    "aiKeysDesc": "With your own key the agent runs without limits, billed to you. One provider at a time.",
+    "aiKeysDesc": "Selected surfaces run on your own key and provider bill. One provider at a time.",
+    "byokSurfacesTitle": "Use my key for",
+    "byokSurfacesDesc": "Everything is enabled by default. Turn off a surface to leave it on minddy's quota, and choose a different model for each call type when needed.",
+    "byokSurface_agent": "Numo agent",
+    "byokSurface_assistant": "Assistant and comments",
+    "byokSurface_automations": "Automations",
+    "byokSurface_voice": "Voice and dictation",
+    "byokSurface_feedback": "Feedback processing",
+    "byokSurfaceUsesKey": "Uses your key",
+    "byokSurfaceUsesQuota": "Stays on minddy's quota",
+    "byokModelDefault": "Provider preselected model",
     "aiKeyUnconfirmed": "We couldn't reach your provider to confirm this key. Until it answers, runs stay on minddy's quota.",
     "aiKeyVmNote": "In the cloud, your key stays outside the agent's machine. For a local run, it is loaded into the proxy on your machine; your provider bills every model call.",
     "aiKeyLabel": "API key",
@@ -3530,7 +3540,11 @@
     "groups": {
       "assistant": {
         "title": "Assistant",
-        "desc": "Numo and automatic assignment."
+        "desc": "Numo in chat and comments."
+      },
+      "automations": {
+        "title": "Automations",
+        "desc": "Smart assignment, smart fill, briefs and imports."
       },
       "agent": {
         "title": "Numo agent"
@@ -3559,6 +3573,10 @@
       "agent_model": {
         "label": "Numo agent model",
         "desc": "Applies to everyone by default. Each user can set their own, and pick another when starting a session."
+      },
+      "automation_agent_model": {
+        "label": "Chains and routines model",
+        "desc": "Numo model used by runs launched from an automation."
       },
       "agent_subagent_favorites": {
         "label": "Sub-agent favorite models",

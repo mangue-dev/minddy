@@ -4,22 +4,13 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
-import {
-  fetchOpenRouterWithSuffixFallback,
-  modelConfigKeys,
-  resolveFromValues,
-} from "@/lib/server/model-config";
+import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { canUseSmartAssign } from "@/lib/server/entitlements";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
-import {
-  recordAiUsage,
-  newRunId,
-  parseOpenRouterUsage,
-  type OpenRouterUsage,
-} from "@/lib/server/ai-usage";
+import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { isStatus } from "@/lib/issue-validation";
 import { hasAnyRule, userIdsWithoutRule } from "@/lib/smart-assign-config";
 import type { SmartAssignConfigWarning } from "@/lib/types";
@@ -61,7 +52,6 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  * - `sweepUnassignedIssues` (cron) rattrape ce que ce dernier `after()` perd.
  */
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MAX_DESCRIPTION_CHARS = 4000;
 
 /** Fenêtre du rattrapage : au-delà, un ticket sans assigné est un choix, pas
@@ -424,9 +414,6 @@ async function chooseAssigneeViaAI({
   ownerId: string;
   rules: Record<string, string>;
 }): Promise<string | null> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
-
   try {
     const [modelCfg, authUsers, { data: categoryRows }] = await Promise.all([
       getAppConfigValues(modelConfigKeys("smart_assign_model")),
@@ -475,85 +462,31 @@ Effort: ${(issue.effort as string) ?? "—"}
 ## Members
 ${memberLines}`;
 
-    const { response } = await fetchOpenRouterWithSuffixFallback(
-      OPENROUTER_URL,
+    const args = await forcedToolCall(
       model,
-      (m) => ({
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://minddy.app",
-          "X-Title": "Smart Assign (minddy)",
+      systemPrompt,
+      userMessage,
+      "choose_assignee",
+      {
+        type: "object",
+        properties: { user_id: { type: "string", enum: memberIds } },
+        required: ["user_id"],
+        additionalProperties: false,
+      },
+      {
+        xTitle: "Smart Assign (minddy)",
+        logPrefix: "[smart-assign]",
+        modelKey: "smart_assign_model",
+        maxTokens: 256,
+        record: {
+          feature: "smart_assign",
+          billTo: { projectOwner: projectId },
+          projectId,
         },
-        body: JSON.stringify({
-          model: m,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
-          ],
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: "choose_assignee",
-                description:
-                  "Assign the issue to exactly one member. Mandatory — you must always pick one.",
-                parameters: {
-                  type: "object",
-                  properties: { user_id: { type: "string", enum: memberIds } },
-                  required: ["user_id"],
-                },
-              },
-            },
-          ],
-          tool_choice: { type: "function", function: { name: "choose_assignee" } },
-          usage: { include: true },
-          max_tokens: 256,
-        }),
-      }),
-      "[smart-assign]",
+      },
     );
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
-    }
-    const data = (await response.json()) as {
-      choices?: {
-        message?: {
-          tool_calls?: { function?: { name?: string; arguments?: string } }[];
-        };
-      }[];
-      id?: string;
-      model?: string;
-      usage?: OpenRouterUsage;
-    };
-    // Suivi des coûts : appel unique (un run d'un seul appel), imputé au owner
-    // du projet — explicitement (MIN-131). Le ticket a bien un créateur, mais
-    // Smart Assign est une automatisation DU PROJET, que le owner a activée et
-    // que SON budget autorise (`canUseSmartAssign(project.owner_id)`) : facturer
-    // le membre qui dépose un ticket lui ferait payer un réglage qui n'est pas
-    // le sien, et découplerait le payeur de la porte qui laisse passer l'appel.
-    const u = parseOpenRouterUsage(data.usage);
-    afterOrNow(() =>
-      recordAiUsage({
-        runId: newRunId(),
-        feature: "smart_assign",
-        model: data.model ?? model,
-        generationId: data.id ?? null,
-        promptTokens: u.promptTokens,
-        completionTokens: u.completionTokens,
-        totalTokens: u.totalTokens,
-        cost: u.cost,
-        billTo: { projectOwner: projectId },
-        projectId,
-      }),
-    );
-    const call = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
-    if (call?.name !== "choose_assignee") return null;
-    const args = JSON.parse(call.arguments || "{}") as { user_id?: unknown };
     // Never trust the enum — re-validate against the real member list.
-    return typeof args.user_id === "string" && memberIds.includes(args.user_id)
+    return typeof args?.user_id === "string" && memberIds.includes(args.user_id)
       ? args.user_id
       : null;
   } catch (err) {

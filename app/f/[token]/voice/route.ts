@@ -88,7 +88,7 @@ export async function POST(
   }
 
   // Le owner paye : sans budget, le micro se tait plutôt que de creuser.
-  if (!(await ownerHasUsageBudget(ctx.project.id))) {
+  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) {
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 

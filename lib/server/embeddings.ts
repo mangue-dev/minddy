@@ -11,6 +11,7 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { ownerHasUsageBudget } from "@/lib/server/usage";
+import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 
 /**
  * Contexte de suivi de coût pour un appel d'embeddings (un appel = un run).
@@ -42,29 +43,60 @@ export async function embedTexts(
   texts: string[],
   opts?: { timeoutMs?: number; record?: EmbeddingUsageRecord }
 ): Promise<(number[] | null)[]> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey || texts.length === 0) return texts.map(() => null);
+  if (texts.length === 0) return [];
 
   // Budget du plan (MIN-72) : l'IA feedback est payée par le owner du projet.
   // Budget à sec → null (comme un échec réseau) : le post vit sans embedding,
   // la passe horaire rattrapera quand le budget sera revenu.
   if (opts?.record?.projectId) {
-    if (!(await ownerHasUsageBudget(opts.record.projectId))) {
+    if (!(await ownerHasUsageBudget(opts.record.projectId, "feedback"))) {
       return texts.map(() => null);
     }
   }
 
+  let billedUserId: string | null = null;
+  const billTo = opts?.record?.billTo;
+  if (billTo && "userId" in billTo) billedUserId = billTo.userId || null;
+  else if (billTo && "projectOwner" in billTo) {
+    const { data } = await getServiceClient()
+      .from("projects")
+      .select("owner_id")
+      .eq("id", billTo.projectOwner)
+      .maybeSingle();
+    billedUserId = (data as { owner_id?: string } | null)?.owner_id ?? null;
+  }
+
+  const runtime = billedUserId
+    ? await resolveAiRuntime({
+        userId: billedUserId,
+        modelKey: "feedback_embedding_model",
+        surface: "feedback",
+      }).catch(() => null)
+    : null;
+  const apiKey = runtime?.apiKey ?? process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return texts.map(() => null);
+  const endpoint = runtime
+    ? `${runtime.baseUrl.replace(/\/+$/, "")}/embeddings`
+    : OPENROUTER_EMBEDDINGS_URL;
+  const provider = runtime?.provider ?? "openrouter";
+
   const input = texts.map((t) => t.slice(0, MAX_INPUT_CHARS));
   const attempt = async (model: string): Promise<(number[] | null)[]> => {
-    const response = await fetch(OPENROUTER_EMBEDDINGS_URL, {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": "Feedback (minddy)",
+        ...(provider === "openrouter"
+          ? { "HTTP-Referer": "https://minddy.app", "X-Title": "Feedback (minddy)" }
+          : {}),
       },
-      body: JSON.stringify({ model, input, usage: { include: true } }),
+      body: JSON.stringify({
+        model,
+        input,
+        dimensions: EMBEDDING_DIMENSIONS,
+        ...(provider === "openrouter" ? { usage: { include: true } } : {}),
+      }),
       signal: AbortSignal.timeout(opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
     if (!response.ok) {
@@ -83,6 +115,8 @@ export async function embedTexts(
       await recordAiUsage({
         runId: newRunId(),
         feature: "embedding",
+        provider,
+        keyMode: runtime?.mode ?? "platform",
         model: data.model ?? model,
         generationId: data.id ?? null,
         promptTokens: u.promptTokens,
@@ -110,8 +144,10 @@ export async function embedTexts(
   try {
     // Le raccourci de routage admin (MIN-263) s'il y en a un, et le modèle nu
     // en repli : un embedding manquant coûte au board une passe de rattrapage.
-    const { model } = await resolveConfiguredModel("feedback_embedding_model");
-    return await withModelSuffixFallback(model, attempt, { logPrefix: "[embeddings]" });
+    const model = runtime?.model ?? (await resolveConfiguredModel("feedback_embedding_model")).model;
+    return provider === "openrouter"
+      ? await withModelSuffixFallback(model, attempt, { logPrefix: "[embeddings]" })
+      : await attempt(model);
   } catch (err) {
     console.error("[embeddings] failed:", (err as Error).message);
     return texts.map(() => null);

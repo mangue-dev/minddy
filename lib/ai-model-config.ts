@@ -15,6 +15,8 @@
  * via `aiModelFallback` instead of redeclaring the constant on its side.
  */
 import { getProviderDefaultModel } from "@/lib/agent-providers";
+import { AGENT_PROVIDERS } from "@/lib/agent-providers";
+import { BYOK_MODEL_KEYS, byokFeatureDefaultModelKey } from "@/lib/ai-surfaces";
 import { DEFAULT_SUBAGENT_FAVORITES } from "@/lib/subagent-favorites";
 import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 
@@ -28,7 +30,7 @@ import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
  */
 export type AiConfigKind = "model" | "modelId" | "favorites" | "recommended" | "flag";
 
-export type AiConfigGroup = "assistant" | "agent" | "byok" | "voice" | "feedback";
+export type AiConfigGroup = "assistant" | "automations" | "agent" | "byok" | "voice" | "feedback";
 
 export interface AiConfigField {
   /** `app_config` key. */
@@ -43,6 +45,8 @@ export interface AiConfigField {
    * en accepterait un. Voir `MODEL_SUFFIXES` pour la raison de chaque exclusion.
    */
   noSuffix?: true;
+  /** Libellé technique généré pour les défauts provider × feature. */
+  adminLabel?: string;
 }
 
 /**
@@ -73,15 +77,22 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // Assistant Numo + helpers texte
   { key: "assistant_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "fallback_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
-  { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  {
+    key: "automation_agent_model",
+    kind: "model",
+    fallback: "deepseek/deepseek-v4-flash",
+    group: "automations",
+    noSuffix: true,
+  },
   // Smart-fill (lib/server/smart-fill.ts, MIN-260) : UN appel par ticket créé à
   // la main, sur son seul titre + sa description, et qui rend priorité, effort,
   // catégories et objectif. Il tient la personne devant son écran (la ligne
   // n'est insérée qu'une fois remplie) : il lui faut donc un modèle RAPIDE, pas
   // un modèle malin — la tâche est un rangement, pas un raisonnement. Le drapeau
   // le coupe partout d'un coup, et le formulaire retombe sur la saisie à la main.
-  { key: "smart_fill_enabled", kind: "flag", fallback: "true", group: "assistant" },
-  { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  { key: "smart_fill_enabled", kind: "flag", fallback: "true", group: "automations" },
+  { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   // Titre d'une conversation Numo (lib/server/assistant/title.ts) : un appel de
   // quelques dizaines de tokens par conversation neuve — un petit modèle suffit,
   // et c'est exactement le genre d'appel où un gros ne se justifie pas.
@@ -91,15 +102,15 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // résumé des colonnes. C'est le prix d'un import qui ne perd rien, et le
   // drapeau le coupe partout d'un coup (l'import retombe alors sur ses tables
   // d'alias, comme avant).
-  { key: "import_map_enabled", kind: "flag", fallback: "true", group: "assistant" },
-  { key: "import_map_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  { key: "import_map_enabled", kind: "flag", fallback: "true", group: "automations" },
+  { key: "import_map_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   // Découpe d'un brief en objectifs + tickets (lib/server/brief-to-issues.ts,
   // MIN-172) : UN appel par brief collé, jamais par ticket — le modèle rend le
   // lot entier d'un coup, ce que vingt `create_issue` en file ne feraient ni au
   // même prix ni à la même latence. Le drapeau la coupe partout d'un coup :
   // l'amorce d'un projet neuf retombe alors sur l'import et la saisie à la main.
-  { key: "brief_enabled", kind: "flag", fallback: "true", group: "assistant" },
-  { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
+  { key: "brief_enabled", kind: "flag", fallback: "true", group: "automations" },
+  { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   // Recherche web (tool `web_search` de Numo et des agents) : le modèle qui lit
   // les résultats du plugin OpenRouter. Le drapeau la coupe partout d'un coup.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
@@ -170,9 +181,38 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   { key: "feedback_embedding_model", kind: "model", fallback: "openai/text-embedding-3-small", group: "feedback" },
 ];
 
+/**
+ * Matrice provider × type d'appel. OpenRouter est absent : son défaut est, par
+ * définition, le réglage plateforme du même type. Les champs vides d'un
+ * provider générique obligent le compte à choisir un id de son endpoint.
+ */
+for (const provider of AGENT_PROVIDERS.filter((entry) => entry.id !== "openrouter")) {
+  for (const modelKey of BYOK_MODEL_KEYS) {
+    let fallback = provider.defaultModel ?? "";
+    if (modelKey === "transcription_model") {
+      fallback = provider.id === "openai" ? "gpt-4o-mini-transcribe" : "";
+    } else if (modelKey === "feedback_embedding_model") {
+      fallback =
+        provider.id === "openai"
+          ? "text-embedding-3-small"
+          : provider.id === "google"
+            ? "gemini-embedding-001"
+            : "";
+    }
+    AI_MODEL_CONFIG_FIELDS.push({
+      key: byokFeatureDefaultModelKey(provider.id, modelKey),
+      kind: "modelId",
+      fallback,
+      group: "byok",
+      adminLabel: `${provider.label} · ${modelKey}`,
+    });
+  }
+}
+
 /** Display order of the dashboard sections. */
 export const AI_MODEL_CONFIG_GROUPS: AiConfigGroup[] = [
   "assistant",
+  "automations",
   "agent",
   "byok",
   "voice",

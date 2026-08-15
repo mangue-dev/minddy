@@ -40,6 +40,8 @@ export interface TranscribeAudioOptions {
   temperature?: number;
   provider?: Record<string, unknown>;
   title?: string;
+  providerId?: string;
+  baseUrl?: string;
 }
 
 export interface TranscribeAudioResult {
@@ -69,15 +71,33 @@ export async function transcribeAudio(
     body.provider = options.provider;
   }
 
-  const res = await fetch("https://openrouter.ai/api/v1/audio/transcriptions", {
+  const providerId = options?.providerId ?? "openrouter";
+  const baseUrl = (options?.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/+$/, "");
+  const direct = providerId === "openai" || providerId === "generic";
+  const directBody = direct ? new FormData() : null;
+  if (directBody) {
+    const bytes = Uint8Array.from(Buffer.from(audioBase64, "base64"));
+    directBody.append("file", new Blob([bytes]), `audio.${format}`);
+    directBody.append("model", model);
+    if (options?.language) directBody.append("language", options.language);
+    if (options?.temperature !== undefined) {
+      directBody.append("temperature", String(options.temperature));
+    }
+  }
+
+  const res = await fetch(`${baseUrl}/audio/transcriptions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://minddy.app",
-      "X-Title": options?.title ?? "minddy",
+      ...(direct
+        ? {}
+        : {
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://minddy.app",
+            "X-Title": options?.title ?? "minddy",
+          }),
     },
-    body: JSON.stringify(body),
+    body: directBody ?? JSON.stringify(body),
     // La dictée n'étant plus bornée en durée, une prise peut valoir plusieurs
     // dizaines de minutes d'audio : 120 s ne suffisaient plus à l'envoyer et à
     // la transcrire. On reste sous le maxDuration = 300 de /api/transcribe.
@@ -87,7 +107,7 @@ export async function transcribeAudio(
   if (!res.ok) {
     const text = await res.text();
     throw new Error(
-      `OpenRouter STT error ${res.status}: ${text.slice(0, 300)}`,
+      `STT error ${res.status}: ${text.slice(0, 300)}`,
     );
   }
 

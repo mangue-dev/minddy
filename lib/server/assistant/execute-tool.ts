@@ -620,8 +620,7 @@ async function executeWebSearch(
   if (!query) return toolError("query is required");
 
   const turn = ctx.webSearch;
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!turn || !apiKey) {
+  if (!turn) {
     return toolError("Web search is not available here.");
   }
   if (turn.used >= MAX_WEB_SEARCHES_PER_TURN) {
@@ -634,7 +633,8 @@ async function executeWebSearch(
   turn.used++;
   return await runWebSearchTool({
     query,
-    apiKey,
+    userId: ctx.userId,
+    surface: "assistant",
     runId: turn.runId,
     seq,
     billTo: { userId: ctx.userId },

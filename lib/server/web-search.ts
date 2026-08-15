@@ -11,6 +11,8 @@ import {
   type NormalizedUsage,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
+import type { AiSurface } from "@/lib/ai-surfaces";
+import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 
 /**
  * Recherche web de Numo — le SEUL chemin d'accès au web de l'app.
@@ -276,7 +278,10 @@ async function attemptWebSearch(params: {
  */
 export async function runWebSearchTool(params: {
   query: string;
-  apiKey: string;
+  /** Repli historique/tests. Avec un user, la clé et le modèle se résolvent par surface. */
+  apiKey?: string;
+  userId?: string;
+  surface?: AiSurface;
   runId: string;
   seq: number;
   maxResults?: number;
@@ -293,10 +298,27 @@ export async function runWebSearchTool(params: {
     };
   }
 
+  const runtime = params.userId
+    ? await resolveAiRuntime({
+        userId: params.userId,
+        modelKey: WEB_SEARCH_MODEL_CONFIG_KEY,
+        surface: params.surface ?? "assistant",
+      }).catch(() => null)
+    : null;
+
+  // Le plugin `web` est une capacité OpenRouter, pas une extension du standard
+  // OpenAI-compatible. Une clé native reste donc sur le quota Minddy pour CE
+  // sous-appel ; une clé OpenRouter, elle, utilise bien son modèle par feature.
+  const byokOpenRouter = runtime?.provider === "openrouter" ? runtime : null;
+  const apiKey = byokOpenRouter?.apiKey ?? params.apiKey ?? process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    return { result: { error: "Web search is not available here." }, success: false };
+  }
+
   const outcome = await runWebSearch({
     query: params.query,
-    apiKey: params.apiKey,
-    model: settings.model,
+    apiKey,
+    model: byokOpenRouter?.model ?? settings.model,
     maxResults: params.maxResults,
     signal: params.signal,
   });
@@ -307,6 +329,8 @@ export async function runWebSearchTool(params: {
     runId: params.runId,
     seq: params.seq,
     feature: "web_search",
+    provider: "openrouter",
+    keyMode: byokOpenRouter?.mode ?? "platform",
     model: outcome.model,
     generationId: outcome.generationId,
     promptTokens: outcome.usage.promptTokens,

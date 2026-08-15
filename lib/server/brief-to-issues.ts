@@ -184,6 +184,7 @@ ${text}
     {
       xTitle: "Project brief (minddy)",
       logPrefix: "[brief-split]",
+      modelKey: BRIEF_MODEL_KEY,
       maxTokens: MAX_OUTPUT_TOKENS,
       timeoutMs: TIMEOUT_MS,
       record: {

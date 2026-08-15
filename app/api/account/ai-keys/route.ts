@@ -12,6 +12,10 @@ import {
   normalizeBaseUrl,
   resolveProviderBaseUrl,
 } from "@/lib/agent-providers";
+import { parseAiSurfaces, parseByokFeatureModels } from "@/lib/ai-surfaces";
+import { BYOK_MODEL_KEYS } from "@/lib/ai-surfaces";
+import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
+import type { AgentProviderId } from "@/lib/agent-providers";
 
 /**
  * Clé « BYOK » du compte (MIN-46 / MIN-10). UN seul provider actif : OpenRouter,
@@ -24,7 +28,7 @@ import {
  */
 
 const SANITIZED =
-  "id, provider, key_prefix, base_url, created_at, last_used_at, validated_at";
+  "id, provider, key_prefix, base_url, created_at, last_used_at, validated_at, enabled_surfaces, feature_models";
 
 // Bornes larges : une clé d'API réelle et une base URL tiennent très en dessous.
 const MAX_KEY_LENGTH = 1024;
@@ -48,7 +52,23 @@ export async function GET(request: NextRequest) {
     .select(SANITIZED)
     .eq("user_id", auth.user.id)
     .order("created_at", { ascending: false });
-  return NextResponse.json({ keys: data ?? [] });
+  const keys = await Promise.all(
+    (data ?? []).map(async (row) => {
+      const resolvedEntries = await Promise.all(
+        BYOK_MODEL_KEYS.map(async (modelKey) => [
+          modelKey,
+          await resolveByokFeatureDefaultModel(row.provider as AgentProviderId, modelKey),
+        ] as const),
+      );
+      return {
+        ...row,
+        resolved_feature_models: Object.fromEntries(
+          resolvedEntries.filter((entry) => entry[1] !== null),
+        ),
+      };
+    }),
+  );
+  return NextResponse.json({ keys });
 }
 
 export async function POST(request: NextRequest) {
@@ -172,4 +192,52 @@ export async function DELETE(request: NextRequest) {
   await service.from("user_ai_keys").delete().eq("user_id", auth.user.id);
   await clearDefaultModel(service, auth.user.id);
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * Réglages non sensibles du BYOK actif. L'écriture est partielle mais chaque
+ * valeur fournie remplace son ensemble complet : c'est ce qui rend possible de
+ * décocher toutes les surfaces ou d'effacer tous les overrides modèle.
+ */
+export async function PATCH(request: NextRequest) {
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+
+  let body: { enabled_surfaces?: unknown; feature_models?: unknown };
+  try {
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+    body = parsed as typeof body;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const update: { enabled_surfaces?: string[]; feature_models?: Record<string, string> } = {};
+  if ("enabled_surfaces" in body) {
+    const surfaces = parseAiSurfaces(body.enabled_surfaces);
+    if (!surfaces) return NextResponse.json({ error: "Invalid AI surfaces" }, { status: 400 });
+    update.enabled_surfaces = surfaces;
+  }
+  if ("feature_models" in body) {
+    const models = parseByokFeatureModels(body.feature_models);
+    if (!models) return NextResponse.json({ error: "Invalid feature models" }, { status: 400 });
+    update.feature_models = models;
+  }
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: "No preference supplied" }, { status: 400 });
+  }
+
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from("user_ai_keys")
+    .update(update)
+    .eq("user_id", auth.user.id)
+    .select(SANITIZED)
+    .maybeSingle();
+  if (error) {
+    console.error("[api/account/ai-keys] preferences update failed:", error.message);
+    return NextResponse.json({ error: "Could not save BYOK preferences" }, { status: 500 });
+  }
+  if (!data) return NextResponse.json({ error: "No BYOK key configured" }, { status: 404 });
+  return NextResponse.json({ key: data });
 }

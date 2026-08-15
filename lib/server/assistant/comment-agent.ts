@@ -33,6 +33,7 @@ import {
 } from "./prompt";
 import { commentDisplay, type CommentDisplay } from "./comment-live";
 import { gatherProjectPromptContext } from "./prompt-context";
+import { fetchAiChat, resolveAiRuntime } from "@/lib/server/ai-runtime";
 import {
   buildAttachmentParts,
   groupPromptAttachments,
@@ -185,7 +186,7 @@ export async function runCommentMention({
     if (!access) return;
 
     // Budget du plan (MIN-72) — fire-and-forget : à sec, skip silencieux.
-    if (!(await hasUsageBudget(actorId))) return;
+    if (!(await hasUsageBudget(actorId, "assistant"))) return;
 
     // ── Post the live placeholder reply right away ───────────────────────
     const { data: reply, error: replyError } = await service
@@ -428,7 +429,7 @@ export async function runObjectiveCommentMention({
     if (!access) return;
 
     // Budget du plan (MIN-72) — fire-and-forget : à sec, skip silencieux.
-    if (!(await hasUsageBudget(actorId))) return;
+    if (!(await hasUsageBudget(actorId, "assistant"))) return;
 
     // ── Post the live placeholder reply right away ───────────────────────
     const { data: reply, error: replyError } = await service
@@ -651,7 +652,7 @@ export async function runFeedbackCommentMention({
     if (!access) return;
 
     // Budget du plan (MIN-72) — fire-and-forget : à sec, skip silencieux.
-    if (!(await hasUsageBudget(actorId))) return;
+    if (!(await hasUsageBudget(actorId, "assistant"))) return;
 
     // ── Post the live placeholder reply right away ───────────────────────
     const { data: reply, error: replyError } = await service
@@ -887,8 +888,12 @@ async function runLoop(
     onText: (partial: string) => void;
   }
 ): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY not configured");
+  const aiRuntime = await resolveAiRuntime({
+    userId: ctx.userId,
+    modelKey: "assistant_model",
+    surface: "assistant",
+  });
+  ctx.model = aiRuntime.model;
 
   let finalContent = "";
   let continueLoop = true;
@@ -912,15 +917,10 @@ async function runLoop(
     // Past the round cap, force a text-only conclusion (no tools offered).
     const lastRound = roundCount >= MAX_TOOL_ROUNDS;
 
-    const response = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": "Numo (minddy)",
-      },
-      body: JSON.stringify({
+    const { response } = await fetchAiChat(
+      aiRuntime,
+      ctx.model,
+      () => ({
         model: ctx.model,
         messages,
         stream: true,
@@ -929,7 +929,9 @@ async function runLoop(
         max_tokens: 4096,
         ...(lastRound ? {} : { tools }),
       }),
-    });
+      "Numo (minddy)",
+      "[numo-comment]",
+    );
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
@@ -1004,6 +1006,8 @@ async function runLoop(
       runId,
       seq: roundCount - 1,
       feature: "numo_comment",
+      provider: aiRuntime.provider,
+      keyMode: aiRuntime.mode,
       model: modelUsed,
       generationId,
       promptTokens: usageInfo?.prompt_tokens ?? null,

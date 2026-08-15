@@ -2071,7 +2071,7 @@
     "mcpDialogDone": "C'est connecté",
     "cyclesTab": "Cycles",
     "inboxTab": "Inbox",
-    "agentTab": "Agent Numo",
+    "agentTab": "IA",
     "dataTab": "Données",
     "agentModelTitle": "Modèle par défaut de l'agent",
     "agentModelDesc": "Vous pouvez choisir un autre modèle à chaque lancement.",
@@ -2080,11 +2080,21 @@
     "agentReasoningTitle": "Niveau de raisonnement par défaut",
     "agentReasoningDesc": "Le temps que le modèle passe à réfléchir avant d'agir. Vous pouvez choisir un autre niveau à chaque lancement.",
     "aiProviderTitle": "Provider IA",
-    "aiProviderDesc": "L'agent Numo utilise le quota minddy, ou votre propre clé de provider.",
+    "aiProviderDesc": "Les fonctions IA utilisent le quota minddy, ou votre propre clé de provider.",
     "aiProviderMinddy": "Quota minddy",
     "aiProviderMinddyHint": "Tourne sur la clé de minddy, dans la limite du budget mensuel de votre plan. Aucune clé à ajouter.",
     "aiProviderGeneric": "Générique (OpenAI-compatible)",
-    "aiKeysDesc": "Avec votre propre clé, l'agent tourne sans limite, à vos frais. Un seul provider à la fois.",
+    "aiKeysDesc": "Avec votre propre clé, les surfaces choisies tournent à vos frais. Un seul provider à la fois.",
+    "byokSurfacesTitle": "Utiliser ma clé pour",
+    "byokSurfacesDesc": "Tout est activé par défaut. Décochez une surface pour la laisser sur le quota minddy, et choisissez un modèle différent pour chaque type d'appel si nécessaire.",
+    "byokSurface_agent": "Agent Numo",
+    "byokSurface_assistant": "Assistant et commentaires",
+    "byokSurface_automations": "Automatisations",
+    "byokSurface_voice": "Voix et dictée",
+    "byokSurface_feedback": "Traitement des retours",
+    "byokSurfaceUsesKey": "Utilise votre clé",
+    "byokSurfaceUsesQuota": "Reste sur le quota minddy",
+    "byokModelDefault": "Modèle pré-sélectionné du provider",
     "aiKeyUnconfirmed": "Nous n'avons pas pu joindre votre fournisseur pour confirmer cette clé. Tant qu'il ne répond pas, les sessions restent sur le quota minddy.",
     "aiKeyVmNote": "Dans le cloud, votre clé reste hors de la machine de l'agent. Pour un run local, elle est chargée dans le proxy sur votre machine ; votre provider facture chaque appel au modèle.",
     "aiKeyLabel": "Clé API",
@@ -3530,7 +3540,11 @@
     "groups": {
       "assistant": {
         "title": "Assistant",
-        "desc": "Numo et l'assignation automatique."
+        "desc": "Numo dans le chat et les commentaires."
+      },
+      "automations": {
+        "title": "Automatisations",
+        "desc": "Assignation, remplissage intelligent, briefs et imports."
       },
       "agent": {
         "title": "Agent Numo"
@@ -3559,6 +3573,10 @@
       "agent_model": {
         "label": "Modèle de l'agent Numo",
         "desc": "S'applique à tous par défaut. Chacun peut définir le sien, et en choisir un autre au lancement d'une session."
+      },
+      "automation_agent_model": {
+        "label": "Modèle des chaînes et routines",
+        "desc": "Modèle Numo utilisé par les runs lancés depuis une automatisation."
       },
       "agent_subagent_favorites": {
         "label": "Modèles favoris des sous-agents",

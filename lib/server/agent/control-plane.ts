@@ -42,6 +42,7 @@ import {
 import type { AgentCheckpoint } from "./runs";
 import type { AgentEventType } from "./agent-contract";
 import { parseAgentMentions } from "@/lib/agent-mentions";
+import { surfaceForAgentRun } from "@/lib/ai-surfaces";
 
 /**
  * PLAN DE CONTRÔLE de la microVM (MIN-223) — la seule surface par laquelle une
@@ -453,6 +454,7 @@ export async function handleControlPlaneRequest(opts: {
       billTo: billToFor(run),
       model,
       ...(typeof body.provider === "string" ? { provider: body.provider } : {}),
+      keyMode: run.key_mode,
       generationId: typeof body.generationId === "string" ? body.generationId : null,
       promptTokens: claim.promptTokens,
       completionTokens: claim.completionTokens,
@@ -991,17 +993,14 @@ async function runWebSearch(
 ): Promise<ControlPlaneResult> {
   const query = String(args.query ?? "").trim();
   if (!query) return bad("web_search: query is required");
-  const [{ runWebSearchTool }, { resolveAgentApiKey }] = await Promise.all([
-    import("@/lib/server/web-search"),
-    import("./model"),
-  ]);
+  const { runWebSearchTool } = await import("@/lib/server/web-search");
   // Le lanceur du run, et lui seul : c'est SA clé (BYOK) ou SON quota qui paie
   // la recherche, exactement comme pour les appels du modèle.
   if (!run.created_by) return bad("web_search: this run has no owner");
-  const { apiKey } = await resolveAgentApiKey(run.created_by);
   const outcome = await runWebSearchTool({
     query,
-    apiKey,
+    userId: run.created_by,
+    surface: surfaceForAgentRun(run),
     runId: run.run_id ?? run.id,
     // La bande de seq des recherches est à elle ; le compteur repart du tour, et
     // deux recherches d'un même tour ne se marchent pas dessus.

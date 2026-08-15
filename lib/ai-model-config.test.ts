@@ -32,7 +32,7 @@ describe("registre des réglages IA × catalogues i18n", () => {
     const groups = messages.Admin.groups as Record<string, GroupEntry>;
 
     it(`donne un libellé à chaque réglage (${locale})`, () => {
-      const missing = AI_MODEL_CONFIG_FIELDS.filter((f) => !fields[f.key]?.label).map(
+      const missing = AI_MODEL_CONFIG_FIELDS.filter((f) => !f.adminLabel && !fields[f.key]?.label).map(
         (f) => f.key,
       );
       expect(missing).toEqual([]);

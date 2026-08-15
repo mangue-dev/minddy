@@ -4,6 +4,7 @@ import { nextBillingPlanId, type BillingPlanId } from "@/lib/billing-plans";
 import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { getUserUsage } from "@/lib/server/usage";
 import { userHasByokKey } from "./model";
+import type { AiSurface } from "@/lib/ai-surfaces";
 
 /**
  * Contrôle d'accès de l'agent de code (MIN-46 / MIN-10, refondu par MIN-72) :
@@ -55,7 +56,10 @@ export interface AgentQuota {
 }
 
 /** Décide si l'utilisateur peut lancer un run maintenant. */
-export async function checkAgentQuota(userId: string): Promise<AgentQuota> {
+export async function checkAgentQuota(
+  userId: string,
+  surface: Extract<AiSurface, "agent" | "automations"> = "agent",
+): Promise<AgentQuota> {
   const { plan } = await getResolvedBilling(userId);
   if (!plan.allowAgents) {
     return {
@@ -68,7 +72,7 @@ export async function checkAgentQuota(userId: string): Promise<AgentQuota> {
     };
   }
 
-  if (await userHasByokKey(userId)) {
+  if (await userHasByokKey(userId, surface)) {
     const usage = await getUserUsage(userId);
     const cap = plan.includedUsageUsd;
     // Les DEUX features de microVM : un run d'agent et un passage de routine

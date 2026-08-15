@@ -19,6 +19,8 @@ import {
   type AiFeature,
   type AiUsageBillTo,
 } from "@/lib/server/ai-usage";
+import type { AiSurface } from "@/lib/ai-surfaces";
+import { usesByokForSurface } from "@/lib/server/ai-runtime";
 
 /**
  * Budget d'usage (MIN-72) — le dépensé d'un user sur la fenêtre courante,
@@ -170,8 +172,12 @@ export function segmentizeUsage(
  * Check pré-vol : budget restant → l'usage courant ; épuisé → 403
  * `usage_budget_exceeded`. Retourne l'usage pour éviter un second fetch.
  */
-export async function ensureUsageBudget(userId: string): Promise<UserUsage> {
+export async function ensureUsageBudget(
+  userId: string,
+  surface?: AiSurface,
+): Promise<UserUsage> {
   const usage = await getUserUsage(userId);
+  if (surface && (await usesByokForSurface(userId, surface))) return usage;
   const included = usage.billing.plan.includedUsageUsd;
   if (usage.usedUsd >= included) {
     throw new PlanLimitError("usage_budget_exceeded", {
@@ -183,8 +189,9 @@ export async function ensureUsageBudget(userId: string): Promise<UserUsage> {
 }
 
 /** Variante booléenne pour les jobs de fond (cron feedback, smart assign). */
-export async function hasUsageBudget(userId: string): Promise<boolean> {
+export async function hasUsageBudget(userId: string, surface?: AiSurface): Promise<boolean> {
   try {
+    if (surface && (await usesByokForSurface(userId, surface))) return true;
     const usage = await getUserUsage(userId);
     return usage.usedUsd < usage.billing.plan.includedUsageUsd;
   } catch (err) {
@@ -199,7 +206,10 @@ export async function hasUsageBudget(userId: string): Promise<boolean> {
  * publics) : c'est le owner qui paye, pas le visiteur. Best-effort (true si
  * le projet est introuvable) : ne jamais casser un flux public sur un doute.
  */
-export async function ownerHasUsageBudget(projectId: string): Promise<boolean> {
+export async function ownerHasUsageBudget(
+  projectId: string,
+  surface?: AiSurface,
+): Promise<boolean> {
   try {
     const service = getServiceClient();
     const { data } = await service
@@ -209,7 +219,7 @@ export async function ownerHasUsageBudget(projectId: string): Promise<boolean> {
       .maybeSingle();
     const ownerId = (data as { owner_id?: string } | null)?.owner_id;
     if (!ownerId) return true;
-    return await hasUsageBudget(ownerId);
+    return await hasUsageBudget(ownerId, surface);
   } catch (err) {
     console.error("[usage] owner budget check failed:", (err as Error).message);
     return true;

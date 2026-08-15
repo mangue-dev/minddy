@@ -9,6 +9,10 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { stripModelSuffix } from "@/lib/ai-model-config";
+import { chatCompletionsUrl } from "@/lib/agent-providers";
+import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
+import { resolveAiRuntime, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
+import { getServiceClient } from "@/lib/supabase-service";
 
 /**
  * Appel OpenRouter à sortie structurée forcée (tools + tool_choice) — le contrat
@@ -58,6 +62,10 @@ export async function forcedToolCall(
     xTitle?: string;
     logPrefix?: string;
     record?: ForcedToolCallRecord;
+    /** Type réel de l'appel : permet de résoudre son modèle BYOK. */
+    modelKey?: ByokModelKey;
+    /** Cas particulier où le même modèle appartient à une autre surface (feedback voice). */
+    surface?: AiSurface;
     /** Défaut : 1024 — de quoi couvrir un verdict ou un titre. À relever pour
      *  les sorties qui grandissent avec l'entrée (un plan de correspondance
      *  porte une ligne par colonne du fichier). */
@@ -72,19 +80,52 @@ export async function forcedToolCall(
     timeoutMs?: number;
   }
 ): Promise<Record<string, unknown> | null> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
-
   const logPrefix = options?.logPrefix ?? "[feedback-llm]";
 
+  const billedUserId = await (async (): Promise<string | null> => {
+    const billTo = options?.record?.billTo;
+    if (!billTo) return null;
+    if ("userId" in billTo) return billTo.userId || null;
+    if ("projectOwner" in billTo) {
+      const { data } = await getServiceClient()
+        .from("projects")
+        .select("owner_id")
+        .eq("id", billTo.projectOwner)
+        .maybeSingle();
+      return (data as { owner_id?: string } | null)?.owner_id ?? null;
+    }
+    return null;
+  })();
+
+  let runtime: ResolvedAiRuntime | null = null;
+  if (billedUserId && options?.modelKey) {
+    runtime = await resolveAiRuntime({
+      userId: billedUserId,
+      modelKey: options.modelKey,
+      surface: options.surface,
+    }).catch(() => null);
+  }
+  const apiKey = runtime?.apiKey ?? process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return null;
+  const endpoint = runtime ? chatCompletionsUrl(runtime.baseUrl) : OPENROUTER_URL;
+  const provider = runtime?.provider ?? "openrouter";
+  const resolvedModel = runtime?.model ?? model;
+
   const attempt = async (attemptModel: string): Promise<Record<string, unknown> | null> => {
-    const response = await fetch(OPENROUTER_URL, {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": options?.xTitle ?? "Feedback (minddy)",
+        ...(runtime?.requestProfile.anthropicVersion
+          ? { "anthropic-version": "2023-06-01" }
+          : {}),
+        ...(provider === "openrouter"
+          ? {
+              "HTTP-Referer": "https://minddy.app",
+              "X-Title": options?.xTitle ?? "Feedback (minddy)",
+            }
+          : {}),
       },
       body: JSON.stringify({
         model: attemptModel,
@@ -103,8 +144,8 @@ export async function forcedToolCall(
           },
         ],
         tool_choice: { type: "function", function: { name: toolName } },
-        usage: { include: true },
-        max_tokens: options?.maxTokens ?? 1024,
+        ...(provider === "openrouter" ? { usage: { include: true } } : {}),
+        max_tokens: options?.maxTokens ?? runtime?.requestProfile.maxTokens ?? 1024,
       }),
       signal: AbortSignal.timeout(options?.timeoutMs ?? 45_000),
     });
@@ -130,6 +171,8 @@ export async function forcedToolCall(
       await recordAiUsage({
         runId: newRunId(),
         feature: options.record.feature,
+        provider,
+        keyMode: runtime?.mode ?? "platform",
         model: data.model ?? attemptModel,
         generationId: data.id ?? null,
         promptTokens: u.promptTokens,
@@ -147,13 +190,13 @@ export async function forcedToolCall(
   };
 
   try {
-    return await attempt(model);
+    return await attempt(resolvedModel);
   } catch (err) {
     // Repli du raccourci de routage (MIN-263) : le modèle NU plutôt qu'une
     // fonctionnalité éteinte. Un seul rejeu, et seulement sur un refus.
-    const base = stripModelSuffix(model);
-    if (err instanceof OpenRouterHttpError && base !== model) {
-      console.warn(`${logPrefix} ${model} refused (${err.status}), retrying on ${base}`);
+    const base = stripModelSuffix(resolvedModel);
+    if (provider === "openrouter" && err instanceof OpenRouterHttpError && base !== resolvedModel) {
+      console.warn(`${logPrefix} ${resolvedModel} refused (${err.status}), retrying on ${base}`);
       try {
         return await attempt(base);
       } catch (retryErr) {

@@ -91,6 +91,7 @@ export function AdminModelsDashboard() {
   const fieldsByGroup = useMemo(() => {
     const map: Record<AiConfigGroup, AiConfigField[]> = {
       assistant: [],
+      automations: [],
       agent: [],
       byok: [],
       voice: [],
@@ -172,10 +173,10 @@ function ConfigRow({
   const t = useTranslations("Admin");
   // Casts : `field.key` vient de la config serveur, donc la clé se construit à
   // l'exécution et échappe au catalogue typé (cf. lib/i18n-keys.ts).
-  const label = t(`fields.${field.key}.label` as AdminKey);
+  const label = field.adminLabel ?? t(`fields.${field.key}.label` as AdminKey);
   // Description optionnelle : un champ dont le libellé se suffit n'en a pas.
   const descKey = `fields.${field.key}.desc` as AdminKey;
-  const desc = t.has(descKey) ? t(descKey) : null;
+  const desc = field.adminLabel ? null : t.has(descKey) ? t(descKey) : null;
 
   if (loading) {
     return (

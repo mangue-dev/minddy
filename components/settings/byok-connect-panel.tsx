@@ -242,6 +242,10 @@ export function ByokConnectPanel({
                 onChange={(e) => setKeyDraft(e.target.value)}
                 placeholder={selectedDef.keyPlaceholder}
                 type="password"
+                // `off` est ignoré par plusieurs gestionnaires de mots de passe
+                // sur les champs password ; `new-password` désactive réellement
+                // la proposition d'identifiants enregistrés pour une clé API.
+                autoComplete="new-password"
                 spellCheck={false}
                 autoCapitalize="off"
                 autoCorrect="off"

@@ -9,12 +9,7 @@ import {
   type AiUsageInput,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
-import { getAppConfigValues } from "@/lib/server/app-config";
-import {
-  fetchOpenRouterWithSuffixFallback,
-  modelConfigKeys,
-  resolveFromValues,
-} from "@/lib/server/model-config";
+import { fetchAiChat, resolveAiRuntime } from "@/lib/server/ai-runtime";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
@@ -262,7 +257,7 @@ export async function POST(
 
   // Budget d'usage du plan (MIN-72) — pré-vol avant le mini-agent de dictée.
   try {
-    await ensureUsageBudget(auth.user.id);
+    await ensureUsageBudget(auth.user.id, "voice");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
@@ -278,11 +273,6 @@ export async function POST(
       { error: "Too many requests", retry_after: rateLimit.retryAfter },
       { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } }
     );
-  }
-
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "Dictation not configured" }, { status: 503 });
   }
 
   let body: {
@@ -364,12 +354,12 @@ export async function POST(
   const service = getServiceClient();
   // Seuls les MEMBRES entrent dans ce prompt : un objectif ne référence ni
   // catégorie ni ticket, le reste du contexte projet ne lui sert à rien.
-  const [membersResult, modelCfg, locale] = await Promise.all([
+  const [membersResult, aiRuntime, locale] = await Promise.all([
     listMembers(
       { db: auth.supabase, service, projectId, projectKey: project.key as string },
       project.owner_id as string
     ),
-    getAppConfigValues(modelConfigKeys("dictate_model")),
+    resolveAiRuntime({ userId: auth.user.id, modelKey: "dictate_model", surface: "voice" }),
     getLocale(),
   ]);
   const members: PromptMember[] =
@@ -381,7 +371,7 @@ export async function POST(
       : [];
   // `let` : le repli du raccourci de routage (MIN-263) colle au modèle qui a
   // marché, pour ne pas re-tenter le suffixe à chaque round.
-  let model = resolveFromValues("dictate_model", modelCfg).model;
+  let model = aiRuntime.model;
 
   const messages: OpenRouterMessage[] = [
     {
@@ -409,25 +399,17 @@ export async function POST(
   const usageRows: AiUsageInput[] = [];
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const call = await fetchOpenRouterWithSuffixFallback(
-        OPENROUTER_URL,
+      const call = await fetchAiChat(
+        aiRuntime,
         model,
         (m) => ({
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://minddy.app",
-            "X-Title": "Numo (minddy)",
-          },
-          body: JSON.stringify({
             model: m,
             messages,
             tools: [UPDATE_DRAFT_TOOL],
             usage: { include: true },
             max_tokens: 4096,
-          }),
         }),
+        "Numo (minddy)",
         "[dictate-objective]",
       );
       const response = call.response;
@@ -447,6 +429,8 @@ export async function POST(
         runId,
         seq: round,
         feature: "dictation",
+        provider: aiRuntime.provider,
+        keyMode: aiRuntime.mode,
         model: data.model ?? model,
         generationId: data.id ?? null,
         promptTokens: u.promptTokens,

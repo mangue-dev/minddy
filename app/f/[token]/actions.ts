@@ -303,7 +303,7 @@ export async function dictateFeedbackAction(
   });
   if (!rate.allowed) return { ok: false, error: "rateLimited" };
 
-  if (!(await ownerHasUsageBudget(ctx.project.id))) {
+  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) {
     return { ok: false, error: "unavailable" };
   }
 
@@ -368,7 +368,7 @@ export async function findSimilarPostsAction(
   });
   if (!rate.allowed) return [];
 
-  if (!(await ownerHasUsageBudget(ctx.project.id))) return [];
+  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) return [];
 
   // 5 s : le premier appel à froid (config + OpenRouter) peut dépasser 3 s,
   // et un échec ici est silencieux pour le visiteur.

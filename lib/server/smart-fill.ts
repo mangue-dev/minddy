@@ -256,7 +256,7 @@ export async function runSmartFill({
     if (!enabled) return {};
     // Le budget de CELUI QUI A ARMÉ la bascule, comme pour la dictée. À sec, on
     // ne remplit pas — et le ticket naît quand même.
-    if (!(await hasUsageBudget(actorId))) return {};
+    if (!(await hasUsageBudget(actorId, "automations"))) return {};
 
     const { model } = resolveFromValues("smart_fill_model", config);
     const ctx = await gatherContext(projectId);
@@ -272,6 +272,7 @@ export async function runSmartFill({
       {
         xTitle: "minddy Smart-fill",
         logPrefix: "smart-fill",
+        modelKey: "smart_fill_model",
         maxTokens: 256,
         // Quelqu'un attend devant son écran : au-delà, le ticket doit naître
         // sans son remplissage plutôt que de faire patienter une minute.

@@ -3,7 +3,6 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import {
   modelConfigKeys,
-  resolveFromValues,
   withModelSuffixFallback,
 } from "@/lib/server/model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
@@ -13,6 +12,7 @@ import {
 } from "@/lib/server/openrouter-transcribe";
 import { recordAiUsage, newRunId, type AiFeature } from "@/lib/server/ai-usage";
 import { ensureUsageBudget } from "@/lib/server/usage";
+import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 import {
   isPlanLimitError,
   planLimitResponse,
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
   // Budget d'usage du plan (MIN-72) — pré-vol avant l'appel de transcription.
   try {
-    await ensureUsageBudget(user.id);
+    await ensureUsageBudget(user.id, "voice");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
@@ -97,18 +97,17 @@ export async function POST(request: NextRequest) {
   const language =
     typeof langRaw === "string" && langRaw.trim() ? langRaw.trim() : undefined;
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    console.error("[/api/transcribe] OPENROUTER_API_KEY not configured");
-    return Response.json({ error: "Server misconfigured" }, { status: 500 });
-  }
-
   // Model is DB-configured (app_config), like the assistant model.
   const cfg = await getAppConfigValues([
     ...modelConfigKeys("transcription_model"),
     "transcription_model_provider",
   ]);
-  const model = resolveFromValues("transcription_model", cfg).model;
+  const runtime = await resolveAiRuntime({
+    userId: user.id,
+    modelKey: "transcription_model",
+    surface: "voice",
+  });
+  const model = runtime.model;
   // Le modèle RÉELLEMENT appelé : le repli du raccourci de routage (MIN-263)
   // peut retirer le suffixe, et c'est cette valeur-là qui va au ledger.
   let usedModel = model;
@@ -137,10 +136,12 @@ export async function POST(request: NextRequest) {
       model,
       (m) => {
         usedModel = m;
-        return transcribeAudio(m, audioBase64, format, apiKey, {
+        return transcribeAudio(m, audioBase64, format, runtime.apiKey, {
           language,
-          provider,
+          provider: runtime.provider === "openrouter" ? provider : undefined,
           title: "minddy Dictate",
+          providerId: runtime.provider,
+          baseUrl: runtime.baseUrl,
         });
       },
       { logPrefix: "[/api/transcribe]" },
@@ -151,6 +152,8 @@ export async function POST(request: NextRequest) {
       recordAiUsage({
         runId,
         feature,
+        provider: runtime.provider,
+        keyMode: runtime.mode,
         model: usedModel,
         promptTokens: result.inputTokens || null,
         completionTokens: result.outputTokens || null,

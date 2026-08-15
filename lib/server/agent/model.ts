@@ -19,6 +19,12 @@ import {
 import { decryptUserAiKey } from "./byok-credentials";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 import type { VmModelPricing } from "./vm/protocol";
+import {
+  byokFeatureDefaultModelKey,
+  DEFAULT_BYOK_SURFACES,
+  type AiSurface,
+  type ByokFeatureModels,
+} from "@/lib/ai-surfaces";
 
 /**
  * Résolution du modèle et de l'endpoint de l'agent de code (MIN-46).
@@ -137,12 +143,48 @@ export interface ResolvedAgentModel {
 export async function resolveAgentModel(opts: {
   perRunModel?: string | null;
   userId: string;
+  surface?: Extract<AiSurface, "agent" | "automations">;
 }): Promise<ResolvedAgentModel> {
   const perRun = opts.perRunModel?.trim();
   if (perRun) return { model: perRun, chosenByUser: true };
+
+  // Une chaîne/routine est une feature distincte : son choix BYOK ne doit pas
+  // être écrasé par le défaut interactif de l'agent. Sans BYOK sur cette
+  // surface, elle continue naturellement sur la cascade historique Minddy.
+  if (opts.surface === "automations") {
+    const automationByok = await getUserByok(opts.userId, "automations");
+    if (automationByok) {
+      const chosen = automationByok.featureModels.automation_agent_model?.trim();
+      if (chosen) return { model: chosen, chosenByUser: true };
+      if (automationByok.provider === "openrouter") {
+        return {
+          model:
+            (await getAppConfigValue("automation_agent_model"))?.trim() ||
+            aiModelFallback("automation_agent_model"),
+          chosenByUser: false,
+        };
+      }
+      const featureKey = byokFeatureDefaultModelKey(
+        automationByok.provider,
+        "automation_agent_model",
+      );
+      const configured = (await getAppConfigValue(featureKey).catch(() => null))?.trim();
+      const fallback = aiModelFallback(featureKey).trim();
+      const providerDefault =
+        configured || fallback || (await resolveProviderDefaultModel(automationByok.provider));
+      if (providerDefault) return { model: providerDefault, chosenByUser: false };
+      throw new AgentModelRequiredError(automationByok.provider);
+    }
+    return {
+      model:
+        (await getAppConfigValue("automation_agent_model"))?.trim() ||
+        aiModelFallback("automation_agent_model"),
+      chosenByUser: false,
+    };
+  }
   const userDefault = await getUserDefaultModel(opts.userId);
   if (userDefault) return { model: userDefault, chosenByUser: true };
-  const byok = await getUserByok(opts.userId);
+  const byok = await getUserByok(opts.userId, opts.surface ?? "agent");
   // Défaut frontier du provider (openai/anthropic/google), réglable en /admin.
   const providerDefault = byok ? await resolveProviderDefaultModel(byok.provider) : undefined;
   if (providerDefault) return { model: providerDefault, chosenByUser: false };
@@ -236,6 +278,8 @@ export interface UserByok {
   apiKey: string;
   /** Base URL effective (registre, ou custom pour 'generic'). */
   baseUrl: string;
+  enabledSurfaces: AiSurface[];
+  featureModels: ByokFeatureModels;
 }
 
 /**
@@ -294,11 +338,14 @@ async function confirmsUnvalidatedKey(params: {
  * tourner quoi que ce soit ; une ligne non validée ne vaut donc plus rien, ni
  * ici ni dans `checkAgentQuota`.
  */
-export async function getUserByok(userId: string): Promise<UserByok | null> {
+export async function getUserByok(
+  userId: string,
+  surface?: AiSurface,
+): Promise<UserByok | null> {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("user_ai_keys")
-    .select("provider, key_encrypted, base_url, validated_at")
+    .select("provider, key_encrypted, base_url, validated_at, enabled_surfaces, feature_models")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -308,8 +355,14 @@ export async function getUserByok(userId: string): Promise<UserByok | null> {
     key_encrypted: string;
     base_url: string | null;
     validated_at: string | null;
+    enabled_surfaces: AiSurface[] | null;
+    feature_models: ByokFeatureModels | null;
   } | null;
   if (!row) return null;
+  const enabledSurfaces = Array.isArray(row.enabled_surfaces)
+    ? row.enabled_surfaces
+    : DEFAULT_BYOK_SURFACES;
+  if (surface && !enabledSurfaces.includes(surface)) return null;
   const apiKey = decryptUserAiKey(row.key_encrypted);
   if (!apiKey) return null;
   const baseUrl = resolveProviderBaseUrl(row.provider, row.base_url);
@@ -333,12 +386,21 @@ export async function getUserByok(userId: string): Promise<UserByok | null> {
   ) {
     return null;
   }
-  return { provider, apiKey, baseUrl };
+  return {
+    provider,
+    apiKey,
+    baseUrl,
+    enabledSurfaces,
+    featureModels: row.feature_models ?? {},
+  };
 }
 
 /** True si l'utilisateur a un BYOK utilisable (→ usage illimité). */
-export async function userHasByokKey(userId: string): Promise<boolean> {
-  return (await getUserByok(userId)) != null;
+export async function userHasByokKey(
+  userId: string,
+  surface: AiSurface = "agent",
+): Promise<boolean> {
+  return (await getUserByok(userId, surface)) != null;
 }
 
 // ── Capacités par modèle, lues dans l'index OpenRouter ──────────────────────
@@ -441,8 +503,11 @@ export interface ResolvedAgentEndpoint {
  * Résout l'endpoint effectif : BYOK de l'user si présent (provider + base URL +
  * clé), sinon la clé plateforme OpenRouter. Lève si aucune clé plateforme.
  */
-export async function resolveAgentApiKey(userId: string): Promise<ResolvedAgentEndpoint> {
-  const byok = await getUserByok(userId);
+export async function resolveAgentApiKey(
+  userId: string,
+  surface: Extract<AiSurface, "agent" | "automations"> = "agent",
+): Promise<ResolvedAgentEndpoint> {
+  const byok = await getUserByok(userId, surface);
   if (byok) {
     return { apiKey: byok.apiKey, mode: "byok", provider: byok.provider, baseUrl: byok.baseUrl };
   }

@@ -138,7 +138,7 @@ export async function routineRunBudgetUsd(routine: {
 }): Promise<number | null> {
   const percent = clampSpendPercent(routine.max_spend_percent);
   if (percent >= NO_SPEND_CAP_PERCENT) return null;
-  const quota = await checkAgentQuota(routine.owner_id);
+  const quota = await checkAgentQuota(routine.owner_id, "automations");
   if (quota.unlimited || quota.cap == null) return null;
   return (quota.cap * percent) / 100;
 }
@@ -243,7 +243,7 @@ async function refuseModelAbovePlan(
   model: string | null,
 ): Promise<Extract<RoutineResult<never>, { ok: false }> | null> {
   if (!model) return null;
-  const quota = await checkAgentQuota(userId);
+  const quota = await checkAgentQuota(userId, "automations");
   try {
     await ensureModelInPlan({ userId, model, mode: quota.mode });
     return null;

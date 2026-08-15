@@ -82,6 +82,10 @@ describe("DEFAULT_SUBAGENT_FAVORITES", () => {
 describe("registre des réglages IA", () => {
   it("donne un défaut non vide à chaque réglage de modèle", () => {
     for (const field of AI_MODEL_CONFIG_FIELDS) {
+      // Un endpoint générique (ou un provider sans cette capacité native) n'a
+      // aucun id universel honnête. Ses champs BYOK générés restent vides tant
+      // qu'un admin ne les configure pas, plutôt que d'envoyer un modèle faux.
+      if (field.adminLabel && field.kind === "modelId" && !field.fallback.trim()) continue;
       expect(aiModelFallback(field.key).trim().length).toBeGreaterThan(0);
     }
   });

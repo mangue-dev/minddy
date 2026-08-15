@@ -8,12 +8,7 @@ import {
   type AiUsageInput,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
-import { getAppConfigValues } from "@/lib/server/app-config";
-import {
-  fetchOpenRouterWithSuffixFallback,
-  modelConfigKeys,
-  resolveFromValues,
-} from "@/lib/server/model-config";
+import { fetchAiChat, resolveAiRuntime } from "@/lib/server/ai-runtime";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
@@ -140,7 +135,7 @@ export async function POST(request: NextRequest) {
 
   // Budget d'usage du plan (MIN-72) — pré-vol avant l'appel.
   try {
-    await ensureUsageBudget(auth.user.id);
+    await ensureUsageBudget(auth.user.id, "voice");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
@@ -152,11 +147,6 @@ export async function POST(request: NextRequest) {
       { error: "Too many requests", retry_after: rateLimit.retryAfter },
       { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } }
     );
-  }
-
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "Dictation not configured" }, { status: 503 });
   }
 
   let body: { transcript?: unknown; note?: unknown };
@@ -185,28 +175,20 @@ export async function POST(request: NextRequest) {
       ? sanitizeAssistantMessageContent(body.note.slice(-NOTE_SAMPLE_CHARS)).trim()
       : "";
 
-  const [modelCfg, locale] = await Promise.all([
-    getAppConfigValues(modelConfigKeys("dictate_model")),
+  const [aiRuntime, locale] = await Promise.all([
+    resolveAiRuntime({ userId: auth.user.id, modelKey: "dictate_model", surface: "voice" }),
     getLocale(),
   ]);
-  const model = resolveFromValues("dictate_model", modelCfg).model;
+  const model = aiRuntime.model;
 
   const runId = newRunId();
   const usageRows: AiUsageInput[] = [];
   let tasks: string[] = [];
   try {
-    const { response } = await fetchOpenRouterWithSuffixFallback(
-      OPENROUTER_URL,
+    const { response } = await fetchAiChat(
+      aiRuntime,
       model,
       (m) => ({
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://minddy.app",
-          "X-Title": "Numo (minddy)",
-        },
-        body: JSON.stringify({
           model: m,
           messages: [
             { role: "system", content: buildPrompt({ note, locale }) },
@@ -219,8 +201,8 @@ export async function POST(request: NextRequest) {
           },
           usage: { include: true },
           max_tokens: 4096,
-        }),
       }),
+      "Numo (minddy)",
       "[dictate-task]",
     );
     if (!response.ok) {
@@ -238,6 +220,8 @@ export async function POST(request: NextRequest) {
       runId,
       seq: 0,
       feature: "dictation",
+      provider: aiRuntime.provider,
+      keyMode: aiRuntime.mode,
       model: data.model ?? model,
       generationId: data.id ?? null,
       promptTokens: u.promptTokens,

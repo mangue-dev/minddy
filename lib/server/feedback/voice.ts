@@ -2,7 +2,6 @@ import "server-only";
 
 import { getAppConfigValues } from "@/lib/server/app-config";
 import {
-  fetchOpenRouterWithSuffixFallback,
   modelConfigKeys,
   resolveFromValues,
   withModelSuffixFallback,
@@ -25,6 +24,9 @@ import {
   type FeedbackVoicePatch,
   type FeedbackVoiceTurn,
 } from "@/lib/feedback/types";
+import { fetchAiChat, resolveAiRuntime } from "@/lib/server/ai-runtime";
+import { getServiceClient } from "@/lib/supabase-service";
+import type { ByokModelKey } from "@/lib/ai-surfaces";
 
 /**
  * Dicter un retour — le cœur partagé par les DEUX surfaces (MIN-37).
@@ -53,6 +55,25 @@ export const FEEDBACK_VOICE_ENABLED_KEY = "feedback_voice_enabled";
 export const FEEDBACK_VOICE_MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 
 const MAX_TRANSCRIPT_CHARS = 20_000;
+
+async function feedbackRuntime(
+  billTo: AiUsageBillTo,
+  projectId: string,
+  modelKey: ByokModelKey,
+) {
+  let userId = "userId" in billTo ? billTo.userId : null;
+  if (!userId && "projectOwner" in billTo) {
+    const { data } = await getServiceClient()
+      .from("projects")
+      .select("owner_id")
+      .eq("id", projectId)
+      .maybeSingle();
+    userId = (data as { owner_id?: string } | null)?.owner_id ?? null;
+  }
+  return userId
+    ? resolveAiRuntime({ userId, modelKey, surface: "feedback" })
+    : null;
+}
 const MAX_HISTORY_TURNS = 12;
 const MAX_HISTORY_CHARS = 4000;
 
@@ -222,9 +243,10 @@ export async function transcribeFeedbackAudio({
   const format = resolveAudioFormat(audio.type || "audio/webm");
   if (!format) throw new Error(`Unsupported audio mime type: ${audio.type}`);
 
-  const cfg = await getAppConfigValues(modelConfigKeys("transcription_model"));
-  const model = resolveFromValues("transcription_model", cfg).model;
-  const apiKey = requireApiKey();
+  const runtime = await feedbackRuntime(billTo, projectId, "transcription_model");
+  const cfg = runtime ? null : await getAppConfigValues(modelConfigKeys("transcription_model"));
+  const model = runtime?.model ?? resolveFromValues("transcription_model", cfg ?? {}).model;
+  const apiKey = runtime?.apiKey ?? requireApiKey();
 
   const audioBase64 = Buffer.from(await audio.arrayBuffer()).toString("base64");
   // Le modèle RÉELLEMENT appelé : le repli du raccourci de routage (MIN-263)
@@ -237,6 +259,8 @@ export async function transcribeFeedbackAudio({
       return transcribeAudio(m, audioBase64, format, apiKey, {
         language: locale,
         title: "minddy Feedback voice",
+        providerId: runtime?.provider,
+        baseUrl: runtime?.baseUrl,
       });
     },
     { logPrefix: "[feedback-voice]" },
@@ -246,6 +270,8 @@ export async function transcribeFeedbackAudio({
       runId,
       seq: 0,
       feature: "feedback_voice",
+      provider: runtime?.provider ?? "openrouter",
+      keyMode: runtime?.mode ?? "platform",
       model: usedModel,
       promptTokens: result.inputTokens || null,
       completionTokens: result.outputTokens || null,
@@ -301,9 +327,10 @@ export async function runFeedbackVoicePass({
   billTo: AiUsageBillTo;
   projectId: string;
 }): Promise<{ patch: FeedbackVoicePatch; reply: string; usage: AiUsageInput[] }> {
-  const cfg = await getAppConfigValues(modelConfigKeys("dictate_model"));
-  const model = resolveFromValues("dictate_model", cfg).model;
-  const apiKey = requireApiKey();
+  const runtime = await feedbackRuntime(billTo, projectId, "dictate_model");
+  const cfg = runtime ? null : await getAppConfigValues(modelConfigKeys("dictate_model"));
+  const model = runtime?.model ?? resolveFromValues("dictate_model", cfg ?? {}).model;
+  if (!runtime) requireApiKey();
 
   const messages: OpenRouterMessage[] = [
     {
@@ -314,27 +341,25 @@ export async function runFeedbackVoicePass({
     { role: "user", content: transcript },
   ];
 
-  const { response } = await fetchOpenRouterWithSuffixFallback(
-    OPENROUTER_URL,
+  const effectiveRuntime =
+    runtime ??
+    (await resolveAiRuntime({
+      userId: "userId" in billTo ? billTo.userId : "",
+      modelKey: "dictate_model",
+      surface: "feedback",
+    }));
+  const { response } = await fetchAiChat(
+    effectiveRuntime,
     model,
     (m) => ({
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": "Numo (minddy)",
-      },
-      body: JSON.stringify({
         model: m,
         messages,
         tools: [UPDATE_FEEDBACK_TOOL],
         tool_choice: { type: "function", function: { name: "update_feedback" } },
         usage: { include: true },
         max_tokens: 4096,
-      }),
-      signal: AbortSignal.timeout(60_000),
     }),
+    "Numo (minddy)",
     "[feedback-voice]",
   );
   if (!response.ok) {
@@ -354,6 +379,8 @@ export async function runFeedbackVoicePass({
       runId,
       seq,
       feature: "feedback_voice",
+      provider: effectiveRuntime.provider,
+      keyMode: effectiveRuntime.mode,
       model: data.model ?? model,
       generationId: data.id ?? null,
       promptTokens: u.promptTokens,

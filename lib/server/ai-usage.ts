@@ -81,6 +81,8 @@ export interface AiUsageInput {
   model?: string | null;
   /** Défaut DB : 'openrouter'. Poser 'vercel' pour le compute sandbox. */
   provider?: string;
+  /** Qui a payé l'appel LLM. Le quota utilisateur ne somme que `platform`. */
+  keyMode?: "platform" | "byok";
   generationId?: string | null;
   promptTokens?: number | null;
   completionTokens?: number | null;
@@ -114,6 +116,7 @@ function toRow(input: AiUsageInput) {
     seq: input.seq ?? 0,
     feature: input.feature,
     ...(input.provider ? { provider: input.provider } : {}),
+    ...(input.keyMode ? { key_mode: input.keyMode } : {}),
     model: input.model ?? null,
     generation_id: input.generationId ?? null,
     prompt_tokens: input.promptTokens ?? null,

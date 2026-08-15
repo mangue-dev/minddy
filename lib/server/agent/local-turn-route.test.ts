@@ -308,7 +308,7 @@ describe("la préparation locale d'`execute.ts`", () => {
     // lancées avant d'attendre la cible, sinon chaque aller-retour rallonge le
     // délai qui sépare l'envoi du premier token.
     const prepareAt = source.indexOf("const targetPromise = resolveRepoCloneTarget(run.project_id);");
-    const endpointAt = source.indexOf("const endpointPromise = resolveAgentApiKey(run.created_by);");
+    const endpointAt = source.indexOf("const endpointPromise = resolveAgentApiKey(");
     const targetAwaitAt = source.indexOf("const target = await targetPromise;");
     expect(prepareAt).toBeGreaterThan(-1);
     expect(endpointAt).toBeGreaterThan(prepareAt);

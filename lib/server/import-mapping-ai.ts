@@ -255,6 +255,7 @@ export async function proposeImportMapping({
     {
       xTitle: "Import mapping (minddy)",
       logPrefix: "[import-map]",
+      modelKey: IMPORT_MAP_MODEL_KEY,
       maxTokens: MAX_OUTPUT_TOKENS,
       record: {
         feature: "import_map",

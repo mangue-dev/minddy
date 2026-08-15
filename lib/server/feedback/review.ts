@@ -204,7 +204,7 @@ export async function isFeedbackReviewEnabled(projectId: string): Promise<boolea
 async function reviewModeForProject(projectId: string): Promise<FeedbackReviewMode> {
   const [project, hasBudget] = await Promise.all([
     projectReviewSettings(projectId),
-    ownerHasUsageBudget(projectId),
+    ownerHasUsageBudget(projectId, "feedback"),
   ]);
   return resolveFeedbackReviewMode({
     reviewEnabled: project.reviewEnabled,
@@ -712,6 +712,7 @@ ${categoryBlock}`;
     {
       xTitle: "Feedback Review (minddy)",
       logPrefix: "[feedback-review]",
+      modelKey: "feedback_analysis_model",
       record: {
         feature: "feedback_classify",
         // Revue de fond : c'est le budget du owner qui l'autorise (ligne 164),

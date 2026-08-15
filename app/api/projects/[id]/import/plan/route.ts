@@ -72,7 +72,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   // Budget épuisé : pas d'erreur, pas de proposition. L'utilisateur garde son
   // import et son tableau de correspondance, il le remplit à la main.
-  if (!(await hasUsageBudget(auth.user.id))) {
+  if (!(await hasUsageBudget(auth.user.id, "automations"))) {
     return NextResponse.json({ mapping: null });
   }
 

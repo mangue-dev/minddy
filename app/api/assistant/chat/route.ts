@@ -2,11 +2,6 @@ import { NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
-import { getAppConfigValues } from "@/lib/server/app-config";
-import {
-  modelConfigKeys,
-  resolveCascadeFromValues,
-} from "@/lib/server/model-config";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import {
@@ -47,6 +42,7 @@ import {
 import { buildAttachmentParts } from "@/lib/server/assistant/attachment-parts";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
+import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 import type { AttachmentInput } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -228,7 +224,7 @@ export async function POST(request: NextRequest) {
 
   // Budget d'usage du plan (MIN-72) — pré-vol avant tout appel LLM.
   try {
-    await ensureUsageBudget(user.id);
+    await ensureUsageBudget(user.id, "assistant");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
@@ -283,13 +279,12 @@ export async function POST(request: NextRequest) {
 
   const service = getServiceClient();
 
-  // Model comes from app_config (DB-configured, not an env var) — swappable
-  // without a redeploy thanks to the 60s in-process cache.
-  const modelCfg = await getAppConfigValues([
-    ...modelConfigKeys("assistant_model"),
-    ...modelConfigKeys("fallback_model"),
-  ]);
-  const { model } = resolveCascadeFromValues(["assistant_model", "fallback_model"], modelCfg);
+  const aiRuntime = await resolveAiRuntime({
+    userId: user.id,
+    modelKey: "assistant_model",
+    surface: "assistant",
+  });
+  const model = aiRuntime.model;
 
   // Locale from the NEXT_LOCALE cookie (same chain as the rest of the app).
   // Resolved BEFORE the stream starts — next-intl needs the request context.
@@ -503,8 +498,9 @@ export async function POST(request: NextRequest) {
     .limit(30);
 
   // Detect caching support via OpenRouter pricing metadata — memoised per process.
-  const apiKey = process.env.OPENROUTER_API_KEY ?? "";
-  const supportsCache = await modelSupportsCaching(model, apiKey);
+  const apiKey = aiRuntime.apiKey;
+  const supportsCache =
+    aiRuntime.provider === "openrouter" && (await modelSupportsCaching(model, apiKey));
   const systemMessage: ChatMessage = supportsCache
     ? {
         role: "system",
@@ -538,7 +534,9 @@ export async function POST(request: NextRequest) {
       -1
     );
     const modalities = history.some((m) => rowAttachments(m).length > 0)
-      ? await getModelInputModalities(model, apiKey)
+      ? aiRuntime.provider === "openrouter"
+        ? await getModelInputModalities(model, apiKey)
+        : new Set(["text"])
       : null;
 
     for (const [i, msg] of history.entries()) {
@@ -604,6 +602,7 @@ export async function POST(request: NextRequest) {
           locale,
           numoDefaultStatus,
           model,
+          aiRuntime,
           conversationId: finalConvId,
           webSearch: webSearchEnabled ? { runId, used: 0 } : undefined,
         });
@@ -618,6 +617,8 @@ export async function POST(request: NextRequest) {
               runId,
               seq: i,
               feature: "numo_chat" as const,
+              provider: aiRuntime.provider,
+              keyMode: aiRuntime.mode,
               model: g.model,
               generationId: g.generationId,
               promptTokens: g.promptTokens,

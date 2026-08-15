@@ -798,7 +798,7 @@ export async function startNumoPrReview(input: {
   const { scope, userId } = input;
   try {
     await ensureAgentsAllowed(userId);
-    await ensureUsageBudget(userId);
+    await ensureUsageBudget(userId, "agent");
 
     // La question part comme PROMPT du run, avec qui l'a posée : l'amorce la
     // place en tête du contexte (« What you were asked »), et c'est à elle que la
@@ -2053,7 +2053,7 @@ export async function prAiReviewResponse(
 ): Promise<Response> {
   try {
     await ensureAgentsAllowed(userId);
-    await ensureUsageBudget(userId);
+    await ensureUsageBudget(userId, "agent");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;

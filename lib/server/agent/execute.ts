@@ -674,11 +674,12 @@ export async function executeAgentRun(
       ? loadPrRunContext(run.pull_request_id)
       : Promise.resolve(null);
     const prefsPromise = resolveRunPrefs(run);
+    const aiSurface = run.chain_id || run.routine_id ? "automations" : "agent";
     const quotaAndLedgerPromise = Promise.all([
-      checkAgentQuota(run.created_by ?? "").catch(() => null),
+      checkAgentQuota(run.created_by ?? "", aiSurface).catch(() => null),
       spentFromLedger(run.run_id ?? run.id),
     ]);
-    const endpointPromise = resolveAgentApiKey(run.created_by);
+    const endpointPromise = resolveAgentApiKey(run.created_by, aiSurface);
 
     // Cible de clone (token frais pour ce chunk) + client PR/MR du provider.
     const target = await targetPromise;
@@ -1571,7 +1572,7 @@ export async function executeAgentRun(
       if (Date.now() - lastBudgetAt < BUDGET_REFRESH_INTERVAL_MS) return null;
       lastBudgetAt = Date.now();
       const [quota, spent] = await Promise.all([
-        checkAgentQuota(run.created_by ?? "").catch(() => null),
+        checkAgentQuota(run.created_by ?? "", aiSurface).catch(() => null),
         spentFromLedger(run.run_id ?? run.id).catch(() => null),
       ]);
       if (!quota) return null;

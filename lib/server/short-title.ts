@@ -209,6 +209,7 @@ Two or three words each. Nothing was lost that a reader needed.`;
     {
       xTitle: "Short title (minddy)",
       logPrefix: "[numo-title]",
+      modelKey: SHORT_TITLE_MODEL_KEY,
       record: usage
         ? {
             feature: usage.feature,
