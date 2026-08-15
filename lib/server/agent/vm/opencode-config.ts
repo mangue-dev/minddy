@@ -47,9 +47,9 @@ import { isLocalJob, type VmJob } from "./protocol";
  *    = { effort }` (la forme OpenRouter) arrive intact dans le corps ; `options.
  *    reasoning_effort` à plat est **retiré** par opencode sur l'appel principal
  *    (il survit sur le petit modèle, ce qui rend la faute d'autant plus discrète).
- *    Les couches compat openai / anthropic / google, qui attendent la forme
- *    PLATE ([agent-providers.ts](../../../agent-providers.ts), `reasoningField`),
- *    perdent donc leur niveau de raisonnement en 1.18.16 : c'est le proxy local du
+ *    OpenAI et Gemini, qui attendent la forme PLATE, perdent donc leur niveau de
+ *    raisonnement en 1.18.16 ; Anthropic attend sa propre forme `thinking` :
+ *    c'est le proxy local du
  *    superviseur (§2.6 du dossier) qui le réinjectera, et c'est sa deuxième
  *    raison d'être après le `generation_id`.
  *

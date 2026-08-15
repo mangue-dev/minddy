@@ -39,6 +39,10 @@ import {
   isDemoSampleId,
   type DemoTicket,
 } from "@/lib/demo-dictation";
+import {
+  aiChatProviderHeaders,
+  translateAiChatRequest,
+} from "@/lib/ai-chat";
 
 /**
  * La dictée, jouable sans compte (MIN-150).
@@ -250,23 +254,26 @@ export async function POST(request: NextRequest) {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "https://minddy.app",
-          "X-Title": "minddy public demo",
+          ...aiChatProviderHeaders("openrouter", "minddy public demo"),
         },
-        body: JSON.stringify({
-          model: m,
-          messages: [
+        body: JSON.stringify(
+          translateAiChatRequest(
             {
-              role: "system",
-              content: buildDemoPrompt({ locale, today, members, categories }),
+              model: m,
+              messages: [
+                {
+                  role: "system",
+                  content: buildDemoPrompt({ locale, today, members, categories }),
+                },
+                { role: "user", content: transcript },
+              ],
+              tools: [FILL_TICKET_TOOL],
+              toolChoice: { type: "function", function: { name: "fill_ticket" } },
+              maxOutputTokens: 700,
             },
-            { role: "user", content: transcript },
-          ],
-          tools: [FILL_TICKET_TOOL],
-          tool_choice: { type: "function", function: { name: "fill_ticket" } },
-          usage: { include: true },
-          max_tokens: 700,
-        }),
+            "openrouter",
+          ),
+        ),
         signal: AbortSignal.timeout(30_000),
       }),
       "[api/demo/dictate]",

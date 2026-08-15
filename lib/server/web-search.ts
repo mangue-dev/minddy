@@ -4,7 +4,6 @@ import { getAppConfigValues } from "@/lib/server/app-config";
 import { stripModelSuffix } from "@/lib/ai-model-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import {
-  OPENROUTER_USAGE_INCLUDE,
   parseOpenRouterUsage,
   recordAiUsage,
   type AiUsageBillTo,
@@ -13,6 +12,10 @@ import {
 } from "@/lib/server/ai-usage";
 import type { AiSurface } from "@/lib/ai-surfaces";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
+import {
+  aiChatProviderHeaders,
+  translateAiChatRequest,
+} from "@/lib/ai-chat";
 
 /**
  * Recherche web de Numo — le SEUL chemin d'accès au web de l'app.
@@ -192,20 +195,25 @@ async function attemptWebSearch(params: {
       headers: {
         Authorization: `Bearer ${params.apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://minddy.app",
-        "X-Title": "Numo web search (minddy)",
+        ...aiChatProviderHeaders("openrouter", "Numo web search (minddy)"),
       },
       signal: controller.signal,
-      body: JSON.stringify({
-        model: params.model,
-        messages: [
-          { role: "system", content: SEARCH_SYSTEM_PROMPT },
-          { role: "user", content: query },
-        ],
-        plugins: [{ id: "web", engine: "exa", max_results: maxResults }],
-        max_tokens: MAX_ANSWER_TOKENS,
-        usage: OPENROUTER_USAGE_INCLUDE,
-      }),
+      body: JSON.stringify(
+        translateAiChatRequest(
+          {
+            model: params.model,
+            messages: [
+              { role: "system", content: SEARCH_SYSTEM_PROMPT },
+              { role: "user", content: query },
+            ],
+            maxOutputTokens: MAX_ANSWER_TOKENS,
+            extensions: {
+              plugins: [{ id: "web", engine: "exa", max_results: maxResults }],
+            },
+          },
+          "openrouter",
+        ),
+      ),
     });
 
     if (!response.ok) {

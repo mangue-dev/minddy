@@ -63,9 +63,9 @@ describe("reasoningRequestFields", () => {
     });
   });
 
-  it("forme PLATE sur les couches compat OpenAI", () => {
+  it("forme PLATE sur OpenAI et Gemini ; Anthropic attend le modèle", () => {
     expect(reasoningRequestFields("low", "openai")).toEqual({ reasoning_effort: "low" });
-    expect(reasoningRequestFields("high", "anthropic")).toEqual({ reasoning_effort: "high" });
+    expect(reasoningRequestFields("high", "anthropic")).toEqual({});
     expect(reasoningRequestFields("medium", "google")).toEqual({ reasoning_effort: "medium" });
     expect(reasoningRequestFields("minimal", "openai")).toEqual({ reasoning_effort: "minimal" });
   });
@@ -84,10 +84,10 @@ describe("reasoningRequestFields", () => {
     // ces deux-là reviennent en 400 et tuent le round. Perdre un cran de
     // réflexion vaut mieux que perdre le tour.
     expect(reasoningRequestFields("xhigh", "openai")).toEqual({ reasoning_effort: "high" });
-    expect(reasoningRequestFields("max", "anthropic")).toEqual({ reasoning_effort: "high" });
+    expect(reasoningRequestFields("max", "anthropic")).toEqual({});
   });
 
-  it("n'émet jamais budget_tokens ni thinkingConfig (champs d'API natives)", () => {
+  it("la fonction sans modèle n'émet jamais un contrat Anthropic au hasard", () => {
     for (const provider of ["openrouter", "openai", "anthropic", "google", "generic"] as const) {
       const body = JSON.stringify(reasoningRequestFields("high", provider));
       expect(body).not.toContain("budget_tokens");

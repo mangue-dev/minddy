@@ -1,13 +1,13 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
-import { chatCompletionsUrl, getAgentProvider, type AgentProviderId } from "@/lib/agent-providers";
+import { chatCompletionsUrl, type AgentProviderId } from "@/lib/agent-providers";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import {
-  REASONING_REQUEST_KEYS,
-  reasoningRequestFields,
-  type ReasoningLevel,
-} from "@/lib/agent-reasoning";
+  alternateOutputTokenBody,
+  aiChatProviderHeaders,
+  translateLegacyAiChatBody,
+} from "@/lib/ai-chat";
 import {
-  OPENROUTER_USAGE_INCLUDE,
   parseOpenRouterUsage,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage-shape";
@@ -49,9 +49,10 @@ import type { RedactText } from "../redact";
  *    moteurs, ce qui est le critère de bascule du lot 3.
  * 3. **Le niveau de raisonnement des couches compat.** Mesuré au lot 1 :
  *    `reasoning_effort` à plat est RETIRÉ du corps par opencode ; seule la forme
- *    imbriquée (OpenRouter) survit. Un BYOK openai / anthropic / google perdrait
+ *    imbriquée (OpenRouter) survit. Un BYOK openai / google perdrait
  *    donc son raisonnement en silence — le round part, il coûte, il pense moins.
- *    Le champ est réinjecté ici, dans la forme que le registre déclare
+ *    Anthropic a le même problème avec sa forme `thinking`. Le champ est
+ *    réinjecté ici, dans la forme model-aware que le registre déclare
  *    ([agent-providers.ts](../../../agent-providers.ts), `reasoningField`) — et
  *    dans CELLE-LÀ SEULEMENT : un corps qui porte les deux formes à la fois part
  *    en 400 chez OpenRouter (« both provided with conflicting values »), donc
@@ -199,53 +200,12 @@ export function patchCompletionBody(
   body: Record<string, unknown>,
   job: LlmProxyJob,
 ): Record<string, unknown> {
-  const profile = getAgentProvider(job.provider)?.requestProfile ?? {};
-  const out = { ...body };
-  if (profile.usageAccounting && out.usage === undefined) out.usage = OPENROUTER_USAGE_INCLUDE;
-  if (profile.streamUsage && out.stream_options === undefined) {
-    out.stream_options = { include_usage: true };
-  }
-  // Le raisonnement : uniquement ce qui MANQUE, et dans UNE SEULE forme.
-  //
-  // Ce qui manque : sur OpenRouter la forme imbriquée est déjà passée par la
-  // config d'opencode, et la réécrire ici écraserait un `exclude` que le
-  // registre a choisi.
-  //
-  // Une seule forme : le corps peut porter les DEUX. La nôtre voyage imbriquée
-  // dans les `options` du modèle, et opencode pose la sienne à plat sur les
-  // modèles de la famille OpenAI — mesuré sur le run c7465b6b (openrouter,
-  // `openai/gpt-5.6-luna`, niveau `high`), mort au tout premier appel :
-  // « "reasoning_effort" and "reasoning.effort" are both provided with
-  // conflicting values ». On ne laisse donc partir que la forme que le registre
-  // déclare, et on retire l'autre du corps — y compris quand le niveau est `off`,
-  // où un `reasoning_effort` posé par opencode ferait penser (et payer) un run
-  // qui avait demandé le contraire.
-  //
-  // `undefined` (provider générique, dont on ne sait rien) : on ne touche à rien.
-  const field = profile.reasoningField;
-  if (field) {
-    const fields = reasoningRequestFields(job.reasoningLevel, job.provider);
-    for (const key of REASONING_REQUEST_KEYS) {
-      if (key in fields) {
-        if (out[key] === undefined) out[key] = fields[key];
-      } else {
-        delete out[key];
-      }
-    }
-  }
-  return out;
+  return translateLegacyAiChatBody(body, job.provider, job.reasoningLevel);
 }
 
 /** Les en-têtes que le registre ajoute, et qu'opencode ne connaît pas. */
 export function extraHeaders(job: LlmProxyJob): Record<string, string> {
-  const profile = getAgentProvider(job.provider)?.requestProfile ?? {};
-  const headers: Record<string, string> = {};
-  if (profile.attribution) {
-    headers["HTTP-Referer"] = "https://minddy.app";
-    headers["X-Title"] = "Numo agent (minddy)";
-  }
-  if (profile.anthropicVersion) headers["anthropic-version"] = "2023-06-01";
-  return headers;
+  return aiChatProviderHeaders(job.provider, "Numo agent (minddy)");
 }
 
 /** Ce qu'une requête entrante a le droit de devenir : une URL, ou un refus. */
@@ -529,11 +489,19 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
     if (relayKey) headers.authorization = `Bearer ${relayKey}`;
 
     opts.onTiming?.("llm-upstream-request");
-    const upstream = await http(route.url, {
+    const upstreamRequest: RequestInit = {
       method: "POST",
       headers,
       ...(body === undefined ? {} : { body }),
-    });
+    };
+    let upstream = await http(route.url, upstreamRequest);
+    if (upstream.status === 400 && body !== undefined) {
+      const retryBody = alternateOutputTokenBody(body, await upstream.clone().text());
+      if (retryBody !== null) {
+        body = retryBody;
+        upstream = await http(route.url, { ...upstreamRequest, body });
+      }
+    }
     opts.onTiming?.("llm-upstream-headers");
 
     const out: Record<string, string> = {};

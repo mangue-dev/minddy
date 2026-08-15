@@ -19,11 +19,9 @@
  * et la boucle de `reasoningRequestFields`. Un seul fichier plutôt que deux
  * moitiés qui pourraient diverger.
  *
- * UN SEUL vocabulaire de wire : `effort`, sous deux formes seulement —
- * `reasoning: { effort }` (OpenRouter) et `reasoning_effort` (les trois couches
- * compat OpenAI : openai, anthropic, google). Ni `thinking.budget_tokens` ni
- * `thinkingConfig` : ce sont des champs des API NATIVES Anthropic et Gemini, et
- * minddy tape leur couche `/chat/completions` (cf. docs/reasoning-levels.md).
+ * UN SEUL vocabulaire produit, traduit au dernier moment : `reasoning: { effort }`
+ * (OpenRouter), `reasoning_effort` (OpenAI/Gemini) ou `thinking` (la couche de
+ * compatibilité Anthropic conserve ici son contrat natif).
  *
  * La gate est le registre : un provider sans `reasoningField` n'envoie RIEN.
  * C'est le défaut sûr — un champ inconnu envoyé à un serveur OpenAI-compatible
@@ -166,7 +164,7 @@ export function toReasoningLevel(value: unknown): ReasoningLevel {
  * au garde-fou 400 de la boucle : un message d'erreur qui cite l'une d'elles
  * désigne un endpoint qui REJETTE le champ au lieu de l'ignorer.
  */
-export const REASONING_REQUEST_KEYS = ["reasoning_effort", "reasoning"] as const;
+export const REASONING_REQUEST_KEYS = ["reasoning_effort", "reasoning", "thinking"] as const;
 
 /** Ce qu'un `reasoning_effort` à plat accepte : le vocabulaire de l'API OpenAI. */
 const COMPAT_EFFORTS: ReasoningLevel[] = ["minimal", "low", "medium", "high"];
@@ -187,6 +185,9 @@ export function reasoningRequestFields(
   // `exclude: false` : on VEUT recevoir la trace pour la persister repliée dans
   // le fil — ce qu'on ne veut pas, c'est la streamer (cf. l'indicateur du feed).
   if (field === "reasoning") return { reasoning: { effort: level, exclude: false } };
+  // Anthropic dépend de la famille de modèle (manuel jusqu'à 4.6, adaptatif à
+  // partir de 4.7). Le traducteur model-aware de lib/ai-chat.ts s'en charge.
+  if (field === "thinking") return {};
   /**
    * Les couches compat (openai, anthropic, google) ne connaissent que le
    * vocabulaire de l'API OpenAI. `xhigh` et `max` sont des paliers d'OpenRouter,
@@ -198,9 +199,9 @@ export function reasoningRequestFields(
 }
 
 /**
- * Tokens de réflexion à prévoir EN PLUS de la réponse, par niveau. Ce ne sont pas
- * des budgets envoyés au provider (le wire ne parle qu'en `effort`) : ils servent
- * à relever `max_tokens`, cf. `reasoningMaxTokens`.
+ * Tokens de réflexion à prévoir EN PLUS de la réponse, par niveau. Ils servent
+ * au plafond global et, pour les Claude qui acceptent encore le mode manuel, de
+ * budget indicatif dans l'adaptateur model-aware.
  */
 const REASONING_HEADROOM: Record<ReasoningLevel, number> = {
   off: 0,
@@ -212,12 +213,17 @@ const REASONING_HEADROOM: Record<ReasoningLevel, number> = {
   max: 8192,
 };
 
+/** Budget indicatif derrière un palier, utilisé par l'adaptateur Anthropic. */
+export function reasoningTokenBudget(level: ReasoningLevel): number {
+  return REASONING_HEADROOM[level];
+}
+
 /**
- * Plafond `max_tokens` à envoyer quand le raisonnement est actif. Les tokens de
- * réflexion sont comptés DANS `max_tokens` par les couches compat : à `high`, la
+ * Plafond de sortie interne à demander quand le raisonnement est actif. Les
+ * tokens de réflexion sont comptés DANS ce plafond par les couches compat : à `high`, la
  * réflexion mangerait l'essentiel des 8192 du profil et tronquerait la réponse
  * **et les tool-calls** du round. On relève donc le plafond du surcoût attendu.
- * `undefined` en entrée (provider qui n'envoie pas `max_tokens`) reste `undefined`.
+ * `undefined` en entrée (surface sans plafond) reste `undefined`.
  */
 export function reasoningMaxTokens(
   base: number | undefined,
@@ -225,7 +231,7 @@ export function reasoningMaxTokens(
 ): number | undefined {
   if (base === undefined) return undefined;
   if (!isReasoningLevel(level)) return base;
-  return base + REASONING_HEADROOM[level];
+  return base + reasoningTokenBudget(level);
 }
 
 /**

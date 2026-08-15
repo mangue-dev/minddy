@@ -8,10 +8,13 @@ import {
   type AiUsageBillTo,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
-import { stripModelSuffix } from "@/lib/ai-model-config";
-import { chatCompletionsUrl } from "@/lib/agent-providers";
+import { getAgentProvider } from "@/lib/agent-providers";
 import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
-import { resolveAiRuntime, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
+import {
+  fetchAiChat,
+  resolveAiRuntime,
+  type ResolvedAiRuntime,
+} from "@/lib/server/ai-runtime";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
@@ -35,13 +38,6 @@ export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
  * premier token. Rejouer un timeout, lui, ne ferait que doubler l'attente de
  * quelqu'un qui patiente déjà devant son écran.
  */
-class OpenRouterHttpError extends Error {
-  constructor(readonly status: number, message: string) {
-    super(message);
-    this.name = "OpenRouterHttpError";
-  }
-}
-
 /** Contexte de suivi de coût pour un appel forcé (feature + imputation). */
 export interface ForcedToolCallRecord {
   feature: AiFeature;
@@ -107,27 +103,23 @@ export async function forcedToolCall(
   }
   const apiKey = runtime?.apiKey ?? process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
-  const endpoint = runtime ? chatCompletionsUrl(runtime.baseUrl) : OPENROUTER_URL;
   const provider = runtime?.provider ?? "openrouter";
   const resolvedModel = runtime?.model ?? model;
+  const effectiveRuntime: ResolvedAiRuntime =
+    runtime ?? {
+      apiKey,
+      mode: "platform",
+      provider: "openrouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+      model: resolvedModel,
+      requestProfile: getAgentProvider("openrouter")!.requestProfile,
+    };
 
-  const attempt = async (attemptModel: string): Promise<Record<string, unknown> | null> => {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        ...(runtime?.requestProfile.anthropicVersion
-          ? { "anthropic-version": "2023-06-01" }
-          : {}),
-        ...(provider === "openrouter"
-          ? {
-              "HTTP-Referer": "https://minddy.app",
-              "X-Title": options?.xTitle ?? "Feedback (minddy)",
-            }
-          : {}),
-      },
-      body: JSON.stringify({
+  try {
+    const call = await fetchAiChat(
+      effectiveRuntime,
+      resolvedModel,
+      (attemptModel) => ({
         model: attemptModel,
         messages: [
           { role: "system", content: systemPrompt },
@@ -143,18 +135,17 @@ export async function forcedToolCall(
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: toolName } },
-        ...(provider === "openrouter" ? { usage: { include: true } } : {}),
-        max_tokens: options?.maxTokens ?? runtime?.requestProfile.maxTokens ?? 1024,
+        toolChoice: { type: "function", function: { name: toolName } },
+        maxOutputTokens: options?.maxTokens ?? 1024,
       }),
-      signal: AbortSignal.timeout(options?.timeoutMs ?? 45_000),
-    });
+      options?.xTitle ?? "Feedback (minddy)",
+      logPrefix,
+      { signal: AbortSignal.timeout(options?.timeoutMs ?? 45_000) },
+    );
+    const response = call.response;
     if (!response.ok) {
       const errorText = await response.text();
-      throw new OpenRouterHttpError(
-        response.status,
-        `LLM error (${response.status}): ${errorText.slice(0, 200)}`,
-      );
+      throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
     }
     const data = (await response.json()) as {
       choices?: {
@@ -173,7 +164,7 @@ export async function forcedToolCall(
         feature: options.record.feature,
         provider,
         keyMode: runtime?.mode ?? "platform",
-        model: data.model ?? attemptModel,
+        model: data.model ?? call.model,
         generationId: data.id ?? null,
         promptTokens: u.promptTokens,
         completionTokens: u.completionTokens,
@@ -184,26 +175,10 @@ export async function forcedToolCall(
         conversationId: options.record.conversationId ?? null,
       });
     }
-    const call = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
-    if (call?.name !== toolName) return null;
-    return JSON.parse(call.arguments || "{}") as Record<string, unknown>;
-  };
-
-  try {
-    return await attempt(resolvedModel);
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
+    if (toolCall?.name !== toolName) return null;
+    return JSON.parse(toolCall.arguments || "{}") as Record<string, unknown>;
   } catch (err) {
-    // Repli du raccourci de routage (MIN-263) : le modèle NU plutôt qu'une
-    // fonctionnalité éteinte. Un seul rejeu, et seulement sur un refus.
-    const base = stripModelSuffix(resolvedModel);
-    if (provider === "openrouter" && err instanceof OpenRouterHttpError && base !== resolvedModel) {
-      console.warn(`${logPrefix} ${resolvedModel} refused (${err.status}), retrying on ${base}`);
-      try {
-        return await attempt(base);
-      } catch (retryErr) {
-        console.error(`${logPrefix} LLM call failed:`, (retryErr as Error).message);
-        return null;
-      }
-    }
     console.error(`${logPrefix} LLM call failed:`, (err as Error).message);
     return null;
   }

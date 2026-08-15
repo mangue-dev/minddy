@@ -45,18 +45,21 @@ describe("le corps de la requête, complété et pas refait", () => {
   it("réinjecte le raisonnement que les couches compat perdent", () => {
     // Mesuré au lot 1 : opencode RETIRE `reasoning_effort` à plat du corps. Un
     // BYOK anthropic garderait son round, mais penserait moins — sans un mot.
-    const out = patchCompletionBody({ model: "x" }, { ...JOB, provider: "anthropic" });
-    expect(out.reasoning_effort).toBe("medium");
-    expect(extraHeaders({ ...JOB, provider: "anthropic" })["anthropic-version"]).toBe("2023-06-01");
+    const out = patchCompletionBody(
+      { model: "claude-sonnet-5" },
+      { ...JOB, provider: "anthropic" },
+    );
+    expect(out.thinking).toEqual({ type: "adaptive" });
+    expect(extraHeaders({ ...JOB, provider: "anthropic" })).toEqual({});
   });
 
-  it("ne touche à rien de ce qu'opencode a déjà posé", () => {
+  it("préserve l'usage explicite mais garde le niveau décidé par le run", () => {
     const out = patchCompletionBody(
       { model: "x", usage: { include: false }, reasoning: { effort: "high" } },
       JOB,
     );
     expect(out.usage).toEqual({ include: false });
-    expect(out.reasoning).toEqual({ effort: "high" });
+    expect(out.reasoning).toEqual({ effort: "medium", exclude: false });
   });
 
   it("ne laisse jamais partir les deux formes du raisonnement", () => {
@@ -68,7 +71,7 @@ describe("le corps de la requête, complété et pas refait", () => {
       { model: "x", reasoning: { effort: "high" }, reasoning_effort: "low" },
       JOB,
     );
-    expect(out.reasoning).toEqual({ effort: "high" });
+    expect(out.reasoning).toEqual({ effort: "medium", exclude: false });
     expect("reasoning_effort" in out).toBe(false);
 
     // Et dans l'autre sens, sur une couche compat : c'est la forme plate qui reste.
@@ -281,6 +284,45 @@ describe("l'appariement round → génération", () => {
 });
 
 describe("le relais, monté pour de vrai", () => {
+  it("retente l'autre alias de plafond après son rejet explicite", async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const upstream = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>);
+      if (bodies.length === 1) {
+        return new Response(
+          JSON.stringify({ error: { message: "max_tokens is not supported" } }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response(sse([{ id: "gen-retry", model: "m", choices: [] }]), {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      });
+    }) as typeof fetch;
+
+    const proxy = await startLlmProxy({
+      job: {
+        baseUrl: "https://compatible.example/v1",
+        provider: "generic",
+        reasoningLevel: "off",
+      },
+      fetchImpl: upstream,
+    });
+    try {
+      const response = await fetch(`${proxy.url}/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "m", messages: [], max_completion_tokens: 321 }),
+      });
+      expect(response.status).toBe(200);
+      expect(bodies).toHaveLength(2);
+      expect(bodies[0]).toMatchObject({ max_tokens: 321 });
+      expect(bodies[1]).toMatchObject({ max_completion_tokens: 321 });
+    } finally {
+      await proxy.close();
+    }
+  });
+
   it("complète la requête, rend le flux intact, et retient la génération", async () => {
     let seen: { url: string; body: unknown; headers: Record<string, string> } | null = null;
     const upstream = (async (input: RequestInfo | URL, init?: RequestInit) => {

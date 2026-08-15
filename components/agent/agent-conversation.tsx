@@ -61,8 +61,7 @@ import { useLocalRepo } from "@/lib/use-local-repo";
 import { playLocalRunHere } from "@/lib/local-run-here";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentDiffSheet } from "./agent-diff-sheet";
-import { SubagentActivityBar } from "./subagent-activity-bar";
-import { PlanActivityBar } from "./plan-activity-bar";
+import { AgentActivityPill } from "./agent-activity-pill";
 import { turnSubagents } from "@/lib/agent-subagents";
 import { livePlan } from "@/lib/agent-plan";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
@@ -73,11 +72,6 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import { MentionLinksProvider } from "@/components/mention-links";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 /**
  * Cœur réutilisable de la conversation de l'agent de code (MIN-46 + MIN-68), extrait
@@ -327,9 +321,9 @@ export function AgentConversation({
   /**
    * Ce que CETTE session a changé dans le dépôt, cumulé sur tous ses tours (union
    * des events `files_changed`, compteurs réels de git). C'est l'information que
-   * portait la barre au-dessus du composer ; elle vit maintenant dans l'EN-TÊTE,
-   * réduite à ses deux nombres — la liste des fichiers, elle, reste à un clic
-   * (vue diff) et sous chaque réponse dans le fil.
+   * portait la barre au-dessus du composer ; la pilule n'en montre maintenant
+   * que le décompte — la liste complète reste à un clic dans la diff et sous
+   * chaque réponse dans le fil.
    *
    * Aucune requête de plus : ce sont les events que le fil charge déjà.
    */
@@ -357,21 +351,18 @@ export function AgentConversation({
     [liveDiffFiles, sessionFiles],
   );
   /**
-   * Les sous-agents du tour en cours (MIN-112) → carte au-dessus du composer.
-   * Lus sur les MÊMES events que le fil (clé react-query partagée) : aucune
-   * requête de plus. Vide dès que l'agent est au repos — plus rien ne tourne, et
-   * une carte qui resterait affichée dirait le contraire.
+   * Les sous-agents du tour en cours (MIN-112) → indicateur dans la pilule du
+   * composer. Lus sur les MÊMES events que le fil (clé react-query partagée) :
+   * aucune requête de plus.
    */
   const subagents = useMemo(
     () => (working ? turnSubagents(liveEvents) : []),
     [liveEvents, working],
   );
   /**
-   * La checklist du tour en cours (`update_plan`) → carte au-dessus du composer.
-   * Mêmes events que le fil, aucune requête de plus. Vide dès que l'agent est au
-   * repos, comme la carte des sous-agents : un plan qui reste affiché après la
-   * réponse décrit un travail déjà rendu, juste au-dessus de l'input où l'on tape
-   * la question suivante. Il revient dès que le nouveau tour en repose un.
+   * La checklist du tour en cours (`update_plan`) → indicateur dans la pilule du
+   * composer. Mêmes events que le fil, aucune requête de plus. Vide dès que
+   * l'agent est au repos : le plan décrit un travail déjà rendu.
    */
   const planSteps = useMemo(
     () => (working ? livePlan(liveEvents) : []),
@@ -732,53 +723,25 @@ export function AgentConversation({
     latestWorkRun && latestWorkRun.pr_state !== "merged" ? latestWorkRun : null;
 
   /**
-   * Actions de la session, à gauche de celles de l'hôte (le lien vers la pull
-   * request) : ce que la session a changé, puis — s'il n'y a pas encore de PR — de
-   * quoi la demander. Les deux vivaient dans une barre au-dessus du composer, qui
-   * grandissait à chaque fichier touché et poussait l'input sous les doigts.
-   *
-   * Le diff est le PREMIER de la grappe, et la grappe est collée à droite : ses
-   * nombres s'allongent donc vers la GAUCHE, sans jamais déplacer le bouton de PR.
+   * Action de la session, à gauche de celles de l'hôte (le lien vers la pull
+   * request). Le résumé des fichiers est maintenant dans la pilule au-dessus du
+   * composer, afin que l'en-tête ne change pas de taille quand le diff évolue.
    */
   const sessionActions =
-    liveRun && (sessionFiles.length > 0 || liveDiffFiles.length > 0) ? (
-      <>
-        {sessionTotals.additions > 0 || sessionTotals.deletions > 0 ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={openDiffSheet}
-                className="flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 font-mono text-xs tabular-nums outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
-              >
-                <span className="text-emerald-600 dark:text-emerald-400">
-                  +{sessionTotals.additions}
-                </span>
-                <span className="text-red-600 dark:text-red-400">
-                  −{sessionTotals.deletions}
-                </span>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t("diffTitle")}</TooltipContent>
-          </Tooltip>
-        ) : null}
-        {/* Du travail poussé, aucune PR, et l'agent est au repos : c'est le moment
-            de la proposer. Pendant qu'il travaille, non — le tour en cours pousse
-            encore, et la demande partirait sur un état qui bouge. */}
-        {canCreatePr && !working ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={requestingPr}
-            onClick={() => void createPr()}
-          >
-            <GitPullRequest className="size-3.5" />
-            {t("createPullRequest")}
-          </Button>
-        ) : null}
-      </>
+    liveRun && canCreatePr && !working ? (
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={requestingPr}
+        onClick={() => void createPr()}
+      >
+        <GitPullRequest className="size-3.5" />
+        {t("createPullRequest")}
+      </Button>
     ) : null;
+
+  const changedFileCount = liveDiffFiles.length > 0 ? liveDiffFiles.length : sessionFiles.length;
 
   return (
     <MentionLinksProvider value={links}>
@@ -874,22 +837,18 @@ export function AgentConversation({
       {phase !== "loading" && (
         <div className="dock-above-nav shrink-0">
           <div className="mx-auto w-full max-w-[800px]">
-          {/* Ce qui s'intercale entre le fil et le composer tient sur UNE ligne,
-              de hauteur fixe, repliée. La barre « fichiers changés » vivait ici :
-              elle grandissait d'une ligne à chaque fichier touché et faisait
-              descendre l'input pendant qu'on écrivait. Ce qu'elle disait est passé
-              dans l'EN-TÊTE (les deux nombres du diff, et la demande de pull
-              request), où rien ne bouge. Le détail par tour, lui, est resté dans le
-              fil, sous la réponse qui l'a produit.
-              Ce qui reprend la place, ce sont les deux choses que le fil dit MAL :
-              le plan, qu'il pose une fois et laisse remonter hors de l'écran alors
-              qu'on le consulte tout du long ; et les sous-agents, pendant lesquels
-              le parent attend et n'émet plus rien du tout. Le plan d'abord, les
-              sous-agents ensuite : du plus durable au plus fugace, l'éphémère au
-              contact de l'input. */}
-          {liveRun ? <PlanActivityBar steps={planSteps} /> : null}
-          {liveRun && subagents.some((s) => !s.endedAt) ? (
-            <SubagentActivityBar subagents={subagents} />
+          {/* Le résumé vivant reste sur une seule ligne et à la largeur de son
+              contenu : plan, fichiers et sous-agents partagent une pilule au lieu
+              de pousser le composer à chaque détail supplémentaire. */}
+          {liveRun ? (
+            <AgentActivityPill
+              planSteps={planSteps}
+              fileCount={changedFileCount}
+              additions={sessionTotals.additions}
+              deletions={sessionTotals.deletions}
+              subagents={subagents}
+              onOpenDiff={openDiffSheet}
+            />
           ) : null}
           {/* Question active : la carte prend la PLACE du composer (pattern
               Claude Code/Codex). Le ChatInput reste MONTÉ, masqué en CSS — le

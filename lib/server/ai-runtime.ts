@@ -18,6 +18,12 @@ import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { getUserByok, resolveProviderDefaultModel } from "@/lib/server/agent/model";
 import { chatCompletionsUrl } from "@/lib/agent-providers";
+import {
+  alternateOutputTokenBody,
+  aiChatProviderHeaders,
+  translateAiChatRequest,
+  type AiChatRequest,
+} from "@/lib/ai-chat";
 import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 
 export type AiKeyMode = "platform" | "byok";
@@ -105,7 +111,8 @@ export async function resolveAiRuntime(params: {
         provider: byok.provider,
         baseUrl: byok.baseUrl,
         model,
-        requestProfile: getAgentProvider(byok.provider)?.requestProfile ?? {},
+        requestProfile:
+          getAgentProvider(byok.provider)?.requestProfile ?? { outputTokenField: "max_tokens" },
       };
     }
   }
@@ -120,7 +127,10 @@ export async function resolveAiRuntime(params: {
     provider: DEFAULT_AGENT_PROVIDER,
     baseUrl,
     model: rootModel || aiModelFallback(params.modelKey),
-    requestProfile: getAgentProvider(DEFAULT_AGENT_PROVIDER)?.requestProfile ?? {},
+    requestProfile:
+      getAgentProvider(DEFAULT_AGENT_PROVIDER)?.requestProfile ?? {
+        outputTokenField: "max_completion_tokens",
+      },
   };
 }
 
@@ -128,39 +138,63 @@ export async function usesByokForSurface(userId: string, surface: AiSurface): Pr
   return (await getUserByok(userId, surface)) !== null;
 }
 
-/** Fetch chat OpenAI-compatible, avec les particularités du provider résolu. */
+async function retryUnsupportedOutputTokenAlias(
+  endpoint: string,
+  firstResponse: Response,
+  firstRequest: RequestInit,
+): Promise<Response> {
+  if (firstResponse.status !== 400 || typeof firstRequest.body !== "string") {
+    return firstResponse;
+  }
+
+  const retryBody = alternateOutputTokenBody(
+    firstRequest.body,
+    await firstResponse.clone().text(),
+  );
+  return retryBody === null
+    ? firstResponse
+    : fetch(endpoint, { ...firstRequest, body: retryBody });
+}
+
+/**
+ * Fetch chat OpenAI-compatible, avec les particularités du provider résolu.
+ *
+ * Les profils choisissent le nom documenté. Un endpoint générique — ou une
+ * couche compat encore en bêta — peut néanmoins n'accepter que l'autre alias :
+ * on ne le retente qu'après un 400 qui désigne explicitement le champ rejeté.
+ */
 export async function fetchAiChat(
   runtime: ResolvedAiRuntime,
   model: string,
-  bodyFor: (model: string) => Record<string, unknown>,
+  requestFor: (model: string) => AiChatRequest,
   title: string,
   logPrefix: string,
+  init?: Pick<RequestInit, "signal">,
 ): Promise<{ response: Response; model: string }> {
   const endpoint = chatCompletionsUrl(runtime.baseUrl);
   const request = (attemptModel: string): RequestInit => {
-    const body: Record<string, unknown> = { ...bodyFor(attemptModel), model: attemptModel };
-    if (!runtime.requestProfile.usageAccounting) delete body.usage;
-    if (!runtime.requestProfile.streamUsage) delete body.stream_options;
-    if (runtime.requestProfile.maxTokens && body.max_tokens == null) {
-      body.max_tokens = runtime.requestProfile.maxTokens;
-    }
+    const body = translateAiChatRequest(
+      { ...requestFor(attemptModel), model: attemptModel },
+      runtime.provider,
+    );
     return {
       method: "POST",
       headers: {
         Authorization: `Bearer ${runtime.apiKey}`,
         "Content-Type": "application/json",
-        ...(runtime.requestProfile.anthropicVersion
-          ? { "anthropic-version": "2023-06-01" }
-          : {}),
-        ...(runtime.requestProfile.attribution
-          ? { "HTTP-Referer": "https://minddy.app", "X-Title": title }
-          : {}),
+        ...aiChatProviderHeaders(runtime.provider, title),
       },
       body: JSON.stringify(body),
+      ...init,
     };
   };
   if (runtime.provider === "openrouter") {
     return fetchOpenRouterWithSuffixFallback(endpoint, model, request, logPrefix);
   }
-  return { response: await fetch(endpoint, request(model)), model };
+  const firstRequest = request(model);
+  const firstResponse = await fetch(endpoint, firstRequest);
+  return {
+    response: await retryUnsupportedOutputTokenAlias(endpoint, firstResponse, firstRequest),
+    model,
+  };
 }

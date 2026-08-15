@@ -21,12 +21,12 @@ export interface ProviderRequestProfile {
   usageAccounting?: boolean;
   /** Envoie `stream_options: { include_usage: true }` (tokens dans le stream). */
   streamUsage?: boolean;
-  /** Envoie `max_tokens` (évité ailleurs : conflit max_completion_tokens sur certains modèles récents). */
-  maxTokens?: number;
+  /** Nom wire du plafond de sortie. Les surfaces, elles, parlent `maxOutputTokens`. */
+  outputTokenField: "max_tokens" | "max_completion_tokens";
+  /** Plafond par défaut quand une surface n'en fixe pas un. */
+  defaultMaxOutputTokens?: number;
   /** Ajoute les headers d'attribution OpenRouter (HTTP-Referer / X-Title). */
   attribution?: boolean;
-  /** Ajoute `anthropic-version` (couche compat Anthropic). */
-  anthropicVersion?: boolean;
   /**
    * Marque le prompt système d'un cache breakpoint `cache_control:{ephemeral}`.
    * Réservé aux providers qui l'acceptent : OpenRouter le transmet aux modèles qui
@@ -39,12 +39,12 @@ export interface ProviderRequestProfile {
    * Forme du champ de raisonnement acceptée par cet endpoint (MIN-122) : la SEULE
    * gate de la feature — un provider sans ce champ n'en envoie jamais aucun.
    *   `reasoning`        → `reasoning: { effort }` (OpenRouter).
-   *   `reasoning_effort` → `reasoning_effort` à plat (couches compat OpenAI :
-   *                        openai, anthropic, google).
+   *   `reasoning_effort` → `reasoning_effort` à plat (OpenAI et Gemini).
+   *   `thinking`         → forme model-aware adaptative/manuelle (Anthropic).
    * Le générique reste muet : sa base URL est un serveur inconnu, et un champ
    * refusé revient en 400. Les niveaux et leur traduction : lib/agent-reasoning.ts.
    */
-  reasoningField?: "reasoning" | "reasoning_effort";
+  reasoningField?: "reasoning" | "reasoning_effort" | "thinking";
 }
 
 export interface AgentProviderDef {
@@ -92,7 +92,8 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     requestProfile: {
       usageAccounting: true,
       streamUsage: true,
-      maxTokens: 8192,
+      outputTokenField: "max_completion_tokens",
+      defaultMaxOutputTokens: 8192,
       attribution: true,
       promptCaching: true,
       reasoningField: "reasoning",
@@ -107,7 +108,11 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "sk-…",
     logoModel: "openai/x",
     listStrategy: "openai",
-    requestProfile: { streamUsage: true, reasoningField: "reasoning_effort" },
+    requestProfile: {
+      streamUsage: true,
+      outputTokenField: "max_completion_tokens",
+      reasoningField: "reasoning_effort",
+    },
     keysUrl: "https://platform.openai.com/api-keys",
   },
   {
@@ -118,11 +123,13 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "sk-ant-…",
     logoModel: "anthropic/x",
     listStrategy: "anthropic",
-    // La couche compat Anthropic s'appuie sur l'API Messages → max_tokens requis.
+    // La couche compat accepte les deux plafonds, mais recommande le contrat
+    // OpenAI récent. Le raisonnement garde en revanche la forme Anthropic.
     requestProfile: {
-      anthropicVersion: true,
-      maxTokens: 8192,
-      reasoningField: "reasoning_effort",
+      streamUsage: true,
+      outputTokenField: "max_completion_tokens",
+      defaultMaxOutputTokens: 8192,
+      reasoningField: "thinking",
     },
     keysUrl: "https://console.anthropic.com/settings/keys",
   },
@@ -134,7 +141,11 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "AIza…",
     logoModel: "google/x",
     listStrategy: "openai",
-    requestProfile: { reasoningField: "reasoning_effort" },
+    requestProfile: {
+      streamUsage: true,
+      outputTokenField: "max_completion_tokens",
+      reasoningField: "reasoning_effort",
+    },
     keysUrl: "https://aistudio.google.com/apikey",
   },
   {
@@ -144,7 +155,9 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "sk-…",
     logoModel: "",
     listStrategy: "generic",
-    requestProfile: {},
+    // Un serveur générique peut n'implémenter que l'ancien contrat Chat
+    // Completions. On n'y envoie aucune extension de provider.
+    requestProfile: { outputTokenField: "max_tokens" },
   },
 ];
 

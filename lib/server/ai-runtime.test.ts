@@ -16,7 +16,7 @@ vi.mock("@/lib/server/agent/model", () => ({
   resolveProviderDefaultModel: vi.fn(async () => null),
 }));
 
-const { resolveAiRuntime } = await import("@/lib/server/ai-runtime");
+const { fetchAiChat, resolveAiRuntime } = await import("@/lib/server/ai-runtime");
 
 describe("resolveAiRuntime", () => {
   beforeEach(() => {
@@ -92,5 +92,71 @@ describe("resolveAiRuntime", () => {
       resolveAiRuntime({ userId: "u1", modelKey: "automation_agent_model" }),
     ).resolves.toMatchObject({ mode: "byok", model: "platform/automation" });
     expect(getUserByok).toHaveBeenCalledWith("u1", "automations");
+  });
+});
+
+describe("fetchAiChat", () => {
+  const runtime = {
+    apiKey: "user-key",
+    mode: "byok" as const,
+    provider: "google" as const,
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    model: "gemini-test",
+    requestProfile: {
+      streamUsage: true,
+      outputTokenField: "max_completion_tokens" as const,
+      reasoningField: "reasoning_effort" as const,
+    },
+  };
+
+  it("retente l'autre alias de plafond après un rejet explicite", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ error: { message: "Unsupported parameter: max_completion_tokens" } }),
+          { status: 400 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+
+    const { response } = await fetchAiChat(
+      runtime,
+      runtime.model,
+      (model) => ({ model, messages: [], maxOutputTokens: 321 }),
+      "test",
+      "[test]",
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      max_completion_tokens: 321,
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({
+      max_tokens: 321,
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).not.toHaveProperty(
+      "max_completion_tokens",
+    );
+    fetchMock.mockRestore();
+  });
+
+  it("ne retente pas un 400 sans rapport avec le plafond", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("invalid tool schema", { status: 400 }));
+
+    const { response } = await fetchAiChat(
+      runtime,
+      runtime.model,
+      (model) => ({ model, messages: [], maxOutputTokens: 321 }),
+      "test",
+      "[test]",
+    );
+
+    expect(response.status).toBe(400);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    fetchMock.mockRestore();
   });
 });

@@ -11,9 +11,7 @@ import {
 import type { AssistantToolDef } from "./tools";
 import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
 import { stripModelSuffix } from "@/lib/ai-model-config";
-import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
-import { chatCompletionsUrl } from "@/lib/agent-providers";
-import type { ResolvedAiRuntime } from "@/lib/server/ai-runtime";
+import { fetchAiChat, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
 
 // ── OpenRouter streaming agent loop (ported from AutoKap's assistant) ───
 
@@ -156,24 +154,23 @@ export async function processChat(
   emitter: SafeEmitter,
   context: ProcessChatContext
 ): Promise<ProcessChatResult> {
-  const aiRuntime: ResolvedAiRuntime =
-    context.aiRuntime ??
-    {
-      apiKey: process.env.OPENROUTER_API_KEY ?? "",
-      mode: "platform",
-      provider: "openrouter",
-      baseUrl: "https://openrouter.ai/api/v1",
-      model: context.model,
-      requestProfile: {
-        usageAccounting: true,
-        streamUsage: true,
-        attribution: true,
-        promptCaching: true,
-      },
-    };
+  const aiRuntime: ResolvedAiRuntime = context.aiRuntime ?? {
+    apiKey: process.env.OPENROUTER_API_KEY ?? "",
+    mode: "platform",
+    provider: "openrouter",
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: context.model,
+    requestProfile: {
+      usageAccounting: true,
+      streamUsage: true,
+      outputTokenField: "max_completion_tokens",
+      defaultMaxOutputTokens: 8192,
+      attribution: true,
+      promptCaching: true,
+    },
+  };
   if (!aiRuntime.apiKey) throw new Error("OPENROUTER_API_KEY not configured");
   const apiKey = aiRuntime.apiKey;
-  const endpoint = chatCompletionsUrl(aiRuntime.baseUrl);
 
   const generations: GenerationInfo[] = [];
   let finalContent = "";
@@ -193,37 +190,17 @@ export async function processChat(
     continueLoop = false;
     roundCount++;
 
-    const requestBody: Record<string, unknown> = {
-      model: requestModel,
-      messages,
-      stream: true,
-      ...(aiRuntime.requestProfile.streamUsage
-        ? { stream_options: { include_usage: true } }
-        : {}),
-      ...(aiRuntime.requestProfile.usageAccounting ? { usage: { include: true } } : {}),
-      max_tokens: aiRuntime.requestProfile.maxTokens ?? 4096,
-    };
-    if (tools.length > 0) {
-      requestBody.tools = tools;
-    }
-
-    const call = await fetchOpenRouterWithSuffixFallback(
-      endpoint,
+    const call = await fetchAiChat(
+      aiRuntime,
       requestModel,
       (m) => ({
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          ...(aiRuntime.requestProfile.anthropicVersion
-            ? { "anthropic-version": "2023-06-01" }
-            : {}),
-          ...(aiRuntime.requestProfile.attribution
-            ? { "HTTP-Referer": "https://minddy.app", "X-Title": "Numo (minddy)" }
-            : {}),
-        },
-        body: JSON.stringify({ ...requestBody, model: m }),
+        model: m,
+        messages,
+        stream: true,
+        maxOutputTokens: 4096,
+        ...(tools.length > 0 ? { tools } : {}),
       }),
+      "Numo (minddy)",
       "[assistant]",
     );
     const response = call.response;

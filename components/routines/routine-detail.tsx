@@ -481,6 +481,10 @@ export function RoutineDetail({
               model={routine.model}
             />
 
+            <p className="text-xs text-muted-foreground">
+              {t("executionEnvironment")}
+            </p>
+
             {routine.last_error ? (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                 <AlertTriangle className="size-3.5 shrink-0" />

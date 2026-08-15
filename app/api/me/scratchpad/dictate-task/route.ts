@@ -189,18 +189,17 @@ export async function POST(request: NextRequest) {
       aiRuntime,
       model,
       (m) => ({
-          model: m,
-          messages: [
-            { role: "system", content: buildPrompt({ note, locale }) },
-            { role: "user", content: transcript },
-          ],
-          tools: [WRITE_TASKS_TOOL],
-          tool_choice: {
-            type: "function",
-            function: { name: "write_tasks" },
-          },
-          usage: { include: true },
-          max_tokens: 4096,
+        model: m,
+        messages: [
+          { role: "system", content: buildPrompt({ note, locale }) },
+          { role: "user", content: transcript },
+        ],
+        tools: [WRITE_TASKS_TOOL],
+        toolChoice: {
+          type: "function",
+          function: { name: "write_tasks" },
+        },
+        maxOutputTokens: 4096,
       }),
       "Numo (minddy)",
       "[dictate-task]",
