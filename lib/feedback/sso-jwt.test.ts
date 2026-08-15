@@ -9,7 +9,7 @@ import {
 const SECRET = "test-sso-secret";
 const NOW = 1_800_000_000;
 
-function b64url(value: object): string {
+function b64url(value: Record<string, unknown>): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
 

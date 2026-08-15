@@ -377,7 +377,7 @@ export async function openPullRequestAfterPush(
     noteBranchPushed: (pushed: { pushed: boolean }) => Promise<void>;
   },
 ): Promise<{ result: unknown; success: boolean }> {
-  const { run, target, forge, issue, workBranch, baseBranch, prState } = ctx;
+  const { forge, issue, workBranch, baseBranch, prState } = ctx;
   const { pushed, prTitle, body, fresh, jobsNote, noteBranchPushed } = opts;
   const andJobs = (text: string) => (jobsNote ? `${text} ${jobsNote}` : text);
   // Rien de commité par-dessus la base : on s'arrête AVANT de toucher au dépôt

@@ -444,12 +444,12 @@ const GITLAB_SYSTEM_PATTERNS: Array<{
     kind: "review_dismissed",
   },
   {
-    re: /^requested review from @?([\w.\-]+)/i,
+    re: /^requested review from @?([\w.-]+)/i,
     kind: "review_requested",
     fill: (e, m) => (e.subject = m[1]),
   },
   {
-    re: /^removed review request for @?([\w.\-]+)/i,
+    re: /^removed review request for @?([\w.-]+)/i,
     kind: "review_request_removed",
     fill: (e, m) => (e.subject = m[1]),
   },
@@ -460,12 +460,12 @@ const GITLAB_SYSTEM_PATTERNS: Array<{
   },
   { re: /^force[- ]pushed/i, kind: "force_pushed" },
   {
-    re: /^(?:added|assigned) to @?([\w.\-]+)|^assigned to @?([\w.\-]+)/i,
+    re: /^(?:added|assigned) to @?([\w.-]+)|^assigned to @?([\w.-]+)/i,
     kind: "assigned",
     fill: (e, m) => (e.subject = m[1] ?? m[2] ?? null),
   },
   {
-    re: /^unassigned @?([\w.\-]+)/i,
+    re: /^unassigned @?([\w.-]+)/i,
     kind: "unassigned",
     fill: (e, m) => (e.subject = m[1]),
   },

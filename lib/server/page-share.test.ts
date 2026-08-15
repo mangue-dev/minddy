@@ -47,7 +47,7 @@ function table(name: string) {
     },
     update: (values: Row) => {
       writes.push({ kind: "update", values });
-      db.share = { ...(db.share ?? {}), ...values };
+      db.share = { ...db.share, ...values };
       return { eq: async () => ({ error: null }) };
     },
     delete: () => ({

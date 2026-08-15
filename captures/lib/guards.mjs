@@ -532,7 +532,7 @@ export async function updateDemoUserMetadata(world, { userId, patch, confirmed }
     throw new Error(`captures: ${current.user?.email} ne correspond pas au motif de démo. REFUSÉ.`);
   }
   const { error } = await world.admin.auth.admin.updateUserById(userId, {
-    user_metadata: { ...(current.user.user_metadata || {}), ...patch },
+    user_metadata: { ...current.user.user_metadata, ...patch },
   });
   if (error) throw new Error(`captures: écriture des préférences — ${error.message}`);
 }

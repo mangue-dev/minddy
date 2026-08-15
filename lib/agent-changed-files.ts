@@ -34,10 +34,6 @@ function byStatusThenPath(a: AgentFileChange, b: AgentFileChange): number {
   return r !== 0 ? r : a.path.localeCompare(b.path);
 }
 
-function str(v: unknown): string {
-  return typeof v === "string" ? v : "";
-}
-
 /**
  * Union des events `files_changed` d'un run → état CUMULÉ de la branche (dernier
  * statut connu par chemin, compteurs du dernier event qui l'a touché). Sert la barre

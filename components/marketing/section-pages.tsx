@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { ScreenshotSlot } from "./screenshot-slot";
-import { Reveal, RevealGroup, RevealHeading } from "./reveal";
+import { Reveal, RevealHeading } from "./reveal";
 import { IsoTile, type IsoTileName } from "./iso-tile";
 
 /**

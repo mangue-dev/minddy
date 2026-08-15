@@ -774,6 +774,10 @@ function withToolAnalytics(server: McpServer): McpServer {
   return new Proxy(server, {
     get(target, prop, receiver) {
       if (prop === "registerTool") return wrapped;
+      // `Reflect.get` est ici l'API du piège, pas un contournement de typage :
+      // c'est le seul accès qui transmet `receiver`, donc le seul qui garde le
+      // `this` correct sur un getter du serveur. `target[prop]` le perdrait.
+      // oxlint-disable-next-line anti-slop/no-reflect-get
       const value = Reflect.get(target, prop, receiver);
       return typeof value === "function" ? value.bind(target) : value;
     },

@@ -10,7 +10,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { ListPlus, MessagesSquare, Plug, Plus, Webhook } from "lucide-react";
+import { MessagesSquare, Plug, Plus, Webhook } from "lucide-react";
 import {
   revokeIntegrationApi,
   updateIntegrationWebhookApi,

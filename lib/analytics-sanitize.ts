@@ -22,6 +22,8 @@ const MAX_EVENT_NAME_LENGTH = 64;
 const SAFE_KEY_PATTERN = /^[a-z0-9_:-]+$/;
 
 /** Caractères de contrôle (dont \n, \t) — remplacés par une espace. */
+// Le propos de cette constante EST de matcher des caractères de contrôle.
+// oxlint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g;
 
 /** Neutralise les caractères de contrôle et borne la longueur. */

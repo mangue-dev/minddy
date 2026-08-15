@@ -279,7 +279,7 @@ export function scratchpadPreview(content: string): ScratchpadPreviewSection[] {
  */
 export function cleanDictatedTaskLine(value: string, max = 1000): string {
   return value
-    .replace(/^\s*(?:[-*+]\s*)?(?:\[[ x~\-]\]\s*)?/i, "")
+    .replace(/^\s*(?:[-*+]\s*)?(?:\[[ x~-]\]\s*)?/i, "")
     .replace(/^#{1,6}\s+/, "")
     .replace(/\s+/g, " ")
     .trim()

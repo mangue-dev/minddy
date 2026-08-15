@@ -15,7 +15,6 @@ import { fetchAiChat, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
 
 // ── OpenRouter streaming agent loop (ported from AutoKap's assistant) ───
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 /** One entry of a multimodal message content array (OpenRouter chat format). */
 export type ChatContentPart =
@@ -170,7 +169,6 @@ export async function processChat(
     },
   };
   if (!aiRuntime.apiKey) throw new Error("OPENROUTER_API_KEY not configured");
-  const apiKey = aiRuntime.apiKey;
 
   const generations: GenerationInfo[] = [];
   let finalContent = "";

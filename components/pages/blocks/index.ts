@@ -97,7 +97,6 @@ export const blocksByNodeName = PAGE_BLOCKS.reduce((map, block) => {
 /** Déclaré dans blocks/types.ts, re-exporté ici : c'est par le registre que
     tout le dépôt le lit. Le pourquoi du déménagement est écrit là-bas. */
 export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks/types";
-import { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks/types";
 
 /** Les nœuds qui reçoivent un ID stable : TOUS ceux du catalogue. Se recalcule
     depuis le registre — un bloc neuf est identifié d'office. */

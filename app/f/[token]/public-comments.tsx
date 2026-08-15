@@ -158,7 +158,6 @@ export function PublicComments({
                   {replyingTo === root.id && (
                     <li>
                       <Composer
-                        identity={identity}
                         pending={pending}
                         autoFocus
                         label={t("commentReplySend")}
@@ -179,7 +178,6 @@ export function PublicComments({
 
       {allowComments ? (
         <Composer
-          identity={identity}
           pending={pending}
           label={t("commentSend")}
           placeholder={
@@ -206,7 +204,6 @@ export function PublicComments({
  * vient d'écrire trois phrases ne les perd pas sur un échec réseau.
  */
 function Composer({
-  identity,
   pending,
   label,
   placeholder,
@@ -215,7 +212,6 @@ function Composer({
   onCancel,
   onSubmit,
 }: {
-  identity: PublicIdentity | null;
   pending: boolean;
   label: string;
   placeholder: string;

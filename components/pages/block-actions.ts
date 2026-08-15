@@ -309,7 +309,7 @@ export function styledBox(dom: HTMLElement): HTMLElement {
  */
 export function withoutBlockIds(content: JSONContent[]): JSONContent[] {
   return content.map((node) => {
-    const attrs = { ...(node.attrs ?? {}) };
+    const attrs = { ...node.attrs };
     delete attrs[BLOCK_ID_ATTRIBUTE];
     return {
       ...node,

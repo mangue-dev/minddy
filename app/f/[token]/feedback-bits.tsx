@@ -395,7 +395,6 @@ export function FeedbackPostRow({
   /** Ligne libre sous la méta (« votre retour a été regroupé avec celui-ci »). */
   footer?: ReactNode;
 }) {
-  const t = useTranslations("PublicFeedback");
   const router = useRouter();
   const [optimistic, setOptimistic] = useState<{ voted: boolean; count: number } | null>(null);
   const voted = optimistic?.voted ?? post.votedByMe;

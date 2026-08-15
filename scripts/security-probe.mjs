@@ -81,7 +81,10 @@ async function rest(path, { method = "GET", bearer, body, headers = {} } = {}) {
       "Content-Type": "application/json",
       ...headers,
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    // Le corps n'entre dans l'init QUE s'il existe : `method` vaut « GET » par
+    // défaut, et `fetch` refuse un GET porteur d'un corps — même à `undefined`,
+    // la seule présence de la clé suffit à le faire lever chez undici.
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   let payload = null;
   try {

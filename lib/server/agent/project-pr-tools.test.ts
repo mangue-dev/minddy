@@ -53,7 +53,7 @@ vi.mock("@/lib/supabase-service", () => {
     q.select = chain;
     q.order = chain;
     q.eq = (column: string, value: unknown) => {
-      world.query.eq = { ...(world.query.eq ?? {}), [column]: value };
+      world.query.eq = { ...world.query.eq, [column]: value };
       return q;
     };
     q.in = (column: string, values: unknown[]) => {

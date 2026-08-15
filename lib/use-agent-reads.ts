@@ -41,7 +41,7 @@ export function useAgentReads() {
       // Optimiste : avance le curseur de lecture tout de suite (bulle vidée sur la
       // liste + le badge sidebar). Toujours sûr — `now` est postérieur à toute fin.
       queryClient.setQueryData<ReadsData>(AGENT_READS_KEY, (old) => ({
-        reads: { ...(old?.reads ?? {}), [issueId]: now },
+        reads: { ...old?.reads, [issueId]: now },
       }));
       if (inFlight.has(issueId)) return;
       inFlight.add(issueId);

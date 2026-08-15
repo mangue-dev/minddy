@@ -39,7 +39,6 @@ export const maxDuration = 60;
 // approximative. D'où l'interdiction explicite de raccourcir, de reformuler et
 // de trancher entre deux lectures, plus le contre-exemple en fin de prompt.
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // Même modèle que la dictée de ticket (clé app_config `dictate_model`) : c'est
 // le même geste, la même exigence de latence.
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;

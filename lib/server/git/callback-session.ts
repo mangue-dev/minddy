@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createSupabaseWithCookieSink, type CookieSink } from "@/lib/server/api-auth";
 
 /**

@@ -20,7 +20,7 @@ import { SettingsGroup, SettingsListRow } from "@/components/settings/settings-u
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
-import { dueDateFormat, parseDueDate } from "@/lib/due-date";
+import { parseDueDate } from "@/lib/due-date";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { fetchRecurrencesApi, updateIssueApi } from "@/lib/issues-api";
 import { RECURRENCE_CADENCES, type RecurrenceCadence } from "@/lib/recurrence";

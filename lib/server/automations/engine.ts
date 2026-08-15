@@ -512,7 +512,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
       issueId: issue.id,
       ownerId,
       preset: presetOfRules(rules),
-      ...(deferred ?? {}),
+      ...deferred,
     });
     // Null = une autre chaîne est née entre-temps (index unique). On rend la
     // main : c'est elle qui pilote maintenant.

@@ -78,6 +78,7 @@ export function markAnalyticsReady(): void {
   if (analyticsReady) return;
   analyticsReady = true;
   // Copie avant itération : un callback peut en enregistrer un autre.
+  // oxlint-disable-next-line unicorn/no-useless-spread
   for (const cb of [...readyWaiters]) {
     readyWaiters.delete(cb);
     cb();

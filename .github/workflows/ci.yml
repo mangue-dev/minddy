@@ -69,8 +69,21 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Le linter passe en premier : 2 s, et il attrape une classe d'erreurs que
+      # le typecheck ne voit pas (optional chaining non sûr, variable morte,
+      # options de `fetch` invalides). `--deny-warnings` en fait une barrière —
+      # sans lui, oxlint sort 0 et la CI ne dirait rien.
+      - name: Lint
+        run: pnpm run lint
+
       - name: Typecheck
         run: pnpm run typecheck
+
+      # Le tsconfig racine exclut la coquille Electron, qui a son propre build.
+      # Le bundle résout néanmoins tous ses imports locaux : il attrape donc une
+      # API déplacée dans le launcher avant la publication d'un binaire cassé.
+      - name: Desktop bundle
+        run: node scripts/build-desktop.mjs
 
       # `vitest` construit d'abord le bundle de la projection des pages
       # (test/build-pages-md-setup.ts) : c'est du code du dépôt exécuté avant le

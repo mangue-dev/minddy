@@ -161,7 +161,7 @@ function renderDashboard() {
         <div class="tile">
           <div class="tile-value">${kb(totalBytes)}</div>
           <div class="tile-label">poids des captures actuelles</div>
-          <div class="tile-note">${[...viewports].length} viewport${
+          <div class="tile-note">${viewports.size} viewport${
             viewports.size > 1 ? "s" : ""
           } traversé${viewports.size > 1 ? "s" : ""} : ${[...viewports].join(", ") || "—"}</div>
         </div>

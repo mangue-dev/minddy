@@ -321,7 +321,7 @@ describe("minddy_list_pages", () => {
   it("rend un arbre à trois niveaux à plat, avec le parent de chacun", async () => {
     const guide = await createPage("Guide");
     const install = await createPage("Installation", "", guide);
-    const macos = await createPage("macOS", "", install);
+    await createPage("macOS", "", install);
 
     const { ok, payload } = await call("minddy_list_pages", { project_id: PROJECT });
     expect(ok).toBe(true);

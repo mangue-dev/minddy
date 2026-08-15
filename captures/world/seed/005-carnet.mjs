@@ -64,7 +64,7 @@ async function main() {
   if (error) throw new Error(`captures: lecture du carnet — ${error.message}`);
 
   if (existing) {
-    const tasks = (existing.content || "").split("\n").filter((l) => /^- \[/.test(l)).length;
+    const tasks = (existing.content || "").split("\n").filter((l) => l.startsWith('- [')).length;
     console.log(`  → carnet déjà là (${tasks} tâches), laissé tel quel`);
     return;
   }

@@ -44,7 +44,6 @@ export const maxDuration = 120;
 // The dictation session is throwaway: history lives on the client and dies
 // with the dialog / when the panel switches issue.
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // L'étape agentique post-dictée (transcript → patch d'issue) tourne sur son
 // propre modèle — rapide et pas cher, distinct du modèle global de Numo. Il se
 // règle en base (`dictate_model`, cf. lib/ai-model-config.ts).

@@ -56,7 +56,6 @@ import {
   X,
 } from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
-import { EmptyState } from "@/components/empty-state";
 import { EmptyScene } from "@/components/empty-scene";
 import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
@@ -1203,7 +1202,6 @@ export function FeedbackTeamPage() {
             key={selectedId}
             projectId={projectId}
             project={project ?? null}
-            projectName={project?.name ?? ""}
             projectKey={project?.key ?? ""}
             postId={selectedId}
             boardEnabled={boardEnabled}
@@ -1259,7 +1257,6 @@ export function FeedbackTeamPage() {
 function FeedbackDetail({
   projectId,
   project,
-  projectName,
   projectKey,
   postId,
   boardEnabled,
@@ -1275,7 +1272,6 @@ function FeedbackDetail({
   projectId: string;
   /** Le projet lui-même — le formulaire de promotion en a besoin. */
   project: Project | null;
-  projectName: string;
   projectKey: string;
   postId: string;
   /** Board public publié : sans lui, ni voix ni choix public/privé. */

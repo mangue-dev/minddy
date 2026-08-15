@@ -76,7 +76,7 @@ describe("scanSecrets — les faux positifs à ne PAS attraper", () => {
    * elle vit dans la moitié des `.env.example` du monde.
    */
   it("ignore un JWT ordinaire et reconnaît celui qui dit `service_role`", () => {
-    const jwt = (payload: object) =>
+    const jwt = (payload: Record<string, unknown>) =>
       [
         Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
         Buffer.from(JSON.stringify(payload)).toString("base64url"),

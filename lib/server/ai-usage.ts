@@ -10,7 +10,6 @@ import { getServiceClient } from "@/lib/supabase-service";
 import {
   type AiFeature,
   type AiUsageBillTo,
-  type NormalizedUsage,
 } from "./ai-usage-shape";
 
 export type {

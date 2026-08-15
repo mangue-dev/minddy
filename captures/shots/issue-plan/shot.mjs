@@ -17,6 +17,11 @@ import { publishShot, writeManifest } from "../../lib/publish.mjs";
  * ce dossier — sans lui, l'ordre du disque déciderait laquelle des deux images
  * part en production. Voir `intent.md`.
  */
+// Volontairement non exporté ET non référencé : `publish.mjs` ne l'importe pas,
+// il teste le TEXTE du fichier (`/^const RETIRED = true/m`). La ligne est donc
+// porteuse telle quelle — la « nettoyer » rendrait le dossier publiable à
+// nouveau, en silence.
+// oxlint-disable-next-line no-unused-vars
 const RETIRED = true;
 
 const SLOT = "workflowIssue";

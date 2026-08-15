@@ -546,7 +546,7 @@ export function stopLocalTurn(runId: string, note = quitLogNote()): void {
 
 /** Tous les tours, pour le ⌘Q. */
 export function stopAllLocalTurns(note = quitLogNote()): void {
-  for (const runId of [...live.keys()]) stopLocalTurn(runId, note);
+  for (const runId of live.keys()) stopLocalTurn(runId, note);
 }
 
 /**
@@ -803,7 +803,7 @@ async function fetchText(
   try {
     const response = await session.defaultSession.fetch(url, {
       ...init,
-      headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+      headers: { "content-type": "application/json", ...init?.headers },
     });
     const text = await response.text();
     if (!response.ok) {

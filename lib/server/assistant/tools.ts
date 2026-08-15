@@ -12,7 +12,6 @@ import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
-import { NOTIFICATION_CATEGORIES } from "@/lib/notification-prefs";
 import { AUTOMATION_PRESET_IDS } from "@/lib/automations";
 import { REASONING_LEVELS } from "@/lib/agent-reasoning";
 import {

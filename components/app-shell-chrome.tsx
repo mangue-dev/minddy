@@ -396,9 +396,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isInbox = pathname.startsWith("/inbox");
-  // Cross-project (Home-level) boards (MIN-29).
-  const isMyGlobal = pathname === "/my";
-  const isAllGlobal = pathname === "/all";
 
   // Shares the ["issues", projectId] cache with the board (no extra realtime
   // bridge). Since MIN-91 the palette lists every project's tickets from the

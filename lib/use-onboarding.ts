@@ -78,7 +78,7 @@ export function useOnboarding(): UseOnboardingResult {
     if (pendingSteps.length === 0 && !pendingDismiss && !pendingStart) {
       return meta ?? null;
     }
-    const patch: Record<string, unknown> = { ...(meta ?? {}) };
+    const patch: Record<string, unknown> = { ...meta };
     for (const step of pendingSteps) {
       patch[ONBOARDING_STEPS_META_KEY] = withAcknowledgedStep(patch, step);
     }

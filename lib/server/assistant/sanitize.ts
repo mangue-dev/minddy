@@ -1,5 +1,7 @@
 import "server-only";
 
+// Le propos de cette constante EST de matcher des caractères de contrôle.
+// oxlint-disable-next-line no-control-regex
 const CONTROL_CHARS_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 
 /**

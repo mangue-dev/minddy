@@ -22,7 +22,6 @@ const {
   modelConfigKeys,
   resolveCascadeFromValues,
   resolveConfiguredModel,
-  resolveFromValues,
   withModelSuffixFallback,
 } = await import("./model-config");
 const { aiModelFallback } = await import("@/lib/ai-model-config");

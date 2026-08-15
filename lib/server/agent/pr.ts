@@ -283,7 +283,7 @@ async function ghJson<T>(
 ): Promise<T> {
   const res = await fetch(url, {
     ...init,
-    headers: { ...githubHeaders(token, init?.accept), ...(init?.headers ?? {}) },
+    headers: { ...githubHeaders(token, init?.accept), ...init?.headers },
   });
   const text = await res.text();
   const data = text ? (JSON.parse(text) as unknown) : null;

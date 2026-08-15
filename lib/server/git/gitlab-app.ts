@@ -457,6 +457,24 @@ interface GitlabHook {
 }
 
 /**
+ * Le corps d'un POST/PUT de hook — le pendant en ÉCRITURE de `GitlabHook`, dont
+ * tous les drapeaux sont obligatoires : GitLab traite un drapeau absent comme
+ * `false`, donc « oublier » `note_events` désabonne le hook en silence. Nommer
+ * la forme fait échouer la compilation plutôt que le webhook.
+ */
+interface GitlabHookWrite {
+  url: string;
+  token: string;
+  issues_events: boolean;
+  merge_requests_events: boolean;
+  note_events: boolean;
+  emoji_events: boolean;
+  pipeline_events: boolean;
+  push_events: boolean;
+  enable_ssl_verification: boolean;
+}
+
+/**
  * Aligne le webhook minddy du projet GitLab sur l'état voulu de la synchro
  * d'issues. GitLab n'a pas d'endpoint global comme la GitHub App : le hook vit
  * SUR LE DÉPÔT, donc on le provisionne à l'activation.
@@ -495,7 +513,7 @@ export async function ensureGitlabIssuesHook(
   const hooks = (await listResponse.json()) as GitlabHook[];
   const existing = hooks.find((h) => h.url === webhookUrl);
 
-  const write = async (url: string, method: "POST" | "PUT", body: object) => {
+  const write = async (url: string, method: "POST" | "PUT", body: GitlabHookWrite) => {
     const response = await fetch(url, {
       method,
       headers: { ...gitlabHeaders(accessToken), "Content-Type": "application/json" },

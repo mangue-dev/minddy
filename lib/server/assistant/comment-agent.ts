@@ -57,7 +57,6 @@ import {
 // only the final message visible. No conversation is stored: the reply comment
 // IS the whole artifact.
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MAX_TOOL_ROUNDS = 6;
 
 /** Detects an @numo / @Numo mention in a comment body (word-boundary, not mid-email). */

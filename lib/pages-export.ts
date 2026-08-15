@@ -53,6 +53,7 @@ const MAX_SLUG_LENGTH = 80;
 export function pageFileSlug(title: string): string {
   const cleaned = title
     // Les caractères de contrôle : invisibles dans un titre, refusés dans un nom.
+    // oxlint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]/g, "")
     // Interdits sur Windows, plus `/` et `\` qui ouvriraient un dossier.
     .replace(/[<>:"/\\|?*]/g, "-")

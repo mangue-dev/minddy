@@ -323,11 +323,11 @@ export function foldPath<T>(
 ): { lead: T | null; hidden: T[]; tail: T[] } {
   if (trail.length === 0) return { lead: null, hidden: [], tail: [] };
   if (trail.length <= max) {
-    return { lead: trail[0], hidden: [], tail: [...trail.slice(1)] };
+    return { lead: trail[0], hidden: [], tail: trail.slice(1) };
   }
   return {
     lead: trail[0],
-    hidden: [...trail.slice(1, -1)],
+    hidden: trail.slice(1, -1),
     tail: [trail[trail.length - 1]],
   };
 }

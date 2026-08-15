@@ -14,7 +14,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts"],
+    include: ["lib/**/*.test.ts", "tools/**/*.test.ts"],
     // Le bundle de la projection des pages (MIN-295) : la projection le charge
     // par chemin, donc il doit exister avant le premier test qui la traverse.
     globalSetup: ["test/build-pages-md-setup.ts"],

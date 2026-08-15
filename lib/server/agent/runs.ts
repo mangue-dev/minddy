@@ -1028,6 +1028,7 @@ export async function previousRunSummaryForPr(
  * même raison — `JSON.parse` côté Postgres les refuse tout autant.
  */
 const NUL_AND_LONE_SURROGATES =
+  // oxlint-disable-next-line no-control-regex
   /[\u0000]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
 
 export function stripUnstorable<T>(value: T): T {

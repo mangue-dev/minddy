@@ -3,7 +3,6 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { requireProjectMember } from "@/lib/server/feedback/team-guard";
 import {
   enableBoardForProject,
-  getBoardForProject,
   rotateSsoSecret,
 } from "@/lib/server/feedback/boards";
 import { createIntegration } from "@/lib/server/integrations";

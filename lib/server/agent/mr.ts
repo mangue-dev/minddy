@@ -73,7 +73,7 @@ function errorMessage(data: unknown, status: number): string {
 async function glJson<T>(url: string, token: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
-    headers: { ...gitlabHeaders(token), ...(init?.headers ?? {}) },
+    headers: { ...gitlabHeaders(token), ...init?.headers },
   });
   const text = await res.text();
   let data: unknown = null;

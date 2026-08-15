@@ -35,7 +35,6 @@ export const maxDuration = 120;
 //   patch immediately, from the side panel.
 // The route itself never writes to the DB.
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // Même modèle que la dictée de ticket (clé app_config `dictate_model`) : c'est
 // la même étape agentique, sur d'autres champs.
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;

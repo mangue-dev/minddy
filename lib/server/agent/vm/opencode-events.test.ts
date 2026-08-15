@@ -37,6 +37,18 @@ function fixtureEvents(): OpencodeEvent[] {
     .map((line) => JSON.parse(line) as OpencodeEvent);
 }
 
+/**
+ * Ouvre une sous-table d'un event de fixture, ou rend `undefined` si le chemin
+ * n'existe pas. Les `properties` d'un `OpencodeEvent` sont volontairement larges
+ * — c'est un flux tiers. Passer par ici plutôt que par une conversion enchaînée
+ * évite qu'un `?.` sur le premier maillon laisse le second déréférencer `undefined`.
+ */
+function subRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
 /** Rejoue le tour capturé et rend tout ce qu'il a produit. */
 function replay() {
   const state = newTurnStreamState();
@@ -70,13 +82,11 @@ describe("un vrai tour capturé", () => {
     // Mesuré : le premier `message.part.updated` d'un tool arrive en `pending`
     // avec `input: {}`. L'émettre afficherait un appel sans argument, puis rien.
     const state = newTurnStreamState();
-    const pending = fixtureEvents().find(
-      (e) =>
-        e.type === "message.part.updated" &&
-        (e.properties?.part as Record<string, unknown> | undefined)?.type === "tool" &&
-        ((e.properties?.part as Record<string, unknown>).state as Record<string, unknown>)
-          ?.status === "pending",
-    );
+    const pending = fixtureEvents().find((e) => {
+      if (e.type !== "message.part.updated") return false;
+      const part = subRecord(e.properties?.part);
+      return part?.type === "tool" && subRecord(part.state)?.status === "pending";
+    });
     expect(pending, "la fixture doit porter un état `pending`").toBeTruthy();
     expect(translateEvent(pending!, state).events).toEqual([]);
   });
@@ -100,12 +110,11 @@ describe("un vrai tour capturé", () => {
     // Le premier `message.updated` d'un round assistant arrive à `cost: 0`, sans
     // `finish`. Le compter écrirait une ligne vide, puis une vraie.
     const state = newTurnStreamState();
-    const early = fixtureEvents().find(
-      (e) =>
-        e.type === "message.updated" &&
-        (e.properties?.info as Record<string, unknown> | undefined)?.role === "assistant" &&
-        !(e.properties?.info as Record<string, unknown>).finish,
-    );
+    const early = fixtureEvents().find((e) => {
+      if (e.type !== "message.updated") return false;
+      const info = subRecord(e.properties?.info);
+      return info?.role === "assistant" && !info.finish;
+    });
     expect(early, "la fixture doit porter un round non terminé").toBeTruthy();
     expect(translateEvent(early!, state).usage).toBeUndefined();
   });

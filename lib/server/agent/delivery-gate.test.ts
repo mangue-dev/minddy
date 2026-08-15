@@ -293,7 +293,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function seed(): AgentChatMessage[] {
+function _seed(): AgentChatMessage[] {
   return [
     { role: "system", content: "You are numo." },
     { role: "user", content: "Do the thing." },

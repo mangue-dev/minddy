@@ -1488,7 +1488,7 @@ export const SUBAGENT_CONTROL_TOOLS: ReadonlySet<string> = new Set([
  * fond appartiennent au PARENT. Une fille qui coche le plan de l'utilisateur ou qui
  * ouvre une pull request agirait au nom d'une conversation qu'elle n'a pas lue.
  */
-const SUBAGENT_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
+const _SUBAGENT_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
   ...SUBAGENT_CONTROL_TOOLS,
   "create_pr",
   "ask_user",
@@ -1502,7 +1502,7 @@ const SUBAGENT_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
 ]);
 
 /** Les quatre lecteurs : tout ce qu'un sous-agent `explore` a le droit de faire. */
-const SUBAGENT_READ_TOOLS: ReadonlySet<string> = new Set([
+const _SUBAGENT_READ_TOOLS: ReadonlySet<string> = new Set([
   "read_file",
   "list_dir",
   "glob",

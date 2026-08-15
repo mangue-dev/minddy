@@ -57,7 +57,6 @@ export function RoutinesPanel({
 }) {
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
-  const locale = useLocale();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { projects } = useProjects();

@@ -1330,7 +1330,7 @@ export async function runOpencodeTurn(
      * conversation, et le tour suivant repartait du ticket comme s'il n'avait
      * jamais travaillé (mesuré le 2026-08-13, run `1e8775aa`).
      */
-    let journalSeq: Record<string, number> = { ...(previous?.seq ?? {}) };
+    let journalSeq: Record<string, number> = { ...previous?.seq };
     /**
      * L'INCRÉMENT, DÉCOUPÉ POUR LE TRANSPORT. Le corps d'une requête reste
      * plafonné par la plateforme : un round qui lit deux cents fichiers rendrait

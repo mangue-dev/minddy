@@ -129,7 +129,6 @@ import { listTeamFeedback, getTeamFeedbackDetail } from "@/lib/server/feedback/t
 import { isFeedbackPostStatus } from "@/lib/feedback/types";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
-import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
 import {
   linkFeedbackIssue,
   promoteFeedbackPost,

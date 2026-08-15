@@ -47,7 +47,7 @@ function fakeHost(replies: Array<[RegExp, Partial<ShellResult>]> = []): {
       commands.push(command);
       envs.push(opts?.env);
       const hit = replies.find(([pattern]) => pattern.test(command));
-      return { exitCode: 0, stdout: "", stderr: "", ...(hit?.[1] ?? {}) };
+      return { exitCode: 0, stdout: "", stderr: "", ...hit?.[1] };
     },
     readFile: async (p) => files.get(p) ?? null,
     writeFile: async (p, content) => {

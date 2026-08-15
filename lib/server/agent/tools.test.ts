@@ -280,8 +280,8 @@ describe("agentToolsFor — read_resource et les images", () => {
  * ils appartiennent au parent, et le seul moyen fiable de le garantir est de ne pas
  * les servir. Ce test remplace « lancer une session et regarder ce qu'elle fait ».
  */
-const SUBAGENT_READERS = ["read_file", "list_dir", "glob", "grep"];
-const MINDDY_AND_CONTROL = [
+const _SUBAGENT_READERS = ["read_file", "list_dir", "glob", "grep"];
+const _MINDDY_AND_CONTROL = [
   ...MINDDY_TOOLS,
   "create_pr",
   "ask_user",

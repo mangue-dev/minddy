@@ -69,7 +69,7 @@ async function setEnabledFlag(userId: string, enabled: boolean): Promise<void> {
   const { data, error } = await service.auth.admin.getUserById(userId);
   if (error || !data.user) throw new Error(error?.message ?? "Unknown account");
   const appMetadata = {
-    ...(data.user.app_metadata ?? {}),
+    ...data.user.app_metadata,
     [MFA_ENABLED_CLAIM]: enabled,
   } as Record<string, unknown>;
 

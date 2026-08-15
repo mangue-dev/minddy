@@ -6,15 +6,17 @@ import { describe, expect, it } from "vitest";
 /**
  * MIN-362 — LA MATRICE DE TEST DU CHANTIER LOCAL, exécutable.
  *
- * `vitest.config.ts` ne COLLECTE que `lib/**` : ni `app/api/**` ni
- * `desktop/src/**` ne sont exercés par les 360 fichiers de tests du dépôt. Or le
+ * `vitest.config.ts` ne COLLECTE que `lib/**` et les tests du plugin oxlint : ni
+ * `app/api/**` ni `desktop/src/**` ne sont exercés directement par la suite. Or le
  * verrou d'admission du plan de contrôle tient dans UN fichier de `app/api/`, et
  * le lanceur du harness vivra dans `desktop/src/` — c'est-à-dire que le chantier
  * le plus sensible du dépôt atterrit exactement là où sa culture de test ne va
  * pas.
  *
- * Élargir `include` serait le geste évident et le mauvais : la suite tourne en
- * node nu, en 18 s, et `app/**` traînerait React, Next et jsdom derrière lui.
+ * Élargir `include` aux surfaces applicatives serait le geste évident et le
+ * mauvais : la suite tourne en node nu, en 18 s, et `app/**` traînerait React,
+ * Next et jsdom derrière lui. Le plugin oxlint reste pur et garde ses tests à
+ * côté de son code vendorisé.
  * Le dépôt a déjà écrit les deux bonnes réponses, et ce fichier ne fait que les
  * RENDRE OBLIGATOIRES :
  *
@@ -99,10 +101,12 @@ const SURFACES_HORS_LIB = [
 ] as const;
 
 describe("les surfaces du chantier local qui vivent hors de `lib/**`", () => {
-  it("la prémisse tient : vitest ne collecte que `lib/**`", () => {
+  it("la prémisse tient : vitest ne collecte que les tests purs", () => {
     // Si un jour `include` s'élargit, ce fichier n'a plus la même valeur — il
     // doit alors être relu, pas contourné.
-    expect(read("vitest.config.ts")).toContain('include: ["lib/**/*.test.ts"]');
+    expect(read("vitest.config.ts")).toContain(
+      'include: ["lib/**/*.test.ts", "tools/**/*.test.ts"]',
+    );
   });
 
   it("sont chacune atteintes par un test de `lib/`", () => {

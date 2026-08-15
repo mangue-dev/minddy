@@ -146,7 +146,7 @@ export function translateAiChatRequest(
     ...(request.parallelToolCalls !== undefined
       ? { parallel_tool_calls: request.parallelToolCalls }
       : {}),
-    ...(request.extensions ?? {}),
+    ...request.extensions,
   };
 
   const maxOutputTokens =
@@ -180,11 +180,9 @@ export function aiChatProviderHeaders(
 ): Record<string, string> {
   const profile = getAgentProvider(provider)?.requestProfile;
   if (!profile) throw new Error(`Unknown AI provider: ${provider}`);
-  return {
-    ...(profile.attribution
-      ? { "HTTP-Referer": "https://minddy.app", "X-Title": title }
-      : {}),
-  };
+  return profile.attribution
+    ? { "HTTP-Referer": "https://minddy.app", "X-Title": title }
+    : {};
 }
 
 /**

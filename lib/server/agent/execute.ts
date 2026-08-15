@@ -3,26 +3,20 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
-import { recordAiUsage, spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
+import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
 import { getOrCreateAgentSandbox, sandboxHost, sandboxName, type Sandbox } from "./sandbox";
 import { cloudLayout } from "./harness-layout";
-import { cloneRepo, clonePullRequest, commitAndPush, revParseHead, repoBackgroundRunner } from "./repo-host";
-import { newLiveEditLog } from "./live-edits";
+import { cloneRepo, clonePullRequest, revParseHead, repoBackgroundRunner } from "./repo-host";
 import { BackgroundJobs } from "./background";
 import { scopeSubagentModels } from "./subagent-config";
 import { getSubagentFavorites, maxParallelSubagents } from "./subagent-app-config";
 import { getAgentModelsForUser } from "./models-catalog";
 import { SecretRedactor } from "./redact";
-import { newVerificationSink } from "./diagnostics";
-import { toolOutputFileName } from "./command-output";
 import { readRepoInstructions, REPO_INSTRUCTION_FILES, type InstructionsState } from "./repo-instructions";
-import type { AgentChatMessage, EmitAgentEvent, EmitAgentLive } from "./agent-contract";
-import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
-import { broadcastRunStream } from "./live";
-import { agentToolsFor } from "./tools";
+import type { AgentChatMessage, EmitAgentEvent } from "./agent-contract";
 import { isWebSearchEnabled, MAX_WEB_SEARCHES_PER_TURN } from "@/lib/server/web-search";
 import {
   buildAgentContextMessage,
@@ -38,8 +32,6 @@ import {
 import { buildOpencodeAnchor } from "./opencode-anchor";
 import { promptWithMentions } from "@/lib/agent-mentions";
 import { loadPrReviewBoot, loadPrRunContext, pullRequestHeadRef, pullRequestLocalBranch } from "./pr-run";
-import { type PrToolContext, type ReviewableFile } from "./pr-tools";
-import { type ProjectPrToolContext } from "./project-pr-tools";
 import {
   resolveAgentApiKey,
   getModelContextWindow,
@@ -58,14 +50,8 @@ import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
 import { agentControlOrigin } from "./origin";
 import { forgeFor, type Forge } from "./forge";
 import { prStateFromRef } from "./pull-requests";
-import type { PullRequestRef } from "./pr";
-import { type IssueToolContext } from "./issue-tools";
-import { type ScratchpadToolContext } from "./scratchpad-tools";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import {
-  notePrCommits as notePrCommitsOn,
-  registerPr as registerPrOn,
-  reopenIfRejectedWorkPushed as reopenIfRejectedWorkPushedOn,
   resolveRunPrefs,
   prTerm,
   SANDBOX_USAGE_SEQ_BASE,
@@ -82,7 +68,6 @@ import {
   loadRunJournal,
   notifyAgentRun,
   type AgentRun,
-  type AgentCheckpoint,
 } from "./runs";
 import { checkAgentQuota } from "./quota";
 import { generatedAgentBranchName } from "./branch-name";
@@ -127,37 +112,10 @@ async function resolveCommitterIdentity(
   return { name: "minddy agent", email: "agent@minddy.app" };
 }
 
-/** Wall-clock max d'UN TOUR (garde-fou anti-runaway ; réinitialisé à chaque tour). */
-const MAX_WALL_CLOCK_MS = 60 * 60_000;
-/**
- * Chemins édités qu'un tour emporte au chunk suivant (MIN-210) — les PLUS RÉCENTS
- * au-delà. Le cap tient `MAX_CHECKPOINT_BYTES` à l'abri d'une refonte à mille
- * fichiers, et il coûte peu : `formatTypeErrors` ne fait que remonter les chemins
- * touchés en tête du bloc, il ne filtre rien — un chemin tombé sous le cap voit
- * quand même ses erreurs servies, plus bas.
- */
-const CHECKPOINT_EDITED_PATHS_MAX = 200;
-
 /** Borne du re-queue « message en attente » sur erreur mid-turn (catch final) :
     `attempts` (incrémenté à chaque claim) n'est pas remis à zéro sur ce chemin,
     donc une erreur persistante s'arrête après ce nombre de claims. */
 const MAX_ERROR_REQUEUE_ATTEMPTS = 2;
-/** Wall-clock max d'UN sous-agent (MIN-112) — une borne de coût par tâche
- *  déléguée, plus une part d'un chunk qui n'existe plus (MIN-225). */
-const SUBAGENT_MAX_MS = 600_000;
-/** Marge gardée pour couper les filles et livrer leur rapport partiel DANS le tour
- *  (avant le type-check, qui doit voir leurs fichiers). */
-const SUBAGENT_CUT_MARGIN_MS = 10_000;
-/**
- * Base des seq de fichiers de sortie d'un sous-agent, hors de la bande du parent
- * (`run.continuations * 1000` ; le compteur ne bouge plus depuis MIN-225, un tour
- * ne se découpant plus, mais la bande reste celle-là pour qu'un run migré ne
- * collisionne pas avec les lignes de son passé).
- * Sans ça, deux tools d'un même tour écriraient le même `slug-<seq>.log`
- * (cf. `toolOutputFileName`) et le second écraserait la sortie du premier.
- */
-const SUBAGENT_OUTPUT_SEQ_BASE = 500_000;
-
 /**
  * Ce qu'un appel d'exécuteur a fait du run.
  *
@@ -233,16 +191,6 @@ function userPromptFromMessages(messages: AgentChatMessage[]): string {
     .map((text) => text.trim())
     .filter(Boolean)
     .join("\n\n");
-}
-
-function lastAssistantText(messages: AgentChatMessage[]): string {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i];
-    if (m.role !== "assistant") continue;
-    const text = typeof m.content === "string" ? m.content.trim() : "";
-    if (text) return text;
-  }
-  return "";
 }
 
 
@@ -526,20 +474,6 @@ export async function executeAgentRun(
       .catch(() => {});
     return emitChain;
   };
-  /**
-   * Fichiers touchés par le CHUNK, dits au fil avant le commit qui les arrête —
-   * le même registre que celui de la microVM ([live-edits.ts](live-edits.ts)),
-   * qui porte les règles (une entrée par chemin, la liste sur chaque charge).
-   */
-  const liveEdits = newLiveEditLog();
-  // Direct du fil : le texte du round pendant qu'il s'écrit, diffusé sur le topic
-  // du run. Rien en base — le fil ouvert l'affiche, les autres n'en savent rien.
-  const emitLive: EmitAgentLive = (progress) =>
-    broadcastRunStream(run.id, {
-      ...progress,
-      ...liveEdits.payload(),
-      at: Date.now(),
-    });
   /**
    * Qui paye ce run (MIN-131) : son CRÉATEUR, pas le owner du projet — un membre
    * qui lance un agent chez quelqu'un d'autre consomme son propre budget, et
@@ -987,28 +921,6 @@ export async function executeAgentRun(
     // travail (cf. `sandboxReady` dans components/agent/agent-event-feed.tsx).
     if (sandbox) await emit("status", { phase: "sandbox_ready" });
 
-    // La branche est-elle DÉJÀ sur le remote ? Vrai quand la run hérite d'une
-    // lignée (`launchAgentRun` ne transmet que des branches poussées) ou qu'un
-    // chunk précédent a poussé. Sert à ne stamper qu'une fois.
-    // `!writesToRepo` : une relecture ne poussera jamais, donc elle n'a aucune
-    // branche à enregistrer — la marquer déjà stampée est un garde-fou de plus.
-    let branchStamped = run.branch_name != null || !writesToRepo;
-    /**
-     * Enregistre la branche de travail au premier push qui a VRAIMENT eu lieu :
-     * c'est ce push qui la crée sur le dépôt, donc c'est lui qui la fait exister
-     * pour l'app. Un push sauté (rien de commité) ne stampe rien.
-     */
-    const noteBranchPushed = async (pushed: { pushed: boolean } | null): Promise<void> => {
-      if (!pushed?.pushed || branchStamped) return;
-      // Best-effort : le travail est DÉJÀ sur le dépôt à ce stade — un stamp raté
-      // ne doit pas faire échouer un tour abouti. Le prochain push réessaie.
-      const stamped = await stampRun(run.id, { branch_name: workBranch }).catch((err) => {
-        console.error("[agent-execute] branch stamp failed:", (err as Error).message);
-        return null;
-      });
-      branchStamped = stamped != null;
-    };
-
     // Baseline du « diff par tour » (MIN-46, event `files_changed`) : HEAD à l'entrée
     // du chunk. `filesFromSha` est le point depuis lequel la fin de tour diffe — le
     // dernier sha émis (persisté dans le checkpoint, survit aux chunks WIP), ou ce
@@ -1341,7 +1253,7 @@ export async function executeAgentRun(
      * et doit raconter exactement la même chose. Deux copies auraient divergé au
      * premier correctif porté d'un seul côté.
      */
-    const landing: PrLandingContext = {
+    const _landing: PrLandingContext = {
       run,
       target,
       forge,
@@ -1352,18 +1264,6 @@ export async function executeAgentRun(
       emit,
       prState,
     };
-    const notePrCommits = (pushed: { remoteUpdated: boolean } | null) =>
-      notePrCommitsOn(landing, pushed);
-    const registerPr = (pr: PullRequestRef, kind: "opened" | "reopened") =>
-      registerPrOn(landing, pr, kind);
-
-
-    /** Même implémentation partagée : la réouverture d'une PR refusée au push. */
-    const reopenIfRejectedWorkPushed = (
-      pushed: { remoteUpdated: boolean } | null,
-      token: string,
-    ) => reopenIfRejectedWorkPushedOn(landing, pushed, token);
-
     // Fenêtre de contexte ET prix d'entrée du modèle (OpenRouter) : le seuil de
     // compaction se dérive des deux — la fenêtre le BORNE, le prix le DIMENSIONNE.
     // Une seule lecture d'index sert les deux (cache de process).
@@ -1388,20 +1288,6 @@ export async function executeAgentRun(
     //
     // Une PR sans ticket (le cas normal d'une PR humaine, MIN-143) laisse le
     // défaut nul : `issue` redevient obligatoire, ce que le tool dit aussi.
-    const issueToolCtx: IssueToolContext = {
-      anchorIssueId: run.issue_id ?? prRun?.issueId ?? null,
-      projectId: run.project_id,
-      projectKey: issue?.projectKey ?? project.key,
-      actorId: run.created_by,
-      numoDefaultStatus,
-      imageInput,
-      // `report_verdict` (MIN-147) écrit sur CE run, et n'est servi que si le
-      // run est une étape de chaîne.
-      runId: run.id,
-      chainId: run.chain_id,
-    };
-    const scratchpadToolCtx: ScratchpadToolContext = { userId: run.created_by };
-
     /**
      * Les trois écritures de PR (MIN-168), câblées comme `create_pr` : la forge du
      * provider et le token de `resolveRepoCloneTarget` — Numo commente sous
@@ -1413,48 +1299,6 @@ export async function executeAgentRun(
      * repris n'a pas de `prBoot` à réutiliser. On re-résout un token frais à
      * l'appel — un chunk peut durer plus longtemps que le token du claim.
      */
-    let prFilesCache: Promise<ReviewableFile[]> | null = prBoot
-      ? Promise.resolve(prBoot.files)
-      : null;
-    /**
-     * Ancres posées par CE RUN, semées depuis le checkpoint. UN SEUL objet pour
-     * les deux familles de tools PR (MIN-267) : le plafond des 5 se compte par
-     * run, et une session qui relit une pull request et une routine qui en
-     * commente cinq ne doivent pas avoir chacune son compteur — sinon « 5 par
-     * run » devient « 5 par famille », ce que rien ne justifie.
-     */
-    const prInline = { used: run.checkpoint?.prInlineComments ?? 0 };
-    const prToolCtx: PrToolContext | null = prRun
-      ? {
-          forge,
-          call: {
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prRun.number,
-          },
-          files: () => {
-            prFilesCache ??= (async () => {
-              const fresh =
-                (await resolveRepoCloneTarget(run.project_id).catch(() => null)) ?? target;
-              secrets.addAuthUrl(fresh.authUrl);
-              secrets.add(fresh.token);
-              const { files } = await forge.listPullRequestFiles({
-                token: fresh.token,
-                repoFullName: fresh.repoFullName,
-                number: prRun.number,
-              });
-              return files;
-            })();
-            return prFilesCache;
-          },
-          model: run.model,
-          locale: commentLocale,
-          // Compteur d'ancres du RUN, semé depuis le checkpoint : c'est ce qui rend
-          // le plafond de 5 insensible à la reprise et au tour suivant.
-          inline: prInline,
-        }
-      : null;
-
     /**
      * Les pull requests DU PROJET (MIN-267), câblées comme les précédentes : la
      * forge du provider et un token re-résolu À CHAQUE APPEL — un tour de microVM
@@ -1465,26 +1309,6 @@ export async function executeAgentRun(
      * comme pour `create_pr` : le tool n'est pas dans son jeu, et le handler ne
      * lui est pas câblé.
      */
-    const projectPrToolCtx: ProjectPrToolContext | null = prRun
-      ? null
-      : {
-          projectId: run.project_id,
-          repo: async () => {
-            const fresh = await resolveRepoCloneTarget(run.project_id).catch(() => null);
-            if (!fresh) return null;
-            secrets.addAuthUrl(fresh.authUrl);
-            secrets.add(fresh.token);
-            return {
-              token: fresh.token,
-              repoFullName: fresh.repoFullName,
-              provider: fresh.provider,
-            };
-          },
-          model: run.model,
-          locale: commentLocale,
-          inline: prInline,
-        };
-
     // Jobs de fond du chunk (MIN-114). Ils meurent AVANT chaque push (un watcher
     // qui écrit pendant le `git add -A` commiterait n'importe quoi) et de toute
     // façon en fin de chunk (`finally`) : un processus oublié mangerait la microVM
@@ -1508,12 +1332,10 @@ export async function executeAgentRun(
     // c'est de l'état de TOUR, et un tour qui déborde d'un chunk doit type-checker
     // ce qu'il a édité AVANT la soft-deadline. Le chemin `completed` ne l'écrit pas
     // (le tour y est fini), donc le semis reste vide au premier chunk d'un tour.
-    const editedPaths = new Set<string>(run.checkpoint?.editedPaths ?? []);
     /** Ce que le modèle a vérifié lui-même sur ce chunk (MIN-262) — rempli par
      *  `run_command`, périmé par toute édition, lu par la porte de livraison.
      *  PARTAGÉ avec les filles, comme `editedPaths`. Il ne voyage PAS dans le
      *  checkpoint : un chunk qui reprend n'a rien vu passer vert lui-même. */
-    const verification = newVerificationSink();
 
     // `quotaNow` et `ledgerSpentUsd` sont lus plus haut, avant la microVM (MIN-223) :
     // le plafond de la clé LLM du run en dépend, et cette clé précède la politique
@@ -1573,23 +1395,6 @@ export async function executeAgentRun(
      * `null` = pas encore l'heure, ou lecture en panne — la boucle garde alors son
      * plafond, une facturation injoignable n'arrête pas un run.
      */
-    let lastBudgetAt = Date.now();
-    const maybeRefreshBudget = async (): Promise<number | null> => {
-      if (Date.now() - lastBudgetAt < BUDGET_REFRESH_INTERVAL_MS) return null;
-      lastBudgetAt = Date.now();
-      const [quota, spent] = await Promise.all([
-        checkAgentQuota(run.created_by ?? "", aiSurface).catch(() => null),
-        spentFromLedger(run.run_id ?? run.id).catch(() => null),
-      ]);
-      if (!quota) return null;
-      const account = quota.unlimited ? undefined : Math.max(0, quota.remaining ?? 0);
-      const fromRun =
-        run.budget_usd == null
-          ? undefined
-          : Math.max(0, Number(run.budget_usd) - Math.max(run.cost_usd, spent ?? 0));
-      return minDefined(account, fromRun) ?? null;
-    };
-
     /**
      * ── LA BIFURCATION (MIN-224) ────────────────────────────────────────────
      *

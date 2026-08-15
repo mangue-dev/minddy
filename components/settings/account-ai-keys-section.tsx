@@ -40,7 +40,6 @@ import { isLocalAgentProvider } from "@/lib/agent-providers";
  */
 export function AccountAiKeysSection() {
   const t = useTranslations("Account");
-  const tAgent = useTranslations("Agent");
   const tc = useTranslations("Common");
   const queryClient = useQueryClient();
   const { keys, loading: keysLoading } = useAiKeysQuery();

@@ -128,6 +128,10 @@ function withRequestHeaders(
   extra: Record<string, string> = {},
 ): { request: { headers: Headers } } {
   const headers = new Headers(request.headers);
+  // Le spread n'est PAS superflu : `headers.delete()` mute la collection qu'on
+  // itère. Sans la copie, l'itérateur saute des en-têtes — et ceux qu'il saute
+  // sont précisément ceux qu'on voulait retirer.
+  // oxlint-disable-next-line unicorn/no-useless-spread
   for (const name of [...headers.keys()]) {
     if (name.toLowerCase().startsWith(TRUST_HEADER_PREFIX)) headers.delete(name);
   }

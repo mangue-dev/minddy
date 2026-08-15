@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { checkCommand } from "./command-guard";
 import {
   buildAgentContextMessage,
   buildInheritedBranchMessage,
@@ -506,7 +505,7 @@ describe("statut d'atterrissage annoncé dans le contexte", () => {
  * absent et brûle un round), et le prompt d'un sous-agent est une persona à part —
  * pas celui du parent amputé, qui lui ferait chercher un ticket inexistant.
  */
-const FAVORITES = [
+const _FAVORITES = [
   {
     id: "deepseek/cheap",
     label: "Cheap One",

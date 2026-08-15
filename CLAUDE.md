@@ -123,6 +123,73 @@ Deux réflexes qui vont avec :
 - Le dépôt tient **deux lockfiles**. Ajouter par `pnpm add`, puis resynchroniser
   avec `npm install --package-lock-only --legacy-peer-deps` (le dépôt porte un
   conflit de peers tiptap préexistant qui bloque npm sans ce drapeau).
+- **Installer avec la version de pnpm de la CI — `10.28.0`**, celle qu'épingle
+  [ci.yml](.github/workflows/ci.yml), jamais `pnpm@latest`. pnpm 11 réécrit le
+  lockfile en perdant les injections de `packageExtensions` : sur pnpm 11, le
+  `shiki: ^3.19.0` que `package.json` pousse dans `streamdown` disparaît, les
+  deux copies de shiki divergent et `npm run typecheck` tombe sur une erreur
+  dans `components/ai-elements/message.tsx` — un fichier que personne n'a
+  touché. Le symptôme ne désigne pas sa cause : vérifier
+  `git diff pnpm-lock.yaml` avant de partir déboguer le code.
+
+## Lint : une règle éteinte est une décision, pas un oubli
+
+```bash
+npm run lint      # oxlint --deny-warnings — tout le dépôt, 2 s
+```
+
+**Le lancer avant de répondre.** Il tourne aussi en CI, avant le typecheck, et
+il attrape une classe d'erreurs que `tsc` ne voit pas : optional chaining qui
+déréférence `undefined`, variable morte, `fetch` avec un corps sur un GET.
+
+Deux jeux de règles y tournent : les règles `correctness` d'oxlint, et
+**anti-slop** ([github.com/dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop)),
+quinze règles qui refusent les motifs TypeScript à faible preuve. Le plugin est
+**vendorisé** dans `tools/oxlint/anti-slop/` — c'est le principe de son auteur :
+les fichiers sont à nous, donc modifiables. `tsconfig.json` les exclut, ils sont
+chargés par oxlint, pas par `tsc`.
+
+**La sélection est le cœur d'[oxlint.config.ts](oxlint.config.ts).** Les quinze
+règles anti-slop à `error` sur ce dépôt donnent **7 926 erreurs** ; un linter
+qu'on ne lance jamais n'attrape rien. Ce qui est allumé est donc ce que le dépôt
+tient à **zéro** — donc ce qu'une PR ne peut plus regresser. Ce qui est éteint
+l'est **avec son compte au jour de l'audit**, en commentaire sur la ligne :
+
+```ts
+"anti-slop/no-unknown-returns": "off",       // 77 — le plus proche d'être tenable
+"anti-slop/require-safety-comment-for-type-assertion": "off", // 3653
+```
+
+Ce nombre est ce qui rend un cliquet possible : **on rallume une règle quand son
+compte est retombé à zéro, pas avant.** Sans lui, « off » ne se distingue plus
+d'un oubli, et personne ne sait ce qu'il en coûterait de rallumer.
+
+Certaines lignes ne sont pas un compte à faire baisser mais un **désaccord de
+fond**, et le commentaire le dit : `no-module-mocking` refuse `vi.mock`, alors
+que la doctrine de test ci-dessous est déjà plus fine que la règle ;
+`no-shape-in-symbol-names` refuse le mot « shape », qui ici est presque toujours
+du domaine (la forme d'une puce de mention, les formes du canvas de grain).
+
+**Une exception locale s'écrit avec sa raison.** `oxlint-disable-next-line` seul
+ne dit rien à celui qui passera après :
+
+```ts
+// Le spread n'est PAS superflu : `headers.delete()` mute la collection qu'on
+// itère. Sans la copie, l'itérateur saute des en-têtes — et ceux qu'il saute
+// sont précisément ceux qu'on voulait retirer.
+// oxlint-disable-next-line unicorn/no-useless-spread
+for (const name of [...headers.keys()]) {
+```
+
+C'est le cas qui compte le plus, parce que la règle y a **tort** et que la
+« corriger » introduirait le bug. Il y en a cinq dans le dépôt, tous commentés :
+[proxy.ts](proxy.ts) et [lib/analytics.ts](lib/analytics.ts) (mutation pendant
+l'itération), [lib/server/mcp/tools.ts](lib/server/mcp/tools.ts) (`Reflect.get`
+est l'API du piège Proxy, seule à transmettre `receiver`), et
+[captures/shots/issue-plan/shot.mjs](captures/shots/issue-plan/shot.mjs) — dont
+le `const RETIRED = true` n'est ni exporté ni référencé parce que `publish.mjs`
+le lit **par regex sur le texte source**. Le « nettoyer » remettrait ce dossier
+en production, en silence.
 
 ## Tests : un comportement neuf vient avec le sien
 

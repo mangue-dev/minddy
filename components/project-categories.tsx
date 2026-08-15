@@ -53,7 +53,6 @@ function CategoryRow({
   onUpdate: (updates: { name?: string; color?: string }) => Promise<unknown>;
   onDelete: () => void;
 }) {
-  const t = useTranslations("Categories");
   const tc = useTranslations("Common");
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.name);

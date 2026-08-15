@@ -42,7 +42,6 @@ import type { ByokModelKey } from "@/lib/ai-surfaces";
  * `feedback_voice` : au ledger, une ligne = un retour dicté.
  */
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 /** Interrupteur admin — coupe le micro sur les deux surfaces d'un coup. */
 export const FEEDBACK_VOICE_ENABLED_KEY = "feedback_voice_enabled";

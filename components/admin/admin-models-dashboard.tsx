@@ -103,7 +103,7 @@ export function AdminModelsDashboard() {
 
   // Reflect a saved value back into local state so the row's dirty check resets.
   const onSaved = useCallback((key: string, value: string) => {
-    setValues((prev) => ({ ...(prev ?? {}), [key]: value }));
+    setValues((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   return (

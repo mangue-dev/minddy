@@ -281,7 +281,7 @@ export async function startProbeServer(opts: {
       OPENCODE_DB: path.join(root, "probe.db"),
       OPENCODE_DISABLE_AUTOUPDATE: "1",
       OPENCODE_DISABLE_MODELS_FETCH: "1",
-      ...(opts.env ?? {}),
+      ...opts.env,
     },
     stdio: "ignore",
   });

@@ -30,7 +30,7 @@ import type { AdminOverview, AdminOverviewDay } from "@/lib/types";
  *  façon (il faudrait des agrégats dédiés, pas un scan). */
 const FUNNEL_SCAN_LIMIT = 5_000;
 
-const IANA_TZ = /^[A-Za-z][A-Za-z0-9_+\-]*(?:\/[A-Za-z0-9_+\-]+)*$/;
+const IANA_TZ = /^[A-Za-z][A-Za-z0-9_+-]*(?:\/[A-Za-z0-9_+-]+)*$/;
 
 interface TotalsPayload {
   total_users: number;

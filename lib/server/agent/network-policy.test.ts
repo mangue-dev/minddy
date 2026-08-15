@@ -112,7 +112,12 @@ describe("buildAgentNetworkPolicy — le plan de contrôle", () => {
     // …et cette URL matche bien la règle qui la fait forwarder.
     const path = new URL(agentVmUrl(ORIGIN, "events")).pathname;
     const [rule] = rulesFor("www.minddy.app");
-    const prefix = (rule.match?.path as { startsWith: string }).startsWith;
+    // Affirmé avant d'être lu : sans `match.path`, la ligne suivante partait en
+    // TypeError sur `undefined`, et le test disait « cannot read startsWith »
+    // au lieu de « la règle a perdu son chemin ».
+    const matchPath = rule.match?.path;
+    expect(matchPath, "la règle doit porter un `match.path`").toBeDefined();
+    const prefix = (matchPath as { startsWith: string }).startsWith;
     expect(path.startsWith(prefix)).toBe(true);
   });
 });

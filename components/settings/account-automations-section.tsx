@@ -21,7 +21,6 @@ import { FolderKanban, Workflow } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import {
-  SettingsEmpty,
   SettingsGroup,
   SettingsListRow,
   SettingsRow,
