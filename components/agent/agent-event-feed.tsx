@@ -78,11 +78,20 @@ export type FeedItem =
   | {
       kind: "note";
       id: string;
-      variant: "commit" | "error" | "reasoningUnsupported" | "providerRetry" | "localDeclined";
+      variant:
+        | "commit"
+        | "error"
+        | "reasoningUnsupported"
+        | "providerRetry"
+        | "localDeclined"
+        | "currentRepoOverlap";
       /** Motif NOMMÉ d'une erreur du harness (`turnTooLong`…), traduit à l'affichage.
        *  Absent sur une erreur de modèle, qui n'a que son texte. Porte aussi le
        *  motif d'un run gardé dans le cloud (`byok`, `no_mint` — MIN-357). */
       code?: string;
+      /** Combien de fichiers la note compte (MIN-358 : ceux que le commit a
+       *  emportés à l'utilisateur). Le message se décline au pluriel. */
+      count?: number;
       text: string;
       createdAt: string;
     }
@@ -518,6 +527,28 @@ function buildFeed(
             createdAt: e.created_at,
           });
         }
+        /**
+         * MIN-358 : l'agent travaillait dans le dépôt que l'utilisateur a sur
+         * son disque, et son commit a emporté des fichiers que celui-ci avait
+         * lui aussi modifiés — donc du travail à lui part dans la pull request.
+         *
+         * Aucune astuce ne referme ce cas : deux mains dans le même fichier ne
+         * se démêlent pas après coup. Ce qu'on peut faire, et qui est le
+         * minimum, c'est le DIRE au lieu de trancher en silence.
+         */
+        if (p.phase === "current_repo_overlap") {
+          const files = typeof p.files === "number" ? p.files : 0;
+          if (files > 0) {
+            items.push({
+              kind: "note",
+              id: e.id,
+              variant: "currentRepoOverlap",
+              count: files,
+              text: "",
+              createdAt: e.created_at,
+            });
+          }
+        }
         // Le fournisseur est tombé (MIN-219) : le tour attend avant de retenter,
         // et l'attente peut durer plusieurs minutes. L'event existait déjà, il
         // n'avait aucun lecteur — l'agent se taisait sans que rien ne dise pourquoi.
@@ -774,6 +805,14 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Cloud className="size-3 shrink-0" />
         {t(LOCAL_DECLINED_KEYS[item.code ?? ""] ?? "localDeclined")}
+      </div>
+    );
+  }
+  if (item.variant === "currentRepoOverlap") {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <GitCommit className="size-3 shrink-0" />
+        {t("currentRepoOverlap", { count: item.count ?? 0 })}
       </div>
     );
   }

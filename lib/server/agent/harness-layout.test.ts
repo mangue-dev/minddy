@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertUsableLayout,
   cloudLayout,
+  layoutForCurrentRepo,
   layoutForRoot,
   runScopedRoot,
   CLOUD_SANDBOX_ROOT,
@@ -70,6 +71,21 @@ describe("la dérivation", () => {
     }
   });
 
+  /**
+   * MIN-358 — le mode dépôt courant : le dépôt est celui de l'utilisateur, tout
+   * le reste appartient au run. C'est le seul layout où `repoDir` n'est pas
+   * `<root>/repo`, et il passe le même contrôle que les autres.
+   */
+  it("laisse le dépôt courant où il est, sans y installer le harness", () => {
+    const layout = layoutForCurrentRepo("/work/r-1", "/Users/x/Projets/app/", "/opt/oc");
+    expect(layout.repoDir).toBe("/Users/x/Projets/app");
+    expect(layout.harnessDir).toBe("/work/r-1/harness");
+    for (const dir of [layout.toolOutputDir, layout.harnessDir, layout.typecheckDir]) {
+      expect(dir.startsWith(`${layout.repoDir}/`)).toBe(false);
+    }
+    expect(() => assertUsableLayout(layout)).not.toThrow();
+  });
+
   it("absorbe un slash final plutôt que de produire un `//`", () => {
     // `resolveWithin` compare à `${base}/` : un double slash y échapperait à la
     // comparaison de préfixe d'un côté et pas de l'autre.
@@ -135,10 +151,25 @@ describe("le contrôle du layout", () => {
     expect(() => assertUsableLayout({ ...base, repoDir: "/work/r-1/repo/" })).toThrow(/slash/i);
   });
 
-  it("refuse un dépôt qui n'est pas sous la racine du run", () => {
-    // Sinon rien ne garantit plus que le harness et les sorties de tools en
-    // soient des frères — donc qu'ils échappent au `git add -A`.
-    expect(() => assertUsableLayout({ ...base, repoDir: "/ailleurs/repo" })).toThrow(/under root/i);
+  /**
+   * MIN-358 : un dépôt HORS de la racine du run est désormais légitime — c'est
+   * le mode dépôt courant, où le dépôt est celui de l'utilisateur. Ce qui reste
+   * refusé est la seule chose que la règle protégeait vraiment : un harness
+   * installé DANS le dépôt, donc visible du `git status` de quelqu'un.
+   */
+  it("accepte un dépôt hors de la racine du run (mode dépôt courant)", () => {
+    expect(() => assertUsableLayout({ ...base, repoDir: "/Users/x/Projets/app" })).not.toThrow();
+  });
+
+  it("refuse un harness installé DANS le dépôt", () => {
+    const inside = layoutForCurrentRepo("/work/r-1", "/work/r-1", "/opt/oc");
+    expect(() => assertUsableLayout(inside)).toThrow(/outside the repository/i);
+  });
+
+  it("refuse un dossier du run hors de la racine du run", () => {
+    expect(() => assertUsableLayout({ ...base, harnessDir: "/ailleurs/harness" })).toThrow(
+      /under root/i,
+    );
   });
 
   it("refuse un champ manquant", () => {

@@ -100,6 +100,15 @@ export interface OpencodeDeliveryDeps {
   editedPaths?: readonly string[];
   /** Graine du verrou « le dépôt a été touché » — vient du checkpoint. */
   repoTouched?: boolean;
+  /**
+   * LE PÉRIMÈTRE DU TOUR en mode dépôt courant (MIN-358) — cf.
+   * `DeliveryGateDeps.scopePaths`. Absent en mode clone.
+   *
+   * C'est le superviseur qui le calcule, parce que lui seul a l'instantané pris
+   * au DÉBUT du tour ; ce module lui rend en échange les éditions de ce tour
+   * (`turnEditedPaths`), qui en sont l'autre moitié.
+   */
+  scopePaths?: () => Promise<readonly string[]>;
   /** Ce qu'il reste de budget mural au tour, pour que la porte se taise à temps. */
   remainingMs: () => number;
 }
@@ -128,10 +137,25 @@ export interface OpencodeDelivery {
   repoTouched(): boolean;
   /** Ce que le checkpoint doit porter — capé, et vide quand il n'y a rien. */
   checkpointEditedPaths(): string[];
+  /**
+   * LES ÉDITIONS DE CE TOUR-CI, sans celles qu'il a héritées du checkpoint
+   * (MIN-358) — la moitié « tools » du périmètre du tour.
+   *
+   * La distinction ne servait à rien tant que le dépôt était à nous. Elle décide
+   * de tout en mode dépôt courant : après un tour, le travail de l'agent reste
+   * « modifié » dans l'arbre de travail (nos commits vivent sur une ref, pas sur
+   * le HEAD de l'utilisateur), donc le confondre avec le sien ferait passer
+   * chaque fichier de l'agent pour du travail humain emporté.
+   */
+  turnEditedPaths(): string[];
 }
 
 export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelivery {
   const editedPaths = new Set<string>(deps.editedPaths ?? []);
+  /** Les éditions de CE tour (cf. `turnEditedPaths`). `editedPaths`, lui, part du
+   *  checkpoint ET se vide à chaque type-check : ni l'un ni l'autre ne peut dire
+   *  ce que le tour courant a écrit. */
+  const turnEdited = new Set<string>();
   const planWrites = newPlanWriteSink();
   const verification: VerificationSink = newVerificationSink();
 
@@ -143,6 +167,7 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
     verification,
     filesFromSha: deps.filesFromSha,
     repoTouched: deps.repoTouched ?? false,
+    ...(deps.scopePaths ? { scopePaths: deps.scopePaths } : {}),
     logPrefix: "[supervisor]",
   });
 
@@ -169,7 +194,12 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
     // type-check ciblé à tout ce qui a changé depuis le premier tour. Le sondage
     // est un RECOURS, pour le seul cas où l'on n'a rien d'autre.
     if (gate.repoTouched() || editedPaths.size > 0) return;
-    const stat = await turnDiffStat(deps.host, deps.filesFromSha).catch(() => null);
+    // Le périmètre du tour BORNE le sondage en mode dépôt courant (MIN-358) :
+    // sans lui, le WIP de l'utilisateur ferait dire à un tour purement
+    // conversationnel qu'il a touché au dépôt, et lui ferait payer un type-check
+    // et une suite de tests sur des fichiers dont il n'a jamais entendu parler.
+    const scope = await deps.scopePaths?.().catch(() => undefined);
+    const stat = await turnDiffStat(deps.host, deps.filesFromSha, scope).catch(() => null);
     if (!stat) return;
     if (stat.files.length === 0 && stat.untracked === 0 && stat.lines === 0) return;
     /**
@@ -180,7 +210,7 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
      * c'est exactement le changement qui casse le typage ailleurs. La boucle
      * maison, elle, notait le chemin supprimé (`delete_file` → `noteEdited`).
      */
-    for (const path of await turnTouchedPaths(deps.host, deps.filesFromSha)) {
+    for (const path of await turnTouchedPaths(deps.host, deps.filesFromSha, scope)) {
       editedPaths.add(path);
     }
     for (const path of stat.files) editedPaths.add(path);
@@ -215,6 +245,7 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
       const relative = repoRelative(deps.host.layout.repoDir, filepath);
       if (!relative) return;
       editedPaths.add(relative);
+      turnEdited.add(relative);
       // Toute édition périme ce que le modèle avait vérifié : vert AVANT la
       // dernière édition ne veut rien dire (`diagnostics.ts`).
       noteVerificationStale(verification);
@@ -227,6 +258,7 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
     noteEdits: () => gate.noteEdits(),
     repoTouched: () => gate.repoTouched(),
     checkpointEditedPaths: () => [...editedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX),
+    turnEditedPaths: () => [...turnEdited],
   };
 }
 

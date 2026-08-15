@@ -67,6 +67,9 @@ const OPTS = {
   workBranch: "minddy/agent/min-123-abcd1234",
   baseBranch: "main",
   message: "wip(MIN-123): agent update",
+  // MIN-358 : l'identité voyage jusqu'au commit et se pose par `git -c`, elle
+  // n'est plus écrite dans le `.git/config` du clone.
+  committer: { name: "minddy agent", email: "agent@minddy.app" },
 };
 
 describe("commitAndPush", () => {
@@ -94,7 +97,8 @@ describe("commitAndPush", () => {
     const { sandbox, commands } = fakeSandbox({
       "git status --porcelain": { stdout: " M lib/foo.ts\n" },
       "git add -A": {},
-      "git commit -m": {},
+      // MIN-358 : le commit porte son identité en tête (`git -c user.email=…`).
+      "git -c 'user.email=": {},
       // Le commit fait avancer HEAD : c'est LUI qui rend la branche poussable.
       "git rev-parse HEAD": { stdout: `${WORK_SHA}\n` },
       "git rev-parse --verify": { stdout: `${BASE_SHA}\n` },
@@ -153,7 +157,8 @@ describe("commitAndPush", () => {
     const { sandbox } = fakeSandbox({
       "git status --porcelain": { stdout: " M lib/foo.ts\n" },
       "git add -A": {},
-      "git commit -m": {},
+      // MIN-358 : le commit porte son identité en tête (`git -c user.email=…`).
+      "git -c 'user.email=": {},
       "git rev-parse HEAD": { stdout: `${WORK_SHA}\n` },
       "git rev-parse --verify": { stdout: `${BASE_SHA}\n` },
       "git ls-remote": { stdout: "" },

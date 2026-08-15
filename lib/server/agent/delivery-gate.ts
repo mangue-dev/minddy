@@ -95,6 +95,18 @@ export interface DeliveryGateDeps {
   filesFromSha: string;
   /** Graine du verrou « le dépôt a été touché » — vient du checkpoint. */
   repoTouched: boolean;
+  /**
+   * LE PÉRIMÈTRE DU TOUR, quand le dépôt n'est pas à nous (MIN-358).
+   *
+   * Les deux lectures ci-dessous qui comparent une référence à l'ARBRE DE
+   * TRAVAIL — la portée des tests et l'auto-relecture — y verraient sinon le WIP
+   * de l'utilisateur : le modèle relirait le travail de quelqu'un d'autre comme
+   * s'il était le sien, et `vitest related` partirait sur ses fichiers à lui.
+   *
+   * ABSENT en mode clone, et c'est le cas courant : là, l'arbre de travail n'a
+   * jamais contenu que le travail de l'agent.
+   */
+  scopePaths?: () => Promise<readonly string[]>;
   /** Préfixe des logs du moteur appelant (`[agent-vm]`, `[agent-execute]`). */
   logPrefix: string;
 }
@@ -141,6 +153,13 @@ export interface DeliveryGate {
 export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   const { host, emit, editedPaths, planWrites, filesFromSha, logPrefix } = deps;
   const verification = deps.verification ?? newVerificationSink();
+  /** Le périmètre, ou `undefined` quand rien ne borne (mode clone). Un périmètre
+   *  qui LÈVE ne borne rien non plus : mieux vaut un diff trop large qu'une porte
+   *  de livraison en panne. */
+  const scope = async (): Promise<readonly string[] | undefined> => {
+    if (!deps.scopePaths) return undefined;
+    return await deps.scopePaths().catch(() => undefined);
+  };
 
   /** Le tour a-t-il édité le dépôt ? Verrou LATCHÉ, là où `editedPaths` se vide à
    *  chaque type-check : après une relance, le tour a toujours édité, même si le
@@ -258,7 +277,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * dispenser sur un doute.
    */
   const testScopeForTurn = async (budgetMs: number): Promise<TestScope | null> => {
-    const stat = await turnDiffStat(host, filesFromSha).catch(() => null);
+    const stat = await turnDiffStat(host, filesFromSha, await scope()).catch(() => null);
     const small =
       stat !== null &&
       stat.untracked === 0 &&
@@ -300,7 +319,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   const selfReviewBlock = async (budgetMs: number): Promise<string | null> => {
     if (!repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
     const startedAt = Date.now();
-    const { diff, porcelain } = await turnDiff(host, filesFromSha).catch(() => ({
+    const { diff, porcelain } = await turnDiff(host, filesFromSha, await scope()).catch(() => ({
       diff: "",
       porcelain: "",
     }));

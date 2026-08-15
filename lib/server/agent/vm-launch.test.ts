@@ -92,6 +92,8 @@ const jobInput = (): Omit<VmJob, "bootstrapMs"> =>
     layout: LAYOUT,
     runId: "run-1",
     workBranch: "minddy/agent/min-42",
+    repoMode: "clone",
+    committer: { name: "minddy agent", email: "agent@minddy.app" },
     messages: [],
   }) as unknown as Omit<VmJob, "bootstrapMs">;
 

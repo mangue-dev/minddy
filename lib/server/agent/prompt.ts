@@ -162,9 +162,22 @@ export function minddyToolsBlock(opts: { images: boolean; routine: boolean }): s
  * par les deux moteurs), et un modèle qui ne le sait pas tente la commande, se
  * prend l'erreur, et brûle un round à comprendre.
  */
-export function gitOwnershipBlock(n: PromptToolNames): string {
-  return `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. \`${n.shell}\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapping it in \`bash -c\` included. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.
+export function gitOwnershipBlock(n: PromptToolNames, currentRepo = false): string {
+  const refusals = `\`${n.shell}\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapping it in \`bash -c\` included. Read-only git (status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit the file back.`;
+  if (!currentRepo) {
+    return `- **The harness owns git.** At the end of each turn it commits and pushes whatever you changed — and touches the remote only then: as long as you have changed no file, the working branch stays inside this machine and never appears on the repository. ${refusals}
 - **You have history, for the last ${Math.round(HISTORY_WINDOW_DAYS / 30)} months.** The clone is cut at that boundary, not at one commit: \`git log --since=<date>\`, \`git log -- <path>\`, \`git show <sha>\` and \`git diff <sha> <sha>\` all work inside the window, on the base branch and on this one. Past the boundary the oldest commits are grafted and have no parents, so a walk simply stops there — that is the end of the clone, not the beginning of the repository. Never conclude from a short \`git log\` that nothing happened.`;
+  }
+  /**
+   * MODE DÉPÔT COURANT (MIN-358) — trois faits que le texte ci-dessus rendrait
+   * FAUX, et chacun coûte du travail humain s'il n'est pas dit : ce dépôt n'est
+   * pas jetable, `git status` n'est plus le diff du modèle, et l'historique n'est
+   * plus une fenêtre. Le garde-fou de shell, lui, ne change pas d'un mot.
+   */
+  return `- **This repository is the user's own working copy** — their branch, their uncommitted work, their \`node_modules\`, their real \`.env\` files. You are a guest in it: never switch branch, never stash, never commit, and leave alone what the task does not need. At the end of each turn the harness delivers YOUR work by committing only the paths you changed, onto its own branch, without touching their branch, their staged changes or their working tree. ${refusals}
+- **\`git status\` is NOT your diff here.** It shows their work in progress next to yours, and nothing in it tells the two apart. To see what you changed, diff the paths you edited this turn (\`git diff -- <paths>\`) — and never conclude from a dirty tree that you broke something.
+- **A file they were already editing, that you edit too, goes out with your pull request** — their unfinished work included. That is unavoidable when two people share a checkout; the conversation says it plainly when it happens. It is one more reason to touch only what the task needs.
+- **History is complete** — this is their normal clone, not a shallow window: \`git log\`, \`git show <sha>\`, \`git diff <sha> <sha>\` all reach back as far as the repository goes. But \`origin/<base>\` is only as fresh as their last \`git fetch\`, so it can be days behind the real base branch — never read it as the live tip.`;
 }
 
 /** Règle DURE, identique aux deux ancrages : la seule écriture de statut côté
@@ -217,9 +230,11 @@ export function anchorRulesSection(opts: {
   notebook: boolean;
   routine: boolean;
   n: PromptToolNames;
+  /** Le tour joue-t-il dans le checkout de l'utilisateur (MIN-358) ? */
+  currentRepo?: boolean;
 }): string {
   const { notebook, routine, n } = opts;
-  const gitOwnership = gitOwnershipBlock(n);
+  const gitOwnership = gitOwnershipBlock(n, opts.currentRepo === true);
   return routine
     ? `## Tickets of the project
 - This session is not anchored to a ticket, but the project's tickets are yours to read and edit. \`search_issues\` finds one, then \`read_issue\`, \`update_issue\`, \`write_issue_plan\`, \`append_to_plan\` and \`edit_issue_text\` take its identifier in \`issue\` — they have no default target here, so always pass it.

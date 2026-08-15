@@ -39,8 +39,14 @@ import type { Locale } from "@/i18n/config";
  * nulle part.
  *
  * D'où un refus EXPLICITE côté harness (`parseVmJob`), et pas une tolérance.
+ *
+ * **2 (MIN-358)** — `repoMode` est apparu, et c'est le cas d'école de la règle
+ * ci-dessus lue à l'envers : un champ AJOUTÉ, mais qu'un harness d'hier ne peut
+ * pas ignorer « sans mal ». Ignoré, il ferait un `git add -A` et un
+ * `git checkout -b` dans le dépôt de quelqu'un — c'est-à-dire précisément ce que
+ * ce lot existe pour empêcher. Le refus vaut mieux que le tour.
  */
-export const VM_PROTOCOL_VERSION = 1;
+export const VM_PROTOCOL_VERSION = 2;
 
 /** Le bundle du harness, écrit par la fonction avant chaque tour. */
 export function vmBundlePath(layout: HarnessLayout): string {
@@ -254,6 +260,27 @@ export interface VmJob {
   // ── Le dépôt ──────────────────────────────────────────────────────────────
   baseBranch: string;
   workBranch: string;
+  /**
+   * DANS QUEL DÉPÔT CE TOUR ÉCRIT (MIN-358, décision D2).
+   *
+   * - `clone` : un clone créé pour ce tour, à nous seuls (la microVM, et le mode
+   *   worktree du jour où il existera). `git add -A` y est sans conséquence ;
+   * - `current` : le checkout que l'utilisateur a déjà sur son disque, avec sa
+   *   branche, son index et son WIP. La fin de tour y passe par
+   *   [current-repo.ts](../current-repo.ts), qui ne touche à aucun des trois.
+   *
+   * Une VALEUR et non une déduction de `controlToken` : le mode d'exécution
+   * (cloud/local) et la forme du dépôt sont deux questions, et D2 fait déjà du
+   * worktree dédié une option d'une conversation locale.
+   */
+  repoMode: "clone" | "current";
+  /**
+   * IDENTITÉ GIT DES COMMITS DE L'AGENT (MIN-358). Elle voyage depuis que le
+   * clone ne l'écrit plus dans `.git/config` : elle se pose par `git -c`, sur la
+   * seule commande qui commite. Côté GitHub c'est le bot de l'App — une identité
+   * rattachable à un vrai compte, sans quoi Vercel bloque le déploiement.
+   */
+  committer: { name: string; email: string };
   /** URL de push, token de forge ÉPHÉMÈRE compris. Il est déjà dans la microVM
    *  (c'est lui qui a cloné) ; la boucle en redemande un frais au plan de
    *  contrôle avant chaque push, un tour pouvant durer plus que le token. */
@@ -324,7 +351,25 @@ export function parseVmJob(raw: unknown): VmJob {
     throw new Error("vm job: missing layout");
   }
   assertUsableLayout(job.layout);
+  // MIN-358 : le mode du dépôt n'a PAS de défaut. Un job muet ne peut pas être
+  // traité comme un clone — c'est le mode `current` qui est dangereux à jouer par
+  // erreur, et c'est justement celui qu'un job d'une forme inattendue tairait.
+  if (job.repoMode !== "clone" && job.repoMode !== "current") {
+    throw new Error(`vm job: unknown repoMode ${JSON.stringify(job.repoMode)}`);
+  }
   return job as VmJob;
+}
+
+/**
+ * CE TOUR ÉCRIT-IL DANS LE DÉPÔT DE QUELQU'UN D'AUTRE ? (MIN-358)
+ *
+ * Nommé plutôt que testé sur place, pour la raison de `isLocalJob` juste en
+ * dessous : la question se pose à quatre endroits (la préparation, le push, le
+ * périmètre des diffs de fin de tour, le prompt), et un test recopié quatre fois
+ * finit par ne plus vouloir dire la même chose partout.
+ */
+export function isCurrentRepoJob(job: Pick<VmJob, "repoMode">): boolean {
+  return job.repoMode === "current";
 }
 
 /**

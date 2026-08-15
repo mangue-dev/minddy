@@ -72,6 +72,15 @@ export interface OpencodeAnchorInput {
   webSearchMax?: number;
   chain?: boolean;
   images?: boolean;
+  /**
+   * LE TOUR JOUE-T-IL DANS LE CHECKOUT DE L'UTILISATEUR (MIN-358) ?
+   *
+   * Trois lignes du bloc git deviennent fausses en mode dépôt courant, et
+   * chacune coûte du travail humain quand elle n'est pas dite : le dépôt n'est
+   * plus jetable, `git status` n'est plus le diff du modèle, et l'historique
+   * n'est plus une fenêtre de six mois (cf. `gitOwnershipBlock`).
+   */
+  currentRepo?: boolean;
   /** La délégation est-elle offerte, et sur quels modèles ? Absent = pas de `task`. */
   subagents?: {
     favorites: Array<FavoriteSubagentModel & { multiplier?: number }>;
@@ -185,7 +194,7 @@ ${harnessDeltas(input)}
 ${anchorTools}${chainTool}
 ${minddyToolsBlock({ images: input.images === true, routine })}
 
-${anchorRulesSection({ notebook, routine, n })}${projectPrSection(routine)}${delegationSection(input)}
+${anchorRulesSection({ notebook, routine, n, currentRepo: input.currentRepo === true })}${projectPrSection(routine)}${delegationSection(input)}
 
 ${workflowSteps({
   routine,

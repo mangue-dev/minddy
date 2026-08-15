@@ -94,6 +94,22 @@ export function sq(value: string): string {
 }
 
 /**
+ * L'IDENTITÉ GIT, POSÉE PAR COMMANDE ET JAMAIS PERSISTÉE (MIN-358).
+ *
+ * `git config user.email` écrit dans `.git/config`. Dans un clone jetable c'est
+ * sans conséquence ; dans le dépôt de l'utilisateur — le mode dépôt courant —
+ * c'est SON identité qu'on réécrit, durablement, pour tous ses commits suivants
+ * (mesuré). `git -c` fait la même chose pour la seule commande qui suit, et rend
+ * donc la question sans objet des deux côtés.
+ *
+ * Un fragment de commande, et non un environnement : c'est ce que `RepoHost.exec`
+ * sait transporter.
+ */
+export function gitIdentityFlags(committer: { name: string; email: string }): string {
+  return `-c ${sq(`user.email=${committer.email}`)} -c ${sq(`user.name=${committer.name}`)}`;
+}
+
+/**
  * FENÊTRE D'HISTORIQUE du clone de travail, en jours (MIN-267).
  *
  * Le clone était à `--depth 1` : UN commit, greffé, sans parent. Suffisant pour
@@ -134,6 +150,13 @@ export function historySince(now: Date = new Date()): string {
  * effet de bord. La reprise de la branche de travail utilise la MÊME borne : un
  * `--depth 1` y poserait une greffe sur son tip et re-couperait la marche
  * arrière, alors même que la base, elle, est profonde.
+ *
+ * L'IDENTITÉ N'EST PLUS ÉCRITE DANS `.git/config` (MIN-358). Elle voyage jusqu'au
+ * commit, où `commitAndPush` la pose par `git -c`. Ici, dans un clone jetable, la
+ * persister était sans conséquence ; le geste, lui, était le même que celui qui,
+ * dans le dépôt de l'utilisateur, réécrit SON identité pour tous ses commits
+ * suivants (mesuré). Un geste qu'on n'a qu'à un seul endroit ne peut pas fuir
+ * dans l'autre mode.
  */
 export async function cloneRepo(
   host: RepoHost,
@@ -141,9 +164,6 @@ export async function cloneRepo(
     authUrl: string;
     baseBranch: string;
     workBranch: string;
-    // Identité git des commits de l'agent. Doit être rattachable à un vrai compte
-    // du forge (bot de l'App côté GitHub) : sinon Vercel bloque le déploiement.
-    committer: { name: string; email: string };
   },
 ): Promise<void> {
   const { root, repoDir } = host.layout;
@@ -163,8 +183,6 @@ export async function cloneRepo(
 
   const setup = [
     `set -e`,
-    `git config user.email ${sq(opts.committer.email)}`,
-    `git config user.name ${sq(opts.committer.name)}`,
     `if git ls-remote --exit-code --heads ${sq(opts.authUrl)} ${sq(opts.workBranch)} >/dev/null 2>&1; then`,
     `  git fetch --shallow-since=${sq(since)} ${sq(opts.authUrl)} ${sq(opts.workBranch)}:${sq(opts.workBranch)}`,
     `  git checkout ${sq(opts.workBranch)}`,
@@ -248,10 +266,11 @@ export async function clonePullRequest(
     : [`  exit 1`];
   const setup = [
     `set -e`,
-    // Identité neutre : aucun commit ne part d'ici, mais git refuse certaines
-    // opérations de lecture-écriture d'index sans elle.
-    `git config user.email 'agent@minddy.app'`,
-    `git config user.name 'minddy agent'`,
+    // AUCUNE IDENTITÉ N'EST POSÉE ICI (MIN-358). Il y en avait une, « neutre »,
+    // au motif que git refuserait certaines opérations d'index sans elle : mesuré
+    // faux — sur un dépôt sans la moindre identité (ni locale, ni globale, ni
+    // système), `fetch`, `checkout`, `tag -f` et `show` passent tous. Et rien ne
+    // commite ici, par construction.
     `if git fetch --depth 1 ${sq(opts.authUrl)} ${sq(`${opts.headRef}:${opts.localBranch}`)} 2>/dev/null; then`,
     `  :`,
     `else`,
@@ -330,7 +349,19 @@ async function baseTipSha(host: RepoHost, baseBranch: string): Promise<string> {
  */
 export async function commitAndPush(
   host: RepoHost,
-  opts: { authUrl: string; workBranch: string; baseBranch: string; message: string },
+  opts: {
+    authUrl: string;
+    workBranch: string;
+    baseBranch: string;
+    message: string;
+    /**
+     * Identité git des commits de l'agent, posée PAR COMMANDE (MIN-358) plutôt
+     * qu'écrite dans `.git/config` au clonage. Doit être rattachable à un vrai
+     * compte du forge (bot de l'App côté GitHub) : sinon Vercel bloque le
+     * déploiement.
+     */
+    committer: { name: string; email: string };
+  },
 ): Promise<{ committed: boolean; remoteUpdated: boolean; headSha: string; pushed: boolean }> {
   const status = await host.exec(`git status --porcelain`);
   const dirty = status.stdout.trim().length > 0;
@@ -338,7 +369,9 @@ export async function commitAndPush(
   if (dirty) {
     const staged = await host.exec(`git add -A`);
     if (staged.exitCode !== 0) throw new Error(`git add failed: ${staged.stderr || staged.stdout}`);
-    const commit = await host.exec(`git commit -m ${sq(opts.message)}`);
+    const commit = await host.exec(
+      `git ${gitIdentityFlags(opts.committer)} commit -m ${sq(opts.message)}`,
+    );
     if (commit.exitCode !== 0) throw new Error(`git commit failed: ${commit.stderr || commit.stdout}`);
   }
 
@@ -373,6 +406,31 @@ export async function commitAndPush(
 }
 
 // ── Diff par tour (event `files_changed`, MIN-46) ────────────────────────────
+
+/**
+ * LE PÉRIMÈTRE D'UN TOUR, QUAND LE DÉPÔT N'EST PAS À NOUS (MIN-358).
+ *
+ * Les trois lectures ci-dessous comparent une référence à l'ARBRE DE TRAVAIL. En
+ * microVM, cet arbre ne contient que le travail de l'agent, et la question ne se
+ * pose pas. Dans le checkout de l'utilisateur, il contient aussi le SIEN : sans
+ * borne, l'auto-relecture de fin de tour lui rend son propre WIP comme s'il
+ * venait du modèle, et la portée ciblée des tests part sur ses fichiers à lui.
+ *
+ * `undefined` = pas de borne, exactement le comportement d'avant. Une liste
+ * VIDE, elle, borne à rien du tout — et c'est le bon sens : un tour qui n'a
+ * touché à aucun fichier n'a pas de diff, quoi qu'il y ait dans l'arbre.
+ */
+export type TurnScope = readonly string[] | undefined;
+
+/** Le `-- <chemins>` d'une commande git, ou "" quand rien ne borne. `:(literal)`
+ *  n'y est pas utile : ces chemins viennent de git lui-même, pas du modèle. */
+function pathspec(scope: TurnScope): string {
+  if (scope === undefined) return "";
+  // Un pathspec impossible plutôt qu'aucun pathspec : `-- ` seul serait lu comme
+  // « tout », c'est-à-dire l'inverse de ce qu'une liste vide demande.
+  if (scope.length === 0) return ` -- ${sq(":(exclude)*")}`;
+  return ` -- ${scope.map(sq).join(" ")}`;
+}
 
 /** Nombre max de fichiers listés dans un event `files_changed` (gros tour borné). */
 export const CHANGED_FILES_CAP = 100;
@@ -431,16 +489,18 @@ function numstatNewPath(field: string): string {
 export async function turnDiff(
   host: RepoHost,
   fromSha: string,
+  scope?: TurnScope,
 ): Promise<{ diff: string; porcelain: string }> {
+  const only = pathspec(scope);
   const [diff, porcelain] = await Promise.all([
     fromSha
       ? host
-          .exec(`git diff ${sq(fromSha)}`, { timeoutMs: 30_000 })
+          .exec(`git diff ${sq(fromSha)}${only}`, { timeoutMs: 30_000 })
           .then((r) => (r.exitCode === 0 ? r.stdout : ""))
           .catch(() => "")
       : Promise.resolve(""),
     host
-      .exec(`git status --porcelain`, { timeoutMs: 30_000 })
+      .exec(`git status --porcelain${only}`, { timeoutMs: 30_000 })
       .then((r) => (r.exitCode === 0 ? r.stdout : ""))
       .catch(() => ""),
   ]);
@@ -466,13 +526,15 @@ export async function turnDiff(
 export async function turnDiffStat(
   host: RepoHost,
   fromSha: string,
+  scope?: TurnScope,
 ): Promise<{ files: string[]; lines: number; untracked: number } | null> {
   if (!fromSha) return null;
+  const only = pathspec(scope);
   try {
     const [numstat, names, porcelain] = await Promise.all([
-      host.exec(`git diff --numstat ${sq(fromSha)}`, { timeoutMs: 30_000 }),
-      host.exec(`git diff --name-only --diff-filter=d ${sq(fromSha)}`, { timeoutMs: 30_000 }),
-      host.exec(`git status --porcelain`, { timeoutMs: 30_000 }),
+      host.exec(`git diff --numstat ${sq(fromSha)}${only}`, { timeoutMs: 30_000 }),
+      host.exec(`git diff --name-only --diff-filter=d ${sq(fromSha)}${only}`, { timeoutMs: 30_000 }),
+      host.exec(`git status --porcelain${only}`, { timeoutMs: 30_000 }),
     ]);
     if (numstat.exitCode !== 0 || names.exitCode !== 0) return null;
     let lines = 0;
@@ -507,12 +569,17 @@ export async function turnDiffStat(
  *
  * Best-effort comme ses voisines : toute erreur rend une liste vide.
  */
-export async function turnTouchedPaths(host: RepoHost, fromSha: string): Promise<string[]> {
+export async function turnTouchedPaths(
+  host: RepoHost,
+  fromSha: string,
+  scope?: TurnScope,
+): Promise<string[]> {
   if (!fromSha) return [];
+  const only = pathspec(scope);
   try {
     const [names, porcelain] = await Promise.all([
-      host.exec(`git diff --name-only ${sq(fromSha)}`, { timeoutMs: 30_000 }),
-      host.exec(`git status --porcelain`, { timeoutMs: 30_000 }),
+      host.exec(`git diff --name-only ${sq(fromSha)}${only}`, { timeoutMs: 30_000 }),
+      host.exec(`git status --porcelain${only}`, { timeoutMs: 30_000 }),
     ]);
     const paths = new Set<string>();
     if (names.exitCode === 0) {

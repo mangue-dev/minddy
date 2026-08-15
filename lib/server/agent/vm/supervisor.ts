@@ -1,4 +1,14 @@
 import { changedFiles, commitAndPush, repoBackgroundRunner, type RepoHost } from "../repo-host";
+import {
+  commitTurnAndPush,
+  dropIgnoredPaths,
+  prepareCurrentRepo,
+  readRepoState,
+  turnPaths,
+  type CurrentRepoState,
+  type RepoState,
+  type TurnPaths,
+} from "../current-repo";
 import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
 // La MÊME normalisation que la boucle maison : `update_plan` est un tool de
 // contrôle, et les deux moteurs doivent en tirer le même event `plan_update`.
@@ -26,7 +36,13 @@ import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
 import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
 import { subagentUsageSeq } from "../subagent-config";
-import { isLocalJob, type VmJob, type VmPushResult, type VmTurnReport } from "./protocol";
+import {
+  isCurrentRepoJob,
+  isLocalJob,
+  type VmJob,
+  type VmPushResult,
+  type VmTurnReport,
+} from "./protocol";
 import { parseAgentUserMessage, promptWithMentions, type AgentUserMessage } from "@/lib/agent-mentions";
 
 /**
@@ -245,6 +261,65 @@ export async function runOpencodeTurn(
   let authUrl = job.authUrl;
   secrets.addAuthUrl(authUrl);
 
+  /** Ce qu'on rend quand le tour n'a pas pu commencer (ou s'est cassé en vol). */
+  const failed = (message: string, costUsd = 0): VmTurnReport => ({
+    status: "error",
+    errorMessage: cap(secrets.redact(message), 1000),
+    costUsd,
+    checkpointDropped: [],
+    checkpointBytes: 0,
+    pushed: null,
+    workBranch: job.workBranch,
+    sandboxMs: job.bootstrapMs + (now() - startedAt),
+  });
+
+  /**
+   * LE DÉPÔT DE L'UTILISATEUR, PRÉPARÉ AVANT TOUT LE RESTE (MIN-358).
+   *
+   * Avant le décor, avant le proxy, avant le pont : c'est le seul endroit d'où
+   * l'on peut encore sortir sans rien avoir ouvert à refermer. Et il n'y a pas de
+   * mode dégradé — un dépôt qu'on ne sait pas lire est un tour qui n'a nulle part
+   * où écrire.
+   *
+   * `null` en mode clone, et c'est ce `null` qui, plus bas, décide de la forme du
+   * commit : `git add -A` dans un clone à nous, l'index temporaire dans le
+   * checkout de quelqu'un.
+   */
+  let current: CurrentRepoState | null = null;
+  /** L'arbre de travail tel qu'il était AVANT que le modèle ne touche à rien —
+   *  l'autre moitié du périmètre du tour (cf. `turnScope`). */
+  let stateAtStart: RepoState = new Map();
+  if (isCurrentRepoJob(job)) {
+    try {
+      current = await prepareCurrentRepo(host, {
+        runId: job.runId,
+        authUrl,
+        workBranch: job.workBranch,
+      });
+      stateAtStart = await readRepoState(host);
+    } catch (err) {
+      return failed((err as Error).message);
+    }
+    // Event neutre (invisible au fil, comptable en base) : la branche que
+    // l'utilisateur avait sous les doigts et ce qu'il avait en cours quand le
+    // tour a commencé. C'est ce qui permettra de relire un tour dont la pull
+    // request contient des commits que personne n'attribue à l'agent.
+    await cp
+      .emit("status", {
+        phase: "current_repo",
+        branch: current.branch,
+        dirty: current.dirty,
+        resumed: current.resumed,
+      })
+      .catch(() => {});
+  }
+  /**
+   * La baseline du diff du tour. En mode clone elle vient du job ; en mode dépôt
+   * courant, au PREMIER tour, la fonction ne pouvait pas la connaître — c'est le
+   * HEAD d'une machine qu'elle n'a jamais vue. Le harness la résout donc lui-même.
+   */
+  const filesFromSha = job.filesFromSha || current?.parent || "";
+
   // ── Le décor, posé avant le premier octet de serveur ───────────────────────
   await deps.writeFile(opencodeAnchorFile(job.layout), input.anchorInstructions);
   for (const file of opencodeToolFiles(job)) {
@@ -277,6 +352,30 @@ export async function runOpencodeTurn(
    * de recherches web, ancres de relecture ([tool-bridge.ts](tool-bridge.ts)).
    */
   /**
+   * LE PÉRIMÈTRE DU TOUR (MIN-358) — ce que ce tour, et lui seul, a le droit de
+   * livrer et de relire dans le dépôt de quelqu'un d'autre.
+   *
+   * Deux sources unies ici parce que le superviseur est le seul à avoir les
+   * deux : l'instantané pris avant le premier round, et les éditions notées par
+   * les permissions d'opencode ([current-repo.ts](../current-repo.ts) explique
+   * pourquoi aucune des deux ne suffit).
+   *
+   * Recalculé à chaque appel, jamais mémoïsé : l'arbre de travail bouge pendant
+   * tout le tour, et une liste figée au premier `create_pr` raterait tout ce que
+   * le modèle écrit ensuite.
+   */
+  const turnScope = async (): Promise<TurnPaths> => {
+    if (!current) return { paths: [], carried: [] };
+    const scope = turnPaths({
+      edited: delivery.turnEditedPaths(),
+      owned: job.editedPaths,
+      before: stateAtStart,
+      after: await readRepoState(host),
+    });
+    return { ...scope, paths: await dropIgnoredPaths(host, scope.paths) };
+  };
+
+  /**
    * LES RÈGLES DE LIVRAISON (lot 2, tâche 14), construites AVANT le pont : c'est
    * lui qui sert `write_issue_plan` et `create_pr`, donc lui qui porte la voix du
    * harness. Le superviseur, de son côté, leur donne les deux faits qui viennent
@@ -285,9 +384,10 @@ export async function runOpencodeTurn(
   const delivery = makeOpencodeDelivery({
     host,
     emit: (type, payload) => cp.emit(type, payload),
-    filesFromSha: job.filesFromSha,
+    filesFromSha,
     editedPaths: job.editedPaths,
     repoTouched: job.repoTouched,
+    ...(current ? { scopePaths: async () => (await turnScope()).paths } : {}),
     remainingMs: () => SUPERVISOR_TURN_SOFT_DEADLINE_MS - (now() - startedAt),
   });
 
@@ -356,12 +456,48 @@ export async function runOpencodeTurn(
   async function pushWork(message: string): Promise<VmPushResult> {
     authUrl = (await cp.repoAuthUrl()) ?? authUrl;
     secrets.addAuthUrl(authUrl);
-    return await commitAndPush(host, {
+    if (!current) {
+      return await commitAndPush(host, {
+        authUrl,
+        workBranch: job.workBranch,
+        baseBranch: job.baseBranch,
+        message,
+        committer: job.committer,
+      });
+    }
+    /**
+     * LE MÊME PUSH, DANS LE DÉPÔT DE QUELQU'UN D'AUTRE (MIN-358) — index
+     * temporaire, `commit-tree`, ref à nous. Rien de ce que l'utilisateur a sous
+     * les doigts n'est touché, et la pull request sort quand même.
+     */
+    const pushed = await commitTurnAndPush(host, {
+      runId: job.runId,
       authUrl,
       workBranch: job.workBranch,
-      baseBranch: job.baseBranch,
       message,
+      committer: job.committer,
+      // Le parent RÉEL est relu par `commitTurnAndPush` à chaque appel : le
+      // second push d'un tour (`create_pr`, puis la fin de tour) doit prolonger
+      // le premier commit, pas lui fabriquer un frère.
+      fallbackParent: current.parent,
+      scope: await turnScope(),
     });
+    /**
+     * LE CAS QUE RIEN NE REFERME, ET QUI DOIT DONC SE DIRE : l'agent a livré des
+     * fichiers que l'utilisateur avait lui aussi modifiés, donc son travail à lui
+     * part dans la pull request. C'est le prix du mode dépôt courant — deux mains
+     * dans le même fichier — et ce qui serait fautif, ce serait de le taire.
+     */
+    if (pushed.carried.length > 0) {
+      await cp
+        .emit("status", {
+          phase: "current_repo_overlap",
+          files: pushed.carried.length,
+          paths: pushed.carried.slice(0, 20),
+        })
+        .catch(() => {});
+    }
+    return pushed;
   }
 
   /**
@@ -501,18 +637,6 @@ export async function runOpencodeTurn(
    * à rendre, et `null` le dit.
    */
   let ledger: TurnLedger | null = null;
-
-  /** Ce qu'on rend quand le tour n'a pas pu commencer (ou s'est cassé en vol). */
-  const failed = (message: string, costUsd = 0): VmTurnReport => ({
-    status: "error",
-    errorMessage: cap(secrets.redact(message), 1000),
-    costUsd,
-    checkpointDropped: [],
-    checkpointBytes: 0,
-    pushed: null,
-    workBranch: job.workBranch,
-    sandboxMs: job.bootstrapMs + (now() - startedAt),
-  });
 
   try {
     server = await deps.startServer(env);
@@ -731,7 +855,7 @@ export async function runOpencodeTurn(
         const opencode = await syncJournal();
         // `lastFilesSha` reste celui du départ : rien n'est poussé avant la fin
         // du tour, donc la baseline du diff n'a pas bougé.
-        if (!(await cp.saveCheckpointQuietly(turnCheckpoint(job.filesFromSha, opencode)))) {
+        if (!(await cp.saveCheckpointQuietly(turnCheckpoint(filesFromSha, opencode)))) {
           runClosed = true;
         }
       } catch (err) {
@@ -1419,14 +1543,14 @@ export async function runOpencodeTurn(
           : "completed";
 
     const changed =
-      status === "completed" && pushed?.headSha && pushed.headSha !== job.filesFromSha
-        ? await changedFiles(host, job.filesFromSha, pushed.headSha).catch(() => null)
+      status === "completed" && pushed?.headSha && pushed.headSha !== filesFromSha
+        ? await changedFiles(host, filesFromSha, pushed.headSha).catch(() => null)
         : null;
 
     // Le MÊME constructeur que la sauvegarde périodique : seul le sha des
     // fichiers change, et il ne change qu'ici (c'est le push qui l'a bougé).
     const checkpoint: OpencodeCheckpoint = turnCheckpoint(
-      status === "completed" ? pushed?.headSha || job.filesFromSha : job.filesFromSha,
+      status === "completed" ? pushed?.headSha || filesFromSha : filesFromSha,
       opencodeState,
     );
 
