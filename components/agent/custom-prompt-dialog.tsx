@@ -3,16 +3,9 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Textarea,
 } from "mangue-ui";
-import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 
 /**
@@ -66,32 +59,32 @@ export function CustomPromptDialog({
   };
 
   return (
-    <Dialog open={!!target} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-lg"
-        onClick={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-        onContextMenu={(e) => e.stopPropagation()}
-      >
-        <DialogHeader>
-          <DialogTitle>{t("customPromptTitle")}</DialogTitle>
-          <DialogDescription>
-            {target === "launch"
-              ? t("customPromptLaunchDescription")
-              : t("customPromptCopyDescription")}
-          </DialogDescription>
-        </DialogHeader>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-          className="flex flex-col gap-3"
-        >
-          <Textarea
-            autoFocus
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
+    <FormDialog
+      open={!!target}
+      onOpenChange={onOpenChange}
+      title={t("customPromptTitle")}
+      description={
+        target === "launch"
+          ? t("customPromptLaunchDescription")
+          : t("customPromptCopyDescription")
+      }
+      className="sm:max-w-lg"
+      contentProps={{
+        onClick: (e) => e.stopPropagation(),
+        onMouseDown: (e) => e.stopPropagation(),
+        onContextMenu: (e) => e.stopPropagation(),
+      }}
+      submitLabel={submitLabel}
+      submitDisabled={!instructions.trim()}
+      onSubmit={submit}
+      dictation={{
+        onTranscription: (text) => setInstructions((value) => `${value}${value ? " " : ""}${text}`),
+      }}
+    >
+      <Textarea
+        autoFocus
+        value={instructions}
+        onChange={(e) => setInstructions(e.target.value)}
             // ⌘/Ctrl+Entrée valide ; Entrée seule reste un retour à la ligne,
             // une consigne tenant souvent sur plusieurs — sauf si le compte a
             // mis l'envoi sur Entrée, où Maj+Entrée prend le relais.
@@ -101,19 +94,10 @@ export function CustomPromptDialog({
                 submit();
               }
             }}
-            placeholder={t("customPromptPlaceholder")}
-            rows={6}
-            aria-label={t("customPromptTitle")}
-          />
-          <DialogFooter>
-            <SendShortcutTooltip label={submitLabel}>
-              <Button type="submit" disabled={!instructions.trim()}>
-                {submitLabel}
-              </Button>
-            </SendShortcutTooltip>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        placeholder={t("customPromptPlaceholder")}
+        rows={6}
+        aria-label={t("customPromptTitle")}
+      />
+    </FormDialog>
   );
 }

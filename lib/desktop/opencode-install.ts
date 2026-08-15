@@ -1,4 +1,10 @@
-import { OPENCODE_VERSION, opencodeBin } from "@/lib/server/agent/vm/opencode-version";
+import {
+  MINDDY_NODE_EXEC_ENV,
+  MINDDY_NPM_CLI_ENV,
+  MINDDY_RUNTIME_BIN_ENV,
+  OPENCODE_VERSION,
+  opencodeBin,
+} from "@/lib/server/agent/vm/opencode-version";
 
 /**
  * LE BINAIRE OPENCODE SUR LA MACHINE (MIN-293) — la moitié qui se décide sans
@@ -22,15 +28,10 @@ import { OPENCODE_VERSION, opencodeBin } from "@/lib/server/agent/vm/opencode-ve
  * ## L'inconnue que l'audit n'avait pas nommée : `npm`
  *
  * `ensureInstalled` shell-out `npm i opencode-ai@…`. **Electron embarque Node,
- * pas npm.** Sur un Mac sans Command Line Tools — c'est-à-dire sur la machine de
- * quelqu'un qui n'est pas développeur — il n'y a pas de `npm` sur le `PATH`, et
- * l'installation ne peut pas avoir lieu. Ce n'est pas une panne à rattraper ici :
- * c'est un refus, dit avant le fork, avec ce qu'il faut faire.
- *
- * Le jour où le local s'adresse à quelqu'un qui n'a pas de chaîne d'outils, il
- * faudra un autre chemin (téléchargement direct de l'archive, ou binaire
- * embarqué) — et il faudra alors s'occuper de la signature, puisque c'est
- * précisément ce que `disable-library-validation` autorise. Ce n'est pas ce lot.
+ * pas npm.** Le launcher fournit donc un npm de repli dans le bundle signé et
+ * l'exécute avec le Node d'Electron. Le npm système reste utilisable par une
+ * ancienne app et le PATH utilisateur est tout de même réparé pour les shells
+ * des tools, mais aucun des deux n'est requis pour amorcer OpenCode.
  *
  * ## Une fois par MACHINE, pas une fois par tour
  *
@@ -50,6 +51,70 @@ import { OPENCODE_VERSION, opencodeBin } from "@/lib/server/agent/vm/opencode-ve
  */
 
 export { OPENCODE_VERSION, opencodeBin };
+
+/** Un chemin POSIX sans doublons, qui respecte d'abord le shell déjà configuré. */
+export function localRuntimePath(current: string | undefined, discovered: readonly string[]): string {
+  const ordered = [
+    ...(current ?? "").split(":"),
+    ...discovered,
+    "/opt/homebrew/bin",
+    "/opt/homebrew/sbin",
+    "/usr/local/bin",
+    "/usr/local/sbin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+  ];
+  return [...new Set(ordered.filter((entry) => entry.trim()))].join(":");
+}
+
+/** Script POSIX qui transforme l'exécutable Electron en commande Node/npm. */
+export function electronToolShim(executable: string, args: readonly string[] = []): string {
+  const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
+  return (
+    `#!/bin/sh\nELECTRON_RUN_AS_NODE=1 exec ${[executable, ...args].map(quote).join(" ")}` +
+    ` "$@"\n`
+  );
+}
+
+export interface NpmInvocation {
+  readonly executable: string;
+  readonly argsPrefix: readonly string[];
+  readonly extraEnv: Readonly<Record<string, string>>;
+  readonly source: "bundled" | "system";
+}
+
+/**
+ * Le npm livré avec l'app est prioritaire : il rend le premier lancement
+ * indépendant de la configuration shell de la personne. Le npm système reste
+ * un repli utile en développement et pour les anciennes installations.
+ */
+export function npmInvocation(opts: {
+  bundledCli: string | null;
+  electronExecutable: string;
+  systemNpm: string | null;
+}): NpmInvocation | null {
+  if (opts.bundledCli) {
+    return {
+      executable: opts.electronExecutable,
+      argsPrefix: [opts.bundledCli],
+      extraEnv: {
+        ELECTRON_RUN_AS_NODE: "1",
+        [MINDDY_NPM_CLI_ENV]: opts.bundledCli,
+        [MINDDY_NODE_EXEC_ENV]: opts.electronExecutable,
+      },
+      source: "bundled",
+    };
+  }
+  if (!opts.systemNpm) return null;
+  return {
+    executable: opts.systemNpm,
+    argsPrefix: [],
+    extraEnv: {},
+    source: "system",
+  };
+}
 
 /** Ce que la coquille a lu sur le disque avant de décider. */
 export interface OpencodeFacts {
@@ -128,8 +193,8 @@ export function readOpencodeManifestVersion(raw: string): string | null {
  */
 export function opencodeRefusalMessage(reason: "no_npm", wanted = OPENCODE_VERSION): string {
   return (
-    `minddy needs opencode ${wanted} to run an agent turn on this Mac, and no npm was found on ` +
-    "the PATH to install it. Install Node.js (or run `xcode-select --install`), then start the turn again."
+    `minddy needs opencode ${wanted} to run an agent turn on this Mac, but neither its bundled ` +
+    "npm nor a system npm is available. Reinstall or update minddy, then start the turn again."
   );
 }
 

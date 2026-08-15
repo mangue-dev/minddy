@@ -3,16 +3,9 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Textarea,
 } from "mangue-ui";
-import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 
 /**
@@ -72,25 +65,23 @@ export function PageAgentCopyDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("copyForAgent")}</DialogTitle>
-          <DialogDescription>
-            {t("copyForAgentDescription", { title: pageTitle })}
-          </DialogDescription>
-        </DialogHeader>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-          className="flex flex-col gap-3"
-        >
-          <Textarea
-            autoFocus
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("copyForAgent")}
+      description={t("copyForAgentDescription", { title: pageTitle })}
+      className="sm:max-w-lg"
+      submitLabel={submitLabel}
+      cancelLabel={tCommon("cancel")}
+      onSubmit={submit}
+      dictation={{
+        onTranscription: (text) => setInstructions((value) => `${value}${value ? " " : ""}${text}`),
+      }}
+    >
+      <Textarea
+        autoFocus
+        value={instructions}
+        onChange={(e) => setInstructions(e.target.value)}
             // ⌘/Ctrl+Entrée valide ; Entrée seule reste un retour à la ligne,
             // une consigne tenant souvent sur plusieurs — sauf si le compte a
             // mis l'envoi sur Entrée, où Maj+Entrée prend le relais.
@@ -100,27 +91,10 @@ export function PageAgentCopyDialog({
                 submit();
               }
             }}
-            placeholder={t("copyForAgentPlaceholder")}
-            rows={5}
-            aria-label={t("copyForAgentLabel")}
-          />
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-            >
-              {tCommon("cancel")}
-            </Button>
-            {/* JAMAIS désactivé : le champ vide est un cas normal, celui où on
-                ne veut que désigner la page. Le libellé change avec lui pour
-                que le bouton dise ce qu'il va copier. */}
-            <SendShortcutTooltip label={submitLabel}>
-              <Button type="submit">{submitLabel}</Button>
-            </SendShortcutTooltip>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        placeholder={t("copyForAgentPlaceholder")}
+        rows={5}
+        aria-label={t("copyForAgentLabel")}
+      />
+    </FormDialog>
   );
 }

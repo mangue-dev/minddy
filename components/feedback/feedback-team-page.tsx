@@ -2649,6 +2649,7 @@ function InternalFeedbackDialog({
   onCreated: (postId: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
+  const tCommon = useTranslations("Common");
   const tDictate = useTranslations("Dictate");
   const locale = useLocale();
   const [author, setAuthor] = useState<ComposerAuthor | null>(null);
@@ -2797,17 +2798,22 @@ function InternalFeedbackDialog({
     }
   };
 
+  const requestClose = () => {
+    // Une dictée en vol atterrit dans ce formulaire : fermer la jetterait.
+    if (transcribing || numoBusy) {
+      toast.info(tDictate("inFlight"), { id: "dictation-in-flight" });
+      return;
+    }
+    reset();
+    onOpenChange(false);
+  };
+
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        // Une dictée en vol atterrit dans ce formulaire : fermer la jetterait.
-        if (!next && (transcribing || numoBusy)) {
-          toast.info(tDictate("inFlight"), { id: "dictation-in-flight" });
-          return;
-        }
-        if (!next) reset();
-        onOpenChange(next);
+        if (!next) requestClose();
+        else onOpenChange(true);
       }}
     >
       {/* ⌘/Ctrl+Entrée envoie depuis N'IMPORTE QUEL champ du modal — le titre
@@ -2925,12 +2931,17 @@ function InternalFeedbackDialog({
               {tDictate("numoWorking")}
             </span>
           )}
-          <SendShortcutTooltip scope="form" label={t("create")}>
-            <Button disabled={!canSubmit} onClick={() => void submit()}>
-              {busy && <Spinner />}
-              {t("create")}
+          <div className="ml-auto flex items-center gap-2">
+            <Button type="button" variant="ghost" disabled={busy || numoBusy} onClick={requestClose}>
+              {tCommon("cancel")}
             </Button>
-          </SendShortcutTooltip>
+            <SendShortcutTooltip scope="form" label={t("create")}>
+              <Button disabled={!canSubmit} onClick={() => void submit()}>
+                {busy && <Spinner />}
+                {t("create")}
+              </Button>
+            </SendShortcutTooltip>
+          </div>
         </div>
 
         {/* Numo reprend la dictée : le liseré souligne le bord du modal pendant

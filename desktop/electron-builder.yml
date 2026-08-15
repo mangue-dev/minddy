@@ -23,10 +23,11 @@ directories:
   output: release
 
 # Négations seulement : le défaut d'electron-builder embarque déjà `dist/`,
-# `package.json` et les dépendances de PRODUCTION (donc `electron-updater` et sa
-# transitivité), en élaguant les devDependencies — dont Electron et
-# electron-builder eux-mêmes. Lister `files` en positif obligerait à réénumérer
-# cette transitivité à la main, et à la tenir à jour.
+# `package.json` et les dépendances de PRODUCTION (`electron-updater` et le npm
+# de bootstrap de l'agent local, avec leurs transitivités), en élaguant les
+# devDependencies — dont Electron et electron-builder eux-mêmes. Lister `files`
+# en positif obligerait à réénumérer cette transitivité à la main et à la tenir à
+# jour.
 files:
   # Les sources TypeScript : `dist/` est le bundle esbuild, il se suffit.
   - "!src/**"

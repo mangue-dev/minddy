@@ -602,7 +602,15 @@ export function ObjectiveDialog({
                   disabled={submitting}
                 />
               )}
-              <div className="ml-auto flex items-center justify-end max-sm:w-full">
+              <div className="ml-auto flex items-center justify-end gap-2 max-sm:w-full">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={submitting || numoBusy}
+                  onClick={() => handleOpenChange(false)}
+                >
+                  {tCommon("cancel")}
+                </Button>
                 {showSplit ? (
                   /* L'infobulle s'accroche à l'action, pas au chevron : ses
                      props traversent `SplitButton` jusqu'au bouton de gauche,

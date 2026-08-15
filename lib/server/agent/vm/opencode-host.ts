@@ -8,9 +8,11 @@ import { OpencodeClient } from "./opencode-client";
 import {
   OPENCODE_INSTALL_MANIFEST,
   OPENCODE_VERSION,
+  MINDDY_RUNTIME_BIN_ENV,
   opencodeBin,
   opencodeInstallArgs,
   opencodeInstallManifestPath,
+  opencodeNpmProgram,
   opencodePackageManifestPath,
   opencodePluginManifestPath,
 } from "./opencode-version";
@@ -127,10 +129,23 @@ async function ensureInstalled(installDir: string): Promise<void> {
    */
   await writeFile(opencodeInstallManifestPath(installDir), OPENCODE_INSTALL_MANIFEST, "utf8");
   await new Promise<void>((resolve, reject) => {
-    const child = spawn("npm", opencodeInstallArgs(installDir), {
-      cwd: installDir,
-      stdio: ["ignore", "ignore", "pipe"],
-    });
+    const npm = opencodeNpmProgram(process.env);
+    const installEnv = npm.electronRunAsNode
+      ? { ...process.env, ELECTRON_RUN_AS_NODE: "1" }
+      : process.env;
+    const runtimeBin = process.env[MINDDY_RUNTIME_BIN_ENV]?.trim();
+    if (npm.electronRunAsNode && runtimeBin) {
+      installEnv.PATH = `${runtimeBin}:${installEnv.PATH ?? ""}`;
+    }
+    const child = spawn(
+      npm.executable,
+      [...npm.argsPrefix, ...opencodeInstallArgs(installDir)],
+      {
+        cwd: installDir,
+        stdio: ["ignore", "ignore", "pipe"],
+        env: installEnv,
+      },
+    );
     let err = "";
     child.stderr?.on("data", (chunk: Buffer) => {
       err += chunk.toString();

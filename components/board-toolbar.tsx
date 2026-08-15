@@ -72,7 +72,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ShareViewDialog } from "@/components/share-view-dialog";
-import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { FormDialog } from "@/components/form-dialog";
 import {
   STATUSES,
   PRIORITIES,
@@ -565,32 +565,34 @@ function ViewNameDialog({
   }, [open, initialName]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <form
-          {...submitShortcut}
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const trimmed = name.trim();
-            if (!trimmed) return;
-            setBusy(true);
-            try {
-              await onSubmit(
-                trimmed,
-                withDescription ? description.trim() || undefined : undefined
-              );
-              onOpenChange(false);
-            } catch (err) {
-              toast.error((err as Error).message);
-            } finally {
-              setBusy(false);
-            }
-          }}
-          className="flex flex-col gap-3"
-        >
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      className="sm:max-w-sm"
+      formProps={submitShortcut}
+      submitLabel={submitLabel ?? tc("save")}
+      cancelLabel={tc("cancel")}
+      submitDisabled={!name.trim()}
+      submitting={busy}
+      onSubmit={async () => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        setBusy(true);
+        try {
+          await onSubmit(trimmed, withDescription ? description.trim() || undefined : undefined);
+          onOpenChange(false);
+        } catch (err) {
+          toast.error((err as Error).message);
+        } finally {
+          setBusy(false);
+        }
+      }}
+      dictation={withDescription ? {
+        onTranscription: (text) => setDescription((value) => `${value}${value ? " " : ""}${text}`),
+        disabled: busy,
+      } : undefined}
+    >
           <Input
             autoFocus
             value={name}
@@ -612,16 +614,7 @@ function ViewNameDialog({
               />
             </div>
           )}
-          <DialogFooter>
-            <SendShortcutTooltip scope="form" label={submitLabel ?? tc("save")}>
-              <Button type="submit" disabled={busy || !name.trim()}>
-                {submitLabel ?? tc("save")}
-              </Button>
-            </SendShortcutTooltip>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 

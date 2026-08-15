@@ -24,6 +24,7 @@ import {
 } from "@/components/issue-context-menu";
 import { AgentSessionDetail } from "@/components/agents/agent-session-detail";
 import { EmptyScene } from "@/components/empty-scene";
+import { FormDialog } from "@/components/form-dialog";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
 import { SessionCompose } from "@/components/agents/session-compose";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
@@ -471,40 +472,37 @@ function SessionNameDialog({
   }, [session, t]);
 
   return (
-    <Dialog open={!!session} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t("renameSessionTitle")}</DialogTitle>
-        </DialogHeader>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setBusy(true);
-            try {
-              await onSubmit(name.trim());
-              onOpenChange(false);
-            } catch (err) {
-              toast.error((err as Error).message);
-            } finally {
-              setBusy(false);
-            }
-          }}
-          className="flex flex-col gap-3"
-        >
-          <Input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("sessionNamePlaceholder")}
-          />
-          <DialogFooter>
-            <Button type="submit" disabled={busy}>
-              {tCommon("save")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={!!session}
+      onOpenChange={onOpenChange}
+      title={t("renameSessionTitle")}
+      className="sm:max-w-sm"
+      submitLabel={tCommon("save")}
+      cancelLabel={tCommon("cancel")}
+      submitting={busy}
+      onSubmit={async () => {
+        setBusy(true);
+        try {
+          await onSubmit(name.trim());
+          onOpenChange(false);
+        } catch (err) {
+          toast.error((err as Error).message);
+        } finally {
+          setBusy(false);
+        }
+      }}
+      dictation={{
+        onTranscription: (text) => setName((value) => `${value}${value ? " " : ""}${text}`),
+        disabled: busy,
+      }}
+    >
+      <Input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder={t("sessionNamePlaceholder")}
+      />
+    </FormDialog>
   );
 }
 

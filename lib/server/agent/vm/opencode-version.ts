@@ -28,6 +28,27 @@
 export const OPENCODE_VERSION = "1.18.16";
 
 /**
+ * Le chemin de repli local vers npm voyage dans l'environnement du harness.
+ * Dans une microVM ces variables sont absentes et le harness utilise le `npm`
+ * de l'image. Dans l'app de bureau, elles désignent le npm signé et empaqueté
+ * avec minddy, exécuté par le Node qu'Electron embarque déjà.
+ */
+export const MINDDY_NPM_CLI_ENV = "MINDDY_NPM_CLI";
+export const MINDDY_NODE_EXEC_ENV = "MINDDY_NODE_EXEC";
+export const MINDDY_RUNTIME_BIN_ENV = "MINDDY_RUNTIME_BIN";
+
+/** Programme npm choisi par le harness, testable sans lancer de processus. */
+export function opencodeNpmProgram(
+  env: Readonly<Record<string, string | undefined>>,
+): { executable: string; argsPrefix: string[]; electronRunAsNode: boolean } {
+  const cli = env[MINDDY_NPM_CLI_ENV]?.trim();
+  const node = env[MINDDY_NODE_EXEC_ENV]?.trim();
+  return cli && node
+    ? { executable: node, argsPrefix: [cli], electronRunAsNode: true }
+    : { executable: "npm", argsPrefix: [], electronRunAsNode: false };
+}
+
+/**
  * Le binaire, tel que `npm i opencode-ai` le pose dans son dossier d'installation.
  *
  * Le DOSSIER, lui, est une valeur du layout depuis MIN-354

@@ -489,10 +489,13 @@ l'écrit dans la VM, l'app le récupère depuis le déploiement — c'est ce qui
 coquille mince (§1) et le contrat vérifié par le compilateur.
 
 **Electron embarque Node**, donc rien à installer côté utilisateur pour ça
-(`utilityProcess.fork`, ou un fork avec `ELECTRON_RUN_AS_NODE`). Reste à vérifier
-que le Node d'Electron correspond à la cible `node24` du bundle esbuild. Le binaire
-opencode, lui, doit être installé et épinglé sur la machine — la version est déjà
-une constante partagée
+(`utilityProcess.fork`, ou un fork avec `ELECTRON_RUN_AS_NODE`). Minddy embarque
+aussi le CLI npm — absent d'Electron — et expose des shims `node`/`npm` adossés
+au runtime signé. Le harness les utilise pour amorcer ou réparer son OpenCode
+épinglé, et l'agent peut ensuite installer les dépendances du dépôt même sans
+chaîne Node système. Le `PATH` du shell utilisateur reste prioritaire quand il
+est déjà configuré. Le Node d'Electron correspond à la cible `node24` du bundle.
+La version d'OpenCode est une constante partagée
 ([opencode-version.ts](../lib/server/agent/vm/opencode-version.ts)), écrite pour
 avoir exactement ce genre de deuxième lecteur.
 

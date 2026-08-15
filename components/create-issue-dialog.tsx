@@ -801,7 +801,15 @@ export function CreateIssueDialog({
               </div>
               {/* Le bouton dans son propre bloc : c'est lui qui bascule sur une
                 ligne à lui, pleine largeur, quand la barre passe à la ligne. */}
-              <div className="flex items-center justify-end max-sm:w-full sm:ml-1">
+              <div className="flex items-center justify-end gap-2 max-sm:w-full sm:ml-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={submitting || numoBusy}
+                  onClick={() => handleOpenChange(false)}
+                >
+                  {tCommon("cancel")}
+                </Button>
                 {otherProjects.length > 0 && currentProject ? (
                   /* L'infobulle s'accroche à l'action, pas au chevron : ses
                      props traversent `SplitButton` jusqu'au bouton de gauche,

@@ -66,6 +66,7 @@ import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-t
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { UserAvatar } from "@/components/user-avatar";
 import { ModelCombobox } from "@/components/agent/model-combobox";
@@ -1746,17 +1747,21 @@ export function PrDetail({
           il se fait ICI, au clic : le défaut de l'instance convient la plupart
           du temps, une grosse PR mérite parfois mieux. Le choix est retenu pour
           la prochaine fois ; « défaut de minddy » l'efface. */}
-      <Dialog
+      <FormDialog
         open={aiReviewDialog}
         onOpenChange={(next) => {
           if (!next && !startingAiReview) setAiReviewDialog(false);
         }}
+        title={t("aiReview")}
+        description={t("numoReviewDialogDescription")}
+        className="sm:max-w-md"
+        submitLabel={t("numoReviewStart")}
+        submitIcon={startingAiReview ? <Spinner /> : <NumoIcon animated={false} />}
+        submitting={startingAiReview}
+        cancelLabel={t("cancel")}
+        onCancel={() => setAiReviewDialog(false)}
+        onSubmit={() => void startAiReview()}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("aiReview")}</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">{t("numoReviewDialogDescription")}</p>
           <div className="flex flex-col gap-1.5">
             <span className="text-xs text-muted-foreground">{t("numoReviewModelLabel")}</span>
             <ModelCombobox
@@ -1781,44 +1786,39 @@ export function PrDetail({
               onChange={setAiReviewReasoningOverride}
               disabled={startingAiReview}
               levels={aiReviewReasoningLevels}
+              variant="field"
             />
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={startingAiReview}
-              onClick={() => setAiReviewDialog(false)}
-            >
-              {t("cancel")}
-            </Button>
-            <Button disabled={startingAiReview} onClick={() => void startAiReview()}>
-              {startingAiReview ? <Spinner /> : <NumoIcon animated={false} />}
-              {t("numoReviewStart")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormDialog>
 
       {/* Dialogue de review — les trois verdicts partagent le même formulaire ;
           seule la case « et relancer Numo » distingue la demande de changements. */}
-      <Dialog
+      <FormDialog
         open={!!reviewVerdict}
         onOpenChange={(next) => {
           if (!next && !submitting) setReviewVerdict(null);
         }}
+        title={t(
+          reviewVerdict === "approve"
+            ? "reviewApproveTitle"
+            : reviewVerdict === "comment"
+              ? "reviewCommentTitle"
+              : "reviewRequestChangesTitle",
+        )}
+        className="sm:max-w-md"
+        submitLabel={reviewSubmitLabel}
+        submitDisabled={reviewSubmitDisabled}
+        submitting={submitting}
+        submitIcon={submitting ? <Spinner /> : null}
+        cancelLabel={t("cancel")}
+        onCancel={() => setReviewVerdict(null)}
+        onSubmit={() => void submitReview()}
+        dictation={{
+          onTranscription: (text) =>
+            setReviewMessage((value) => `${value}${value ? " " : ""}${text}`),
+          disabled: submitting,
+        }}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {t(
-                reviewVerdict === "approve"
-                  ? "reviewApproveTitle"
-                  : reviewVerdict === "comment"
-                    ? "reviewCommentTitle"
-                    : "reviewRequestChangesTitle",
-              )}
-            </DialogTitle>
-          </DialogHeader>
           {/* Les deux modes d'une demande de changements. Le second existe
               parce que la consigne est presque toujours la MÊME — « reprends ce
               qu'on t'a écrit et corrige-le » — et qu'on la retapait à la main
@@ -1969,30 +1969,7 @@ export function PrDetail({
             </div>
           ) : null}
 
-          {/* Annuler et envoyer restent séparés des réglages pour que le bouton
-              garde une position stable quand le chemin instantané est désactivé. */}
-          <DialogFooter className="sm:flex-wrap">
-            <div className="flex items-center gap-2 sm:ml-auto">
-              <Button
-                variant="outline"
-                disabled={submitting}
-                onClick={() => setReviewVerdict(null)}
-              >
-                {t("cancel")}
-              </Button>
-              <SendShortcutTooltip label={reviewSubmitLabel}>
-                <Button
-                  disabled={reviewSubmitDisabled}
-                  onClick={() => void submitReview()}
-                >
-                  {submitting ? <Spinner /> : null}
-                  {reviewSubmitLabel}
-                </Button>
-              </SendShortcutTooltip>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormDialog>
     </div>
     </PrEndpointProvider>
   );

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { OPENCODE_VERSION } from "@/lib/server/agent/vm/opencode-version";
+import {
+  MINDDY_NODE_EXEC_ENV,
+  MINDDY_NPM_CLI_ENV,
+  OPENCODE_VERSION,
+  opencodeNpmProgram,
+} from "@/lib/server/agent/vm/opencode-version";
 import {
   OPENCODE_INSTALL_MANIFEST,
   opencodeInstallArgs,
@@ -13,6 +18,9 @@ import {
   opencodeDecision,
   opencodeInstallNote,
   opencodeRefusalMessage,
+  electronToolShim,
+  localRuntimePath,
+  npmInvocation,
   readOpencodeManifestVersion,
 } from "./opencode-install";
 
@@ -110,6 +118,60 @@ describe("readOpencodeManifestVersion", () => {
 });
 
 describe("les chemins et la commande", () => {
+  it("répare le PATH minimal d'une app lancée depuis Finder sans perdre le PATH existant", () => {
+    expect(localRuntimePath("/usr/bin:/bin", ["/Users/c/.nvm/versions/node/v24/bin"]))
+      .toBe(
+        "/usr/bin:/bin:/Users/c/.nvm/versions/node/v24/bin:/opt/homebrew/bin:" +
+          "/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin",
+      );
+  });
+
+  it("fabrique des shims Node/npm qui supportent les espaces et apostrophes", () => {
+    expect(electronToolShim("/Applications/Minddy's App.app/minddy", ["/app asar/npm-cli.js"]))
+      .toBe(
+        "#!/bin/sh\nELECTRON_RUN_AS_NODE=1 exec " +
+          "'/Applications/Minddy'\\''s App.app/minddy' '/app asar/npm-cli.js' \"$@\"\n",
+      );
+  });
+
+  it("préfère le npm embarqué et le fait exécuter par le Node d'Electron", () => {
+    expect(
+      npmInvocation({
+        bundledCli: "/Applications/minddy.app/Contents/Resources/app.asar/node_modules/npm/bin/npm-cli.js",
+        electronExecutable: "/Applications/minddy.app/Contents/MacOS/minddy",
+        systemNpm: "/usr/local/bin/npm",
+      }),
+    ).toMatchObject({
+      executable: "/Applications/minddy.app/Contents/MacOS/minddy",
+      source: "bundled",
+      extraEnv: { ELECTRON_RUN_AS_NODE: "1" },
+    });
+  });
+
+  it("retombe sur le npm système quand l'ancien bundle n'en porte pas", () => {
+    expect(
+      npmInvocation({ bundledCli: null, electronExecutable: "/minddy", systemNpm: "/usr/local/bin/npm" }),
+    ).toEqual({ executable: "/usr/local/bin/npm", argsPrefix: [], extraEnv: {}, source: "system" });
+  });
+
+  it("donne au harness le même npm embarqué pour son contrôle autoritaire", () => {
+    expect(
+      opencodeNpmProgram({
+        [MINDDY_NPM_CLI_ENV]: "/app.asar/node_modules/npm/bin/npm-cli.js",
+        [MINDDY_NODE_EXEC_ENV]: "/Applications/minddy.app/Contents/MacOS/minddy",
+      }),
+    ).toEqual({
+      executable: "/Applications/minddy.app/Contents/MacOS/minddy",
+      argsPrefix: ["/app.asar/node_modules/npm/bin/npm-cli.js"],
+      electronRunAsNode: true,
+    });
+    expect(opencodeNpmProgram({})).toEqual({
+      executable: "npm",
+      argsPrefix: [],
+      electronRunAsNode: false,
+    });
+  });
+
   it("pose le binaire là où le harness ira le chercher", () => {
     // Deux lecteurs, un seul chemin : si celui-ci diverge, la coquille installe
     // 144 Mo à côté de ce que le harness cherche, et personne ne le dit.
@@ -164,9 +226,9 @@ describe("les chemins et la commande", () => {
 });
 
 describe("ce que l'utilisateur lit", () => {
-  it("nomme l'incantation que personne ne devine", () => {
+  it("demande de réparer l'app quand son bootstrap et le repli système manquent", () => {
     const message = opencodeRefusalMessage("no_npm", WANTED);
-    expect(message).toContain("xcode-select --install");
+    expect(message).toMatch(/reinstall or update minddy/i);
     expect(message).toContain(WANTED);
   });
 

@@ -59,6 +59,7 @@ export function ReasoningCombobox({
   disabled,
   disabledTooltip,
   levels = GENERIC_REASONING_LEVELS,
+  variant = "compact",
 }: {
   value: ReasoningLevel;
   onChange: (value: ReasoningLevel) => void;
@@ -71,6 +72,8 @@ export function ReasoningCombobox({
    * sera retenu (le catalogue n'est pas arrivé), pas un choix d'affichage.
    */
   levels?: ReasoningLevel[];
+  /** Champ pleine largeur, pour les formulaires qui le posent sous le modèle. */
+  variant?: "compact" | "field";
 }) {
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
@@ -111,10 +114,15 @@ export function ReasoningCombobox({
           aria-expanded={open}
           aria-label={t("reasoning")}
           disabled={disabled}
-          className="h-8 shrink-0 gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium text-foreground/80 hover:bg-muted/50"
+          className={cn(
+            "gap-1.5 text-xs font-medium text-foreground/80",
+            variant === "field"
+              ? "h-10 w-full justify-start rounded-md border border-input bg-transparent px-3 text-left hover:bg-muted/50"
+              : "h-8 shrink-0 rounded-full border border-transparent bg-transparent px-1.5 hover:bg-muted/50",
+          )}
         >
           <Brain className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="whitespace-nowrap">{label}</span>
+          <span className="whitespace-nowrap text-left">{label}</span>
           <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

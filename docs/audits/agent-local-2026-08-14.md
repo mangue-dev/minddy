@@ -406,11 +406,13 @@ faut écrire la question.
 > **Et deux choses que la mesure a ajoutées à cette liste :**
 >
 > - **`npm` n'est pas garanti.** `ensureInstalled` shell-out `npm i opencode-ai@…`,
->   or **Electron embarque Node, pas npm**. Sur un Mac sans Command Line Tools il
->   n'y en a pas, et l'installation ne peut pas avoir lieu. Traité par un refus
->   **dit avant le fork**, avec l'incantation qui le répare
->   ([lib/desktop/opencode-install.ts](../../lib/desktop/opencode-install.ts)) ;
->   embarquer le binaire est un lot à part.
+>   or **Electron embarque Node, pas npm**. Le constat initial avait été traité
+>   par un refus avant le fork, mais une app lancée par Finder ne voyait même pas
+>   le npm pourtant installé sur la machine. Le bootstrap est désormais autonome :
+>   npm est une dépendance de production du bundle, lancé par le Node d'Electron ;
+>   le launcher préchauffe et journalise, puis le harness revérifie et répare
+>   autoritairement avant chaque démarrage
+>   ([lib/desktop/opencode-install.ts](../../lib/desktop/opencode-install.ts)).
 > - **Le type-graphe de `vm/protocol.ts` ne passe pas la frontière.** Il
 >   type-importe `../runs`, qui est `server-only` : la coquille qui l'importerait
 >   ferait entrer la moitié du serveur dans son type-check, qui n'a ni `global.d.ts`
