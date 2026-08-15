@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -537,6 +538,51 @@ export async function claimRun(runId: string): Promise<AgentRun | null> {
 export async function getRun(runId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service.from("agent_runs").select("*").eq("id", runId).maybeSingle();
+  return (data as AgentRun | null) ?? null;
+}
+
+/**
+ * Le prochain tour qu'une coquille connectée peut réclamer (MIN-371).
+ *
+ * La machine ne transmet que les projets pour lesquels elle possède un
+ * attachement local. `created_by` garde les runs sur le compte qui les a
+ * demandés : être membre du même projet ne permet pas de faire exécuter le run
+ * d'un collègue sur son Mac.
+ *
+ * Cette lecture ne claim rien. Le CAS de `claimRun`, dans la route, départage
+ * les coquilles qui auraient vu la même ligne entre cette lecture et le claim.
+ */
+export async function findQueuedLocalRunForMachine(input: {
+  userId: string;
+  projectIds: readonly string[];
+  /** Le client de session applique la RLS ; le défaut sert les appels internes. */
+  client?: SupabaseClient;
+}): Promise<AgentRun | null> {
+  if (input.projectIds.length === 0) return null;
+
+  const client = input.client ?? getServiceClient();
+  let query = client
+    .from("agent_runs")
+    .select("*")
+    .eq("status", "queued")
+    .eq("local_exec", true)
+    .eq("created_by", input.userId)
+    .in("project_id", [...input.projectIds])
+    .lte("not_before", new Date().toISOString());
+  const scope = currentDeploymentScope();
+  query = scope === null
+    ? query.is("deployment_url", null)
+    : query.eq("deployment_url", scope);
+
+  const { data, error } = await query
+    .order("not_before", { ascending: true })
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("[agent-runs] local queue lookup failed:", error.message);
+    return null;
+  }
   return (data as AgentRun | null) ?? null;
 }
 

@@ -37,7 +37,7 @@ import { createHash } from "node:crypto";
  *
  * ## Il n'est pas un secret
  *
- * Il voyage en clair vers le serveur (MIN-294 s'en servira pour le claim) et il
+ * Il voyage en clair vers le serveur (MIN-371 s'en sert pour le claim) et il
  * n'ouvre rien : c'est le BAIL qui autorise, jamais l'identifiant. Le hash n'est
  * pas là pour cacher le chemin — il est là pour que ce qui voyage soit de
  * longueur fixe et ne porte pas le prénom de quelqu'un.

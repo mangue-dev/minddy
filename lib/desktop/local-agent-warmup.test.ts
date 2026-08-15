@@ -27,15 +27,15 @@ describe("pré-chauffage de l'agent local", () => {
     expect(source).toContain("const task = ensureOpencodeOnce(installDir).finally(");
   });
 
-  it("masque le pré-vol machine derrière la préparation du job serveur", () => {
-    const start = source.indexOf("export async function startLocalTurn");
-    const end = source.indexOf("export function prewarmLocalAgent", start);
-    const launch = source.slice(start, end);
-
-    expect(launch.indexOf("bundle: ensureBundle(opts.origin)")).toBeLessThan(
-      launch.indexOf("const answer = await fetchJson"),
+  it("le pull remet l'affectation au même lanceur qui consomme les caches préchauffés", () => {
+    const claim = source.slice(
+      source.indexOf("async function claimLocalTurn"),
+      source.indexOf("export function prewarmLocalAgent"),
     );
-    expect(launch).toContain("machinePreflight, requestedAt");
-    expect(source).toContain("validatePreflightBundle(");
+    const run = source.slice(source.indexOf("export async function runAssignment"));
+
+    expect(claim).toContain("runAssignment(assignment, opts.origin");
+    expect(run).toContain("ensureBundle(origin, assignment.job.protocolVersion)");
+    expect(run).toContain("ensureOpencode(opencodeDir)");
   });
 });

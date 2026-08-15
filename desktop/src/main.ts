@@ -40,7 +40,7 @@ import { hideWindow } from "./hide-window";
 import {
   prewarmLocalAgent,
   runningTurns,
-  startLocalTurn,
+  startLocalClaimLoop,
   stopAllLocalTurns,
   sweepOrphanTurns,
 } from "./launcher";
@@ -70,6 +70,7 @@ import { trace } from "./trace";
 /** Le lien d'auth reçu avant que la page ne soit prête à l'entendre. */
 let pendingAuthLink: DesktopAuthLink | null = null;
 let mainWindow: BrowserWindow | null = null;
+let stopClaimingLocalRuns: (() => void) | null = null;
 
 /**
  * LE CANAL, et l'origine qui en découle (MIN-352).
@@ -658,31 +659,6 @@ function registerIpc(): void {
     discoverLocalModels(input),
   );
 
-  /**
-   * LE DÉCLENCHEUR DE TOUR LOCAL (MIN-293) — **coquille de dév uniquement**.
-   *
-   * MIN-294 porte la présence, le claim et l'aiguillage : c'est LUI qui fera
-   * arriver un run sur cette machine, par une boucle de réclamation dans le main
-   * process. Sans lui, aucun run n'atteint jamais le Mac — et un lot qu'on ne
-   * peut vérifier qu'après le suivant ne se livre pas. D'où ce membre, qui est
-   * **exactement la fonction que cette boucle appellera** : seul l'appelant
-   * changera.
-   *
-   * ⚠ **Refusé dans l'app empaquetée**, et ce n'est pas de la prudence
-   * décorative. Le renderer charge du code DISTANT : lui laisser déclencher un
-   * fork de harness, même borné par ce que le serveur accepte de servir (session
-   * de l'utilisateur, run marqué local, run qui lui appartient), serait la
-   * première surface du pont à EXÉCUTER quelque chose. Le pont se lit en trente
-   * secondes précisément parce qu'aucun de ses membres ne fait ça.
-   */
-  ipcMain.handle("minddy:local-run:start", async (_event, input: unknown) => {
-    if (app.isPackaged) {
-      return { status: "refused", reason: "dev_only", message: "Local runs are driven by minddy itself." };
-    }
-    const runId = readString((input as { runId?: unknown } | null)?.runId);
-    if (!runId) return { status: "refused", reason: "assignment_invalid", message: "no run id" };
-    return startLocalTurn({ origin, runId, deviceId: deviceIdForUserData(app.getPath("userData")) });
-  });
 }
 
 function readString(value: unknown): string | null {
@@ -895,6 +871,12 @@ if (!app.requestSingleInstanceLock()) {
     // L'installation éventuelle d'opencode et le cache du harness commencent
     // pendant l'ouverture de la fenêtre. Aucun secret ni dépôt ne sont touchés.
     void prewarmLocalAgent(origin);
+    // Le clone réclame lui-même ses tours. La page peut ainsi se trouver sur un
+    // téléphone ou dans un autre navigateur ; elle ne déclenche aucun process.
+    stopClaimingLocalRuns = startLocalClaimLoop({
+      getOrigin: () => origin,
+      deviceId: deviceIdForUserData(app.getPath("userData")),
+    });
     // La fenêtre est passée à l'updater pour que sa proposition d'installer
     // s'attache à elle, plutôt que de flotter seule au milieu de l'écran.
     startAutoUpdates(() => mainWindow);
@@ -960,9 +942,11 @@ if (!app.requestSingleInstanceLock()) {
         return;
       }
     }
-    // Les tours d'abord, la fenêtre ensuite : `stopLocalTurn` écrit le mot de la
-    // fin dans le journal de chacun, et c'est la seule ligne qui distingue
+    // Plus aucun claim, puis les tours, puis la fenêtre : `stopLocalTurn` écrit
+    // le mot de la fin dans le journal de chacun, seule ligne qui distingue
     // « quelqu'un a quitté » de « le harness a planté » dans un rapport.
+    stopClaimingLocalRuns?.();
+    stopClaimingLocalRuns = null;
     stopAllLocalTurns();
     const window = mainWindow;
     mainWindow = null;

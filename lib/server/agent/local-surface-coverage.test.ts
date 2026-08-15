@@ -91,7 +91,7 @@ const SURFACES_HORS_LIB = [
   {
     file: "app/api/desktop/local-turn/route.ts",
     pourquoi:
-      "le déclencheur d'un tour local (MIN-293) : quatre gardes dont l'ORDRE est la " +
+      "le pull et le déclencheur d'un tour local (MIN-371) : sélection bornée puis gardes dont l'ORDRE est la " +
       "garantie — un run refusé par sa nature ou par son mode de clé ne doit jamais " +
       "être claim, et le bail se monte en dernier parce qu'émettre c'est révoquer.",
     reachedBy: "@/app/api/desktop/local-turn/route",
@@ -140,6 +140,7 @@ const COQUILLE = {
     "nommage, rotation, en-tête, substitution et forme du rapport dans @/lib/desktop/run-log",
   "launcher.ts":
     "le `utilityProcess.fork`, le `fetch` de session, le `fs` et le registre des tours vivants ; " +
+    "la cadence et les projets annoncés par le pull dans @/lib/desktop/local-claim, " +
     "le contrat d'affectation et le layout dans @/lib/desktop/local-turn, l'empreinte du harness " +
     "dans @/lib/desktop/harness-bundle, la question du ⌘Q dans @/lib/desktop/quit-guard, " +
     "et ce qu'on tue dans @/lib/server/agent/vm/child-registry",

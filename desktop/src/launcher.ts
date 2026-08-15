@@ -12,6 +12,11 @@ import { app, session, utilityProcess, type UtilityProcess } from "electron";
 
 import { childEnv } from "@/lib/desktop/child-env";
 import {
+  localClaimProjectIds,
+  nextLocalClaimDelay,
+  type LocalClaimOutcome,
+} from "@/lib/desktop/local-claim";
+import {
   HARNESS_BUNDLE_PATH,
   HARNESS_DIR_NAME,
   HARNESS_MANIFEST_PATH,
@@ -48,6 +53,7 @@ import { installOpencode, readOpencodeFacts } from "./opencode-install";
 import { describeLocalRepo, localProjectsFor } from "./local-repo";
 import { prepareLocalWorktree } from "@/lib/desktop/local-worktree";
 import { noteLauncherFailure, openRunLog, type RunLog } from "./run-log";
+import { readLocalRepos } from "./repo-store";
 import { trace } from "./trace";
 
 /**
@@ -141,26 +147,16 @@ const opencodePreflights = new Map<
  * un harness, car leur protocole et leur code peuvent diverger. */
 const localAgentWarmups = new Map<string, Promise<void>>();
 
-/**
- * Ce que le lanceur rend à son appelant.
- *
- * `skipped` n'est PAS un refus, et c'est la distinction qui manquait : un run
- * qui n'est plus en file est un run dont le tour tourne DÉJÀ — le message de
- * l'utilisateur sera pris par la boucle en vol, il n'y a rien à lancer et rien à
- * dire. Le confondre avec un échec faisait surgir une alerte à chaque relance de
- * la conversation.
- */
+/** Ce que le lanceur rend après avoir reçu une affectation du serveur. */
 export type LocalTurnResult =
   | { readonly status: "started"; readonly runId: string; readonly logPath: string }
-  | { readonly status: "skipped"; readonly reason: "not_queued" }
   | {
       readonly status: "refused";
       readonly reason:
         | LocalTurnRefusal
         | HarnessRefusal
         | "no_npm"
-        | "install_failed"
-        | "server";
+        | "install_failed";
       readonly message: string;
     };
 
@@ -173,87 +169,92 @@ export function runningTurns(): RunningTurn[] {
 }
 
 /**
- * DEMANDE UN TOUR À L'ORIGINE ACTIVE, puis le joue.
- *
- * `origin` est celle du canal actif, jamais une constante : **la machine ne parle
- * qu'à l'origine qui lui a donné son travail.** Une coquille en preview qui
- * jouerait un tour avec le harness et le bail de la production ferait diverger le
- * contrat typé en silence — et c'est aussi ce qui fait marcher le développement
- * contre `localhost`.
+ * La présence du clone est son pull (MIN-371) : pas de heartbeat, pas de topic
+ * tenu par la page. La prochaine itération n'est programmée qu'après la fin de
+ * la précédente, donc deux requêtes de cette coquille ne se chevauchent jamais.
  */
-export async function startLocalTurn(opts: {
-  origin: string;
-  runId: string;
+export function startLocalClaimLoop(opts: {
+  getOrigin: () => string;
   deviceId: string;
-}): Promise<LocalTurnResult> {
-  if (live.has(opts.runId)) {
-    return refuse("already_running", localTurnRefusalMessage("already_running", ""));
-  }
+}): () => void {
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
 
-  const requestedAt = Date.now();
-  // Le manifeste et le binaire ne dépendent pas du job. Les démarrer avant le
-  // POST masque leur coût derrière la préparation serveur (contexte, quota,
-  // cible Git), puis `runAssignment` confronte tout de même le protocole reçu.
-  const machinePreflight: LocalMachinePreflight = {
-    bundle: ensureBundle(opts.origin),
-    opencode: ensureOpencode(localOpencodeDir(app.getPath("userData"))),
-  };
-  // Un refus serveur peut rendre avant ces promesses. Leur erreur restera
-  // observable si le job les attend, mais ne devient pas un rejet non géré si
-  // aucun job n'est finalement attribué.
-  void machinePreflight.bundle.catch(() => {});
-  void machinePreflight.opencode.catch(() => {});
-  const answer = await fetchJson(`${opts.origin}/api/desktop/local-turn`, {
-    method: "POST",
-    body: JSON.stringify({ runId: opts.runId, deviceId: opts.deviceId }),
-  });
-
-  /**
-   * ⚠ **CE QUE LE SERVEUR A RÉPONDU, DIT TEL QUEL.**
-   *
-   * La première version écrasait tout échec HTTP en « cette version de l'app ne
-   * sait pas lire ce tour, mets-la à jour » — un message faux dans la quasi-
-   * totalité des cas, et qui envoyait chercher au pire endroit. Un 409
-   * « ce déploiement ne sait pas frapper de clé plafonnée », un 404, un 401 de
-   * session expirée : trois pannes distinctes, un seul mensonge.
-   *
-   * Le motif `server` porte donc le statut ET la phrase du serveur, et
-   * `assignment_invalid` retrouve son sens exact — le corps est arrivé, et il
-   * n'a pas la forme attendue.
-   */
-  if (!answer.ok) {
-    // Le tour tourne déjà : il n'y a rien à lancer, et rien à dire.
-    if (answer.status === 409 && /not queued/i.test(answer.error)) {
-      trace("local-turn:skipped", { runId: opts.runId });
-      return { status: "skipped", reason: "not_queued" };
+  const poll = async () => {
+    const projectIds = localClaimProjectIds(readLocalRepos());
+    let outcome: LocalClaimOutcome = "idle";
+    if (projectIds.length > 0) {
+      try {
+        outcome = await claimLocalTurn({
+          origin: opts.getOrigin(),
+          deviceId: opts.deviceId,
+          projectIds,
+        });
+      } catch (error) {
+        trace("local-claim:failed", {
+          message: error instanceof Error ? error.message : String(error),
+        });
+        outcome = "unavailable";
+      }
     }
-    const message = `minddy refused to prepare this turn (${answer.status}): ${answer.error}`;
-    noteLauncherFailure(message);
-    return refuse("server", message);
+    if (stopped) return;
+    timer = setTimeout(() => void poll(), nextLocalClaimDelay(outcome));
+  };
+
+  void poll();
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
+}
+
+async function claimLocalTurn(opts: {
+  origin: string;
+  deviceId: string;
+  projectIds: string[];
+}): Promise<LocalClaimOutcome> {
+  const requestedAt = Date.now();
+  const answer = await fetchJson(
+    `${opts.origin}/api/desktop/local-turn`,
+    {
+      method: "POST",
+      body: JSON.stringify({ deviceId: opts.deviceId, projectIds: opts.projectIds }),
+    },
+    { quiet: true },
+  );
+  if (!answer.ok) {
+    trace("local-claim:unavailable", { status: answer.status });
+    return "unavailable";
+  }
+  if (
+    typeof answer.body === "object" && answer.body !== null &&
+    (answer.body as { status?: unknown }).status === "idle"
+  ) {
+    return "idle";
   }
 
   const assignment = parseLocalTurnAssignment(answer.body);
   if (!assignment) {
-    const message = localTurnRefusalMessage("assignment_invalid", "");
-    noteLauncherFailure(`${message}\n${JSON.stringify(answer.body)?.slice(0, 800) ?? ""}`);
-    return refuse("assignment_invalid", message);
+    noteLauncherFailure(
+      `${localTurnRefusalMessage("assignment_invalid", "")}\n` +
+      `${JSON.stringify(answer.body)?.slice(0, 800) ?? ""}`,
+    );
+    return "unavailable";
   }
+
   const serverDiagnostics =
     typeof answer.body === "object" && answer.body !== null &&
     typeof (answer.body as Record<string, unknown>).diagnostics === "object"
       ? ((answer.body as Record<string, unknown>).diagnostics as Record<string, unknown>)
       : undefined;
   const assignmentReadyMs = Date.now() - requestedAt;
-  trace("local-turn:assignment-ready", {
-    runId: opts.runId,
-    elapsedMs: assignmentReadyMs,
-  });
-  return runAssignment(assignment, opts.origin, {
-    machinePreflight,
+  trace("local-turn:assignment-ready", { runId: assignment.runId, elapsedMs: assignmentReadyMs });
+  const result = await runAssignment(assignment, opts.origin, {
     requestedAt,
     assignmentReadyMs,
     serverDiagnostics,
   });
+  return result.status === "started" ? "claimed" : "refused";
 }
 
 /**
@@ -297,8 +298,8 @@ export function prewarmLocalAgent(origin: string): Promise<void> {
 }
 
 /**
- * JOUE UNE AFFECTATION — le cœur du lot, et le point d'entrée que la boucle de
- * claim de MIN-294 appellera telle quelle.
+ * JOUE UNE AFFECTATION — le cœur du lot, appelé aussi bien par le déclencheur
+ * historique que par la boucle de claim du clone (MIN-371).
  *
  * L'ordre des cinq étapes n'est pas indifférent : **tout ce qui peut refuser
  * refuse avant le premier octet écrit sur le disque.** Un tour qui échoue après
@@ -794,7 +795,11 @@ function sha256Of(body: string): string {
 /** Ce qu'une requête rend : le corps, ou le STATUT et la phrase du serveur. */
 type Fetched<T> = { ok: true; body: T } | { ok: false; status: number; error: string };
 
-async function fetchText(url: string, init?: RequestInit): Promise<Fetched<string>> {
+async function fetchText(
+  url: string,
+  init?: RequestInit,
+  opts: { quiet?: boolean } = {},
+): Promise<Fetched<string>> {
   try {
     const response = await session.defaultSession.fetch(url, {
       ...init,
@@ -802,20 +807,24 @@ async function fetchText(url: string, init?: RequestInit): Promise<Fetched<strin
     });
     const text = await response.text();
     if (!response.ok) {
-      console.error(`[launcher] ${url} → ${response.status} ${text.slice(0, 300)}`);
+      if (!opts.quiet) console.error(`[launcher] ${url} → ${response.status} ${text.slice(0, 300)}`);
       return { ok: false, status: response.status, error: serverError(text) };
     }
     return { ok: true, body: text };
   } catch (error) {
-    console.error(`[launcher] ${url} injoignable`, error);
+    if (!opts.quiet) console.error(`[launcher] ${url} injoignable`, error);
     // `0` : rien n'a répondu. Le distinguer d'un vrai statut évite de faire
     // passer une coupure réseau pour un refus du serveur.
     return { ok: false, status: 0, error: (error as Error).message };
   }
 }
 
-async function fetchJson(url: string, init?: RequestInit): Promise<Fetched<unknown>> {
-  const text = await fetchText(url, init);
+async function fetchJson(
+  url: string,
+  init?: RequestInit,
+  opts: { quiet?: boolean } = {},
+): Promise<Fetched<unknown>> {
+  const text = await fetchText(url, init, opts);
   if (!text.ok) return text;
   try {
     return { ok: true, body: JSON.parse(text.body) };

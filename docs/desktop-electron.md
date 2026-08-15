@@ -455,7 +455,13 @@ formellement dépréciée mais bien vivante.
 > | --- | --- |
 > | `GET /api/desktop/harness` | le manifeste : empreinte, taille, version de protocole, version d'opencode. Demandé à **chaque** tour, deux cents octets. |
 > | `GET /api/desktop/harness/bundle` | les octets, quand l'empreinte a changé. Un fichier par empreinte sous `userData/harness/`. |
-> | `POST /api/desktop/local-turn` | le déclencheur : admettre, claim, préparer, monter le bail, rendre l'affectation. **C'est exactement ce que la boucle de réclamation de MIN-294 fera** — seul l'appelant changera. |
+> | `POST /api/desktop/local-turn` | le pull du clone (MIN-371) : sélectionner parmi ses projets attachés, admettre, claim, préparer, monter le bail, rendre l'affectation. L'ancien appel par identifiant reste compatible. |
+>
+> Depuis MIN-371, le clone appelle cette surface en arrière-plan avec sa session
+> et les seuls identifiants de ses projets attachés. Il relit la liste à chaque
+> passage, ne transmet aucun chemin et joue l'affectation avec le lanceur déjà en
+> place. Le renderer n'est plus dans la boucle : un téléphone peut envoyer le
+> message suivant, le run repasse en file et le clone le réclame.
 >
 > Trois différences avec ce qui suit, et chacune vient d'une décision prise
 > depuis : **le repli cloud n'existe pas en cours de conversation** (D1 :

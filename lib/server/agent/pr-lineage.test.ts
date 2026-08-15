@@ -103,6 +103,7 @@ vi.mock("./quota", () => ({
 
 vi.mock("./model", () => ({
   AgentModelRequiredError: class AgentModelRequiredError extends Error {},
+  getUserByok: vi.fn(async () => null),
   resolveAgentModel: vi.fn(async () => ({ model: "modele/test", chosenByUser: false })),
   resolveReasoningLevel: vi.fn(async () => "medium"),
   resolvePrReviewModel: vi.fn(async () => ({ model: "modele/test", chosenByUser: false })),

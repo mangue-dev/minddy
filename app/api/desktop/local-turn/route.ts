@@ -5,7 +5,11 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { admitLocalRun, issueLocalExecToken } from "@/lib/server/agent/local-exec";
 import { rowMayRunLocally } from "@/lib/server/agent/local-exec-scope";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
-import { claimRun, getRun } from "@/lib/server/agent/runs";
+import {
+  claimRun,
+  findQueuedLocalRunForMachine,
+  getRun,
+} from "@/lib/server/agent/runs";
 import { executeAgentRun } from "@/lib/server/agent/execute";
 import type { VmJob } from "@/lib/server/agent/vm/protocol";
 
@@ -73,30 +77,29 @@ async function localProjectCatalog(
  *
  * ## Ce qu'il est, et ce qu'il n'est pas
  *
- * La présence d'une machine, le claim d'un run et l'aiguillage appartiennent à
- * **MIN-294**. Sans eux, aucun run n'atteint jamais un Mac — et un lot qu'on ne
- * peut vérifier qu'une fois le suivant fait ne se livre pas. Cette route est donc
- * le déclencheur assumé qui manque : elle FORCE la préparation d'un tour que
- * l'utilisateur a lui-même marqué local, et rend à sa machine ce qu'il faut pour
- * le jouer.
+ * Depuis MIN-371, deux appels arrivent ici : le clone réclame le prochain run de
+ * ses projets attachés, ou l'ancien déclencheur de développement désigne un id.
+ * Dans les deux cas cette route prépare le tour que l'utilisateur a marqué
+ * local et rend à sa machine ce qu'il faut pour le jouer.
  *
- * Elle n'est pas jetable pour autant. Ce qu'elle fait — admettre, claim, préparer,
- * monter le bail, rendre l'affectation — est **exactement** ce que la boucle de
- * réclamation de MIN-294 fera ; ce qui changera, c'est QUI l'appelle et QUAND :
- * une machine qui dit « j'ai du temps, as-tu du travail ? », au lieu d'un
- * identifiant de run passé à la main.
+ * Le pull est aussi la présence : une machine qui ne réclame plus n'est plus là.
+ * Aucun abonnement de page ni heartbeat n'est nécessaire, et le navigateur qui
+ * contrôle la conversation peut se trouver sur un autre appareil.
  *
- * ## Les quatre portes, dans cet ordre
+ * ## Les cinq portes, dans cet ordre
  *
- * 1. **une session**, et quelqu'un qui a le droit de lire ce run ;
- * 2. **la nature du run** — `rowMayRunLocally` : un run d'ancrage `pr`, de
+ * 1. **une session**, puis une sélection limitée aux projets attachés annoncés
+ *    par le clone et aux runs créés par ce même utilisateur ;
+ * 2. **le droit de lire ce run** — la sélection passe par la RLS et la garde est
+ *    répétée avant tout claim ;
+ * 3. **la nature du run** — `rowMayRunLocally` : un run d'ancrage `pr`, de
  *    webhook, de routine, de chaîne ou du board public de feedback **ne part
  *    jamais sur une machine**, parce que son contexte est du texte d'attaquant
  *    potentiel et qu'en local une injection de prompt est un shell sur le poste
  *    de quelqu'un ([local-exec-scope.ts](../../../../lib/server/agent/local-exec-scope.ts)) ;
- * 3. **l'admission** — `admitLocalRun` : un BYOK interactif passe directement ;
+ * 4. **l'admission** — `admitLocalRun` : un BYOK interactif passe directement ;
  *    une clé plateforme exige le mint fournisseur ;
- * 4. **le claim** — `queued → running`, atomique, une seule machine gagne.
+ * 5. **le claim** — `queued → running`, atomique, une seule machine gagne.
  *
  * ## Pourquoi le bail est monté EN DERNIER
  *
@@ -112,6 +115,24 @@ export const dynamic = "force-dynamic";
  *  Le même ordre de grandeur qu'un lancement, sans le réveil de microVM. */
 export const maxDuration = 120;
 
+const DEVICE_ID = /^[0-9a-f]{32}$/;
+const PROJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_CLAIM_PROJECTS = 50;
+
+type LocalTurnRequest = {
+  runId?: unknown;
+  deviceId?: unknown;
+  projectIds?: unknown;
+};
+
+/** Le pull n'accepte qu'une liste courte d'UUID uniques, jamais des chemins. */
+function claimProjects(body: LocalTurnRequest | null): string[] | null {
+  if (!DEVICE_ID.test(typeof body?.deviceId === "string" ? body.deviceId : "")) return null;
+  if (!Array.isArray(body?.projectIds) || body.projectIds.length > MAX_CLAIM_PROJECTS) return null;
+  if (body.projectIds.some((id) => typeof id !== "string" || !PROJECT_ID.test(id))) return null;
+  return [...new Set(body.projectIds as string[])];
+}
+
 export async function POST(request: NextRequest) {
   const startedAt = Date.now();
   const timings: Record<string, number> = {};
@@ -120,21 +141,30 @@ export async function POST(request: NextRequest) {
   };
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  // La RLS applique exactement le même périmètre que la liste de projets de
-  // l'interface. Ce travail recouvre la préparation du tour et ne contient pas
-  // de chemin local.
-  const projectsPromise = localProjectCatalog(auth.supabase);
 
-  const body = (await request.json().catch(() => null)) as { runId?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as LocalTurnRequest | null;
   const runId = typeof body?.runId === "string" ? body.runId.trim() : "";
-  if (!runId) return NextResponse.json({ error: "runId required" }, { status: 400 });
+  const claimProjectIds = runId ? null : claimProjects(body);
+  if (!runId && !claimProjectIds) {
+    return NextResponse.json({ error: "runId or valid machine claim required" }, { status: 400 });
+  }
 
-  const run = await getRun(runId);
+  const run = runId
+    ? await getRun(runId)
+    : await findQueuedLocalRunForMachine({
+        userId: auth.user.id,
+        projectIds: claimProjectIds!,
+        client: auth.supabase,
+      });
+  if (!run && !runId) {
+    return NextResponse.json({ status: "idle" }, { headers: { "cache-control": "no-store" } });
+  }
   // Un run illisible et un run inexistant rendent la MÊME chose : un identifiant
   // de run ne doit pas servir à apprendre qu'il existe.
   if (!run || !(await canReadAgentRun(auth.user.id, run))) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
+  const selectedRunId = run.id;
   mark("run-and-access");
 
   if (!run.local_exec) {
@@ -145,7 +175,7 @@ export async function POST(request: NextRequest) {
     // Ne devrait pas arriver — `createRun` applique déjà la règle — mais c'est le
     // second rideau à l'endroit qui compte : sans affectation, aucune machine ne
     // peut jouer ce run.
-    console.error(`[desktop-local-turn] ${runId} : contexte tiers (${scope.reason})`);
+    console.error(`[desktop-local-turn] ${selectedRunId} : contexte tiers (${scope.reason})`);
     return NextResponse.json({ error: `third-party context: ${scope.reason}` }, { status: 409 });
   }
   /**
@@ -172,6 +202,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "run is not queued" }, { status: 409 });
   }
   mark("claimed");
+  // Aucun catalogue sur les pulls `idle` : ce serait deux lectures de base
+  // toutes les deux secondes pour ne rien rendre. Une fois le claim gagné, la
+  // RLS applique le périmètre de l'interface et la lecture recouvre la
+  // préparation du tour.
+  const projectsPromise = localProjectCatalog(auth.supabase);
 
   // Un objet et non un `let` : `tsc` ne suit pas une affectation faite depuis un
   // rappel, et réduirait la variable à `null` juste après.
@@ -205,7 +240,7 @@ export async function POST(request: NextRequest) {
 
   const lease = await issueLocalExecToken(run.id);
   if (!lease.ok) {
-    console.error(`[desktop-local-turn] ${runId} : bail refusé (${lease.error})`);
+    console.error(`[desktop-local-turn] ${selectedRunId} : bail refusé (${lease.error})`);
     return NextResponse.json({ error: `lease refused: ${lease.error}` }, { status: 503 });
   }
   mark("leased");

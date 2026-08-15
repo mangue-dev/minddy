@@ -27,6 +27,7 @@ import { NextRequest } from "next/server";
 
 const h = vi.hoisted(() => ({
   run: null as Record<string, unknown> | null,
+  next: true,
   claimed: true,
   prepares: true,
   calls: [] as string[],
@@ -51,6 +52,10 @@ vi.mock("@/lib/server/agent/run-access", () => ({
 
 vi.mock("@/lib/server/agent/runs", () => ({
   getRun: vi.fn(async () => h.run),
+  findQueuedLocalRunForMachine: vi.fn(async () => {
+    h.calls.push("find");
+    return h.next ? h.run : null;
+  }),
   claimRun: vi.fn(async () => {
     h.calls.push("claim");
     return h.claimed ? h.run : null;
@@ -118,6 +123,7 @@ function row(over: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   h.run = row();
+  h.next = true;
   h.claimed = true;
   h.prepares = true;
   h.calls.length = 0;
@@ -225,12 +231,47 @@ describe("POST /api/desktop/local-turn", () => {
     expect(h.calls).toEqual(["claim"]);
   });
 
+  it("la coquille réclame le plus ancien run de ses seuls projets attachés", async () => {
+    const response = await POST({
+      deviceId: "0123456789abcdef0123456789abcdef",
+      projectIds: ["11111111-2222-4333-8444-555555555555"],
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).runId).toBe("run-1");
+    expect(h.calls).toEqual(["find", "claim", "prepare", "lease"]);
+  });
+
+  it("rend un état idle quand aucun tour local n'attend cette machine", async () => {
+    h.next = false;
+    const response = await POST({
+      deviceId: "0123456789abcdef0123456789abcdef",
+      projectIds: ["11111111-2222-4333-8444-555555555555"],
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "idle" });
+    expect(h.calls).toEqual(["find"]);
+  });
+
+  it("borne et valide ce qu'une machine annonce", async () => {
+    for (const body of [
+      { deviceId: "court", projectIds: ["11111111-2222-4333-8444-555555555555"] },
+      { deviceId: "0123456789abcdef0123456789abcdef", projectIds: ["pas-un-uuid"] },
+      {
+        deviceId: "0123456789abcdef0123456789abcdef",
+        projectIds: Array.from({ length: 51 }, () => "11111111-2222-4333-8444-555555555555"),
+      },
+    ]) {
+      expect((await POST(body)).status).toBe(400);
+    }
+    expect(h.calls).toEqual([]);
+  });
+
   it("rend 404 sur un run inconnu, sans dire qu'il est inconnu", async () => {
     h.run = null;
     expect((await POST({ runId: "run-1" })).status).toBe(404);
   });
 
-  it("refuse un corps sans identifiant", async () => {
+  it("refuse un corps sans identifiant ni claim de machine", async () => {
     expect((await POST({})).status).toBe(400);
   });
 });
