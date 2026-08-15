@@ -2210,6 +2210,7 @@
     "localDeclined": "This agent is running in the cloud rather than on your machine.",
     "localDeclinedByok": "With your own API key, the agent runs in the cloud: a local run couldn't be capped.",
     "localDeclinedNoMint": "The agent is running in the cloud: spending can't be capped on your machine yet.",
+    "currentRepoOverlap": "{count, plural, one {# file you had also edited went into the pull request} other {# files you had also edited went into the pull request}}, your unfinished changes included.",
     "quotaTitle": "You've reached 100% of your usage limit",
     "quotaWorkKept": "The agent stopped here; its work is pushed and the session picks up where it left off.",
     "quotaResetsOn": "Your budget refills on {date}.",

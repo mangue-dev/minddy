@@ -173,3 +173,45 @@ describe("buildOpencodeAnchor — une routine et une relecture ne promettent rie
     expect(text).not.toContain("## Delegating to sub-agents");
   });
 });
+
+/**
+ * MIN-358 — CE QUE L'ANCRAGE DIT DU DÉPÔT, ET QUI DÉPEND DE À QUI IL EST.
+ *
+ * Trois phrases du bloc git deviennent fausses quand le tour joue dans le
+ * checkout de quelqu'un, et chacune coûte du travail humain si le modèle la
+ * croit : « le harness committe tout ce que tu as changé » (il ne committe que
+ * les chemins de l'agent), `git status` lu comme un diff (il porte le WIP de
+ * l'utilisateur), et une fenêtre d'historique de six mois (le dépôt est complet).
+ */
+describe("buildOpencodeAnchor — le mode dépôt courant", () => {
+  const clone = buildOpencodeAnchor({ ...FULL, anchor: "issue", interactive: true });
+  const current = buildOpencodeAnchor({
+    ...FULL,
+    anchor: "issue",
+    interactive: true,
+    currentRepo: true,
+  });
+
+  it("dit que le dépôt appartient à quelqu'un, et ce qu'on n'y fait pas", () => {
+    expect(current).toContain("the user's own working copy");
+    expect(current).toContain("never switch branch, never stash, never commit");
+    expect(clone).not.toContain("the user's own working copy");
+  });
+
+  it("retire `git status` du rôle de diff, et nomme le cas des deux mains", () => {
+    expect(current).toContain("`git status` is NOT your diff here");
+    expect(current).toContain("goes out with your pull request");
+  });
+
+  it("corrige l'historique et la fraîcheur de la base", () => {
+    expect(current).toContain("History is complete");
+    expect(current).toContain("only as fresh as their last `git fetch`");
+    expect(clone).toContain("You have history, for the last 6 months");
+  });
+
+  it("ne touche pas au garde-fou de shell, qui est le même des deux côtés", () => {
+    for (const text of [clone, current]) {
+      expect(text).toContain("`git commit`, `git push`, `git reset`");
+    }
+  });
+});

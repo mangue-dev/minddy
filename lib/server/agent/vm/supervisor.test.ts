@@ -201,7 +201,18 @@ function host() {
       // `commitAndPush` enchaîne add / commit / push / rev-parse ; `changedFiles`
       // fait un diff. Ce qui compte est que le superviseur les appelle, pas ce
       // que git répond — la mécanique est testée chez `repo-host`.
+      // MIN-358, mode dépôt courant : la préparation vérifie que le dossier EST
+      // la racine du dépôt (les deux lignes doivent coïncider), et le commit
+      // passe par la plomberie plutôt que par `git commit`.
+      if (command.includes("show-toplevel")) {
+        return { exitCode: 0, stdout: `${LAYOUT.repoDir}\n${LAYOUT.repoDir}\n`, stderr: "" };
+      }
+      if (command.includes("write-tree")) return { exitCode: 0, stdout: "arbre-après\n", stderr: "" };
+      if (command.includes("commit-tree")) return { exitCode: 0, stdout: "sha-après\n", stderr: "" };
       if (command.includes("rev-parse")) return { exitCode: 0, stdout: "sha-après\n", stderr: "" };
+      if (command.includes("status --porcelain -z")) {
+        return { exitCode: 0, stdout: " M a.ts\0", stderr: "" };
+      }
       if (command.includes("status --porcelain")) return { exitCode: 0, stdout: " M a.ts\n", stderr: "" };
       if (command.includes("push") && !h.pushed) {
         return { exitCode: 1, stdout: "", stderr: "remote rejected" };
@@ -392,6 +403,8 @@ function job(over: Partial<VmJob> = {}): VmJob {
     prInlineComments: 0,
     baseBranch: "main",
     workBranch: "minddy/agent/min-42-abcd1234",
+    repoMode: "clone",
+    committer: { name: "minddy agent", email: "agent@minddy.app" },
     authUrl: "https://x-access-token:ghs_SECRET@github.com/org/repo.git",
     commitRef: "MIN-42",
     bootstrapMs: 21_500,
@@ -1862,5 +1875,73 @@ describe("le battement du tour", () => {
     expect(h.checkpoints.length).toBeGreaterThanOrEqual(1);
     expect(report.status).toBe("error");
     expect(report.errorCode).toBe("turnTooLong");
+  });
+});
+
+/**
+ * MIN-358 — LE MÊME TOUR, DANS LE DÉPÔT DE QUELQU'UN D'AUTRE.
+ *
+ * Ce que le superviseur doit faire de `repoMode: "current"` tient en trois
+ * branchements, et chacun se voit d'ici : préparer le dépôt au lieu de le
+ * supposer, commiter par la plomberie au lieu de `git add -A`, et publier ce
+ * qu'un mode partagé est seul à savoir. La mécanique git, elle, est vérifiée
+ * contre un vrai dépôt ([current-repo.git.test.ts](../current-repo.git.test.ts)).
+ */
+describe("le mode dépôt courant", () => {
+  it("prépare le dépôt et n'envoie AUCUN des gestes qui détruisent du travail", async () => {
+    h.pushed = true;
+    const report = await run({ repoMode: "current" });
+
+    expect(report.status).toBe("completed");
+    expect(h.exec.some((c) => c.includes("show-toplevel"))).toBe(true);
+    for (const forbidden of ["git add", "git commit -m", "git checkout", "git config"]) {
+      expect(h.exec.some((c) => c.includes(forbidden))).toBe(false);
+    }
+    // Le commit passe par l'index jetable, et le push par le SHA — jamais `HEAD`,
+    // qui est celui de l'utilisateur.
+    expect(h.exec.some((c) => c.includes("read-tree"))).toBe(true);
+    expect(h.exec.some((c) => c.includes("commit-tree"))).toBe(true);
+    expect(h.exec.some((c) => c.includes("HEAD:refs/heads/"))).toBe(false);
+  });
+
+  it("dit au fil dans quel état il a trouvé le dépôt", async () => {
+    h.pushed = true;
+    await run({ repoMode: "current" });
+    const found = h.events.find(
+      (e) => e.type === "status" && e.payload.phase === "current_repo",
+    );
+    // Ce que l'event doit PORTER : la branche que l'utilisateur avait sous les
+    // doigts et ce qu'il avait en cours. C'est de quoi relire, plus tard, une
+    // pull request dont personne n'attribue les commits à l'agent. (Le host
+    // factice répond à tout `rev-parse`, donc l'ancre du run y existe déjà.)
+    expect(Object.keys(found?.payload ?? {}).sort()).toEqual([
+      "branch",
+      "dirty",
+      "phase",
+      "resumed",
+    ]);
+  });
+
+  it("échoue avec son motif quand le dossier n'est pas un dépôt", async () => {
+    h.pushed = true;
+    const report = await runOpencodeTurn(
+      job({ repoMode: "current" }),
+      { prompt: "fais le ticket", anchorInstructions: "# Ancrage" },
+      cp(),
+      {
+        ...(host() as object),
+        exec: vi.fn(async () => ({ exitCode: 128, stdout: "", stderr: "not a git repository" })),
+      } as never,
+      deps(),
+    );
+    expect(report.status).toBe("error");
+    expect(report.errorMessage).toMatch(/not a git repository/);
+  });
+
+  it("laisse le mode clone exactement où il était", async () => {
+    h.pushed = true;
+    await run({});
+    expect(h.exec.some((c) => c.includes("git add -A"))).toBe(true);
+    expect(h.exec.some((c) => c.includes("show-toplevel"))).toBe(false);
   });
 });

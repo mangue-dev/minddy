@@ -49,7 +49,7 @@ import {
 } from "./model";
 import { agentSandboxName, buildAgentNetworkPolicy, AGENT_LLM_PLACEHOLDER_KEY } from "./network-policy";
 import { startVmLoop } from "./vm-launch";
-import { VM_PROTOCOL_VERSION, type VmJob } from "./vm/protocol";
+import { isCurrentRepoJob, VM_PROTOCOL_VERSION, type VmJob } from "./vm/protocol";
 import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
 import { agentControlOrigin } from "./origin";
 import { forgeFor, type Forge } from "./forge";
@@ -805,12 +805,14 @@ export async function executeAgentRun(
           });
           return;
         }
-        const committer = await resolveCommitterIdentity(target);
+        // L'identité de committer n'est plus écrite dans le clone (MIN-358) :
+        // elle voyage dans le job et se pose par `git -c`, sur la seule commande
+        // qui commite. Un geste qu'on n'a qu'à un endroit ne peut pas fuir dans
+        // le dépôt de quelqu'un.
         await cloneRepo(sandboxHost(fresh, cloudLayout()), {
           authUrl: vmTarget.authUrl,
           baseBranch,
           workBranch,
-          committer,
         });
       },
     });
@@ -1123,10 +1125,22 @@ export async function executeAgentRun(
      * dépôt, demande du lanceur. Sur un tour repris, l'amorce n'a rien écrit —
      * l'historique vit dans le journal d'opencode — et le prompt vient du steering.
      */
+    /**
+     * DANS QUEL DÉPÔT CE TOUR ÉCRIT (MIN-358). Une constante ici, et c'est le
+     * fait : cette fonction a créé la microVM et cloné dedans, elle ne sait
+     * produire qu'un clone. Le mode `current` appartient au lanceur de bureau
+     * (MIN-293), qui travaille dans un dépôt existant avant lui.
+     *
+     * Nommé plutôt qu'écrit deux fois : le job le porte, et l'ancrage servi au
+     * modèle en dépend — dire l'un sans l'autre donnerait un tour qui écrit d'une
+     * façon et se croit dans l'autre.
+     */
+    const repoMode: VmJob["repoMode"] = "clone";
     const opencodeInput = {
       anchorInstructions: buildOpencodeAnchor({
         locale: commentLocale,
         anchor,
+        currentRepo: isCurrentRepoJob({ repoMode }),
         interactive: !run.routine_id,
         webSearch: webSearchAllowed,
         webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
@@ -1528,6 +1542,20 @@ export async function executeAgentRun(
       prInlineComments: run.checkpoint?.prInlineComments ?? 0,
       baseBranch,
       workBranch,
+      /**
+       * LA FONCTION NE SAIT PRODUIRE QU'UN CLONE (MIN-358). C'est elle qui a
+       * créé la microVM et cloné dedans ; le mode `current` appartient à un
+       * lanceur qui, lui, travaille dans un dépôt qui existait avant lui.
+       */
+      repoMode,
+      /**
+       * Une relecture ne commite RIEN : lui résoudre le bot de l'App coûterait un
+       * appel de forge pour une identité que personne n'utilisera. Ailleurs c'est
+       * le bot, mémoïsé par process (cf. `getGithubBotCommitIdentity`).
+       */
+      committer: prRun
+        ? { name: "minddy agent", email: "agent@minddy.app" }
+        : await resolveCommitterIdentity(target),
       // Le job PART dans la microVM : c'est `vmTarget`, jamais `target`
       // (MIN-327). La boucle n'en fait que du `git` — et une relecture n'en
       // reçoit qu'un token en lecture.

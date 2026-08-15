@@ -38,10 +38,10 @@
  * et `absoluteInRepo` ([opencode-permissions.ts](vm/opencode-permissions.ts))
  * comparent tous à cette valeur. Tant qu'elle était un littéral, sa forme allait
  * de soi ; elle arrive désormais par un JSON écrit ailleurs. `assertUsableLayout`
- * est ce qui reprend le rôle du littéral : un chemin relatif, un slash final ou
- * un dépôt hors de sa racine rendraient ces quatre fonctions muettes plutôt que
- * fausses — `resolveWithin("repo", "../x")` ne sort de rien du tout, puisque
- * « rien » est ce à quoi il compare.
+ * est ce qui reprend le rôle du littéral : un chemin relatif ou un slash final
+ * rendraient ces quatre fonctions muettes plutôt que fausses —
+ * `resolveWithin("repo", "../x")` ne sort de rien du tout, puisque « rien » est
+ * ce à quoi il compare.
  *
  * Module PUR et SANS AUCUN import : il part dans le bundle de la microVM, il est
  * lu par le script de snapshot lancé à la main (`tsx`), et par la fonction.
@@ -52,23 +52,28 @@ export interface HarnessLayout {
   /** La racine UNIQUE du run. Tout ce qui suit en dérive, sauf `opencodeDir`. */
   root: string;
   /**
-   * Où le dépôt est cloné — et LA RACINE DE SÉCURITÉ (cf. en-tête). Aucune
+   * Où vit le dépôt du tour — et LA RACINE DE SÉCURITÉ (cf. en-tête). Aucune
    * écriture du modèle ne sort d'ici.
+   *
+   * Cloné pour le tour dans le cas courant ; en mode dépôt courant (MIN-358),
+   * c'est le checkout que l'utilisateur avait déjà, et il n'est PAS sous `root`
+   * (cf. `layoutForCurrentRepo`).
    */
   repoDir: string;
   /**
    * Où le harness dépose les sorties de tools trop longues pour le modèle
-   * (MIN-107). DÉLIBÉRÉMENT hors de `repoDir` : le `git add -A` de fin de tour ne
-   * le voit pas, donc rien de tout ça n'atterrit dans un commit ou une PR.
+   * (MIN-107). DÉLIBÉRÉMENT hors de `repoDir` : la fin de tour ne le voit pas,
+   * donc rien de tout ça n'atterrit dans un commit ou une PR — et, dans le dépôt
+   * courant de l'utilisateur, rien de tout ça n'apparaît dans son `git status`.
    */
   toolOutputDir: string;
   /**
    * Où vit le HARNESS lui-même — bundle, job du tour, config et état d'opencode.
    *
    * Hors de `repoDir` pour la même raison que `toolOutputDir`, et c'est encore
-   * plus vrai ici : le `git add -A` de fin de tour emporterait sinon le code du
-   * harness ET le job, qui porte l'historique de la conversation, dans un commit
-   * du dépôt de l'utilisateur puis dans sa pull request.
+   * plus vrai ici : la fin de tour emporterait sinon le code du harness ET le
+   * job, qui porte l'historique de la conversation ET l'URL de push, dans un
+   * commit du dépôt de l'utilisateur puis dans sa pull request.
    */
   harnessDir: string;
   /**
@@ -110,6 +115,26 @@ export function cloudLayout(): HarnessLayout {
 }
 
 /**
+ * LE LAYOUT DU MODE DÉPÔT COURANT (MIN-358) — tout ce qui est du run sous la
+ * racine du run, mais le DÉPÔT ailleurs : là où l'utilisateur l'a déjà cloné.
+ *
+ * C'est le seul cas où `repoDir` n'est pas `<root>/repo`, et il n'est pas un
+ * assouplissement de MIN-354 mais son premier vrai client : le dépôt cesse
+ * d'être un dossier qu'on crée pour devenir un dossier qu'on trouve. Ce qui
+ * reste tenu, et qui était la VRAIE raison de la règle « sous la racine », c'est
+ * que le harness, ses sorties de tools et son `.tsbuildinfo` ne soient jamais
+ * DANS le dépôt — sinon ils apparaîtraient dans le `git status` de l'utilisateur
+ * et, pire, dans le périmètre du tour ([current-repo.ts](current-repo.ts)).
+ */
+export function layoutForCurrentRepo(
+  root: string,
+  repoDir: string,
+  opencodeDir: string,
+): HarnessLayout {
+  return { ...layoutForRoot(root, opencodeDir), repoDir: trimTrailingSlashes(repoDir) };
+}
+
+/**
  * LA RACINE D'UN RUN SUR UNE MACHINE PARTAGÉE — un dossier par identifiant de
  * run, sous un dossier de travail commun.
  *
@@ -137,9 +162,17 @@ export function runScopedRoot(baseDir: string, runId: string): string {
  * - **sans slash final** — `assertNotGit` compare à `${base}/.git`, et
  *   `resolveWithin` à `${base}/` : une base finissant par `/` produit un
  *   `//`, que `normalize` efface d'un côté et pas de l'autre ;
- * - **le dépôt sous la racine** — c'est ce qui garantit que `toolOutputDir` et
- *   `harnessDir` en sont frères et non enfants, donc que le `git add -A` de fin
- *   de tour ne les emporte jamais.
+ * - **le harness hors du dépôt** — c'est ce qui garantit que `toolOutputDir`,
+ *   `harnessDir` et `typecheckDir` ne sont pas des enfants du dépôt, donc que le
+ *   `git add -A` de fin de tour ne les emporte jamais.
+ *
+ * CE QUI A CHANGÉ EN MIN-358, et pourquoi ce n'est pas un relâchement : la règle
+ * s'écrivait « le dépôt sous la racine », ce qui n'était qu'une FAÇON de dire la
+ * troisième — vraie tant que le dépôt était un dossier qu'on créait. En mode
+ * dépôt courant, le dépôt est celui de l'utilisateur et vit où il vit ; ce qu'on
+ * doit encore refuser, c'est un harness qui s'installerait DEDANS. La règle est
+ * donc dite pour ce qu'elle protège, et les trois dossiers du run restent, eux,
+ * tenus sous la racine du run.
  *
  * LÈVE, et ne rend pas un booléen : le seul appelant est le harness au moment
  * où il lit son job, et un layout douteux n'a pas de mode dégradé — il n'y a
@@ -163,9 +196,14 @@ export function assertUsableLayout(layout: HarnessLayout): void {
     }
   }
   for (const [name, value] of dirs) {
-    if (name === "root" || name === "opencodeDir") continue;
+    if (name === "root" || name === "opencodeDir" || name === "repoDir") continue;
     if (!value.startsWith(`${layout.root}/`)) {
       throw new Error(`harness layout: ${name} (${value}) must live under root (${layout.root})`);
+    }
+    if (value === layout.repoDir || value.startsWith(`${layout.repoDir}/`)) {
+      throw new Error(
+        `harness layout: ${name} (${value}) must live OUTSIDE the repository (${layout.repoDir})`,
+      );
     }
   }
 }

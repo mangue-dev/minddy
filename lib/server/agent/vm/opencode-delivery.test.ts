@@ -259,6 +259,47 @@ describe("la porte de `create_pr`", () => {
     expect(vi.mocked(typeErrorsForTurn).mock.calls[0][1]).toEqual(["lib/neuf.ts"]);
   });
 
+  /**
+   * MIN-358 — LE PÉRIMÈTRE, quand le dépôt n'est pas à nous. Sans lui, le sondage
+   * lit l'arbre de travail ENTIER : le WIP de l'utilisateur ferait dire à un tour
+   * purement conversationnel qu'il a touché au dépôt, et lui ferait payer un
+   * type-check et une suite de tests sur des fichiers dont il n'a jamais entendu
+   * parler.
+   */
+  /**
+   * MIN-358 — LES ÉDITIONS DE CE TOUR, distinctes du cumul du checkpoint. La
+   * distinction ne servait à rien tant que le dépôt était à nous ; elle décide de
+   * tout en mode dépôt courant, où le travail des tours PRÉCÉDENTS est encore
+   * « modifié » dans l'arbre (nos commits vivent sur une ref, pas sur le HEAD de
+   * l'utilisateur) — et serait donc pris pour le sien.
+   */
+  it("sépare les éditions de CE tour de celles qu'il a héritées", () => {
+    const { delivery } = deliveryFor({ editedPaths: ["hier.ts"] });
+    delivery.noteEdit(`${REPO_DIR}/aujourdhui.ts`);
+
+    expect(delivery.turnEditedPaths()).toEqual(["aujourdhui.ts"]);
+    expect(delivery.checkpointEditedPaths()).toEqual(["hier.ts", "aujourdhui.ts"]);
+  });
+
+  it("borne les lectures de diff au périmètre du tour en mode dépôt courant", async () => {
+    const { delivery } = deliveryFor({
+      host: repoSaying("", ""),
+      scopePaths: async () => ["lib/a.ts"],
+    });
+    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+
+    await createPr({});
+    expect(vi.mocked(turnDiffStat).mock.calls[0][2]).toEqual(["lib/a.ts"]);
+  });
+
+  it("ne borne RIEN en mode clone — l'arbre n'y contient que le travail de l'agent", async () => {
+    const { delivery } = deliveryFor({ host: repoSaying("", "") });
+    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+
+    await createPr({});
+    expect(vi.mocked(turnDiffStat).mock.calls[0][2]).toBeUndefined();
+  });
+
   it("PÉRIME ce que le modèle avait vérifié avant de toucher au dépôt par le shell", async () => {
     /**
      * MIN-286 — `noteVerificationStale` n'était appelé que depuis `noteEdit`,

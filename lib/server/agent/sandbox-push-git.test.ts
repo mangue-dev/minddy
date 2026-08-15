@@ -68,6 +68,13 @@ const sandbox = {
 const WORK_BRANCH = "minddy/agent/min-123-abcd1234";
 /** Identité git + signature coupée : le dépôt du test ne doit rien à la config globale. */
 const GIT_IDENTITY = `git config user.email numo@minddy.app && git config user.name numo && git config commit.gpgsign false`;
+/**
+ * L'identité que le HARNESS pose, et elle n'est PAS celle du dépôt (MIN-358) :
+ * le clone garde `numo`, le commit doit sortir sous celle-ci. C'est ce qui
+ * distingue un `git -c user.email=…` d'un `git config user.email` — et ce qui
+ * fait qu'en mode dépôt courant l'identité de l'utilisateur reste la sienne.
+ */
+const COMMITTER = { name: "minddy[bot]", email: "42+minddy[bot]@users.noreply.github.com" };
 
 beforeAll(async () => {
   root = mkdtempSync(path.join(tmpdir(), "minddy-agent-push-"));
@@ -94,6 +101,7 @@ const push = (message: string) =>
     workBranch: WORK_BRANCH,
     baseBranch: "main",
     message,
+    committer: COMMITTER,
   });
 
 describe("commitAndPush sur un vrai dépôt git", () => {
@@ -112,6 +120,19 @@ describe("commitAndPush sur un vrai dépôt git", () => {
 
     expect(res).toMatchObject({ committed: true, pushed: true, remoteUpdated: true });
     expect(await remoteHeads()).toContain(`refs/heads/${WORK_BRANCH}`);
+  });
+
+  /**
+   * MIN-358 — l'identité vient de l'APPEL, pas du dépôt. Le clone est configuré
+   * sous `numo` et le commit sort quand même sous le bot : c'est la preuve que
+   * `git -c` fait le travail que `git config` faisait, sans écrire dans le
+   * `.git/config` de personne.
+   */
+  it("commite sous l'identité passée, sans toucher à celle du dépôt", async () => {
+    const { stdout: author } = await sh(`git log -1 --format='%an <%ae>'`, repo);
+    expect(author.trim()).toBe(`${COMMITTER.name} <${COMMITTER.email}>`);
+    const { stdout: configured } = await sh(`git config user.email`, repo);
+    expect(configured.trim()).toBe("numo@minddy.app");
   });
 
   it("tour suivant sans changement → push no-op, branche et travail conservés", async () => {

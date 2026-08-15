@@ -23,6 +23,8 @@ const job = (over: Record<string, unknown> = {}) => ({
   layout: cloudLayout(),
   runId: "r-1",
   workBranch: "minddy/agent-1",
+  repoMode: "clone",
+  committer: { name: "minddy agent", email: "agent@minddy.app" },
   appOrigin: "https://minddy.example",
   ...over,
 });
@@ -52,6 +54,16 @@ describe("parseVmJob", () => {
   it("refuse un layout que les garde-fous ne sauraient pas tenir", () => {
     const broken = { ...cloudLayout(), repoDir: "repo" };
     expect(() => parseVmJob(job({ layout: broken }))).toThrow(/absolute/i);
+  });
+
+  /**
+   * MIN-358 — le mode du dépôt n'a PAS de défaut, et c'est asymétrique à dessein :
+   * `current` est celui qu'on ne veut surtout pas jouer par accident, et c'est
+   * justement celui qu'un job d'une forme inattendue tairait.
+   */
+  it("refuse un job qui ne dit pas dans quel dépôt il écrit", () => {
+    expect(() => parseVmJob(job({ repoMode: undefined }))).toThrow(/repoMode/i);
+    expect(() => parseVmJob(job({ repoMode: "worktree" as never }))).toThrow(/repoMode/i);
   });
 
   it("refuse ce qui n'est pas un objet", () => {

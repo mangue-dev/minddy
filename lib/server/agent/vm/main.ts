@@ -13,9 +13,10 @@ import { parseVmJob, vmJobPath, type VmJob, type VmTurnReport } from "./protocol
  * `detached: true` avant de rendre la main.
  *
  * `node main.js <chemin du job>`, et c'est tout. Le bundle est écrit au démarrage
- * du tour, à côté de son job ; les deux vivent HORS du dépôt, pour que le
- * `git add -A` de fin de tour ne les emporte jamais dans un commit du dépôt de
- * l'utilisateur (cf. `HarnessLayout.harnessDir`).
+ * du tour, à côté de son job ; les deux vivent HORS du dépôt, pour que la fin de
+ * tour ne les emporte jamais dans un commit du dépôt de l'utilisateur — et, en
+ * mode dépôt courant (MIN-358), pour qu'ils n'apparaissent même pas dans son
+ * `git status` (cf. `HarnessLayout.harnessDir`).
  *
  * LE CHEMIN DU JOB VIENT DE L'ARGUMENT, PAS D'UNE CONSTANTE (MIN-354), et c'est
  * la seule chose que ce process apprend d'ailleurs que du job lui-même : tout le

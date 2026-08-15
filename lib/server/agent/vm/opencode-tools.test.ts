@@ -71,6 +71,8 @@ function job(over: Partial<VmJob> = {}): VmJob {
     prInlineComments: 0,
     baseBranch: "main",
     workBranch: "minddy/agent/min-42-abcd1234",
+    repoMode: "clone",
+    committer: { name: "minddy agent", email: "agent@minddy.app" },
     authUrl: "https://x-access-token:tok@github.com/org/repo.git",
     commitRef: "MIN-42",
     bootstrapMs: 0,
