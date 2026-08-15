@@ -439,8 +439,8 @@ Chaque lot vérifiable seul. **L'ordre n'est pas libre entre 1 et 3** (cf. D7).
 | **5** | Livraison : `git commit` rendu, bloc git du prompt réécrit | D6 | ✅ fait |
 | **6** | Conventions imbriquées + note de frontière en local (§5.4) | D6 | ✅ fait |
 | **7** | Liste des permissions autorisées + test qui échoue à la prochaine montée d'opencode (§5.5) | aucune | ✅ fait |
-| **8** | Mesurer le coût des allers-retours `read`/`bash`, puis ACL si ça paie (§5.6) | mesure | ⏳ à faire |
-| **9** | Serveurs MCP du dépôt, `skill`, `todowrite` (§3 #11, #12) | à cadrer | ⏳ à cadrer |
+| **8** | Mesurer le coût des allers-retours `read`/`bash`, puis ACL si ça paie (§5.6) | mesure | ✅ fait — `ask` gardé, l'ACL ne paie pas |
+| **9** | Serveurs MCP du dépôt, `skill`, `todowrite` (§3 #11, #12) | à cadrer | ✅ fait — découverte implicite fermée, tools inchangés |
 
 **Le lot 0 part seul et tout de suite.** Les lots 1 et 2 sont ceux dont la
 différence se voit au premier tour.
@@ -487,3 +487,33 @@ la phrase entière, jamais sur le verbe.
 refusé. C'est le seul reste de périmètre qui garde encore quelque chose de réel
 (les hooks du dépôt de l'utilisateur), et son coût — ne pas pouvoir `cat
 .git/HEAD` — est nul, `git` sait tout dire de son propre état.
+
+---
+
+### 9ter. Mesures des lots 8 et 9 (2026-08-15)
+
+**Le lot 8 tranche pour conserver les allers-retours.** La sonde
+[`opencode-cost.probe.test.ts`](../../lib/server/agent/vm/opencode-cost.probe.test.ts)
+mesure, sur `opencode-ai@1.18.16` et 30 appels, un surcoût de 0,40 ms par lecture
+et 5,67 ms par commande. Le motif d'ACL `*.env` couvre bien la racine, les
+sous-dossiers et les chemins hors dépôt, mais son refus est générique : il ne
+peut pas orienter le modèle vers `.env.example`. Le gain ne compense ni cette
+perte de guidage ni l'incapacité d'une ACL à comprendre une commande shell
+composée. **Décision : `read: "ask"` et `bash: "ask"` restent.**
+
+**Le lot 9 ferme une découverte qui n'était pas documentée.** La sonde
+[`opencode-capabilities.probe.test.ts`](../../lib/server/agent/vm/opencode-capabilities.probe.test.ts)
+établit que `skill` lit `~/.claude/skills`, `~/.agents/skills` et les skills du
+dépôt depuis `$HOME`, indépendamment des dossiers `XDG_*` relocalisés par le
+harness. `OPENCODE_DISABLE_EXTERNAL_SKILLS=1` coupe cette découverte implicite
+tout en laissant fonctionner une liste `skills.paths` explicitement nommée.
+**Décision : `skill` reste désactivé et l'écoutille est posée dans tous les
+mondes ; le jour où Minddy sert ses propres skills, il les nomme.**
+
+`todowrite`, lui, ne publie aucune permission et n'écrit rien hors d'opencode :
+son retrait reste un choix de produit (une seule checklist), pas une économie de
+réseau. La vraie écriture partagée est le miroir de `update_plan` vers le ticket ;
+le superviseur ne la rejoue désormais plus pour un plan strictement identique,
+tout en conservant chaque event dans le journal. Enfin, les MCP déclarés par le
+dépôt restent coupés par `OPENCODE_DISABLE_PROJECT_CONFIG`, tandis qu'un MCP
+explicitement fourni dans la configuration Minddy demeure possible.

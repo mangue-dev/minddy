@@ -257,6 +257,16 @@ export async function startProbeServer(opts: {
   config: Record<string, unknown>;
   /** Réutiliser un décor existant (redémarrage : même DB, même dépôt). */
   reuse?: { root: string; repo: string };
+  /**
+   * Variables d'environnement de PLUS, posées sur le serveur (MIN-364, lot 9).
+   *
+   * Elles vont ici plutôt que dans le `process.env` de la sonde parce que la
+   * découverte d'opencode est MÉMOÏSÉE au premier accès : mesurer un
+   * `OPENCODE_DISABLE_*` demande de redémarrer le serveur, et un `process.env`
+   * restauré entre-temps aurait rendu la mesure muette — une sonde qui dit « oui,
+   * c'est coupé » sur un serveur où rien n'était posé.
+   */
+  env?: Record<string, string>;
 }): Promise<ProbeServer> {
   const root = opts.reuse?.root ?? probeRoot(opts.tag);
   const repo = opts.reuse?.repo ?? makeRepo(root);
@@ -271,6 +281,7 @@ export async function startProbeServer(opts: {
       OPENCODE_DB: path.join(root, "probe.db"),
       OPENCODE_DISABLE_AUTOUPDATE: "1",
       OPENCODE_DISABLE_MODELS_FETCH: "1",
+      ...(opts.env ?? {}),
     },
     stdio: "ignore",
   });

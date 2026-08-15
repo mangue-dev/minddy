@@ -1464,6 +1464,39 @@ describe("la checklist du tour", () => {
     expect(h.toolCalls.some((c) => c.name === "update_plan")).toBe(false);
   });
 
+  /**
+   * MIN-364 (lot 9) — LE PLAN DU TICKET EST UNE SURFACE PARTAGÉE.
+   *
+   * L'audit reprochait à `todowrite` de coûter « 20 écritures réseau sur une
+   * surface partagée » (§3 #12). Mesuré sur le binaire : `todowrite` n'écrit
+   * nulle part hors d'opencode. L'écriture réseau, c'est CELLE-CI — le miroir
+   * vers le plan du ticket, que d'autres lisent et éditent.
+   *
+   * Un modèle réémet couramment sa checklist à l'identique : le prompt lui
+   * demande d'envoyer le plan ENTIER à chaque changement, et « changement » est
+   * son jugement.
+   */
+  it("ne re-miroite PAS un plan identique, mais garde l'event", async () => {
+    await run();
+    const plan = { plan: [{ step: "Lire le diff", status: "completed" }] };
+    await updatePlan()(plan);
+    await updatePlan()(plan);
+    await updatePlan()(plan);
+
+    // Une seule écriture sur le ticket…
+    expect(h.plansSynced).toHaveLength(1);
+    // …et trois events : le journal dit ce que le modèle a FAIT, et « il a
+    // réémis trois fois le même plan » est un fait qu'une autopsie doit lire.
+    expect(h.events.filter((e) => e.type === "plan_update")).toHaveLength(3);
+  });
+
+  it("re-miroite dès que le plan change VRAIMENT", async () => {
+    await run();
+    await updatePlan()({ plan: [{ step: "Lire le diff", status: "in_progress" }] });
+    await updatePlan()({ plan: [{ step: "Lire le diff", status: "completed" }] });
+    expect(h.plansSynced).toHaveLength(2);
+  });
+
   it("normalise ce que le modèle envoie, comme la boucle maison", async () => {
     await run();
     await updatePlan()({

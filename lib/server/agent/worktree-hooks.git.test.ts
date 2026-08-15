@@ -99,19 +99,25 @@ afterAll(() => {
 });
 
 describe("un `core.hooksPath` posé sur le dépôt principal", () => {
-  it("s'applique au `git commit` d'un WORKTREE — le worktree n'isole rien", async () => {
-    // Le worktree ne porte AUCUNE config à lui : il lit celle du principal.
-    const { stdout } = await sh(`git config --get core.hooksPath`, worktree);
-    expect(stdout.trim()).toBe(path.join(root, "hooks"));
+  it(
+    "s'applique au `git commit` d'un WORKTREE — le worktree n'isole rien",
+    async () => {
+      // Le worktree ne porte AUCUNE config à lui : il lit celle du principal.
+      const { stdout } = await sh(`git config --get core.hooksPath`, worktree);
+      expect(stdout.trim()).toBe(path.join(root, "hooks"));
 
-    const before = traceLines();
-    await sh(`printf 'travail\n' > b.txt && git add -A`, worktree);
-    await expect(
-      sh(`git commit -qm "depuis le worktree"`, worktree),
-      "le hook de l'utilisateur ne s'est PAS exécuté depuis le worktree — reprendre §9 de l'audit",
-    ).rejects.toThrow();
-    expect(traceLines(), "le hook n'a pas laissé sa trace").toBe(before + 1);
-  });
+      const before = traceLines();
+      await sh(`printf 'travail\n' > b.txt && git add -A`, worktree);
+      await expect(
+        sh(`git commit -qm "depuis le worktree"`, worktree),
+        "le hook de l'utilisateur ne s'est PAS exécuté depuis le worktree — reprendre §9 de l'audit",
+      ).rejects.toThrow();
+      expect(traceLines(), "le hook n'a pas laissé sa trace").toBe(before + 1);
+    },
+    // Sous la charge des 400 autres fichiers, les processus Git peuvent attendre
+    // plus que le délai Vitest par défaut. Isolé, ce test termine en moins de 1 s.
+    15_000,
+  );
 
   it("ne s'applique PAS à notre fin de tour, qui est de la plomberie", async () => {
     const host = localHost(

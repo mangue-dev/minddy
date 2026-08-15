@@ -561,6 +561,13 @@ describe("l'auto-découverte depuis le dépôt (MIN-360)", () => {
       const env = opencodeServerEnv(j);
       expect(env.OPENCODE_PURE).toBe("1");
       expect(env.OPENCODE_DISABLE_PROJECT_CONFIG).toBe("1");
+      // MIN-364, lot 9 : `skill` ne doit jamais ramasser implicitement les
+      // skills Claude Code / agents du HOME ni celles du dépôt. Le jour où
+      // Minddy en sert, elles passent par `skills.paths`, explicitement nommé.
+      expect(env.OPENCODE_DISABLE_EXTERNAL_SKILLS).toBe("1");
+      // `ask_user` est le tool `question`. Sa présence est désormais un contrat
+      // du chemin local (D7), pas un effet du client `cli` choisi par défaut.
+      expect(env.OPENCODE_ENABLE_QUESTION_TOOL).toBe("1");
     }
   });
 

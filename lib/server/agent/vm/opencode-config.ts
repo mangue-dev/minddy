@@ -205,11 +205,32 @@ interface OpencodeModelDef {
  *
  * - `todowrite` : notre checklist EST le plan du ticket, et elle se synchronise
  *   ([plan-sync.ts](../plan-sync.ts)). Une todo locale ne se lit nulle part.
+ *   **Mesuré (MIN-364, lot 9)** : ce tool n'écrit nulle part hors d'opencode et
+ *   ne publie aucune permission. Le « 20 écritures réseau » que l'audit du 15/08
+ *   lui reprochait (§3 #12) visait en fait NOTRE `update_plan`, qui miroite vers
+ *   le plan du ticket — et c'est là qu'on l'a réglé (cf. `update_plan` dans
+ *   [supervisor.ts](supervisor.ts) : un plan identique ne se re-synchronise pas).
+ *   Le retrait reste donc une décision de PRODUIT — une seule checklist — et pas
+ *   une histoire de coût.
  * - `websearch` : il ne porterait ni le plafond du tour (`webSearchMax`) ni la
  *   facturation ([web-search.ts](../../web-search.ts)) — et il n'est de toute
  *   façon pas servi sur OpenRouter. Notre `web_search` de domaine le remplace.
- * - `skill` : les skills d'opencode lisent le disque de la microVM ; il n'y en a
- *   aucune, et un tool qui ne rend jamais rien coûte un round à le découvrir.
+ * - `skill` : **et le motif écrit ici était faux** (MIN-364, lot 9). Il disait
+ *   « les skills lisent le disque de la microVM ; il n'y en a aucune ». Mesuré :
+ *   la découverte lit **`$HOME`**, que le harness ne relocalise pas — donc, sur
+ *   un Mac, `~/.claude/skills/` et `~/.agents/skills/`, plus la remontée du
+ *   dossier de session jusqu'à la racine du dépôt.
+ *
+ *   Ce n'est donc pas « rien » qu'on retirait, c'est **les skills Claude Code de
+ *   l'utilisateur ET celles du dépôt**. Et c'est la seconde moitié qui décide :
+ *   un `SKILL.md` est écrit par quiconque peut committer, il est INSTRUCTIONS par
+ *   nature, et il entre dans le contexte sans passer par notre note de frontière
+ *   ([repo-instructions.ts](../repo-instructions.ts)) — c'est-à-dire exactement
+ *   la surface d'injection que le lot 6 vient de refermer pour les `AGENTS.md`.
+ *
+ *   Le levier existe le jour où minddy voudra servir SES skills :
+ *   `skills.paths` les NOMME, et survit à `OPENCODE_DISABLE_EXTERNAL_SKILLS`
+ *   (mesuré, [opencode-capabilities.probe.test.ts](opencode-capabilities.probe.test.ts)).
  */
 const DISABLED_BUILTINS = ["todowrite", "websearch", "skill"] as const;
 
@@ -777,6 +798,45 @@ export function opencodeServerEnv(
      */
     OPENCODE_PURE: "1",
     OPENCODE_DISABLE_PROJECT_CONFIG: "1",
+    /**
+     * LA TROISIÈME ÉCOUTILLE (MIN-364, lot 9) — celle qui manquait, et dont
+     * l'absence ne se voyait que parce qu'un autre réglage la couvrait.
+     *
+     * La découverte de skills d'opencode lit **`$HOME`** (`~/.claude/skills/`,
+     * `~/.agents/skills/`) et remonte du dossier de session à la racine du dépôt.
+     * Le harness relocalise `XDG_CONFIG_HOME`, `XDG_DATA_HOME` et
+     * `XDG_CACHE_HOME` — **mais pas `HOME`**, qui doit rester celui de
+     * l'utilisateur pour que son `PATH`, ses `nvm`, ses `~/.gitconfig` marchent.
+     *
+     * Aujourd'hui `tools.skill` est à `false`, donc rien ne se charge. Mais le
+     * jour où quelqu'un le passe à `true` en pensant offrir « les skills du
+     * dépôt », il ouvre AUSSI le dossier de skills Claude Code de son
+     * propriétaire — sans qu'aucune ligne ne le dise. Cette écoutille fait que
+     * ce jour-là, il faudra NOMMER ce qu'on sert (`skills.paths`, mesuré comme la
+     * seule forme sélective) au lieu de tout prendre.
+     *
+     * Mesuré : `OPENCODE_DISABLE_EXTERNAL_SKILLS` coupe la découverte implicite
+     * ENTIÈRE et laisse passer `skills.paths`
+     * ([opencode-capabilities.probe.test.ts](opencode-capabilities.probe.test.ts)).
+     */
+    OPENCODE_DISABLE_EXTERNAL_SKILLS: "1",
+    /**
+     * ET LA QUESTION, ÉPINGLÉE (MIN-364) — parce qu'elle est devenue
+     * load-bearing et qu'elle ne tenait qu'à un défaut.
+     *
+     * Relevé dans le binaire 1.18.16 : le tool `question` n'entre dans le jeu des
+     * intégrés que si `["app","cli","desktop"].includes(client) ||
+     * enableQuestionTool`, où `client` vient d'`OPENCODE_CLIENT` avec `"cli"`
+     * pour défaut. On ne pose pas `OPENCODE_CLIENT`, donc ça marche — **par
+     * accident de défaut**.
+     *
+     * Or `ask_user` EST `question`, et depuis D7 il ne termine plus le tour : il
+     * le suspend. Si une version d'opencode changeait ce défaut, ou si quelqu'un
+     * posait `OPENCODE_CLIENT=sdk` en croyant bien faire, `ask_user` disparaîtrait
+     * du jeu de tools **sans un mot** — le modèle cesserait simplement de pouvoir
+     * demander. Une variable explicite coûte une ligne et ferme ce cas-là.
+     */
+    OPENCODE_ENABLE_QUESTION_TOOL: "1",
     // C'est lui qui met les tools de domaine hors du dépôt (cf. `opencodeToolDir`).
     XDG_CONFIG_HOME: opencodeConfigHome(job.layout),
     // Les snapshots, les journaux et les binaires téléchargés — sous le harness

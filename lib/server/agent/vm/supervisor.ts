@@ -889,6 +889,11 @@ export async function runOpencodeTurn(
   const foreignCalls = new Map<string, number>();
   /** Combien de sorties sont restées sur la machine — le tour le journalise. */
   let withheldOutputs = 0;
+  /**
+   * La DERNIÈRE checklist miroitée vers le ticket, sérialisée. Une réémission à
+   * l'identique ne réécrit pas le plan de quelqu'un d'autre (cf. `update_plan`).
+   */
+  let lastPlanSynced = "";
 
   const bridge = await (deps.startToolBridge ?? startToolBridge)({
     job,
@@ -916,8 +921,30 @@ export async function runOpencodeTurn(
       update_plan: async (args) => {
         const plan = normalizePlan(args.plan);
         await cp.emit("plan_update", { plan });
-        // Miroir vers le plan de l'issue — best-effort, ne bloque jamais le tour.
-        await cp.syncPlan(plan).catch(() => {});
+        /**
+         * MIROIR VERS LE PLAN DU TICKET — best-effort, et **jamais deux fois pour
+         * le même plan** (MIN-364, lot 9).
+         *
+         * C'est la vraie réponse au §3 #12 de l'audit du 15/08, qui reprochait à
+         * `todowrite` de coûter « 20 écritures réseau sur une surface partagée » :
+         * mesuré, `todowrite` n'écrit nulle part hors d'opencode. L'écriture
+         * réseau, c'est CELLE-CI — et le ticket est bien une surface partagée,
+         * que d'autres lisent et éditent.
+         *
+         * Un modèle réémet couramment sa checklist à l'identique (le prompt lui
+         * demande d'envoyer le plan ENTIER à chaque changement, et « changement »
+         * est son jugement). Ces répétitions-là n'apprennent rien à personne et
+         * réécrivent quand même le plan de quelqu'un d'autre.
+         *
+         * L'event, lui, part toujours : il est le journal de ce que le modèle a
+         * FAIT, et « il a réémis cinq fois le même plan » est un fait qu'une
+         * autopsie doit pouvoir lire.
+         */
+        const signature = JSON.stringify(plan);
+        if (signature !== lastPlanSynced) {
+          lastPlanSynced = signature;
+          await cp.syncPlan(plan).catch(() => {});
+        }
         return { result: { ok: true }, success: true };
       },
     },
