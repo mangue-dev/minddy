@@ -1,6 +1,6 @@
 {
   "name": "minddy",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "private": true,
   "scripts": {
     "predev": "npm run build:agent-vm && npm run build:pages-md",
