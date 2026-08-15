@@ -1344,25 +1344,28 @@ export function agentToolsFor(opts: {
    */
   interactive?: boolean;
   /**
-   * LE TOUR JOUE-T-IL SUR LA MACHINE DE L'UTILISATEUR (MIN-293) ? Un seul tool
-   * disparaît alors, et le retrait est délibéré plutôt que subi.
+   * LE TOUR JOUE-T-IL SUR LA MACHINE DE L'UTILISATEUR (MIN-293, puis MIN-364) ?
    *
-   * **`run_background` ne survit pas au passage en local.** Les jobs partent en
-   * `setsid`, **explicitement pour survivre au shell** ([background.ts](background.ts)) :
-   * c'est ce qui permet à un serveur de dev de tenir entre deux `run_command`.
-   * Ce qui les tue est le `stopAll` de fin de tour — et ce `stopAll` ne tourne
-   * jamais quand le harness est tué net (⌘Q, plantage du main process). Dans une
-   * microVM, sans conséquence : la machine meurt avec eux. Sur un Mac, le
-   * `npm run dev` que le modèle a lancé reste vivant, port 3000 tenu, **et rien
-   * nulle part ne sait où le retrouver** — il n'a même pas de fenêtre à fermer.
+   * ⚠ **CE DRAPEAU NE RETIRE PLUS RIEN, et la trace de ce qu'il retirait est ce
+   * qui explique pourquoi.** `run_background` en était sorti pour une raison
+   * d'exploitation nommée : les jobs partent en `setsid`, **explicitement pour
+   * survivre au shell** ([background.ts](background.ts)), et ce qui les tue est le
+   * `stopAll` de fin de tour — lequel ne tourne jamais quand le harness est tué
+   * net (⌘Q, plantage du main process). Sur un Mac, le `npm run dev` du modèle
+   * restait alors vivant, port 3000 tenu, et rien nulle part ne savait où le
+   * retrouver.
    *
-   * CE QUE ÇA COÛTE, et il faut le dire : en local, le modèle ne peut plus faire
-   * tourner un serveur pour aller voir sa page rendre. C'est une perte réelle, et
-   * la contrepartie de la seule promesse qu'on puisse tenir sur la machine de
-   * quelqu'un — *rien de ce que l'agent a lancé ne vous survit*. Le jour où le
-   * registre d'enfants ([vm/child-registry.ts](vm/child-registry.ts)) couvrira
-   * aussi les jobs de fond, ce retrait pourra être rouvert : il est le seul de
-   * cette fonction à être une décision d'exploitation et non de produit.
+   * **Le motif est tombé** (décision D8) : le registre d'enfants
+   * ([vm/child-registry.ts](vm/child-registry.ts)) existe depuis MIN-293 et sert
+   * déjà le serveur opencode ; le superviseur y inscrit désormais les jobs de
+   * fond, et le lanceur les relit au ⌘Q comme au démarrage. Ce que le retrait
+   * coûtait était le plus gros écart de parité du dossier : un agent local ne
+   * pouvait ni lancer un serveur, ni aller voir sa page rendre — la boucle de
+   * feedback la plus courte qui existe, et précisément celle que l'app de bureau
+   * rend possible pour la première fois.
+   *
+   * Le drapeau reste, parce qu'il reste la seule chose qui sache ce qu'est un
+   * tour local, et parce que le prochain écart se déclarera ici.
    */
   local?: boolean;
 }): AgentToolDef[] {
@@ -1378,9 +1381,6 @@ export function agentToolsFor(opts: {
       if (name === "web_search") return opts.webSearch;
       if (name === "report_verdict") return opts.chain === true;
       if (NON_INTERACTIVE_FORBIDDEN_TOOLS.has(name)) return opts.interactive !== false;
-      // MIN-293 : rien de ce que l'agent lance sur la machine de quelqu'un ne
-      // doit lui survivre, et un `setsid` survit à tout (cf. `local` ci-dessus).
-      if (name === "run_background") return opts.local !== true;
       return true;
     })
     .map((t) => {

@@ -8,7 +8,11 @@ import {
   turnDiff,
   type RepoHost,
 } from "../repo-host";
-import { REPO_INSTRUCTION_FILES } from "../repo-instructions";
+import {
+  formatServedInstructions,
+  REPO_INSTRUCTION_FILES,
+  type RepoInstructionFile,
+} from "../repo-instructions";
 import {
   formatSecretFindings,
   isSecretFile,
@@ -26,7 +30,12 @@ import {
   type RepoState,
   type TurnPaths,
 } from "../current-repo";
-import { BackgroundJobs, OPENCODE_BACKGROUND_LOG_NOTES } from "../background";
+import {
+  BackgroundJobs,
+  OPENCODE_BACKGROUND_LOG_NOTES,
+  type BackgroundJobRunner,
+} from "../background";
+import { forgetHarnessChild, noteHarnessChild } from "./child-registry";
 // La MÊME normalisation que la boucle maison : `update_plan` est un tool de
 // contrôle, et les deux moteurs doivent en tirer le même event `plan_update`.
 import { normalizePlan } from "../agent-contract";
@@ -68,6 +77,7 @@ import {
   type VmTurnReport,
 } from "./protocol";
 import { parseAgentUserMessage, promptWithMentions, type AgentUserMessage } from "@/lib/agent-mentions";
+import { matchAskUserAnswers, type AskUserQuestion } from "@/lib/ask-user";
 
 /**
  * LE SUPERVISEUR (MIN-286, lot 1) — ce que devient `runVmTurn` quand la boucle
@@ -273,37 +283,180 @@ export interface SupervisorInput {
 }
 
 /**
- * LES CONVENTIONS DU DÉPÔT, TROUVÉES PLUTÔT QU'AUTO-DÉCOUVERTES (MIN-360).
+ * LES JOBS DE FOND, INSCRITS AU REGISTRE D'ENFANTS (MIN-364, décision D8).
+ *
+ * C'était la CONDITION écrite de la réouverture de `run_background` en local, et
+ * elle tient en une ligne de fait : les jobs partent en `setsid`, donc ils
+ * survivent au shell qui les a lancés — et au harness lui-même quand il est tué
+ * net (⌘Q, plantage du main process), puisque le `stopAll` de fin de tour ne
+ * tourne alors jamais. Sans registre, le `npm run dev` du modèle restait vivant,
+ * le port 3000 tenu, **et rien nulle part ne savait où le retrouver**.
+ *
+ * L'inscription se fait DERRIÈRE le `start` plutôt que dans `background.ts` :
+ * ce module-là est pur et testable sans disque, et c'est ce qui fait sa valeur.
+ * Ici, le superviseur sait déjà écrire sur le disque de la machine.
+ *
+ * `kind: "background"` n'est pas cosmétique : `killTargets` signale ces enfants
+ * **en GROUPE** (`-pid`), parce que le chef de session n'est pas le serveur mais
+ * le shell qui l'a lancé — tuer le seul chef laisserait le `next dev` derrière.
+ *
+ * Hors chemin local, la fonction rend le runner tel quel : la microVM meurt avec
+ * ses enfants, et un fichier de plus n'y garderait rien.
+ */
+function registeredBackgroundRunner(
+  runner: BackgroundJobRunner,
+  harnessDir: string,
+  local: boolean,
+): BackgroundJobRunner {
+  if (!local) return runner;
+  return {
+    start: async (opts) => {
+      const started = await runner.start(opts);
+      // APRÈS le start, parce que c'est lui qui rend le pid — et le seul instant
+      // non couvert est celui où le job n'a pas encore de numéro à écrire.
+      if (started.pid > 0) {
+        noteHarnessChild(harnessDir, {
+          pid: started.pid,
+          kind: "background",
+          label: opts.command.slice(0, 200),
+        });
+      }
+      return started;
+    },
+    read: (opts) => runner.read(opts),
+    stop: async (opts) => {
+      await runner.stop(opts);
+      // Retiré seulement quand on l'a arrêté SOI-MÊME : un job qu'on n'a pas su
+      // tuer doit rester dans le registre, c'est justement lui que le lanceur
+      // aura à moissonner.
+      forgetHarnessChild(harnessDir, opts.pid);
+    },
+  };
+}
+
+/** Le port d'une URL de service local, ou 0 si elle n'en porte pas de lisible. */
+function portOfUrl(url: string): number {
+  try {
+    const parsed = new URL(url);
+    return Number(parsed.port) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Combien de fichiers de conventions on sert au plus, et jusqu'à quelle
+ * profondeur. Un monorepo en porte une poignée ; trente serait le signe d'autre
+ * chose, et le budget d'octets (`formatServedInstructions`) ne serait de toute
+ * façon plus tenu par les derniers.
+ */
+const INSTRUCTION_FILES_MAX = 20;
+const INSTRUCTION_FILES_MAX_DEPTH = 5;
+
+/** Dossiers qu'on ne traverse pas : ce qu'on y trouverait n'est pas du projet. */
+const INSTRUCTION_SEARCH_PRUNED = [
+  "node_modules",
+  ".git",
+  ".next",
+  "dist",
+  "build",
+  "vendor",
+  "target",
+  ".venv",
+  "coverage",
+];
+
+/**
+ * LES CONVENTIONS DU DÉPÔT, TROUVÉES PLUTÔT QU'AUTO-DÉCOUVERTES (MIN-360, puis
+ * MIN-364 pour les imbriquées).
  *
  * Opencode allait chercher `AGENTS.md` et `CLAUDE.md` tout seul, en remontant
  * depuis le dépôt. C'est la MÊME remontée qui ramassait les plugins et les tools
  * d'un `.opencode/`, c'est-à-dire du code arbitraire écrit par quiconque peut
- * committer — et c'est cette remontée qu'on vient de couper
+ * committer — et c'est cette remontée qu'on a coupée
  * (`OPENCODE_DISABLE_PROJECT_CONFIG`, cf. [opencode-config.ts](opencode-config.ts)).
  *
- * On rend donc le seul morceau qui n'exécute rien, et on le rend NOMMÉ : la racine
- * du dépôt, ces deux fichiers-là. Ce qu'on perd au passage, et qu'il vaut mieux
- * écrire : les fichiers de sous-dossiers, qu'opencode collait au fur et à mesure.
- * Le harness maison les servait paresseusement
- * ([repo-instructions.ts](../repo-instructions.ts)) ; ce chemin-ci ne les a plus,
- * et c'est le prix de la fermeture.
+ * On rend donc le seul morceau qui n'exécute rien : ces deux noms de fichiers, et
+ * rien d'autre. **La racine ET les sous-dossiers** (MIN-364) : le mécanisme
+ * paresseux qui servait les imbriqués se collait au RÉSULTAT d'un tool de
+ * fichier, et ces tools appartiennent à opencode — il n'a plus de point
+ * d'accroche, donc un monorepo dont chaque paquet porte ses conventions ne les
+ * voyait plus du tout.
+ *
+ * L'ordre est celui de la profondeur, du plus GÉNÉRAL au plus SPÉCIFIQUE : c'est
+ * l'ordre dans lequel les règles se surchargent, et c'est celui que le document
+ * servi annonce au modèle.
  *
  * Best-effort de bout en bout : une sonde muette rend une liste vide, jamais une
- * erreur — un tour ne s'arrête pas parce qu'un `ls` n'a pas répondu.
+ * erreur — un tour ne s'arrête pas parce qu'un `find` n'a pas répondu.
  */
-async function repoInstructionFiles(host: RepoHost): Promise<string[]> {
+async function findInstructionFiles(host: RepoHost): Promise<string[]> {
   const names = REPO_INSTRUCTION_FILES;
+  const prune = INSTRUCTION_SEARCH_PRUNED.map((dir) => `-name ${sq(dir)}`).join(" -o ");
+  const wanted = names.map((name) => `-name ${sq(name)}`).join(" -o ");
   try {
-    // `ls` sort en 1 dès qu'un des noms manque, mais liste quand même les autres
-    // sur stdout : c'est la sortie qui fait foi, pas le code de retour.
-    const res = await host.exec(`ls -1 ${names.map(sq).join(" ")} 2>/dev/null`, {
-      timeoutMs: 30_000,
-    });
-    const found = new Set(res.stdout.split("\n").map((line) => line.trim()).filter(Boolean));
-    return names.filter((name) => found.has(name)).map((name) => `${host.layout.repoDir}/${name}`);
+    const res = await host.exec(
+      `find . -maxdepth ${INSTRUCTION_FILES_MAX_DEPTH} \\( ${prune} \\) -prune -o ` +
+        `-type f \\( ${wanted} \\) -print 2>/dev/null`,
+      { timeoutMs: 30_000 },
+    );
+    const found = res.stdout
+      .split("\n")
+      .map((line) => line.trim().replace(/^\.\//, ""))
+      .filter((line) => line && names.includes(line.split("/").pop() ?? ""));
+    // Profondeur d'abord (le général avant le spécifique), puis l'ordre déclaré
+    // des noms — `AGENTS.md` avant `CLAUDE.md`, comme partout ailleurs.
+    return [...new Set(found)]
+      .sort((a, b) => {
+        const depth = a.split("/").length - b.split("/").length;
+        if (depth !== 0) return depth;
+        return a.localeCompare(b);
+      })
+      .slice(0, INSTRUCTION_FILES_MAX);
   } catch {
     return [];
   }
+}
+
+/**
+ * LE DOCUMENT DE CONVENTIONS SERVI AU TOUR, écrit à côté de l'ancrage.
+ *
+ * ⚠ C'EST ICI QUE LA NOTE DE FRONTIÈRE REVIENT (MIN-364, §5.4 de l'audit du
+ * 15/08). Elle manquait sur le chemin local : `readRepoInstructions` n'est appelé
+ * que côté serveur, où `host` est `null` en local, donc le CONTENU des `AGENTS.md`
+ * arrivait bien (opencode charge la clé `instructions`) mais sans la phrase qui
+ * dit au modèle que ces fichiers sont des DONNÉES sur le projet et non une source
+ * d'ordres. C'est exactement le garde-fou d'injection de prompt sur un fichier que
+ * quiconque peut committer — et le dépôt d'une relecture n'est même pas celui de
+ * l'utilisateur.
+ *
+ * On lit nous-mêmes plutôt que de nommer N chemins à opencode, parce que c'est la
+ * seule façon de PLAFONNER : il lit en entier ce qu'on lui nomme, et trente
+ * `AGENTS.md` de monorepo entreraient au complet dans le prompt système, à chaque
+ * round.
+ */
+async function servedInstructionsFile(
+  host: RepoHost,
+  writeFile: (path: string, content: string) => Promise<void>,
+): Promise<string[]> {
+  const paths = await findInstructionFiles(host);
+  if (paths.length === 0) return [];
+  const files: RepoInstructionFile[] = [];
+  for (const path of paths) {
+    const content = await readWorkFile(host, path).catch(() => null);
+    if (content?.trim()) files.push({ path, content });
+  }
+  const document = formatServedInstructions(files);
+  if (!document) return [];
+  const target = `${host.layout.harnessDir}/repo-instructions.md`;
+  try {
+    await writeFile(target, document);
+  } catch {
+    // Un fichier qu'on n'a pas su écrire ne doit pas faire tomber le tour : le
+    // modèle travaillera sans les conventions, ce qui est le cas d'avant ce lot.
+    return [];
+  }
+  return [target];
 }
 
 /**
@@ -507,12 +660,15 @@ export async function runOpencodeTurn(
    * numérotés par TOUR, et un tour a sa microVM.
    */
   const background = new BackgroundJobs(
-    repoBackgroundRunner(host),
+    registeredBackgroundRunner(repoBackgroundRunner(host), job.layout.harnessDir, local),
     0,
     // Le log vit hors du dépôt, et une lecture hors dépôt est refusée par notre
     // propre verdict de permission (`external_directory`) : c'est le SHELL qu'on
     // envoie le lire, pas `read`.
     OPENCODE_BACKGROUND_LOG_NOTES,
+    // Le même monde que celui du verdict de permission : un `git commit` lancé en
+    // fond se juge comme un `git commit` de premier plan (MIN-364).
+    { local },
   );
   const servesBackground = localToolsFor(job).some(
     (t) => t.function.name === "run_background",
@@ -771,11 +927,32 @@ export async function runOpencodeTurn(
   const env = {
     ...opencodeServerEnv(job, {
       baseUrl: proxy.url,
-      repoInstructionFiles: await repoInstructionFiles(host),
+      repoInstructionFiles: await servedInstructionsFile(host, deps.writeFile),
     }),
     // L'adresse du pont, lue par les 32 tools générés (cf. `SUPERVISOR_URL_ENV`).
     [SUPERVISOR_URL_ENV]: bridge.url,
   };
+
+  /**
+   * LES TROIS PORTS QUE `webfetch` REFUSE ENCORE (MIN-364, décision D8).
+   *
+   * Le refus portait sur tout l'espace privé, et son dommage collatéral était la
+   * capacité qu'on veut : `curl localhost:3000` pour aller voir rendre la page
+   * qu'on vient d'écrire. Ce qui reste refusé est ce qui n'est pas une page —
+   * le **proxy LLM** (il porte la clé du modèle), le **pont de tools** (il
+   * n'authentifie RIEN : joindre son port, c'est appeler `create_pr` ou
+   * `update_issue` à la place de l'agent) et le **serveur opencode** du tour
+   * (son API répond à qui la joint : ouvrir une session, répondre à une
+   * permission à la place du superviseur).
+   *
+   * Lus ici parce que c'est ici, et nulle part ailleurs, qu'ils sont connus : les
+   * deux premiers sont attribués au démarrage, le troisième vient de l'hôte.
+   */
+  const harnessPorts = [
+    portOfUrl(proxy.url),
+    portOfUrl(bridge.url),
+    deps.opencodePort,
+  ].filter((port) => port > 0);
 
   /**
    * DÉMARRÉ DANS LE `try`, et ce n'est pas un détail de forme : le proxy et le
@@ -893,6 +1070,29 @@ export async function runOpencodeTurn(
     let budgetExhausted = false;
     /** Le tour s'est terminé sur des questions : la session ATTEND l'utilisateur. */
     let askedUser = false;
+    /**
+     * LA QUESTION SUSPEND-ELLE LE TOUR, OU LE TERMINE-T-ELLE (MIN-364, D7) ?
+     *
+     * Sur la machine de l'utilisateur, elle suspend : le tool `question` bloque
+     * sans timeout, personne ne paie de compute pendant ce temps, et quelqu'un est
+     * devant l'écran. En microVM elle termine — c'est le motif d'origine, et il
+     * reste vrai là-bas.
+     *
+     * `job.interactive === false` (une ROUTINE) n'a de toute façon pas le tool.
+     */
+    const questionsSuspend = local && job.interactive !== false;
+    /**
+     * LA QUESTION EN VOL. Non nulle = le modèle attend, le tour est suspendu, et
+     * le prochain message de l'utilisateur est SA RÉPONSE — pas du steering.
+     *
+     * Elle porte ses questions parce que le protocole d'opencode veut les réponses
+     * DANS L'ORDRE des questions posées (`answers: string[][]`), là où la carte de
+     * l'UI ne renvoie qu'un texte composé : `matchAskUserAnswers` fait le chemin
+     * inverse, et il lui faut la liste.
+     */
+    let pendingQuestion: { id: string; questions: AskUserQuestion[] } | null = null;
+    /** Les dossiers hors dépôt déjà annoncés au fil — un par tour, pas un par accès. */
+    const outsideDirs = new Set<string>();
     /**
      * UNE COUPURE QU'ON A DEMANDÉE, et une seule — le drapeau se CONSOMME.
      *
@@ -1123,6 +1323,64 @@ export async function runOpencodeTurn(
       (await cp.pullSteering().catch(() => []))
         .map(parseAgentUserMessage)
         .filter((message) => message.text.trim());
+
+    /**
+     * RÉPOND À LA QUESTION EN VOL, et le round REPART DE LUI-MÊME (D7).
+     *
+     * Ni `abort`, ni re-prompt : le tool `question` est suspendu à cette requête,
+     * et lui répondre le résout en `completed` avec « User has answered your
+     * questions: … ». C'est ce qui SUPPRIME le détour d'avant — la réponse n'a
+     * plus à repasser par le steering, donc plus à ouvrir un tour de plus.
+     *
+     * Le fil, lui, reçoit quand même son `user_message` : sans lui, la réponse de
+     * l'utilisateur n'aurait aucune trace dans la conversation (elle vit dans le
+     * résultat du tool, que le fil ne montre pas comme une parole humaine).
+     */
+    const answerPendingQuestion = async (messages: AgentUserMessage[]): Promise<void> => {
+      const asked = pendingQuestion;
+      if (!asked) return;
+      // Plusieurs messages ne devraient pas arriver (la carte remplace le
+      // composer), mais s'ils arrivent ils sont tous la réponse : en perdre un
+      // serait perdre une phrase que l'utilisateur a écrite.
+      const text = messages.map((m) => m.text.trim()).filter(Boolean).join("\n\n");
+      const mentions = messages.flatMap((m) => m.mentions ?? []);
+      pendingQuestion = null;
+      await cp.emit("user_message", {
+        text: cap(text, 4000),
+        ...(mentions.length > 0 ? { mentions } : {}),
+      });
+      /**
+       * L'INVERSE DE LA CARTE : elle compose `question → réponse` par ligne, on
+       * ré-associe. Une réponse qu'on n'arrive à apparier à rien — texte libre
+       * tapé hors carte, « je passe » — part ENTIÈRE sur la première question
+       * plutôt qu'en « Unanswered » : opencode recopie les libellés tels quels au
+       * modèle, et le silence serait la seule forme qui perde vraiment ce que
+       * l'utilisateur a dit.
+       */
+      const matched = matchAskUserAnswers(asked.questions, text);
+      const answers = matched.some((entry) => entry.answer)
+        ? matched.map((entry) => (entry.answer ? [entry.answer] : []))
+        : asked.questions.map((_, i) => (i === 0 ? [text] : []));
+      await client.replyQuestion(asked.id, answers).catch((err) => {
+        // Une réponse qui n'arrive pas laisse le tool suspendu jusqu'à la
+        // deadline. À dire — mais pas à faire tomber le tour, comme pour les
+        // permissions : le modèle verra son tool ne jamais rendre.
+        console.error("[supervisor] question reply failed:", (err as Error).message);
+      });
+    };
+
+    /**
+     * ÉCARTE la question en vol — le geste de TOUTE sortie de tour qui en trouve
+     * une (« Stop », deadline, plafond, run conclu ailleurs). Sans lui, le tool
+     * resterait `running` pour toujours dans l'historique d'opencode, et le tour
+     * suivant rejouerait un appel jamais résolu.
+     */
+    const closePendingQuestion = async (): Promise<void> => {
+      const asked = pendingQuestion;
+      if (!asked) return;
+      pendingQuestion = null;
+      await client.rejectQuestion(asked.id);
+    };
     /**
      * Poste le prompt en attente sur une session au repos, et dit au fil ce qui
      * vient de l'UTILISATEUR.
@@ -1232,30 +1490,53 @@ export async function runOpencodeTurn(
        */
       if (now() - lastSteerAt >= STEER_POLL_INTERVAL_MS) {
         lastSteerAt = now();
-        if (await cp.checkInterrupt().catch(() => false)) {
-          /**
-           * UN STOP ACCOMPAGNÉ D'UN MESSAGE se poursuit dans CE tour (« arrête-toi
-           * et fais plutôt ça ») : le composer envoie toujours le couple steer
-           * PUIS interrupt. On ne draine donc que là, et on consomme le drapeau —
-           * sans quoi le sondage suivant le relirait et sortirait, message accepté
-           * et jamais joué (même raisonnement que `clearInterrupt` dans
-           * `agent-loop.ts`).
-           */
-          const steered = await takeSteering();
+        const stopping = await cp.checkInterrupt().catch(() => false);
+        /**
+         * UN STOP ACCOMPAGNÉ D'UN MESSAGE se poursuit dans CE tour (« arrête-toi
+         * et fais plutôt ça ») : le composer envoie toujours le couple steer
+         * PUIS interrupt. On ne draine donc que là, et on consomme le drapeau —
+         * sans quoi le sondage suivant le relirait et sortirait, message accepté
+         * et jamais joué (même raisonnement que `clearInterrupt` dans
+         * `agent-loop.ts`).
+         *
+         * Hors stop, on ne draine QU'APRÈS avoir su qu'il y a quelque chose :
+         * `pullSteering` consomme, et un message drainé sans être joué serait
+         * perdu pour de bon.
+         */
+        const steered =
+          stopping || (await cp.hasPendingMessages().catch(() => false))
+            ? await takeSteering()
+            : [];
+        /**
+         * LA RÉPONSE À UNE QUESTION N'EST PAS DU STEERING (D7). Elle dénoue un
+         * tool suspendu, et le round qui l'attendait repart tout seul : couper
+         * la session ici tuerait précisément le round qu'on vient de débloquer.
+         *
+         * Le « Stop » qui l'accompagne est consommé sans être joué, et c'est la
+         * bonne conduite : le composer envoie toujours le couple steer + interrupt
+         * ([agent-conversation.tsx](../../../components/agent/agent-conversation.tsx)),
+         * or ici l'utilisateur RÉPOND — il ne demande pas l'arrêt.
+         */
+        if (pendingQuestion && steered.length > 0) {
+          if (stopping) await cp.clearInterrupt().catch(() => {});
+          await answerPendingQuestion(steered);
+          return false;
+        }
+        if (stopping) {
           if (steered.length === 0) {
             interrupted = true;
+            await closePendingQuestion();
             await abortSession();
             return true;
           }
           await cp.clearInterrupt().catch(() => {});
-           pendingPrompt.push(...steered.map((message) => ({ message, steered: true })));
+          pendingPrompt.push(...steered.map((message) => ({ message, steered: true })));
+          await closePendingQuestion();
           await abortSession();
-        } else if (await cp.hasPendingMessages().catch(() => false)) {
-          // Drainé seulement maintenant qu'on sait qu'on va couper pour le poster.
-           pendingPrompt.push(
-             ...(await takeSteering()).map((message) => ({ message, steered: true })),
-           );
-          if (pendingPrompt.length > 0) await abortSession();
+        } else if (steered.length > 0) {
+          pendingPrompt.push(...steered.map((message) => ({ message, steered: true })));
+          await closePendingQuestion();
+          await abortSession();
         }
       }
       // La sauvegarde périodique EST le battement de cœur (cf. son commentaire).
@@ -1264,11 +1545,13 @@ export async function runOpencodeTurn(
         // Le run a été conclu ailleurs (annulé, ou déjà stampé). Continuer, ce
         // serait dépenser au nom d'une conversation qui n'existe plus.
         interrupted = true;
+        await closePendingQuestion();
         await abortSession();
         return true;
       }
       if (now() > deadline) {
         timedOut = true;
+        await closePendingQuestion();
         await abortSession();
         return true;
       }
@@ -1333,7 +1616,7 @@ export async function runOpencodeTurn(
               pending: pendingTasks.size,
               maxParallel: job.subagents.maxParallel,
             },
-            { local },
+            { local, harnessPorts },
           );
           /**
            * PUIS LE DISQUE ET LE RÉSOLVEUR (MIN-360), et sur le chemin local
@@ -1347,7 +1630,9 @@ export async function runOpencodeTurn(
            * périmètre du tour.
            */
           if (local) {
-            verdict = await refineLocalVerdict(out.permission, verdict, job.layout.repoDir);
+            verdict = await refineLocalVerdict(out.permission, verdict, job.layout.repoDir, {
+              harnessPorts,
+            });
           }
           if (verdict.reason && out.permission.callId) {
             refusedCalls.set(out.permission.callId, verdict.reason);
@@ -1365,6 +1650,38 @@ export async function runOpencodeTurn(
             out.permission.callId
           ) {
             pendingTasks.add(out.permission.callId);
+          }
+          /**
+           * CHAQUE SORTIE DE DOSSIER LAISSE UNE TRACE (MIN-364, décision D5).
+           *
+           * C'est la contrepartie de l'ouverture, et sa seule justification
+           * honnête : le mur d'avant n'attrapait que les tools honnêtes et
+           * poussait le travail vers `bash`, c'est-à-dire vers l'endroit où l'on
+           * ne voit plus rien. Ici le verdict ne bride rien ET le fil garde la
+           * liste — l'exact contraire de la situation du §2 de l'audit.
+           *
+           * Le chemin est réécrit par `scrubPaths` comme tout le reste du chemin
+           * local : ce qui monte dit « l'agent est sorti vers `~/Projets/autre` »,
+           * pas le nom de l'utilisateur.
+           */
+          if (
+            local &&
+            out.permission.permission === "external_directory" &&
+            verdict.reply === "once" &&
+            !child
+          ) {
+            /**
+             * UNE FOIS PAR DOSSIER, pas une fois par fichier. Opencode redemande
+             * à chaque accès (on répond `once`, jamais `always`), et un tour qui
+             * lit trente fichiers d'un dépôt voisin publierait trente lignes
+             * identiques : le fil deviendrait illisible, donc la trace ne serait
+             * plus lue — ce qui reviendrait à ne pas l'avoir.
+             */
+            const outside = scrubPaths(out.permission.filepath ?? "", job.layout.repoDir);
+            if (outside && !outsideDirs.has(outside)) {
+              outsideDirs.add(outside);
+              await cp.emit("status", { phase: "outside_repo", path: outside }).catch(() => {});
+            }
           }
           /**
            * UNE ÉCRITURE AUTORISÉE EST UNE ÉDITION DU TOUR. C'est le seul endroit
@@ -1413,22 +1730,37 @@ export async function runOpencodeTurn(
         }
 
         /**
-         * LA QUESTION AU LIEU DU TOUR. `ask_user` a toujours été TERMINAL chez
-         * nous : les questions partent au fil, la session se met en attente, et
-         * la réponse revient au tour suivant par le steering. Chez opencode le
-         * tool BLOQUE — tenir une microVM ouverte le temps qu'un humain revienne
-         * coûterait des heures de compute pour ne rien faire.
+         * LA QUESTION — ET C'EST LE SEUL ENDROIT DU HARNESS OÙ LES DEUX MONDES
+         * FONT DEUX CHOSES DIFFÉRENTES DU MÊME EVENT (MIN-364, décision D7).
          *
-         * On écarte donc la question (le tool se résout, l'historique reste
+         * **En microVM, `ask_user` reste TERMINAL.** Les questions partent au fil,
+         * la session se met en attente, et la réponse revient au tour suivant par
+         * le steering. Chez opencode le tool BLOQUE — tenir une microVM ouverte le
+         * temps qu'un humain revienne coûterait des heures de compute pour ne rien
+         * faire. On écarte donc la question (le tool se résout, l'historique reste
          * apparié) et on coupe le tour. Mesuré : `reject` rend le tool en erreur
          * « The user dismissed this question », et l'`abort` seul le rendrait
-         * « Tool execution aborted » — les deux laissent un historique que le
-         * tour suivant rejoue sans trou.
+         * « Tool execution aborted » — les deux laissent un historique que le tour
+         * suivant rejoue sans trou.
+         *
+         * **Sur la machine de quelqu'un, elle SUSPEND.** Le motif du refus nommait
+         * la microVM, et il vaut zéro sur un Mac : il n'y a pas de compute à
+         * payer, et l'utilisateur est devant l'écran. Le tool bloque tout seul —
+         * mesuré, sans timeout, et y répondre ne termine pas le tour
+         * ([opencode-wait.probe.test.ts](opencode-wait.probe.test.ts)) — donc il
+         * n'y a littéralement RIEN à faire ici : on note la question en vol, et
+         * `lifecycle` reconnaîtra le prochain message de l'utilisateur comme sa
+         * réponse. Le détour d'avant (rejet → coupure du tour → réponse déguisée
+         * en steering au tour suivant) disparaît avec ses trois étapes.
          */
         if (out.question && !child) {
-          askedUser = true;
-          await client.rejectQuestion(out.question.id);
-          await abortSession();
+          if (questionsSuspend) {
+            pendingQuestion = { id: out.question.id, questions: out.question.questions };
+          } else {
+            askedUser = true;
+            await client.rejectQuestion(out.question.id);
+            await abortSession();
+          }
         }
 
         /**
@@ -1463,6 +1795,21 @@ export async function runOpencodeTurn(
               ? refusedCalls.get(String(event.payload.id ?? ""))
               : undefined;
           let payload = redactPayload(event.payload, secrets);
+          /**
+           * LA CARTE DE QUESTIONS DOIT SAVOIR SI ELLE BLOQUE (MIN-364, D7).
+           *
+           * Le fil ne montrait la carte qu'au REPOS, et c'était juste tant qu'une
+           * question terminait le tour. Elle suspend maintenant : l'agent est
+           * `running` pendant qu'il attend, et une carte qui n'apparaît qu'au repos
+           * laisserait l'utilisateur devant un composer désarmé, sans rien à quoi
+           * répondre, pendant que le modèle attend sa réponse.
+           *
+           * Le drapeau voyage sur l'EVENT plutôt que sur le run : le fil relit ses
+           * events, et un run passé doit se relire tel qu'il s'est joué.
+           */
+          if (questionsSuspend && event.type === "question") {
+            payload = { ...payload, blocking: true };
+          }
           /**
            * PUIS LES CHEMINS DE LA MACHINE, SUR LE CHEMIN LOCAL (MIN-361).
            *
@@ -1586,6 +1933,7 @@ export async function runOpencodeTurn(
              * dépense sort des compteurs, ce qui est exactement le défaut que
              * MIN-216 avait fermé côté boucle maison.
              */
+            await closePendingQuestion();
             await abortSession();
             break;
           }
@@ -1690,6 +2038,14 @@ export async function runOpencodeTurn(
       }
     } finally {
       abortEvents.abort();
+      /**
+       * ET LA QUESTION EN VOL EST ÉCARTÉE, quelle que soit la sortie (D7) — y
+       * compris celle que personne n'a prévue (le flux qui se rompt, une panne du
+       * serveur opencode). Un tool `question` laissé `running` reste figé pour
+       * toujours dans la base d'opencode, que le tour suivant relit : mesuré au
+       * lot 0 de la sonde d'attente, rien ne le ressuscite.
+       */
+      await closePendingQuestion().catch(() => {});
       /**
        * CE QU'ON A DRAINÉ SANS SAVOIR LE JOUER RETOURNE EN FILE (MIN-286).
        *

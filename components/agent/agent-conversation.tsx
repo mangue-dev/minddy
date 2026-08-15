@@ -363,11 +363,26 @@ export function AgentConversation({
     () => (working ? livePlan(liveEvents) : []),
     [liveEvents, working],
   );
+  /**
+   * LA CARTE DE QUESTIONS, ET LE TOUR N'EST PLUS FORCÉMENT FINI (MIN-364, D7).
+   *
+   * Sur la machine de l'utilisateur, `ask_user` SUSPEND le tour au lieu de le
+   * terminer : le modèle attend, l'agent reste `running`, et l'event `question`
+   * porte alors `blocking: true`. Exiger le repos ferait exactement le contraire
+   * de ce qu'on veut — un composer désarmé face à un modèle qui attend une
+   * réponse, et un tour qui ne repart que sur la deadline.
+   *
+   * Le repos reste exigé pour une question NON bloquante (le chemin microVM) :
+   * là, la carte ne doit s'ouvrir qu'une fois le tour rangé, sinon elle
+   * apparaîtrait le temps du push et de l'export du journal.
+   */
   const activeQuestion = useMemo((): {
     eventId: string;
     questions: AskUserQuestion[];
+    /** Le tour ATTEND cette réponse : y répondre ne relance rien, ça le dénoue. */
+    blocking: boolean;
   } | null => {
-    if (!liveRun || working || !steerable) return null;
+    if (!liveRun || !steerable) return null;
     const ordered = [...liveEvents].sort((a, b) => a.seq - b.seq);
     // Réponse déjà en vol ? `pendingMessages` n'est JAMAIS purgée en cas de succès
     // (cf. lib/agent-pending.ts — la soustraction multi-ensemble en dépend) : on ne
@@ -387,7 +402,12 @@ export function AgentConversation({
         const questions = parseAskUserQuestions(
           (e.payload ?? {}) as Record<string, unknown>
         );
-        return questions.length > 0 ? { eventId: e.id, questions } : null;
+        if (questions.length === 0) return null;
+        const blocking = e.payload?.blocking === true;
+        // Une question qui ne bloque pas a terminé son tour : tant que l'agent
+        // travaille, ce qu'on voit à l'écran est le tour SUIVANT.
+        if (working && !blocking) return null;
+        return { eventId: e.id, questions, blocking };
       }
     }
     return null;
@@ -630,10 +650,22 @@ export function AgentConversation({
   // Envoi depuis le composer live. Si l'agent TRAVAILLE : on met d'abord le message
   // en file PUIS on interrompt → le tour en cours s'arrête et reprend en traitant
   // ce message en priorité (steering). Au repos : simple relance.
-  const sendLive = async (message: string, _attachments: unknown[] = [], mentions: AssistantMention[] = []) => {
+  //
+  // SAUF QUAND LE TOUR ATTEND UNE RÉPONSE (MIN-364, D7) : le message n'est alors
+  // pas du steering, il DÉNOUE le tool `question` sur lequel le round est
+  // suspendu. Le harness le reconnaît de toute façon (`pendingQuestion`, cf.
+  // supervisor.ts) et consomme le drapeau d'arrêt sans le jouer ; ne pas l'envoyer
+  // du tout évite simplement de demander l'arrêt de ce qu'on vient de débloquer.
+  const sendLive = async (
+    message: string,
+    _attachments: unknown[] = [],
+    mentions: AssistantMention[] = [],
+    opts: { answersBlockingQuestion?: boolean } = {},
+  ) => {
     const text = message.trim();
     if (!text) return;
     await steer(text, mentions);
+    if (opts.answersBlockingQuestion) return;
     // Sur ce que fait le SERVEUR, pas sur ce que l'interface montre : un arrêt
     // déjà demandé mais pas encore pris laisse le tour tourner, et le message
     // doit quand même le couper.
@@ -836,8 +868,16 @@ export function AgentConversation({
               <AskUserCard
                 key={activeQuestion.eventId}
                 questions={activeQuestion.questions}
-                onAnswer={(text) => void sendLive(text)}
-                onSkip={() => void sendLive(tToolCall("skippedQuestions"))}
+                onAnswer={(text) =>
+                  void sendLive(text, [], [], {
+                    answersBlockingQuestion: activeQuestion.blocking,
+                  })
+                }
+                onSkip={() =>
+                  void sendLive(tToolCall("skippedQuestions"), [], [], {
+                    answersBlockingQuestion: activeQuestion.blocking,
+                  })
+                }
               />
             </div>
           ) : null}

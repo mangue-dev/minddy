@@ -3,9 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   decidePermission,
   editTargets,
+  KNOWN_PERMISSIONS,
+  REVIEWED_OPENCODE_VERSION,
+  UNKNOWN_PERMISSION_REASON,
   type PermissionAsk,
   type SubagentContext,
 } from "./opencode-permissions";
+import { OPENCODE_VERSION } from "./opencode-version";
 import { FORBIDDEN_COMMAND_REASON } from "../command-guard";
 import { layoutForRoot } from "../harness-layout";
 
@@ -61,7 +65,7 @@ describe("les commandes", () => {
     expect(verdict.reply).toBe("reject");
     // Le message VOYAGE : opencode le recopie dans l'erreur du tool, et c'est là
     // que le modèle le lit. Un refus muet le laisserait deviner.
-    expect(verdict.message).toContain("the harness owns git");
+    expect(verdict.message).toContain("throws away uncommitted work");
     // Et le refus reste mesurable en base, comme du temps de la boucle maison.
     expect(verdict.reason).toBe(FORBIDDEN_COMMAND_REASON);
   });
@@ -359,38 +363,74 @@ describe("le chemin local (MIN-360)", () => {
     });
   });
 
+  /**
+   * MIN-364 (décision D8) — LE FETCH SE JUGE SUR LE PORT.
+   *
+   * Le refus portait sur tout l'espace privé, et son dommage collatéral était la
+   * capacité qu'on veut : `curl localhost:3000` pour aller voir rendre la page
+   * qu'on vient d'écrire. Ce qui reste refusé est ce qui n'est PAS une page — le
+   * proxy LLM (il porte la clé du modèle), le pont de tools (il n'authentifie
+   * rien : le joindre, c'est appeler `create_pr` à la place de l'agent) et le
+   * serveur opencode du tour (son API répond à qui la joint).
+   */
   describe("les fetchs", () => {
-    it("refuse la boucle locale, le lien-local et le réseau de l'utilisateur", () => {
+    const HARNESS = [4096, 4097, 51234];
+    const localFetch = (url?: string) =>
+      decidePermission(ask({ permission: "webfetch", url }), REPO, undefined, {
+        local: true,
+        harnessPorts: HARNESS,
+      });
+
+    it("refuse les trois services du harness, sur la boucle locale", () => {
       for (const url of [
         "http://127.0.0.1:4096/v1/chat/completions", // le proxy LLM, donc la clé
-        "http://localhost:3000",
-        "http://[::1]:9000/",
-        "http://169.254.169.254/latest/meta-data/",
-        "http://192.168.1.1/admin",
-        "http://nas.local/volume1",
+        "http://localhost:4097/tool", // le pont, qui n'authentifie rien
+        "http://[::1]:51234/session", // le serveur opencode du tour
       ]) {
-        const verdict = local(ask({ permission: "webfetch", url }));
+        const verdict = localFetch(url);
         expect(verdict.reply, url).toBe("reject");
         expect(verdict.reason).toBe("private_fetch");
       }
     });
 
+    it("laisse passer le serveur de dév de l'utilisateur — l'écart de parité n°1", () => {
+      for (const url of [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000/api/health",
+        "http://[::1]:8080/",
+        "http://192.168.1.42:5173/",
+      ]) {
+        expect(localFetch(url), url).toEqual({ reply: "once" });
+      }
+    });
+
     it("laisse passer une URL publique", () => {
-      expect(local(ask({ permission: "webfetch", url: "https://example.com/docs" }))).toEqual({
-        reply: "once",
-      });
+      expect(localFetch("https://example.com/docs")).toEqual({ reply: "once" });
     });
 
     it("refuse un fetch dont il ne sait pas lire l'URL", () => {
-      expect(local(ask({ permission: "webfetch" })).reply).toBe("reject");
+      expect(localFetch().reply).toBe("reject");
+    });
+
+    /**
+     * SANS LISTE DE PORTS, TOUTE LA BOUCLE LOCALE RESTE REFUSÉE — le comportement
+     * d'avant D8. Une ignorance ne s'interprète pas en autorisation, et le
+     * superviseur est le seul à connaître ces trois ports : s'il oublie de les
+     * passer, c'est le refus large qui doit rester.
+     */
+    it("refuse tout le privé quand les ports du harness sont inconnus", () => {
+      for (const url of ["http://localhost:3000", "http://192.168.1.1/admin", "http://nas.local/x"]) {
+        expect(local(ask({ permission: "webfetch", url })).reply, url).toBe("reject");
+      }
     });
   });
 
   describe("la permission inconnue", () => {
     it("passe en microVM, refuse sur une machine", () => {
-      // `lsp`, `skill`, `doom_loop`, `plan_enter` — et tout ce qu'une montée de
-      // version ajoutera sans que personne ne l'ait lu.
-      for (const permission of ["lsp", "skill", "doom_loop", "plan_enter"]) {
+      // `lsp`, et tout ce qu'une montée de version ajoutera sans que personne ne
+      // l'ait lu. (`skill`, `doom_loop` et `plan_enter` ont depuis été LUS et
+      // tranchés, cf. `KNOWN_PERMISSIONS` : ils ne sont plus des inconnus.)
+      for (const permission of ["lsp", "mcp_call", "quelque_chose_de_1_19"]) {
         expect(decide(ask({ permission })), permission).toEqual({ reply: "once" });
         const verdict = local(ask({ permission }));
         expect(verdict.reply, permission).toBe("reject");
@@ -402,12 +442,130 @@ describe("le chemin local (MIN-360)", () => {
     });
   });
 
+  /**
+   * MIN-364 (décision D5) — LE PÉRIMÈTRE D'ÉCRITURE S'OUVRE ICI, ET NULLE PART
+   * AILLEURS.
+   *
+   * `external_directory: "deny"` a longtemps été décrit comme la frontière ; il
+   * n'en était pas une (un `deny` de config court-circuite avant publication).
+   * Ce qui refusait vraiment, c'est `absoluteInRepo` dans le `case "edit"` —
+   * donc c'est lui qui devait changer.
+   */
+  describe("le périmètre d'écriture", () => {
+    it("laisse écrire hors du dossier attaché — un monorepo, un dépôt voisin", () => {
+      for (const path of [
+        "/Users/dev/Projets/voisin/lib/x.ts",
+        "/Users/dev/.config/opencode/skill/x.md",
+        "../voisin/lib/x.ts",
+      ]) {
+        expect(local(ask({ permission: "edit", filepath: path })), path).toEqual({
+          reply: "once",
+        });
+      }
+    });
+
+    it("publie la sortie de dossier au lieu de la refuser", () => {
+      expect(local(ask({ permission: "external_directory", filepath: "/Users/dev/Projets" }))).toEqual({
+        reply: "once",
+      });
+      // …et la microVM, elle, garde son refus : elle n'a qu'un dépôt.
+      expect(decide(ask({ permission: "external_directory", filepath: "/etc" })).reply).toBe(
+        "reject",
+      );
+    });
+
+    /**
+     * LE SEUL RESTE DE PÉRIMÈTRE, et il ne dépend d'aucune décision (§9 de
+     * l'audit) : un hook écrit dans un `.git/` s'exécute au prochain geste git
+     * d'un humain, et un `.git/config` porte des identifiants. Où qu'il soit sur
+     * le disque, pas seulement dans le dépôt du tour.
+     */
+    it("refuse `.git/` PARTOUT, y compris dans un dépôt voisin", () => {
+      for (const path of [
+        `${REPO}/.git/hooks/pre-commit`,
+        "/Users/dev/Projets/voisin/.git/config",
+        "/Users/dev/Projets/voisin/.GIT/hooks/pre-push",
+      ]) {
+        const verdict = local(ask({ permission: "edit", filepath: path }));
+        expect(verdict.reply, path).toBe("reject");
+        expect(verdict.message).toContain(".git");
+      }
+    });
+  });
+
   it("ne change RIEN aux verdicts qui existaient déjà", () => {
     expect(local(ask({ command: "npm test" }))).toEqual({ reply: "once" });
     expect(local(ask({ command: "git push" })).reply).toBe("reject");
     expect(local(ask({ permission: "edit", filepath: `${REPO}/lib/x.ts` }))).toEqual({
       reply: "once",
     });
-    expect(local(ask({ permission: "edit", filepath: "/etc/passwd" })).reply).toBe("reject");
+    // …et la microVM garde SA frontière : c'est le clone jetable, il n'y a
+    // qu'un dépôt, et rien n'y justifie d'ouvrir le disque.
+    expect(decide(ask({ permission: "edit", filepath: "/etc/passwd" })).reply).toBe("reject");
+  });
+});
+
+/**
+ * MIN-364 (lot 7, §5.5 de l'audit du 15/08) — LE CLIQUET DE VERSION.
+ *
+ * `default: reject` est la bonne POSTURE sur la machine de quelqu'un. Laissé
+ * seul, il fait de chaque montée d'opencode un RETRAIT de capacité que personne
+ * ne décide : `lsp`, `plan_enter`/`plan_exit`, `skill`, `doom_loop` étaient tous
+ * refusés « par construction », et le seraient restés indéfiniment. Combiné à
+ * `OPENCODE_DISABLE_LSP_DOWNLOAD`, ça voulait dire qu'on n'aurait JAMAIS les
+ * diagnostics LSP recollés à l'édition — le mécanisme que la porte de livraison
+ * cite elle-même comme la bonne forme.
+ *
+ * Ce qui manquait n'était pas le refus, c'était le geste qui le lève. Ces tests
+ * SONT ce geste : la relecture devient une étape de la montée de version.
+ */
+describe("les permissions lues, et la montée de version qui les périme", () => {
+  it("TOMBE dès qu'opencode monte de version, tant que la liste n'a pas été relue", () => {
+    expect(
+      REVIEWED_OPENCODE_VERSION,
+      `opencode est passé en ${OPENCODE_VERSION} et les permissions n'ont pas été relues. ` +
+        "Relever le ruleset par défaut du binaire (`strings <bin> | grep doom_loop`) et les ids " +
+        "de tools (`GET /experimental/tool`), caser toute permission de plus dans " +
+        "`decidePermission`, l'ajouter à `KNOWN_PERMISSIONS`, PUIS avancer " +
+        "`REVIEWED_OPENCODE_VERSION`.",
+    ).toBe(OPENCODE_VERSION);
+  });
+
+  it("traite VRAIMENT chaque permission qu'elle déclare connaître", () => {
+    // La liste ne doit pas pouvoir grossir sans que le `switch` grossisse avec :
+    // un nom déclaré mais non casé retomberait dans le `default`, c'est-à-dire
+    // refusé « parce qu'inconnu » tout en étant annoncé connu.
+    for (const permission of KNOWN_PERMISSIONS) {
+      const verdict = decidePermission(ask({ permission }), REPO, undefined, { local: true });
+      expect(verdict.reason, permission).not.toBe(UNKNOWN_PERMISSION_REASON);
+    }
+  });
+
+  it("garde le refus par défaut sur ce qui n'y est PAS", () => {
+    for (const permission of ["lsp", "mcp_call", "quelque_chose_de_1_19"]) {
+      expect(KNOWN_PERMISSIONS.has(permission)).toBe(false);
+      const verdict = decidePermission(ask({ permission }), REPO, undefined, { local: true });
+      expect(verdict.reply, permission).toBe("reject");
+      expect(verdict.reason).toBe(UNKNOWN_PERMISSION_REASON);
+      // Et il NOMME la permission : c'est ce qui le rend réparable, et ce qui
+      // fait qu'une montée de version se voit dans `agent_run_events`.
+      expect(verdict.message).toContain(permission);
+    }
+  });
+
+  /**
+   * `doom_loop` est publié quand le modèle rejoue exactement le même appel de
+   * tool, plusieurs fois d'affilée. Le refus est le bon verdict — personne n'est
+   * devant l'écran pour arbitrer, et une boucle coûte un round à chaque tour —
+   * mais il doit DIRE ce qui se passe : « permission inconnue » n'aide pas à en
+   * sortir.
+   */
+  it("coupe une boucle en disant que c'en est une", () => {
+    const verdict = decidePermission(ask({ permission: "doom_loop" }), REPO, undefined, {
+      local: true,
+    });
+    expect(verdict.reply).toBe("reject");
+    expect(verdict.reason).toBe("doom_loop");
+    expect(verdict.message).toMatch(/same tool with the same input/i);
   });
 });

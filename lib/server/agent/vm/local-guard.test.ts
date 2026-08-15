@@ -95,18 +95,20 @@ describe("realPathOf", () => {
 });
 
 describe("refineLocalVerdict — les écritures", () => {
-  it("refuse une écriture qui SORT du dépôt par un lien symbolique", async () => {
-    // `ln -s /Users/dev/.ssh <dépôt>/notes` n'est vu par aucun garde-fou : le
-    // chemin reste sous le dépôt, et pointe pourtant sur le trousseau.
-    const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/notes`]: "/Users/dev/.ssh" });
-    const verdict = await refineLocalVerdict(
-      ask({ filepath: `${REPO}/notes/authorized_keys` }),
-      ALLOW,
-      REPO,
-      { realpath },
-    );
-    expect(verdict.reply).toBe("reject");
-    expect(verdict.message).toMatch(/outside the repository/i);
+  /**
+   * MIN-364 (décision D5) — LA GARDE DE SORTIE DE DÉPÔT A DISPARU AVEC LE
+   * PÉRIMÈTRE QU'ELLE GARDAIT.
+   *
+   * Elle n'existait que pour empêcher un `ln -s` de faire sortir une écriture
+   * d'un périmètre qui n'existe plus : le disque est désormais atteignable en
+   * ligne droite, et refuser le lien symbolique aurait été refuser par la porte
+   * de derrière ce qu'on autorise par la grande.
+   */
+  it("laisse passer un lien qui sort du dépôt — le disque est ouvert", async () => {
+    const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/notes`]: "/Users/dev/Projets/voisin" });
+    expect(
+      await refineLocalVerdict(ask({ filepath: `${REPO}/notes/x.ts` }), ALLOW, REPO, { realpath }),
+    ).toEqual(ALLOW);
   });
 
   it("refuse un lien qui mène dans `.git/`", async () => {
@@ -129,7 +131,9 @@ describe("refineLocalVerdict — les écritures", () => {
   });
 
   it("inspecte TOUS les fichiers d'un `apply_patch`, pas le premier", async () => {
-    const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/b`]: "/tmp/ailleurs" });
+    // Le second passe par un lien qui mène dans `.git/` : c'est ce qui reste
+    // gardé, et il ne doit pas être sauvé par le fait d'être en second.
+    const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/b`]: `${REPO}/.git/hooks` });
     const verdict = await refineLocalVerdict(
       ask({
         files: [
@@ -153,38 +157,70 @@ describe("refineLocalVerdict — les écritures", () => {
       await refineLocalVerdict(ask({ filepath: `${REPO}/lib/x.ts` }), ALLOW, REPO, { realpath }),
     ).toEqual(ALLOW);
   });
-});
 
-describe("refineLocalVerdict — les fetchs", () => {
-  const fetchAsk = (url: string) => ask({ permission: "webfetch", url });
-
-  it("refuse un domaine PUBLIC qui résout vers la boucle locale", async () => {
-    // C'est la forme qu'a une attaque : le littéral, lui, a l'air irréprochable.
+  /**
+   * ET LE `.git/` D'UN DÉPÔT VOISIN AUSSI. Le périmètre s'est ouvert, la règle
+   * `.git` ne s'est pas ouverte avec : un hook posé dans le dépôt d'à côté
+   * s'exécute au prochain geste git de son propriétaire, exactement comme ici.
+   */
+  it("refuse un lien qui mène dans le `.git/` d'un AUTRE dépôt", async () => {
+    const realpath = realpathOf({
+      [REPO]: REPO,
+      [`${REPO}/voisin`]: "/Users/dev/Projets/voisin/.git",
+    });
     const verdict = await refineLocalVerdict(
-      fetchAsk("https://docs.example.com/guide"),
+      ask({ filepath: `${REPO}/voisin/hooks/pre-commit` }),
       ALLOW,
       REPO,
-      { resolve: async () => ["127.0.0.1"] },
+      { realpath },
     );
     expect(verdict.reply).toBe("reject");
+    expect(verdict.message).toMatch(/\.git/i);
+  });
+});
+
+/**
+ * MIN-364 (décision D8) — LE FETCH SE JUGE SUR LE PORT, PLUS SUR L'ESPACE PRIVÉ.
+ *
+ * Le refus d'avant portait sur toute la boucle locale, et son dommage collatéral
+ * était la capacité qu'on veut : `curl localhost:3000` pour aller voir rendre la
+ * page qu'on vient d'écrire. Ce qui reste refusé est ce qui n'est pas une page —
+ * le proxy LLM (il porte la clé du modèle), le pont de tools (il n'authentifie
+ * rien) et le serveur opencode du tour (son API répond à qui la joint).
+ *
+ * `HARNESS` joue les trois ports que le superviseur connaît.
+ */
+describe("refineLocalVerdict — les fetchs", () => {
+  const fetchAsk = (url: string) => ask({ permission: "webfetch", url });
+  const HARNESS = [4096, 4097, 51234];
+
+  it("refuse un domaine PUBLIC qui résout vers un port du harness", async () => {
+    // C'est la forme qu'a une attaque : le littéral, lui, a l'air irréprochable.
+    const verdict = await refineLocalVerdict(fetchAsk("https://docs.example.com:4096/guide"), ALLOW, REPO, {
+      resolve: async () => ["127.0.0.1"],
+      harnessPorts: HARNESS,
+    });
+    expect(verdict.reply).toBe("reject");
     expect(verdict.reason).toBe("private_fetch");
-    expect(verdict.message).toMatch(/local network/i);
+    expect(verdict.message).toMatch(/harness's own service/i);
   });
 
-  it("refuse dès qu'UNE des adresses est privée", async () => {
-    const verdict = await refineLocalVerdict(fetchAsk("https://example.com"), ALLOW, REPO, {
+  it("refuse dès qu'UNE des adresses est privée, sur un port du harness", async () => {
+    const verdict = await refineLocalVerdict(fetchAsk("https://example.com:51234"), ALLOW, REPO, {
       resolve: async () => ["93.184.216.34", "192.168.1.5"],
+      harnessPorts: HARNESS,
     });
     expect(verdict.reply).toBe("reject");
   });
 
-  it("refuse un nom qui ne résout pas", async () => {
-    // Un nom dont on ne sait rien est exactement ce que ce garde-fou existe pour
-    // ne pas laisser passer. Ce qu'on perd est un `webfetch`, pas le tour.
-    const verdict = await refineLocalVerdict(fetchAsk("https://nowhere.example"), ALLOW, REPO, {
+  it("refuse un nom du port du harness qui ne résout pas", async () => {
+    // Un nom dont on ne sait rien, sur un port qui est le nôtre, est exactement ce
+    // que ce garde-fou existe pour ne pas laisser passer.
+    const verdict = await refineLocalVerdict(fetchAsk("https://nowhere.example:4096"), ALLOW, REPO, {
       resolve: async () => {
         throw new Error("ENOTFOUND");
       },
+      harnessPorts: HARNESS,
     });
     expect(verdict.reply).toBe("reject");
   });
@@ -196,17 +232,48 @@ describe("refineLocalVerdict — les fetchs", () => {
         called += 1;
         return [];
       },
+      harnessPorts: HARNESS,
     });
     expect(verdict.reply).toBe("reject");
     expect(called).toBe(0);
   });
 
-  it("laisse passer une adresse publique", async () => {
-    expect(
-      await refineLocalVerdict(fetchAsk("https://developer.mozilla.org/en-US/"), ALLOW, REPO, {
-        resolve: async () => ["93.184.216.34"],
-      }),
-    ).toEqual(ALLOW);
+  /**
+   * L'ÉCART DE PARITÉ N°1 DU DOSSIER, refermé : un agent qui ne peut pas aller
+   * voir la page qu'il vient d'écrire n'a plus de boucle de feedback du tout.
+   */
+  it("laisse passer le serveur de dév de l'utilisateur", async () => {
+    for (const url of ["http://localhost:3000/", "http://127.0.0.1:3000/api/health"]) {
+      expect(
+        await refineLocalVerdict(fetchAsk(url), ALLOW, REPO, { harnessPorts: HARNESS }),
+        url,
+      ).toEqual(ALLOW);
+    }
+  });
+
+  it("ne résout MÊME PAS un nom public qui ne vise aucun port du harness", async () => {
+    // Le contrôle ne porte que sur nos ports : résoudre le reste serait un
+    // aller-retour DNS par fetch, pour un verdict qui ne peut pas changer.
+    let called = 0;
+    const verdict = await refineLocalVerdict(fetchAsk("https://developer.mozilla.org/en-US/"), ALLOW, REPO, {
+      resolve: async () => {
+        called += 1;
+        return ["93.184.216.34"];
+      },
+      harnessPorts: HARNESS,
+    });
+    expect(verdict).toEqual(ALLOW);
+    expect(called).toBe(0);
+  });
+
+  /**
+   * SANS LISTE DE PORTS, TOUTE LA BOUCLE LOCALE RESTE REFUSÉE. Une ignorance ne
+   * s'interprète pas en autorisation : c'est le comportement d'avant D8, et c'est
+   * ce qui doit rester si un jour le superviseur oublie de passer ses ports.
+   */
+  it("refuse tout le privé quand les ports du harness sont inconnus", async () => {
+    const verdict = await refineLocalVerdict(fetchAsk("http://localhost:3000/"), ALLOW, REPO, {});
+    expect(verdict.reply).toBe("reject");
   });
 });
 

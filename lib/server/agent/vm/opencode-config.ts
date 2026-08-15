@@ -419,8 +419,24 @@ function permissions(job: VmJob): Record<string, PermissionRule> {
      * plutôt qu'« Unknown agent type ».
      */
     task: "ask",
-    // La microVM n'a qu'un dépôt et un harness ; tout le reste est hors sujet.
-    external_directory: "deny",
+    /**
+     * SORTIR DU DOSSIER (MIN-364, décision D5).
+     *
+     * En microVM : `deny`. Il n'y a qu'un dépôt et un harness, tout le reste est
+     * hors sujet, et un `deny` de config court-circuite avant publication.
+     *
+     * Sur la machine de l'utilisateur : `ask`, **pour autoriser**. Le mur d'avant
+     * n'attrapait que les tools honnêtes — vingt des trente commandes mesurées
+     * atteignent un dossier extérieur sans publier autre chose que `bash` — et il
+     * poussait donc le travail vers l'endroit où l'on ne voit plus rien. `ask`
+     * rend un `once` immédiat ET publie la sortie au fil : le verdict ne bride
+     * rien, et on garde la trace de chaque excursion.
+     *
+     * Le prix, à savoir plutôt qu'à découvrir : un aller-retour HTTP en boucle
+     * locale sur les ~10 commandes (sur 30 mesurées) qui publient vraiment cette
+     * permission. Les vingt autres ne passent de toute façon jamais par ici.
+     */
+    external_directory: local ? "ask" : "deny",
   };
 }
 

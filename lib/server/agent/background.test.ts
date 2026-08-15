@@ -175,7 +175,7 @@ describe("run_background — garde-fou git (MIN-108 vaut ici aussi)", () => {
     const out = await jobs.handle({ action: "start", command: "git push origin HEAD" });
     expect(out.success).toBe(false);
     expect(out.reason).toBe(FORBIDDEN_COMMAND_REASON);
-    expect(String(asRecord(out.result).error)).toMatch(/harness owns git/i);
+    expect(String(asRecord(out.result).error)).toMatch(/harness owns the remote/i);
     // Rien n'a été lancé dans la microVM : le refus arrive AVANT.
     expect(starts).toHaveLength(0);
   });

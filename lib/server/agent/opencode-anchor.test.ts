@@ -194,13 +194,78 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
 
   it("dit que le dépôt appartient à quelqu'un, et ce qu'on n'y fait pas", () => {
     expect(current).toContain("the user's own working copy");
-    expect(current).toContain("never switch branch, never stash, never commit");
+    expect(current).toContain("never switch branch, never stash");
     expect(clone).not.toContain("the user's own working copy");
+  });
+
+  /**
+   * MIN-364 (§1 de l'audit du 2026-08-15) — LE DÉFAUT QUI N'ÉTAIT PAS UN
+   * ARBITRAGE : personne ne commitait.
+   *
+   * Le harness ne commite plus en mode dépôt courant (D2bis-B), et l'ancrage
+   * promettait pourtant « the harness delivers YOUR work by committing » deux
+   * propositions après un « never commit ». Le modèle finissait ses tours sur
+   * « c'est livré » et rien ne l'était.
+   */
+  it("dit que RIEN n'est commité pour le modèle, et que la livraison est sa phrase", () => {
+    expect(current).toContain("Nothing is committed for you here");
+    expect(current).not.toContain("delivers YOUR work by committing");
+    // Le cloud, lui, commite pour de vrai : sa phrase ne bouge pas.
+    expect(clone).toContain("it commits and pushes whatever you changed");
+  });
+
+  it("rend le commit au modèle SUR DEMANDE, sans lui rendre le `git add -A`", () => {
+    expect(current).toContain("You commit only when they ask you to");
+    expect(current).toContain("never `git add -A`");
+    expect(current).toContain("`create_pr` owns the remote");
   });
 
   it("retire `git status` du rôle de diff, et nomme le cas des deux mains", () => {
     expect(current).toContain("`git status` is NOT your diff here");
     expect(current).toContain("goes out with your pull request");
+  });
+
+  /**
+   * MIN-364 (D7) — LA QUESTION NE TUE PLUS LE TOUR SUR UNE MACHINE.
+   *
+   * « ça termine ton tour » pousse le modèle à tout finir avant de demander, et
+   * lui fait lire son propre tour comme perdu au moment où il demande. Les deux
+   * conduites sont fausses quand le tool bloque et rend la réponse dans son
+   * résultat.
+   */
+  it("dit que la question SUSPEND le tour, là où le cloud dit qu'elle le termine", () => {
+    expect(current).toContain("SUSPENDS your turn — it does not end it");
+    expect(current).toContain("comes back to you as the tool's own result");
+    // « SUSPENDS » contient « ENDS » : c'est la phrase entière qui distingue les
+    // deux, jamais le verbe seul.
+    expect(current).not.toContain("It is not a blocking prompt");
+    expect(current).not.toContain("the session goes to sleep");
+    expect(clone).toContain("`question` ENDS your turn");
+    expect(clone).not.toContain("SUSPENDS your turn");
+  });
+
+  /**
+   * MIN-364 (décision D5) — LE DISQUE EST OUVERT, ET LA RETENUE EST UNE RÈGLE DE
+   * PROMPT, PAS UN MUR.
+   *
+   * C'est un choix assumé : le mur d'avant n'attrapait de toute façon que les
+   * tools honnêtes (vingt des trente commandes mesurées atteignent un dossier
+   * extérieur sans publier autre chose que `bash`). Ce qui ne serait PAS
+   * assumable, c'est de le décrire ailleurs comme une garantie — d'où le test :
+   * la règle doit être écrite comme une demande, et l'écriture ailleurs doit
+   * passer par une VRAIE question.
+   */
+  it("ouvre le disque et demande de DEMANDER avant d'écrire ailleurs", () => {
+    expect(current).toContain("the whole disk is within reach");
+    expect(current).toContain("ASK before you WRITE anywhere outside this folder");
+    expect(current).toContain("`question`");
+    // La règle de tête ne peut plus dire « reste dans le dépôt » : une règle
+    // fausse dans un prompt en affaiblit vingt autres.
+    expect(current).not.toContain("Stay within this repository");
+    expect(current).toContain("Reading elsewhere on the disk is fine");
+    // Le cloud, lui, garde son périmètre : le clone est jetable et complet.
+    expect(clone).toContain("Stay within this repository");
+    expect(clone).not.toContain("the whole disk is within reach");
   });
 
   it("corrige l'historique et la fraîcheur de la base", () => {
@@ -209,9 +274,24 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
     expect(clone).toContain("You have history, for the last 6 months");
   });
 
-  it("ne touche pas au garde-fou de shell, qui est le même des deux côtés", () => {
+  /**
+   * LE GARDE-FOU DE SHELL N'EST PLUS LE MÊME DES DEUX CÔTÉS (MIN-364), et c'est
+   * la seule chose que D6 change. Ce test ANCRE la liste servie de chaque côté
+   * sur celle que `command-guard` exécute réellement : le tour local avait, avant
+   * ce lot, le bloc git du CLOUD — donc la liste qui refuse `git commit` — parce
+   * que l'ancrage se lisait sur un `repoMode` que la machine remplace.
+   */
+  it("annonce EXACTEMENT ce que `command-guard` refuse de chaque côté", () => {
+    expect(clone).toContain("`git commit`, `git push`, `git reset`");
+    // En dépôt courant `git commit` n'est plus dans la liste des refus…
+    expect(current).toContain("REFUSES what would destroy work that is not yours");
+    expect(current).toContain("plus `git push`, which belongs to `create_pr`");
+    expect(current).not.toContain("`git commit`, `git push`, `git reset`");
+    // …et les deux côtés refusent toujours ce qui détruit.
     for (const text of [clone, current]) {
-      expect(text).toContain("`git commit`, `git push`, `git reset`");
+      expect(text).toContain("`git reset`");
+      expect(text).toContain("`git clean -f`");
+      expect(text).toContain("`--amend`");
     }
   });
 });

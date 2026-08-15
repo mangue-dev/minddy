@@ -52,12 +52,43 @@
  * Et le bug d'enveloppe qui rendait le reste contournable : `env -i git push`
  * passait, parce que `skipPrefix` s'arrêtait sur `-i`. Les enveloppes voient
  * désormais leurs OPTIONS sautées, avec leur valeur quand elles en portent une.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * LE COMMIT REND À CELUI QUI TRAVAILLE (MIN-364, décision D6)
+ *
+ * `commit` était refusé sur un motif écrit noir sur blanc — « le harness commite
+ * et pousse à la fin de chaque tour ». **En mode dépôt courant, il ne commite
+ * plus** (D2bis-B) : trois textes disaient trois choses, et le résultat était un
+ * tour local qui ne livrait RIEN — le travail restait dans l'arbre, le modèle
+ * lisait dans son prompt qu'il était livré, et le garde-fou lui refusait de le
+ * livrer lui-même.
+ *
+ * D'où le `scope` : c'est le MÊME module, et il rend deux verdicts parce que les
+ * deux mondes ne se ressemblent plus sur ce point-là. En microVM, le harness
+ * commite : `commit` reste refusé, et le motif est vrai. Sur la machine de
+ * quelqu'un, personne ne commite à sa place : `commit` est rendu au modèle, qui
+ * ne s'en sert que sur demande (c'est le prompt qui le dit, cf. `prompt.ts`).
+ *
+ * `push`, lui, reste refusé des DEUX côtés, et pour deux raisons différentes :
+ * en microVM c'est la fin de tour qui pousse, en local c'est `create_pr` qui
+ * possède le remote (il mint le token, applique la porte de livraison et relie
+ * la pull request au ticket). Un `push` nu contournerait les trois.
  */
 
 /** Valeur du champ `reason` de l'event `tool_result` d'un refus (mesurable en base). */
 export const FORBIDDEN_COMMAND_REASON = "forbidden_command";
 
 export type CommandVerdict = { allowed: true } | { allowed: false; reason: string };
+
+/**
+ * LE MONDE OÙ LA COMMANDE S'EXÉCUTE (MIN-364). Un seul champ, et il ne décide
+ * que d'une chose : qui commite. Tout le reste du garde-fou est identique des
+ * deux côtés — ce qui détruit du travail le détruit partout.
+ */
+export interface CommandScope {
+  /** Le tour joue-t-il sur la machine de l'utilisateur (`isLocalJob`) ? */
+  local?: boolean;
+}
 
 /** Caractères qui terminent une commande dans un `sh -c` : chaînage, pipe,
  *  sous-shell, substitution. Le relevé de production montre exactement ce cas —
@@ -90,10 +121,13 @@ const WRAPPER_VALUE_OPTIONS: Record<string, ReadonlySet<string>> = {
   nohup: new Set<string>(),
 };
 
-/** Sous-commandes git refusées quelle que soit leur forme. */
-const ALWAYS_FORBIDDEN = new Set([
-  "commit", // le harness commite à la fin de chaque tour
-  "push", // …et pousse (force-push inclus : la sous-commande suffit)
+/**
+ * Sous-commandes qui DÉTRUISENT ou RÉÉCRIVENT du travail non commité, refusées
+ * dans les deux mondes. Aucune ne dépend de qui livre : ce qu'elles jettent
+ * n'est pas récupérable, et rien dans git ne distingue le travail de l'agent de
+ * celui qui était là avant lui.
+ */
+const DESTRUCTIVE = new Set([
   "reset", // `--hard` détruit ; `--soft`/`--mixed` n'ont aucune raison d'être ici
   "restore", // sa raison d'être est de jeter des modifications
   "rebase",
@@ -224,10 +258,21 @@ function skipPrefix(tokens: string[]): number {
 const GIT_GLOBAL_WITH_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);
 
 /**
- * Les globales qui font travailler git AILLEURS que dans le dépôt du tour. Elles
- * sont refusées en bloc plutôt que suivies : le harness possède UN dépôt, celui du
- * cwd, et le second rideau des permissions (`external_directory: "deny"`) ne voit
- * pas passer un `bash`.
+ * Les globales qui font travailler git AILLEURS que dans le dépôt du tour.
+ *
+ * **En microVM elles sont refusées en bloc** plutôt que suivies : le harness y
+ * possède UN dépôt, celui du cwd, et le second rideau des permissions
+ * (`external_directory: "deny"`) ne voit pas passer un `bash`.
+ *
+ * **Sur la machine de l'utilisateur, elles passent** (MIN-364, décision D5) :
+ * c'est le MÊME périmètre que celui qu'on vient d'ouvrir aux tools de fichier,
+ * dit par un autre mot. Un monorepo dont les paquets sont hors du dossier
+ * attaché, un dépôt voisin à consulter — les refuser ici pendant que `read` et
+ * `edit` y vont serait la cage à l'envers du §2 de l'audit, une fois de plus.
+ *
+ * Ce qui les rend inoffensives est ailleurs et n'a pas bougé : les sous-commandes
+ * qui DÉTRUISENT restent refusées quel que soit le dépôt visé — `git -C /autre
+ * reset --hard` se fait toujours refuser sur `reset`, jamais sur `-C`.
  */
 const GIT_GLOBAL_ELSEWHERE = new Set(["-C", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);
 
@@ -349,13 +394,47 @@ function shellCommandArg(tokens: string[]): string | null {
   return null;
 }
 
-function refusal(what: string): CommandVerdict {
+/**
+ * CE QUI DÉTRUIT DU TRAVAIL — le refus qui ne dépend d'aucune décision de
+ * livraison, et le seul du lot dont la victime n'est jamais l'agent lui-même.
+ */
+function destructiveRefusal(what: string): CommandVerdict {
   return {
     allowed: false,
     reason:
-      `Refused \`${what}\` — the harness owns git: it commits and pushes your work at the end of ` +
-      `every turn, and reopens the pull request if needed. Read-only git (status/diff/log/show) ` +
-      `is fine. If you need to discard a change you made, edit the file back instead.`,
+      `Refused \`${what}\` — it throws away uncommitted work, and nothing in git tells what YOU ` +
+      `changed apart from what was already in this checkout. Read-only git ` +
+      `(status/diff/log/show/branch) and \`git add\` are free. To undo a change you made, edit ` +
+      `the file back instead.`,
+  };
+}
+
+/** LE PUSH, refusé des deux côtés — mais pas par le même propriétaire (D6). */
+function pushRefusal(scope: CommandScope): CommandVerdict {
+  return {
+    allowed: false,
+    reason: scope.local
+      ? `Refused \`git push\` — \`create_pr\` owns the remote here: it mints the credentials, runs ` +
+        `the delivery checks and links the pull request to the ticket, and a bare push goes ` +
+        `around all three. Commit locally when you were asked to, then \`create_pr\` to publish.`
+      : `Refused \`git push\` — the harness owns the remote: it pushes your work at the end of ` +
+        `every turn, and reopens the pull request if needed. Read-only git (status/diff/log/show) ` +
+        `is fine, and \`git add\` is free.`,
+  };
+}
+
+/**
+ * LE COMMIT, EN MICROVM SEULEMENT (D6). Sur la machine de quelqu'un, ce refus
+ * n'existe plus : personne ne commite à la place du modèle, et le prompt lui dit
+ * quand le faire.
+ */
+function harnessCommitRefusal(): CommandVerdict {
+  return {
+    allowed: false,
+    reason:
+      `Refused \`git commit\` — the harness owns git here: it commits and pushes your work at the ` +
+      `end of every turn, and reopens the pull request if needed. Read-only git ` +
+      `(status/diff/log/show) is fine, and \`git add\` is free.`,
   };
 }
 
@@ -449,7 +528,7 @@ const shortFlagWith = (letter: string) => (a: string) =>
   a.startsWith("-") && !a.startsWith("--") && a.includes(letter);
 
 /** Ce segment lance-t-il une commande git interdite ? */
-function checkSegment(segment: string, depth: number): CommandVerdict {
+function checkSegment(segment: string, depth: number, scope: CommandScope): CommandVerdict {
   const tokens = tokenize(segment);
 
   // `bash -lc "git reset --hard"` : le shell cache git derrière son propre `-c`.
@@ -457,7 +536,7 @@ function checkSegment(segment: string, depth: number): CommandVerdict {
   // borne `bash -c "bash -c …"`, qui n'a aucune raison d'exister.
   const inner = shellCommandArg(tokens);
   if (inner != null && depth < 3) {
-    const verdict = check(inner, depth + 1);
+    const verdict = check(inner, depth + 1, scope);
     if (!verdict.allowed) return verdict;
   }
 
@@ -482,7 +561,7 @@ function checkSegment(segment: string, depth: number): CommandVerdict {
   // inoffensif ici et ne l'est pas là-bas, et c'est le `-C` qui le dit.
   for (const global of globals) {
     const name = global.includes("=") ? global.slice(0, global.indexOf("=")) : global;
-    if (GIT_GLOBAL_ELSEWHERE.has(name)) {
+    if (!scope.local && GIT_GLOBAL_ELSEWHERE.has(name)) {
       return {
         allowed: false,
         reason:
@@ -503,30 +582,34 @@ function checkSegment(segment: string, depth: number): CommandVerdict {
     if (verdict) return verdict;
   }
 
-  if (ALWAYS_FORBIDDEN.has(sub)) return refusal(`git ${sub}`);
-  // `--amend` réécrit le dernier commit — celui du harness, poussé ou non.
-  if (args.includes("--amend")) return refusal(`git ${sub} --amend`);
+  if (DESTRUCTIVE.has(sub)) return destructiveRefusal(`git ${sub}`);
+  if (sub === "push") return pushRefusal(scope);
+  // Le commit reste au harness dans la microVM, et RIEN QUE là (D6).
+  if (sub === "commit" && !scope.local) return harnessCommitRefusal();
+  // `--amend` réécrit le dernier commit — celui du harness dans la microVM,
+  // celui de l'UTILISATEUR sur sa machine. Refusé des deux côtés, donc.
+  if (args.includes("--amend")) return destructiveRefusal(`git ${sub} --amend`);
   // `checkout` est ambigu (changer de branche est inoffensif) : on ne refuse que
   // les formes qui visent des FICHIERS, c'est-à-dire qui jettent le travail.
   if (sub === "checkout") {
     const discards = args.find((a) => a === "--" || a === "." || a === "-f" || a === "--force");
-    if (discards) return refusal(`git checkout ${discards}`);
+    if (discards) return destructiveRefusal(`git checkout ${discards}`);
   }
   // `git stash` seul est récupérable ; `drop`/`clear` ne le sont pas.
   if (sub === "stash" && (args[0] === "drop" || args[0] === "clear")) {
-    return refusal(`git stash ${args[0]}`);
+    return destructiveRefusal(`git stash ${args[0]}`);
   }
   // `git clean` sans `-f` ne fait rien ; avec, il supprime des fichiers non suivis
   // — le travail non commité, exactement ce que ce module protège. `-n` reste libre.
   if (sub === "clean") {
     const forces = args.find((a) => a === "--force" || shortFlagWith("f")(a));
-    if (forces) return refusal(`git clean ${forces}`);
+    if (forces) return destructiveRefusal(`git clean ${forces}`);
   }
   // `git switch` est l'équivalent moderne de `checkout` : changer de branche est
   // inoffensif, jeter les modifications pour y arriver ne l'est pas.
   if (sub === "switch") {
     const discards = args.find((a) => a === "--discard-changes" || a === "--force" || a === "-f");
-    if (discards) return refusal(`git switch ${discards}`);
+    if (discards) return destructiveRefusal(`git switch ${discards}`);
   }
   return { allowed: true };
 }
@@ -536,13 +619,13 @@ function checkSegment(segment: string, depth: number): CommandVerdict {
  * modèle comme une ERREUR DE TOOL : le round continue, il lit pourquoi et
  * s'adapte — on ne casse jamais le tour.
  */
-export function checkCommand(command: string): CommandVerdict {
-  return check(command, 0);
+export function checkCommand(command: string, scope: CommandScope = {}): CommandVerdict {
+  return check(command, 0, scope);
 }
 
-function check(command: string, depth: number): CommandVerdict {
+function check(command: string, depth: number, scope: CommandScope): CommandVerdict {
   for (const segment of splitSegments(command)) {
-    const verdict = checkSegment(segment, depth);
+    const verdict = checkSegment(segment, depth, scope);
     if (!verdict.allowed) return verdict;
   }
   return { allowed: true };

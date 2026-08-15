@@ -73,28 +73,60 @@ export function isPrivateHostname(raw: string): boolean {
 
 /** Le nom d'hôte d'une URL, ou "" si elle n'en porte pas de lisible. */
 export function fetchHostname(raw: string | undefined): string {
-  const url = (raw ?? "").trim();
-  if (!url) return "";
-  const read = (candidate: string): string => {
+  return fetchUrl(raw)?.hostname.replace(/^\[|\]$/g, "") ?? "";
+}
+
+/**
+ * LE PORT D'UNE URL, DÉFAUT DE SCHÉMA COMPRIS (MIN-364, décision D8).
+ *
+ * C'est lui qui distingue « le serveur de dév de l'utilisateur » — que l'agent
+ * doit pouvoir aller voir rendre, c'est la boucle de feedback la plus courte qui
+ * existe — de « les deux services du harness », qui sont sur la même boucle
+ * locale et qui, eux, ne se prêtent pas : le proxy LLM porte la clé du modèle, le
+ * pont de tools n'authentifie RIEN, et l'API d'opencode répond à qui la joint.
+ *
+ * `0` quand l'URL est illisible : aucun port réel ne vaut zéro, donc aucune
+ * comparaison de port ne peut réussir par accident dessus.
+ */
+export function fetchPort(raw: string | undefined): number {
+  const url = fetchUrl(raw);
+  if (!url) return 0;
+  if (url.port) return Number(url.port);
+  if (url.protocol === "https:") return 443;
+  if (url.protocol === "http:") return 80;
+  return 0;
+}
+
+function fetchUrl(raw: string | undefined): URL | null {
+  const value = (raw ?? "").trim();
+  if (!value) return null;
+  const read = (candidate: string): URL | null => {
     try {
-      return new URL(candidate).hostname.replace(/^\[|\]$/g, "");
+      return new URL(candidate);
     } catch {
-      return "";
+      return null;
     }
   };
   // Un modèle écrit parfois `example.com/x` sans schéma. On tente donc la même
   // complétion qu'opencode plutôt que de rendre vide : refuser sur une forme
   // lisible ne serait que du bruit, et l'adresse est ce qui décide de toute façon.
-  return read(url) || read(`https://${url}`);
+  return read(value) || read(`https://${value}`);
 }
 
-/** Le mot au modèle sur un `webfetch` refusé. Une seule rédaction, lue des deux
- *  côtés — le refus littéral et le refus après résolution disent la même chose. */
+/**
+ * Le mot au modèle sur un `webfetch` refusé. Une seule rédaction, lue des deux
+ * côtés — le refus littéral et le refus après résolution disent la même chose.
+ *
+ * ⚠ CE QU'IL NE DIT PLUS (D8) : « fetch public URLs only ». Le serveur de dév de
+ * l'utilisateur est joignable depuis MIN-364 ; ce qui reste refusé sur la boucle
+ * locale, ce sont les PORTS du harness, et le message le nomme pour que le modèle
+ * ne conclue pas que `localhost` est fermé.
+ */
 export function privateFetchMessage(hostname: string): string {
   return (
-    `Refused fetching ${hostname} — it points at this machine or its local network. ` +
-    `On a developer's computer that address space holds the harness's own services, their ` +
-    `running dev servers and whatever their VPN reaches, none of which is public ` +
-    `documentation. Fetch public URLs only.`
+    `Refused fetching ${hostname} — that address and port are the harness's own service ` +
+    `(the model proxy, the tool bridge, or the agent server that runs this turn), not a page. ` +
+    `They hold this session's credentials and answer to whoever reaches them. Everything else ` +
+    `on this machine is fine, your own dev server included.`
   );
 }

@@ -15,7 +15,10 @@ describe("checkCommand — les commandes réellement passées en production", ()
   it("refuse le `git checkout --` du 2026-07-14", () => {
     const v = refused("git checkout -- components/app-shell-chrome.tsx");
     expect(v.allowed).toBe(false);
-    if (!v.allowed) expect(v.reason).toMatch(/harness owns git/i);
+    // Le motif ne parle plus de LIVRAISON (« le harness commite ») : ce refus-ci
+    // ne dépend d'aucune décision de livraison, il protège du travail non commité
+    // qui n'est pas celui de l'agent (MIN-364).
+    if (!v.allowed) expect(v.reason).toMatch(/throws away uncommitted work/i);
   });
 
   it("refuse le `cd … && git checkout -- …` du 2026-07-15", () => {
@@ -102,6 +105,114 @@ describe("checkCommand — ce qui détruit du travail ou écrit sur le remote", 
     expect(allowed('bash -c "bash -c \\"git push\\""')).toBe(false);
     expect(allowed('sh -c -- "git reset --hard"')).toBe(false);
     expect(allowed('bash -o pipefail -c "git push"')).toBe(false);
+  });
+});
+
+/**
+ * LE COMMIT RENDU AU MODÈLE, ET RIEN D'AUTRE AVEC LUI (MIN-364, décision D6).
+ *
+ * Le défaut que ce bloc ferme est le §1 de l'audit du 2026-08-15 : en mode dépôt
+ * courant, le harness ne commite plus (D2bis-B), le prompt promettait qu'il le
+ * faisait, et ce garde-fou refusait au modèle de le faire — trois textes, trois
+ * versions, et un tour local qui ne livrait rien.
+ *
+ * Ce qui est vérifié ici n'est donc pas « commit passe » mais la FRONTIÈRE : ce
+ * seul verbe bouge, et tout ce qui détruit du travail reste refusé des deux
+ * côtés.
+ */
+describe("checkCommand — le commit, selon qui commite (MIN-364)", () => {
+  const local = (cmd: string) => checkCommand(cmd, { local: true });
+
+  it("rend `git commit` au modèle sur la machine de l'utilisateur", () => {
+    for (const cmd of [
+      "git commit -m 'fix: le compteur de tâches'",
+      "git commit -m x lib/plan.ts",
+      "GIT_AUTHOR_NAME=x git commit -m y",
+      'bash -lc "git commit -m wip"',
+    ]) {
+      expect(local(cmd).allowed, cmd).toBe(true);
+    }
+  });
+
+  it("le garde refusé en microVM, où le harness commite VRAIMENT", () => {
+    const v = refused("git commit -m 'wip'");
+    expect(v.allowed).toBe(false);
+    if (!v.allowed) expect(v.reason).toMatch(/harness owns git/i);
+  });
+
+  it("garde `git push` refusé des deux côtés, avec le bon propriétaire", () => {
+    const cloud = refused("git push origin HEAD");
+    expect(cloud.allowed).toBe(false);
+    if (!cloud.allowed) expect(cloud.reason).toMatch(/harness owns the remote/i);
+
+    const machine = local("git push --force-with-lease");
+    expect(machine.allowed).toBe(false);
+    // En local, c'est `create_pr` qui possède le remote : il mint le token,
+    // applique la porte de livraison et relie la PR au ticket.
+    if (!machine.allowed) expect(machine.reason).toMatch(/create_pr` owns the remote/i);
+  });
+
+  /**
+   * MIN-364 (décision D5) — `git -C` EST LE MÊME PÉRIMÈTRE, DIT PAR UN AUTRE MOT.
+   *
+   * Il était refusé en bloc parce que « le harness possède UN dépôt ». Sur la
+   * machine de l'utilisateur, les tools de fichier vont désormais où ils veulent :
+   * refuser à git de regarder le dépôt d'à côté pendant que `read` y va serait la
+   * cage à l'envers du §2 de l'audit — celle qui ferme le tool qui DÉCLARE et
+   * laisse ouvert le shell qui ne déclare rien.
+   */
+  it("laisse git travailler ailleurs sur la machine (D5)", () => {
+    for (const cmd of [
+      "git -C /Users/dev/Projets/voisin log --oneline -5",
+      "git -C ../voisin diff --stat",
+      "git --work-tree=/Users/dev/Projets/voisin status",
+    ]) {
+      expect(local(cmd).allowed, cmd).toBe(true);
+    }
+    // …et le garde en microVM, où il n'y a vraiment qu'un dépôt.
+    expect(allowed("git -C /autre log")).toBe(false);
+  });
+
+  it("mais pas de DÉTRUIRE ailleurs : la sous-commande décide, pas le dépôt", () => {
+    // `git -C` passe, `reset` non — et c'est le bon ordre des raisons : ce qui
+    // est refusé l'est parce qu'il détruit, pas parce qu'il vise un autre dossier.
+    expect(local("git -C /Users/dev/Projets/voisin reset --hard").allowed).toBe(false);
+    expect(local("git -C /Users/dev/Projets/voisin push").allowed).toBe(false);
+    expect(local("git -C /Users/dev/voisin checkout -- x.ts").allowed).toBe(false);
+  });
+
+  /**
+   * ET `--git-dir` RESTE REFUSÉ, mais par l'AUTRE règle — celle du token `.git`,
+   * que le §9 de l'audit garde explicitement hors de tous les lots. Un
+   * `--git-dir` nomme forcément un `.git`, donc les deux règles se croisent ici.
+   * Le coût est nul : `git -C <dépôt>` fait le même travail.
+   */
+  it("garde `--git-dir` refusé, parce qu'il nomme un `.git/`", () => {
+    const verdict = local("git --git-dir=/Users/dev/Projets/voisin/.git status");
+    expect(verdict.allowed).toBe(false);
+    if (!verdict.allowed) expect(verdict.reason).toMatch(/belongs to the harness/i);
+  });
+
+  it("ne rend RIEN d'autre : ce qui détruit du travail reste refusé en local", () => {
+    for (const cmd of [
+      "git reset --hard HEAD",
+      "git restore package-lock.json",
+      "git checkout -- lib/plan.ts",
+      "git clean -fd",
+      "git stash drop",
+      "git rebase -i main",
+      "git cherry-pick abc1234",
+      "git switch --discard-changes main",
+      // `--amend` réécrit le dernier commit — ici celui de l'UTILISATEUR.
+      "git commit --amend --no-edit",
+      // Et la persistance par `git config` ne bouge pas d'un mot (§7.1).
+      "git config --global core.hooksPath /tmp/hooks",
+      "git config core.pager 'sh -c evil'",
+      // `.git/` par le shell non plus : c'est le seul reste de périmètre gardé.
+      "cat .git/config",
+    ]) {
+      expect(local(cmd).allowed, cmd).toBe(false);
+    }
   });
 });
 

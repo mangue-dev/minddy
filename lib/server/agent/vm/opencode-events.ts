@@ -234,6 +234,12 @@ function permissionPath(
   metadata: Record<string, unknown>,
 ): string {
   if (typeof metadata.filepath === "string" && metadata.filepath.trim()) return metadata.filepath;
+  // `external_directory` porte son chemin dans `metadata.parentDir` (mesuré,
+  // MIN-364) : sans lui, la trace au fil dirait « l'agent est sorti du dossier »
+  // sans jamais dire où — donc exactement l'inverse de ce qu'on lui demande.
+  if (String(props.permission ?? "") === "external_directory") {
+    return typeof metadata.parentDir === "string" ? metadata.parentDir.trim() : "";
+  }
   if (String(props.permission ?? "") !== "read") return "";
   const patterns = Array.isArray(props.patterns) ? props.patterns : [];
   const first = patterns.find((p) => typeof p === "string" && p.trim() && p !== "*");

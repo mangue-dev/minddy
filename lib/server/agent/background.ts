@@ -1,4 +1,4 @@
-import { checkCommand, FORBIDDEN_COMMAND_REASON } from "./command-guard";
+import { checkCommand, FORBIDDEN_COMMAND_REASON, type CommandScope } from "./command-guard";
 import { headTail } from "./prune";
 
 /**
@@ -273,6 +273,13 @@ export class BackgroundJobs {
     private readonly seqBase = 0,
     /** Comment DIRE au modèle d'aller lire le log complet — cf. `BackgroundLogNotes`. */
     private readonly notes: BackgroundLogNotes = LOOP_BACKGROUND_LOG_NOTES,
+    /**
+     * LE MONDE OÙ LE JOB TOURNE, passé tel quel à `checkCommand` (MIN-364). Sans
+     * lui, un `git commit` de fond serait refusé sur la machine de l'utilisateur
+     * là où le même `git commit` de premier plan passe — deux verdicts pour la
+     * même commande, à un tool près.
+     */
+    private readonly scope: CommandScope = {},
   ) {}
 
   /** Exécute un appel `run_background`. Ne lève jamais : tout revient au modèle
@@ -316,7 +323,7 @@ export class BackgroundJobs {
 
     // Le garde-fou git de MIN-108 vaut ICI AUSSI : sans lui, `run_background`
     // serait une porte dérobée sur `git push` & consorts.
-    const verdict = checkCommand(command);
+    const verdict = checkCommand(command, this.scope);
     if (!verdict.allowed) return fail(verdict.reason, FORBIDDEN_COMMAND_REASON);
 
     const live = [...this.jobs.values()].filter(isLive);

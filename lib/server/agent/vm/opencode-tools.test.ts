@@ -279,22 +279,30 @@ describe("où les fichiers sont posés", () => {
   });
 
   /**
-   * MIN-293 — ET JAMAIS SUR LA MACHINE DE QUELQU'UN.
+   * MIN-364 (décision D8) — ET SUR LA MACHINE DE QUELQU'UN AUSSI, DÉSORMAIS.
    *
-   * Les jobs de fond partent en `setsid`, **expressément pour survivre au
-   * shell** : c'est ce qui permet à un serveur de dev de tenir entre deux
-   * `run_command`. Ce qui les tue est le `stopAll` de fin de tour, et ce
-   * `stopAll` ne tourne jamais quand le harness est tué net (⌘Q, plantage du
-   * main process). Dans une microVM la machine meurt avec eux ; sur un Mac, le
-   * `npm run dev` reste vivant, port 3000 tenu, sans même une fenêtre à fermer.
+   * Il en avait disparu (MIN-293) pour une raison d'exploitation nommée : les
+   * jobs partent en `setsid`, **expressément pour survivre au shell**, et le
+   * `stopAll` de fin de tour ne tourne jamais quand le harness est tué net (⌘Q,
+   * plantage du main process) — le `npm run dev` restait alors vivant, port 3000
+   * tenu, sans même une fenêtre à fermer.
+   *
+   * La condition écrite de la réouverture était le registre d'enfants, et elle
+   * est remplie : le superviseur y inscrit chaque job (`kind: "background"`, donc
+   * signalé en GROUPE), le lanceur le relit au ⌘Q et au démarrage. Ce que le
+   * retrait coûtait était le premier écart de parité du dossier — un agent local
+   * ne pouvait ni lancer un serveur, ni aller voir sa page rendre.
    */
-  it("`run_background` disparaît d'un tour LOCAL — rien de lancé ne doit survivre", () => {
+  it("`run_background` est servi sur un tour LOCAL comme ailleurs", () => {
     const local = job({ controlToken: "bail-hs256" });
-    expect(localToolsFor(local).map((t) => t.function.name)).toEqual(["update_plan"]);
-    expect(opencodeToolFiles(local).map((f) => f.path)).not.toContain(
+    expect(localToolsFor(local).map((t) => t.function.name)).toEqual(
+      localToolsFor(job()).map((t) => t.function.name),
+    );
+    expect(localToolsFor(local).map((t) => t.function.name)).toContain("run_background");
+    expect(opencodeToolFiles(local).map((f) => f.path)).toContain(
       `${TOOL_DIR}/run_background.ts`,
     );
-    // Et rien d'autre ne bouge : c'est un retrait, pas un régime à part.
+    // Et rien d'autre ne bouge : le drapeau local ne retire plus aucun tool.
     expect(domainToolsFor(local).map((t) => t.function.name)).toEqual(
       domainToolsFor(job()).map((t) => t.function.name),
     );

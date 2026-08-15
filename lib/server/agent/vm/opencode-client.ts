@@ -210,10 +210,35 @@ export class OpencodeClient {
   }
 
   /**
-   * Écarte une question du modèle. Notre `ask_user` ne se répond pas ici : il
-   * REND LA MAIN À L'UTILISATEUR, et la réponse revient au tour suivant par le
-   * steering. Le tool, lui, doit être résolu pour que l'historique reste
-   * apparié — mesuré : il revient en `error`, « The user dismissed this question ».
+   * RÉPOND à une question du modèle — le chemin de la machine (MIN-364, D7).
+   *
+   * `POST /question/:id/reply`, corps `{answers}` : une liste par question, dans
+   * l'ordre où elles ont été posées, chacune portant les libellés choisis.
+   * Mesuré sur `opencode-ai@1.18.16` ([opencode-wait.probe.test.ts](opencode-wait.probe.test.ts)) :
+   * **200 `true`, l'appel BLOQUE sans timeout tant que personne ne répond, et y
+   * répondre ne termine PAS le tour** — le tool `question` revient `completed`
+   * (« User has answered your questions: … ») et le round repart vers le modèle.
+   *
+   * Le schéma du binaire ne valide pas les libellés contre les options offertes
+   * (`QuestionAnswer = Array(String)`) : une réponse en TEXTE LIBRE — celle que la
+   * carte de questions compose quand l'utilisateur tape « Autre chose… » — voyage
+   * telle quelle jusqu'au modèle.
+   */
+  async replyQuestion(questionId: string, answers: string[][]): Promise<void> {
+    const route = this.legacy(`/question/${questionId}/reply`);
+    const res = await this.http(route, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ answers }),
+    });
+    if (!res.ok) throw new OpencodeHttpError(res.status, route, await res.text());
+  }
+
+  /**
+   * Écarte une question du modèle — le chemin de la MICROVM, et celui de toute
+   * sortie de tour (« Stop », deadline, plafond) qui trouve une question en vol.
+   * Le tool doit être résolu pour que l'historique reste apparié — mesuré : il
+   * revient en `error`, « The user dismissed this question ».
    */
   async rejectQuestion(questionId: string): Promise<void> {
     const route = this.legacy(`/question/${questionId}/reject`);

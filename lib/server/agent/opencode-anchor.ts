@@ -6,6 +6,7 @@ import {
   askingSection,
   buildPrReviewSystemPrompt,
   chainSection,
+  GIT_REFUSALS_CURRENT_REPO,
   grepPatternNote,
   introBlock,
   minddyToolsBlock,
@@ -101,7 +102,13 @@ const n = OPENCODE_TOOL_NAMES;
 function harnessDeltas(input: OpencodeAnchorInput): string {
   const routine = input.interactive === false;
   const lines = [
-    `- **The harness owns git, and your shell enforces it.** \`${n.shell}\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapped in \`bash -c\` included. Read-only git and \`git add\` are free. See Git and pull requests below for what happens instead.`,
+    // La liste des refus est celle de `command-guard`, et elle N'EST PAS la même
+    // des deux côtés depuis D6 : `git commit` est rendu au modèle en mode dépôt
+    // courant. La redire ici sans le scope ferait dire au harnais l'inverse de ce
+    // qu'il exécute — le défaut du §1 de l'audit, une ligne plus bas.
+    input.currentRepo === true
+      ? `- **Your shell enforces what git may not do here.** ${GIT_REFUSALS_CURRENT_REPO(n)} See Git and pull requests below for who delivers.`
+      : `- **The harness owns git, and your shell enforces it.** \`${n.shell}\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapped in \`bash -c\` included. Read-only git and \`git add\` are free. See Git and pull requests below for what happens instead.`,
     `- ${shellOutputNote(n)}`,
     `- **To rename or remove a file, use \`${n.shell}\`** (\`mv\`, \`rm\`): the end-of-turn commit picks them up like any other change.`,
     `- **There is no batch-edit tool.** One \`edit\` call changes one place; chain them rather than looking for a multi-edit. Read the file before editing it, and copy \`oldString\` verbatim from what \`${n.read}\` showed.`,
@@ -122,7 +129,13 @@ function harnessDeltas(input: OpencodeAnchorInput): string {
   }
   if (!routine) {
     lines.push(
-      `- **\`${n.ask}\` ENDS your turn.** It is not a blocking prompt: the questions go to the user, the session goes to sleep, and their answers open your next turn. So ask everything blocking the same piece of work in ONE call, and never call it for something you can decide yourself.`,
+      // MIN-364 (D7) : la question BLOQUE sur la machine de l'utilisateur, et il
+      // n'y a rien à faire pour ça — le tool d'opencode bloque déjà tout seul.
+      // Lui dire l'inverse le ferait tout finir avant de demander, et lire son
+      // propre tour comme perdu au moment où il demande.
+      input.currentRepo === true
+        ? `- **\`${n.ask}\` SUSPENDS your turn — it does not end it.** The call blocks, the user answers, and their answer comes back to you as the tool's own result: you keep your context, your plan and your open files. Ask the moment the answer changes what you would write, and put everything blocking the same piece of work in ONE call.`
+        : `- **\`${n.ask}\` ENDS your turn.** It is not a blocking prompt: the questions go to the user, the session goes to sleep, and their answers open your next turn. So ask everything blocking the same piece of work in ONE call, and never call it for something you can decide yourself.`,
     );
   }
   return `## What minddy's harness changes about your tools
@@ -205,7 +218,7 @@ ${workflowSteps({
   failedEditAdvice: `If an \`edit\` fails because \`oldString\` wasn't found, re-read the file and copy the exact current text.`,
 })}
 
-${askingSection({ routine, n })}${chainSection(input.chain === true)}${untrustedContentSection({ notebook })}${rulesTail(replyLanguage)}`;
+${askingSection({ routine, n, currentRepo: input.currentRepo === true })}${chainSection(input.chain === true)}${untrustedContentSection({ notebook })}${rulesTail(replyLanguage, input.currentRepo === true)}`;
 }
 
 /**

@@ -113,6 +113,63 @@ export function formatBootInstructions(
 }
 
 /**
+ * Cap d'UN fichier dans le document servi à opencode (`formatServedInstructions`).
+ * Généreux — un `AGENTS.md` de racine fait couramment 6 à 8 Ko —, mais borné :
+ * un seul fichier ne doit pas manger le budget des autres.
+ */
+export const SERVED_INSTRUCTIONS_FILE_MAX_BYTES = 12_000;
+
+/**
+ * LE DOCUMENT UNIQUE SERVI À OPENCODE EN `instructions` (MIN-364, lot 6).
+ *
+ * ## Pourquoi il existe
+ *
+ * Opencode allait chercher les `AGENTS.md` tout seul ; `OPENCODE_DISABLE_PROJECT_CONFIG`
+ * lui a retiré ce geste **en même temps que les plugins et les tools du dépôt**,
+ * parce que c'est la même remontée. On lui rendait donc les fichiers de la RACINE,
+ * nommés, par la clé `instructions` — et il en manquait deux choses :
+ *
+ * 1. **les fichiers IMBRIQUÉS.** Le mécanisme paresseux qui les servait
+ *    (`collectTouchedInstructions`) se collait au RÉSULTAT d'un tool de fichier,
+ *    et ces tools appartiennent à opencode depuis MIN-286 : il n'a plus de point
+ *    d'accroche. Un monorepo dont chaque paquet porte ses conventions ne les
+ *    servait donc plus du tout ;
+ * 2. **la note de frontière.** Sur un tour local, `readRepoInstructions` n'est
+ *    même pas appelé (le serveur n'a pas de `host`) : le CONTENU arrivait bien —
+ *    opencode charge la clé `instructions` — mais sans la phrase qui dit au modèle
+ *    que ces fichiers sont des DONNÉES sur le projet et non une source d'ordres.
+ *    Or c'est exactement le garde-fou d'injection de prompt sur un fichier que
+ *    quiconque peut committer.
+ *
+ * ## Pourquoi UN document plutôt que N chemins
+ *
+ * Parce que le budget. Opencode lit les fichiers qu'on lui nomme, **en entier** :
+ * lui donner trente `AGENTS.md` de monorepo mettrait trente fichiers complets dans
+ * le prompt système, à chaque round. Ici c'est nous qui lisons, donc nous qui
+ * plafonnons — et la note de frontière tient dans le même document, une fois.
+ *
+ * Rend `null` quand il n'y a rien à servir.
+ */
+export function formatServedInstructions(files: RepoInstructionFile[]): string | null {
+  const blocks: string[] = [];
+  let spent = 0;
+  for (const file of files) {
+    const trimmed = file.content.trim();
+    if (!trimmed) continue;
+    const remaining = Math.min(
+      SERVED_INSTRUCTIONS_FILE_MAX_BYTES,
+      REPO_INSTRUCTIONS_MAX_BYTES - spent,
+    );
+    if (remaining <= 0) break;
+    const body = cap(trimmed, remaining, file.path);
+    blocks.push(`<REPO_INSTRUCTIONS path="${file.path}">\n${body}\n</REPO_INSTRUCTIONS>`);
+    spent += body.length;
+  }
+  if (blocks.length === 0) return null;
+  return `# Repository instructions\nThe repository ships these instructions, from its root down to the directories they sit in — the deeper ones win over the ones above them, on anything under their own directory. ${BOUNDARY}\n\n${blocks.join("\n\n")}\n`;
+}
+
+/**
  * Ce qu'un run a déjà servi d'instructions. Muté par `collectTouchedInstructions`
  * et persisté dans le checkpoint : un tour éclaté sur plusieurs chunks ne doit pas
  * re-servir un `AGENTS.md` que le modèle a déjà lu.

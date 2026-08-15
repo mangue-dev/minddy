@@ -1207,11 +1207,28 @@ export async function executeAgentRun(
      * façon et se croit dans l'autre.
      */
     const repoMode: VmJob["repoMode"] = "clone";
+    /**
+     * ⚠ ET POURTANT L'ANCRAGE NE SE LIT PAS SUR `repoMode` (MIN-364).
+     *
+     * `repoMode` est un champ que la MACHINE remplace — `assignmentToJob` y pose
+     * `"current"` en valeur ([lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
+     * Le `"clone"` ci-dessus n'est donc, sur un tour local, qu'un placeholder que
+     * personne ne joue. L'ancrage, lui, est composé ICI et part tel quel : le lire
+     * sur ce placeholder servait au tour local **le bloc git du cloud** — « the
+     * harness commits and pushes whatever you changed at the end of each turn »,
+     * alors que le harness local ne commite rien (D2bis-B) et que le garde-fou
+     * refusait au modèle de commiter. C'est la troisième version des trois textes
+     * du §1 de l'audit du 2026-08-15, et la plus fausse des trois.
+     *
+     * Le fait qu'il faut dire au modèle est « ce checkout existait avant toi », et
+     * `run.local_exec` est ce qui le sait côté serveur.
+     */
+    const currentRepo = localTurn || isCurrentRepoJob({ repoMode });
     const opencodeInput = {
       anchorInstructions: buildOpencodeAnchor({
         locale: commentLocale,
         anchor,
-        currentRepo: isCurrentRepoJob({ repoMode }),
+        currentRepo,
         interactive: !run.routine_id,
         webSearch: webSearchAllowed,
         webSearchMax: MAX_WEB_SEARCHES_PER_TURN,

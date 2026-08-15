@@ -5,6 +5,7 @@ import { assertNotGit, resolveWithin } from "../repo-path";
 import { isSecretFile } from "../secret-scan";
 import {
   fetchHostname,
+  fetchPort,
   isPrivateHostname,
   privateFetchMessage,
   PRIVATE_FETCH_REASON,
@@ -146,6 +147,66 @@ const ALLOW: PermissionVerdict = { reply: "once" };
 /** `tool_result.reason` d'une permission que ce module ne connaît pas. */
 export const UNKNOWN_PERMISSION_REASON = "unknown_permission";
 
+/** `tool_result.reason` d'une boucle coupée (`doom_loop`). */
+export const DOOM_LOOP_REASON = "doom_loop";
+
+/** `tool_result.reason` d'une capacité que la config du tour a éteinte. */
+export const DISABLED_PERMISSION_REASON = "disabled_permission";
+
+/**
+ * LES PERMISSIONS QU'ON A LUES, ET LA VERSION OÙ ON LES A LUES (MIN-364, lot 7).
+ *
+ * ## Le défaut que ça ferme : un cliquet
+ *
+ * `default: reject` est la bonne POSTURE sur la machine de quelqu'un — autoriser
+ * ce qu'on n'a jamais lu n'est pas un garde-fou. Mais laissé seul, il fait de
+ * chaque montée d'opencode un RETRAIT de capacité que personne ne décide : `lsp`,
+ * `plan_enter`/`plan_exit`, `skill`, `doom_loop` étaient tous refusés « par
+ * construction », et le seraient restés indéfiniment (§5.5 de l'audit du 15/08).
+ *
+ * Ce qui manquait n'est pas le refus, c'est le geste qui le lève. Le voici :
+ * **cette liste est ce que le harness a lu et tranché**, et
+ * `REVIEWED_OPENCODE_VERSION` dit à quelle version. Un test tombe dès que
+ * `OPENCODE_VERSION` avance ([opencode-permissions.test.ts](opencode-permissions.test.ts)) :
+ * la relecture devient une étape de la montée de version, pas un oubli.
+ *
+ * ## Comment la relire, à la prochaine montée
+ *
+ * Le binaire porte son propre ruleset par défaut, et c'est lui qui fait foi :
+ * `strings opencode | grep 'doom_loop:"ask"'` en donne le bloc complet
+ * (`{"*":"allow", doom_loop:"ask", external_directory:{…}, question:"deny",
+ * plan_enter:"deny", plan_exit:"deny", read:{…}}` en 1.18.16), et
+ * `GET /experimental/tool` sur un serveur nu donne les ids de tools. Toute
+ * permission de plus se case ici avec un verdict et une phrase pour le modèle.
+ */
+export const REVIEWED_OPENCODE_VERSION = "1.18.16";
+
+/**
+ * Les noms de permission que `decidePermission` traite explicitement. Tout ce qui
+ * n'y est pas tombe dans le `default` — donc refusé en local, en le disant.
+ */
+export const KNOWN_PERMISSIONS: ReadonlySet<string> = new Set([
+  // Ce qui publie vraiment avec notre config (mesuré) …
+  "bash",
+  "edit",
+  "read",
+  "webfetch",
+  "task",
+  "external_directory",
+  "question",
+  "doom_loop",
+  // … et ce que la config sert en `allow` ou en `deny`, donc qui ne publie pas
+  // aujourd'hui. Lu et tranché quand même : une ACL qui change de version ne doit
+  // pas casser un tour sur une permission dont la conduite est évidente.
+  "glob",
+  "grep",
+  "websearch",
+  "todowrite",
+  "skill",
+  "plan_enter",
+  "plan_exit",
+]);
+
 /** `tool_result.reason` d'une lecture de fichier de secrets refusée. */
 export const SECRET_FILE_READ_REASON = "secret_file_read";
 
@@ -160,16 +221,36 @@ export const SECRET_FILE_READ_REASON = "secret_file_read";
 export interface PermissionScope {
   /** Le tour joue-t-il sur la machine de l'utilisateur (`isLocalJob`) ? */
   local?: boolean;
+  /**
+   * LES PORTS DU HARNESS SUR LA BOUCLE LOCALE (MIN-364, décision D8) — le proxy
+   * LLM, le pont de tools, le serveur opencode du tour.
+   *
+   * Ce sont les SEULS que `webfetch` refuse encore en local. Le refus d'avant
+   * portait sur tout l'espace privé, et son dommage collatéral était exactement
+   * la capacité qu'on veut : `curl localhost:3000` pour aller voir la page qu'on
+   * vient d'écrire rendre. Les deux se distinguent par le port, et le superviseur
+   * est le seul à les connaître — d'où le passage par le scope plutôt qu'une
+   * constante.
+   *
+   * Vide = on ne sait pas quels ports protéger, et on refuse alors toute la
+   * boucle locale : une ignorance ne s'interprète pas en autorisation.
+   */
+  harnessPorts?: readonly number[];
 }
 
 /**
- * LE VERDICT LITTÉRAL D'UN `webfetch` — la moitié PURE du garde-fou (MIN-360).
+ * LE VERDICT LITTÉRAL D'UN `webfetch` — la moitié PURE du garde-fou (MIN-360,
+ * puis MIN-364 pour le port).
  *
  * L'autre moitié est la RÉSOLUTION du nom, qui demande un résolveur et vit donc
  * dans [local-guard.ts](local-guard.ts). Les deux sont nécessaires : celle-ci
- * refuse `http://127.0.0.1`, l'autre refuse le domaine public qui pointe dessus.
+ * refuse `http://127.0.0.1:<port du harness>`, l'autre refuse le domaine public
+ * qui pointe dessus.
  */
-export function webfetchLiteralVerdict(url: string | undefined): PermissionVerdict {
+export function webfetchLiteralVerdict(
+  url: string | undefined,
+  harnessPorts: readonly number[] = [],
+): PermissionVerdict {
   const hostname = fetchHostname(url);
   if (!hostname) {
     return {
@@ -178,10 +259,19 @@ export function webfetchLiteralVerdict(url: string | undefined): PermissionVerdi
       reason: PRIVATE_FETCH_REASON,
     };
   }
-  if (isPrivateHostname(hostname)) {
+  if (isPrivateHostname(hostname) && isHarnessPort(url, harnessPorts)) {
     return { reply: "reject", message: privateFetchMessage(hostname), reason: PRIVATE_FETCH_REASON };
   }
   return ALLOW;
+}
+
+/**
+ * Ce fetch vise-t-il un service du harness ? Sans liste, TOUT compte : c'est la
+ * conduite prudente d'une ignorance, et elle rend le comportement d'avant D8.
+ */
+export function isHarnessPort(url: string | undefined, harnessPorts: readonly number[]): boolean {
+  if (harnessPorts.length === 0) return true;
+  return harnessPorts.includes(fetchPort(url));
 }
 
 /**
@@ -218,7 +308,9 @@ export function decidePermission(
           message: "The harness could not read the command to run, so it refused it.",
         };
       }
-      const verdict = checkCommand(command);
+      // Le scope voyage : `git commit` est refusé en microVM (le harness commite)
+      // et rendu au modèle sur la machine de quelqu'un (D6, MIN-364).
+      const verdict = checkCommand(command, { local: scope.local === true });
       if (verdict.allowed) return ALLOW;
       return { reply: "reject", message: verdict.reason, reason: FORBIDDEN_COMMAND_REASON };
     }
@@ -240,12 +332,21 @@ export function decidePermission(
       }
       try {
         for (const { path } of targets) {
-          // `resolveWithin` prend un chemin RELATIF au dépôt : lui passer un absolu
-          // le recollerait sous `REPO_DIR` (`/etc/x` → `<dépôt>/etc/x`), donc sans
-          // jamais sortir — c'est-à-dire sans jamais rien refuser. On ramène donc
-          // d'abord au relatif, et un chemin qui n'est pas sous le dépôt est refusé
-          // avant même d'être normalisé.
-          const abs = absoluteInRepo(repoDir, path);
+          /**
+           * ⚠ C'EST CE `case` QUI FAISAIT LA FRONTIÈRE, pas la ligne de config
+           * (MIN-364, décision D5).
+           *
+           * `absoluteInRepo` LÈVE sur tout chemin hors dépôt : `external_directory`
+           * pouvait bien passer en `allow`, l'écriture était refusée ici. Le
+           * périmètre s'ouvre donc ici, et nulle part ailleurs.
+           *
+           * Ce qui reste, et qui ne dépend d'aucune décision de périmètre :
+           * **`.git/`**. `assertNotGit` refuse un segment `.git` OÙ QU'IL SOIT dans
+           * le chemin, dépôt de l'agent ou dépôt voisin — un hook écrit là s'exécute
+           * au prochain geste git d'un humain, et un `config` y porte des
+           * identifiants. C'est le seul reste de périmètre du §9 de l'audit.
+           */
+          const abs = scope.local ? absoluteOnDisk(repoDir, path) : absoluteInRepo(repoDir, path);
           assertNotGit(repoDir, abs, path);
         }
         return ALLOW;
@@ -255,28 +356,36 @@ export function decidePermission(
     }
 
     /**
-     * ⚠ BRANCHE MORTE EN L'ÉTAT, et il vaut mieux l'écrire que la croire
-     * (MIN-362, MIN-363). Elle a été décrite ici comme un « second rideau » et
-     * comme « ce qui tient le modèle à l'écart du reste du disque » : les deux
-     * sont faux.
+     * SORTIR DU DOSSIER (MIN-364, décision D5) — et ce `case` a changé de nature
+     * deux fois, ce qui vaut d'être écrit.
      *
-     * Notre config pose `external_directory: "deny"`, et un `deny` de config
-     * **court-circuite avant toute publication** — mesuré : la demande n'arrive
-     * jamais sur le flux, donc jamais ici
+     * Il a été décrit comme « un second rideau » et comme « ce qui tient le modèle
+     * à l'écart du reste du disque » : les deux étaient faux. Notre config posait
+     * `external_directory: "deny"`, et un `deny` de config **court-circuite avant
+     * toute publication** — mesuré, la demande n'arrivait jamais ici
      * ([opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts)).
-     * Ce qui refuse, c'est la ligne de `opencode-config.ts`, pas ce `case`.
+     * Et même publiée elle n'aurait rien tenu : vingt des trente commandes
+     * mesurées atteignent un dossier extérieur sans jamais publier autre chose
+     * que `bash` (mesure n°1 en tête de fichier).
      *
-     * Et même publiée, elle ne tiendrait pas le disque : vingt des trente
-     * commandes mesurées atteignent un dossier extérieur sans jamais publier
-     * autre chose que `bash` (mesure n°1 en tête de fichier).
+     * **En local, elle est désormais en `ask` et cette branche s'exécute — pour
+     * autoriser.** Le mur d'avant n'attrapait que les tools honnêtes et poussait
+     * le travail vers `bash`, c'est-à-dire vers l'endroit où l'on ne voit plus
+     * rien. Autoriser en LAISSANT UNE TRACE (le superviseur publie un event à
+     * chaque sortie de dossier, cf. `supervisor.ts`) est l'exact contraire : le
+     * verdict ne bride rien, et le fil garde la liste des excursions.
      *
-     * On la GARDE quand même, pour une seule raison : le jour où la config
-     * passerait `external_directory` en `ask` — c'est la forme qu'aurait une
-     * carte d'approbation « l'agent veut sortir du dossier » —, le refus par
-     * défaut doit déjà être écrit et testé. Elle n'a pas à être décrite comme un
-     * verrou tant qu'elle ne s'exécute pas.
+     * La règle « demander avant d'écrire ailleurs » vit dans le PROMPT, et elle
+     * est assumée comme une politesse et non comme un mur (D5, point 1) : un
+     * modèle qui ne la lit pas écrit ailleurs sans demander, et rien ne l'arrête.
+     * Ce qui ne serait pas assumable, c'est de la décrire ailleurs comme une
+     * garantie.
+     *
+     * Hors chemin local, rien ne bouge : la microVM n'a qu'un dépôt, la config y
+     * garde son `deny`, et cette branche n'y est jamais atteinte.
      */
     case "external_directory":
+      if (scope.local) return ALLOW;
       return {
         reply: "reject",
         message: `The harness only allows work inside the repository (${repoDir}).`,
@@ -319,25 +428,106 @@ export function decidePermission(
     }
 
     /**
-     * LE FETCH (MIN-360). Hors chemin local, il est en `allow` dans la config et
-     * n'arrive donc pas ici. En local, c'est la boucle locale de l'utilisateur
-     * qu'il atteint — voir [private-address.ts](private-address.ts).
+     * LE FETCH (MIN-360, puis MIN-364). Hors chemin local, il est en `allow` dans
+     * la config et n'arrive donc pas ici. En local, c'est la boucle locale de
+     * l'utilisateur qu'il atteint — voir [private-address.ts](private-address.ts).
      *
      * Le contrôle est en DEUX temps : le littéral ici, la RÉSOLUTION dans
      * [local-guard.ts](local-guard.ts). Sans le second, un domaine public qui
-     * pointe sur 127.0.0.1 passerait — et c'est la forme qu'a une attaque.
+     * pointe sur le port du proxy passerait — et c'est la forme qu'a une attaque.
+     *
+     * Ce qui a changé avec D8 : le refus porte sur le PORT, plus sur tout
+     * l'espace privé. Un agent qui ne peut pas aller voir la page qu'il vient
+     * d'écrire n'a plus de boucle de feedback du tout, et c'est précisément celle
+     * que l'app de bureau rend possible pour la première fois.
      */
     case "webfetch":
-      return scope.local ? webfetchLiteralVerdict(ask.url) : ALLOW;
+      return scope.local ? webfetchLiteralVerdict(ask.url, scope.harnessPorts ?? []) : ALLOW;
 
     /**
-     * LA PERMISSION QU'ON NE CONNAÎT PAS (MIN-360).
+     * LA LECTURE SANS ENJEU (MIN-364, lot 7). `glob` et `grep` sont en `allow`
+     * dans notre config et ne publient donc pas — mais ils sont LUS et décidés,
+     * et c'est ce qui les distingue d'un `default` : le jour où une montée de
+     * version les met en `ask`, ils passent, sans qu'un tour se casse dessus.
+     */
+    case "glob":
+    case "grep":
+      return ALLOW;
+
+    /**
+     * LA QUESTION (MIN-364, lot 7) — elle n'est PAS consultée : mesuré, un
+     * `ask_user` publie `question.asked` sur le flux et ne passe jamais par une
+     * demande de permission. Ce qui retire vraiment `ask_user` d'une routine est
+     * le jeu de tools de l'agent (`primaryTools`).
      *
-     * `default: return ALLOW` laissait passer en silence tout type non déclaré —
-     * `lsp`, `skill`, `doom_loop`, `plan_enter`/`plan_exit`, et tout ce qu'une
-     * montée de version d'opencode ajoutera. C'était tenable dans une microVM
-     * jetable ; sur la machine de quelqu'un, autoriser par défaut ce qu'on n'a
-     * jamais lu est le contraire d'un garde-fou.
+     * On l'autorise quand même, plutôt que de la laisser au `default` : si une
+     * version se mettait à la publier, un refus casserait `ask_user` en silence
+     * sur 100 % des tours locaux — pour une capacité que la config a déjà
+     * tranchée juste au-dessus.
+     */
+    case "question":
+      return ALLOW;
+
+    /**
+     * LA BOUCLE (MIN-364, lot 7). `doom_loop` est publié quand le modèle rejoue
+     * exactement le même appel de tool avec exactement la même entrée, plusieurs
+     * fois d'affilée (relevé dans le binaire 1.18.16) : la question posée est
+     * « on continue malgré les échecs répétés ? ».
+     *
+     * On répond NON, et c'est une décision, pas une ignorance : personne n'est
+     * devant l'écran pour arbitrer, et laisser tourner une boucle coûte de
+     * l'argent par round pour produire la même chose. Le message, lui, doit dire
+     * ce qui se passe — un refus qui ressemblait à « permission inconnue » ne
+     * disait rien de la boucle, donc n'aidait pas à en sortir.
+     */
+    case "doom_loop":
+      return {
+        reply: "reject",
+        message:
+          `You have called the same tool with the same input several times in a row, and it keeps ` +
+          `failing. Calling it again will not change the answer: read the error, then either fix ` +
+          `what it points at or take another route. If nothing works, say so in your reply — ` +
+          `looping costs a round each time and produces the same thing.`,
+        reason: DOOM_LOOP_REASON,
+      };
+
+    /**
+     * CE QUE LA CONFIG A DÉJÀ ÉTEINT (MIN-364, lot 7) — `websearch` et `todowrite`
+     * sont en `deny`, `skill` est retiré du jeu de tools, `plan_enter`/`plan_exit`
+     * (le mode plan d'opencode) n'ont pas de sens dans un tour ancré à un ticket.
+     *
+     * Un `deny` de config court-circuite avant publication : ces branches ne
+     * s'exécutent pas aujourd'hui. Elles sont écrites pour que le refus soit une
+     * DÉCISION relue plutôt qu'un défaut, et pour que le modèle lise un motif
+     * plutôt que « le harness ne connaît pas cette permission ».
+     */
+    case "websearch":
+    case "todowrite":
+    case "skill":
+    case "plan_enter":
+    case "plan_exit":
+      return {
+        reply: "reject",
+        message:
+          `\`${ask.permission}\` is off in this session — minddy serves its own equivalent ` +
+          `(\`web_search\` for the web, \`update_plan\` for the checklist, the ticket's plan for ` +
+          `the rest). Use those instead.`,
+        reason: DISABLED_PERMISSION_REASON,
+      };
+
+    /**
+     * LA PERMISSION QU'ON NE CONNAÎT PAS (MIN-360, puis MIN-364 lot 7).
+     *
+     * `default: return ALLOW` laissait passer en silence tout type non déclaré.
+     * C'était tenable dans une microVM jetable ; sur la machine de quelqu'un,
+     * autoriser par défaut ce qu'on n'a jamais lu est le contraire d'un garde-fou.
+     *
+     * ⚠ MAIS LE REFUS PAR DÉFAUT EST UN CLIQUET, et c'est le §5.5 de l'audit du
+     * 15/08 : en l'état, chaque montée d'opencode RETIRE de la capacité au lieu
+     * d'en ajouter, sans que personne ne le décide. Ce qui manquait n'est pas le
+     * refus — c'est le geste qui le lève : `KNOWN_PERMISSIONS` nomme ce qu'on a
+     * lu, `REVIEWED_OPENCODE_VERSION` dit quand, et un test tombe à la prochaine
+     * montée de version tant que la relecture n'a pas eu lieu.
      *
      * Le refus NOMME la permission : c'est ce qui le rend réparable. La première
      * montée de version qui en ajoute une se voit dans `agent_run_events` plutôt
@@ -434,4 +624,19 @@ function absoluteInRepo(repoDir: string, filepath: string): string {
     throw new Error(`Path escapes the repository: ${filepath}`);
   }
   return resolved;
+}
+
+/**
+ * LE MÊME CHEMIN, SANS LA FRONTIÈRE (MIN-364, décision D5) — sur la machine de
+ * l'utilisateur, où le disque entier est à portée.
+ *
+ * Ne LÈVE plus sur la sortie de dépôt ; elle normalise, et c'est tout. Ce qui
+ * garde encore quelque chose est `assertNotGit`, appelé juste après par
+ * l'appelant : un segment `.git`, où qu'il soit sur le disque, reste refusé.
+ *
+ * Un chemin relatif reste relatif au DÉPÔT, `..` compris : c'est le cwd du
+ * modèle, et un `../autre-projet/x.ts` désigne bien le dossier voisin.
+ */
+function absoluteOnDisk(repoDir: string, filepath: string): string {
+  return posixPath.normalize(filepath.startsWith("/") ? filepath : `${repoDir}/${filepath}`);
 }

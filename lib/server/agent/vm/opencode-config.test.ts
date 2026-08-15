@@ -609,10 +609,22 @@ describe("les permissions du chemin local (MIN-360)", () => {
     expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].permission?.webfetch).toBe("ask");
   });
 
-  it("ne change rien d'autre entre les deux mondes", () => {
-    // Le reste de l'ACL est le même : ce lot resserre trois lignes, pas le tour.
-    const { read: _r1, webfetch: _w1, ...cloudRest } = cloud().permission;
-    const { read: _r2, webfetch: _w2, ...localRest } = onMachine().permission;
+  /**
+   * MIN-364 (décision D5) — LA QUATRIÈME LIGNE QUI BASCULE.
+   *
+   * `external_directory` passe de `deny` à `ask` **pour autoriser** : le `deny`
+   * de config court-circuite avant publication, donc il n'attrapait que les tools
+   * honnêtes et poussait le travail vers `bash`, où l'on ne voit plus rien. En
+   * `ask`, le superviseur rend `once` ET publie la sortie au fil.
+   */
+  it("ouvre le disque en LAISSANT une trace, et rien d'autre ne bouge", () => {
+    expect(cloud().permission.external_directory).toBe("deny");
+    expect(onMachine().permission.external_directory).toBe("ask");
+    expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].permission?.external_directory).toBe("ask");
+
+    // Le reste de l'ACL est le même : ces lots resserrent quatre lignes, pas le tour.
+    const { read: _r1, webfetch: _w1, external_directory: _e1, ...cloudRest } = cloud().permission;
+    const { read: _r2, webfetch: _w2, external_directory: _e2, ...localRest } = onMachine().permission;
     expect(localRest).toEqual(cloudRest);
   });
 });
