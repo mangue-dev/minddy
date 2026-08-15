@@ -461,6 +461,11 @@ qui peut se taire (si `node_modules` manque, `detectTypeChecker` rend `null` et
 gonfle. → Réécrire la description du ticket et amender §4, sinon le cadrage
 devient un piège pour le prochain qui l'ouvre.
 
+> **FAIT.** La description de MIN-293 a été réécrite le 2026-08-14 (elle nomme
+> désormais la perte du diff comme « la perte produit assumée du chantier »), et
+> le §4 de [desktop-electron.md](../desktop-electron.md) porte depuis MIN-363 le
+> critère qui remplace celui-là, avec ses quatre écarts en tableau.
+
 ### Le drapeau de mode d'exécution existe déjà
 
 L'audit a répété qu'« aucun champ ne distingue un run local d'un run cloud ».
@@ -568,6 +573,36 @@ d'`utilityProcess` n'est câblé nulle part, et les logs d'opencode partent dans
 dossier de la machine. C'est le premier ticket de support de la feature, et il
 sera insoluble. → capture du stdout/stderr dès le lanceur, et un geste « copier le
 rapport de diagnostic ».
+
+> **FAIT (MIN-363, 2026-08-15) : cette dette est soldée.**
+>
+> - Les cinq commentaires ont été réécrits **là où ils sont lus** — les deux de
+>   [opencode-permissions.ts](../../lib/server/agent/vm/opencode-permissions.ts)
+>   (la mesure n°1, et le `case "external_directory"` qui est nommé branche morte
+>   au lieu de « second rideau »), les trois de
+>   [opencode-config.ts](../../lib/server/agent/vm/opencode-config.ts) : la
+>   mesure n°4 dit maintenant qu'il y a **deux** catalogues, `list: "allow"` a
+>   disparu (12 tools servis, pas de `list`), et `OPENCODE_SHELL_CWD` aussi (0
+>   occurrence, revérifiée au `strings` sur `opencode-darwin-arm64`). Les deux
+>   suppressions laissent derrière elles un commentaire qui dit **pourquoi la
+>   ligne n'est pas là**, sans quoi la prochaine relecture la remettrait.
+> - La ligne « la machine qui exécute ne détient aucun secret » était **déjà**
+>   corrigée par MIN-355/357/360 aux trois endroits (`network-policy.ts`,
+>   `vm/main.ts`, le bloc `apiKey` d'`opencode-config.ts`), comme le paragraphe
+>   `read *.env ask` de [harness-opencode.md](../harness-opencode.md). Vérifié,
+>   rien à réécrire.
+> - **Le critère de bascule est réécrit** en tête du §4 de
+>   [desktop-electron.md](../desktop-electron.md), avec ses quatre écarts assumés
+>   et un renvoi vers D1/D2 pour les deux paragraphes que ces décisions périment.
+> - **Les journaux existent avant le lanceur** :
+>   [lib/desktop/run-log.ts](../../lib/desktop/run-log.ts) (nommage daté et
+>   triable, rotation à deux plafonds qui garde toujours le plus récent,
+>   substitution des secrets à l'écriture, forme du rapport) avec son test, et
+>   [desktop/src/run-log.ts](../../desktop/src/run-log.ts) pour le `fs`. Le
+>   lanceur de MIN-293 n'a qu'à brancher les deux flux de son `utilityProcess`
+>   sur `openRunLog(...).write` — l'en-tête du fichier montre les cinq lignes. Le
+>   geste **Help → Copy Diagnostic Report** est en place, et il ne fait que
+>   remplir le presse-papier : rien ne part tout seul.
 
 ---
 

@@ -114,6 +114,9 @@ const COQUILLE = {
   "channel-store.ts": "lecture/écriture du fichier de canal ; parse dans @/lib/desktop/channel",
   "repo-store.ts": "lecture/écriture des attachements ; parse dans @/lib/desktop/local-repo",
   "local-repo.ts": "panneau système + rangement ; verdicts dans @/lib/desktop/local-repo",
+  "run-log.ts":
+    "le `fs` du journal d'un tour local et le ramassage du rapport de diagnostic ; " +
+    "nommage, rotation, en-tête, substitution et forme du rapport dans @/lib/desktop/run-log",
   "trace.ts": "une ligne de journal, sans décision",
 } as const;
 

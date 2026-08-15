@@ -27,10 +27,22 @@ import {
  * CE QUI A ÉTÉ MESURÉ (opencode-ai@1.18.16, faux fournisseur local qui scripte
  * les appels de tool — aucun modèle dépensé)
  *
- * 1. **`bash: "ask"` demande pour TOUTE commande**, `echo hi` comprise :
+ * 1. **`bash: "ask"` publie une demande**, et `echo hi` la publie :
  *    `{permission: "bash", patterns: ["echo hi"], metadata: {command: "echo hi"},
- *    always: ["echo *"], tool: {messageID, callID}}`. Le garde-fou voit donc
- *    exactement ce que voyait `run_command`.
+ *    always: ["echo *"], tool: {messageID, callID}}`. Sur une commande ordinaire,
+ *    le garde-fou voit donc exactement ce que voyait `run_command`.
+ *
+ *    ⚠ **« pour TOUTE commande » était faux** (MIN-362, MIN-363), et la nuance
+ *    n'est pas d'école : mesurée commande par commande dans
+ *    [opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts),
+ *    `cd <ailleurs>` publie `external_directory` et **jamais** `bash`, et `cd .`
+ *    comme `popd` ne publient **rien du tout**. Ces trois-là ne passent JAMAIS
+ *    devant `checkCommand`. Sur trente commandes visant un dossier hors dépôt,
+ *    dix publient `external_directory`, vingt ne publient que `bash` — dont
+ *    `grep`, `find`, `sed`, `node`, `curl`, que `checkCommand` (qui ne vise que
+ *    git) laisse passer. **Ce module est un anti-accident, pas un périmètre** ;
+ *    le seul périmètre qui tiendrait est au niveau de l'OS (§2 de
+ *    [l'audit local](../../../../docs/audits/agent-local-2026-08-14.md)).
  * 2. **Une écriture publie `permission: "edit"`** avec `metadata.filepath`
  *    **ABSOLU** (et un `diff`), quel que soit le tool — `write`, `edit`,
  *    `apply_patch`. Une écriture HORS du dépôt en publie deux : d'abord
@@ -242,11 +254,28 @@ export function decidePermission(
       }
     }
 
-    // Un run n'a qu'un dépôt et un harness : tout le reste est hors sujet, et
-    // la config le refuse déjà (`external_directory: "deny"`). Ceci est le second
-    // rideau — une ACL qui bougerait chez opencode ne rouvrirait pas le disque.
-    // Il compte DOUBLE hors microVM : la machine n'est plus une frontière, ce
-    // refus-ci est ce qui tient le modèle à l'écart du reste du disque.
+    /**
+     * ⚠ BRANCHE MORTE EN L'ÉTAT, et il vaut mieux l'écrire que la croire
+     * (MIN-362, MIN-363). Elle a été décrite ici comme un « second rideau » et
+     * comme « ce qui tient le modèle à l'écart du reste du disque » : les deux
+     * sont faux.
+     *
+     * Notre config pose `external_directory: "deny"`, et un `deny` de config
+     * **court-circuite avant toute publication** — mesuré : la demande n'arrive
+     * jamais sur le flux, donc jamais ici
+     * ([opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts)).
+     * Ce qui refuse, c'est la ligne de `opencode-config.ts`, pas ce `case`.
+     *
+     * Et même publiée, elle ne tiendrait pas le disque : vingt des trente
+     * commandes mesurées atteignent un dossier extérieur sans jamais publier
+     * autre chose que `bash` (mesure n°1 en tête de fichier).
+     *
+     * On la GARDE quand même, pour une seule raison : le jour où la config
+     * passerait `external_directory` en `ask` — c'est la forme qu'aurait une
+     * carte d'approbation « l'agent veut sortir du dossier » —, le refus par
+     * défaut doit déjà être écrit et testé. Elle n'a pas à être décrite comme un
+     * verrou tant qu'elle ne s'exécute pas.
+     */
     case "external_directory":
       return {
         reply: "reject",
