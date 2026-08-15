@@ -139,8 +139,25 @@ branche WIP poussée en fin de tour.
 - **Les permissions sont une ACL ordonnée**, pas trois booléens :
   `{action, resource, effect: allow|ask|deny}`, dernière règle gagnante, `resource`
   en glob. L'agent `plan` livré le montre : `edit * deny` puis
-  `edit .opencode/plans/*.md allow`. C'est ce qui exprimera notre `writesToRepo: false`
-  d'une session de relecture, et nos `read *.env ask` sont déjà là par défaut.
+  `edit .opencode/plans/*.md allow`. C'est ce qui exprime notre `writesToRepo: false`
+  d'une session de relecture.
+
+  **⚠ Le `read *.env ask` livré par défaut, lui, était NEUTRALISÉ par notre config
+  (corrigé en MIN-360).** Le ruleset du binaire porte bien
+  `read: {"*": "allow", "*.env": "ask", "*.env.*": "ask", "*.env.example": "allow"}`
+  — cette phrase-là était vraie. Ce qui manquait est la suite : **nos règles sont
+  concaténées APRÈS**, et la dernière qui matche gagne. Notre `read: "allow"`
+  supprimait donc la question, aux deux endroits où il était écrit (la carte
+  globale, et le littéral des sous-agents `explore`, c'est-à-dire précisément ceux
+  dont le métier est de lire). Sans conséquence sur un clone jetable ; en mode
+  dépôt courant, c'est le `.env` **réel** de l'utilisateur qui entrait en silence
+  dans le contexte du modèle.
+  Depuis MIN-360, `read` passe en `ask` **sur le chemin local** et le verdict est à
+  nous ([opencode-permissions.ts](../lib/server/agent/vm/opencode-permissions.ts)) :
+  prendre la main plutôt que redéclarer leur glob, parce qu'une ACL qu'on ne
+  contrôle pas dépend de l'ordre de concaténation et de la sémantique de glob d'une
+  version. **Une lecture générale à en tirer : ce qu'opencode livre ne survit à
+  notre config que si on l'y réécrit.**
 - **La config porte tout ce dont la parité a besoin** (schéma OpenAPI) :
   `agent.<id>.{prompt, tools, permission, model, temperature, maxSteps}`,
   `tools` (carte nom → booléen ; **attention, elle ne RETIRE pas l'intégré, elle
@@ -1279,6 +1296,35 @@ plutôt que supprimés — la porte de livraison garde ses 32 cas purs,
 passer par l'exécuteur. `AGENT_ENGINES` garde ses deux valeurs — des centaines de
 lignes de runs portent `loop` — mais un `LIVE_AGENT_ENGINES` les distingue de ce
 qui peut encore JOUER : c'est sur celui-là que compte le garde-fou des secrets.
+
+### 2.30 Le contenu d'un dépôt exécutait du code — les deux écoutilles (MIN-360)
+
+Opencode **auto-découvre** depuis le dépôt, et minddy ne posait aucune des deux
+variables qui l'en empêchent. Dans une microVM jetable, sans enjeu. En mode dépôt
+courant sur la machine de l'utilisateur, c'est **de l'exécution de code arbitraire
+depuis le contenu d'un dépôt** — un vecteur d'injection qui contourne entièrement
+le modèle de permissions, puisqu'il s'exécute avant lui.
+
+Relevé **dans le binaire** (1.18.16, `opencode-darwin-arm64`), pas déduit d'une doc :
+
+| Variable | Ce qu'elle coupe, tel que le code le dit |
+| --- | --- |
+| `OPENCODE_PURE=1` | Le chargeur de plugins **serveur** fait `let A = flags.pure ? [] : config.plugin_origins ?? []`. Plus aucun plugin externe : ni ceux déclarés dans un `opencode.json` du dépôt, ni les `*.ts` ramassés sous `.opencode/plugin(s)/`. Nos plugins à nous ne sont pas concernés — il n'y en a aucun (§2.15). |
+| `OPENCODE_DISABLE_PROJECT_CONFIG=1` | `ConfigPaths.directories` cesse de remonter chercher `.opencode/` depuis le dépôt, `ConfigPaths.files` de remonter chercher `opencode.json(c)`. Ça ferme les **tools** du dépôt (des `*.ts` exécutés dès que le modèle les appelle) et ses **serveurs MCP** (un process lancé au démarrage de la session). |
+
+**Pourquoi notre config ne suffisait pas**, alors que l'ordre de fusion nous est
+favorable : `OPENCODE_CONFIG_CONTENT` est bien appliqué **après** les
+`opencode.json` du dépôt, donc notre ACL gagne sur ce qui se REMPLACE. Mais
+`plugin`, `mcp` et les tools d'un `.opencode/` **s'ajoutent** — il n'y a rien à
+gagner sur une liste qui se concatène.
+
+**Ce que la seconde écoutille emporte au passage, et qu'il fallait rendre :** les
+`AGENTS.md` / `CLAUDE.md` du dépôt, qu'opencode chargeait par la MÊME remontée.
+Ils repassent en `instructions[]`, nommés, racine seulement, sondés par le
+superviseur. Ce qu'on perd — les fichiers de sous-dossiers, qu'opencode collait au
+fil de l'eau — est le prix de la fermeture, et il est écrit dans le code.
+**Notre** dossier de tools, lui, est intact : il vient de `Path.config`
+(`XDG_CONFIG_HOME`), qui reste inclus inconditionnellement.
 
 ---
 

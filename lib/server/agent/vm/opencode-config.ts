@@ -1,6 +1,6 @@
 import type { HarnessLayout } from "../harness-layout";
 import { RUN_COMMAND_TIMEOUT_MS } from "../tools";
-import type { VmJob } from "./protocol";
+import { isLocalJob, type VmJob } from "./protocol";
 
 /**
  * LA CONFIG D'OPENCODE POUR UN TOUR (MIN-286, lot 1) — ce que le superviseur pose
@@ -346,8 +346,24 @@ function permissions(job: VmJob): Record<string, PermissionRule> {
    * ([opencode-permissions.ts](opencode-permissions.ts)).
    */
   const write: PermissionAction = job.writesToRepo ? "ask" : "deny";
+  const local = isLocalJob(job);
   return {
-    read: "allow",
+    /**
+     * `read` (MIN-360) — `allow` en microVM, `ask` sur la machine de quelqu'un.
+     *
+     * `allow` n'était pas neutre : opencode LIVRE `{"*.env": "ask", "*.env.*":
+     * "ask", "*.env.example": "allow"}` dans son ruleset par défaut, nos règles
+     * sont concaténées APRÈS, et la dernière qui matche gagne — notre `allow`
+     * effaçait donc la question sur les `.env`. Sur un clone jetable, sans
+     * enjeu ; en mode dépôt courant, c'est le `.env` réel de l'utilisateur.
+     *
+     * On ne remet pas leur glob : on prend la main. Un `ask` global fait passer
+     * chaque lecture par `decidePermission`, qui est à nous, testé, et ne dépend
+     * ni de l'ordre de concaténation ni de la sémantique de glob d'une version.
+     * Le coût est un aller-retour HTTP en boucle locale par lecture — le même
+     * que `bash` paie depuis toujours.
+     */
+    read: local ? "ask" : "allow",
     glob: "allow",
     grep: "allow",
     list: "allow",
@@ -358,7 +374,17 @@ function permissions(job: VmJob): Record<string, PermissionRule> {
     // (mesuré). Ce qui retire vraiment `ask_user` d'une routine est le jeu de
     // tools de l'agent (`primaryTools`).
     question: job.interactive ? "ask" : "deny",
-    webfetch: "allow",
+    /**
+     * `webfetch` (MIN-360) — `allow` en microVM, `ask` sur une machine.
+     *
+     * En `allow`, il n'est JAMAIS publié en permission : `decidePermission` ne
+     * voyait aucun fetch. Dans la microVM c'était sans conséquence, la boucle
+     * locale ne portant que nos deux serveurs et le firewall bornant le reste.
+     * Sur un Mac, la même ligne atteint le proxy LLM (donc la clé), le pont de
+     * tools — qui n'authentifie rien —, les serveurs de dév de l'utilisateur, un
+     * Ollama, un NAS, et tout ce que son VPN rend joignable.
+     */
+    webfetch: local ? "ask" : "allow",
     websearch: "deny",
     todowrite: "deny",
     /**
@@ -550,7 +576,9 @@ function subagentAgents(job: VmJob): Record<string, OpencodeAgentConfig> {
       description: subagentDescription(entry),
       tools: subagentTools(job, entry.mode),
       permission: explore
-        ? { "*": "deny", read: "allow", grep: "allow", glob: "allow" }
+        ? // `read` suit la même règle que celle du parent (MIN-360), et c'est ici
+          // qu'elle compte le plus : une fille `explore` n'a que ça à faire.
+          { "*": "deny", read: isLocalJob(job) ? "ask" : "allow", grep: "allow", glob: "allow" }
         : // Une fille ne délègue pas (hiérarchie à un niveau, doublée du
           // `subagent_depth: 1` d'opencode) et ne pose pas de question : elle
           // rapporte au parent, qui décide.
@@ -573,16 +601,28 @@ function subagentDescription(entry: SubagentAgentEntry): string {
   return `${what} ${on}`;
 }
 
+export interface BuildOpencodeConfigOptions {
+  /** Chemins des plugins que le superviseur a écrits. Toujours vide : la décision
+   *  de MIN-286 (docs/harness-opencode.md §2.15) est de n'en poser aucun. */
+  plugins?: string[];
+  baseUrl?: string;
+  /**
+   * Les fichiers de conventions du dépôt (`AGENTS.md`, `CLAUDE.md`) que le
+   * superviseur a TROUVÉS — chemins absolus, racine du dépôt seulement.
+   *
+   * Ils remplacent ce qu'opencode faisait tout seul avant que
+   * `OPENCODE_DISABLE_PROJECT_CONFIG` ne le lui retire (MIN-360).
+   */
+  repoInstructionFiles?: string[];
+}
+
 /**
  * LA CONFIG D'UN TOUR. Pure : même job, même document, à l'octet près — c'est ce
  * qui permet de la comparer dans un test au lieu de la relire.
- *
- * `plugins` porte les chemins des plugins que le superviseur a écrits (règles de
- * livraison, gate, self-review). Vide tant que le lot 2 ne les a pas posés.
  */
 export function buildOpencodeConfig(
   job: VmJob,
-  opts: { plugins?: string[]; baseUrl?: string } = {},
+  opts: BuildOpencodeConfigOptions = {},
 ): OpencodeConfig {
   const ref = modelRef(job.model);
   return {
@@ -594,7 +634,16 @@ export function buildOpencodeConfig(
     small_model: ref,
     subagent_depth: 1,
     default_agent: OPENCODE_PRIMARY_AGENT,
-    instructions: [opencodeAnchorFile(job.layout)],
+    /**
+     * L'ancrage minddy, PUIS les conventions du dépôt (MIN-360).
+     *
+     * Opencode allait chercher `AGENTS.md` / `CLAUDE.md` tout seul en remontant
+     * depuis le dépôt. `OPENCODE_DISABLE_PROJECT_CONFIG` — qu'on pose désormais,
+     * cf. `opencodeServerEnv` — lui retire ce geste EN MÊME TEMPS que les tools et
+     * les plugins du dépôt, parce que c'est la même remontée. On les rend donc
+     * explicitement : nommés, à la racine, et sans rien exécuter.
+     */
+    instructions: [opencodeAnchorFile(job.layout), ...(opts.repoInstructionFiles ?? [])],
     provider: {
       [OPENCODE_PROVIDER_ID]: {
         npm: OPENCODE_PROVIDER_NPM,
@@ -658,11 +707,39 @@ export function buildOpencodeConfig(
  */
 export function opencodeServerEnv(
   job: VmJob,
-  opts: { plugins?: string[]; baseUrl?: string } = {},
+  opts: BuildOpencodeConfigOptions = {},
 ): Record<string, string> {
   return {
     OPENCODE_CONFIG_CONTENT: JSON.stringify(buildOpencodeConfig(job, opts)),
     OPENCODE_DB: opencodeDbPath(job.layout),
+    /**
+     * LES DEUX ÉCOUTILLES QUI FERMENT L'AUTO-DÉCOUVERTE (MIN-360) — et elles ne
+     * sont pas de la prudence, elles ferment de l'EXÉCUTION DE CODE ARBITRAIRE
+     * DEPUIS LE CONTENU D'UN DÉPÔT, sur la machine de l'utilisateur.
+     *
+     * Relevé dans le binaire (1.18.16, `opencode-darwin-arm64`), pas déduit :
+     *
+     * - `OPENCODE_PURE` → le chargeur de plugins SERVEUR fait
+     *   `let A = flags.pure ? [] : config.plugin_origins ?? []`. Aucun plugin
+     *   externe n'est chargé — ni ceux d'un `opencode.json` du dépôt, ni les
+     *   `*.ts` que le binaire ramasse sous `.opencode/plugin(s)/`. Nos plugins à
+     *   nous ne sont pas concernés : il n'y en a aucun (§2.15 du dossier) ;
+     * - `OPENCODE_DISABLE_PROJECT_CONFIG` → `ConfigPaths.directories` cesse de
+     *   remonter chercher `.opencode/` depuis le dépôt, et `ConfigPaths.files` de
+     *   remonter chercher `opencode.json(c)`. Ça ferme les TOOLS du dépôt (des
+     *   `*.ts` exécutés dès que le modèle les appelle) et ses serveurs MCP (un
+     *   process lancé au démarrage de la session), que notre config ne pouvait
+     *   pas neutraliser : elle est fusionnée APRÈS, donc elle GAGNE sur ce qui se
+     *   remplace, mais ces trois-là s'AJOUTENT.
+     *
+     * Ce que la seconde retire aussi, et qui est rendu ailleurs : les `AGENTS.md`
+     * et `CLAUDE.md` du dépôt, qu'opencode chargeait par la même remontée. Ils
+     * repassent par `instructions` (cf. `BuildOpencodeConfigOptions`). Notre
+     * dossier de tools, lui, est intact — il vient de `Path.config`
+     * (`XDG_CONFIG_HOME`), qui reste inclus inconditionnellement.
+     */
+    OPENCODE_PURE: "1",
+    OPENCODE_DISABLE_PROJECT_CONFIG: "1",
     // C'est lui qui met les tools de domaine hors du dépôt (cf. `opencodeToolDir`).
     XDG_CONFIG_HOME: opencodeConfigHome(job.layout),
     // Les snapshots, les journaux et les binaires téléchargés — sous le harness

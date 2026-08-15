@@ -104,7 +104,7 @@ vi.mock("./pr-landing", async (importOriginal) => ({
   resolveRunPrefs: vi.fn(async () => ({ locale: "fr" as const, numoDefaultStatus: "triage" })),
 }));
 
-const { landVmTurn } = await import("./vm-rest");
+const { landVmTurn, billableSandboxMs, MAX_SANDBOX_MS } = await import("./vm-rest");
 const { stampRun } = await import("./runs");
 
 const RUN = {
@@ -196,6 +196,37 @@ describe("le métrage de la microVM change de main", () => {
     await landVmTurn(run(), report({ sandboxMs: Number.NaN }));
     await landVmTurn(run(), report({ sandboxMs: -60_000 }));
     expect(h.sandboxUsage).toHaveLength(0);
+  });
+
+  /**
+   * MIN-360 — AUCUNE VALEUR PORTANT UNE CONSÉQUENCE FINANCIÈRE NE VIENT D'UN
+   * PROCESS LOCAL SANS BORNE SERVEUR.
+   *
+   * Le rapport vient du process qu'on soupçonne. La marque « run local », elle,
+   * est celle de la LIGNE — posée au lancement, jamais relue du rapport : un
+   * harness détourné se dirait cloud, et facturerait des minutes de Mac à son
+   * propriétaire.
+   */
+  it("ne facture RIEN de compute pour un run local, quoi que dise le rapport", async () => {
+    h.run = { ...RUN, local_exec: true };
+    await landVmTurn(run(), report({ sandboxMs: 90 * 60_000 }));
+    expect(h.sandboxUsage).toHaveLength(0);
+  });
+});
+
+describe("billableSandboxMs — la règle, seule", () => {
+  it("borne un run cloud à la durée de vie d'une microVM", () => {
+    expect(billableSandboxMs(7 * 60_000, { localExec: false })).toBe(7 * 60_000);
+    expect(billableSandboxMs(1_000 * 24 * 60 * 60_000, { localExec: false })).toBe(MAX_SANDBOX_MS);
+    expect(billableSandboxMs(-1, { localExec: false })).toBe(0);
+    expect(billableSandboxMs(Number.NaN, { localExec: false })).toBe(0);
+    expect(billableSandboxMs(Number.POSITIVE_INFINITY, { localExec: false })).toBe(0);
+  });
+
+  it("rend zéro pour un run local, y compris sur une durée plausible", () => {
+    // Il n'y a pas eu de microVM : la machine est celle que l'utilisateur a
+    // fournie, et la lui facturer serait le plus discret des vols.
+    expect(billableSandboxMs(7 * 60_000, { localExec: true })).toBe(0);
   });
 });
 

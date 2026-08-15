@@ -104,5 +104,32 @@ describe.each(ROOTS)("garde-fous de chemin (%s)", (_name, layout) => {
       // .gitignore n'est PAS dans .git/
       expect(() => assertNotGit(BASE, `${BASE}/.gitignore`, ".gitignore")).not.toThrow();
     });
+
+    /**
+     * MIN-360 — CE QUE LE DISQUE RÉEL AJOUTE.
+     *
+     * Le préfixe brut sur la racine tenait tant que le dépôt était un clone
+     * jetable sur l'ext4 d'une microVM. Sur le Mac de quelqu'un, il rate deux
+     * chemins qui désignent exactement le même pouvoir : un hook.
+     */
+    it("replie la casse — APFS ne distingue pas `.GIT/` de `.git/`", () => {
+      expect(() => assertNotGit(BASE, `${BASE}/.GIT/hooks/pre-commit`, ".GIT/hooks/pre-commit"))
+        .toThrow(/\.git/i);
+      expect(() => assertNotGit(BASE, `${BASE}/.Git/config`, ".Git/config")).toThrow(/\.git/i);
+    });
+
+    it("refuse un `.git` IMBRIQUÉ, pas seulement celui de la racine", () => {
+      // Sous-module, dépôt imbriqué, fixture de test : le hook y a le même pouvoir.
+      expect(() => assertNotGit(BASE, `${BASE}/packages/ui/.git/hooks/post-checkout`, "packages/ui/.git/hooks/post-checkout"))
+        .toThrow(/\.git/i);
+    });
+
+    it("ne se laisse pas troubler par une racine qui contient le mot", () => {
+      // La racine est donnée par le harness : ce qui s'y trouve ne vient pas du
+      // modèle, et seul ce qui est SOUS elle est inspecté.
+      const root = "/Users/dev/.github/minddy";
+      expect(() => assertNotGit(root, `${root}/lib/x.ts`, "lib/x.ts")).not.toThrow();
+      expect(() => assertNotGit(root, `${root}/.git/config`, ".git/config")).toThrow(/\.git/i);
+    });
   });
 });

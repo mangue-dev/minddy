@@ -1,0 +1,231 @@
+import { describe, expect, it } from "vitest";
+
+import { realPathOf, refineLocalVerdict } from "./local-guard";
+import { isPrivateAddress, isPrivateHostname, fetchHostname } from "./private-address";
+import type { PermissionAsk, PermissionVerdict } from "./opencode-permissions";
+
+/**
+ * MIN-360 — LES DEUX GARDE-FOUS QUI ONT BESOIN DU DISQUE ET DU RÉSOLVEUR.
+ *
+ * `decidePermission` est pur et le reste ; ce qui est testé ici, ce sont les deux
+ * contrôles qu'aucune chaîne de caractères ne peut rendre : le lien symbolique
+ * créé DANS le dépôt (que `ln -s` pose sans qu'aucun garde-fou le voie) et le
+ * domaine public qui résout vers la boucle locale.
+ *
+ * Les deux IO sont injectées, donc le fichier ne touche ni au disque ni au réseau.
+ */
+
+const REPO = "/Users/dev/Projets/minddy";
+
+const ask = (over: Partial<PermissionAsk>): PermissionAsk => ({
+  id: "per_1",
+  sessionId: "ses_1",
+  permission: "edit",
+  callId: "call_1",
+  ...over,
+});
+
+const ALLOW: PermissionVerdict = { reply: "once" };
+
+/**
+ * Un faux `realpath` : la table est le disque. Ce qui y est décrit existe et rend
+ * sa cible réelle ; **tout ce qui n'y est pas LÈVE**, comme le vrai sur un fichier
+ * qui n'a pas encore été créé — et c'est exactement le cas que `realPathOf` doit
+ * savoir traiter.
+ */
+const realpathOf = (disk: Record<string, string>) =>
+  async (path: string): Promise<string> => {
+    if (!(path in disk)) throw new Error("ENOENT");
+    return disk[path];
+  };
+
+describe("private-address", () => {
+  it("reconnaît la machine, son réseau et son VPN", () => {
+    for (const address of [
+      "127.0.0.1", "127.1.2.3", "0.0.0.0",
+      "10.0.0.5", "172.16.0.1", "172.31.255.254", "192.168.1.10",
+      "169.254.169.254", // le métadata des clouds, tant qu'à faire
+      "100.100.1.2", // Tailscale
+      "::1", "fd12:3456::1", "fe80::1",
+      "::ffff:127.0.0.1", // la même adresse, écrite en IPv6
+    ]) {
+      expect(isPrivateAddress(address), address).toBe(true);
+    }
+  });
+
+  it("laisse passer une adresse publique", () => {
+    for (const address of ["93.184.216.34", "8.8.8.8", "172.32.0.1", "192.169.0.1", "2606:4700::1"]) {
+      expect(isPrivateAddress(address), address).toBe(false);
+    }
+  });
+
+  it("refuse les noms qui ne désignent que le réseau local", () => {
+    for (const host of ["localhost", "app.localhost", "nas.local", "db.internal", ""]) {
+      expect(isPrivateHostname(host), host).toBe(true);
+    }
+    expect(isPrivateHostname("example.com")).toBe(false);
+    // Un point final est une forme absolue du même nom.
+    expect(isPrivateHostname("nas.local.")).toBe(true);
+  });
+
+  it("lit le nom d'hôte d'une URL, avec ou sans schéma", () => {
+    expect(fetchHostname("https://example.com/docs")).toBe("example.com");
+    expect(fetchHostname("http://127.0.0.1:4096/x")).toBe("127.0.0.1");
+    expect(fetchHostname("http://[::1]:8080/")).toBe("::1");
+    expect(fetchHostname("[::1]:8080")).toBe("::1");
+    expect(fetchHostname("example.com/docs")).toBe("example.com");
+    expect(fetchHostname(undefined)).toBe("");
+  });
+});
+
+describe("realPathOf", () => {
+  it("résout le plus proche ancêtre qui existe", () => {
+    // Une écriture crée souvent le fichier : `realpath` du fichier lèverait, et
+    // c'est le DOSSIER lié qui compte.
+    const realpath = realpathOf({ [`${REPO}/notes`]: "/Users/dev/.ssh" });
+    return expect(realPathOf(`${REPO}/notes/x.ts`, realpath)).resolves.toBe("/Users/dev/.ssh/x.ts");
+  });
+
+  it("rend le chemin tel quel quand rien ne résout", () => {
+    const realpath = async (): Promise<string> => {
+      throw new Error("ENOENT");
+    };
+    return expect(realPathOf("/a/b/c", realpath)).resolves.toBe("/a/b/c");
+  });
+});
+
+describe("refineLocalVerdict — les écritures", () => {
+  it("refuse une écriture qui SORT du dépôt par un lien symbolique", async () => {
+    // `ln -s /Users/dev/.ssh <dépôt>/notes` n'est vu par aucun garde-fou : le
+    // chemin reste sous le dépôt, et pointe pourtant sur le trousseau.
+    const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/notes`]: "/Users/dev/.ssh" });
+    const verdict = await refineLocalVerdict(
+      ask({ filepath: `${REPO}/notes/authorized_keys` }),
+      ALLOW,
+      REPO,
+      { realpath },
+    );
+    expect(verdict.reply).toBe("reject");
+    expect(verdict.message).toMatch(/outside the repository/i);
+  });
+
+  it("refuse un lien qui mène dans `.git/`", async () => {
+    const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/hooks`]: `${REPO}/.git/hooks` });
+    const verdict = await refineLocalVerdict(
+      ask({ filepath: `${REPO}/hooks/pre-commit` }),
+      ALLOW,
+      REPO,
+      { realpath },
+    );
+    expect(verdict.reply).toBe("reject");
+    expect(verdict.message).toMatch(/\.git/i);
+  });
+
+  it("laisse passer une écriture ordinaire", async () => {
+    const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/lib`]: `${REPO}/lib` });
+    expect(
+      await refineLocalVerdict(ask({ filepath: `${REPO}/lib/x.ts` }), ALLOW, REPO, { realpath }),
+    ).toEqual(ALLOW);
+  });
+
+  it("inspecte TOUS les fichiers d'un `apply_patch`, pas le premier", async () => {
+    const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/b`]: "/tmp/ailleurs" });
+    const verdict = await refineLocalVerdict(
+      ask({
+        files: [
+          { path: `${REPO}/a.ts`, status: "modified" },
+          { path: `${REPO}/b/c.ts`, status: "added" },
+        ],
+      }),
+      ALLOW,
+      REPO,
+      { realpath },
+    );
+    expect(verdict.reply).toBe("reject");
+  });
+
+  it("laisse le verdict tel quel quand la racine ne résout pas", async () => {
+    // Une IO muette ne doit pas arrêter le tour : le contrôle PUR a déjà eu lieu.
+    const realpath = async (): Promise<string> => {
+      throw new Error("ENOENT");
+    };
+    expect(
+      await refineLocalVerdict(ask({ filepath: `${REPO}/lib/x.ts` }), ALLOW, REPO, { realpath }),
+    ).toEqual(ALLOW);
+  });
+});
+
+describe("refineLocalVerdict — les fetchs", () => {
+  const fetchAsk = (url: string) => ask({ permission: "webfetch", url });
+
+  it("refuse un domaine PUBLIC qui résout vers la boucle locale", async () => {
+    // C'est la forme qu'a une attaque : le littéral, lui, a l'air irréprochable.
+    const verdict = await refineLocalVerdict(
+      fetchAsk("https://docs.example.com/guide"),
+      ALLOW,
+      REPO,
+      { resolve: async () => ["127.0.0.1"] },
+    );
+    expect(verdict.reply).toBe("reject");
+    expect(verdict.reason).toBe("private_fetch");
+    expect(verdict.message).toMatch(/local network/i);
+  });
+
+  it("refuse dès qu'UNE des adresses est privée", async () => {
+    const verdict = await refineLocalVerdict(fetchAsk("https://example.com"), ALLOW, REPO, {
+      resolve: async () => ["93.184.216.34", "192.168.1.5"],
+    });
+    expect(verdict.reply).toBe("reject");
+  });
+
+  it("refuse un nom qui ne résout pas", async () => {
+    // Un nom dont on ne sait rien est exactement ce que ce garde-fou existe pour
+    // ne pas laisser passer. Ce qu'on perd est un `webfetch`, pas le tour.
+    const verdict = await refineLocalVerdict(fetchAsk("https://nowhere.example"), ALLOW, REPO, {
+      resolve: async () => {
+        throw new Error("ENOTFOUND");
+      },
+    });
+    expect(verdict.reply).toBe("reject");
+  });
+
+  it("refuse le littéral sans même appeler le résolveur", async () => {
+    let called = 0;
+    const verdict = await refineLocalVerdict(fetchAsk("http://127.0.0.1:4096/x"), ALLOW, REPO, {
+      resolve: async () => {
+        called += 1;
+        return [];
+      },
+    });
+    expect(verdict.reply).toBe("reject");
+    expect(called).toBe(0);
+  });
+
+  it("laisse passer une adresse publique", async () => {
+    expect(
+      await refineLocalVerdict(fetchAsk("https://developer.mozilla.org/en-US/"), ALLOW, REPO, {
+        resolve: async () => ["93.184.216.34"],
+      }),
+    ).toEqual(ALLOW);
+  });
+});
+
+describe("refineLocalVerdict — le sens de la fonction", () => {
+  it("ne peut que refuser ce qui était autorisé, jamais l'inverse", async () => {
+    // C'est ce qui la rend sûre à insérer après un verdict : un refus ressort
+    // intact, et on ne touche même pas au disque.
+    const rejected: PermissionVerdict = { reply: "reject", message: "non" };
+    const realpath = async (): Promise<string> => {
+      throw new Error("le disque ne doit pas être touché");
+    };
+    expect(
+      await refineLocalVerdict(ask({ filepath: `${REPO}/lib/x.ts` }), rejected, REPO, { realpath }),
+    ).toEqual(rejected);
+  });
+
+  it("ne touche pas aux permissions qui ne la concernent pas", async () => {
+    expect(await refineLocalVerdict(ask({ permission: "bash", command: "ls" }), ALLOW, REPO)).toEqual(
+      ALLOW,
+    );
+  });
+});

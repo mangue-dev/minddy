@@ -583,6 +583,91 @@ describe("les garde-fous et les questions", () => {
     expect(out.events).toEqual([]);
   });
 
+  /**
+   * MIN-360 — LE CHEMIN D'UNE LECTURE N'EST PAS OÙ ON LE CROIT.
+   *
+   * Relevé dans le binaire 1.18.16 : `ReadTool` appelle
+   * `ask({permission: "read", patterns: [<relatif au worktree>], always: ["*"],
+   * metadata: {}})`. Le `metadata` est **vide**. Ce test est ce qui empêche le
+   * verdict de lecture du chemin local de refuser 100 % des lectures en croyant
+   * garder les `.env`.
+   */
+  it("rend le chemin d'une LECTURE, qu'opencode met dans `patterns`", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      {
+        type: "permission.asked",
+        properties: {
+          id: "per_3",
+          sessionID: "ses_1",
+          permission: "read",
+          patterns: [".env.local"],
+          always: ["*"],
+          metadata: {},
+          tool: { messageID: "msg_1", callID: "call_3" },
+        },
+      },
+      state,
+    );
+    expect(out.permission?.filepath).toBe(".env.local");
+  });
+
+  it("ne prend pas le joker d'un `always` pour un chemin", () => {
+    const state = newTurnStreamState();
+    const out = translateEvent(
+      {
+        type: "permission.asked",
+        properties: {
+          id: "per_4",
+          sessionID: "ses_1",
+          permission: "read",
+          patterns: ["*"],
+          metadata: {},
+          tool: { messageID: "msg_1", callID: "call_4" },
+        },
+      },
+      state,
+    );
+    // Sans chemin lisible, le verdict refuse — et c'est la bonne issue.
+    expect(out.permission?.filepath).toBeUndefined();
+  });
+
+  it("rend l'URL d'un `webfetch`, et elle seule", () => {
+    const state = newTurnStreamState();
+    const fetch = translateEvent(
+      {
+        type: "permission.asked",
+        properties: {
+          id: "per_5",
+          sessionID: "ses_1",
+          permission: "webfetch",
+          patterns: ["http://127.0.0.1:4096/x"],
+          metadata: { url: "http://127.0.0.1:4096/x", format: "markdown" },
+          tool: { messageID: "msg_1", callID: "call_5" },
+        },
+      },
+      state,
+    );
+    expect(fetch.permission?.url).toBe("http://127.0.0.1:4096/x");
+    // Sur un `bash`, `patterns` porte la COMMANDE : la recopier en « url »
+    // serait un champ qui ment.
+    const bash = translateEvent(
+      {
+        type: "permission.asked",
+        properties: {
+          id: "per_6",
+          sessionID: "ses_1",
+          permission: "bash",
+          patterns: ["curl http://x"],
+          metadata: { command: "curl http://x" },
+          tool: { messageID: "msg_1", callID: "call_6" },
+        },
+      },
+      state,
+    );
+    expect(bash.permission?.url).toBeUndefined();
+  });
+
   it("rend le chemin ABSOLU d'une écriture", () => {
     const state = newTurnStreamState();
     const out = translateEvent(

@@ -43,9 +43,38 @@ export function resolveReadable(
   return resolveWithin(baseDir, path);
 }
 
-/** Lève si `absPath` (déjà résolu sous `baseDir`) vise `.git/` (écritures interdites). */
+/**
+ * Lève si `absPath` (déjà résolu sous `baseDir`) vise un `.git/` — écritures
+ * interdites.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * DEUX ÉLARGISSEMENTS QUE LE DISQUE RÉEL IMPOSE (MIN-360)
+ *
+ * La comparaison était un préfixe brut sur la racine du dépôt, et elle tenait tant
+ * que le dépôt était un clone jetable sur un ext4 de microVM :
+ *
+ * - **la casse.** APFS est insensible à la casse : `.GIT/hooks/pre-commit` désigne
+ *   exactement le même fichier que `.git/hooks/pre-commit`, et n'était pas reconnu.
+ *   On replie donc les deux côtés avant de comparer ;
+ * - **la profondeur.** Seul le `.git` de la RACINE était gardé. Un dépôt en porte
+ *   d'autres (sous-modules, dépôt imbriqué, fixture de test), et un hook y a
+ *   exactement le même pouvoir. Un segment `.git` est donc refusé **où qu'il soit**
+ *   dans le chemin.
+ *
+ * Ce qui n'est PAS ici, et qui doit se dire : le lien symbolique. `ln -s` n'est vu
+ * par aucun garde-fou, et un lien créé DANS le dépôt satisfait cette validation
+ * tout en pointant ailleurs. Ça demande le disque, donc `realpath`, donc une
+ * fonction asynchrone — elle vit dans [vm/local-guard.ts](vm/local-guard.ts), et
+ * c'est le superviseur qui l'applique. Celle-ci reste pure.
+ */
 export function assertNotGit(baseDir: string, absPath: string, relPath: string): void {
-  if (absPath === `${baseDir}/.git` || absPath.startsWith(`${baseDir}/.git/`)) {
+  const base = baseDir.toLowerCase();
+  const target = absPath.toLowerCase();
+  // On n'inspecte que ce qui est SOUS le dépôt : la racine, elle, est donnée par
+  // le harness, et un `.git` qui s'y trouverait ne viendrait pas du modèle.
+  const inside =
+    target === base ? "" : target.startsWith(`${base}/`) ? target.slice(base.length + 1) : target;
+  if (inside.split("/").includes(".git")) {
     throw new Error(`Refusing to write inside .git: ${relPath}`);
   }
 }

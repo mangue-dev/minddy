@@ -2,6 +2,13 @@ import { posix as posixPath } from "node:path";
 
 import { checkCommand, FORBIDDEN_COMMAND_REASON } from "../command-guard";
 import { assertNotGit, resolveWithin } from "../repo-path";
+import { isSecretFile } from "../secret-scan";
+import {
+  fetchHostname,
+  isPrivateHostname,
+  privateFetchMessage,
+  PRIVATE_FETCH_REASON,
+} from "./private-address";
 
 /**
  * LES GARDE-FOUS, REJOUÉS SUR LA DEMANDE DE PERMISSION D'OPENCODE (MIN-286, lot 2).
@@ -51,7 +58,14 @@ export interface PermissionAsk {
   callId: string;
   /** `metadata.command` sur un `bash`. */
   command?: string;
-  /** `metadata.filepath` sur une écriture — absolu (mesure n°2). */
+  /**
+   * LE CHEMIN DONT LA DEMANDE PARLE, et il ne voyage pas au même endroit selon
+   * le tool (cf. `permissionPath` dans [opencode-events.ts](opencode-events.ts)) :
+   * `metadata.filepath` sur une ÉCRITURE, absolu (mesure n°2) ; `patterns[0]` sur
+   * une LECTURE, relatif au worktree, parce que `ReadTool` publie un `metadata`
+   * VIDE — mesuré sur le binaire, et c'est le genre de détail qui fait refuser
+   * 100 % des lectures quand on le suppose au lieu de le regarder.
+   */
   filepath?: string;
   /**
    * LES FICHIERS D'UN `apply_patch`, UN PAR UN (`metadata.files`).
@@ -73,6 +87,12 @@ export interface PermissionAsk {
    * AVANT qu'opencode ne le résolve (mesuré, cf. `decideTask`).
    */
   subagentType?: string;
+  /**
+   * L'URL d'un `webfetch` (MIN-360). Elle n'était lue par personne, pour une
+   * raison qui a cessé d'être vraie : `webfetch: "allow"` ne publiait aucune
+   * demande, donc ce verdict ne voyait jamais un seul fetch.
+   */
+  url?: string;
 }
 
 /**
@@ -111,6 +131,47 @@ export interface PermissionVerdict {
 
 const ALLOW: PermissionVerdict = { reply: "once" };
 
+/** `tool_result.reason` d'une permission que ce module ne connaît pas. */
+export const UNKNOWN_PERMISSION_REASON = "unknown_permission";
+
+/** `tool_result.reason` d'une lecture de fichier de secrets refusée. */
+export const SECRET_FILE_READ_REASON = "secret_file_read";
+
+/**
+ * CE QUE LE VERDICT DOIT SAVOIR DU MONDE OÙ IL S'APPLIQUE (MIN-360).
+ *
+ * Un seul champ, et il en vaut trois : sur le chemin local, la machine n'est plus
+ * une frontière. Le dépôt est celui de l'utilisateur (avec son vrai `.env`), la
+ * boucle locale est la sienne (avec ses serveurs et sa clé de modèle), et une
+ * permission qu'on ne connaît pas ne peut plus être « sans enjeu par défaut ».
+ */
+export interface PermissionScope {
+  /** Le tour joue-t-il sur la machine de l'utilisateur (`isLocalJob`) ? */
+  local?: boolean;
+}
+
+/**
+ * LE VERDICT LITTÉRAL D'UN `webfetch` — la moitié PURE du garde-fou (MIN-360).
+ *
+ * L'autre moitié est la RÉSOLUTION du nom, qui demande un résolveur et vit donc
+ * dans [local-guard.ts](local-guard.ts). Les deux sont nécessaires : celle-ci
+ * refuse `http://127.0.0.1`, l'autre refuse le domaine public qui pointe dessus.
+ */
+export function webfetchLiteralVerdict(url: string | undefined): PermissionVerdict {
+  const hostname = fetchHostname(url);
+  if (!hostname) {
+    return {
+      reply: "reject",
+      message: "The harness could not read the URL to fetch, so it refused it.",
+      reason: PRIVATE_FETCH_REASON,
+    };
+  }
+  if (isPrivateHostname(hostname)) {
+    return { reply: "reject", message: privateFetchMessage(hostname), reason: PRIVATE_FETCH_REASON };
+  }
+  return ALLOW;
+}
+
 /**
  * LE VERDICT DU HARNESS. Ne lève jamais : un garde-fou qui lève sur une forme
  * inattendue arrêterait le tour au lieu de le protéger, et le seul chemin sûr
@@ -129,6 +190,7 @@ export function decidePermission(
    */
   repoDir: string,
   subagents?: SubagentContext,
+  scope: PermissionScope = {},
 ): PermissionVerdict {
   switch (ask.permission) {
     case "task":
@@ -191,8 +253,77 @@ export function decidePermission(
         message: `The harness only allows work inside the repository (${repoDir}).`,
       };
 
+    /**
+     * LA LECTURE (MIN-360) — une demande qui n'arrivait jamais, parce que notre
+     * config disait `read: "allow"`.
+     *
+     * Ce que cette ligne effaçait, c'est une protection qu'opencode LIVRE : son
+     * ruleset par défaut met `*.env` et `*.env.*` en `ask`. Nos règles étant
+     * concaténées après et la dernière qui matche gagnant, notre `allow`
+     * supprimait la question. Sans conséquence sur un clone jetable ; en mode
+     * dépôt courant, c'est le `.env` RÉEL de l'utilisateur, avec ses vraies clés,
+     * qui entrait en silence dans le contexte du modèle.
+     *
+     * ⚠ CE QUE CE REFUS NE FERME PAS, et il vaut mieux l'écrire que le laisser
+     * croire : `bash` reste ouvert, et `cat .env` ne passe pas par ici. C'est le
+     * « mur de papier » du §2 de l'audit — un périmètre de lecture qui tiendrait
+     * vraiment demanderait de garder le SHELL, ce qui n'est pas de ce lot. Ce
+     * refus-ci ferme le chemin par lequel un modèle distrait y arrive tout seul.
+     */
+    case "read": {
+      const path = (ask.filepath ?? "").trim();
+      if (!path) {
+        return {
+          reply: "reject",
+          message: "The harness could not read the path to open, so it refused the read.",
+        };
+      }
+      if (!isSecretFile(path)) return ALLOW;
+      return {
+        reply: "reject",
+        message:
+          `Refused reading ${path} — environment files hold this machine's real credentials, ` +
+          `and this session runs on someone's own computer. If you need to know which ` +
+          `variables exist, read the \`.env.example\` next to it.`,
+        reason: SECRET_FILE_READ_REASON,
+      };
+    }
+
+    /**
+     * LE FETCH (MIN-360). Hors chemin local, il est en `allow` dans la config et
+     * n'arrive donc pas ici. En local, c'est la boucle locale de l'utilisateur
+     * qu'il atteint — voir [private-address.ts](private-address.ts).
+     *
+     * Le contrôle est en DEUX temps : le littéral ici, la RÉSOLUTION dans
+     * [local-guard.ts](local-guard.ts). Sans le second, un domaine public qui
+     * pointe sur 127.0.0.1 passerait — et c'est la forme qu'a une attaque.
+     */
+    case "webfetch":
+      return scope.local ? webfetchLiteralVerdict(ask.url) : ALLOW;
+
+    /**
+     * LA PERMISSION QU'ON NE CONNAÎT PAS (MIN-360).
+     *
+     * `default: return ALLOW` laissait passer en silence tout type non déclaré —
+     * `lsp`, `skill`, `doom_loop`, `plan_enter`/`plan_exit`, et tout ce qu'une
+     * montée de version d'opencode ajoutera. C'était tenable dans une microVM
+     * jetable ; sur la machine de quelqu'un, autoriser par défaut ce qu'on n'a
+     * jamais lu est le contraire d'un garde-fou.
+     *
+     * Le refus NOMME la permission : c'est ce qui le rend réparable. La première
+     * montée de version qui en ajoute une se voit dans `agent_run_events` plutôt
+     * que de s'ouvrir toute seule.
+     */
     default:
-      return ALLOW;
+      if (!scope.local) return ALLOW;
+      return {
+        reply: "reject",
+        message:
+          `The harness does not know the permission "${ask.permission}", and this session runs ` +
+          `on a real computer — so it refused it rather than allow something it has never ` +
+          `checked. Do what you were doing another way.`,
+        reason: UNKNOWN_PERMISSION_REASON,
+      };
   }
 }
 

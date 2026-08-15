@@ -63,7 +63,35 @@ import type { VmTurnReport } from "./vm/protocol";
  * au-delà, ce n'est plus une horloge, et on coupe. Recopié plutôt qu'importé —
  * `sandbox.ts` tire le SDK Vercel, qui n'a rien à faire dans ce chemin-ci.
  */
-const MAX_SANDBOX_MS = 24 * 60 * 60_000;
+export const MAX_SANDBOX_MS = 24 * 60 * 60_000;
+
+/**
+ * CE QU'ON FACTURE DE COMPUTE POUR CE TOUR — la règle générale, écrite une fois
+ * (MIN-360) :
+ *
+ * **Aucune valeur portant une conséquence financière ne vient d'un process local
+ * sans borne serveur.**
+ *
+ * Deux bornes, et elles ne disent pas la même chose :
+ *
+ * - **un run LOCAL ne facture RIEN.** Il n'y a pas eu de microVM : le wall-clock
+ *   remonté est celui du Mac de l'utilisateur, et le convertir en dollars
+ *   reviendrait à lui faire payer une machine qu'il a lui-même fournie. La marque
+ *   « run local » est celle de la LIGNE (`agent_runs.local_exec`, posée au
+ *   lancement), jamais un champ du rapport — le rapport vient du process qu'on
+ *   soupçonne, et un harness détourné se dirait cloud ;
+ * - **un run cloud est plafonné** à la durée de vie d'une microVM. Au-delà, ce
+ *   n'est plus une horloge.
+ *
+ * Le chien de garde ([drain.ts](drain.ts)) tient la même règle sur son propre
+ * chemin, et il la tient mieux encore : il calcule la durée depuis `started_at`,
+ * donc l'horloge y est celle du serveur de bout en bout.
+ */
+export function billableSandboxMs(reported: number, opts: { localExec: boolean }): number {
+  if (opts.localExec) return 0;
+  if (!Number.isFinite(reported)) return 0;
+  return Math.min(Math.max(0, reported), MAX_SANDBOX_MS);
+}
 
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
@@ -94,10 +122,12 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
    * avant de comparer la marge à la facture Vercel.
    *
    * Écrit AVANT le reste : le reste peut échouer, cette ligne-là ne doit pas.
+   *
+   * ET BORNÉ CÔTÉ SERVEUR (MIN-360) : `billableSandboxMs` lit la marque de la
+   * LIGNE, pas du rapport — un run local ne facture aucun compute, et un rapport
+   * qui prétendrait le contraire n'a pas voix au chapitre.
    */
-  const sandboxMs = Number.isFinite(report.sandboxMs)
-    ? Math.min(Math.max(0, report.sandboxMs), MAX_SANDBOX_MS)
-    : 0;
+  const sandboxMs = billableSandboxMs(report.sandboxMs, { localExec: !!run.local_exec });
   if (sandboxMs > 0) {
     await recordSandboxUsage({
       runId: run.run_id ?? run.id,

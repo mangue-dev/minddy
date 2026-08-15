@@ -203,6 +203,54 @@ const TOOL_ARGS: Record<string, Record<string, string>> = {
  * la liste sert un garde-fou, une forme inattendue n'a pas à y entrer en
  * silence.
  */
+/**
+ * L'URL d'une demande de `webfetch` (MIN-360), et de celle-là seulement.
+ *
+ * `metadata.url` d'abord ; à défaut le premier `patterns`, qui est la chaîne sur
+ * laquelle opencode ferait matcher un « toujours » — donc la meilleure
+ * approximation de la cible le jour où la métadonnée change de forme. Ce repli est
+ * la raison pour laquelle le champ est réservé à `webfetch` : sur un `bash`,
+ * `patterns` porte la COMMANDE, et la recopier en « url » serait un champ qui ment.
+ *
+ * Vide plutôt que deviné : une URL qu'on ne sait pas lire fait REFUSER le fetch
+ * ([opencode-permissions.ts](opencode-permissions.ts)), et c'est la bonne issue.
+ */
+/**
+ * LE CHEMIN D'UNE DEMANDE, ET IL N'EST PAS AU MÊME ENDROIT SELON LE TOOL (MIN-360).
+ *
+ * Une écriture publie `metadata.filepath`, ABSOLU (mesure n°2 de
+ * [opencode-permissions.ts](opencode-permissions.ts)). **Une LECTURE publie un
+ * `metadata` VIDE** : `ReadTool` appelle
+ * `ask({permission: "read", patterns: [<chemin relatif au worktree>], always: ["*"],
+ * metadata: {}})` — relevé dans le binaire 1.18.16.
+ *
+ * Sans ce repli, le verdict de lecture du chemin local ne verrait jamais un
+ * chemin, et refuserait **100 % des lectures** en croyant garder les `.env`. Le
+ * champ garde donc un seul sens — « le chemin dont cette demande parle » — et
+ * c'est ici qu'on va le chercher là où il est.
+ */
+function permissionPath(
+  props: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): string {
+  if (typeof metadata.filepath === "string" && metadata.filepath.trim()) return metadata.filepath;
+  if (String(props.permission ?? "") !== "read") return "";
+  const patterns = Array.isArray(props.patterns) ? props.patterns : [];
+  const first = patterns.find((p) => typeof p === "string" && p.trim() && p !== "*");
+  return typeof first === "string" ? first.trim() : "";
+}
+
+function permissionUrl(
+  props: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): string {
+  if (String(props.permission ?? "") !== "webfetch") return "";
+  if (typeof metadata.url === "string" && metadata.url.trim()) return metadata.url.trim();
+  const patterns = Array.isArray(props.patterns) ? props.patterns : [];
+  const first = patterns.find((p) => typeof p === "string" && p.trim());
+  return typeof first === "string" ? first.trim() : "";
+}
+
 function permissionFiles(
   metadata: Record<string, unknown>,
 ): { path: string; status: "added" | "modified" | "deleted" }[] {
@@ -600,6 +648,8 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       const metadata = (props.metadata ?? {}) as Record<string, unknown>;
       const tool = (props.tool ?? {}) as Record<string, unknown>;
       const files = permissionFiles(metadata);
+      const url = permissionUrl(props, metadata);
+      const filepath = permissionPath(props, metadata);
       return {
         sessionId,
         events: [],
@@ -609,8 +659,9 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
           permission: String(props.permission ?? ""),
           callId: String(tool.callID ?? ""),
           ...(typeof metadata.command === "string" ? { command: metadata.command } : {}),
-          ...(typeof metadata.filepath === "string" ? { filepath: metadata.filepath } : {}),
+          ...(filepath ? { filepath } : {}),
           ...(files.length > 0 ? { files } : {}),
+          ...(url ? { url } : {}),
           // La délégation demande AVANT de résoudre l'agent : c'est ce qui permet
           // de répondre autre chose qu'« Unknown agent type » (cf. `decideTask`).
           ...(typeof metadata.subagent_type === "string"

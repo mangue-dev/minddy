@@ -538,3 +538,81 @@ describe("un run qui ne vit pas dans une microVM", () => {
     }
   });
 });
+
+/**
+ * MIN-360 — LES GARDE-FOUS QUE LE PASSAGE EN LOCAL REND OBLIGATOIRES.
+ *
+ * Deux choses ici, et la seconde compte autant que la première : ce que la config
+ * FERME pour tout le monde (l'auto-découverte de plugins et de config d'un dépôt),
+ * et ce qu'elle ne resserre QUE sur le chemin local — parce que resserrer les
+ * runs cloud leur ferait payer un aller-retour de permission par lecture pour un
+ * risque qui n'existe pas dans un clone jetable.
+ *
+ * Ce qui distingue un job local d'un job cloud est la présence du jeton
+ * (`isLocalJob`), et c'est voulu : un drapeau `local: true` à côté de lui serait
+ * une seconde vérité sur le même fait.
+ */
+describe("l'auto-découverte depuis le dépôt (MIN-360)", () => {
+  it("coupe les plugins et la config de projet, dans les deux mondes", () => {
+    // Mesuré dans le binaire 1.18.16 : `pure` vide `plugin_origins` côté serveur,
+    // `DISABLE_PROJECT_CONFIG` arrête la remontée vers `.opencode/` et
+    // `opencode.json`. Sans elles, le contenu d'un dépôt exécute du code.
+    for (const j of [job(), job({ controlToken: "jeton" })]) {
+      const env = opencodeServerEnv(j);
+      expect(env.OPENCODE_PURE).toBe("1");
+      expect(env.OPENCODE_DISABLE_PROJECT_CONFIG).toBe("1");
+    }
+  });
+
+  it("garde NOTRE dossier de tools, qui ne passe pas par cette remontée", () => {
+    // `Path.config` (donc `XDG_CONFIG_HOME`) reste inclus inconditionnellement :
+    // les ~35 tools de domaine sont servis, l'écoutille ne les emporte pas.
+    const env = opencodeServerEnv(job());
+    expect(env.XDG_CONFIG_HOME).toBe(`${LAYOUT.harnessDir}/config`);
+  });
+
+  it("rend explicitement les conventions du dépôt qu'elle vient de lui retirer", () => {
+    const repoFiles = [`${LAYOUT.repoDir}/AGENTS.md`, `${LAYOUT.repoDir}/CLAUDE.md`];
+    const cfg = buildOpencodeConfig(job(), { repoInstructionFiles: repoFiles });
+    // L'ancrage minddy d'ABORD : c'est le nôtre, et il n'est pas négociable.
+    expect(cfg.instructions).toEqual([opencodeAnchorFile(LAYOUT), ...repoFiles]);
+  });
+
+  it("n'invente aucun fichier quand le superviseur n'en a trouvé aucun", () => {
+    expect(buildOpencodeConfig(job()).instructions).toEqual([opencodeAnchorFile(LAYOUT)]);
+  });
+});
+
+describe("les permissions du chemin local (MIN-360)", () => {
+  const cloud = () => buildOpencodeConfig(job());
+  const onMachine = () => buildOpencodeConfig(job({ controlToken: "jeton-de-bail" }));
+
+  it("passe `read` en `ask` sur une machine, et le laisse en `allow` en microVM", () => {
+    // `allow` effaçait le `*.env ask` qu'opencode livre : nos règles sont
+    // concaténées APRÈS, et la dernière qui matche gagne.
+    expect(cloud().permission.read).toBe("allow");
+    expect(onMachine().permission.read).toBe("ask");
+  });
+
+  it("applique la même règle aux filles `explore`, dont c'est tout le métier", () => {
+    // Le littéral des sous-agents est le SECOND endroit où la ligne était écrite,
+    // et c'est précisément celui des agents qui ne font que lire.
+    expect(cloud().agent.explore.permission?.read).toBe("allow");
+    expect(onMachine().agent.explore.permission?.read).toBe("ask");
+  });
+
+  it("passe `webfetch` en `ask` sur une machine", () => {
+    // En `allow` il n'est JAMAIS publié en permission : le verdict ne voyait
+    // aucun fetch, et sur un Mac la boucle locale porte le proxy LLM.
+    expect(cloud().permission.webfetch).toBe("allow");
+    expect(onMachine().permission.webfetch).toBe("ask");
+    expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].permission?.webfetch).toBe("ask");
+  });
+
+  it("ne change rien d'autre entre les deux mondes", () => {
+    // Le reste de l'ACL est le même : ce lot resserre trois lignes, pas le tour.
+    const { read: _r1, webfetch: _w1, ...cloudRest } = cloud().permission;
+    const { read: _r2, webfetch: _w2, ...localRest } = onMachine().permission;
+    expect(localRest).toEqual(cloudRest);
+  });
+});
