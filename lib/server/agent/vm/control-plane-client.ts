@@ -9,14 +9,27 @@ import type { AgentUserMessage } from "@/lib/agent-mentions";
  * boucle, depuis la microVM, touche la base, le ledger, les tickets, le carnet et
  * la forge.
  *
- * CE QUI FAIT QUE ÇA MARCHE SANS AUCUN SECRET. La VM ne porte rien : pas de clé
- * Supabase, pas de jeton d'identité. Elle appelle NOTRE PROPRE ORIGINE en https,
- * et le firewall de Vercel Sandbox forwarde la requête vers la route de collecte
- * en y ajoutant un OIDC signé par la plateforme, dont le claim `sandbox_name`
- * vaut `agent-<run.id>`. Le `runId` n'est donc JAMAIS dans le corps : il est
- * dérivé de ce claim côté serveur, et la VM ne peut rien prétendre d'autre que
- * son propre run. Il n'y a pas d'en-tête d'authentification à poser ici, et c'est
- * normal — il n'y en a pas.
+ * CE QUI FAIT QUE ÇA MARCHE SANS AUCUN SECRET, DANS UNE MICROVM. La VM ne porte
+ * rien : pas de clé Supabase, pas de jeton d'identité. Elle appelle NOTRE PROPRE
+ * ORIGINE en https, et le firewall de Vercel Sandbox forwarde la requête vers la
+ * route de collecte en y ajoutant un OIDC signé par la plateforme, dont le claim
+ * `sandbox_name` vaut `agent-<run.id>`. Le `runId` n'est donc JAMAIS dans le
+ * corps : il est dérivé de ce claim côté serveur, et la VM ne peut rien prétendre
+ * d'autre que son propre run. Il n'y a pas d'en-tête d'authentification à poser, et
+ * c'est normal — il n'y en a pas.
+ *
+ * ET SUR UNE MACHINE, IL FAUT EN POSER UN (MIN-355). Aucun firewall ne signe pour
+ * un harness qui tourne sur un Mac : il porte alors un jeton HS256 `{rid, gen, exp}`
+ * que le serveur a signé, et `getToken` est par où il arrive. Deux points qui ont
+ * l'air de détails et n'en sont pas :
+ *
+ * - **`emitLive` pose ses en-têtes à un SECOND endroit** (son `fetch` détaché, plus
+ *   bas). Le jeton posé sur `request()` mais pas sur lui donnerait un tour qui
+ *   aboutit, un fil qui ne stream plus pendant des heures, et zéro erreur — le
+ *   `catch` y est vide par conception ;
+ * - **un GETTER, pas une chaîne.** Le jeton dure quinze minutes et un tour dure des
+ *   heures : il sera renouvelé sous le harness (MIN-294), et c'est ce joint-là qui
+ *   le permet sans rien changer d'autre ici.
  *
  * LA DISCIPLINE DE CE MODULE, et elle vaut d'être dite : **rien de ce qui est
  * best-effort ne doit pouvoir tuer un tour.** Un event perdu se rattrape au poll
@@ -134,8 +147,22 @@ export interface ControlPlaneClient {
   reportTurn(report: VmTurnReport): Promise<void>;
 }
 
-export function createControlPlaneClient(appOrigin: string): ControlPlaneClient {
+export function createControlPlaneClient(
+  appOrigin: string,
+  /**
+   * Le jeton d'exécution locale, RELU À CHAQUE APPEL (MIN-355). Absent en microVM,
+   * où il n'y a rien à porter. Rendre `null` revient à appeler sans en-tête : la
+   * route répond alors 403, ce qui est exactement ce qu'il faut qu'il arrive.
+   */
+  getToken?: () => string | null | undefined,
+): ControlPlaneClient {
   const url = (surface: string) => agentVmUrl(appOrigin, surface);
+
+  /** Le SEUL endroit qui fabrique l'en-tête, pour ses deux consommateurs. */
+  function authHeaders(): Record<string, string> {
+    const token = getToken?.();
+    return token ? { authorization: `Bearer ${token}` } : {};
+  }
 
   async function request(
     method: "GET" | "POST" | "PUT" | "DELETE",
@@ -147,9 +174,11 @@ export function createControlPlaneClient(appOrigin: string): ControlPlaneClient 
       try {
         const res = await fetch(url(surface), {
           method,
-          ...(body === undefined
-            ? {}
-            : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
+          headers: {
+            ...authHeaders(),
+            ...(body === undefined ? {} : { "content-type": "application/json" }),
+          },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
         if (res.ok) return await res.json().catch(() => ({}));
@@ -191,11 +220,15 @@ export function createControlPlaneClient(appOrigin: string): ControlPlaneClient 
      * Le `catch` vide n'est pas une négligence : c'est le seul appel de ce
      * fichier dont la perte ne se rattrape ni ne se journalise utilement (une
      * ligne d'erreur toutes les 250 ms noierait les logs du tour).
+     *
+     * C'est aussi ce qui rend le jeton facile à oublier ICI (MIN-355) : sans
+     * `authHeaders()` sur cette ligne, un tour local aboutirait normalement et ne
+     * streamerait plus rien pendant des heures, sans une erreur nulle part.
      */
     emitLive: (progress) => {
       void fetch(url("/stream"), {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...authHeaders() },
         body: JSON.stringify(progress),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       }).catch(() => {});

@@ -40,6 +40,15 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  * L'affirmation trop large, elle, n'était pas neutre : elle a dispensé de regarder
  * ce que ce token-là ouvrait vraiment.
  *
+ * ET TOUT CE QUI PRÉCÈDE NE VAUT QUE D'UNE MICROVM (MIN-355). Ce fichier décrit
+ * une politique posée par le firewall de Vercel Sandbox : un tour qui joue sur la
+ * machine de l'utilisateur n'en a aucune, et n'a donc rien de ce que la plateforme
+ * garantit ici. Il PORTE un jeton d'exécution locale
+ * ([local-exec-token.ts](local-exec-token.ts)) — « la machine qui exécute ne
+ * détient aucun jeton d'identité » cesse d'être vraie là-bas, et ce qui la remplace
+ * n'est pas une cachette mais une réduction de pouvoir, écrite dans
+ * `handleControlPlaneRequest`.
+ *
  * DEUX CHOIX QUI ONT L'AIR DE DÉTAILS ET N'EN SONT PAS.
  *
  * 1. `path: { exact }` sur la route de complétion, **jamais** un `startsWith`.

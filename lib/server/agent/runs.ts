@@ -281,6 +281,32 @@ export interface AgentRun {
    * restent lisibles, et c'est tout ce qu'on leur demande.
    */
   agent_engine: AgentEngine;
+  /**
+   * Ce run s'exécute sur la MACHINE DE L'UTILISATEUR (MIN-355), pas dans une
+   * microVM.
+   *
+   * FIGÉ AU LANCEMENT, comme `loop_in_vm` et `agent_engine`, et pour une raison de
+   * plus qu'eux : ce qui change n'est pas seulement où la boucle tourne, c'est le
+   * DÉPÔT sur lequel elle travaille. Un tour joué sur un Mac puis repris dans une
+   * microVM repartirait d'un clone qui ne connaît rien de ce que le premier a
+   * écrit.
+   *
+   * Deux lecteurs, et ils ne se ressemblent pas : le plan de contrôle, qui n'admet
+   * un jeton local que sur une ligne qui le dit, et le CHIEN DE GARDE, pour qui un
+   * run local est le seul cas où « on ne sait pas » est permanent (il n'y a pas de
+   * plateforme à interroger, cf. `reapDeadVmRuns`).
+   */
+  local_exec: boolean;
+  /**
+   * La GÉNÉRATION du bail d'exécution locale (MIN-355) — la seule révocation
+   * possible d'un jeton auto-porteur.
+   *
+   * Le jeton du harness porte ce nombre en claim ; `issueLocalExecToken`
+   * ([local-exec.ts](local-exec.ts)) l'incrémente à chaque émission, ce qui tue
+   * tous les précédents à l'instant. Une machine par run, par construction plutôt
+   * que par convention.
+   */
+  local_exec_gen: number;
   created_at: string;
   updated_at: string;
 }
@@ -324,6 +350,13 @@ export interface CreateRunInput {
   prNumber?: number | null;
   prUrl?: string | null;
   prState?: AgentRun["pr_state"];
+  /**
+   * Ce run part sur la MACHINE DE L'UTILISATEUR (MIN-355) — cf.
+   * `AgentRun.local_exec`. C'est la SEULE entrée : le mode est figé ici, à la
+   * création, et rien ne le bascule ensuite. Absent = un run de microVM, ce que
+   * sont tous les runs jusqu'à MIN-293.
+   */
+  localExec?: boolean;
 }
 
 /**
@@ -416,6 +449,10 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       deployment_url: currentDeploymentScope(),
       loop_in_vm: loopInVm,
       agent_engine: engine,
+      // L'ENVIRONNEMENT D'EXÉCUTION (MIN-355), posé ici et jamais ailleurs — même
+      // doctrine que les deux lignes du dessus. La génération du bail, elle, part
+      // à zéro : elle ne devient quelque chose qu'à l'émission du premier jeton.
+      local_exec: input.localExec === true,
     })
     .select("*")
     .single();
@@ -469,6 +506,52 @@ export async function getRun(runId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service.from("agent_runs").select("*").eq("id", runId).maybeSingle();
   return (data as AgentRun | null) ?? null;
+}
+
+/**
+ * PREND LE BAIL D'EXÉCUTION LOCALE (MIN-355) : incrémente `local_exec_gen` et rend
+ * la nouvelle génération, celle que le jeton portera.
+ *
+ * C'est le geste de révocation autant que celui d'émission, et c'est voulu : un
+ * jeton auto-porteur ne se rappelle pas, il se PÉRIME. Émettre le suivant est donc
+ * la seule façon de tuer le précédent — d'où « une machine par run », qui devient
+ * une propriété de la colonne plutôt qu'une règle que quelqu'un devrait faire
+ * respecter.
+ *
+ * COMPARE-AND-SWAP plutôt qu'un `col = col + 1` : Postgrest ne sait pas écrire un
+ * incrément, et une lecture suivie d'une écriture nue laisserait deux émissions
+ * simultanées rendre la MÊME génération — donc deux machines valides sur un run
+ * qui n'en admet qu'une. La garde `.eq("local_exec_gen", …)` fait que la seconde
+ * n'écrit rien et recommence.
+ *
+ * `null` = ce run n'est pas un run local (garde `local_exec`), ou la ligne a
+ * disparu. Un run de microVM n'a pas de bail à donner, et lui en donner un serait
+ * exactement la bascule d'environnement à chaud que le mode figé interdit.
+ */
+export async function bumpLocalExecGen(runId: string): Promise<number | null> {
+  const service = getServiceClient();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: current } = await service
+      .from("agent_runs")
+      .select("local_exec, local_exec_gen")
+      .eq("id", runId)
+      .maybeSingle();
+    const row = current as { local_exec?: boolean; local_exec_gen?: number } | null;
+    if (!row?.local_exec) return null;
+    const next = (row.local_exec_gen ?? 0) + 1;
+    const { data } = await service
+      .from("agent_runs")
+      .update({ local_exec_gen: next })
+      .eq("id", runId)
+      .eq("local_exec", true)
+      .eq("local_exec_gen", row.local_exec_gen ?? 0)
+      .select("local_exec_gen")
+      .maybeSingle();
+    const written = (data as { local_exec_gen?: number } | null)?.local_exec_gen;
+    if (typeof written === "number") return written;
+  }
+  console.error(`[agent-runs] local exec lease contention on ${runId}`);
+  return null;
 }
 
 /**
