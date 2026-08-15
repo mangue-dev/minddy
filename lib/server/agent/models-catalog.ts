@@ -117,10 +117,10 @@ function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
  *    et `gemini-3-pro-image` déclarent tous deux `tools`.
  * L'index, lui, les garde : un id collé à la main doit rester chiffrable.
  *
- * Les DOUBLONS DE VERSION (instantanés datés, pré-versions, tarif `:batch` —
- * un tiers de la liste ici) tombent un cran plus loin, dans `sortById`, avec
- * ceux des autres providers : même raison que les aiguillages, et même limite —
- * on range ce qu'on PROPOSE, pas ce qu'on accepte.
+ * Les DOUBLONS DE VERSION (instantanés datés, pré-versions, tarif `:batch` — à
+ * lui seul un cinquième de la liste ici) tombent un cran plus loin, dans
+ * `sortById`, avec ceux des autres providers : même raison que les aiguillages,
+ * et même limite — on range ce qu'on PROPOSE, pas ce qu'on accepte.
  */
 async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
   const index = await listOpenRouterIndex(apiKey);

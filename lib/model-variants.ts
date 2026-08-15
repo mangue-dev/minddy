@@ -10,8 +10,9 @@
  *    modèle à moitié prix contre une file d'attente asynchrone. On ne l'appelle
  *    jamais : la boucle de l'agent attend sa réponse. C'est donc du bruit pur, et
  *    le seul cas où on écarte une variante `:` ;
- *  - l'INSTANTANÉ DATÉ (`openai/gpt-4o-2024-11-20`, `deepseek-v4-pro-0813`,
- *    `qwen3-235b-a22b-2507`) — l'id figé d'une version que l'id nu sert déjà ;
+ *  - l'INSTANTANÉ DATÉ (`openai/gpt-4o-2024-11-20`,
+ *    `anthropic/claude-sonnet-5-20260114`) — une DATE DE BUILD au calendrier, et
+ *    l'id nu est l'alias mouvant qui pointe dessus ;
  *  - le QUALIFICATIF (`-preview`, `-exp`, `-beta`…) — `tencent/hy3-preview` à
  *    côté de `tencent/hy3`, `deepseek-v3.2-exp` à côté de `deepseek-v3.2`.
  *
@@ -19,7 +20,25 @@
  * est là.** `google/gemini-3.1-pro-preview` n'a pas de `gemini-3.1-pro` en face —
  * il reste, parce que le retirer ne rangerait pas la liste, il retirerait le
  * modèle. Deviner un gagnant dans une famille qui n'a que des datés
- * (`mistral-large-2512` / `-2407`) serait le même pari : on les garde tous.
+ * (`gpt-4o-2024-11-20` / `-2024-08-06`, sans `gpt-4o` en face) serait le même
+ * pari : on les garde tous.
+ *
+ * ─── Ce qui n'est PAS un instantané : le TAG DE RELEASE à quatre chiffres ───
+ *
+ * `-0731`, `-0813`, `-2507` ressemblent à des dates et n'en sont pas. DeepSeek,
+ * Qwen et Moonshot s'en servent pour publier une version AMÉLIORÉE sous le nom de
+ * famille existant, pendant que l'id nu reste accroché à la sortie précédente :
+ * `deepseek-v4-flash-0731` n'est pas `deepseek-v4-flash` figé, c'est le modèle
+ * d'après, et `qwen3-235b-a22b-2507` n'est pas une photo de `qwen3-235b-a22b`.
+ * Les traiter en doublons ne rangeait pas la liste — ça retirait du picker le
+ * seul id qui mène à ce modèle-là, et il n'en restait aucun chemin.
+ *
+ * D'où la forme de `SNAPSHOT_RE` : elle ne reconnaît qu'une date lisible comme
+ * telle (`2024-11-20`, `20241120`, `05-06`), jamais un tag nu. Un `-0613` de
+ * `gpt-4-0613`, lui, EST bien un instantané — mais il porte exactement la même
+ * forme qu'un `-0905` de Moonshot, et rien dans l'id ne les sépare. L'erreur
+ * n'est pas symétrique : garder un doublon allonge une liste déjà cherchable,
+ * retirer un modèle légitime le rend introuvable. Dans le doute, on garde.
  *
  * Les autres variantes `:` ne sont PAS des doublons et restent listées :
  * `:free` est un autre prix (donc un autre multiplicateur), `:thinking` un autre
@@ -36,12 +55,14 @@
 const BATCH_VARIANT = "batch";
 
 /**
- * Suffixe d'instantané : date ISO complète, date sans année (`-05-06`, la forme
- * des `-preview-…` de Google), date compacte, ou tag de version à 4 chiffres
- * (`-0813`, `-2507`). Un tag purement numérique est ambigu par nature — c'est la
- * présence d'un id nu en face qui tranche, jamais ce motif tout seul.
+ * Suffixe d'instantané : une DATE, et rien d'autre — ISO complète
+ * (`-2024-11-20`), compacte (`-20241120`), ou sans année (`-05-06`, la forme des
+ * `-preview-…` de Google). Un tag de release à quatre chiffres (`-0813`, `-2507`)
+ * n'en est pas une : il nomme un modèle de plus, pas une photo de l'id nu (cf.
+ * l'en-tête). L'ancre `$` et l'ordre des branches comptent : `-2024-11-20` doit
+ * se lire en entier, pas se faire couper en `-11-20`.
  */
-const SNAPSHOT_RE = /-(?:\d{4}-\d{2}-\d{2}|\d{2}-\d{2}|\d{8}|\d{4})$/;
+const SNAPSHOT_RE = /-(?:\d{4}-\d{2}-\d{2}|\d{8}|\d{2}-\d{2})$/;
 
 /** Qualificatif de pré-version accolé au nom. */
 const QUALIFIER_RE = /-(?:preview|beta|alpha|exp|experimental|nightly|latest|rc\d*)$/;

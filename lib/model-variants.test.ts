@@ -13,8 +13,22 @@ const dedupe = (list: string[]) => ids(dedupeModelVariants(list.map((id) => ({ i
 describe("canonicalModelId", () => {
   it("retire un instantané daté", () => {
     expect(canonicalModelId("openai/gpt-4o-2024-11-20")).toBe("openai/gpt-4o");
-    expect(canonicalModelId("deepseek/deepseek-v4-pro-0813")).toBe("deepseek/deepseek-v4-pro");
-    expect(canonicalModelId("qwen/qwen3-235b-a22b-2507")).toBe("qwen/qwen3-235b-a22b");
+    expect(canonicalModelId("anthropic/claude-sonnet-5-20260114")).toBe("anthropic/claude-sonnet-5");
+    expect(canonicalModelId("google/gemini-2.5-pro-05-06")).toBe("google/gemini-2.5-pro");
+  });
+
+  it("NE retire PAS un tag de release à quatre chiffres", () => {
+    // `-0731` / `-2507` ne sont pas des dates de build mais le nom d'une sortie
+    // de plus : l'id nu reste accroché à la précédente. Les ramener à lui, c'est
+    // annoncer un doublon là où il y a deux modèles.
+    for (const id of [
+      "deepseek/deepseek-v4-flash-0731",
+      "deepseek/deepseek-v4-pro-0813",
+      "qwen/qwen3-235b-a22b-2507",
+      "moonshotai/kimi-k3-0905",
+    ]) {
+      expect(canonicalModelId(id)).toBe(id);
+    }
   });
 
   it("retire un qualificatif de pré-version", () => {
@@ -89,11 +103,35 @@ describe("dedupeModelVariants", () => {
     );
   });
 
+  it("GARDE la sortie suivante d'une famille, même à côté de l'id nu", () => {
+    // Le cas qui a cassé le picker : `deepseek-v4-flash-0731` et
+    // `deepseek-v4-pro-0813` sont des modèles de plus, pas des photos de
+    // `-flash` et `-pro`. Les écarter ne laissait AUCUN chemin vers eux.
+    expect(
+      dedupe([
+        "deepseek/deepseek-v4-flash",
+        "deepseek/deepseek-v4-flash-0731",
+        "deepseek/deepseek-v4-pro",
+        "deepseek/deepseek-v4-pro-0813",
+        "deepseek/deepseek-v4-pro-0813:batch",
+        "qwen/qwen3.8-27b",
+        "qwen/qwen3.8-27b-2507",
+      ]),
+    ).toEqual([
+      "deepseek/deepseek-v4-flash",
+      "deepseek/deepseek-v4-flash-0731",
+      "deepseek/deepseek-v4-pro",
+      "deepseek/deepseek-v4-pro-0813",
+      "qwen/qwen3.8-27b",
+      "qwen/qwen3.8-27b-2507",
+    ]);
+  });
+
   it("garde toute une famille qui n'a que des datés", () => {
     // Aucun id nu : désigner un gagnant serait un pari sur ce que l'utilisateur veut.
-    expect(dedupe(["mistralai/mistral-large-2512", "mistralai/mistral-large-2407"])).toEqual([
-      "mistralai/mistral-large-2512",
-      "mistralai/mistral-large-2407",
+    expect(dedupe(["openai/gpt-4o-2024-11-20", "openai/gpt-4o-2024-08-06"])).toEqual([
+      "openai/gpt-4o-2024-11-20",
+      "openai/gpt-4o-2024-08-06",
     ]);
   });
 
