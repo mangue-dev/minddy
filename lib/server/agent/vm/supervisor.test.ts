@@ -179,6 +179,10 @@ function cp(): ControlPlaneClient {
       return { result: { url: "https://forge/pr/7" }, success: true };
     },
     repoAuthUrl: async () => "https://x-access-token:fresh@github.com/org/repo.git",
+    // Jamais appelée d'un job de microVM (cf. `isLocalJob`) : ce décor ne joue
+    // que des tours cloud, et cette ligne est là pour que le contrat soit
+    // complet, pas pour être exercée.
+    llmKey: async () => "sk-or-v1-clef-de-test",
     reportTurn: async () => {},
   };
 }

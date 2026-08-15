@@ -34,12 +34,21 @@ import { parseVmJob, vmJobPath, type VmJob, type VmTurnReport } from "./protocol
  * par un OIDC de la plateforme : `env | grep -i key` ne rend rien ici, et c'est
  * mesuré (docs/orchestrateur-process-long.md §1).
  *
- * SUR LA MACHINE DE L'UTILISATEUR, CETTE PHRASE CESSE D'ÊTRE VRAIE (MIN-355), et
- * il vaut mieux l'écrire que la laisser se périmer : il n'y a pas de firewall, donc
- * le job porte un jeton d'exécution locale (`controlToken`) que le harness pose sur
- * chacun de ses appels. Il est lisible par ce que le tour exécute. Ce qui le rend
- * tenable n'est pas une cachette, c'est ce qu'il N'OUVRE PAS — voir
- * `handleControlPlaneRequest` et [local-exec-token.ts](../local-exec-token.ts).
+ * SUR LA MACHINE DE L'UTILISATEUR, CETTE PHRASE CESSE D'ÊTRE VRAIE (MIN-355,
+ * MIN-357), et il vaut mieux l'écrire que la laisser se périmer. Il n'y a pas de
+ * firewall, donc ce process détient DEUX choses :
+ *
+ * 1. **un jeton d'exécution locale** (`controlToken`), porté par le job et posé
+ *    sur chacun de ses appels au plan de contrôle. Il est lisible par ce que le
+ *    tour exécute ; ce qui le rend tenable n'est pas une cachette, c'est ce qu'il
+ *    N'OUVRE PAS — voir `handleControlPlaneRequest` et
+ *    [local-exec-token.ts](../local-exec-token.ts) ;
+ * 2. **la clé du modèle**, qui n'est PAS dans le job : elle est demandée au
+ *    démarrage du tour (`/llm-key`) et ne vit que dans la mémoire du proxy LLM
+ *    ([llm-proxy.ts](llm-proxy.ts)), donc hors de l'environnement du serveur
+ *    opencode, que le modèle lit par un simple `env`. Elle est toujours mintée à
+ *    plafond dur : c'est le plafond, et lui seul, qui borne ce qu'un modèle
+ *    hostile peut en faire.
  */
 
 /**

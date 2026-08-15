@@ -40,14 +40,21 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  * L'affirmation trop large, elle, n'était pas neutre : elle a dispensé de regarder
  * ce que ce token-là ouvrait vraiment.
  *
- * ET TOUT CE QUI PRÉCÈDE NE VAUT QUE D'UNE MICROVM (MIN-355). Ce fichier décrit
- * une politique posée par le firewall de Vercel Sandbox : un tour qui joue sur la
- * machine de l'utilisateur n'en a aucune, et n'a donc rien de ce que la plateforme
- * garantit ici. Il PORTE un jeton d'exécution locale
- * ([local-exec-token.ts](local-exec-token.ts)) — « la machine qui exécute ne
- * détient aucun jeton d'identité » cesse d'être vraie là-bas, et ce qui la remplace
- * n'est pas une cachette mais une réduction de pouvoir, écrite dans
- * `handleControlPlaneRequest`.
+ * ET TOUT CE QUI PRÉCÈDE NE VAUT QUE D'UNE MICROVM (MIN-355, MIN-357). Ce fichier
+ * décrit une politique posée par le firewall de Vercel Sandbox : un tour qui joue
+ * sur la machine de l'utilisateur n'en a aucune, et n'a donc rien de ce que la
+ * plateforme garantit ici. **Les deux moitiés de l'invariant y tombent, et il
+ * vaut mieux les écrire que les laisser se périmer :**
+ *
+ * - le harness PORTE un jeton d'identité ([local-exec-token.ts](local-exec-token.ts)),
+ *   parce qu'aucun firewall ne signe pour lui. Ce qui le remplace n'est pas une
+ *   cachette mais une réduction de pouvoir, écrite dans `handleControlPlaneRequest` ;
+ * - et il PORTE la clé du modèle, parce qu'aucun firewall ne la posera après sa
+ *   sortie. Elle descend d'un cran seulement — jusqu'au proxy LLM
+ *   ([vm/llm-proxy.ts](vm/llm-proxy.ts)), en mémoire, jamais dans le job ni dans
+ *   l'environnement du serveur opencode — et elle est toujours une clé MINTÉE À
+ *   PLAFOND DUR ([run-key.ts](run-key.ts)) : c'est le plafond qui borne le dégât,
+ *   pas le secret.
  *
  * DEUX CHOIX QUI ONT L'AIR DE DÉTAILS ET N'EN SONT PAS.
  *
@@ -55,7 +62,9 @@ import { chatCompletionsUrl } from "@/lib/agent-providers";
  *    C'est ce mot qui met `/api/v1/key` — la route de PROVISIONING d'OpenRouter,
  *    voisine d'un segment — hors de portée : mesurée à 401 avec le placeholder,
  *    là qu'un préfixe l'aurait créditée et aurait laissé la VM émettre ses
- *    propres clés.
+ *    propres clés. **Le proxy LLM porte désormais le même mot** (`resolveProxyTarget`,
+ *    égalité stricte sur `pathname`) : sur une machine, c'est lui qui pose la
+ *    clé, donc c'est lui qui tient ce que cette ligne-ci tient ici.
  * 2. Le catch-all `"*": []` reste : le reste d'Internet est OUVERT, sans
  *    injection. On ferme le chemin du **secret**, pas celui de la **donnée** —
  *    l'exfiltration du contenu du dépôt est déjà possible aujourd'hui

@@ -1,9 +1,12 @@
+import { connect } from "node:net";
+
 import { describe, expect, it } from "vitest";
 
 import {
   extraHeaders,
   GenerationSniffer,
   patchCompletionBody,
+  resolveProxyTarget,
   startLlmProxy,
   takeGeneration,
   type LlmProxyJob,
@@ -94,6 +97,108 @@ describe("le corps de la requête, complété et pas refait", () => {
     expect(extraHeaders({ ...JOB, provider: "generic" })).toEqual({});
   });
 });
+
+/**
+ * MIN-357 — LA FAILLE MESURÉE, REJOUÉE.
+ *
+ * L'ancienne garde testait un SUFFIXE sur la request-target brute, que `fetch`
+ * normalise ensuite : `'/../v1/keys#/chat/completions'` passait le test et
+ * partait sur `/api/v1/keys`, la route de PROVISIONING. Tant que le firewall
+ * posait la clé après la sortie de la microVM, ça ne rendait rien ; le jour où
+ * le proxy porte la vraie clé (tour local), le modèle s'émet une clé SANS
+ * PLAFOND depuis son propre shell.
+ */
+describe("le proxy ne sert qu'une route", () => {
+  const target = (method: string, path: string) =>
+    resolveProxyTarget(method, path, "https://openrouter.ai/api/v1");
+
+  it("refuse les trois formes qui menaient ailleurs qu'aux complétions", () => {
+    for (const route of ["keys", "credits", "generation"]) {
+      const decision = target("POST", `/../v1/${route}#/chat/completions`);
+      expect(decision.ok).toBe(false);
+      expect(decision.ok === false && decision.status).toBe(400);
+      // Ce que l'ancienne forme croyait lire, et ce que `fetch` aurait appelé.
+      expect(`/../v1/${route}#/chat/completions`.endsWith("/chat/completions")).toBe(true);
+      expect(new URL(`https://openrouter.ai/api/v1/../v1/${route}`).pathname).toBe(`/api/v1/${route}`);
+    }
+  });
+
+  it("refuse ce qui changerait d'hôte, de forme ou de méthode", () => {
+    // `//` : `new URL('https://openrouter.ai/api/v1' + '//evil.test/x')` sort du
+    // domaine du fournisseur sans un seul caractère suspect au milieu.
+    expect(target("POST", "//evil.test/chat/completions")).toMatchObject({ status: 400 });
+    // Une request-target absolue, que le parseur HTTP accepte (forme proxy).
+    expect(target("POST", "https://evil.test/chat/completions")).toMatchObject({ status: 400 });
+    // Un chemin voisin, sans rien de malformé : ce n'est pas la route servie.
+    expect(target("POST", "/keys")).toMatchObject({ status: 404 });
+    expect(target("POST", "/chat/completions/x")).toMatchObject({ status: 404 });
+    // La route servie, mais en lecture : une sonde, pas un round.
+    expect(target("GET", "/chat/completions")).toMatchObject({ status: 405 });
+  });
+
+  it("laisse passer la route servie, query comprise", () => {
+    expect(target("POST", "/chat/completions")).toEqual({
+      ok: true,
+      url: "https://openrouter.ai/api/v1/chat/completions",
+    });
+    expect(target("post", "/chat/completions?beta=1")).toEqual({
+      ok: true,
+      url: "https://openrouter.ai/api/v1/chat/completions?beta=1",
+    });
+  });
+
+  /**
+   * La même chose sur le VRAI serveur, en écrivant la request-target à la main :
+   * `fetch` normaliserait le chemin avant de l'envoyer, donc il ne peut pas
+   * prouver ce qui compte ici — c'est un `curl --path-as-is` (ou n'importe quelle
+   * socket) que le modèle a sous la main. Et le parseur de node ne rattrape rien :
+   * mesuré, `req.url` vaut `/../v1/keys#/chat/completions` À L'IDENTIQUE.
+   */
+  it("refuse la request-target brute sans jamais appeler le fournisseur", async () => {
+    let calls = 0;
+    const upstream = (async () => {
+      calls++;
+      return new Response("{}", { status: 200 });
+    }) as typeof fetch;
+
+    const proxy = await startLlmProxy({
+      job: JOB,
+      fetchImpl: upstream,
+      apiKey: async () => "sk-or-v1-clef-plafonnee",
+    });
+    try {
+      const answer = await rawRequest(proxy.url, "/../v1/keys#/chat/completions");
+      expect(answer.split("\r\n")[0]).toContain("400");
+      expect(calls).toBe(0);
+    } finally {
+      await proxy.close();
+    }
+  });
+});
+
+/** Une requête HTTP écrite à la main — la seule façon de faire arriver une
+ *  request-target que `fetch` refuserait de laisser telle quelle. */
+function rawRequest(origin: string, requestTarget: string): Promise<string> {
+  const { hostname, port } = new URL(origin);
+  const body = "{}";
+  const head = [
+    `POST ${requestTarget} HTTP/1.1`,
+    `Host: ${hostname}:${port}`,
+    "content-type: application/json",
+    `content-length: ${Buffer.byteLength(body)}`,
+    "connection: close",
+    "",
+    body,
+  ].join("\r\n");
+  return new Promise((resolve, reject) => {
+    const socket = connect({ host: hostname, port: Number(port) }, () => socket.write(head));
+    let out = "";
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk) => (out += chunk));
+    socket.on("end", () => resolve(out));
+    socket.on("error", reject);
+  });
+}
 
 describe("ce que la réponse laisse voir", () => {
   it("lit l'id et le coût d'une génération streamée", () => {
@@ -273,6 +378,63 @@ describe("le relais, monté pour de vrai", () => {
     } finally {
       await proxy.close();
     }
+  });
+
+  /**
+   * MIN-357 — LE TOUR LOCAL : c'est ce process qui pose la clé, parce qu'il n'y a
+   * pas de firewall sur un Mac. Elle ne descend pas plus bas que lui : ni dans le
+   * job, ni dans la config d'opencode (que le modèle lit par un `env`).
+   */
+  it("pose la clé du tour local à la place du placeholder", async () => {
+    let seenAuth = "";
+    let asked = 0;
+    const upstream = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seenAuth = ((init?.headers ?? {}) as Record<string, string>).authorization ?? "";
+      return new Response(sse([{ id: "gen-1", model: "m", choices: [{ delta: {} }] }]), {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      });
+    }) as typeof fetch;
+
+    const proxy = await startLlmProxy({
+      job: JOB,
+      fetchImpl: upstream,
+      apiKey: async () => {
+        asked++;
+        return "sk-or-v1-clef-plafonnee";
+      },
+    });
+    try {
+      for (const _ of [1, 2]) {
+        await fetch(`${proxy.url}/chat/completions`, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: "Bearer placeholder" },
+          body: JSON.stringify({ model: "m", messages: [] }),
+        });
+      }
+      expect(seenAuth).toBe("Bearer sk-or-v1-clef-plafonnee");
+      // DEMANDÉE UNE FOIS, au démarrage : deux rounds ne font pas deux mints.
+      expect(asked).toBe(1);
+    } finally {
+      await proxy.close();
+    }
+  });
+
+  it("refuse de démarrer quand le plan de contrôle ne rend pas de clé", async () => {
+    // Sans clé plafonnée, un tour local n'a plus AUCUN garde-fou de dépense : le
+    // compute de microVM, dernier filet dans le cloud, vaut zéro sur une machine.
+    // Mieux vaut un tour qui ne part pas — et qui le dit dans son rapport.
+    await expect(startLlmProxy({ job: JOB, apiKey: async () => null })).rejects.toThrow(
+      /no capped model key/,
+    );
+    await expect(
+      startLlmProxy({
+        job: JOB,
+        apiKey: async () => {
+          throw new Error("POST /llm-key → 503: minting is not configured");
+        },
+      }),
+    ).rejects.toThrow(/503/);
   });
 
   it("rend une erreur JSON quand le fournisseur est injoignable", async () => {

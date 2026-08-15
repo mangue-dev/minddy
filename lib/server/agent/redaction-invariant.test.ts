@@ -43,9 +43,12 @@ const CHECKS: Record<LiveAgentEngine, Array<{ what: string; file: string; contai
       contains: "if (opts.redact) body = opts.redact(body)",
     },
     {
+      // Le champ seul, pas l'appel entier : l'appel a gagné une option en MIN-357
+      // (la clé du modèle sur un tour local) et en gagnera d'autres. Ce qu'on
+      // garde ici est que le registre y ARRIVE, pas la forme du jour.
       what: "le superviseur donne bien son registre au proxy",
       file: "vm/supervisor.ts",
-      contains: "startLlmProxy({ job: j, redact: secrets.redact })",
+      contains: "redact: secrets.redact,",
     },
     {
       what: "le journal poussé en base est substitué",

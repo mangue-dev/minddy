@@ -26,7 +26,7 @@ import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
 import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
 import { subagentUsageSeq } from "../subagent-config";
-import type { VmJob, VmPushResult, VmTurnReport } from "./protocol";
+import { isLocalJob, type VmJob, type VmPushResult, type VmTurnReport } from "./protocol";
 import { parseAgentUserMessage, promptWithMentions, type AgentUserMessage } from "@/lib/agent-mentions";
 
 /**
@@ -256,8 +256,20 @@ export async function runOpencodeTurn(
   // `secrets.redact` est une lambda liée au registre, qui est MUTABLE : le token
   // re-minté avant un push (cf. `pushWork`) est substitué par le proxy dès qu'il
   // est enregistré, sans que le proxy ait à être reconstruit.
+  //
+  // ET C'EST LUI QUI PORTE LA CLÉ SUR UNE MACHINE (MIN-357) : `apiKey` n'est
+  // câblé que pour un tour local, où aucun firewall ne la posera à la sortie. Le
+  // superviseur ne la voit jamais — il passe le MOYEN de la demander, et elle ne
+  // vit que dans la mémoire du proxy, ni dans le job ni dans l'environnement du
+  // serveur opencode. Un mint refusé fait lever `startLlmProxy`, donc échouer le
+  // tour avec son motif : c'est la conduite voulue, pas une régression.
   const proxy = await (deps.startProxy ??
-    ((j: VmJob) => startLlmProxy({ job: j, redact: secrets.redact })))(job);
+    ((j: VmJob) =>
+      startLlmProxy({
+        job: j,
+        redact: secrets.redact,
+        ...(isLocalJob(j) ? { apiKey: () => cp.llmKey() } : {}),
+      })))(job);
   /**
    * Le pont de tools, ouvert AVANT le serveur pour la même raison que le proxy :
    * son adresse entre dans l'environnement d'opencode, donc elle doit exister

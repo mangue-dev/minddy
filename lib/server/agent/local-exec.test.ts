@@ -22,7 +22,7 @@ vi.mock("./runs", () => ({
   }),
 }));
 
-import { issueLocalExecToken } from "./local-exec";
+import { admitLocalRun, issueLocalExecToken } from "./local-exec";
 import { resolveLocalExecSecret, verifyLocalExecToken } from "./local-exec-token";
 
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
@@ -70,5 +70,55 @@ describe("le bail d'exécution locale", () => {
     } finally {
       process.env.SUPABASE_SERVICE_ROLE_KEY = saved;
     }
+  });
+});
+
+/**
+ * MIN-357 — CE QUI N'A PAS DE PLAFOND RESTE DANS LE CLOUD.
+ *
+ * Les deux refus ne se ressemblent pas : `byok` est structurel (l'API de
+ * provisioning n'émet que sur le compte qui détient la clé de provisioning), et
+ * `no_mint` est une propriété du déploiement. Ce qu'ils partagent, c'est la
+ * conduite : basculer dans le cloud, jamais déplafonner.
+ */
+describe("qui a le droit de jouer sur la machine de l'utilisateur", () => {
+  const withProvisioning = <T,>(value: string | undefined, run: () => T): T => {
+    const saved = process.env.OPENROUTER_PROVISIONING_KEY;
+    if (value === undefined) delete process.env.OPENROUTER_PROVISIONING_KEY;
+    else process.env.OPENROUTER_PROVISIONING_KEY = value;
+    try {
+      return run();
+    } finally {
+      if (saved === undefined) delete process.env.OPENROUTER_PROVISIONING_KEY;
+      else process.env.OPENROUTER_PROVISIONING_KEY = saved;
+    }
+  };
+
+  it("laisse partir un run plateforme sur un déploiement qui sait plafonner", () => {
+    withProvisioning("sk-or-prov-de-test", () => {
+      expect(admitLocalRun({ keyMode: "platform" })).toEqual({ ok: true });
+    });
+  });
+
+  it("garde un run BYOK dans le cloud, même quand le mint est disponible", () => {
+    // La clé de l'utilisateur est sur SON compte : on ne peut rien plafonner, et
+    // le compute de microVM — le dernier garde-fou — vaut zéro sur une machine.
+    withProvisioning("sk-or-prov-de-test", () => {
+      expect(admitLocalRun({ keyMode: "byok" })).toEqual({ ok: false, reason: "byok" });
+    });
+  });
+
+  it("garde tout le monde dans le cloud quand rien ne sait minter", () => {
+    // Sans mint, l'appelant retomberait sur la clé plateforme — NON PLAFONNÉE, et
+    // partagée avec Numo, la transcription, les embeddings et le catalogue.
+    withProvisioning(undefined, () => {
+      expect(admitLocalRun({ keyMode: "platform" })).toEqual({ ok: false, reason: "no_mint" });
+    });
+    // Une variable posée à VIDE compte comme absente — c'est déjà la règle de
+    // `runKeyMintingEnabled`, et deux lectures qui divergeraient là-dessus
+    // donneraient un run local sans clé.
+    withProvisioning("   ", () => {
+      expect(admitLocalRun({ keyMode: "platform" })).toEqual({ ok: false, reason: "no_mint" });
+    });
   });
 });

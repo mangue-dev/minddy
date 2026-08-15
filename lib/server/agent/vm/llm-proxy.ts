@@ -24,6 +24,13 @@ import type { RedactText } from "../redact";
  * clé après la sortie comme aujourd'hui, `network-policy.ts` ne change pas d'une
  * ligne et aucun secret n'entre dans le process où le modèle exécute du shell.
  *
+ * ET SUR LA MACHINE DE L'UTILISATEUR, C'EST CE PROCESS QUI POSE LA CLÉ (MIN-357).
+ * Il n'y a pas de firewall sur un Mac : la clé descend jusqu'ici — et pas plus
+ * bas — demandée au plan de contrôle au démarrage du tour, gardée en mémoire, et
+ * posée sur la seule route servie (cf. `LlmProxyOptions.apiKey` et
+ * `resolveProxyTarget`). C'est ce qui fait de la garde de chemin, ci-dessous, une
+ * pièce de sécurité et plus une commodité.
+ *
  * ─────────────────────────────────────────────────────────────────────────────
  * TROIS CHOSES QUI NE SE FONT QUE LÀ, et c'est pour elles qu'il existe
  *
@@ -135,6 +142,27 @@ export interface LlmProxyOptions {
   /** Injecté pour les tests : le fournisseur, sans réseau. */
   fetchImpl?: typeof fetch;
   /**
+   * LA CLÉ DU MODÈLE, QUAND C'EST À NOUS DE LA POSER (MIN-357) — présente
+   * SEULEMENT quand le tour joue sur la machine de l'utilisateur.
+   *
+   * En microVM, ce champ est absent et rien ne change : la boucle envoie le
+   * placeholder, le firewall pose la vraie clé après la sortie de la VM, et ce
+   * process ne détient rien. Sur un Mac il n'y a pas de firewall, donc la clé
+   * doit bien exister quelque part — et « quelque part », c'est ICI, dans la
+   * mémoire du proxy, pas dans `job.json` ni dans `OPENCODE_CONFIG_CONTENT`
+   * (qui entre dans l'environnement du serveur opencode, donc lisible par un
+   * simple `env` du shell du modèle).
+   *
+   * DEMANDÉE UNE FOIS, AU DÉMARRAGE, et gardée en closure. Le plan de contrôle
+   * ne rend qu'une clé MINTÉE À PLAFOND DUR (`/llm-key`, control-plane.ts) : ce
+   * qui borne le dégât n'est pas la cachette — le modèle peut appeler ce proxy
+   * depuis son propre shell, il écoute sur `127.0.0.1` — c'est le plafond que
+   * le fournisseur tient. D'où le refus de démarrer sans clé, plus bas : un tour
+   * local sans plafond n'est pas un tour dégradé, c'est un tour qui ne doit pas
+   * avoir lieu.
+   */
+  apiKey?: () => Promise<string | null>;
+  /**
    * LA SUBSTITUTION DES SECRETS, AVANT LE MODÈLE (MIN-328) — et c'est ICI qu'elle
    * doit vivre sous ce moteur.
    *
@@ -214,6 +242,83 @@ export function extraHeaders(job: LlmProxyJob): Record<string, string> {
   }
   if (profile.anthropicVersion) headers["anthropic-version"] = "2023-06-01";
   return headers;
+}
+
+/** Ce qu'une requête entrante a le droit de devenir : une URL, ou un refus. */
+export type ProxyRoute =
+  | { ok: true; url: string }
+  | { ok: false; status: 400 | 404 | 405; message: string };
+
+/**
+ * LE PROXY SERT UNE ROUTE, IL N'EST PAS UN RELAIS GÉNÉRIQUE (MIN-357) — et
+ * c'est la ligne qui décide si le verrou de la clé tient ou tombe entièrement.
+ *
+ * L'ANCIENNE FORME ÉTAIT UN TEST DE SUFFIXE SUR UNE REQUEST-TARGET BRUTE
+ * (`path.split("?")[0].endsWith("/chat/completions")`). Mesuré :
+ *
+ * ```
+ * '/../v1/keys#/chat/completions'.endsWith('/chat/completions')  → true
+ * new URL('https://openrouter.ai/api/v1' + ce_chemin).pathname   → /api/v1/keys
+ * ```
+ *
+ * `fetch` normalise les `..` et jette le fragment : ce que le test regarde et ce
+ * que le relais appelle ne sont PAS le même chemin. Tant que la clé était posée
+ * par le firewall après la sortie de la VM, ça ne rendait rien (le placeholder
+ * repartait en 401) ; le jour où ce proxy porte la vraie clé, **le modèle
+ * s'émet une clé sans plafond depuis son propre shell** et le verrou 2 tombe
+ * entièrement. Même faille sur `/api/v1/credits` et `/api/v1/generation`.
+ *
+ * D'où les quatre gardes, dans cet ordre, et aucune n'est décorative :
+ *
+ * 1. **400 sur `#`, `..`, `//` et sur tout chemin ne commençant pas par `/`.**
+ *    C'est le refus de tout ce qui rend une chaîne et son URL différentes —
+ *    fragment jeté, segments normalisés, et le `//` qui change carrément
+ *    d'hôte (`new URL('https://a/api' + '//evil.com/x')`). On refuse la FORME
+ *    plutôt que d'essayer de deviner ce qu'elle deviendra.
+ * 2. **Égalité stricte sur `url.pathname`**, jamais un suffixe ni un préfixe :
+ *    c'est le même mot qui met `/api/v1/keys` hors de portée dans la politique
+ *    réseau (`path: { exact }`, network-policy.ts), et pour la même raison.
+ * 3. **L'origine, comparée aussi.** Redondante avec la garde 1 aujourd'hui ;
+ *    gratuite, et c'est elle qui tient si quelqu'un assouplit l'autre.
+ * 4. **`POST` exigé.** La route de complétion est un POST ; un GET sur elle est
+ *    une sonde, pas un round.
+ *
+ * CE QUE ÇA REFUSE ET QUI PASSAIT AVANT : tout le reste du fournisseur. C'est
+ * tenable parce qu'opencode n'appelle qu'elle — le provider est
+ * `@ai-sdk/openai-compatible` et le catalogue de modèles est DÉCLARÉ dans la
+ * config (`providerModels`), donc rien ne va chercher `/models` en ligne.
+ */
+export function resolveProxyTarget(
+  method: string | undefined,
+  requestTarget: string | undefined,
+  baseUrl: string,
+): ProxyRoute {
+  const completions = chatCompletionsUrl(baseUrl);
+  const prefix = completions.replace(/\/chat\/completions$/, "");
+  const raw = requestTarget ?? "";
+
+  if (!raw.startsWith("/")) {
+    return { ok: false, status: 400, message: "proxy: path must start with '/'" };
+  }
+  if (raw.includes("#") || raw.includes("..") || raw.includes("//")) {
+    return { ok: false, status: 400, message: "proxy: path must not contain '#', '..' or '//'" };
+  }
+
+  let url: URL;
+  let expected: URL;
+  try {
+    url = new URL(`${prefix}${raw}`);
+    expected = new URL(completions);
+  } catch {
+    return { ok: false, status: 400, message: "proxy: unreadable path" };
+  }
+  if (url.origin !== expected.origin || url.pathname !== expected.pathname) {
+    return { ok: false, status: 404, message: "proxy: only the completion route is served" };
+  }
+  if ((method ?? "").toUpperCase() !== "POST") {
+    return { ok: false, status: 405, message: "proxy: the completion route is POST only" };
+  }
+  return { ok: true, url: url.toString() };
 }
 
 /**
@@ -335,7 +440,18 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   const pool: CapturedGeneration[] = [];
   /** Relais commencés et pas finis — ce que `settle` attend. */
   let inFlight = 0;
-  const target = chatCompletionsUrl(job.baseUrl).replace(/\/chat\/completions$/, "");
+
+  /**
+   * LA CLÉ, PRISE AVANT LE PREMIER OCTET DE SERVEUR. Le port n'existe pas encore
+   * quand cette ligne s'exécute : il n'y a donc aucune fenêtre pendant laquelle
+   * ce proxy écoute sans savoir quoi poser sur `authorization`.
+   *
+   * L'échec LÈVE, et remonte jusqu'au rapport de fin de tour (`main.ts`) : sans
+   * clé plafonnée, un tour local n'a plus aucun garde-fou de dépense — le
+   * compute de microVM, dernier filet dans le cloud, vaut structurellement zéro
+   * sur la machine de quelqu'un. Mieux vaut un tour qui ne part pas et le dit.
+   */
+  const apiKey = opts.apiKey ? await requireApiKey(opts.apiKey) : null;
 
   const server = createServer((req, res) => {
     void relay(req, res).catch((err) => {
@@ -357,12 +473,26 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   }
 
   async function relayOnce(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const path = req.url ?? "/";
+    const route = resolveProxyTarget(req.method, req.url, job.baseUrl);
+    if (!route.ok) {
+      // Le corps est LU QUAND MÊME avant de refuser : un client qui a commencé à
+      // écrire et à qui on répond sans vider la socket se retrouve avec une
+      // connexion à moitié consommée, et opencode retente sur un tuyau cassé.
+      await readBody(req).catch(() => {});
+      // Un refus ici n'est jamais anodin : c'est soit un opencode qui a changé de
+      // route, soit quelqu'un qui essaie de se servir du proxy. Ça se lit dans un
+      // log, borné parce que la request-target vient d'en face.
+      console.error(`[llm-proxy] refused ${req.method} ${(req.url ?? "").slice(0, 200)}`);
+      res.writeHead(route.status, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: { message: route.message } }));
+      return;
+    }
     const raw = await readBody(req);
-    const isCompletion = path.split("?")[0].endsWith("/chat/completions");
 
+    // Il n'y a plus qu'une route servie : ce qui arrive ici EST une complétion,
+    // et les trois gestes qui suivent n'ont plus de condition à porter.
     let body: string | undefined = raw.length > 0 ? raw.toString("utf8") : undefined;
-    if (isCompletion && body) {
+    if (body) {
       try {
         body = JSON.stringify(patchCompletionBody(JSON.parse(body), job));
       } catch {
@@ -384,9 +514,14 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       if (["host", "content-length", "connection", "accept-encoding"].includes(key)) continue;
       if (typeof value === "string") headers[key] = value;
     }
+    // LA CLÉ ÉCRASE LE PLACEHOLDER, et seulement sur cette route-là (MIN-357).
+    // Sans clé — le cas de la microVM — c'est le placeholder d'opencode qui part,
+    // et le firewall le remplace après la sortie : la ligne ci-dessous est la
+    // SEULE différence entre les deux mondes.
+    if (apiKey) headers.authorization = `Bearer ${apiKey}`;
 
-    const upstream = await http(`${target}${path}`, {
-      method: req.method ?? "GET",
+    const upstream = await http(route.url, {
+      method: "POST",
       headers,
       ...(body === undefined ? {} : { body }),
     });
@@ -408,7 +543,7 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
      * génération : rien à facturer, mais une entrée de plus dans la file, au
      * modèle vide — donc appariable à n'importe quel round (cf. `flush`).
      */
-    const sniff = isCompletion && upstream.status < 400;
+    const sniff = upstream.status < 400;
     const sniffer = new GenerationSniffer();
     const reader = upstream.body.getReader();
     const decoder = new TextDecoder();
@@ -446,6 +581,17 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
         server.closeAllConnections?.();
       }),
   };
+}
+
+/**
+ * La clé du tour, ou rien du tout. Le message est ce qu'un utilisateur lira dans
+ * son fil quand un tour local n'aura pas pu démarrer : il doit dire la CAUSE,
+ * pas « proxy error ».
+ */
+async function requireApiKey(fetchKey: () => Promise<string | null>): Promise<string> {
+  const key = (await fetchKey())?.trim();
+  if (!key) throw new Error("llm proxy: no capped model key for this turn");
+  return key;
 }
 
 function readBody(req: IncomingMessage): Promise<Buffer> {
