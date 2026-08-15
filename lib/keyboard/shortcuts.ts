@@ -69,6 +69,15 @@ export const CHEATSHEET: CheatsheetSection[] = [
         labelKey: "navObjectiveIssues",
         keys: [["mod", "O"]],
       },
+      // Même cas : pas un chord, et il ne vaut que sur une page ouverte — le
+      // menu ⋯ de la page l'affiche aussi, à côté de l'entrée qu'il déclenche.
+      {
+        id: "page.copyForAgent",
+        labelKey: "pageCopyForAgent",
+        // ⇧ obligatoire : ⌘L nu est pris par la barre d'adresse du navigateur
+        // et n'atteint jamais la page (cf. components/pages/page-view.tsx).
+        keys: [["mod", "⇧", "L"]],
+      },
     ],
   },
   {
@@ -155,4 +164,16 @@ export function resolveKeyToken(token: string): string {
 export function formatModShortcut(key: string): string {
   const mod = resolveKeyToken("mod");
   return mod === "⌘" ? `⌘${key}` : `${mod}+${key}`;
+}
+
+/**
+ * Le même, avec ⇧ — « ⌘⇧L » sur un Mac, « Ctrl+Shift+L » ailleurs.
+ *
+ * Écrit à part plutôt qu'en passant « ⇧L » au précédent : hors Mac la forme
+ * attendue est « Ctrl+Shift+L », avec le mot et le second « + », et non
+ * « Ctrl+⇧L » — un symbole de Mac au milieu d'une phrase Windows.
+ */
+export function formatModShiftShortcut(key: string): string {
+  const mod = resolveKeyToken("mod");
+  return mod === "⌘" ? `⌘⇧${key}` : `${mod}+Shift+${key}`;
 }

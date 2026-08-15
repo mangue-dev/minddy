@@ -37,6 +37,7 @@ import { Check, MoreHorizontal, TriangleAlert } from "lucide-react";
 import type { Editor, JSONContent } from "@tiptap/react";
 
 import { eventKey } from "@/lib/keyboard/event-key";
+import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 
 import {
   discardPageOnUnload,
@@ -638,6 +639,49 @@ function PageSurface({
   const documentMenu = usePageDocumentMenu({ projectId, pages });
   const pageRef = useMemo(() => ({ id: pageId, title }), [pageId, title]);
 
+  /* ── ⌘⇧L : copier cette page pour un agent ───────────────────────────── */
+  //
+  // Le geste de Notion, et pour la même raison : donner la page qu'on lit à
+  // quelqu'un d'autre est trop fréquent pour passer par un menu. Ce que
+  // « quelqu'un d'autre » veut dire ici, c'est un agent — d'où les coordonnées
+  // MCP à côté de l'URL, et la consigne facultative (lib/page-agent-prompt.ts).
+  //
+  // ⇧ EST OBLIGATOIRE, et ce n'est pas un choix d'esthétique. ⌘L nu ne parvient
+  // jamais à la page sur un Mac : la barre d'adresse le prend au niveau du
+  // navigateur, avant le document — le `keydown` n'arrive pas, et il n'y a donc
+  // rien à `preventDefault`. Vérifié en vrai sur la PR 67, après l'avoir écrit
+  // en ⌘L. Le voisinage est déjà en ⌘⇧ pour la même raison (⌘⇧D, la dictée,
+  // lib/create-context.tsx) : c'est la forme qui passe.
+  //
+  // Il OUVRE le dialog au lieu de copier sec, et c'est délibéré : l'entrée du
+  // menu et le raccourci sont le même geste, ils doivent donner le même
+  // résultat. Le champ prend le focus, donc ⌘⇧L puis ⌘Entrée copie sans rien
+  // demander, contre la possibilité de dire ce qu'on veut voir fait.
+  //
+  // Il ne demande AUCUN focus particulier : il suffit que la page soit à
+  // l'écran. L'écouteur est sur `window`, en capture — le curseur peut être
+  // dans l'éditeur, dans le titre ou nulle part, c'est la page affichée qu'on
+  // copie.
+  //
+  // `openAgentCopyRef` : le raccourci ne se réabonne pas à chaque frappe dans
+  // le titre. `pageRef` change à chaque caractère tapé, et un `useEffect` qui
+  // en dépendrait poserait un écouteur par lettre.
+  const openAgentCopyRef = useRef<() => void>(() => {});
+  openAgentCopyRef.current = () => documentMenu.openAgentCopy(pageRef, "shortcut");
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!matchesModShiftCombo(event, "l")) return;
+      // Un dialog déjà ouvert tient l'écran — celui-ci compris : sans cette
+      // garde, le raccourci pendant qu'on écrit la consigne rouvrirait le
+      // dialog et effacerait ce qui vient d'être tapé.
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      event.preventDefault();
+      openAgentCopyRef.current();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
+
   /* ── Ce que Numo voit quand on est sur cette page ─────────────────────── */
   //
   // La page ouverte devient le contexte ambiant de l'assistant (MIN-273) : « fais
@@ -763,7 +807,9 @@ function PageSurface({
         />
         <IssueActionsMenu
           searchable={false}
-          actions={documentMenu.actionsFor(pageRef)}
+          // La touche n'est affichée QUE là : ⌘⇧L vise la page ouverte, qui est
+          // celle-ci et pas la ligne d'arbre qu'on survole.
+          actions={documentMenu.actionsFor(pageRef, { shortcut: true })}
           trigger={
             <Button
               variant="ghost"

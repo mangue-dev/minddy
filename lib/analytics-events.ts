@@ -333,6 +333,11 @@ export interface AnalyticsEventProps {
   page_published: { has_password: boolean; with_children: boolean };
   page_unpublished: NoProps;
   page_exported: { format: "md" | "zip" | "pdf" };
+  /** Une page copiée pour un agent : `source` dit si le geste est passé par le
+      menu ⋯ ou par ⌘L — c'est ce qui dira si le raccourci a trouvé son public,
+      ou si personne ne l'a découvert. `with_instructions` dit si le champ
+      facultatif a servi : s'il ne sert jamais, le dialog est du péage. */
+  page_copied_for_agent: { source: "menu" | "shortcut"; with_instructions: boolean };
 
   // ── Notifications ──
   notifications_opened: { unread_count: number; surface: "inbox" | "popover" };
@@ -703,6 +708,7 @@ const EVENT_NAMES = [
   "page_published",
   "page_unpublished",
   "page_exported",
+  "page_copied_for_agent",
   // Notifications
   "notifications_opened",
   "notification_clicked",

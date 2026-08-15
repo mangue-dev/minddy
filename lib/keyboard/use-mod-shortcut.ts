@@ -1,7 +1,11 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { formatModShortcut, resolveKeyToken } from "@/lib/keyboard/shortcuts";
+import {
+  formatModShiftShortcut,
+  formatModShortcut,
+  resolveKeyToken,
+} from "@/lib/keyboard/shortcuts";
 
 /** La plateforme ne change pas en cours de session : rien à quoi s'abonner. */
 const subscribe = () => () => {};
@@ -35,5 +39,14 @@ export function useModShortcut(key: string): string {
     subscribe,
     () => formatModShortcut(key),
     () => `Ctrl+${key}`
+  );
+}
+
+/** Le même, avec ⇧ — « ⌘⇧L » sur un Mac, « Ctrl+Shift+L » ailleurs. */
+export function useModShiftShortcut(key: string): string {
+  return useSyncExternalStore(
+    subscribe,
+    () => formatModShiftShortcut(key),
+    () => `Ctrl+Shift+${key}`
   );
 }
