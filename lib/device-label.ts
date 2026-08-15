@@ -16,6 +16,7 @@
 /** L'ordre compte : chaque famille se déclare en se faisant passer pour les
  *  précédentes. Edge dit « Chrome » et « Safari », Chrome dit « Safari ». */
 const BROWSERS: readonly { name: string; test: RegExp }[] = [
+  { name: "minddy", test: /\bminddy-desktop\//i },
   { name: "Edge", test: /\bEdg(?:e|A|iOS)?\//i },
   { name: "Opera", test: /\bOPR\/|\bOpera\//i },
   { name: "Samsung Internet", test: /\bSamsungBrowser\//i },

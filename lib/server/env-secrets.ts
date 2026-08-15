@@ -127,6 +127,12 @@ export const SECRET_SPECS: SecretSpec[] = [
     requiredWhenDeployed: false,
     purpose: "signature des notifications Web Push",
   },
+  {
+    name: "APNS_PRIVATE_KEY",
+    minLength: 64,
+    requiredWhenDeployed: false,
+    purpose: "signature des notifications APNs de l'app macOS",
+  },
 ];
 
 /** Environnement déployé (Vercel), par opposition à un poste de développement. */

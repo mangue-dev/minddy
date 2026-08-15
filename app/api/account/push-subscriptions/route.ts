@@ -4,7 +4,10 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { deviceLabelFromUserAgent } from "@/lib/device-label";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import { PUSH_DEVICE_COLUMNS } from "@/lib/server/push/columns";
-import { resolveRegistrationState } from "@/lib/server/push/registration";
+import {
+  parsePushRegistration,
+  resolveRegistrationState,
+} from "@/lib/server/push/registration";
 import type { PushDevice } from "@/lib/types";
 
 /**
@@ -65,51 +68,54 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
 
-  const { endpoint, keys, locale, oldEndpoint, refresh } = (body ?? {}) as {
-    endpoint?: unknown;
-    keys?: { p256dh?: unknown; auth?: unknown };
+  const { locale, oldEndpoint, refresh } = (body ?? {}) as {
     locale?: unknown;
     oldEndpoint?: unknown;
     refresh?: unknown;
   };
-
-  const p256dh = keys?.p256dh;
-  const authSecret = keys?.auth;
-  if (
-    typeof endpoint !== "string" ||
-    !endpoint.startsWith("https://") ||
-    typeof p256dh !== "string" ||
-    !p256dh ||
-    typeof authSecret !== "string" ||
-    !authSecret
-  ) {
+  const registration = parsePushRegistration(body);
+  if (!registration) {
     return NextResponse.json({ error: t("pushSubscriptionInvalid") }, { status: 400 });
   }
+  const {
+    endpoint: endpointValue,
+    transport: selectedTransport,
+    p256dh,
+    auth: authSecret,
+    installationId,
+  } = registration;
 
   // Un endpoint est une adresse que le serveur ira APPELER, à chaque
   // notification, pour toujours. Le navigateur y met celle de son service de
   // push ; le corps de la requête, lui, est écrit par qui veut — d'où le garde
   // anti-SSRF sur l'adresse résolue (MIN-341), en plus du https.
-  try {
-    await assertPublicHttpUrl(endpoint);
-  } catch {
-    return NextResponse.json({ error: t("pushSubscriptionInvalid") }, { status: 400 });
+  if (selectedTransport === "web") {
+    try {
+      await assertPublicHttpUrl(endpointValue);
+    } catch {
+      return NextResponse.json({ error: t("pushSubscriptionInvalid") }, { status: 400 });
+    }
   }
 
   const rotatedFrom =
-    typeof oldEndpoint === "string" && oldEndpoint && oldEndpoint !== endpoint
+    typeof oldEndpoint === "string" && oldEndpoint && oldEndpoint !== endpointValue
       ? oldEndpoint
       : null;
 
   // L'état ANTÉRIEUR de cet appareil : sa propre ligne, ou celle que le
   // ré-abonnement vient de périmer. La RLS ne rend que les miennes, donc rien à
   // filtrer de plus.
-  const { data: priorRows } = await auth.supabase
+  const priorQuery = auth.supabase
     .from("push_subscriptions")
-    .select("endpoint, enabled, locale")
-    .in("endpoint", rotatedFrom ? [endpoint, rotatedFrom] : [endpoint]);
+    .select("endpoint, enabled, locale");
+  const { data: priorRows } = installationId
+    ? await priorQuery.eq("native_installation_id", installationId)
+    : await priorQuery.in(
+        "endpoint",
+        rotatedFrom ? [endpointValue, rotatedFrom] : [endpointValue]
+      );
   const priorRow =
-    priorRows?.find((r) => r.endpoint === endpoint) ?? priorRows?.[0] ?? null;
+    priorRows?.find((r) => r.endpoint === endpointValue) ?? priorRows?.[0] ?? null;
   const state = resolveRegistrationState(
     priorRow
       ? { enabled: priorRow.enabled as boolean, locale: priorRow.locale as string }
@@ -124,9 +130,11 @@ export async function POST(request: NextRequest) {
     .upsert(
       {
         user_id: auth.user.id,
-        endpoint,
-        p256dh,
-        auth: authSecret,
+        endpoint: endpointValue,
+        transport: selectedTransport,
+        p256dh: selectedTransport === "web" ? p256dh : null,
+        auth: selectedTransport === "web" ? authSecret : null,
+        native_installation_id: installationId,
         // Calculé côté serveur depuis l'en-tête : rien à croire d'un corps de
         // requête pour une étiquette qu'on affichera telle quelle.
         device_label: deviceLabelFromUserAgent(userAgent),
@@ -159,6 +167,17 @@ export async function POST(request: NextRequest) {
         "[api/push-subscriptions] cleanup of rotated endpoint failed:",
         cleanupError.message
       );
+    }
+  }
+
+  if (installationId) {
+    const { error: cleanupError } = await auth.supabase
+      .from("push_subscriptions")
+      .delete()
+      .eq("native_installation_id", installationId)
+      .neq("endpoint", endpointValue);
+    if (cleanupError) {
+      console.error("[api/push-subscriptions] cleanup of rotated APNs token failed:", cleanupError.message);
     }
   }
 

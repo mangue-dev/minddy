@@ -1,10 +1,12 @@
 import path from "node:path";
 import {
   BrowserWindow,
+  Notification as NativeNotification,
   app,
   dialog,
   ipcMain,
   powerMonitor,
+  pushNotifications,
   session,
   shell,
   systemPreferences,
@@ -29,6 +31,7 @@ import { deviceIdForUserData } from "@/lib/desktop/device-id";
 import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
+import { nativePushContent } from "@/lib/desktop/native-push";
 import { quitDecision, quitPrompt } from "@/lib/desktop/quit-guard";
 import {
   carrySessionCookies,
@@ -36,6 +39,11 @@ import {
 } from "@/lib/desktop/session-carry";
 import { routeDisposition } from "@/lib/desktop/window-routes";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
+import {
+  nativePushAllowed,
+  pushInstallationId,
+  setNativePushAllowed,
+} from "./push-installation-store";
 import { hideWindow } from "./hide-window";
 import {
   prewarmLocalAgent,
@@ -71,6 +79,8 @@ import { trace } from "./trace";
 let pendingAuthLink: DesktopAuthLink | null = null;
 let mainWindow: BrowserWindow | null = null;
 let stopClaimingLocalRuns: (() => void) | null = null;
+/** Une seule inscription APNs à la fois, partagée entre les montages du site. */
+let apnsRegistration: Promise<string> | null = null;
 
 /**
  * LE CANAL, et l'origine qui en découle (MIN-352).
@@ -585,6 +595,39 @@ function registerIpc(): void {
     app.dock?.setBadge(n > 0 ? String(n) : "");
   });
 
+  ipcMain.handle("minddy:push:register", async (_event, options: unknown) => {
+    // Le binaire de développement ne porte pas l'entitlement APNs de minddy et
+    // ne doit pas faire croire au renderer qu'il possède un appareil joignable.
+    if (process.platform !== "darwin" || !app.isPackaged) return null;
+    try {
+      const userData = app.getPath("userData");
+      const activate =
+        !!options &&
+        typeof options === "object" &&
+        (options as { activate?: unknown }).activate === true;
+      if (activate) await setNativePushAllowed(userData, true);
+      else if (!(await nativePushAllowed(userData))) return null;
+      apnsRegistration ??= pushNotifications.registerForAPNSNotifications();
+      const token = await apnsRegistration;
+      return {
+        token,
+        installationId: await pushInstallationId(userData),
+      };
+    } catch (error) {
+      apnsRegistration = null;
+      console.error("[push] inscription APNs impossible", error);
+      return null;
+    }
+  });
+
+  ipcMain.handle("minddy:push:unregister", async () => {
+    if (process.platform === "darwin") {
+      pushNotifications.unregisterForAPNSNotifications();
+      apnsRegistration = null;
+      await setNativePushAllowed(app.getPath("userData"), false);
+    }
+  });
+
   ipcMain.on("minddy:window-buttons", (_event, visible: unknown) => {
     wantsWindowButtons = visible !== false;
     applyWindowButtons();
@@ -867,6 +910,24 @@ if (!app.requestSingleInstanceLock()) {
     hardenSession();
     registerIpc();
     mainWindow = createWindow();
+    // Quand l'app tourne, macOS remet la charge au process au lieu d'afficher
+    // lui-même la bannière. On la rend native ici ; quand l'app est quittée,
+    // APNs et macOS l'affichent sans aucun process minddy — le cœur du ticket.
+    pushNotifications.on("received-apns-notification", (_event, payload) => {
+      const content = nativePushContent(payload);
+      if (!content || !NativeNotification.isSupported()) return;
+      const notification = new NativeNotification({
+        title: content.title,
+        body: content.body,
+      });
+      notification.on("click", () => {
+        if (!mainWindow) return;
+        if (content.url) void mainWindow.loadURL(`${origin}${content.url}`);
+        mainWindow.show();
+        mainWindow.focus();
+      });
+      notification.show();
+    });
     buildAppMenu(mainWindow, channel, onChannelChange);
     // L'installation éventuelle d'opencode et le cache du harness commencent
     // pendant l'ouverture de la fenêtre. Aucun secret ni dépôt ne sont touchés.

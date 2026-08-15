@@ -16,6 +16,11 @@
 -->
 <plist version="1.0">
   <dict>
+    <!-- MIN-356 — adresse APNs du bundle signé. `production` correspond au
+         profil Developer ID distribué ; un binaire de développement non signé
+         ne tente pas de s'inscrire (desktop/src/main.ts). -->
+    <key>com.apple.developer.aps-environment</key>
+    <string>production</string>
     <!-- V8 compile à la volée : sans ça, la première page ne s'affiche pas. -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>

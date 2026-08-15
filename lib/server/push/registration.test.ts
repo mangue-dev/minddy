@@ -1,6 +1,40 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveRegistrationState } from "./registration";
+import { parsePushRegistration, resolveRegistrationState } from "./registration";
+
+describe("parsePushRegistration", () => {
+  it("accepte un abonnement Web Push complet", () => {
+    expect(
+      parsePushRegistration({
+        endpoint: "https://push.example/device",
+        keys: { p256dh: "public", auth: "secret" },
+      })
+    ).toEqual({
+      endpoint: "https://push.example/device",
+      transport: "web",
+      p256dh: "public",
+      auth: "secret",
+      installationId: null,
+    });
+  });
+
+  it("accepte un token APNs hexadécimal sans clés Web Push", () => {
+    const endpoint = `apns:${"ab".repeat(32)}`;
+    const installationId = "11111111-1111-4111-8111-111111111111";
+    expect(parsePushRegistration({ transport: "apns", endpoint, installationId })).toEqual({
+      endpoint,
+      transport: "apns",
+      p256dh: null,
+      auth: null,
+      installationId,
+    });
+  });
+
+  it("refuse de faire passer une URL ou un token arbitraire pour APNs", () => {
+    expect(parsePushRegistration({ transport: "apns", endpoint: "https://x" })).toBeNull();
+    expect(parsePushRegistration({ transport: "apns", endpoint: "apns:not-hex" })).toBeNull();
+  });
+});
 
 /**
  * MIN-183 — un rafraîchissement ne RALLUME pas.

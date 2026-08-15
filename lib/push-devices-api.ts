@@ -72,6 +72,32 @@ export async function savePushDeviceApi(
   return device;
 }
 
+/** Associe au compte le token APNs rendu par la coquille macOS signée. */
+export async function saveNativePushDeviceApi(
+  token: string,
+  installationId: string,
+  locale: string,
+  opts: { track?: boolean; refresh?: boolean } = {}
+): Promise<PushDevice> {
+  const { device } = await parseJson<{ device: PushDevice }>(
+    await fetch("/api/account/push-subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transport: "apns",
+        endpoint: `apns:${token}`,
+        installationId,
+        locale,
+        refresh: opts.refresh,
+      }),
+    })
+  );
+  if (opts.track !== false) {
+    trackEvent("push_device_enabled", { platform: platformProp() });
+  }
+  return device;
+}
+
 export async function setPushDeviceEnabledApi(
   deviceId: string,
   enabled: boolean

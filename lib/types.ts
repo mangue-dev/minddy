@@ -267,6 +267,8 @@ export interface MyNotification {
 export interface PushDevice {
   id: string;
   endpoint: string;
+  /** Le protocole qui joint cet appareil : VAPID sur le web, APNs dans l'app macOS. */
+  transport: "web" | "apns";
   /** « Chrome sur macOS » — calculé côté serveur (lib/device-label.ts). */
   device_label: string | null;
   /** La langue de l'appareil, figée à l'abonnement : le téléphone en français

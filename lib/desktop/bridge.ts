@@ -3,7 +3,7 @@
  *
  * Le renderer charge du code distant : il ne doit pouvoir appeler que ce qui est
  * exposé ici, nommément, par `contextBridge`. D'où la règle que ce fichier
- * s'impose : **il se lit en trente secondes**. Douze membres, aucun qui rende
+ * s'impose : **il se lit en trente secondes**. Une liste fermée, aucun membre qui rende
  * un objet Node, aucun qui PRENNE un chemin de fichier, aucun qui exécute quoi
  * que ce soit.
  *
@@ -45,6 +45,16 @@ export interface DesktopBridge {
   onAuthLink(handler: (link: DesktopAuthLink) => void): () => void;
   /** Le compteur du dock. `0` retire la pastille. */
   setBadgeCount(count: number): void;
+  /**
+   * Inscrit le bundle signé auprès d'APNs et rend son token courant. Optionnel
+   * pour que le site déployé reste compatible avec les anciennes coquilles.
+   */
+  registerForPushNotifications?(options?: { activate?: boolean }): Promise<{
+    token: string;
+    installationId: string;
+  } | null>;
+  /** Retire l'inscription APNs de cette installation. */
+  unregisterForPushNotifications?(): Promise<void>;
   /**
    * DEMANDE que les boutons macOS (fermer / réduire / plein écran) soient
    * montrés ou cachés.

@@ -1301,6 +1301,7 @@
     "devicesDesc": "Soyez prévenu sur votre téléphone ou votre ordinateur quand quelque chose arrive dans votre inbox. Une entrée par appareil; coupez-en un, ou retirez celui que vous n'utilisez plus.",
     "enableLabel": "Prévenir cet appareil",
     "enableDesc": "Votre navigateur va demander l'autorisation.",
+    "enableDescNative": "L'app macOS reçoit ces alertes même après l'avoir quittée.",
     "enabling": "Activation…",
     "empty": "Aucun appareil ne reçoit encore les notifications.",
     "thisDevice": "Cet appareil",
@@ -1323,7 +1324,7 @@
     "unsupportedHint": "Ce navigateur ne gère pas les notifications push.",
     "notConfiguredHint": "Les notifications push ne sont pas configurées sur ce serveur.",
     "iosInstallHint": "Sur iPhone et iPad, ajoutez d'abord minddy à l'écran d'accueil : bouton Partager, puis « Sur l'écran d'accueil ». Les notifications ne fonctionnent que depuis l'app installée.",
-    "desktopHint": "L'app de bureau vous prévient nativement tant qu'elle est ouverte, et se tait dès qu'on la quitte. Pour être prévenu dans tous les cas, gardez minddy ouvert dans votre navigateur : le push y fonctionne."
+    "desktopHint": "Cette version de l'app de bureau ne vous prévient que lorsqu'elle est ouverte. Mettez minddy à jour pour recevoir les notifications après l'avoir quittée."
   },
   "Issue": {
     "entity": "Ticket",

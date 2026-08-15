@@ -133,6 +133,8 @@ const COQUILLE = {
   "updater.ts": "electron-updater ; les décisions sont dans @/lib/desktop/update-*",
   "hide-window.ts": "câblage de hideWindowStep (@/lib/desktop/hide-window)",
   "channel-store.ts": "lecture/écriture du fichier de canal ; parse dans @/lib/desktop/channel",
+  "push-installation-store.ts":
+    "lecture/écriture de l'identité APNs ; validation dans @/lib/desktop/push-installation",
   "repo-store.ts": "lecture/écriture des attachements ; parse dans @/lib/desktop/local-repo",
   "local-repo.ts": "panneau système + rangement ; verdicts dans @/lib/desktop/local-repo",
   "run-log.ts":

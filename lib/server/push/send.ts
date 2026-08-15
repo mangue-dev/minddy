@@ -4,6 +4,7 @@ import webpush, { type WebPushError } from "web-push";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { configureWebPush } from "./vapid";
+import { sendApnsNotification } from "./apns";
 import { toPushLocale, type PushLocale, type PushPayload } from "./payload";
 
 /**
@@ -44,8 +45,9 @@ import { toPushLocale, type PushLocale, type PushPayload } from "./payload";
 export interface PushSubscriptionRow {
   id: string;
   endpoint: string;
-  p256dh: string;
-  auth: string;
+  transport?: "web" | "apns";
+  p256dh: string | null;
+  auth: string | null;
   locale: string | null;
 }
 
@@ -73,6 +75,31 @@ async function sendToSubscription(
   sub: PushSubscriptionRow,
   payload: PushPayload
 ): Promise<PushSendOutcome> {
+  if (sub.transport === "apns") {
+    const response = await sendApnsNotification(sub.endpoint, payload);
+    if (response.status === 200) {
+      await service
+        .from("push_subscriptions")
+        .update({ last_push_at: new Date().toISOString(), failure_count: 0 })
+        .eq("id", sub.id);
+      return "sent";
+    }
+    if (
+      response.status === 410 ||
+      response.reason === "BadDeviceToken" ||
+      response.reason === "Unregistered"
+    ) {
+      await service.from("push_subscriptions").delete().eq("id", sub.id);
+      return "gone";
+    }
+    console.error(
+      `[push/apns] envoi échoué (${response.status || "sans statut"}): ${response.reason ?? "raison inconnue"}`
+    );
+    await incrementFailureCount(service, sub.id);
+    return "failed";
+  }
+
+  if (!configureWebPush() || !sub.p256dh || !sub.auth) return "skipped";
   try {
     await webpush.sendNotification(
       {
@@ -111,19 +138,22 @@ async function sendToSubscription(
     );
     // `failure_count + 1` sans RPC : la valeur lue peut être périmée, mais
     // c'est un indicateur d'entretien, pas un compteur transactionnel.
-    const { data } = await service
-      .from("push_subscriptions")
-      .select("failure_count")
-      .eq("id", sub.id)
-      .maybeSingle();
-    if (data) {
-      await service
-        .from("push_subscriptions")
-        .update({ failure_count: ((data.failure_count as number) ?? 0) + 1 })
-        .eq("id", sub.id);
-    }
+    await incrementFailureCount(service, sub.id);
     return "failed";
   }
+}
+
+async function incrementFailureCount(service: SupabaseClient, id: string): Promise<void> {
+  const { data } = await service
+    .from("push_subscriptions")
+    .select("failure_count")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return;
+  await service
+    .from("push_subscriptions")
+    .update({ failure_count: ((data.failure_count as number) ?? 0) + 1 })
+    .eq("id", id);
 }
 
 /** Exécute les tâches par vagues de `CONCURRENCY`. */
@@ -146,7 +176,7 @@ export async function activeSubscriptionsOf(
 ): Promise<PushSubscriptionRow[]> {
   const { data, error } = await service
     .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth, locale")
+    .select("id, endpoint, transport, p256dh, auth, locale")
     .eq("user_id", userId)
     .eq("enabled", true);
   if (error) {
@@ -170,8 +200,6 @@ export async function sendPushToUser(
   opts: { onlyEndpoint?: string } = {}
 ): Promise<{ sent: number; gone: number; failed: number }> {
   const tally = { sent: 0, gone: 0, failed: 0 };
-  if (!configureWebPush()) return tally;
-
   let subs = await activeSubscriptionsOf(service, userId);
   if (opts.onlyEndpoint) {
     subs = subs.filter((s) => s.endpoint === opts.onlyEndpoint);

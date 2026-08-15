@@ -9,6 +9,7 @@ import {
 } from "@/lib/notification-prefs";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { isPushConfigured } from "@/lib/server/push/vapid";
+import { isApnsConfigured } from "@/lib/server/push/apns";
 import { buildPushPayload, loadPushContext } from "@/lib/server/push/payload";
 import { sendPushToUser } from "@/lib/server/push/send";
 
@@ -162,7 +163,7 @@ export async function insertNotifications(
 /** Le volet push d'`insertNotifications`, isolé pour se lire seul. Best-effort
     de bout en bout : rien de ce qui suit ne remonte à l'appelant. */
 function pushNotifications(service: SupabaseClient, kept: NotificationRow[]): void {
-  if (!isPushConfigured()) return;
+  if (!isPushConfigured() && !isApnsConfigured()) return;
   afterOrNow(async () => {
     const ctx = await loadPushContext(service, kept);
     // Séquentiel par destinataire : `sendPushToUser` parallélise déjà par

@@ -53,6 +53,10 @@ export function useDesktopNotifications(): void {
   useEffect(() => {
     const bridge = getDesktopBridge();
     if (!bridge) return;
+    // MIN-356 : les coquilles récentes reçoivent la même ligne par APNs, même
+    // quand elles sont quittées. Garder aussi le relais realtime afficherait
+    // chaque événement deux fois. Les anciennes coquilles conservent ce repli.
+    if (bridge.registerForPushNotifications) return;
     if (typeof Notification === "undefined") return;
 
     if (seen.current === null) {

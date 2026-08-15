@@ -6,7 +6,8 @@
 > **Quatre décisions prises avant d'écrire**, et ce document ne les rouvre pas :
 > le livrable de MIN-285 est ce texte, pas un prototype ; **l'agent qui agit sur
 > le dépôt local est le sujet**, le wrapper n'en est que le véhicule ; les
-> notifications se contentent de l'app ouverte ; macOS est la seule cible.
+> les notifications se contentaient initialement de l'app ouverte (remplacé par
+> APNs en MIN-356) ; macOS est la seule cible.
 >
 > **Ce qui a été lu pour l'écrire**, plutôt que supposé : le harness de la
 > microVM et son protocole ([vm/protocol.ts](../lib/server/agent/vm/protocol.ts),
@@ -27,7 +28,7 @@
 Deux prémisses de MIN-285 ne tiennent pas telles quelles. L'une lui retire son
 premier argument, l'autre le rend beaucoup plus constructible qu'il n'en a l'air.
 
-**Le push est une régression, pas un gain.** Electron n'est pas bâti sur Chromium
+**Le Web Push est indisponible dans Electron.** Electron n'est pas bâti sur Chromium
 mais sur *Chromium Content*, un sous-ensemble qui **n'embarque pas le service de
 push**. Mesuré dans une vraie fenêtre en MIN-291, et la nuance compte : l'API,
 elle, est bien là — `PushManager` existe, `pushManager` est sur le prototype de
@@ -37,15 +38,15 @@ available`. Conséquence pratique, et elle n'est pas cosmétique :
 `isPushSupported()` ([lib/push/client.ts](../lib/push/client.ts)) rend **`true`**
 dans l'app, donc l'interrupteur des réglages s'y afficherait comme partout et
 échouerait sur une erreur illisible. D'où la branche desktop de
-[account-push-devices-section.tsx](../components/settings/account-push-devices-section.tsx),
-qui dit le renoncement au lieu de laisser essayer.
+[account-push-devices-section.tsx](../components/settings/account-push-devices-section.tsx)
+le disait explicitement jusqu'à MIN-356.
 Or minddy a déjà le vrai push web depuis MIN-183 — service worker, VAPID, émetteur
 serveur — et il sonne **même quand l'app est fermée**, dans Chrome comme dans
 Safari. Emballer la web app dans Electron ne l'améliore pas : ça le supprime. Les
-seuls remplaçants sont l'APNS d'Apple (`pushNotifications`, **macOS uniquement**,
-compte Apple Developer + entitlement + app signée + un second émetteur côté
-serveur, à côté de l'émetteur VAPID qu'on garderait pour le web) ou un bricolage
-FCM non officiel. On ne fait ni l'un ni l'autre : décision 3.
+Le remplacement livré en MIN-356 est l'APNs d'Apple (`pushNotifications`,
+**macOS uniquement**) : entitlement sur l'app signée, token associé au compte
+par la page authentifiée et second émetteur côté serveur. VAPID reste inchangé
+pour le web ; aucun FCM non officiel n'entre dans la coquille.
 
 **Tu as déjà une app installable.** [app/manifest.json](../app/manifest.json), les
 icônes 192/512, le service worker : « fenêtre sans barre d'URL, icône dans le
@@ -72,7 +73,7 @@ changement d'hébergeur, avec **trois verrous** (§4) et un renoncement (§4.4).
 | | PWA installée | Wrapper Electron |
 | --- | --- | --- |
 | Fenêtre dédiée, icône au dock | oui | oui |
-| Notifications **app fermée** | **oui** (Web Push, déjà livré) | non |
+| Notifications **app fermée** | **oui** (Web Push) | **oui** (APNs, MIN-356) |
 | Notifications app ouverte | oui | oui, natives |
 | Raccourci global (⌥ Espace) | non | oui |
 | Menu natif, badge de dock chiffré | partiel | oui |
@@ -249,26 +250,21 @@ première vraie connexion par lien externe se vérifie là.
 
 ---
 
-## 3. Les notifications, sans Web Push
+## 3. Les notifications : Web Push et APNs
 
-**Décision : rien de neuf côté serveur.** L'app est déjà abonnée en temps réel à
-tous les projets de l'utilisateur (le pont de MIN-89) ; le renderer transforme ce
-qu'il reçoit en `new Notification()`, que le main process rend native, et pose le
-compteur de non-lus sur le dock (`app.dock.setBadge`). Zéro infrastructure, zéro
-table, zéro clé. Livré en MIN-291
-([lib/use-desktop-notifications.ts](../lib/use-desktop-notifications.ts)) : la
-liste de `["notifications"]` suffit, la formulation est celle de l'inbox et des
-bannières poussées ([lib/notification-line.ts](../lib/notification-line.ts)), et
-la première liste au démarrage est enregistrée SANS rien afficher — sinon ouvrir
-l'app le matin ferait tomber trente bannières d'un coup. La sonde de MIN-290 l'a vérifié dans une vraie fenêtre :
-`Notification.permission` vaut déjà `granted` et la notification part du renderer
-sans qu'on demande quoi que ce soit à l'utilisateur.
+MIN-291 utilisait le temps réel puis `new Notification()` tant que le renderer
+tournait. MIN-356 garde ce chemin comme compatibilité pour une ancienne coquille,
+mais les versions actuelles s'inscrivent auprès d'APNs au lancement. Le token du
+bundle signé passe par le pont Electron, puis par la session web authentifiée,
+et rejoint `push_subscriptions` avec `transport = 'apns'`.
 
-**Ce qu'on perd, et il faut le dire au lieu de l'habiller** : app quittée, plus
-rien. C'est acceptable pour une app de bureau qu'on laisse ouverte, et c'est
-d'autant plus acceptable que **le web, lui, garde le vrai push** : quelqu'un qui
-veut être prévenu à coup sûr garde l'onglet ou la PWA, qui sonneront. La page de
-téléchargement doit le dire en une phrase, pas le taire.
+À l'insertion d'une ligne d'inbox, le serveur construit toujours une seule
+formulation. `sendPushToUser` choisit ensuite VAPID pour un navigateur ou APNs
+pour l'app macOS. APNs affiche l'alerte quand aucun process minddy ne tourne ; si
+l'app tourne, `received-apns-notification` la transforme en bannière native et
+son clic ouvre la route transportée. Le relais realtime est alors coupé pour ne
+pas afficher deux fois la même chose. Le badge du dock reste alimenté par la
+liste temps réel : lui représente un état exact, pas un événement APNs.
 
 Ce que ça ouvre en revanche, et qui n'existe pas sur le web : le clic sur une
 notification réveille la fenêtre sur le bon ticket, le badge est un chiffre exact,

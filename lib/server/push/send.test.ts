@@ -19,11 +19,13 @@ import type { PushPayload } from "./payload";
 
 const H = vi.hoisted(() => ({
   send: vi.fn<(sub: unknown, payload: string, opts: unknown) => Promise<void>>(),
+  sendApns: vi.fn(),
 }));
 
 vi.mock("web-push", () => ({
   default: { sendNotification: H.send, setVapidDetails: vi.fn() },
 }));
+vi.mock("./apns", () => ({ sendApnsNotification: H.sendApns }));
 
 const { sendPushToUser } = await import("./send");
 
@@ -81,6 +83,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "public");
   vi.stubEnv("VAPID_PRIVATE_KEY", "private");
   H.send.mockReset();
+  H.sendApns.mockReset();
 });
 
 describe("sendPushToUser", () => {
@@ -102,6 +105,52 @@ describe("sendPushToUser", () => {
         args: expect.objectContaining({ failure_count: 0 }),
       },
     ]);
+  });
+
+  it("route un appareil natif vers APNs", async () => {
+    H.sendApns.mockResolvedValue({ status: 200, reason: null });
+    const { service, ops } = stubService([
+      {
+        id: "mac",
+        endpoint: `apns:${"ab".repeat(32)}`,
+        transport: "apns",
+        p256dh: null,
+        auth: null,
+        locale: "fr",
+      },
+    ]);
+
+    const tally = await sendPushToUser(service, "u1", () => PAYLOAD);
+
+    expect(tally).toEqual({ sent: 1, gone: 0, failed: 0 });
+    expect(H.sendApns).toHaveBeenCalledWith(`apns:${"ab".repeat(32)}`, PAYLOAD);
+    expect(H.send).not.toHaveBeenCalled();
+    expect(ops[0]).toMatchObject({
+      table: "push_subscriptions",
+      op: "update",
+      args: { failure_count: 0 },
+    });
+  });
+
+  it("purge un token APNs révoqué", async () => {
+    H.sendApns.mockResolvedValue({ status: 410, reason: "Unregistered" });
+    const { service, ops } = stubService([
+      {
+        id: "mac",
+        endpoint: `apns:${"cd".repeat(32)}`,
+        transport: "apns",
+        p256dh: null,
+        auth: null,
+        locale: "en",
+      },
+    ]);
+
+    expect(await sendPushToUser(service, "u1", () => PAYLOAD)).toEqual({
+      sent: 0,
+      gone: 1,
+      failed: 0,
+    });
+    expect(ops).toEqual([{ table: "push_subscriptions", op: "delete", args: null }]);
   });
 
   // 404/410 : le service de push nous dit que l'abonnement n'existe plus. C'est

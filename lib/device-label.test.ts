@@ -15,6 +15,11 @@ import {
  */
 const CASES: readonly [label: string, ua: string, expected: string][] = [
   [
+    "app minddy sur macOS",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/150.0.0.0 Electron/43.4.0 minddy-desktop/0.9.4 Safari/537.36",
+    "minddy sur macOS",
+  ],
+  [
     "Safari sur iPhone",
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
     "Safari sur iPhone",

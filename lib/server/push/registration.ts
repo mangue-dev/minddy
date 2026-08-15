@@ -1,5 +1,7 @@
 import "server-only";
 
+import { isPushInstallationId } from "@/lib/desktop/push-installation";
+
 /**
  * Ce qu'un (ré)enregistrement d'appareil décide de son `enabled` et de sa
  * `locale` (MIN-183).
@@ -30,6 +32,57 @@ import "server-only";
 export interface PriorRegistration {
   enabled: boolean;
   locale: string | null;
+}
+
+export interface ParsedPushRegistration {
+  endpoint: string;
+  transport: "web" | "apns";
+  p256dh: string | null;
+  auth: string | null;
+  installationId: string | null;
+}
+
+/** Valide la forme locale avant que la route ne fasse le contrôle réseau web. */
+export function parsePushRegistration(input: unknown): ParsedPushRegistration | null {
+  if (!input || typeof input !== "object") return null;
+  const value = input as {
+    endpoint?: unknown;
+    transport?: unknown;
+    installationId?: unknown;
+    keys?: { p256dh?: unknown; auth?: unknown };
+  };
+  if (value.transport === "apns") {
+    if (
+      typeof value.endpoint !== "string" ||
+      !/^apns:[a-f0-9]{32,512}$/i.test(value.endpoint) ||
+      !isPushInstallationId(value.installationId)
+    ) return null;
+    return {
+      endpoint: value.endpoint,
+      transport: "apns",
+      p256dh: null,
+      auth: null,
+      installationId: value.installationId,
+    };
+  }
+
+  const p256dh = value.keys?.p256dh;
+  const auth = value.keys?.auth;
+  if (
+    typeof value.endpoint !== "string" ||
+    !value.endpoint.startsWith("https://") ||
+    typeof p256dh !== "string" ||
+    !p256dh ||
+    typeof auth !== "string" ||
+    !auth
+  ) return null;
+  return {
+    endpoint: value.endpoint,
+    transport: "web",
+    p256dh,
+    auth,
+    installationId: null,
+  };
 }
 
 export function resolveRegistrationState(

@@ -16,6 +16,7 @@ import { ensureMemberSlotAvailable } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { isPushConfigured } from "@/lib/server/push/vapid";
+import { isApnsConfigured } from "@/lib/server/push/apns";
 import { sendPushToUser } from "@/lib/server/push/send";
 import { sendInvitationEmail } from "@/lib/server/invitation-email";
 import type { Invitation } from "@/lib/types";
@@ -299,7 +300,7 @@ export async function claimPendingInvitationsLate(user: {
 
 /** La notification système d'une invitation. Best-effort de bout en bout. */
 function pushInvitation(inviteeId: string, inviterId: string): void {
-  if (!isPushConfigured()) return;
+  if (!isPushConfigured() && !isApnsConfigured()) return;
   afterOrNow(async () => {
     const service = getServiceClient();
     const inviters = await fetchAuthUsersById(service, [inviterId]);

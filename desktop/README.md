@@ -135,6 +135,22 @@ LaunchServices inscrit `Electron.app`, pas nous.
 dossier de DONNÉES (`~/Library/Application Support/minddy/`), et il devait être
 posé avant qu'il existe des installations.
 
+### Push APNs (MIN-356)
+
+Le bundle `app.minddy.desktop` porte la capability Push Notifications et
+`com.apple.developer.aps-environment=production`. Le profil/certificat utilisé
+pour signer doit donc autoriser cette capability ; un build de développement
+non empaqueté ne tente volontairement pas de s'inscrire.
+
+Le provider serveur utilise une clé APNs token-based `.p8`. Poser
+`APNS_TEAM_ID`, `APNS_KEY_ID` et `APNS_PRIVATE_KEY` dans l'environnement du site
+(`APNS_BUNDLE_ID` reste optionnel tant que l'identifiant du bundle ne change
+pas). La clé privée ne va jamais dans l'app. Une livraison complète de MIN-356
+demande donc les trois pièces ensemble : migration Supabase, variables serveur,
+puis binaire signé/notarisé republié. Sans configuration serveur, l'inbox reste
+fonctionnelle mais APNs est un no-op ; une ancienne coquille garde le relais
+temps réel tant qu'elle tourne.
+
 **Le `.zip` accompagne le `.dmg` et n'est pas décoratif** : le `.dmg` sert au
 premier téléchargement, Squirrel.Mac ne sait lire que le `.zip`. Publier l'un
 sans l'autre donne une app qui s'installe et ne se met jamais à jour, sans rien

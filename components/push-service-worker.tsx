@@ -6,7 +6,8 @@ import { useLocale } from "next-intl";
 import { refreshThisDeviceSubscription } from "@/lib/push/client";
 
 /**
- * Monte le service worker des notifications push (MIN-183). Aucun rendu : ce
+ * Monte le transport des notifications push (Web Push en MIN-183, APNs natif
+ * en MIN-356). Aucun rendu : ce
  * composant n'existe que pour son effet, à côté de `<NewVersionBanner />` dans
  * les providers de l'app.
  *
@@ -19,7 +20,7 @@ import { refreshThisDeviceSubscription } from "@/lib/push/client";
  * (sans permission, aucun push n'arrivera jamais) et il survivrait à la
  * fermeture de l'onglet.
  *
- * L'abonnement, lui, naît dans le geste de l'interrupteur des réglages, où la
+ * Sur le web, l'abonnement naît dans le geste de l'interrupteur des réglages, où la
  * permission se demande. Ici on ne fait que remonter le worker pour les
  * appareils DÉJÀ abonnés — sinon le navigateur, qui décharge un worker inactif,
  * n'aurait plus personne pour recevoir l'événement `push`.
@@ -37,7 +38,9 @@ import { refreshThisDeviceSubscription } from "@/lib/push/client";
  *     qu'une rotation de la paire VAPID laisse derrière elle. Le service de push
  *     répond alors 403 à chaque envoi, éternellement.
  *
- * `refreshThisDeviceSubscription` traite les deux : l'upsert porte sur
+ * `refreshThisDeviceSubscription` traite les deux. Dans l'app macOS récente,
+ * la même fonction demande au pont son token APNs courant et l'associe à la
+ * session authentifiée ; aucun service worker n'est alors enregistré. L'upsert porte sur
  * `endpoint`, donc c'est sans effet quand rien n'a bougé, et l'ancienne ligne
  * part avec `oldEndpoint` quand il a fallu se réabonner.
  */

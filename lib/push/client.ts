@@ -21,11 +21,13 @@
  *   • HTTPS obligatoire, `localhost` excepté (d'où `next dev --experimental-https`).
  */
 
-import { savePushDeviceApi } from "@/lib/push-devices-api";
+import { saveNativePushDeviceApi, savePushDeviceApi } from "@/lib/push-devices-api";
+import { getDesktopBridge } from "@/lib/desktop/bridge";
 import type { PushDevice } from "@/lib/types";
 
 /** Le navigateur sait-il faire du push ? (Firefox privé, vieux Safari, non.) */
 export function isPushSupported(): boolean {
+  if (getDesktopBridge()?.registerForPushNotifications) return true;
   return (
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
@@ -90,6 +92,11 @@ export async function registerPushServiceWorker(): Promise<ServiceWorkerRegistra
 /** L'endpoint de l'abonnement de CET appareil, ou null s'il n'y en a pas. Sert
  *  à reconnaître « cet appareil-ci » dans la liste rendue par le serveur. */
 export async function currentEndpoint(): Promise<string | null> {
+  const native = getDesktopBridge()?.registerForPushNotifications;
+  if (native) {
+    const registration = await native();
+    return registration ? `apns:${registration.token}` : null;
+  }
   if (!isPushSupported()) return null;
   const registration = await navigator.serviceWorker.getRegistration("/");
   if (!registration) return null;
@@ -185,6 +192,21 @@ export type SubscribeResult =
  * demande de permission (voir l'en-tête du fichier).
  */
 export async function subscribeThisDevice(locale: string): Promise<SubscribeResult> {
+  const native = getDesktopBridge()?.registerForPushNotifications;
+  if (native) {
+    try {
+      const registration = await native({ activate: true });
+      if (!registration) return { ok: false, reason: "failed" };
+      const device = await saveNativePushDeviceApi(
+        registration.token,
+        registration.installationId,
+        locale
+      );
+      return { ok: true, device };
+    } catch (e) {
+      return { ok: false, reason: "failed", message: (e as Error).message };
+    }
+  }
   if (!isPushSupported()) return { ok: false, reason: "unsupported" };
   // Safari iOS : hors PWA installée, `subscribe()` échoue par construction. Le
   // dire AVANT vaut mieux qu'une erreur opaque après.
@@ -222,6 +244,15 @@ export async function subscribeThisDevice(locale: string): Promise<SubscribeResu
 export async function refreshThisDeviceSubscription(
   locale: string
 ): Promise<PushDevice | null> {
+  const native = getDesktopBridge()?.registerForPushNotifications;
+  if (native) {
+    const registration = await native();
+    if (!registration) return null;
+    return saveNativePushDeviceApi(registration.token, registration.installationId, locale, {
+      refresh: true,
+      track: false,
+    });
+  }
   if (!isPushSupported() || Notification.permission !== "granted") return null;
   const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   if (!key) return null;
@@ -251,6 +282,12 @@ export async function refreshThisDeviceSubscription(
  * un appareil qui ne peut plus rien recevoir.
  */
 export async function unsubscribeThisDevice(): Promise<string | null> {
+  const bridge = getDesktopBridge();
+  if (bridge?.registerForPushNotifications) {
+    const registration = await bridge.registerForPushNotifications();
+    await bridge.unregisterForPushNotifications?.();
+    return registration ? `apns:${registration.token}` : null;
+  }
   if (!isPushSupported()) return null;
   const registration = await navigator.serviceWorker.getRegistration("/");
   if (!registration) return null;

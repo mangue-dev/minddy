@@ -1301,6 +1301,7 @@
     "devicesDesc": "Get an alert on your phone or desktop when something lands in your inbox. One entry per device; turn any of them off, or remove one you no longer use.",
     "enableLabel": "Notify this device",
     "enableDesc": "Your browser will ask for permission.",
+    "enableDescNative": "The macOS app receives these alerts even after you quit it.",
     "enabling": "Turning on…",
     "empty": "No device receives notifications yet.",
     "thisDevice": "This device",
@@ -1323,7 +1324,7 @@
     "unsupportedHint": "This browser doesn't support push notifications.",
     "notConfiguredHint": "Push notifications aren't configured on this server.",
     "iosInstallHint": "On iPhone and iPad, add minddy to your home screen first: tap Share, then “Add to Home Screen”. Notifications only work from the installed app.",
-    "desktopHint": "The desktop app notifies you natively while it's open, and stops when you quit it. To be notified either way, keep minddy open in your browser: push works there."
+    "desktopHint": "This version of the desktop app only notifies you while it is open. Update minddy to enable notifications after you quit it."
   },
   "Issue": {
     "entity": "Issue",

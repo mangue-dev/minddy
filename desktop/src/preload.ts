@@ -6,11 +6,11 @@ import type { DesktopChannel } from "@/lib/desktop/channel";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
 /**
- * LA SURFACE, en entier (MIN-291).
+ * LA SURFACE, en entier (MIN-291, APNs ajouté en MIN-356).
  *
  * Le renderer charge du code DISTANT. Ce fichier est la seule chose qu'il peut
  * atteindre au-delà du web, et il doit se lire en trente secondes : dix
- * membres, aucun qui rende un objet Node, aucun qui prenne un chemin de fichier,
+ * membres nommés, aucun qui rende un objet Node, aucun qui prenne un chemin de fichier,
  * aucun qui exécute quoi que ce soit. Tout passe par un message au main process,
  * qui reste libre de refuser — `openExternal` en particulier ne fait rien tant
  * que l'URL n'a pas passé la garde de navigation.
@@ -62,6 +62,16 @@ const bridge: DesktopBridge = {
 
   setBadgeCount(count: number) {
     ipcRenderer.send("minddy:set-badge", count);
+  },
+
+  registerForPushNotifications(options) {
+    return ipcRenderer.invoke("minddy:push:register", options) as ReturnType<
+      NonNullable<DesktopBridge["registerForPushNotifications"]>
+    >;
+  },
+
+  unregisterForPushNotifications() {
+    return ipcRenderer.invoke("minddy:push:unregister") as Promise<void>;
   },
 
   setWindowButtonsVisible(visible: boolean) {

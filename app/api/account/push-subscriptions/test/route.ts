@@ -7,6 +7,7 @@ import fr from "@/messages/fr.json";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isPushConfigured } from "@/lib/server/push/vapid";
+import { isApnsConfigured } from "@/lib/server/push/apns";
 import { toPushLocale } from "@/lib/server/push/payload";
 import { sendPushToUser } from "@/lib/server/push/send";
 
@@ -28,10 +29,6 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  if (!isPushConfigured()) {
-    return NextResponse.json({ error: t("pushNotConfigured") }, { status: 503 });
-  }
-
   let body: unknown;
   try {
     body = await request.json();
@@ -47,7 +44,7 @@ export async function POST(request: NextRequest) {
   // d'un autre compte introuvable, sans qu'on ait à y penser.
   const { data: device, error } = await auth.supabase
     .from("push_subscriptions")
-    .select("id, locale, enabled")
+    .select("id, transport, locale, enabled")
     .eq("endpoint", endpoint)
     .maybeSingle();
 
@@ -57,6 +54,11 @@ export async function POST(request: NextRequest) {
   }
   if (!device) {
     return NextResponse.json({ error: t("pushDeviceNotFound") }, { status: 404 });
+  }
+  const configured =
+    device.transport === "apns" ? isApnsConfigured() : isPushConfigured();
+  if (!configured) {
+    return NextResponse.json({ error: t("pushNotConfigured") }, { status: 503 });
   }
   // `sendPushToUser` ne vise que les appareils actifs : un appareil éteint ne
   // sonnerait pas, et le silence se lirait comme une panne.
