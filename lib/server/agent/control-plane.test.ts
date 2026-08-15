@@ -976,3 +976,117 @@ describe("la microVM appelante et le run qu'elle prétend exécuter", () => {
     expect(res.status).toBe(200);
   });
 });
+
+/**
+ * MIN-355 — LE CHEMIN LOCAL, ET CE QU'IL NE SERT PAS.
+ *
+ * Un tour qui joue sur la machine de l'utilisateur porte un jeton que NOUS avons
+ * signé, sur un disque que le modèle peut lire. On ne prétend donc pas le
+ * protéger : on réduit ce qu'il ouvre. Trois refus, et une garde de fraîcheur qui
+ * ne coûte rien parce que la ligne du run est déjà lue.
+ */
+describe("le plan de contrôle vu depuis une machine", () => {
+  const LOCAL_GEN = 4;
+  const callLocal = (
+    method: string,
+    surface: string,
+    body: Record<string, unknown> | null = null,
+    gen = LOCAL_GEN,
+  ) =>
+    handleControlPlaneRequest({ runId: RUN_ID, method, surface, body, local: { gen } });
+
+  beforeEach(() => {
+    h.run = { ...h.run!, local_exec: true, local_exec_gen: LOCAL_GEN };
+  });
+
+  it("sert les surfaces ordinaires d'un run local qui travaille", async () => {
+    expect((await callLocal("POST", "/events", { type: "assistant_message" })).status).toBe(200);
+    expect(h.events).toHaveLength(1);
+  });
+
+  it("refuse un jeton dont la GÉNÉRATION a été dépassée — la révocation est là", async () => {
+    // Émettre un jeton incrémente la génération (`issueLocalExecToken`) : celui de
+    // la machine précédente meurt à l'instant, sans qu'on ait rien à rappeler.
+    const res = await callLocal("POST", "/events", { type: "assistant_message" }, LOCAL_GEN - 1);
+    expect(res.status).toBe(403);
+    expect(h.events).toEqual([]);
+  });
+
+  it("refuse un jeton signé pour un run qui n'est PAS local", async () => {
+    // Ne devrait pas exister — donc si ça existe, c'est une faute de chez nous, et
+    // elle s'arrête ici plutôt que d'ouvrir une seconde voie sur un run cloud.
+    h.run = { ...h.run!, local_exec: false };
+    expect((await callLocal("POST", "/events", { type: "assistant_message" })).status).toBe(403);
+    expect(h.events).toEqual([]);
+  });
+
+  it("exige que le run TRAVAILLE, sur toutes les surfaces qui lisent sa ligne", async () => {
+    // Une microVM se fait couper au repos ; une machine, non. Sans cette ligne, un
+    // jeton de quinze minutes servirait encore les tools d'une conversation finie
+    // et consommerait sa file de steering.
+    h.run = { ...h.run!, status: "completed" };
+    for (const [method, surface] of [
+      ["POST", "/events"],
+      ["GET", "/messages"],
+      ["POST", "/tool/read_issue"],
+      ["GET", "/budget"],
+    ] as const) {
+      const res = await callLocal(method, surface, { type: "assistant_message", args: {} });
+      // 409 et pas 403 : c'est celui que le client du plan de contrôle lit déjà
+      // comme « arrête-toi », et il n'est pas retenté.
+      expect([surface, res.status]).toEqual([surface, 409]);
+    }
+    expect(h.events).toEqual([]);
+    expect(h.issueCalls).toEqual([]);
+  });
+
+  it("ne rend AUCUN token de forge — le renouvellement passe par l'app", async () => {
+    const res = await callLocal("POST", "/repo-auth");
+    expect(res.status).toBe(403);
+    // Rien n'a été minté : le refus est en amont de la forge.
+    expect(h.repoAccessAsked).toEqual([]);
+  });
+
+  it("sert le MÊME jeu de tools que dans la microVM, carnet compris", async () => {
+    /**
+     * Le cadrage voulait retirer `set_scratchpad` du chemin local — le seul tool
+     * destructeur de la surface. Écarté le 2026-08-15, et ce test est la trace de
+     * la décision plutôt que de son absence :
+     *
+     * - un porteur de jeton lit le carnet et son `rev` par `read_scratchpad`, qui
+     *   reste servi : le compare-and-swap ne garde que de l'obsolescence ;
+     * - et un refus servi ici sans retrait du CATALOGUE (`agentToolsFor`) ferait
+     *   brûler un round au modèle sur un tool déclaré qui ment.
+     */
+    for (const name of [
+      "read_scratchpad",
+      "add_scratchpad_tasks",
+      "update_scratchpad_task",
+      "set_scratchpad",
+    ]) {
+      expect([name, (await callLocal("POST", `/tool/${name}`, { args: {} })).status]).toEqual([
+        name,
+        200,
+      ]);
+    }
+    expect(h.scratchpadCalls).toHaveLength(4);
+  });
+
+  it("laisse le DIRECT passer sans lire la ligne du run — le 13e cas, assumé", async () => {
+    // C'est le seul appel chaud (~4/s) : lui imposer un lookup serait exactement
+    // la charge que son court-circuit existe pour supprimer. Ce qu'un jeton volé y
+    // gagne est du texte éphémère sur le fil de SON run, quinze minutes au plus.
+    const res = await callLocal("POST", "/stream", { text: "salut" }, LOCAL_GEN - 1);
+    expect(res.status).toBe(200);
+    expect(h.runReads).toBe(0);
+  });
+
+  it("ne change RIEN au chemin de la microVM", async () => {
+    // La preuve que les deux refus sont bien conditionnés : les mêmes appels,
+    // sans `local`, se comportent comme avant — y compris sur un run conclu, que
+    // seul le chemin local ferme.
+    h.run = { ...h.run!, status: "completed", local_exec: true, local_exec_gen: LOCAL_GEN };
+    expect((await call("POST", "/repo-auth")).status).toBe(200);
+    expect((await call("POST", "/events", { type: "assistant_message" })).status).toBe(200);
+  });
+});

@@ -155,6 +155,21 @@ export interface VmJob {
   /** Origine du plan de contrôle — le déploiement qui a lancé ce run, jamais la
    *  prod par défaut (cf. `agentControlOrigin`). */
   appOrigin: string;
+  /**
+   * LE JETON D'EXÉCUTION LOCALE (MIN-355) — présent SEULEMENT quand le tour joue
+   * sur la machine de l'utilisateur. En microVM, il n'y a rien à porter : le
+   * firewall signe après la sortie de la VM.
+   *
+   * Il est ici, donc sur un disque que le modèle peut lire, et ce n'est pas une
+   * négligence — un secret posé sur la machine qu'on soupçonne ne se cache pas.
+   * Ce qui est traité, c'est son pouvoir (cf. `handleControlPlaneRequest`), et sa
+   * durée : quinze minutes.
+   *
+   * LU AVANT TOUTE VALIDATION par [main.ts](main.ts), et il faut que ça reste
+   * vrai : un harness qui REFUSE son job doit encore pouvoir dire pourquoi, et
+   * sur le chemin local, parler demande ce jeton.
+   */
+  controlToken?: string;
   // ── Modèle ────────────────────────────────────────────────────────────────
   model: string;
   /** Base URL OpenAI-compatible. La CLÉ, elle, n'est pas ici : le firewall la

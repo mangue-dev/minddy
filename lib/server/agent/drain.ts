@@ -191,7 +191,7 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
   const { data } = await service
     .from("agent_runs")
     .select(
-      "id, sandbox_id, loop_command_id, created_by, project_id, issue_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at, cost_usd",
+      "id, sandbox_id, loop_command_id, local_exec, created_by, project_id, issue_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at, cost_usd",
     )
     .eq("status", "running")
     .lt("last_activity_at", cutoff)
@@ -200,6 +200,7 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     id: string;
     sandbox_id: string | null;
     loop_command_id: string | null;
+    local_exec: boolean | null;
     created_by: string | null;
     project_id: string;
     issue_id: string | null;
@@ -247,16 +248,38 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     if (alive === true) continue; // le process vit : on ne touche à rien.
     if (alive === null) {
       /**
-       * On ne SAIT PAS — et il y a deux façons de ne pas savoir. Sans identifiant
-       * de commande, il n'y a rien à interroger : la boucle n'a jamais été lancée,
-       * et passé le délai d'amorçage c'est un fait, pas une présomption. Avec un
-       * identifiant, c'est la plateforme qui ne répond pas : on lui laisse deux
-       * heures avant d'en tirer une conclusion.
+       * On ne SAIT PAS — et il y a maintenant trois façons de ne pas savoir.
+       *
+       * **Sans identifiant de commande**, il n'y a rien à interroger : la boucle
+       * n'a jamais été lancée, et passé le délai d'amorçage c'est un fait, pas une
+       * présomption. **Avec un identifiant**, c'est la plateforme qui ne répond
+       * pas : on lui laisse deux heures avant d'en tirer une conclusion.
+       *
+       * **ET SUR UNE MACHINE, ON NE SAURA JAMAIS (MIN-355).** Un run local n'a ni
+       * microVM ni commande — il n'y a personne à qui poser la question. Il tombait
+       * donc dans la première branche, celle du « jamais lancé », qui n'est fondée
+       * que parce qu'un amorçage de microVM dure vingt secondes : trois minutes de
+       * silence (le seuil de la requête ci-dessus) sur un run vieux d'un quart
+       * d'heure suffisaient à le déclarer mort, à publier « l'agent s'est arrêté »
+       * et à facturer du compute. Un Mac qui dort quatre minutes perdait son tour,
+       * là où un run cloud dont l'API ne répond pas a droit à deux heures.
+       *
+       * On lui donne donc la MÊME borne que ce cas-là, et pour la même raison : ce
+       * qui manque n'est pas un verdict plus audacieux, c'est une borne. Le harness
+       * écrit `last_activity_at` toutes les deux minutes
+       * (`SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS`) ; deux heures, c'est soixante
+       * battements manqués — et un tour qui reviendrait après, s'il revient,
+       * retrouve sa session au repos sur son dernier checkpoint plutôt qu'un run
+       * `running` que personne ne joue.
        */
-      const lost = row.loop_command_id
-        ? (agedMs(row.last_activity_at) ?? 0) >= VM_LOOP_LOST_AFTER_MS &&
-          (agedMs(row.started_at) ?? 0) >= VM_LOOP_LOST_AFTER_MS
-        : (agedMs(row.started_at) ?? 0) >= VM_LOOP_UNLAUNCHED_AFTER_MS;
+      // Il y a quelqu'un à interroger, ou personne par nature : dans les deux cas
+      // le silence est ce qui décide, et il a deux heures. Reste le seul cas où
+      // une réponse était DUE et n'est jamais venue — une microVM sans commande.
+      const lost =
+        row.local_exec || row.loop_command_id
+          ? (agedMs(row.last_activity_at) ?? 0) >= VM_LOOP_LOST_AFTER_MS &&
+            (agedMs(row.started_at) ?? 0) >= VM_LOOP_LOST_AFTER_MS
+          : (agedMs(row.started_at) ?? 0) >= VM_LOOP_UNLAUNCHED_AFTER_MS;
       if (!lost) continue;
     }
 
@@ -321,8 +344,16 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
      * par le reaper d'inactivité — ~5 min après ce stamp, qui vient tout juste de
      * faire passer le run au repos. On facture donc moins que ce que la
      * plateforme nous facture, ce qui est le bon sens de l'erreur.
+     *
+     * ET RIEN DU TOUT POUR UN RUN LOCAL (MIN-355) : il n'y a pas eu de microVM.
+     * Facturer ici du `sandbox_compute` sur des minutes de Mac reviendrait à faire
+     * payer à l'utilisateur une machine qu'il a lui-même fournie — et à la faire
+     * payer précisément sur le chemin de l'incident, celui qu'on ne relit pas.
+     * La borne est SERVEUR, jamais un chiffre que le harness rendrait : c'est le
+     * même principe que `sandboxMs`, et il vaut d'autant plus ici que la machine
+     * est celle qu'on soupçonne.
      */
-    const startedMs = row.started_at ? Date.parse(row.started_at) : NaN;
+    const startedMs = row.started_at && !row.local_exec ? Date.parse(row.started_at) : NaN;
     if (Number.isFinite(startedMs) && Date.now() > startedMs) {
       const billTo: AiUsageBillTo = row.created_by
         ? { userId: row.created_by }

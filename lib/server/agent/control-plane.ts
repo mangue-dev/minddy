@@ -84,6 +84,20 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
  * le pouvoir minimal de son ancrage (`RepoTokenAccess` dans `repo-access.ts`).
  * L'affirmation trop large est ce qui a dispensé d'y regarder pendant deux tickets.
  *
+ * ET IL Y A DÉSORMAIS UNE DEUXIÈME VOIE D'ADMISSION (MIN-355). Un tour qui joue
+ * sur la machine de l'utilisateur n'a pas de firewall pour signer quoi que ce
+ * soit : il PORTE un jeton HS256 que nous avons signé
+ * ([local-exec-token.ts](local-exec-token.ts)), et le `runId` reste un paramètre
+ * d'entrée de ce module — dérivé d'un claim, comme avant, mais d'un claim à nous.
+ *
+ * Ce que ça change, et il faut le dire dans ces termes : **ce jeton vit sur un
+ * disque que le modèle peut lire.** On ne traite donc pas sa confidentialité, on
+ * réduit son POUVOIR — `opts.local` plus bas, et les deux refus qu'il déclenche :
+ * `/repo-auth`, et `status = 'running'` exigé partout où la ligne du run est lue.
+ * Deux et pas trois : le retrait de `set_scratchpad` a été écarté, et le pourquoi
+ * est écrit là où il se serait posé (`/tool/`). Ce qui reste ouvert est ce qu'un
+ * tour local doit pouvoir faire pour être un tour.
+ *
  * LA COUPURE QUI GUIDE TOUT ÇA : la microVM a le DÉPÔT, la fonction a la FORGE et
  * la BASE. `create_pr` est coupé exactement là — la VM pousse, la fonction ouvre.
  */
@@ -284,6 +298,17 @@ export async function handleControlPlaneRequest(opts: {
    * n'exécute pas, et ce n'est pas une divergence à découvrir dans les logs.
    */
   sandboxName?: string;
+  /**
+   * LE TOUR JOUE SUR LA MACHINE DE L'UTILISATEUR (MIN-355), et le `runId` ci-dessus
+   * ne vient donc pas d'un OIDC de la plateforme mais d'un jeton que NOUS avons
+   * signé (`admitLocalCaller`, [local-exec-token.ts](local-exec-token.ts)).
+   *
+   * Présent = le chemin local, avec la génération de bail que le jeton porte. Ce
+   * n'est pas un drapeau d'information : c'est ce qui déclenche les réductions de
+   * pouvoir plus bas — le jeton vit sur un disque que le modèle peut lire, et
+   * prétendre le protéger serait la seule chose qu'on ne puisse pas tenir.
+   */
+  local?: { gen: number };
 }): Promise<ControlPlaneResult> {
   const { runId, method, surface } = opts;
   const body = opts.body ?? {};
@@ -342,6 +367,39 @@ export async function handleControlPlaneRequest(opts: {
   // run dont la VM n'est pas encore enregistrée, on laisse passer.
   if (opts.sandboxName && run.sandbox_id && run.sandbox_id !== opts.sandboxName) {
     return { status: 403, body: { error: "sandbox does not run this run" } };
+  }
+
+  /**
+   * CE QUE LE CHEMIN LOCAL PAIE À CHAQUE APPEL (MIN-355), et pourquoi c'est ici.
+   *
+   * La ligne du run est déjà lue trois lignes plus haut : ces trois contrôles ne
+   * coûtent donc RIEN de plus, et c'est tout l'argument du jeton auto-porteur.
+   * Un jeton opaque haché aurait été révocable par nature, mais au prix d'un
+   * lookup sur `/stream` — ~29 000 par tour de deux heures, très exactement la
+   * charge que son court-circuit existe pour supprimer.
+   *
+   * 1. **La ligne doit se dire locale.** Un jeton signé pour un run de microVM ne
+   *    devrait pas exister ; s'il existe, c'est une faute de chez nous, et elle
+   *    s'arrête là plutôt que d'ouvrir une seconde voie sur un run cloud.
+   * 2. **La génération doit être la courante.** C'est la seule révocation d'un
+   *    jeton qu'on ne peut pas rappeler : émettre le suivant tue le précédent
+   *    (`issueLocalExecToken`), et le refus est instantané ici.
+   * 3. **Le run doit TRAVAILLER.** Sur le chemin cloud, seule `/rest` l'exigeait —
+   *    la microVM d'un run conclu étant coupée par le reaper, la question ne se
+   *    posait pas. Une machine, elle, ne se coupe pas : sans cette ligne, un
+   *    jeton de quinze minutes continuerait de servir des tools et de consommer la
+   *    file de steering d'une conversation terminée. Le 409 est celui que le
+   *    client du plan de contrôle lit déjà comme « arrête-toi »
+   *    (`saveCheckpointQuietly`), et il n'est pas retenté.
+   */
+  if (opts.local) {
+    if (!run.local_exec) return forbidden("this run does not execute locally");
+    if (run.local_exec_gen !== opts.local.gen) {
+      return forbidden("local execution token superseded — ask the app for a fresh one");
+    }
+    if (run.status !== "running") {
+      return { status: 409, body: { error: "run is no longer running" } };
+    }
   }
 
   if (method === "POST" && surface === "/events") {
@@ -538,6 +596,23 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (method === "POST" && surface === "/repo-auth") {
+    /**
+     * ET UNE MACHINE LOCALE N'EN REÇOIT PAS DU TOUT (MIN-355).
+     *
+     * C'est la surface la plus chère du plan de contrôle : elle rend un token
+     * d'installation `repo-write` **à la demande, renouvelable indéfiniment**. Sur
+     * le chemin cloud, ce qui la borne est la microVM — jetable, coupée au repos,
+     * et qui détient déjà ce token dans son `.git/config` (elle ne peut pas cloner
+     * sans). Aucune de ces deux phrases n'est vraie d'un Mac.
+     *
+     * Le renouvellement passe donc par l'APP, qui a la session de l'utilisateur :
+     * une autorité qui sait QUI demande, là où ce jeton-ci ne sait que quel run.
+     * C'est la première des trois réductions de pouvoir, et la seule qui retire
+     * quelque chose à un tour honnête — le prix est assumé.
+     */
+    if (opts.local) {
+      return forbidden("a local run renews its repository token through the app, not here");
+    }
     // Un token de forge FRAIS. C'est la seule raison d'être de cette surface : un
     // tour qui vit dans la VM peut durer plus longtemps que le token
     // d'installation qui a cloné le dépôt, et un push qui échoue en 401 à la
@@ -593,6 +668,28 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (method === "POST" && surface.startsWith("/tool/")) {
+    /**
+     * LE JEU DE TOOLS NE CHANGE PAS SUR UNE MACHINE (MIN-355), et c'est une
+     * décision, pas un oubli.
+     *
+     * Le cadrage voulait retirer `set_scratchpad` du chemin local — c'est le seul
+     * tool destructeur de la surface (il réécrit le carnet privé du lanceur en
+     * entier, sans retour). Deux raisons de ne pas le faire, tranchées le
+     * 2026-08-15 :
+     *
+     * - **ça ne protégeait pas grand-chose.** `read_scratchpad` reste servi, donc
+     *   un porteur de jeton lit le carnet et son `rev` de toute façon : le
+     *   compare-and-swap n'est une garde que contre l'obsolescence, pas contre
+     *   quelqu'un qui la contourne en lisant d'abord ;
+     * - **ça coûtait un tool qui ne ment pas.** Un refus servi ici sans retrait du
+     *   catalogue (`agentToolsFor`) fait brûler un round au modèle, et le dépôt a
+     *   déjà tranché ce point ailleurs : `ask_user` et `create_routine` sortent du
+     *   JEU DE TOOLS d'une routine, jamais par un 403.
+     *
+     * Ce qui reste vrai du pouvoir d'un jeton local est donc porté par les deux
+     * gardes qui, elles, ne coûtent rien au tour honnête : `/repo-auth` et
+     * `status = 'running'`.
+     */
     return await runPlatformTool(run, surface.slice("/tool/".length), body);
   }
 

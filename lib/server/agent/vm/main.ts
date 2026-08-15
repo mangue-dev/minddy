@@ -29,10 +29,17 @@ import { parseVmJob, vmJobPath, type VmJob, type VmTurnReport } from "./protocol
  * dernier checkpoint périodique, avec du travail perdu entre les deux. D'où le
  * `try` global, et le rapport minimal qu'il rend quand tout le reste a échoué.
  *
- * Le process ne détient AUCUN secret. Le firewall pose la clé du modèle après la
- * sortie de la VM, et le plan de contrôle prouve l'identité du run par un OIDC de
- * la plateforme : `env | grep -i key` ne rend rien ici, et c'est mesuré
- * (docs/orchestrateur-process-long.md §1).
+ * DANS UNE MICROVM, le process ne détient AUCUN secret. Le firewall pose la clé du
+ * modèle après la sortie de la VM, et le plan de contrôle prouve l'identité du run
+ * par un OIDC de la plateforme : `env | grep -i key` ne rend rien ici, et c'est
+ * mesuré (docs/orchestrateur-process-long.md §1).
+ *
+ * SUR LA MACHINE DE L'UTILISATEUR, CETTE PHRASE CESSE D'ÊTRE VRAIE (MIN-355), et
+ * il vaut mieux l'écrire que la laisser se périmer : il n'y a pas de firewall, donc
+ * le job porte un jeton d'exécution locale (`controlToken`) que le harness pose sur
+ * chacun de ses appels. Il est lisible par ce que le tour exécute. Ce qui le rend
+ * tenable n'est pas une cachette, c'est ce qu'il N'OUVRE PAS — voir
+ * `handleControlPlaneRequest` et [local-exec-token.ts](../local-exec-token.ts).
  */
 
 /**
@@ -81,9 +88,24 @@ async function main(): Promise<void> {
    * constater mort. Seul `appOrigin` est lu hors validation, parce qu'il faut
    * bien une adresse pour dire qu'on refuse — c'est le champ le plus ancien du
    * contrat, et le seul dont on ne puisse rien faire d'autre.
+   *
+   * DEPUIS MIN-355, IL Y EN A UN SECOND, et pour la même raison exactement : sur
+   * la machine de l'utilisateur, une adresse ne suffit pas à parler, il faut aussi
+   * le jeton. Le lire hors validation est ce qui garde vraie la promesse de ce
+   * fichier — le tour rend TOUJOURS un rapport, y compris quand ce rapport dit
+   * « je refuse ce job ».
    */
-  const raw = JSON.parse(await readFile(jobPathFromArgv(), "utf8")) as { appOrigin?: string };
-  const cp = createControlPlaneClient(raw.appOrigin ?? "");
+  const raw = JSON.parse(await readFile(jobPathFromArgv(), "utf8")) as {
+    appOrigin?: string;
+    controlToken?: string;
+  };
+  const cp = createControlPlaneClient(
+    raw.appOrigin ?? "",
+    // Un getter, parce que le jeton dure quinze minutes et un tour des heures :
+    // c'est ici que le renouvellement se branchera (MIN-294), sans toucher au
+    // client. Aujourd'hui il rend toujours ce que le job portait.
+    () => raw.controlToken ?? null,
+  );
   const startedAt = Date.now();
 
   let job: VmJob | null = null;

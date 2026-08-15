@@ -4,6 +4,7 @@ import {
   CONTROL_PLANE_MAX_BODY_BYTES,
   handleControlPlaneRequest,
 } from "@/lib/server/agent/control-plane";
+import { admitLocalCaller, resolveLocalExecSecret } from "@/lib/server/agent/local-exec-token";
 import {
   AGENT_VM_PATH_PREFIX,
   admitSandboxCaller,
@@ -12,16 +13,22 @@ import {
 
 /**
  * PLAN DE CONTRÔLE de la microVM de l'agent (MIN-223) — l'unique porte par
- * laquelle une boucle qui vit dans la VM touche la base, le ledger, les tickets
+ * laquelle une boucle qui exécute un tour touche la base, le ledger, les tickets
  * et le carnet.
  *
- * ELLE N'A AUCUN SECRET À TRANSPORTER, et c'est tout l'intérêt.
- * `defineSandboxProxy` valide l'OIDC que le firewall de Vercel Sandbox a posé
- * sur la requête forwardée (signature contre le JWKS de `oidc.vercel.com`,
- * `aud`, fenêtre de validité) et rend les claims d'identité de la sandbox
- * émettrice : team, projet, nom. Notre nommage étant `agent-<run.id>`, le run
- * est désigné par un claim signé, jamais par le corps de la requête — rien à
- * croire sur parole, rien qu'un `env` de la VM puisse lire.
+ * DEUX VOIES D'ADMISSION, ET UNE SEULE PORTE (MIN-355). Elles ne prouvent pas la
+ * même chose de la même façon, et tout le reste — le 413, le parsing du corps, la
+ * dérivation de la surface, l'appel au module — leur est commun et n'est écrit
+ * qu'une fois (`serveControlPlane`).
+ *
+ * ── VOIE 1 : LA MICROVM, QUI N'A AUCUN SECRET À TRANSPORTER ──────────────────
+ *
+ * Et c'est tout l'intérêt. `defineSandboxProxy` valide l'OIDC que le firewall de
+ * Vercel Sandbox a posé sur la requête forwardée (signature contre le JWKS de
+ * `oidc.vercel.com`, `aud`, fenêtre de validité) et rend les claims d'identité de
+ * la sandbox émettrice : team, projet, nom. Notre nommage étant `agent-<run.id>`,
+ * le run est désigné par un claim signé, jamais par le corps de la requête — rien
+ * à croire sur parole, rien qu'un `env` de la VM puisse lire.
  *
  * MAIS L'OIDC SEUL NE DIT PAS DE QUEL COMPTE ON PARLE (MIN-331). L'émetteur est
  * commun à toute la plateforme, et l'`aud` est celle que l'appelant a lui-même
@@ -46,11 +53,30 @@ import {
  * rejeu suppose donc de l'avoir intercepté sur ce chemin-là, et ne vaudrait que
  * le temps qui reste — pour agir sur le run qu'il désigne déjà, et aucun autre.
  *
- * Une requête sans OIDC valide → 403 (défaut de `defineSandboxProxy`). Une
- * sandbox d'un autre locataire, ou qui n'est pas celle d'un run → 403 aussi : ce
- * n'est pas une erreur de l'appelant, c'est quelqu'un qui n'a rien à faire ici.
- * Et un déploiement qui ne sait pas quel locataire il sert → 503, jamais un
- * passe-droit.
+ * ── VOIE 2 : LA MACHINE DE L'UTILISATEUR, QUI PORTE UN JETON ────────────────
+ *
+ * Sur un Mac, il n'y a pas de firewall pour signer. `defineSandboxProxy` accepte
+ * un SECOND ARGUMENT, appelé quand les en-têtes `vercel-forwarded-*` manquent —
+ * avec la requête ORIGINALE, corps non consommé (vérifié dans
+ * `@vercel/sandbox/dist/proxy.js`). La voie locale est donc un `catch` sur la
+ * porte existante : ni route jumelle, ni fork, ni seconde copie du 413.
+ *
+ * Elle est gardée par `admitLocalCaller` — un jeton HS256 `{rid, gen, exp}` que
+ * NOUS avons signé ([local-exec-token.ts](../../../../lib/server/agent/local-exec-token.ts)).
+ * Ce que ce jeton ouvre est délibérément plus étroit que ce qu'ouvre l'OIDC : il
+ * vit sur un disque que le modèle peut lire, et `control-plane.ts` en réduit le
+ * pouvoir plutôt que de prétendre le protéger.
+ *
+ * CE QUI ATTERRIT ICI SANS ÊTRE LOCAL, et pourquoi ça ne fait pas de trou : une
+ * requête bien forwardée dont l'OIDC est REFUSÉ passe aussi par ce second
+ * argument. Elle n'a pas de jeton à nous — donc elle repart en 403, comme avant.
+ * L'inverse (un jeton local valide accompagné d'en-têtes forwardés bidon) ne gagne
+ * rien : le porteur du jeton choisit déjà la surface qu'il appelle.
+ *
+ * Une requête sans OIDC valide ET sans jeton → 403. Une sandbox d'un autre
+ * locataire, ou qui n'est pas celle d'un run → 403 aussi : ce n'est pas une
+ * erreur de l'appelant, c'est quelqu'un qui n'a rien à faire ici. Et un
+ * déploiement qui ne sait ni qui il sert ni signer → 503, jamais un passe-droit.
  */
 
 export const runtime = "nodejs";
@@ -59,23 +85,21 @@ export const dynamic = "force-dynamic";
  *  ticket). Le tool le plus lent est une recherche de tickets ; 60 s couvre. */
 export const maxDuration = 60;
 
-const handler = defineSandboxProxy(async (request, meta) => {
-  const admission = admitSandboxCaller(
-    { teamId: meta.teamId, projectId: meta.projectId, sandboxName: meta.sandboxName },
-    resolveControlPlaneTenant(),
-  );
-  if (!admission.ok) {
-    // Le 503 est une panne de CONFIGURATION, pas un refus : il mérite une ligne,
-    // sinon un déploiement sans VERCEL_TEAM_ID casserait tous les runs en silence.
-    if (admission.status === 503) {
-      console.error("[agent-vm] VERCEL_TEAM_ID/VERCEL_PROJECT_ID manquants — plan de contrôle fermé");
-    }
-    return Response.json({ error: admission.error }, { status: admission.status });
-  }
-  const runId = admission.runId;
-
-  // Le chemin est celui que la VM a demandé — le proxy le reconstruit depuis les
-  // en-têtes `vercel-forwarded-*`, pas depuis le routage Next.
+/**
+ * TOUT CE QUI EST COMMUN AUX DEUX VOIES, écrit une fois (MIN-355).
+ *
+ * Ce qui différencie un appelant est son ADMISSION, et rien d'autre : une fois le
+ * run désigné, une requête locale et une requête de microVM sont la même requête.
+ * Dupliquer ces vingt lignes reviendrait à tenir deux plafonds de corps et deux
+ * dérivations de surface — c'est-à-dire à en avoir un jour deux différents.
+ */
+async function serveControlPlane(
+  request: Request,
+  caller: { runId: string; sandboxName?: string; local?: { gen: number } },
+): Promise<Response> {
+  // Le chemin est celui que l'appelant a demandé — sur la voie 1, le proxy le
+  // reconstruit depuis les en-têtes `vercel-forwarded-*` ; sur la voie 2, c'est
+  // l'URL appelée telle quelle. Dans les deux cas, pas le routage de Next.
   const url = new URL(request.url);
   if (!url.pathname.startsWith(AGENT_VM_PATH_PREFIX)) {
     return Response.json({ error: "off the control plane" }, { status: 404 });
@@ -102,14 +126,57 @@ const handler = defineSandboxProxy(async (request, meta) => {
   }
 
   const result = await handleControlPlaneRequest({
-    runId,
+    runId: caller.runId,
     method: request.method,
     surface,
     body,
-    sandboxName: meta.sandboxName,
+    ...(caller.sandboxName ? { sandboxName: caller.sandboxName } : {}),
+    ...(caller.local ? { local: caller.local } : {}),
   });
   return Response.json(result.body, { status: result.status });
-});
+}
+
+const handler = defineSandboxProxy(
+  async (request, meta) => {
+    const admission = admitSandboxCaller(
+      { teamId: meta.teamId, projectId: meta.projectId, sandboxName: meta.sandboxName },
+      resolveControlPlaneTenant(),
+    );
+    if (!admission.ok) {
+      // Le 503 est une panne de CONFIGURATION, pas un refus : il mérite une ligne,
+      // sinon un déploiement sans VERCEL_TEAM_ID casserait tous les runs en silence.
+      if (admission.status === 503) {
+        console.error("[agent-vm] VERCEL_TEAM_ID/VERCEL_PROJECT_ID manquants — plan de contrôle fermé");
+      }
+      return Response.json({ error: admission.error }, { status: admission.status });
+    }
+    return await serveControlPlane(request, {
+      runId: admission.runId,
+      sandboxName: meta.sandboxName,
+    });
+  },
+  /**
+   * LA VOIE LOCALE (MIN-355) — appelée avec la requête ORIGINALE et son corps
+   * intact quand rien ne l'a forwardée. C'est le seul endroit d'où un tour qui ne
+   * tourne pas chez Vercel puisse parler, et il n'y entre qu'avec un jeton à nous.
+   */
+  async (request) => {
+    const admission = admitLocalCaller(
+      request.headers.get("authorization"),
+      resolveLocalExecSecret(),
+    );
+    if (!admission.ok) {
+      if (admission.status === 503) {
+        console.error("[agent-vm] SUPABASE_SERVICE_ROLE_KEY manquante — voie locale fermée");
+      }
+      return Response.json({ error: admission.error }, { status: admission.status });
+    }
+    return await serveControlPlane(request, {
+      runId: admission.runId,
+      local: { gen: admission.gen },
+    });
+  },
+);
 
 export const GET = handler;
 export const POST = handler;
