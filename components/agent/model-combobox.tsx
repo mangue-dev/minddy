@@ -241,7 +241,7 @@ export function ModelCombobox({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex cursor-not-allowed">
-            <span className="pointer-events-none flex h-8 shrink items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 text-xs font-medium text-foreground/45">
+            <span className="pointer-events-none flex h-8 shrink items-center gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium text-foreground/45">
               {shown ? logoFor(shown) : null}
               <span className="max-w-[9rem] truncate">
                 {shown ? formatModelName(shown) : defaultLabel}
@@ -273,7 +273,7 @@ export function ModelCombobox({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="h-8 shrink gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
+            className="h-8 shrink gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium text-foreground/80 hover:bg-muted/50"
           >
             {value
               ? logoFor(value)

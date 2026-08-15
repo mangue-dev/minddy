@@ -5,6 +5,9 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { parseAgentMentions } from "@/lib/agent-mentions";
+import { parseResourcesInput } from "@/lib/server/attachments";
+import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
+import type { AttachmentInput } from "@/lib/types";
 
 /**
  * Liste GLOBALE des conversations de l'agent de code (Numo), tous projets
@@ -255,6 +258,7 @@ export async function POST(request: NextRequest) {
     reasoningLevel?: string;
     baseBranch?: string;
     mentions?: unknown;
+    attachments?: unknown;
     /** La conversation démarre sur la MACHINE de l'utilisateur (MIN-359). Une
      *  demande, que `localExecRequested` valide côté serveur. */
     localExec?: unknown;
@@ -301,12 +305,18 @@ export async function POST(request: NextRequest) {
   const reasoningLevel = isReasoningLevel(body.reasoningLevel)
     ? body.reasoningLevel
     : undefined;
+  const resources = parseResourcesInput(body.attachments, `chat/${auth.user.id}/`, 5);
+  if (resources === null) {
+    return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
+  }
+  const attachments = resources.filter((resource): resource is AttachmentInput => resource.kind !== "link");
+  const promptWithFiles = await promptWithAttachments(prompt, attachments);
 
   const result = await launchAgentRun({
     projectId,
     userId: auth.user.id,
     triggeredBy: "button",
-    prompt,
+    prompt: promptWithFiles,
     model,
     forced: !!model,
     reasoningLevel,

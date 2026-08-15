@@ -870,48 +870,51 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           </div>
 
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-            {/* Contrôles de gauche (ex. picker de modèle). Vide → la barre reste
-                visuellement identique (le cluster d'envoi collé à droite). */}
-            <div className="flex min-w-0 items-center gap-1.5">{leadingControls}</div>
+            {/* Les fichiers sont une propriété du message, pas du modèle : dans
+                l'agent ils précèdent donc le sélecteur de modèle, comme demandé
+                par MIN-369. */}
+            <div className="flex min-w-0 items-center gap-1.5">
+              {!isStreaming && !hideAttach && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept={ACCEPT}
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.length) uploads.addFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    disabled={disabled || !userId}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
+                    aria-label={tAttach("attach")}
+                    title={tAttach("attach")}
+                  >
+                    <Paperclip className="size-4" />
+                  </Button>
+                </>
+              )}
+              {leadingControls}
+            </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {isStreaming && (isEmpty || !sendWhileStreaming) ? (
                 <Button
                   size="icon-sm"
-                  variant="outline"
+                  variant="default"
                   onClick={onAbort}
-                  className="h-8 w-8 shrink-0 rounded-full"
+                  className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90"
                   title={t("stop")}
                 >
-                  <Square className="h-3 w-3" />
+                  <Square className="h-3 w-3 fill-white text-white" />
                 </Button>
               ) : (
                 <>
-                  {!isStreaming && !hideAttach && (
-                    <>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        multiple
-                        accept={ACCEPT}
-                        className="hidden"
-                        onChange={(e) => {
-                          if (e.target.files?.length) uploads.addFiles(e.target.files);
-                          e.target.value = "";
-                        }}
-                      />
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        disabled={disabled || !userId}
-                        onClick={() => fileInputRef.current?.click()}
-                        className="h-8 w-8 shrink-0 rounded-full text-muted-foreground"
-                        aria-label={tAttach("attach")}
-                        title={tAttach("attach")}
-                      >
-                        <Paperclip className="size-4" />
-                      </Button>
-                    </>
-                  )}
                   {!isStreaming && (
                     <DictateButton
                       onTranscription={appendDictated}

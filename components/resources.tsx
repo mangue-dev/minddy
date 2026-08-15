@@ -844,8 +844,10 @@ export function ResourcePills({
         )}
 
       <Dialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent className="max-w-3xl p-2">
-          <DialogTitle className="sr-only">{preview?.file_name}</DialogTitle>
+        <DialogContent className="max-w-3xl px-4 pb-4 pt-16">
+          <DialogTitle className="absolute top-4 right-14 left-4 flex h-8 items-center truncate text-sm font-medium">
+            {preview?.file_name}
+          </DialogTitle>
           {preview?.storage_path && (
             <>
               {/* Storage file behind an auth redirect — next/image can't optimize it. */}
@@ -853,16 +855,26 @@ export function ResourcePills({
               <img
                 src={attachmentFileUrl(preview.storage_path)}
                 alt={preview.file_name}
-                className="max-h-[75vh] w-full rounded-md object-contain"
+                className="max-h-[75vh] w-full object-contain"
               />
-              <div className="flex items-center justify-between gap-2 px-1 pb-1 text-xs text-muted-foreground">
-                <span className="truncate">{preview.file_name}</span>
-                <a
-                  href={attachmentFileUrl(preview.storage_path, true)}
-                  className="shrink-0 hover:text-foreground hover:underline"
-                >
-                  {t("download")}
-                </a>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button asChild size="sm">
+                  <a href={attachmentFileUrl(preview.storage_path, true)}>
+                    {t("download")}
+                  </a>
+                </Button>
+                {onRemove && (canRemove?.(preview) ?? true) && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      onRemove(preview);
+                      setPreview(null);
+                    }}
+                  >
+                    {t("remove")}
+                  </Button>
+                )}
               </div>
             </>
           )}

@@ -86,3 +86,35 @@ export function changeTotals(
     { additions: 0, deletions: 0 },
   );
 }
+
+/** Statistiques d'un fichier renvoyées par la route du diff (forme forge). */
+export interface LiveDiffStat {
+  filename: string;
+  additions: number;
+  deletions: number;
+  previous_filename?: string;
+}
+
+/**
+ * Ajoute aux fichiers provisoires du tour les compteurs exacts du diff Git
+ * vivant. La liste provisoire reste la source de la portée du tour : le diff
+ * vivant couvre aussi les tours précédents de la branche, donc on ne doit pas
+ * le rendre directement dans le fil.
+ */
+export function mergeLiveFileStats(
+  liveFiles: AgentFileChange[],
+  diffFiles: LiveDiffStat[],
+): AgentFileChange[] {
+  const statsByPath = new Map<string, LiveDiffStat>();
+  for (const file of diffFiles) {
+    statsByPath.set(file.filename, file);
+    if (file.previous_filename) statsByPath.set(file.previous_filename, file);
+  }
+
+  return liveFiles.map((file) => {
+    const stat = statsByPath.get(file.path);
+    return stat
+      ? { ...file, additions: stat.additions, deletions: stat.deletions }
+      : file;
+  });
+}

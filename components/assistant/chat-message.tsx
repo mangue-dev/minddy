@@ -156,7 +156,7 @@ function UserText({
   }, [content, mentions]);
 
   return (
-    <p className="whitespace-pre-wrap">
+    <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
       {parts.map((part, i) =>
         typeof part === "string" ? (
           part
@@ -259,7 +259,7 @@ export const ChatMessage = memo(function ChatMessage({
                     de type sur cette bulle-là, mais aux clartés d'une surface
                     d'encre — c'est la SURFACE qui le dit, pas chaque pilule
                     (app/globals.css). */}
-                <div className="chat-selectable mention-on-ink relative rounded-xl bg-foreground px-4 py-2 text-sm leading-relaxed text-background">
+                <div className="chat-selectable mention-on-ink relative min-w-0 max-w-full break-words rounded-xl bg-foreground px-4 py-2 text-sm leading-relaxed text-background [overflow-wrap:anywhere]">
                   <UserText
                     content={message.content}
                     mentions={

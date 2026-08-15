@@ -24,8 +24,10 @@ export interface AgentRunLive {
   /**
    * Fichiers touchés jusqu'ici par le tour, PROVISOIRES : le serveur en renvoie la
    * liste ENTIÈRE à chaque charge, donc celle-ci fait foi sans qu'on ait à fusionner.
-   * `additions`/`deletions` y valent 0 — git n'a encore rien compté, et un compteur
-   * à zéro se tait (`hideEmpty`) plutôt que de se lire comme une mesure.
+   * `additions`/`deletions` y valent 0 — le direct ne fait que signaler les chemins.
+   * Le fil les enrichit avec le diff statistique Git vivant quand il est disponible,
+   * et un compteur encore à zéro se tait (`hideEmpty`) plutôt que de se lire comme
+   * une mesure.
    */
   files: AgentFileChange[];
   /** La liste a été bornée côté serveur (gros tour). */

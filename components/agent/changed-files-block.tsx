@@ -27,8 +27,8 @@ import {
  * mène précisément à elles. Les marques viennent maintenant du même endroit
  * ([pr-file-marks](../pull-requests/pr-file-marks.tsx)).
  *
- * Les compteurs se taisent quand ils valent zéro : en vue LIVE, git n'a pas
- * encore compté, et « +0 −0 » sur chaque ligne se lirait comme une mesure.
+ * Les compteurs se taisent quand ils valent zéro : en vue LIVE, Git peut ne pas
+ * encore avoir répondu, et « +0 −0 » sur chaque ligne se lirait comme une mesure.
  */
 
 /**

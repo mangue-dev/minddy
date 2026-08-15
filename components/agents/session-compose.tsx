@@ -47,6 +47,7 @@ import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import { MentionLinksProvider } from "@/components/mention-links";
 import type { AssistantMention } from "@/lib/assistant-types";
+import type { ResourceInput } from "@/lib/types";
 
 /**
  * Sélecteur du PROJET de la conversation. Obligatoire : sans ticket, seul le
@@ -270,12 +271,12 @@ export function SessionCompose({
   };
   const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
   useEffect(() => {
-    if (!localRepo.ready) setEnvironment("cloud");
+    setEnvironment(localRepo.ready ? "local" : "cloud");
   }, [localRepo.ready]);
 
   const launch = async (
     message: string,
-    _attachments: unknown[] = [],
+    attachments: ResourceInput[] = [],
     mentions: AssistantMention[] = [],
   ) => {
     if (launching) return;
@@ -302,6 +303,7 @@ export function SessionCompose({
         reasoningLevel,
         baseBranch: baseBranch || undefined,
         mentions,
+        attachments,
         // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
         // le dossier a pu disparaître (ou le projet changer).
         localExec,
@@ -449,9 +451,43 @@ export function SessionCompose({
             sendDisabledTooltip={
               noRepoAnywhere ? t("composeNoRepo") : t("composeProjectTooltip")
             }
-            hideAttach
             initialValue={initialText}
             placeholder={t("composePlaceholderFree")}
+            contextSlot={
+              projectId ? (
+                <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto px-2.5 pt-2.5">
+                  <BranchCombobox
+                    projectId={projectId}
+                    value={baseBranch}
+                    onChange={setBaseBranch}
+                    defaultLabel={t("branchDefault")}
+                    defaultHint={t("branchDefaultHint")}
+                    placeholder={t("branchSearchPlaceholder")}
+                    emptyLabel={t("branchSearchEmpty")}
+                    loadingLabel={t("branchSearchLoading")}
+                    disabled={launching}
+                  />
+                  {localRepo.linked ? (
+                    <EnvironmentCombobox
+                      value={environment}
+                      onChange={setEnvironment}
+                      localAvailable={localRepo.available}
+                      folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
+                      needsAttach={localRepo.state?.status !== "ready"}
+                      onAttach={() => {
+                        void localRepo.attach().then((next) => {
+                          if (next?.status === "ready") setEnvironment("local");
+                          else if (next && next.status === "invalid") {
+                            toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
+                          }
+                        });
+                      }}
+                      disabled={launching || localRepo.busy}
+                    />
+                  ) : null}
+                </div>
+              ) : null
+            }
             leadingControls={
               <>
                 <ModelCombobox
@@ -472,38 +508,6 @@ export function SessionCompose({
                   disabled={launching}
                   levels={reasoningLevels}
                 />
-                {projectId ? (
-                  <BranchCombobox
-                    projectId={projectId}
-                    value={baseBranch}
-                    onChange={setBaseBranch}
-                    defaultLabel={t("branchDefault")}
-                    defaultHint={t("branchDefaultHint")}
-                    placeholder={t("branchSearchPlaceholder")}
-                    emptyLabel={t("branchSearchEmpty")}
-                    loadingLabel={t("branchSearchLoading")}
-                    disabled={launching}
-                  />
-                ) : null}
-                {localRepo.state ? (
-                  <EnvironmentCombobox
-                    value={environment}
-                    onChange={setEnvironment}
-                    folder={
-                      localRepo.state.status === "ready" ? localRepo.state.folder : null
-                    }
-                    needsAttach={localRepo.state.status !== "ready"}
-                    onAttach={() => {
-                      void localRepo.attach().then((next) => {
-                        if (next?.status === "ready") setEnvironment("local");
-                        else if (next && next.status === "invalid") {
-                          toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
-                        }
-                      });
-                    }}
-                    disabled={launching || localRepo.busy}
-                  />
-                ) : null}
               </>
             }
           />

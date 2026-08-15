@@ -85,7 +85,7 @@ export function ReasoningCombobox({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex cursor-not-allowed">
-            <span className="pointer-events-none flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 text-xs font-medium text-foreground/45">
+            <span className="pointer-events-none flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium text-foreground/45">
               <Brain className="size-3.5 shrink-0" />
               <span className="whitespace-nowrap">{label}</span>
             </span>
@@ -111,7 +111,7 @@ export function ReasoningCombobox({
           aria-expanded={open}
           aria-label={t("reasoning")}
           disabled={disabled}
-          className="h-8 shrink-0 gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 text-xs font-medium text-foreground/80 hover:bg-muted"
+          className="h-8 shrink-0 gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium text-foreground/80 hover:bg-muted/50"
         >
           <Brain className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="whitespace-nowrap">{label}</span>

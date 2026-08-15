@@ -13,6 +13,7 @@ import type {
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 import type { AssistantMention } from "./assistant-types";
+import type { ResourceInput } from "./types";
 
 /**
  * Fetchers client de l'agent de code (MIN-46) : lancer un run sur une issue et
@@ -251,6 +252,7 @@ export async function launchAgentRunApi(
      *  `implement` la passe « en cours » côté serveur. */
     intent?: "implement" | "plan" | "verify" | "custom";
     mentions?: AssistantMention[];
+    attachments?: ResourceInput[];
     /** La conversation démarre sur la MACHINE (MIN-359) : choisi au premier
      *  message, figé ensuite. Le serveur revalide (`localExecRequested`). */
     localExec?: boolean;
@@ -303,6 +305,7 @@ export async function launchNotebookAgentApi(body: {
   projectId: string;
   prompt: string;
   mentions?: AssistantMention[];
+  attachments?: ResourceInput[];
   model?: string;
   /** Niveau de raisonnement choisi au lancement (MIN-122). Absent = défaut perso. */
   reasoningLevel?: ReasoningLevel;
@@ -492,13 +495,18 @@ export async function steerAgentRunApi(
   runId: string,
   message: string,
   mentions: AssistantMention[] = [],
+  attachments: ResourceInput[] = [],
 ): Promise<{ ok: true; status: AgentRunStatus }> {
   trackEvent("agent_steered", { length_bucket: lengthBucket(message) });
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/steer`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, ...(mentions.length ? { mentions } : {}) }),
+      body: JSON.stringify({
+        message,
+        ...(mentions.length ? { mentions } : {}),
+        ...(attachments.length ? { attachments } : {}),
+      }),
     }),
   );
 }

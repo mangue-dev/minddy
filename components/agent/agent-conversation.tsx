@@ -68,6 +68,7 @@ import { livePlan } from "@/lib/agent-plan";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import type { AssistantMention } from "@/lib/assistant-types";
+import type { ResourceInput } from "@/lib/types";
 import { MentionLinksProvider } from "@/components/mention-links";
 import {
   Tooltip,
@@ -543,10 +544,14 @@ export function AgentConversation({
   // Le dossier a disparu sous l'attachement (déplacé, disque démonté, dépôt
   // re-lié) : on retombe sur le cloud plutôt que de lancer vers un chemin mort.
   useEffect(() => {
-    if (!localRepo.ready) setEnvironment("cloud");
+    setEnvironment(localRepo.ready ? "local" : "cloud");
   }, [localRepo.ready]);
 
-  const launch = async (message: string, _attachments: unknown[] = [], mentions: AssistantMention[] = []) => {
+  const launch = async (
+    message: string,
+    attachments: ResourceInput[] = [],
+    mentions: AssistantMention[] = [],
+  ) => {
     // La phase compose n'existe que pour un ancrage ISSUE (celui des sessions
     // sans ticket vit dans SessionCompose, avant toute run) : sans issue, rien
     // à lancer ici.
@@ -575,6 +580,7 @@ export function AgentConversation({
         reasoningLevel,
         intent: composeIntent,
         mentions,
+        attachments,
         // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
         // le dossier a pu disparaître.
         localExec,
@@ -605,7 +611,11 @@ export function AgentConversation({
   };
 
   // Message au repos : poursuit la conversation (nouveau tour dans le même contexte).
-  const steer = async (message: string, mentions: AssistantMention[] = []) => {
+  const steer = async (
+    message: string,
+    mentions: AssistantMention[] = [],
+    attachments: ResourceInput[] = [],
+  ) => {
     if (!liveRun) return;
     const text = message.trim();
     if (!text) return;
@@ -615,7 +625,7 @@ export function AgentConversation({
     // écho arrive. En cas d'échec, on la retire nous-mêmes (le message n'existe pas).
     setPendingMessages((p) => [...p, { text, mentions }]);
     try {
-      await steerAgentRunApi(liveRun.id, text, mentions);
+      await steerAgentRunApi(liveRun.id, text, mentions, attachments);
       // Un message au repos REMET le run en file : le tour suivant a besoin du
       // même coup de pouce que le premier (cf. `playLocalRunHere`).
       await playHere(liveRun.id, liveRun.local_exec);
@@ -667,13 +677,13 @@ export function AgentConversation({
   // du tout évite simplement de demander l'arrêt de ce qu'on vient de débloquer.
   const sendLive = async (
     message: string,
-    _attachments: unknown[] = [],
+    attachments: ResourceInput[] = [],
     mentions: AssistantMention[] = [],
     opts: { answersBlockingQuestion?: boolean } = {},
   ) => {
     const text = message.trim();
     if (!text) return;
-    await steer(text, mentions);
+    await steer(text, mentions, attachments);
     if (opts.answersBlockingQuestion) return;
     // Sur ce que fait le SERVEUR, pas sur ce que l'interface montre : un arrêt
     // déjà demandé mais pas encore pris laisse le tour tourner, et le message
@@ -804,6 +814,7 @@ export function AgentConversation({
             promptMentions={liveRun.prompt_mentions}
             pendingUserMessages={pendingMessages}
             onOpenFile={openDiff}
+            liveDiffFiles={liveDiffFiles}
             hiddenQuestionEventId={activeQuestion?.eventId}
             localExec={liveRun.local_exec === true}
             className="h-full py-4"
@@ -903,10 +914,9 @@ export function AgentConversation({
               sendWhileStreaming
                 beam={working}
                 disabled={!steerable}
-                hideAttach
                 mentionables={mentionables}
                 onMentionQuery={onMentionQuery}
-                placeholder={
+              placeholder={
                 steerable
                   ? working
                     ? t("livePlaceholder")
@@ -919,6 +929,40 @@ export function AgentConversation({
                       isLatest
                       ? t("endedPlaceholder")
                       : t("pastRunPlaceholder")
+              }
+              contextSlot={
+                <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto px-2.5 pt-2.5">
+                  <BranchCombobox
+                    issueId={issueId}
+                    value=""
+                    onChange={() => {}}
+                    defaultLabel={t("branchDefault")}
+                    defaultHint={t("branchDefaultHint")}
+                    placeholder={t("branchSearchPlaceholder")}
+                    emptyLabel={t("branchSearchEmpty")}
+                    loadingLabel={t("branchSearchLoading")}
+                    disabled
+                    disabledTooltip={t("branchLocked")}
+                    lockedBranch={liveRun.base_branch}
+                    workBranch={liveRun.branch_name}
+                    workBranchTooltip={
+                      liveRun.branch_name
+                        ? t("branchSessionLocked", {
+                            origin: liveRun.base_branch ?? t("branchDefault"),
+                            branch: liveRun.branch_name,
+                          })
+                        : undefined
+                    }
+                  />
+                  {liveRun.local_exec ? (
+                    <EnvironmentCombobox
+                      value="local"
+                      onChange={() => {}}
+                      disabled
+                      disabledTooltip={t("environmentLocked")}
+                    />
+                  ) : null}
+                </div>
               }
               leadingControls={
                 <>
@@ -943,44 +987,6 @@ export function AgentConversation({
                     disabled
                     disabledTooltip={t("reasoningLocked")}
                   />
-                  {/* Branche copiée au lancement, figée elle aussi pour la session.
-                      Dès que la branche de travail est stampée (`branch_name`), le
-                      chip se dédouble en « origine → branche de session » pour
-                      montrer où l'agent pousse réellement. */}
-                  <BranchCombobox
-                    issueId={issueId}
-                    value=""
-                    onChange={() => {}}
-                    defaultLabel={t("branchDefault")}
-                    defaultHint={t("branchDefaultHint")}
-                    placeholder={t("branchSearchPlaceholder")}
-                    emptyLabel={t("branchSearchEmpty")}
-                    loadingLabel={t("branchSearchLoading")}
-                    disabled
-                    disabledTooltip={t("branchLocked")}
-                    lockedBranch={liveRun.base_branch}
-                    workBranch={liveRun.branch_name}
-                    workBranchTooltip={
-                      liveRun.branch_name
-                        ? t("branchSessionLocked", {
-                            origin: liveRun.base_branch ?? t("branchDefault"),
-                            branch: liveRun.branch_name,
-                          })
-                        : undefined
-                    }
-                  />
-                  {/* L'environnement, figé pour la conversation (MIN-359) — et
-                      le seul des quatre chips qui ne se montre que s'il vaut
-                      autre chose que le défaut : sur les milliers de runs cloud,
-                      un chip « dans le cloud » n'apprend rien à personne. */}
-                  {liveRun.local_exec ? (
-                    <EnvironmentCombobox
-                      value="local"
-                      onChange={() => {}}
-                      disabled
-                      disabledTooltip={t("environmentLocked")}
-                    />
-                  ) : null}
                 </>
               }
               />
@@ -994,9 +1000,43 @@ export function AgentConversation({
               mentionables={mentionables}
               onMentionQuery={onMentionQuery}
               disabled={launching}
-              hideAttach
               initialValue={initialComposeText}
               placeholder={t("composePlaceholder")}
+              contextSlot={
+                <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto px-2.5 pt-2.5">
+                  <BranchCombobox
+                    issueId={issueId}
+                    value={baseBranch}
+                    onChange={setBaseBranch}
+                    defaultLabel={t("branchDefault")}
+                    defaultHint={t("branchDefaultHint")}
+                    placeholder={t("branchSearchPlaceholder")}
+                    emptyLabel={t("branchSearchEmpty")}
+                    loadingLabel={t("branchSearchLoading")}
+                    disabled={launching || inheritedWork != null}
+                    disabledTooltip={inheritedWork ? t("branchInherited") : undefined}
+                    lockedBranch={inheritedWork?.base_branch}
+                  />
+                  {localRepo.linked ? (
+                    <EnvironmentCombobox
+                      value={environment}
+                      onChange={setEnvironment}
+                      localAvailable={localRepo.available}
+                      folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
+                      needsAttach={localRepo.state?.status !== "ready"}
+                      onAttach={() => {
+                        void localRepo.attach().then((next) => {
+                          if (next?.status === "ready") setEnvironment("local");
+                          else if (next && next.status === "invalid") {
+                            toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
+                          }
+                        });
+                      }}
+                      disabled={launching || localRepo.busy}
+                    />
+                  ) : null}
+                </div>
+              }
               leadingControls={
                 <>
                   <ModelCombobox
@@ -1017,46 +1057,6 @@ export function AgentConversation({
                     disabled={launching}
                     levels={reasoningLevels}
                   />
-                  {/* Branche que l'agent COPIE pour son espace de travail. Choix
-                      possible seulement ici (au lancement) et seulement pour une
-                      lignée NEUVE : quand la session hérite d'une branche
-                      existante, sa base ne se rechoisit pas — chip verrouillé. */}
-                  <BranchCombobox
-                    issueId={issueId}
-                    value={baseBranch}
-                    onChange={setBaseBranch}
-                    defaultLabel={t("branchDefault")}
-                    defaultHint={t("branchDefaultHint")}
-                    placeholder={t("branchSearchPlaceholder")}
-                    emptyLabel={t("branchSearchEmpty")}
-                    loadingLabel={t("branchSearchLoading")}
-                    disabled={launching || inheritedWork != null}
-                    disabledTooltip={inheritedWork ? t("branchInherited") : undefined}
-                    lockedBranch={inheritedWork?.base_branch}
-                  />
-                  {/* Où le tour part (MIN-359). Rendu SEULEMENT quand un dossier
-                      est attaché à ce projet sur cette machine : dans un
-                      navigateur, ou pour un membre qui n'a rien attaché, le
-                      choix n'existe pas et il ne doit rien y avoir à lire. */}
-                  {localRepo.state ? (
-                    <EnvironmentCombobox
-                      value={environment}
-                      onChange={setEnvironment}
-                      folder={
-                        localRepo.state.status === "ready" ? localRepo.state.folder : null
-                      }
-                      needsAttach={localRepo.state.status !== "ready"}
-                      onAttach={() => {
-                        void localRepo.attach().then((next) => {
-                          if (next?.status === "ready") setEnvironment("local");
-                          else if (next && next.status === "invalid") {
-                            toast.error(t(LOCAL_REPO_ERROR_KEYS[next.reason]));
-                          }
-                        });
-                      }}
-                      disabled={launching || localRepo.busy}
-                    />
-                  ) : null}
                 </>
               }
             />

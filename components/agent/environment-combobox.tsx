@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Check, ChevronsUpDown, Cloud, FolderPlus, Laptop } from "lucide-react";
 import {
@@ -68,6 +69,7 @@ export function EnvironmentCombobox({
   onChange,
   folder,
   needsAttach = false,
+  localAvailable = true,
   onAttach,
   disabled,
   disabledTooltip,
@@ -78,6 +80,8 @@ export function EnvironmentCombobox({
   folder?: string | null;
   /** Le dossier retenu ne vaut plus rien : choisir « ma machine » en redemande un. */
   needsAttach?: boolean;
+  /** Faux dans le navigateur : le choix est visible mais nécessite l'app Mac. */
+  localAvailable?: boolean;
   onAttach?: () => void;
   disabled?: boolean;
   /** Tooltip du chip verrouillé (environnement figé pour la conversation). */
@@ -87,8 +91,10 @@ export function EnvironmentCombobox({
   const [open, setOpen] = useState(false);
 
   const Icon = value === "local" ? Laptop : Cloud;
-  const label =
-    value === "local" ? (folder ?? t("environmentLocal")) : t("environmentCloud");
+  // Le bouton nomme le type d'environnement, jamais le chemin concret. Le
+  // dossier reste utile dans l'aide du menu, mais un chemin long rend le chip
+  // instable et contredit le vocabulaire local/cloud de l'application.
+  const label = value === "local" ? t("environmentLocal") : t("environmentCloud");
 
   // Verrouillé : chip statique + tooltip, SANS popover — le <span> extérieur
   // porte le hover, un bouton `disabled` n'émettant pas d'événement pointer
@@ -158,7 +164,14 @@ export function EnvironmentCombobox({
                 className={cn("size-4 shrink-0", value === "cloud" ? "opacity-100" : "opacity-0")}
               />
             </CommandItem>
-            <CommandItem value="local" onSelect={() => pick("local")}>
+            <CommandItem
+              value="local"
+              aria-disabled={!localAvailable}
+              className={cn(!localAvailable && "cursor-not-allowed opacity-50")}
+              onSelect={() => {
+                if (localAvailable) pick("local");
+              }}
+            >
               {needsAttach ? (
                 <FolderPlus className="size-4 shrink-0 text-muted-foreground" />
               ) : (
@@ -167,7 +180,18 @@ export function EnvironmentCombobox({
               <span className="flex-1">
                 <span className="block">{t("environmentLocal")}</span>
                 <span className="block text-xs text-muted-foreground">
-                  {needsAttach
+                  {!localAvailable ? (
+                    <>
+                      {t("environmentLocalDesktopHint")} {" "}
+                      <Link
+                        href="/download"
+                        className="font-medium text-foreground underline underline-offset-2"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {t("environmentLocalDownload")}
+                      </Link>
+                    </>
+                  ) : needsAttach
                     ? t("environmentLocalAttach")
                     : t("environmentLocalHint", { folder: folder ?? "" })}
                 </span>

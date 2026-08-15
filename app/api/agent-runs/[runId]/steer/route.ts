@@ -17,6 +17,9 @@ import { checkAgentQuota } from "@/lib/server/agent/quota";
 import { syncIssueStatusOnAgentStart } from "@/lib/server/agent/issue-status-sync";
 import { getServiceClient } from "@/lib/supabase-service";
 import { parseAgentMentions } from "@/lib/agent-mentions";
+import { parseResourcesInput } from "@/lib/server/attachments";
+import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
+import type { AttachmentInput } from "@/lib/types";
 
 /**
  * Reprise à CHAUD d'un run d'agent (MIN-46 + MIN-68) : l'utilisateur envoie un
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  let payload: { message?: string; mentions?: unknown };
+  let payload: { message?: string; mentions?: unknown; attachments?: unknown };
   try {
     payload = (await request.json()) as { message?: string };
   } catch {
@@ -68,6 +71,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   // `?.` : un corps JSON `null` est valide côté parseur mais n'a pas de champs.
   const message = (typeof payload?.message === "string" ? payload.message : "").trim().slice(0, MAX_LEN);
   if (!message) return NextResponse.json({ error: "Message required" }, { status: 400 });
+
+  const resources = parseResourcesInput(payload?.attachments, `chat/${auth.user.id}/`, 5);
+  if (resources === null) {
+    return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
+  }
+  const attachments = resources.filter((resource): resource is AttachmentInput => resource.kind !== "link");
+  const messageWithFiles = await promptWithAttachments(message, attachments);
 
   const run = await getRun(runId);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
@@ -215,7 +225,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  await insertRunMessage(runId, auth.user.id, message, parseAgentMentions(payload?.mentions));
+  await insertRunMessage(runId, auth.user.id, messageWithFiles, parseAgentMentions(payload?.mentions));
   // Un message relance l'horloge d'inactivité (empêche le reaping imminent).
   await bumpRunActivity(runId);
 

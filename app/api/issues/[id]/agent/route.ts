@@ -11,6 +11,9 @@ import {
 } from "@/lib/server/agent/launch";
 import { parseAgentMentions } from "@/lib/agent-mentions";
 import { isSharedRun, type RunAnchors } from "@/lib/server/agent/run-access";
+import { parseResourcesInput } from "@/lib/server/attachments";
+import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
+import type { AttachmentInput } from "@/lib/types";
 
 /** Les colonnes de `RUN_COLUMNS` dont ce fichier a besoin pour trancher. */
 type RunRow = RunAnchors & { created_by: string | null } & Record<string, unknown>;
@@ -121,6 +124,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     reasoningLevel?: string;
     intent?: AgentLaunchIntent;
     mentions?: unknown;
+    attachments?: unknown;
     /** La conversation démarre sur la MACHINE de l'utilisateur (MIN-359). Une
      *  demande, que `localExecRequested` valide côté serveur. */
     localExec?: unknown;
@@ -148,12 +152,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       : undefined;
   // Niveau inconnu ignoré : le lancement retombe alors sur le défaut perso.
   const reasoningLevel = isReasoningLevel(body.reasoningLevel) ? body.reasoningLevel : undefined;
+  const resources = parseResourcesInput(body.attachments, `chat/${auth.user.id}/`, 5);
+  if (resources === null) {
+    return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
+  }
+  const attachments = resources.filter((resource): resource is AttachmentInput => resource.kind !== "link");
+  const promptWithFiles = prompt
+    ? await promptWithAttachments(prompt, attachments)
+    : undefined;
 
   const result = await launchAgentRun({
     issueId: id,
     userId: auth.user.id,
     triggeredBy: "button",
-    prompt,
+    prompt: promptWithFiles,
     model,
     forced: !!model,
     baseBranch,

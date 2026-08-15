@@ -184,7 +184,7 @@ function SecondarySidebarGutter({
   const { setSlot } = useSecondarySidebar();
   return (
     <motion.div
-      className="relative h-full shrink-0 overflow-hidden bg-sidebar"
+      className="relative z-[31] h-full shrink-0 overflow-hidden bg-sidebar"
       // `initial` explicite : c'est cette valeur-là que framer écrit dans le
       // HTML du serveur, et c'est elle qui réserve la colonne au premier
       // affichage (cf. routeHasSecondaryNav).

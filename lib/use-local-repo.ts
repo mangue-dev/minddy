@@ -82,6 +82,8 @@ export function useLocalRepo(projectId: string | null) {
   }, [projectId, busy]);
 
   return {
+    /** L'app de bureau est-elle présente dans cette fenêtre ? */
+    available: !!getDesktopBridge(),
     /** `null` hors app de bureau, ou tant que la première lecture n'a pas répondu. */
     state,
     /** Le dossier est attaché ET encore valide : le run local est possible. */

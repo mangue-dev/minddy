@@ -17,7 +17,6 @@ import {
   Cloud,
   CloudOff,
   GitCommit,
-  Laptop,
 } from "lucide-react";
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
@@ -40,7 +39,9 @@ import {
   type AgentRunEvent,
   type AgentRunStatus,
 } from "@/lib/agent-api";
+import { mergeLiveFileStats, type LiveDiffStat } from "@/lib/agent-changed-files";
 import type { AssistantMessage, AssistantToolCall, AssistantMention } from "@/lib/assistant-types";
+import type { AttachmentInput } from "@/lib/types";
 
 /**
  * Flux d'activité d'un run d'agent (MIN-46), rendu en PARITÉ EXACTE avec le chat
@@ -166,6 +167,7 @@ function makeMessage(
   content: string | null,
   role: "assistant" | "user" = "assistant",
   mentions?: AssistantMention[],
+  attachments?: AttachmentInput[],
 ): AssistantMessage {
   return {
     id,
@@ -175,8 +177,89 @@ function makeMessage(
     tool_calls: null,
     tool_call_id: null,
     tool_name: null,
-    metadata: mentions?.length ? { mentions } : {},
+    metadata: {
+      ...(mentions?.length ? { mentions } : {}),
+      ...(attachments?.length ? { attachments } : {}),
+    },
     created_at: "",
+  };
+}
+
+const ATTACHMENT_METADATA_RE = /<!-- minddy-attachments:([^\s]+) -->\s*/;
+const ATTACHMENT_BLOCK_RE = /<attachments>\n[\s\S]*?\n<\/attachments>/;
+const LEGACY_ATTACHMENT_LINE_RE =
+  /^- (.+?) \((.+?), (\d+) bytes\): (https?:\/\/\S+)$/gm;
+
+/** Recover the storage key embedded in Supabase's legacy signed URL format. */
+function storagePathFromSignedUrl(raw: string): string | null {
+  try {
+    const url = new URL(raw);
+    const prefix = "/storage/v1/object/sign/attachments/";
+    if (!url.pathname.startsWith(prefix)) return null;
+    return decodeURIComponent(url.pathname.slice(prefix.length));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Agent prompts carry signed URLs so the runtime can download chat uploads.
+ * Those URLs are operational context, not prose the sender wrote: recover the
+ * upload descriptors for the same resource pills as the assistant, then remove
+ * the entire internal block from the user-facing bubble.
+ */
+function displayUserMessage(content: string): {
+  content: string;
+  attachments: AttachmentInput[];
+} {
+  const marker = content.match(ATTACHMENT_METADATA_RE);
+  let attachments: AttachmentInput[] = [];
+  if (marker?.[1]) {
+    try {
+      const parsed: unknown = JSON.parse(decodeURIComponent(marker[1]));
+      if (Array.isArray(parsed)) {
+        attachments = parsed
+          .filter(
+            (item): item is AttachmentInput =>
+              !!item &&
+              typeof item === "object" &&
+              typeof item.storage_path === "string" &&
+              typeof item.file_name === "string" &&
+              typeof item.mime_type === "string" &&
+              typeof item.size_bytes === "number",
+          )
+          .slice(0, 5);
+      }
+    } catch {
+      // A malformed marker is only presentation metadata. The prompt remains
+      // usable by the agent; it simply falls back to no resource pills.
+    }
+  }
+  // The first version of agent attachments wrote only the readable instruction
+  // and its signed URLs. Rebuild enough metadata from that stable format to
+  // render existing conversations as pills too; the regular authenticated file
+  // route then mints a fresh URL, even if the old signed one has expired.
+  if (attachments.length === 0) {
+    const reconstructed: AttachmentInput[] = [];
+    for (const match of content.matchAll(LEGACY_ATTACHMENT_LINE_RE)) {
+      const storage_path = storagePathFromSignedUrl(match[4]);
+      if (!storage_path) continue;
+      reconstructed.push({
+        storage_path,
+        file_name: match[1],
+        mime_type: match[2],
+        size_bytes: Number(match[3]),
+      });
+      if (reconstructed.length === 5) break;
+    }
+    attachments = reconstructed;
+  }
+  return {
+    content: content
+      .replace(ATTACHMENT_METADATA_RE, "")
+      .replace(ATTACHMENT_BLOCK_RE, "")
+      .trim(),
+    attachments,
   };
 }
 
@@ -239,10 +322,17 @@ function buildFeed(
   // émis en events `user_message` et rendus par la boucle ci-dessous.
   const prompt = (initialPrompt ?? "").trim();
   if (prompt) {
+    const displayed = displayUserMessage(prompt);
     userTexts.push(prompt);
     items.push({
       kind: "message",
-       message: makeMessage("initial-prompt", prompt, "user", initialPromptMentions ?? undefined),
+       message: makeMessage(
+         "initial-prompt",
+         displayed.content,
+         "user",
+         initialPromptMentions ?? undefined,
+         displayed.attachments,
+       ),
       createdAt: "",
     });
   }
@@ -376,6 +466,7 @@ function buildFeed(
       case "user_message": {
         const text = str(p.text);
         if (!text.trim()) break;
+        const displayed = displayUserMessage(text);
         const mentions = Array.isArray(p.mentions)
           ? (p.mentions as AssistantMention[])
           : undefined;
@@ -392,7 +483,7 @@ function buildFeed(
         // tool-calls suivants (ils appartiennent au prochain tour de l'agent).
         items.push({
           kind: "message",
-          message: makeMessage(e.id, text, "user", mentions),
+          message: makeMessage(e.id, displayed.content, "user", mentions, displayed.attachments),
           createdAt: e.created_at,
         });
         break;
@@ -594,6 +685,8 @@ function buildFeed(
 interface RenderContext {
   results: Map<string, ToolResult>;
   copyableIds: Set<string>;
+  /** Compteurs exacts du diff Git vivant, couvrant toute la branche. */
+  liveDiffFiles: LiveDiffStat[];
   /** Ouvre la vue diff de la session (dans la conversation) → lignes cliquables. */
   onOpenFile?: (path: string) => void;
   /** Event `question` ACTIF, rendu par la conversation à la place du composer →
@@ -603,20 +696,21 @@ interface RenderContext {
 
 function FilesRow({
   item,
+  liveDiffFiles,
   onOpenFile,
 }: {
   item: Extract<FeedItem, { kind: "files" }>;
+  liveDiffFiles: LiveDiffStat[];
   onOpenFile?: (path: string) => void;
 }) {
   const t = useTranslations("Agent");
-  // Le bloc du tour EN COURS ne dit pas la même chose que celui d'un tour fini :
-  // sa liste bouge encore, ses compteurs valent zéro (git n'a rien compté), et
-  // ses lignes mènent au diff VIVANT, pas à l'état poussé. Le libellé le dit
-  // (« N fichiers ce tour ») et shimmer tant que le tour avance — la marque
-  // « ça tourne » du fil, la même que le plan et les sous-agents.
+  // Le bloc du tour EN COURS garde sa liste provisoire, mais ses compteurs sont
+  // enrichis par le diff Git vivant dès que celui-ci répond. Il mène au diff
+  // VIVANT, pas à l'état poussé ; le libellé et le shimmer le signalent.
+  const files = item.live ? mergeLiveFileStats(item.files, liveDiffFiles) : item.files;
   return (
     <ChangedFilesBlock
-      files={item.files}
+      files={files}
       truncated={item.truncated}
       label={
         item.live
@@ -645,7 +739,16 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
       />
     );
   }
-  if (it.kind === "files") return <FilesRow key={it.id} item={it} onOpenFile={ctx.onOpenFile} />;
+  if (it.kind === "files") {
+    return (
+      <FilesRow
+        key={it.id}
+        item={it}
+        liveDiffFiles={ctx.liveDiffFiles}
+        onOpenFile={ctx.onOpenFile}
+      />
+    );
+  }
   // Avant le repli en note : `renderItem` se termine par un NoteRow fourre-tout,
   // sans cette branche une ligne de réflexion s'y rendrait.
   if (it.kind === "reasoning") {
@@ -835,6 +938,7 @@ export function AgentEventFeed({
   className,
   pendingUserMessages = [],
   onOpenFile,
+  liveDiffFiles,
   hiddenQuestionEventId,
   localExec = false,
 }: {
@@ -859,6 +963,8 @@ export function AgentEventFeed({
   className?: string;
   /** Rend cliquables les fichiers des blocs de diff (ouvre la vue diff de la session). */
   onOpenFile?: (path: string) => void;
+  /** Compteurs exacts du diff vivant, utilisés par le bloc de fichiers du tour actif. */
+  liveDiffFiles?: LiveDiffStat[];
   /**
    * Event `question` ACTIF (MIN-86) : sa carte vivante est rendue par la
    * conversation à la place du composer → son item du fil est masqué ici.
@@ -1055,6 +1161,7 @@ export function AgentEventFeed({
   const ctx: RenderContext = {
     results,
     copyableIds,
+    liveDiffFiles: liveDiffFiles ?? [],
     onOpenFile,
     hiddenQuestionEventId,
   };
@@ -1093,14 +1200,6 @@ export function AgentEventFeed({
           Largeur bornée + centrée, avec le MÊME retrait horizontal (px-3) que le
           composer `ChatInput` → messages et input strictement à la même largeur. */}
       <div className="mx-auto flex w-full max-w-[800px] flex-col gap-3 px-3">
-        {/* La marque du run local, en tête et une seule fois — avant même la
-            bulle de lancement, parce qu'elle qualifie tout ce qui suit. */}
-        {localExec ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Laptop className="size-3 shrink-0" />
-            {t("localRunNote")}
-          </div>
-        ) : null}
         {blocks.map((block) =>
           block.type === "turn" ? (
             <TurnGroup

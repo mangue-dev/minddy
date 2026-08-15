@@ -1743,6 +1743,7 @@ html[data-desktop-app]
 html[data-desktop-app] .secondary-sidebar-header {
   position: relative;
   z-index: 31;
+  -webkit-app-region: drag;
 }
 
 html[data-desktop-app] .secondary-sidebar-header
