@@ -3,7 +3,7 @@
   "version": "0.9.4",
   "private": true,
   "scripts": {
-    "predev": "npm run build:pages-md",
+    "predev": "npm run build:agent-vm && npm run build:pages-md",
     "dev": "NODE_OPTIONS=--max-http-header-size=32768 next dev",
     "prebuild": "npm run build:agent-vm && npm run build:pages-md",
     "build": "next build",

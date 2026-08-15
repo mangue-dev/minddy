@@ -24,6 +24,17 @@ import { fileURLToPath } from "node:url";
  * `platform: node` et `format: cjs` : le bundle tourne sous le Node de la microVM
  * (`node24`), pas dans un navigateur ni sous Next. `packages: bundle` est le
  * défaut — c'est exactement ce qu'on veut, tout doit entrer.
+ *
+ * ⚠ **Câblé sur `prebuild` ET sur `predev`, et le second a manqué longtemps.**
+ * `next dev` ne construit rien : le bundle lu par `vm-launch.ts` restait celui
+ * du dernier build à la main, et un tour lancé en local jouait donc un harness
+ * d'un autre jour. Depuis MIN-354 un décalage de PROTOCOLE se dit (« the harness
+ * bundle is out of date ») ; toute autre modification du harness, elle, se
+ * jouait en silence avec l'ancien code. Il coûte 20 ms.
+ *
+ * Ça ne couvre que le DÉMARRAGE du serveur de dév : modifier
+ * `lib/server/agent/vm/` pendant qu'il tourne demande encore de relancer ce
+ * script à la main. Le sachant, c'est un réflexe ; sans ça, c'était un piège.
  */
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
