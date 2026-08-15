@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
+import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import {
   Button,
   CommandGroup,
@@ -39,7 +40,61 @@ import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { prIdentifier } from "@/lib/repo-providers";
 import type { MessageKey } from "@/lib/i18n-keys";
-import type { PullRequestListItem, PullRequestStateFilter } from "@/lib/agent-api";
+import type {
+  AgentRunPrResponse,
+  PullRequestListItem,
+  PullRequestListResponse,
+  PullRequestStateFilter,
+} from "@/lib/agent-api";
+
+const ALL_PULL_REQUESTS_QUERY_KEY = ["pull-requests", "all"] as const;
+
+/** `open` comprend les brouillons, comme le filtre servi par l'API. */
+function matchesStateFilter(state: PullRequestListItem["pr_state"], filter: unknown): boolean {
+  return (
+    filter === "all" ||
+    (filter === "open" && (state === "open" || state === "draft")) ||
+    filter === state
+  );
+}
+
+/**
+ * Applique un changement d'état à toutes les variantes en cache de la liste.
+ * Une ligne qui sort du filtre courant disparaît immédiatement : la sidebar et
+ * le détail choisissent donc leur nouvel état dans le même rendu.
+ */
+function updateCachedPullRequestState(
+  queryClient: ReturnType<typeof useQueryClient>,
+  prId: string,
+  state: PullRequestListItem["pr_state"],
+) {
+  for (const [key, data] of queryClient.getQueriesData<PullRequestListResponse>({
+    queryKey: ALL_PULL_REQUESTS_QUERY_KEY,
+  })) {
+    if (!data || !data.pullRequests.some((pr) => pr.prId === prId)) continue;
+    const filter = (key as QueryKey)[2];
+    const pullRequests = matchesStateFilter(state, filter)
+      ? data.pullRequests.map((pr) => (pr.prId === prId ? { ...pr, pr_state: state } : pr))
+      : data.pullRequests.filter((pr) => pr.prId !== prId);
+    queryClient.setQueryData(key, { ...data, pullRequests });
+  }
+
+  // Le détail a son propre cache, servi par la forge. Le laisser attendre le
+  // refetch après avoir déjà changé la sidebar faisait cohabiter deux états de
+  // la même PR pendant un aller-retour réseau.
+  queryClient.setQueryData<AgentRunPrResponse>(["pull-request", prId], (data) => {
+    if (!data?.pr) return data;
+    return {
+      ...data,
+      pr: {
+        ...data.pr,
+        state,
+        draft: state === "draft",
+        merged: state === "merged",
+      },
+    };
+  });
+}
 
 /**
  * Page Pull Requests (MIN-66, élargie par MIN-143) — vue liste/détail façon
@@ -360,6 +415,36 @@ export function PullRequestsPage() {
   const tCommon = useTranslations("Common");
   const format = useFormatter();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
+  const queryClient = useQueryClient();
+
+  // Les actions de forge sont lentes, mais leur état est connu dès le clic : on
+  // patche la liste avant la réponse, puis on réconcilie avec le serveur. Le
+  // snapshot permet de remettre exactement les listes en place si la forge
+  // refuse finalement l'action (protection de branche, droits retirés…).
+  const applyOptimisticState = useCallback(
+    (prId: string, state: PullRequestListItem["pr_state"]) => {
+      const previous = queryClient.getQueriesData<PullRequestListResponse>({
+        queryKey: ALL_PULL_REQUESTS_QUERY_KEY,
+      });
+      const previousDetail = queryClient.getQueryData<AgentRunPrResponse>([
+        "pull-request",
+        prId,
+      ]);
+      updateCachedPullRequestState(queryClient, prId, state);
+      return () => {
+        for (const [key, data] of previous) queryClient.setQueryData(key, data);
+        queryClient.setQueryData(["pull-request", prId], previousDetail);
+      };
+    },
+    [queryClient],
+  );
+
+  const applyConfirmedState = useCallback(
+    (prId: string, state: PullRequestListItem["pr_state"]) => {
+      updateCachedPullRequestState(queryClient, prId, state);
+    },
+    [queryClient],
+  );
 
   // Deep-links : `?pr=<id>` (direct, MIN-143) et `?run=<id>` (historique — la
   // sidebar d'issue et tous les liens déjà en circulation parlent en run).
@@ -483,8 +568,14 @@ export function PullRequestsPage() {
    */
   const clicked =
     selectedPrId && filtered.some((p) => p.prId === selectedPrId) ? selectedPrId : null;
+  // Un refetch de fond ne doit jamais fermer le panneau : c'était la source du
+  // clignotement à chaque retour dans la fenêtre. Seul un lien profond encore
+  // en cours de résolution attend sa réponse avant de prendre la première PR.
+  const waitingForDeepLink = !!deepLink && fetching && !deepLinkedByRun && !clicked;
   const selectedId =
-    clicked ?? deepLinkedByRun?.prId ?? (fetching ? null : (filtered[0]?.prId ?? null));
+    clicked ??
+    deepLinkedByRun?.prId ??
+    (waitingForDeepLink ? null : (filtered[0]?.prId ?? null));
   const selected = filtered.find((p) => p.prId === selectedId) ?? null;
 
   // « Enregistrer la vue actuelle » (⌘K) : la PR ouverte est une sélection de
@@ -683,6 +774,8 @@ export function PullRequestsPage() {
             item={selected}
             onBack={() => setMobileDetail(false)}
             onRefetchList={() => void refetch()}
+            onOptimisticStateChange={applyOptimisticState}
+            onStateChange={applyConfirmedState}
             onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}
           />
         ) : (

@@ -102,3 +102,16 @@ describe("conduite à tenir face à la détresse", () => {
     });
   }
 });
+
+describe("messages du chat Numo", () => {
+  for (const [surface, prompt] of Object.entries({
+    "chat de projet": surfaces["chat de projet"],
+    "chat global": surfaces["chat global"],
+  })) {
+    it(`traite chaque message utilisateur comme une demande directe dans le ${surface}`, () => {
+      expect(prompt).toContain("direct message from the person currently talking to");
+      expect(prompt).toContain("not a task-notebook note");
+      expect(prompt).toContain("asks to use it");
+    });
+  }
+});

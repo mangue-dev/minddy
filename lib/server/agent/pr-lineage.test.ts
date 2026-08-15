@@ -209,18 +209,20 @@ describe("reprise d'une pull request sans ticket", () => {
   });
 });
 
-describe("la lignée du TICKET garde la priorité", () => {
-  it("ignore la PR quand un ticket est fourni, et lit sa lignée à lui", async () => {
+describe("la PR explicite garde la priorité", () => {
+  it("lit la lignée de la PR quand elle est rattachée à un ticket", async () => {
+    h.pr = { ...h.pr, issueId: ISSUE_ID };
     h.issueLineage = lineage({ branchName: "minddy/agent/min-249-f80dca09", prNumber: 49 });
+    h.prLineage = lineage({ branchName: "minddy/agent/note-92275fe4", prNumber: 51 });
 
     const result = await relaunch({ issueId: ISSUE_ID });
 
     expect(result.ok).toBe(true);
-    expect(h.activeCalls).toEqual(["issue"]);
+    expect(h.activeCalls).toEqual(["pr"]);
     expect(h.created[0]).toMatchObject({
       issueId: ISSUE_ID,
-      branchName: "minddy/agent/min-249-f80dca09",
-      prNumber: 49,
+      branchName: "minddy/agent/note-92275fe4",
+      prNumber: 51,
     });
   });
 });

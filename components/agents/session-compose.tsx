@@ -290,7 +290,8 @@ export function SessionCompose({
       toast.error(t("modelRequired"));
       return;
     }
-    const localExec = environment === "local" && localRepo.ready;
+    const localExec = environment !== "cloud" && localRepo.ready;
+    const localWorktree = localExec && environment === "worktree";
     setLaunching(true);
     setLaunchText(prompt);
     setLaunchMentions(mentions);
@@ -307,6 +308,7 @@ export function SessionCompose({
         // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
         // le dossier a pu disparaître (ou le projet changer).
         localExec,
+        localWorktree,
       });
       /**
        * Amorce le cache de la session AVANT de rendre la main.
@@ -483,7 +485,7 @@ export function SessionCompose({
                       emptyLabel={t("branchSearchEmpty")}
                       loadingLabel={t("branchSearchLoading")}
                       disabled={launching}
-                      localBranches={environment === "local" ? localRepo.branches : undefined}
+                      localBranches={environment !== "cloud" ? localRepo.branches : undefined}
                       localLabel={t("branchLocalGroup")}
                       cloudLabel={t("branchCloudGroup")}
                       bare

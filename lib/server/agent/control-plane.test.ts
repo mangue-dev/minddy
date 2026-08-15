@@ -66,6 +66,7 @@ const h = vi.hoisted(() => ({
   revoked: [] as string[],
   /** L'API de provisioning refuse (variable absente, panne) : `mintRunKey` → null. */
   mintFails: false,
+  byokAvailable: true,
 }));
 
 // `runKeyCapUsd` reste le VRAI : c'est l'arithmétique du plafond, et la servir
@@ -82,6 +83,14 @@ vi.mock("./run-key", async (importOriginal) => ({
   revokeRunKey: vi.fn(async (hash: string) => {
     h.revoked.push(hash);
   }),
+}));
+
+vi.mock("./model", () => ({
+  resolveAgentApiKey: vi.fn(async () =>
+    h.byokAvailable
+      ? { apiKey: "sk-user-byok", mode: "byok", provider: "openrouter", baseUrl: "https://openrouter.ai/api/v1" }
+      : { apiKey: "sk-platform", mode: "platform", provider: "openrouter", baseUrl: "https://openrouter.ai/api/v1" },
+  ),
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
@@ -267,6 +276,7 @@ beforeEach(() => {
   h.minted.length = 0;
   h.revoked.length = 0;
   h.mintFails = false;
+  h.byokAvailable = true;
   h.steeredByOther = false;
   h.prIssueId = null;
   h.stampReturnsNull = false;
@@ -339,7 +349,7 @@ describe("le budget restant du tour", () => {
     expect(await call("GET", "/budget").then((r) => r.body)).toEqual({ remainingUsd: 0.5 });
   });
 
-  it("rend `null` en illimité (BYOK) — il n'y a rien à plafonner", async () => {
+  it("rend `null` pour un BYOK cloud sans plafond de run", async () => {
     h.quota = { unlimited: true, allowed: true, mode: "byok" };
     expect(await call("GET", "/budget").then((r) => r.body)).toEqual({ remainingUsd: null });
   });
@@ -1082,8 +1092,9 @@ describe("le plan de contrôle vu depuis une machine", () => {
    *
    * Sur un Mac il n'y a pas de firewall pour poser la clé à la sortie : elle
    * descend jusqu'au proxy du harness, en mémoire, et cette surface est par où.
-   * Ce qui borne le dégât n'est pas le secret de la réponse — le modèle lit le
-   * jeton, donc il peut appeler ceci lui-même — c'est le PLAFOND de la clé rendue.
+   * La clé plateforme n'est rendue que si elle a été mintée avec un plafond dur.
+   * La clé BYOK, elle, est servie directement pour les lancements locaux que la
+   * surface d'admission réserve à une action interactive de l'utilisateur.
    */
   describe("la clé du modèle", () => {
     it("mint une clé plafonnée sur le restant du compte, et la stampe pour la révoquer", async () => {
@@ -1112,12 +1123,19 @@ describe("le plan de contrôle vu depuis une machine", () => {
       expect(h.minted).toEqual([]);
     });
 
-    it("refuse un run BYOK, qui n'a littéralement aucun plafond en local", async () => {
-      // La clé est sur le compte de l'utilisateur : l'API de provisioning n'émet
-      // que sur le compte qui détient la clé de provisioning, donc rien à
-      // plafonner. Et le compute de microVM, dernier garde-fou, vaut zéro ici.
-      h.run = { ...h.run!, key_mode: "byok" };
-      expect((await callLocal("POST", "/llm-key")).status).toBe(403);
+    it("sert directement la clé BYOK sans plafond ni mint", async () => {
+      h.run = { ...h.run!, key_mode: "byok", budget_usd: null };
+      const res = await callLocal("POST", "/llm-key");
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ key: "sk-user-byok" });
+      expect(h.minted).toEqual([]);
+      expect(h.stamped).toEqual([]);
+    });
+
+    it("refuse un BYOK dont la clé a été retirée", async () => {
+      h.run = { ...h.run!, key_mode: "byok", budget_usd: null };
+      h.byokAvailable = false;
+      expect((await callLocal("POST", "/llm-key")).status).toBe(409);
       expect(h.minted).toEqual([]);
     });
 

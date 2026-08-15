@@ -112,6 +112,8 @@ export interface AgentRunSummary {
    * « dans le cloud », ce qu'ont été tous les runs jusqu'ici.
    */
   local_exec?: boolean;
+  /** Le mode local utilise un checkout Git isolé pour cette conversation. */
+  local_worktree?: boolean;
 }
 
 /**
@@ -256,6 +258,8 @@ export async function launchAgentRunApi(
     /** La conversation démarre sur la MACHINE (MIN-359) : choisi au premier
      *  message, figé ensuite. Le serveur revalide (`localExecRequested`). */
     localExec?: boolean;
+    /** Crée un worktree isolé sur la machine locale. */
+    localWorktree?: boolean;
   },
 ): Promise<{ run: AgentRunSummary }> {
   // Le prompt n'est JAMAIS envoyé — seulement sa présence et sa longueur.
@@ -313,6 +317,8 @@ export async function launchNotebookAgentApi(body: {
   /** La conversation démarre sur la MACHINE (MIN-359) : choisi au premier
    *  message, figé ensuite. Le serveur revalide (`localExecRequested`). */
   localExec?: boolean;
+  /** Crée un worktree isolé sur la machine locale. */
+  localWorktree?: boolean;
 }): Promise<{ run: AgentRunSummary }> {
   trackEvent("agent_launched", {
     model: body.model ?? "default",
@@ -701,7 +707,7 @@ export async function actOnPullRequestApi(
   prId: string,
   action: "merge" | "close" | "reopen" | "ready_for_review",
   method?: MergeMethod,
-): Promise<{ ok: true; pr_state: string }> {
+): Promise<{ ok: true; pr_state: PullRequestListItem["pr_state"] }> {
   trackEvent("pr_review_submitted", { verdict: action });
   return parseJson(
     await fetch(prEndpoint(prId), {
@@ -761,6 +767,11 @@ export async function submitPullRequestReviewApi(
      *  Défaut `true` — le geste historique. */
     postVerdict?: boolean;
     model?: string;
+    reasoningLevel?: ReasoningLevel;
+    /** Demande un lancement sur le dépôt local attaché à ce projet. */
+    localExec?: boolean;
+    /** Isole ce lancement local dans son worktree. */
+    localWorktree?: boolean;
   },
 ): Promise<{
   ok: true;
@@ -797,13 +808,18 @@ export async function submitPullRequestReviewApi(
 export async function requestPullRequestAiReviewApi(
   prId: string,
   model?: string,
+  reasoningLevel?: ReasoningLevel,
 ): Promise<{ ok: true; review: PrReviewRunSummary }> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
     await fetch(prEndpoint(prId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "ai_review", ...(model === undefined ? {} : { model }) }),
+      body: JSON.stringify({
+        action: "ai_review",
+        ...(model === undefined ? {} : { model }),
+        ...(reasoningLevel === undefined ? {} : { reasoningLevel }),
+      }),
     }),
   );
 }

@@ -30,6 +30,7 @@ import {
   assignmentToJob,
   localLayout,
   localOpencodeDir,
+  localRunRoot,
   localRunsDir,
   localTurnRefusalMessage,
   localTurnSecrets,
@@ -45,6 +46,7 @@ import { OPENCODE_VERSION } from "@/lib/server/agent/vm/opencode-version";
 import { vmBundlePath, vmJobPath } from "@/lib/server/agent/harness-layout";
 import { installOpencode, readOpencodeFacts } from "./opencode-install";
 import { describeLocalRepo } from "./local-repo";
+import { prepareLocalWorktree } from "@/lib/desktop/local-worktree";
 import { noteLauncherFailure, openRunLog, type RunLog } from "./run-log";
 import { trace } from "./trace";
 
@@ -355,11 +357,36 @@ export async function runAssignment(
     return refuse(opencode.reason, opencode.message);
   }
 
-  // 4. LE DISQUE DU RUN. Le layout est la seule chose que la machine ajoute au
+  // 4. LE DISQUE DU RUN. Le checkout attaché peut porter la branche, l'index et
+  // le WIP de la personne. Quand la session a demandé l'isolation, git crée un
+  // worktree sous sa racine de run : aucun fichier de ce checkout humain n'est
+  // touché. Ce geste arrive après les pré-vols, pour qu'un harness ou opencode
+  // indisponible ne laisse même pas un checkout à nettoyer.
+  const isolated = assignment.localWorktree;
+  const worktree = isolated
+    ? prepareLocalWorktree({
+        sourceRepo: repo.path,
+        runRoot: localRunRoot(userData, assignment.runId),
+        baseBranch: typeof assignment.job.baseBranch === "string" ? assignment.job.baseBranch : null,
+        workBranch: typeof assignment.job.workBranch === "string" ? assignment.job.workBranch : "",
+        authUrl: assignment.job.authUrl,
+      })
+    : null;
+  if (worktree && !worktree.ok) {
+    noteLauncherFailure(worktree.message);
+    return refuse("repo_invalid", worktree.message);
+  }
+
+  // Le layout est la seule chose que la machine ajoute au
   //    job, et `localLayout` garantit que le harness n'atterrit jamais DANS le
   //    dépôt de l'utilisateur — sinon il apparaîtrait dans son `git status`.
-  const layout = localLayout({ userDataPath: userData, runId: assignment.runId, repoPath: repo.path });
-  const job = assignmentToJob(assignment, { layout, appOrigin: origin });
+  const layout = localLayout({
+    userDataPath: userData,
+    runId: assignment.runId,
+    repoPath: worktree?.ok ? worktree.path : repo.path,
+    isolated,
+  });
+  const job = assignmentToJob(assignment, { layout, appOrigin: origin, isolated });
 
   const log = openRunLog(
     {
@@ -367,7 +394,7 @@ export async function runAssignment(
       appVersion: app.getVersion(),
       bundleVersion: bundle.manifest.sha256.slice(0, 12),
       opencodeVersion: OPENCODE_VERSION,
-      repoPath: repo.path,
+      repoPath: layout.repoDir,
     },
     localTurnSecrets(job),
   );

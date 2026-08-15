@@ -569,7 +569,8 @@ export function AgentConversation({
       return;
     }
     const prompt = message.trim();
-    const localExec = environment === "local" && localRepo.ready;
+    const localExec = environment !== "cloud" && localRepo.ready;
+    const localWorktree = localExec && environment === "worktree";
     setLaunching(true);
     // Affichage OPTIMISTE du 1er message, comme pour un follow-up : le POST enchaîne
     // les pré-checks (issue, dépôt, quota, résolution du modèle) avant de rendre la
@@ -592,6 +593,7 @@ export function AgentConversation({
         // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
         // le dossier a pu disparaître.
         localExec,
+        localWorktree,
       });
       // La session neuve devient la session ouverte → bascule live immédiate. Son
       // `prompt` porte le même texte : le fil affiche la MÊME bulle, sans coupure.
@@ -958,7 +960,7 @@ export function AgentConversation({
                   ) : null}
                   {liveRun.local_exec ? (
                     <EnvironmentCombobox
-                      value="local"
+                      value={liveRun.local_worktree ? "worktree" : "local"}
                       onChange={() => {}}
                       disabled
                       disabledTooltip={t("environmentLocked")}
@@ -1043,7 +1045,7 @@ export function AgentConversation({
                     disabled={launching || inheritedWork != null}
                     disabledTooltip={inheritedWork ? t("branchInherited") : undefined}
                     lockedBranch={inheritedWork?.base_branch}
-                    localBranches={environment === "local" ? localRepo.branches : undefined}
+                    localBranches={environment !== "cloud" ? localRepo.branches : undefined}
                     localLabel={t("branchLocalGroup")}
                     cloudLabel={t("branchCloudGroup")}
                     bare

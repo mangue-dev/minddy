@@ -204,26 +204,18 @@ says why it is like that. You can read AND write them, in markdown.
 - What is WORK belongs in an issue, not a page; what is a two-minute personal thing belongs in
   the task notebook. A page is written for someone who arrives in six months.`;
 
-const SCRATCHPAD_BLOCK = `## Task notebook (the user's personal scratchpad)
-Every account has ONE task notebook ("carnet de tâches" in French, "task notebook" in
-English): a single markdown doc of the quick things the user wants to do right now — the
-in-app replacement for a personal problems.md file. It is PERSONAL and CROSS-PROJECT (it
-belongs to the user, never to a project) and it contains no issues, just free notes.
-- Format: '##' section headings + the same checkbox tasks as an issue plan — "- [ ]" to do,
-  "- [~]" in progress, "- [x]" done, "- [-]" dropped. Prose is allowed anywhere.
-- It is deliberately VOLATILE and has no history: items get jotted down, ticked off, then
-  wiped by "remove completed tasks". It is a working surface, never a spec or an archive.
-- It is NOT the backlog. A notebook line is a two-minute thing that doesn't deserve an issue.
-  Never promote one into an issue unless the user asks ("fais-en un ticket").
-- Reading: get_scratchpad returns the raw markdown, the task list with 0-based indices, the
-  section titles, and \`rev\` (the version).
-- Writing: prefer the surgical tools — add_scratchpad_tasks to append new tasks (optionally
-  under a '##' section), update_scratchpad_tasks to flip existing tasks by index. Fall back to
-  set_scratchpad (which REWRITES the whole doc) only to edit task text, delete lines or
-  restructure sections.
-- The user may have the notebook open and be typing in it while you write, so ALWAYS read it
-  first and pass back the \`rev\` you read. On a conflict, re-read, reapply your change onto the
-  fresh content, and retry — never clobber what they wrote.`;
+const USER_MESSAGES_BLOCK = `## Messages in this conversation
+Every entry with the \`user\` role is a direct message from the person currently talking to
+you. It is their request, question, instruction, feedback or context for this conversation —
+not a task-notebook note, not a draft ticket, and not text to silently file away.
+- Reply to and act on the message itself. Do not reinterpret it as something that should go
+  into the task notebook, and do not read or write that notebook unless the user explicitly
+  asks to use it (for example, “note ça dans mon carnet” / “add this to my notes”).
+- Conversation history consists of earlier direct user messages and your replies. It is not a
+  notebook snapshot: never infer checkbox state, an implicit task list, or permission to
+  update personal notes from it.
+- The task notebook is only an optional personal document. If explicitly asked to change it,
+  use get_scratchpad first, then its dedicated tools; otherwise leave it untouched.`;
 
 const SETTINGS_BLOCK = `## Project & account settings
 Beyond issues, you can edit project settings and the user's OWN account settings.
@@ -477,7 +469,7 @@ ${PAGES_BLOCK}
 
 ${FEEDBACK_BLOCK}
 
-${SCRATCHPAD_BLOCK}
+${USER_MESSAGES_BLOCK}
 
 ${SETTINGS_BLOCK}
 
@@ -523,7 +515,7 @@ ${PAGES_BLOCK}
 
 ${FEEDBACK_BLOCK}
 
-${SCRATCHPAD_BLOCK}
+${USER_MESSAGES_BLOCK}
 
 ${SETTINGS_BLOCK}
 
@@ -623,8 +615,6 @@ ${VOCABULARY_BLOCK}
 ${PLAN_BLOCK}
 
 ${PAGES_BLOCK}
-
-${SCRATCHPAD_BLOCK}
 
 ${SETTINGS_BLOCK}
 
@@ -732,8 +722,6 @@ ${PLAN_BLOCK}
 
 ${PAGES_BLOCK}
 
-${SCRATCHPAD_BLOCK}
-
 ${SETTINGS_BLOCK}
 
 ## Comment mode rules (fire and forget)
@@ -833,8 +821,6 @@ ${VOCABULARY_BLOCK}
 ${PLAN_BLOCK}
 
 ${PAGES_BLOCK}
-
-${SCRATCHPAD_BLOCK}
 
 ## Feedback tools
 You can act on THIS feedback post directly — the tools default to it when you omit feedback_post_id:

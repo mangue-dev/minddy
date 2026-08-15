@@ -69,8 +69,19 @@ import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { UserAvatar } from "@/components/user-avatar";
 import { ModelCombobox } from "@/components/agent/model-combobox";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import {
+  EnvironmentCombobox,
+  LOCAL_REPO_ERROR_KEYS,
+  type AgentEnvironment,
+} from "@/components/agent/environment-combobox";
+import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
+import { useLocalRepo } from "@/lib/use-local-repo";
+import {
+  useAgentModelsQuery,
+  useReasoningLevelsFor,
+} from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
+import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import {
   usePullRequestQuery,
   usePrCommentsQuery,
@@ -481,11 +492,20 @@ export function PrDetail({
   item,
   onBack,
   onRefetchList,
+  onOptimisticStateChange,
+  onStateChange,
   onOpenIssue,
 }: {
   item: PullRequestListItem;
   onBack: () => void;
   onRefetchList: () => void;
+  /** Patche la sidebar dès le clic et rend une restauration si la forge refuse. */
+  onOptimisticStateChange: (
+    prId: string,
+    state: PullRequestListItem["pr_state"],
+  ) => () => void;
+  /** Aligne le cache local sur l'état effectivement renvoyé par la forge. */
+  onStateChange: (prId: string, state: PullRequestListItem["pr_state"]) => void;
   /** Ouvre l'issue liée dans le panneau latéral, par-dessus la page (pas de navigation). */
   onOpenIssue: (issueId: string, projectId: string) => void;
 }) {
@@ -494,7 +514,7 @@ export function PrDetail({
   const isSend = useIsSendShortcut();
   const format = useFormatter();
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
-  const { defaultModel } = useAgentPreferencesQuery();
+  const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
 
   const {
     pr,
@@ -557,6 +577,8 @@ export function PrDetail({
   // Modèle de la run à lancer — vide = le défaut du compte (MIN-68 : relancer Numo
   // est un lancement à froid, il a donc son propre choix de modèle).
   const [model, setModel] = useState("");
+  const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
+  const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
   // Numo relit la PR (MIN-141) : une SESSION, pas un appel bloquant — elle se
@@ -565,6 +587,8 @@ export function PrDetail({
   const reviewSession = usePrReviewSession(item.prId);
   const [aiReviewDialog, setAiReviewDialog] = useState(false);
   const [aiReviewModel, setAiReviewModel] = useState("");
+  const [aiReviewReasoningOverride, setAiReviewReasoningOverride] =
+    useState<ReasoningLevel | null>(null);
   const [startingAiReview, setStartingAiReview] = useState(false);
   const [tab, setTab] = useState<"activity" | "commits" | "files">("activity");
   // Fondu doux en haut et en bas du fil — le même que la conversation d'agent et
@@ -578,6 +602,26 @@ export function PrDetail({
   // c'est elle qui atteste, à l'envoi, qu'on répond toujours à ce message-là.
 
   const isWorking = !!item.activeRunId;
+  // L'environnement n'a de sens que pour une relance d'agent classique. Une
+  // relecture de PR (`pullRequestId`) reste volontairement dans le cloud : le
+  // contenu peut venir d'un fork et ne doit jamais devenir un shell local.
+  const localRepo = useLocalRepo(item.project?.id ?? null);
+  useEffect(() => {
+    setEnvironment(localRepo.ready ? "local" : "cloud");
+  }, [localRepo.ready]);
+
+  const effectiveModel = model || defaultModel || providerDefaultModel;
+  const reasoningLevels = useReasoningLevelsFor(effectiveModel);
+  const reasoningLevel = nearestReasoningLevel(
+    reasoningOverride ?? defaultReasoningLevel,
+    reasoningLevels,
+  );
+  const aiReviewEffectiveModel = aiReviewModel || reviewSession.model?.instance;
+  const aiReviewReasoningLevels = useReasoningLevelsFor(aiReviewEffectiveModel, "review");
+  const aiReviewReasoningLevel = nearestReasoningLevel(
+    aiReviewReasoningOverride ?? defaultReasoningLevel,
+    aiReviewReasoningLevels,
+  );
   // Ce que CE compte git peut faire sur ce dépôt (MIN-144). Un geste humain part
   // du compte de la personne : sans compte, ou sans droit, l'affordance
   // DISPARAÎT — c'est le bandeau qui explique, une fois, en haut.
@@ -687,10 +731,22 @@ export function PrDetail({
     method?: MergeMethod,
   ) => {
     if (acting) return;
+    const optimisticState =
+      action === "merge"
+        ? "merged"
+        : action === "close"
+          ? "closed"
+          : action === "ready_for_review"
+            ? "open"
+            : pr?.draft
+              ? "draft"
+              : "open";
+    const rollback = onOptimisticStateChange(item.prId, optimisticState);
     setActing(action);
     setConfirmAction(null);
     try {
-      await actOnPullRequestApi(item.prId, action, method);
+      const result = await actOnPullRequestApi(item.prId, action, method);
+      onStateChange(item.prId, result.pr_state);
       toast.success(
         action === "merge"
           ? t("mergedToast")
@@ -703,6 +759,8 @@ export function PrDetail({
       onRefetchList();
       await refetchPr();
     } catch (err) {
+      rollback();
+      onRefetchList();
       toast.error((err as Error).message);
     } finally {
       setActing(null);
@@ -713,6 +771,8 @@ export function PrDetail({
     setReviewVerdict(verdict);
     setReviewMessage("");
     setReviewMode("write");
+    setModel("");
+    setReasoningOverride(null);
     // La relance n'a de sens que sur une demande de changements, et c'est là son
     // comportement attendu : cochée d'office.
     setRelaunch(verdict === "request_changes" && canRelaunch);
@@ -774,6 +834,9 @@ export function PrDetail({
         relaunch: relaunching && reviewVerdict === "request_changes",
         postVerdict,
         model: model || undefined,
+        reasoningLevel: relaunching ? reasoningLevel : undefined,
+        localExec: relaunching && environment !== "cloud" && localRepo.ready,
+        localWorktree: relaunching && environment === "worktree" && localRepo.ready,
       });
       // Trois issues, trois messages : le verdict est passé, la forge l'a replié
       // en commentaire (une App ne peut pas approuver sa propre PR — le dire,
@@ -809,6 +872,7 @@ export function PrDetail({
   const openAiReviewDialog = () => {
     // Le dernier choix du compte, sinon « le défaut de minddy » (chaîne vide).
     setAiReviewModel(reviewSession.model?.preferred ?? "");
+    setAiReviewReasoningOverride(null);
     setAiReviewDialog(true);
   };
 
@@ -820,7 +884,11 @@ export function PrDetail({
     if (startingAiReview) return;
     setStartingAiReview(true);
     try {
-      await requestPullRequestAiReviewApi(item.prId, aiReviewModel);
+      await requestPullRequestAiReviewApi(
+        item.prId,
+        aiReviewModel,
+        aiReviewReasoningLevel,
+      );
       setAiReviewDialog(false);
       // La passe se regarde dans le fil : y ramener, sinon elle se joue sous un
       // onglet que personne ne regarde.
@@ -1706,6 +1774,15 @@ export function PrDetail({
               disabled={startingAiReview}
             />
           </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-muted-foreground">{tAgent("reasoning")}</span>
+            <ReasoningCombobox
+              value={aiReviewReasoningLevel}
+              onChange={setAiReviewReasoningOverride}
+              disabled={startingAiReview}
+              levels={aiReviewReasoningLevels}
+            />
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -1847,16 +1924,30 @@ export function PrDetail({
             )
           ) : null}
 
-          {/* Le pied porte TROIS choses quand la relance est cochée — le modèle,
-              annuler, envoyer —, et le dialogue fait 28rem : sur un nom de modèle
-              un peu long, la ligne débordait au lieu de se replier. Elle se replie
-              donc (`flex-wrap`), et c'est `ml-auto` qui tient les boutons à droite
-              — `justify-between` les ramenait à gauche dès que le combobox passait
-              seul sur sa ligne. */}
-          <DialogFooter className="sm:flex-wrap">
-            {/* Nouvelle run = nouveau choix de modèle (identique à un premier
-                lancement) ; vide = le modèle par défaut du compte. */}
-            {reviewVerdict === "request_changes" && relaunching ? (
+          {/* Les réglages ne sont visibles que pour le chemin qui lance réellement
+              une run maintenant. Un envoi de review seul ne fait qu'écrire sur la
+              forge : lui proposer un environnement, un modèle ou un raisonnement
+              serait une fausse promesse. */}
+          {reviewVerdict === "request_changes" && relaunching ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {localRepo.linked ? (
+                <EnvironmentCombobox
+                  value={environment}
+                  onChange={setEnvironment}
+                  localAvailable={localRepo.available}
+                  folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
+                  needsAttach={localRepo.state?.status !== "ready"}
+                  onAttach={() => {
+                    void localRepo.attach().then((next) => {
+                      if (next?.status === "ready") setEnvironment("local");
+                      else if (next && next.status === "invalid") {
+                        toast.error(tAgent(LOCAL_REPO_ERROR_KEYS[next.reason]));
+                      }
+                    });
+                  }}
+                  disabled={submitting || localRepo.busy}
+                />
+              ) : null}
               <ModelCombobox
                 variant="compact"
                 value={model}
@@ -1869,7 +1960,18 @@ export function PrDetail({
                 freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
                 disabled={submitting}
               />
-            ) : null}
+              <ReasoningCombobox
+                value={reasoningLevel}
+                onChange={setReasoningOverride}
+                disabled={submitting}
+                levels={reasoningLevels}
+              />
+            </div>
+          ) : null}
+
+          {/* Annuler et envoyer restent séparés des réglages pour que le bouton
+              garde une position stable quand le chemin instantané est désactivé. */}
+          <DialogFooter className="sm:flex-wrap">
             <div className="flex items-center gap-2 sm:ml-auto">
               <Button
                 variant="outline"

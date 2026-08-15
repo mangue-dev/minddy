@@ -131,8 +131,9 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
  */
 export function useReasoningLevelsFor(
   modelId: string | null | undefined,
+  scope: AgentModelsScope = "user",
 ): ReasoningLevel[] {
-  const { models } = useAgentModelsQuery();
+  const { models } = useAgentModelsQuery(scope);
   const entry = modelId ? models.find((m) => m.id === modelId) : undefined;
   return reasoningLevelsFor(entry?.reasoning);
 }

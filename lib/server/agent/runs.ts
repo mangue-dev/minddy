@@ -298,6 +298,8 @@ export interface AgentRun {
    * plateforme à interroger, cf. `reapDeadVmRuns`).
    */
   local_exec: boolean;
+  /** Le run local utilise un worktree isolé plutôt que le checkout attaché. */
+  local_worktree: boolean;
   /**
    * La GÉNÉRATION du bail d'exécution locale (MIN-355) — la seule révocation
    * possible d'un jeton auto-porteur.
@@ -358,6 +360,8 @@ export interface CreateRunInput {
    * sont tous les runs jusqu'à MIN-293.
    */
   localExec?: boolean;
+  /** Isole le run local dans un worktree de la machine qui l'exécute. */
+  localWorktree?: boolean;
 }
 
 /**
@@ -463,6 +467,17 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
        * injection coûte une VM jetable, sur le Mac de quelqu'un c'est un shell.
        */
       local_exec:
+        input.localExec === true &&
+        localRunScope({
+          triggeredBy: input.triggeredBy,
+          routineId: input.routineId,
+          chainId: input.chainId,
+          pullRequestId: input.pullRequestId,
+        }).ok,
+      // Cette option n'a de sens que pour un run effectivement local. La même
+      // garde que `local_exec` ferme les entrées automatisées / tierces.
+      local_worktree:
+        input.localWorktree === true &&
         input.localExec === true &&
         localRunScope({
           triggeredBy: input.triggeredBy,

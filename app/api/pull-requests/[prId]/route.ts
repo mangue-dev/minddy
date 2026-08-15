@@ -18,8 +18,8 @@ import {
  *       | { action: 'close' }
  *       | { action: 'reopen' }                               → fermée → rouverte (MIN-164)
  *       | { action: 'ready_for_review' }                     → brouillon → prête
- *       | { action: 'review', verdict, message, relaunch?, model? }
- *       | { action: 'ai_review', model? }                    → Numo relit (MIN-141)
+ *       | { action: 'review', verdict, message, relaunch?, model?, reasoningLevel?, localExec?, localWorktree? }
+ *       | { action: 'ai_review', model?, reasoningLevel? }    → Numo relit (MIN-141)
  *       | { action: 'link_issue', issueId }                  → rattache un ticket (MIN-163)
  *
  * `ai_review` rend un 202 avec la SESSION d'agent ancrée à cette PR (MIN-168) :
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (action === "ai_review") {
     // La langue n'est plus un paramètre : une session d'agent écrit dans celle de
     // son lanceur, résolue au premier chunk comme pour toutes les autres.
-    return prAiReviewResponse(auth.scope, auth.userId, body.model);
+    return prAiReviewResponse(auth.scope, auth.userId, body.model, body.reasoningLevel);
   }
   return prStateActionResponse(auth.scope, action, body, auth.userId);
 }

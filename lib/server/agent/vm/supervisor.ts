@@ -1187,7 +1187,7 @@ export async function runOpencodeTurn(
      * « supprimé » si c'en était.
      */
     const liveEdits = newLiveEditLog();
-    /** Ce que le tour a encore le droit de dépenser. Absent = BYOK, illimité. */
+    /** Ce que le tour a encore le droit de dépenser. Absent = aucun plafond. */
     let budgetUsd = job.budgetUsd;
     let lastBudgetAt = now();
     let budgetExhausted = false;

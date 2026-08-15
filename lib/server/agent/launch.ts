@@ -105,7 +105,8 @@ export interface LaunchAgentInput {
    * « demander des changements » doit pouvoir repartir dessus. Le projet vient du
    * dépôt de la PR (comme pour une relecture), la lignée de `inheritableWorkForPr`,
    * et le run reste un run CARNET — il n'a pas de ticket à occuper ni à déplacer.
-   * Ignoré quand `issueId` est fourni : la lignée du ticket fait alors autorité.
+   * Quand `issueId` est aussi fourni, le ticket reste l'ancrage métier du run,
+   * mais cette PR garde la priorité pour la branche héritée.
    * Sans rapport avec `pullRequestId`, qui ancre une RELECTURE (aucune écriture).
    */
   continuePullRequestId?: string | null;
@@ -183,6 +184,8 @@ export interface LaunchAgentInput {
    * ensuite — même doctrine que le moteur et la microVM (cf. `createRun`).
    */
   localExec?: boolean;
+  /** Demande un worktree local isolé, si le run est admis en local. */
+  localWorktree?: boolean;
 }
 
 /**
@@ -212,9 +215,11 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   if (input.pullRequestId) return launchPrReviewRun(input, input.pullRequestId);
 
   const issueId = input.issueId ?? null;
-  // Reprise d'une PR SANS ticket (MIN-292) : c'est la PR qui porte la lignée.
-  // `issueId` gagne — une PR rattachée à un ticket se reprend par son ticket.
-  const continuePrId = issueId ? null : input.continuePullRequestId ?? null;
+  // Reprise d'une PR (MIN-292) : quand l'appelant fournit une PR explicite, elle
+  // porte la lignée dans tous les cas — y compris quand elle est rattachée à un
+  // ticket. Le ticket reste l'ancrage métier du run, mais il ne peut plus faire
+  // choisir une autre branche que celle de la PR demandée.
+  const continuePrId = input.continuePullRequestId ?? null;
   let projectId: string;
   // Titre du TICKET : la moitié durable de ce que le titreur résume (l'autre est
   // la consigne). Cf. `agentRunTitleSource`.
@@ -230,6 +235,14 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     if (!issue) return { ok: false, error: "issueNotFound" };
     projectId = (issue as { project_id: string }).project_id;
     issueTitle = (issue as { title: string | null }).title;
+    if (continuePrId) {
+      continuePr = await loadPrRunContext(continuePrId);
+      // La PR vient du même geste serveur que le ticket. Refuser un ancrage
+      // incohérent évite de créer un run du ticket sur la branche d'une autre PR.
+      if (!continuePr || continuePr.issueId !== issueId) {
+        return { ok: false, error: "prNotFound" };
+      }
+    }
   } else if (continuePrId) {
     // Même résolution de projet qu'une relecture : une PR appartient à un dépôt,
     // et le projet porteur est le premier lien accessible au lanceur — c'est lui
@@ -259,14 +272,14 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // donc avant le réveil de la sandbox cloud — sans changer les gardes qui les
   // consomment ci-dessous.
   const linkPromise = getProjectLink(projectId);
-  const activePromise = issueId
-    ? activeRunForIssue(issueId)
-    : continuePr
-      ? activeRunForPrNumber({
-          repoFullName: continuePr.repoFullName,
-          prNumber: continuePr.number,
-          provider: continuePr.provider,
-        })
+  const activePromise = continuePr
+    ? activeRunForPrNumber({
+        repoFullName: continuePr.repoFullName,
+        prNumber: continuePr.number,
+        provider: continuePr.provider,
+      })
+    : issueId
+      ? activeRunForIssue(issueId)
       : input.routineId
         ? activeRunForRoutine(input.routineId)
         : Promise.resolve(null);
@@ -287,13 +300,13 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // Une ROUTINE (MIN-185) retrouve cette règle, pour la même raison qu'un
   // ticket : un passage qui traîne ne doit pas se faire doubler par l'échéance
   // suivante — même instruction, même dépense, deux fois.
-  if (issueId) {
-    const active = await activePromise;
-    if (active) return { ok: false, error: "alreadyRunning", run: active };
-  } else if (continuePr) {
+  if (continuePr) {
     // Une reprise de PR, elle, retrouve la règle : deux relances en parallèle
     // pousseraient sur la MÊME branche. C'est la lignée qui est unique, pas le
     // carnet — et ici la lignée est la pull request.
+    const active = await activePromise;
+    if (active) return { ok: false, error: "alreadyRunning", run: active };
+  } else if (issueId) {
     const active = await activePromise;
     if (active) return { ok: false, error: "alreadyRunning", run: active };
   } else if (input.routineId) {
@@ -303,6 +316,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 
   const quota = await quotaPromise;
   if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
+  const localExec = localExecRequested(input);
 
   // Le titre ne se lance qu'une fois les gardes passées — un refus ne doit pas
   // consommer un appel modèle — puis il se recouvre avec la résolution du modèle
@@ -369,14 +383,14 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // branche à reprendre (aucun run l'ayant ouverte, ou déjà mergée) est refusée
   // ici plutôt que de partir en silence sur une branche neuve, ce qui perdrait
   // le travail qu'on demandait justement de corriger.
-  const inherited = issueId
-    ? await inheritableWorkForIssue(issueId)
-    : continuePr
-      ? await inheritableWorkForPr({
-          repoFullName: continuePr.repoFullName,
-          prNumber: continuePr.number,
-          provider: continuePr.provider,
-        })
+  const inherited = continuePr
+    ? await inheritableWorkForPr({
+        repoFullName: continuePr.repoFullName,
+        prNumber: continuePr.number,
+        provider: continuePr.provider,
+      })
+    : issueId
+      ? await inheritableWorkForIssue(issueId)
       : null;
   if (continuePr && !inherited) return { ok: false, error: "prNoBranch" };
 
@@ -414,7 +428,8 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       // chemin `pr` n'y passe jamais : c'est `launchPrReviewRun`, une fonction à
       // part, et c'est ainsi que « un run de relecture ne part pas en local »
       // est une propriété du code plutôt qu'un `if` à ne pas oublier.
-      localExec: localExecRequested(input),
+      localExec,
+      localWorktree: localExec && input.localWorktree === true,
     });
   } catch (err) {
     // Course perdue contre un lancement concurrent (double-clic, deux onglets) :

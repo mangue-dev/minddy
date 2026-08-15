@@ -130,7 +130,7 @@ export interface ControlPlaneClient {
   /**
    * Ce que ce tour a ENCORE le droit de dépenser, relu maintenant — le plus serré
    * du restant mensuel du compte et du plafond du run. `null` = inconnu (lecture
-   * en panne) ou illimité (BYOK) : l'appelant garde alors son plafond courant.
+   * en panne) ou aucun plafond applicable : l'appelant garde son plafond courant.
    *
    * Existe parce que rien ne réserve de budget : deux runs concurrents lisent le
    * même restant et le prennent chacun pour plafond. L'ancienne forme relisait à

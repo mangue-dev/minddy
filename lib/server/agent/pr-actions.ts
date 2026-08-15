@@ -39,6 +39,7 @@ import type { PrReviewRunSummary, PrReviewSession } from "@/lib/pr-review-sessio
 import { canReadAgentRun } from "./run-access";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
 import { isGithubUserAuthConfigured } from "@/lib/server/git/github-user-auth";
 import { getGithubAppSlug } from "@/lib/server/git/github-app";
@@ -1635,8 +1636,13 @@ export interface PrActionBody {
   action?: string;
   message?: string;
   model?: string;
+  reasoningLevel?: string;
   verdict?: string;
   relaunch?: boolean;
+  /** Demande à une relance de correction de jouer dans le dépôt local attaché. */
+  localExec?: boolean;
+  /** Demande le checkout Git isolé de cette relance locale. */
+  localWorktree?: boolean;
   /**
    * Poster le VERDICT sur la forge ? Défaut `true` (le geste historique).
    *
@@ -1945,10 +1951,13 @@ export async function prReviewResponse(
       typeof body.model === "string" && body.model.trim()
         ? body.model.trim().slice(0, MAX_MODEL_ID_LENGTH)
         : undefined;
-    // Deux ancrages pour un même geste : le ticket quand la PR en porte un (la
-    // lignée du ticket fait autorité — c'est elle qui déplace son statut), la PR
-    // elle-même sinon. `launchAgentRun` ignore le second dès que le premier est
-    // fourni ; on passe les deux et on le laisse trancher.
+    const reasoningLevel = isReasoningLevel(body.reasoningLevel)
+      ? body.reasoningLevel
+      : undefined;
+    // Deux ancrages pour un même geste : le ticket reste l'ancrage métier qui
+    // reçoit les événements et le statut, mais la PR explicite est prioritaire
+    // pour la lignée de branche. On passe les deux et le lanceur vérifie aussi
+    // qu'ils désignent bien la même PR rattachée au ticket.
     const result = await launchAgentRun({
       issueId: scope.pr.issue_id,
       continuePullRequestId: scope.pr.id,
@@ -1957,6 +1966,9 @@ export async function prReviewResponse(
       prompt: message,
       model,
       forced: !!model,
+      reasoningLevel,
+      localExec: body.localExec === true,
+      localWorktree: body.localWorktree === true,
     });
     if (!result.ok) return launchErrorResponse(result);
     launchedRunId = result.run.id;
@@ -2037,6 +2049,7 @@ export async function prAiReviewResponse(
   scope: PrScope,
   userId: string,
   requestedModel?: string | null,
+  requestedReasoningLevel?: string | null,
 ): Promise<Response> {
   try {
     await ensureAgentsAllowed(userId);
@@ -2051,6 +2064,9 @@ export async function prAiReviewResponse(
   // choix retenu, sans quoi il gagnerait pour toujours), et l'absence de champ
   // (on résout comme d'habitude, sans rien toucher).
   const chosen = requestedModel?.trim();
+  const reasoningLevel = isReasoningLevel(requestedReasoningLevel)
+    ? requestedReasoningLevel
+    : undefined;
   if (requestedModel !== undefined && !chosen) await rememberPrReviewModel(userId, null);
 
   const result = await launchAgentRun({
@@ -2063,6 +2079,7 @@ export async function prAiReviewResponse(
     // ci-dessus qui porte la différence.
     model: chosen || null,
     forced: !!chosen,
+    reasoningLevel,
   });
   if (!result.ok) return await prLaunchErrorResponse(result);
 

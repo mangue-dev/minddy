@@ -34,8 +34,8 @@ import type { VmJob } from "@/lib/server/agent/vm/protocol";
  *    jamais sur une machine**, parce que son contexte est du texte d'attaquant
  *    potentiel et qu'en local une injection de prompt est un shell sur le poste
  *    de quelqu'un ([local-exec-scope.ts](../../../../lib/server/agent/local-exec-scope.ts)) ;
- * 3. **l'admission** — `admitLocalRun` : pas de BYOK (aucun plafond possible),
- *    pas de mint de clé (la clé plateforme est non plafonnée) ;
+ * 3. **l'admission** — `admitLocalRun` : un BYOK interactif passe directement ;
+ *    une clé plateforme exige le mint fournisseur ;
  * 4. **le claim** — `queued → running`, atomique, une seule machine gagne.
  *
  * ## Pourquoi le bail est monté EN DERNIER
@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
       runId: run.id,
       projectId: run.project_id,
       repoFullName: prepared.repoFullName,
+      localWorktree: run.local_worktree === true,
       diagnostics: { ...timings, total: Date.now() - startedAt },
       // Le bail voyage DANS le job (`controlToken`), et pas à côté : un job local
       // est, par définition, un job qui porte un jeton (`isLocalJob`). Une seconde

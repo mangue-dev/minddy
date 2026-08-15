@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Check, ChevronsUpDown, Cloud, FolderPlus, Laptop } from "lucide-react";
+import { Check, ChevronsUpDown, Cloud, FolderPlus, GitBranch, Laptop } from "lucide-react";
 import {
   Button,
   Command,
@@ -47,7 +47,7 @@ import {
  * laisserait quelqu'un sans aucun moyen de comprendre pourquoi elle a disparu.
  */
 
-export type AgentEnvironment = "cloud" | "local";
+export type AgentEnvironment = "cloud" | "local" | "worktree";
 
 /**
  * Pourquoi un dossier ne peut pas servir → ce que la personne lit.
@@ -93,11 +93,16 @@ export function EnvironmentCombobox({
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
 
-  const Icon = value === "local" ? Laptop : Cloud;
+  const Icon = value === "cloud" ? Cloud : value === "worktree" ? GitBranch : Laptop;
   // Le bouton nomme le type d'environnement, jamais le chemin concret. Le
   // dossier reste utile dans l'aide du menu, mais un chemin long rend le chip
   // instable et contredit le vocabulaire local/cloud de l'application.
-  const label = value === "local" ? t("environmentLocal") : t("environmentCloud");
+  const label =
+    value === "cloud"
+      ? t("environmentCloud")
+      : value === "worktree"
+        ? t("environmentWorktree")
+        : t("environmentLocal");
 
   // Verrouillé : chip statique + tooltip, SANS popover — le <span> extérieur
   // porte le hover, un bouton `disabled` n'émettant pas d'événement pointer
@@ -126,7 +131,7 @@ export function EnvironmentCombobox({
     // Le dossier ne vaut plus rien : on ne bascule PAS sur une promesse creuse,
     // on rouvre le panneau. C'est l'appelant qui rebranchera `value` si le
     // nouveau dossier passe.
-    if (next === "local" && needsAttach) {
+    if (next !== "cloud" && needsAttach) {
       onAttach?.();
       return;
     }
@@ -209,6 +214,34 @@ export function EnvironmentCombobox({
                 className={cn(
                   "size-4 shrink-0",
                   value === "local" && !needsAttach ? "opacity-100" : "opacity-0",
+                )}
+              />
+            </CommandItem>
+            <CommandItem
+              value="worktree"
+              aria-disabled={!localAvailable}
+              className={cn(!localAvailable && "cursor-not-allowed opacity-50")}
+              onSelect={() => {
+                if (localAvailable) pick("worktree");
+              }}
+            >
+              {needsAttach ? (
+                <FolderPlus className="size-4 shrink-0 text-muted-foreground" />
+              ) : (
+                <GitBranch className="size-4 shrink-0 text-muted-foreground" />
+              )}
+              <span className="flex-1">
+                <span className="block">{t("environmentWorktree")}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {needsAttach
+                    ? t("environmentLocalAttach")
+                    : t("environmentWorktreeHint", { folder: folder ?? "" })}
+                </span>
+              </span>
+              <Check
+                className={cn(
+                  "size-4 shrink-0",
+                  value === "worktree" && !needsAttach ? "opacity-100" : "opacity-0",
                 )}
               />
             </CommandItem>

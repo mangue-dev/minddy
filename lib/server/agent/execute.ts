@@ -49,7 +49,11 @@ import {
 } from "./model";
 import { agentSandboxName, buildAgentNetworkPolicy, AGENT_LLM_PLACEHOLDER_KEY } from "./network-policy";
 import { startVmLoop } from "./vm-launch";
-import { isCurrentRepoJob, VM_PROTOCOL_VERSION, type VmJob } from "./vm/protocol";
+import {
+  isCurrentRepoJob,
+  VM_PROTOCOL_VERSION,
+  type VmJob,
+} from "./vm/protocol";
 import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
 import { agentControlOrigin } from "./origin";
 import { forgeFor, type Forge } from "./forge";
@@ -81,6 +85,8 @@ import {
   type AgentCheckpoint,
 } from "./runs";
 import { checkAgentQuota } from "./quota";
+import { generatedAgentBranchName } from "./branch-name";
+
 /** Le plus serré des plafonds fournis (les absents ne bornent rien). */
 function minDefined(...values: (number | undefined)[]): number | undefined {
   const defined = values.filter((v): v is number => v != null && Number.isFinite(v));
@@ -169,10 +175,6 @@ export type ExecuteOutcome =
 
 function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
-}
-
-function slugForBranch(identifier: string): string {
-  return identifier.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 /**
@@ -744,7 +746,7 @@ export async function executeAgentRun(
       ? { key: issue.projectKey, name: issue.projectName }
       : await loadProjectContext(run.project_id);
     // Référence lisible du run dans les messages de commit (`wip(...)`).
-    const commitRef = issue?.identifier ?? "note";
+    const commitRef = issue?.identifier ?? "agent";
     // Langue du commentaire + du résumé de l'agent = celle du lanceur (défaut owner),
     // et statut d'atterrissage des tickets créés par l'agent = son réglage de compte.
     const { locale: commentLocale, numoDefaultStatus } = prefs;
@@ -755,14 +757,18 @@ export async function executeAgentRun(
     const workBranch = prRun
       ? pullRequestLocalBranch(prRun)
       : run.branch_name ??
-        (issue
-          ? `minddy/agent/${slugForBranch(issue.identifier)}-${run.id.slice(0, 8)}`
-          : `minddy/agent/note-${run.id.slice(0, 8)}`);
+        generatedAgentBranchName({
+          runId: run.id,
+          issueIdentifier: issue?.identifier,
+          conversationTitle: run.title,
+          prompt: run.prompt,
+        });
 
     /**
      * Budget d'usage RESTANT à l'entrée du chunk. Snapshoté une fois ici : la
      * boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
-     * round. En BYOK, `unlimited` → aucun plafond (l'utilisateur paie sa note).
+     * round. En BYOK le COMPTE est illimité, mais un run local porte son propre
+     * `budget_usd`, choisi par l'utilisateur.
      *
      * Deux lectures, une seule attente : la somme du ledger (cf. `runSpentUsd`)
      * ne dépend pas du quota, elle part avec lui.
@@ -1275,7 +1281,11 @@ export async function executeAgentRun(
      * Le fait qu'il faut dire au modèle est « ce checkout existait avant toi », et
      * `run.local_exec` est ce qui le sait côté serveur.
      */
-    const currentRepo = localTurn || isCurrentRepoJob({ repoMode });
+    // Le worktree local est bien sur la machine de l'utilisateur, mais pas dans
+    // son checkout : il reprend donc les règles d'un clone (le harnais livre le
+    // commit), tandis que le mode historique garde la protection du dépôt courant.
+    const currentRepo =
+      (localTurn && !run.local_worktree) || isCurrentRepoJob({ repoMode });
     const opencodeInput = {
       anchorInstructions: buildOpencodeAnchor({
         locale: commentLocale,
@@ -1358,7 +1368,6 @@ export async function executeAgentRun(
       getModelInputPrice(run.model, provider, apiKey).catch(() => null),
       getModelPricing(run.model, provider, apiKey).catch(() => null),
     ]);
-
     // Contextes des tools métier, construits côte à côte : les deux jeux sont
     // servis quel que soit l'ancrage (MIN-125). Ce que l'ancrage décide encore,
     // c'est `anchorIssueId` — la cible par défaut des tools ticket.

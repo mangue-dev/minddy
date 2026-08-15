@@ -1,4 +1,5 @@
 import {
+  layoutForRoot,
   layoutForCurrentRepo,
   runScopedRoot,
   type HarnessLayout,
@@ -101,7 +102,7 @@ export interface AssignedJob {
 export interface LocalJob extends AssignedJob {
   readonly layout: HarnessLayout;
   readonly appOrigin: string;
-  readonly repoMode: "current";
+  readonly repoMode: "clone" | "current";
   readonly bootstrapMs: 0;
 }
 
@@ -128,6 +129,8 @@ export interface LocalTurnAssignment {
    * réglages ferait partir un run vers un dossier qui n'existe plus.
    */
   readonly repoFullName: string;
+  /** Le checkout isolé est une décision figée au lancement de la session. */
+  readonly localWorktree: boolean;
   /** Le job, moins les trois champs que seule la machine peut remplir. */
   readonly job: AssignedJob;
 }
@@ -168,9 +171,13 @@ export type LocalTurnRefusal =
  */
 export function parseLocalTurnAssignment(raw: unknown): LocalTurnAssignment | null {
   if (typeof raw !== "object" || raw === null) return null;
-  const { runId, projectId, repoFullName, job } = raw as Record<string, unknown>;
+  const { runId, projectId, repoFullName, localWorktree, job } = raw as Record<string, unknown>;
   if (!isNonEmptyString(runId) || !isNonEmptyString(projectId)) return null;
   if (!isNonEmptyString(repoFullName)) return null;
+  // Un serveur déployé juste avant la migration ne connaît pas encore ce champ.
+  // Son absence retombe sur le comportement historique, sûr (checkout courant) ;
+  // seule une valeur présente mais mal formée est un contrat incohérent.
+  if (localWorktree !== undefined && typeof localWorktree !== "boolean") return null;
   if (typeof job !== "object" || job === null) return null;
 
   const typed = job as Partial<AssignedJob>;
@@ -194,6 +201,7 @@ export function parseLocalTurnAssignment(raw: unknown): LocalTurnAssignment | nu
     runId,
     projectId,
     repoFullName,
+    localWorktree: localWorktree === true,
     job: job as AssignedJob,
   };
 }
@@ -226,9 +234,12 @@ export function localLayout(opts: {
   userDataPath: string;
   runId: string;
   repoPath: string;
+  isolated?: boolean;
 }): HarnessLayout {
+  const root = localRunRoot(opts.userDataPath, opts.runId);
+  if (opts.isolated) return layoutForRoot(root, localOpencodeDir(opts.userDataPath));
   return layoutForCurrentRepo(
-    localRunRoot(opts.userDataPath, opts.runId),
+    root,
     opts.repoPath,
     localOpencodeDir(opts.userDataPath),
   );
@@ -247,14 +258,17 @@ export function localLayout(opts: {
  */
 export function assignmentToJob(
   assignment: LocalTurnAssignment,
-  machine: { layout: HarnessLayout; appOrigin: string },
+  machine: { layout: HarnessLayout; appOrigin: string; isolated?: boolean },
 ): LocalJob {
   return {
     ...assignment.job,
     layout: machine.layout,
     // La machine ne parle qu'à l'origine qui lui a donné son travail (cf. en-tête).
     appOrigin: machine.appOrigin,
-    repoMode: "current",
+    // `clone` veut dire « checkout appartenant au tour ». Un worktree local est
+    // exactement cela : il n'est pas un clone réseau, mais le harnais peut y
+    // committer et pousser sans emporter le WIP du checkout attaché.
+    repoMode: machine.isolated ? "clone" : "current",
     // Pas de microVM, donc pas de compute d'amorçage à facturer (cf. en-tête).
     bootstrapMs: 0,
   };

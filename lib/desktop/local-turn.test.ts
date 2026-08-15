@@ -44,6 +44,7 @@ function assignment(over: Record<string, unknown> = {}) {
     runId: RUN_ID,
     projectId: "proj-1",
     repoFullName: "mangue-dev/minddy",
+    localWorktree: false,
     ...envelope,
     job: {
       protocolVersion: VM_PROTOCOL_VERSION,
@@ -117,6 +118,11 @@ describe("parseLocalTurnAssignment", () => {
     expect(parseLocalTurnAssignment("<!doctype html>")).toBeNull();
     expect(parseLocalTurnAssignment(null)).toBeNull();
   });
+
+  it("tolère un serveur antérieur à l'option, mais refuse une valeur incohérente", () => {
+    expect(parseLocalTurnAssignment(assignment({ localWorktree: undefined }))?.localWorktree).toBe(false);
+    expect(parseLocalTurnAssignment(assignment({ localWorktree: "yes" }))).toBeNull();
+  });
 });
 
 describe("le layout de la machine", () => {
@@ -180,6 +186,17 @@ describe("assignmentToJob", () => {
   it("pose le mode dépôt courant en VALEUR, jamais par déduction", () => {
     expect(job.repoMode).toBe("current");
     expect(isCurrentRepoJob(job)).toBe(true);
+  });
+
+  it("pose le mode clone pour un worktree isolé", () => {
+    const isolated = assignmentToJob(parseLocalTurnAssignment(assignment({ localWorktree: true }))!, {
+      layout: localLayout({ userDataPath: USER_DATA, runId: RUN_ID, repoPath: REPO, isolated: true }),
+      appOrigin: "http://localhost:3000",
+      isolated: true,
+    });
+    expect(isolated.repoMode).toBe("clone");
+    expect(isCurrentRepoJob(isolated)).toBe(false);
+    expect(isolated.layout.repoDir).toBe(`${USER_DATA}/agent-runs/${RUN_ID}/repo`);
   });
 
   it("ne facture aucun amorçage — il n'y a pas eu de microVM", () => {
@@ -329,7 +346,13 @@ function fullAssignment() {
     locale: "fr",
     feature: "agent_code",
   };
-  return { runId: RUN_ID, projectId: "proj-1", repoFullName: "mangue-dev/minddy", job };
+  return {
+    runId: RUN_ID,
+    projectId: "proj-1",
+    repoFullName: "mangue-dev/minddy",
+    localWorktree: false,
+    job,
+  };
 }
 
 describe("staleRunRoots", () => {

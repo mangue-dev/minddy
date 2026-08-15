@@ -245,7 +245,7 @@ export interface VmJob {
   opencodeInput: { prompt: string; anchorInstructions: string };
   instructions: { paths: string[]; bytes: number };
   usageSeqStart: number;
-  /** Plafond restant, le plus serré du quota et du plafond de run. Absent = BYOK. */
+  /** Plafond restant, le plus serré du quota et du plafond de run. */
   budgetUsd?: number;
   /** Fichiers édités que le type-check n'a pas encore vus (état de TOUR). */
   editedPaths: string[];

@@ -122,10 +122,8 @@ describe("le bail d'exécution locale", () => {
 /**
  * MIN-357 — CE QUI N'A PAS DE PLAFOND RESTE DANS LE CLOUD.
  *
- * Les deux refus ne se ressemblent pas : `byok` est structurel (l'API de
- * provisioning n'émet que sur le compte qui détient la clé de provisioning), et
- * `no_mint` est une propriété du déploiement. Ce qu'ils partagent, c'est la
- * conduite : basculer dans le cloud, jamais déplafonner.
+ * Le BYOK local est interactif ; les contextes non surveillés sont exclus plus
+ * tôt par `localRunScope`. La plateforme garde son exigence de mint.
  */
 describe("qui a le droit de jouer sur la machine de l'utilisateur", () => {
   const withProvisioning = <T,>(value: string | undefined, run: () => T): T => {
@@ -146,15 +144,11 @@ describe("qui a le droit de jouer sur la machine de l'utilisateur", () => {
     });
   });
 
-  it("garde un run BYOK dans le cloud, même quand le mint est disponible", () => {
-    // La clé de l'utilisateur est sur SON compte : on ne peut rien plafonner, et
-    // le compute de microVM — le dernier garde-fou — vaut zéro sur une machine.
-    withProvisioning("sk-or-prov-de-test", () => {
-      expect(admitLocalRun({ keyMode: "byok" })).toEqual({ ok: false, reason: "byok" });
-    });
+  it("laisse partir un BYOK sans exiger le mint ni un plafond", () => {
+    expect(admitLocalRun({ keyMode: "byok" })).toEqual({ ok: true });
   });
 
-  it("garde tout le monde dans le cloud quand rien ne sait minter", () => {
+  it("garde les runs plateforme dans le cloud quand rien ne sait minter", () => {
     // Sans mint, l'appelant retomberait sur la clé plateforme — NON PLAFONNÉE, et
     // partagée avec Numo, la transcription, les embeddings et le catalogue.
     withProvisioning(undefined, () => {

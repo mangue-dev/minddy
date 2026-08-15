@@ -38,17 +38,12 @@ import { bumpLocalExecGen, runLocalExecScopeRow } from "./runs";
 /**
  * Pourquoi un run ne peut pas jouer sur la machine de l'utilisateur.
  *
- * - `byok` : la clé est celle de l'utilisateur, sur SON compte, et l'API de
- *   provisioning d'OpenRouter n'émet que sur le compte qui détient la clé de
- *   provisioning. Un run BYOK local n'a donc littéralement aucun plafond : pas de
- *   clé plafonnable, pas de `budgetUsd`, et le compute de microVM — dernier
- *   garde-fou du cloud — vaut structurellement zéro sur une machine ;
  * - `no_mint` : `OPENROUTER_PROVISIONING_KEY` n'est pas posée sur ce
  *   déploiement. Dans une microVM jetable, la dégradation vers la clé plateforme
  *   est assumée ; sur la machine de quelqu'un, cette clé-là est NON PLAFONNÉE et
  *   partagée avec Numo, la transcription, les embeddings et le catalogue.
  */
-export type LocalRunRefusal = "byok" | "no_mint";
+export type LocalRunRefusal = "no_mint";
 
 export type LocalRunAdmission = { ok: true } | { ok: false; reason: LocalRunRefusal };
 
@@ -56,10 +51,11 @@ export type LocalRunAdmission = { ok: true } | { ok: false; reason: LocalRunRefu
  * UN RUN A-T-IL LE DROIT DE JOUER EN LOCAL ? (MIN-357)
  *
  * L'appelant est le LANCEUR (MIN-293), et ce qu'il doit en faire tient en une
- * phrase : **basculer dans le cloud, jamais déplafonner.** Un run refusé ici
- * n'est pas un run qui échoue — c'est un run qui part en microVM, où tout ce qui
- * manque à une machine existe (firewall, clé posée à la sortie, compute
- * facturé), et où l'absence de mint n'est qu'un plafond fournisseur en moins.
+ * phrase : **basculer dans le cloud quand une clé plateforme ne peut pas être
+ * mintée.** Un run refusé ici n'est pas un run qui échoue — c'est un run qui part
+ * en microVM, où tout ce qui manque à une machine existe (firewall, clé posée à
+ * la sortie, compute facturé). Un BYOK, lui, est admis directement : le run est
+ * interactif et l'utilisateur assume les appels facturés par son fournisseur.
  *
  * Ce qui compte, c'est que la bascule SE DISE : un event `status` de phase
  * `local_exec_declined` portant ce `reason`, que le fil rend en note
@@ -75,7 +71,10 @@ export type LocalRunAdmission = { ok: true } | { ok: false; reason: LocalRunRefu
  * l'environnement du déploiement. C'est ce qui permet de le casser dans un test.
  */
 export function admitLocalRun(opts: { keyMode: "platform" | "byok" }): LocalRunAdmission {
-  if (opts.keyMode === "byok") return { ok: false, reason: "byok" };
+  // Un BYOK local est un geste interactif de l'utilisateur. Les contextes sans
+  // surveillance (routine, automation, mention, review) sont déjà exclus par
+  // `localRunScope`; ils continuent de tourner dans le cloud.
+  if (opts.keyMode === "byok") return { ok: true };
   if (!runKeyMintingEnabled()) return { ok: false, reason: "no_mint" };
   return { ok: true };
 }

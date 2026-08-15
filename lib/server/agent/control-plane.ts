@@ -260,8 +260,8 @@ function liveFiles(
  * partent du LEDGER, pas d'une colonne — c'est ce qui rend la relecture utile,
  * puisque le ledger est écrit appel par appel, y compris par les autres runs.
  *
- * `null` = illimité (BYOK) ou lecture en panne. La VM garde alors son plafond
- * d'entrée : une facturation injoignable ne doit pas arrêter un tour en cours.
+ * `null` = aucun plafond de compte ni de run, ou lecture en panne. La VM garde
+ * alors son plafond d'entrée.
  */
 async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
   try {
@@ -671,14 +671,13 @@ export async function handleControlPlaneRequest(opts: {
      * la confidentialité de la réponse — c'est le PLAFOND DUR de la clé rendue,
      * tenu par OpenRouter, hors de la VM comme hors de notre code.
      *
-     * D'où les deux refus qui suivent, et l'absence de tout repli :
+     * Deux modes, aucun repli implicite :
      *
-     * - **BYOK reste dans le cloud en v1.** Pas de clé plafonnable (l'API de
-     *   provisioning n'émet que sur le compte qui détient la clé de
-     *   provisioning), pas de `budgetUsd`, et le compute de microVM — dernier
-     *   garde-fou — vaut structurellement zéro sur la machine de quelqu'un. Un
-     *   run BYOK local n'aurait littéralement aucun plafond ;
-     * - **pas de mint = pas de clé.** 503, jamais `OPENROUTER_API_KEY` : la clé
+     * - **BYOK** : la clé de l'utilisateur est rendue telle quelle. Le local est
+     *   réservé aux lancements interactifs ; routines et autres déclenchements
+     *   sans utilisateur restent dans le cloud ;
+     * - **plateforme** : pas de mint = pas de clé. 503, jamais
+     *   `OPENROUTER_API_KEY` : la clé
      *   plateforme est NON PLAFONNÉE et partagée avec Numo, la transcription, les
      *   embeddings et le catalogue. Raisonnable dans une microVM jetable,
      *   inacceptable sur la machine d'un utilisateur. C'est au LANCEUR de garder
@@ -689,7 +688,15 @@ export async function handleControlPlaneRequest(opts: {
       return forbidden("a microVM gets its model key from the firewall, not from here");
     }
     if (run.key_mode === "byok") {
-      return forbidden("a bring-your-own-key run cannot be capped, so it stays in the cloud");
+      const { resolveAgentApiKey } = await import("./model");
+      const endpoint = await resolveAgentApiKey(run.created_by ?? "").catch(() => null);
+      // La clé a pu être retirée après le lancement. Ne jamais substituer alors
+      // la clé plateforme à un run figé BYOK : ce serait changer de payeur et
+      // faire descendre un secret partagé sur une machine utilisateur.
+      if (!endpoint || endpoint.mode !== "byok") {
+        return { status: 409, body: { error: "the BYOK credential used by this run is no longer available" } };
+      }
+      return ok({ key: endpoint.apiKey });
     }
     const [{ mintRunKey, revokeRunKey, runKeyCapUsd }, { checkAgentQuota }, { spentFromLedger }] =
       await Promise.all([

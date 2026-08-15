@@ -873,7 +873,6 @@ const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
  * motif inconnu retombe sur la phrase générique plutôt que sur rien.
  */
 const LOCAL_DECLINED_KEYS: Record<string, MessageKey<"Agent">> = {
-  byok: "localDeclinedByok",
   no_mint: "localDeclinedNoMint",
 };
 

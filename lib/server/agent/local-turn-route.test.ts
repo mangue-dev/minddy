@@ -14,7 +14,7 @@ import { NextRequest } from "next/server";
  *  - un run refusé par sa NATURE (ancrage `pr`, webhook, routine, chaîne) ne doit
  *    jamais être claim : le claim le passe en `running`, et un run `running` que
  *    personne ne joue est un run mort jusqu'au chien de garde ;
- *  - un run BYOK ne doit jamais être claim non plus, pour la même raison ;
+ *  - un run BYOK interactif peut être claim sans dépendre du mint plateforme ;
  *  - le BAIL est monté EN DERNIER, parce qu'émettre c'est révoquer : le monter
  *    avant la préparation tuerait un tour en cours pour découvrir ensuite qu'on
  *    ne sait pas en préparer un nouveau.
@@ -107,6 +107,7 @@ function row(over: Record<string, unknown> = {}) {
     key_mode: "platform",
     status: "queued",
     local_exec: true,
+    budget_usd: null,
     triggered_by: "chat",
     routine_id: null,
     chain_id: null,
@@ -188,12 +189,10 @@ describe("POST /api/desktop/local-turn", () => {
     }
   });
 
-  it("refuse un run BYOK avant tout claim — il n'a littéralement aucun plafond", async () => {
+  it("joue un run BYOK sans plafond ni mint de la plateforme", async () => {
     h.run = row({ key_mode: "byok" });
-    const response = await POST({ runId: "run-1" });
-    expect(response.status).toBe(409);
-    expect((await response.json()).error).toContain("byok");
-    expect(h.calls).toEqual([]);
+    expect((await POST({ runId: "run-1" })).status).toBe(200);
+    expect(h.calls).toEqual(["claim", "prepare", "lease"]);
   });
 
   it("refuse quand ce déploiement ne sait pas frapper de clé plafonnée", async () => {

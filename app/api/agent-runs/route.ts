@@ -262,6 +262,7 @@ export async function POST(request: NextRequest) {
     /** La conversation démarre sur la MACHINE de l'utilisateur (MIN-359). Une
      *  demande, que `localExecRequested` valide côté serveur. */
     localExec?: unknown;
+    localWorktree?: unknown;
   };
   try {
     const parsed: unknown = await request.json();
@@ -323,6 +324,7 @@ export async function POST(request: NextRequest) {
     baseBranch,
     promptMentions: parseAgentMentions(body.mentions),
     localExec: body.localExec === true,
+    localWorktree: body.localWorktree === true,
   });
   if (!result.ok) return launchErrorResponse(result);
   return NextResponse.json({ run: result.run });
