@@ -12,7 +12,7 @@ import {
   type DeliveryGateDeps,
 } from "../delivery-gate";
 import { newPlanWriteSink, watchPlanWrites } from "../plan-closure";
-import { REPO_DIR, turnDiffStat, turnTouchedPaths, type RepoHost } from "../repo-host";
+import { turnDiffStat, turnTouchedPaths, type RepoHost } from "../repo-host";
 import type { PlatformToolHandler } from "../agent-contract";
 
 /**
@@ -212,7 +212,7 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
     probeRepoTouched,
 
     noteEdit(filepath: string) {
-      const relative = repoRelative(filepath);
+      const relative = repoRelative(deps.host.layout.repoDir, filepath);
       if (!relative) return;
       editedPaths.add(relative);
       // Toute édition périme ce que le modèle avait vérifié : vert AVANT la
@@ -239,10 +239,10 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
  * dépôt n'est pas noté : la permission le refusera de toute façon, et un
  * `/etc/passwd` en tête d'un bloc d'erreurs de typage n'aiderait personne.
  */
-export function repoRelative(filepath: string): string {
+export function repoRelative(repoDir: string, filepath: string): string {
   const trimmed = filepath.trim();
   if (!trimmed) return "";
   if (!trimmed.startsWith("/")) return trimmed.replace(/^\.\//, "");
-  if (trimmed === REPO_DIR) return "";
-  return trimmed.startsWith(`${REPO_DIR}/`) ? trimmed.slice(REPO_DIR.length + 1) : "";
+  if (trimmed === repoDir) return "";
+  return trimmed.startsWith(`${repoDir}/`) ? trimmed.slice(repoDir.length + 1) : "";
 }

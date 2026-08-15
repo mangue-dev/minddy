@@ -70,6 +70,27 @@ describe("checkCommand — ce qui détruit du travail ou écrit sur le remote", 
     expect(allowed("git -C /vercel/sandbox/repo checkout -- lib/plan.ts")).toBe(false);
   });
 
+  /**
+   * MIN-354 — LE GARDE-FOU NE CONNAÎT AUCUN CHEMIN, ET C'EST CE QUI LE SAUVE.
+   *
+   * Il lit une commande, jamais un layout : le dépôt qui apparaît dans un `cd`
+   * ou un `git -C` n'est qu'un argument. C'était vrai sans qu'on le vérifie tant
+   * que ces chaînes venaient toutes de `/vercel/sandbox/repo` — et c'est
+   * exactement ce que le lot met à l'épreuve, puisque les commandes d'un run
+   * local porteront le chemin du poste. Rien à changer dans `command-guard.ts` :
+   * ce bloc ANCRE cette non-dépendance, pour qu'une future « amélioration » qui
+   * s'appuierait sur un préfixe se fasse voir ici.
+   */
+  it("refuse la même chose quel que soit le dépôt cité dans la commande", () => {
+    const HOME = "/Users/dev/Projets/app";
+    expect(allowed(`git -C ${HOME} checkout -- lib/plan.ts`)).toBe(false);
+    expect(allowed(`sh -c 'cd ${HOME} && git push'`)).toBe(false);
+    expect(refused(`cd ${HOME} && git checkout -- package-lock.json`).allowed).toBe(false);
+    // …et laisse passer la même chose, elle aussi.
+    expect(allowed(`cd ${HOME} && git diff --stat`)).toBe(true);
+    expect(allowed(`cd ${HOME} && npm test`)).toBe(true);
+  });
+
   // MIN-244 : le shell cachait git derrière son propre `-c`, et `gitInvocation`
   // prenait `bash` pour le binaire. C'est une forme que le modèle écrit tout seul.
   it("re-parse la commande portée par un shell", () => {

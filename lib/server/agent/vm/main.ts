@@ -1,19 +1,26 @@
 import { readFile } from "node:fs/promises";
 
+import { cloudLayout } from "../harness-layout";
 import { createControlPlaneClient } from "./control-plane-client";
+import { reservePort } from "./free-port";
 import { localHost } from "./local-host";
 import { opencodeSupervisorDeps } from "./opencode-host";
-import { OPENCODE_PORT, runOpencodeTurn } from "./supervisor";
-import { VM_JOB_PATH, type VmJob, type VmTurnReport } from "./protocol";
+import { runOpencodeTurn } from "./supervisor";
+import { parseVmJob, vmJobPath, type VmJob, type VmTurnReport } from "./protocol";
 
 /**
- * L'ENTRÉE DU HARNESS DANS LA MICROVM (MIN-224) — le point que la fonction lance
- * en `detached: true` avant de rendre la main.
+ * L'ENTRÉE DU HARNESS (MIN-224) — le point que le lanceur démarre en
+ * `detached: true` avant de rendre la main.
  *
- * `node /vercel/sandbox/harness/main.js`, et c'est tout. Le bundle est écrit par
- * `writeFiles` au démarrage du tour, à côté de son job ; les deux vivent HORS de
- * `REPO_DIR`, pour que le `git add -A` de fin de tour ne les emporte jamais dans
- * un commit du dépôt de l'utilisateur (cf. `HARNESS_DIR`).
+ * `node main.js <chemin du job>`, et c'est tout. Le bundle est écrit au démarrage
+ * du tour, à côté de son job ; les deux vivent HORS du dépôt, pour que le
+ * `git add -A` de fin de tour ne les emporte jamais dans un commit du dépôt de
+ * l'utilisateur (cf. `HarnessLayout.harnessDir`).
+ *
+ * LE CHEMIN DU JOB VIENT DE L'ARGUMENT, PAS D'UNE CONSTANTE (MIN-354), et c'est
+ * la seule chose que ce process apprend d'ailleurs que du job lui-même : tout le
+ * reste — dépôt, sorties de tools, harness, opencode — est DANS le job. L'œuf et
+ * la poule se dénouent là, et nulle part ailleurs.
  *
  * CE QUE CE FICHIER GARANTIT, et c'est sa seule vraie raison d'être : **le tour
  * rend TOUJOURS un rapport**. La fonction a rendu la main, personne ne l'attend,
@@ -42,20 +49,48 @@ async function runOpencodeTurnHere(
   host: ReturnType<typeof localHost>,
 ): Promise<VmTurnReport> {
   if (!job.opencodeInput) throw new Error("job carries no opencodeInput");
+  /**
+   * LE PORT D'OPENCODE, DEMANDÉ AU SYSTÈME (MIN-354) — 4096 en dur tant que la
+   * microVM était à nous seuls, réservé ici depuis qu'une machine peut porter
+   * deux runs (cf. [free-port.ts](free-port.ts)). Le pont de tools, lui, écoute
+   * sur un port éphémère de lui-même et rend son URL.
+   */
+  const opencodePort = await reservePort();
   return await runOpencodeTurn(job, job.opencodeInput, cp, host, {
-    ...opencodeSupervisorDeps(OPENCODE_PORT),
+    ...opencodeSupervisorDeps({ port: opencodePort, layout: job.layout }),
+    opencodePort,
   });
 }
 
+/**
+ * Où lire le job. L'argument du lanceur fait foi ; le repli est le chemin de la
+ * microVM, le seul monde où il n'y a jamais eu qu'une racine possible.
+ */
+function jobPathFromArgv(): string {
+  const given = process.argv[2]?.trim();
+  return given || vmJobPath(cloudLayout());
+}
+
 async function main(): Promise<void> {
-  const job = JSON.parse(await readFile(VM_JOB_PATH, "utf8")) as VmJob;
-  const cp = createControlPlaneClient(job.appOrigin);
-  const host = localHost();
+  /**
+   * LE JOB EST LU BRUT, PUIS VALIDÉ DANS LE `try` (MIN-354) — et pas avant.
+   *
+   * Le refus d'un contrat inconnu (`parseVmJob`) est une fin de tour comme une
+   * autre : il doit sortir par le même rapport que le reste, sinon un harness
+   * périmé laisse un run `running` que seul le chien de garde finira par
+   * constater mort. Seul `appOrigin` est lu hors validation, parce qu'il faut
+   * bien une adresse pour dire qu'on refuse — c'est le champ le plus ancien du
+   * contrat, et le seul dont on ne puisse rien faire d'autre.
+   */
+  const raw = JSON.parse(await readFile(jobPathFromArgv(), "utf8")) as { appOrigin?: string };
+  const cp = createControlPlaneClient(raw.appOrigin ?? "");
   const startedAt = Date.now();
 
+  let job: VmJob | null = null;
   let report: VmTurnReport;
   try {
-    report = await runOpencodeTurnHere(job, cp, host);
+    job = parseVmJob(raw);
+    report = await runOpencodeTurnHere(job, cp, localHost(job.layout));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[agent-vm] turn crashed:", message);
@@ -78,10 +113,12 @@ async function main(): Promise<void> {
       checkpointDropped: [],
       checkpointBytes: 0,
       pushed: null,
-      workBranch: job.workBranch,
+      // `null` quand c'est le JOB qui a été refusé : rien de lui n'est digne de
+      // confiance, pas même la branche de travail.
+      workBranch: job?.workBranch ?? "",
       // Même règle que la sortie saine : l'amorçage a coûté de la microVM, et un
       // tour qui lève ne doit pas être l'occasion de ne pas le facturer.
-      sandboxMs: job.bootstrapMs + (Date.now() - startedAt),
+      sandboxMs: (job?.bootstrapMs ?? 0) + (Date.now() - startedAt),
     };
   }
 

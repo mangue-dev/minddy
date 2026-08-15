@@ -1,4 +1,4 @@
-import { HARNESS_DIR, REPO_DIR } from "../repo-host";
+import type { HarnessLayout } from "../harness-layout";
 import { RUN_COMMAND_TIMEOUT_MS } from "../tools";
 import type { VmJob } from "./protocol";
 
@@ -62,8 +62,8 @@ import type { VmJob } from "./protocol";
  * 5. **`agent.<id>.prompt` REMPLACE le prompt système intégré**, et les
  *    `instructions` sont des CHEMINS DE FICHIER dont le contenu est ajouté au
  *    message système (mesuré : marqueur retrouvé dans le corps). L'ancrage minddy
- *    voyage donc par un fichier que le superviseur écrit sous `HARNESS_DIR` —
- *    hors de `REPO_DIR`, pour que le `git add -A` de fin de tour ne l'emporte
+ *    voyage donc par un fichier que le superviseur écrit sous `harnessDir` —
+ *    hors du dépôt, pour que le `git add -A` de fin de tour ne l'emporte
  *    jamais dans un commit du dépôt de l'utilisateur.
  */
 
@@ -76,11 +76,25 @@ export const OPENCODE_PROVIDER_NPM = "@ai-sdk/openai-compatible";
 /** L'agent PRIMAIRE d'un tour — celui qui reçoit le prompt de l'utilisateur. */
 export const OPENCODE_PRIMARY_AGENT = "build";
 
+/**
+ * LES CHEMINS D'OPENCODE, DÉRIVÉS DU LAYOUT DU RUN (MIN-354).
+ *
+ * C'étaient six constantes de module sous `/vercel/sandbox/harness`. Le piège
+ * qu'elles portaient n'était pas seulement `/vercel` : deux runs lancés à la
+ * suite sur une même machine auraient partagé **une seule base SQLite**, un seul
+ * fichier d'ancrage et un seul dossier de tools — chacun réécrivant le décor de
+ * l'autre, avec des symptômes qui ne ressemblent pas à leur cause.
+ */
+
 /** Le fichier d'ancrage minddy, ajouté au prompt système par `instructions`. */
-export const OPENCODE_ANCHOR_FILE = `${HARNESS_DIR}/minddy-anchor.md`;
+export function opencodeAnchorFile(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/minddy-anchor.md`;
+}
 
 /** Où vit l'état d'opencode : SQLite, hors du dépôt (cf. §5). */
-export const OPENCODE_DB_PATH = `${HARNESS_DIR}/opencode.db`;
+export function opencodeDbPath(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/opencode.db`;
+}
 
 /**
  * Le `XDG_CONFIG_HOME` du serveur, et le dossier de tools qui en découle.
@@ -91,11 +105,15 @@ export const OPENCODE_DB_PATH = `${HARNESS_DIR}/opencode.db`;
  * entreraient dans le `git add -A` de fin de tour et se retrouveraient commités
  * chez l'utilisateur.
  */
-export const OPENCODE_CONFIG_HOME = `${HARNESS_DIR}/config`;
-export const OPENCODE_TOOL_DIR = `${OPENCODE_CONFIG_HOME}/opencode/tool`;
+export function opencodeConfigHome(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/config`;
+}
+export function opencodeToolDir(layout: HarnessLayout): string {
+  return `${opencodeConfigHome(layout)}/opencode/tool`;
+}
 
 /**
- * LES DEUX AUTRES DOSSIERS D'OPENCODE, ramenés eux aussi sous `HARNESS_DIR`.
+ * LES DEUX AUTRES DOSSIERS D'OPENCODE, ramenés eux aussi sous `harnessDir`.
  *
  * Mesuré le 2026-08-12 (serveur réel, dépôt git jetable) : `XDG_DATA_HOME` reçoit
  * `opencode/repos/` — les **snapshots** de travail, qui sont des dépôts git —, et
@@ -106,8 +124,12 @@ export const OPENCODE_TOOL_DIR = `${OPENCODE_CONFIG_HOME}/opencode/tool`;
  * ramener des dépôts git entiers dans le commit du tour. Tout l'état d'opencode
  * tient sous un seul dossier, et ce dossier est frère du dépôt.
  */
-export const OPENCODE_DATA_HOME = `${HARNESS_DIR}/data`;
-export const OPENCODE_CACHE_HOME = `${HARNESS_DIR}/cache`;
+export function opencodeDataHome(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/data`;
+}
+export function opencodeCacheHome(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/cache`;
+}
 
 /**
  * Troncature de sortie de tool. Les valeurs par défaut d'opencode, redites ici
@@ -572,7 +594,7 @@ export function buildOpencodeConfig(
     small_model: ref,
     subagent_depth: 1,
     default_agent: OPENCODE_PRIMARY_AGENT,
-    instructions: [OPENCODE_ANCHOR_FILE],
+    instructions: [opencodeAnchorFile(job.layout)],
     provider: {
       [OPENCODE_PROVIDER_ID]: {
         npm: OPENCODE_PROVIDER_NPM,
@@ -630,19 +652,19 @@ export function opencodeServerEnv(
 ): Record<string, string> {
   return {
     OPENCODE_CONFIG_CONTENT: JSON.stringify(buildOpencodeConfig(job, opts)),
-    OPENCODE_DB: OPENCODE_DB_PATH,
-    // C'est lui qui met les tools de domaine hors du dépôt (cf. `OPENCODE_TOOL_DIR`).
-    XDG_CONFIG_HOME: OPENCODE_CONFIG_HOME,
+    OPENCODE_DB: opencodeDbPath(job.layout),
+    // C'est lui qui met les tools de domaine hors du dépôt (cf. `opencodeToolDir`).
+    XDG_CONFIG_HOME: opencodeConfigHome(job.layout),
     // Les snapshots, les journaux et les binaires téléchargés — sous le harness
-    // eux aussi (cf. `OPENCODE_DATA_HOME`).
-    XDG_DATA_HOME: OPENCODE_DATA_HOME,
-    XDG_CACHE_HOME: OPENCODE_CACHE_HOME,
+    // eux aussi (cf. `opencodeDataHome`).
+    XDG_DATA_HOME: opencodeDataHome(job.layout),
+    XDG_CACHE_HOME: opencodeCacheHome(job.layout),
     OPENCODE_DISABLE_AUTOUPDATE: "1",
     OPENCODE_DISABLE_MODELS_FETCH: "1",
     OPENCODE_DISABLE_LSP_DOWNLOAD: "1",
     OPENCODE_DISABLE_EMBEDDED_WEB_UI: "1",
     // Le shell d'opencode est PERSISTANT et démarre où on le lui dit : le dépôt.
-    OPENCODE_SHELL_CWD: REPO_DIR,
+    OPENCODE_SHELL_CWD: job.layout.repoDir,
   };
 }
 

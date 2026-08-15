@@ -13,6 +13,7 @@ import {
   SELF_REVIEW_OVERWRITES_MAX_CHARS,
 } from "./self-review";
 import type { RepoHost } from "./repo-host";
+import { cloudLayout } from "./harness-layout";
 
 const DIFF = `diff --git a/components/board-toolbar.tsx b/components/board-toolbar.tsx
 --- a/components/board-toolbar.tsx
@@ -160,6 +161,7 @@ function hunk(lines: string[], startLine = 1, file = "a.ts"): string {
 /** Un hôte qui répond la MÊME sortie à tout grep — on teste le tri, pas git. */
 function hostReturning(stdout: string, exitCode = 0): RepoHost {
   return {
+    layout: cloudLayout(),
     exec: async () => ({ exitCode, stdout, stderr: "" }),
     readFile: async () => null,
     writeFile: async () => {},
@@ -290,6 +292,7 @@ describe("overwriteSitesForTurn", () => {
 
   it("ne fait pas échouer un tour quand le grep tombe", async () => {
     const host: RepoHost = {
+      layout: cloudLayout(),
       exec: async () => {
         throw new Error("sandbox morte");
       },

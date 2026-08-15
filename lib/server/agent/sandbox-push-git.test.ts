@@ -10,6 +10,7 @@ import { commitAndPush } from "./repo-host";
 // couvre donc aussi l'adaptateur RPC, c'est-à-dire le chemin réel de l'ancienne
 // forme — la logique de `commitAndPush`, elle, est désormais commune aux deux.
 import { sandboxHost, type Sandbox } from "./sandbox";
+import { cloudLayout } from "./harness-layout";
 
 /**
  * `commitAndPush` contre un VRAI dépôt git (MIN-123). Le seul test de ce dossier
@@ -88,7 +89,7 @@ afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 /** Un push de fin de tour, avec le message qu'aurait le harnais. */
 const push = (message: string) =>
-  commitAndPush(sandboxHost(sandbox), {
+  commitAndPush(sandboxHost(sandbox, cloudLayout()), {
     authUrl: `file://${origin}`,
     workBranch: WORK_BRANCH,
     baseBranch: "main",

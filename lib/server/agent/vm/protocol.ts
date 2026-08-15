@@ -1,4 +1,5 @@
-import { HARNESS_DIR, type ChangedFile } from "../repo-host";
+import { assertUsableLayout, type HarnessLayout } from "../harness-layout";
+import type { ChangedFile } from "../repo-host";
 import type { AgentCheckpoint } from "../runs";
 import type { AgentAnchor } from "../prompt";
 import type { ScopedFavorite } from "../subagent-config";
@@ -24,10 +25,40 @@ import type { Locale } from "@/i18n/config";
  * d'un « Stop » cliqué dix minutes plus tard.
  */
 
+/**
+ * LA VERSION DU CONTRAT (MIN-354). À incrémenter dès qu'un champ change de sens
+ * ou disparaît — pas quand on en AJOUTE un que l'ancien harness peut ignorer sans
+ * mal.
+ *
+ * Ce qu'elle protège n'existait pas avant elle. Le harness n'est plus forcément
+ * écrit par le déploiement qui le lance : il est téléchargé, puis MIS EN CACHE
+ * sur une machine qu'on ne contrôle pas. Un bundle d'hier qui lit un job de forme
+ * neuve ne lèverait pas — il lirait les champs qu'il connaît, ignorerait les
+ * autres en silence, et jouerait le tour avec les anciens chemins. Sur ce lot-ci
+ * précisément, ça veut dire : écrire dans `/vercel/sandbox` sur un Mac, donc
+ * nulle part.
+ *
+ * D'où un refus EXPLICITE côté harness (`parseVmJob`), et pas une tolérance.
+ */
+export const VM_PROTOCOL_VERSION = 1;
+
 /** Le bundle du harness, écrit par la fonction avant chaque tour. */
-export const VM_BUNDLE_PATH = `${HARNESS_DIR}/main.js`;
-/** Le job du tour, écrit à côté. Relu par le bundle à son démarrage. */
-export const VM_JOB_PATH = `${HARNESS_DIR}/job.json`;
+export function vmBundlePath(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/main.js`;
+}
+
+/**
+ * Le job du tour, écrit à côté du bundle.
+ *
+ * Une FONCTION du layout, mais le harness ne peut pas s'en servir pour trouver
+ * son propre job : le layout est DANS le job. Cet œuf et cette poule se
+ * résolvent par l'argument de ligne de commande que le lanceur passe
+ * ([vm-launch.ts](../vm-launch.ts)) — c'est la seule information dont le harness
+ * a besoin avant de savoir quoi que ce soit d'autre.
+ */
+export function vmJobPath(layout: HarnessLayout): string {
+  return `${layout.harnessDir}/job.json`;
+}
 
 /**
  * Plafond du checkpoint qu'une boucle en VM peut REMONTER (MIN-221 §2).
@@ -98,11 +129,24 @@ export interface VmSubagentConfig {
 }
 
 /**
- * LE JOB D'UN TOUR. Écrit en JSON sous `/vercel/sandbox/harness` — hors de
- * `REPO_DIR`, pour que le `git add -A` de fin de tour n'emporte jamais
- * l'historique de la conversation dans un commit du dépôt de l'utilisateur.
+ * LE JOB D'UN TOUR. Écrit en JSON sous `layout.harnessDir` — hors du dépôt, pour
+ * que le `git add -A` de fin de tour n'emporte jamais l'historique de la
+ * conversation dans un commit du dépôt de l'utilisateur.
  */
 export interface VmJob {
+  /** La version du contrat (cf. `VM_PROTOCOL_VERSION`). Le harness REFUSE ce
+   *  qu'il ne reconnaît pas plutôt que d'en ignorer les champs en silence. */
+  protocolVersion: number;
+  /**
+   * OÙ CE TOUR TRAVAILLE (MIN-354) — dépôt, sorties de tools, harness, opencode.
+   *
+   * C'était six constantes de module sous `/vercel/sandbox`. C'est devenu une
+   * valeur du run pour deux raisons qui n'en font qu'une : `/vercel` n'existe pas
+   * sur une machine ordinaire, et une machine ordinaire peut porter deux runs à
+   * la fois — là où une microVM en portait un par construction
+   * ([harness-layout.ts](../harness-layout.ts)).
+   */
+  layout: HarnessLayout;
   /** La ligne du run. `ledgerRunId` est `run.run_id ?? run.id` : l'identifiant
    *  sous lequel la DÉPENSE se compte, qui n'est pas celui de la ligne. */
   runId: string;
@@ -228,6 +272,44 @@ export interface VmJob {
   locale: Locale;
   /** Feature de ledger des appels LLM : `routine_code` pour un passage de routine. */
   feature: "agent_code" | "routine_code";
+}
+
+/**
+ * LE JOB, RELU PAR LE HARNESS — et REFUSÉ s'il ne vient pas du même contrat.
+ *
+ * Trois refus, dans cet ordre, et chacun ferme une porte que le harness ne peut
+ * pas refermer plus tard :
+ *
+ * 1. **Version inconnue.** Un bundle mis en cache sur une machine survit à son
+ *    déploiement ; le jour où un champ change de sens, c'est ici, et nulle part
+ *    ailleurs, qu'on peut encore s'en apercevoir. Un refus qui se dit vaut
+ *    infiniment mieux qu'un tour qui joue avec la moitié d'un job.
+ * 2. **Layout absent.** Sans lui, le harness n'a aucune raison de croire à un
+ *    chemin plutôt qu'à un autre — et retomber sur `/vercel` serait exactement la
+ *    tolérance silencieuse que la version existe pour supprimer.
+ * 3. **Layout inutilisable** (`assertUsableLayout`) : c'est la racine de sécurité
+ *    des garde-fous d'écriture, et elle arrive désormais par un JSON.
+ *
+ * LÈVE plutôt que de rendre un `null` : l'appelant est `main.ts`, dont le contrat
+ * est de TOUJOURS rendre un rapport — un throw y devient un rapport d'erreur
+ * visible dans le fil, un `null` y deviendrait une branche de plus à oublier.
+ */
+export function parseVmJob(raw: unknown): VmJob {
+  const job = raw as Partial<VmJob> | null;
+  if (!job || typeof job !== "object") {
+    throw new Error("vm job: expected an object");
+  }
+  if (job.protocolVersion !== VM_PROTOCOL_VERSION) {
+    throw new Error(
+      `vm job: unsupported protocol version ${JSON.stringify(job.protocolVersion)} ` +
+        `(this harness speaks ${VM_PROTOCOL_VERSION}) — the harness bundle is out of date`,
+    );
+  }
+  if (!job.layout || typeof job.layout !== "object") {
+    throw new Error("vm job: missing layout");
+  }
+  assertUsableLayout(job.layout);
+  return job as VmJob;
 }
 
 /** Ce qu'un push a produit, tel que `commitAndPush` le rend. */

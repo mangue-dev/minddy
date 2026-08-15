@@ -3,8 +3,8 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { HARNESS_DIR } from "./repo-host";
-import { VM_BUNDLE_PATH, VM_JOB_PATH, type VmJob } from "./vm/protocol";
+import { assertUsableLayout } from "./harness-layout";
+import { vmBundlePath, vmJobPath, type VmJob } from "./vm/protocol";
 import type { Sandbox } from "./sandbox";
 
 /**
@@ -23,7 +23,7 @@ import type { Sandbox } from "./sandbox";
  * boucle qui s'arrête écrit son checkpoint — là où une commande tuée par la
  * plateforme ne laisse rien.
  *
- * TOUT VIT HORS DE `REPO_DIR`. Le harness et le modèle partagent désormais le
+ * TOUT VIT HORS DU DÉPÔT. Le harness et le modèle partagent désormais le
  * même disque : sans ça, le `git add -A` de fin de tour emporterait le bundle ET
  * le job — donc l'historique complet de la conversation — dans un commit du dépôt
  * de l'utilisateur, puis dans sa pull request.
@@ -80,10 +80,29 @@ export async function startVmLoop(
    */
   callStartMs: number,
 ): Promise<string> {
+  /**
+   * LE LAYOUT EST CONTRÔLÉ D'ABORD, avant même de lire le bundle (MIN-354). Le
+   * harness le refuse aussi (`parseVmJob`), mais seulement une fois la microVM
+   * réveillée et le dépôt cloné : le dire ici fait échouer l'amorçage — quelque
+   * chose que la fonction journalise et dont la session se reprend — plutôt
+   * qu'un tour lancé pour rien. Et `repoDir` est la racine de sécurité des
+   * garde-fous d'écriture : elle se contrôle là où on l'écrit.
+   */
+  assertUsableLayout(job.layout);
+
   const bundle = await bundleSource();
 
-  await sandbox.mkDir(HARNESS_DIR).catch(() => {});
-  await sandbox.writeFiles([{ path: VM_BUNDLE_PATH, content: bundle }]);
+  /**
+   * LES CHEMINS VIENNENT DU JOB, et c'est lui qui les porte parce que c'est lui
+   * que le harness lira. Trois écritures et un lancement au même endroit : si le
+   * layout change, rien ici ne peut se désynchroniser de ce que le harness croit.
+   */
+  const { harnessDir } = job.layout;
+  const bundlePath = vmBundlePath(job.layout);
+  const jobPath = vmJobPath(job.layout);
+
+  await sandbox.mkDir(harnessDir).catch(() => {});
+  await sandbox.writeFiles([{ path: bundlePath, content: bundle }]);
 
   /**
    * DEUX ÉCRITURES ET PAS UNE, et c'est le prix de la mesure. Le job doit porter
@@ -99,13 +118,15 @@ export async function startVmLoop(
    */
   const withBootstrap: VmJob = { ...job, bootstrapMs: Date.now() - callStartMs };
   // Le job porte l'historique de la conversation : c'est le plus gros des deux,
-  // et c'est pour lui que `HARNESS_DIR` est hors du dépôt.
-  await sandbox.writeFiles([{ path: VM_JOB_PATH, content: JSON.stringify(withBootstrap) }]);
+  // et c'est pour lui que `harnessDir` est hors du dépôt.
+  await sandbox.writeFiles([{ path: jobPath, content: JSON.stringify(withBootstrap) }]);
 
   const command = await sandbox.runCommand({
     cmd: "node",
-    args: [VM_BUNDLE_PATH],
-    cwd: HARNESS_DIR,
+    // Le chemin du job en ARGUMENT : c'est la seule chose que le harness ne peut
+    // pas apprendre du job lui-même (cf. `vmJobPath`).
+    args: [bundlePath, jobPath],
+    cwd: harnessDir,
     detached: true,
   });
   return command.cmdId;

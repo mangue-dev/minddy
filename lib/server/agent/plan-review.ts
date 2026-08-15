@@ -1,5 +1,5 @@
 import { headTail } from "./prune";
-import { REPO_DIR, sq, type RepoHost } from "./repo-host";
+import { sq, type RepoHost } from "./repo-host";
 
 /**
  * AUTO-RELECTURE D'UN PLAN (MIN-237) — le pendant, pour un document, de ce que
@@ -261,7 +261,7 @@ export async function planReviewForTurn(host: RepoHost, plan: string): Promise<s
   let scripts: RepoScripts | null = null;
   try {
     const res = await host.exec(buildScriptsCommand(), {
-      cwd: REPO_DIR,
+      cwd: host.layout.repoDir,
       timeoutMs: PLAN_REVIEW_TIMEOUT_MS,
     });
     if (res.exitCode === 0) scripts = parseScriptsProbe(res.stdout);

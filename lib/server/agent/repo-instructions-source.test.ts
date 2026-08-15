@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { readRepoInstructions } from "./repo-instructions";
-import { PR_BASE_TAG, REPO_DIR, type RepoHost } from "./repo-host";
+import { PR_BASE_TAG, type RepoHost } from "./repo-host";
+import { cloudLayout } from "./harness-layout";
 
 /**
  * MIN-328 — L'`AGENTS.md` DE LA TÊTE D'UNE PR N'ENTRE PAS DANS LE CONTEXTE.
@@ -25,9 +26,10 @@ function reviewHost(opts: {
   base?: Record<string, string>;
 }): RepoHost & { commands: string[] } {
   const commands: string[] = [];
-  const head = new Map(Object.entries(opts.head).map(([p, c]) => [`${REPO_DIR}/${p}`, c]));
+  const head = new Map(Object.entries(opts.head).map(([p, c]) => [`${cloudLayout().repoDir}/${p}`, c]));
   return {
     commands,
+    layout: cloudLayout(),
     exec: async (command: string) => {
       commands.push(command);
       const at = /^git show '([^']+):([^']+)'$/.exec(command.trim());

@@ -3,12 +3,12 @@ import "server-only";
 import { Sandbox, type NetworkPolicy } from "@vercel/sandbox";
 
 import {
-  REPO_DIR,
   SANDBOX_RUNTIME,
   type RepoHost,
   type ShellOptions,
   type ShellResult,
 } from "./repo-host";
+import type { HarnessLayout } from "./harness-layout";
 
 /**
  * Couche Vercel Sandbox de l'agent de code (MIN-46) — la microVM elle-même : sa
@@ -66,14 +66,20 @@ export type { Sandbox };
  * la microVM. C'est le chemin de l'ANCIENNE forme (la boucle dans la fonction) et
  * celui de la fonction quand elle amorce un run de la nouvelle : un clone, un
  * `writeFiles`, une lecture d'`AGENTS.md`.
+ *
+ * `layout` est EXPLICITE depuis MIN-354, même s'il vaut toujours `cloudLayout()`
+ * ici : ce chemin-là parle à une microVM, et une microVM a toujours le layout du
+ * cloud. Le passer plutôt que le supposer est ce qui fait que le jour où un host
+ * parle à autre chose, il n'y a rien à retrouver dans ce fichier.
  */
-export function sandboxHost(sandbox: Sandbox): RepoHost {
+export function sandboxHost(sandbox: Sandbox, layout: HarnessLayout): RepoHost {
   return {
+    layout,
     exec: async (command: string, opts?: ShellOptions): Promise<ShellResult> => {
       const res = await sandbox.runCommand({
         cmd: "sh",
         args: ["-c", command],
-        cwd: opts?.cwd ?? REPO_DIR,
+        cwd: opts?.cwd ?? layout.repoDir,
         timeoutMs: opts?.timeoutMs,
         signal: opts?.signal,
         env: opts?.env,

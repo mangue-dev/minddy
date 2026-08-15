@@ -10,10 +10,9 @@ import {
   cloneRepo,
   historySince,
   HISTORY_WINDOW_DAYS,
-  REPO_DIR,
-  SANDBOX_HOME,
   type RepoHost,
 } from "./repo-host";
+import { cloudLayout, layoutForRoot } from "./harness-layout";
 
 const exec = promisify(execFile);
 
@@ -37,6 +36,7 @@ const exec = promisify(execFile);
 function fakeHost() {
   const commands: string[] = [];
   const host: RepoHost = {
+    layout: cloudLayout(),
     async exec(command) {
       commands.push(command);
       return { exitCode: 0, stdout: "", stderr: "" };
@@ -95,15 +95,23 @@ describe("cloneRepo — ce que git en fait vraiment", () => {
     for (const root of roots) await rm(root, { recursive: true, force: true });
   });
 
-  /** Host local : `sh -c` sur un vrai disque, avec REPO_DIR replacé sous `root`. */
+  /**
+   * Host local : `sh -c` sur un vrai disque, sous une racine de run RÉELLE.
+   *
+   * Ce host réécrivait les chemins à la main (`command.replace(REPO_DIR, …)`)
+   * pour ramener `/vercel/sandbox` dans un dossier temporaire — le contournement
+   * exact que MIN-354 supprime. Il reçoit maintenant un layout, et le code sous
+   * test travaille pour de bon hors de `/vercel` : c'est la même vérification,
+   * mais elle exerce enfin le chemin qu'un poste de travail empruntera.
+   */
   function localHost(root: string): RepoHost {
+    const layout = layoutForRoot(root, join(root, "oc"));
     return {
+      layout,
       async exec(command, opts) {
-        const local = (p: string) =>
-          p.replace(REPO_DIR, join(root, "repo")).replace(SANDBOX_HOME, root);
         try {
-          const { stdout, stderr } = await exec("sh", ["-c", local(command)], {
-            cwd: local(opts?.cwd ?? REPO_DIR),
+          const { stdout, stderr } = await exec("sh", ["-c", command], {
+            cwd: opts?.cwd ?? layout.repoDir,
           });
           return { exitCode: 0, stdout, stderr };
         } catch (e) {
@@ -115,7 +123,9 @@ describe("cloneRepo — ce que git en fait vraiment", () => {
         return null;
       },
       async writeFile() {},
-      async mkdir() {},
+      async mkdir(absPath) {
+        await exec("mkdir", ["-p", absPath]);
+      },
     };
   }
 

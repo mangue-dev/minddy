@@ -1,4 +1,4 @@
-import { REPO_DIR, sq, type RepoHost } from "./repo-host";
+import { sq, type RepoHost } from "./repo-host";
 
 /**
  * Type-check du dépôt (MIN-110). Depuis MIN-263 il ne tourne plus en fin de tour :
@@ -38,11 +38,17 @@ export const TYPECHECK_MIN_BUDGET_MS = 60_000;
 export const TYPE_ERRORS_MAX_CHARS = 2000;
 /**
  * `.tsbuildinfo` gardé HORS du dépôt : le `git add -A` de fin de tour ne le voit
- * jamais, et `git status` reste propre pour le modèle (même raison que
- * TOOL_OUTPUT_DIR). Persiste dans le snapshot de la microVM → les tours suivants
- * repartent à chaud (22 s → 11 s).
+ * jamais, et `git status` reste propre pour le modèle (même raison que le dossier
+ * de sorties de tools). Persiste dans le snapshot de la microVM → les tours
+ * suivants repartent à chaud (22 s → 11 s).
+ *
+ * Sous la racine DU RUN depuis MIN-354 : deux runs qui partageraient un cache
+ * incrémental le rendraient plus lent que pas de cache du tout, chacun
+ * invalidant celui de l'autre à chaque passage.
  */
-const TSBUILDINFO = "/vercel/sandbox/typecheck/agent.tsbuildinfo";
+function tsbuildinfo(host: RepoHost): string {
+  return `${host.layout.typecheckDir}/agent.tsbuildinfo`;
+}
 
 /** En-tête du bloc d'erreurs. Formulation d'OpenCode (« … please fix: »), dont on
  *  sait qu'elle fonctionne, recalée sur notre portée : le tour, pas le fichier. */
@@ -74,7 +80,7 @@ export async function detectTypeChecker(host: RepoHost): Promise<TypeChecker | n
   try {
     const res = await host.exec(
       `test -f tsconfig.json && test -x ./node_modules/.bin/tsc && ./node_modules/.bin/tsc --version`,
-      { cwd: REPO_DIR, timeoutMs: 30_000 },
+      { cwd: host.layout.repoDir, timeoutMs: 30_000 },
     );
     if (res.exitCode !== 0) return null;
     const major = Number(/Version (\d+)\./.exec(res.stdout)?.[1] ?? NaN);
@@ -100,12 +106,13 @@ export async function typeErrorsForTurn(
   // `--incremental` explicite : le tsconfig du dépôt ne l'active pas forcément, et
   // c'est lui qui fait passer les tours suivants de 22 s à 11 s. Interdit avec
   // `--noEmit` avant TS 5 → on s'en passe (on paie le prix fort, mais on parle).
+  const buildInfo = tsbuildinfo(host);
   const incremental =
-    checker.major >= 5 ? ` --incremental --tsBuildInfoFile ${TSBUILDINFO}` : "";
+    checker.major >= 5 ? ` --incremental --tsBuildInfoFile ${sq(buildInfo)}` : "";
   try {
     const res = await host.exec(
-      `mkdir -p $(dirname ${TSBUILDINFO}); ./node_modules/.bin/tsc --noEmit --pretty false${incremental} 2>&1`,
-      { cwd: REPO_DIR, timeoutMs: TYPECHECK_TIMEOUT_MS },
+      `mkdir -p ${sq(host.layout.typecheckDir)}; ./node_modules/.bin/tsc --noEmit --pretty false${incremental} 2>&1`,
+      { cwd: host.layout.repoDir, timeoutMs: TYPECHECK_TIMEOUT_MS },
     );
     // exitCode 0 = rien à dire. Non nul SANS erreur analysable = panne d'outil
     // (tsconfig illisible, OOM, timeout) : `formatTypeErrors` renvoie null.
@@ -294,14 +301,14 @@ export function testRunnerBin(script: string): string | null {
  */
 export async function detectTestRunner(host: RepoHost): Promise<TestRunner | null> {
   try {
-    const raw = await host.readFile(`${REPO_DIR}/package.json`);
+    const raw = await host.readFile(`${host.layout.repoDir}/package.json`);
     if (!raw) return null;
     const script = (JSON.parse(raw) as { scripts?: Record<string, unknown> }).scripts?.test;
     if (typeof script !== "string" || script.trim() === "") return null;
     const bin = testRunnerBin(script);
     if (!bin) return null;
     const res = await host.exec(`test -x ./node_modules/.bin/${bin}`, {
-      cwd: REPO_DIR,
+      cwd: host.layout.repoDir,
       timeoutMs: 30_000,
     });
     return res.exitCode === 0 ? { script, bin } : null;
@@ -396,7 +403,7 @@ export async function testFailuresForTurn(
     // un `| tail` avait suffi à faire taire un run de suite de 2 760 tests). Un
     // runner qui écrit sa progression tient la socket ouverte ; on le laisse.
     const res = await host.exec(related ?? `npm run test --silent 2>&1`, {
-      cwd: REPO_DIR,
+      cwd: host.layout.repoDir,
       timeoutMs: related ? TEST_RELATED_TIMEOUT_MS : TEST_TIMEOUT_MS,
       env: { CI: "1", NO_COLOR: "1", FORCE_COLOR: "0" },
     });

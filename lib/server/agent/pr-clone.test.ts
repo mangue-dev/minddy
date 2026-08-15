@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { clonePullRequest, PR_BASE_TAG, type RepoHost } from "./repo-host";
+import { cloudLayout } from "./harness-layout";
 
 /**
  * Le clone d'une session de RELECTURE (MIN-168), et surtout ce que MIN-258 y a
@@ -21,6 +22,7 @@ import { clonePullRequest, PR_BASE_TAG, type RepoHost } from "./repo-host";
 function fakeHost(opts: { fails?: (cmd: string) => boolean } = {}) {
   const commands: string[] = [];
   const host: RepoHost = {
+    layout: cloudLayout(),
     async exec(command) {
       commands.push(command);
       const bad = opts.fails?.(command) === true;

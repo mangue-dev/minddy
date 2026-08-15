@@ -2,9 +2,10 @@ import { spawn } from "node:child_process";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
+import type { HarnessLayout } from "../harness-layout";
 import { OpencodeClient } from "./opencode-client";
-import { OPENCODE_BIN, OPENCODE_INSTALL_DIR, OPENCODE_VERSION } from "./opencode-version";
-import { OPENCODE_DIRECTORY, type SupervisorDeps } from "./supervisor";
+import { opencodeBin, OPENCODE_VERSION } from "./opencode-version";
+import type { SupervisorDeps } from "./supervisor";
 
 /**
  * COMMENT ON TIENT UN SERVEUR OPENCODE VIVANT DANS LA MICROVM (MIN-286, lot 3).
@@ -39,7 +40,7 @@ import { OPENCODE_DIRECTORY, type SupervisorDeps } from "./supervisor";
  *    l'installation).
  */
 
-export { OPENCODE_BIN, OPENCODE_INSTALL_DIR, OPENCODE_VERSION };
+export { opencodeBin, OPENCODE_VERSION };
 
 async function exists(path: string): Promise<boolean> {
   return await access(path).then(
@@ -49,17 +50,17 @@ async function exists(path: string): Promise<boolean> {
 }
 
 /**
- * La version RÉELLEMENT posée dans `/vercel/oc`, lue sur le disque — `null` si
- * rien n'est installé, ou si le paquet est là sans son manifeste.
+ * La version RÉELLEMENT posée dans le dossier d'installation, lue sur le disque —
+ * `null` si rien n'est installé, ou si le paquet est là sans son manifeste.
  *
  * On la lit plutôt que d'exécuter `opencode --version` : un `spawn` de 144 Mo de
  * binaire natif à chaque tour pour apprendre un numéro qui est écrit dans un
  * fichier de 2 Ko, c'est cher pour la même réponse.
  */
-async function installedVersion(): Promise<string | null> {
+async function installedVersion(installDir: string): Promise<string | null> {
   try {
     const manifest = await readFile(
-      `${OPENCODE_INSTALL_DIR}/node_modules/opencode-ai/package.json`,
+      `${installDir}/node_modules/opencode-ai/package.json`,
       "utf8",
     );
     const version = (JSON.parse(manifest) as { version?: string }).version;
@@ -81,21 +82,21 @@ async function installedVersion(): Promise<string | null> {
  * numéro écrit sur le disque, et une divergence réinstalle (dix secondes, une
  * fois, jusqu'à ce que le snapshot soit rejoué).
  */
-async function ensureInstalled(): Promise<void> {
-  const found = await installedVersion();
-  if (found === OPENCODE_VERSION && (await exists(OPENCODE_BIN))) return;
+async function ensureInstalled(installDir: string): Promise<void> {
+  const found = await installedVersion(installDir);
+  if (found === OPENCODE_VERSION && (await exists(opencodeBin(installDir)))) return;
   if (found && found !== OPENCODE_VERSION) {
     console.log(
       `[opencode] version ${found} installée, ${OPENCODE_VERSION} attendue — réinstallation ` +
         `(snapshot AGENT_SANDBOX_SNAPSHOT_ID à rejouer : scripts/create-agent-snapshot.ts)`,
     );
   }
-  await mkdir(OPENCODE_INSTALL_DIR, { recursive: true });
+  await mkdir(installDir, { recursive: true });
   await new Promise<void>((resolve, reject) => {
     const child = spawn(
       "npm",
       ["i", "--no-audit", "--no-fund", "--silent", `opencode-ai@${OPENCODE_VERSION}`],
-      { cwd: OPENCODE_INSTALL_DIR, stdio: ["ignore", "ignore", "pipe"] },
+      { cwd: installDir, stdio: ["ignore", "ignore", "pipe"] },
     );
     let err = "";
     child.stderr?.on("data", (chunk: Buffer) => {
@@ -114,17 +115,23 @@ async function ensureInstalled(): Promise<void> {
  * Les dépendances RÉELLES du superviseur : un serveur qu'on démarre, des fichiers
  * qu'on écrit, un client HTTP.
  *
- * `port` est un argument parce que le superviseur en connaît un seul (`OPENCODE_PORT`)
- * et qu'un test pourrait en vouloir un autre sans réécrire ce module.
+ * `port` est RÉSERVÉ par l'appelant (MIN-354, cf. [free-port.ts](free-port.ts)) :
+ * il valait 4096 en dur tant que la microVM était à nous seuls, et deux runs sur
+ * une même machine s'y seraient disputé la même socket.
+ *
+ * `layout` donne les deux choses que ce module ne peut pas deviner : où le
+ * binaire est installé, et quel dépôt le client déclare en `directory`.
  */
-export function opencodeSupervisorDeps(port: number): Pick<
+export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayout }): Pick<
   SupervisorDeps,
   "startServer" | "writeFile" | "client"
 > {
+  const { port, layout } = opts;
   return {
     startServer: async (env) => {
-      await ensureInstalled();
-      const child = spawn(OPENCODE_BIN, ["serve", "--port", String(port), "--hostname", "127.0.0.1"], {
+      await ensureInstalled(layout.opencodeDir);
+      const bin = opencodeBin(layout.opencodeDir);
+      const child = spawn(bin, ["serve", "--port", String(port), "--hostname", "127.0.0.1"], {
         // L'environnement du harness PLUS celui du tour : `opencodeServerEnv` ne
         // porte que la config et les dossiers, or le binaire a encore besoin d'un
         // `PATH` et d'un `HOME` pour lancer le shell des tools.
@@ -175,6 +182,6 @@ export function opencodeSupervisorDeps(port: number): Pick<
     // `directory` est le dépôt : toutes les routes héritées d'opencode le veulent
     // en query, et c'est lui qui donne au serveur son identité de projet (le hash
     // du premier commit — cf. la sonde de reprise du lot 0).
-    client: (baseUrl) => new OpencodeClient({ baseUrl, directory: OPENCODE_DIRECTORY }),
+    client: (baseUrl) => new OpencodeClient({ baseUrl, directory: layout.repoDir }),
   };
 }

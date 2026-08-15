@@ -21,13 +21,19 @@ import {
   parseBackgroundProbe,
   BACKGROUND_FETCH_BYTES,
 } from "../lib/server/agent/background";
+import { cloudLayout } from "../lib/server/agent/harness-layout";
 
 for (const line of fs.readFileSync(".env", "utf8").split("\n")) {
   const m = line.match(/^(VERCEL_TOKEN|VERCEL_TEAM_ID|VERCEL_PROJECT_ID)=(.*)$/);
   if (m) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
 }
 
-const DIR = "/vercel/sandbox/tool-output";
+/**
+ * Les chemins d'une microVM, pris au layout du cloud (MIN-354) plutôt que
+ * réécrits : cette sonde inspecte de vraies VM de production, et un chemin
+ * recopié à la main y chercherait des logs là où ils ne sont plus.
+ */
+const { root: SANDBOX_ROOT, toolOutputDir: DIR } = cloudLayout();
 const paths = (jobId: string) => ({
   log: `${DIR}/${jobId}.log`,
   pid: `${DIR}/${jobId}.pid`,
@@ -49,7 +55,7 @@ async function main(): Promise<void> {
     timeout: 300_000,
   });
   const sh = async (script: string) => {
-    const res = await sandbox.runCommand({ cmd: "sh", args: ["-c", script], cwd: "/vercel/sandbox" });
+    const res = await sandbox.runCommand({ cmd: "sh", args: ["-c", script], cwd: SANDBOX_ROOT });
     return { code: res.exitCode, out: await res.stdout(), err: await res.stderr() };
   };
 

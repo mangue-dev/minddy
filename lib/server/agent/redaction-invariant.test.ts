@@ -151,7 +151,7 @@ describe("le registre porte le token de la VM comme celui de la fonction", () =>
     // `target.authUrl` y serait le bug d'origine — un token de fonction dans un
     // `.git/config` que le modèle peut lire.
     for (const geste of [
-      "await cloneRepo(sandboxHost(fresh), {\n          authUrl: vmTarget.authUrl,",
+      "await cloneRepo(sandboxHost(fresh, cloudLayout()), {\n          authUrl: vmTarget.authUrl,",
       "authUrl: vmTarget.authUrl,\n            baseBranch,",
     ]) {
       expect(source).toContain(geste);

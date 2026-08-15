@@ -1,7 +1,7 @@
 /**
- * OÙ VIT OPENCODE, ET DANS QUELLE VERSION (MIN-286, lot 3).
+ * DANS QUELLE VERSION OPENCODE TOURNE, ET OÙ SON BINAIRE SE TROUVE (MIN-286, lot 3).
  *
- * Module SANS AUCUN import, et c'est sa raison d'être : ces trois constantes ont
+ * Module SANS AUCUN import, et c'est sa raison d'être : ces deux valeurs ont
  * **deux** lecteurs qui ne se ressemblent pas —
  *
  *  - [opencode-host.ts](opencode-host.ts), dans la microVM, qui installe le
@@ -22,8 +22,15 @@
 /** La version d'opencode que ce dépôt a mesurée. Voir docs/harness-opencode.md. */
 export const OPENCODE_VERSION = "1.18.16";
 
-/** Où le binaire vit dans la microVM — hors du dépôt, comme tout le harness. */
-export const OPENCODE_INSTALL_DIR = "/vercel/oc";
-
-/** Le binaire lui-même, tel que `npm i opencode-ai` le pose. */
-export const OPENCODE_BIN = `${OPENCODE_INSTALL_DIR}/node_modules/.bin/opencode`;
+/**
+ * Le binaire, tel que `npm i opencode-ai` le pose dans son dossier d'installation.
+ *
+ * Le DOSSIER, lui, est une valeur du layout depuis MIN-354
+ * (`HarnessLayout.opencodeDir`) : `/vercel/oc` dans la microVM, ailleurs sur une
+ * machine ordinaire. Il n'est PAS propre au run — 144 Mo de binaire se partagent
+ * entre les runs d'une même machine, et le cuire par run reviendrait à
+ * réinstaller à chaque ticket.
+ */
+export function opencodeBin(installDir: string): string {
+  return `${installDir}/node_modules/.bin/opencode`;
+}

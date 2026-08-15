@@ -3,15 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   buildOpencodeConfig,
   opencodeServerEnv,
-  OPENCODE_ANCHOR_FILE,
-  OPENCODE_DB_PATH,
+  opencodeAnchorFile,
+  opencodeDbPath,
   OPENCODE_PRIMARY_AGENT,
   OPENCODE_PROVIDER_ID,
   MAX_SUBAGENT_MODELS,
   subagentAgentTable,
 } from "./opencode-config";
-import { HARNESS_DIR, REPO_DIR } from "../repo-host";
-import type { VmJob } from "./protocol";
+import { cloudLayout, layoutForRoot } from "../harness-layout";
+import { VM_PROTOCOL_VERSION, type VmJob } from "./protocol";
 
 /**
  * MIN-286 lot 1 — la config d'opencode d'un tour.
@@ -31,8 +31,17 @@ import type { VmJob } from "./protocol";
  *    imbriquée passe.
  */
 
+/**
+ * MIN-354 — le job porte son layout, et tous les chemins de la config en dérivent.
+ * Le fixture garde celui de la microVM (rien ne bouge en production) ; le dernier
+ * bloc du fichier vérifie que TOUT suit quand la racine change.
+ */
+const LAYOUT = cloudLayout();
+
 function job(over: Partial<VmJob> = {}): VmJob {
   return {
+    protocolVersion: VM_PROTOCOL_VERSION,
+    layout: LAYOUT,
     runId: "11111111-2222-4333-8444-555555555555",
     ledgerRunId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     projectId: "proj-1",
@@ -404,14 +413,14 @@ describe("l'environnement du serveur", () => {
   it("passe tout par l'environnement, sans un seul fichier de config", () => {
     const env = opencodeServerEnv(job());
     expect(JSON.parse(env.OPENCODE_CONFIG_CONTENT)).toEqual(buildOpencodeConfig(job()));
-    expect(env.OPENCODE_DB).toBe(OPENCODE_DB_PATH);
+    expect(env.OPENCODE_DB).toBe(opencodeDbPath(LAYOUT));
   });
 
   it("garde l'état d'opencode HORS du dépôt", () => {
     // Sinon le `git add -A` de fin de tour emporte la base de la conversation
-    // dans un commit du dépôt de l'utilisateur (même règle que `HARNESS_DIR`).
-    expect(OPENCODE_DB_PATH.startsWith(`${REPO_DIR}/`)).toBe(false);
-    expect(OPENCODE_ANCHOR_FILE.startsWith(`${REPO_DIR}/`)).toBe(false);
+    // dans un commit du dépôt de l'utilisateur (même règle que le harness).
+    expect(opencodeDbPath(LAYOUT).startsWith(`${LAYOUT.repoDir}/`)).toBe(false);
+    expect(opencodeAnchorFile(LAYOUT).startsWith(`${LAYOUT.repoDir}/`)).toBe(false);
   });
 
   it("ramène les TROIS dossiers d'opencode sous le harness, pas seulement la config", () => {
@@ -424,8 +433,8 @@ describe("l'environnement du serveur", () => {
      */
     const env = opencodeServerEnv(job());
     for (const dir of [env.XDG_CONFIG_HOME, env.XDG_DATA_HOME, env.XDG_CACHE_HOME]) {
-      expect(dir.startsWith(`${HARNESS_DIR}/`)).toBe(true);
-      expect(dir.startsWith(`${REPO_DIR}/`)).toBe(false);
+      expect(dir.startsWith(`${LAYOUT.harnessDir}/`)).toBe(true);
+      expect(dir.startsWith(`${LAYOUT.repoDir}/`)).toBe(false);
     }
   });
 
@@ -485,5 +494,45 @@ describe("aucun secret ne peut entrer dans la config", () => {
         "tools",
       ].sort(),
     );
+  });
+});
+
+/**
+ * MIN-354 — LE DÉCOR SUIT LE RUN, ET PAS UNE CONSTANTE.
+ *
+ * Six chemins d'opencode étaient des `const` de module sous
+ * `/vercel/sandbox/harness`. Ce que ce bloc garde n'est pas leur valeur, c'est
+ * qu'aucun ne soit resté en arrière : un seul chemin figé et **deux runs d'une
+ * même machine partageraient une base SQLite**, un fichier d'ancrage et un
+ * dossier de tools — chacun réécrivant le décor de l'autre.
+ */
+describe("un run qui ne vit pas dans une microVM", () => {
+  const LOCAL = layoutForRoot("/Users/dev/Library/Application Support/minddy/runs/r-7", "/Users/dev/oc");
+  const local = () => job({ layout: LOCAL });
+
+  it("pose TOUT l'état d'opencode sous le harness DE CE RUN", () => {
+    const env = opencodeServerEnv(local());
+    for (const value of [env.OPENCODE_DB, env.XDG_CONFIG_HOME, env.XDG_DATA_HOME, env.XDG_CACHE_HOME]) {
+      expect(value.startsWith(`${LOCAL.harnessDir}/`)).toBe(true);
+    }
+    // Et plus rien ne pointe vers la microVM.
+    expect(JSON.stringify(env)).not.toContain("/vercel/");
+  });
+
+  it("donne au shell d'opencode le dépôt DE CE RUN", () => {
+    expect(opencodeServerEnv(local()).OPENCODE_SHELL_CWD).toBe(LOCAL.repoDir);
+  });
+
+  it("fait lire l'ancrage là où le superviseur l'écrit", () => {
+    expect(buildOpencodeConfig(local()).instructions).toEqual([opencodeAnchorFile(LOCAL)]);
+  });
+
+  it("ne partage aucun de ces chemins avec un autre run", () => {
+    const other = layoutForRoot("/Users/dev/Library/Application Support/minddy/runs/r-8", "/Users/dev/oc");
+    const mine = opencodeServerEnv(local());
+    const theirs = opencodeServerEnv(job({ layout: other }));
+    for (const key of ["OPENCODE_DB", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "OPENCODE_SHELL_CWD"] as const) {
+      expect(mine[key]).not.toBe(theirs[key]);
+    }
   });
 });

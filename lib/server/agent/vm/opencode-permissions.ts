@@ -2,7 +2,6 @@ import { posix as posixPath } from "node:path";
 
 import { checkCommand, FORBIDDEN_COMMAND_REASON } from "../command-guard";
 import { assertNotGit, resolveWithin } from "../repo-path";
-import { REPO_DIR } from "../repo-host";
 
 /**
  * LES GARDE-FOUS, REJOUÉS SUR LA DEMANDE DE PERMISSION D'OPENCODE (MIN-286, lot 2).
@@ -119,6 +118,16 @@ const ALLOW: PermissionVerdict = { reply: "once" };
  */
 export function decidePermission(
   ask: PermissionAsk,
+  /**
+   * LE DÉPÔT DU RUN (`job.layout.repoDir`), et il est passé plutôt que lu depuis
+   * une constante (MIN-354).
+   *
+   * C'est LE paramètre qui rendait ce verdict inutilisable hors microVM :
+   * `metadata.filepath` est ABSOLU (mesure n°2), donc comparé à `/vercel/sandbox/repo`
+   * sur une machine où le dépôt vit ailleurs, il sortait TOUJOURS — le harness
+   * refusait 100 % des écritures, en croyant garder quelque chose.
+   */
+  repoDir: string,
   subagents?: SubagentContext,
 ): PermissionVerdict {
   switch (ask.permission) {
@@ -162,8 +171,8 @@ export function decidePermission(
           // jamais sortir — c'est-à-dire sans jamais rien refuser. On ramène donc
           // d'abord au relatif, et un chemin qui n'est pas sous le dépôt est refusé
           // avant même d'être normalisé.
-          const abs = absoluteInRepo(path);
-          assertNotGit(REPO_DIR, abs, path);
+          const abs = absoluteInRepo(repoDir, path);
+          assertNotGit(repoDir, abs, path);
         }
         return ALLOW;
       } catch (err) {
@@ -171,13 +180,15 @@ export function decidePermission(
       }
     }
 
-    // La microVM n'a qu'un dépôt et un harness : tout le reste est hors sujet, et
+    // Un run n'a qu'un dépôt et un harness : tout le reste est hors sujet, et
     // la config le refuse déjà (`external_directory: "deny"`). Ceci est le second
     // rideau — une ACL qui bougerait chez opencode ne rouvrirait pas le disque.
+    // Il compte DOUBLE hors microVM : la machine n'est plus une frontière, ce
+    // refus-ci est ce qui tient le modèle à l'écart du reste du disque.
     case "external_directory":
       return {
         reply: "reject",
-        message: `The harness only allows work inside the repository (${REPO_DIR}).`,
+        message: `The harness only allows work inside the repository (${repoDir}).`,
       };
 
     default:
@@ -256,10 +267,10 @@ export function editTargets(ask: PermissionAsk): NonNullable<PermissionAsk["file
  * passe par `resolveWithin` (le `..` y est normalisé, la sortie y est refusée) ;
  * un absolu est comparé au dépôt tel quel.
  */
-function absoluteInRepo(filepath: string): string {
-  if (!filepath.startsWith("/")) return resolveWithin(REPO_DIR, filepath);
+function absoluteInRepo(repoDir: string, filepath: string): string {
+  if (!filepath.startsWith("/")) return resolveWithin(repoDir, filepath);
   const resolved = posixPath.normalize(filepath);
-  if (resolved !== REPO_DIR && !resolved.startsWith(`${REPO_DIR}/`)) {
+  if (resolved !== repoDir && !resolved.startsWith(`${repoDir}/`)) {
     throw new Error(`Path escapes the repository: ${filepath}`);
   }
   return resolved;

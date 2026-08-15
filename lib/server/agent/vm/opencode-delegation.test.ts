@@ -7,6 +7,7 @@ import { decidePermission } from "./opencode-permissions";
 import { describeSpawn, markChildPayload, SubagentRegistry } from "./supervisor";
 import { subagentAgentName } from "./opencode-config";
 import { subagentUsageSeq } from "../subagent-config";
+import { cloudLayout } from "../harness-layout";
 
 /**
  * MIN-286 lot 2, tâche 12 — LA DÉLÉGATION, jouée sur un tour réellement capturé.
@@ -60,7 +61,7 @@ function replay() {
     if (out.child) registry.register(out.child);
     if (out.permission) {
       runningAtAsk = registry.running;
-      const verdict = decidePermission(out.permission, {
+      const verdict = decidePermission(out.permission, cloudLayout().repoDir, {
         names: new Set(table.keys()),
         running: registry.running,
         maxParallel: 2,
