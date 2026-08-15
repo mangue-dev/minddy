@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useAssistantChat } from "@/lib/use-assistant-chat";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { resolveAssistantScope } from "@/lib/assistant-scope";
+import { hasResumableConversation } from "@/lib/assistant-resumable";
 import {
   fetchActiveConversation,
   setActiveConversation,
@@ -269,6 +270,42 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     void setActiveConversation(state.conversationId);
   }, [restored, state.conversationId]);
 
+  /**
+   * Le pointeur relu SANS ouvrir le panneau, pour les surfaces qui doivent
+   * savoir s'il reste un fil à reprendre — l'accueil, qui n'affiche son FAB
+   * qu'à cette condition. La reprise ci-dessus ne peut pas le leur dire : elle
+   * ne se déclenche qu'à la première ouverture, et sur l'accueil il n'y en a
+   * pas eu. Une lecture par session, à la demande : qui ne pose pas la question
+   * ne paie pas la requête.
+   */
+  const [probedConversationId, setProbedConversationId] = useState<
+    string | null
+  >(null);
+  const probeStartedRef = useRef(false);
+  const probeActiveConversation = useCallback(() => {
+    if (probeStartedRef.current) return;
+    probeStartedRef.current = true;
+    void fetchActiveConversation()
+      .then(({ conversationId }) => setProbedConversationId(conversationId))
+      .catch(() => {
+        // Pointeur illisible (réseau) : on s'en tient à l'état vivant, comme la
+        // reprise. Au pire un FAB en moins, jamais un fil perdu.
+      });
+  }, []);
+
+  const resumable = hasResumableConversation({
+    conversationId: state.conversationId,
+    messageCount: state.messages.length,
+    busy: isBusy,
+    probedConversationId,
+    restored,
+  });
+
+  const resumeValue = useMemo<AssistantResumeValue>(
+    () => ({ hasConversation: resumable, probe: probeActiveConversation }),
+    [resumable, probeActiveConversation],
+  );
+
   const value = useMemo<AssistantChatContextValue>(
     () => ({
       state,
@@ -297,7 +334,9 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   return (
     <AssistantChatContext.Provider value={value}>
       <AssistantBusyContext.Provider value={isBusy}>
-        {children}
+        <AssistantResumeContext.Provider value={resumeValue}>
+          {children}
+        </AssistantResumeContext.Provider>
       </AssistantBusyContext.Provider>
     </AssistantChatContext.Provider>
   );
@@ -318,6 +357,40 @@ const AssistantBusyContext = createContext(false);
 
 export function useAssistantBusy(): boolean {
   return useContext(AssistantBusyContext);
+}
+
+/**
+ * « Reste-t-il un fil à reprendre ? », et rien d'autre — un contexte séparé pour
+ * la même raison que le précédent : son consommateur n'a besoin que du booléen,
+ * qui ne change qu'aux deux bouts d'une conversation, pas à chaque token.
+ *
+ * `probe` demande la lecture du pointeur serveur, une fois par session. Il vit
+ * ici plutôt que chez l'appelant pour que les deux surfaces qui poseraient la
+ * question n'en fassent qu'une requête, et que la réponse arrive au même
+ * endroit que l'état vivant avec lequel elle se combine
+ * ([assistant-resumable.ts](assistant-resumable.ts)).
+ */
+interface AssistantResumeValue {
+  hasConversation: boolean;
+  probe: () => void;
+}
+
+const AssistantResumeContext = createContext<AssistantResumeValue>({
+  hasConversation: false,
+  probe: () => {},
+});
+
+/**
+ * Y a-t-il une conversation Numo à rouvrir ? Appeler ce hook DÉCLARE le besoin :
+ * il déclenche la lecture du pointeur au montage, et rend `false` tant qu'on ne
+ * sait pas — l'accueil préfère un FAB qui apparaît à un FAB qui s'éteint.
+ */
+export function useResumableConversation(): boolean {
+  const { hasConversation, probe } = useContext(AssistantResumeContext);
+  useEffect(() => {
+    probe();
+  }, [probe]);
+  return hasConversation;
 }
 
 export function useAssistantChatContext(): AssistantChatContextValue {

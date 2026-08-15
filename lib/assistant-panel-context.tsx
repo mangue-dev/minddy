@@ -17,6 +17,7 @@ import type {
   AssistantMention,
   AssistantPageContext,
 } from "@/lib/assistant-types";
+import type { ResourceInput } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { trackEvent } from "@/lib/analytics";
 
@@ -45,6 +46,13 @@ export interface OpenAssistantOptions {
    */
   mentions?: AssistantMention[];
   command?: AssistantCommandId;
+  /**
+   * Les pièces jointes du composer d'origine, DÉJÀ téléversées : `ResourceInput`
+   * ne porte qu'un chemin de stockage, pas un fichier. L'accueil peut donc en
+   * joindre — l'attente qui les monte se joue dans son composer, et l'ouverture
+   * ne transporte plus que des références.
+   */
+  attachments?: ResourceInput[];
   /** Pre-fill the composer without sending (one-shot). */
   draft?: string;
   /**
@@ -272,11 +280,19 @@ export function useAssistantContext(
 /**
  * Masque le FAB de Numo tant que ce composant est monté et `active`.
  *
- * À appeler depuis la surface qui porte un composer épinglé en bas d'écran : le
- * FAB s'y poserait dessus, souvent pile sur son bouton d'envoi. C'est la
- * surface qui sait, pas la route — la page Agents montre une conversation sous
- * son onglet Conversations et une simple liste sous son onglet Routines, à la
- * même URL.
+ * À appeler depuis la surface qui porte déjà un composer, pour l'une des deux
+ * raisons qui rendent le bouton flottant de trop :
+ *
+ * - il le RECOUVRE — un composer épinglé en bas d'écran, où le FAB tombe
+ *   souvent pile sur son bouton d'envoi (les conversations d'agent) ;
+ * - il le RÉPÈTE — l'accueil, dont le composer est au centre de l'écran et fait
+ *   déjà ce que le FAB propose. Là, la suppression est conditionnelle : le FAB
+ *   revient dès qu'il a autre chose à offrir, à savoir une conversation à
+ *   rouvrir (cf. `useResumableConversation`).
+ *
+ * C'est la surface qui sait, pas la route — la page Agents montre une
+ * conversation sous son onglet Conversations et une simple liste sous son
+ * onglet Routines, à la même URL.
  */
 export function useSuppressAssistantFab(active = true): void {
   const { setFabSuppressed } = useAssistantPanel();

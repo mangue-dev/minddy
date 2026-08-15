@@ -93,20 +93,28 @@ export function AssistantPanel() {
     if (dispatchedOptionsRef.current === pendingOptions) return;
     dispatchedOptionsRef.current = pendingOptions;
 
-    const { prompt, draft, projectId, pageContext, mentions, command } =
-      pendingOptions;
+    const {
+      prompt,
+      draft,
+      projectId,
+      pageContext,
+      mentions,
+      command,
+      attachments,
+    } = pendingOptions;
     const targetProjectId =
       projectId === undefined ? scopeProjectId : projectId;
 
     if (prompt) {
       // Pass the context explicitly: the state set above only reaches the shell
-      // on the next render, after this synchronous one-shot send. Mentions et
-      // commande viennent du composer qui a écrit le message (la home) et
-      // voyagent avec lui : le panneau ne fait que les relayer.
+      // on the next render, after this synchronous one-shot send. Mentions,
+      // commande et pièces jointes viennent du composer qui a écrit le message
+      // (la home) et voyagent avec lui : le panneau ne fait que les relayer.
       handle.sendMessage(targetProjectId ?? null, prompt, {
         pageContext: pageContext ?? null,
         mentions,
         command,
+        attachments,
       });
     }
 

@@ -76,8 +76,8 @@ export type AssistantDisplayMode = "compact" | "expanded";
 export interface AssistantShellHandle {
   /** Send a message. `projectId` null = global mode. Ce qui suit ne vaut que
    *  pour CET envoi : le contexte de page des ouvertures contextuelles, et les
-   *  mentions et la commande du composer qui a écrit le message ailleurs (la
-   *  home). `pageContext` absent = celui du shell. */
+   *  mentions, la commande et les pièces jointes du composer qui a écrit le
+   *  message ailleurs (la home). `pageContext` absent = celui du shell. */
   sendMessage: (
     projectId: string | null,
     message: string,
@@ -85,6 +85,7 @@ export interface AssistantShellHandle {
       pageContext?: AssistantPageContext | null;
       mentions?: AssistantMention[];
       command?: AssistantCommandId;
+      attachments?: ResourceInput[];
     },
   ) => void;
   /** Pre-fill the composer without sending. */
@@ -249,6 +250,9 @@ export const AssistantShell = forwardRef<
               : effectiveContextRef.current,
           ...(opts?.mentions?.length ? { mentions: opts.mentions } : {}),
           ...(opts?.command ? { command: opts.command } : {}),
+          ...(opts?.attachments?.length
+            ? { attachments: opts.attachments }
+            : {}),
         }),
       fill: (text) => chatInputRef.current?.fill(text),
     }),

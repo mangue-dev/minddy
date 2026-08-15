@@ -120,9 +120,11 @@ interface ChatInputProps {
   className?: string;
   /**
    * Hide the attach affordances (file button + drop overlay + paste-to-attach).
-   * The home composer sets this: it hands the prompt off to the global panel via
-   * `open({ prompt })`, which carries no files, so an attach button there would
-   * silently drop the upload. Attachments still belong in the panel itself.
+   * À poser sur les surfaces dont l'envoi ne SAIT PAS quoi faire d'un fichier —
+   * les composers de l'agent, qui parlent à un dépôt et non à un stockage de
+   * pièces jointes. L'accueil l'a longtemps porté pour une autre raison
+   * (`open({ prompt })` ne relayait pas les fichiers) : depuis que l'ouverture
+   * les transporte, il ne le porte plus.
    */
   hideAttach?: boolean;
   /**
