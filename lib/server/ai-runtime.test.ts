@@ -159,4 +159,50 @@ describe("fetchAiChat", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     fetchMock.mockRestore();
   });
+
+  it("retente avec reasoning none après le rejet explicite des function tools", async () => {
+    const openAiRuntime = {
+      ...runtime,
+      provider: "openai" as const,
+      baseUrl: "https://api.openai.com/v1",
+      model: "gpt-future",
+    };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: {
+              message:
+                "Function tools with reasoning_effort are not supported for gpt-future",
+            },
+          }),
+          { status: 400 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+
+    const { response } = await fetchAiChat(
+      openAiRuntime,
+      openAiRuntime.model,
+      (model) => ({
+        model,
+        messages: [],
+        tools: [{ type: "function", function: { name: "search" } }],
+        reasoning: { effort: "medium" },
+      }),
+      "test",
+      "[test]",
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      reasoning_effort: "medium",
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({
+      reasoning_effort: "none",
+    });
+    fetchMock.mockRestore();
+  });
 });

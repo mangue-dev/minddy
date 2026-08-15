@@ -37,8 +37,19 @@ describe("liveFromStream", () => {
       reasoningMs: 0,
       files: [{ path: "lib/a.ts", status: "deleted", additions: 0, deletions: 0 }],
       filesTruncated: true,
+      fileStats: [],
       startedAt: T0,
     });
+  });
+
+  it("garde les compteurs Git locaux et les utilise aussi comme liste de secours", () => {
+    const live = liveFromStream(null, {
+      fileStats: [{ path: "components/agent/feed.tsx", status: "modified", additions: 12, deletions: 3 }],
+    }, now);
+    expect(live?.files).toEqual([
+      { path: "components/agent/feed.tsx", status: "modified", additions: 12, deletions: 3 },
+    ]);
+    expect(live?.fileStats).toEqual(live?.files);
   });
 
   it("efface tout sur une charge VRAIMENT vide — c'est la purge du relais", () => {

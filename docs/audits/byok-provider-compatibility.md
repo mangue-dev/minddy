@@ -20,7 +20,7 @@ traduit ensuite la requête vers le wire de chaque provider.
 | Provider | Endpoint utilisé | Plafond de sortie | Raisonnement | Usage stream | Notes |
 | --- | --- | --- | --- | --- | --- |
 | OpenRouter | `/api/v1/chat/completions` | `max_completion_tokens` | `reasoning: { effort }` ou `reasoning.max_tokens` | `usage.include` + `stream_options.include_usage` | Les extensions non portables (plugin web) passent par `extensions` et restent explicitement OpenRouter-only. |
-| OpenAI | `/v1/chat/completions` | `max_completion_tokens` | `reasoning_effort` | `stream_options.include_usage` | Corrige directement le 400 de la capture. `max_tokens` ne sort plus de minddy vers OpenAI. |
+| OpenAI | `/v1/chat/completions` | `max_completion_tokens` | `reasoning_effort`; forcé à `none` pour GPT-5.6 + function tools | `stream_options.include_usage` | OpenAI recommande Responses pour le raisonnement, les tools et le multi-tour. Tant que minddy utilise Chat Completions, GPT-5.6 ne peut pas combiner function tools et effort de raisonnement. |
 | Anthropic | `/v1/chat/completions` (couche compatible) | `max_completion_tokens` | `thinking: adaptive` sur les familles actuelles ; budget manuel borné quand explicitement demandé sur 4.5/4.6 ; rien pour une famille inconnue | `stream_options.include_usage` | `reasoning_effort` est ignoré par la couche compatible. Le mode manuel est legacy et refusé par plusieurs Claude actuels. Les sorties de tools restent validées par minddy car `strict` est ignoré. |
 | Google Gemini | `/v1beta/openai/chat/completions` | `max_completion_tokens`, avec repli ciblé vers `max_tokens` si l'endpoint le rejette explicitement | `reasoning_effort` | `stream_options.include_usage` | Google documente les efforts et le streaming, mais pas le nom du plafond de chat dans sa page de compatibilité, encore bêta. Le choix primaire suit le contrat OpenAI actuel ; le repli évite de parier un appel utilisateur sur cette zone non documentée. |
 | Générique | `<base>/chat/completions` | `max_tokens` | aucun champ | aucun champ propriétaire | Choix conservateur pour les serveurs qui n'implémentent que l'ancien contrat OpenAI. Une base inconnue ne reçoit jamais `reasoning`, `usage` ou `stream_options`. |
@@ -30,6 +30,10 @@ traduit ensuite la requête vers le wire de chaque provider.
 - OpenAI Chat Completions : `max_completion_tokens` inclut sortie visible et
   tokens de raisonnement ; `max_tokens` est déprécié et incompatible avec les
   modèles o-series. <https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create>
+- OpenAI GPT-5.6 : la famille accepte `none` comme niveau et la recommandation
+  officielle est d'utiliser Responses pour les workflows de raisonnement,
+  function calling et multi-tour.
+  <https://developers.openai.com/api/docs/guides/latest-model>
 - OpenRouter Chat Completions : `max_tokens` est déprécié en faveur de
   `max_completion_tokens`; la forme `reasoning` est l'abstraction du gateway.
   <https://openrouter.ai/docs/api/api-reference/chat/create-a-chat-completion>
@@ -49,9 +53,9 @@ traduit ensuite la requête vers le wire de chaque provider.
   <https://ai.google.dev/gemini-api/docs/openai>
 
 Les deux transports (appels serveur et proxy opencode) appliquent enfin un filet
-très étroit : après un `400` qui cite
-explicitement l'alias de plafond envoyé comme « unsupported/not supported », il
-retente une seule fois avec l'autre alias. Il ne relance aucun autre `400`.
+très étroit. Ils retentent une seule fois après un `400` qui cite explicitement
+l'alias de plafond envoyé comme non supporté, ou le couple function tools +
+`reasoning_effort` comme interdit. Aucun autre `400` n'est relancé.
 
 ## Couverture des surfaces
 
@@ -87,5 +91,8 @@ Les modalités qui ne sont pas des Chat Completions gardent leur endpoint dédi�
    adaptatif) est décidée dans l'adaptateur, pas dans les surfaces.
 5. Les réponses structurées sont toujours validées côté minddy : la
    compatibilité d'un provider ne vaut pas garantie de JSON Schema stricte.
-6. Le repli d'alias ne s'active que sur un rejet explicite du champ ; une erreur
-   de modèle, de tool ou de schéma conserve sa réponse originale.
+6. Les deux replis autorisés ne s'activent que sur leur rejet explicite ; une
+   autre erreur de modèle, de tool ou de schéma conserve sa réponse originale.
+7. Sur Chat Completions, GPT-5.6 + function tools reçoit toujours
+   `reasoning_effort: "none"`. Rétablir le raisonnement nécessite une migration
+   complète de ce transport vers Responses, réponses et streaming compris.

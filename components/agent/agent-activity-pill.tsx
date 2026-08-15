@@ -46,14 +46,14 @@ function PlanTooltip({ steps }: { steps: PlanStep[] }) {
 
   return (
     <div className="grid gap-2">
-      <p className="font-medium text-foreground">{t("plan")}</p>
+      <p className="font-medium text-background">{t("plan")}</p>
       <div className="grid gap-1.5">
         {steps.map((step, index) => (
           <div
             key={`${index}:${step.step}`}
             className={cn(
               "flex items-start gap-2 text-xs",
-              step.status === "in_progress" ? "text-foreground" : "text-muted-foreground",
+              step.status === "in_progress" ? "text-background" : "text-background/70",
               step.status === "cancelled" && "line-through",
             )}
           >
@@ -73,7 +73,7 @@ function SubagentTooltip({ subagents }: { subagents: TurnSubagent[] }) {
 
   return (
     <div className="grid gap-2">
-      <p className="font-medium text-foreground">
+      <p className="font-medium text-background">
         {t("subagentsWorking", { count: runningCount })}
       </p>
       <div className="grid gap-1.5">
@@ -85,7 +85,7 @@ function SubagentTooltip({ subagents }: { subagents: TurnSubagent[] }) {
           return (
             <div
               key={subagent.id}
-              className="flex items-center gap-2 text-xs text-muted-foreground"
+              className="flex items-center gap-2 text-xs text-background/70"
             >
               {running ? (
                 <Spinner className="size-3.5 shrink-0 text-blue-500" />
@@ -162,7 +162,7 @@ export function AgentActivityPill({
             <TooltipContent
               side="top"
               sideOffset={8}
-              className="w-80 max-w-[calc(100vw-2rem)]"
+              className="w-80 max-w-[calc(100vw-2rem)] bg-foreground text-background"
             >
               <PlanTooltip steps={planSteps} />
             </TooltipContent>
@@ -181,7 +181,7 @@ export function AgentActivityPill({
               <button
                 type="button"
                 onClick={onOpenDiff}
-                className="flex shrink-0 items-center gap-1.5 rounded-full font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <span className="whitespace-nowrap text-muted-foreground">
                   {t("filesChanged", { count: fileCount })}
@@ -194,7 +194,7 @@ export function AgentActivityPill({
                 ) : null}
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8}>
+            <TooltipContent side="top" sideOffset={8} className="bg-foreground text-background">
               {t("diffTitle")}
             </TooltipContent>
           </Tooltip>
@@ -223,7 +223,7 @@ export function AgentActivityPill({
             <TooltipContent
               side="top"
               sideOffset={8}
-              className="w-80 max-w-[calc(100vw-2rem)]"
+              className="w-80 max-w-[calc(100vw-2rem)] bg-foreground text-background"
             >
               <SubagentTooltip subagents={subagents} />
             </TooltipContent>

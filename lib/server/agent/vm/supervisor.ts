@@ -702,6 +702,16 @@ export async function runOpencodeTurn(
   });
 
   /**
+   * Un run local n'est pas lisible par la route `/diff` du serveur : le dépôt
+   * est sur la machine qui exécute le harnais. Après une édition, cette machine
+   * relit donc son propre diff et l'attache au flux temps réel. Le délai laisse
+   * l'outil d'OpenCode finir d'écrire avant le `git diff`; on ne lance qu'une
+   * lecture groupée pour une rafale d'éditions.
+  */
+  let liveStatsTimer: ReturnType<typeof setTimeout> | null = null;
+  let refreshLocalLiveStats = () => {};
+
+  /**
    * L'offre de sous-agents du tour, telle que la config vient de la déclarer.
    * Une seule source ([opencode-config.ts](opencode-config.ts)) : ce qui est
    * servi au modèle, ce que le garde-fou accepte et ce que le fil affiche sont
@@ -1205,6 +1215,25 @@ export async function runOpencodeTurn(
      * « supprimé » si c'en était.
      */
     const liveEdits = newLiveEditLog();
+    refreshLocalLiveStats = () => {
+      if (!local || liveStatsTimer || !filesFromSha) return;
+      liveStatsTimer = setTimeout(() => {
+        liveStatsTimer = null;
+        void (async () => {
+          const scope = current ? (await turnScope()).paths : undefined;
+          const changed = await workingTreeChangedFiles(host, filesFromSha, scope).catch(() => null);
+          if (!changed || changed.files.length === 0) return;
+          liveEdits.noteStats(changed.files);
+          publishLive({
+            text: "",
+            tools: toolsSeen,
+            reasoningActive: false,
+            reasoningMs: 0,
+            ...liveEdits.payload(),
+          });
+        })();
+      }, 350);
+    };
     /** Ce que le tour a encore le droit de dépenser. Absent = aucun plafond. */
     let budgetUsd = job.budgetUsd;
     let lastBudgetAt = now();
@@ -1894,6 +1923,9 @@ export async function runOpencodeTurn(
                 reasoningMs: 0,
                 ...liveEdits.payload(),
               });
+              // Les chemins sont visibles tout de suite ; les compteurs exacts
+              // suivent dès que l'outil a fini de les écrire sur le disque local.
+              refreshLocalLiveStats();
             }
           }
           await client
@@ -2278,6 +2310,10 @@ export async function runOpencodeTurn(
         if (await lifecycle()) break;
       }
     } finally {
+      if (liveStatsTimer) {
+        clearTimeout(liveStatsTimer);
+        liveStatsTimer = null;
+      }
       abortEvents.abort();
       /**
        * ET LA QUESTION EN VOL EST ÉCARTÉE, quelle que soit la sortie (D7) — y

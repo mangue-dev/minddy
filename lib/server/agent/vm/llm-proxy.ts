@@ -3,8 +3,8 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { chatCompletionsUrl, type AgentProviderId } from "@/lib/agent-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import {
-  alternateOutputTokenBody,
   aiChatProviderHeaders,
+  repairRejectedAiChatBody,
   translateLegacyAiChatBody,
 } from "@/lib/ai-chat";
 import {
@@ -496,7 +496,7 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
     };
     let upstream = await http(route.url, upstreamRequest);
     if (upstream.status === 400 && body !== undefined) {
-      const retryBody = alternateOutputTokenBody(body, await upstream.clone().text());
+      const retryBody = repairRejectedAiChatBody(body, await upstream.clone().text());
       if (retryBody !== null) {
         body = retryBody;
         upstream = await http(route.url, { ...upstreamRequest, body });

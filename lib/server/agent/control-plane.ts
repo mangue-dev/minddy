@@ -7,7 +7,7 @@ import { defaultLocale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 
 import { executeIssueTool, type IssueToolContext } from "./issue-tools";
-import type { AgentLiveEdit } from "./agent-contract";
+import type { AgentLiveEdit, AgentLiveFileStat } from "./agent-contract";
 import { CHANGED_FILES_CAP } from "./repo-host";
 import {
   anchorForRun,
@@ -246,6 +246,29 @@ function liveFiles(
   return { files, filesTruncated: raw.length > files.length || claimedTruncated === true };
 }
 
+/** Compteurs exacts fournis par le harnais local. Ils restent validés et bornés
+ * avant de rejoindre le topic temps réel, comme les simples chemins ci-dessus. */
+function liveFileStats(raw: unknown): AgentLiveFileStat[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const files: AgentLiveFileStat[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const r = item as Record<string, unknown>;
+    if (typeof r.path !== "string" || !r.path) continue;
+    files.push({
+      path: r.path,
+      status: (typeof r.status === "string" && LIVE_FILE_STATUSES.has(r.status)
+        ? r.status
+        : "modified") as AgentLiveFileStat["status"],
+      additions: Math.max(0, Math.round(num(r.additions) ?? 0)),
+      deletions: Math.max(0, Math.round(num(r.deletions) ?? 0)),
+      ...(typeof r.previousPath === "string" ? { previousPath: r.previousPath } : {}),
+    });
+    if (files.length === CHANGED_FILES_CAP) break;
+  }
+  return files.length > 0 ? files : undefined;
+}
+
 /**
  * CE QUE CE TOUR A ENCORE LE DROIT DE DÉPENSER, relu MAINTENANT.
  *
@@ -345,6 +368,7 @@ export async function handleControlPlaneRequest(opts: {
    * rattrape en 2 s au poll : le perdre, c'est perdre le rendu streamé.
    */
   if (method === "POST" && surface === "/stream") {
+    const fileStats = liveFileStats(body.fileStats);
     afterOrNow(() =>
       broadcastToTopic(agentRunTopic(runId), "stream", {
         text: typeof body.text === "string" ? body.text : "",
@@ -356,6 +380,7 @@ export async function handleControlPlaneRequest(opts: {
         // et réduite aux deux champs que le fil lit — sinon un payload malformé (ou
         // simplement gros) partirait tel quel sur le topic de tous les abonnés.
         ...liveFiles(body.files, body.filesTruncated),
+        ...(fileStats ? { fileStats } : {}),
         at: Date.now(),
       }),
     );

@@ -48,6 +48,16 @@ export type AgentLiveEdit = {
 };
 
 /**
+ * Statistiques Git exactes du tour en cours. Elles voyagent avec le direct quand
+ * le dépôt vit sur la machine de l'utilisateur : le serveur ne peut pas le lire
+ * à sa place, donc la route de diff ne peut pas produire les compteurs `+ / −`.
+ */
+export type AgentLiveFileStat = AgentLiveEdit & {
+  additions: number;
+  deletions: number;
+};
+
+/**
  * Un message du protocole chat OpenRouter. `content` accepte un TABLEAU DE PARTIES
  * (texte + image, MIN-111) : c'est ce qui permet à une maquette jointe au ticket
  * d'arriver dans les yeux du modèle.
@@ -145,6 +155,8 @@ export interface AgentLiveProgress {
   /** La liste a été bornée (`CHANGED_FILES_CAP`) : le fil le dit plutôt que de
    *  laisser lire une liste tronquée comme une liste complète. */
   filesTruncated?: boolean;
+  /** Compteurs Git exacts des fichiers du tour, quand le harnais peut les lire. */
+  fileStats?: AgentLiveFileStat[];
 }
 
 export type EmitAgentLive = (progress: AgentLiveProgress) => void;

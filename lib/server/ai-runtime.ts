@@ -19,8 +19,8 @@ import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { getUserByok, resolveProviderDefaultModel } from "@/lib/server/agent/model";
 import { chatCompletionsUrl } from "@/lib/agent-providers";
 import {
-  alternateOutputTokenBody,
   aiChatProviderHeaders,
+  repairRejectedAiChatBody,
   translateAiChatRequest,
   type AiChatRequest,
 } from "@/lib/ai-chat";
@@ -138,7 +138,7 @@ export async function usesByokForSurface(userId: string, surface: AiSurface): Pr
   return (await getUserByok(userId, surface)) !== null;
 }
 
-async function retryUnsupportedOutputTokenAlias(
+async function retryRejectedChatRequest(
   endpoint: string,
   firstResponse: Response,
   firstRequest: RequestInit,
@@ -147,7 +147,7 @@ async function retryUnsupportedOutputTokenAlias(
     return firstResponse;
   }
 
-  const retryBody = alternateOutputTokenBody(
+  const retryBody = repairRejectedAiChatBody(
     firstRequest.body,
     await firstResponse.clone().text(),
   );
@@ -159,9 +159,10 @@ async function retryUnsupportedOutputTokenAlias(
 /**
  * Fetch chat OpenAI-compatible, avec les particularités du provider résolu.
  *
- * Les profils choisissent le nom documenté. Un endpoint générique — ou une
- * couche compat encore en bêta — peut néanmoins n'accepter que l'autre alias :
- * on ne le retente qu'après un 400 qui désigne explicitement le champ rejeté.
+ * Les profils choisissent le contrat documenté. Deux 400 seulement sont
+ * réparables sans ambiguïté : un alias de plafond explicitement rejeté, et le
+ * couple GPT-5.6 function tools + raisonnement explicitement refusé par Chat
+ * Completions. Aucun autre 400 n'est rejoué.
  */
 export async function fetchAiChat(
   runtime: ResolvedAiRuntime,
@@ -194,7 +195,7 @@ export async function fetchAiChat(
   const firstRequest = request(model);
   const firstResponse = await fetch(endpoint, firstRequest);
   return {
-    response: await retryUnsupportedOutputTokenAlias(endpoint, firstResponse, firstRequest),
+    response: await retryRejectedChatRequest(endpoint, firstResponse, firstRequest),
     model,
   };
 }

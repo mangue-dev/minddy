@@ -58,6 +58,7 @@ import {
   type AgentEnvironment,
 } from "./environment-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
+import { useAgentRunLive } from "@/lib/use-agent-run-live";
 import { playLocalRunHere } from "@/lib/local-run-here";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentDiffSheet } from "./agent-diff-sheet";
@@ -317,6 +318,11 @@ export function AgentConversation({
     liveRun?.id ?? null,
     serverWorking
   );
+  // Le feed a sa propre lecture pour rendre la queue vivante. Cette seconde
+  // abonnée partage le même canal, mais rend aussi les compteurs Git locaux
+  // disponibles à la pilule du composer — une route serveur ne peut pas lire le
+  // dépôt qui reste sur la machine de l'utilisateur.
+  const runLive = useAgentRunLive(liveRun?.id ?? null, serverWorking);
 
   /**
    * Ce que CETTE session a changé dans le dépôt, cumulé sur tous ses tours (union
@@ -344,11 +350,21 @@ export function AgentConversation({
    * et ils sont déjà chargés.
    */
   const { files: liveDiffFiles } = useAgentRunDiffStatQuery(liveRun?.id ?? null, working);
+  const liveHeaderFiles = useMemo(() => {
+    if (runLive?.fileStats.length) {
+      // Les events décrivent les tours déjà terminés ; le relevé local remplace
+      // seulement les chemins du tour en cours et conserve le reste de la session.
+      const byPath = new Map(sessionFiles.map((file) => [file.path, file]));
+      for (const file of runLive.fileStats) byPath.set(file.path, file);
+      return [...byPath.values()];
+    }
+    return liveDiffFiles.length > 0 ? liveDiffFiles : sessionFiles;
+  }, [liveDiffFiles, runLive?.fileStats, sessionFiles]);
   const sessionTotals = useMemo(
     // Le direct FAIT FOI dès qu'il a quelque chose : il contient tout ce que
     // portent les events (les commits des tours passés) PLUS le tour en cours.
-    () => changeTotals(liveDiffFiles.length > 0 ? liveDiffFiles : sessionFiles),
-    [liveDiffFiles, sessionFiles],
+    () => changeTotals(liveHeaderFiles),
+    [liveHeaderFiles],
   );
   /**
    * Les sous-agents du tour en cours (MIN-112) → indicateur dans la pilule du
@@ -741,7 +757,7 @@ export function AgentConversation({
       </Button>
     ) : null;
 
-  const changedFileCount = liveDiffFiles.length > 0 ? liveDiffFiles.length : sessionFiles.length;
+  const changedFileCount = liveHeaderFiles.length;
 
   return (
     <MentionLinksProvider value={links}>

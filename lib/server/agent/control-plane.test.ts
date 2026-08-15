@@ -455,6 +455,20 @@ describe("le direct — le topic vient du run, pas du corps", () => {
     expect(h.streamPayloads[0].filesTruncated).toBe(true);
   });
 
+  it("relaie les compteurs Git locaux, nettoyés comme le reste du direct", async () => {
+    await call("POST", "/stream", {
+      text: "",
+      fileStats: [
+        { path: "lib/a.ts", status: "modified", additions: 8.6, deletions: -4 },
+        { path: "", additions: 20, deletions: 1 },
+      ],
+    });
+    await Promise.all(h.afterWork.map((w) => w()));
+    expect(h.streamPayloads[0].fileStats).toEqual([
+      { path: "lib/a.ts", status: "modified", additions: 9, deletions: 0 },
+    ]);
+  });
+
   it("ne parle pas de fichiers quand il n'y en a pas", async () => {
     // `clearLive` passe par ici : une liste vide ne doit pas devenir un `files: []`
     // que le fil lirait comme « le tour n'a rien touché ».

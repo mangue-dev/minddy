@@ -54,6 +54,10 @@ function isManualThinkingClaude(model: string): boolean {
   return /^claude-(?:opus|sonnet|haiku)-4-(?:5|6)(?:-|$)/i.test(model);
 }
 
+function isGpt56(model: string): boolean {
+  return /^gpt-5\.6(?:-|$)/i.test(model);
+}
+
 function anthropicReasoningFields(params: {
   model: string;
   effort?: ReasoningLevel;
@@ -91,7 +95,14 @@ function providerReasoningFields(
   model: string,
   reasoning: AiChatRequest["reasoning"] | undefined,
   maxOutputTokens: number | undefined,
+  hasFunctionTools: boolean,
 ): Record<string, unknown> {
+  // GPT-5.6 sait appeler des fonctions via Chat Completions, mais pas en même
+  // temps qu'un effort de raisonnement. Responses est la voie complète ; tant
+  // que ce transport reste Chat Completions, `none` est le contrat documenté.
+  if (provider === "openai" && hasFunctionTools && isGpt56(model)) {
+    return { reasoning_effort: "none" };
+  }
   if (
     reasoning === undefined ||
     (reasoning.effort === undefined && reasoning.maxTokens === undefined)
@@ -146,7 +157,13 @@ export function translateAiChatRequest(
 
   Object.assign(
     body,
-    providerReasoningFields(provider, request.model, request.reasoning, maxOutputTokens),
+    providerReasoningFields(
+      provider,
+      request.model,
+      request.reasoning,
+      maxOutputTokens,
+      Boolean(request.tools?.length),
+    ),
   );
 
   if (profile.usageAccounting) body.usage = { include: true };
@@ -206,6 +223,36 @@ export function alternateOutputTokenBody(
 }
 
 /**
+ * Répare les deux seuls 400 de compatibilité que l'on sait rejouer sans risque :
+ * un alias de plafond refusé, ou GPT-5.6 Chat Completions qui refuse le couple
+ * function tools + raisonnement. Toute autre erreur conserve le corps initial.
+ */
+export function repairRejectedAiChatBody(
+  bodyText: string,
+  errorText: string,
+): string | null {
+  const outputAliasRepair = alternateOutputTokenBody(bodyText, errorText);
+  if (outputAliasRepair !== null) return outputAliasRepair;
+
+  if (
+    !/function tools[^\n]{0,160}reasoning_effort[^\n]{0,160}(?:not supported|unsupported)/i.test(
+      errorText,
+    )
+  ) {
+    return null;
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(bodyText) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(body.tools) || body.tools.length === 0) return null;
+  body.reasoning_effort = "none";
+  return JSON.stringify(body);
+}
+
+/**
  * Frontière de compatibilité pour un client tiers (opencode) qui fabrique déjà
  * du JSON OpenAI. Les alias provider sont absorbés puis réémis par le même
  * traducteur que toutes les surfaces.
@@ -238,6 +285,7 @@ export function translateLegacyAiChatBody(
         typeof body.model === "string" ? body.model : "",
         { effort: reasoningEffort },
         maxOutputTokens,
+        Array.isArray(body.tools) && body.tools.length > 0,
       ),
     );
   }

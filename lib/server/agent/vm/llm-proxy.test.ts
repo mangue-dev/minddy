@@ -53,6 +53,17 @@ describe("le corps de la requête, complété et pas refait", () => {
     expect(extraHeaders({ ...JOB, provider: "anthropic" })).toEqual({});
   });
 
+  it("désactive le raisonnement de GPT-5.6 quand opencode envoie des tools", () => {
+    const out = patchCompletionBody(
+      {
+        model: "gpt-5.6-sol",
+        tools: [{ type: "function", function: { name: "bash" } }],
+      },
+      { ...JOB, provider: "openai", reasoningLevel: "high" },
+    );
+    expect(out.reasoning_effort).toBe("none");
+  });
+
   it("préserve l'usage explicite mais garde le niveau décidé par le run", () => {
     const out = patchCompletionBody(
       { model: "x", usage: { include: false }, reasoning: { effort: "high" } },

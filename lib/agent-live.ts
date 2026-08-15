@@ -1,4 +1,8 @@
-import { parseFilesChangedPayload, type AgentEventType, type AgentFileChange } from "./agent-api";
+import {
+  parseFilesChangedPayload,
+  type AgentEventType,
+  type AgentFileChange,
+} from "./agent-api";
 
 /**
  * CE QUE LE FIL AFFICHE DU ROUND EN COURS, et les deux règles qui le font changer.
@@ -32,6 +36,8 @@ export interface AgentRunLive {
   files: AgentFileChange[];
   /** La liste a été bornée côté serveur (gros tour). */
   filesTruncated: boolean;
+  /** Compteurs Git exacts du tour quand ils remontent de l'exécuteur local. */
+  fileStats: AgentFileChange[];
 }
 
 export interface StreamPayload {
@@ -42,6 +48,7 @@ export interface StreamPayload {
   at?: unknown;
   files?: unknown;
   filesTruncated?: unknown;
+  fileStats?: unknown;
 }
 
 function str(v: unknown): string {
@@ -67,16 +74,21 @@ export function liveFromStream(
   // La MÊME lecture que celle de l'event `files_changed` (`agent-api`) : deux
   // parseurs pour un même payload finissent toujours par diverger, et le second
   // perdait déjà les statuts et les compteurs du premier.
-  const { files, truncated } = parseFilesChangedPayload({
+  const { files: announcedFiles, truncated } = parseFilesChangedPayload({
     files: payload.files,
     truncated: payload.filesTruncated,
   });
+  const { files: fileStats } = parseFilesChangedPayload({ files: payload.fileStats });
+  // L'outil intégré annonce son chemin dès que l'écriture est autorisée. Le
+  // relevé Git arrive un peu après, une fois l'écriture réellement posée ; il
+  // attrape aussi les modifications faites par une commande shell.
+  const files = announcedFiles.length > 0 ? announcedFiles : fileStats;
   // Envoi À VIDE : les vrais events du round sont posés, ils prennent le relais à
   // l'écran. Une phase de PURE réflexion n'écrit ni texte ni outil — sans
   // `reasoningActive` dans ce test, l'indicateur disparaîtrait au lieu de
   // s'afficher. Les fichiers comptent comme un signe de vie : la charge qui les
   // porte est justement celle d'un round au repos.
-  if (!text && !tools && !reasoningActive && files.length === 0) return null;
+  if (!text && !tools && !reasoningActive && files.length === 0 && fileStats.length === 0) return null;
   return {
     text,
     tools,
@@ -84,6 +96,7 @@ export function liveFromStream(
     reasoningMs,
     files,
     filesTruncated: truncated,
+    fileStats,
     startedAt: prev?.startedAt ?? now(),
   };
 }

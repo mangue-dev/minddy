@@ -1160,7 +1160,19 @@ export function AgentEventFeed({
   const ctx: RenderContext = {
     results,
     copyableIds,
-    liveDiffFiles: liveDiffFiles ?? [],
+    // Sur un run local, le serveur ne peut pas ouvrir le dépôt pour sa requête
+    // de diff. Le harnais publie alors ses propres compteurs Git dans le direct ;
+    // ils sont plus frais que le repli HTTP et font apparaître les `+ / −` dans
+    // le bloc du tour dès l'édition.
+    liveDiffFiles:
+      live?.fileStats.length
+        ? live.fileStats.map((file) => ({
+            filename: file.path,
+            additions: file.additions,
+            deletions: file.deletions,
+            ...(file.previousPath ? { previous_filename: file.previousPath } : {}),
+          }))
+        : liveDiffFiles ?? [],
     onOpenFile,
     hiddenQuestionEventId,
   };

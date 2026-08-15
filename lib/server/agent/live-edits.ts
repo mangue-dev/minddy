@@ -1,5 +1,5 @@
 import type { EmitAgentLive } from "./agent-contract";
-import type { AgentLiveEdit } from "./agent-contract";
+import type { AgentLiveEdit, AgentLiveFileStat } from "./agent-contract";
 import { CHANGED_FILES_CAP } from "./repo-host";
 
 /**
@@ -25,6 +25,8 @@ import { CHANGED_FILES_CAP } from "./repo-host";
 export interface LiveEditLog {
   /** Ce qu'un tool vient de toucher. */
   note(edits: AgentLiveEdit[]): void;
+  /** Compteurs Git exacts lus après que l'outil a effectivement écrit. */
+  noteStats(stats: AgentLiveFileStat[]): void;
   /** Le relais est passé à la liste de git : on oublie. Rend `true` s'il y avait
    *  quelque chose à oublier — l'appelant n'a à rediffuser que dans ce cas. */
   clear(): boolean;
@@ -38,18 +40,28 @@ export interface LiveEditLog {
    * qui touche 200 fichiers ne doit pas en diffuser 200 quatre fois par seconde,
    * et une liste tronquée sans le dire se lit comme une liste complète.
    */
-  payload(): { files?: AgentLiveEdit[]; filesTruncated?: boolean };
+  payload(): {
+    files?: AgentLiveEdit[];
+    filesTruncated?: boolean;
+    fileStats?: AgentLiveFileStat[];
+  };
 }
 
 export function newLiveEditLog(): LiveEditLog {
   const edits = new Map<string, AgentLiveEdit>();
+  const stats = new Map<string, AgentLiveFileStat>();
   return {
     note: (batch) => {
       for (const edit of batch) edits.set(edit.path, edit);
     },
+    noteStats: (batch) => {
+      stats.clear();
+      for (const stat of batch) stats.set(stat.path, stat);
+    },
     clear: () => {
-      if (edits.size === 0) return false;
+      if (edits.size === 0 && stats.size === 0) return false;
       edits.clear();
+      stats.clear();
       return true;
     },
     payload: () => {
@@ -59,6 +71,7 @@ export function newLiveEditLog(): LiveEditLog {
       return {
         files: filesTruncated ? all.slice(0, CHANGED_FILES_CAP) : all,
         filesTruncated,
+        ...(stats.size > 0 ? { fileStats: [...stats.values()].slice(0, CHANGED_FILES_CAP) } : {}),
       };
     },
   };

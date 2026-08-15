@@ -66,6 +66,11 @@ ne porte plus de décision propre à une surface.
 famille Claude reconnue, l'adaptateur envoie explicitement
 `thinking: { type: "disabled" }`, car Claude 5 peut raisonner par défaut.
 
+Exception OpenAI GPT-5.6 : dès que Chat Completions contient des function tools,
+l'adaptateur envoie `reasoning_effort: "none"`, quel que soit le niveau choisi.
+OpenAI refuse cette combinaison avec un effort actif et recommande Responses
+pour conserver à la fois le raisonnement, les tools et le multi-tour.
+
 **Le défaut est `medium`** (« Standard » dans l'UI) : un agent de code gagne à
 réfléchir un peu avant d'agir. `off` a été le défaut le jour de la livraison de
 MIN-122, pour ne rien changer au comportement existant le temps de constater le

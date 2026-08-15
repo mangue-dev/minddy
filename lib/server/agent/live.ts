@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { AgentLiveEdit } from "./agent-contract";
+import type { AgentLiveEdit, AgentLiveFileStat } from "./agent-contract";
 
 /**
  * Diffusion EN DIRECT d'une session de l'agent de code, sur le topic privé
@@ -50,6 +50,8 @@ export interface AgentLiveStream {
   files?: AgentLiveEdit[];
   /** La liste a été bornée à `CHANGED_FILES_CAP`. */
   filesTruncated?: boolean;
+  /** Compteurs Git exacts du tour en cours (notamment pour les runs locaux). */
+  fileStats?: AgentLiveFileStat[];
 }
 
 /**

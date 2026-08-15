@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   alternateOutputTokenBody,
   aiChatProviderHeaders,
+  repairRejectedAiChatBody,
   translateAiChatRequest,
   translateLegacyAiChatBody,
 } from "./ai-chat";
@@ -25,6 +26,24 @@ describe("translateAiChatRequest", () => {
     expect(body).not.toHaveProperty("max_tokens");
     expect(body).not.toHaveProperty("usage");
     expect(body).not.toHaveProperty("reasoning");
+  });
+
+  it("désactive explicitement le raisonnement de GPT-5.6 avec des function tools", () => {
+    const withTools = translateAiChatRequest(
+      {
+        ...base,
+        model: "gpt-5.6-sol",
+        tools: [{ type: "function", function: { name: "search" } }],
+      },
+      "openai",
+    );
+    expect(withTools.reasoning_effort).toBe("none");
+
+    const withoutTools = translateAiChatRequest(
+      { ...base, model: "gpt-5.6-sol" },
+      "openai",
+    );
+    expect(withoutTools.reasoning_effort).toBe("high");
   });
 
   it("traduit OpenRouter avec ses extensions de comptage et raisonnement", () => {
@@ -160,6 +179,26 @@ describe("alternateOutputTokenBody", () => {
       alternateOutputTokenBody(
         JSON.stringify({ max_completion_tokens: 42 }),
         "invalid tool schema",
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("repairRejectedAiChatBody", () => {
+  it("répare uniquement le rejet explicite tools + reasoning de Chat Completions", () => {
+    const repaired = repairRejectedAiChatBody(
+      JSON.stringify({
+        model: "gpt-5.6-sol",
+        tools: [{ type: "function", function: { name: "search" } }],
+        reasoning_effort: "medium",
+      }),
+      "Function tools with reasoning_effort are not supported for gpt-5.6-sol",
+    );
+    expect(JSON.parse(repaired!)).toMatchObject({ reasoning_effort: "none" });
+    expect(
+      repairRejectedAiChatBody(
+        JSON.stringify({ model: "gpt-5.6-sol", reasoning_effort: "medium" }),
+        "Function tools with reasoning_effort are not supported for gpt-5.6-sol",
       ),
     ).toBeNull();
   });
