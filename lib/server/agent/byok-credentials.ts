@@ -21,6 +21,14 @@ function getAiKeySecret(): string {
   return requireSecret("AI_KEY_ENCRYPTION_SECRET");
 }
 
+/**
+ * État non sensible stocké pour un endpoint local sans authentification. La
+ * colonne historique `key_encrypted` est `NOT NULL` dans certaines instances :
+ * ce marqueur permet donc d'enregistrer Ollama immédiatement, sans demander de
+ * clé ni de migration préalable. Il n'est jamais envoyé au fournisseur.
+ */
+export const LOCAL_ENDPOINT_WITHOUT_API_KEY = "minddy:local-endpoint-without-api-key:v1";
+
 export function encryptUserAiKey(plain: string): string {
   return JSON.stringify(encrypt(plain, getAiKeySecret()));
 }

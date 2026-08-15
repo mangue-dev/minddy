@@ -48,6 +48,7 @@ import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
 import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import { isLocalAgentProvider } from "@/lib/agent-providers";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
 import { BranchCombobox } from "./branch-combobox";
@@ -534,8 +535,10 @@ export function AgentConversation({
     reasoningLevels,
   );
   const [launching, setLaunching] = useState(false);
-  // Seul un BYOK générique sans défaut résoluble impose de choisir un modèle.
-  const modelRequired = provider === "generic" && !defaultModel && !model;
+  // Les endpoints génériques et locaux n'ont aucun défaut fiable : l'id du
+  // modèle est une décision de leur propriétaire, jamais un repli cloud.
+  const localEndpoint = isLocalAgentProvider(provider);
+  const modelRequired = (provider === "generic" || localEndpoint) && !defaultModel && !model;
 
   // OÙ LA CONVERSATION TOURNE (MIN-359), figé au lancement comme ses trois
   // voisins. Le chip n'existe que dans l'app de bureau ET quand un dossier est
@@ -559,8 +562,8 @@ export function AgentConversation({
   // Le dossier a disparu sous l'attachement (déplacé, disque démonté, dépôt
   // re-lié) : on retombe sur le cloud plutôt que de lancer vers un chemin mort.
   useEffect(() => {
-    setEnvironment(localRepo.ready ? "local" : "cloud");
-  }, [localRepo.ready]);
+    setEnvironment(localEndpoint || localRepo.ready ? "local" : "cloud");
+  }, [localEndpoint, localRepo.ready]);
 
   const launch = async (
     message: string,
@@ -1030,6 +1033,7 @@ export function AgentConversation({
                       value={environment}
                       onChange={setEnvironment}
                       localAvailable={localRepo.available}
+                      cloudAvailable={!localEndpoint}
                       folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                       needsAttach={localRepo.state?.status !== "ready"}
                       onAttach={() => {

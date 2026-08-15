@@ -473,6 +473,30 @@ describe("le relais, monté pour de vrai", () => {
     }
   });
 
+  it("retire le placeholder quand un endpoint local n'a pas de clé", async () => {
+    let seenAuth: string | undefined;
+    const upstream = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seenAuth = ((init?.headers ?? {}) as Record<string, string>).authorization;
+      return new Response(sse([]), { status: 200 });
+    }) as typeof fetch;
+
+    const proxy = await startLlmProxy({
+      job: { ...JOB, provider: "ollama", baseUrl: "http://127.0.0.1:11434/v1" },
+      fetchImpl: upstream,
+      apiKey: async () => null,
+    });
+    try {
+      await fetch(`${proxy.url}/chat/completions`, {
+        method: "POST",
+        headers: { authorization: "Bearer placeholder" },
+        body: "{}",
+      });
+      expect(seenAuth).toBeUndefined();
+    } finally {
+      await proxy.close();
+    }
+  });
+
   it("refuse de démarrer quand le plan de contrôle ne rend pas de clé", async () => {
     // Sans clé plafonnée, un tour local n'a plus AUCUN garde-fou de dépense : le
     // compute de microVM, dernier filet dans le cloud, vaut zéro sur une machine.
@@ -537,6 +561,29 @@ describe("le relais, monté pour de vrai", () => {
       });
       expect(res.status).toBe(502);
       expect((await res.json()).error.message).toContain("réseau coupé");
+    } finally {
+      await proxy.close();
+    }
+  });
+
+  it("dit qu'un endpoint local est indisponible sans proposer de repli cloud", async () => {
+    const upstream = (async () => {
+      throw new Error("ECONNREFUSED");
+    }) as typeof fetch;
+    const proxy = await startLlmProxy({
+      job: { ...JOB, provider: "local_openai", baseUrl: "http://127.0.0.1:1234/v1" },
+      fetchImpl: upstream,
+    });
+    try {
+      const res = await fetch(`${proxy.url}/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      expect(res.status).toBe(502);
+      const body = await res.json();
+      expect(body.error.message).toContain("local model endpoint is unavailable");
+      expect(body.error.message).toContain("No cloud provider was used");
     } finally {
       await proxy.close();
     }

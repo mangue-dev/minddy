@@ -251,6 +251,7 @@ vi.mock("@/lib/server/api-auth", () => ({
   }),
 }));
 vi.mock("@/lib/server/agent/byok-credentials", () => ({
+  LOCAL_ENDPOINT_WITHOUT_API_KEY: "sans-cle-local",
   encryptUserAiKey: () => "chiffré",
   keyPrefix: () => "sk-…",
 }));
@@ -289,6 +290,14 @@ describe("base URL BYOK « generic »", () => {
       })
     );
     expect(response.status).toBe(200);
+  });
+
+  it("enregistre Ollama sans clé ni sonde depuis le cloud", async () => {
+    const response = await postAiKey(
+      jsonRequest({ provider: "ollama", base_url: "http://127.0.0.1:11434" })
+    );
+    expect(response.status).toBe(200);
+    expect(pinnedRequest).not.toHaveBeenCalled();
   });
 });
 

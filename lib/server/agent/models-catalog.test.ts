@@ -55,6 +55,12 @@ async function freshCatalog(
   index: OpenRouterModelInfo[] = INDEX,
   /** Valeur de la ligne `app_config.recommended_models` ; `null` = non réglée. */
   recommendedConfig: string | null = null,
+  endpoint: {
+    provider: "ollama" | "local_openai";
+    baseUrl: string;
+    apiKey: string;
+    mode: "byok";
+  } | null = null,
 ) {
   vi.resetModules();
   vi.doMock("./openrouter-index", () => ({
@@ -65,6 +71,7 @@ async function freshCatalog(
   vi.doMock("./model", () => ({
     getRootDefaultModel: vi.fn(async () => null),
     resolveAgentApiKey: vi.fn(async () => {
+      if (endpoint) return endpoint;
       throw new Error("no platform key");
     }),
     resolveProviderDefaultModel: vi.fn(async () => null),
@@ -121,6 +128,25 @@ describe("getAgentModelsForUser", () => {
       "anthropic/claude-opus-5",
       "deepseek/deepseek-v4-flash",
     ]);
+  });
+
+  it("remet l'adresse locale à la coquille sans jamais la sonder côté serveur", async () => {
+    const { getAgentModelsForUser } = await freshCatalog(
+      INDEX,
+      null,
+      {
+        provider: "ollama",
+        baseUrl: "http://127.0.0.1:11434/v1",
+        apiKey: "",
+        mode: "byok",
+      },
+    );
+
+    await expect(getAgentModelsForUser("user-1")).resolves.toMatchObject({
+      provider: "ollama",
+      localEndpoint: { provider: "ollama", baseUrl: "http://127.0.0.1:11434/v1" },
+      models: [],
+    });
   });
 });
 

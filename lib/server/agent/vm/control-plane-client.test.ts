@@ -86,14 +86,17 @@ describe("le client du plan de contrôle, sur une machine", () => {
    *
    * Il n'y a aucune clé ailleurs, et il ne doit pas y en avoir : un échec ici veut
    * dire « ce déploiement ne sait pas plafonner », et la seule conduite juste est
-   * que le tour ne parte pas. D'où une méthode qui LÈVE, dans les deux formes
-   * d'échec — le refus, et la réponse creuse.
+   * que le tour ne parte pas. La seule exception est `key: null`, contrat
+   * explicite d'un endpoint local sans authentification.
    */
-  it("rend la clé du tour local, et lève plutôt que de rendre du vide", async () => {
+  it("rend la clé du tour local, ou null quand l'endpoint n'en demande pas", async () => {
     const cp = createControlPlaneClient(ORIGIN, () => "jeton-du-bail");
     reply = { status: 200, body: { key: "sk-or-v1-clef-du-run", capUsd: 3 } };
     await expect(cp.llmKey()).resolves.toBe("sk-or-v1-clef-du-run");
     expect(calls.at(-1)!.url).toBe(`${ORIGIN}/api/agent-vm/llm-key`);
+
+    reply = { status: 200, body: { key: null } };
+    await expect(cp.llmKey()).resolves.toBeNull();
 
     // Un 200 sans clé serait une faute de chez nous : sans ce refus, elle devient
     // un `authorization` vide et un 401 du fournisseur qui ne dit rien.

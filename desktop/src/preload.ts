@@ -135,6 +135,12 @@ const bridge: DesktopBridge = {
     >;
   },
 
+  discoverLocalModels(input) {
+    return ipcRenderer.invoke("minddy:local-models:discover", input) as Promise<
+      Awaited<ReturnType<DesktopBridge["discoverLocalModels"]>>
+    >;
+  },
+
   // LE DÉCLENCHEUR DE TOUR LOCAL (MIN-293), refusé dans l'app EMPAQUETÉE — la
   // condition vit dans le main process, pas ici : un preload est du code qu'on
   // livre, et une garde écrite du côté qui demande n'en est pas une.

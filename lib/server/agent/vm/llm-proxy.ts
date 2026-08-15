@@ -1,6 +1,10 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
-import { chatCompletionsUrl, type AgentProviderId } from "@/lib/agent-providers";
+import {
+  chatCompletionsUrl,
+  isLocalAgentProvider,
+  type AgentProviderId,
+} from "@/lib/agent-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import {
   aiChatProviderHeaders,
@@ -416,7 +420,9 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
    * sur la machine de quelqu'un. Mieux vaut un tour qui ne part pas et le dit.
    */
   const apiKeyPromise = opts.apiKey
-    ? requireApiKey(opts.apiKey)
+    ? isLocalAgentProvider(job.provider)
+      ? optionalApiKey(opts.apiKey)
+      : requireApiKey(opts.apiKey)
     : Promise.resolve<string | null>(null);
   const apiKey = opts.deferApiKey ? null : await apiKeyPromise;
 
@@ -478,7 +484,13 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       // `host` désignerait le proxy ; `content-length` ne vaut plus après le
       // complément ; `accept-encoding` ferait revenir un corps compressé qu'on
       // relaierait sans son en-tête (undici décompresse et garde l'en-tête).
-      if (["host", "content-length", "connection", "accept-encoding"].includes(key)) continue;
+      if (
+        ["host", "content-length", "connection", "accept-encoding"].includes(key) ||
+        // Sur une machine, opencode porte toujours le placeholder dans ce champ.
+        // Sans clé locale, le relayer ferait échouer des serveurs qui n'attendent
+        // aucune authentification ; avec clé, celle-ci l'écrase plus bas.
+        (opts.apiKey && key === "authorization")
+      ) continue;
       if (typeof value === "string") headers[key] = value;
     }
     // LA CLÉ ÉCRASE LE PLACEHOLDER, et seulement sur cette route-là (MIN-357).
@@ -494,7 +506,17 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       headers,
       ...(body === undefined ? {} : { body }),
     };
-    let upstream = await http(route.url, upstreamRequest);
+    let upstream: Response;
+    try {
+      upstream = await http(route.url, upstreamRequest);
+    } catch (error) {
+      if (isLocalAgentProvider(job.provider)) {
+        throw new Error(
+          "local model endpoint is unavailable; check that it is running and that its URL is reachable from this Mac. No cloud provider was used",
+        );
+      }
+      throw error;
+    }
     if (upstream.status === 400 && body !== undefined) {
       const retryBody = repairRejectedAiChatBody(body, await upstream.clone().text());
       if (retryBody !== null) {
@@ -575,6 +597,11 @@ async function requireApiKey(fetchKey: () => Promise<string | null>): Promise<st
   const key = (await fetchKey())?.trim();
   if (!key) throw new Error("llm proxy: no capped model key for this turn");
   return key;
+}
+
+/** Une absence de clé est un contrat permis uniquement pour un endpoint local. */
+async function optionalApiKey(fetchKey: () => Promise<string | null>): Promise<string | null> {
+  return (await fetchKey())?.trim() || null;
 }
 
 function readBody(req: IncomingMessage): Promise<Buffer> {

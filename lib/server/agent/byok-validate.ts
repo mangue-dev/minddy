@@ -1,6 +1,10 @@
 import "server-only";
 
-import { getAgentProvider, type AgentProviderId } from "@/lib/agent-providers";
+import {
+  getAgentProvider,
+  isLocalAgentProvider,
+  type AgentProviderId,
+} from "@/lib/agent-providers";
 
 /**
  * PROBE D'UNE CLÉ BYOK (MIN-344) — le fournisseur reconnaît-il cette clé ?
@@ -75,6 +79,9 @@ export async function probeByokKey(params: {
   const { provider, apiKey, baseUrl } = params;
   if (!apiKey || !baseUrl) return "invalid";
   if (!getAgentProvider(provider)) return "invalid";
+  // Une sonde depuis le déploiement cloud annulerait précisément la promesse du
+  // provider local. Son état est établi par le premier appel du proxy local.
+  if (isLocalAgentProvider(provider)) return "unknown";
 
   const { url, headers } = probeRequestFor(provider, baseUrl.replace(/\/+$/, ""), apiKey);
   try {

@@ -47,12 +47,18 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 vi.mock("./byok-credentials", () => ({
-  decryptUserAiKey: (value: string) => (value === "corrompu" ? null : "sk-clair"),
+  LOCAL_ENDPOINT_WITHOUT_API_KEY: "sans-cle-local",
+  decryptUserAiKey: (value: string | null) => (!value || value === "corrompu" ? null : "sk-clair"),
   encryptUserAiKey: (value: string) => value,
   keyPrefix: (value: string) => value.slice(0, 6),
 }));
 
-const { getUserByok, userHasByokKey, resetByokProbeCache } = await import("./model");
+const {
+  getUserByok,
+  resolveAgentApiKey,
+  userHasByokKey,
+  resetByokProbeCache,
+} = await import("./model");
 
 const USER = "5ad9b962-93e7-4a7c-a44b-f4925484ba93";
 
@@ -98,6 +104,50 @@ describe("getUserByok — la validation gouverne", () => {
     probeByokKey.mockResolvedValue("unknown");
     await expect(getUserByok(USER)).resolves.toBeNull();
     expect(updated).toHaveLength(0);
+  });
+
+  it("ne sonde jamais un endpoint local et refuse de le résoudre pour le cloud", async () => {
+    keyRow = {
+      provider: "local_openai",
+      key_encrypted: "chiffré",
+      base_url: "http://127.0.0.1:1234/v1",
+      validated_at: null,
+    };
+
+    await expect(getUserByok(USER)).resolves.toMatchObject({
+      provider: "local_openai",
+      baseUrl: "http://127.0.0.1:1234/v1",
+    });
+    expect(probeByokKey).not.toHaveBeenCalled();
+    await expect(resolveAgentApiKey(USER)).rejects.toMatchObject({
+      code: "localEndpointRequiresLocalRun",
+    });
+    await expect(resolveAgentApiKey(USER, "agent", { allowLocal: true })).resolves.toMatchObject({
+      mode: "byok",
+      provider: "local_openai",
+    });
+  });
+
+  it("accepte un endpoint local sans clé, sans jamais retomber sur la plateforme", async () => {
+    keyRow = {
+      provider: "ollama",
+      // Le marqueur garde l'enregistrement compatible avec les bases ayant
+      // encore `key_encrypted NOT NULL`.
+      key_encrypted: "sans-cle-local",
+      base_url: "http://127.0.0.1:11434",
+      validated_at: null,
+    };
+
+    await expect(getUserByok(USER)).resolves.toMatchObject({
+      provider: "ollama",
+      apiKey: "",
+      baseUrl: "http://127.0.0.1:11434/v1",
+    });
+    await expect(resolveAgentApiKey(USER, "agent", { allowLocal: true })).resolves.toMatchObject({
+      mode: "byok",
+      apiKey: "",
+    });
+    expect(probeByokKey).not.toHaveBeenCalled();
   });
 });
 

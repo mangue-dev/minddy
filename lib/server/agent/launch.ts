@@ -8,11 +8,13 @@ import { getProjectLink } from "@/lib/server/git/repo-links";
 import { REPO_PROVIDERS, isRepoProviderId } from "@/lib/repo-providers";
 import { insertEvents } from "@/lib/server/issue-events";
 import {
+  getUserByok,
   resolveAgentModel,
   resolveReasoningLevel,
   resolvePrReviewModel,
   AgentModelRequiredError,
 } from "./model";
+import { isLocalAgentProvider } from "@/lib/agent-providers";
 import { ensureModelInPlan } from "./model-plan";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { checkAgentQuota, type AgentQuota } from "./quota";
@@ -66,6 +68,7 @@ export type LaunchError =
   | "alreadyRunning"
   | "quotaExceeded"
   | "noModelForProvider"
+  | "localEndpointRequiresLocalRun"
   | "modelAbovePlan"
   | "promptRequired";
 
@@ -286,6 +289,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
         : Promise.resolve(null);
   const aiSurface = input.chainId || input.routineId ? "automations" : "agent";
   const quotaPromise = checkAgentQuota(input.userId, aiSurface);
+  const byokPromise = getUserByok(input.userId, aiSurface);
 
   const link = await linkPromise;
   if (!link) return { ok: false, error: "noRepo" };
@@ -319,6 +323,13 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   const quota = await quotaPromise;
   if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
   const localExec = localExecRequested(input);
+  const byok = await byokPromise;
+  // Ne jamais créer un run cloud qui finirait par choisir OpenRouter : le
+  // provider local est une configuration valide, mais il n'existe que depuis
+  // le proxy de l'app de bureau.
+  if (isLocalAgentProvider(byok?.provider) && !localExec) {
+    return { ok: false, error: "localEndpointRequiresLocalRun" };
+  }
 
   // Le titre ne se lance qu'une fois les gardes passées — un refus ne doit pas
   // consommer un appel modèle — puis il se recouvre avec la résolution du modèle

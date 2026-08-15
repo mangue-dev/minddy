@@ -925,10 +925,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   size="icon-sm"
                   variant="default"
                   onClick={onAbort}
-                  className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90"
+                  className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
                   title={t("stop")}
                 >
-                  <Square className="h-3 w-3 fill-white text-white" />
+                  <Square className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
                 </Button>
               ) : (
                 <>

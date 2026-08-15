@@ -153,9 +153,10 @@ export interface ControlPlaneClient {
    * tour ne parte pas plutôt qu'il parte sans plafond.
    *
    * Elle n'est appelée QUE sur le chemin local : une microVM n'en a pas besoin
-   * (le firewall pose la clé après sa sortie) et se ferait refuser.
+   * (le firewall pose la clé après sa sortie) et se ferait refuser. `null` est
+   * réservé aux endpoints locaux sans authentification.
    */
-  llmKey(): Promise<string>;
+  llmKey(): Promise<string | null>;
   /** Le rapport de fin de tour. C'est lui qui met la session au repos. */
   reportTurn(report: VmTurnReport): Promise<void>;
 }
@@ -382,9 +383,10 @@ export function createControlPlaneClient(
 
     llmKey: async () => {
       const body = (await request("POST", "/llm-key")) as { key?: unknown };
-      // Une réponse 200 sans clé serait une faute de chez nous, et elle doit
-      // s'arrêter ici : plus bas, une chaîne vide devient un `authorization`
-      // vide, et le tour meurt sur un 401 du fournisseur qui ne dit rien.
+      // `null` est le contrat explicite d'un endpoint local sans auth. Toute
+      // autre forme creuse reste une faute du plan de contrôle : confondre les
+      // deux masquerait une clé cloud perdue derrière un 401 du fournisseur.
+      if (body.key === null) return null;
       if (typeof body.key !== "string" || !body.key.trim()) {
         throw new Error("POST /llm-key returned no key");
       }

@@ -49,10 +49,10 @@ export async function fetchAiKeysApi(): Promise<{ keys: AiKey[] }> {
   return parseJson(await fetch("/api/account/ai-keys"));
 }
 
-/** Enregistre le BYOK actif (remplace l'existant). `baseUrl` requis pour 'generic'. */
+/** Enregistre le BYOK actif (remplace l'existant). Les providers locaux peuvent ne pas avoir de clé. */
 export async function addAiKeyApi(input: {
   provider: string;
-  key: string;
+  key?: string;
   baseUrl?: string;
 }): Promise<{ key: AiKey }> {
   // Jamais la clé, évidemment — seulement le fournisseur choisi.
@@ -61,7 +61,7 @@ export async function addAiKeyApi(input: {
     await fetch("/api/account/ai-keys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider: input.provider, key: input.key, base_url: input.baseUrl }),
+      body: JSON.stringify({ provider: input.provider, key: input.key ?? "", base_url: input.baseUrl }),
     }),
   );
 }

@@ -20,6 +20,10 @@
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
 import type { DesktopChannel } from "@/lib/desktop/channel";
+import type {
+  LocalModelDiscoveryInput,
+  LocalModelDiscoveryResult,
+} from "@/lib/desktop/local-models";
 import type { LocalRepoState } from "@/lib/desktop/local-repo";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
@@ -139,6 +143,12 @@ export interface DesktopBridge {
   forgetLocalRepo(input: { projectId: string }): Promise<LocalRepoState>;
   /** Les branches déjà présentes dans le dépôt attaché. */
   localRepoBranches?(input: { projectId: string; fullName: string }): Promise<string[]>;
+  /**
+   * Lit les modèles exposés par Ollama ou un endpoint OpenAI-compatible sur la
+   * boucle locale. Le main process refuse toute URL qui ne pointe pas vers
+   * loopback, et ne rend jamais autre chose que des ids de modèles.
+   */
+  discoverLocalModels(input: LocalModelDiscoveryInput): Promise<LocalModelDiscoveryResult>;
   /**
    * FORCE UN TOUR SUR CETTE MACHINE (MIN-293) — **coquille de DÉV uniquement**.
    *

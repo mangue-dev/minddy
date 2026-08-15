@@ -8,7 +8,10 @@ import {
   Input,
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
   Spinner,
@@ -20,8 +23,10 @@ import { NumoIcon } from "@/components/numo-icon";
 import {
   AGENT_PROVIDERS,
   getAgentProvider,
+  isLocalAgentProvider,
   MINDDY_QUOTA_PROVIDER_ID,
 } from "@/lib/agent-providers";
+import { isDesktop } from "@/lib/desktop/bridge";
 import { addAiKeyApi, deleteAiKeyApi } from "@/lib/agent-keys-api";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { agentModelsQueryKey } from "@/lib/use-agent-models-query";
@@ -59,6 +64,7 @@ export function ByokConnectPanel({
   const { keys, loading: keysLoading } = useAiKeysQuery();
   const activeKey = keys[0] ?? null;
   const activeProvider = activeKey?.provider ?? MINDDY_QUOTA_PROVIDER_ID;
+  const desktop = isDesktop();
 
   // Sélection courante = override en cours (avant enregistrement) sinon le
   // provider persisté. Brouillons de clé / base URL pour le formulaire BYOK.
@@ -69,6 +75,7 @@ export function ByokConnectPanel({
 
   const selected = selectedOverride ?? activeProvider;
   const selectedDef = getAgentProvider(selected); // undefined pour « quota minddy »
+  const localProvider = !!selectedDef && isLocalAgentProvider(selectedDef.id);
   const isConfigured = !!activeKey && activeKey.provider === selected;
 
   /**
@@ -77,8 +84,19 @@ export function ByokConnectPanel({
    * s'affichait en français dans l'UI anglaise. Il vient donc d'ici, pas de
    * `AGENT_PROVIDERS`. Le reste passe tel quel.
    */
-  const providerLabel = (provider: { id: string; label: string; requiresBaseUrl?: boolean }) =>
-    provider.requiresBaseUrl ? t("aiProviderGeneric") : provider.label;
+  const providerLabel = (provider: { id: string; label: string }) => {
+    if (provider.id === "generic") return t("aiProviderGeneric");
+    if (provider.id === "local_openai") return t("aiProviderLocalOpenAi");
+    return provider.label;
+  };
+  // Un endpoint local n'a de sens que dans l'app qui peut le joindre. On laisse
+  // néanmoins la configuration active visible dans le navigateur pour pouvoir la
+  // retirer sans devoir revenir sur le Mac qui l'a créée.
+  const providers = AGENT_PROVIDERS.filter(
+    (provider) => desktop || !isLocalAgentProvider(provider.id) || provider.id === activeKey?.provider,
+  );
+  const cloudProviders = providers.filter((provider) => !isLocalAgentProvider(provider.id));
+  const localProviders = providers.filter((provider) => isLocalAgentProvider(provider.id));
 
   /** La clé change l'endpoint ET le catalogue de modèles : les trois lectures
    *  qui en dépendent se réconcilient ensemble, jamais l'une sans l'autre. */
@@ -92,7 +110,10 @@ export function ByokConnectPanel({
 
   const onProviderChange = async (next: string) => {
     setKeyDraft("");
-    setBaseUrlDraft("");
+    // L'installation habituelle ne demande aucune saisie : les deux ports sont
+    // ceux proposés par Ollama et LM Studio. Cette valeur reste éditable pour
+    // Docker, une autre machine du LAN ou un autre serveur compatible.
+    setBaseUrlDraft(getAgentProvider(next)?.localDefaultBaseUrl ?? "");
     setSelectedOverride(next);
     // Repasser au quota minddy = retirer le BYOK actif (mode plateforme).
     if (next === MINDDY_QUOTA_PROVIDER_ID && activeKey) {
@@ -109,7 +130,7 @@ export function ByokConnectPanel({
 
   const saveKey = async () => {
     const key = keyDraft.trim();
-    if (!selectedDef || !key || saving) return;
+    if (!selectedDef || (!key && !localProvider) || saving) return;
     if (selectedDef.requiresBaseUrl && !/^https?:\/\/.+/i.test(baseUrlDraft.trim())) {
       toast.error(t("aiKeyBaseUrlInvalid"));
       return;
@@ -122,7 +143,7 @@ export function ByokConnectPanel({
         baseUrl: selectedDef.requiresBaseUrl ? baseUrlDraft.trim() : undefined,
       });
       await refreshByok();
-      toast.success(t("aiKeyAddedToast"));
+      toast.success(localProvider ? t("aiLocalEndpointAddedToast") : t("aiKeyAddedToast"));
       setKeyDraft("");
       setBaseUrlDraft("");
       onConnected?.();
@@ -155,22 +176,45 @@ export function ByokConnectPanel({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={MINDDY_QUOTA_PROVIDER_ID}>
-            <span className="flex items-center gap-2">
-              <NumoIcon animated={false} className="size-4 text-primary" />
-              {t("aiProviderMinddy")}
-            </span>
-          </SelectItem>
-          {AGENT_PROVIDERS.map((p) => (
-            <SelectItem key={p.id} value={p.id}>
+          <SelectGroup>
+            <SelectLabel>{t("aiProviderCloudGroup")}</SelectLabel>
+            <SelectItem value={MINDDY_QUOTA_PROVIDER_ID}>
               <span className="flex items-center gap-2">
-                <ProviderLogo provider={p.id} size={16} />
-                {providerLabel(p)}
+                <NumoIcon animated={false} className="size-4 text-primary" />
+                {t("aiProviderMinddy")}
               </span>
             </SelectItem>
-          ))}
+            {cloudProviders.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                <span className="flex items-center gap-2">
+                  <ProviderLogo provider={p.id} size={16} />
+                  {providerLabel(p)}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectGroup>
+          {localProviders.length > 0 ? (
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel>{t("aiProviderLocalGroup")}</SelectLabel>
+                {localProviders.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    <span className="flex items-center gap-2">
+                      <ProviderLogo provider={p.id} size={16} />
+                      {providerLabel(p)}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
+          ) : null}
         </SelectContent>
       </Select>
+
+      {!desktop && !isLocalAgentProvider(activeProvider) ? (
+        <p className="text-xs text-muted-foreground">{t("aiProviderLocalDesktopHint")}</p>
+      ) : null}
 
       {selected === MINDDY_QUOTA_PROVIDER_ID ? (
         // ── Quota minddy : mode plateforme, aucune clé ──────────────────────
@@ -186,7 +230,7 @@ export function ByokConnectPanel({
               </span>
               <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
                 {activeKey.base_url ? `${activeKey.base_url} · ` : ""}
-                {activeKey.key_prefix ?? ""}
+                {activeKey.key_prefix ?? (isLocalAgentProvider(activeKey.provider) ? t("aiKeyNotRequired") : "")}
               </span>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={() => void removeKey()}>
@@ -212,18 +256,22 @@ export function ByokConnectPanel({
         // ── BYOK à configurer : clé (+ base URL pour le générique) ──────────
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted-foreground">
-            {t("aiKeysDesc")} {t("aiKeyVmNote")}
+            {isLocalAgentProvider(selectedDef.id)
+              ? t("aiKeyLocalEndpointHint")
+              : t("aiKeysDesc")} {t("aiKeyVmNote")}
           </p>
 
           {selectedDef.requiresBaseUrl ? (
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                {t("aiKeyBaseUrlLabel")}
+                {isLocalAgentProvider(selectedDef.id)
+                  ? t("aiKeyLocalBaseUrlLabel")
+                  : t("aiKeyBaseUrlLabel")}
               </label>
               <Input
                 value={baseUrlDraft}
                 onChange={(e) => setBaseUrlDraft(e.target.value)}
-                placeholder="https://…/v1"
+                placeholder={selectedDef.id === "ollama" ? "http://127.0.0.1:11434" : "http://127.0.0.1:1234/v1"}
                 spellCheck={false}
                 autoCapitalize="off"
                 autoCorrect="off"
@@ -234,13 +282,13 @@ export function ByokConnectPanel({
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              {t("aiKeyLabel")}
+              {localProvider ? t("aiKeyOptionalLabel") : t("aiKeyLabel")}
             </label>
             <div className="flex items-center gap-2">
               <Input
                 value={keyDraft}
                 onChange={(e) => setKeyDraft(e.target.value)}
-                placeholder={selectedDef.keyPlaceholder}
+                placeholder={localProvider ? t("aiKeyOptionalPlaceholder") : selectedDef.keyPlaceholder}
                 type="password"
                 // `off` est ignoré par plusieurs gestionnaires de mots de passe
                 // sur les champs password ; `new-password` désactive réellement
@@ -257,10 +305,10 @@ export function ByokConnectPanel({
               <Button
                 type="button"
                 onClick={() => void saveKey()}
-                disabled={saving || !keyDraft.trim()}
+                disabled={saving || (!localProvider && !keyDraft.trim())}
               >
                 {saving && <Spinner />}
-                {t("aiKeySave")}
+                {localProvider ? t("aiLocalEndpointSave") : t("aiKeySave")}
               </Button>
             </div>
             {selectedDef.keysUrl ? (

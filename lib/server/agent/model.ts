@@ -8,6 +8,7 @@ import { aiModelFallback, byokDefaultModelKey } from "@/lib/ai-model-config";
 import {
   DEFAULT_AGENT_PROVIDER,
   getProviderDefaultModel,
+  isLocalAgentProvider,
   resolveProviderBaseUrl,
   type AgentProviderId,
 } from "@/lib/agent-providers";
@@ -16,7 +17,10 @@ import {
   DEFAULT_REASONING_LEVEL,
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
-import { decryptUserAiKey } from "./byok-credentials";
+import {
+  decryptUserAiKey,
+  LOCAL_ENDPOINT_WITHOUT_API_KEY,
+} from "./byok-credentials";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 import type { VmModelPricing } from "./vm/protocol";
 import {
@@ -282,6 +286,24 @@ export interface UserByok {
   featureModels: ByokFeatureModels;
 }
 
+/** Un endpoint privé n'est jamais un repli valable pour une microVM cloud. */
+export class LocalEndpointRequiresLocalRunError extends Error {
+  code = "localEndpointRequiresLocalRun" as const;
+  constructor() {
+    super("This BYOK endpoint is local and can only be used by a local run");
+    this.name = "LocalEndpointRequiresLocalRunError";
+  }
+}
+
+/** Un run BYOK figé ne change jamais de payeur si sa clé est retirée. */
+export class ByokCredentialUnavailableError extends Error {
+  code = "byokCredentialUnavailable" as const;
+  constructor() {
+    super("The BYOK credential used by this run is no longer available");
+    this.name = "ByokCredentialUnavailableError";
+  }
+}
+
 /**
  * Une clé non validée est-elle reconnue MAINTENANT ? (MIN-344)
  *
@@ -352,7 +374,7 @@ export async function getUserByok(
     .maybeSingle();
   const row = data as {
     provider: string;
-    key_encrypted: string;
+    key_encrypted: string | null;
     base_url: string | null;
     validated_at: string | null;
     enabled_surfaces: AiSurface[] | null;
@@ -363,16 +385,25 @@ export async function getUserByok(
     ? row.enabled_surfaces
     : DEFAULT_BYOK_SURFACES;
   if (surface && !enabledSurfaces.includes(surface)) return null;
-  const apiKey = decryptUserAiKey(row.key_encrypted);
-  if (!apiKey) return null;
+  const localProvider = isLocalAgentProvider(row.provider);
+  const apiKey =
+    row.key_encrypted === LOCAL_ENDPOINT_WITHOUT_API_KEY
+      ? ""
+      : decryptUserAiKey(row.key_encrypted);
+  // La clé reste obligatoire pour tous les providers cloud. Localement, Ollama
+  // et la plupart des serveurs OpenAI-compatibles n'en demandent aucune : le
+  // proxy retirera alors le placeholder d'opencode au lieu de l'envoyer.
+  if (!apiKey && !localProvider) return null;
   const baseUrl = resolveProviderBaseUrl(row.provider, row.base_url);
   if (!baseUrl) return null;
-  // Une base URL custom est revalidée à CHAQUE usage, pas seulement à
+  // Une base URL custom cloud est revalidée à CHAQUE usage, pas seulement à
   // l'enregistrement (MIN-341) : entre les deux, le DNS du domaine appartient
   // toujours à celui qui l'a saisi, et rien n'empêche qu'il pointe désormais
   // sur le réseau interne. Une URL devenue irrésoluble tombe dans le même cas
   // que les autres lignes inutilisables — on l'ignore.
-  if (row.base_url) {
+  // Le serveur ne résout jamais une adresse locale : seuls le proxy LLM et le
+  // harness de l'app de bureau y accèdent.
+  if (row.base_url && !localProvider) {
     try {
       await assertPublicHttpUrl(baseUrl);
     } catch {
@@ -382,13 +413,14 @@ export async function getUserByok(
   const provider = row.provider as AgentProviderId;
   if (
     !row.validated_at &&
-    !(await confirmsUnvalidatedKey({ userId, provider, apiKey, baseUrl }))
+    !localProvider &&
+    !(await confirmsUnvalidatedKey({ userId, provider, apiKey: apiKey!, baseUrl }))
   ) {
     return null;
   }
   return {
     provider,
-    apiKey,
+    apiKey: apiKey ?? "",
     baseUrl,
     enabledSurfaces,
     featureModels: row.feature_models ?? {},
@@ -506,11 +538,16 @@ export interface ResolvedAgentEndpoint {
 export async function resolveAgentApiKey(
   userId: string,
   surface: Extract<AiSurface, "agent" | "automations"> = "agent",
+  options: { allowLocal?: boolean; requireByok?: boolean } = {},
 ): Promise<ResolvedAgentEndpoint> {
   const byok = await getUserByok(userId, surface);
   if (byok) {
+    if (isLocalAgentProvider(byok.provider) && !options.allowLocal) {
+      throw new LocalEndpointRequiresLocalRunError();
+    }
     return { apiKey: byok.apiKey, mode: "byok", provider: byok.provider, baseUrl: byok.baseUrl };
   }
+  if (options.requireByok) throw new ByokCredentialUnavailableError();
   const platform = process.env.OPENROUTER_API_KEY;
   if (!platform) throw new Error("OPENROUTER_API_KEY not configured");
   const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);

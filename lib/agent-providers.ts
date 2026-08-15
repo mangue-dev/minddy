@@ -13,7 +13,16 @@
  * appliquées dans la boucle.
  */
 
-export type AgentProviderId = "openrouter" | "openai" | "anthropic" | "google" | "generic";
+export type AgentProviderId =
+  | "openrouter"
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "generic"
+  /** Endpoint OpenAI-compatible atteint seulement depuis l'app de bureau. */
+  | "local_openai"
+  /** Ollama, via sa couche OpenAI-compatible `/v1`. */
+  | "ollama";
 
 /** Ajustements de la requête chat par provider (compat OpenAI variable). */
 export interface ProviderRequestProfile {
@@ -55,6 +64,12 @@ export interface AgentProviderDef {
   /** true → l'utilisateur DOIT fournir une base URL (generic). */
   requiresBaseUrl?: boolean;
   /**
+   * URL proposée à l'installation d'un endpoint local. C'est un brouillon UI,
+   * jamais un repli côté serveur : une URL explicitement enregistrée reste
+   * requise pour lancer un run.
+   */
+  localDefaultBaseUrl?: string;
+  /**
    * Modèle par défaut (frontier) de ce provider en BYOK — pré-rempli dans le
    * sélecteur et utilisé comme fallback de résolution (cf. `resolveAgentModel`).
    * Absent pour OpenRouter (reprend le défaut racine = quota minddy) et pour le
@@ -73,7 +88,14 @@ export interface AgentProviderDef {
    */
   logoModel: string;
   /** Stratégie de listing des modèles (cf. route /api/agent/models). */
-  listStrategy: "openrouter" | "openai" | "anthropic" | "generic";
+  listStrategy: "openrouter" | "openai" | "anthropic" | "generic" | "none";
+  /**
+   * L'adresse désigne la machine ou le réseau de l'utilisateur. Elle ne doit
+   * jamais être sondée par le serveur ni être choisie pour une microVM cloud.
+   */
+  localOnly?: boolean;
+  /** Segment OpenAI-compatible ajouté quand le serveur local attend une racine. */
+  localBaseUrlSuffix?: string;
   requestProfile: ProviderRequestProfile;
   /** Lien vers la page de génération de clé (aide du wizard). */
   keysUrl?: string;
@@ -159,6 +181,35 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     // Completions. On n'y envoie aucune extension de provider.
     requestProfile: { outputTokenField: "max_tokens" },
   },
+  {
+    id: "local_openai",
+    label: "Endpoint local (OpenAI-compatible)",
+    requiresBaseUrl: true,
+    // Port par défaut de LM Studio, l'implémentation OpenAI-compatible locale la
+    // plus répandue. L'utilisateur peut naturellement le remplacer.
+    localDefaultBaseUrl: "http://127.0.0.1:1234/v1",
+    keyPlaceholder: "sk-…",
+    logoModel: "",
+    listStrategy: "none",
+    localOnly: true,
+    // Pas de champ optionnel : un endpoint local inconnu est la forme la plus
+    // conservatrice du contrat Chat Completions.
+    requestProfile: { outputTokenField: "max_tokens" },
+  },
+  {
+    id: "ollama",
+    label: "Ollama (local)",
+    requiresBaseUrl: true,
+    localDefaultBaseUrl: "http://127.0.0.1:11434",
+    keyPlaceholder: "ollama",
+    logoModel: "",
+    listStrategy: "none",
+    localOnly: true,
+    // Ollama expose ses Chat Completions sous `/v1`, alors que son URL habituelle
+    // est la racine `http://127.0.0.1:11434`.
+    localBaseUrlSuffix: "/v1",
+    requestProfile: { outputTokenField: "max_tokens" },
+  },
 ];
 
 /** Provider par défaut quand aucun BYOK : clé plateforme OpenRouter. */
@@ -188,6 +239,11 @@ export function isKnownAgentProvider(id: string): id is AgentProviderId {
   return AGENT_PROVIDERS.some((p) => p.id === id);
 }
 
+/** Un endpoint local ne peut être atteint que par le harness de l'app de bureau. */
+export function isLocalAgentProvider(id: string | null | undefined): boolean {
+  return getAgentProvider(id)?.localOnly === true;
+}
+
 /** Normalise une base URL : trim, retire le `/` final et un `/chat/completions` collé. */
 export function normalizeBaseUrl(raw: string): string {
   return raw
@@ -208,7 +264,12 @@ export function resolveProviderBaseUrl(
   if (!def) return null;
   const raw = def.requiresBaseUrl ? (customBaseUrl ?? "").trim() : (def.baseUrl ?? "");
   if (!raw) return null;
-  return normalizeBaseUrl(raw);
+  const normalized = normalizeBaseUrl(raw);
+  if (!def.localBaseUrlSuffix) return normalized;
+  const suffix = def.localBaseUrlSuffix.replace(/^\/+/, "");
+  return normalized.toLowerCase().endsWith(`/${suffix.toLowerCase()}`)
+    ? normalized
+    : `${normalized}/${suffix}`;
 }
 
 /** URL de complétion chat OpenAI-compatible pour une base donnée. */

@@ -679,7 +679,13 @@ export async function executeAgentRun(
       checkAgentQuota(run.created_by ?? "", aiSurface).catch(() => null),
       spentFromLedger(run.run_id ?? run.id),
     ]);
-    const endpointPromise = resolveAgentApiKey(run.created_by, aiSurface);
+    // Un run BYOK est figé sur son propre payeur. Si la configuration a disparu,
+    // ou si un endpoint local a été demandé depuis le cloud, la préparation
+    // échoue explicitement : elle ne peut jamais reprendre la clé plateforme.
+    const endpointPromise = resolveAgentApiKey(run.created_by, aiSurface, {
+      allowLocal: localTurn,
+      requireByok: run.key_mode === "byok",
+    });
 
     // Cible de clone (token frais pour ce chunk) + client PR/MR du provider.
     const target = await targetPromise;

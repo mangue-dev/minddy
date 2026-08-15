@@ -25,6 +25,7 @@ const AGENT_ERROR_KEYS: Record<string, MessageKey<"Agent">> = {
   alreadyRunning: "errorAlreadyRunning",
   quotaExceeded: "errorQuotaExceeded",
   noModelForProvider: "errorNoModelForProvider",
+  localEndpointRequiresLocalRun: "errorLocalEndpointRequiresLocalRun",
   supersededRun: "errorSupersededRun",
   prMerged: "errorPrMerged",
   promptRequired: "errorPromptRequired",

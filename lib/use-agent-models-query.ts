@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_AGENT_PROVIDER, type AgentProviderId } from "@/lib/agent-providers";
+import { getDesktopBridge } from "@/lib/desktop/bridge";
 import {
   reasoningLevelsFor,
   type ModelReasoning,
@@ -67,6 +68,11 @@ interface AgentModelsResult {
    * sur le catalogue entier, comme avant.
    */
   recommended: string[];
+  /** Config locale non secrète : son catalogue est lu par la coquille Electron. */
+  localEndpoint?: {
+    provider: "local_openai" | "ollama";
+    baseUrl: string;
+  };
 }
 
 async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsResult> {
@@ -87,15 +93,36 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     maxMultiplier?: number | null;
     planId?: string | null;
     recommended?: string[];
+    localEndpoint?: {
+      provider?: AgentProviderId;
+      baseUrl?: string;
+    };
   };
-  return {
+  const localEndpoint: AgentModelsResult["localEndpoint"] =
+    data.localEndpoint &&
+    (data.localEndpoint.provider === "local_openai" || data.localEndpoint.provider === "ollama") &&
+    typeof data.localEndpoint.baseUrl === "string" &&
+    data.localEndpoint.baseUrl
+      ? { provider: data.localEndpoint.provider, baseUrl: data.localEndpoint.baseUrl }
+      : undefined;
+  const catalog: AgentModelsResult = {
     provider: data.provider ?? DEFAULT_AGENT_PROVIDER,
     defaultModel: data.defaultModel ?? null,
     models: data.models ?? [],
     maxMultiplier: data.maxMultiplier ?? null,
     planId: data.planId ?? null,
     recommended: data.recommended ?? [],
+    ...(localEndpoint ? { localEndpoint } : {}),
   };
+  // Le serveur web ne peut — et ne doit — jamais joindre une adresse locale.
+  // L'app de bureau le fait derrière un pont borné à loopback, puis le picker
+  // reçoit exactement le même contrat qu'un catalogue cloud.
+  const bridge = scope === "user" && catalog.localEndpoint ? getDesktopBridge() : null;
+  if (!bridge || !catalog.localEndpoint) return catalog;
+  const discovered = await bridge.discoverLocalModels(catalog.localEndpoint).catch(() => null);
+  return discovered?.ok
+    ? { ...catalog, models: discovered.models.map((id) => ({ id, name: id })) }
+    : catalog;
 }
 
 export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
@@ -103,7 +130,10 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
     // Une portée = un catalogue : les deux ne doivent jamais partager un cache.
     queryKey: scope === "user" ? agentModelsQueryKey : [...agentModelsQueryKey, scope],
     queryFn: () => fetchAgentModels(scope),
-    staleTime: 60 * 60 * 1000,
+    // Les catalogues cloud sont cachés côté serveur ; une minute permet en
+    // revanche à Ollama / LM Studio fraîchement démarré d'apparaître vite sans
+    // bouton de rafraîchissement ni accès local depuis le cloud.
+    staleTime: 60 * 1000,
   });
   return {
     provider: data?.provider ?? DEFAULT_AGENT_PROVIDER,

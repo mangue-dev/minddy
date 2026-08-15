@@ -4,10 +4,15 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
-import { encryptUserAiKey, keyPrefix } from "@/lib/server/agent/byok-credentials";
+import {
+  encryptUserAiKey,
+  keyPrefix,
+  LOCAL_ENDPOINT_WITHOUT_API_KEY,
+} from "@/lib/server/agent/byok-credentials";
 import { probeByokKey } from "@/lib/server/agent/byok-validate";
 import {
   getAgentProvider,
+  isLocalAgentProvider,
   isKnownAgentProvider,
   normalizeBaseUrl,
   resolveProviderBaseUrl,
@@ -19,8 +24,9 @@ import type { AgentProviderId } from "@/lib/agent-providers";
 
 /**
  * Clé « BYOK » du compte (MIN-46 / MIN-10). UN seul provider actif : OpenRouter,
- * OpenAI, Anthropic, Google ou un endpoint OpenAI-compatible générique (avec sa
- * base URL). Reconfigurer = remplacer (on efface les autres). La clé en clair
+ * OpenAI, Anthropic, Google, un endpoint OpenAI-compatible générique ou un
+ * endpoint local (OpenAI-compatible / Ollama). Reconfigurer = remplacer (on
+ * efface les autres). La clé en clair
  * n'est JAMAIS renvoyée — seulement provider + key_prefix + base_url. Écritures
  * via service client (RLS = lecture-propriétaire) ; clé chiffrée au repos
  * (AES-256-GCM). Changer/retirer le provider réinitialise le modèle par défaut
@@ -33,6 +39,21 @@ const SANITIZED =
 // Bornes larges : une clé d'API réelle et une base URL tiennent très en dessous.
 const MAX_KEY_LENGTH = 1024;
 const MAX_BASE_URL_LENGTH = 2048;
+
+/**
+ * Les endpoints locaux ne sont jamais joints depuis cette route : vérifier leur
+ * host par `assertPublicHttpUrl` serait à la fois faux (localhost est voulu) et
+ * dangereux (une future sonde serveur deviendrait une SSRF). On valide seulement
+ * la forme que le harness local utilisera.
+ */
+function isHttpEndpointUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw);
+    return (url.protocol === "http:" || url.protocol === "https:") && !!url.hostname;
+  } catch {
+    return false;
+  }
+}
 
 /** Efface le défaut modèle perso (obsolète quand le provider change). */
 async function clearDefaultModel(service: ReturnType<typeof getServiceClient>, userId: string) {
@@ -87,29 +108,34 @@ export async function POST(request: NextRequest) {
 
   const key = typeof body.key === "string" ? body.key.trim() : "";
   const provider = typeof body.provider === "string" ? body.provider.trim() : "";
-  if (!key) return NextResponse.json({ error: "Missing key" }, { status: 400 });
-  if (key.length > MAX_KEY_LENGTH) {
-    return NextResponse.json({ error: "Invalid key" }, { status: 400 });
-  }
   if (!isKnownAgentProvider(provider)) {
     return NextResponse.json({ error: "Unsupported provider" }, { status: 400 });
   }
+  const localProvider = isLocalAgentProvider(provider);
+  // Une installation Ollama ou un serveur OpenAI-compatible local n'a le plus
+  // souvent aucune authentification. Une clé vide est donc valide UNIQUEMENT
+  // pour ces providers : tous les endpoints cloud restent fail-closed.
+  if (!key && !localProvider) return NextResponse.json({ error: "Missing key" }, { status: 400 });
+  if (key.length > MAX_KEY_LENGTH) {
+    return NextResponse.json({ error: "Invalid key" }, { status: 400 });
+  }
 
-  // Base URL requise pour le provider générique. Le serveur ira appeler cette
-  // adresse : elle passe donc le garde anti-SSRF (MIN-341), pas une regex —
-  // `http://169.254.169.254/` satisfait `^https?://.+` et vise le service de
-  // métadonnées du cloud.
+  // Base URL requise pour le provider générique et les providers locaux. Une URL
+  // cloud reste soumise au garde anti-SSRF ; une URL locale ne sortira JAMAIS de
+  // cette machine et ne doit donc jamais être résolue ni sondée par ce serveur.
   const def = getAgentProvider(provider)!;
   let baseUrl: string | null = null;
   if (def.requiresBaseUrl) {
     const raw = typeof body.base_url === "string" ? body.base_url.trim() : "";
-    if (raw.length > MAX_BASE_URL_LENGTH || !/^https?:\/\/.+/i.test(raw)) {
+    if (raw.length > MAX_BASE_URL_LENGTH || !isHttpEndpointUrl(raw)) {
       return NextResponse.json({ error: "Invalid base URL" }, { status: 400 });
     }
-    try {
-      await assertPublicHttpUrl(raw);
-    } catch {
-      return NextResponse.json({ error: "Invalid base URL" }, { status: 400 });
+    if (!localProvider) {
+      try {
+        await assertPublicHttpUrl(raw);
+      } catch {
+        return NextResponse.json({ error: "Invalid base URL" }, { status: 400 });
+      }
     }
     baseUrl = normalizeBaseUrl(raw);
   }
@@ -122,20 +148,32 @@ export async function POST(request: NextRequest) {
   // (fournisseur injoignable) enregistre la clé SANS date de validation : elle ne
   // lève rien, et `getUserByok` retentera au premier usage.
   const effectiveBaseUrl = resolveProviderBaseUrl(provider, baseUrl);
-  const verdict = effectiveBaseUrl
-    ? await probeByokKey({ provider, apiKey: key, baseUrl: effectiveBaseUrl })
-    : "unknown";
+  // Un endpoint local est volontairement opaque au cloud : aucun listing ni
+  // probe ne doit faire sortir cette requête de l'app de bureau. La clé est
+  // considérée configurée afin que le run local puisse la recevoir ; le premier
+  // appel du proxy rendra une erreur explicite si l'endpoint est indisponible.
+  const verdict = localProvider
+    ? "valid"
+    : effectiveBaseUrl
+      ? await probeByokKey({ provider, apiKey: key, baseUrl: effectiveBaseUrl })
+      : "unknown";
   if (verdict === "invalid") {
     const t = await getTranslations("ApiErrors");
     return NextResponse.json({ error: t("aiKeyRejected") }, { status: 400 });
   }
 
-  let encrypted: string;
-  try {
-    encrypted = encryptUserAiKey(key);
-  } catch {
-    // AI_KEY_ENCRYPTION_SECRET manquant → fail-closed (on ne stocke jamais en clair).
-    return NextResponse.json({ error: "BYOK is not configured on the server" }, { status: 503 });
+  // `user_ai_keys.key_encrypted` est NOT NULL sur les instances déjà
+  // déployées. Un endpoint local sans authentification n'a aucun secret à
+  // chiffrer : on persiste donc un marqueur non sensible, compris par
+  // `getUserByok`, plutôt qu'un NULL qui ferait échouer l'enregistrement.
+  let encrypted = LOCAL_ENDPOINT_WITHOUT_API_KEY;
+  if (key) {
+    try {
+      encrypted = encryptUserAiKey(key);
+    } catch {
+      // AI_KEY_ENCRYPTION_SECRET manquant → fail-closed (on ne stocke jamais en clair).
+      return NextResponse.json({ error: "BYOK is not configured on the server" }, { status: 503 });
+    }
   }
 
   const service = getServiceClient();
@@ -162,7 +200,7 @@ export async function POST(request: NextRequest) {
         user_id: auth.user.id,
         provider,
         key_encrypted: encrypted,
-        key_prefix: keyPrefix(key),
+        key_prefix: key ? keyPrefix(key) : null,
         base_url: baseUrl,
         validated_at: verdict === "valid" ? new Date().toISOString() : null,
         updated_at: new Date().toISOString(),
@@ -212,10 +250,25 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  const service = getServiceClient();
+  const { data: active } = await service
+    .from("user_ai_keys")
+    .select("provider")
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+  const localProvider = isLocalAgentProvider(
+    (active as { provider?: string } | null)?.provider,
+  );
   const update: { enabled_surfaces?: string[]; feature_models?: Record<string, string> } = {};
   if ("enabled_surfaces" in body) {
     const surfaces = parseAiSurfaces(body.enabled_surfaces);
     if (!surfaces) return NextResponse.json({ error: "Invalid AI surfaces" }, { status: 400 });
+    if (localProvider && surfaces.some((surface) => surface !== "agent")) {
+      return NextResponse.json(
+        { error: "Local endpoints are available only for local agent runs" },
+        { status: 400 },
+      );
+    }
     update.enabled_surfaces = surfaces;
   }
   if ("feature_models" in body) {
@@ -227,7 +280,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "No preference supplied" }, { status: 400 });
   }
 
-  const service = getServiceClient();
   const { data, error } = await service
     .from("user_ai_keys")
     .update(update)

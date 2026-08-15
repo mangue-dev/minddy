@@ -70,6 +70,7 @@ export function EnvironmentCombobox({
   folder,
   needsAttach = false,
   localAvailable = true,
+  cloudAvailable = true,
   onAttach,
   disabled,
   disabledTooltip,
@@ -83,6 +84,8 @@ export function EnvironmentCombobox({
   needsAttach?: boolean;
   /** Faux dans le navigateur : le choix est visible mais nécessite l'app Mac. */
   localAvailable?: boolean;
+  /** Faux pour un endpoint BYOK privé : il ne peut pas sortir vers une microVM. */
+  cloudAvailable?: boolean;
   onAttach?: () => void;
   disabled?: boolean;
   /** Tooltip du chip verrouillé (environnement figé pour la conversation). */
@@ -166,18 +169,20 @@ export function EnvironmentCombobox({
       <PopoverContent className="min-w-64 rounded-xl p-0" align="start">
         <Command shouldFilter={false}>
           <CommandList className="p-1">
-            <CommandItem value="cloud" onSelect={() => pick("cloud")}>
-              <Cloud className="size-4 shrink-0 text-muted-foreground" />
-              <span className="flex-1">
-                <span className="block">{t("environmentCloud")}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {t("environmentCloudHint")}
+            {cloudAvailable ? (
+              <CommandItem value="cloud" onSelect={() => pick("cloud")}>
+                <Cloud className="size-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1">
+                  <span className="block">{t("environmentCloud")}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {t("environmentCloudHint")}
+                  </span>
                 </span>
-              </span>
-              <Check
-                className={cn("size-4 shrink-0", value === "cloud" ? "opacity-100" : "opacity-0")}
-              />
-            </CommandItem>
+                <Check
+                  className={cn("size-4 shrink-0", value === "cloud" ? "opacity-100" : "opacity-0")}
+                />
+              </CommandItem>
+            ) : null}
             <CommandItem
               value="local"
               aria-disabled={!localAvailable}

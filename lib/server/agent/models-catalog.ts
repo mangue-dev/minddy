@@ -15,6 +15,7 @@ import { parseRecommendedModels } from "@/lib/recommended-models";
 import { dedupeModelVariants } from "@/lib/model-variants";
 import {
   getAgentProvider,
+  isLocalAgentProvider,
   normalizeBaseUrl,
   resolveProviderBaseUrl,
   DEFAULT_AGENT_PROVIDER,
@@ -82,13 +83,22 @@ export interface AgentModelsCatalog {
    * liste de conseils y masquerait justement ce qu'on est venu chercher.
    */
   recommended?: string[];
+  /**
+   * Adresse non secrète que seule l'application de bureau emploie pour découvrir
+   * le catalogue local. Le serveur ne la joint jamais : `models` reste vide ici
+   * et le bridge Electron fait l'appel sur loopback.
+   */
+  localEndpoint?: {
+    provider: Extract<AgentProviderId, "local_openai" | "ollama">;
+    baseUrl: string;
+  };
 }
 
 const TTL_MS = 60 * 60 * 1000;
 const cache = new Map<string, { at: number; models: AgentModelEntry[] }>();
 
 /** Écarte les modèles non conversationnels (embeddings, audio, image…). */
-const NON_CHAT_RE = /(embedding|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
+const NON_CHAT_RE = /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
 /**
  * La liste telle qu'on la PROPOSE : sans ses doublons de version, et rangée.
@@ -175,6 +185,11 @@ async function loadModels(
     case "generic":
       // Endpoint arbitraire : peut ne pas exposer /models → l'échec est toléré.
       return listOpenAICompat(baseUrl, apiKey);
+    case "none":
+      // Les endpoints locaux ne sont jamais joints depuis le cloud. Le champ de
+      // modèle reste libre dans le picker : l'utilisateur saisit l'id exposé par
+      // Ollama, LM Studio, vLLM… sur sa propre machine.
+      return [];
   }
 }
 
@@ -286,7 +301,10 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
   let apiKey = "";
   let mode: "platform" | "byok" = "platform";
   try {
-    const endpoint = await resolveAgentApiKey(userId);
+    // Cette lecture ne sonde jamais un endpoint local (`listStrategy: none`) ;
+    // elle sert seulement à rendre le bon provider et à garder le picker dans le
+    // même namespace que le run local.
+    const endpoint = await resolveAgentApiKey(userId, "agent", { allowLocal: true });
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
     apiKey = endpoint.apiKey;
@@ -299,21 +317,32 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
   // racine (quota minddy / OpenRouter BYOK) ; null pour un générique.
   const providerDefault = await resolveProviderDefaultModel(provider);
   const defaultModel =
-    providerDefault ?? (provider === "generic" ? null : await getRootDefaultModel());
+    providerDefault ?? (provider === "generic" || isLocalAgentProvider(provider) ? null : await getRootDefaultModel());
 
   const limit = mode === "platform" ? await getModelPlanLimit(userId) : null;
+  const localEndpoint = isLocalAgentProvider(provider)
+    ? {
+        provider: provider as Extract<AgentProviderId, "local_openai" | "ollama">,
+        baseUrl,
+      }
+    : undefined;
+  const header = {
+    provider,
+    defaultModel,
+    ...(localEndpoint ? { localEndpoint } : {}),
+  };
 
   const cacheKey = `${provider}|${baseUrl}`;
   const hit = cache.get(cacheKey);
   if (hit && Date.now() - hit.at < TTL_MS) {
-    return { provider, defaultModel, ...(await withMultipliers(hit.models, limit)) };
+    return { ...header, ...(await withMultipliers(hit.models, limit)) };
   }
   try {
     const models = await loadModels(provider, baseUrl, apiKey);
     cache.set(cacheKey, { at: Date.now(), models });
-    return { provider, defaultModel, ...(await withMultipliers(models, limit)) };
+    return { ...header, ...(await withMultipliers(models, limit)) };
   } catch {
-    return { provider, defaultModel, ...(await withMultipliers(hit?.models ?? [], limit)) };
+    return { ...header, ...(await withMultipliers(hit?.models ?? [], limit)) };
   }
 }
 

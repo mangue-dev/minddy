@@ -12,6 +12,7 @@ import {
 } from "electron";
 
 import { parseDesktopAuthLink, type DesktopAuthLink } from "@/lib/desktop/auth-link";
+import { discoverLocalModels } from "@/lib/desktop/local-models";
 import {
   desktopOriginForChannel,
   parseDesktopChannel,
@@ -648,6 +649,14 @@ function registerIpc(): void {
     const parsed = localRepoRequest(input);
     return parsed ? localBranches(parsed.projectId, { fullName: parsed.fullName }) : [];
   });
+
+  // Une page distante ne reçoit pas un proxy réseau par le pont Electron. Elle
+  // peut seulement demander cette découverte bornée : `local-models.ts` accepte
+  // loopback et les deux routes fixes Ollama / OpenAI-compatible, puis ne rend
+  // que des ids de modèles.
+  ipcMain.handle("minddy:local-models:discover", (_event, input: unknown) =>
+    discoverLocalModels(input),
+  );
 
   /**
    * LE DÉCLENCHEUR DE TOUR LOCAL (MIN-293) — **coquille de dév uniquement**.

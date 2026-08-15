@@ -716,14 +716,20 @@ export async function handleControlPlaneRequest(opts: {
     }
     if (run.key_mode === "byok") {
       const { resolveAgentApiKey } = await import("./model");
-      const endpoint = await resolveAgentApiKey(run.created_by ?? "").catch(() => null);
+      const endpoint = await resolveAgentApiKey(run.created_by ?? "", "agent", {
+        allowLocal: true,
+        requireByok: true,
+      }).catch(() => null);
       // La clé a pu être retirée après le lancement. Ne jamais substituer alors
       // la clé plateforme à un run figé BYOK : ce serait changer de payeur et
       // faire descendre un secret partagé sur une machine utilisateur.
       if (!endpoint || endpoint.mode !== "byok") {
         return { status: 409, body: { error: "the BYOK credential used by this run is no longer available" } };
       }
-      return ok({ key: endpoint.apiKey });
+      // Un provider local peut volontairement ne demander aucune clé (Ollama,
+      // LM Studio…). `null` est distinct d'une réponse incomplète : le proxy
+      // enlèvera alors son placeholder au lieu d'inventer un Bearer vide.
+      return ok({ key: endpoint.apiKey || null });
     }
     const [{ mintRunKey, revokeRunKey, runKeyCapUsd }, { checkAgentQuota }, { spentFromLedger }] =
       await Promise.all([

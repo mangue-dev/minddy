@@ -42,6 +42,7 @@ import {
 } from "@/lib/last-agent-project";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import { isLocalAgentProvider } from "@/lib/agent-providers";
 import type { Project } from "@/lib/types";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
@@ -246,7 +247,8 @@ export function SessionCompose({
   // optimiste : sans elle, la page Agents nommait une sandbox pour un tour qui
   // attendait en réalité le harness local.
   const [launchLocalExec, setLaunchLocalExec] = useState(false);
-  const modelRequired = provider === "generic" && !defaultModel && !model;
+  const localEndpoint = isLocalAgentProvider(provider);
+  const modelRequired = (provider === "generic" || localEndpoint) && !defaultModel && !model;
   const selectedProject = launchable.find((p) => p.id === projectId) ?? null;
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId || null);
 
@@ -271,8 +273,8 @@ export function SessionCompose({
   };
   const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
   useEffect(() => {
-    setEnvironment(localRepo.ready ? "local" : "cloud");
-  }, [localRepo.ready]);
+    setEnvironment(localEndpoint || localRepo.ready ? "local" : "cloud");
+  }, [localEndpoint, localRepo.ready]);
 
   const launch = async (
     message: string,
@@ -461,6 +463,7 @@ export function SessionCompose({
                         value={environment}
                         onChange={setEnvironment}
                         localAvailable={localRepo.available}
+                        cloudAvailable={!localEndpoint}
                         folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                         needsAttach={localRepo.state?.status !== "ready"}
                         onAttach={() => {

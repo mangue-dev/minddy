@@ -26,6 +26,7 @@ import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasonin
 import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { AI_SURFACE_DEFINITIONS, type AiSurface, type ByokModelKey } from "@/lib/ai-surfaces";
+import { isLocalAgentProvider } from "@/lib/agent-providers";
 
 /**
  * Section « Agent de code » des paramètres du compte (MIN-46) : le provider et
@@ -181,7 +182,9 @@ function ByokSurfacePreferences({
       title={t("byokSurfacesTitle")}
       description={t("byokSurfacesDesc")}
     >
-      {AI_SURFACE_DEFINITIONS.map((surface) => {
+      {AI_SURFACE_DEFINITIONS.filter(
+        (surface) => !isLocalAgentProvider(key.provider) || surface.id === "agent",
+      ).map((surface) => {
         const enabled = key.enabled_surfaces.includes(surface.id);
         return (
           <div key={surface.id} className="border-b border-border/60 last:border-b-0">
