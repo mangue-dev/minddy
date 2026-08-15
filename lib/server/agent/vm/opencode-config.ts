@@ -799,6 +799,15 @@ export function opencodeServerEnv(
     OPENCODE_PURE: "1",
     OPENCODE_DISABLE_PROJECT_CONFIG: "1",
     /**
+     * `PURE` ferme les plugins externes, mais pas les plugins livrés par
+     * OpenCode. Ceux-ci ne participent pas à notre harness : provider, agents,
+     * permissions et tools sont tous déclarés explicitement ci-dessus. Les
+     * charger à chaque serveur déclenche néanmoins leur initialisation avant le
+     * premier prompt. Les couper conserve les intégrés que nous servons, tout en
+     * retirant ce travail de démarrage sans surface fonctionnelle utilisée.
+     */
+    OPENCODE_DISABLE_DEFAULT_PLUGINS: "1",
+    /**
      * LA TROISIÈME ÉCOUTILLE (MIN-364, lot 9) — celle qui manquait, et dont
      * l'absence ne se voyait que parce qu'un autre réglage la couvrait.
      *
@@ -847,6 +856,14 @@ export function opencodeServerEnv(
     OPENCODE_DISABLE_MODELS_FETCH: "1",
     OPENCODE_DISABLE_LSP_DOWNLOAD: "1",
     OPENCODE_DISABLE_EMBEDDED_WEB_UI: "1",
+    /**
+     * FFF construit un index de recherche par projet et démarre son watcher au
+     * premier prompt. Notre harness utilise déjà les tools `glob` et `grep`
+     * intégrés ; garder cet index spéculatif faisait payer plusieurs secondes
+     * avant la première requête modèle pour un bénéfice qui n'est jamais requis
+     * par le tour. OpenCode retombe sur son implémentation de recherche normale.
+     */
+    OPENCODE_DISABLE_FFF: "1",
     /**
      * ⚠ IL N'Y A PAS D'`OPENCODE_SHELL_CWD` ICI, ET C'EST UNE CORRECTION (MIN-363).
      *

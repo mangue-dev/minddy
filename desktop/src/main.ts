@@ -37,6 +37,7 @@ import { routeDisposition } from "@/lib/desktop/window-routes";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
 import { hideWindow } from "./hide-window";
 import {
+  prewarmLocalAgent,
   runningTurns,
   startLocalTurn,
   stopAllLocalTurns,
@@ -112,6 +113,10 @@ async function setChannel(next: DesktopChannel): Promise<void> {
   channel = next;
   origin = to;
   trace("setChannel", { channel: next, origin });
+  // L'origine décide du harness : on le préchauffe dès la bascule, loin du
+  // premier message local. La promesse est volontairement détachée : un canal
+  // reste navigable même si son serveur est momentanément indisponible.
+  void prewarmLocalAgent(origin);
   // Les deux surfaces natives qui NOMMENT le canal se refont : sans ça, la coche
   // du menu resterait sur celui qu'on vient de quitter et « À propos »
   // annoncerait l'ancienne origine jusqu'au prochain lancement.
@@ -864,6 +869,9 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     mainWindow = createWindow();
     buildAppMenu(mainWindow, channel, onChannelChange);
+    // L'installation éventuelle d'opencode et le cache du harness commencent
+    // pendant l'ouverture de la fenêtre. Aucun secret ni dépôt ne sont touchés.
+    void prewarmLocalAgent(origin);
     // La fenêtre est passée à l'updater pour que sa proposition d'installer
     // s'attache à elle, plutôt que de flotter seule au milieu de l'écran.
     startAutoUpdates(() => mainWindow);

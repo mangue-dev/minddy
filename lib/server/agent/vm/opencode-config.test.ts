@@ -561,6 +561,11 @@ describe("l'auto-découverte depuis le dépôt (MIN-360)", () => {
       const env = opencodeServerEnv(j);
       expect(env.OPENCODE_PURE).toBe("1");
       expect(env.OPENCODE_DISABLE_PROJECT_CONFIG).toBe("1");
+      // MIN-368 : aucun plugin par défaut ni index FFF spéculatif ne doit
+      // retarder le premier prompt. Les outils standards restent servis par
+      // OpenCode et nos tools sont explicitement déclarés par le harness.
+      expect(env.OPENCODE_DISABLE_DEFAULT_PLUGINS).toBe("1");
+      expect(env.OPENCODE_DISABLE_FFF).toBe("1");
       // MIN-364, lot 9 : `skill` ne doit jamais ramasser implicitement les
       // skills Claude Code / agents du HOME ni celles du dépôt. Le jour où
       // Minddy en sert, elles passent par `skills.paths`, explicitement nommé.

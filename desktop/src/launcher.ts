@@ -123,6 +123,23 @@ interface LiveTurn {
 const live = new Map<string, LiveTurn>();
 
 /**
+ * Pré-vols opencode en cours, par dossier machine. Le préchauffage démarre au
+ * lancement de l'app ; un clic très rapide sur « envoyer » doit rejoindre ce
+ * même travail, jamais lancer un second `npm install` concurrent.
+ */
+const opencodePreflights = new Map<
+  string,
+  Promise<
+    | { ok: true; note: string | null }
+    | { ok: false; reason: "no_npm" | "install_failed"; message: string }
+  >
+>();
+
+/** Pré-chauffages en cours, un par origine : stable/preview ne partagent jamais
+ * un harness, car leur protocole et leur code peuvent diverger. */
+const localAgentWarmups = new Map<string, Promise<void>>();
+
+/**
  * Ce que le lanceur rend à son appelant.
  *
  * `skipped` n'est PAS un refus, et c'est la distinction qui manquait : un run
@@ -210,6 +227,46 @@ export async function startLocalTurn(opts: {
 }
 
 /**
+ * PRÉCHAUFFE LE CHEMIN LOCAL PENDANT QUE L'APPLICATION S'OUVRE.
+ *
+ * Aucun job, jeton de contrôle, clé LLM ou dépôt utilisateur n'est impliqué :
+ * on ne fait que mettre en cache le harness signé de l'origine et le binaire
+ * opencode de la machine. Le tour garde ses contrôles complets — notamment le
+ * rehash du bundle juste avant le fork — mais son premier message ne paie plus
+ * un téléchargement ou une installation qui pouvait se faire à l'ouverture.
+ */
+export function prewarmLocalAgent(origin: string): Promise<void> {
+  const active = localAgentWarmups.get(origin);
+  if (active) return active;
+
+  const userData = app.getPath("userData");
+  const task = Promise.all([
+    // Pas encore de job, donc pas de protocole à confronter. Le tour le fera
+    // toujours avant d'exécuter le cache préchauffé.
+    ensureBundle(origin),
+    ensureOpencode(localOpencodeDir(userData)),
+  ])
+    .then(([bundle, opencode]) => {
+      trace("local-agent:prewarm", {
+        origin,
+        bundle: bundle.ok ? "ready" : bundle.reason,
+        opencode: opencode.ok ? "ready" : opencode.reason,
+      });
+    })
+    .catch((error) => {
+      // Le préchauffage est une optimisation : un réseau indisponible au
+      // démarrage ne doit ni alerter ni empêcher le pré-vol normal du tour.
+      trace("local-agent:prewarm-failed", {
+        origin,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    })
+    .finally(() => localAgentWarmups.delete(origin));
+  localAgentWarmups.set(origin, task);
+  return task;
+}
+
+/**
  * JOUE UNE AFFECTATION — le cœur du lot, et le point d'entrée que la boucle de
  * claim de MIN-294 appellera telle quelle.
  *
@@ -234,10 +291,21 @@ export async function runAssignment(
     return refuse(reason, message);
   }
 
-  // 2. LE HARNESS, et son empreinte. Le protocole confronté est celui du JOB
-  //    qu'on va lui donner, jamais une constante compilée dans l'app : la
-  //    coquille ne parle pas le protocole, elle le relaie.
-  const bundle = await ensureBundle(origin, assignment.job.protocolVersion);
+  // 2. LE HARNESS et OPENCODE. Ces deux pré-vols ne dépendent que de données
+  //    déjà validées (l'origine, le protocole et le dossier machine) et ne
+  //    s'écrivent pas dans le dépôt du tour. Les attendre l'un après l'autre
+  //    ajoutait inutilement le temps réseau du manifeste au démarrage/à
+  //    l'installation d'opencode — particulièrement visible au premier token.
+  //    On garde les refus et leur ordre d'affichage ci-dessous : seul le temps
+  //    d'attente se recouvre.
+  const bundlePromise = ensureBundle(origin, assignment.job.protocolVersion);
+  const opencodeDir = localOpencodeDir(userData);
+  const opencodePromise = ensureOpencode(opencodeDir);
+
+  // Le protocole confronté est celui du JOB qu'on va lui donner, jamais une
+  // constante compilée dans l'app : la coquille ne parle pas le protocole, elle
+  // le relaie.
+  const bundle = await bundlePromise;
   if (!bundle.ok) {
     const message = harnessRefusalMessage(bundle.reason, origin);
     noteLauncherFailure(message);
@@ -245,8 +313,7 @@ export async function runAssignment(
   }
 
   // 3. OPENCODE, une fois par machine et pas une fois par tour.
-  const opencodeDir = localOpencodeDir(userData);
-  const opencode = await ensureOpencode(opencodeDir);
+  const opencode = await opencodePromise;
   if (!opencode.ok) {
     noteLauncherFailure(opencode.message);
     return refuse(opencode.reason, opencode.message);
@@ -434,7 +501,7 @@ type BundleRefused = { ok: false; reason: HarnessRefusal };
  */
 async function ensureBundle(
   origin: string,
-  jobProtocol: number,
+  jobProtocol?: number,
 ): Promise<BundleReady | BundleRefused> {
   const answer = await fetchJson(`${origin}${HARNESS_MANIFEST_PATH}`);
   if (!answer.ok) return { ok: false, reason: "manifest_unreachable" };
@@ -442,9 +509,19 @@ async function ensureBundle(
   if (!manifest) return { ok: false, reason: "manifest_invalid" };
 
   const file = path.join(harnessDir(), harnessBundleFileName(manifest.sha256));
-  const decision = bundleDecision(manifest, measure(file), jobProtocol);
-  if (decision.action === "refuse") return { ok: false, reason: decision.reason };
-  if (decision.action === "reuse") return { ok: true, path: file, manifest };
+  const cached = measure(file);
+  if (jobProtocol == null) {
+    // Le cache n'est pas encore exécutable : seul le tour connaît le protocole
+    // qu'il a reçu. Ici, on gagne le téléchargement tout en laissant le contrôle
+    // de compatibilité à `runAssignment`.
+    if (cached?.sha256 === manifest.sha256 && cached.bytes === manifest.bytes) {
+      return { ok: true, path: file, manifest };
+    }
+  } else {
+    const decision = bundleDecision(manifest, cached, jobProtocol);
+    if (decision.action === "refuse") return { ok: false, reason: decision.reason };
+    if (decision.action === "reuse") return { ok: true, path: file, manifest };
+  }
 
   const download = await fetchText(`${origin}${HARNESS_BUNDLE_PATH}`);
   if (!download.ok) return { ok: false, reason: "download_failed" };
@@ -481,6 +558,19 @@ function pruneBundles(keep: string): void {
 // ── opencode ────────────────────────────────────────────────────────────────
 
 async function ensureOpencode(
+  installDir: string,
+): Promise<
+  | { ok: true; note: string | null }
+  | { ok: false; reason: "no_npm" | "install_failed"; message: string }
+> {
+  const active = opencodePreflights.get(installDir);
+  if (active) return active;
+  const task = ensureOpencodeOnce(installDir).finally(() => opencodePreflights.delete(installDir));
+  opencodePreflights.set(installDir, task);
+  return task;
+}
+
+async function ensureOpencodeOnce(
   installDir: string,
 ): Promise<
   | { ok: true; note: string | null }

@@ -117,7 +117,7 @@ export function SecondarySidebar({
           de la liste, ce qui la restreint, ce qu'on peut y créer. C'est la seule
           bande épinglée du volet — tout ce qui pilote la liste doit être ici, et
           non dans `children`, qui défile avec elle. */}
-      <div className="flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
+      <div className="secondary-sidebar-header flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
         {filter ? (
           <SidebarFilterField {...filter} />
         ) : title ? (

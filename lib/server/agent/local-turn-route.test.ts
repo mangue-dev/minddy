@@ -313,4 +313,32 @@ describe("la préparation locale d'`execute.ts`", () => {
     // une valeur inventée ferait mentir les deux.
     expect(source).toContain("...(sandbox ? { sandbox_id: sandboxName(sandbox)");
   });
+
+  it("prépare en parallèle les lectures qui précèdent le job local", () => {
+    // Ces opérations ne dépendent pas les unes des autres. Elles doivent être
+    // lancées avant d'attendre la cible, sinon chaque aller-retour rallonge le
+    // délai qui sépare l'envoi du premier token.
+    const prepareAt = source.indexOf("const targetPromise = resolveRepoCloneTarget(run.project_id);");
+    const endpointAt = source.indexOf("const endpointPromise = resolveAgentApiKey(run.created_by);");
+    const targetAwaitAt = source.indexOf("const target = await targetPromise;");
+    expect(prepareAt).toBeGreaterThan(-1);
+    expect(endpointAt).toBeGreaterThan(prepareAt);
+    expect(targetAwaitAt).toBeGreaterThan(endpointAt);
+    expect(source).toContain("const [issue, prRun, prefs, quotaAndLedger, endpoint] = await Promise.all([");
+  });
+
+  it("réutilise le jeton de la cible pour un tour local", () => {
+    // Les runs locaux ne peuvent pas être des relectures : leur scope est validé
+    // avant le claim. Une seconde résolution de jeton ne change donc pas leurs
+    // droits et ajoute seulement une attente au lancement.
+    expect(source).toContain("const vmTarget = localTurn\n      ? target");
+  });
+
+  it("ne recharge pas les ressources du ticket pour une reprise opencode", () => {
+    // La mémoire du tour local vit dans SQLite : le prompt d'amorce n'est pas
+    // reconstruit, donc ses ressources ne doivent pas retarder le steering.
+    expect(source).toContain("includePromptContext: !run.checkpoint?.opencode?.sessionId");
+    expect(source).toContain("includePromptContext\n      ? service");
+    expect(source).toContain("Promise.resolve({ data: [] })");
+  });
 });

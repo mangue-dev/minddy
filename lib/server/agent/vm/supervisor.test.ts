@@ -78,6 +78,34 @@ function childRound(over: Record<string, unknown> = {}): string {
   });
 }
 
+function parentText(partId: string, messageId: string, text: string): string {
+  return JSON.stringify({
+    type: "message.part.updated",
+    properties: {
+      sessionID: PARENT,
+      part: { id: partId, messageID: messageId, sessionID: PARENT, type: "text", text },
+    },
+  });
+}
+
+function parentRound(messageId: string, finish: string): string {
+  return JSON.stringify({
+    type: "message.updated",
+    properties: {
+      sessionID: PARENT,
+      info: {
+        id: messageId,
+        sessionID: PARENT,
+        role: "assistant",
+        finish,
+        modelID: "openai/gpt-5.6-luna",
+        cost: 0.001,
+        tokens: { input: 100, output: 20, reasoning: 0, cache: { read: 0, write: 0 } },
+      },
+    },
+  });
+}
+
 const h = {
   files: [] as Array<{ path: string; content: string }>,
   env: {} as Record<string, string>,
@@ -645,6 +673,59 @@ describe("le tour", () => {
     expect(h.events.map((e) => e.type)).toEqual(["tool_call", "tool_result", "summary"]);
     expect(h.events[0].payload).toMatchObject({ name: "read_issue", issue: "MIN-286" });
     expect(h.events.at(-1)?.payload.text).toBe("fini");
+  });
+
+  it("reprend une fois quand Luna conclut sur une simple annonce d'action", async () => {
+    const preamble =
+      "Je vais inventorier le dossier `figma`, puis vérifier la version de `mangue-ui`.";
+    const result = "Le dossier contient 4 fichiers et mangue-ui est en version 2.3.1.";
+    h.extraFrames = [
+      parentText("prt_preamble", "msg_preamble", preamble),
+      parentRound("msg_preamble", "stop"),
+      JSON.stringify({ type: "session.idle", properties: { sessionID: PARENT } }),
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: PARENT,
+          part: {
+            id: "prt_read_after_repair",
+            callID: "call_read_after_repair",
+            sessionID: PARENT,
+            type: "tool",
+            tool: "read",
+            state: { status: "running", input: { filePath: "figma" } },
+          },
+        },
+      }),
+      JSON.stringify({
+        type: "message.part.updated",
+        properties: {
+          sessionID: PARENT,
+          part: {
+            id: "prt_read_after_repair",
+            callID: "call_read_after_repair",
+            sessionID: PARENT,
+            type: "tool",
+            tool: "read",
+            state: { status: "completed", input: { filePath: "figma" }, output: "a.fig\n" },
+          },
+        },
+      }),
+      parentRound("msg_tools_after_repair", "tool-calls"),
+      parentText("prt_result", "msg_result", result),
+      parentRound("msg_result", "stop"),
+    ];
+
+    const report = await run();
+
+    expect(h.prompts).toHaveLength(2);
+    expect(h.prompts[1]).toContain("only announced intended actions");
+    expect(h.events).toContainEqual({ type: "thinking", payload: { text: preamble } });
+    expect(h.events.some((event) => event.payload.id === "call_read_after_repair")).toBe(true);
+    expect(h.events.filter((event) => event.type === "summary")).toEqual([
+      { type: "summary", payload: { text: result } },
+    ]);
+    expect(report.reply).toBe(result);
   });
 
   it("écrit une ligne de ledger par round, numérotée depuis le job", async () => {

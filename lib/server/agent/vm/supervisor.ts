@@ -53,6 +53,10 @@ import {
   type RoundUsage,
 } from "./opencode-events";
 import {
+  looksLikeUnexecutedPreamble,
+  OPENCODE_CONTINUATION_REPAIR,
+} from "./opencode-continuation";
+import {
   opencodeAnchorFile,
   opencodeDbPath,
   opencodeServerEnv,
@@ -441,11 +445,17 @@ async function servedInstructionsFile(
 ): Promise<string[]> {
   const paths = await findInstructionFiles(host);
   if (paths.length === 0) return [];
-  const files: RepoInstructionFile[] = [];
-  for (const path of paths) {
-    const content = await readWorkFile(host, path).catch(() => null);
-    if (content?.trim()) files.push({ path, content });
-  }
+  // Chaque lecture est indépendante et le document final garde l'ordre de
+  // `paths` grâce à `Promise.all`. Dans un monorepo, les lire en série faisait
+  // attendre le serveur opencode derrière chaque aller-retour disque/RPC.
+  const files = (
+    await Promise.all(
+      paths.map(async (path): Promise<RepoInstructionFile | null> => {
+        const content = await readWorkFile(host, path).catch(() => null);
+        return content?.trim() ? { path, content } : null;
+      }),
+    )
+  ).filter((file): file is RepoInstructionFile => file !== null);
   const document = formatServedInstructions(files);
   if (!document) return [];
   const target = `${host.layout.harnessDir}/repo-instructions.md`;
@@ -474,6 +484,12 @@ export async function runOpencodeTurn(
 ): Promise<VmTurnReport> {
   const now = deps.now ?? (() => Date.now());
   const startedAt = now();
+  // Les tours locaux traversent plusieurs processus et services HTTP avant que
+  // le fournisseur puisse émettre un token. Ces jalons restent dans le log du
+  // harness (jamais dans le fil) pour attribuer la latence à une étape réelle.
+  const timing = (stage: string) =>
+    console.log(`[agent-timing] ${stage} +${now() - startedAt}ms`);
+  timing("supervisor-start");
   const previous = job.opencode;
 
   const secrets = new SecretRedactor();
@@ -562,10 +578,30 @@ export async function runOpencodeTurn(
   const filesFromSha = job.filesFromSha || current?.parent || "";
 
   // ── Le décor, posé avant le premier octet de serveur ───────────────────────
-  await deps.writeFile(opencodeAnchorFile(job.layout), input.anchorInstructions);
-  for (const file of opencodeToolFiles(job)) {
-    await deps.writeFile(file.path, file.content);
-  }
+  // L'ancrage et les fichiers de tools ont des destinations distinctes. Une
+  // barrière unique avant `startServer` garde la configuration atomique vue par
+  // opencode, sans ajouter 32 attentes disque/RPC au premier token.
+  await Promise.all([
+    deps.writeFile(opencodeAnchorFile(job.layout), input.anchorInstructions),
+    ...opencodeToolFiles(job).map((file) => deps.writeFile(file.path, file.content)),
+  ]);
+  timing("harness-files-ready");
+  // Les conventions du dépôt ne dépendent ni du proxy ni du pont. On commence
+  // leur découverte tout de suite, puis on attend le document juste avant de
+  // donner l'environnement au serveur : opencode voit toujours le fichier
+  // complet, mais le coût disque/RPC se recouvre avec l'initialisation locale.
+  const servedInstructionsPromise = servedInstructionsFile(host, deps.writeFile);
+
+  // Le mint de la clé locale est un aller-retour vers le plan de contrôle. Il
+  // ne dépend pas du pont : on le recouvre avec la construction du reste du
+  // superviseur au lieu de le mettre sur le chemin critique du serveur.
+  const proxyPromise = (deps.startProxy ??
+    ((j: VmJob) =>
+      startLlmProxy({
+        job: j,
+        redact: secrets.redact,
+        ...(isLocalJob(j) ? { apiKey: () => cp.llmKey() } : {}),
+      })))(job);
 
   // Le proxy AVANT le serveur : sa `baseURL` entre dans la config du tour, donc
   // elle doit être connue avant qu'opencode ne lise son environnement.
@@ -579,13 +615,8 @@ export async function runOpencodeTurn(
   // vit que dans la mémoire du proxy, ni dans le job ni dans l'environnement du
   // serveur opencode. Un mint refusé fait lever `startLlmProxy`, donc échouer le
   // tour avec son motif : c'est la conduite voulue, pas une régression.
-  const proxy = await (deps.startProxy ??
-    ((j: VmJob) =>
-      startLlmProxy({
-        job: j,
-        redact: secrets.redact,
-        ...(isLocalJob(j) ? { apiKey: () => cp.llmKey() } : {}),
-      })))(job);
+  const proxy = await proxyPromise;
+  timing("llm-proxy-ready");
   /**
    * Le pont de tools, ouvert AVANT le serveur pour la même raison que le proxy :
    * son adresse entre dans l'environnement d'opencode, donc elle doit exister
@@ -950,11 +981,12 @@ export async function runOpencodeTurn(
     },
     ...(deps.toolBridgePort != null ? { port: deps.toolBridgePort } : {}),
   });
+  timing("tool-bridge-ready");
 
   const env = {
     ...opencodeServerEnv(job, {
       baseUrl: proxy.url,
-      repoInstructionFiles: await servedInstructionsFile(host, deps.writeFile),
+      repoInstructionFiles: await servedInstructionsPromise,
     }),
     // L'adresse du pont, lue par les 32 tools générés (cf. `SUPERVISOR_URL_ENV`).
     [SUPERVISOR_URL_ENV]: bridge.url,
@@ -1001,6 +1033,7 @@ export async function runOpencodeTurn(
 
   try {
     server = await deps.startServer(env);
+    timing("opencode-process-started");
     const bootTimeoutMs = deps.bootTimeoutMs ?? OPENCODE_BOOT_TIMEOUT_MS;
     const bootStartedAt = now();
     if (!(await client.waitHealthy(bootTimeoutMs))) {
@@ -1010,6 +1043,7 @@ export async function runOpencodeTurn(
         `opencode did not become healthy — waited ${now() - bootStartedAt} ms (cap ${bootTimeoutMs} ms)`,
       );
     }
+    timing("opencode-healthy");
 
     // ── La session : reprise par le journal, ou neuve ────────────────────────
     let sessionId = previous?.sessionId ?? "";
@@ -1049,6 +1083,7 @@ export async function runOpencodeTurn(
     if (!sessionId) {
       sessionId = (await client.createSession(`minddy ${job.commitRef}`)).id;
     }
+    timing(previous?.sessionId ? "opencode-session-resumed" : "opencode-session-created");
 
     // ── Le flux, traduit au fil de l'eau ─────────────────────────────────────
     const state = newTurnStreamState();
@@ -1069,6 +1104,10 @@ export async function runOpencodeTurn(
      * en plus les gestes des filles, qui ne sont pas ceux de la mère.
      */
     let toolsSeen = 0;
+    /** La fin du dernier round de la mère — `idle` ne porte pas cette information. */
+    let lastParentFinish: string | null = null;
+    /** Une annonce d'action textuelle ne se répare qu'une fois : jamais de boucle. */
+    let repairedPreamble = false;
     /**
      * LA RÉFLEXION EN COURS, telle que le direct la raconte (MIN-122).
      *
@@ -1145,6 +1184,10 @@ export async function runOpencodeTurn(
 
     const abortEvents = new AbortController();
     const stream = client.events(abortEvents.signal);
+    // Réarmé à chaque prompt. Un event `reasoning`, texte ou tool/permission est
+    // le premier signal effectivement produit par le modèle ; les événements de
+    // connexion du serveur ne comptent donc pas comme un faux premier token.
+    let awaitingFirstModelSignal = false;
 
     /**
      * ── LE STEERING ET LE « STOP » (MIN-286, lot 3) ───────────────────────────
@@ -1457,6 +1500,8 @@ export async function runOpencodeTurn(
          sessionId,
          parts.map((part) => promptWithMentions(part.message.text, part.message.mentions)).join("\n\n"),
        );
+       awaitingFirstModelSignal = true;
+       timing("prompt-accepted");
     };
 
     /**
@@ -1612,6 +1657,13 @@ export async function runOpencodeTurn(
         if (winner.done) break;
         const raw = winner.value;
         const out = translateEvent(raw, state);
+        if (
+          awaitingFirstModelSignal &&
+          (out.reasoning || out.liveText || out.permission || out.question || out.events.length > 0)
+        ) {
+          awaitingFirstModelSignal = false;
+          timing("first-model-signal");
+        }
         // Une session qui n'est pas la mère est une FILLE : le modèle a délégué,
         // et opencode publie tout sur le même flux. Ce qui vient d'elle se dit,
         // se compte et se facture — mais dans sa bande à elle, et sans jamais
@@ -1922,6 +1974,7 @@ export async function runOpencodeTurn(
               ...liveEdits.payload(),
             });
           }
+          if (!child) lastParentFinish = out.usage.finish;
           // Le round est clos, quelle que soit sa fin : le compteur d'outils
           // repart de zéro pour le suivant.
           if (!child) toolsSeen = 0;
@@ -2056,6 +2109,41 @@ export async function runOpencodeTurn(
           if (pendingPrompt.length > 0) {
             await cp.emit("status", { phase: "steered" });
             await postPending();
+            continue;
+          }
+          /**
+           * GPT-5.6 Luna a été observé terminant un round `stop` par « Je vais
+           * inventorier… puis vérifier… », sans aucun appel de tool. Une couche
+           * OpenAI-compatible avait aplati ce qui était sémantiquement une
+           * commentary en texte assistant : pour opencode, `stop` + `idle` est
+           * une conclusion parfaitement valide, alors que la phrase promet
+           * encore tout le travail.
+           *
+           * On répare la contradiction UNE fois, dans la même session : le texte
+           * devient la narration intermédiaire qu'il aurait dû être, puis une
+           * consigne interne demande d'agir sans réannoncer. La détection est
+           * volontairement étroite (`opencode-continuation.ts`) pour ne jamais
+           * relancer une vraie réponse qui parlerait simplement au futur.
+           */
+          const stranded = outward(replyOf(state, sessionId));
+          if (
+            !repairedPreamble &&
+            lastParentFinish === "stop" &&
+            looksLikeUnexecutedPreamble(stranded)
+          ) {
+            repairedPreamble = true;
+            await cp.emit("thinking", { text: cap(stranded, 2000) });
+            reasoningSince = null;
+            lastLiveAt = 0;
+            toolsSeen = 0;
+            cp.emitLive({
+              text: "",
+              tools: 0,
+              reasoningActive: false,
+              reasoningMs: 0,
+              ...liveEdits.payload(),
+            });
+            await client.promptAsync(sessionId, OPENCODE_CONTINUATION_REPAIR);
             continue;
           }
           break;
@@ -2637,4 +2725,3 @@ function redactPayload(
 ): Record<string, unknown> {
   return redactDeep(payload, secrets.redact) as Record<string, unknown>;
 }
-

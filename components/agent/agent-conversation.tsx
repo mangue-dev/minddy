@@ -223,6 +223,11 @@ export function AgentConversation({
   // encore nulle part. On le tient ici pour le montrer tout de suite.
   const [launchText, setLaunchText] = useState<string | null>(null);
   const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
+  // Le POST n'a pas encore rendu la run : son `local_exec` n'est donc pas
+  // disponible pendant la bulle optimiste. On garde le choix validé par le
+  // dossier local pour ne jamais afficher « Ouverture de la sandbox » pendant
+  // qu'un tour local est en cours de préparation.
+  const [launchLocalExec, setLaunchLocalExec] = useState(false);
   // Demande « créer la PR » envoyée : désactive le bouton le temps que l'agent
   // reparte (working) ou que la PR apparaisse. Remise à zéro par l'effet plus bas.
   const [requestingPr, setRequestingPr] = useState(false);
@@ -443,6 +448,7 @@ export function AgentConversation({
   useEffect(() => {
     setPendingMessages([]);
     setLaunchText(null);
+    setLaunchLocalExec(false);
     setRequestingPr(false);
     // L'arrêt demandé vaut pour la session qu'on quitte, pas pour celle qu'on ouvre.
     setStopping(false);
@@ -550,6 +556,7 @@ export function AgentConversation({
       return;
     }
     const prompt = message.trim();
+    const localExec = environment === "local" && localRepo.ready;
     setLaunching(true);
     // Affichage OPTIMISTE du 1er message, comme pour un follow-up : le POST enchaîne
     // les pré-checks (issue, dépôt, quota, résolution du modèle) avant de rendre la
@@ -557,6 +564,7 @@ export function AgentConversation({
     // composer (vidé à l'envoi), ni dans le fil (aucune session à afficher).
     if (prompt) setLaunchText(prompt);
     setLaunchMentions(mentions);
+    setLaunchLocalExec(localExec);
     try {
       const { run: started } = await launchAgentRunApi(issueId, {
         prompt: prompt || undefined,
@@ -569,7 +577,7 @@ export function AgentConversation({
         mentions,
         // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
         // le dossier a pu disparaître.
-        localExec: environment === "local" && localRepo.ready,
+        localExec,
       });
       // La session neuve devient la session ouverte → bascule live immédiate. Son
       // `prompt` porte le même texte : le fil affiche la MÊME bulle, sans coupure.
@@ -589,6 +597,7 @@ export function AgentConversation({
       // pas → on retire la bulle plutôt que de laisser croire au lancement.
       setLaunchText(null);
       setLaunchMentions([]);
+      setLaunchLocalExec(false);
       toast.error(agentErrorMessage(err));
     } finally {
       setLaunching(false);
@@ -808,6 +817,7 @@ export function AgentConversation({
             runId={null}
             status="queued"
             pendingUserMessages={[{ text: launchText, mentions: launchMentions }]}
+            localExec={launchLocalExec}
             className="h-full py-4"
           />
         ) : phase === "loading" ? (

@@ -76,8 +76,6 @@ export async function startVmLoop(
    */
   assertUsableLayout(job.layout);
 
-  const bundle = await harnessBundleSource();
-
   /**
    * LES CHEMINS VIENNENT DU JOB, et c'est lui qui les porte parce que c'est lui
    * que le harness lira. Trois écritures et un lancement au même endroit : si le
@@ -87,7 +85,14 @@ export async function startVmLoop(
   const bundlePath = vmBundlePath(job.layout);
   const jobPath = vmJobPath(job.layout);
 
-  await sandbox.mkDir(harnessDir).catch(() => {});
+  // La lecture/mémoïsation du bundle vit dans la fonction, l'ouverture du
+  // répertoire vit dans la microVM : ces deux travaux sont indépendants. Les
+  // sérialiser ajoutait un aller-retour sandbox entier avant la première ligne
+  // du harness, surtout visible sur le démarrage cloud.
+  const [bundle] = await Promise.all([
+    harnessBundleSource(),
+    sandbox.mkDir(harnessDir).catch(() => {}),
+  ]);
   await sandbox.writeFiles([{ path: bundlePath, content: bundle }]);
 
   /**

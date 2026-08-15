@@ -265,23 +265,33 @@ interface IssueContext {
   resources: AgentResourceContext[];
 }
 
-async function loadIssueContext(run: AgentRun, issueId: string): Promise<IssueContext> {
+async function loadIssueContext(
+  run: AgentRun,
+  issueId: string,
+  opts: { includePromptContext?: boolean } = {},
+): Promise<IssueContext> {
   const service = getServiceClient();
+  const includePromptContext = opts.includePromptContext !== false;
   const [{ data: issue }, { data: project }, { data: attachmentRows }] = await Promise.all([
     service
       .from("issues")
-      .select("number, title, description, plan")
+      // Une session opencode reprise possède déjà son amorce dans sa base locale.
+      // Ne relire ni le long markdown ni le plan ne peut influencer son prochain
+      // prompt ; c'était du transport et du décodage avant chaque premier token.
+      .select(includePromptContext ? "number, title, description, plan" : "number, title")
       .is("deleted_at", null)
       .eq("id", issueId)
       .maybeSingle(),
     service.from("projects").select("key, name").eq("id", run.project_id).maybeSingle(),
-    service
-      .from("attachments")
-      .select(
-        "id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(title)",
-      )
-      .eq("issue_id", issueId)
-      .order("created_at", { ascending: true }),
+    includePromptContext
+      ? service
+          .from("attachments")
+          .select(
+            "id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(title)",
+          )
+          .eq("issue_id", issueId)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] }),
   ]);
   const key = (project as { key?: string } | null)?.key ?? "ISSUE";
   const number = (issue as { number?: number } | null)?.number ?? 0;
@@ -636,8 +646,35 @@ export async function executeAgentRun(
       return "interrupted";
     }
 
+    /** Un tour local ne démarre jamais de microVM : ce fait est aussi utile
+     *  pendant la préparation, où il évite une seconde résolution de jeton. */
+    const localTurn = run.local_exec === true;
+
+    // Ces lectures sont indépendantes. Les sérialiser retardait le job local
+    // avant même que le Mac puisse démarrer opencode, alors que le premier token
+    // ne dépend que de leur résultat final. On conserve l'attente de la cible en
+    // premier pour garder son erreur et sa frontière de sécurité inchangées.
+    const targetPromise = resolveRepoCloneTarget(run.project_id);
+    const issuePromise = run.issue_id
+      ? loadIssueContext(run, run.issue_id, {
+          // Sur une reprise opencode, le prompt est volontairement vide : le
+          // modèle relit sa base SQLite et le steering arrive via le superviseur.
+          // Le contexte riche (description, plan, ressources) est donc inutile.
+          includePromptContext: !run.checkpoint?.opencode?.sessionId,
+        })
+      : Promise.resolve(null);
+    const prRunPromise = run.pull_request_id
+      ? loadPrRunContext(run.pull_request_id)
+      : Promise.resolve(null);
+    const prefsPromise = resolveRunPrefs(run);
+    const quotaAndLedgerPromise = Promise.all([
+      checkAgentQuota(run.created_by ?? "").catch(() => null),
+      spentFromLedger(run.run_id ?? run.id),
+    ]);
+    const endpointPromise = resolveAgentApiKey(run.created_by);
+
     // Cible de clone (token frais pour ce chunk) + client PR/MR du provider.
-    const target = await resolveRepoCloneTarget(run.project_id);
+    const target = await targetPromise;
     if (!target) throw new Error("No repository linked to this project");
     secrets.addAuthUrl(target.authUrl);
     secrets.add(target.token);
@@ -646,8 +683,13 @@ export async function executeAgentRun(
     // Ancrage du run, à TROIS valeurs : ticket minddy, CARNET (MIN-84, la note du
     // lanceur est l'instruction), ou PULL REQUEST (MIN-168 — une session de
     // relecture, en lecture seule sur le dépôt).
-    const issue = run.issue_id ? await loadIssueContext(run, run.issue_id) : null;
-    const prRun = run.pull_request_id ? await loadPrRunContext(run.pull_request_id) : null;
+    const [issue, prRun, prefs, quotaAndLedger, endpoint] = await Promise.all([
+      issuePromise,
+      prRunPromise,
+      prefsPromise,
+      quotaAndLedgerPromise,
+      endpointPromise,
+    ]);
     // Un run ancré à une PR dont la ligne a disparu ne doit PAS retomber en run
     // carnet : il se croirait autorisé à créer une branche et à pousser dessus.
     if (run.pull_request_id && !prRun) {
@@ -672,11 +714,12 @@ export async function executeAgentRun(
      * `target` plutôt que de faire mourir le tour. C'est le pire cas, et il est
      * celui d'avant.
      */
-    const vmTarget =
-      (await resolveRepoCloneTarget(
-        run.project_id,
-        anchor === "pr" ? "repo-read" : "repo-write",
-      ).catch(() => null)) ?? target;
+    const vmTarget = localTurn
+      ? target
+      : (await resolveRepoCloneTarget(
+          run.project_id,
+          anchor === "pr" ? "repo-read" : "repo-write",
+        ).catch(() => null)) ?? target;
     secrets.addAuthUrl(vmTarget.authUrl);
     secrets.add(vmTarget.token);
     /**
@@ -693,7 +736,7 @@ export async function executeAgentRun(
     const commitRef = issue?.identifier ?? "note";
     // Langue du commentaire + du résumé de l'agent = celle du lanceur (défaut owner),
     // et statut d'atterrissage des tickets créés par l'agent = son réglage de compte.
-    const { locale: commentLocale, numoDefaultStatus } = await resolveRunPrefs(run);
+    const { locale: commentLocale, numoDefaultStatus } = prefs;
     // Session de relecture : les branches sont celles de la PR — sa base est le
     // point de comparaison du diff, sa tête ce qu'on relit. Ailleurs, la base
     // choisie au lancement et la branche de travail du run.
@@ -720,17 +763,14 @@ export async function executeAgentRun(
      * est sans effet (le plafond a 1,5× de marge, et le ledger est relu à chaque
      * chunk).
      */
-    const [quotaNow, ledgerSpentUsd] = await Promise.all([
-      checkAgentQuota(run.created_by ?? "").catch(() => null),
-      spentFromLedger(run.run_id ?? run.id),
-    ]);
+    const [quotaNow, ledgerSpentUsd] = quotaAndLedger;
 
     // Endpoint du run (BYOK de l'utilisateur, ou clé plateforme OpenRouter).
     // Résolu AVANT l'amorce de l'historique : le prompt système ne décrit que les
     // tools réellement offerts, et web_search en dépend. Et avant la microVM
     // depuis MIN-223 : c'est cette clé (ou celle du run, ci-dessous) que le
     // firewall injectera — la politique réseau ne peut pas se construire sans.
-    const { apiKey, baseUrl, provider, mode: keyMode } = await resolveAgentApiKey(run.created_by);
+    const { apiKey, baseUrl, provider, mode: keyMode } = endpoint;
 
     /**
      * LA CLÉ QUE LE FIREWALL INJECTERA, et elle n'est pas forcément `apiKey`.
@@ -801,8 +841,6 @@ export async function executeAgentRun(
      * l'aiguillage appartiennent à MIN-294 ; ici, le seul appelant est la route
      * de déclenchement de dév.
      */
-    const localTurn = run.local_exec === true;
-
     // Sandbox : réveille la microVM (filesystem restauré depuis le snapshot
     // persistant → reprise rapide) ; sinon `onCreate` clone la branche de travail.
     // Nom déterministe → même microVM/snapshot d'un tour à l'autre.

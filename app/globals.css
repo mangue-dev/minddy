@@ -1734,6 +1734,40 @@ html[data-desktop-app]
   -webkit-app-region: no-drag;
 }
 
+/* La sidebar secondaire est téléportée dans la gouttière du shell. Sa ligne
+   de titre ne se trouve donc pas dans le même sous-arbre que la bande fixe de
+   déplacement, qui la recouvre sinon avec son z-index. La placer au-dessus de
+   cette bande permet aux boutons Recherche, Filtrer et Ajouter de recevoir
+   leurs événements ; les descendants interactifs restent explicitement hors
+   de la zone de déplacement. */
+html[data-desktop-app] .secondary-sidebar-header {
+  position: relative;
+  z-index: 31;
+}
+
+html[data-desktop-app] .secondary-sidebar-header
+  :is(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    label,
+    summary,
+    [role="button"],
+    [role="link"],
+    [role="menuitem"],
+    [role="combobox"],
+    [role="tab"],
+    [role="option"],
+    [role="checkbox"],
+    [role="switch"],
+    [contenteditable="true"],
+    [tabindex]
+  ) {
+  -webkit-app-region: no-drag;
+}
+
 /* ⚠ **Les VOILES sont creusés, eux aussi** (MIN-308).
 
    Le creusement ci-dessus ne vise que les éléments FOCUSABLES. Le contenu Radix

@@ -78,6 +78,8 @@ describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
       "**The harness owns git",
       "**a check you did not run is a check nobody ran**",
       "**Behaviour you add or change comes WITH ITS TEST, in the same turn.**",
+      "**If `glob` cannot find a file or directory the user explicitly named, do not conclude it is absent:**",
+      "**Do not announce what you are about to inspect or run:**",
       "**The user sees exactly ONE message per turn: your last one**",
       "Never print secrets or the git remote URL.",
     ]) {

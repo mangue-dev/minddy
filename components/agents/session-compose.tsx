@@ -241,6 +241,10 @@ export function SessionCompose({
   // d'AgentConversation : les pré-checks serveur prennent quelques secondes).
   const [launchText, setLaunchText] = useState<string | null>(null);
   const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
+  // Même information que la run rendue, mais disponible dès le premier rendu
+  // optimiste : sans elle, la page Agents nommait une sandbox pour un tour qui
+  // attendait en réalité le harness local.
+  const [launchLocalExec, setLaunchLocalExec] = useState(false);
   const modelRequired = provider === "generic" && !defaultModel && !model;
   const selectedProject = launchable.find((p) => p.id === projectId) ?? null;
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId || null);
@@ -285,9 +289,11 @@ export function SessionCompose({
       toast.error(t("modelRequired"));
       return;
     }
+    const localExec = environment === "local" && localRepo.ready;
     setLaunching(true);
     setLaunchText(prompt);
     setLaunchMentions(mentions);
+    setLaunchLocalExec(localExec);
     try {
       const { run } = await launchNotebookAgentApi({
         projectId,
@@ -298,7 +304,7 @@ export function SessionCompose({
         mentions,
         // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
         // le dossier a pu disparaître (ou le projet changer).
-        localExec: environment === "local" && localRepo.ready,
+        localExec,
       });
       /**
        * Amorce le cache de la session AVANT de rendre la main.
@@ -325,6 +331,7 @@ export function SessionCompose({
       // bulle plutôt que de laisser croire au lancement.
       setLaunchText(null);
       setLaunchMentions([]);
+      setLaunchLocalExec(false);
       toast.error(agentErrorMessage(err));
     } finally {
       setLaunching(false);
@@ -380,6 +387,7 @@ export function SessionCompose({
               runId={null}
               status="queued"
               pendingUserMessages={[{ text: launchText, mentions: launchMentions }]}
+              localExec={launchLocalExec}
               className="h-full py-4"
             />
           </MentionLinksProvider>

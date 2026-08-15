@@ -254,7 +254,25 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     projectId = input.projectId;
   }
 
-  const link = await getProjectLink(projectId);
+  // Après la résolution du projet, ces lectures ne dépendent plus les unes des
+  // autres. Les lancer ensemble raccourcit le temps avant le kick du drain — et
+  // donc avant le réveil de la sandbox cloud — sans changer les gardes qui les
+  // consomment ci-dessous.
+  const linkPromise = getProjectLink(projectId);
+  const activePromise = issueId
+    ? activeRunForIssue(issueId)
+    : continuePr
+      ? activeRunForPrNumber({
+          repoFullName: continuePr.repoFullName,
+          prNumber: continuePr.number,
+          provider: continuePr.provider,
+        })
+      : input.routineId
+        ? activeRunForRoutine(input.routineId)
+        : Promise.resolve(null);
+  const quotaPromise = checkAgentQuota(input.userId);
+
+  const link = await linkPromise;
   if (!link) return { ok: false, error: "noRepo" };
   // Le registre des providers fait autorité (MIN-69) : un provider connu avec la
   // capacité d'écriture (PR/MR) peut porter l'agent — github ET gitlab.
@@ -270,59 +288,36 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // ticket : un passage qui traîne ne doit pas se faire doubler par l'échéance
   // suivante — même instruction, même dépense, deux fois.
   if (issueId) {
-    const active = await activeRunForIssue(issueId);
+    const active = await activePromise;
     if (active) return { ok: false, error: "alreadyRunning", run: active };
   } else if (continuePr) {
     // Une reprise de PR, elle, retrouve la règle : deux relances en parallèle
     // pousseraient sur la MÊME branche. C'est la lignée qui est unique, pas le
     // carnet — et ici la lignée est la pull request.
-    const active = await activeRunForPrNumber({
-      repoFullName: continuePr.repoFullName,
-      prNumber: continuePr.number,
-      provider: continuePr.provider,
-    });
+    const active = await activePromise;
     if (active) return { ok: false, error: "alreadyRunning", run: active };
   } else if (input.routineId) {
-    const active = await activeRunForRoutine(input.routineId);
+    const active = await activePromise;
     if (active) return { ok: false, error: "alreadyRunning", run: active };
   }
 
-  const quota = await checkAgentQuota(input.userId);
+  const quota = await quotaPromise;
   if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
 
-  // Titre de la conversation. TOUTE conversation en a un désormais, ticket
-  // compris : la page Agents ne groupe plus les runs d'un ticket sous une
-  // session unique, si bien que trois conversations du même ticket portaient
-  // trois fois son titre, à la lettre près. Ce qui les distingue, c'est ce qu'on
-  // a demandé — d'où le résumé du ticket ET de la consigne
-  // (`agentRunTitleSource`), rendu à l'écran précédé de l'identifiant du ticket.
-  //
-  // Le résumé part MAINTENANT, en parallèle des résolutions qui suivent, et se
-  // pose sur le run à sa création — ainsi la conversation n'existe jamais sans
-  // son titre, et l'attente ne s'ajoute pas au lancement.
-  //
-  // Un passage de ROUTINE fait exception (MIN-185), et pour une raison qui coûte
-  // cher : son titre est celui de la routine, écrit UNE fois à la création.
-  // Le laisser passer ici ferait payer un appel de résumé à CHAQUE échéance —
-  // tous les matins pour une routine quotidienne — afin de réécrire un titre
-  // qu'on a déjà.
+  // Le titre ne se lance qu'une fois les gardes passées — un refus ne doit pas
+  // consommer un appel modèle — puis il se recouvre avec la résolution du modèle
+  // et de la branche. Surtout, il ne devient JAMAIS une barrière avant le drain :
+  // la conversation démarre sous son libellé de repli et le titre arrive après.
   const titleSource = agentRunTitleSource({ issueTitle, prompt: input.prompt });
-  const titlePromise =
+  const generatedTitle =
     !input.routineId && titleSource
       ? generateShortTitle({
           text: titleSource,
           kind: "note",
-          // La note est écrite dans la langue de la personne, sans qu'on la
-          // connaisse ici : le modèle la reprend telle quelle.
           locale: "auto",
-          usage: {
-            // Un titre de session est une dépense de l'agent, pas du chat.
-            feature: "agent_code",
-            userId: input.userId,
-            projectId,
-          },
+          usage: { feature: "agent_code", userId: input.userId, projectId },
         }).catch(() => null)
-      : Promise.resolve(null);
+      : null;
 
   let model: string;
   try {
@@ -395,9 +390,9 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       createdBy: input.userId,
       prompt: input.prompt ?? null,
       promptMentions: input.promptMentions ?? null,
-      // Le titre fourni gagne : c'est celui de la routine, et il n'a rien à
-      // attendre d'une génération qui n'a pas eu lieu.
-      title: input.title?.trim() || (await titlePromise),
+      // Le titre fourni gagne : c'est celui de la routine. Un titre généré, lui,
+      // s'écrit après la réponse HTTP — il ne peut pas retarder le premier token.
+      title: input.title?.trim() || null,
       model,
       modelForced: !!input.forced,
       reasoningLevel,
@@ -430,6 +425,29 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       return { ok: false, error: "alreadyRunning", run: winner ?? undefined };
     }
     throw err;
+  }
+
+  /**
+   * Le titre est un enrichissement asynchrone, pas une dépendance du lancement.
+   * La promesse a déjà démarré plus haut et a donc recouvert les pré-vols ; ce
+   * callback ne l'attend pas pour ne pas sérialiser le kick du drain derrière
+   * elle. La clause `is(title, null)` respecte un renommage manuel effectué dans
+   * l'intervalle — une réponse lente du petit modèle ne reprend jamais la main.
+   */
+  if (!input.title?.trim() && generatedTitle) {
+    after(() => {
+      void generatedTitle
+        .then(async (title) => {
+          if (!title) return;
+          const { error } = await service
+            .from("agent_runs")
+            .update({ title })
+            .eq("id", run.id)
+            .is("title", null);
+          if (error) console.error("[agent-launch] title update failed:", error.message);
+        })
+        .catch((err) => console.error("[agent-launch] title generation failed:", (err as Error).message));
+    });
   }
 
   if (issueId) {
