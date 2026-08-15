@@ -1326,6 +1326,71 @@ fil de l'eau — est le prix de la fermeture, et il est écrit dans le code.
 **Notre** dossier de tools, lui, est intact : il vient de `Path.config`
 (`XDG_CONFIG_HOME`), qui reste inclus inconditionnellement.
 
+### 2.31 Ce qui remonte de la machine de l'utilisateur (MIN-361)
+
+Tout le reste du chantier local raisonne sur ce qui **descend** — le jeton du
+run, la clé du modèle, le token de forge. Ce qui **remonte** est le seul point du
+dossier qui ne se répare pas après coup : ce qui est monté est monté. D'où trois
+décisions, prises avant le lanceur (MIN-293) plutôt que pendant.
+
+**1. Un run local n'exporte pas son journal.** `agent_run_journal` porte la
+sortie COMPLÈTE de chaque tool — une lecture de 260 lignes y pèse 22 Ko,
+republiée deux à trois fois —, il est conservé 30 jours et rejoué devant le
+modèle. Sa seule justification écrite est « rendre un tour indépendant de la
+microVM qui l'a précédé », et **elle tombe justement sur une machine** : la base
+SQLite d'opencode vit sous `harnessDir`, donc sous la racine **du run** et non du
+tour, et la session est encore là au tour suivant. On exporterait un service déjà
+rendu au prix du disque de quelqu'un dans la base de production.
+
+| | microVM | machine |
+| --- | --- | --- |
+| Mémoire de la session entre deux tours | `agent_run_journal`, rejoué au démarrage | la base SQLite locale, jamais partie |
+| Sortie complète des tools côté serveur | oui, 30 jours | **rien** |
+| Médecine légale d'un run raté | le journal | les aperçus du fil, et le journal d'opencode resté chez son propriétaire |
+
+**Ce que ça impose au lanceur** : la racine d'un run local ne se nettoie pas
+entre deux tours. Si elle disparaît quand même, le superviseur le voit (`test -f`
+sur `opencodeDbPath`) et ouvre une session neuve — un `sessionId` de checkpoint
+sans sa base prompterait dans le vide, et casserait la conversation pour de bon.
+
+**2. Ce qui monte encore est filtré, pas cru.** `agent_run_events` est persisté
+30 jours et lu par tout membre du projet. Deux gestes à la frontière de sortie,
+là où la substitution des secrets est déjà posée
+([local-uplink.ts](../lib/server/agent/vm/local-uplink.ts)) :
+
+- **les chemins de la machine sont réécrits** — le dépôt devient relatif, la
+  maison devient `~`. C'est le geste qui traite `/Users/<prénom nom>/…`, lequel
+  n'est pas dans les sorties suspectes mais dans **toutes** : chaque trace de
+  pile, chaque `pwd`, y compris pour un fichier qui est DANS le dépôt. Une règle
+  qui ne regarderait que ce qui sort du dépôt le laisserait passer intégralement.
+  Il passe aussi le mot de la fin, donc le **message de commit** et
+  `agent_runs.outcome` ;
+- **une sortie qui parle d'ailleurs est retenue, et seulement comptée.** Le
+  déclencheur est l'APPEL autant que la sortie : `cat ~/.ssh/id_rsa` rend du
+  texte qui ne porte aucun chemin, et c'est le cas qui compte. Ce qui reste
+  visible est le **geste** — on doit pouvoir lire ce que l'agent est allé faire,
+  surtout hors du dossier ; ce qui ne monte pas est le **contenu**.
+
+« Personnel » veut dire `/Users/x`, `/home/x`, `~`, et les points de montage
+(`/Volumes`, `/mnt`, `/media`). **Pas `/usr`, pas `/opt`, pas `/etc`** — ces
+trois-là sont identiques sur tous les Mac, ils sont dans la moitié des traces de
+pile, et `/etc` apparaît dans le CONTENU des dépôts (un Dockerfile, une conf
+nginx). Les y inclure ferait retenir des lectures parfaitement ordinaires, et une
+garde qui vide le fil de ses sorties honnêtes ne reste pas en place. Le résidu
+est donc nommé plutôt que masqué : `cat /etc/hosts` par le shell monte, du même
+ordre que le « mur de papier » du §2 de l'audit local.
+
+**3. C'est dit littéralement**, dans l'écran qui attache le dossier
+(`Settings.localRepoWarning`) et dans la politique de confidentialité
+(`Privacy.agentText`, `Privacy.retentionAgentDesc`) : ce que l'agent fait sur la
+machine part dans le fil, y reste 30 jours et se lit à plusieurs.
+
+**Ce que ce lot ne ferme pas**, et qui appartient au lot des garde-fous : le
+chemin d'exfiltration le plus court n'est pas `curl`, c'est `git add -A` → commit
+→ push → pull request. C'est le scan de secrets avant push
+([secret-scan.ts](../lib/server/agent/secret-scan.ts), MIN-360) qui le garde ; ce
+ticket-ci ne portait que sur ce qu'on **stocke**.
+
 ---
 
 ## 3. L'inventaire de parité — nos 51 tools, un par un

@@ -2750,7 +2750,7 @@
     "localRepoAttach": "Attacher un dossier",
     "localRepoChange": "Changer",
     "localRepoDetach": "Détacher",
-    "localRepoWarning": "Un agent qui tourne ici lit et écrit dans ce dossier avec votre compte, et ce qu'il lit part dans le fil de la conversation — donc chez minddy. Le dossier n'est attaché que sur ce Mac : personne d'autre dans le projet ne le voit."
+    "localRepoWarning": "Un agent qui tourne ici lit et écrit dans ce dossier avec votre compte. Ce qu'il y fait — ses commandes, les fichiers qu'il touche, des extraits de ce qu'il lit — est envoyé à minddy, conservé 30 jours et lisible par tous les membres du projet. Ce qu'il lit hors de ce dossier, non : cela reste sur ce Mac. Le dossier lui-même n'est attaché qu'ici, et personne d'autre dans le projet ne le voit."
   },
   "Seed": {
     "emptyBoardCta": "Discuter avec Numo",
@@ -3932,7 +3932,7 @@
     "title": "Politique de confidentialité",
     "metaTitle": "Politique de confidentialité",
     "metaDescription": "Ce que minddy collecte, pourquoi, combien de temps, et les droits que vous pouvez exercer.",
-    "lastUpdated": "Dernière mise à jour : 14 août 2026",
+    "lastUpdated": "Dernière mise à jour : 15 août 2026",
     "controllerTitle": "Responsable du traitement",
     "controllerText": "Le responsable du traitement de vos données personnelles est <name>Clément Guérin</name>, entrepreneur individuel (micro-entreprise), SIRET : 10028571700011, domicilié au 43 Quai Malakoff, 44000 Nantes, France. Pour toute question relative à vos données : <email>hello@minddy.app</email>",
     "collectedTitle": "Données collectées",
@@ -3978,7 +3978,7 @@
     "retentionNotifications": "Notifications",
     "retentionNotificationsDesc": "supprimées 6 mois après avoir été lues",
     "retentionAgent": "Exécutions de l'agent de code",
-    "retentionAgentDesc": "l'état d'exécution (messages échangés avec le modèle, extraits de code) est conservé le temps du run et de ses reprises ; seules les métadonnées (branche, pull request, statut) restent ensuite attachées au ticket",
+    "retentionAgentDesc": "le fil d'une exécution (messages échangés avec le modèle, appels d'outils et extraits de leur sortie) est conservé 30 jours après la fin du run, puis supprimé ; seules les métadonnées (branche, pull request, statut) restent ensuite attachées au ticket. Les mêmes 30 jours valent pour une exécution jouée sur votre ordinateur",
     "retentionFeedback": "Participants aux boards",
     "retentionFeedbackDesc": "conservées tant que le projet titulaire du board existe, et supprimées avec lui. Une identité qui n'a rien déposé; adresse vérifiée, puis plus rien; est supprimée au bout de 90 jours. Les retours écartés comme indésirables sont supprimés au bout de 30 jours. Vous pouvez à tout moment demander l'effacement de votre identité à l'éditeur du board : son adresse et son nom disparaissent, ses contributions restent en ligne sous pseudonyme",
     "retentionAnalytics": "Données analytics",
@@ -3994,7 +3994,7 @@
     "processorP2": "Catégories concernées : adresse email vérifiée, votes, retours et commentaires publiés, et l'audio d'un retour dicté. minddy ne les utilise à aucune fin commerciale et n'entraîne aucun modèle avec. Vous pouvez demander leur effacement à l'éditeur du board, qui dispose pour cela d'un outil dans minddy ; elles sont en tout état de cause supprimées avec le projet titulaire du board.",
     "processorP3": "Ces contributions sont traitées par des modèles d'IA avant publication : chaque retour est relu pour écarter les indésirables et signaler ce qui ne doit pas être rendu public, classé par thème, rapproché des retours voisins, et traduit dans la langue de l'équipe quand elle en diffère ; une dictée y ajoute la transcription de l'audio. Ces traitements passent par les mêmes fournisseurs que le reste du service; voir « Fournisseurs de modèles d'IA » ci-dessous, dont la réserve sur la conservation vaut ici aussi. Ni l'adresse email ni le nom du participant ne leur sont transmis : seul le texte qu'il a écrit, ou le son de sa voix.",
     "agentTitle": "Agent de code : environnement d'exécution",
-    "agentText": "Lorsque vous déclenchez l'agent de code, le dépôt lié est cloné dans une machine virtuelle isolée et éphémère fournie par Vercel (Sandbox), détruite à la fin de l'exécution. Le code nécessaire au traitement est transmis au modèle via OpenRouter. minddy ne conserve pas de copie du dépôt au-delà de l'exécution.",
+    "agentText": "Lorsque vous déclenchez l'agent de code, le dépôt lié est cloné dans une machine virtuelle isolée et éphémère fournie par Vercel (Sandbox), détruite à la fin de l'exécution. Le code nécessaire au traitement est transmis au modèle via OpenRouter. minddy ne conserve pas de copie du dépôt au-delà de l'exécution. Depuis l'application de bureau, vous pouvez à la place faire tourner une conversation sur votre propre ordinateur, dans un dossier que vous attachez au projet : l'agent travaille alors sous votre compte, dans ce dossier seulement. Ce qu'il y fait — ses commandes, les fichiers qu'il touche, des extraits de ce qu'il lit — est enregistré dans le fil de la conversation, pour la durée indiquée ci-dessus. Ce qu'il lit hors de ce dossier ne nous est pas transmis, et la sortie complète de ses outils ne quitte jamais votre machine.",
     "aiProvidersTitle": "Fournisseurs de modèles d'IA",
     "aiProvidersGateway": "OpenRouter n'est pas le destinataire final de vos contenus : c'est une passerelle. Chaque requête est acheminée vers le fournisseur du modèle utilisé; DeepSeek, Anthropic, OpenAI ou Google selon le modèle; qui la traite sur ses propres serveurs, aux États-Unis.",
     "aiProvidersRetention": "Les politiques de conservation varient d'un fournisseur à l'autre : certains ne conservent rien, d'autres journalisent les requêtes pendant une durée limitée, d'autres peuvent les utiliser pour améliorer leurs modèles. Cette étape échappe à notre contrôle et nous ne pouvons rien vous garantir à son sujet.",

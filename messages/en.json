@@ -2750,7 +2750,7 @@
     "localRepoAttach": "Attach a folder",
     "localRepoChange": "Change",
     "localRepoDetach": "Detach",
-    "localRepoWarning": "An agent running here reads and writes in this folder with your own account, and what it reads goes into the conversation thread — so it reaches minddy. The folder is attached on this Mac only: nobody else on the project sees it."
+    "localRepoWarning": "An agent running here reads and writes in this folder with your own account. What it does there — its commands, the files it touches, excerpts of what it reads — is sent to minddy, kept 30 days and readable by everyone on the project. What it reads outside this folder is not: that stays on this Mac. The folder itself is attached here only, and nobody else on the project sees it."
   },
   "Seed": {
     "emptyBoardCta": "Chat with Numo",
@@ -3932,7 +3932,7 @@
     "title": "Privacy policy",
     "metaTitle": "Privacy policy",
     "metaDescription": "What minddy collects, why, how long it is kept, and the rights you can exercise.",
-    "lastUpdated": "Last updated: 14 August 2026",
+    "lastUpdated": "Last updated: 15 August 2026",
     "controllerTitle": "Data controller",
     "controllerText": "The controller of your personal data is <name>Clément Guérin</name>, sole proprietor (micro-enterprise), SIRET: 10028571700011, located at 43 Quai Malakoff, 44000 Nantes, France. For any data-related question: <email>hello@minddy.app</email>",
     "collectedTitle": "Data collected",
@@ -3978,7 +3978,7 @@
     "retentionNotifications": "Notifications",
     "retentionNotificationsDesc": "deleted 6 months after being read",
     "retentionAgent": "Coding agent runs",
-    "retentionAgentDesc": "the execution state (messages exchanged with the model, code excerpts) is kept for the duration of the run and its resumptions; afterwards only the metadata (branch, pull request, status) stays attached to the issue",
+    "retentionAgentDesc": "the thread of a run (messages exchanged with the model, tool calls and excerpts of their output) is kept 30 days after the run ends, then deleted; afterwards only the metadata (branch, pull request, status) stays attached to the issue. The same 30 days apply to a run played on your own computer",
     "retentionFeedback": "Board participants",
     "retentionFeedbackDesc": "kept as long as the project that owns the board exists, and deleted with it. An identity that never posted anything; address verified, then nothing; is deleted after 90 days. Feedback set aside as junk is deleted after 30 days. You can ask the board's publisher to erase your identity at any time: the address and name go, the contributions stay online under a pseudonym",
     "retentionAnalytics": "Analytics data",
@@ -3994,7 +3994,7 @@
     "processorP2": "Categories involved: verified email address, votes, published feedback and comments, and the audio of a dictated post. minddy uses them for no commercial purpose and trains no model on them. You can ask the board's publisher to erase them; minddy gives them a tool for exactly that; and they are in any case deleted along with the project that owns the board.",
     "processorP3": "These contributions are processed by AI models before publication: every post is screened to set junk aside and flag what should not be made public, sorted by topic, matched against neighbouring posts, and translated into the team's language when it differs; a dictation adds the transcription of the audio. These steps go through the same providers as the rest of the service; see “AI model providers” below, whose caveat about retention applies here too. Neither the participant's email address nor their name is sent to them: only the text they wrote, or the sound of their voice.",
     "agentTitle": "Coding agent: execution environment",
-    "agentText": "When you trigger the coding agent, the linked repository is cloned into an isolated, ephemeral virtual machine provided by Vercel (Sandbox), destroyed at the end of the run. The code needed for the task is sent to the model through OpenRouter. minddy keeps no copy of the repository beyond the run.",
+    "agentText": "When you trigger the coding agent, the linked repository is cloned into an isolated, ephemeral virtual machine provided by Vercel (Sandbox), destroyed at the end of the run. The code needed for the task is sent to the model through OpenRouter. minddy keeps no copy of the repository beyond the run. From the desktop app you can have a conversation run on your own computer instead, in a folder you attach to the project: the agent then works under your own account, in that folder only. What it does there — its commands, the files it touches, excerpts of what it reads — is recorded in the conversation thread, for the period given above. What it reads outside that folder is not sent to us, and the full output of its tools never leaves your machine.",
     "aiProvidersTitle": "AI model providers",
     "aiProvidersGateway": "OpenRouter is not the final recipient of your content: it is a gateway. Each request is routed to the provider of the model in use; DeepSeek, Anthropic, OpenAI or Google depending on the model; which processes it on its own servers, in the United States.",
     "aiProvidersRetention": "Retention policies differ from one provider to the next: some keep nothing, some log requests for a limited time, some may use them to improve their models. This step is outside our control and we cannot give you any guarantee about it.",

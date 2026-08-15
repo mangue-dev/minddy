@@ -42,13 +42,19 @@ import {
   type OpencodeEvent,
   type RoundUsage,
 } from "./opencode-events";
-import { opencodeAnchorFile, opencodeServerEnv, subagentAgentTable } from "./opencode-config";
+import {
+  opencodeAnchorFile,
+  opencodeDbPath,
+  opencodeServerEnv,
+  subagentAgentTable,
+} from "./opencode-config";
 import { localToolsFor, opencodeToolFiles, SUPERVISOR_URL_ENV } from "./opencode-tools";
 import { startToolBridge, type SupervisorTool, type ToolBridge } from "./tool-bridge";
 import { makeOpencodeDelivery, repoRelative, type OpencodeDelivery } from "./opencode-delivery";
 import { newLiveEditLog } from "../live-edits";
 import { decidePermission, editTargets } from "./opencode-permissions";
 import { refineLocalVerdict } from "./local-guard";
+import { filterLocalPayload, scrubPaths, withheldOutput } from "./local-uplink";
 import { startLlmProxy, type LlmProxy } from "./llm-proxy";
 import { commitMessageFromReply } from "../commit-message";
 import { BUDGET_REFRESH_INTERVAL_MS } from "@/lib/agent-models";
@@ -329,10 +335,23 @@ export async function runOpencodeTurn(
    */
   const local = isLocalJob(job);
 
+  /**
+   * CE QU'UNE CHAÎNE DEVIENT AVANT DE QUITTER LA MACHINE (MIN-361).
+   *
+   * Les secrets d'abord — c'est l'invariant de MIN-239, et il vaut partout —,
+   * puis, sur le chemin local SEULEMENT, les chemins de la machine
+   * ([local-uplink.ts](local-uplink.ts)). Un seul crochet plutôt qu'un `if` à
+   * chaque sortie : les sorties de texte d'un tour sont cinq (le mot de la fin,
+   * le direct, le message de commit, l'erreur de session, le rapport d'échec),
+   * et une seule oubliée suffit à faire monter `/Users/<prénom nom>/…`.
+   */
+  const outward = (text: string): string =>
+    local ? scrubPaths(secrets.redact(text), job.layout.repoDir) : secrets.redact(text);
+
   /** Ce qu'on rend quand le tour n'a pas pu commencer (ou s'est cassé en vol). */
   const failed = (message: string, costUsd = 0): VmTurnReport => ({
     status: "error",
-    errorMessage: cap(secrets.redact(message), 1000),
+    errorMessage: cap(outward(message), 1000),
     costUsd,
     checkpointDropped: [],
     checkpointBytes: 0,
@@ -671,7 +690,7 @@ export async function runOpencodeTurn(
         } catch (err) {
           // Un push raté est une erreur de TOOL : le modèle la lit et décide. Le
           // message peut recopier l'URL de push, token compris (MIN-239).
-          const detail = `push failed: ${secrets.redact((err as Error).message)}`;
+          const detail = `push failed: ${outward((err as Error).message)}`;
           return {
             result: { error: jobsNote ? `${detail} ${jobsNote}` : detail },
             success: false,
@@ -699,6 +718,20 @@ export async function runOpencodeTurn(
    * (`run_background`, dont `checkCommand` écarte un `git push`).
    */
   const refusedCalls = new Map<string, string>();
+
+  /**
+   * APPELS DE TOOL QUI ONT PARLÉ D'AILLEURS QUE DU DÉPÔT, par `callId` et avec
+   * leur compte de chemins (MIN-361). Chemin local seulement.
+   *
+   * Jumelle de `refusedCalls`, et pour la même raison de forme : ce qu'on
+   * apprend à l'APPEL doit encore être su au RÉSULTAT, qui arrive plus tard et
+   * ne porte que son identifiant. Sans elle, la sortie d'un `cat ~/.ssh/id_rsa`
+   * monterait entière — le texte d'une clé privée ne contient aucun chemin, donc
+   * rien à regarder dans la sortie elle-même.
+   */
+  const foreignCalls = new Map<string, number>();
+  /** Combien de sorties sont restées sur la machine — le tour le journalise. */
+  let withheldOutputs = 0;
 
   const bridge = await (deps.startToolBridge ?? startToolBridge)({
     job,
@@ -782,6 +815,31 @@ export async function runOpencodeTurn(
         console.error("[supervisor] replay failed:", (err as Error).message);
         sessionId = "";
       });
+    }
+    /**
+     * SUR UNE MACHINE, LA MÉMOIRE EST UN FICHIER — donc elle peut manquer
+     * (MIN-361).
+     *
+     * Un run local n'exporte pas son journal (cf. `syncJournal`) : sa
+     * conversation vit dans la base SQLite d'opencode, sous la racine du run. Le
+     * checkpoint, lui, porte toujours le `sessionId` — et un identifiant sans sa
+     * base est ce qu'il y a de pire, un tour qui prompte une session que le
+     * serveur ne connaît pas. Un dossier de travail nettoyé, une autre machine,
+     * un `~/Library` purgé suffisent.
+     *
+     * On repart alors à neuf, ce que le code sait déjà faire juste en dessous :
+     * la conversation perd sa mémoire, le ticket et le dépôt sont toujours là.
+     * La sonde est un `test -f` — jamais une raison de refuser le tour, d'où le
+     * `catch` qui vaut « absent ».
+     */
+    if (local && sessionId) {
+      const probe = await host
+        .exec(`test -f ${sq(opencodeDbPath(job.layout))}`, { timeoutMs: 10_000 })
+        .catch(() => null);
+      if (!probe || probe.exitCode !== 0) {
+        console.log("[supervisor] no local opencode store — starting a fresh session");
+        sessionId = "";
+      }
     }
     if (!sessionId) {
       sessionId = (await client.createSession(`minddy ${job.commitRef}`)).id;
@@ -909,8 +967,36 @@ export async function runOpencodeTurn(
     /**
      * Exporte ce qui est neuf et le POUSSE. Rend le pointeur que le checkpoint
      * portera — la session et le curseur, quelques dizaines d'octets.
+     *
+     * ───────────────────────────────────────────────────────────────────────
+     * SAUF SUR UNE MACHINE, OÙ IL N'EXPORTE RIEN (MIN-361).
+     *
+     * Ce journal porte la sortie COMPLÈTE de chaque tool, il est persisté 30
+     * jours dans la base de production, et il est rejoué devant le modèle. Dans
+     * une microVM, c'est le contenu d'un clone jetable d'un dépôt que le projet
+     * possède déjà ; sur une machine, c'est le disque de quelqu'un — le contenu
+     * de ses fichiers, et ce que le shell est allé lire.
+     *
+     * **Sa seule justification écrite tombe justement là** : « c'est ce qui rend
+     * un tour indépendant de la microVM qui l'a précédé » (cf. la reprise de
+     * session plus haut). Une microVM est détruite à la fin du tour ; une
+     * machine, non. La base SQLite d'opencode vit sous `harnessDir`
+     * ([opencode-config.ts](opencode-config.ts)), donc sous la racine DU RUN
+     * ([harness-layout.ts](../harness-layout.ts)) et pas du tour : la session
+     * est encore là au tour suivant, et l'export ne rendrait qu'un service déjà
+     * rendu — au prix du seul point non réparable du dossier.
+     *
+     * CE QU'ON PERD, et il vaut mieux l'écrire que le découvrir : la médecine
+     * légale SERVEUR d'un run local. Le journal était la seule trace complète
+     * des sorties de tools ; autopsier un run local se fera donc sur les aperçus
+     * du fil, et sur le journal d'opencode resté chez son propriétaire.
+     *
+     * CE QUE ÇA IMPOSE AU LANCEUR (MIN-293) : la racine d'un run local ne se
+     * nettoie pas entre deux tours. Si elle disparaît quand même, la reprise de
+     * session le voit et repart à neuf plutôt que de prompter dans le vide.
      */
     const syncJournal = async (): Promise<OpencodeCheckpointState> => {
+      if (local) return { sessionId, seq: journalSeq };
       const fresh = await client.syncHistory(journalSeq);
       let batch: Record<string, unknown>[] = [];
       let bytes = 0;
@@ -1307,7 +1393,7 @@ export async function runOpencodeTurn(
               liveEdits.note(live);
               lastLiveAt = 0;
               cp.emitLive({
-                text: secrets.redact(liveTextOf(state, sessionId)),
+                text: outward(liveTextOf(state, sessionId)),
                 tools: toolsSeen,
                 reasoningActive: false,
                 reasoningMs: 0,
@@ -1376,6 +1462,46 @@ export async function runOpencodeTurn(
               ? refusedCalls.get(String(event.payload.id ?? ""))
               : undefined;
           let payload = redactPayload(event.payload, secrets);
+          /**
+           * PUIS LES CHEMINS DE LA MACHINE, SUR LE CHEMIN LOCAL (MIN-361).
+           *
+           * `agent_run_events` est persisté 30 jours et lu par tout membre du
+           * projet. Deux gestes, et ils ne font pas le même travail
+           * ([local-uplink.ts](local-uplink.ts)) :
+           *
+           * - **tout est réécrit** — le dépôt devient relatif, la maison devient
+           *   `~`. C'est ce qui traite `/Users/<prénom nom>/…`, qui n'est pas
+           *   dans les sorties suspectes mais dans toutes ;
+           * - **une sortie qui parle d'ailleurs est RETENUE**, et seulement
+           *   comptée. Le déclencheur est l'APPEL autant que la sortie : un
+           *   `cat ~/.ssh/id_rsa` rend du texte qui ne porte aucun chemin, et
+           *   c'est pourtant le cas qui compte. D'où la table des appels
+           *   étrangers, jumelle de `refusedCalls`.
+           *
+           * Ce qui reste visible est le GESTE : on doit pouvoir lire ce que
+           * l'agent est allé faire, surtout quand il est allé le faire hors du
+           * dossier. Ce qui ne monte pas est le CONTENU.
+           */
+          if (local) {
+            const filtered = filterLocalPayload(payload, job.layout.repoDir);
+            payload = filtered.payload;
+            const callId = String(payload.id ?? "");
+            if (event.type === "tool_call" && filtered.foreign && callId) {
+              foreignCalls.set(callId, filtered.foreignCount);
+            }
+            if (event.type === "tool_result") {
+              const fromCall = foreignCalls.get(callId) ?? 0;
+              const paths = fromCall + filtered.foreignCount;
+              if (paths > 0) {
+                // La taille de la sortie TELLE QU'ELLE ÉTAIT : c'est elle que le
+                // compte doit dire, pas celle de la version réécrite.
+                const chars = String(event.payload.preview ?? "").length;
+                payload = { ...payload, preview: withheldOutput(chars, paths), withheld: paths };
+                withheldOutputs += 1;
+              }
+              foreignCalls.delete(callId);
+            }
+          }
           // Un `spawn_agent` ne porte que le NOM de l'agent : on lui rend le mode
           // et le modèle que le fil affiche depuis MIN-112.
           if (payload.name === "spawn_agent") payload = describeSpawn(payload, agentTable);
@@ -1476,7 +1602,7 @@ export async function runOpencodeTurn(
         if (liveDue) {
           lastLiveAt = now();
           cp.emitLive({
-            text: secrets.redact(liveTextOf(state, sessionId)),
+            text: outward(liveTextOf(state, sessionId)),
             tools: toolsSeen,
             reasoningActive: reasoningSince !== null,
             reasoningMs: reasoningSince === null ? 0 : Math.max(0, now() - reasoningSince),
@@ -1539,7 +1665,7 @@ export async function runOpencodeTurn(
           if (entry && report.trim()) {
             await cp.emit(
               "summary",
-              markChildPayload({ text: cap(secrets.redact(report), 4000) }, entry),
+              markChildPayload({ text: cap(outward(report), 4000) }, entry),
             );
           }
           if (entry) await cp.emit("status", { phase: "subagent_report", id: entry.id });
@@ -1600,6 +1726,19 @@ export async function runOpencodeTurn(
      */
     costUsd += await turnLedger.recordOrphans(cp, proxy);
 
+    /**
+     * CE QUI N'EST PAS MONTÉ SE COMPTE (MIN-361). Event neutre — invisible au
+     * fil, comptable en base, comme `current_repo` : c'est le seul moyen de
+     * savoir, après coup, qu'un tour a lu hors du dossier, sans faire monter ce
+     * qu'il y a lu. Best-effort : un compte perdu ne coûte pas le tour.
+     */
+    if (withheldOutputs > 0) {
+      console.log(`[supervisor] ${withheldOutputs} tool output(s) stayed on this machine`);
+      await cp
+        .emit("status", { phase: "local_output_withheld", outputs: withheldOutputs })
+        .catch(() => {});
+    }
+
     // ── L'état d'opencode, exporté pour le tour suivant ──────────────────────
     let opencodeState: OpencodeCheckpointState | undefined;
     try {
@@ -1619,8 +1758,16 @@ export async function runOpencodeTurn(
      * que la boucle maison (`reply: ""` sur `ask_user`) : la carte de questions
      * clôt le fil, il n'y a pas de mot de la fin à afficher, et le commit prend
      * son message générique plutôt qu'une phrase écrite avant la question.
+     *
+     * SUBSTITUÉ ET RÉÉCRIT ICI, une fois pour ses TROIS destinations (MIN-361) :
+     * l'event `summary`, le message de commit
+     * ([commit-message.ts](../commit-message.ts)) et le `reply` du rapport, qui
+     * devient `agent_runs.outcome`. Seule la première passait par le registre de
+     * secrets ; les deux autres emportaient telle quelle la parole du modèle —
+     * donc, sur une machine, les chemins qu'il venait de citer, jusque dans un
+     * message de commit poussé sur la forge.
      */
-    const reply = askedUser ? "" : replyOf(state, sessionId);
+    const reply = askedUser ? "" : outward(replyOf(state, sessionId));
     /**
      * LE MOT DE LA FIN, DIT AU FIL — et c'est ce qui CLÔT le tour à l'écran.
      *
@@ -1638,7 +1785,7 @@ export async function runOpencodeTurn(
      */
     const endedWell = !budgetExhausted && !interrupted && !sessionError && !timedOut;
     if (reply.trim() && endedWell) {
-      await cp.emit("summary", { text: cap(secrets.redact(reply), 8000) });
+      await cp.emit("summary", { text: cap(reply, 8000) });
     }
     /**
      * Le verrou « le dépôt a été touché », posé une dernière fois avant le push :
@@ -1664,7 +1811,7 @@ export async function runOpencodeTurn(
       try {
         pushed = await pushWork(commitMessageFromReply(reply, job.commitRef));
       } catch (err) {
-        pushError = secrets.redact((err as Error).message);
+        pushError = outward((err as Error).message);
         console.error("[supervisor] turn-end push failed:", pushError);
       }
     }
@@ -1703,7 +1850,7 @@ export async function runOpencodeTurn(
       // `agent_question` plutôt qu'`agent_done` ([vm-rest.ts](../vm-rest.ts)).
       ...(askedUser ? { askedUser: true } : {}),
       ...(timedOut ? { errorCode: "turnTooLong" as const } : {}),
-      ...(sessionError ? { errorMessage: cap(secrets.redact(sessionError), 1000) } : {}),
+      ...(sessionError ? { errorMessage: cap(outward(sessionError), 1000) } : {}),
       costUsd,
       checkpoint,
       // Plus rien ne se lâche : le journal ne transite plus par le checkpoint,

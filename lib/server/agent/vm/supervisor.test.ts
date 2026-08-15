@@ -6,7 +6,7 @@ import { runOpencodeTurn, lastSeqByAggregate, type SupervisorDeps } from "./supe
 import { OpencodeClient } from "./opencode-client";
 import { takeGeneration, type CapturedGeneration } from "./llm-proxy";
 import { opencodeAnchorFile, opencodeToolDir } from "./opencode-config";
-import { cloudLayout } from "../harness-layout";
+import { cloudLayout, layoutForRoot } from "../harness-layout";
 
 /** Le layout du run testé — celui d'une microVM (MIN-354). */
 const LAYOUT = cloudLayout();
@@ -140,6 +140,8 @@ const h = {
   diff: "",
   /** Les fichiers de conventions présents à la racine du dépôt (MIN-360). */
   repoInstructions: [] as string[],
+  /** La base SQLite d'opencode est-elle encore sur la machine ? (MIN-361) */
+  localStore: true,
 };
 
 function cp(): ControlPlaneClient {
@@ -193,14 +195,19 @@ function cp(): ControlPlaneClient {
 }
 
 /** Le dépôt : seuls `commitAndPush` et `changedFiles` le touchent ici. */
-function host() {
+function host(layout = LAYOUT) {
   return {
     // Le host porte son layout depuis MIN-354 : c'est de lui que viennent le
     // dépôt (chemins relatifs des éditions) et le dossier de sorties de tools
     // (les trois fichiers d'un job de fond).
-    layout: LAYOUT,
+    layout,
     exec: vi.fn(async (command: string) => {
       h.exec.push(command);
+      // MIN-361 : la sonde de la base SQLite d'opencode, sur le chemin local —
+      // c'est elle qui décide entre reprendre la session et en ouvrir une neuve.
+      if (command.startsWith("test -f")) {
+        return { exitCode: h.localStore ? 0 : 1, stdout: "", stderr: "" };
+      }
       // Le lanceur d'un job de fond rend son PID sur stdout (`background.ts`).
       if (command.includes("setsid")) return { exitCode: 0, stdout: "4242\n", stderr: "" };
       // MIN-360 : la sonde des `AGENTS.md` / `CLAUDE.md` de la racine, qu'on rend
@@ -215,7 +222,7 @@ function host() {
       // la racine du dépôt (les deux lignes doivent coïncider), et le commit
       // passe par la plomberie plutôt que par `git commit`.
       if (command.includes("show-toplevel")) {
-        return { exitCode: 0, stdout: `${LAYOUT.repoDir}\n${LAYOUT.repoDir}\n`, stderr: "" };
+        return { exitCode: 0, stdout: `${layout.repoDir}\n${layout.repoDir}\n`, stderr: "" };
       }
       if (command.includes("write-tree")) return { exitCode: 0, stdout: "arbre-après\n", stderr: "" };
       if (command.includes("commit-tree")) return { exitCode: 0, stdout: "sha-après\n", stderr: "" };
@@ -477,6 +484,7 @@ beforeEach(() => {
   h.exec = [];
   h.diff = "";
   h.repoInstructions = [];
+  h.localStore = true;
 });
 
 /** Une demande de permission, telle qu'opencode la publie sur le flux. */
@@ -2013,5 +2021,157 @@ describe("le mode dépôt courant", () => {
     await run({});
     expect(h.exec.some((c) => c.includes("git add -A"))).toBe(true);
     expect(h.exec.some((c) => c.includes("show-toplevel"))).toBe(false);
+  });
+});
+
+/**
+ * MIN-361 — CE QUI REMONTE DE LA MACHINE DE L'UTILISATEUR.
+ *
+ * Le seul point du chantier local qui ne se répare pas après coup : ce qui est
+ * monté est monté. Les tests ci-dessous tiennent les deux moitiés de la
+ * décision — ce qui ne part PAS (le journal, le contenu d'une sortie qui parle
+ * d'ailleurs) et ce qui part quand même mais réécrit (les chemins de la
+ * machine, jusque dans le message de commit).
+ *
+ * Le décor est le tour capturé, joué avec un layout de MACHINE et un
+ * `controlToken` — c'est lui, et rien d'autre, qui fait un tour local
+ * (`isLocalJob`).
+ */
+describe("un tour sur la machine de quelqu'un", () => {
+  const LOCAL_LAYOUT = layoutForRoot("/Users/testeur/.minddy/runs/r1", "/Users/testeur/.minddy/oc");
+  const REPO = LOCAL_LAYOUT.repoDir;
+
+  const runLocal = (over: Partial<VmJob> = {}, moreDeps: Partial<SupervisorDeps> = {}) =>
+    runOpencodeTurn(
+      job({ layout: LOCAL_LAYOUT, controlToken: "jeton-de-bail", ...over }),
+      { prompt: "fais le ticket", anchorInstructions: "# Ancrage minddy\nMIN-42" },
+      cp(),
+      host(LOCAL_LAYOUT),
+      { ...deps(), ...moreDeps },
+    );
+
+  /** Une frame de tool, telle qu'opencode la publie sur le flux. */
+  const toolFrame = (
+    tool: string,
+    callId: string,
+    state: Record<string, unknown>,
+  ): string =>
+    JSON.stringify({
+      type: "message.part.updated",
+      properties: {
+        sessionID: PARENT,
+        part: { type: "tool", tool, callID: callId, id: `prt_${callId}`, state },
+      },
+    });
+
+  const resultOf = (callId: string) =>
+    h.events.find((e) => e.type === "tool_result" && e.payload.id === callId);
+
+  it("n'exporte RIEN du journal de ses tools", async () => {
+    await runLocal();
+    // Ni l'export côté opencode, ni l'écriture côté base : la sortie complète de
+    // chaque tool reste sur la machine qui l'a produite.
+    expect(h.routes).not.toContain("POST /sync/history");
+    expect(h.journal).toEqual([]);
+  });
+
+  it("…là où un tour de microVM l'exporte, comme avant", async () => {
+    // Le contre-exemple compte autant : la décision porte sur le chemin LOCAL,
+    // et un journal cloud qui disparaîtrait coûterait la mémoire de la session.
+    await run();
+    expect(h.journal.length).toBeGreaterThan(0);
+  });
+
+  it("retient la sortie d'un tool qui est allé lire ailleurs", async () => {
+    h.extraFrames = [
+      toolFrame("bash", "call_ailleurs", {
+        status: "completed",
+        input: { command: "cat ~/.ssh/config" },
+        output: "Host github.com\n  IdentityFile ~/.ssh/id_ed25519\n",
+      }),
+    ];
+    await runLocal();
+    const preview = String(resultOf("call_ailleurs")?.payload.preview ?? "");
+    expect(preview).toContain("kept this output on this machine");
+    expect(preview).not.toContain("id_ed25519");
+    // Retenue ET COMPTÉE : c'est ce qui permet de savoir, après coup, qu'un tour
+    // a lu hors du dossier — sans faire monter ce qu'il y a lu.
+    expect(resultOf("call_ailleurs")?.payload.withheld).toBe(1);
+    expect(
+      h.events.some(
+        (e) => e.type === "status" && e.payload.phase === "local_output_withheld",
+      ),
+    ).toBe(true);
+  });
+
+  it("la retient sur l'APPEL, même quand la sortie ne porte aucun chemin", async () => {
+    // Le cas qui décide de la forme : une clé privée est du texte sans le
+    // moindre chemin. Regarder la seule sortie la laisserait monter entière.
+    h.extraFrames = [
+      toolFrame("bash", "call_cle", {
+        status: "running",
+        input: { command: "cat /Users/testeur/.ssh/id_rsa" },
+      }),
+      toolFrame("bash", "call_cle", {
+        status: "completed",
+        input: { command: "cat /Users/testeur/.ssh/id_rsa" },
+        output: "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\n",
+      }),
+    ];
+    await runLocal();
+    const preview = String(resultOf("call_cle")?.payload.preview ?? "");
+    expect(preview).toContain("kept this output on this machine");
+    expect(preview).not.toContain("OPENSSH PRIVATE KEY");
+    // Le GESTE, lui, reste lisible : on doit pouvoir voir ce que l'agent est
+    // allé faire, surtout quand il est allé le faire hors du dossier.
+    const call = h.events.find((e) => e.type === "tool_call" && e.payload.id === "call_cle");
+    expect(JSON.stringify(call?.payload)).toContain("~/.ssh/id_rsa");
+  });
+
+  it("laisse monter ce qui ne parle que du dépôt, en chemin relatif", async () => {
+    h.extraFrames = [
+      toolFrame("read", "call_dedans", {
+        status: "completed",
+        input: { filePath: `${REPO}/lib/x.ts` },
+        output: `${REPO}/lib/x.ts\nexport const x = 1;\n`,
+      }),
+    ];
+    await runLocal();
+    const payload = JSON.stringify(resultOf("call_dedans")?.payload);
+    expect(payload).toContain("export const x = 1;");
+    // Et `/Users/<prénom nom>` a disparu — y compris sur un chemin qui est DANS
+    // le dépôt, ce qu'une règle « hors du dépôt » ne couvrirait jamais.
+    expect(payload).not.toContain("/Users/testeur");
+    expect(payload).toContain("./lib/x.ts");
+    expect(resultOf("call_dedans")?.payload.withheld).toBeUndefined();
+  });
+
+  it("ne réécrit rien du tout sur le chemin cloud", async () => {
+    h.extraFrames = [
+      toolFrame("bash", "call_cloud", {
+        status: "completed",
+        input: { command: "cat /Users/quelquun/.ssh/config" },
+        output: "Host github.com\n",
+      }),
+    ];
+    await run();
+    // Aucun tour de microVM ne doit changer de comportement : la garde est
+    // adossée au chemin local, et un clone jetable n'a pas de disque personnel.
+    expect(String(resultOf("call_cloud")?.payload.preview ?? "")).toContain("Host github.com");
+  });
+
+  it("repart d'une session neuve quand la base d'opencode a disparu", async () => {
+    // Sans journal exporté, la mémoire du tour précédent EST ce fichier. Un
+    // identifiant de session sans sa base ferait prompter dans le vide, et la
+    // conversation serait cassée pour de bon.
+    h.localStore = false;
+    await runLocal({ opencode: { sessionId: "ses_dun_autre_temps", events: [], seq: {} } });
+    expect(h.routes).toContain("POST /session");
+  });
+
+  it("reprend la session quand la base est encore là", async () => {
+    h.localStore = true;
+    await runLocal({ opencode: { sessionId: PARENT, events: [], seq: {} } });
+    expect(h.routes).not.toContain("POST /session");
   });
 });
