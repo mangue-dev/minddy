@@ -600,9 +600,19 @@ export function buildOpencodeConfig(
         npm: OPENCODE_PROVIDER_NPM,
         name: "minddy",
         options: {
-          // LE PLACEHOLDER, JAMAIS LA CLÉ. Le firewall la pose à la sortie de la
-          // microVM (cf. `network-policy.ts`) : ce document part sur le disque
-          // d'un process où le modèle exécute du shell arbitraire.
+          /**
+           * LE PLACEHOLDER, JAMAIS LA CLÉ — et c'est vrai des DEUX mondes, pour
+           * deux raisons différentes.
+           *
+           * Ce document part sur le disque d'un process où le modèle exécute du
+           * shell arbitraire, et il entre dans l'environnement du serveur
+           * opencode (`OPENCODE_CONFIG_CONTENT`) : un `env` suffit à le lire.
+           * Dans la microVM, la vraie clé est posée par le firewall à la sortie
+           * (cf. `network-policy.ts`) ; sur la machine de l'utilisateur, où il
+           * n'y a pas de firewall, elle est posée par le proxy LLM — en mémoire,
+           * sur la seule route qu'il sert ([llm-proxy.ts](llm-proxy.ts), MIN-357).
+           * Ce champ-ci ne change pas d'un monde à l'autre, et c'est le but.
+           */
           apiKey: job.llmPlaceholderKey,
           /**
            * LE PROXY LOCAL QUAND IL Y EN A UN (lot 2), le fournisseur sinon.

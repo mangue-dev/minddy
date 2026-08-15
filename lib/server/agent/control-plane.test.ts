@@ -60,6 +60,28 @@ const h = vi.hoisted(() => ({
   scratchpadCalls: [] as string[],
   /** Le PROFIL de token demandé à `resolveRepoCloneTarget`, appel par appel. */
   repoAccessAsked: [] as string[],
+  /** Les clés LLM demandées au fournisseur, avec le plafond posé sur chacune. */
+  minted: [] as Array<{ runId: string; capUsd: number }>,
+  /** Les clés révoquées — ce qui ne doit jamais survivre au tour qui l'a demandée. */
+  revoked: [] as string[],
+  /** L'API de provisioning refuse (variable absente, panne) : `mintRunKey` → null. */
+  mintFails: false,
+}));
+
+// `runKeyCapUsd` reste le VRAI : c'est l'arithmétique du plafond, et la servir
+// depuis cette surface sans l'exercer reviendrait à ne rien tester du tout. Seuls
+// les deux appels qui SORTENT du process sont moqués.
+vi.mock("./run-key", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./run-key")>()),
+  mintRunKey: vi.fn(async (opts: { runId: string; capUsd: number }) => {
+    h.minted.push(opts);
+    return h.mintFails
+      ? null
+      : { key: "sk-or-v1-clef-du-run", hash: "hash-neuf", capUsd: opts.capUsd };
+  }),
+  revokeRunKey: vi.fn(async (hash: string) => {
+    h.revoked.push(hash);
+  }),
 }));
 
 vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
@@ -242,6 +264,9 @@ beforeEach(() => {
   h.journal.length = 0;
   h.scratchpadCalls.length = 0;
   h.repoAccessAsked.length = 0;
+  h.minted.length = 0;
+  h.revoked.length = 0;
+  h.mintFails = false;
   h.steeredByOther = false;
   h.prIssueId = null;
   h.stampReturnsNull = false;
@@ -270,6 +295,10 @@ beforeEach(() => {
     chain_id: null,
     model: "deepseek/deepseek-v4-flash",
     checkpoint: { messages: [] },
+    // MIN-357 : les deux colonnes que `/llm-key` regarde — le mode de clé (un
+    // BYOK n'est pas plafonnable) et la clé du tour précédent, à révoquer.
+    key_mode: "platform",
+    provider_key_id: null,
   };
 });
 
@@ -1030,6 +1059,7 @@ describe("le plan de contrôle vu depuis une machine", () => {
       ["GET", "/messages"],
       ["POST", "/tool/read_issue"],
       ["GET", "/budget"],
+      ["POST", "/llm-key"],
     ] as const) {
       const res = await callLocal(method, surface, { type: "assistant_message", args: {} });
       // 409 et pas 403 : c'est celui que le client du plan de contrôle lit déjà
@@ -1045,6 +1075,63 @@ describe("le plan de contrôle vu depuis une machine", () => {
     expect(res.status).toBe(403);
     // Rien n'a été minté : le refus est en amont de la forge.
     expect(h.repoAccessAsked).toEqual([]);
+  });
+
+  /**
+   * MIN-357 — LA CLÉ DU MODÈLE, ET LE MIROIR DE `/repo-auth`.
+   *
+   * Sur un Mac il n'y a pas de firewall pour poser la clé à la sortie : elle
+   * descend jusqu'au proxy du harness, en mémoire, et cette surface est par où.
+   * Ce qui borne le dégât n'est pas le secret de la réponse — le modèle lit le
+   * jeton, donc il peut appeler ceci lui-même — c'est le PLAFOND de la clé rendue.
+   */
+  describe("la clé du modèle", () => {
+    it("mint une clé plafonnée sur le restant du compte, et la stampe pour la révoquer", async () => {
+      const res = await callLocal("POST", "/llm-key");
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ key: "sk-or-v1-clef-du-run", capUsd: 3 });
+      // Le plafond n'est pas déclaré par la machine : il est calculé ici, sur le
+      // quota du compte et le ledger, exactement comme au lancement d'un chunk.
+      expect(h.minted).toEqual([{ runId: RUN_ID, capUsd: 3 }]);
+      // Sans ce stamp, ni la fin de tour ni le chien de garde ne sauraient quoi
+      // révoquer : la clé vivrait ses 24 h sur la machine de quelqu'un.
+      expect(h.stamped.at(-1)).toEqual({ provider_key_id: "hash-neuf" });
+    });
+
+    it("révoque la clé du tour précédent", async () => {
+      h.run = { ...h.run!, provider_key_id: "hash-du-tour-davant" };
+      await callLocal("POST", "/llm-key");
+      expect(h.revoked).toEqual(["hash-du-tour-davant"]);
+    });
+
+    it("n'en sert AUCUNE à une microVM", async () => {
+      // Là-bas, la clé est posée par le firewall APRÈS la sortie de la VM : la
+      // servir ferait entrer le secret dans le process où le modèle a un shell,
+      // c'est-à-dire défaire MIN-223 par une porte qu'on aurait ouverte.
+      expect((await call("POST", "/llm-key")).status).toBe(403);
+      expect(h.minted).toEqual([]);
+    });
+
+    it("refuse un run BYOK, qui n'a littéralement aucun plafond en local", async () => {
+      // La clé est sur le compte de l'utilisateur : l'API de provisioning n'émet
+      // que sur le compte qui détient la clé de provisioning, donc rien à
+      // plafonner. Et le compute de microVM, dernier garde-fou, vaut zéro ici.
+      h.run = { ...h.run!, key_mode: "byok" };
+      expect((await callLocal("POST", "/llm-key")).status).toBe(403);
+      expect(h.minted).toEqual([]);
+    });
+
+    it("rend 503 quand rien ne sait minter — jamais la clé plateforme", async () => {
+      // C'est LE point du verrou : la clé plateforme est non plafonnée et partagée
+      // avec Numo, la transcription, les embeddings et le catalogue. Un tour local
+      // qui n'a pas de clé plafonnée ne doit pas avoir lieu.
+      h.mintFails = true;
+      const res = await callLocal("POST", "/llm-key");
+      expect(res.status).toBe(503);
+      // Et rien n'est stampé : on ne remplace pas un hash révocable par du vide.
+      expect(h.stamped).toEqual([]);
+      expect(h.revoked).toEqual([]);
+    });
   });
 
   it("sert le MÊME jeu de tools que dans la microVM, carnet compris", async () => {

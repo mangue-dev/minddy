@@ -143,6 +143,19 @@ export interface ControlPlaneClient {
   callTool(name: string, body: Record<string, unknown>): Promise<VmToolResponse>;
   /** Une URL de push avec un token de forge FRAIS — un tour dure plus qu'un token. */
   repoAuthUrl(): Promise<string | null>;
+  /**
+   * LA CLÉ DU MODÈLE D'UN TOUR LOCAL (MIN-357), mintée à plafond dur pour ce run.
+   *
+   * LÈVE, et c'est l'inverse exact de sa voisine `repoAuthUrl` : celle-là a un
+   * repli (le token que le job porte déjà), celle-ci n'en a aucun — il n'y a
+   * aucune clé ailleurs, et il ne doit pas y en avoir. Un 503 ici veut dire « ce
+   * déploiement ne sait pas plafonner », et la seule conduite juste est que le
+   * tour ne parte pas plutôt qu'il parte sans plafond.
+   *
+   * Elle n'est appelée QUE sur le chemin local : une microVM n'en a pas besoin
+   * (le firewall pose la clé après sa sortie) et se ferait refuser.
+   */
+  llmKey(): Promise<string>;
   /** Le rapport de fin de tour. C'est lui qui met la session au repos. */
   reportTurn(report: VmTurnReport): Promise<void>;
 }
@@ -365,6 +378,17 @@ export function createControlPlaneClient(
         console.error("[agent-vm] repo auth refresh failed:", (err as Error).message);
         return null;
       }
+    },
+
+    llmKey: async () => {
+      const body = (await request("POST", "/llm-key")) as { key?: unknown };
+      // Une réponse 200 sans clé serait une faute de chez nous, et elle doit
+      // s'arrêter ici : plus bas, une chaîne vide devient un `authorization`
+      // vide, et le tour meurt sur un 401 du fournisseur qui ne dit rien.
+      if (typeof body.key !== "string" || !body.key.trim()) {
+        throw new Error("POST /llm-key returned no key");
+      }
+      return body.key;
     },
 
     reportTurn: async (report) => {

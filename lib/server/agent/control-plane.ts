@@ -98,6 +98,12 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
  * est écrit là où il se serait posé (`/tool/`). Ce qui reste ouvert est ce qu'un
  * tour local doit pouvoir faire pour être un tour.
  *
+ * ET UNE SURFACE QUI N'EXISTE QUE POUR LUI (MIN-357). Sans firewall, personne ne
+ * pose la clé du modèle à la sortie de la machine : `/llm-key` la rend, et elle
+ * est le miroir de `/repo-auth` — refusée au cloud comme l'autre est refusée au
+ * local. Elle ne rend JAMAIS qu'une clé mintée à plafond dur : ce qui borne le
+ * dégât d'un jeton lu par le modèle n'est pas une cachette, c'est ce plafond-là.
+ *
  * LA COUPURE QUI GUIDE TOUT ÇA : la microVM a le DÉPÔT, la fonction a la FORGE et
  * la BASE. `create_pr` est coupé exactement là — la VM pousse, la fonction ouvre.
  */
@@ -645,6 +651,82 @@ export async function handleControlPlaneRequest(opts: {
     const target = await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null);
     if (!target) return { status: 404, body: { error: "no repository linked" } };
     return ok({ authUrl: target.authUrl });
+  }
+
+  if (method === "POST" && surface === "/llm-key") {
+    /**
+     * LA CLÉ DU MODÈLE, ET ELLE NE DESCEND QUE SUR UNE MACHINE (MIN-357) — le
+     * miroir exact de `/repo-auth` ci-dessus : celle-là refuse le local, celle-ci
+     * refuse le cloud.
+     *
+     * POURQUOI LE CLOUD EST REFUSÉ, et ce n'est pas une précaution de style : une
+     * microVM ne détient AUCUNE clé LLM, le firewall la pose après sa sortie
+     * (network-policy.ts). Servir cette surface là-bas ferait entrer le secret
+     * dans le process où le modèle exécute du shell — c'est-à-dire défaire
+     * MIN-223 par une porte qu'on aurait ouverte nous-mêmes.
+     *
+     * CE QU'ELLE NE PRÉTEND PAS. Le jeton local vit sur un disque que le modèle
+     * lit : il peut appeler cette surface lui-même, et de toute façon relayer par
+     * le proxy qui écoute sur `127.0.0.1`. Ce qui borne le dégât n'est donc pas
+     * la confidentialité de la réponse — c'est le PLAFOND DUR de la clé rendue,
+     * tenu par OpenRouter, hors de la VM comme hors de notre code.
+     *
+     * D'où les deux refus qui suivent, et l'absence de tout repli :
+     *
+     * - **BYOK reste dans le cloud en v1.** Pas de clé plafonnable (l'API de
+     *   provisioning n'émet que sur le compte qui détient la clé de
+     *   provisioning), pas de `budgetUsd`, et le compute de microVM — dernier
+     *   garde-fou — vaut structurellement zéro sur la machine de quelqu'un. Un
+     *   run BYOK local n'aurait littéralement aucun plafond ;
+     * - **pas de mint = pas de clé.** 503, jamais `OPENROUTER_API_KEY` : la clé
+     *   plateforme est NON PLAFONNÉE et partagée avec Numo, la transcription, les
+     *   embeddings et le catalogue. Raisonnable dans une microVM jetable,
+     *   inacceptable sur la machine d'un utilisateur. C'est au LANCEUR de garder
+     *   le run dans le cloud quand le mint n'est pas disponible (`admitLocalRun`,
+     *   [local-exec.ts](local-exec.ts)) ; ici, on refuse.
+     */
+    if (!opts.local) {
+      return forbidden("a microVM gets its model key from the firewall, not from here");
+    }
+    if (run.key_mode === "byok") {
+      return forbidden("a bring-your-own-key run cannot be capped, so it stays in the cloud");
+    }
+    const [{ mintRunKey, revokeRunKey, runKeyCapUsd }, { checkAgentQuota }, { spentFromLedger }] =
+      await Promise.all([
+        import("./run-key"),
+        import("./quota"),
+        import("@/lib/server/ai-usage"),
+      ]);
+    // Même arithmétique qu'au lancement d'un chunk de microVM (`execute.ts`), et
+    // sur les mêmes entrées : le budget du run est un gouverneur, le restant du
+    // compte un plafond dur. La lire ici plutôt que de la faire voyager, c'est ce
+    // qui fait qu'un tour long ne s'appuie pas sur un restant vieux de six heures.
+    const [quota, ledgerSpent] = await Promise.all([
+      checkAgentQuota(run.created_by ?? "").catch(() => null),
+      spentFromLedger(run.run_id ?? run.id).catch(() => null),
+    ]);
+    const minted = await mintRunKey({
+      runId: run.id,
+      capUsd: runKeyCapUsd({
+        runBudgetUsd: run.budget_usd,
+        runSpentUsd: Math.max(run.cost_usd, ledgerSpent ?? 0),
+        accountRemainingUsd:
+          quota && !quota.unlimited ? Math.max(0, quota.remaining ?? 0) : undefined,
+      }),
+    });
+    if (!minted) {
+      return { status: 503, body: { error: "no capped model key could be minted for this run" } };
+    }
+    /**
+     * LE HASH AVANT LA RÉPONSE, et la précédente révoquée derrière. C'est ce qui
+     * fait qu'une clé ne survit jamais au tour qui l'a demandée : la fin de tour
+     * (`vm-rest.ts`) et le chien de garde (`drain.ts`) révoquent tous deux
+     * `provider_key_id`, et ils ne peuvent révoquer que ce qu'ils lisent.
+     */
+    const previous = run.provider_key_id;
+    await stampRun(run.id, { provider_key_id: minted.hash });
+    if (previous && previous !== minted.hash) await revokeRunKey(previous).catch(() => {});
+    return ok({ key: minted.key, capUsd: minted.capUsd });
   }
 
   if (method === "POST" && surface === "/rest") {

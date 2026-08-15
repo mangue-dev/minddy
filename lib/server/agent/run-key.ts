@@ -22,11 +22,22 @@ import "server-only";
  * facture, et l'API de provisioning d'OpenRouter n'émet que sur le compte qui la
  * détient. Ça se DIT dans l'écran BYOK, ça ne se corrige pas.
  *
- * DÉGRADATION VOULUE : sans `OPENROUTER_PROVISIONING_KEY`, on retombe sur la clé
- * plateforme. Le mint est un garde-fou de dépense, pas un prérequis de
- * fonctionnement — une variable pas encore posée en prod ne doit pas empêcher un
- * run de tourner, elle doit lui retirer son plafond fournisseur et le dire dans
- * les logs.
+ * DÉGRADATION VOULUE **DANS UNE MICROVM**, et nulle part ailleurs : sans
+ * `OPENROUTER_PROVISIONING_KEY`, le chemin cloud retombe sur la clé plateforme.
+ * Le mint y est un garde-fou de dépense, pas un prérequis de fonctionnement —
+ * une variable pas encore posée en prod ne doit pas empêcher un run de tourner,
+ * elle doit lui retirer son plafond fournisseur et le DIRE dans les logs. Elle ne
+ * le disait pas : `mintRunKey` rendait `null` sans un mot quand la variable
+ * manquait, ce qui est la seule façon pour une dégradation d'être vraiment
+ * silencieuse (MIN-357).
+ *
+ * ET CETTE DÉGRADATION N'EXISTE PAS SUR LA MACHINE DE L'UTILISATEUR. La clé
+ * plateforme est NON PLAFONNÉE et partagée avec Numo, la transcription, les
+ * embeddings et le catalogue : la laisser descendre sur un Mac, où le compute de
+ * microVM — dernier garde-fou du cloud — vaut structurellement zéro, serait
+ * offrir un robinet ouvert. **Pas de mint = pas de run local** : le lanceur garde
+ * le run dans le cloud (`admitLocalRun`, [local-exec.ts](local-exec.ts)) et la
+ * surface qui sert la clé refuse en 503 (`/llm-key`, control-plane.ts).
  */
 
 /** Clé de provisioning OpenRouter (émet et révoque les clés de run). JAMAIS
@@ -140,7 +151,14 @@ export async function mintRunKey(opts: {
   capUsd: number;
 }): Promise<RunKey | null> {
   const provisioning = process.env[PROVISIONING_ENV]?.trim();
-  if (!provisioning) return null;
+  if (!provisioning) {
+    // LE SEUL ÉCHEC QUI NE SE DISAIT PAS (MIN-357). Les deux autres branches
+    // journalisent depuis le début ; celle-ci, la seule qui soit permanente sur
+    // un déploiement, rendait `null` en silence — et l'appelant retombait sur la
+    // clé plateforme sans que rien, nulle part, ne l'ait dit une seule fois.
+    console.error(`[agent-run-key] ${PROVISIONING_ENV} manquante — run non plafonné chez le fournisseur`);
+    return null;
+  }
   try {
     const res = await fetch(KEYS_URL, {
       method: "POST",

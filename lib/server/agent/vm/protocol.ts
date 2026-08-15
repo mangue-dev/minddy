@@ -327,6 +327,23 @@ export function parseVmJob(raw: unknown): VmJob {
   return job as VmJob;
 }
 
+/**
+ * CE TOUR JOUE-T-IL SUR LA MACHINE DE L'UTILISATEUR ? (MIN-357)
+ *
+ * La réponse est la présence du JETON, et c'est voulu : un drapeau `local: true`
+ * à côté de lui serait une seconde vérité sur le même fait, donc un jour une
+ * divergence — un job qui se dit local sans jeton ne peut pas parler, un job qui
+ * porte un jeton n'est rien d'autre qu'un job local (cf. `VmJob.controlToken`).
+ *
+ * Nommé ici plutôt que testé sur place : deux appelants aujourd'hui (le proxy
+ * LLM par le superviseur, et le renouvellement de jeton demain, MIN-294), et ce
+ * genre de test recopié est exactement ce qui finit par ne plus vouloir dire la
+ * même chose des deux côtés.
+ */
+export function isLocalJob(job: Pick<VmJob, "controlToken">): boolean {
+  return Boolean(job.controlToken?.trim());
+}
+
 /** Ce qu'un push a produit, tel que `commitAndPush` le rend. */
 export interface VmPushResult {
   committed: boolean;

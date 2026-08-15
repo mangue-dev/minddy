@@ -14,6 +14,7 @@ import {
   ArrowDown,
   Brain,
   CircleSlash,
+  Cloud,
   CloudOff,
   GitCommit,
 } from "lucide-react";
@@ -77,9 +78,10 @@ export type FeedItem =
   | {
       kind: "note";
       id: string;
-      variant: "commit" | "error" | "reasoningUnsupported" | "providerRetry";
+      variant: "commit" | "error" | "reasoningUnsupported" | "providerRetry" | "localDeclined";
       /** Motif NOMMÉ d'une erreur du harness (`turnTooLong`…), traduit à l'affichage.
-       *  Absent sur une erreur de modèle, qui n'a que son texte. */
+       *  Absent sur une erreur de modèle, qui n'a que son texte. Porte aussi le
+       *  motif d'un run gardé dans le cloud (`byok`, `no_mint` — MIN-357). */
       code?: string;
       text: string;
       createdAt: string;
@@ -499,6 +501,23 @@ function buildFeed(
             createdAt: e.created_at,
           });
         }
+        /**
+         * MIN-357 : le run était demandé sur la machine de l'utilisateur, et il
+         * est parti dans le cloud. La bascule est la bonne conduite (ce qui
+         * manque en local, c'est un PLAFOND, et le cloud en a un) — mais une
+         * bascule muette laisserait quelqu'un croire que son agent tourne chez
+         * lui, sur son dépôt, alors qu'il tourne dans une microVM.
+         */
+        if (p.phase === "local_exec_declined") {
+          items.push({
+            kind: "note",
+            id: e.id,
+            variant: "localDeclined",
+            ...(str(p.reason) ? { code: str(p.reason) } : {}),
+            text: "",
+            createdAt: e.created_at,
+          });
+        }
         // Le fournisseur est tombé (MIN-219) : le tour attend avant de retenter,
         // et l'attente peut durer plusieurs minutes. L'event existait déjà, il
         // n'avait aucun lecteur — l'agent se taisait sans que rien ne dise pourquoi.
@@ -712,6 +731,17 @@ const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   usageRejected: "errorUsageRejected",
 };
 
+/**
+ * Pourquoi ce run n'a pas pu jouer sur la machine (MIN-357) → ce que
+ * l'utilisateur lit. Les deux motifs viennent d'`admitLocalRun`
+ * ([lib/server/agent/local-exec.ts](../../lib/server/agent/local-exec.ts)) ; un
+ * motif inconnu retombe sur la phrase générique plutôt que sur rien.
+ */
+const LOCAL_DECLINED_KEYS: Record<string, MessageKey<"Agent">> = {
+  byok: "localDeclinedByok",
+  no_mint: "localDeclinedNoMint",
+};
+
 function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
   const t = useTranslations("Agent");
   if (item.variant === "error") {
@@ -736,6 +766,14 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <CloudOff className="size-3 shrink-0" />
         {t("providerRetry")}
+      </div>
+    );
+  }
+  if (item.variant === "localDeclined") {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Cloud className="size-3 shrink-0" />
+        {t(LOCAL_DECLINED_KEYS[item.code ?? ""] ?? "localDeclined")}
       </div>
     );
   }

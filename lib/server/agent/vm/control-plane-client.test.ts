@@ -18,9 +18,12 @@ const ORIGIN = "https://minddy.test";
 
 /** Ce qu'un appel a réellement envoyé — l'URL et les en-têtes, rien d'autre. */
 let calls: Array<{ url: string; headers: Record<string, string> }> = [];
+/** Ce que le plan de contrôle répond. Réglable par test ; `{ ok: true }` sinon. */
+let reply: { status: number; body: unknown } = { status: 200, body: { ok: true } };
 
 beforeEach(() => {
   calls = [];
+  reply = { status: 200, body: { ok: true } };
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -28,8 +31,8 @@ beforeEach(() => {
         url: String(url),
         headers: Object.fromEntries(new Headers(init?.headers).entries()),
       });
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
+      return new Response(JSON.stringify(reply.body), {
+        status: reply.status,
         headers: { "content-type": "application/json" },
       });
     }),
@@ -75,6 +78,32 @@ describe("le client du plan de contrôle, sur une machine", () => {
       "Bearer premier",
       "Bearer renouvelé",
     ]);
+  });
+
+  /**
+   * MIN-357 — LA CLÉ DU MODÈLE N'A AUCUN REPLI, contrairement à sa voisine
+   * `repoAuthUrl` (qui retombe sur le token que le job porte déjà).
+   *
+   * Il n'y a aucune clé ailleurs, et il ne doit pas y en avoir : un échec ici veut
+   * dire « ce déploiement ne sait pas plafonner », et la seule conduite juste est
+   * que le tour ne parte pas. D'où une méthode qui LÈVE, dans les deux formes
+   * d'échec — le refus, et la réponse creuse.
+   */
+  it("rend la clé du tour local, et lève plutôt que de rendre du vide", async () => {
+    const cp = createControlPlaneClient(ORIGIN, () => "jeton-du-bail");
+    reply = { status: 200, body: { key: "sk-or-v1-clef-du-run", capUsd: 3 } };
+    await expect(cp.llmKey()).resolves.toBe("sk-or-v1-clef-du-run");
+    expect(calls.at(-1)!.url).toBe(`${ORIGIN}/api/agent-vm/llm-key`);
+
+    // Un 200 sans clé serait une faute de chez nous : sans ce refus, elle devient
+    // un `authorization` vide et un 401 du fournisseur qui ne dit rien.
+    reply = { status: 200, body: { capUsd: 3 } };
+    await expect(cp.llmKey()).rejects.toThrow(/no key/);
+
+    // Un refus n'est pas retenté (403), et il remonte tel quel : c'est ce texte
+    // que le rapport de fin de tour portera.
+    reply = { status: 403, body: { error: "a microVM gets its model key from the firewall" } };
+    await expect(cp.llmKey()).rejects.toThrow(/firewall/);
   });
 
   it("garde le `content-type` là où il y a un corps, et nulle part ailleurs", async () => {

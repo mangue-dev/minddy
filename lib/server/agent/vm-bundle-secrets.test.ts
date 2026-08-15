@@ -27,6 +27,15 @@ import { describe, expect, it } from "vitest";
  * le module fautif, lu seul, est parfaitement raisonnable. C'est exactement la
  * forme d'un défaut qui se garde par un test et pas autrement.
  *
+ * CE QU'IL NE GARDE PAS, ET IL FAUT LE SAVOIR AVANT DE S'APPUYER DESSUS (MIN-357).
+ * Ce test inspecte le GRAPHE D'IMPORTS et les lectures de `process.env` — pas les
+ * payloads. Un secret qui arrive au harness par le job, par une réponse du plan de
+ * contrôle ou par un en-tête le laissera vert quoi qu'on fasse : c'est exactement
+ * le cas du chemin local, où le jeton d'exécution voyage dans `job.json` et où la
+ * clé du modèle est SERVIE au harness (`/llm-key`). Le garde-fou qui a tenu
+ * MIN-223 ne dit rien de ce chantier-là ; ce qui le tient, ce sont les tests de
+ * `llm-proxy.ts`, de `control-plane.ts` et de `local-exec.ts`.
+ *
  * LES IMPORTS DE TYPE NE COMPTENT PAS, et c'est le point technique du fichier :
  * un `import type` disparaît à la compilation, donc n'existe pas dans le bundle.
  * `abandoned-spend.ts` importe `NormalizedUsage` d'`ai-usage.ts` de cette
