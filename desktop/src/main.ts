@@ -533,9 +533,16 @@ function createWindow(): BrowserWindow {
   window.on("show", () => trace("window:show"));
   window.on("hide", () => trace("window:hide"));
   window.on("blur", () => trace("window:blur"));
-  for (const event of ["suspend", "resume", "lock-screen", "unlock-screen"] as const) {
-    powerMonitor.on(event, () => trace(`power:${event}`));
-  }
+  // Quatre lignes et pas une boucle, et ça ne se resserre pas : chaque événement
+  // de `powerMonitor` est une SURCHARGE distincte à nom littéral dans les typings
+  // d'Electron. Une union ne satisfait aucune d'entre elles — `tsc` retient la
+  // dernière surcharge et refuse le tout. La boucle qui vivait ici cassait
+  // `npm --prefix desktop run typecheck`, et la seule autre issue serait un cast,
+  // c'est-à-dire éteindre le seul contrôle qui vérifie ces noms.
+  powerMonitor.on("suspend", () => trace("power:suspend"));
+  powerMonitor.on("resume", () => trace("power:resume"));
+  powerMonitor.on("lock-screen", () => trace("power:lock-screen"));
+  powerMonitor.on("unlock-screen", () => trace("power:unlock-screen"));
 
   void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
   return window;
