@@ -21,6 +21,15 @@ import type { Locale } from "@/i18n/config";
  *
  * Le chrome marketing plutôt qu'un écran nu : on tombe sur cette page depuis
  * l'extérieur, et une nav est ce qui rattrape le visiteur.
+ *
+ * L'ÉCHELLE EST CELLE DE LA LANDING, pas celle d'une boîte de dialogue. La
+ * première version tenait dans un `max-w-lg` avec un titre en `text-3xl` : posée
+ * entre la nav et le footer, hauts de leur taille normale, elle se lisait comme
+ * une note perdue au milieu d'un écran vide. Le titre reprend donc la mesure du
+ * hero (`hero.tsx`), et le nombre devient un vrai élément d'affichage — même
+ * recette que le mot-symbole du footer : une taille fluide en `clamp`, un
+ * `leading-none` et un tracking resserré, pour qu'il occupe la largeur qu'on lui
+ * donne sur un téléphone comme sur un grand écran.
  */
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -35,15 +44,15 @@ export default async function NotFound() {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background">
       <MarketingNav />
-      <main className="flex flex-1 items-center justify-center px-6 py-24">
-        <div className="mx-auto w-full max-w-lg text-center">
-          <p className="mb-4 font-display text-6xl font-semibold tracking-tighter text-muted-foreground/40">
+      <main className="flex flex-1 items-center justify-center px-6 py-20 sm:py-28">
+        <div className="mx-auto w-full max-w-2xl text-center">
+          <p className="mb-4 font-display text-[clamp(6rem,20vw,13rem)] leading-none font-semibold tracking-[-0.06em] text-muted-foreground/40 sm:mb-6">
             404
           </p>
-          <h1 className="mb-3 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
+          <h1 className="mb-4 text-4xl leading-[1.05] font-semibold tracking-tighter text-balance sm:text-5xl">
             {t("notFoundTitle")}
           </h1>
-          <p className="mb-8 leading-relaxed text-pretty text-muted-foreground">
+          <p className="mb-10 text-lg leading-relaxed text-pretty text-muted-foreground">
             {t("notFoundBody")}
           </p>
           <Button asChild size="lg">

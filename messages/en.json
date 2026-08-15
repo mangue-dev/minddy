@@ -975,7 +975,7 @@
     "copied": "Copied",
     "scrollToBottom": "Scroll to bottom",
     "notFoundTitle": "This page does not exist",
-    "notFoundBody": "The link is wrong, or the page has moved. Everything else is still where you left it.",
+    "notFoundBody": "The link is wrong, or the page has moved.",
     "notFoundCta": "Back to home",
     "botAccount": "Bot"
   },
