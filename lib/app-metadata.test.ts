@@ -18,6 +18,7 @@ const META_PAGE_KEYS = [
   "inbox",
   "all",
   "agents",
+  "routines",
   "pullRequests",
   "statistics",
   "trash",

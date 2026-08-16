@@ -768,12 +768,10 @@ export const IssueCardBody = memo(function IssueCardBody({
   return (
     <div
       className={cn(
-        // `shadow-xs` et non `shadow-sm` : une carte de board est POSÉE sur la
-        // colonne, elle ne flotte pas au-dessus. `shadow-sm` (l'ancien `shadow`
-        // de Tailwind 3, 3 px de flou à 10 % d'opacité) lui donnait un relief de
-        // popover, répété sur les N cartes visibles. Le relief franc reste ce
-        // qu'il a toujours dit : la carte qu'on TIENT (`shadow-lg` ci-dessous).
-        "flex flex-col gap-2 rounded-xl border border-border p-3 text-left shadow-xs",
+        // Les cartes sont posées sur la colonne : en light mode, un contour et
+        // un shadow noirs autour d'un contenu blanc formaient une bande trop
+        // présente. Le contraste actuel reste utile sur le fond sombre.
+        "flex flex-col gap-2 rounded-xl border border-border/60 p-3 text-left shadow-none dark:border-border dark:shadow-xs",
         // Sélection groupée (MIN-75) : fond bleuté plutôt qu'un liseré.
         selected ? "bg-primary/10" : "bg-card",
         dragging && "cursor-grabbing shadow-lg"

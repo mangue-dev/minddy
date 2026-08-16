@@ -65,7 +65,6 @@ import {
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
-import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { UserAvatar } from "@/components/user-avatar";

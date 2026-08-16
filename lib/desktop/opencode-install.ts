@@ -1,7 +1,6 @@
 import {
   MINDDY_NODE_EXEC_ENV,
   MINDDY_NPM_CLI_ENV,
-  MINDDY_RUNTIME_BIN_ENV,
   OPENCODE_VERSION,
   opencodeBin,
 } from "@/lib/server/agent/vm/opencode-version";
