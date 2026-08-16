@@ -54,9 +54,10 @@ est bonne. Sans lui, tu n'as aucun critère.
 
 ### 2. Vérifier que les données existent
 
-Lire `captures/world/world.md`. Si l'écran a besoin de données absentes, tu ne
-les crées pas ici : tu passes la main à `capture-world`, qui demandera l'accord
-de l'utilisateur avant d'écrire quoi que ce soit dans la base de production.
+Vérifier dans l'environnement de démonstration que les données nécessaires
+existent. Si elles sont absentes, tu ne les crées pas ici : tu passes la main à
+`capture-world`, qui demandera l'accord de l'utilisateur avant d'écrire quoi
+que ce soit dans la base de production.
 
 Même chose si l'image révèle que les données existantes rendent mal — une
 colonne trop vide, un titre qui déborde, trois tickets urgents d'un coup.

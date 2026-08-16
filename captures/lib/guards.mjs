@@ -329,7 +329,7 @@ async function readOwnedRows(world, table, match) {
   if (!data || data.length === 0) {
     throw new Error(
       `captures: aucune ligne ne correspond dans ${table} (${JSON.stringify(match)}). ` +
-        `Rien à faire — vérifie l'état dans captures/world/world.md.`,
+        "Rien à faire — vérifie l'environnement de démonstration.",
     );
   }
   data.forEach((row, i) => validateRow(world, table, row, i));

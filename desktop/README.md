@@ -166,8 +166,7 @@ donne la même réponse à la demande.
 
 Les deux marches à marche :
 **[docs/desktop-release.md](../docs/desktop-release.md)** pour livrer,
-**[docs/desktop-signing.md](../docs/desktop-signing.md)** pour le compte Apple et
-le certificat.
+et la procédure interne de signature pour le compte Apple et le certificat.
 
 ## Ce qui n'est pas fait ici
 

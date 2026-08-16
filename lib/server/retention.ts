@@ -36,8 +36,8 @@ import {
  * Ce à quoi l'utilisateur n'a pas touché, lui, ne bouge jamais.
  *
  * Appelé une fois par nuit par `app/api/cron/data-retention/route.ts`.
- * Les durées correspondantes sont documentées dans
- * `docs/rgpd/registre-des-traitements.md`.
+ * Les durées correspondantes sont documentées dans le registre interne des
+ * traitements.
  */
 
 /** Durées de conservation, en jours. Source de vérité du produit. */

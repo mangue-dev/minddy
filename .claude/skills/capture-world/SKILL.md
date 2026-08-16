@@ -62,8 +62,8 @@ chose, ou une approbation d'un plan différent ne valent pas accord.
 
 ### 1. Lire l'état avant d'agir
 
-Toujours commencer par `captures/world/world.md`. Il dit ce qui existe déjà. Si
-la donnée demandée y figure, il n'y a rien à créer : tu le dis et tu t'arrêtes.
+Toujours interroger l'environnement de démonstration avant d'agir. Si la donnée
+requise existe déjà, il n'y a rien à créer : tu le dis et tu t'arrêtes.
 
 ### 2. Créer le compte, si c'est la première fois
 
@@ -129,18 +129,12 @@ que le projet visé est bien un projet de démo.
 Un projet a besoin de `owner_id`, `name`, `key`. La clé doit être unique parmi
 les projets vivants du même propriétaire.
 
-### 5. Mettre le registre à jour
+### 5. Documenter le seed sans données de production
 
-Dans le **même commit** que le script de seed, mettre à jour
-`captures/world/world.md` :
-
-- le compte, s'il vient d'être créé ;
-- le tableau des projets ;
-- le tableau des membres ;
-- une ligne dans le journal des seeds, avec la capture visée.
-
-Ce registre est ce qui rend les rafraîchissements possibles plus tard. Un seed
-non enregistré est un seed perdu.
+Dans le **même commit** que le script de seed, expliquer son objectif et les
+données de démonstration qu'il crée dans le README du dossier de seeds. Ne
+consigner ni identifiant de compte vivant, ni adresse e-mail, ni état de la base
+de production dans le dépôt.
 
 ### 6. Vérifier
 

@@ -50,6 +50,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # Aucun document interne, identifiant de production ou secret ne doit
+      # atteindre la forge, même si un contributeur contourne son .gitignore.
+      - name: Public repository check
+        run: node scripts/check-public-repo.mjs
+
       # pnpm est le gestionnaire qui installe RÉELLEMENT ce dépôt (node_modules
       # est un store pnpm) ; `package-lock.json` est tenu en second pour les
       # outils qui n'en lisent qu'un. La CI installe donc par pnpm, sinon elle

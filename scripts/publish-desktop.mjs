@@ -92,7 +92,7 @@ for (const app of apps) {
     fail(
       `${path.relative(repo, app)} n'est PAS signé. Squirrel.Mac exige une app signée : ` +
         "la publier donnerait une app qui s'installe et ne se met jamais à jour. " +
-        "Voir docs/desktop-signing.md."
+        "Voir la procédure interne de signature."
     );
   }
 }
@@ -113,7 +113,7 @@ for (const app of apps) {
       `${path.relative(repo, app)} n'a pas de ticket de notarisation agrafé. ` +
         "macOS refusera de l'ouvrir. Le build a probablement écrit " +
         "`skipped macOS notarization` — vérifier APPLE_KEYCHAIN_PROFILE, puis " +
-        "docs/desktop-signing.md §3."
+        "la procédure interne de signature."
     );
   }
 }

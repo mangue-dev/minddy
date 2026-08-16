@@ -12,6 +12,7 @@
     "desktop:dev": "node scripts/dev-desktop.mjs",
     "desktop:check": "node scripts/desktop-fingerprint.mjs --explain",
     "desktop:release": "npm --prefix desktop run dist && node scripts/publish-desktop.mjs",
+    "check:public-repo": "node scripts/check-public-repo.mjs",
     "start": "next start",
     "lint": "oxlint --deny-warnings",
     "typecheck": "tsc --noEmit",

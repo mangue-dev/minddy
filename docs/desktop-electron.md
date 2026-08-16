@@ -509,8 +509,7 @@ avoir exactement ce genre de deuxième lecteur.
 > [desktop/src/updater.ts](../desktop/src/updater.ts) les mises à jour ;
 > [scripts/publish-desktop.mjs](../scripts/publish-desktop.mjs) la publication du
 > flux ; `/download` la page. Ne restent que les gestes qui demandent un compte
-> Apple, et ils ont leur marche à marche :
-> **[docs/desktop-signing.md](desktop-signing.md)**.
+> Apple, et ils ont leur marche à marche dans la procédure interne de signature.
 >
 > Une chose que ce cadrage n'avait pas dite, et qui compte : **l'IDENTITÉ de
 > l'app arrive ici et nulle part avant**. Tant qu'on lançait depuis le dépôt,

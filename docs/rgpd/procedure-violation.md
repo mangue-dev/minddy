@@ -153,8 +153,8 @@ Une fois l'incident clos :
 - ajouter le test ou le garde-fou qui aurait détecté la faille — une politique
   RLS manquante se rattrape par un test qui vérifie l'isolation, pas par une
   relecture attentive ;
-- mettre à jour le [registre des traitements](registre-des-traitements.md) si les
-  mesures de sécurité changent ;
+- mettre à jour le registre interne des traitements si les mesures de sécurité
+  changent ;
 - reprendre cette procédure si l'incident a montré qu'elle était incomplète.
 
 ---
@@ -173,7 +173,7 @@ Une fois l'incident clos :
 
 ## Documents liés
 
-- [Registre des activités de traitement](registre-des-traitements.md)
+- Registre interne des activités de traitement
 - [Sous-traitants et transferts](sous-traitants.md)
 - [Registre des violations](registre-des-violations.md)
 - CNIL — [Notifier une violation de données personnelles](https://www.cnil.fr/fr/notifier-une-violation-de-donnees-personnelles)

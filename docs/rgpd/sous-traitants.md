@@ -175,7 +175,7 @@ dépôt à un projet.*
 2. Déterminer l'hébergement réel des données et, s'il est hors UE, la base de
    transfert (adéquation, CCT, DPF).
 3. Ajouter une ligne au tableau ci-dessus et une section de détail.
-4. Ajouter le traitement concerné au [registre](registre-des-traitements.md).
+4. Ajouter le traitement concerné au registre interne.
 5. Mettre à jour la liste des sous-traitants dans la politique de confidentialité
    publique (clé `transfersProcessors` des namespaces `Privacy`, en français et
    en anglais) — cette liste est **nominative**, un prestataire non cité ne peut

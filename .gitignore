@@ -13,7 +13,21 @@ next-env.d.ts
 .DS_Store
 *.pem
 *.tsbuildinfo
-problems.md
+
+# Fichiers locaux et documents internes — aucun ne doit rejoindre le dépôt
+# public. Un fichier déjà suivi doit aussi être retiré de l'index avec
+# `git rm --cached <fichier>` : cette liste protège les futurs ajouts.
+/dev.log
+/problems.md
+/tsconfig.tsbuildinfo
+/copy-audit*.json
+/copy-audit*.md
+/*-plan.md
+/.claude/settings.json
+/captures/world/world.md
+/docs/audits/securite-2026-08-05.md
+/docs/desktop-signing.md
+/docs/rgpd/registre-des-traitements.md
 
 # debug
 npm-debug.log*
