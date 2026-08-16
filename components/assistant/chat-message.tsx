@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Copy, Check } from "lucide-react";
 import { IconButton, toast } from "mangue-ui";
@@ -51,6 +51,8 @@ interface ChatMessageProps {
    *  accordion is intermediate narration, not an answer to take away. The host
    *  decides via `copyableMessageIds` (lib/assistant-turns). */
   showCopyButton?: boolean;
+  /** Content placed between an assistant answer and its Copy button. */
+  afterContent?: ReactNode;
 }
 
 // ── Copy button ───────────────────────────────────────────────────────
@@ -73,13 +75,13 @@ function CopyButton({ text }: { text: string }) {
       variant="ghost"
       size="sm"
       aria-label={tc("copy")}
-      className="size-6 rounded-md bg-transparent p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+      className="size-5 rounded-md bg-transparent p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
       title={tc("copy")}
     >
       {copied ? (
-        <Check className="h-3.5 w-3.5 text-brand" />
+        <Check className="size-3 text-brand" />
       ) : (
-        <Copy className="h-3.5 w-3.5" />
+        <Copy className="size-3" />
       )}
     </IconButton>
   );
@@ -225,6 +227,7 @@ export const ChatMessage = memo(function ChatMessage({
   seedLive = false,
   onSeedCreated,
   showCopyButton = true,
+  afterContent,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
 
@@ -282,6 +285,7 @@ export const ChatMessage = memo(function ChatMessage({
                 <MessageContent className="chat-selectable relative px-0 py-0 text-sm leading-relaxed text-foreground">
                   <AssistantText content={message.content} />
                 </MessageContent>
+                {afterContent ? <div className="w-full">{afterContent}</div> : null}
                 {showCopyButton && (
                   <div className="-mt-1">
                     <CopyButton text={message.content} />

@@ -4,15 +4,19 @@
 // palette ("Keyboard shortcuts"). Renders the shared registry in lib/keyboard.
 
 import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Input,
 } from "mangue-ui";
 import { KbdSequence } from "@/components/ui/kbd";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
+import { filterCheatsheet } from "@/lib/keyboard/filter-cheatsheet";
 import { CHEATSHEET, resolveKeyToken } from "@/lib/keyboard/shortcuts";
 
 export function KeyboardCheatsheet() {
@@ -20,6 +24,11 @@ export function KeyboardCheatsheet() {
   const tk = useTranslations("Keyboard");
   const tSection = useTranslations("Keyboard.sections");
   const tShortcut = useTranslations("Keyboard.shortcuts");
+  const [query, setQuery] = useState("");
+  const filteredCheatsheet = filterCheatsheet(CHEATSHEET, query, {
+    sectionTitle: tSection,
+    shortcutLabel: tShortcut,
+  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -29,8 +38,19 @@ export function KeyboardCheatsheet() {
           <DialogDescription>{tk("shortcutsDescription")}</DialogDescription>
         </DialogHeader>
 
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={tk("searchPlaceholder")}
+            aria-label={tk("searchLabel")}
+            className="pl-9"
+          />
+        </div>
+
         <div className="-mr-2 flex max-h-[65vh] flex-col gap-5 overflow-y-auto pr-2">
-          {CHEATSHEET.map((section) => (
+          {filteredCheatsheet.map((section) => (
             <section key={section.id}>
               <h3 className="mb-1 text-xs font-medium text-muted-foreground">
                 {tSection(section.titleKey)}
@@ -66,6 +86,11 @@ export function KeyboardCheatsheet() {
               </ul>
             </section>
           ))}
+          {filteredCheatsheet.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              {tk("noSearchResults")}
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>

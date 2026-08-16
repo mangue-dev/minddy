@@ -30,6 +30,7 @@ const h = vi.hoisted(() => ({
   next: true,
   claimed: true,
   prepares: true,
+  declined: true,
   calls: [] as string[],
 }));
 
@@ -60,6 +61,23 @@ vi.mock("@/lib/server/agent/runs", () => ({
     h.calls.push("claim");
     return h.claimed ? h.run : null;
   }),
+  declineQueuedLocalRun: vi.fn(async () => {
+    h.calls.push("decline");
+    return h.declined ? { ...h.run, local_exec: false } : null;
+  }),
+  appendEvent: vi.fn(async () => {
+    h.calls.push("event");
+  }),
+}));
+
+vi.mock("@/lib/server/agent/launch", () => ({
+  kickAgentDrain: vi.fn(() => {
+    h.calls.push("drain");
+  }),
+}));
+
+vi.mock("@/lib/supabase-service", () => ({
+  getServiceClient: vi.fn(() => ({})),
 }));
 
 vi.mock("@/lib/server/agent/execute", () => ({
@@ -126,6 +144,7 @@ beforeEach(() => {
   h.next = true;
   h.claimed = true;
   h.prepares = true;
+  h.declined = true;
   h.calls.length = 0;
 });
 
@@ -201,7 +220,7 @@ describe("POST /api/desktop/local-turn", () => {
     expect(h.calls).toEqual(["claim", "prepare", "lease"]);
   });
 
-  it("refuse quand ce déploiement ne sait pas frapper de clé plafonnée", async () => {
+  it("replie dans le cloud quand ce déploiement ne sait pas frapper de clé plafonnée", async () => {
     // Dans une microVM jetable, la dégradation vers la clé plateforme est
     // assumée. Sur la machine de quelqu'un, cette clé-là est NON PLAFONNÉE et
     // partagée avec Numo, la transcription et les embeddings.
@@ -209,9 +228,25 @@ describe("POST /api/desktop/local-turn", () => {
     delete process.env.OPENROUTER_PROVISIONING_KEY;
     try {
       const response = await POST({ runId: "run-1" });
-      expect(response.status).toBe(409);
-      expect((await response.json()).error).toContain("no_mint");
-      expect(h.calls).toEqual([]);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        status: "idle",
+        declinedRunId: "run-1",
+        reason: "no_mint",
+      });
+      expect(h.calls).toEqual(["decline", "event", "drain"]);
+    } finally {
+      process.env.OPENROUTER_PROVISIONING_KEY = saved;
+    }
+  });
+
+  it("ne replie pas sous les pieds d'une autre coquille qui a déjà claim", async () => {
+    const saved = process.env.OPENROUTER_PROVISIONING_KEY;
+    delete process.env.OPENROUTER_PROVISIONING_KEY;
+    h.declined = false;
+    try {
+      expect((await POST({ runId: "run-1" })).status).toBe(409);
+      expect(h.calls).toEqual(["decline"]);
     } finally {
       process.env.OPENROUTER_PROVISIONING_KEY = saved;
     }

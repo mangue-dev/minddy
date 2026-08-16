@@ -1,44 +1,40 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger, cn } from "mangue-ui";
-import { ChevronRight } from "lucide-react";
+import { FilePen } from "lucide-react";
+import { Button, cn } from "mangue-ui";
 import type { AgentFileChange } from "@/lib/agent-api";
-import { changeTotals, prFileStatus } from "@/lib/agent-changed-files";
-import {
-  DiffCounters,
-  DiffStatBar,
-  FilePathLabel,
-  FileStatusIcon,
-} from "@/components/pull-requests/pr-file-marks";
+import { changeTotals } from "@/lib/agent-changed-files";
+import { DiffCounters, FilePathLabel } from "@/components/pull-requests/pr-file-marks";
 
-/**
- * Bloc « fichiers changés » compact et repliable (MIN-46, note « diff par tour »),
- * rendu dans le fil sous la réponse d'un tour. `onOpenFile` rend les lignes
- * cliquables (vers la vue diff de la session, dans la conversation — PR ou pas).
- *
- * **Il parle la langue des diffs de PR**, et pas la sienne. Il écrivait avant une
- * phrase en texte plat — « modifié app/(app)/agents/page.tsx », tout en gris,
- * sans mono — là où la vue diff, l'arbre des fichiers et l'en-tête d'une carte de
- * fichier disent la même chose autrement : une icône colorée pour la nature du
- * changement, le chemin en mono avec le dossier éteint, les compteurs à droite.
- * Les autres surfaces s'accordaient ; celle-ci détonnait, alors qu'un clic dessus
- * mène précisément à elles. Les marques viennent maintenant du même endroit
- * ([pr-file-marks](../pull-requests/pr-file-marks.tsx)).
- *
- * Les compteurs se taisent quand ils valent zéro : en vue LIVE, Git peut ne pas
- * encore avoir répondu, et « +0 −0 » sur chaque ligne se lirait comme une mesure.
- */
+const INITIAL_VISIBLE_FILES = 5;
+const MORE_FILES = 10;
 
-/**
- * Une ligne de fichier respire comme les lignes de liste du reste de minddy
- * (32 px de haut, `px-2 py-2`) et non comme une ligne de diff. Ce bloc n'est pas
- * un diff : il compte rarement plus d'une dizaine d'entrées, et chacune est une
- * cible de clic — la densité de l'arbre d'une PR de quarante fichiers y serait
- * un tassement, pas un gain.
- */
-const ROW_CLASS = "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left";
+type ChangeKind = "created" | "deleted" | "edited";
+
+const SUMMARY_KEYS = {
+  created: "filesCreated",
+  deleted: "filesDeleted",
+  edited: "filesEdited",
+} as const;
+
+const SINGLE_FILE_KEYS = {
+  created: "fileCreated",
+  deleted: "fileDeleted",
+  edited: "fileEdited",
+} as const;
+
+function changeKind(files: AgentFileChange[]): ChangeKind {
+  if (files.every((file) => file.status === "added")) return "created";
+  if (files.every((file) => file.status === "deleted")) return "deleted";
+  return "edited";
+}
+
+function fileName(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash === -1 ? path : path.slice(slash + 1);
+}
 
 function FileRow({
   file,
@@ -47,11 +43,14 @@ function FileRow({
   file: AgentFileChange;
   onOpenFile?: (path: string) => void;
 }) {
-  const inner = (
+  const content = (
     <>
-      <FileStatusIcon status={prFileStatus(file.status)} />
       <FilePathLabel path={file.path} previousPath={file.previousPath} />
-      <DiffCounters additions={file.additions} deletions={file.deletions} hideEmpty />
+      <DiffCounters
+        additions={file.additions}
+        deletions={file.deletions}
+        hideEmpty
+      />
     </>
   );
 
@@ -60,80 +59,102 @@ function FileRow({
       <button
         type="button"
         onClick={() => onOpenFile(file.path)}
-        className={cn(
-          ROW_CLASS,
-          "outline-none transition-colors hover:bg-muted focus-visible:bg-muted",
-        )}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
       >
-        {inner}
+        {content}
       </button>
     );
   }
-  return <div className={ROW_CLASS}>{inner}</div>;
+
+  return <div className="flex w-full items-center gap-2 px-3 py-2">{content}</div>;
 }
 
+/**
+ * Carte finale des fichiers changés sous la réponse d'un tour.
+ *
+ * Le résumé reste visible avec une liste courte : cinq fichiers au départ, puis
+ * dix de plus à chaque demande. La diff complète reste accessible via Review ;
+ * cliquer une ligne ouvre directement le fichier correspondant dans cette même
+ * sidebar.
+ */
 export function ChangedFilesBlock({
   files,
-  label,
   truncated = false,
-  defaultOpen = false,
-  live = false,
-  action,
   onOpenFile,
+  onReview,
   className,
 }: {
   files: AgentFileChange[];
-  /** Libellé du bloc, déjà localisé avec le décompte (ex. « 3 fichiers modifiés »). */
-  label: string;
   truncated?: boolean;
-  defaultOpen?: boolean;
-  /** Vue live : titre qui shimmer (travail en cours). */
-  live?: boolean;
-  /** Bloc d'action à droite de l'en-tête (ex. bouton « créer la PR »). */
-  action?: ReactNode;
   onOpenFile?: (path: string) => void;
+  onReview?: () => void;
   className?: string;
 }) {
   const t = useTranslations("Agent");
-  const [open, setOpen] = useState(defaultOpen);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_FILES);
+
   if (files.length === 0) return null;
+
+  const kind = changeKind(files);
   const { additions, deletions } = changeTotals(files);
+  const summary =
+    files.length === 1
+      ? t(SINGLE_FILE_KEYS[kind], { file: fileName(files[0].path) })
+      : t(SUMMARY_KEYS[kind], { count: files.length });
+  const visibleFiles = files.length === 1 ? [] : files.slice(0, visibleCount);
+  const hasMore = visibleCount < files.length;
+
+  const reviewAction = onReview ? (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={onReview}
+      className="h-7 px-2 text-xs"
+    >
+      {t("reviewChangesShort")}
+    </Button>
+  ) : null;
 
   return (
-    <div className={cn("rounded-xl border border-border bg-card", className)}>
-      <Collapsible open={open} onOpenChange={setOpen}>
-        {/* Même respiration que les autres cartes du fil (le bloc « plan », les
-            cartes de fichier d'un diff) : 12 px sur les côtés, 10 px en haut. */}
-        <div className="flex items-center gap-2 px-3 py-2.5">
-          <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-            <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
-            <span className={cn("truncate", live && "text-shimmer")}>{label}</span>
-            <DiffCounters additions={additions} deletions={deletions} hideEmpty />
-            {/* La barre replie le tour en une image : replié, le bloc dit déjà
-                si l'agent a étoffé ou réécrit. Muette tant que git n'a pas
-                compté — cinq blocs gris ne diraient rien. */}
-            {additions + deletions > 0 ? (
-              <DiffStatBar additions={additions} deletions={deletions} />
-            ) : null}
-          </CollapsibleTrigger>
-          {action ? <div className="shrink-0">{action}</div> : null}
-        </div>
-        <CollapsibleContent>
-          {/* La liste garde son propre retrait (`px-1.5`) : les lignes sont des
-              cibles de clic, et leur surbrillance doit s'arrêter avant le bord
-              de la carte plutôt que de venir buter contre lui. */}
-          <div className="flex flex-col px-1.5 pb-2">
-            {files.map((f) => (
-              <FileRow key={`${f.status}:${f.path}`} file={f} onOpenFile={onOpenFile} />
-            ))}
-            {truncated ? (
-              <p className="px-2 pt-1.5 text-[11px] text-muted-foreground">
-                {t("filesListTruncated")}
-              </p>
-            ) : null}
+    <div className={cn("overflow-hidden rounded-lg border border-border bg-card", className)}>
+      <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent/50">
+            <FilePen className="size-5 text-muted-foreground" />
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">{summary}</p>
+            <DiffCounters additions={additions} deletions={deletions} className="mt-0.5 text-xs" />
+          </div>
+        </div>
+        {reviewAction ? <div className="shrink-0">{reviewAction}</div> : null}
+      </div>
+
+      {visibleFiles.length > 0 ? (
+        <div className="divide-y divide-border">
+          {visibleFiles.map((file) => (
+            <FileRow key={`${file.status}:${file.path}`} file={file} onOpenFile={onOpenFile} />
+          ))}
+        </div>
+      ) : null}
+
+      {hasMore ? (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((count) => count + MORE_FILES)}
+          className="w-full border-t border-border px-3 py-2 text-left text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground"
+        >
+          {t("filesShowMore")}
+        </button>
+      ) : null}
+
+      {truncated ? (
+        <p className="border-t border-border px-3 py-1.5 text-[11px] text-muted-foreground">
+          {t("filesListTruncated")}
+        </p>
+      ) : null}
+
     </div>
   );
 }

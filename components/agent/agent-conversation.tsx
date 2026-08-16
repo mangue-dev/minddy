@@ -16,7 +16,7 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { ChevronsUpDown, GitPullRequest } from "lucide-react";
+import { GitPullRequest } from "lucide-react";
 import { cumulativeBranchFiles, changeTotals } from "@/lib/agent-changed-files";
 import { NumoIcon } from "@/components/numo-icon";
 import { ChatInput } from "@/components/assistant/chat-input";
@@ -67,9 +67,6 @@ import { turnSubagents } from "@/lib/agent-subagents";
 import { livePlan } from "@/lib/agent-plan";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
-import { useProjects } from "@/lib/projects-context";
-import { ProjectOrb } from "@/components/project-orb";
-import { projectOrbSeed } from "@/lib/project-orb-colors";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 import { MentionLinksProvider } from "@/components/mention-links";
@@ -170,11 +167,6 @@ export function AgentConversation({
   const t = useTranslations("Agent");
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
-  const { projects } = useProjects();
-  const project = useMemo(
-    () => projects.find((candidate) => candidate.id === projectId) ?? null,
-    [projects, projectId],
-  );
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId);
 
   /**
@@ -729,7 +721,10 @@ export function AgentConversation({
       </Button>
     ) : null;
 
-  const changedFileCount = liveHeaderFiles.length;
+  // Le relevé live a sa place dans la pilule pendant le tour. Une fois le tour
+  // terminé, le bloc final `files_changed` apparaît dans le fil : ne gardons pas
+  // une seconde pilule qui ne contiendrait plus que le même résumé.
+  const changedFileCount = working ? liveHeaderFiles.length : 0;
 
   return (
     <MentionLinksProvider value={links}>
@@ -775,6 +770,7 @@ export function AgentConversation({
             promptMentions={liveRun.prompt_mentions}
             pendingUserMessages={pendingMessages}
             onOpenFile={openDiff}
+            onOpenDiff={openDiffSheet}
             liveDiffFiles={liveDiffFiles}
             hiddenQuestionEventId={activeQuestion?.eventId}
             localExec={liveRun.local_exec === true}
@@ -879,59 +875,6 @@ export function AgentConversation({
                       ? t("endedPlaceholder")
                       : t("pastRunPlaceholder")
               }
-              contextSlot={
-                <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
-                  {project ? (
-                    <button
-                      type="button"
-                      disabled
-                      aria-label={project.name}
-                      className="flex h-8 shrink items-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground/45"
-                    >
-                      <ProjectOrb
-                        seed={projectOrbSeed(project)}
-                        iconUrl={project.icon_url}
-                        className="size-3.5 shrink-0 grayscale"
-                      />
-                      <span className="max-w-[10rem] truncate">{project.name}</span>
-                      <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
-                    </button>
-                  ) : null}
-                  {liveRun.local_exec ? (
-                    <EnvironmentCombobox
-                      value={liveRun.local_worktree ? "worktree" : "local"}
-                      onChange={() => {}}
-                      disabled
-                      disabledTooltip={t("environmentLocked")}
-                      bare
-                    />
-                  ) : null}
-                  <BranchCombobox
-                    issueId={issueId}
-                    value=""
-                    onChange={() => {}}
-                    defaultLabel={t("branchDefault")}
-                    defaultHint={t("branchDefaultHint")}
-                    placeholder={t("branchSearchPlaceholder")}
-                    emptyLabel={t("branchSearchEmpty")}
-                    loadingLabel={t("branchSearchLoading")}
-                    disabled
-                    disabledTooltip={t("branchLocked")}
-                    lockedBranch={liveRun.base_branch}
-                    workBranch={liveRun.branch_name}
-                    workBranchTooltip={
-                      liveRun.branch_name
-                        ? t("branchSessionLocked", {
-                            origin: liveRun.base_branch ?? t("branchDefault"),
-                            branch: liveRun.branch_name,
-                          })
-                        : undefined
-                    }
-                    bare
-                  />
-                </div>
-              }
-              contextPlacement="above"
               leadingControls={
                 <>
                   {/* Modèle figé pour la session : picker verrouillé + tooltip. */}

@@ -12,7 +12,7 @@ const source = readFileSync(join(__dirname, "../../desktop/src/launcher.ts"), "u
 
 describe("pré-chauffage de l'agent local", () => {
   it("réchauffe le harness et opencode sans créer de job", () => {
-    const start = source.indexOf("export function prewarmLocalAgent(origin: string): Promise<void>");
+    const start = source.indexOf("export function prewarmLocalAgent(origin: string): Promise<boolean>");
     const end = source.indexOf("\n}\n\n/**\n * JOUE UNE AFFECTATION", start);
     const warmup = source.slice(start, end);
 
@@ -37,5 +37,24 @@ describe("pré-chauffage de l'agent local", () => {
     expect(claim).toContain("runAssignment(assignment, opts.origin");
     expect(run).toContain("ensureBundle(origin, assignment.job.protocolVersion)");
     expect(run).toContain("ensureOpencode(opencodeDir)");
+  });
+
+  it("ne claim jamais avant que les prérequis machine soient prêts", () => {
+    const loop = source.slice(
+      source.indexOf("export function startLocalClaimLoop"),
+      source.indexOf("async function claimLocalTurn"),
+    );
+    const readyAt = loop.indexOf("const ready = await prewarmLocalAgent(origin)");
+    const claimAt = loop.indexOf("outcome = await claimLocalTurn(");
+
+    expect(readyAt).toBeGreaterThan(-1);
+    expect(claimAt).toBeGreaterThan(readyAt);
+    expect(loop).toContain("if (ready) {");
+  });
+
+  it("mémorise un pré-vol réussi sans refaire un téléchargement à chaque poll", () => {
+    expect(source).toContain("const localAgentReadyOrigins = new Set<string>();");
+    expect(source).toContain("if (localAgentReadyOrigins.has(origin)) return Promise.resolve(true);");
+    expect(source).toContain("if (ready) localAgentReadyOrigins.add(origin);");
   });
 });

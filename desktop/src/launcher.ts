@@ -145,7 +145,14 @@ const opencodePreflights = new Map<
 
 /** Pré-chauffages en cours, un par origine : stable/preview ne partagent jamais
  * un harness, car leur protocole et leur code peuvent diverger. */
-const localAgentWarmups = new Map<string, Promise<void>>();
+const localAgentWarmups = new Map<string, Promise<boolean>>();
+/**
+ * Une origine n'entre dans la file locale qu'après un pré-vol réussi. Sans ce
+ * verrou, une app installée incapable de trouver npm pouvait gagner le claim
+ * contre une coquille de développement prête, puis abandonner le run qu'elle
+ * venait de rendre inaccessible à l'autre machine.
+ */
+const localAgentReadyOrigins = new Set<string>();
 
 /** Ce que le lanceur rend après avoir reçu une affectation du serveur. */
 export type LocalTurnResult =
@@ -185,11 +192,19 @@ export function startLocalClaimLoop(opts: {
     let outcome: LocalClaimOutcome = "idle";
     if (projectIds.length > 0) {
       try {
-        outcome = await claimLocalTurn({
-          origin: opts.getOrigin(),
-          deviceId: opts.deviceId,
-          projectIds,
-        });
+        const origin = opts.getOrigin();
+        // Le claim est irréversible pour les autres coquilles : on ne le tente
+        // qu'une fois le harness et opencode réellement disponibles ici.
+        const ready = await prewarmLocalAgent(origin);
+        if (ready) {
+          outcome = await claimLocalTurn({
+            origin,
+            deviceId: opts.deviceId,
+            projectIds,
+          });
+        } else {
+          outcome = "unavailable";
+        }
       } catch (error) {
         trace("local-claim:failed", {
           message: error instanceof Error ? error.message : String(error),
@@ -266,7 +281,8 @@ async function claimLocalTurn(opts: {
  * rehash du bundle juste avant le fork — mais son premier message ne paie plus
  * un téléchargement ou une installation qui pouvait se faire à l'ouverture.
  */
-export function prewarmLocalAgent(origin: string): Promise<void> {
+export function prewarmLocalAgent(origin: string): Promise<boolean> {
+  if (localAgentReadyOrigins.has(origin)) return Promise.resolve(true);
   const active = localAgentWarmups.get(origin);
   if (active) return active;
 
@@ -278,11 +294,14 @@ export function prewarmLocalAgent(origin: string): Promise<void> {
     ensureOpencode(localOpencodeDir(userData)),
   ])
     .then(([bundle, opencode]) => {
+      const ready = bundle.ok && opencode.ok;
       trace("local-agent:prewarm", {
         origin,
         bundle: bundle.ok ? "ready" : bundle.reason,
         opencode: opencode.ok ? "ready" : opencode.reason,
       });
+      if (ready) localAgentReadyOrigins.add(origin);
+      return ready;
     })
     .catch((error) => {
       // Le préchauffage est une optimisation : un réseau indisponible au
@@ -291,6 +310,7 @@ export function prewarmLocalAgent(origin: string): Promise<void> {
         origin,
         message: error instanceof Error ? error.message : String(error),
       });
+      return false;
     })
     .finally(() => localAgentWarmups.delete(origin));
   localAgentWarmups.set(origin, task);

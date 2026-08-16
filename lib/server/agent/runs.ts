@@ -595,6 +595,29 @@ export async function findQueuedLocalRunForMachine(input: {
 }
 
 /**
+ * Replie vers le cloud un tour local que ce déploiement ne peut pas admettre.
+ *
+ * La garde est aussi importante que l'écriture : entre la sélection du run et
+ * cette transition, une autre coquille peut l'avoir claim. Dans ce cas elle a
+ * gagné et on ne change surtout pas l'environnement sous un tour déjà préparé.
+ */
+export async function declineQueuedLocalRun(runId: string): Promise<AgentRun | null> {
+  const { data, error } = await getServiceClient()
+    .from("agent_runs")
+    .update({ local_exec: false, local_worktree: false })
+    .eq("id", runId)
+    .eq("status", "queued")
+    .eq("local_exec", true)
+    .select("*")
+    .maybeSingle();
+  if (error) {
+    console.error(`[agent-runs] local fallback failed on ${runId}:`, error.message);
+    return null;
+  }
+  return (data as AgentRun | null) ?? null;
+}
+
+/**
  * DE QUOI JUGER LA NATURE D'UN RUN (MIN-360) — les quatre colonnes qui disent d'où
  * son contexte vient, et rien d'autre.
  *

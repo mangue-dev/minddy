@@ -6,11 +6,15 @@ import { admitLocalRun, issueLocalExecToken } from "@/lib/server/agent/local-exe
 import { rowMayRunLocally } from "@/lib/server/agent/local-exec-scope";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import {
+  appendEvent,
   claimRun,
+  declineQueuedLocalRun,
   findQueuedLocalRunForMachine,
   getRun,
 } from "@/lib/server/agent/runs";
 import { executeAgentRun } from "@/lib/server/agent/execute";
+import { kickAgentDrain } from "@/lib/server/agent/launch";
+import { getServiceClient } from "@/lib/supabase-service";
 import type { VmJob } from "@/lib/server/agent/vm/protocol";
 
 type LocalProjectCatalogRow = {
@@ -186,7 +190,26 @@ export async function POST(request: NextRequest) {
    */
   const admission = admitLocalRun({ keyMode: run.key_mode });
   if (!admission.ok) {
-    return NextResponse.json({ error: `refused: ${admission.reason}` }, { status: 409 });
+    /**
+     * Pas de clé plafonnée à faire descendre sur la machine : le run reste
+     * parfaitement exécutable dans une microVM, où le firewall porte la clé.
+     * La transition garde `queued + local_exec` pour ne jamais convertir sous
+     * les pieds d'une autre coquille qui aurait gagné le claim entre-temps.
+     */
+    const cloudRun = await declineQueuedLocalRun(run.id);
+    if (!cloudRun) {
+      return NextResponse.json({ error: "run is not queued" }, { status: 409 });
+    }
+    await appendEvent(run.id, "status", {
+      status: "queued",
+      phase: "local_exec_declined",
+      reason: admission.reason,
+    });
+    kickAgentDrain(getServiceClient());
+    return NextResponse.json(
+      { status: "idle", declinedRunId: run.id, reason: admission.reason },
+      { headers: { "cache-control": "no-store" } },
+    );
   }
 
   /**

@@ -162,7 +162,7 @@ export function AgentActivityPill({
             <TooltipContent
               side="top"
               sideOffset={8}
-              className="w-80 max-w-[calc(100vw-2rem)] bg-foreground text-background"
+              className="w-80 max-w-[calc(100vw-2rem)] bg-foreground text-background text-left"
             >
               <PlanTooltip steps={planSteps} />
             </TooltipContent>
@@ -194,7 +194,11 @@ export function AgentActivityPill({
                 ) : null}
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8} className="bg-foreground text-background">
+            <TooltipContent
+              side="top"
+              sideOffset={8}
+              className="bg-foreground text-background text-left"
+            >
               {t("diffTitle")}
             </TooltipContent>
           </Tooltip>
@@ -223,7 +227,7 @@ export function AgentActivityPill({
             <TooltipContent
               side="top"
               sideOffset={8}
-              className="w-80 max-w-[calc(100vw-2rem)] bg-foreground text-background"
+              className="w-80 max-w-[calc(100vw-2rem)] bg-foreground text-background text-left"
             >
               <SubagentTooltip subagents={subagents} />
             </TooltipContent>

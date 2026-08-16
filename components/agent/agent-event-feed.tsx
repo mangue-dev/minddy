@@ -689,6 +689,8 @@ interface RenderContext {
   liveDiffFiles: LiveDiffStat[];
   /** Ouvre la vue diff de la session (dans la conversation) → lignes cliquables. */
   onOpenFile?: (path: string) => void;
+  /** Ouvre la vue diff complète de la session depuis la carte finale. */
+  onOpenDiff?: () => void;
   /** Event `question` ACTIF, rendu par la conversation à la place du composer →
       son item du fil est masqué (les questions passées restent, inertes). */
   hiddenQuestionEventId?: string | null;
@@ -698,12 +700,13 @@ function FilesRow({
   item,
   liveDiffFiles,
   onOpenFile,
+  onOpenDiff,
 }: {
   item: Extract<FeedItem, { kind: "files" }>;
   liveDiffFiles: LiveDiffStat[];
   onOpenFile?: (path: string) => void;
+  onOpenDiff?: () => void;
 }) {
-  const t = useTranslations("Agent");
   // Le bloc du tour EN COURS garde sa liste provisoire, mais ses compteurs sont
   // enrichis par le diff Git vivant dès que celui-ci répond. Il mène au diff
   // VIVANT, pas à l'état poussé ; le libellé et le shimmer le signalent.
@@ -712,19 +715,13 @@ function FilesRow({
     <ChangedFilesBlock
       files={files}
       truncated={item.truncated}
-      label={
-        item.live
-          ? t("filesChangedTurn", { count: item.files.length })
-          : t("filesChanged", { count: item.files.length })
-      }
-      live={item.live}
-      defaultOpen
       onOpenFile={onOpenFile}
+      onReview={onOpenDiff}
     />
   );
 }
 
-function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
+function renderItem(it: FeedItem, ctx: RenderContext, afterContent?: ReactNode): ReactNode {
   if (it.kind === "message") {
     // Question ACTIVE : la carte vivante est affichée par la conversation à la
     // place du composer — sa bulle du fil ne se rend pas du tout.
@@ -736,16 +733,22 @@ function renderItem(it: FeedItem, ctx: RenderContext): ReactNode {
         toolCallResults={ctx.results}
         askUserAnswer={it.askUserAnswer}
         showCopyButton={ctx.copyableIds.has(it.message.id)}
+        afterContent={afterContent}
       />
     );
   }
   if (it.kind === "files") {
+    // Le résumé live est déjà visible dans la pilule au-dessus du composer.
+    // Garder ici la liste complète pendant que l'agent travaille dupliquerait
+    // l'indicateur et ferait descendre inutilement la réponse en cours.
+    if (it.live) return null;
     return (
       <FilesRow
         key={it.id}
         item={it}
         liveDiffFiles={ctx.liveDiffFiles}
         onOpenFile={ctx.onOpenFile}
+        onOpenDiff={ctx.onOpenDiff}
       />
     );
   }
@@ -811,14 +814,22 @@ function TurnGroup({
   interrupted?: boolean;
   ctx: RenderContext;
 }) {
+  const filesContent = files.length > 0 ? (
+    <>
+      {files.map((it) => renderItem(it, ctx))}
+    </>
+  ) : null;
+  const attachFilesToSummary =
+    !!summary && summary.kind === "message" && !!summary.message.content && filesContent;
+
   return (
     <div className="flex flex-col gap-3">
       <WorkAccordion startedAt={startedAt} endedAt={endedAt} active={active}>
         {work.map((it) => renderItem(it, ctx))}
       </WorkAccordion>
-      {summary ? renderItem(summary, ctx) : null}
+      {summary ? renderItem(summary, ctx, attachFilesToSummary || undefined) : null}
       {/* Fichiers changés du tour : sous la réponse, hors de l'accordéon de travail. */}
-      {files.map((it) => renderItem(it, ctx))}
+      {!attachFilesToSummary ? filesContent : null}
       {interrupted ? <InterruptedRow /> : null}
     </div>
   );
@@ -937,6 +948,7 @@ export function AgentEventFeed({
   className,
   pendingUserMessages = [],
   onOpenFile,
+  onOpenDiff,
   liveDiffFiles,
   hiddenQuestionEventId,
   localExec = false,
@@ -962,6 +974,8 @@ export function AgentEventFeed({
   className?: string;
   /** Rend cliquables les fichiers des blocs de diff (ouvre la vue diff de la session). */
   onOpenFile?: (path: string) => void;
+  /** Ouvre la vue diff complète depuis le bouton Review de la carte finale. */
+  onOpenDiff?: () => void;
   /** Compteurs exacts du diff vivant, utilisés par le bloc de fichiers du tour actif. */
   liveDiffFiles?: LiveDiffStat[];
   /**
@@ -1174,6 +1188,7 @@ export function AgentEventFeed({
           }))
         : liveDiffFiles ?? [],
     onOpenFile,
+    onOpenDiff,
     hiddenQuestionEventId,
   };
   // Le tour actif (accordéon ouvert « Travaille depuis X ») porte déjà le signal
