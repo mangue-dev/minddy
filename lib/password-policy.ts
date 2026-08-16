@@ -14,10 +14,10 @@
  * **Ce module reste la copie d'une vérité qui vit ailleurs.** Changer la
  * politique dans le dashboard Supabase sans la changer ici, c'est réintroduire
  * exactement ce qu'on corrige — ou pire, un bouton actif sur un mot de passe que
- * le serveur refusera. Les valeurs en vigueur là-bas sont relevées dans
- * [docs/auth-supabase-config.md](../docs/auth-supabase-config.md), avec le
- * contrôle de fuite (HIBP) qui, lui, n'a pas d'équivalent ici : c'est un appel
- * réseau de GoTrue, et il ressort en `weak_password`.
+ * le serveur refusera. Les valeurs en vigueur sont consignées dans le bloc
+ * « Durcissement Auth » de [.env.example](../.env.example), avec le contrôle de
+ * fuite (HIBP) qui, lui, n'a pas d'équivalent ici : c'est un appel réseau de
+ * GoTrue, et il ressort en `weak_password`.
  */
 
 export const MIN_PASSWORD_LENGTH = 8;

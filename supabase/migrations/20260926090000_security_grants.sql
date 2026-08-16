@@ -7,7 +7,7 @@
 --     cross-tenant sur n'importe quel objectif. Seul definer du repo sans la
 --     paire revoke/grant (pattern claim_agent_run, 20260806090000).
 --
---  2. Les 6 tables à colonnes secrètes ont une policy de lecture propriétaire
+--  2. Les 7 tables à colonnes secrètes ont une policy de lecture propriétaire
 --     (« l'API ne renvoie jamais les tokens » — vrai pour NOS routes, mais
 --     tout utilisateur connecté détient la clé anon + son JWT et peut parler
 --     à PostgREST en direct : `?select=access_token_encrypted` passait). La

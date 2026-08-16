@@ -2,6 +2,7 @@
   "name": "minddy",
   "version": "0.9.5",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "predev": "npm run build:agent-vm && npm run build:pages-md",
     "dev": "NODE_OPTIONS=--max-http-header-size=32768 next dev",

@@ -84,11 +84,12 @@ sur Vercel (HTTPS natif, redirection HTTP→HTTPS gérée par la plateforme).
   claim `amr` du JWT ([lib/server/reauth.ts](lib/server/reauth.ts)). La
   vérification du mot de passe est débitée par utilisateur, pour ne pas devenir
   un oracle entre les mains d'une session volée.
-- **Politique de mot de passe :** longueur minimale 8, imposée côté client
-  ([app/(auth)/login/page.tsx](<app/(auth)/login/page.tsx>)) ET côté serveur
-  (Dashboard Supabase → Auth). Voir le bloc « Durcissement Auth » de
-  [.env.example](.env.example) pour la protection anti-mots-de-passe-fuités et
-  les rate limits Auth.
+- **Politique de mot de passe :** l'interface applique les mêmes règles que
+  la configuration Supabase dans [lib/password-policy.ts](lib/password-policy.ts)
+  (8 caractères, minuscule, majuscule, chiffre). Le Dashboard Supabase reste
+  l'autorité qui les impose ; le bloc « Durcissement Auth » de
+  [.env.example](.env.example) consigne aussi la protection contre les mots de
+  passe fuités et les rate limits Auth.
 
 ## 2. Autorisation — un monolithe service-role, RLS en seconde ligne
 
@@ -131,15 +132,16 @@ par ce chemin.
   l'historique de la page et laissait ses fichiers orphelins (MIN-338).
 - **Colonnes secrètes cloisonnées par privilèges colonne** (pas seulement par
   RLS, qui filtre les lignes et non les colonnes) : `git_connections`,
-  `user_ai_keys`, `api_keys`, `oauth_grants`, `integrations`, `billing_accounts`
-  — les tokens/hashs/identifiants Stripe ne sont pas dans la liste blanche
-  lisible par `authenticated`. Voir
+  `git_user_identities`, `user_ai_keys`, `api_keys`, `oauth_grants`, `integrations`,
+  `billing_accounts` — les tokens/hashs/identifiants Stripe ne sont pas dans
+  la liste blanche lisible par `authenticated`. Voir
   [20260926090000_security_grants.sql](supabase/migrations/20260926090000_security_grants.sql).
   ⚠ Conséquence : une colonne AJOUTÉE plus tard à l'une de ces tables n'est pas
   lisible tant qu'un `grant select (col)` explicite ne l'ajoute pas.
-- **Fonctions SECURITY DEFINER :** réservées au `service_role`, sauf les aides de
-  policy (`can_access_project`, `is_project_member`, `is_project_owner`, et la
-  famille `can_watch_*`) — elles ne répondent que sur
+- **Fonctions SECURITY DEFINER :** réservées au `service_role`, sauf les sept
+  aides de policy : `can_access_project`, `is_project_member`,
+  `is_project_owner`, `can_watch_agent_run`, `can_watch_numo_comment`,
+  `can_watch_pr_review` et `can_watch_pull_request`. Elles ne répondent que sur
   l'accès de l'appelant, et les policies RLS ne peuvent pas les appeler sans
   EXECUTE. La règle est appliquée par une boucle sur `pg_proc`
   ([20260926093000_definer_grants_sweep.sql](supabase/migrations/20260926093000_definer_grants_sweep.sql)),
@@ -159,8 +161,12 @@ par ce chemin.
 - **Au repos :** Supabase chiffre la base (AES-256) et le stockage via son
   infrastructure. `auth.users` (email, métadonnées) est géré et chiffré par
   Supabase.
-- **Secrets applicatifs :** les vrais secrets sont chiffrés **côté app** en
-  AES-256-GCM (enveloppe) avant écriture, jamais renvoyés par l'API :
+- **Secrets applicatifs :** les secrets réversibles sont chiffrés **côté app** en
+  AES-256-GCM (enveloppe) avant écriture. Ils ne figurent pas dans les réponses
+  ordinaires, avec une exception explicite : un owner peut obtenir le secret SSO
+  de son board depuis les endpoints de configuration ou le MCP afin de le poser
+  dans le backend de son site. Il ne doit jamais aller dans le code client ni
+  dans le contrôle de version.
   - tokens OAuth GitLab → `GIT_TOKEN_ENCRYPTION_SECRET` /
     `GITLAB_TOKEN_ENCRYPTION_SECRET`
   - **secret de webhook GitLab, un par dépôt** (MIN-333) → même enveloppe et
@@ -220,18 +226,21 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
 
 ## 6. Validation des entrées
 
-- Validation **manuelle** (pas de Zod) sur les route handlers : chaque string
-  bornée en longueur, chaque enum passée par une allowlist
+- La plupart des route handlers valident manuellement : chaque string est
+  bornée en longueur, chaque enum passe par une allowlist
   ([lib/issue-validation.ts](lib/issue-validation.ts),
   [lib/objective-constants.ts](lib/objective-constants.ts),
   [lib/category-colors.ts](lib/category-colors.ts)), chaque nombre fini et borné,
-  chaque array plafonné. Un corps JSON malformé produit un 400, jamais un crash.
+  chaque array plafonné. L'enregistrement dynamique des clients OAuth/MCP
+  (`/api/oauth/register`) utilise, lui, un schéma Zod. Un corps JSON malformé
+  produit un 400, jamais un crash.
 - **Injection SQL :** Supabase/PostgREST paramétrise ; aucune requête raw
   concaténée.
-- **XSS :** le markdown (commentaires, descriptions) est rendu sans HTML brut
-  (react-markdown sans `rehype-raw`, TipTap `html: false`) ; les posts du board
-  de feedback sont en texte brut.
-- **Exception assumée : l'éditeur de PAGES est en `html: true`**
+- **XSS :** les commentaires et contenus riches sont du markdown, pas du texte
+  brut. Le composant de rendu n'active `rehype-raw` que sur demande ; lorsque
+  cette porte est utilisée, `rehype-sanitize` le suit immédiatement.
+  L'éditeur TipTap des pages configure `html: true`.
+- **Éditeur de PAGES : `html: true`**
   ([components/pages/page-extensions.ts](components/pages/page-extensions.ts)).
   Markdown n'a ni dépliant ni sous-page ; les deux se projettent en HTML minimal
   (`<details>`, `<div data-type="subpage">`), et sans cette option elles
@@ -271,12 +280,15 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
 | --- | --- |
 | Crons (`/api/cron/*`) | `Authorization: Bearer ${CRON_SECRET}`, comparé en `timingSafeEqual` ([lib/server/cron-auth.ts](lib/server/cron-auth.ts)) |
 | Webhook GitHub | Signature HMAC de l'App (`timingSafeEqual`) ; **fail-closed** — secret absent → 503, rien traité ; anti-rejeu sur `X-GitHub-Delivery` |
-| Webhook GitLab | Jeton **propre au dépôt**, résolu sur `project.id` puis comparé en `timingSafeEqual` ; **fail-closed** — aucune matière à vérifier → 503, jeton refusé → 401 ; anti-rejeu sur `X-Gitlab-Event-UUID` |
+| Webhook GitLab | Jeton **propre au dépôt**, résolu sur `project.id` puis comparé en `timingSafeEqual` (ce n'est pas une signature HMAC). Si le chiffrement et le repli historique sont tous deux absents, la route répond 503 ; un jeton absent ou non reconnu répond 401, y compris lorsqu'aucun secret de ce dépôt n'a été chargé. Anti-rejeu sur `X-Gitlab-Event-UUID`. |
 | Webhook Stripe | Signature Stripe vérifiée ; idempotence en **deux temps** (MIN-344) — la ligne `stripe_webhook_events` est une réservation, le `processed_at` n'est posé qu'après un traitement réussi, donc un échec transitoire reste rejouable |
 | Webhook Supabase (nouvel utilisateur) | Secret partagé `x-minddy-webhook-secret` ; fail-closed 503 |
 | OAuth 2.1 / MCP (`/api/oauth/*`, `/api/mcp`) | Clients publics PKCE S256 obligatoire, tokens opaques hashés, codes à usage unique |
 | Boards publics (`/f/<token>`, `/share/<token>`) | Servis côté serveur en clé service ; option mot de passe ; OTP email pour voter/commenter |
 | API intégration (`/api/v1/*`) | Clé API d'intégration (sha256), scopée au projet |
+| Plan de contrôle microVM (`/api/agent-vm/*`) | OIDC Vercel Sandbox, tenant Vercel attendu et nom de sandbox dérivant du run ; voie locale distincte par jeton HS256 à portée réduite |
+| Administration (`/admin`, `/api/admin/*`) | Session Supabase puis `isAdminUser` dans chaque handler ; allowlist d'e-mail confirmée ou rôle `app_metadata` |
+| Callbacks forge (GitHub setup, GitHub user authorization, GitLab OAuth) | `state` signé et session de callback liée au même utilisateur avant tout échange de code ou écriture |
 
 ## 9. L'agent de code — ce que sa microVM détient
 
@@ -284,12 +296,14 @@ La microVM d'un run (Vercel Sandbox) exécute du shell décidé par un modèle, 
 un réseau sortant ouvert. On la considère **compromise par hypothèse** : la
 question n'est pas de l'empêcher de mal faire, c'est de borner ce qu'elle tient.
 
-- **Aucun secret de minddy.** Ni clé LLM (le firewall pose l'en-tête
-  `authorization` *après* la sortie de la VM), ni clé Supabase, ni jeton
-  d'identité : le plan de contrôle reconnaît la VM par l'OIDC que la plateforme
-  signe, et le locataire (`team_id`/`project_id`) est vérifié avant le nom
-  (MIN-331). Voir [lib/server/agent/network-policy.ts](lib/server/agent/network-policy.ts).
-- **Un seul secret, et il est structurel : le token de forge.** `git clone`
+- **Elle ne reçoit pas les secrets de la plateforme minddy.** Ni clé LLM
+  racine (le firewall pose l'en-tête `authorization` *après* la sortie de la
+  VM), ni clé Supabase, ni jeton d'identité. Le plan de contrôle reconnaît la
+  VM par l'OIDC que la plateforme signe, et vérifie le locataire
+  (`team_id`/`project_id`) avant le nom (MIN-331). Voir
+  [lib/server/agent/network-policy.ts](lib/server/agent/network-policy.ts).
+- **Elle détient néanmoins un secret de forge lorsque le run doit cloner ou
+  pousser.** `git clone`
   l'écrit dans `.git/config` — c'est ce avec quoi la VM clone et pousse, elle ne
   peut pas travailler sans. Ce qui est borné, c'est ce qu'il ouvre
   ([lib/server/agent/repo-access.ts](lib/server/agent/repo-access.ts),
@@ -374,4 +388,10 @@ En cas de compromission suspectée :
 5. **Rejouer la sonde** ([scripts/security-probe.mjs](scripts/security-probe.mjs))
    après remédiation.
 
-**Contact :** l'équipe minddy (le propriétaire du projet Supabase/Vercel).
+## 12. Signaler une vulnérabilité
+
+Ne publiez pas une vulnérabilité ou une preuve d'exploitation dans une issue
+GitHub. Envoyez-la à [hello@minddy.app](mailto:hello@minddy.app) avec une
+description, les étapes de reproduction, l'impact observé et, si possible,
+une proposition de correctif. Nous accusons réception sous 7 jours, puis
+convenons avec vous d'un calendrier de correction et de divulgation.

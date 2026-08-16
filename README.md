@@ -1,90 +1,64 @@
 # minddy
 
-Blank Next.js 16 (Turbopack) + React 19 + Tailwind v4 starter, wired to
-[`mangue-ui`](../../mangue-ui/packages/mangue-ui).
+minddy is an open-source issue tracker for small product teams. It keeps the
+daily work in one place: projects, issues, objectives, saved views, collaborative
+pages, a public feedback board, and an MCP server that lets coding agents work
+with the same backlog as the team.
+
+The application is built with Next.js, React, Tailwind CSS, and Supabase. It
+also includes an optional macOS desktop shell and integrations for GitHub,
+GitLab, Stripe, and OpenRouter.
+
+## Run locally
+
+Requirements: Node.js 24 and pnpm 10 (the versions used by CI), plus a Supabase
+project for an interactive application.
 
 ```bash
-npm install     # installs mangue-ui from the local file: path
-npm run dev
+corepack enable
+corepack prepare pnpm@10.28.0 --activate
+pnpm install --frozen-lockfile
+cp .env.example .env
+pnpm dev
 ```
 
-## How mangue-ui is wired
+`.env.example` documents every optional integration and the Supabase dashboard
+settings. At minimum, set `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` for a local
+application that can access its data. Never commit `.env` or production
+credentials.
 
-- **`next.config.mjs`** — `transpilePackages: ["mangue-ui"]` (the lib ships source).
-- **`app/globals.css`** — imports `mangue-ui/tokens.css`, `@source`s the lib so
-  Tailwind generates its classes, then overrides tokens (this file is yours).
-- **`app/layout.tsx`** — provides the `--font-*` variables and wraps in `ThemeProvider`.
-- Components: `import { Button, ... } from "mangue-ui"`.
+The development command builds the agent-VM and page-markdown bundles before
+starting Next.js. See [CONTRIBUTING.md](CONTRIBUTING.md) before running code from
+an untrusted pull request: dependency installation, tests, and development
+commands execute repository code.
 
-## Switching from local to published
-
-While developing, `mangue-ui` resolves from the sibling repo via
-`"mangue-ui": "file:../../mangue-ui/packages/mangue-ui"`. Once mangue-ui is
-published to npm, swap that line for a real version (e.g. `"^0.1.0"`) and
-`npm install` — nothing else changes.
-
-## Deploying on Vercel
-
-Works out of the box once mangue-ui is on npm: `transpilePackages` + the
-`@source` line are the only requirements. (The `file:` path won't resolve on
-Vercel — publish first, or keep this app in a monorepo with mangue-ui.)
-
-### Two-branch deploy workflow
-
-Like AutoKap, deploys go through two branches:
-
-- **`main`** → **preview** deploys (every push).
-- **`production`** → the **production** deploy (only via `npm run deploy`).
-
-Vercel watches the `production` branch, so pushing `production` _is_ the deploy
-trigger — there is no explicit `vercel deploy` step.
-
-**Release a version to production** (run from `main`):
+## Common commands
 
 ```bash
-npm run deploy            # interactive: pick a version bump, then deploys
-npm run deploy -- patch   # non-interactive: bump patch (or minor/major/none)
+pnpm dev          # run the web app locally
+pnpm lint         # lint
+pnpm typecheck    # type-check
+pnpm test         # run the test suite
+pnpm build        # production build
+pnpm desktop:dev  # run the optional macOS shell
 ```
 
-`npm run deploy` (see [`deploy.sh`](deploy.sh)):
+## Architecture and deployment
 
-1. Checks the working tree is clean.
-2. Replays the CI gates as a last net (tests, `node scripts/audit.mjs`,
-   typecheck) and refuses to deploy a commit whose CI is red. The gates of
-   record live in [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which
-   runs them on every pull request in a throwaway runner with no secrets — see
-   [`CONTRIBUTING.md`](CONTRIBUTING.md).
-3. Bumps the version (`patch`/`minor`/`major`, or `none`) — commits
-   `chore: bump version to X` and tags `vX`. The tag is for release tracking
-   only; minddy is private, nothing is published to npm.
-4. Pushes the current branch → a preview deploy.
-5. Merges the current branch into `production` and pushes it → the production
-   deploy. On any failure it prints "production was NOT redeployed" and returns
-   you to your branch.
+- **Web app:** Next.js App Router, React, Tailwind CSS, and `mangue-ui`.
+- **Data and auth:** Supabase Postgres, Auth, Storage, and Realtime.
+- **Agent integration:** OAuth 2.1 MCP endpoint and an optional Vercel Sandbox
+  code agent.
+- **Deployment:** Vercel. `main` creates previews; `production` is the
+  production branch. `pnpm deploy` runs the release checks and promotes the
+  current branch.
 
-### One-time setup
+The CI workflow is the source of truth for checks. It runs the public-repository
+check, lint, typecheck, desktop bundle build, tests, and dependency audit. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for contribution and review guidance, and
+[SECURITY.md](SECURITY.md) for the security model and vulnerability reporting.
 
-1. Create the `production` branch from `main` (identical to prod today, so no
-   downtime) and push it:
+## License
 
-   ```bash
-   git checkout -b production && git push -u origin production && git checkout main
-   ```
-
-2. In the **Vercel dashboard** → minddy project → **Settings → Git**, set the
-   **Production Branch** to `production`. This is what makes `main` preview-only;
-   it can't be set from `vercel.json`. **Until you change it, pushes to `main`
-   still deploy to production**, so do this before (or with) your first
-   `npm run deploy`.
-
-3. Still in **Settings → Environment Variables**, add `VERCEL_DEEP_CLONE` = `1`
-   for **Production and Preview**. Vercel otherwise builds from a
-   `git clone --depth=10`, where the `vX` tag of the running version is out of
-   reach past ten commits — and the version indicator in the account menu counts
-   commits from that tag to say how far ahead of its release a deployment is
-   (`0.8.9-3` = three commits past `v0.8.9`, see
-   [`scripts/commits-since-version.mjs`](scripts/commits-since-version.mjs)).
-   Without the variable the count falls back to 0 and the bare version shows —
-   never a wrong count, just no count.
-
-PR humaine sans référence de ticket.
+minddy is released under the [MIT License](LICENSE).

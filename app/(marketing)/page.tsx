@@ -26,8 +26,10 @@ export async function generateMetadata(): Promise<Metadata> {
  * avant le premier octet de la landing, et une page que le CDN ne pouvait pas
  * mettre en cache (mesuré en prod : `cache-control: private, no-store`,
  * `x-vercel-cache: MISS` à chaque appel). Le middleware fait la même chose en
- * vérifiant la signature du JWT localement, et il s'exécute AVANT le cache :
- * les connectés sont redirigés, les autres reçoivent la page mise en cache.
+ * lisant la session depuis les cookies, et il s'exécute AVANT le cache : les
+ * connectés sont redirigés, les autres reçoivent la page mise en cache. Cette
+ * lecture ne constitue pas une autorisation ; les handlers vérifient ensuite
+ * les JWT avant d'accéder aux données.
  */
 export default async function LandingPage() {
   return (

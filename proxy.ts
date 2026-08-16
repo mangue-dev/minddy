@@ -267,9 +267,10 @@ function isSupabaseGetSessionWarning(args: unknown[]): boolean {
 }
 
 /**
- * Session courante, vérifiée LOCALEMENT (signature du JWT, aucun aller-retour
- * réseau vers GoTrue). L'avertissement « use getUser() » du SDK ne s'applique
- * pas ici : le middleware ne fait que router, il n'autorise aucune donnée.
+ * Session courante lue depuis les cookies. `getSession()` ne vérifie pas la
+ * signature du JWT : il ne sert ici qu'au routage et au renouvellement des
+ * cookies, jamais à autoriser une donnée. Les handlers vérifient l'identité
+ * avec `getClaims()` ou leur garde dédiée.
  *
  * ## Elle ÉCRIT, et c'est tout l'objet du `sink` (MIN-293)
  *
@@ -524,8 +525,10 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // getSession() validates the JWT locally (no network round-trip). The SDK's
-  // "use getUser()" warning is spurious here — suppress it just for this call.
+  // `getSession()` lit les cookies mais ne vérifie pas la signature du JWT. La
+  // route ne l'utilise que pour router et rafraîchir la session ; les API gardent
+  // leur propre vérification. Le SDK avertit à juste titre, mais le warning est
+  // masqué ici pour ne pas polluer les logs à chaque requête.
   const _w = console.warn;
   console.warn = (...a: unknown[]) => {
     if (isSupabaseGetSessionWarning(a)) return;
