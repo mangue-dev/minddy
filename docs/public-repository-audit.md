@@ -111,7 +111,10 @@ l'exécuter depuis une installation propre et archiver son résultat avec le tag
 
 `scripts/check-public-repo.mjs` contrôle l'index, les chemins interdits et les
 motifs de secrets. Hors mode `--staged`, il inspecte aussi chaque blob atteignable
-depuis `--all` (branches, tags et remotes suivies), afin qu'un secret supprimé de
-HEAD reste bloquant tant que l'historique publiable n'est pas nettoyé. Le mode
+depuis les branches, tags et refs `origin/*`, afin qu'un secret supprimé de HEAD
+reste bloquant tant que l'historique publiable n'est pas nettoyé. Les checkpoints
+locaux sous `refs/codex/*` ne sont pas inclus : ils ne font pas partie d'un push
+standard et ne doivent jamais être exportés avec `git push --mirror` ou une copie
+du dossier `.git`. Le mode
 `--staged` reste volontairement limité aux changements candidats : il est adapté
 au hook local ; la CI doit exécuter la commande sans option.

@@ -93,13 +93,15 @@ function scanText(path, text, failures, prefix = "") {
 }
 
 /**
- * Analyse chaque blob atteignable depuis une ref (branches, tags et remotes
- * suivies). Cela détecte un secret retiré de HEAD mais encore présent dans un
- * commit qui serait rendu public. Les objets inaccessibles ne sont pas poussés
- * par Git : la procédure de purge est documentée dans l'audit de publication.
+ * Analyse chaque blob atteignable depuis une ref publiable (branches, tags et
+ * refs `origin/*`). Cela détecte un secret retiré de HEAD mais encore présent
+ * dans un commit qui serait rendu public. Les refs privées de l'outillage local
+ * (par exemple `refs/codex/*`) ne font pas partie d'un push standard et ne
+ * doivent pas faire échouer la publication. Les objets inaccessibles ne sont
+ * pas poussés par Git : la procédure de purge est documentée dans l'audit.
  */
 function scanReachableHistory(failures) {
-  const entries = git(["rev-list", "--objects", "--all"])
+  const entries = git(["rev-list", "--objects", "--branches", "--tags", "--remotes=origin"])
     .split("\n")
     .filter(Boolean)
     .map((line) => {
