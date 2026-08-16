@@ -2,6 +2,7 @@
   "name": "minddy-desktop",
   "version": "0.9.5",
   "private": true,
+  "license": "AGPL-3.0-only",
   "description": "La coquille macOS de minddy — une fenêtre sur www.minddy.app",
   "author": "mangue <hello@minddy.app>",
   "homepage": "https://www.minddy.app",

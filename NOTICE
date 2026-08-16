@@ -1,0 +1,24 @@
+minddy
+Copyright (c) 2026 Clément Guérin
+
+Project source released before the AGPL-3.0-only transition included contributions committed under the MIT License by the following identities:
+
+- Clément Guérin <81526886+mangue-dev@users.noreply.github.com>
+- mangué <81526886+mangue-dev@users.noreply.github.com>
+- minddy agent <agent@minddy.app>
+- minddy-app[bot] <304735913+minddy-app[bot]@users.noreply.github.com>
+
+The historical MIT notice is retained for those contributions:
+
+MIT License
+
+Copyright (c) 2026 Clément Guérin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Third-party notices, including the Inter font license, remain alongside the relevant component. See docs/licensing.md for the policy and audit scope.
+

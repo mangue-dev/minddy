@@ -61,4 +61,7 @@ check, lint, typecheck, desktop bundle build, tests, and dependency audit. See
 
 ## License
 
-minddy is released under the [MIT License](LICENSE).
+minddy is released under the [GNU AGPL v3.0 only](LICENSE). If you operate a
+modified version for users over a network, you must offer those users the
+corresponding source code. See the [licensing policy](docs/licensing.md),
+including the limits on use of the minddy name and logos.

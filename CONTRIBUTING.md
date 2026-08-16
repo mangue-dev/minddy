@@ -1,5 +1,20 @@
 # Contribuer à minddy
 
+## Licence et DCO
+
+Les contributions sont distribuées sous **AGPL-3.0-only**. Aucun CLA ni aucune
+cession de copyright n'est demandé. Chaque commit doit toutefois porter le DCO
+suivant, qui atteste que vous avez le droit de soumettre votre contribution sous
+cette licence :
+
+```
+Signed-off-by: Prénom Nom <email@example.com>
+```
+
+Utilisez `git commit -s` pour l'ajouter. La politique complète, y compris les
+notices et la règle applicable aux opérateurs d'instances modifiées, est dans
+[docs/licensing.md](docs/licensing.md).
+
 ## ⚠ Ce dépôt exécute du code dès l'installation
 
 À lire avant de cloner une pull request sur sa machine. Ce n'est pas une
