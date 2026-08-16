@@ -8,9 +8,10 @@ import { stopSandboxByName } from "@/lib/server/agent/sandbox";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Une conversation de l'agent (MIN-46) : la LIRE, la RENOMMER, la SUPPRIMER.
+ * Une conversation de l'agent (MIN-46) : la LIRE, la RENOMMER, l'ÉPINGLER, la
+ * DÉSÉPINGLER, la SUPPRIMER.
  *
- * Les trois demandent la même chose — pouvoir lire ce run, c'est-à-dire être
+ * Ces gestes demandent la même chose — pouvoir lire ce run, c'est-à-dire être
  * membre de son projet ET, sauf run partagé, en être le créateur (MIN-332,
  * `canReadAgentRun`) — et rendent le même 404 quand on ne l'a pas : dire
  * « interdit » apprendrait déjà qu'un run porte cet identifiant.
@@ -95,17 +96,20 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  let payload: { title?: unknown };
+  let payload: { title?: unknown; pinned?: unknown };
   try {
-    payload = (await request.json()) as { title?: unknown };
+    payload = (await request.json()) as { title?: unknown; pinned?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  if (!("title" in (payload ?? {}))) {
-    return NextResponse.json({ error: "Title required" }, { status: 400 });
+  const hasTitle = Object.prototype.hasOwnProperty.call(payload ?? {}, "title");
+  const hasPinned = Object.prototype.hasOwnProperty.call(payload ?? {}, "pinned");
+  if (!hasTitle && !hasPinned) {
+    return NextResponse.json({ error: "Title or pinned required" }, { status: 400 });
   }
-  const raw = typeof payload?.title === "string" ? payload.title.trim() : "";
-  const title = raw.slice(0, MAX_TITLE) || null;
+  if (hasPinned && typeof payload.pinned !== "boolean") {
+    return NextResponse.json({ error: "Pinned must be a boolean" }, { status: 400 });
+  }
 
   const run = await getRun(runId);
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
@@ -114,12 +118,34 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  const { error } = await getServiceClient()
-    .from("agent_conversations")
-    .update({ title })
-    .eq("id", run.conversation_id ?? run.id);
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  const conversationId = run.conversation_id ?? run.id;
+  let title = run.title;
+  if (hasTitle) {
+    const raw = typeof payload.title === "string" ? payload.title.trim() : "";
+    title = raw.slice(0, MAX_TITLE) || null;
+    const { error } = await getServiceClient()
+      .from("agent_conversations")
+      .update({ title })
+      .eq("id", conversationId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  }
+
+  if (hasPinned) {
+    const pins = auth.supabase.from("agent_conversation_pins");
+    const result = payload.pinned
+      ? await pins.upsert(
+          { user_id: auth.user.id, conversation_id: conversationId },
+          { onConflict: "user_id,conversation_id" },
+        )
+      : await pins
+          .delete()
+          .eq("user_id", auth.user.id)
+          .eq("conversation_id", conversationId);
+    if (result.error) {
+      return NextResponse.json({ error: result.error.message }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ run: sanitizeRun({ ...run, title }) });

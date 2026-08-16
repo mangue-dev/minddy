@@ -120,6 +120,8 @@ export interface AgentSessionListItem {
   } | null;
   /** CE run travaille (queued/running) → « Numo travaille ». */
   working: boolean;
+  /** Cette conversation est épinglée par l'utilisateur courant. */
+  pinned: boolean;
   /**
    * Fin d'agent de ce run, ou `null`. Comparé au `last_read_at` de l'utilisateur
    * → bulle bleue « terminé, non lu ».
@@ -148,6 +150,17 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const { data: pinRows, error: pinsError } = await auth.supabase
+    .from("agent_conversation_pins")
+    .select("conversation_id")
+    .eq("user_id", auth.user.id);
+
+  if (pinsError) return NextResponse.json({ error: pinsError.message }, { status: 500 });
+
+  const pinnedConversationIds = new Set(
+    (pinRows ?? []).map((row) => row.conversation_id as string),
+  );
 
   // Un run dont l'issue est à la corbeille (MIN-133) : `issue_id` est renseigné
   // mais la ressource imbriquée revient nulle, la policy `issues_select` l'ayant
@@ -205,14 +218,18 @@ export async function GET(request: NextRequest) {
         }
       : null,
     working: WORKING_STATUSES.includes(r.status),
+    pinned: pinnedConversationIds.has(r.conversation_id),
     lastCompletedAt: r.completed_at,
     awaitingInput: r.status === "completed" && r.awaiting_input,
   }));
 
-  // Ordre STABLE par date de création (la plus récente en haut) : contrairement à
-  // updated_at (bougé par les synchros PR / webhooks), created_at ne change pas →
-  // la liste ne se réordonne pas toute seule.
-  const sessions = items.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  // Les épingles passent devant les conversations ordinaires. À l'intérieur de
+  // chaque groupe, l'ordre reste celui de création : la liste ne se réordonne
+  // pas au gré des synchronisations PR / webhooks.
+  const sessions = items.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    return a.created_at < b.created_at ? 1 : -1;
+  });
   return NextResponse.json({ sessions });
 }
 

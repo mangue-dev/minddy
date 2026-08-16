@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -17,7 +17,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Bot, Pencil, Plus, Trash2 } from "lucide-react";
+import { Bot, Pencil, Pin, PinOff, Plus, Trash2 } from "lucide-react";
 import {
   IssueContextMenu,
   type ContextMenuAction,
@@ -55,6 +55,7 @@ import {
   deleteAgentRunApi,
   isAgentSessionUnread,
   renameAgentRunApi,
+  setAgentConversationPinnedApi,
   type AgentRunSummary,
   type AgentSessionListItem,
 } from "@/lib/agent-api";
@@ -94,12 +95,15 @@ function sessionKey(s: AgentSessionListItem): string {
   return s.conversationId;
 }
 
+const PINNED_GROUP_KEY = "__pinned__";
+
 type SessionGroup = ProjectGroup<AgentSessionListItem>;
 
 /**
  * Une conversation dans la liste : SON TITRE, sur une ligne, et rien d'autre —
- * au plus un point ou un spinner en bout de ligne, pour ce qui ne peut pas
- * attendre le survol (l'agent travaille, il a fini, il attend une réponse).
+ * au plus une épingle, un point ou un spinner en bout de ligne, pour ce qui ne
+ * peut pas attendre le survol (l'agent travaille, il a fini, il attend une
+ * réponse).
  *
  * Tout le reste — de quoi la conversation parle (ticket, sujet libre, relecture
  * de PR), son état exact, sa date, son projet — vit dans le TOOLTIP. Une colonne
@@ -114,6 +118,7 @@ function SessionRow({
   dateLabel,
   onSelect,
   onRename,
+  onTogglePinned,
   onDelete,
 }: {
   session: AgentSessionListItem;
@@ -124,6 +129,7 @@ function SessionRow({
   dateLabel: string;
   onSelect: () => void;
   onRename: () => void;
+  onTogglePinned: () => void;
   onDelete: () => void;
 }) {
   const t = useTranslations("Agents");
@@ -144,8 +150,8 @@ function SessionRow({
       : t("freeBadge");
 
   /**
-   * Les deux seules choses qu'on fasse à une conversation sans l'ouvrir : la
-   * renommer et la supprimer. Écrites une fois, comme partout ailleurs dans
+   * Les choses qu'on fasse à une conversation sans l'ouvrir : la renommer,
+   * l'épingler et la supprimer. Écrites une fois, comme partout ailleurs dans
    * l'app — c'est le sens de `ContextMenuAction[]` plutôt que des
    * `<DropdownMenuItem>` recopiés.
    */
@@ -155,6 +161,12 @@ function SessionRow({
       label: t("renameSession"),
       icon: <Pencil className="size-4" />,
       onSelect: onRename,
+    },
+    {
+      id: "pin",
+      label: session.pinned ? t("unpinSession") : t("pinSession"),
+      icon: session.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />,
+      onSelect: onTogglePinned,
     },
     {
       id: "delete",
@@ -189,6 +201,12 @@ function SessionRow({
           )}
         >
           <span className="min-w-0 flex-1 truncate text-sm">{title}</span>
+          {session.pinned ? (
+            <Pin
+              className="size-3 shrink-0 text-muted-foreground"
+              aria-label={t("unpinSession")}
+            />
+          ) : null}
           {session.working ? (
             <Spinner className="size-3 shrink-0 text-muted-foreground" />
           ) : unread ? (
@@ -258,6 +276,9 @@ function SessionGroupRows({
   onNewSession,
   onRename,
   onDelete,
+  onTogglePinned,
+  fallbackLabel,
+  headerIcon,
 }: {
   group: SessionGroup;
   open: boolean;
@@ -279,7 +300,10 @@ function SessionGroupRows({
   onNewSession: () => void;
   /** Clic droit sur une ligne : renommer / supprimer cette conversation. */
   onRename: (session: AgentSessionListItem) => void;
+  onTogglePinned: (session: AgentSessionListItem) => void;
   onDelete: (session: AgentSessionListItem) => void;
+  fallbackLabel?: string;
+  headerIcon?: ReactNode;
 }) {
   const t = useTranslations("Agents");
   // « Afficher plus » et « Sans projet » sont ceux de l'accordéon, partagés avec
@@ -301,7 +325,8 @@ function SessionGroupRows({
   return (
     <SidebarProjectGroup
       project={group.project}
-      fallbackLabel={tCommon("noProjectGroup")}
+      fallbackLabel={fallbackLabel ?? tCommon("noProjectGroup")}
+      headerIcon={headerIcon}
       open={open}
       collapsible={collapsible}
       onToggle={onToggle}
@@ -360,6 +385,7 @@ function SessionGroupRows({
             dateLabel={fmtDay(s.updated_at)}
             onSelect={() => onSelect(key)}
             onRename={() => onRename(s)}
+            onTogglePinned={() => onTogglePinned(s)}
             onDelete={() => onDelete(s)}
           />
         );
@@ -686,6 +712,7 @@ export function AgentsPage() {
           orb_seed: draftProject?.orb_seed ?? null,
         },
         working: false,
+        pinned: false,
         lastCompletedAt: null,
         awaitingInput: false,
       }
@@ -916,6 +943,16 @@ export function AgentsPage() {
     await refetch();
   };
 
+  /** Épingle une conversation pour ce compte, puis la replace en tête de liste. */
+  const togglePinnedSession = async (session: AgentSessionListItem) => {
+    try {
+      await setAgentConversationPinnedApi(session.runId, !session.pinned);
+      await refetch();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
   /**
    * Supprimer, pour de bon : `agent_run_events` et `agent_run_messages` partent en
    * cascade, et le serveur coupe d'abord la microVM. Si c'est la conversation
@@ -963,8 +1000,12 @@ export function AgentsPage() {
   }, [sessions, query]);
 
   const listCount = visibleSessions.length;
+  const pinnedSessions = useMemo(
+    () => visibleSessions.filter((session) => session.pinned),
+    [visibleSessions],
+  );
   const groups = useMemo(
-    () => groupByProject(visibleSessions, (s) => s.project),
+    () => groupByProject(visibleSessions.filter((session) => !session.pinned), (s) => s.project),
     [visibleSessions],
   );
   // Un filtre en cours DÉPLIE tout et lève la coupe des cinq : chercher, c'est
@@ -1073,6 +1114,29 @@ export function AgentsPage() {
             {/* Un projet, ses conversations. Aucune entrée synthétique : un
                 brouillon n'est pas une conversation — la colonne ne montre que ce
                 qui existe, c'est-à-dire à partir du premier message envoyé. */}
+            {pinnedSessions.length > 0 ? (
+              <SessionGroupRows
+                group={{ key: PINNED_GROUP_KEY, project: null, items: pinnedSessions }}
+                open={filtering || !collapsedGroups.has(PINNED_GROUP_KEY)}
+                showAll={filtering || expandedGroups.has(PINNED_GROUP_KEY)}
+                collapsible={!filtering}
+                canLaunch={false}
+                selectedKey={selectedKey}
+                reads={reads}
+                fmtDay={fmtDay}
+                onToggle={() => toggleGroup(PINNED_GROUP_KEY)}
+                onShowAll={() =>
+                  setExpandedGroups((prev) => toggledSet(prev, PINNED_GROUP_KEY))
+                }
+                onSelect={selectReal}
+                onNewSession={() => startNewSession()}
+                onRename={setRenameTarget}
+                onTogglePinned={(session) => void togglePinnedSession(session)}
+                onDelete={setDeleteTarget}
+                fallbackLabel={t("pinnedSessions")}
+                headerIcon={<Pin className="size-4 shrink-0 text-muted-foreground" />}
+              />
+            ) : null}
             {groups.map((g) => (
               <SessionGroupRows
                 key={g.key}
@@ -1089,6 +1153,7 @@ export function AgentsPage() {
                 onSelect={selectReal}
                 onNewSession={() => startNewSession(g.project?.id)}
                 onRename={setRenameTarget}
+                onTogglePinned={(session) => void togglePinnedSession(session)}
                 onDelete={setDeleteTarget}
               />
             ))}

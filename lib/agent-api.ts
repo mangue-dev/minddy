@@ -375,6 +375,20 @@ export async function renameAgentRunApi(
   );
 }
 
+/** Épingle ou désépingle la conversation pour l'utilisateur courant. */
+export async function setAgentConversationPinnedApi(
+  runId: string,
+  pinned: boolean,
+): Promise<void> {
+  await parseJson(
+    await fetch(`/api/agent-runs/${runId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pinned }),
+    }),
+  );
+}
+
 /**
  * SUPPRIME une conversation, quel que soit son état. Le serveur coupe d'abord la
  * microVM et révoque la clé du run : sans ça, une conversation supprimée en plein
@@ -1215,6 +1229,8 @@ export interface AgentSessionListItem {
   } | null;
   /** CE run TRAVAILLE (queued/running) → spinner « Numo travaille ». */
   working: boolean;
+  /** Cette conversation est épinglée par l'utilisateur courant. */
+  pinned: boolean;
   /**
    * Fin d'agent de ce run, ou `null` s'il n'a jamais terminé. Comparé au
    * `last_read_at` de l'utilisateur → bulle bleue « terminé, non lu ».

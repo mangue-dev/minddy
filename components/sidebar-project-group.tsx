@@ -81,6 +81,7 @@ export function toggledSet(set: ReadonlySet<string>, key: string): Set<string> {
 export function SidebarProjectGroup({
   project,
   fallbackLabel,
+  headerIcon,
   open,
   collapsible,
   onToggle,
@@ -94,6 +95,8 @@ export function SidebarProjectGroup({
   project: GroupProject | null;
   /** Nom de repli quand le projet n'est pas joint (`NO_PROJECT_KEY`). */
   fallbackLabel: string;
+  /** Icône d'un groupe spécial qui n'est pas rattaché à un projet. */
+  headerIcon?: ReactNode;
   open: boolean;
   /**
    * Faux pendant un filtre : la liste est alors dépliée de force, et un en-tête
@@ -119,7 +122,7 @@ export function SidebarProjectGroup({
 }) {
   const header = (
     <>
-      {project ? (
+      {headerIcon ?? (project ? (
         <ProjectOrb
           seed={projectOrbSeed(project)}
           iconUrl={project.icon_url}
@@ -127,7 +130,7 @@ export function SidebarProjectGroup({
         />
       ) : (
         <Folder className="size-4 shrink-0 text-muted-foreground" />
-      )}
+      ))}
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
         {project?.name ?? fallbackLabel}
       </span>
@@ -185,7 +188,7 @@ export function SidebarProjectGroup({
         // un fond au survol et à la sélection, et collées les unes aux autres
         // elles se lisent comme un bloc unique — c'est le fond de la ligne
         // survolée qui touche celui de sa voisine.
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 pt-1">
           {children}
           {hiddenCount > 0 ? (
             <button
