@@ -63,6 +63,8 @@ const {
 const USER = "5ad9b962-93e7-4a7c-a44b-f4925484ba93";
 
 beforeEach(() => {
+  process.env.MINDDY_MANAGED_AI = "1";
+  process.env.OPENROUTER_API_KEY = "platform-key";
   keyRow = {
     provider: "openrouter",
     key_encrypted: "chiffré",
@@ -188,6 +190,18 @@ describe("checkAgentQuota — BYOK ne paye pas la microVM", () => {
     usage.usedUsd = 9_999;
     const quota = await checkAgentQuota(USER);
     expect(quota).toMatchObject({ allowed: true, unlimited: true, mode: "byok" });
+  });
+
+  it("ne lit ni plan ni ledger minddy pour le BYOK auto-hébergé", async () => {
+    process.env.MINDDY_MANAGED_AI = "";
+    usage.byFeature = { sandbox_compute: 99 };
+    usage.usedUsd = 999;
+
+    await expect(checkAgentQuota(USER)).resolves.toMatchObject({
+      allowed: true,
+      unlimited: true,
+      mode: "byok",
+    });
   });
 
   it("refuse quand les minutes de microVM ont mangé le budget du plan", async () => {

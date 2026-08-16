@@ -65,6 +65,7 @@ vi.mock("@/lib/server/billing-accounts", () => ({
   },
 }));
 vi.mock("@/lib/server/stripe", () => ({
+  isStripeConfigured: () => true,
   verifyStripeWebhookSignature: () => event,
   getStripeWebhookSecret: () => "whsec_test",
   coerceStripePlanId: (id: string) => id,

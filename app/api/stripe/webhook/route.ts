@@ -9,6 +9,7 @@ import {
   coerceStripePlanId,
   fetchStripeSubscription,
   getStripeWebhookSecret,
+  isStripeConfigured,
   stripeUnixToIso,
   verifyStripeWebhookSignature,
   type StripeCheckoutSession,
@@ -176,6 +177,13 @@ function billingEventName(
 }
 
 export async function POST(request: NextRequest) {
+  // Une instance auto-hébergée n'a pas de webhook Stripe à traiter. Répondre
+  // sans lire le corps évite de créer une ligne de ledger ou un effet secondaire
+  // facturable lorsqu'un endpoint est simplement exposé par Next.
+  if (!isStripeConfigured()) {
+    return Response.json({ error: "Managed billing is not configured" }, { status: 503 });
+  }
+
   let event: StripeEvent;
   try {
     const payload = await request.text();

@@ -66,6 +66,7 @@ export type LaunchError =
   | "unsupportedProvider"
   | "alreadyRunning"
   | "quotaExceeded"
+  | "managedServiceUnavailable"
   | "noModelForProvider"
   | "localEndpointRequiresLocalRun"
   | "modelAbovePlan"
@@ -314,7 +315,13 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   }
 
   const quota = await quotaPromise;
-  if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
+  if (!quota.allowed) {
+    return {
+      ok: false,
+      error: quota.reason === "managed_ai_unavailable" ? "managedServiceUnavailable" : "quotaExceeded",
+      quota,
+    };
+  }
   const localExec = localExecRequested(input);
   const byok = await byokPromise;
   // Ne jamais créer un run cloud qui finirait par choisir OpenRouter : le
@@ -588,7 +595,13 @@ async function launchPrReviewRun(
   if (active) return { ok: false, error: "alreadyRunning", run: active };
 
   const quota = await checkAgentQuota(input.userId);
-  if (!quota.allowed) return { ok: false, error: "quotaExceeded", quota };
+  if (!quota.allowed) {
+    return {
+      ok: false,
+      error: quota.reason === "managed_ai_unavailable" ? "managedServiceUnavailable" : "quotaExceeded",
+      quota,
+    };
+  }
 
   const resolvedReview = await resolvePrReviewModel({
     perCall: input.model,

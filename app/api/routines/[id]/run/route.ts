@@ -33,6 +33,7 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   unsupportedProvider: 409,
   alreadyRunning: 409,
   quotaExceeded: 402,
+  managedServiceUnavailable: 503,
   noModelForProvider: 400,
   localEndpointRequiresLocalRun: 409,
   modelAbovePlan: 403,

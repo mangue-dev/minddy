@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getResolvedBilling, type ResolvedBilling } from "@/lib/server/billing-accounts";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
 import { hasUsageBudget } from "@/lib/server/usage";
+import { isManagedBillingEnabled } from "@/lib/managed-services";
 
 /**
  * Entitlements (MIN-72) — les gardes de plan appelées par les routes de
@@ -55,6 +56,7 @@ export async function countAccessibleProjects(userId: string): Promise<number> {
 
 /** Garde de création de projet : throw 403 `project_limit_reached` si plein. */
 export async function ensureProjectLimit(ownerId: string): Promise<void> {
+  if (!isManagedBillingEnabled()) return;
   const { plan } = await getResolvedBilling(ownerId);
   if (plan.maxProjects == null) return;
   const accessible = await countAccessibleProjects(ownerId);
@@ -71,6 +73,7 @@ export async function ensureProjectLimit(ownerId: string): Promise<void> {
  * (UI, API v1, MCP, Numo, import CSV, dictée).
  */
 export async function ensureIssueLimit(projectId: string): Promise<void> {
+  if (!isManagedBillingEnabled()) return;
   const service = getServiceClient();
   const { data: project, error } = await service
     .from("projects")
@@ -112,6 +115,7 @@ export async function ensureMemberSlotAvailable(
   ownerId: string,
   projectId: string
 ): Promise<void> {
+  if (!isManagedBillingEnabled()) return;
   const { plan } = await getResolvedBilling(ownerId);
   if (plan.maxMembersPerProject == null) return;
 
@@ -146,6 +150,7 @@ export async function ensureMemberSlotAvailable(
 
 /** Garde de lancement d'agent : le plan doit inclure les agents (Go/Pro). */
 export async function ensureAgentsAllowed(userId: string): Promise<void> {
+  if (!isManagedBillingEnabled()) return;
   const { plan } = await getResolvedBilling(userId);
   if (!plan.allowAgents) {
     throw new PlanLimitError("agents_not_in_plan");
@@ -175,6 +180,7 @@ export async function canUseSmartAssign(ownerId: string): Promise<boolean> {
  * chaînes sans migration de données.
  */
 export async function canUseAutomations(ownerId: string): Promise<boolean> {
+  if (!isManagedBillingEnabled()) return true;
   const { plan } = await getResolvedBilling(ownerId);
   return plan.allowAgents && (await hasUsageBudget(ownerId));
 }

@@ -29,6 +29,7 @@ import {
   type AiSurface,
   type ByokFeatureModels,
 } from "@/lib/ai-surfaces";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
  * Résolution du modèle et de l'endpoint de l'agent de code (MIN-46).
@@ -523,6 +524,13 @@ export async function supportsImageInput(
 
 export type AgentKeyMode = "platform" | "byok";
 
+export class ManagedAgentServiceUnavailableError extends Error {
+  constructor() {
+    super("Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.");
+    this.name = "ManagedAgentServiceUnavailableError";
+  }
+}
+
 export interface ResolvedAgentEndpoint {
   apiKey: string;
   mode: AgentKeyMode;
@@ -548,8 +556,9 @@ export async function resolveAgentApiKey(
     return { apiKey: byok.apiKey, mode: "byok", provider: byok.provider, baseUrl: byok.baseUrl };
   }
   if (options.requireByok) throw new ByokCredentialUnavailableError();
+  if (!isManagedAiEnabled()) throw new ManagedAgentServiceUnavailableError();
   const platform = process.env.OPENROUTER_API_KEY;
-  if (!platform) throw new Error("OPENROUTER_API_KEY not configured");
+  if (!platform) throw new ManagedAgentServiceUnavailableError();
   const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
   return { apiKey: platform, mode: "platform", provider: DEFAULT_AGENT_PROVIDER, baseUrl: baseUrl! };
 }

@@ -55,6 +55,8 @@ function launchErrorCode(error: string): RoutineErrorCode {
   switch (error) {
     case "quotaExceeded":
       return "quota";
+    case "managedServiceUnavailable":
+      return "managedServiceUnavailable";
     case "noRepo":
     case "unsupportedProvider":
       return "noRepo";

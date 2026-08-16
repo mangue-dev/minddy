@@ -121,6 +121,13 @@ const PROJECT = "22222222-2222-4222-8222-222222222222";
 const TRASHED = "2026-07-01T00:00:00.000Z";
 
 beforeEach(() => {
+  process.env.MINDDY_MANAGED_BILLING = "1";
+  process.env.STRIPE_SECRET_KEY = "sk_test";
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
+  process.env.STRIPE_PRICE_ID_GO = "price_go";
+  process.env.STRIPE_PRICE_ID_PRO = "price_pro";
+  process.env.STRIPE_PRICE_ID_GO_YEARLY = "price_go_year";
+  process.env.STRIPE_PRICE_ID_PRO_YEARLY = "price_pro_year";
   projectRows = [];
   issueRows = [];
   memberRows = [];
@@ -130,6 +137,16 @@ beforeEach(() => {
 });
 
 describe("limite de projets", () => {
+  it("ne vend aucune limite structurelle à une instance auto-hébergée", async () => {
+    process.env.MINDDY_MANAGED_BILLING = "";
+    projectRows = [
+      { id: "p1", owner_id: OWNER, deleted_at: null },
+      { id: "p2", owner_id: OWNER, deleted_at: null },
+    ];
+
+    await expect(ensureProjectLimit(OWNER)).resolves.toBeUndefined();
+  });
+
   it("ne compte pas un projet mis à la corbeille", async () => {
     projectRows = [
       { id: "p1", owner_id: OWNER, deleted_at: null },

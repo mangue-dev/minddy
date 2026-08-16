@@ -123,6 +123,11 @@ export function PlanSection() {
     []
   );
 
+  // L'édition auto-hébergée n'a aucun produit Stripe à proposer. Ne pas rendre
+  // des cartes désactivées : elles feraient croire à un achat requis pour le
+  // cœur alors que seules les capacités cloud sont optionnelles.
+  if (!loading && !status?.managedBilling) return null;
+
   return (
     <div className="space-y-5">
       {/* Bascule mensuel / annuel — l'annuel offre 2 mois. */}

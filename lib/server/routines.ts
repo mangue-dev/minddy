@@ -83,6 +83,7 @@ export type RoutineErrorCode =
   | "noRepo"
   | "alreadyRunning"
   | "modelAbovePlan"
+  | "managedServiceUnavailable"
   | "launchFailed";
 
 export type RoutineErrorKey =

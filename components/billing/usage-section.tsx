@@ -14,6 +14,8 @@ export function UsageSection() {
   const t = useTranslations("Billing");
   const { usage } = useBillingSummary();
 
+  if (usage && !usage.managedAi) return null;
+
   return (
     <div className="rounded-xl border border-border bg-card">
       <UsageBreakdownBody bordered />

@@ -23,6 +23,7 @@ describe("resolveAiRuntime", () => {
     config.clear();
     getUserByok.mockReset();
     process.env.OPENROUTER_API_KEY = "platform-key";
+    process.env.MINDDY_MANAGED_AI = "1";
     config.set("assistant_model", "platform/chat");
   });
 
@@ -37,6 +38,15 @@ describe("resolveAiRuntime", () => {
       model: "platform/chat",
     });
     expect(getUserByok).toHaveBeenCalledWith("u1", "assistant");
+  });
+
+  it("ne prend jamais la clé plateforme sans opt-in de service managé", async () => {
+    process.env.MINDDY_MANAGED_AI = "";
+    getUserByok.mockResolvedValue(null);
+
+    await expect(
+      resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }),
+    ).rejects.toMatchObject({ name: "ManagedAiUnavailableError" });
   });
 
   it("fait hériter OpenRouter BYOK du modèle plateforme du même appel", async () => {

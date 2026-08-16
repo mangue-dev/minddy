@@ -36,7 +36,7 @@ const PAGE_SIZE = 25;
 export function UsageHistorySection() {
   const t = useTranslations("Billing");
   const locale = useLocale();
-  const { includedUsd } = useBillingSummary();
+  const { includedUsd, usage } = useBillingSummary();
 
   const [open, setOpen] = useState(false);
   const [segment, setSegment] = useState<UsageSegmentId | "all">("all");
@@ -79,6 +79,8 @@ export function UsageHistorySection() {
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  if (usage && !usage.managedAi) return null;
 
   return (
     <Collapsible

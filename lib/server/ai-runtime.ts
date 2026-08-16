@@ -25,8 +25,17 @@ import {
   type AiChatRequest,
 } from "@/lib/ai-chat";
 import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 
 export type AiKeyMode = "platform" | "byok";
+
+/** Aucun repli plateforme hors service IA explicitement opéré par minddy. */
+export class ManagedAiUnavailableError extends Error {
+  constructor() {
+    super("Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.");
+    this.name = "ManagedAiUnavailableError";
+  }
+}
 
 /** Tout ce qu'un appel IA doit savoir, résolu en un seul endroit. */
 export interface ResolvedAiRuntime {
@@ -117,8 +126,9 @@ export async function resolveAiRuntime(params: {
     }
   }
 
+  if (!isManagedAiEnabled()) throw new ManagedAiUnavailableError();
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY not configured");
+  if (!apiKey) throw new ManagedAiUnavailableError();
   const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
   if (!baseUrl) throw new Error("OpenRouter base URL not configured");
   return {

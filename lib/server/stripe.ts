@@ -1,6 +1,7 @@
 import "server-only";
 
 import crypto from "node:crypto";
+import { isManagedBillingEnabled } from "@/lib/managed-services";
 import {
   coerceBillingPlanId,
   type BillingInterval,
@@ -96,7 +97,7 @@ function getStripeSecretKey(): string {
 }
 
 export function isStripeConfigured(): boolean {
-  return !!process.env.STRIPE_SECRET_KEY;
+  return isManagedBillingEnabled();
 }
 
 export function getStripeWebhookSecret(): string {

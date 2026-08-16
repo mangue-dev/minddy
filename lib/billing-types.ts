@@ -13,6 +13,10 @@ import type { UsageHistoryFeature } from "@/lib/usage-features";
 export interface BillingStatusResponse {
   planId: BillingPlanId;
   source: "admin_override" | "stripe" | "default";
+  /** Service Stripe réellement opéré par cette instance. */
+  managedBilling: boolean;
+  /** Quota IA réellement opéré par cette instance. */
+  managedAi: boolean;
   stripeConfigured: boolean;
   subscription: {
     status: string | null;
@@ -45,6 +49,8 @@ export interface UsageHistoryResponse {
 
 export interface UsageSummaryResponse {
   planId: BillingPlanId;
+  managedBilling: boolean;
+  managedAi: boolean;
   /** Budget d'usage mensuel inclus (USD, coût brut). */
   includedUsd: number;
   usedUsd: number;

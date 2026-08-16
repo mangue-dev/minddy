@@ -84,8 +84,10 @@ const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> 
 
 export function UsageIndicator() {
   const t = useTranslations("Billing");
-  const { loading, remainingPercent, state } = useBillingSummary();
+  const { loading, remainingPercent, state, usage } = useBillingSummary();
   const [open, setOpen] = useState(false);
+
+  if (!loading && !usage?.managedAi) return null;
 
   const stateClass =
     state === "exhausted" || state === "low"

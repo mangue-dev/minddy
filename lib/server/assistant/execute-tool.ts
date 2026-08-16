@@ -270,6 +270,8 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
       return "An agent run is already in progress on this issue.";
     case "quotaExceeded":
       return "Monthly code-agent usage limit reached. Add your own OpenRouter key (BYOK) in Account settings for unlimited usage.";
+    case "managedServiceUnavailable":
+      return "Managed AI is disabled on this instance. Configure BYOK or a local endpoint before launching the code agent.";
     case "noModelForProvider":
       return "The active provider has no default model, so a model must be chosen. Call list_agent_models to find an available model id for this provider, then relaunch with that model (or the user can set a default in Account settings).";
     case "modelAbovePlan":

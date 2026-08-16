@@ -1520,6 +1520,7 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   unsupportedProvider: 409,
   alreadyRunning: 409,
   quotaExceeded: 402,
+  managedServiceUnavailable: 503,
   modelAbovePlan: 403,
 };
 
@@ -2102,6 +2103,7 @@ const PR_LAUNCH_ERROR_STATUS: Record<string, number> = {
   unsupportedProvider: 409,
   alreadyRunning: 409,
   quotaExceeded: 402,
+  managedServiceUnavailable: 503,
   noModelForProvider: 400,
   modelAbovePlan: 403,
 };

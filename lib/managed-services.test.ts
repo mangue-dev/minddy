@@ -1,0 +1,34 @@
+import { describe, expect, it } from "vitest";
+import { resolveManagedServices } from "./managed-services";
+
+const stripe = {
+  STRIPE_SECRET_KEY: "sk_test",
+  STRIPE_WEBHOOK_SECRET: "whsec_test",
+  STRIPE_PRICE_ID_GO: "price_go",
+  STRIPE_PRICE_ID_PRO: "price_pro",
+  STRIPE_PRICE_ID_GO_YEARLY: "price_go_year",
+  STRIPE_PRICE_ID_PRO_YEARLY: "price_pro_year",
+};
+
+describe("resolveManagedServices", () => {
+  it("keeps an instance self-hosted by default, even when secrets are present", () => {
+    expect(resolveManagedServices({ ...stripe, OPENROUTER_API_KEY: "or-key" })).toEqual({
+      billing: false,
+      ai: false,
+    });
+  });
+
+  it("requires an explicit opt-in and a complete provider configuration", () => {
+    expect(
+      resolveManagedServices({
+        MINDDY_MANAGED_BILLING: "1",
+        MINDDY_MANAGED_AI: "1",
+        ...stripe,
+        OPENROUTER_API_KEY: "or-key",
+      }),
+    ).toEqual({ billing: true, ai: true });
+    expect(
+      resolveManagedServices({ MINDDY_MANAGED_BILLING: "1", MINDDY_MANAGED_AI: "1" }),
+    ).toEqual({ billing: false, ai: false });
+  });
+});

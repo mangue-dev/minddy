@@ -8,6 +8,7 @@ import { toast } from "mangue-ui";
 import { UsageSection } from "@/components/billing/usage-section";
 import { PlanSection } from "@/components/billing/plan-section";
 import { UsageHistorySection } from "@/components/billing/usage-history-section";
+import { useBillingSummary } from "@/lib/use-billing-query";
 import {
   billingStatusQueryKey,
   billingUsageQueryKey,
@@ -20,6 +21,22 @@ import {
  */
 export default function BillingPage() {
   const t = useTranslations("Billing");
+  const { loading, status, usage } = useBillingSummary();
+  const hasManagedService = status?.managedBilling || usage?.managedAi;
+
+  if (!loading && !hasManagedService) {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-6 py-10">
+        <header className="mb-8">
+          <h1 className="text-xl font-semibold tracking-tight">{t("pageTitle")}</h1>
+        </header>
+        <div className="rounded-xl border border-border bg-card px-5 py-4">
+          <h2 className="text-sm font-semibold">{t("selfHostedTitle")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("selfHostedDescription")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">

@@ -5,6 +5,7 @@ import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { getUserUsage } from "@/lib/server/usage";
 import { userHasByokKey } from "./model";
 import type { AiSurface } from "@/lib/ai-surfaces";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
  * Contrôle d'accès de l'agent de code (MIN-46 / MIN-10, refondu par MIN-72) :
@@ -52,7 +53,7 @@ export interface AgentQuota {
   /** Plan courant, et le suivant s'il en existe un au-dessus (proposition d'upgrade). */
   planId?: BillingPlanId;
   nextPlanId?: BillingPlanId | null;
-  reason?: "agents_not_in_plan" | "usage_budget_exceeded";
+  reason?: "agents_not_in_plan" | "usage_budget_exceeded" | "managed_ai_unavailable";
 }
 
 /** Décide si l'utilisateur peut lancer un run maintenant. */
@@ -60,6 +61,16 @@ export async function checkAgentQuota(
   userId: string,
   surface: Extract<AiSurface, "agent" | "automations"> = "agent",
 ): Promise<AgentQuota> {
+  const hasByok = await userHasByokKey(userId, surface);
+  // En auto-hébergement, les tokens et l'endpoint appartiennent à l'opérateur.
+  // Une clé BYOK (ou un endpoint local) est donc autorisée sans lire de plan ni
+  // de ledger minddy ; sans elle, on refuse avant tout appel plateforme.
+  if (!isManagedAiEnabled()) {
+    return hasByok
+      ? { allowed: true, unlimited: true, mode: "byok" }
+      : { allowed: false, unlimited: false, mode: "platform", reason: "managed_ai_unavailable" };
+  }
+
   const { plan } = await getResolvedBilling(userId);
   if (!plan.allowAgents) {
     return {
@@ -72,7 +83,7 @@ export async function checkAgentQuota(
     };
   }
 
-  if (await userHasByokKey(userId, surface)) {
+  if (hasByok) {
     const usage = await getUserUsage(userId);
     const cap = plan.includedUsageUsd;
     // Les DEUX features de microVM : un run d'agent et un passage de routine

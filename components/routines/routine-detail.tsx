@@ -855,6 +855,8 @@ function routineErrorLabel(
       return t("lastError_alreadyRunning" as "lastError_quota");
     case "modelAbovePlan":
       return t("lastError_modelAbovePlan" as "lastError_quota");
+    case "managedServiceUnavailable":
+      return t("lastError_managedServiceUnavailable" as "lastError_quota");
     default:
       return t("lastError_launchFailed" as "lastError_quota");
   }

@@ -21,6 +21,7 @@ import {
 } from "@/lib/server/ai-usage";
 import type { AiSurface } from "@/lib/ai-surfaces";
 import { usesByokForSurface } from "@/lib/server/ai-runtime";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
  * Budget d'usage (MIN-72) — le dépensé d'un user sur la fenêtre courante,
@@ -177,6 +178,7 @@ export async function ensureUsageBudget(
   surface?: AiSurface,
 ): Promise<UserUsage> {
   const usage = await getUserUsage(userId);
+  if (!isManagedAiEnabled()) return usage;
   if (surface && (await usesByokForSurface(userId, surface))) return usage;
   const included = usage.billing.plan.includedUsageUsd;
   if (usage.usedUsd >= included) {
@@ -191,6 +193,7 @@ export async function ensureUsageBudget(
 /** Variante booléenne pour les jobs de fond (cron feedback, smart assign). */
 export async function hasUsageBudget(userId: string, surface?: AiSurface): Promise<boolean> {
   try {
+    if (!isManagedAiEnabled()) return true;
     if (surface && (await usesByokForSurface(userId, surface))) return true;
     const usage = await getUserUsage(userId);
     return usage.usedUsd < usage.billing.plan.includedUsageUsd;
