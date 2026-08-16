@@ -6,10 +6,10 @@ ne vaut ni avis juridique ni révocation effective d'un secret.
 
 ## Résultat
 
-**La publication est bloquée.** Le contrôle automatisé parcourt les 21 562
-objets atteignables par les refs et signale des artefacts internes dans des
-commits historiques. Le contenu doit être réécrit, puis les branches et tags
-publiables doivent être vérifiés à nouveau avant tout push vers un dépôt public.
+**Réécriture locale effectuée, publication non encore poussée.** Le contrôle
+automatisé doit être relancé après suppression des refs de sauvegarde locales et
+purge des objets ; les branches et tags réécrits seront alors les seules refs à
+vérifier avant tout push vers un dépôt public.
 
 Le scan n'a pas identifié de clé privée ni de jeton actif correspondant aux
 motifs GitHub, OpenAI, Anthropic, Slack, AWS ou Google dans l'arbre courant. Les
@@ -36,9 +36,12 @@ Les chemins ci-dessous sont encore atteignables depuis les refs et font échouer
   compte par défaut.
 
 La suppression de `.claude/launch.json` de l'arbre courant est incluse dans ce
-changement. La présence historique des autres éléments n'est **pas** corrigée
-ici : réécrire des commits partagés nécessite l'accord explicite du mainteneur et
-la coordination des clones/forks.
+changement. Le 16 août 2026, les branches locales, refs `origin/*` suivies et
+tags ont été réécrits avec `git filter-branch` afin de retirer chaque chemin
+listé, ainsi que toutes les versions historiques de `scripts/seed-inbox.mjs`.
+La version actuelle du script, qui exige un UUID passé en argument, est ensuite
+réintroduite. Une sauvegarde miroir pré-réécriture est conservée hors du dépôt
+à publier dans `/private/tmp/minddy-before-public-history-rewrite-20260816.git`.
 
 Les métadonnées Git exposent aussi les identités d'auteur suivantes : Clément
 Guérin (`81526886+mangue-dev@users.noreply.github.com`), mangué (adresse GitHub noreply), `minddy
@@ -66,7 +69,7 @@ produit ; ils sont inclus dans le périmètre de relecture humaine avant export.
    `git reflog expire --expire=now --all` et `git gc --prune=now`. Ces commandes
    sont destructrices : ne les lancer qu'après validation de la sauvegarde.
 
-Les  objets inaccessibles observés localement ne sont pas envoyés par un push
+Les objets inaccessibles observés localement ne sont pas envoyés par un push
 ordinaire, mais ils doivent être purgés avant de transférer un dossier `.git`,
 de créer un bundle ou de remettre une archive de dépôt.
 
