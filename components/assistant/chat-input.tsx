@@ -646,6 +646,74 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       syncMentionSlots();
     }, [refreshMention, refreshSlash, syncMentionSlots]);
 
+    /**
+     * Colle uniquement le texte fourni par le presse-papiers. Les éditeurs de
+     * code (dont VS Code) fournissent souvent aussi une version `text/html`
+     * enrichie de spans et de styles ; laisser le navigateur l'insérer dans le
+     * contentEditable ferait entrer ce DOM dans le composer. Un nœud texte
+     * unique conserve les caractères markdown et les retours à la ligne, sans
+     * importer ce formatage étranger.
+     */
+    const insertPlainText = useCallback(
+      (value: string) => {
+        const el = editorRef.current;
+        if (!el || !value) return;
+
+        const selection = window.getSelection();
+        const range = document.createRange();
+        if (
+          selection &&
+          selection.rangeCount > 0 &&
+          el.contains(selection.getRangeAt(0).commonAncestorContainer)
+        ) {
+          range.setStart(
+            selection.getRangeAt(0).startContainer,
+            selection.getRangeAt(0).startOffset,
+          );
+          range.setEnd(
+            selection.getRangeAt(0).endContainer,
+            selection.getRangeAt(0).endOffset,
+          );
+        } else {
+          range.selectNodeContents(el);
+          range.collapse(false);
+        }
+
+        range.deleteContents();
+        const textNode = document.createTextNode(value.replace(/\r\n?/g, "\n"));
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        setIsEmpty(false);
+        refreshMention();
+        refreshSlash();
+        syncMentionSlots();
+        el.focus();
+      },
+      [refreshMention, refreshSlash, syncMentionSlots],
+    );
+
+    const handlePaste = useCallback(
+      (e: React.ClipboardEvent<HTMLDivElement>) => {
+        if (canAttach && userId && e.clipboardData.files.length > 0) {
+          e.preventDefault();
+          uploads.addFiles(e.clipboardData.files);
+          return;
+        }
+
+        // Never let the browser choose `text/html` for a text paste. The plain
+        // representation is the source of truth for markdown messages.
+        const text = e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
+        e.preventDefault();
+        if (!text) return;
+        insertPlainText(text);
+      },
+      [canAttach, insertPlainText, uploads, userId],
+    );
+
     // Dictated text is additive: appended after the existing content, caret at
     // the end (same behavior as AutoKap's composer).
     const appendDictated = useCallback((text: string) => {
@@ -865,12 +933,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   refreshMention();
               }}
               onClick={refreshMention}
-              onPaste={(e) => {
-                if (canAttach && userId && e.clipboardData.files.length > 0) {
-                  e.preventDefault();
-                  uploads.addFiles(e.clipboardData.files);
-                }
-              }}
+              onPaste={handlePaste}
               onFocus={() => setIsFocused(true)}
               onBlur={() => {
                 setIsFocused(false);

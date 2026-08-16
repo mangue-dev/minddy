@@ -3,6 +3,10 @@
 import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Copy, Check } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import remarkBreaks from "remark-breaks";
+import remarkGfm from "remark-gfm";
 import { IconButton, toast } from "mangue-ui";
 import type {
   AssistantMention,
@@ -118,6 +122,68 @@ function MessageContextChips({ context }: { context: AssistantPageContext }) {
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+type UserMarkdownNode = {
+  type: string;
+  tagName?: string;
+  value?: string;
+  properties?: Record<string, unknown>;
+  children?: UserMarkdownNode[];
+};
+
+/** Add mention markers after sanitizing, without enabling raw HTML. */
+function rehypeUserMentions(mentions: AssistantMention[]) {
+  const sorted = mentions
+    .map((mention, index) => ({ mention, index }))
+    .sort((a, b) => b.mention.label.length - a.mention.label.length);
+
+  const split = (value: string): UserMarkdownNode[] => {
+    const pattern = sorted
+      .map(({ mention }) => escapeRegExp(mention.label))
+      .join("|");
+    if (!pattern) return [{ type: "text", value }];
+
+    const re = new RegExp(`@(${pattern})`, "g");
+    const out: UserMarkdownNode[] = [];
+    let last = 0;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(value)) !== null) {
+      if (match.index > last) {
+        out.push({ type: "text", value: value.slice(last, match.index) });
+      }
+      const found = sorted.find(({ mention }) => mention.label === match?.[1]);
+      if (!found) {
+        out.push({ type: "text", value: match[0] });
+      } else {
+        out.push({
+          type: "element",
+          tagName: "span",
+          properties: { "data-mention-index": String(found.index) },
+          children: [],
+        });
+      }
+      last = match.index + match[0].length;
+    }
+    if (last < value.length) out.push({ type: "text", value: value.slice(last) });
+    return out;
+  };
+
+  const walk = (node: UserMarkdownNode) => {
+    if (!node.children || node.tagName === "code" || node.tagName === "pre") return;
+    const next: UserMarkdownNode[] = [];
+    for (const child of node.children) {
+      if (child.type === "text" && child.value?.includes("@")) {
+        next.push(...split(child.value));
+      } else {
+        walk(child);
+        next.push(child);
+      }
+    }
+    node.children = next;
+  };
+
+  return () => (tree: UserMarkdownNode) => walk(tree);
+}
+
 /** Le texte de la bulle, avec les « @ » rendus en pilules. Les mentions sont
     persistées sur la métadonnée du message (nom + id) : on n'a donc pas à
     deviner à quel membre « @Clément » renvoyait au moment de l'envoi. */
@@ -136,63 +202,56 @@ function UserText({
   // a cité mène à lui, comme dans une description. Le composer, lui, n'a pas de
   // destinations — on y écrit, un clic y pose le curseur (chat-input.tsx).
   const links = useMentionLinks();
-  const parts = useMemo(() => {
-    if (mentions.length === 0) return [content];
-    // Le plus long d'abord : « @Marie Curie » avant « @Marie ».
-    const sorted = [...mentions].sort((a, b) => b.label.length - a.label.length);
-    const re = new RegExp(
-      `@(${sorted.map((m) => escapeRegExp(m.label)).join("|")})`,
-      "g",
-    );
-    const out: Array<string | AssistantMention> = [];
-    let last = 0;
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(content)) !== null) {
-      if (match.index > last) out.push(content.slice(last, match.index));
-      const mention = sorted.find((m) => m.label === match?.[1]);
-      out.push(mention ?? match[0]);
-      last = match.index + match[0].length;
-    }
-    if (last < content.length) out.push(content.slice(last));
-    return out;
-  }, [content, mentions]);
 
   return (
-    <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-      {parts.map((part, i) =>
-        typeof part === "string" ? (
-          part
-        ) : (
-          <MentionChip
-            key={`${part.type}:${part.id}:${i}`}
-            type={part.type}
-            id={part.id}
-            label={part.label}
-            // Un projet cité porte l'orbe qu'il a AUJOURD'HUI : la graine comme
-            // le favicon se relisent dans le contexte projets, jamais dans le
-            // message — relancer le tirage doit repeindre les pilules déjà
-            // écrites, sinon la même mention a deux couleurs selon son âge.
-            avatarSeed={
-              part.type === "project"
-                ? orbSeedOr(
-                    part.id,
-                    projects.find((p) => p.id === part.id)?.orb_seed,
-                  )
-                : part.avatarSeed
-            }
-            iconUrl={
-              part.type === "project"
-                ? projects.find((p) => p.id === part.id)?.icon_url
-                : null
-            }
-            icon={part.icon}
-            color={part.color}
-            href={links?.href(part.type, part.id) ?? null}
-            onNavigate={() => links?.navigate(part.type, part.id)}
-          />
-        ),
-      )}
-    </p>
+    <div className="break-words whitespace-normal [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-background/40 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:bg-background/15 [&_code]:px-1 [&_code]:font-mono [&_h1]:my-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:font-semibold [&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-background/15 [&_pre]:p-2 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [overflow-wrap:anywhere]">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        // No `rehypeRaw`: pasted/source HTML is displayed as text, while the
+        // markdown syntax itself is still parsed into headings, lists and code.
+        rehypePlugins={[
+          [rehypeSanitize, defaultSchema],
+          ...(mentions.length > 0 ? [rehypeUserMentions(mentions)] : []),
+        ]}
+        components={{
+          span: ({ node, children }) => {
+            const index = Number(
+              (node?.properties as Record<string, unknown> | undefined)?.[
+                "data-mention-index"
+              ],
+            );
+            const mention = Number.isInteger(index) ? mentions[index] : undefined;
+            if (!mention) return <span>{children}</span>;
+            return (
+              <MentionChip
+                type={mention.type}
+                id={mention.id}
+                label={mention.label}
+                avatarSeed={
+                  mention.type === "project"
+                    ? orbSeedOr(
+                        mention.id,
+                        projects.find((p) => p.id === mention.id)?.orb_seed,
+                      )
+                    : mention.avatarSeed
+                }
+                iconUrl={
+                  mention.type === "project"
+                    ? projects.find((p) => p.id === mention.id)?.icon_url
+                    : null
+                }
+                icon={mention.icon}
+                color={mention.color}
+                href={links?.href(mention.type, mention.id) ?? null}
+                onNavigate={() => links?.navigate(mention.type, mention.id)}
+              />
+            );
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }
 

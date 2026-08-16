@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import type { Editor } from "@tiptap/core";
+import type { EditorProps } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
 import { cn } from "mangue-ui";
@@ -69,7 +71,7 @@ const PROSE = cn(
 
 /** Les réglages de la vue ProseMirror — figés hors du composant, cf. la règle
     au-dessus de l'appel à `useEditor`. */
-const EDITOR_PROPS = {
+const EDITOR_PROPS: EditorProps = {
   attributes: { class: PROSE },
   // Le clic sur la pilule d'une mention n'appartient pas à l'extension Link :
   // elle attrape tout `<a>` du document et l'ouvre dans un onglet neuf, ce qui
@@ -151,6 +153,27 @@ export function MarkdownEditor({
   // Le texte de départ, figé au montage : tiptap ne lit `content` qu'à la
   // création de l'éditeur (la surface se remonte par `key`, cf. plus haut).
   const initialContentRef = useRef(value);
+  const editorRef = useRef<Editor | null>(null);
+  const editorProps = useMemo<EditorProps>(
+    () => ({
+      ...EDITOR_PROPS,
+      handlePaste: (_view, event) => {
+        const editor = editorRef.current;
+        const text =
+          event.clipboardData?.getData("text/plain") ||
+          event.clipboardData?.getData("text");
+
+        // Do not let ProseMirror consume the rich `text/html` clipboard flavor.
+        // `insertContent` goes through tiptap-markdown's parser, so markdown
+        // headings, lists and fenced code still become real editor nodes.
+        event.preventDefault();
+        if (!editor || !text) return true;
+        editor.commands.insertContent(text);
+        return true;
+      },
+    }),
+    [],
+  );
 
   // ⚠️ tiptap relit ces options à CHAQUE rendu et réapplique d'un
   // `editor.setOptions()` tout ce qui a changé d'identité — depuis son propre
@@ -162,8 +185,11 @@ export function MarkdownEditor({
     immediatelyRender: false,
     extensions,
     content: initialContentRef.current,
-    editorProps: EDITOR_PROPS,
-    onCreate: ({ editor }) => syncEmpty(editor.isEmpty),
+    editorProps,
+    onCreate: ({ editor }) => {
+      editorRef.current = editor;
+      syncEmpty(editor.isEmpty);
+    },
     onUpdate: ({ editor, transaction }) => {
       syncEmpty(editor.isEmpty);
       // Poser les pilules sur un texte déjà écrit n'est pas une frappe : sans

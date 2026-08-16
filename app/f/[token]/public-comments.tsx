@@ -11,6 +11,7 @@ import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { ProjectOrb } from "@/components/project-orb";
 import { orbSeedOr } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
+import { Markdown } from "@/components/markdown";
 import {
   FEEDBACK_COMMENT_BODY_MAX,
   type PublicComment,
@@ -350,9 +351,11 @@ function PublicCommentRow({
           </IconAction>
         )}
       </div>
-      {/* Saisi dans un textarea nu : du texte, pas du markdown. Le rendre en
-          markdown mangerait un `*` ou un `#` écrit à la main. */}
-      <p className="whitespace-pre-wrap text-sm leading-relaxed">{comment.body}</p>
+      {/* Le champ accepte du texte brut, puis le message est rendu en markdown.
+          Le HTML collé reste du texte et ne devient jamais un nœud exécutable. */}
+      <Markdown className="text-sm" allowRawHtml={false}>
+        {comment.body}
+      </Markdown>
       {onReply && (
         <button
           type="button"

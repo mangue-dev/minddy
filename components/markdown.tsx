@@ -91,32 +91,27 @@ function styled<T extends keyof JSX.IntrinsicElements>(tag: T, className: string
 }
 
 /**
- * Chaîne rehype, dans un ORDRE qui est une propriété de sécurité :
- *
- *  1. `rehypeRaw` transforme le HTML BRUT du texte en vrais nœuds. Sans lui,
- *     react-markdown le jette en silence — un `<a href>` ou un `<img>` d'un
- *     commentaire GitHub (le bot Vercel, dependabot, une capture collée) perdait
- *     son lien et son image sans rien laisser voir du manque ;
- *  2. `rehypeSanitize` referme ensuite sur l'allowlist de `hast-util-sanitize`,
- *     qui EST celle de GitHub — d'où l'usage tel quel : ce qui passe ici est
- *     exactement ce que GitHub laisse passer dans un commentaire, `<script>` et
- *     gestionnaires `on*` exclus ;
- *  3. `rehypeMentions` en DERNIER, et jamais avant : c'est lui qui pose les
- *     `data-mention-*` que le renderer échange contre une puce. Sanitizer après
- *     lui les effacerait ; sanitizer avant garantit qu'un `<span
- *     data-mention-type="numo">` écrit à la main dans un commentaire ne se fasse
- *     pas passer pour une vraie mention.
+ * Chaîne rehype, dans un ORDRE qui est une propriété de sécurité. Le chemin
+ * normal ne branche volontairement pas `rehypeRaw` : les balises HTML collées
+ * dans un commentaire restent du texte, et ne deviennent jamais des nœuds.
+ * `allowRawHtml` est une porte explicite pour une surface qui aurait une raison
+ * de confiance distincte. Le sanitizer vient avant les mentions dans les deux
+ * cas, afin qu'un `data-mention-*` écrit à la main ne se fasse pas passer pour
+ * une vraie mention.
  */
-function rehypeChain(scan?: MentionScan): Options["rehypePlugins"] {
-  const chain: NonNullable<Options["rehypePlugins"]> = [
-    rehypeRaw,
-    [rehypeSanitize, defaultSchema],
-  ];
+function rehypeChain(
+  scan: MentionScan | undefined,
+  allowRawHtml: boolean,
+): Options["rehypePlugins"] {
+  const chain: NonNullable<Options["rehypePlugins"]> = allowRawHtml
+    ? [rehypeRaw, [rehypeSanitize, defaultSchema]]
+    : [[rehypeSanitize, defaultSchema]];
   return scan ? [...chain, rehypeMentions(scan)] : chain;
 }
 
-/** Renders markdown (GFM) with minimal, token-aware styling, plus the raw HTML
-    GitHub allows in a comment (sanitized — cf. `rehypeChain`).
+/** Renders markdown (GFM) with minimal, token-aware styling. Raw HTML is kept
+    as text by default; callers that intentionally display trusted forge HTML
+    can opt in with `allowRawHtml`.
     Pass `members` to render "@Name" and "@numo" mentions as chips — the same
     chip as the Numo composer's (components/mention-chip). The array may be
     empty: it says "this surface carries mentions", and "@numo" is citable there
@@ -129,10 +124,13 @@ export function Markdown({
   children,
   className,
   members,
+  allowRawHtml = false,
 }: {
   children: string;
   className?: string;
   members?: Member[];
+  /** Deliberately opt-in: user-authored comments must not execute/render HTML. */
+  allowRawHtml?: boolean;
 }) {
   // null hors d'une vue de PR : les images d'un commentaire de ticket sont déjà
   // servies par minddy, elles n'ont rien à proxifier.
@@ -157,7 +155,7 @@ export function Markdown({
         // plans. Sans lui, un message écrit en trois lignes se rendait en un seul
         // paragraphe : la différence de « rendu de texte » la plus visible.
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={rehypeChain(scan)}
+        rehypePlugins={rehypeChain(scan, allowRawHtml)}
         components={{
           p: styled("p", "my-3"),
           a: ({ node, ...props }) => (
