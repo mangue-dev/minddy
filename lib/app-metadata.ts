@@ -27,6 +27,7 @@ export type MetaPageKey =
   | "inbox"
   | "all"
   | "agents"
+  | "routines"
   | "pullRequests"
   | "statistics"
   | "trash"

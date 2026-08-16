@@ -396,6 +396,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isInbox = pathname.startsWith("/inbox");
+  const isAgents = pathname.startsWith("/agents");
+  const isRoutines = pathname.startsWith("/routines");
 
   // Shares the ["issues", projectId] cache with the board (no extra realtime
   // bridge). Since MIN-91 the palette lists every project's tickets from the
@@ -730,10 +732,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 onSelect: () => router.push("/agents"),
               },
               {
-                // Les ROUTINES (MIN-185) sont un onglet de la vue Agents, pas
-                // une page : sans entrée à elles, chercher « routine » ne
-                // menait nulle part — l'onglet ne se trouvait qu'en sachant
-                // déjà qu'il existe.
+                // Les ROUTINES (MIN-185) ont leur propre page et leur propre
+                // entrée dans la navigation primaire.
                 key: "go-routines",
                 label: tRoutines("title"),
                 icon: CalendarClock,
@@ -747,7 +747,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                   "programmé",
                   "planifié",
                 ],
-                onSelect: () => router.push("/agents?tab=routines"),
+                onSelect: () => router.push("/routines"),
               },
             ]
           : []),
@@ -1234,7 +1234,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     label: t("agents"),
     icon: NumoNavIcon,
     href: "/agents",
-    active: pathname.startsWith("/agents"),
+    active: isAgents && !isRoutines,
     shortcut: "J",
     showBadgeCollapsed: true,
     disabled: !agentsAllowed,
@@ -1255,6 +1255,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       ) : undefined,
   };
+  const routinesItem: AppNavItem = {
+    key: "routines",
+    label: t("routines"),
+    icon: CalendarClock,
+    href: "/routines",
+    active: isRoutines,
+    disabled: !agentsAllowed,
+    tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
+  };
 
   const sections = useMemo<AppNavSection[]>(() => {
     if (currentProject) {
@@ -1265,6 +1274,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             inboxItem,
             pullRequestsItem,
             agentsItem,
+            routinesItem,
+            {
+              key: "all-global",
+              label: t("allIssues"),
+              icon: LayoutGrid,
+              href: "/all",
+              active: pathname === "/all",
+              shortcut: "B",
+            },
             {
               key: "home-back",
               label: t("home"),
@@ -1350,6 +1368,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           inboxItem,
           pullRequestsItem,
           agentsItem,
+          routinesItem,
+          {
+            key: "all-global",
+            label: t("allIssues"),
+            icon: LayoutGrid,
+            href: "/all",
+            active: pathname === "/all",
+            shortcut: "B",
+          },
           {
             key: "home",
             label: t("home"),
@@ -1359,14 +1386,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             shortcut: "H",
             badge: smartAssignBadge,
             showBadgeCollapsed: true,
-          },
-          {
-            key: "all-global",
-            label: t("allIssues"),
-            icon: LayoutGrid,
-            href: "/all",
-            active: pathname === "/all",
-            shortcut: "B",
           },
         ],
       },

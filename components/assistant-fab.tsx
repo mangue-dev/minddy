@@ -48,10 +48,10 @@ export function AssistantFab() {
    * suggestions, et le FAB tombe pile sur son bouton d'envoi (MIN-162).
    *
    * La page Agents était ici aussi, et c'était trop grossier : la route ne dit
-   * pas ce que la page MONTRE. Sous `?tab=routines`, elle affiche une liste sans
-   * aucun composer, et Numo y devenait injoignable à la souris alors que rien ne
-   * le recouvrait. C'est donc la conversation d'agent elle-même qui se déclare
-   * (`useSuppressAssistantFab`), où qu'elle soit montée — onglet Conversations,
+   * pas ce que la page MONTRE. La page routines affiche une liste sans aucun
+   * composer, et Numo y devient injoignable à la souris alors que rien ne le
+   * recouvre. C'est donc la conversation d'agent elle-même qui se déclare
+   * (`useSuppressAssistantFab`), où qu'elle soit montée — conversation ouverte,
    * passage de routine ouvert, modale d'un ticket.
    */
   const pathname = usePathname();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Skeleton, cn } from "mangue-ui";
@@ -31,8 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * L'onglet ROUTINES (MIN-185) de la vue Agents : la liste à gauche, la routine
- * choisie à droite.
+ * La page ROUTINES (MIN-185) : la liste à gauche, la routine choisie à droite.
  *
  * Deux règles gouvernent ce que l'écran offre :
  *  - **le « + » n'existe que sur un projet dont on est PROPRIÉTAIRE** et qui a
@@ -46,14 +45,11 @@ export function RoutinesPanel({
   onSelect,
   mobileDetail,
   onBack,
-  tabs,
 }: {
   selectedId: string | null;
   onSelect: (routineId: string | null) => void;
   mobileDetail: boolean;
   onBack: () => void;
-  /** Le sélecteur d'onglet Conversations / Routines, posé en tête de colonne. */
-  tabs: ReactNode;
 }) {
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
@@ -184,7 +180,7 @@ export function RoutinesPanel({
    * aucun dépôt lié (une routine clone un dépôt), ou des projets à dépôt mais
    * dont on n'est pas propriétaire (seul le owner engage son budget).
    *
-   * Le composer des conversations dit déjà le deuxième mur ; l'onglet Routines
+   * Le composer des conversations dit déjà le deuxième mur ; la page Routines
    * ne disait rien, et son écran vide se lisait comme un bug.
    */
   const noRepoAnywhere = !gitLoading && projects.length > 0 && gitLinked.size === 0;
@@ -349,7 +345,6 @@ export function RoutinesPanel({
           ) : undefined
         }
       >
-        <div className="px-2 pt-2">{tabs}</div>
         {list}
       </SecondarySidebar>
 

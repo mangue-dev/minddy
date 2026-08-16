@@ -29,7 +29,6 @@ import { agentSessionStatusKey } from "@/components/agents/agent-session-status"
 import { SessionCompose } from "@/components/agents/session-compose";
 import { PrIssuePanel } from "@/components/pull-requests/pr-issue-panel";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
-import { RoutinesPanel } from "@/components/routines/routines-panel";
 import {
   PROJECT_GROUP_INDENT,
   PROJECT_GROUP_LIMIT,
@@ -395,47 +394,6 @@ function SessionGroupRows({
 }
 
 /**
- * Les deux moitiés de la vue Agents (MIN-185) : les CONVERSATIONS — ce qu'on a
- * demandé à Numo — et les ROUTINES — ce qu'il fait tout seul. Deux listes qui
- * n'ont rien à faire ensemble : une routine quotidienne noierait la colonne des
- * conversations en une semaine, et c'est exactement pour ça que ses runs en
- * sortent (`.is("routine_id", null)` dans /api/agent-runs).
- *
- * L'onglet est porté par l'URL (`?tab=routines`) : une notification de routine
- * y renvoie directement, et le lien se partage.
- */
-function AgentsTabs({
-  tab,
-  onChange,
-}: {
-  tab: "sessions" | "routines";
-  onChange: (tab: "sessions" | "routines") => void;
-}) {
-  const t = useTranslations("Agents");
-  return (
-    <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5" role="tablist">
-      {(["sessions", "routines"] as const).map((id) => (
-        <button
-          key={id}
-          type="button"
-          role="tab"
-          aria-selected={tab === id}
-          onClick={() => onChange(id)}
-          className={cn(
-            "flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
-            tab === id
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {id === "sessions" ? t("tabConversations") : t("tabRoutines")}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/**
  * Bouton « Nouveau » de la colonne : il OUVRE une conversation vierge, il ne
  * demande rien d'abord. Il n'y a plus de menu ici — lancer l'agent SUR UN TICKET
  * se fait depuis le ticket lui-même (carte ou panneau), là où l'on sait de quel
@@ -594,14 +552,6 @@ export function AgentsPage() {
   const issueParam = searchParams.get("issue");
   const runParam = searchParams.get("run");
   const composeParam = searchParams.get("compose");
-  // Onglet Conversations / Routines (MIN-185), porté par l'URL : une
-  // notification de routine ouvre `?tab=routines&routine=<id>`.
-  const tabParam = searchParams.get("tab");
-  const routineParam = searchParams.get("routine");
-  const [tab, setTab] = useState<"sessions" | "routines">(
-    tabParam === "routines" || routineParam ? "routines" : "sessions",
-  );
-  const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(routineParam);
 
   const draft = useAgentComposeDraft();
   // Le brouillon n'est honoré que si l'URL le signale ENCORE : une navigation vers
@@ -747,30 +697,9 @@ export function AgentsPage() {
   }, [issueParam]);
   useEffect(() => {
     if (!runParam) return;
-    // L'onglet suit : `?run=` DÉSIGNE une conversation, et on peut y arriver
-    // depuis les routines (une vue enregistrée, un lien). Sans ça, la session
-    // se sélectionnait sous un onglet qui ne la montre pas.
-    setTab("sessions");
     setSelectedKey(runParam);
     setMobileDetail(true);
   }, [runParam]);
-  // Deep-link vers une routine (notification, lien partagé) : l'onglet suit.
-  useEffect(() => {
-    if (!routineParam) return;
-    setTab("routines");
-    setSelectedRoutineId(routineParam);
-    setMobileDetail(true);
-  }, [routineParam]);
-  // `?tab=routines` ARRIVÉ APRÈS le montage — la palette de commandes pousse
-  // cette adresse, et depuis /agents elle ne remonte pas la page : l'état
-  // initial ne rejoue pas, donc sans cet effet le geste ne faisait rien du
-  // tout. À SENS UNIQUE : quitter l'onglet efface le paramètre (`switchTab`),
-  // et un effet qui retomberait sur « conversations » à chaque URL sans `tab`
-  // annulerait le clic qui vient de l'ouvrir.
-  useEffect(() => {
-    if (tabParam !== "routines") return;
-    setTab("routines");
-  }, [tabParam]);
   // Un brouillon POSÉ ouvre son volet, même si l'URL, elle, ne bouge pas :
   // `router.push` vers l'adresse COURANTE est inerte, donc les effets de params
   // ci-dessus ne rejouent pas. C'est exactement le cas d'une deuxième note lancée
@@ -839,14 +768,11 @@ export function AgentsPage() {
    * Publie l'issue active à Numo : il résout « cette issue » (et sa PR le cas
    * échéant), la lit et peut agir dessus — brouillon compris (issue sans PR).
    *
-   * RIEN sous l'onglet Routines, où c'est `RoutinesPanel` qui publie la routine
-   * ouverte. Les hooks ne se sautent pas : cet appel s'exécute même quand la
-   * page rend l'autre onglet, et les deux surfaces se disputeraient alors le
-   * contexte ambiant — Numo aurait reçu, selon l'ordre des effets, le ticket
-   * d'une conversation qui n'est même pas à l'écran.
+   * La page routines porte son propre contexte assistant ; ici, seule la
+   * conversation visible publie son ticket.
    */
   useAssistantContext(
-    tab !== "routines" && activeItem && activeItem.project && activeItem.issue
+    activeItem && activeItem.project && activeItem.issue
       ? {
           projectId: activeItem.project.id,
           issueId: activeItem.issue.id,
@@ -868,17 +794,10 @@ export function AgentsPage() {
   // courante serait inerte, la navigation suivante vers la même conversation ne
   // ferait plus rien) — l'URL ne dit donc jamais ce qu'on regarde. Elle le
   // publie ici, avec les paramètres qui savent le rétablir : `?run=` pour une
-  // conversation, `?tab=routines&routine=` pour une routine. Le composer vierge
+  // conversation. Le composer vierge
   // n'est la vue de rien : on retient alors la page nue.
   usePublishCurrentView(
-    tab === "routines"
-      ? {
-          href: selectedRoutineId
-            ? `/agents?tab=routines&routine=${encodeURIComponent(selectedRoutineId)}`
-            : "/agents?tab=routines",
-          label: t("tabRoutines"),
-        }
-      : realSelected && !composeSelected
+    realSelected && !composeSelected
         ? {
             href: `/agents?run=${encodeURIComponent(realSelected.conversationId)}`,
             label: agentSessionTitle(realSelected, t("freeSessionTitle")),
@@ -1032,40 +951,6 @@ export function AgentsPage() {
     );
   }
 
-  /** Le sélecteur d'onglet, posé en tête de la colonne dans les deux cas. */
-  const switchTab = (next: "sessions" | "routines") => {
-    setTab(next);
-    setMobileDetail(false);
-    // L'URL PORTE l'onglet : un rechargement rouvre celui qu'on regardait, et
-    // l'adresse se partage. En repartant vers les conversations, le paramètre
-    // s'efface — il désignerait sinon l'onglet qu'on vient de quitter. La
-    // routine ouverte sort de l'adresse dans les deux cas : c'est l'onglet
-    // qu'on désigne, pas une sélection.
-    if (next === "routines") {
-      if (tabParam !== "routines" || routineParam) router.replace("/agents?tab=routines");
-    } else if (tabParam || routineParam) {
-      router.replace("/agents");
-    }
-  };
-
-  // ── Onglet ROUTINES (MIN-185) : sa propre liste, son propre détail ────
-  if (tab === "routines") {
-    return (
-      <div className="flex h-full min-h-0">
-        <RoutinesPanel
-          selectedId={selectedRoutineId}
-          onSelect={(id) => {
-            setSelectedRoutineId(id);
-            setMobileDetail(!!id);
-          }}
-          mobileDetail={mobileDetail}
-          onBack={() => setMobileDetail(false)}
-          tabs={<AgentsTabs tab={tab} onChange={switchTab} />}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full min-h-0">
       {/* ── Gauche : liste des sessions ─────────────────────────────────── */}
@@ -1080,9 +965,6 @@ export function AgentsPage() {
         }}
         actions={<NewSessionButton onClick={() => startNewSession()} />}
       >
-        <div className="px-2 pt-2">
-          <AgentsTabs tab={tab} onChange={switchTab} />
-        </div>
         {loading ? (
           /* À la forme de la liste : deux projets, quelques conversations d'une
              ligne dessous. */

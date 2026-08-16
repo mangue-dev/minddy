@@ -20,8 +20,8 @@ describe("buildViewHref", () => {
   });
 
   it("garde ce qui décrit l'écran : onglet, vue, objectif ouvert", () => {
-    expect(buildViewHref("/agents", "?tab=routines&routine=r1")).toBe(
-      "/agents?tab=routines&routine=r1"
+    expect(buildViewHref("/routines", "?routine=r1")).toBe(
+      "/routines?routine=r1"
     );
     expect(buildViewHref("/all", "?view=cycle")).toBe("/all?view=cycle");
     expect(

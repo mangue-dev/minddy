@@ -67,10 +67,10 @@ describe("showsNotificationTarget", () => {
     expect(showsNotificationTarget(`${target}&view=board&group=status`, target)).toBe(
       true
     );
-    // Et dans l'autre sens : `tab=routines` décore l'écran d'une routine, il ne
-    // l'identifie pas — un `/agents` sans onglet explicite affiche la même chose.
+    // Le chemin identifie la page, le paramètre identifie la routine ; les
+    // paramètres décoratifs ne doivent pas changer la cible.
     expect(
-      showsNotificationTarget("/agents?routine=rt-a", "/agents?tab=routines&routine=rt-a")
+      showsNotificationTarget("/routines?routine=rt-a&view=list", "/routines?routine=rt-a")
     ).toBe(true);
   });
 
