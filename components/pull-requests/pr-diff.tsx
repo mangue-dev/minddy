@@ -276,6 +276,7 @@ function PrDiffFile({
   prUrl,
   provider,
   readOnly,
+  expandableContext,
   canResolve,
   collapsed,
   onToggle,
@@ -300,6 +301,9 @@ function PrDiffFile({
   provider?: RepoProviderId;
   /** Lecture seule : ni « + » de gouttière, ni « Répondre ». */
   readOnly?: boolean;
+  /** La version de base est-elle relisible par `endpoint` ? Faux pour un diff
+      local non poussé : proposer le dépliage finirait alors en 404. */
+  expandableContext: boolean;
   /** Résoudre un fil, séparément : c'est une écriture sur le dépôt (MIN-144). */
   canResolve?: boolean;
   collapsed: boolean;
@@ -488,7 +492,8 @@ function PrDiffFile({
    * il n'y a rien à déplier. Sans chargeur, la lib n'offre pas l'affordance,
    * plutôt que de proposer un dépliage qui finirait en 404.
    */
-  const expandable = file.status !== "added" && file.status !== "removed";
+  const expandable =
+    expandableContext && file.status !== "added" && file.status !== "removed";
 
   /**
    * Ouvre le composer sur la sélection de gouttière. `range` porte la plage
@@ -789,6 +794,7 @@ export function PrDiff({
   prUrl,
   provider,
   readOnly = false,
+  expandableContext = true,
   canResolve = !readOnly,
   reviewComments = NO_COMMENTS,
   reviewThreads = NO_THREADS,
@@ -805,6 +811,8 @@ export function PrDiff({
   /** Lecture seule : pas de commentaires de review (vue diff sans PR — la
       conversation de l'agent ; la review vit sur la page Pull requests). */
   readOnly?: boolean;
+  /** Autorise le chargement paresseux du contexte hors hunk. */
+  expandableContext?: boolean;
   /** Résoudre un fil, gouverné À PART (MIN-144) : commenter demande `read` sur
       le dépôt, résoudre demande `write`. Défaut `!readOnly` — les appelants qui
       ne connaissent pas la distinction (agent-diff-sheet) ne changent pas. */
@@ -1008,6 +1016,7 @@ export function PrDiff({
               prUrl={prUrl}
               provider={provider}
               readOnly={readOnly}
+              expandableContext={expandableContext}
               canResolve={canResolve}
               collapsed={collapsed.has(f.filename)}
               onToggle={() => toggle(f.filename)}

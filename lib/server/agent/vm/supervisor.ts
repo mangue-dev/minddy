@@ -82,6 +82,11 @@ import {
 } from "./protocol";
 import { parseAgentUserMessage, promptWithMentions, type AgentUserMessage } from "@/lib/agent-mentions";
 import { matchAskUserAnswers, type AskUserQuestion } from "@/lib/ask-user";
+import {
+  LOCAL_WORKING_DIFF_MAX_BYTES,
+  readWorkingDiff,
+  type WorkingDiff,
+} from "../working-diff";
 
 /**
  * LE SUPERVISEUR (MIN-286, lot 1) — ce que devient `runVmTurn` quand la boucle
@@ -686,6 +691,21 @@ export async function runOpencodeTurn(
   };
 
   /**
+   * LE PÉRIMÈTRE ATTRIBUÉ — plus strict que `turnScope`.
+   *
+   * `turnScope` doit encore voir le shell pour une livraison explicite (codegen,
+   * `rm`, lockfile). Il compare donc l'arbre avant/après et, dans un checkout
+   * partagé, ne peut pas distinguer deux auteurs concurrents. Le diff présenté
+   * comme « changements de cet agent » n'a pas le droit de faire cette
+   * supposition : il ne prend que les écritures observées par les permissions
+   * `edit`, cumulées dans le checkpoint de ce run.
+   */
+  const attributedScope = async (): Promise<string[]> => {
+    if (!current) return [];
+    return await dropIgnoredPaths(host, delivery.checkpointEditedPaths());
+  };
+
+  /**
    * LES RÈGLES DE LIVRAISON (lot 2, tâche 14), construites AVANT le pont : c'est
    * lui qui sert `write_issue_plan` et `create_pr`, donc lui qui porte la voix du
    * harness. Le superviseur, de son côté, leur donne les deux faits qui viennent
@@ -1217,22 +1237,40 @@ export async function runOpencodeTurn(
     const liveEdits = newLiveEditLog();
     refreshLocalLiveStats = () => {
       if (!local || liveStatsTimer || !filesFromSha) return;
-      liveStatsTimer = setTimeout(() => {
-        liveStatsTimer = null;
-        void (async () => {
-          const scope = current ? (await turnScope()).paths : undefined;
-          const changed = await workingTreeChangedFiles(host, filesFromSha, scope).catch(() => null);
-          if (!changed || changed.files.length === 0) return;
-          liveEdits.noteStats(changed.files);
-          publishLive({
-            text: "",
-            tools: toolsSeen,
-            reasoningActive: false,
-            reasoningMs: 0,
-            ...liveEdits.payload(),
-          });
-        })();
-      }, 350);
+      let attempt = 0;
+      const schedule = () => {
+        liveStatsTimer = setTimeout(() => {
+          liveStatsTimer = null;
+          void (async () => {
+            const scope = current ? await attributedScope() : undefined;
+            const diff = await readWorkingDiff(host, filesFromSha, {
+              patches: true,
+              scope,
+              maxBytes: LOCAL_WORKING_DIFF_MAX_BYTES,
+            }).catch(() => null);
+            // La permission arrive AVANT que l'outil ait fini d'écrire. Un gros
+            // patch peut donc ne pas être visible au premier relevé : deux reprises
+            // courtes valent mieux qu'un diff vide jusqu'à la fin du tour.
+            if (!diff || diff.files.length === 0) {
+              if (attempt < 2) {
+                attempt += 1;
+                schedule();
+              }
+              return;
+            }
+            liveEdits.noteStats(diff.files.map(localDiffStat));
+            publishLive({
+              text: "",
+              tools: toolsSeen,
+              reasoningActive: false,
+              reasoningMs: 0,
+              ...liveEdits.payload(),
+            });
+            cp.emitDiff({ ...diff, ...(current ? { snapshot: true } : {}) });
+          })();
+        }, attempt === 0 ? 350 : 650);
+      };
+      schedule();
     };
     /** Ce que le tour a encore le droit de dépenser. Absent = aucun plafond. */
     let budgetUsd = job.budgetUsd;
@@ -1979,7 +2017,13 @@ export async function runOpencodeTurn(
          * tour vient de lire. Une fille compte comme la mère : c'est le même
          * dépôt, et la porte ne regarde que le dépôt.
          */
-        if (out.shell) delivery.noteShell(out.shell.command, out.shell.exit);
+        if (out.shell) {
+          delivery.noteShell(out.shell.command, out.shell.exit);
+          // `bash` peut écrire sans passer par la permission `edit` (codemod,
+          // générateur, mv/rm). Son retour est alors le premier instant où le
+          // patch est certainement sur disque.
+          if (local && out.shell.exit === 0 && !child) refreshLocalLiveStats();
+        }
 
         for (const event of out.events) {
           /**
@@ -2498,11 +2542,24 @@ export async function runOpencodeTurn(
      * quoi les fichiers que l'humain avait déjà en cours remonteraient au fil
      * comme si l'agent les avait touchés.
      */
+    const rawLocalDiff =
+      status === "completed" && local && filesFromSha
+        ? await readWorkingDiff(host, filesFromSha, {
+            patches: true,
+            scope: current ? await attributedScope() : undefined,
+            maxBytes: LOCAL_WORKING_DIFF_MAX_BYTES,
+          }).catch(() => null)
+        : null;
+    const localDiff = rawLocalDiff
+      ? { ...rawLocalDiff, ...(current ? { snapshot: true } : {}) }
+      : null;
     const changed =
       status !== "completed"
         ? null
+        : localDiff && localDiff.files.length > 0
+          ? { files: localDiff.files.map(localDiffStat), truncated: localDiff.truncated }
         : current
-          ? await workingTreeChangedFiles(host, filesFromSha, (await turnScope()).paths).catch(
+          ? await workingTreeChangedFiles(host, filesFromSha, await attributedScope()).catch(
               () => null,
             )
           : pushed?.headSha && pushed.headSha !== filesFromSha
@@ -2533,7 +2590,9 @@ export async function runOpencodeTurn(
       pushed,
       workBranch: job.workBranch,
       ...(pushError ? { pushError } : {}),
-      ...(changed && changed.files.length > 0 ? { changed } : {}),
+      ...(changed && (changed.files.length > 0 || localDiff)
+        ? { changed: { ...changed, ...(localDiff ? { diff: localDiff } : {}) } }
+        : {}),
       sandboxMs: job.bootstrapMs + (now() - startedAt),
     };
   } catch (err) {
@@ -2561,6 +2620,17 @@ export async function runOpencodeTurn(
     await proxy.close().catch(() => {});
     await bridge.close().catch(() => {});
   }
+}
+
+/** Forme forge du patch local → forme historique de `files_changed`. */
+function localDiffStat(file: WorkingDiff["files"][number]) {
+  return {
+    path: file.filename,
+    status: file.status === "removed" ? "deleted" as const : file.status,
+    additions: file.additions,
+    deletions: file.deletions,
+    ...(file.previous_filename ? { previousPath: file.previous_filename } : {}),
+  };
 }
 
 /**

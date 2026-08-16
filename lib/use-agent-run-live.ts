@@ -6,6 +6,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
 import type { AgentRunEvent } from "./agent-api";
 import { liveAfterEvent, liveFromStream, type AgentRunLive, type StreamPayload } from "./agent-live";
+import { parseAgentLocalDiff, type AgentLocalDiff } from "./agent-local-diff";
 
 export type { AgentRunLive } from "./agent-live";
 
@@ -31,8 +32,9 @@ export type { AgentRunLive } from "./agent-live";
  */
 
 interface Listener {
-  onStream: (payload: StreamPayload) => void;
-  onEvent: (row: AgentRunEvent) => void;
+  onStream?: (payload: StreamPayload) => void;
+  onEvent?: (row: AgentRunEvent) => void;
+  onDiff?: (diff: AgentLocalDiff) => void;
 }
 
 interface Entry {
@@ -64,12 +66,16 @@ function subscribeRun(runId: string, listener: Listener): () => void {
         config: { private: true },
       });
       channel.on("broadcast", { event: "stream" }, ({ payload }) => {
-        for (const l of fresh.listeners) l.onStream((payload ?? {}) as StreamPayload);
+        for (const l of fresh.listeners) l.onStream?.((payload ?? {}) as StreamPayload);
       });
       channel.on("broadcast", { event: "event" }, ({ payload }) => {
         const row = (payload as { row?: AgentRunEvent } | null)?.row;
         if (!row?.id) return;
-        for (const l of fresh.listeners) l.onEvent(row);
+        for (const l of fresh.listeners) l.onEvent?.(row);
+      });
+      channel.on("broadcast", { event: "diff" }, ({ payload }) => {
+        const diff = parseAgentLocalDiff(payload);
+        for (const l of fresh.listeners) l.onDiff?.(diff);
       });
       channel.subscribe();
       fresh.channel = channel;
@@ -85,6 +91,30 @@ function subscribeRun(runId: string, listener: Listener): () => void {
     channels.delete(runId);
     if (opened.channel) void getSupabase().removeChannel(opened.channel);
   };
+}
+
+/** Patch produit sur la machine pendant le tour. Il partage le même abonnement
+ * Realtime que le fil, mais reste séparé du stream texte pour ne pas être
+ * retransmis quatre fois par seconde. Au repos, l'event persistant prend le relais. */
+export function useAgentRunLocalDiff(
+  runId: string | null,
+  active: boolean,
+): AgentLocalDiff | null {
+  const [diff, setDiff] = useState<AgentLocalDiff | null>(null);
+
+  useEffect(() => {
+    setDiff(null);
+    if (!runId || !active) return;
+    return subscribeRun(runId, {
+      onDiff: (next) => {
+        // Le relais valide déjà la forme ; l'ordre est porté par le wrapper
+        // Realtime. Deux relevés successifs sont des instantanés complets.
+        setDiff(next);
+      },
+    });
+  }, [runId, active]);
+
+  return diff;
 }
 
 /**

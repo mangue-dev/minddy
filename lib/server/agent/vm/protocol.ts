@@ -6,6 +6,7 @@ import type { ScopedFavorite } from "../subagent-config";
 import type { AgentProviderId } from "@/lib/agent-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { Locale } from "@/i18n/config";
+import type { AgentLiveDiff } from "../agent-contract";
 
 /**
  * LE CONTRAT ENTRE LA FONCTION ET LA MICROVM (MIN-224) — ce que la fonction pose
@@ -488,7 +489,7 @@ export interface VmTurnReport {
    * geste qui la fait avancer. Un tour interrompu garde donc son diff pour le
    * tour qui le termine, qui le racontera d'un seul tenant.
    */
-  changed?: { files: ChangedFile[]; truncated: boolean };
+  changed?: { files: ChangedFile[]; truncated: boolean; diff?: AgentLiveDiff };
   /**
    * Wall-clock de la microVM sur ce tour — la moitié compute de la facture, que
    * plus personne ne tiendrait sans la boucle (MIN-221 §3).

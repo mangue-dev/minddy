@@ -224,6 +224,8 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
 
   it("retire `git status` du rôle de diff, et nomme le cas des deux mains", () => {
     expect(current).toContain("`git status` is NOT your diff here");
+    expect(current).toContain("Use the built-in file editing tools for repository writes");
+    expect(current).toContain("not claimed in your diff");
     expect(current).toContain("goes out with your pull request");
   });
 

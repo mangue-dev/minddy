@@ -57,6 +57,24 @@ export type AgentLiveFileStat = AgentLiveEdit & {
   deletions: number;
 };
 
+/** Patch local à la forme des fichiers de forge, mais produit par Git sur la
+ * machine qui exécute le tour. Borné avant de franchir le plan de contrôle. */
+export interface AgentLiveDiffFile {
+  filename: string;
+  status: "added" | "removed" | "renamed" | "modified";
+  additions: number;
+  deletions: number;
+  patch?: string;
+  previous_filename?: string;
+}
+
+export interface AgentLiveDiff {
+  files: AgentLiveDiffFile[];
+  truncated: boolean;
+  /** Instantané complet de la session (dépôt courant), et non delta du tour. */
+  snapshot?: boolean;
+}
+
 /**
  * Un message du protocole chat OpenRouter. `content` accepte un TABLEAU DE PARTIES
  * (texte + image, MIN-111) : c'est ce qui permet à une maquette jointe au ticket

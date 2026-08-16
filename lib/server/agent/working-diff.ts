@@ -54,6 +54,15 @@ export interface WorkingDiffFile {
  */
 export const WORKING_DIFF_MAX_BYTES = 2_000_000;
 
+/**
+ * Plafond du diff qui quitte une exécution locale. Contrairement à une microVM,
+ * le serveur ne peut pas relire ce dépôt : le patch voyage donc une fois dans le
+ * direct, puis dans l'event de fin de tour. On reste nettement sous la limite du
+ * plan de contrôle et de Realtime ; les gros diffs gardent leur liste et leurs
+ * compteurs, mais annoncent que les patches sont tronqués.
+ */
+export const LOCAL_WORKING_DIFF_MAX_BYTES = 240_000;
+
 /** Le tour a-t-il produit un diff plus gros que ce plafond, ou plus de fichiers
  *  que `CHANGED_FILES_CAP` ? Se dit à l'écran — une liste tronquée sans le dire
  *  se lit comme une liste complète. */
@@ -344,18 +353,20 @@ async function mergeBaseWithHead(
 export async function readWorkingDiff(
   host: RepoHost,
   baseRef: string,
-  opts: { patches: boolean },
+  opts: { patches: boolean; scope?: readonly string[]; maxBytes?: number },
 ): Promise<WorkingDiff> {
   const ref = sq(baseRef);
+  const maxBytes = Math.max(1, Math.min(opts.maxBytes ?? WORKING_DIFF_MAX_BYTES, WORKING_DIFF_MAX_BYTES));
+  const only = workingDiffPathspec(opts.scope);
   const shell: ShellOpts = { cwd: host.layout.repoDir, timeoutMs: 30_000 };
   try {
     const [nameStatus, numstat, patch, untrackedPatch] = await Promise.all([
-      run(host, `git diff --name-status --find-renames ${ref}`, shell),
-      run(host, `git diff --numstat --find-renames ${ref}`, shell),
+      run(host, `git diff --name-status --find-renames ${ref}${only}`, shell),
+      run(host, `git diff --numstat --find-renames ${ref}${only}`, shell),
       opts.patches
         ? run(
             host,
-            `git diff --find-renames --no-color ${ref} | head -c ${WORKING_DIFF_MAX_BYTES}`,
+            `git diff --find-renames --no-color ${ref}${only} | head -c ${maxBytes}`,
             shell,
           )
         : Promise.resolve(""),
@@ -365,9 +376,9 @@ export async function readWorkingDiff(
             // `-I%` plutôt qu'un `xargs` nu : un chemin à espaces doit rester UN
             // argument. `; true` avale le code 1 que `git diff --no-index` rend
             // par DESIGN dès qu'il y a une différence — c'est-à-dire toujours ici.
-            `git ls-files --others --exclude-standard -z` +
+            `git ls-files --others --exclude-standard -z${only}` +
               ` | xargs -0 -n1 -I% git diff --no-index --no-color -- /dev/null %` +
-              ` | head -c ${WORKING_DIFF_MAX_BYTES}; true`,
+              ` | head -c ${maxBytes}; true`,
             shell,
           )
         : Promise.resolve(""),
@@ -378,11 +389,19 @@ export async function readWorkingDiff(
       patch,
       untrackedPatch,
       patchTruncated:
-        patch.length >= WORKING_DIFF_MAX_BYTES || untrackedPatch.length >= WORKING_DIFF_MAX_BYTES,
+        patch.length >= maxBytes || untrackedPatch.length >= maxBytes,
     });
   } catch {
     return { files: [], truncated: false };
   }
+}
+
+/** `undefined` = tout le dépôt ; `[]` = rien. Les chemins viennent du relevé
+ * Git du harness, mais restent quotés comme toute donnée injectée au shell. */
+function workingDiffPathspec(scope: readonly string[] | undefined): string {
+  if (scope === undefined) return "";
+  if (scope.length === 0) return ` -- ${sq(":(exclude)*")}`;
+  return ` -- ${scope.map(sq).join(" ")}`;
 }
 
 type ShellOpts = { cwd: string; timeoutMs: number };

@@ -152,6 +152,14 @@ export interface OpencodeDelivery {
 
 export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelivery {
   const editedPaths = new Set<string>(deps.editedPaths ?? []);
+  /**
+   * Le journal d'attribution ne se vide jamais pendant le run. `editedPaths`
+   * est une file de travail pour le type-check et la porte la consomme ; le
+   * réutiliser pour le diff ferait perdre l'identité des fichiers juste après
+   * leur vérification. Surtout, seuls `noteEdit` et le checkpoint alimentent ce
+   * journal : le delta global de Git ne peut pas savoir quel agent a écrit.
+   */
+  const attributedPaths = new Set<string>(deps.editedPaths ?? []);
   /** Les éditions de CE tour (cf. `turnEditedPaths`). `editedPaths`, lui, part du
    *  checkpoint ET se vide à chaque type-check : ni l'un ni l'autre ne peut dire
    *  ce que le tour courant a écrit. */
@@ -245,6 +253,7 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
       const relative = repoRelative(deps.host.layout.repoDir, filepath);
       if (!relative) return;
       editedPaths.add(relative);
+      attributedPaths.add(relative);
       turnEdited.add(relative);
       // Toute édition périme ce que le modèle avait vérifié : vert AVANT la
       // dernière édition ne veut rien dire (`diagnostics.ts`).
@@ -257,7 +266,7 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
 
     noteEdits: () => gate.noteEdits(),
     repoTouched: () => gate.repoTouched(),
-    checkpointEditedPaths: () => [...editedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX),
+    checkpointEditedPaths: () => [...attributedPaths].slice(-CHECKPOINT_EDITED_PATHS_MAX),
     turnEditedPaths: () => [...turnEdited],
   };
 }

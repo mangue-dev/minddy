@@ -67,7 +67,7 @@ export interface AgentLiveStream {
  */
 export async function broadcastToTopic(
   topic: string,
-  event: "stream" | "event" | "changed",
+  event: "stream" | "event" | "changed" | "diff",
   payload: Record<string, unknown>,
 ): Promise<void> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

@@ -351,11 +351,36 @@ describe("ce que le fil doit dire", () => {
     await landVmTurn(
       run(),
       report({
-        changed: { files: [{ path: "a.ts", status: "modified", additions: 2, deletions: 1 }], truncated: false },
+        changed: {
+          files: [{ path: "a.ts", status: "modified", additions: 2, deletions: 1 }],
+          truncated: false,
+          diff: {
+            files: [{ filename: "a.ts", status: "modified", additions: 2, deletions: 1, patch: "@@\n+x" }],
+            truncated: false,
+          },
+        },
       }),
     );
     expect(h.events.find((e) => e.type === "files_changed")?.payload).toMatchObject({
       truncated: false,
+      diff: { files: [{ filename: "a.ts", patch: "@@\n+x" }] },
+    });
+  });
+
+  it("persiste aussi un snapshot local vide, qui signifie que le travail a été annulé", async () => {
+    await landVmTurn(
+      run(),
+      report({
+        changed: {
+          files: [],
+          truncated: false,
+          diff: { files: [], truncated: false, snapshot: true },
+        },
+      }),
+    );
+    expect(h.events.find((e) => e.type === "files_changed")?.payload).toMatchObject({
+      files: [],
+      diff: { files: [], snapshot: true },
     });
   });
 });

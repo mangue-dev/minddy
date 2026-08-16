@@ -30,6 +30,7 @@ import {
 } from "./runs";
 import type { EmitAgentEvent } from "./agent-contract";
 import type { VmTurnReport } from "./vm/protocol";
+import { localDiffPayload } from "./local-diff-payload";
 
 /**
  * LA MISE AU REPOS D'UN TOUR JOUÉ DANS LA MICROVM (MIN-224).
@@ -178,10 +179,11 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   });
 
   // Le diff du tour, calculé par git DANS la VM (la fonction n'a plus le dépôt).
-  if (report.changed && report.changed.files.length > 0) {
+  if (report.changed && (report.changed.files.length > 0 || report.changed.diff)) {
     await emit("files_changed", {
       files: report.changed.files,
       truncated: report.changed.truncated,
+      ...(report.changed.diff ? { diff: localDiffPayload(report.changed.diff) } : {}),
     });
   }
 

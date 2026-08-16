@@ -1,6 +1,12 @@
 import { agentVmUrl } from "../network-policy";
 import type { AgentCheckpoint } from "../runs";
-import type { AgentEventType, AgentLiveProgress, AgentUsageLine, PlanStep } from "../agent-contract";
+import type {
+  AgentEventType,
+  AgentLiveDiff,
+  AgentLiveProgress,
+  AgentUsageLine,
+  PlanStep,
+} from "../agent-contract";
 import type { VmToolResponse, VmTurnReport } from "./protocol";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
 
@@ -89,6 +95,9 @@ export interface ControlPlaneClient {
    *  (`JSON.stringify(progress)`), donc tout champ absent d'ici passerait quand
    *  même — jusqu'au jour où quelqu'un ajoute une liste blanche et le perd. */
   emitLive(progress: AgentLiveProgress): void;
+  /** Diff Git local, envoyé séparément du stream texte pour ne pas recopier
+   *  jusqu'à 240 Ko quatre fois par seconde. Best-effort comme le direct. */
+  emitDiff(diff: AgentLiveDiff): void;
   recordUsage: (line: AgentUsageLine) => Promise<void>;
   /**
    * Sauvegarde périodique. Ne lève pas — mais rend `false` quand le plan de
@@ -246,6 +255,10 @@ export function createControlPlaneClient(
         body: JSON.stringify(progress),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       }).catch(() => {});
+    },
+
+    emitDiff: (diff) => {
+      void postQuiet("/diff", diff);
     },
 
     recordUsage: (line) =>

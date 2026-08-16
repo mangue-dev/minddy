@@ -1057,6 +1057,27 @@ describe("le plan de contrôle vu depuis une machine", () => {
     expect(h.events).toHaveLength(1);
   });
 
+  it("diffuse le patch local sur un message séparé et borné", async () => {
+    const res = await callLocal("POST", "/diff", {
+      files: [
+        { filename: "lib/a.ts", status: "modified", additions: 4.7, deletions: -2, patch: "@@\n+x" },
+        { filename: "", patch: "ignoré" },
+      ],
+    });
+    expect(res.status).toBe(200);
+    expect(h.afterWork).toHaveLength(1);
+    await h.afterWork[0]();
+    expect(h.streams[0]).toMatchObject({ topic: `agent-run:${RUN_ID}`, event: "diff" });
+    expect(h.streamPayloads[0]).toMatchObject({
+      files: [{ filename: "lib/a.ts", status: "modified", additions: 5, deletions: 0, patch: "@@\n+x" }],
+      truncated: false,
+    });
+  });
+
+  it("refuse la surface de diff local à une microVM cloud", async () => {
+    expect((await call("POST", "/diff", { files: [] })).status).toBe(403);
+  });
+
   it("refuse un jeton dont la GÉNÉRATION a été dépassée — la révocation est là", async () => {
     // Émettre un jeton incrémente la génération (`issueLocalExecToken`) : celui de
     // la machine précédente meurt à l'instant, sans qu'on ait rien à rappeler.

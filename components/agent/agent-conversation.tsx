@@ -59,7 +59,8 @@ import {
   type AgentEnvironment,
 } from "./environment-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
-import { useAgentRunLive } from "@/lib/use-agent-run-live";
+import { useAgentRunLive, useAgentRunLocalDiff } from "@/lib/use-agent-run-live";
+import { mergeAgentLocalDiff, settledAgentLocalDiff } from "@/lib/agent-local-diff";
 import { AgentEventFeed } from "./agent-event-feed";
 import { AgentDiffSheet } from "./agent-diff-sheet";
 import { AgentActivityPill } from "./agent-activity-pill";
@@ -315,6 +316,19 @@ export function AgentConversation({
   // disponibles à la pilule du composer — une route serveur ne peut pas lire le
   // dépôt qui reste sur la machine de l'utilisateur.
   const runLive = useAgentRunLive(liveRun?.id ?? null, serverWorking);
+  const streamedLocalDiff = useAgentRunLocalDiff(
+    liveRun?.local_exec ? liveRun.id : null,
+    serverWorking,
+  );
+  const settledLocalDiff = useMemo(
+    () => settledAgentLocalDiff(liveEvents),
+    [liveEvents],
+  );
+  const localDiff = useMemo(
+    () => mergeAgentLocalDiff(settledLocalDiff, streamedLocalDiff),
+    [settledLocalDiff, streamedLocalDiff],
+  );
+  const useLocalDiff = liveRun?.local_exec === true && (!liveRun.local_worktree || serverWorking);
 
   /**
    * Ce que CETTE session a changé dans le dépôt, cumulé sur tous ses tours (union
@@ -995,6 +1009,9 @@ export function AgentConversation({
           working={serverWorking}
           baseBranch={liveRun.base_branch}
           branchName={liveRun.branch_name}
+          local={useLocalDiff}
+          localFiles={localDiff.files}
+          localTruncated={localDiff.truncated}
         />
       ) : null}
       </div>

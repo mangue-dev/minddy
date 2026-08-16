@@ -15,6 +15,7 @@ import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
 import { runPrEndpoint } from "@/lib/agent-api";
 import { fileAnchorId } from "@/lib/pr-file-tree";
 import { useAgentRunDiffQuery } from "@/lib/use-agent-runs";
+import type { PullRequestFile } from "@/lib/agent-api";
 
 /**
  * Vue diff DANS la conversation de l'agent : les modifications de la session sans
@@ -23,12 +24,10 @@ import { useAgentRunDiffQuery } from "@/lib/use-agent-runs";
  * conversation — qui vit elle-même parfois en Sheet (modal d'issue) : Radix
  * empile.
  *
- * Contenu = le diff servi par /api/agent-runs/[runId]/diff, qui change de source
- * selon ce que le run fait : PENDANT LE TOUR, `git diff` lu dans la microVM —
- * donc ce que l'agent vient d'écrire, avant même qu'il l'ait poussé ; AU REPOS,
- * la PR quand elle existe, sinon le compare base...branche. On le DIT quand la
- * réponse vient de la sandbox : un diff qui contient du travail non poussé ne se
- * lit pas comme un diff de pull request.
+ * En cloud, le contenu vient de /api/agent-runs/[runId]/diff : microVM pendant
+ * le tour, forge au repos. En local, cette route ne peut pas lire le disque de
+ * l'utilisateur : le harness envoie donc un patch borné sur un canal dédié, puis
+ * le conserve dans l'event `files_changed` de fin de tour.
  *
  * Lecture seule : la review (commentaires ancrés) vit sur la page Pull requests.
  */
@@ -40,6 +39,9 @@ export function AgentDiffSheet({
   baseBranch,
   branchName,
   focusPath,
+  local = false,
+  localFiles = [],
+  localTruncated = false,
 }: {
   runId: string;
   open: boolean;
@@ -51,9 +53,19 @@ export function AgentDiffSheet({
   branchName: string | null;
   /** Fichier par lequel on est entré : la vue s'ouvre dessus. */
   focusPath?: string | null;
+  /** Le dépôt vit sur la machine : le serveur ne peut pas relire son patch. */
+  local?: boolean;
+  /** Patch remonté par le harness local (direct + events de fin de tour). */
+  localFiles?: PullRequestFile[];
+  localTruncated?: boolean;
 }) {
   const t = useTranslations("Agent");
-  const { files, provider, url, live, loading } = useAgentRunDiffQuery(runId, open, working);
+  const remote = useAgentRunDiffQuery(runId, open && !local, working);
+  const files = local ? localFiles : remote.files;
+  const provider = local ? undefined : remote.provider;
+  const url = local ? null : remote.url;
+  const live = local ? working && files.length > 0 : remote.live;
+  const loading = local ? false : remote.loading;
 
   /**
    * On arrive SUR le fichier cliqué. L'ancre n'existe qu'une fois le diff peint,
@@ -92,7 +104,15 @@ export function AgentDiffSheet({
           {/* Ce que la ligne dit d'abord, c'est OÙ va ce diff (origine → session).
               Quand il vient de la sandbox, elle dit aussi ce qu'il contient de
               plus que la forge : le travail du tour, pas encore poussé. */}
-          {branchName ? (
+          {local ? (
+            <SheetDescription className="truncate text-xs">
+              {branchName ? <span className="font-mono">{branchName}</span> : null}
+              {branchName ? <span>{" · "}</span> : null}
+              <span className={live ? "text-shimmer" : undefined}>
+                {t(live ? "diffLocalLive" : "diffLocalDescription")}
+              </span>
+            </SheetDescription>
+          ) : branchName ? (
             <SheetDescription className="truncate text-xs">
               <span className="font-mono">
                 {baseBranch ? `${baseBranch} → ${branchName}` : branchName}
@@ -113,7 +133,9 @@ export function AgentDiffSheet({
               <Spinner className="size-5 text-muted-foreground" />
             </div>
           ) : files.length === 0 ? (
-            <p className="pt-4 text-sm text-muted-foreground">{t("diffEmpty")}</p>
+            <p className="pt-4 text-sm text-muted-foreground">
+              {t(local ? "diffEmptyLocal" : "diffEmpty")}
+            </p>
           ) : (
             // Vue diff de la CONVERSATION : elle n'a qu'un run à donner — sa
             // session n'a parfois aucune PR (compare base…branche). Elle passe
@@ -122,16 +144,22 @@ export function AgentDiffSheet({
             // remarque de ligne n'est pas servable telle quelle (MIN-162), et
             // elle passe par la façade indexée par le run. Le composer, lui, ne
             // s'ouvre pas — cette vue est en lecture seule.
-            <PrEndpointProvider endpoint={runPrEndpoint(runId)}>
-              <PrDiff
-                files={files}
-                endpoint={runPrEndpoint(runId)}
-                prUrl={url}
-                provider={provider}
-                readOnly
-                className="pt-4"
-              />
-            </PrEndpointProvider>
+            <>
+              {local && localTruncated ? (
+                <p className="pt-4 text-xs text-muted-foreground">{t("diffLocalTruncated")}</p>
+              ) : null}
+              <PrEndpointProvider endpoint={runPrEndpoint(runId)}>
+                <PrDiff
+                  files={files}
+                  endpoint={runPrEndpoint(runId)}
+                  prUrl={url}
+                  provider={provider}
+                  readOnly
+                  expandableContext={!local}
+                  className="pt-4"
+                />
+              </PrEndpointProvider>
+            </>
           )}
         </div>
       </SheetContent>

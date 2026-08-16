@@ -266,13 +266,13 @@ html[data-desktop-app] .zen-nav-hotzone {
 }
 
 /* ── Shell surfaces ────────────────────────────────────────────────────────────
-   White chrome (sidebar + header) over a light-gray content area. The AppShell
-   root uses --background (gray) and shows through the transparent <main>; the
-   sidebar uses --sidebar and the header is forced to bg-sidebar. Cards/popovers
-   stay white so they pop on the gray content. */
+   Light-gray sidebars around a white content area and header. The AppShell
+   root uses --background (white) and shows through the transparent <main>; the
+   sidebar uses --sidebar while the header stays on bg-background. Cards/popovers
+   stay white with the content surface. */
 :root {
-  --background: oklch(0.967 0.003 264); /* content area — light gray */
-  --sidebar: oklch(1 0 0);              /* chrome — white */
+  --background: oklch(1 0 0);              /* content area — white */
+  --sidebar: oklch(0.967 0.003 264);       /* chrome — light gray */
   --card: oklch(1 0 0);
   --popover: oklch(1 0 0);
   --sidebar-border: oklch(0.912 0.008 264);

@@ -9,6 +9,7 @@ import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 import { executeIssueTool, type IssueToolContext } from "./issue-tools";
 import type { AgentLiveEdit, AgentLiveFileStat } from "./agent-contract";
 import { CHANGED_FILES_CAP } from "./repo-host";
+import { localDiffPayload } from "./local-diff-payload";
 import {
   anchorForRun,
   ISSUE_TOOL_NAMES,
@@ -383,6 +384,18 @@ export async function handleControlPlaneRequest(opts: {
         ...(fileStats ? { fileStats } : {}),
         at: Date.now(),
       }),
+    );
+    return ok();
+  }
+
+  // Le diff complet est un message SÉPARÉ du stream texte : le recopier dans
+  // chaque instantané (~4/s) multiplierait inutilement le trafic. Cette surface
+  // n'existe que pour la machine qui possède le dépôt.
+  if (method === "POST" && surface === "/diff") {
+    if (!opts.local) return forbidden("local diff requires a local execution token");
+    const diff = localDiffPayload(body);
+    afterOrNow(() =>
+      broadcastToTopic(agentRunTopic(runId), "diff", { ...diff, at: Date.now() }),
     );
     return ok();
   }

@@ -119,9 +119,10 @@ describe("l'édition, lue sur la demande de permission", () => {
 
     expect(checks.followUp).toContain("TYPES");
     expect(vi.mocked(typeErrorsForTurn).mock.calls[0][1]).toEqual(["lib/x.ts"]);
-    // Le type-check VIDE la liste en passant (`delivery-gate.ts`) : ce qui reste
-    // au checkpoint est ce qui n'a pas encore été vu, pas un journal du tour.
-    expect(delivery.checkpointEditedPaths()).toEqual([]);
+    // Le type-check vide sa file de travail, mais le checkpoint conserve le
+    // journal d'attribution : le diff d'un checkout partagé ne doit jamais le
+    // reconstruire depuis le `git status` global.
+    expect(delivery.checkpointEditedPaths()).toEqual(["lib/x.ts"]);
   });
 
   it("ignore un chemin hors du dépôt plutôt que de le mettre en tête des erreurs", () => {

@@ -183,6 +183,9 @@ function cp(): ControlPlaneClient {
     emitLive: (progress) => {
       h.live.push(progress as unknown as Record<string, unknown>);
     },
+    emitDiff: (diff) => {
+      h.live.push({ localDiff: diff } as unknown as Record<string, unknown>);
+    },
     recordUsage: async (line) => {
       h.usage.push(line as unknown as Record<string, unknown>);
     },
@@ -2202,6 +2205,25 @@ describe("le mode dépôt courant", () => {
     expect(h.exec.some((c) => c.includes("git status --porcelain --untracked-files=all"))).toBe(
       true,
     );
+  });
+
+  it("borne le diff aux écritures attribuées à CE run, même si un autre fichier bouge", async () => {
+    // Le faux dépôt annonce `a.ts` dans son état global. Seule la permission
+    // d'écriture de `lib/agent.ts` appartient à ce run : le fallback Git ne doit
+    // plus aspirer `a.ts` dans le diff affiché.
+    h.extraFrames = [
+      permissionFrame("edit", { filepath: "/vercel/sandbox/repo/lib/agent.ts" }),
+    ];
+
+    await run({ repoMode: "current" });
+
+    const displayedDiffReads = h.exec.filter(
+      (command) =>
+        command.startsWith("git diff --name-status") || command.startsWith("git diff --numstat"),
+    );
+    expect(displayedDiffReads.length).toBeGreaterThan(0);
+    expect(displayedDiffReads.every((command) => command.includes("'lib/agent.ts'"))).toBe(true);
+    expect(displayedDiffReads.every((command) => !command.includes("'a.ts'"))).toBe(true);
   });
 
   /**

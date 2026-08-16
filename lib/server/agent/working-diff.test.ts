@@ -345,6 +345,26 @@ describe("readWorkingDiff", () => {
     expect(out.files.every((f) => f.patch === undefined)).toBe(true);
   });
 
+  it("borne le diff local aux chemins du tour et au plafond demandé", async () => {
+    const host = fakeHost([
+      [/--name-status/, "M\tlib/a file.ts"],
+      [/--numstat/, "1\t0\tlib/a file.ts"],
+      [/--find-renames --no-color/, ""],
+      [/ls-files --others/, ""],
+    ]);
+    await readWorkingDiff(host, "abc123", {
+      patches: true,
+      scope: ["lib/a file.ts"],
+      maxBytes: 240_000,
+    });
+    expect(host.commands.every((command) => command.includes("'lib/a file.ts'") || !command.startsWith("git"))).toBe(true);
+    expect(host.commands.filter((command) => command.includes("head -c"))).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("head -c 240000"),
+      ]),
+    );
+  });
+
   it("rend une liste vide plutôt que de lever quand la sandbox tombe", async () => {
     const host: RepoHost = {
       layout: cloudLayout(),

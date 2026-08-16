@@ -1525,7 +1525,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       header={
         zen ? undefined : (
           <Header
-            className="bg-sidebar backdrop-blur-none"
+            className="bg-background backdrop-blur-none"
             left={<AppBreadcrumb />}
             right={
               // Desktop only — on mobile, Search moves to the navbar Search button
