@@ -30,7 +30,7 @@ import { getServiceClient } from "@/lib/supabase-service";
  */
 
 /** Version du format. À incrémenter si la forme du document change. */
-export const EXPORT_FORMAT_VERSION = 1;
+export const EXPORT_FORMAT_VERSION = 2;
 
 type Row = Record<string, unknown>;
 
@@ -92,6 +92,7 @@ export interface AccountExport {
   cycles: Row[];
   scratchpad: Row | null;
   assistant_conversations: Row[];
+  code_agent_conversations: Row[];
   notifications: Row[];
   push_devices: Row[];
   statistics: Row[];
@@ -214,7 +215,9 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .order("created_at"),
     service
       .from("notifications")
-      .select("id, project_id, type, issue_id, comment_id, read_at, created_at")
+      .select(
+        "id, project_id, type, issue_id, agent_conversation_id, comment_id, read_at, created_at",
+      )
       .eq("user_id", userId)
       .order("created_at"),
     // Appareils abonnés aux notifications push (MIN-183). NI `endpoint`, NI
@@ -302,6 +305,44 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     else messagesByConversation.set(key, [message]);
   }
 
+  const codeConversationRows = list(
+    "agent_conversations",
+    await service
+      .from("agent_conversations")
+      .select("id, project_id, title, visibility, archived_at, created_at, updated_at")
+      .eq("owner_id", userId)
+      .order("created_at"),
+  );
+  const codeConversationIds = codeConversationRows.map((c) => c.id as string);
+  const [codeMessages, codeTurns, codeContexts] = codeConversationIds.length
+    ? await Promise.all([
+        service
+          .from("agent_messages")
+          .select("conversation_id, turn_id, role, content, source, created_at")
+          .in("conversation_id", codeConversationIds)
+          .order("created_at"),
+        service
+          .from("agent_turns")
+          .select(
+            "id, conversation_id, status, model, reasoning_level, cost_usd, outcome, error_message, started_at, completed_at, created_at",
+          )
+          .in("conversation_id", codeConversationIds)
+          .order("created_at"),
+        service
+          .from("agent_conversation_contexts")
+          .select("conversation_id, kind, resource_id, role, snapshot, created_at")
+          .in("conversation_id", codeConversationIds)
+          .order("created_at"),
+      ])
+    : [
+        { data: [] as Row[], error: null },
+        { data: [] as Row[], error: null },
+        { data: [] as Row[], error: null },
+      ];
+
+  const codeRowsFor = (table: string, result: QueryResult, id: string): Row[] =>
+    list(table, result).filter((row) => row.conversation_id === id);
+
   // Un ticket d'un projet possédé peut aussi avoir été créé par la personne :
   // dédoublonné pour ne pas le sortir deux fois.
   const issuesById = new Map<string, Row>();
@@ -370,6 +411,12 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     assistant_conversations: conversationRows.map((c) => ({
       ...c,
       messages: messagesByConversation.get(c.id as string) ?? [],
+    })),
+    code_agent_conversations: codeConversationRows.map((c) => ({
+      ...c,
+      contexts: codeRowsFor("agent_conversation_contexts", codeContexts, c.id as string),
+      turns: codeRowsFor("agent_turns", codeTurns, c.id as string),
+      messages: codeRowsFor("agent_messages", codeMessages, c.id as string),
     })),
     notifications: list("notifications", notifications),
     push_devices: list("push_subscriptions", pushDevices),

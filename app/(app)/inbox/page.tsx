@@ -166,6 +166,7 @@ export default function InboxPage() {
     someone: t("someone"),
     mcpFallback: tTimeline("mcpFallback"),
     somePageFallback: t("somePageFallback"),
+    someAgentConversationFallback: t("someAgentConversationFallback"),
     someIssueFallback: t("someIssueFallback", {
       entity: tIssue("entity").toLowerCase(),
     }),

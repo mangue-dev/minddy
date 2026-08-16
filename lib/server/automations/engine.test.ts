@@ -67,7 +67,10 @@ vi.mock("@/lib/server/entitlements", () => ({
 }));
 
 vi.mock("@/lib/server/agent/runs", () => ({
-  activeRunForIssue: vi.fn(async () => h.activeRun),
+  activeRunForChain: vi.fn(async (chainId: string) => {
+    const run = h.activeRun as { chain_id?: string | null } | null;
+    return run?.chain_id === chainId ? run : null;
+  }),
   requestInterrupt: vi.fn(async () => undefined),
 }));
 
@@ -419,11 +422,9 @@ describe("runAutomations — conclure une chaîne", () => {
     expect(report.captureChainStarted).toHaveBeenCalled();
   });
 
-  it("un run ACTIF ne réveille pas le sursis — sinon la chaîne devient zombie", async () => {
-    // Réveiller d'abord et abandonner ensuite laissait une chaîne `running` à
-    // l'étape 0, sans run à elle : plus jamais balayée (elle n'est plus
-    // `pending`), plus jamais avancée (aucun run de chaîne ne finira), et
-    // occupant l'index unique du ticket pour toujours.
+  it("une conversation indépendante ne bloque pas le réveil de la chaîne", async () => {
+    // Le ticket n'est plus l'identité d'exécution : une conversation manuelle et
+    // la chaîne ont chacune leur workspace et peuvent progresser en parallèle.
     h.ownerMeta = { automation_preset: "loop-by-effort" };
     h.activeRun = { id: "run-manuel" };
     h.chain = {
@@ -443,10 +444,9 @@ describe("runAutomations — conclure une chaîne", () => {
       event: { type: "status_changed", from: null, to: "todo", source: "web" },
     });
 
-    // Elle reste EN SURSIS : le balayage suivant la reproposera.
-    expect(chainMod.startPendingChain).not.toHaveBeenCalled();
+    expect(chainMod.startPendingChain).toHaveBeenCalledWith("chain-1");
     expect(chainMod.cancelPendingChain).not.toHaveBeenCalled();
-    expect(actions.runAction).not.toHaveBeenCalled();
+    expect(actions.runAction).toHaveBeenCalledTimes(1);
   });
 
   it("un humain qui RANGE le ticket retire la chaîne, même en plein run", async () => {

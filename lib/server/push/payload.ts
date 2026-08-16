@@ -66,6 +66,7 @@ export function toPushLocale(raw: string | null | undefined): PushLocale {
 
 export interface PushContext {
   issues: Map<string, { number: number; title: string }>;
+  agentConversations: Map<string, string | null>;
   objectives: Map<string, string>;
   feedbackPosts: Map<string, string>;
   /** Titre d'une ROUTINE (MIN-185) — la bannière ne montre que lui. */
@@ -84,6 +85,7 @@ export interface PushContext {
 export function emptyPushContext(): PushContext {
   return {
     issues: new Map(),
+    agentConversations: new Map(),
     objectives: new Map(),
     feedbackPosts: new Map(),
     routines: new Map(),
@@ -111,6 +113,7 @@ export async function loadPushContext(
     ...new Set(rows.map(pick).filter((v): v is string => !!v)),
   ];
   const issueIds = ids((r) => r.issue_id);
+  const conversationIds = ids((r) => r.agent_conversation_id);
   const objectiveIds = ids((r) => r.objective_id);
   const feedbackIds = ids((r) => r.feedback_post_id);
   const routineIds = ids((r) => r.routine_id);
@@ -122,6 +125,7 @@ export async function loadPushContext(
 
   const [
     issues,
+    agentConversations,
     objectives,
     feedback,
     routines,
@@ -139,6 +143,9 @@ export async function loadPushContext(
           .in("id", issueIds)
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
+    conversationIds.length
+      ? service.from("agent_conversations").select("id, title").in("id", conversationIds)
+      : Promise.resolve({ data: [] as { id: string; title: string | null }[] }),
     objectiveIds.length
       ? service
           .from("objectives")
@@ -184,6 +191,7 @@ export async function loadPushContext(
   for (const i of issues.data ?? []) {
     ctx.issues.set(i.id, { number: i.number, title: i.title });
   }
+  for (const c of agentConversations.data ?? []) ctx.agentConversations.set(c.id, c.title);
   for (const o of objectives.data ?? []) ctx.objectives.set(o.id, o.name);
   for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, f.title);
   for (const r of routines.data ?? []) ctx.routines.set(r.id, r.title);
@@ -252,6 +260,10 @@ export function buildPushPayload(
     if (!issue) return null;
     const key = row.project_id ? ctx.projectKeys.get(row.project_id) : null;
     title = key ? `${key}-${issue.number} · ${issue.title}` : issue.title;
+  } else if (row.agent_conversation_id) {
+    const conversationTitle = ctx.agentConversations.get(row.agent_conversation_id);
+    if (conversationTitle === undefined) return null;
+    title = conversationTitle || t("someAgentConversationFallback");
   } else {
     return null;
   }

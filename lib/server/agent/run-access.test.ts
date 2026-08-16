@@ -17,7 +17,9 @@ vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: (...args: unknown[]) => getProjectAccess(...args),
 }));
 
-const { canReadAgentRun, isSharedRun } = await import("@/lib/server/agent/run-access");
+const { canReadAgentRun, canReadConversationRecord, isSharedRun } = await import(
+  "@/lib/server/agent/run-access"
+);
 
 const ME = "user-1";
 const run = (over: Partial<Parameters<typeof canReadAgentRun>[1]> = {}) => ({
@@ -57,6 +59,21 @@ describe("isSharedRun — ce qui n'est écrit à la première personne par perso
 });
 
 describe("canReadAgentRun", () => {
+  it("fait primer la visibilite explicite sur les anciens ancrages", async () => {
+    expect(
+      await canReadAgentRun(
+        "user-2",
+        run({
+          pull_request_id: "pr-1",
+          conversation: { owner_id: ME, visibility: "private" },
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      canReadConversationRecord("user-2", { owner_id: ME, visibility: "project" }),
+    ).toBe(true);
+  });
+
   it("son créateur la lit", async () => {
     expect(await canReadAgentRun(ME, run())).toBe(true);
   });

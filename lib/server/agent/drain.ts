@@ -191,7 +191,7 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
   const { data } = await service
     .from("agent_runs")
     .select(
-      "id, sandbox_id, loop_command_id, local_exec, created_by, project_id, issue_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at, cost_usd",
+      "id, sandbox_id, loop_command_id, local_exec, created_by, project_id, issue_id, conversation_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at, cost_usd",
     )
     .eq("status", "running")
     .lt("last_activity_at", cutoff)
@@ -204,6 +204,7 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     created_by: string | null;
     project_id: string;
     issue_id: string | null;
+    conversation_id: string;
     provider_key_id: string | null;
     run_id: string | null;
     routine_id: string | null;

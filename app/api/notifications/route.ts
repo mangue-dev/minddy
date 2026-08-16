@@ -69,6 +69,9 @@ export async function GET(request: NextRequest) {
   if (readable.length === 0) return NextResponse.json([]);
 
   const issueIds = [...new Set(readable.map((n) => n.issue_id).filter(Boolean))] as string[];
+  const conversationIds = [
+    ...new Set(readable.map((n) => n.agent_conversation_id).filter(Boolean)),
+  ] as string[];
   const objectiveIds = [...new Set(readable.map((n) => n.objective_id).filter(Boolean))] as string[];
   const feedbackPostIds = [
     ...new Set(readable.map((n) => n.feedback_post_id).filter(Boolean)),
@@ -84,6 +87,7 @@ export async function GET(request: NextRequest) {
 
   const [
     { data: issues },
+    { data: agentConversations },
     { data: objectives },
     { data: feedbackPosts },
     { data: routines },
@@ -98,6 +102,9 @@ export async function GET(request: NextRequest) {
       ? service.from("issues").select("id, number, title").in("id", issueIds)
       .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
+    conversationIds.length
+      ? service.from("agent_conversations").select("id, title").in("id", conversationIds)
+      : Promise.resolve({ data: [] as { id: string; title: string | null }[] }),
     objectiveIds.length
       ? service.from("objectives").select("id, name").in("id", objectiveIds)
       .is("deleted_at", null)
@@ -150,6 +157,7 @@ export async function GET(request: NextRequest) {
   ]);
 
   const issueMap = new Map((issues ?? []).map((i) => [i.id, i]));
+  const conversationMap = new Map((agentConversations ?? []).map((c) => [c.id, c]));
   const objectiveMap = new Map((objectives ?? []).map((o) => [o.id, o]));
   const feedbackMap = new Map((feedbackPosts ?? []).map((f) => [f.id, f]));
   const routineMap = new Map((routines ?? []).map((r) => [r.id, r]));
@@ -219,6 +227,10 @@ export async function GET(request: NextRequest) {
       read_at: n.read_at,
       created_at: n.created_at,
       issue_id: n.issue_id,
+      agent_conversation_id: n.agent_conversation_id ?? null,
+      agent_conversation_title: n.agent_conversation_id
+        ? conversationMap.get(n.agent_conversation_id)?.title ?? null
+        : null,
       issue_number: issue?.number ?? null,
       issue_title: issue?.title ?? null,
       objective_id: n.objective_id ?? null,

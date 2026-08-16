@@ -710,15 +710,6 @@ export function AgentConversation({
       ? "loading"
       : "compose";
 
-  // Travail dont la prochaine run froide héritera — miroir EXACT de
-  // `inheritableWorkForIssue` : la lignée est indexée sur la BRANCHE (la création
-  // de PR est optionnelle). Run la plus récente avec une branche ; mergée → rien à
-  // hériter (branche neuve). Surtout pas « la plus récente non fusionnée » : on
-  // promettrait d'itérer sur une vieille lignée que le serveur ne touchera pas.
-  const latestWorkRun = runs.find((r) => r.branch_name != null) ?? null;
-  const inheritedWork =
-    latestWorkRun && latestWorkRun.pr_state !== "merged" ? latestWorkRun : null;
-
   /**
    * Action de la session, à gauche de celles de l'hôte (le lien vers la pull
    * request). Le résumé des fichiers est maintenant dans la pilule au-dessus du
@@ -811,15 +802,7 @@ export function AgentConversation({
               <NumoIcon className="size-6 text-muted-foreground" />
             </div>
             <p className="max-w-sm text-sm text-muted-foreground">
-              {/* Une run froide part d'un contexte vierge, mais reprend la lignée
-                  du ticket (branche, et PR si une existe) : on l'annonce, sinon
-                  « nouvel agent » laisse craindre de repartir de zéro et de perdre
-                  le travail déjà poussé. */}
-              {inheritedWork
-                ? inheritedWork.pr_number != null
-                  ? t("composeInheritsPr", { number: inheritedWork.pr_number })
-                  : t("composeInheritsBranch")
-                : t("dialogDescription")}
+              {t("dialogDescription")}
             </p>
           </div>
         )}
@@ -998,9 +981,7 @@ export function AgentConversation({
                     placeholder={t("branchSearchPlaceholder")}
                     emptyLabel={t("branchSearchEmpty")}
                     loadingLabel={t("branchSearchLoading")}
-                    disabled={launching || inheritedWork != null}
-                    disabledTooltip={inheritedWork ? t("branchInherited") : undefined}
-                    lockedBranch={inheritedWork?.base_branch}
+                    disabled={launching}
                     localBranches={environment !== "cloud" ? localRepo.branches : undefined}
                     localLabel={t("branchLocalGroup")}
                     cloudLabel={t("branchCloudGroup")}

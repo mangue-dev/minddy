@@ -208,6 +208,9 @@ export interface MyNotification {
   read_at: string | null;
   created_at: string;
   issue_id: string | null;
+  /** Conversation de code visee, y compris lorsqu'elle n'a aucun ticket. */
+  agent_conversation_id: string | null;
+  agent_conversation_title: string | null;
   issue_number: number | null;
   issue_title: string | null;
   /** Set instead of the issue fields when the notification points at an objective. */

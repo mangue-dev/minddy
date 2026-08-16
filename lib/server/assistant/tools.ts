@@ -1826,13 +1826,13 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "launch_code_agent",
       description:
-        "Send a message to the minddy cloud code agent on an issue. The agent works CONVERSATIONALLY in a sandbox on the project's linked GitHub repository, anchored to the issue: it does what the message asks (implement, fix, explore, explain, review), pushes its code changes to the issue's working branch, and opens a pull request only when asked or when it judges the work ready for review — a PR is NOT automatic, so never promise one. If an agent is already working on the issue, the message reaches it as steering; otherwise a new session starts (inheriting the issue's existing branch/PR). Requires a linked GitHub repo. `mode` is required: plan / implement / verify send the SAME instructions as the app's own buttons (nothing to write), 'custom' sends your own `prompt`. Pass `model` ONLY when the user explicitly names a model to use — resolve the exact id with list_agent_models first so it matches their active provider (a model absent from that provider will fail); otherwise omit `model` and their default applies.",
+        "Start a general conversation with the minddy cloud code agent in this project's repository. A ticket is optional context, not the identity of the conversation. Use `issue_id` for ticket-specific work; omit it for code exploration, explanations, maintenance or any other project-scoped request. `plan`, `implement` and `verify` require an issue; `custom` accepts any prompt. Every call starts its own conversation and branch. A pull request is not automatic. Pass `model` only when the user explicitly names one.",
       parameters: {
         type: "object",
         properties: {
           issue_id: {
             type: "string",
-            description: "id of the issue to work on (resolve it via list_issues/search_issues first).",
+            description: "Optional issue context. Required only for plan, implement and verify.",
           },
           mode: {
             type: "string",
@@ -1859,7 +1859,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         // `mode` est REQUIS : sur un petit modèle, un champ optionnel n'est
         // simplement pas rempli — le choix du job serait alors toujours 'custom'
         // par défaut, et les trois consignes natives ne serviraient jamais.
-        required: ["issue_id", "mode"],
+        required: ["mode"],
       },
     },
   },

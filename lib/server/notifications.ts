@@ -18,6 +18,8 @@ export interface NotificationRow {
   project_id: string | null;
   type: NotificationType;
   issue_id: string | null;
+  /** Conversation de code visee, qu'elle ait ou non un ticket en contexte. */
+  agent_conversation_id?: string | null;
   /** Set instead of issue_id when the notification points at an objective. */
   objective_id?: string | null;
   /** Set instead of issue_id/objective_id for a feedback-post notification. */
@@ -117,6 +119,9 @@ export async function insertNotifications(
           .in("type", siblingTypes(r.type) as string[])
           .is("read_at", null);
         del = r.issue_id ? del.eq("issue_id", r.issue_id) : del.is("issue_id", null);
+        del = r.agent_conversation_id
+          ? del.eq("agent_conversation_id", r.agent_conversation_id)
+          : del.is("agent_conversation_id", null);
         // Une notification de ROUTINE (MIN-185) n'a pas de ticket : sans ce
         // second filtre, le `issue_id is null` ci-dessus déplacerait la ligne
         // de TOUTES les routines du compte — deux routines en échec le même

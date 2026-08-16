@@ -30,6 +30,7 @@ import {
   type AgentResourceContext,
 } from "./prompt";
 import { buildOpencodeAnchor } from "./opencode-anchor";
+import { executionPolicyFor } from "./policy";
 import { promptWithMentions } from "@/lib/agent-mentions";
 import { loadPrReviewBoot, loadPrRunContext, pullRequestHeadRef, pullRequestLocalBranch } from "./pr-run";
 import {
@@ -650,6 +651,11 @@ export async function executeAgentRun(
       throw new Error("The pull request this review was anchored to no longer exists");
     }
     const anchor: AgentAnchor = issue ? "issue" : prRun ? "pr" : "notebook";
+    const policy = executionPolicyFor({
+      hasIssueContext: issue !== null,
+      reviewingPullRequest: prRun !== null,
+      unattended: run.routine_id !== null,
+    });
     /**
      * LE TOKEN QUI DESCEND DANS LA MICROVM, et il n'est plus celui d'au-dessus
      * (MIN-327).
@@ -672,7 +678,7 @@ export async function executeAgentRun(
       ? target
       : (await resolveRepoCloneTarget(
           run.project_id,
-          anchor === "pr" ? "repo-read" : "repo-write",
+          policy.repository === "read" ? "repo-read" : "repo-write",
         ).catch(() => null)) ?? target;
     secrets.addAuthUrl(vmTarget.authUrl);
     secrets.add(vmTarget.token);
@@ -682,7 +688,7 @@ export async function executeAgentRun(
      * l'autre moitié étant le jeu de tools, qui n'a aucune édition. Une phrase de
      * prompt ne tiendrait ni l'une ni l'autre.
      */
-    const writesToRepo = anchor !== "pr";
+    const writesToRepo = policy.repository === "write";
     const project = issue
       ? { key: issue.projectKey, name: issue.projectName }
       : await loadProjectContext(run.project_id);

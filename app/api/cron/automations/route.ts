@@ -7,7 +7,7 @@ import {
   lastRunOfChain,
   staleRunningChains,
 } from "@/lib/server/automations/chain";
-import { activeRunForIssue } from "@/lib/server/agent/runs";
+import { activeRunForChain } from "@/lib/server/agent/runs";
 import { haltChain } from "@/lib/server/automations/report";
 import { runAutomations } from "@/lib/server/automations/engine";
 import type { AutomationSource } from "@/lib/automations";
@@ -113,7 +113,7 @@ async function handle(request: NextRequest) {
     new Date(Date.now() - RUNNING_STALE_MS).toISOString(),
   )) {
     try {
-      if (await activeRunForIssue(chain.issue_id)) continue; // elle travaille
+      if (await activeRunForChain(chain.id)) continue; // elle travaille
       const last = await lastRunOfChain(chain.id);
       if (!last) {
         // Avancée puis jamais lancée (exception entre les deux) : rien à rejouer.

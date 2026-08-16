@@ -7,6 +7,7 @@ const LABELS = {
   mcpFallback: "Un agent",
   somePageFallback: "Page sans titre",
   someIssueFallback: "un ticket",
+  someAgentConversationFallback: "Conversation avec Numo",
 };
 
 function notification(patch: Partial<MyNotification>): MyNotification {
@@ -100,6 +101,12 @@ describe("notificationTitle", () => {
     expect(
       notificationTitle(notification({ page_id: "pg1", page_title: "" }), LABELS)
     ).toBe("Page sans titre");
+  });
+
+  it("ne fait pas passer une conversation générale sans titre pour un ticket", () => {
+    expect(
+      notificationTitle(notification({ agent_conversation_id: "c1" }), LABELS)
+    ).toBe("Conversation avec Numo");
   });
 
   it("retombe sur le repli quand le ticket n'a pas de titre", () => {

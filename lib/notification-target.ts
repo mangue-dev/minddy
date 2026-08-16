@@ -16,6 +16,8 @@ import type { MessageKey } from "./i18n-keys";
 export interface NotificationTarget {
   project_id: string | null;
   issue_id: string | null;
+  /** Conversation de l'agent de code, independante de ses contextes. */
+  agent_conversation_id?: string | null;
   objective_id?: string | null;
   feedback_post_id?: string | null;
   /** Une ROUTINE (MIN-185) : ses exécutions se lisent dans la routine, et
@@ -48,6 +50,7 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
   // La pull request aussi : sa page est globale, et une PR sans ticket n'a rien
   // d'autre à ouvrir — c'est même le cas normal d'une PR humaine.
   if (n.pull_request_id) return `/pull-requests?pr=${n.pull_request_id}`;
+  if (n.agent_conversation_id) return `/agents?run=${n.agent_conversation_id}`;
   if (!n.project_id) return null;
   if (n.objective_id) {
     return `/projects/${n.project_id}/objectives?open=${n.objective_id}`;
@@ -90,6 +93,7 @@ export const NOTIFICATION_TARGET_PARAMS = [
   "issue",
   "routine",
   "pr",
+  "run",
 ] as const;
 
 /** La clé i18n de la phrase « qui a fait quoi », namespace `Inbox`. Typée en

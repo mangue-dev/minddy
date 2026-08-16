@@ -42,6 +42,7 @@ type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled"
 
 interface RunRow {
   id: string;
+  conversation_id: string;
   issue_id: string | null;
   pull_request_id: string | null;
   status: AgentRunStatus;
@@ -56,6 +57,7 @@ interface RunRow {
   updated_at: string;
   completed_at: string | null;
   awaiting_input: boolean;
+  conversation: { title: string | null; visibility: "private" | "project" } | null;
   issue: { id: string; number: number; title: string } | null;
   project: {
     id: string;
@@ -80,7 +82,9 @@ function noteExcerpt(prompt: string | null): string | null {
 }
 
 export interface AgentSessionListItem {
-  /** Le run — la conversation EST ce run. */
+  /** Identite durable de la conversation, distincte de son execution courante. */
+  conversationId: string;
+  /** Execution courante. Conserve pour les routes du moteur pendant la migration. */
   runId: string;
   status: AgentRunStatus;
   model: string | null;
@@ -135,7 +139,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, issue:issues(id, number, title), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
+      "id, conversation_id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number, title), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
     )
     // Un passage de ROUTINE (MIN-185) n'est PAS une conversation : il vit dans
     // sa routine, sous « Exécutions précédentes », et nulle part ailleurs. Sans
@@ -168,6 +172,7 @@ export async function GET(request: NextRequest) {
   // le représentant d'un ticket (l'état de sa dernière run, sa PR, sa fin) se lit
   // maintenant sur chaque ligne, pour ce run-là et lui seul.
   const items: AgentSessionListItem[] = rows.map((r) => ({
+    conversationId: r.conversation_id,
     runId: r.id,
     status: r.status,
     model: r.model,
@@ -178,6 +183,7 @@ export async function GET(request: NextRequest) {
     // sur le titre du ticket, que le client a déjà sous la main.
     title:
       r.pull_request?.title?.trim() ||
+      r.conversation?.title?.trim() ||
       r.title?.trim() ||
       (r.issue_id ? null : noteExcerpt(r.prompt)),
     pr_number: r.pr_number,

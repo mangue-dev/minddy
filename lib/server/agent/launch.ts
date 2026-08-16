@@ -22,11 +22,10 @@ import { loadPrRunContext, type PrRunContext } from "./pr-run";
 import { resolveProjectLinkForRepo } from "./repo-access";
 import {
   createRun,
-  activeRunForIssue,
+  activeRunForChain,
   activeRunForPullRequest,
   activeRunForRoutine,
   activeRunForPrNumber,
-  inheritableWorkForIssue,
   inheritableWorkForPr,
   insertRunMessage,
   bumpRunActivity,
@@ -264,8 +263,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     if (!input.prompt?.trim()) return { ok: false, error: "promptRequired" };
     projectId = prLink.projectId;
   } else {
-    // Run CARNET : sans ticket, la note EST la mission — un run carnet sans
-    // instruction n'aurait rien à faire (un run d'issue, si : le ticket).
+    // Conversation générale : sans ticket, le message EST la mission.
     if (!input.projectId) return { ok: false, error: "issueNotFound" };
     if (!input.prompt?.trim()) return { ok: false, error: "promptRequired" };
     projectId = input.projectId;
@@ -282,8 +280,8 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
         prNumber: continuePr.number,
         provider: continuePr.provider,
       })
-    : issueId
-      ? activeRunForIssue(issueId)
+    : input.chainId
+      ? activeRunForChain(input.chainId)
       : input.routineId
         ? activeRunForRoutine(input.routineId)
         : Promise.resolve(null);
@@ -299,23 +297,18 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     return { ok: false, error: "unsupportedProvider" };
   }
 
-  // « Un seul agent actif par ticket » est une règle du TICKET : les runs carnet,
-  // indépendants les uns des autres, peuvent travailler en parallèle (chacun sur
-  // sa branche). Le quota reste leur seul plafond.
+  // Le ticket est un contexte, pas un verrou : plusieurs conversations peuvent
+  // le citer et travailler en parallèle sur des branches distinctes.
   //
-  // Une ROUTINE (MIN-185) retrouve cette règle, pour la même raison qu'un
-  // ticket : un passage qui traîne ne doit pas se faire doubler par l'échéance
-  // suivante — même instruction, même dépense, deux fois.
+  // Une routine ou une chaîne garde son propre verrou : un passage qui traîne
+  // ne doit pas se faire doubler par la même instruction.
   if (continuePr) {
     // Une reprise de PR, elle, retrouve la règle : deux relances en parallèle
     // pousseraient sur la MÊME branche. C'est la lignée qui est unique, pas le
     // carnet — et ici la lignée est la pull request.
     const active = await activePromise;
     if (active) return { ok: false, error: "alreadyRunning", run: active };
-  } else if (issueId) {
-    const active = await activePromise;
-    if (active) return { ok: false, error: "alreadyRunning", run: active };
-  } else if (input.routineId) {
+  } else if (input.chainId || input.routineId) {
     const active = await activePromise;
     if (active) return { ok: false, error: "alreadyRunning", run: active };
   }
@@ -388,15 +381,9 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     userId: input.userId,
   });
 
-  // Héritage du TRAVAIL (MIN-68, indexé sur la branche) : tant que la lignée de
-  // l'issue est vivante (branche portée par une run, PR non mergée — ou pas de PR
-  // du tout), la run froide repart de SA branche et porte ses `pr_*` dès la
-  // création → `execute.ts` pousse sur la bonne branche et met à jour la MÊME PR
-  // le cas échéant (une `closed` est rouverte au push). Après un merge, plus rien
-  // à hériter : branche neuve.
-  // Un run carnet n'hérite jamais : pas de lignée, branche neuve à chaque fois.
-  // Sauf s'il REPREND une pull request (MIN-292) : là, la lignée existe — c'est
-  // la PR — et elle se lit sur les runs qui portent son numéro. Une PR sans
+  // Une conversation neuve a toujours son workspace. La seule reprise implicite
+  // encore admise ici est une demande EXPLICITE de continuer une pull request :
+  // la lignée se lit alors sur les runs qui portent son numéro. Une PR sans
   // branche à reprendre (aucun run l'ayant ouverte, ou déjà mergée) est refusée
   // ici plutôt que de partir en silence sur une branche neuve, ce qui perdrait
   // le travail qu'on demandait justement de corriger.
@@ -406,9 +393,7 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
         prNumber: continuePr.number,
         provider: continuePr.provider,
       })
-    : issueId
-      ? await inheritableWorkForIssue(issueId)
-      : null;
+    : null;
   if (continuePr && !inherited) return { ok: false, error: "prNoBranch" };
 
   let run: AgentRun;
@@ -451,10 +436,23 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   } catch (err) {
     // Course perdue contre un lancement concurrent (double-clic, deux onglets) :
     // l'index unique a tranché. Même réponse que le pré-check, pas un 500.
-    // (Inatteignable pour un run carnet : les NULL sont distincts dans l'index.)
-    if (err instanceof ActiveRunExistsError && issueId) {
-      const winner = await activeRunForIssue(issueId);
-      return { ok: false, error: "alreadyRunning", run: winner ?? undefined };
+    // Le verrou ne concerne plus les tickets ; il reste aux automatisations et
+    // aux reprises explicites d'une même pull request.
+    if (err instanceof ActiveRunExistsError) {
+      const winner = continuePr
+        ? await activeRunForPrNumber({
+            repoFullName: continuePr.repoFullName,
+            prNumber: continuePr.number,
+            provider: continuePr.provider,
+          })
+        : input.chainId
+          ? await activeRunForChain(input.chainId)
+          : input.routineId
+            ? await activeRunForRoutine(input.routineId)
+            : null;
+      if (continuePr || input.chainId || input.routineId) {
+        return { ok: false, error: "alreadyRunning", run: winner ?? undefined };
+      }
     }
     throw err;
   }
@@ -681,28 +679,21 @@ export type ContinueResult =
   | { ok: false; error: LaunchError; run?: AgentRun; quota?: AgentQuota };
 
 /**
- * Démarre OU CONTINUE un run d'agent, pour les triggers CONVERSATIONNELS où « une
- * run tourne déjà » ne doit pas être une erreur (@numo en commentaire, chat numo) :
- *   • une run TRAVAILLE (queued/running) → le message lui parvient en STEERING, à
- *     chaud, drainé à la frontière de round ;
- *   • sinon (aucune run, ou la dernière est au repos) → nouvelle run FROIDE, qui
- *     hérite de la PR de l'issue.
+ * Démarre une conversation depuis un trigger sans identifiant de conversation.
+ * Une mention de ticket ne détourne jamais une autre conversation. Seule une
+ * mention dans le fil d'une PR rejoint sa review active, car le fil désigne déjà
+ * cette execution partagée.
  * Une run `completed` (au repos) n'est pas reprise ici : la reprise à chaud d'une
  * conversation existante se fait depuis le composer de SA conversation (`/steer`).
  */
 export async function continueOrLaunchAgentRun(
   input: LaunchAgentInput,
 ): Promise<ContinueResult> {
-  // Chemins conversationnels : un ticket (@numo dans un commentaire, chat numo)
-  // et, depuis MIN-168, une PULL REQUEST (@numo dans son fil) — une session de
-  // review qui tourne LIT déjà la PR, donc la question lui parvient en steering
-  // au lieu d'ouvrir une seconde session sur le même diff. Un run carnet, lui, se
-  // reprend par SA conversation (/steer), jamais par ce raccourci.
-  const active = input.issueId
-    ? await activeRunForIssue(input.issueId)
-    : input.pullRequestId
-      ? await activeRunForPullRequest(input.pullRequestId)
-      : null;
+  // Une review qui tourne lit déjà cette PR : la question de son fil lui parvient
+  // en steering au lieu d'ouvrir une seconde session sur le même diff.
+  const active = input.pullRequestId
+    ? await activeRunForPullRequest(input.pullRequestId)
+    : null;
   if (active) {
     const text = (input.prompt ?? "").trim();
     if (text) await insertRunMessage(active.id, input.userId, text, input.promptMentions);

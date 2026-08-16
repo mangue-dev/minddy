@@ -6,6 +6,16 @@ import en from "@/messages/en.json";
 const P = "11111111-1111-1111-1111-111111111111";
 
 describe("notificationTargetPath", () => {
+  it("ouvre une conversation d'agent meme sans ticket", () => {
+    expect(
+      notificationTargetPath({
+        project_id: P,
+        issue_id: null,
+        agent_conversation_id: "conv",
+      }),
+    ).toBe("/agents?run=conv");
+  });
+
   it("ouvre l'objectif quand la ligne en porte un", () => {
     expect(
       notificationTargetPath({ project_id: P, issue_id: null, objective_id: "obj" })

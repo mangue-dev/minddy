@@ -147,6 +147,7 @@ export function CreateIssueDialog({
   analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
 }) {
   const t = useTranslations("IssueUI");
+  const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const { track } = useAnalytics();
   const [title, setTitle] = useState("");

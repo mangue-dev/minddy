@@ -1264,6 +1264,7 @@
     "groupEarlier": "Earlier",
     "groupInvitations": "Invitations",
     "someIssueFallback": "an {entity}",
+    "someAgentConversationFallback": "Conversation with Numo",
     "someone": "Someone",
     "linePrReviewed": "Your pull request was reviewed",
     "linePrMerged": "Your pull request was merged",

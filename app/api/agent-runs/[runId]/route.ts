@@ -115,9 +115,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 
   const { error } = await getServiceClient()
-    .from("agent_runs")
+    .from("agent_conversations")
     .update({ title })
-    .eq("id", runId);
+    .eq("id", run.conversation_id ?? run.id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -155,15 +155,16 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  // Le drapeau d'abord : si la boucle vit encore, elle le lira peut-être avant
-  // qu'on ne lui coupe la machine, et s'arrêtera proprement.
   if (run.status === "queued" || run.status === "running") {
-    await requestInterrupt(runId).catch(() => {});
+    await requestInterrupt(run.id).catch(() => {});
   }
   if (run.sandbox_id) await stopSandboxByName(run.sandbox_id).catch(() => {});
   if (run.provider_key_id) await revokeRunKey(run.provider_key_id).catch(() => {});
 
-  const { error } = await getServiceClient().from("agent_runs").delete().eq("id", runId);
+  const { error } = await getServiceClient()
+    .from("agent_conversations")
+    .delete()
+    .eq("id", run.conversation_id ?? run.id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -10,13 +10,21 @@ import {
   type LaunchResult,
 } from "@/lib/server/agent/launch";
 import { parseAgentMentions } from "@/lib/agent-mentions";
-import { isSharedRun, type RunAnchors } from "@/lib/server/agent/run-access";
+import {
+  canReadConversationRecord,
+  isSharedRun,
+  type ConversationAccessRecord,
+  type RunAnchors,
+} from "@/lib/server/agent/run-access";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
 
 /** Les colonnes de `RUN_COLUMNS` dont ce fichier a besoin pour trancher. */
-type RunRow = RunAnchors & { created_by: string | null } & Record<string, unknown>;
+type RunRow = RunAnchors & {
+  created_by: string | null;
+  conversation: Pick<ConversationAccessRecord, "owner_id" | "visibility"> | null;
+} & Record<string, unknown>;
 
 /**
  * Runs de l'agent de code d'une issue (MIN-46).
@@ -38,7 +46,7 @@ export const maxDuration = 300;
 // ce sont les trois colonnes dont dépend la règle de visibilité (MIN-332), et
 // cette lecture se fait en clé service — sans elles, on ne pourrait pas trier.
 const RUN_COLUMNS =
-  "id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec, local_worktree";
+  "id, conversation_id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec, local_worktree, conversation:agent_conversations(owner_id, visibility)";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -74,8 +82,13 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // en clé service — la policy `agent_runs_select`, qu'elle contourne, dit la
   // même chose. Les trois colonnes de visibilité ressortent du payload aussitôt.
   const runs = ((data ?? []) as unknown as RunRow[])
-    .filter((run) => isSharedRun(run) || run.created_by === auth.user.id)
-    .map(({ created_by: _c, chain_id: _ch, routine_id: _r, ...rest }) => rest);
+    .filter(
+      (run) =>
+        run.conversation
+          ? canReadConversationRecord(auth.user.id, run.conversation)
+          : isSharedRun(run) || run.created_by === auth.user.id,
+    )
+    .map(({ created_by: _c, chain_id: _ch, routine_id: _r, conversation: _v, ...rest }) => rest);
   return NextResponse.json({ runs, pullRequest });
 }
 

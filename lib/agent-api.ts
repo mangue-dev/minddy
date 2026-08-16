@@ -117,10 +117,9 @@ export interface AgentRunSummary {
 }
 
 /**
- * Statuts d'un run qui OCCUPE l'issue : l'agent TRAVAILLE (queued/running). Au
- * repos (`completed`), la session n'occupe plus le ticket — modèle conversationnel :
- * elle attend simplement le prochain message dans sa conversation. Un seul run au
- * travail par issue : tant qu'il y en a un, on n'en lance pas de nouveau.
+ * Statuts d'un run qui TRAVAILLE (queued/running). Le ticket éventuel n'est
+ * qu'un contexte : plusieurs conversations peuvent travailler en parallèle sur
+ * des branches distinctes.
  */
 export const ACTIVE_AGENT_STATUSES: AgentRunStatus[] = ["queued", "running"];
 
@@ -268,7 +267,7 @@ export async function launchAgentRunApi(
     reasoning_level: body.reasoningLevel ?? "default",
     has_branch: !!body.baseBranch,
     provider: "unknown",
-    scope: "issue",
+    scope: "issue_context",
     has_prompt: !!body.prompt,
     prompt_length_bucket: lengthBucket(body.prompt),
     // Où le tour part (MIN-359). Le chemin, lui, ne sort JAMAIS du poste : c'est
@@ -325,7 +324,7 @@ export async function launchNotebookAgentApi(body: {
     reasoning_level: body.reasoningLevel ?? "default",
     has_branch: !!body.baseBranch,
     provider: "unknown",
-    scope: "notebook",
+    scope: "general",
     has_prompt: !!body.prompt,
     prompt_length_bucket: lengthBucket(body.prompt),
     local_exec: !!body.localExec,
@@ -338,6 +337,9 @@ export async function launchNotebookAgentApi(body: {
     }),
   );
 }
+
+/** Nom de domaine actuel ; l'ancien export reste disponible pour compatibilite. */
+export const launchGeneralAgentApi = launchNotebookAgentApi;
 
 /** Branches du dépôt lié à un PROJET (compose d'un run carnet). */
 export async function fetchProjectRepoBranchesApi(
@@ -1184,6 +1186,9 @@ export async function replyPrReviewCommentApi(
  * l'autre). Leur titre vient du titreur, écrit au lancement.
  */
 export interface AgentSessionListItem {
+  /** Identite durable de la conversation. */
+  conversationId: string;
+  /** Execution courante, utilisee par le plan de controle. */
   runId: string;
   status: AgentRunStatus;
   model: string | null;
@@ -1228,7 +1233,7 @@ export async function fetchAgentSessionsApi(): Promise<{
 // ── État « lu » des sessions d'agent (bulle bleue « terminé, non lu ») ────────
 
 /**
- * Carte { issueId → last_read_at } des sessions consultées par l'utilisateur. Une
+ * Carte { conversationId → last_read_at } des conversations consultées. Une
  * session est NON LUE quand sa dernière run terminée (`lastCompletedAt`) est
  * postérieure à ce timestamp (ou absente de la carte = jamais consultée).
  */
@@ -1238,13 +1243,13 @@ export async function fetchAgentReadsApi(): Promise<{
   return parseJson(await fetch(`/api/agent-reads`));
 }
 
-/** Marque une session (issue) comme lue MAINTENANT — upsert `last_read_at = now()`. */
-export async function markAgentSessionReadApi(issueId: string): Promise<void> {
+/** Marque une conversation comme lue MAINTENANT. */
+export async function markAgentSessionReadApi(conversationId: string): Promise<void> {
   await parseJson(
     await fetch(`/api/agent-reads`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ issueId }),
+      body: JSON.stringify({ conversationId }),
     }),
   );
 }
@@ -1256,11 +1261,11 @@ export async function markAgentSessionReadApi(issueId: string): Promise<void> {
  * bulle « terminé » n'apparaît qu'une fois l'agent au repos.
  */
 export function isAgentSessionUnread(
-  session: Pick<AgentSessionListItem, "working" | "lastCompletedAt" | "issue">,
+  session: Pick<AgentSessionListItem, "conversationId" | "working" | "lastCompletedAt">,
   reads: Record<string, string>,
 ): boolean {
-  if (session.working || !session.lastCompletedAt || !session.issue) return false;
-  const lastRead = reads[session.issue.id];
+  if (session.working || !session.lastCompletedAt) return false;
+  const lastRead = reads[session.conversationId];
   // Comparaison NUMÉRIQUE : `completed_at` (Postgres, `…+00:00`) et `last_read_at`
   // (client, `…Z`) n'ont pas le même format string → un `>` lexical serait faux.
   if (!lastRead) return true;

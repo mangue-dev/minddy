@@ -91,7 +91,7 @@ function useIsWideViewport(): boolean {
  * entière, distinguées à l'écran par leur titre et l'identifiant du ticket.
  */
 function sessionKey(s: AgentSessionListItem): string {
-  return s.runId;
+  return s.conversationId;
 }
 
 type SessionGroup = ProjectGroup<AgentSessionListItem>;
@@ -655,6 +655,7 @@ export function AgentsPage() {
   // passage live. (Le brouillon SANS TICKET a son propre volet, `SessionCompose`.)
   const draftItem: AgentSessionListItem | null = issueDraft
     ? {
+        conversationId: `draft:${issueDraft.issueId}`,
         runId: `draft:${issueDraft.issueId}`,
         status: "queued",
         model: null,
@@ -783,6 +784,7 @@ export function AgentsPage() {
   const sessionForKey = (key: string | null): AgentSessionListItem | null =>
     key
       ? sessions.find((s) => s.runId === key) ??
+        sessions.find((s) => s.conversationId === key) ??
         sessions.find((s) => s.issue?.id === key) ??
         null
       : null;
@@ -802,9 +804,9 @@ export function AgentsPage() {
   // SANS TICKET n'ont pas de suivi lu/non-lu (personnelles, pas d'issue à ancrer).
   const shownReal = !composeSelected && (isWide || mobileDetail) ? realSelected : null;
   useEffect(() => {
-    const id = shownReal?.issue?.id;
+    const id = shownReal?.conversationId;
     if (id) markRead(id);
-  }, [shownReal?.issue?.id, shownReal?.lastCompletedAt, markRead]);
+  }, [shownReal?.conversationId, shownReal?.lastCompletedAt, markRead]);
 
   /**
    * Publie l'issue active à Numo : il résout « cette issue » (et sa PR le cas
@@ -851,7 +853,7 @@ export function AgentsPage() {
         }
       : realSelected && !composeSelected
         ? {
-            href: `/agents?run=${encodeURIComponent(realSelected.runId)}`,
+            href: `/agents?run=${encodeURIComponent(realSelected.conversationId)}`,
             label: agentSessionTitle(realSelected, t("freeSessionTitle")),
           }
         : { href: "/agents", label: t("title") }
@@ -873,7 +875,7 @@ export function AgentsPage() {
     // Deep-link par TICKET (`?issue=`) : la sélection retient la CONVERSATION
     // qu'il a ouverte, pas le ticket — sinon aucune ligne ne se surligne, et le
     // volet suivrait un ticket dont les conversations ne sont plus une.
-    if (resolved.runId !== selectedKey) setSelectedKey(resolved.runId);
+    if (resolved.conversationId !== selectedKey) setSelectedKey(resolved.conversationId);
   }, [sessions, selectedKey, composeSelected, launchedRunId]);
 
   // Sélectionne une VRAIE session : abandonne le brouillon en cours (jamais envoyé →
@@ -925,7 +927,7 @@ export function AgentsPage() {
     setDeleting(true);
     try {
       await deleteAgentRunApi(session.runId);
-      if (selectedKey === session.runId) setSelectedKey(FREE_COMPOSE_PARAM);
+      if (selectedKey === session.conversationId) setSelectedKey(FREE_COMPOSE_PARAM);
       setDeleteTarget(null);
       await refetch();
       toast.success(t("sessionDeleted"));

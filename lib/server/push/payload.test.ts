@@ -218,6 +218,19 @@ describe("buildPushPayload", () => {
       "Réparer le sélecteur de cycle"
     );
   });
+
+  it("ouvre et nomme une conversation d'agent sans ticket", () => {
+    const ctx = emptyPushContext();
+    ctx.agentConversations.set("conversation-1", null);
+    const row = issueRow("agent_done", {
+      issue_id: null,
+      agent_conversation_id: "conversation-1",
+    });
+    expect(buildPushPayload(ctx, row, "fr")).toMatchObject({
+      title: fr.Inbox.someAgentConversationFallback,
+      url: "/agents?run=conversation-1",
+    });
+  });
 });
 
 describe("toPushLocale", () => {

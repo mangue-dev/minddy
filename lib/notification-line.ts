@@ -26,6 +26,8 @@ export interface NotificationLabels {
   somePageFallback: string;
   /** `Inbox.someIssueFallback`, déjà formaté avec le mot « ticket » / « issue ». */
   someIssueFallback: string;
+  /** Une conversation générale de Numo dont le titreur n'a rien écrit. */
+  someAgentConversationFallback: string;
 }
 
 /**
@@ -61,6 +63,9 @@ export function notificationTitle(
   // Une pull request : son titre, précédé de son numéro par la référence
   // affichée à côté — elle n'a pas forcément de ticket à nommer.
   if (n.pull_request_id) return n.pull_request_title ?? "";
+  if (n.agent_conversation_id && !n.issue_id) {
+    return n.agent_conversation_title || labels.someAgentConversationFallback;
+  }
   // Une PAGE du wiki (MIN-278) : son titre, et le repli explicite quand elle
   // n'en a pas — une ligne sans titre ne dit plus de quoi on parle.
   if (n.page_id) return n.page_title || labels.somePageFallback;

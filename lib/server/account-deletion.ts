@@ -9,6 +9,8 @@ import {
   listStoragePrefix,
   projectIconPaths,
 } from "@/lib/server/project-storage";
+import { stopSandboxByName } from "@/lib/server/agent/sandbox";
+import { revokeRunKey } from "@/lib/server/agent/run-key";
 
 /**
  * Suppression de compte (MIN-119, RGPD art. 17 — droit à l'effacement).
@@ -216,6 +218,40 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   // objets sous `chat/{user_id}/`.
   const chatObjects = await listStoragePrefix(service, "attachments", `chat/${userId}`);
   removedStorageObjects += await removeObjects(service, "attachments", chatObjects, warnings);
+
+  // Conversations personnelles de l'agent de code dans les projets d'AUTRES
+  // propriétaires. `owner_id on delete set null` les anonymiserait au lieu de
+  // les effacer ; on coupe d'abord leur compute et leur clé, puis la cascade de
+  // la conversation emporte runs, tours, messages, événements et lectures.
+  const { data: personalConversations } = await service
+    .from("agent_conversations")
+    .select("id")
+    .eq("owner_id", userId)
+    .eq("visibility", "private");
+  const personalConversationIds = (personalConversations ?? []).map((row) => row.id as string);
+  if (personalConversationIds.length) {
+    const { data: personalRuns } = await service
+      .from("agent_runs")
+      .select("sandbox_id, provider_key_id")
+      .in("conversation_id", personalConversationIds);
+    for (const run of personalRuns ?? []) {
+      if (run.sandbox_id) {
+        await stopSandboxByName(run.sandbox_id as string).catch((e) =>
+          warnings.push(`agent sandbox: ${(e as Error).message}`),
+        );
+      }
+      if (run.provider_key_id) {
+        await revokeRunKey(run.provider_key_id as string).catch((e) =>
+          warnings.push(`agent key: ${(e as Error).message}`),
+        );
+      }
+    }
+    const { error: conversationsError } = await service
+      .from("agent_conversations")
+      .delete()
+      .in("id", personalConversationIds);
+    if (conversationsError) warnings.push(`agent conversations: ${conversationsError.message}`);
+  }
 
   // ── 3. Le compte ────────────────────────────────────────────────────────
   const { error } = await service.auth.admin.deleteUser(userId);

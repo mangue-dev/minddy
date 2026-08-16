@@ -26,7 +26,7 @@ import {
   type AgentEnvironment,
 } from "@/components/agent/environment-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
-import { launchNotebookAgentApi, type AgentRunSummary } from "@/lib/agent-api";
+import { launchGeneralAgentApi, type AgentRunSummary } from "@/lib/agent-api";
 import { agentRunQueryKey, allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
 import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
@@ -286,7 +286,7 @@ export function SessionCompose({
     setLaunchMentions(mentions);
     setLaunchLocalExec(localExec);
     try {
-      const { run } = await launchNotebookAgentApi({
+      const { run } = await launchGeneralAgentApi({
         projectId,
         prompt,
         model: model || undefined,

@@ -88,9 +88,8 @@ async function kickDeployment(url: string, secret: string): Promise<void> {
 
 /**
  * Déploiement mort : le run ne sera JAMAIS repris (le preview a été supprimé, ou
- * ne répond plus). Sans cette sortie, la ligne reste `queued` pour toujours — et
- * l'index unique `idx_agent_runs_active_issue` interdit alors tout nouveau run
- * sur le ticket. CAS sur `status` : un run repris entre-temps n'est pas touché.
+ * ne répond plus). Sans cette sortie, sa conversation reste `queued` pour
+ * toujours. CAS sur `status` : un run repris entre-temps n'est pas touché.
  */
 async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
@@ -103,7 +102,7 @@ async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<
     })
     .in("id", ids)
     .eq("status", "queued")
-    .select("id, created_by, project_id, issue_id");
+    .select("id, created_by, project_id, issue_id, conversation_id");
   if (error) {
     console.error("[agent-drain] stalled preview fail failed:", error.message);
     return;
@@ -112,6 +111,7 @@ async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<
     created_by: string | null;
     project_id: string;
     issue_id: string | null;
+    conversation_id: string;
   }>;
   for (const row of rows) await notifyAgentRun(row, "agent_failed");
 }

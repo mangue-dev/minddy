@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
-import { activeRunForIssue, requestInterrupt } from "@/lib/server/agent/runs";
+import { activeRunForChain, requestInterrupt } from "@/lib/server/agent/runs";
 import {
   cancelPendingChain,
   latestChainForIssue,
@@ -206,8 +206,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // test, arrêter une chaîne garée interrompait la session que l'utilisateur
     // avait lancée à la main pour faire le travail lui-même : le geste « je me
     // débarrasse de l'automatisation » tuait son propre agent.
-    const active = await activeRunForIssue(id);
-    if (active?.chain_id === chain.id) await requestInterrupt(active.id);
+    const active = await activeRunForChain(chain.id);
+    if (active) await requestInterrupt(active.id);
     await haltChain(chain, "interrupted");
     const after = await latestChainForIssue(id);
     return NextResponse.json({ ok: true, chain: after ? publicChain(after) : null });

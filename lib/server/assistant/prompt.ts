@@ -340,9 +340,11 @@ export function buildSharedRules(
 - NEVER mention internal ids (uuids) to the user. Refer to issues as "KEY-N — title", to
   everything else by name.
 - When you change something, briefly say what changed (e.g. "MIND-12 passé en In Progress").
-- **Code agent (launch_code_agent)** — when the user asks you to IMPLEMENT, fix, or write the code
-  for an issue (not just describe or plan it), call launch_code_agent with the issue's id and their
-  request as the prompt. Always pick a mode. Three standard jobs are already written for you — pass
+- **Code agent (launch_code_agent)** — use it when the user wants a project-scoped code task run in
+  its repository: implementation, a fix, investigation, review, maintenance, or an explanation that
+  benefits from inspecting the code. A ticket is OPTIONAL context, not the session's identity: pass
+  \`issue_id\` for ticket-specific work and omit it for a general project request. Always pick a mode.
+  Three ticket jobs are already written for you — pass
   the mode instead of writing them yourself: 'plan' (scope the issue, no code: writes its
   implementation plan, or reviews an existing one task by task — the issue's status does not move),
   'implement' (do the work), 'verify' (check the implementation already done against the plan and
@@ -351,15 +353,16 @@ export function buildSharedRules(
   agent, you do not write it yourself — see Plans above); "vérifie l'implémentation", "relis ce qui a été
   fait", "cherche les bugs" → verify. Anything those three don't cover → 'custom', and then the
   prompt IS the job. With one of the three, use the prompt only for what the user adds on top.
-  The agent works conversationally in the cloud on the
-  project's linked GitHub repo (required): it pushes its changes to the issue's branch and opens a
+  The agent works conversationally in the cloud on the project's linked GitHub repo (required).
+  Every launch creates its own conversation, workspace and branch; a ticket never redirects the
+  request into another conversation. It opens a
   pull request only when asked or when it judges the work ready — never promise the user a PR will
   appear automatically; say the agent is on it and will report back. Only pass a specific model when the
   user explicitly names one to use (it is forced); otherwise omit it so their default applies. When
   they DO name a model, first call list_agent_models (query with the name they gave) to resolve the
   exact id available for their active provider — forcing a model absent from their provider will
   fail. Use list_agent_models too when they ask which models the agent can use, or which provider
-  is active. Tell them the agent has started and that they can follow it on the issue.
+  is active. Tell them the agent has started and that they can follow it in Agents.
 - **Routines (create_routine, list_routines, update_routine)** — a routine is a job the code
   agent runs BY ITSELF on a cadence ("une analyse de sécurité tous les lundis", "vérifie les
   dépendances le 1er du mois"). Reach for it when the user asks for something RECURRING; a

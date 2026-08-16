@@ -136,7 +136,7 @@ import {
 } from "@/lib/server/feedback/promote";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
-import { continueOrLaunchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import {
   buildAgentLaunchMessage,
   intentForLaunchMode,
@@ -1342,8 +1342,10 @@ export async function executeTool(
 
       case "launch_code_agent": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
-        if (!scoped.ok) return toolError(scoped.error);
+        if (issueId) {
+          const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
+          if (!scoped.ok) return toolError(scoped.error);
+        }
         const model =
           typeof args.model === "string" && args.model.trim() ? args.model.trim() : undefined;
         const prompt =
@@ -1356,6 +1358,9 @@ export async function executeTool(
         // quatrième choix (`custom`, ou tout mode inconnu) retombe sur le
         // comportement d'origine : le prompt de l'assistant EST la demande.
         const mode = isAgentLaunchMode(args.mode) ? args.mode : null;
+        if (mode && !issueId) {
+          return toolError("issue_id is required for plan, implement and verify.");
+        }
         let message = prompt;
         if (mode) {
           const { data: row } = await ctx.supabase
@@ -1374,14 +1379,10 @@ export async function executeTool(
           });
         }
 
-        // Si une run TRAVAILLE sur l'issue (queued/running), le prompt lui parvient
-        // en STEERING au lieu d'échouer avec « alreadyRunning ». Sinon (aucune run,
-        // ou la dernière est au repos) on lance une run FROIDE, qui hérite de la
-        // lignée de l'issue (branche + PR éventuelle — MIN-68). NB : une session au
-        // repos n'est PAS reprise ici ; la reprise à chaud d'une conversation passe
-        // par le composer de SA conversation (/steer).
-        const result = await continueOrLaunchAgentRun({
-          issueId,
+        // Sans conversation_id explicite, chaque appel ouvre une conversation et
+        // une branche propres. Le ticket éventuel n'est que son contexte.
+        const result = await launchAgentRun({
+          ...(issueId ? { issueId } : { projectId }),
           userId: ctx.userId,
           triggeredBy: ctx.triggerSource ?? "chat",
           prompt: message,
@@ -1397,9 +1398,10 @@ export async function executeTool(
         if (!result.ok) return toolError(launchErrorMessage(result));
         return {
           result: {
-            [result.continued ? "continued" : "launched"]: true,
+            launched: true,
             ...(mode ? { mode } : {}),
             run_id: result.run.id,
+            conversation_id: result.run.conversation_id,
             status: result.run.status,
             model: result.run.model,
             reasoning_level: result.run.reasoning_level,

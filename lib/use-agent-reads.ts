@@ -7,7 +7,7 @@ import { fetchAgentReadsApi, markAgentSessionReadApi } from "./agent-api";
 
 /**
  * État « lu » des sessions d'agent (bulle bleue « terminé, non lu »). Une carte
- * { issueId → last_read_at } partagée par toutes les surfaces (liste /agents, badge
+ * { conversationId → last_read_at } partagée par toutes les surfaces (liste /agents, badge
  * sidebar, sélecteur de runs). `markRead` estampille MAINTENANT, de façon optimiste,
  * pour vider la bulle sans attendre le round-trip serveur.
  */
@@ -16,7 +16,7 @@ const AGENT_READS_KEY = ["agent-reads"] as const;
 
 type ReadsData = { reads: Record<string, string> };
 
-// Dédoublonne les POST concurrents pour une même issue (plusieurs surfaces peuvent
+// Dédoublonne les POST concurrents pour une même conversation (plusieurs surfaces peuvent
 // déclencher le mark-read à l'ouverture) — au niveau module, partagé entre instances.
 const inFlight = new Set<string>();
 
@@ -34,23 +34,23 @@ export function useAgentReads() {
   const reads = useMemo(() => data?.reads ?? {}, [data]);
 
   const markRead = useCallback(
-    (issueId: string) => {
-      if (!issueId) return;
+    (conversationId: string) => {
+      if (!conversationId) return;
       const now = new Date().toISOString();
       const previous = queryClient.getQueryData<ReadsData>(AGENT_READS_KEY);
       // Optimiste : avance le curseur de lecture tout de suite (bulle vidée sur la
       // liste + le badge sidebar). Toujours sûr — `now` est postérieur à toute fin.
       queryClient.setQueryData<ReadsData>(AGENT_READS_KEY, (old) => ({
-        reads: { ...old?.reads, [issueId]: now },
+        reads: { ...(old?.reads ?? {}), [conversationId]: now },
       }));
-      if (inFlight.has(issueId)) return;
-      inFlight.add(issueId);
-      void markAgentSessionReadApi(issueId)
+      if (inFlight.has(conversationId)) return;
+      inFlight.add(conversationId);
+      void markAgentSessionReadApi(conversationId)
         .catch(() => {
           // Échec réseau → rollback ; le prochain refetch réconciliera de toute façon.
           queryClient.setQueryData<ReadsData>(AGENT_READS_KEY, previous);
         })
-        .finally(() => inFlight.delete(issueId));
+        .finally(() => inFlight.delete(conversationId));
     },
     [queryClient],
   );

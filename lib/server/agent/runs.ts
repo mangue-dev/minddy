@@ -162,6 +162,13 @@ export interface AgentCheckpoint {
 
 export interface AgentRun {
   id: string;
+  /** Identite durable de la conversation. Un run n'est qu'une execution de
+   *  celle-ci ; plusieurs runs pourront donc partager cet identifiant. */
+  conversation_id: string;
+  conversation?: {
+    owner_id: string | null;
+    visibility: "private" | "project";
+  } | null;
   project_id: string;
   /** Null = run « carnet » (MIN-84) ou run de PULL REQUEST (MIN-168) : ancré au
    *  projet + une instruction libre, sans ticket. Aucune lignée : chaque run de
@@ -366,11 +373,8 @@ export interface CreateRunInput {
 }
 
 /**
- * Levée par `createRun` quand un index unique partiel refuse l'insertion :
- * `idx_agent_runs_active_issue` (une autre run de l'issue est devenue active
- * entre le pré-check et l'INSERT) ou `idx_agent_runs_active_pr` (MIN-168, même
- * règle sur une pull request). C'est le même refus que le garde applicatif,
- * gagné par la base.
+ * Levée par `createRun` quand un index unique partiel refuse l'insertion (une
+ * routine, une chaîne ou une pull request a gagné la course de lancement).
  */
 export class ActiveRunExistsError extends Error {
   constructor() {
@@ -389,10 +393,10 @@ function runScope(run: {
   issue_id?: string | null;
   pullRequestId?: string | null;
   pull_request_id?: string | null;
-}): "issue" | "notebook" | "pr" {
-  if (run.issueId ?? run.issue_id) return "issue";
-  if (run.pullRequestId ?? run.pull_request_id) return "pr";
-  return "notebook";
+}): "issue_context" | "general" | "pr_review" {
+  if (run.issueId ?? run.issue_id) return "issue_context";
+  if (run.pullRequestId ?? run.pull_request_id) return "pr_review";
+  return "general";
 }
 
 /** Code Postgres d'une violation de contrainte d'unicité. */
@@ -537,7 +541,11 @@ export async function claimRun(runId: string): Promise<AgentRun | null> {
 
 export async function getRun(runId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
-  const { data } = await service.from("agent_runs").select("*").eq("id", runId).maybeSingle();
+  const { data } = await service
+    .from("agent_runs")
+    .select("*, conversation:agent_conversations(owner_id, visibility)")
+    .eq("id", runId)
+    .maybeSingle();
   return (data as AgentRun | null) ?? null;
 }
 
@@ -655,11 +663,10 @@ export async function bumpLocalExecGen(runId: string): Promise<number | null> {
 }
 
 /**
- * Run ACTIF (queued/running — l'agent TRAVAILLE) de l'issue, ou null. Au repos
- * (`completed`), une session n'occupe plus le ticket. L'index partiel unique
- * `idx_agent_runs_active_issue` en garantit au plus un — le tri + `limit(1)`
- * reste un garde-fou (des données antérieures peuvent en avoir plusieurs, et
- * `maybeSingle` lèverait au lieu de répondre).
+ * Run ACTIF le plus récent qui cite l'issue, ou null. Ce n'est PAS un verrou :
+ * plusieurs conversations indépendantes peuvent travailler sur le même ticket.
+ * Les lecteurs historiques qui veulent seulement peindre « Numo travaille sur
+ * ce ticket » utilisent ce représentant léger.
  */
 export async function activeRunForIssue(issueId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
@@ -667,6 +674,22 @@ export async function activeRunForIssue(issueId: string): Promise<AgentRun | nul
     .from("agent_runs")
     .select("*")
     .eq("issue_id", issueId)
+    .in("status", ACTIVE_STATUSES)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as AgentRun | null) ?? null;
+}
+
+/** Run ACTIF d'une chaîne d'automatisation. Le ticket n'est plus un verrou :
+ * plusieurs conversations peuvent le citer, tandis qu'une chaîne doit suivre
+ * et interrompre uniquement l'exécution qui lui appartient. */
+export async function activeRunForChain(chainId: string): Promise<AgentRun | null> {
+  const service = getServiceClient();
+  const { data } = await service
+    .from("agent_runs")
+    .select("*")
+    .eq("chain_id", chainId)
     .in("status", ACTIVE_STATUSES)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -775,33 +798,7 @@ export async function lastReviewedShaForPullRequest(
   return (data as { pr_head_sha?: string | null } | null)?.pr_head_sha ?? null;
 }
 
-/**
- * Une run PLUS RÉCENTE que `createdAt` existe-t-elle sur l'issue ? Les runs d'une
- * issue partagent la branche : dès qu'une plus récente existe, la précédente n'est
- * plus reprennable (sa sandbox est restée sur un ancêtre — son push serait rejeté).
- * Elle devient un historique consultable.
- *
- * Les runs `failed` sont IGNORÉES : une run morte à l'amorçage n'a jamais acquis de
- * sandbox ni fait avancer la branche — la compter condamnerait définitivement la
- * dernière bonne session (409 supersededRun) pour une panne transitoire (mint de
- * token GitHub, 502…) survenue en essayant d'en lancer une nouvelle.
- */
-export async function newerRunExistsForIssue(
-  issueId: string,
-  createdAt: string,
-): Promise<boolean> {
-  const service = getServiceClient();
-  const { data } = await service
-    .from("agent_runs")
-    .select("id")
-    .eq("issue_id", issueId)
-    .gt("created_at", createdAt)
-    .neq("status", "failed")
-    .limit(1);
-  return ((data ?? []) as unknown[]).length > 0;
-}
-
-/** Travail de l'issue dont une run froide peut hériter (cf. `inheritableWorkForIssue`). */
+/** Workspace existant repris explicitement via une pull request. */
 export interface InheritableWork {
   branchName: string;
   baseBranch: string | null;
@@ -812,51 +809,7 @@ export interface InheritableWork {
 }
 
 /**
- * TRAVAIL dont une NOUVELLE run froide doit hériter (MIN-68, généralisé au modèle
- * conversationnel) : la lignée est indexée sur la BRANCHE, plus seulement sur la
- * PR — depuis que `create_pr` est une décision, une session peut pousser du vrai
- * travail sans jamais ouvrir de PR, et ce travail ne doit pas être orphelin. On
- * prend la run la plus récente qui porte une branche :
- *   • PR `open` / `draft`  → même branche, on itère sur la PR ;
- *   • PR `closed` (refusée) → même branche, la PR sera rouverte au prochain push ;
- *   • pas de PR             → même branche (le travail poussé continue) ;
- *   • PR `merged`           → livrée : plus rien à itérer, la run repart d'une
- *                             branche neuve (→ null ici).
- * Null aussi si aucune run n'a jamais eu de branche (premier lancement).
- */
-export async function inheritableWorkForIssue(issueId: string): Promise<InheritableWork | null> {
-  const service = getServiceClient();
-  const { data } = await service
-    .from("agent_runs")
-    .select("branch_name, base_branch, pr_number, pr_url, pr_state")
-    .eq("issue_id", issueId)
-    .not("branch_name", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const row = data as {
-    branch_name: string | null;
-    base_branch: string | null;
-    pr_number: number | null;
-    pr_url: string | null;
-    pr_state: AgentRun["pr_state"];
-  } | null;
-  if (!row?.branch_name) return null;
-  if (row.pr_state === "merged") return null;
-  return {
-    branchName: row.branch_name,
-    baseBranch: row.base_branch,
-    prNumber: row.pr_number,
-    prUrl: row.pr_url,
-    prState: row.pr_state,
-  };
-}
-
-/**
- * TRAVAIL dont une run froide hérite quand la lignée n'est PAS celle d'un ticket
- * (MIN-292) : une pull request ouverte par une session CARNET n'a pas d'issue à
- * interroger, et `inheritableWorkForIssue` répondait donc « rien à reprendre » là
- * où une branche existe pourtant, portée par la session qui a ouvert la PR.
+ * Reprend explicitement le workspace d'une pull request existante.
  *
  * La lignée est ici indexée sur la PULL REQUEST — c'est-à-dire sur les runs qui
  * portent son numéro dans ce dépôt (`pr_number`, la colonne qui dit « ce run a
@@ -1082,9 +1035,8 @@ export interface StampFields {
  * ['running']) : un run annulé/déjà terminé n'est jamais réécrit par un chunk en
  * retard. Renvoie le run mis à jour, ou null si la garde n'a pas matché.
  *
- * Null couvre aussi l'échec : notamment une violation de
- * `idx_agent_runs_active_issue` (réveiller un run alors qu'un autre est devenu actif
- * — cf. la route /steer). On la trace au lieu de l'avaler en silence : un appelant
+ * Null couvre aussi l'échec (garde perdue, contrainte, panne de base). On le
+ * trace au lieu de l'avaler en silence : un appelant
  * qui ignore le null croirait le run relancé alors qu'il ne le sera jamais.
  */
 export async function stampRun(
@@ -1190,11 +1142,11 @@ export async function notifyAgentRun(
     created_by: string | null;
     project_id: string;
     issue_id: string | null;
+    conversation_id: string;
   },
   type: "agent_done" | "agent_question" | "agent_failed",
 ): Promise<void> {
-  // Run carnet (issue_id null) : pas de cible où renvoyer — pas de notification.
-  if (!run.created_by || !run.issue_id) return;
+  if (!run.created_by) return;
   try {
     await insertNotifications(
       getServiceClient(),
@@ -1204,6 +1156,7 @@ export async function notifyAgentRun(
           project_id: run.project_id,
           type,
           issue_id: run.issue_id,
+          agent_conversation_id: run.conversation_id,
           actor_id: null,
         },
       ],

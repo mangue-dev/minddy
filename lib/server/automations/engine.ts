@@ -5,7 +5,7 @@ import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { canUseAutomations } from "@/lib/server/entitlements";
 import {
-  activeRunForIssue,
+  activeRunForChain,
   requestInterrupt,
   type AgentRunVerdict,
 } from "@/lib/server/agent/runs";
@@ -365,13 +365,15 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   ) {
     // Le run en cours part avec elle : le laisser finir, c'est continuer à
     // dépenser sur un ticket que son propriétaire vient de ranger.
-    const working = await activeRunForIssue(issue.id);
-    if (working?.chain_id === existing.id) await requestInterrupt(working.id);
+    const working = await activeRunForChain(existing.id);
+    if (working) await requestInterrupt(working.id);
     await shutDownChain(existing, "taken_over");
     return;
   }
 
-  // Un run TRAVAILLE déjà sur le ticket : rien ne doit être décidé maintenant.
+  // Un run de CETTE CHAÎNE travaille déjà : rien ne doit être décidé maintenant.
+  // Une conversation indépendante qui cite le même ticket n'est ni un verrou ni
+  // un signal de progression pour l'automatisation.
   // Ce garde-fou est ICI, AVANT le réveil d'un sursis et avant les règles.
   //
   // Avant le sursis, parce que réveiller d'abord et abandonner ensuite laissait
@@ -385,7 +387,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   // TERMINÉE alors que son étape court encore. (Sur le chemin normal, `stampRun`
   // a déjà rendu le run terminal quand le crochet appelle : rien n'est actif et
   // ce test laisse passer.)
-  if (await activeRunForIssue(issue.id)) return;
+  if (existing && (await activeRunForChain(existing.id))) return;
 
   // ── La chaîne EN SURSIS ───────────────────────────────────────────────────
   // Sémantique du `for:` des alertes : la condition doit tenir EN CONTINU. Au

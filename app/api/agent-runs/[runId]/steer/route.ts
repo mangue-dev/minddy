@@ -3,11 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import {
-  activeRunForIssue,
   activeRunForRoutine,
   getRun,
   insertRunMessage,
-  newerRunExistsForIssue,
   stampRun,
   bumpRunActivity,
   type AgentRunStatus,
@@ -116,7 +114,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   // Sa PR est FUSIONNÉE → ce run est LIVRÉ, on ne le réveille pas (MIN-68). Sa
   // branche est déjà dans la base : y remettre l'agent au travail pousserait de
   // nouveaux commits sur du travail livré. Pour continuer : nouvelle run (qui
-  // repartira d'une branche neuve — `inheritableWorkForIssue` n'hérite jamais
+  // repartira d'une branche neuve — le contexte ticket ne determine plus la branche
   // d'une lignée mergée).
   if (run.pr_state === "merged") {
     return NextResponse.json({ error: "prMerged", code: "prMerged" }, { status: 409 });
@@ -124,32 +122,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   let resumed = false;
   if (RESUME_FROM.includes(run.status)) {
-    // Les notions de « run dépassée » et « une run occupe déjà le ticket » sont
-    // des règles du TICKET (les runs d'une issue partagent la branche). Un run
-    // CARNET (MIN-84, issue_id null) est une conversation autonome sur sa propre
-    // branche : toujours reprennable, jamais supplanté.
-    if (run.issue_id) {
-      const [newer, active] = await Promise.all([
-        newerRunExistsForIssue(run.issue_id, run.created_at),
-        activeRunForIssue(run.issue_id),
-      ]);
-      // Une run PLUS RÉCENTE (non `failed`) existe : les runs d'une issue partagent
-      // la branche, la plus récente l'a fait avancer — reprendre celle-ci pousserait
-      // par-dessus un ancêtre (push rejeté). Une run passée est un HISTORIQUE : on
-      // la consulte, on ne la réveille pas.
-      if (newer) {
-        return NextResponse.json(
-          { error: "supersededRun", code: "supersededRun" },
-          { status: 409 },
-        );
-      }
-      if (active && active.id !== runId) {
-        return NextResponse.json(
-          { error: "alreadyRunning", code: "alreadyRunning" },
-          { status: 409 },
-        );
-      }
-    } else if (run.routine_id) {
+    // La conversation possede son workspace : un autre échange citant le même
+    // ticket ne la supplante jamais. Seules les routines gardent un verrou entre
+    // leurs occurrences planifiées.
+    if (run.routine_id) {
       // Un passage de ROUTINE (MIN-185) se reprend comme une conversation
       // carnet — sauf qu'une routine, elle, n'a droit qu'à UN passage actif à
       // la fois (`idx_agent_runs_active_routine`). Sans cette garde, répondre à
