@@ -50,16 +50,15 @@ import {
   Check,
   LogOut,
   MoreHorizontal,
-  Megaphone,
   BarChart3,
   CreditCard,
   Settings,
-  ArrowUpRight,
   Shield,
   Newspaper,
   Trash2,
   ArrowDownToLine,
   Loader2,
+  type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
@@ -70,7 +69,6 @@ import { UserAvatar } from "@/components/user-avatar";
 import { WhatsNewDialog } from "@/components/whats-new-dialog";
 import { hasRecentChangelog } from "@/lib/changelog";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
-import { openFeedbackBoard } from "@/lib/open-feedback-board";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
@@ -539,7 +537,7 @@ function FooterRow({
   iconClassName,
   trailingIcon: TrailingIcon,
 }: {
-  icon: typeof Megaphone;
+  icon: LucideIcon;
   label: string;
   onClick: () => void;
   collapsed: boolean;
@@ -557,7 +555,7 @@ function FooterRow({
    */
   disabled?: boolean;
   iconClassName?: string;
-  trailingIcon?: typeof Megaphone;
+  trailingIcon?: LucideIcon;
 }) {
   const btn = (
     <button
@@ -710,13 +708,6 @@ function SidebarFooter({
         collapsed={collapsed}
         active={pathname.startsWith("/trash")}
         onClick={() => router.push("/trash")}
-      />
-      <FooterRow
-        icon={Megaphone}
-        label={t("shareFeedback")}
-        collapsed={collapsed}
-        onClick={openFeedbackBoard}
-        trailingIcon={ArrowUpRight}
       />
       <AccountButton collapsed={collapsed} onMenuOpenChange={onMenuOpenChange} />
     </div>

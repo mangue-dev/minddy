@@ -1,10 +1,7 @@
 name: CI
 
-# Ce workflow est le pipeline de vérité (MIN-335). Avant lui, `deploy.sh` ÉTAIT
-# le pipeline : tests, audit et typecheck tournaient sur le poste du mainteneur,
-# à côté d'un `.env` qui porte la clé `service_role` de production. Le code d'une
-# pull request s'exécutant au premier `pnpm install` / `vitest`, ouvrir le dépôt
-# aux contributions revenait à offrir cette clé.
+# Ce workflow est le pipeline versionné de référence. Tests, audit et typecheck
+# tournent sur un runner jetable qui ne voit aucun secret de production.
 #
 # Ici, le même code tourne dans un runner jetable qui ne voit AUCUN secret :
 #

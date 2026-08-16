@@ -1,7 +1,7 @@
 # Livrer minddy : le site, l'app de bureau, et pourquoi ce n'est pas la même chose
 
-> **Ticket** : MIN-292 · Voisins : la procédure interne de signature (le compte
-> Apple et le certificat, une fois pour toutes),
+> **Ticket** : MIN-292 · Voisins : la configuration de signature de l'instance
+> (compte Apple et certificat, une fois pour toutes),
 > [desktop-electron.md](desktop-electron.md) (le cadrage),
 > [desktop/README.md](../desktop/README.md) (le code de la coquille).
 
@@ -162,8 +162,8 @@ recommencer.
 Ce n'est pas à chaque déploiement, et c'est tout l'objet de l'empreinte : la
 plupart des livraisons ne touchent pas à la coquille et sautent l'étape. Si ça
 devenait quand même gênant, la seule façon de ne plus immobiliser ton Mac est un
-runner **macOS** en CI — les deux secrets nécessaires sont documentés dans la
-procédure interne de signature.
+runner **macOS** en CI — ses secrets restent dans le gestionnaire de secrets de
+l'instance, jamais dans ce dépôt.
 
 ---
 

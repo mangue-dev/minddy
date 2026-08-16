@@ -62,9 +62,10 @@ secrets du dépôt, avec un `GITHUB_TOKEN` en lecture seule. Aucun `secrets.*` n
 doit apparaître dans ce fichier. Un job qui a besoin d'un secret est un job qui
 ne doit pas exécuter du code de PR.
 
-[deploy.sh](deploy.sh) rejoue les mêmes gates avant une mise en production, plus
-le verdict de la CI pour le commit déployé. C'est un dernier filet, pas le
-pipeline.
+[`deploy.sh`](deploy.sh) est une aide locale de release : elle rejoue les
+garde-fous et vérifie la CI du commit à publier. Ses conventions de branches et
+d'hébergement sont à adapter à chaque instance ; la CI ci-dessus reste le
+pipeline versionné commun.
 
 ## Travailler dans le dépôt
 

@@ -9,7 +9,6 @@ import {
   BarChart3,
   ClipboardCopy,
   CreditCard,
-  Megaphone,
   Settings,
   Shield,
   Sun,
@@ -23,7 +22,6 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
-import { openFeedbackBoard } from "@/lib/open-feedback-board";
 import { useMyAvatarSeed } from "@/lib/use-my-avatar";
 import { UserAvatar } from "@/components/user-avatar";
 import type { AppNavSection } from "@/components/app-sidebar";
@@ -67,7 +65,6 @@ export function useAccountActions(): {
           ...(isAdmin
             ? [{ key: "m-admin", label: t("adminDashboard"), icon: Shield, href: "/admin" }]
             : []),
-          { key: "m-feedback", label: t("shareFeedback"), icon: Megaphone, onClick: openFeedbackBoard },
         ],
       },
       {
@@ -122,13 +119,6 @@ export function useAccountActions(): {
             },
           ]
         : []),
-      {
-        key: "cmd-feedback",
-        label: t("shareFeedback"),
-        icon: Megaphone,
-        keywords: ["feedback", "support", "retour", "avis"],
-        onSelect: openFeedbackBoard,
-      },
       // Copie dans le presse-papiers le prompt de synchronisation git (localisé
       // FR/EN) prêt à coller dans un agent de code — pas de navigation, juste un
       // writeText + toast, comme l'action « Copier le prompt » d'un ticket.

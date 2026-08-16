@@ -104,22 +104,10 @@ export const SECRET_SPECS: SecretSpec[] = [
     purpose: "repli historique du secret de webhook GitLab",
   },
   {
-    name: "SUPABASE_WEBHOOK_SECRET",
-    minLength: KEY_MIN,
-    requiredWhenDeployed: false,
-    purpose: "signature des webhooks Supabase",
-  },
-  {
     name: "STRIPE_WEBHOOK_SECRET",
     minLength: KEY_MIN,
     requiredWhenDeployed: false,
     purpose: "signature des webhooks Stripe",
-  },
-  {
-    name: "MINDDY_SSO_SECRET",
-    minLength: KEY_MIN,
-    requiredWhenDeployed: false,
-    purpose: "signature du SSO vers notre propre board de retours",
   },
   {
     name: "VAPID_PRIVATE_KEY",

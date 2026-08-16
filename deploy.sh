@@ -216,7 +216,7 @@ else
       # profil trousseau de notarisation). `set -a` les exporte pour les deux
       # scripts appelés ci-dessous.
       if [ -f .env ]; then set -a; . ./.env; set +a; fi
-      : "${APPLE_KEYCHAIN_PROFILE:?manque — voir la procédure interne de signature}"
+      : "${APPLE_KEYCHAIN_PROFILE:?manque — voir docs/desktop-release.md}"
       : "${MINDDY_DESKTOP_FEED_URL:?manque — voir docs/desktop-release.md}"
 
       # `caffeinate -i` empêche la veille PENDANT ces deux commandes, et rend la

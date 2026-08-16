@@ -156,7 +156,7 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   # `gatekeeperAssess` fait passer `spctl` PENDANT le build, avant notarisation —
   # il échoue donc toujours à ce moment-là, et pour rien. La vraie vérification
-  # est `spctl -a -vvv` sur le `.dmg` agrafé (procédure interne de signature).
+  # est `spctl -a -vvv` sur le `.dmg` agrafé (voir docs/desktop-release.md).
   gatekeeperAssess: false
   # Notarisation par `notarytool`, puis agrafage du ticket. **Un booléen, et rien
   # d'autre** : la forme objet (`notarize: {teamId: …}`) est refusée par

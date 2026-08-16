@@ -50,9 +50,9 @@ pnpm desktop:dev  # run the optional macOS shell
 - **Data and auth:** Supabase Postgres, Auth, Storage, and Realtime.
 - **Agent integration:** OAuth 2.1 MCP endpoint and an optional Vercel Sandbox
   code agent.
-- **Deployment:** Vercel. `main` creates previews; `production` is the
-  production branch. `pnpm deploy` runs the release checks and promotes the
-  current branch.
+- **Deployment:** use the hosting and release process appropriate for your
+  instance. `pnpm deploy` is an optional local release helper; adapt its branch
+  and hosting conventions to your instance.
 
 The CI workflow is the source of truth for checks. It runs the public-repository
 check, lint, typecheck, desktop bundle build, tests, and dependency audit. See
