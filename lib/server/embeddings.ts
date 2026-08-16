@@ -12,6 +12,7 @@ import {
 } from "@/lib/server/ai-usage";
 import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
  * Contexte de suivi de coût pour un appel d'embeddings (un appel = un run).
@@ -73,7 +74,7 @@ export async function embedTexts(
         surface: "feedback",
       }).catch(() => null)
     : null;
-  const apiKey = runtime?.apiKey ?? process.env.OPENROUTER_API_KEY;
+  const apiKey = runtime?.apiKey ?? (isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined);
   if (!apiKey) return texts.map(() => null);
   const endpoint = runtime
     ? `${runtime.baseUrl.replace(/\/+$/, "")}/embeddings`

@@ -27,6 +27,7 @@ import {
 import { fetchAiChat, resolveAiRuntime } from "@/lib/server/ai-runtime";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { ByokModelKey } from "@/lib/ai-surfaces";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
  * Dicter un retour — le cœur partagé par les DEUX surfaces (MIN-37).
@@ -407,6 +408,9 @@ export async function runFeedbackVoicePass({
 }
 
 function requireApiKey(): string {
+  if (!isManagedAiEnabled()) {
+    throw new Error("Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.");
+  }
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY not configured");
   return apiKey;

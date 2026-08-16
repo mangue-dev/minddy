@@ -15,6 +15,7 @@ import {
   resolveAiRuntime,
   type ResolvedAiRuntime,
 } from "@/lib/server/ai-runtime";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
@@ -101,7 +102,7 @@ export async function forcedToolCall(
       surface: options.surface,
     }).catch(() => null);
   }
-  const apiKey = runtime?.apiKey ?? process.env.OPENROUTER_API_KEY;
+  const apiKey = runtime?.apiKey ?? (isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined);
   if (!apiKey) return null;
   const provider = runtime?.provider ?? "openrouter";
   const resolvedModel = runtime?.model ?? model;

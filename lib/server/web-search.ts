@@ -12,6 +12,7 @@ import {
 } from "@/lib/server/ai-usage";
 import type { AiSurface } from "@/lib/ai-surfaces";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 import {
   aiChatProviderHeaders,
   translateAiChatRequest,
@@ -318,7 +319,10 @@ export async function runWebSearchTool(params: {
   // OpenAI-compatible. Une clé native reste donc sur le quota Minddy pour CE
   // sous-appel ; une clé OpenRouter, elle, utilise bien son modèle par feature.
   const byokOpenRouter = runtime?.provider === "openrouter" ? runtime : null;
-  const apiKey = byokOpenRouter?.apiKey ?? params.apiKey ?? process.env.OPENROUTER_API_KEY;
+  const apiKey =
+    byokOpenRouter?.apiKey ??
+    params.apiKey ??
+    (isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined);
   if (!apiKey) {
     return { result: { error: "Web search is not available here." }, success: false };
   }

@@ -2,6 +2,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import { getAppConfigValues } from "@/lib/server/app-config";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 import {
   fetchOpenRouterWithSuffixFallback,
   modelConfigKeys,
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = isManagedAiEnabled() ? process.env.OPENROUTER_API_KEY : undefined;
   if (!apiKey) {
     console.error("[api/demo/dictate] OPENROUTER_API_KEY not configured");
     return NextResponse.json({ error: "unavailable" }, { status: 503 });

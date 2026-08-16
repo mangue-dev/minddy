@@ -72,6 +72,7 @@ function stubFetch(handler: (model: string) => Response) {
 
 beforeEach(() => {
   modelsSent.length = 0;
+  process.env.MINDDY_MANAGED_AI = "1";
   process.env.OPENROUTER_API_KEY = "sk-test";
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -82,6 +83,14 @@ afterEach(() => {
 });
 
 describe("forcedToolCall — repli du raccourci de routage", () => {
+  it("n'utilise pas la clé plateforme sans opt-in du service managé", async () => {
+    process.env.MINDDY_MANAGED_AI = "";
+    const fetch = vi.spyOn(globalThis, "fetch");
+
+    expect(await call("openai/gpt-5")).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("n'appelle qu'une fois quand le modèle suffixé passe", async () => {
     stubFetch(() => okResponse("openai/gpt-5"));
     const out = await call("openai/gpt-5:nitro");
