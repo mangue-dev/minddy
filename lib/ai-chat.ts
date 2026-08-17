@@ -54,6 +54,19 @@ function isManualThinkingClaude(model: string): boolean {
   return /^claude-(?:opus|sonnet|haiku)-4-(?:5|6)(?:-|$)/i.test(model);
 }
 
+/**
+ * Familles où le raisonnement ne peut PAS être coupé : `thinking: {type:
+ * "disabled"}` revient en 400 (Fable 5, Mythos 5, Mythos Preview). Le mode
+ * « off » n'y est pas exprimable ; on n'envoie alors aucun champ, ce qui
+ * laisse le défaut de la famille (penser, de toute façon) s'appliquer.
+ */
+function isAlwaysThinkingClaude(model: string): boolean {
+  return (
+    /^claude-(?:fable|mythos)-5(?:-|$)/i.test(model) ||
+    /^claude-mythos-preview(?:-|$)/i.test(model)
+  );
+}
+
 function isGpt56(model: string): boolean {
   return /^gpt-5\.6(?:-|$)/i.test(model);
 }
@@ -65,6 +78,10 @@ function anthropicReasoningFields(params: {
   maxOutputTokens?: number;
 }): Record<string, unknown> {
   if (params.effort === "off") {
+    // Fable 5 / Mythos 5 / Mythos Preview refusent `thinking: {type: "disabled"}`
+    // (400) : le raisonnement est inéteignable sur ces familles, on ne pose donc
+    // aucun champ — le modèle retombe sur son défaut (penser).
+    if (isAlwaysThinkingClaude(params.model)) return {};
     return isAdaptiveClaude(params.model) || isManualThinkingClaude(params.model)
       ? { thinking: { type: "disabled" } }
       : {};

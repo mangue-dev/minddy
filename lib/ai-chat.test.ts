@@ -99,6 +99,27 @@ describe("translateAiChatRequest", () => {
         "anthropic",
       ),
     ).toMatchObject({ thinking: { type: "disabled" } });
+    // Fable 5 / Mythos 5 / Mythos Preview refusent `thinking: {type: "disabled"}`
+    // (400) : « off » n'y envoie AUCUN champ, le modèle garde son défaut.
+    for (const model of [
+      "claude-fable-5",
+      "claude-mythos-5",
+      "claude-mythos-preview",
+    ]) {
+      expect(
+        translateAiChatRequest(
+          { ...base, model, reasoning: { effort: "off" } },
+          "anthropic",
+        ),
+      ).not.toHaveProperty("thinking");
+    }
+    // Opus 5 et Sonnet 5, eux, acceptent toujours le désactivation.
+    expect(
+      translateAiChatRequest(
+        { ...base, model: "claude-opus-5", reasoning: { effort: "off" } },
+        "anthropic",
+      ),
+    ).toMatchObject({ thinking: { type: "disabled" } });
   });
 
   it("traduit Gemini vers reasoning_effort et son usage stream supporté", () => {
