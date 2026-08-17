@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { updateDraftTool } from "@/app/api/projects/[id]/dictate-issue/route";
+import { updateDraftTool } from "@/lib/dictate-smart-fill-tool";
 
 /**
  * SOUS SMART-FILL, LA DICTÉE NE POSE PLUS LES QUATRE PROPRIÉTÉS (MIN-260).

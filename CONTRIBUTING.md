@@ -74,6 +74,12 @@ pipeline versionné commun.
   `package-lock.json` : après un `pnpm add`, resynchroniser avec
   `npm install --package-lock-only --legacy-peer-deps` (un conflit de peers
   tiptap préexistant bloque npm sans ce drapeau).
+- **Deux builds autonomes.** L'application est à la racine ; le site marketing
+  est le workspace `@minddy/marketing` dans `apps/marketing`. Utiliser
+  `pnpm --filter @minddy/marketing dev` ou `build` pour ce dernier. Ne pas
+  importer de fichier entre les deux applications : la frontière, les
+  environnements autorisés et la stratégie de versionnement sont documentés
+  dans `docs/architecture/marketing-application-boundary.md`.
 - **Un comportement neuf vient avec son test.** `npx vitest run` (18 s).
   Le typecheck ne le remplace pas.
 - **Chaînes visibles** : elles passent par next-intl et vivent en double dans

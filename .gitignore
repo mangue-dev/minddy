@@ -6,6 +6,11 @@
 /out/
 next-env.d.ts
 
+# Applications du monorepo : les sorties Next et leurs liens pnpm restent
+# locales à chaque projet, pas seulement à la racine.
+/apps/*/.next/
+/apps/*/node_modules/
+
 # production
 /build
 
