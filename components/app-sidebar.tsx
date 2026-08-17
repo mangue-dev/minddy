@@ -50,9 +50,11 @@ import {
   Check,
   LogOut,
   MoreHorizontal,
+  Megaphone,
   BarChart3,
   CreditCard,
   Settings,
+  ArrowUpRight,
   Shield,
   Newspaper,
   Trash2,
@@ -156,6 +158,17 @@ export type AppNavItem = NavItem & {
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
 
 const MotionLink = motion.create(Link);
+
+/**
+ * Le board où l'équipe Minddy recueille les retours sur le produit. Ce lien
+ * reste volontairement externe : une instance auto-hébergée n'embarque plus
+ * la redirection et le SSO propres à Minddy Cloud.
+ */
+const MINDDY_FEEDBACK_URL = "https://feedback.minddy.app";
+
+function openMinddyFeedback(): void {
+  window.open(MINDDY_FEEDBACK_URL, "_blank", "noopener,noreferrer");
+}
 
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
@@ -708,6 +721,13 @@ function SidebarFooter({
         collapsed={collapsed}
         active={pathname.startsWith("/trash")}
         onClick={() => router.push("/trash")}
+      />
+      <FooterRow
+        icon={Megaphone}
+        label={t("shareFeedback")}
+        collapsed={collapsed}
+        onClick={openMinddyFeedback}
+        trailingIcon={ArrowUpRight}
       />
       <AccountButton collapsed={collapsed} onMenuOpenChange={onMenuOpenChange} />
     </div>
