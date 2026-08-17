@@ -38,6 +38,8 @@ les active pas à elle seule.
   n'est choisi par défaut.
 - PostHog exige une clé et un hôte explicites. Web Push exige aussi un
   `VAPID_SUBJECT`, et APNs un `APNS_BUNDLE_ID` explicites.
+- Vercel Analytics et Speed Insights ne sont montés sur les pages publiques
+  qu'avec `NEXT_PUBLIC_VERCEL_ANALYTICS=1`.
 - Les providers Git intégrés ciblent `github.com` et `gitlab.com`. Les forges
   auto-hébergées sont explicitement non supportées tant qu'un provider
   configurable n'existe pas.

@@ -7,6 +7,7 @@ describe("resolvePublicSite", () => {
     expect(resolvePublicSite({})).toMatchObject({
       url: "http://localhost:3000",
       name: "minddy",
+      productFeedbackUrl: null,
     });
   });
 
@@ -16,11 +17,13 @@ describe("resolvePublicSite", () => {
         appUrl: "https://tickets.example.com/",
         siteName: "Acme Tickets",
         contactEmail: "support@example.com",
+        productFeedbackUrl: "https://feedback.example.com/board",
       }),
     ).toEqual({
       url: "https://tickets.example.com",
       name: "Acme Tickets",
       contactEmail: "support@example.com",
+      productFeedbackUrl: "https://feedback.example.com/board",
     });
   });
 
@@ -28,5 +31,11 @@ describe("resolvePublicSite", () => {
     expect(() => resolvePublicSite({ appUrl: "https://example.com/app" })).toThrow(
       /NEXT_PUBLIC_APP_URL/,
     );
+  });
+
+  it("refuse une destination de retours non HTTP ou porteuse d'identifiants", () => {
+    expect(() =>
+      resolvePublicSite({ productFeedbackUrl: "https://user:secret@example.com" }),
+    ).toThrow(/NEXT_PUBLIC_PRODUCT_FEEDBACK_URL/);
   });
 });

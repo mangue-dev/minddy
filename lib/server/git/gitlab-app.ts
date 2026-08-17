@@ -1,5 +1,5 @@
 import "server-only";
-import { capability } from "@/lib/server/capabilities";
+import { capability, requireCapability } from "@/lib/server/capabilities";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import {
@@ -117,6 +117,7 @@ async function requestGitlabToken(
   params: Record<string, string>,
   nowMs: number,
 ): Promise<GitlabTokenSet> {
+  requireCapability("gitlab");
   const body = new URLSearchParams({
     client_id: getGitlabClientId(),
     client_secret: getGitlabClientSecret(),
@@ -169,6 +170,7 @@ export interface GitlabUser {
 
 /** Identifie le compte connecté (git_connections.provider_account_id + affichage). */
 export async function getGitlabUser(accessToken: string): Promise<GitlabUser> {
+  requireCapability("gitlab");
   const response = await fetch(`${GITLAB_API_BASE}/user`, {
     headers: gitlabHeaders(accessToken),
   });
@@ -230,6 +232,7 @@ export async function getGitlabAccessToken(
   connectionId: string,
   opts: { force?: boolean } = {},
 ): Promise<string> {
+  requireCapability("gitlab");
   const shared = opts.force ? null : inFlight.get(connectionId);
   if (shared) return shared;
   const task = mintGitlabAccessToken(connectionId, !!opts.force).finally(() => {
@@ -335,6 +338,7 @@ export interface GitlabProject {
 export async function listGitlabProjects(
   accessToken: string,
 ): Promise<GitlabProject[]> {
+  requireCapability("gitlab");
   const projects: GitlabProject[] = [];
   let page: number | null = 1;
   while (page) {
@@ -398,6 +402,7 @@ export async function listGitlabOpenIssues(
   /** Plafond dur : on s'arrête dès qu'il est atteint (backfill borné). */
   limit = Number.POSITIVE_INFINITY,
 ): Promise<GitlabIssue[]> {
+  requireCapability("gitlab");
   const issues: GitlabIssue[] = [];
   let page: number | null = 1;
   while (page && issues.length < limit) {
@@ -495,6 +500,7 @@ export async function ensureGitlabIssuesHook(
   projectId: string,
   opts: { enabled?: boolean; secret: string },
 ): Promise<string | null> {
+  requireCapability("gitlab");
   const webhookUrl = `${SITE_URL}/api/webhooks/gitlab`;
   const secret = opts.secret;
 

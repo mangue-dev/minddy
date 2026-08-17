@@ -57,6 +57,8 @@ beforeEach(() => {
   };
   __clearInstallationTokenCacheForTests();
   process.env.GITHUB_APP_ID = "1";
+  process.env.GITHUB_APP_SLUG = "minddy-test";
+  process.env.GIT_STATE_SECRET = "x".repeat(32);
   // Clé de test jetable : `mintAppJwt` signe pour de vrai, il lui faut un PEM.
   process.env.GITHUB_APP_PRIVATE_KEY = TEST_PRIVATE_KEY;
 

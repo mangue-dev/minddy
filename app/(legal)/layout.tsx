@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { resolveCapabilities } from "@/lib/capabilities";
 
 /**
  * Pages légales (mentions, CGU, confidentialité, cookies) — accessibles sans
@@ -21,13 +22,14 @@ import { MarketingFooter } from "@/components/marketing/marketing-footer";
  * exactement ce qu'on cherchait — la mesure suit les pages publiques.
  */
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
+  const webAnalytics = resolveCapabilities(process.env).vercelWebAnalytics.configured;
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background">
       <MarketingNav />
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-10">{children}</main>
       <MarketingFooter />
-      <Analytics />
-      <SpeedInsights />
+      {webAnalytics && <Analytics />}
+      {webAnalytics && <SpeedInsights />}
     </div>
   );
 }

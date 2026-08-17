@@ -3,6 +3,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { DesktopMarketingRedirect } from "@/components/desktop-marketing-redirect";
+import { resolveCapabilities } from "@/lib/capabilities";
 
 /**
  * Site public (MIN-73) : landing et tarifs. Chrome partagé avec les pages
@@ -20,6 +21,7 @@ import { DesktopMarketingRedirect } from "@/components/desktop-marketing-redirec
  * exactement ce qu'on cherchait — la mesure suit les pages publiques.
  */
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
+  const webAnalytics = resolveCapabilities(process.env).vercelWebAnalytics.configured;
   return (
     // `relative isolate` : bloc conteneur ET contexte d'empilement pour les
     // fonds de page. La landing y ancre son shader en `-z-10` pour qu'il parte
@@ -33,8 +35,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <MarketingNav />
       <main className="flex-1">{children}</main>
       <MarketingFooter />
-      <Analytics />
-      <SpeedInsights />
+      {webAnalytics && <Analytics />}
+      {webAnalytics && <SpeedInsights />}
     </div>
   );
 }

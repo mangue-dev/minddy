@@ -14,6 +14,7 @@ export type CapabilityId =
   | "managedAi"
   | "vercelSandbox"
   | "vercelDomains"
+  | "vercelWebAnalytics"
   | "scheduler"
   | "analytics"
   | "transactionalEmail"
@@ -35,6 +36,11 @@ export type CapabilityEnvironment = Record<string, string | undefined>;
 
 const present = (env: CapabilityEnvironment, key: string): boolean =>
   Boolean(env[key]?.trim());
+
+function validVapidSubject(value: string | undefined): boolean {
+  const subject = value?.trim();
+  return Boolean(subject?.startsWith("mailto:") || subject?.startsWith("https://"));
+}
 
 function missing(env: CapabilityEnvironment, keys: string[]): string[] {
   return keys.filter((key) => !present(env, key));
@@ -220,8 +226,8 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
   const webPushMissing = missing(env, [
     "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
     "VAPID_PRIVATE_KEY",
-    "VAPID_SUBJECT",
   ]);
+  if (!validVapidSubject(env.VAPID_SUBJECT)) webPushMissing.push("VAPID_SUBJECT (mailto: or https:)");
   const apnsMissing = missing(env, [
     "APNS_TEAM_ID",
     "APNS_KEY_ID",
@@ -252,7 +258,8 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       requirement: "optional",
       state: absent.length === 0 ? "ready" : "disabled",
       missing: absent,
-      diagnostic: absent.length === 0 ? ready : off,
+      diagnostic:
+        absent.length === 0 ? ready : `${off} Missing: ${absent.join(", ")}.`,
     });
 
   return {
@@ -271,6 +278,19 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     managedAi,
     vercelSandbox,
     vercelDomains,
+    vercelWebAnalytics: status({
+      id: "vercelWebAnalytics",
+      requirement: "optional",
+      state: env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? "ready" : "disabled",
+      missing:
+        env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1"
+          ? []
+          : ["NEXT_PUBLIC_VERCEL_ANALYTICS=1"],
+      diagnostic:
+        env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1"
+          ? "Vercel Analytics and Speed Insights are enabled on public pages."
+          : "Vercel Analytics and Speed Insights are disabled; set NEXT_PUBLIC_VERCEL_ANALYTICS=1 to enable them.",
+    }),
     scheduler: status({
       id: "scheduler",
       requirement: "replaceable",

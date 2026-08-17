@@ -30,6 +30,16 @@ describe("resolveCapabilities", () => {
     expect(capabilities.managedBilling.state).toBe("disabled");
   });
 
+  it("n'active la télémétrie Vercel publique que sur opt-in explicite", () => {
+    expect(resolveCapabilities(core).vercelWebAnalytics.configured).toBe(false);
+    expect(
+      resolveCapabilities({
+        ...core,
+        NEXT_PUBLIC_VERCEL_ANALYTICS: "1",
+      }).vercelWebAnalytics.configured,
+    ).toBe(true);
+  });
+
   it("diagnostique chaque configuration partielle avec les variables manquantes", () => {
     const capabilities = resolveCapabilities({
       ...core,
@@ -92,6 +102,18 @@ describe("resolveCapabilities", () => {
 
     expect(capabilities.vercelSandbox.state).toBe("incomplete");
     expect(capabilities.vercelSandbox.missing).toContain("NEXT_PUBLIC_APP_URL");
+  });
+
+  it("ne déclare pas Web Push prêt avec un sujet VAPID inutilisable", () => {
+    const capabilities = resolveCapabilities({
+      ...core,
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "public",
+      VAPID_PRIVATE_KEY: "private",
+      VAPID_SUBJECT: "push@example.test",
+    });
+
+    expect(capabilities.webPush.configured).toBe(false);
+    expect(capabilities.webPush.missing).toContain("VAPID_SUBJECT (mailto: or https:)");
   });
 
   it("classe les remplacements opérables hors Vercel et hors Resend", () => {

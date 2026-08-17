@@ -1,7 +1,7 @@
 import "server-only";
 
 import { GITHUB_API_BASE, githubHeaders } from "./github-rest";
-import { capability } from "@/lib/server/capabilities";
+import { capability, requireCapability } from "@/lib/server/capabilities";
 import { isForgeTokenCryptoConfigured } from "./token-crypto";
 
 /**
@@ -100,6 +100,7 @@ async function requestUserToken(
   params: Record<string, string>,
   nowMs: number,
 ): Promise<GithubUserTokenSet> {
+  requireCapability("github");
   const body = new URLSearchParams({
     client_id: getClientId(),
     client_secret: getClientSecret(),
@@ -165,6 +166,7 @@ export interface GithubUserAccount {
 export async function getGithubUserAccount(
   token: string,
 ): Promise<GithubUserAccount> {
+  requireCapability("github");
   const response = await fetch(`${GITHUB_API_BASE}/user`, {
     headers: githubHeaders(token),
   });

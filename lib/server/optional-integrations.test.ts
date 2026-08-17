@@ -14,6 +14,7 @@ import {
   getInstallationToken,
   isGithubAppConfigured,
 } from "@/lib/server/git/github-app";
+import { exchangeGithubUserCode } from "@/lib/server/git/github-user-auth";
 import {
   exchangeGitlabCode,
   isGitlabConfigured,
@@ -101,6 +102,32 @@ describe("intégrations absentes", () => {
         redirectUri: "https://example.test/callback",
       }),
     ).rejects.toThrow(/GITLAB_OAUTH_CLIENT_ID/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("garde les adaptateurs de forge inertes quand le secret d'état manque", async () => {
+    vi.stubEnv("GITHUB_APP_ID", "1");
+    vi.stubEnv("GITHUB_APP_SLUG", "example-app");
+    vi.stubEnv("GITHUB_APP_PRIVATE_KEY", "private-key");
+    vi.stubEnv("GITHUB_APP_CLIENT_ID", "client-id");
+    vi.stubEnv("GITHUB_APP_CLIENT_SECRET", "client-secret");
+    vi.stubEnv("GITLAB_OAUTH_CLIENT_ID", "client-id");
+    vi.stubEnv("GITLAB_OAUTH_CLIENT_SECRET", "client-secret");
+    vi.stubEnv("GIT_TOKEN_ENCRYPTION_SECRET", "x".repeat(32));
+
+    await expect(getInstallationToken(1)).rejects.toThrow(/GIT_STATE_SECRET/);
+    await expect(
+      exchangeGithubUserCode({
+        code: "code",
+        redirectUri: "https://example.test/callback",
+      }),
+    ).rejects.toThrow(/GIT_STATE_SECRET/);
+    await expect(
+      exchangeGitlabCode({
+        code: "code",
+        redirectUri: "https://example.test/callback",
+      }),
+    ).rejects.toThrow(/GIT_STATE_SECRET/);
     expect(fetch).not.toHaveBeenCalled();
   });
 });

@@ -20,6 +20,8 @@ En développement, `NEXT_PUBLIC_APP_URL` peut rester vide et vaut alors
 alimente les liens d'invitation, OAuth/MCP et les webhooks GitLab, sans jamais
 retomber sur une URL de l'infrastructure minddy. `NEXT_PUBLIC_SITE_NAME` et
 `NEXT_PUBLIC_CONTACT_EMAIL` personnalisent les valeurs de marque publiques.
+`NEXT_PUBLIC_PRODUCT_FEEDBACK_URL` ajoute, si l'opérateur le souhaite, un lien
+externe « Partager un retour » ; absent, ce lien est masqué.
 
 Avec cette configuration, le cœur (comptes, projets, tickets, objectifs, pages,
 feedback, API et stockage Supabase) démarre. Stripe, OpenRouter, Vercel,
@@ -76,7 +78,7 @@ Sandbox exige `AGENT_EXECUTION_BACKEND=vercel`.
 | Jobs de fond | remplaçable | N'importe quel ordonnanceur HTTP sur `/api/cron/*`, protégé par `CRON_SECRET`; Vercel Cron n'est qu'une option |
 | E-mail Auth | remplaçable | SMTP configuré dans Supabase/GoTrue |
 | E-mail applicatif | remplaçable | `EMAIL_PROVIDER=resend` + clé + expéditeurs, ou `console` en développement |
-| Domaines Vercel, PostHog, Web Push, APNs, GitHub, GitLab, Stripe | facultative | Absence = interface masquée/inactive et aucun appel réseau |
+| Domaines Vercel, Vercel Analytics/Speed Insights, PostHog, Web Push, APNs, GitHub, GitLab, Stripe | facultative | Absence = interface masquée/inactive et aucun appel réseau ; la télémétrie Vercel exige `NEXT_PUBLIC_VERCEL_ANALYTICS=1` |
 
 Les adaptateurs de forge fournis ciblent explicitement `github.com` et
 `gitlab.com`. GitHub Enterprise Server et les instances GitLab auto-hébergées ne

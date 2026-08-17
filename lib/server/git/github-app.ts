@@ -1,7 +1,7 @@
 import "server-only";
 
 import crypto from "node:crypto";
-import { capability } from "@/lib/server/capabilities";
+import { capability, requireCapability } from "@/lib/server/capabilities";
 
 import {
   GITHUB_API_BASE,
@@ -183,6 +183,7 @@ export async function getInstallationToken(
   installationId: number | string,
   scope?: InstallationTokenScope,
 ): Promise<InstallationToken> {
+  requireCapability("github");
   const key = installationTokenCacheKey(installationId, scope);
   const cached = installationTokenCache.get(key);
   if (cached && Date.parse(cached.expiresAt) - Date.now() > SAFETY_WINDOW_MS) {
@@ -309,6 +310,7 @@ let cachedBotIdentity: CommitIdentity | null = null;
 export async function getGithubBotCommitIdentity(
   installationToken: string,
 ): Promise<CommitIdentity> {
+  requireCapability("github");
   if (cachedBotIdentity) return cachedBotIdentity;
 
   const login = `${getGithubAppSlug()}[bot]`;
@@ -411,6 +413,7 @@ export async function getIssuesPermission(
   installationId: number | string,
 ): Promise<"none" | "read" | "write"> {
   try {
+    requireCapability("github");
     const response = await fetch(
       `${GITHUB_API_BASE}/app/installations/${installationId}`,
       { headers: githubHeaders(mintAppJwt()) },
@@ -440,6 +443,7 @@ export async function getInstallationAccount(
   installationId: number | string,
 ): Promise<InstallationAccount | null> {
   try {
+    requireCapability("github");
     const response = await fetch(
       `${GITHUB_API_BASE}/app/installations/${installationId}`,
       { headers: githubHeaders(mintAppJwt()) },

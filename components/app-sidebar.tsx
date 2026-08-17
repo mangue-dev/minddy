@@ -75,6 +75,7 @@ import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
+import { PRODUCT_FEEDBACK_URL } from "@/lib/site";
 import {
   Tooltip,
   TooltipContent,
@@ -158,17 +159,6 @@ export type AppNavItem = NavItem & {
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
 
 const MotionLink = motion.create(Link);
-
-/**
- * Le board où l'équipe Minddy recueille les retours sur le produit. Ce lien
- * reste volontairement externe : une instance auto-hébergée n'embarque plus
- * la redirection et le SSO propres à Minddy Cloud.
- */
-const MINDDY_FEEDBACK_URL = "https://feedback.minddy.app";
-
-function openMinddyFeedback(): void {
-  window.open(MINDDY_FEEDBACK_URL, "_blank", "noopener,noreferrer");
-}
 
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
@@ -708,6 +698,7 @@ function SidebarFooter({
   const t = useTranslations("Nav");
   const router = useRouter();
   const pathname = usePathname();
+  const productFeedbackUrl = PRODUCT_FEEDBACK_URL;
   return (
     <div className="flex flex-col gap-0.5">
       {/* Au-dessus de ses voisines : c'est la seule des quatre choses du pied qui
@@ -722,13 +713,17 @@ function SidebarFooter({
         active={pathname.startsWith("/trash")}
         onClick={() => router.push("/trash")}
       />
-      <FooterRow
-        icon={Megaphone}
-        label={t("shareFeedback")}
-        collapsed={collapsed}
-        onClick={openMinddyFeedback}
-        trailingIcon={ArrowUpRight}
-      />
+      {productFeedbackUrl && (
+        <FooterRow
+          icon={Megaphone}
+          label={t("shareFeedback")}
+          collapsed={collapsed}
+          onClick={() =>
+            window.open(productFeedbackUrl, "_blank", "noopener,noreferrer")
+          }
+          trailingIcon={ArrowUpRight}
+        />
+      )}
       <AccountButton collapsed={collapsed} onMenuOpenChange={onMenuOpenChange} />
     </div>
   );

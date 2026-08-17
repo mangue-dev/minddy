@@ -216,7 +216,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (!isProviderConfigured(provider)) {
       return NextResponse.json(
         { error: t("gitProviderNotConfigured") },
-        { status: 400 },
+        { status: 503 },
       );
     }
 
