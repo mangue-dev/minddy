@@ -75,7 +75,7 @@ Sandbox exige `AGENT_EXECUTION_BACKEND=vercel`.
 | Base, Auth, Realtime, Storage | obligatoire | Pile Supabase complète ; le stockage de production reste le Storage de cette instance |
 | IA | remplaçable | BYOK ou endpoint local ; quota OpenRouter managé seulement avec `MINDDY_MANAGED_AI=1` |
 | Agent de code | remplaçable | Runtime local, ou Vercel Sandbox explicitement choisi avec `AGENT_EXECUTION_BACKEND=vercel`; hors Vercel, `NEXT_PUBLIC_APP_URL` est aussi requis pour joindre le plan de contrôle de cette instance |
-| Jobs de fond | remplaçable | N'importe quel ordonnanceur HTTP sur `/api/cron/*`, activé par `SCHEDULER_ENABLED=1` et protégé par `CRON_SECRET`; Vercel Cron n'est qu'une option |
+| Jobs de fond | remplaçable | N'importe quel ordonnanceur HTTP sur `/api/cron/*`, protégé par `CRON_SECRET`; `vercel.json` fournit l'adaptateur Vercel Cron |
 | E-mail Auth | remplaçable | SMTP configuré dans Supabase/GoTrue |
 | E-mail applicatif | remplaçable | `EMAIL_PROVIDER=resend` + clé + expéditeurs, ou `console` en développement |
 | Domaines Vercel, Vercel Analytics/Speed Insights, PostHog, Web Push, APNs, GitHub, GitLab, Stripe | facultative | Absence = interface masquée/inactive et aucun appel réseau ; la télémétrie Vercel exige `NEXT_PUBLIC_VERCEL_ANALYTICS=1` |
@@ -86,15 +86,22 @@ sont pas sélectionnés silencieusement : ils ne sont pas encore supportés et
 nécessitent un provider alternatif.
 
 Les expéditeurs, hôtes PostHog, sujet VAPID et bundle APNs n'ont volontairement
-aucune valeur par défaut : ils doivent décrire l'infrastructure de l'opérateur,
-jamais celle de minddy.
+aucune valeur par défaut sur une instance auto-hébergée : ils doivent décrire
+l'infrastructure de l'opérateur, jamais celle de minddy.
 
-Le `vercel.json` livré par défaut ne programme aucun cron : déployer le dépôt sur
-Vercel ne doit pas créer d'invocations payantes en silence. Pour choisir Vercel
-Cron, configurez d'abord `SCHEDULER_ENABLED=1` et `CRON_SECRET`, puis reprenez
-explicitement les horaires de `vercel.cron.example.json` dans la configuration
-du déploiement. Avec un autre ordonnanceur, appelez les mêmes routes avec
-`Authorization: Bearer <CRON_SECRET>`.
+Le `vercel.json` versionne les horaires utilisés par le produit hébergé afin
+qu'un déploiement de production ne perde pas ses jobs. Sans `CRON_SECRET`, les
+routes répondent 401 avant d'ouvrir la base ou un service externe. Un opérateur
+Vercel qui ne souhaite aucune invocation doit retirer la section `crons` de sa
+configuration de déploiement. Avec un autre ordonnanceur, appelez les mêmes
+routes avec `Authorization: Bearer <CRON_SECRET>`.
+
+Pour préserver les déploiements existants, les anciennes valeurs minddy (choix
+des services managés, Resend, Sandbox, télémétrie publique et identités push)
+restent reconnues uniquement lorsque Vercel et l'origine canonique
+`*.minddy.app` identifient ensemble le cloud officiel. Vercel seul, un secret
+seul ou un autre domaine n'active jamais ce profil de compatibilité. Les
+variables explicites ci-dessus restent la configuration de toute autre instance.
 
 La commande est réexécutable : `supabase db push` n'applique que les migrations
 absentes et les valeurs déjà présentes dans `.env.local` ne sont jamais

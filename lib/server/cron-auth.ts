@@ -11,9 +11,6 @@ import type { NextRequest } from "next/server";
  * suffit en théorie à reconstruire le secret octet par octet.
  */
 export function verifyCronSecret(request: NextRequest): boolean {
-  // Le secret peut être généré en avance par le bootstrap. Il ne constitue pas
-  // à lui seul le choix d'exécuter des jobs de fond.
-  if (process.env.SCHEDULER_ENABLED?.trim() !== "1") return false;
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
   const provided = Buffer.from(request.headers.get("authorization") ?? "");

@@ -4,6 +4,10 @@ import { connect } from "node:http2";
 import { createPrivateKey, sign } from "node:crypto";
 
 import type { PushPayload } from "./payload";
+import {
+  isOfficialMinddyCloud,
+  LEGACY_MINDDY_APNS_BUNDLE_ID,
+} from "@/lib/deployment-profile";
 
 const APNS_ORIGIN = "https://api.push.apple.com";
 const TOKEN_MAX_AGE_MS = 50 * 60 * 1000;
@@ -13,12 +17,17 @@ export interface ApnsResponse {
   reason: string | null;
 }
 
+function apnsBundleId(): string {
+  return process.env.APNS_BUNDLE_ID?.trim() ||
+    (isOfficialMinddyCloud(process.env) ? LEGACY_MINDDY_APNS_BUNDLE_ID : "");
+}
+
 export function isApnsConfigured(): boolean {
   return !!(
     process.env.APNS_TEAM_ID?.trim() &&
     process.env.APNS_KEY_ID?.trim() &&
     process.env.APNS_PRIVATE_KEY?.trim() &&
-    process.env.APNS_BUNDLE_ID?.trim()
+    apnsBundleId()
   );
 }
 
@@ -70,7 +79,7 @@ export async function sendApnsNotification(
   const providerToken = apnsProviderToken();
   if (!providerToken) return { status: 0, reason: "NotConfigured" };
   const deviceToken = endpoint.startsWith("apns:") ? endpoint.slice(5) : endpoint;
-  const topic = process.env.APNS_BUNDLE_ID!.trim();
+  const topic = apnsBundleId();
   const expiration = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
   const body = JSON.stringify({
     aps: {

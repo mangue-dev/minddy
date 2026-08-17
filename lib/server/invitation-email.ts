@@ -1,6 +1,10 @@
 import "server-only";
 
 import { capability } from "@/lib/server/capabilities";
+import {
+  isOfficialMinddyCloud,
+  LEGACY_MINDDY_INVITATION_FROM,
+} from "@/lib/deployment-profile";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { orbSeedOr, projectOrbGradient } from "@/lib/project-orb-colors";
 
@@ -110,9 +114,11 @@ export async function sendInvitationEmail(
   params: SendInvitationEmailParams
 ): Promise<boolean> {
   const link = invitationLink(params.token, params.origin ?? SITE_URL);
-  const provider = process.env.EMAIL_PROVIDER?.trim();
+  const officialCloud = isOfficialMinddyCloud(process.env);
+  const provider = process.env.EMAIL_PROVIDER?.trim() || (officialCloud ? "resend" : "");
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.INVITATION_EMAIL_FROM?.trim();
+  const from = process.env.INVITATION_EMAIL_FROM?.trim() ||
+    (officialCloud ? LEGACY_MINDDY_INVITATION_FROM : "");
   if (provider === "console" && process.env.NODE_ENV !== "production") {
     console.log(`[invitation-email] (dev — no RESEND_API_KEY) link for ${params.to}: ${link}`);
     return true;

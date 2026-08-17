@@ -3,7 +3,11 @@ interface PublicSiteEnvironment {
   siteName?: string;
   contactEmail?: string;
   productFeedbackUrl?: string;
+  vercel?: string;
+  vercelProjectProductionUrl?: string;
 }
+
+import { isOfficialMinddyCloud } from "@/lib/deployment-profile";
 
 function optionalPublicUrl(value: string | undefined, variable: string): string | null {
   const raw = value?.trim();
@@ -25,7 +29,16 @@ function optionalPublicUrl(value: string | undefined, variable: string): string 
 
 /** Configuration publique pure, partagée par le build client et les tests. */
 export function resolvePublicSite(env: PublicSiteEnvironment) {
-  const rawUrl = env.appUrl?.trim() || "http://localhost:3000";
+  const officialCloud = isOfficialMinddyCloud({
+    NEXT_PUBLIC_APP_URL: env.appUrl,
+    VERCEL: env.vercel,
+    VERCEL_PROJECT_PRODUCTION_URL: env.vercelProjectProductionUrl,
+  });
+  const vercelOrigin = env.vercelProjectProductionUrl?.trim();
+  const rawUrl = env.appUrl?.trim() ||
+    (officialCloud && vercelOrigin
+      ? (vercelOrigin.includes("://") ? vercelOrigin : `https://${vercelOrigin}`)
+      : "http://localhost:3000");
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -52,9 +65,11 @@ export function resolvePublicSite(env: PublicSiteEnvironment) {
     // Une installation auto-hébergée ne doit jamais publier l'adresse de l'opérateur
     // cloud par défaut. L'adresse dérivée reste propre au domaine de l'instance
     // et NEXT_PUBLIC_CONTACT_EMAIL permet de la remplacer explicitement.
-    contactEmail: env.contactEmail?.trim() || `contact@${parsed.hostname}`,
+    contactEmail:
+      env.contactEmail?.trim() ||
+      (officialCloud ? "hello@minddy.app" : `contact@${parsed.hostname}`),
     productFeedbackUrl: optionalPublicUrl(
-      env.productFeedbackUrl,
+      env.productFeedbackUrl || (officialCloud ? "https://feedback.minddy.app" : undefined),
       "NEXT_PUBLIC_PRODUCT_FEEDBACK_URL",
     ),
   };
@@ -65,6 +80,8 @@ const publicSite = resolvePublicSite({
   siteName: process.env.NEXT_PUBLIC_SITE_NAME,
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL,
   productFeedbackUrl: process.env.NEXT_PUBLIC_PRODUCT_FEEDBACK_URL,
+  vercel: process.env.VERCEL,
+  vercelProjectProductionUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL,
 });
 
 /** Origine canonique de cette instance, jamais celle de l'infrastructure minddy par défaut. */

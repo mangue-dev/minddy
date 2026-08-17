@@ -80,6 +80,66 @@ describe("resolveCapabilities", () => {
     expect(capabilities.transactionalEmail.configured).toBe(false);
   });
 
+  it("préserve la configuration historique du cloud officiel sans l'étendre aux autres Vercel", () => {
+    const official = resolveCapabilities({
+      ...core,
+      VERCEL: "1",
+      NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
+      OPENROUTER_API_KEY: "managed-key",
+      RESEND_API_KEY: "resend-key",
+      STRIPE_SECRET_KEY: "stripe-key",
+      STRIPE_WEBHOOK_SECRET: "webhook-key",
+      STRIPE_PRICE_ID_GO: "go",
+      STRIPE_PRICE_ID_PRO: "pro",
+      STRIPE_PRICE_ID_GO_YEARLY: "go-year",
+      STRIPE_PRICE_ID_PRO_YEARLY: "pro-year",
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "public",
+      VAPID_PRIVATE_KEY: "private",
+      APNS_TEAM_ID: "team",
+      APNS_KEY_ID: "key",
+      APNS_PRIVATE_KEY: "private",
+      NEXT_PUBLIC_POSTHOG_KEY: "posthog-key",
+    });
+
+    for (const id of [
+      "managedAi",
+      "managedBilling",
+      "vercelSandbox",
+      "vercelWebAnalytics",
+      "analytics",
+      "transactionalEmail",
+      "webPush",
+      "apns",
+    ] as const) {
+      expect(official[id].configured, `${id}: ${official[id].diagnostic}`).toBe(true);
+    }
+
+    const anotherVercel = resolveCapabilities({
+      ...core,
+      VERCEL: "1",
+      NEXT_PUBLIC_APP_URL: "https://tickets.example.com",
+      OPENROUTER_API_KEY: "operator-key",
+    });
+    expect(anotherVercel.managedAi.configured).toBe(false);
+    expect(anotherVercel.vercelSandbox.configured).toBe(false);
+    expect(anotherVercel.vercelWebAnalytics.configured).toBe(false);
+
+    const optedOut = resolveCapabilities({
+      ...core,
+      VERCEL: "1",
+      NEXT_PUBLIC_APP_URL: "https://www.minddy.app",
+      MINDDY_MANAGED_AI: "0",
+      AGENT_EXECUTION_BACKEND: "local",
+      EMAIL_PROVIDER: "disabled",
+      NEXT_PUBLIC_VERCEL_ANALYTICS: "0",
+      OPENROUTER_API_KEY: "managed-key",
+    });
+    expect(optedOut.managedAi.configured).toBe(false);
+    expect(optedOut.vercelSandbox.configured).toBe(false);
+    expect(optedOut.transactionalEmail.configured).toBe(false);
+    expect(optedOut.vercelWebAnalytics.configured).toBe(false);
+  });
+
   it("n'assemble pas une configuration PostHog avec deux paires partielles", () => {
     const capabilities = resolveCapabilities({
       ...core,
@@ -124,13 +184,10 @@ describe("resolveCapabilities", () => {
     expect(capabilities.managedAi.requirement).toBe("replaceable");
   });
 
-  it("ne confond pas un secret de cron pré-généré avec un ordonnanceur actif", () => {
+  it("active les routes d'ordonnancement avec leur secret d'authentification", () => {
+    expect(resolveCapabilities(core).scheduler)
+      .toMatchObject({ state: "disabled", configured: false, missing: ["CRON_SECRET"] });
     expect(resolveCapabilities({ ...core, CRON_SECRET: "secret" }).scheduler)
-      .toMatchObject({ state: "disabled", configured: false });
-    expect(resolveCapabilities({ ...core, SCHEDULER_ENABLED: "1" }).scheduler)
-      .toMatchObject({ state: "incomplete", configured: false, missing: ["CRON_SECRET"] });
-    expect(
-      resolveCapabilities({ ...core, SCHEDULER_ENABLED: "1", CRON_SECRET: "secret" }).scheduler,
-    ).toMatchObject({ state: "external", configured: true });
+      .toMatchObject({ state: "external", configured: true });
   });
 });

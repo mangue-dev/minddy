@@ -44,6 +44,12 @@ les active pas à elle seule.
   auto-hébergées sont explicitement non supportées tant qu'un provider
   configurable n'existe pas.
 
+Le déploiement historique du service officiel conserve ses anciens choix sans
+exiger toutes ces nouvelles variables au même déploiement. Cette compatibilité
+est bornée à Vercel avec une origine canonique `*.minddy.app`; elle ne s'applique
+ni à Vercel seul, ni aux autres domaines. Une valeur explicite reste prioritaire
+et permet notamment de désactiver une capacité sur le cloud officiel.
+
 Le catalogue exécutable de ces décisions vit dans `lib/capabilities.ts`. Il
 classe chaque capacité (`required`, `replaceable`, `optional`), énumère les
 variables absentes et produit le diagnostic utilisé par les gardes serveur.

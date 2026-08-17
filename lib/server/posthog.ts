@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { PostHog } from "posthog-node";
 import { getAppEnv } from "@/lib/env";
 import { shouldSendServerAnalytics } from "@/lib/analytics-localhost";
+import { isOfficialMinddyCloud } from "@/lib/deployment-profile";
 
 /**
  * Événements PostHog émis par le SERVEUR (MIN-78).
@@ -32,10 +33,13 @@ let client: PostHog | null = null;
  * le projet de production.
  */
 export function getServerPostHog(): PostHog | null {
+  const legacyHost = isOfficialMinddyCloud(process.env)
+    ? "https://eu.i.posthog.com"
+    : undefined;
   const serverKey = process.env.POSTHOG_API_KEY?.trim();
-  const serverHost = process.env.POSTHOG_HOST?.trim();
+  const serverHost = process.env.POSTHOG_HOST?.trim() || legacyHost;
   const publicKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
-  const publicHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim();
+  const publicHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || legacyHost;
   // Une paire reste atomique : mélanger une clé serveur avec l'hôte public (ou
   // l'inverse) activerait un client que le registre de capacités diagnostique
   // comme incomplet. La paire serveur explicite garde la priorité.

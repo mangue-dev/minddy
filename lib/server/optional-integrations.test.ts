@@ -29,6 +29,35 @@ beforeEach(() => {
 });
 
 describe("intégrations absentes", () => {
+  it("conserve Resend et ses expéditeurs historiques sur le cloud officiel", async () => {
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://www.minddy.app");
+    vi.stubEnv("RESEND_API_KEY", "resend-key");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 202 })));
+
+    expect(await sendOtpEmail({ to: "a@example.test", code: "123456", locale: "fr" }))
+      .toBe(true);
+    expect(
+      await sendInvitationEmail({
+        to: "b@example.test",
+        inviterName: "A",
+        projectName: "P",
+        projectId: "project",
+        token: "token",
+        locale: "fr",
+        origin: "https://www.minddy.app",
+      }),
+    ).toBe(true);
+
+    const bodies = vi.mocked(fetch).mock.calls.map(([, init]) =>
+      JSON.parse(String(init?.body)) as { from: string },
+    );
+    expect(bodies.map(({ from }) => from)).toEqual([
+      "minddy <feedback@mail.minddy.app>",
+      "minddy <invites@mail.minddy.app>",
+    ]);
+  });
+
   it("ne contacte ni Vercel Domains, ni Resend, ni PostHog", async () => {
     const fetchMock = vi.mocked(fetch);
 

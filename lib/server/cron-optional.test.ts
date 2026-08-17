@@ -20,16 +20,12 @@ beforeEach(() => {
 });
 
 describe("ordonnanceur facultatif", () => {
-  it("ne programme aucun réveil Vercel dans la configuration par défaut", () => {
+  it("conserve les horaires du déploiement Vercel de production", () => {
     const config = JSON.parse(
       readFileSync(new URL("../../vercel.json", import.meta.url), "utf8"),
     ) as { crons?: unknown[] };
-    const optIn = JSON.parse(
-      readFileSync(new URL("../../vercel.cron.example.json", import.meta.url), "utf8"),
-    ) as { crons?: unknown[] };
 
-    expect(config.crons).toBeUndefined();
-    expect(optIn.crons?.length).toBeGreaterThan(0);
+    expect(config.crons).toHaveLength(8);
   });
 
   it("laisse la route cron inerte sans CRON_SECRET", async () => {
@@ -43,8 +39,10 @@ describe("ordonnanceur facultatif", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("reste inerte avec un secret pré-généré sans opt-in scheduler", async () => {
+  it("autorise Vercel Cron avec le secret déjà déployé", async () => {
     vi.stubEnv("CRON_SECRET", "x".repeat(32));
+    h.getServiceClient.mockReturnValue({});
+    h.drainAgentRuns.mockResolvedValue({ claimed: 0 });
 
     const response = await GET(
       new NextRequest("http://localhost/api/cron/agent-drain", {
@@ -53,9 +51,9 @@ describe("ordonnanceur facultatif", () => {
       }),
     );
 
-    expect(response.status).toBe(401);
-    expect(h.getServiceClient).not.toHaveBeenCalled();
-    expect(h.drainAgentRuns).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(h.getServiceClient).toHaveBeenCalledOnce();
+    expect(h.drainAgentRuns).toHaveBeenCalledOnce();
     expect(fetch).not.toHaveBeenCalled();
   });
 });

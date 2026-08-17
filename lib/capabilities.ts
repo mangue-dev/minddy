@@ -34,6 +34,12 @@ export interface CapabilityStatus {
 
 export type CapabilityEnvironment = Record<string, string | undefined>;
 
+import {
+  isOfficialMinddyCloud,
+  LEGACY_MINDDY_APNS_BUNDLE_ID,
+  LEGACY_MINDDY_VAPID_SUBJECT,
+} from "@/lib/deployment-profile";
+
 const present = (env: CapabilityEnvironment, key: string): boolean =>
   Boolean(env[key]?.trim());
 
@@ -71,9 +77,11 @@ function optIn(
     flag: string;
     keys: string[];
     ready: string;
+    legacyEnabled?: boolean;
   },
 ): CapabilityStatus {
-  if (env[params.flag]?.trim() !== "1") {
+  const explicit = env[params.flag]?.trim();
+  if (explicit !== "1" && !(params.legacyEnabled && !explicit)) {
     return status({
       ...params,
       state: "disabled",
@@ -93,6 +101,7 @@ function optIn(
 
 /** Résout toutes les capacités, sans import de SDK ni appel réseau. */
 export function resolveCapabilities(env: CapabilityEnvironment): Record<CapabilityId, CapabilityStatus> {
+  const officialCloud = isOfficialMinddyCloud(env);
   const supabaseMissing = missing(env, [
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
@@ -122,6 +131,7 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
       "STRIPE_PRICE_ID_PRO_YEARLY",
     ],
     ready: "Managed Stripe billing is enabled.",
+    legacyEnabled: officialCloud,
   });
   const managedAi = optIn(env, {
     id: "managedAi",
@@ -129,9 +139,10 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     flag: "MINDDY_MANAGED_AI",
     keys: ["OPENROUTER_API_KEY"],
     ready: "Managed OpenRouter quota is enabled; BYOK remains an alternative.",
+    legacyEnabled: officialCloud,
   });
 
-  const sandboxBackend = env.AGENT_EXECUTION_BACKEND?.trim();
+  const sandboxBackend = env.AGENT_EXECUTION_BACKEND?.trim() || (officialCloud ? "vercel" : "");
   const sandboxKeys = present(env, "VERCEL")
     ? []
     : missing(env, [
@@ -177,8 +188,9 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
   });
 
   const clientAnalytics = present(env, "NEXT_PUBLIC_POSTHOG_KEY") &&
-    present(env, "NEXT_PUBLIC_POSTHOG_HOST");
-  const serverAnalytics = present(env, "POSTHOG_API_KEY") && present(env, "POSTHOG_HOST");
+    (present(env, "NEXT_PUBLIC_POSTHOG_HOST") || officialCloud);
+  const serverAnalytics = present(env, "POSTHOG_API_KEY") &&
+    (present(env, "POSTHOG_HOST") || officialCloud);
   const analyticsMissing = clientAnalytics || serverAnalytics
     ? []
     : ["NEXT_PUBLIC_POSTHOG_KEY + NEXT_PUBLIC_POSTHOG_HOST or POSTHOG_API_KEY + POSTHOG_HOST"];
@@ -193,12 +205,10 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
         : "Analytics is disabled; no PostHog SDK is initialized and no event is sent.",
   });
 
-  const emailProvider = env.EMAIL_PROVIDER?.trim();
-  const emailMissing = missing(env, [
-    "RESEND_API_KEY",
-    "FEEDBACK_EMAIL_FROM",
-    "INVITATION_EMAIL_FROM",
-  ]);
+  const emailProvider = env.EMAIL_PROVIDER?.trim() || (officialCloud ? "resend" : "");
+  const emailMissing = missing(env, ["RESEND_API_KEY"]);
+  if (!present(env, "FEEDBACK_EMAIL_FROM") && !officialCloud) emailMissing.push("FEEDBACK_EMAIL_FROM");
+  if (!present(env, "INVITATION_EMAIL_FROM") && !officialCloud) emailMissing.push("INVITATION_EMAIL_FROM");
   const transactionalEmail =
     emailProvider !== "resend"
       ? status({
@@ -227,13 +237,16 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
     "VAPID_PRIVATE_KEY",
   ]);
-  if (!validVapidSubject(env.VAPID_SUBJECT)) webPushMissing.push("VAPID_SUBJECT (mailto: or https:)");
+  const vapidSubject = env.VAPID_SUBJECT || (officialCloud ? LEGACY_MINDDY_VAPID_SUBJECT : undefined);
+  if (!validVapidSubject(vapidSubject)) webPushMissing.push("VAPID_SUBJECT (mailto: or https:)");
   const apnsMissing = missing(env, [
     "APNS_TEAM_ID",
     "APNS_KEY_ID",
     "APNS_PRIVATE_KEY",
-    "APNS_BUNDLE_ID",
   ]);
+  if (!present(env, "APNS_BUNDLE_ID") && !(officialCloud && LEGACY_MINDDY_APNS_BUNDLE_ID)) {
+    apnsMissing.push("APNS_BUNDLE_ID");
+  }
   const githubMissing = missing(env, [
     "GITHUB_APP_ID",
     "GITHUB_APP_SLUG",
@@ -281,34 +294,31 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     vercelWebAnalytics: status({
       id: "vercelWebAnalytics",
       requirement: "optional",
-      state: env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ? "ready" : "disabled",
+      state:
+        env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ||
+        (officialCloud && !env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim())
+          ? "ready"
+          : "disabled",
       missing:
-        env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1"
+        env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ||
+        (officialCloud && !env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim())
           ? []
           : ["NEXT_PUBLIC_VERCEL_ANALYTICS=1"],
       diagnostic:
-        env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1"
+        env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim() === "1" ||
+        (officialCloud && !env.NEXT_PUBLIC_VERCEL_ANALYTICS?.trim())
           ? "Vercel Analytics and Speed Insights are enabled on public pages."
           : "Vercel Analytics and Speed Insights are disabled; set NEXT_PUBLIC_VERCEL_ANALYTICS=1 to enable them.",
     }),
     scheduler:
-      env.SCHEDULER_ENABLED?.trim() !== "1"
-        ? status({
-            id: "scheduler",
-            requirement: "replaceable",
-            state: "disabled",
-            missing: ["SCHEDULER_ENABLED=1"],
-            diagnostic:
-              "Background jobs are disabled. Configure an external HTTP scheduler, then set SCHEDULER_ENABLED=1.",
-          })
-        : !present(env, "CRON_SECRET")
+      !present(env, "CRON_SECRET")
           ? status({
               id: "scheduler",
               requirement: "replaceable",
-              state: "incomplete",
+              state: "disabled",
               missing: ["CRON_SECRET"],
               diagnostic:
-                "Scheduler selected but CRON_SECRET is missing; cron routes remain inert.",
+                "Background jobs are disabled; configure CRON_SECRET and an HTTP scheduler to enable them.",
             })
           : status({
               id: "scheduler",
