@@ -127,6 +127,10 @@ const ISSUE_FIELD_PROPERTIES = {
     description:
       "Recurrence cadence — the issue comes back at this rhythm ('every Monday', 'every 4th of the month', 'every year'). It NEEDS a due_date: pass one in the same call unless the issue already has one, otherwise the write is refused. That due date carries the FIRST occurrence and gives the rhythm its day (weekly + a Monday = every Monday, monthly + the 4th = every 4th); a date already past is moved forward to the next occurrence, so a recurring issue never starts overdue. It then runs on its own: setting the issue to 'done' creates the next occurrence in 'backlog' with the due date shifted by one cadence and moves the recurrence onto it — never create that next occurrence yourself. null stops the series (so do clearing the due_date and canceling the issue).",
   },
+} as const;
+
+const CREATE_ISSUE_FIELD_PROPERTIES = {
+  ...ISSUE_FIELD_PROPERTIES,
   smart_fill: {
     type: "boolean",
     description:
@@ -351,7 +355,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          ...ISSUE_FIELD_PROPERTIES,
+          ...CREATE_ISSUE_FIELD_PROPERTIES,
           category_ids: {
             type: "array",
             items: { type: "string" },
@@ -1051,9 +1055,32 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "add_feedback_comment",
+      description:
+        "Post a SHORT, team-only internal comment on a feedback post for triage notes. It is never shown on the public board and is signed as Numo in the team timeline. Use two or three sentences or a few one-line bullets, 1000 characters at most, with no headings. Omit feedback_post_id to target the current feedback post.",
+      parameters: {
+        type: "object",
+        properties: {
+          feedback_post_id: {
+            type: "string",
+            description: "Feedback post id. Omit to target the current post.",
+          },
+          body: {
+            type: "string",
+            description:
+              "Short markdown triage note: two or three sentences, 1000 characters at most, no headings.",
+          },
+        },
+        required: ["body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "respond_to_feedback",
       description:
-        "Reply PUBLICLY on a feedback post — the message is posted to the board's public thread, where everyone reading the request sees it, signed on behalf of the team (never with a member's name, nor yours). This is PUBLIC-facing and cannot be edited or taken back afterwards: only do it when explicitly asked, and post it once it says what the team means. It is the ONLY way you can write on a feedback post, and there is no team-only equivalent here: a triage note is something the user writes themself, in the feedback panel. Omit feedback_post_id to target the current post (feedback comment mode).",
+        "Reply PUBLICLY on a feedback post — the message is posted to the board's public thread, where everyone reading the request sees it, signed on behalf of the team (never with a member's name, nor yours). This is PUBLIC-facing and cannot be edited or taken back afterwards: only do it when explicitly asked, and post it once it says what the team means. For a short team-only triage note, use add_feedback_comment instead. Omit feedback_post_id to target the current post (feedback comment mode).",
       parameters: {
         type: "object",
         properties: {

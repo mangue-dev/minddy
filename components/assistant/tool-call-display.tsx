@@ -638,6 +638,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("feedbackUnlinked") : t("unlinkFeedbackFailed");
     },
   },
+  add_feedback_comment: {
+    icon: MessagesSquare,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("addingFeedbackComment");
+      return success ? t("feedbackCommentAdded") : t("addFeedbackCommentFailed");
+    },
+  },
   respond_to_feedback: {
     icon: MessagesSquare,
     getLabel: (args, _result, success, status, t) => {

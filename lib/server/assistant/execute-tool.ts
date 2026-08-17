@@ -1962,6 +1962,29 @@ export async function executeTool(
         return { result: { unlinked: true, feedback_post_id: postId }, success: true };
       }
 
+      case "add_feedback_comment": {
+        const postId =
+          (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
+          ctx.feedbackPostId ||
+          "";
+        if (!postId) return toolError("feedback_post_id is required.");
+        if (typeof args.body !== "string") return toolError("body must be a string.");
+        const scoped = await getProjectFeedbackPost(projectId, postId);
+        if (!scoped) return toolError("Feedback post not found in this project.");
+        const result = await addCommentToFeedbackPost({
+          postId,
+          actorId: ctx.userId,
+          body: args.body,
+          visibility: "internal",
+          viaAssistant: true,
+        });
+        if (!result.ok) return toolError(result.errorKey ?? "databaseError");
+        return {
+          result: { feedback_post_id: postId, comment: result.comment },
+          success: true,
+        };
+      }
+
       case "respond_to_feedback": {
         const postId =
           (typeof args.feedback_post_id === "string" && args.feedback_post_id) ||
