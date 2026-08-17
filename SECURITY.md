@@ -9,6 +9,14 @@ pas.
 **Stack :** Next.js (App Router) + Supabase (PostgreSQL, Auth, Storage), déployé
 sur Vercel (HTTPS natif, redirection HTTP→HTTPS gérée par la plateforme).
 
+## Versions prises en charge
+
+Avant la première version publique, seul le dernier commit de `main` reçoit des
+correctifs. Après publication, la dernière version stable et `main` sont prises
+en charge ; les versions antérieures peuvent recevoir un correctif à la
+discrétion des mainteneurs, sans garantie. Le bulletin de sécurité indique les
+versions affectées et corrigées.
+
 ---
 
 ## 1. Authentification
@@ -390,8 +398,30 @@ En cas de compromission suspectée :
 
 ## 12. Signaler une vulnérabilité
 
-Ne publiez pas une vulnérabilité ou une preuve d'exploitation dans une issue
-GitHub. Envoyez-la à [hello@minddy.app](mailto:hello@minddy.app) avec une
-description, les étapes de reproduction, l'impact observé et, si possible,
-une proposition de correctif. Nous accusons réception sous 7 jours, puis
-convenons avec vous d'un calendrier de correction et de divulgation.
+Ne publiez jamais une vulnérabilité, une preuve d'exploitation ou des données
+exposées dans une issue, une discussion ou une pull request publique.
+
+Utilisez en priorité **Security → Report a vulnerability** sur GitHub, qui crée
+un avis privé. Si cette option n'est pas visible, écrivez à
+[hello@minddy.app](mailto:hello@minddy.app). Chiffrez les éléments sensibles ou
+demandez d'abord un canal adapté. Incluez :
+
+- la version ou le commit affecté et le mode de déploiement ;
+- les prérequis et étapes minimales de reproduction ;
+- l'impact, les données ou privilèges concernés et l'exploitabilité connue ;
+- les journaux ou preuves expurgés, et une correction suggérée si vous en avez
+  une ;
+- vos attentes de crédit et de coordination de la divulgation.
+
+Nous accusons réception sous sept jours calendaires, confirmons ensuite le
+périmètre et convenons d'un calendrier de correction et de publication. Nous
+pouvons demander un délai raisonnable avant divulgation afin de protéger les
+utilisateurs. Le reporter est tenu informé aux étapes importantes ; aucun
+programme de prime n'est promis.
+
+Les recherches de bonne foi qui évitent l'accès persistant, l'exfiltration, la
+destruction, l'indisponibilité et les données de tiers ne feront pas l'objet de
+représailles de notre part. Arrêtez le test dès qu'une donnée réelle est
+rencontrée et signalez-la sans la conserver. Les tests sur le service managé ne
+doivent utiliser que vos propres comptes et données ; l'ingénierie sociale, le
+spam et les attaques par déni de service sont hors périmètre.

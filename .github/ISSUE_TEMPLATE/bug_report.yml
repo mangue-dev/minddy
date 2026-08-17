@@ -1,0 +1,100 @@
+name: Signaler un bug
+description: Signaler un comportement reproductible de minddy
+title: "[Bug] "
+labels:
+  - bug
+  - needs reproduction
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de vérifier les issues existantes avant de continuer. Pour une vulnérabilité, n'utilisez pas ce formulaire : suivez la [politique de sécurité](https://github.com/mangue-dev/minddy-issues/security/policy).
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Vérifications préalables
+      options:
+        - label: J'ai recherché une issue existante décrivant le même problème.
+          required: true
+        - label: Ce rapport ne contient ni secret, ni donnée personnelle, ni détail de vulnérabilité non corrigée.
+          required: true
+        - label: J'accepte de respecter le Code of Conduct du projet.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version ou commit
+      description: Tag, numéro de version ou SHA du commit utilisé.
+      placeholder: v0.9.5 ou abc1234
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Mode d'utilisation
+      options:
+        - Auto-hébergé
+        - Service managé minddy
+        - Développement local
+        - Application macOS
+        - Autre
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environnement
+      description: Navigateur et version, système, version de Node.js, hébergeur et base de données si pertinents.
+      placeholder: macOS 15, Chrome 140, Node.js 24, Supabase hébergé
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Que s'est-il passé, et quel est l'impact concret ?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Étapes de reproduction minimales
+      placeholder: |
+        1. Créer…
+        2. Ouvrir…
+        3. Observer…
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Résultat attendu
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Résultat obtenu
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Journaux ou captures expurgés
+      description: Retirez tokens, e-mails, identifiants de projet et données client. Les fichiers peuvent être déposés ici.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte supplémentaire
+      description: Régression connue, fréquence, solution de contournement ou autre information utile.

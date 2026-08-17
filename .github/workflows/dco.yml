@@ -1,0 +1,59 @@
+name: DCO
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dco-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dco:
+    name: Developer Certificate of Origin
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify every commit sign-off
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          commits="$(git rev-list --no-merges "${BASE_SHA}..${HEAD_SHA}")"
+          if [[ -z "${commits}" ]]; then
+            echo "No non-merge commit to verify."
+            exit 0
+          fi
+
+          failed=0
+          while IFS= read -r commit; do
+            author_name="$(git show -s --format=%an "${commit}")"
+            author_email="$(git show -s --format=%ae "${commit}")"
+            expected="Signed-off-by: ${author_name} <${author_email}>"
+            expected="$(printf '%s' "${expected}" | tr '[:upper:]' '[:lower:]')"
+            valid=0
+            while IFS= read -r line; do
+              normalized="$(printf '%s' "${line}" | tr '[:upper:]' '[:lower:]')"
+              if [[ "${normalized}" == "${expected}" ]]; then
+                valid=1
+              fi
+            done < <(git show -s --format=%B "${commit}")
+
+            if (( valid == 0 )); then
+              echo "::error::Commit ${commit} has no valid Signed-off-by trailer. Run git commit --amend --signoff (or rebase and sign every commit), then force-push with lease."
+              failed=1
+            fi
+          done <<< "${commits}"
+
+          exit "${failed}"

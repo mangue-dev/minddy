@@ -1,5 +1,17 @@
 # Contribuer à minddy
 
+Merci de contribuer. Toute participation est soumise au
+[Code of Conduct](CODE_OF_CONDUCT.md). Les questions d'utilisation vont dans
+[GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions),
+les bugs et améliorations dans les formulaires d'issue, et les vulnérabilités
+exclusivement par le canal privé de [SECURITY.md](SECURITY.md).
+
+Avant un changement non trivial, ouvrez une issue et attendez que le périmètre
+soit accepté. Une issue ouverte n'est pas une réservation : indiquez que vous
+souhaitez la traiter, gardez le travail visible et prévenez si vous l'abandonnez.
+La gouvernance, les délais de décision et les rôles de revue sont décrits dans
+[GOVERNANCE.md](GOVERNANCE.md).
+
 ## Licence et DCO
 
 Les contributions sont distribuées sous **AGPL-3.0-only**. Aucun CLA ni aucune
@@ -14,6 +26,12 @@ Signed-off-by: Prénom Nom <email@example.com>
 Utilisez `git commit -s` pour l'ajouter. La politique complète, y compris les
 notices et la règle applicable aux opérateurs d'instances modifiées, est dans
 [docs/licensing.md](docs/licensing.md).
+
+Le sign-off est requis sur **chaque commit**, y compris après un rebase. Pour
+corriger le dernier commit, utilisez `git commit --amend --signoff`; pour une
+série, rebasez-la et signez chaque commit. Le workflow DCO bloque la fusion s'il
+manque une ligne valide. Le sign-off atteste vos droits, il ne remplace pas
+l'auteur et ne cède pas votre copyright.
 
 ## ⚠ Ce dépôt exécute du code dès l'installation
 
@@ -50,7 +68,10 @@ PR localement :
 [.github/workflows/ci.yml](.github/workflows/ci.yml) joue, sur chaque pull
 request et chaque push sur `main`/`production` :
 
+- `pnpm run check:public-repo`
+- `pnpm run lint`
 - `pnpm run typecheck`
+- `node scripts/build-desktop.mjs`
 - `pnpm run test`
 - `node scripts/audit.mjs` — vulnérabilités high/critical sur les **trois**
   lockfiles du dépôt (`pnpm-lock.yaml`, `package-lock.json`,
@@ -67,6 +88,24 @@ garde-fous et vérifie la CI du commit à publier. Ses conventions de branches e
 d'hébergement sont à adapter à chaque instance ; la CI ci-dessus reste le
 pipeline versionné commun.
 
+## Préparer une pull request
+
+1. Partez d'une branche à jour et gardez un seul objectif par pull request.
+2. Ajoutez ou adaptez les tests, la documentation et les catalogues de langue.
+3. Exécutez `pnpm lint`, `pnpm typecheck` et `pnpm test` dans un environnement
+   sans secret.
+4. Décrivez le pourquoi, les changements, les vérifications, les risques et la
+   licence de toute nouvelle dépendance ou ressource dans le modèle de PR.
+5. Signez chaque commit avec `git commit -s`.
+
+Une contribution externe est d'abord relue sans exécuter son code. Un
+mainteneur autorise ensuite la CI du fork, demande les corrections nécessaires
+et vérifie le DCO, les checks et les conversations avant fusion. Une approbation
+code owner est obligatoire ; l'auteur n'approuve pas sa propre PR. La fusion se
+fait par squash. Les mainteneurs peuvent refuser un changement hors périmètre,
+insuffisamment sûr ou dont le coût de maintenance dépasse le bénéfice, même si
+son implémentation fonctionne.
+
 ## Travailler dans le dépôt
 
 - **Gestionnaire de paquets : pnpm.** C'est lui qui installe réellement
@@ -81,6 +120,10 @@ pipeline versionné commun.
   placeholders. Après y avoir touché : `npx vitest run lib/i18n-contract.test.ts`.
 - Les conventions détaillées du dépôt sont dans [CLAUDE.md](CLAUDE.md), son
   architecture de sécurité dans [SECURITY.md](SECURITY.md).
+
+Les mises à jour de dépendances suivent [GOVERNANCE.md](GOVERNANCE.md) : origine
+et licence vérifiées, lockfiles synchronisés, aucune fusion automatique d'une
+version majeure, CI et audit high/critical obligatoires.
 
 ## Signaler une faille
 

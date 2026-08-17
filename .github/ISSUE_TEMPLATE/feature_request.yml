@@ -1,0 +1,61 @@
+name: Proposer une amélioration
+description: Décrire un besoin ou une évolution du cœur open source
+title: "[Amélioration] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Commencez par le problème à résoudre. Une discussion exploratoire peut être ouverte dans [GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions).
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Vérifications préalables
+      options:
+        - label: J'ai recherché les issues et discussions existantes.
+          required: true
+        - label: Cette proposition concerne le cœur open source ou son interface publique, pas une demande de support privé.
+          required: true
+        - label: J'accepte de respecter le Code of Conduct du projet.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème à résoudre
+      description: Qui rencontre ce problème, dans quel contexte, et avec quel impact ?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Résultat souhaité
+      description: Décrivez le comportement attendu sans imposer inutilement une implémentation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives envisagées
+      description: Contournements actuels, solutions comparées ou raisons de les écarter.
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Périmètre et compatibilité
+      description: API, migration, données, sécurité, accessibilité ou rupture de compatibilité éventuelle.
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Souhaitez-vous contribuer à l'implémentation ?
+      options:
+        - Oui
+        - Peut-être, avec accompagnement
+        - Non
+    validations:
+      required: true

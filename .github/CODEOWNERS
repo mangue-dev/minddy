@@ -1,0 +1,20 @@
+# Le mainteneur principal reste responsable de chaque changement tant qu'un
+# deuxième mainteneur n'a pas été nommé dans GOVERNANCE.md.
+* @mangue-dev
+
+# Ces surfaces modifient les règles de confiance, de publication ou de droits.
+/.github/ @mangue-dev
+/SECURITY.md @mangue-dev
+/GOVERNANCE.md @mangue-dev
+/CODE_OF_CONDUCT.md @mangue-dev
+/SUPPORT.md @mangue-dev
+/docs/licensing.md @mangue-dev
+/LICENSE @mangue-dev
+/NOTICE @mangue-dev
+/package.json @mangue-dev
+/pnpm-lock.yaml @mangue-dev
+/package-lock.json @mangue-dev
+/desktop/package.json @mangue-dev
+/desktop/package-lock.json @mangue-dev
+/scripts/ @mangue-dev
+/supabase/migrations/ @mangue-dev

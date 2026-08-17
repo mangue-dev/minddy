@@ -66,6 +66,19 @@ check, lint, typecheck, desktop bundle build, tests, and dependency audit. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and review guidance, and
 [SECURITY.md](SECURITY.md) for the security model and vulnerability reporting.
 
+## Community and governance
+
+- Propose bugs and improvements through the repository's structured issue
+  forms, and read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull
+  request.
+- Ask usage and self-hosting questions in GitHub Discussions. The boundaries
+  between best-effort community help and commercial support are documented in
+  [SUPPORT.md](SUPPORT.md).
+- Project roles, decisions, reviews, protected branches, and dependency policy
+  are defined in [GOVERNANCE.md](GOVERNANCE.md).
+- Participation is subject to the [Code of Conduct](CODE_OF_CONDUCT.md). Report
+  vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
 ## License
 
 minddy is released under the [GNU AGPL v3.0 only](LICENSE). If you operate a
