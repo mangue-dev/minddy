@@ -6,6 +6,7 @@ import {
 } from "@/lib/server/git/callback-session";
 import { getInstallationAccount } from "@/lib/server/git/github-app";
 import { upsertGithubConnection } from "@/lib/server/git/connections";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
  * GET /api/git/github/setup — Setup URL de l'app GitHub (MIN-47).
@@ -18,7 +19,8 @@ import { upsertGithubConnection } from "@/lib/server/git/connections";
  * l'utilisateur vers les paramètres du projet pour choisir un dépôt.
  */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  const origin = canonicalAppOrigin();
   const { userId: sessionUserId, applyCookies } =
     await readForgeCallbackSession(request);
   const state = verifyGitLinkState(searchParams.get("state"));

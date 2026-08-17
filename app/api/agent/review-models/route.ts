@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getPrReviewModelCatalog } from "@/lib/server/agent/models-catalog";
 import { getInstancePrReviewModel } from "@/lib/server/agent/model";
+import { capability } from "@/lib/server/capabilities";
 
 /**
  * Catalogue du picker « faire vérifier par Numo ».
@@ -33,5 +34,9 @@ export async function GET(request: NextRequest) {
     getPrReviewModelCatalog(auth.user.id),
     getInstancePrReviewModel(),
   ]);
-  return NextResponse.json({ ...catalog, defaultModel });
+  return NextResponse.json({
+    ...catalog,
+    defaultModel,
+    cloudExecutionConfigured: capability("vercelSandbox").configured,
+  });
 }

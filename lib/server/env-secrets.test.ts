@@ -68,6 +68,11 @@ describe("findSecretProblems", () => {
     expect(findSecretProblems({})).toEqual([]);
   });
 
+  it("exige le cœur Supabase sur une production Node hors Vercel", () => {
+    const problems = findSecretProblems({ NODE_ENV: "production" });
+    expect(problems.some((p) => p.includes("SUPABASE_SERVICE_ROLE_KEY"))).toBe(true);
+  });
+
   it("accepte les lignes optionnelles vides d'un .env.example copié", () => {
     const env = healthyEnv();
     for (const spec of SECRET_SPECS) {

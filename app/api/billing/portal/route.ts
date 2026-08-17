@@ -10,6 +10,7 @@ import {
   isStripeConfigured,
 } from "@/lib/server/stripe";
 import { billingReturnUrl } from "@/lib/desktop/return-url";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
  * POST /api/billing/portal — { url } de la session Stripe Customer Portal
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await createStripePortalSession({
       customerId: account.stripe_customer_id,
-      returnUrl: billingReturnUrl(request.nextUrl.origin, "/billing", fromDesktop),
+      returnUrl: billingReturnUrl(canonicalAppOrigin(), "/billing", fromDesktop),
     });
     return Response.json({ url: session.url });
   } catch (error) {

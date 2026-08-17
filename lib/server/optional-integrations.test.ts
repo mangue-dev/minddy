@@ -51,6 +51,16 @@ describe("intégrations absentes", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("n'active jamais le faux provider de domaines en production auto-hébergée", async () => {
+    vi.stubEnv("MDY_FAKE_VERCEL_DOMAINS", "1");
+
+    expect(await addDomainToVercel("example.test")).toEqual({
+      ok: false,
+      code: "api_error",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("refuse les configurations partielles avant tout appel réseau", async () => {
     vi.stubEnv("EMAIL_PROVIDER", "resend");
     vi.stubEnv("RESEND_API_KEY", "resend-key");

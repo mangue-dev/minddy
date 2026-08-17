@@ -25,6 +25,7 @@ import {
 } from "@/lib/server/git/link-state";
 import { listCandidateRepos } from "@/lib/server/git/repo-links";
 import { refreshForgeAccountNames } from "@/lib/server/git/account-refresh";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 function isProviderConfigured(provider: RepoProviderId): boolean {
   return provider === "github" ? isGithubAppConfigured() : isGitlabConfigured();
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ mode: "install", url });
   }
   const url = getGitlabAuthorizeUrl({
-    redirectUri: `${request.nextUrl.origin}/api/git/gitlab/callback`,
+    redirectUri: `${canonicalAppOrigin()}/api/git/gitlab/callback`,
     state,
   });
   return NextResponse.json({ mode: "oauth", url });

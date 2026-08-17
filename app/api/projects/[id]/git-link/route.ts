@@ -38,6 +38,7 @@ import {
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { syncRepoPullRequests } from "@/lib/server/agent/pull-requests";
 import type { ProjectGitLink } from "@/lib/types";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -239,7 +240,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ mode: "install", url });
     }
     const url = getGitlabAuthorizeUrl({
-      redirectUri: `${request.nextUrl.origin}/api/git/gitlab/callback`,
+      redirectUri: `${canonicalAppOrigin()}/api/git/gitlab/callback`,
       state,
     });
     return NextResponse.json({ mode: "oauth", url });

@@ -68,6 +68,10 @@ interface AgentModelsResult {
    * sur le catalogue entier, comme avant.
    */
   recommended: string[];
+  /** Le backend cloud peut réellement lancer une session sur cette instance. */
+  cloudExecutionConfigured: boolean;
+  /** Les routes de tâches planifiées sont protégées et peuvent être ordonnancées. */
+  routineSchedulingConfigured: boolean;
   /** Config locale non secrète : son catalogue est lu par la coquille Electron. */
   localEndpoint?: {
     provider: "local_openai" | "ollama";
@@ -83,6 +87,8 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     maxMultiplier: null,
     planId: null,
     recommended: [],
+    cloudExecutionConfigured: true,
+    routineSchedulingConfigured: true,
   };
   const res = await fetch(SCOPE_ENDPOINTS[scope]);
   if (!res.ok) return empty;
@@ -93,6 +99,8 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     maxMultiplier?: number | null;
     planId?: string | null;
     recommended?: string[];
+    cloudExecutionConfigured?: boolean;
+    routineSchedulingConfigured?: boolean;
     localEndpoint?: {
       provider?: AgentProviderId;
       baseUrl?: string;
@@ -112,6 +120,10 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     maxMultiplier: data.maxMultiplier ?? null,
     planId: data.planId ?? null,
     recommended: data.recommended ?? [],
+    // Les portées admin et un serveur ancien n'exposent pas ce champ : ne pas
+    // transformer une réponse transitoire en désactivation trompeuse du composer.
+    cloudExecutionConfigured: data.cloudExecutionConfigured ?? true,
+    routineSchedulingConfigured: data.routineSchedulingConfigured ?? true,
     ...(localEndpoint ? { localEndpoint } : {}),
   };
   // Le serveur web ne peut — et ne doit — jamais joindre une adresse locale.
@@ -142,6 +154,8 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
     maxMultiplier: data?.maxMultiplier ?? null,
     planId: data?.planId ?? null,
     recommended: data?.recommended ?? [],
+    cloudExecutionConfigured: data?.cloudExecutionConfigured ?? true,
+    routineSchedulingConfigured: data?.routineSchedulingConfigured ?? true,
     loading: isPending,
   };
 }

@@ -124,9 +124,14 @@ export const SECRET_SPECS: SecretSpec[] = [
   },
 ];
 
-/** Environnement déployé (Vercel), par opposition à un poste de développement. */
+/** Environnement déployé, chez Vercel comme sur tout serveur Node de production. */
 function isDeployed(env: SecretEnv): boolean {
-  return !!env.VERCEL || env.VERCEL_ENV === "production" || env.VERCEL_ENV === "preview";
+  return (
+    env.NODE_ENV === "production" ||
+    !!env.VERCEL ||
+    env.VERCEL_ENV === "production" ||
+    env.VERCEL_ENV === "preview"
+  );
 }
 
 /** La valeur lue pour cette spec (nom principal, puis alias), déjà nettoyée. */

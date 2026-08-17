@@ -10,6 +10,7 @@ import {
   buildIntegrationPrompt,
   type IntegrationPromptMode,
 } from "@/lib/server/integration-prompt";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     typeof body.placement === "string" ? body.placement.trim().slice(0, PLACEMENT_MAX) : "";
 
   const locale = (await getLocale()) === "fr" ? ("fr" as const) : ("en" as const);
-  const origin = request.nextUrl.origin;
+  const origin = canonicalAppOrigin();
   const projectName = guard.access.project.name;
 
   if (mode === "board") {

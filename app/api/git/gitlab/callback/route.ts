@@ -9,6 +9,7 @@ import {
   getGitlabUser,
 } from "@/lib/server/git/gitlab-app";
 import { upsertGitlabConnection } from "@/lib/server/git/connections";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
  * GET /api/git/gitlab/callback — callback OAuth GitLab (MIN-47).
@@ -23,7 +24,8 @@ import { upsertGitlabConnection } from "@/lib/server/git/connections";
  * déposerait le jeton GitLab de la victime dans le compte de l'attaquant.
  */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  const origin = canonicalAppOrigin();
   const { userId: sessionUserId, applyCookies } =
     await readForgeCallbackSession(request);
   const state = verifyGitLinkState(searchParams.get("state"));

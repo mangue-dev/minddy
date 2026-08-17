@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
+import { capability } from "@/lib/server/capabilities";
 
 /**
  * Index des modèles pour le picker de l'agent (MIN-46), résolu selon le provider
@@ -17,5 +18,9 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const catalog = await getAgentModelsForUser(auth.user.id);
-  return NextResponse.json(catalog);
+  return NextResponse.json({
+    ...catalog,
+    cloudExecutionConfigured: capability("vercelSandbox").configured,
+    routineSchedulingConfigured: capability("scheduler").configured,
+  });
 }

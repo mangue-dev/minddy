@@ -13,19 +13,36 @@ import { SITE_URL } from "@/lib/site";
  * de déclencher l'envoi avec le bon en-tête pour que l'e-mail légitime, expédié
  * par nous, sous notre nom, mène chez l'attaquant (MIN-351).
  *
- * Trois cas, dans cet ordre :
+ * Quatre cas, dans cet ordre :
  * - production Vercel — le domaine canonique, quel que soit l'alias emprunté ;
  * - preview Vercel — l'URL du déploiement, pour qu'un preview reste chez lui ;
+ * - production auto-hébergée — le domaine canonique configuré par l'opérateur ;
  * - poste de dev — le localhost du serveur.
  *
- * Volontairement PAS `NEXT_PUBLIC_APP_URL` : elle vaut le domaine de prod
- * jusque sur un preview (voir `lib/server/agent/origin.ts`).
+ * `SITE_URL` porte l'origine publique configurée, mais un preview Vercel la
+ * remplace par son URL de déploiement (voir `lib/server/agent/origin.ts`).
  */
-export function canonicalAppOrigin(): string {
-  if (process.env.VERCEL_ENV?.trim() === "production") return SITE_URL;
+export interface AppOriginEnvironment {
+  VERCEL_ENV?: string;
+  VERCEL_URL?: string;
+  NODE_ENV?: string;
+  PORT?: string;
+}
 
-  const vercelUrl = process.env.VERCEL_URL?.trim();
+export function resolveCanonicalAppOrigin(
+  env: AppOriginEnvironment,
+  siteUrl: string,
+): string {
+  if (env.VERCEL_ENV?.trim() === "production") return siteUrl;
+
+  const vercelUrl = env.VERCEL_URL?.trim();
   if (vercelUrl) return `https://${vercelUrl}`;
 
-  return `http://localhost:${process.env.PORT?.trim() || "3000"}`;
+  if (env.NODE_ENV === "production") return siteUrl;
+
+  return `http://localhost:${env.PORT?.trim() || "3000"}`;
+}
+
+export function canonicalAppOrigin(): string {
+  return resolveCanonicalAppOrigin(process.env, SITE_URL);
 }

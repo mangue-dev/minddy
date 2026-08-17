@@ -217,7 +217,11 @@ export function SessionCompose({
     if (projectId && launchable.some((p) => p.id === projectId)) return;
     setProjectId(defaultAgentProjectId(launchable, lastAgentProjectId()) ?? "");
   }, [launchable, projectId, gitLinkedLoading]);
-  const { provider, defaultModel: providerDefaultModel } = useAgentModelsQuery();
+  const {
+    provider,
+    defaultModel: providerDefaultModel,
+    cloudExecutionConfigured,
+  } = useAgentModelsQuery();
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
   // Niveau de raisonnement du lancement (MIN-122), figé sur la run côté serveur :
@@ -280,6 +284,10 @@ export function SessionCompose({
       return;
     }
     const localExec = environment !== "cloud" && localRepo.ready;
+    if (!localExec && !cloudExecutionConfigured) {
+      toast.error(t("errorExecutionBackendUnavailable"));
+      return;
+    }
     const localWorktree = localExec && environment === "worktree";
     setLaunching(true);
     setLaunchText(prompt);
@@ -419,9 +427,15 @@ export function SessionCompose({
             // librement éditable) et le tooltip du bouton dit ce qui manque —
             // choisir un projet, ou en connecter un à un dépôt s'il n'y en a
             // aucun où lancer l'agent.
-            sendDisabled={!projectId}
+            sendDisabled={
+              !projectId || (environment === "cloud" && !cloudExecutionConfigured)
+            }
             sendDisabledTooltip={
-              noRepoAnywhere ? t("composeNoRepo") : t("composeProjectTooltip")
+              environment === "cloud" && !cloudExecutionConfigured
+                ? t("errorExecutionBackendUnavailable")
+                : noRepoAnywhere
+                  ? t("composeNoRepo")
+                  : t("composeProjectTooltip")
             }
             initialValue={initialText}
             placeholder={t("composePlaceholderFree")}
@@ -447,7 +461,7 @@ export function SessionCompose({
                         value={environment}
                         onChange={setEnvironment}
                         localAvailable={localRepo.available}
-                        cloudAvailable={!localEndpoint}
+                        cloudAvailable={!localEndpoint && cloudExecutionConfigured}
                         folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                         needsAttach={localRepo.state?.status !== "ready"}
                         onAttach={() => {

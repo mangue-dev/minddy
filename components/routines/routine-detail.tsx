@@ -139,6 +139,11 @@ export function RoutineDetail({
   const format = useFormatter();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const {
+    cloudExecutionConfigured,
+    routineSchedulingConfigured,
+    loading: agentCapabilitiesLoading,
+  } = useAgentModelsQuery();
 
   const { runs, loading } = useRoutineRunsQuery(routine.id);
   /**
@@ -218,6 +223,10 @@ export function RoutineDetail({
   };
 
   const runNow = async () => {
+    if (!cloudExecutionConfigured) {
+      toast.error(t("unavailableExecutionBackend"));
+      return;
+    }
     setBusy(true);
     try {
       await runRoutineNowApi(routine.id);
@@ -252,6 +261,16 @@ export function RoutineDetail({
    */
   const toggleSeq = useRef(0);
   const toggleEnabled = (enabled: boolean) => {
+    if (enabled && (!cloudExecutionConfigured || !routineSchedulingConfigured)) {
+      toast.error(
+        t(
+          !cloudExecutionConfigured
+            ? "unavailableExecutionBackend"
+            : "unavailableScheduler",
+        ),
+      );
+      return;
+    }
     const seq = ++toggleSeq.current;
     const previous = patchRoutineInCache(queryClient, routine.id, {
       enabled,
@@ -421,7 +440,12 @@ export function RoutineDetail({
                   cours), où l'état pourrait changer sous la main. */}
               <Switch
                 checked={routine.enabled}
-                disabled={busy}
+                disabled={
+                  busy ||
+                  agentCapabilitiesLoading ||
+                  (!routine.enabled &&
+                    (!cloudExecutionConfigured || !routineSchedulingConfigured))
+                }
                 onCheckedChange={toggleEnabled}
               />
             </label>
@@ -437,7 +461,9 @@ export function RoutineDetail({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  disabled={busy}
+                  disabled={
+                    busy || agentCapabilitiesLoading || !cloudExecutionConfigured
+                  }
                   onSelect={() => void runNow()}
                 >
                   <Play className="size-4" />
@@ -484,6 +510,20 @@ export function RoutineDetail({
             <p className="text-xs text-muted-foreground">
               {t("executionEnvironment")}
             </p>
+
+            {!agentCapabilitiesLoading &&
+            (!cloudExecutionConfigured || !routineSchedulingConfigured) ? (
+              <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="size-3.5 shrink-0" />
+                <span>
+                  {t(
+                    !cloudExecutionConfigured
+                      ? "unavailableExecutionBackend"
+                      : "unavailableScheduler",
+                  )}
+                </span>
+              </p>
+            ) : null}
 
             {routine.last_error ? (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -616,7 +656,9 @@ export function RoutineDetail({
                     {isOwner ? (
                       <Button
                         size="sm"
-                        disabled={busy}
+                        disabled={
+                          busy || agentCapabilitiesLoading || !cloudExecutionConfigured
+                        }
                         onClick={() => void runNow()}
                       >
                         <Play className="size-4" />

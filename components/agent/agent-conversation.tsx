@@ -522,7 +522,11 @@ export function AgentConversation({
   }, [active, liveRun?.id]);
 
   // Sélection de modèle (phase compose).
-  const { provider, defaultModel: providerDefaultModel } = useAgentModelsQuery();
+  const {
+    provider,
+    defaultModel: providerDefaultModel,
+    cloudExecutionConfigured,
+  } = useAgentModelsQuery();
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
   // Branche de BASE (phase compose, lignée neuve) : "" = le défaut du dépôt.
@@ -573,6 +577,10 @@ export function AgentConversation({
     }
     const prompt = message.trim();
     const localExec = environment !== "cloud" && localRepo.ready;
+    if (!localExec && !cloudExecutionConfigured) {
+      toast.error(t("errorExecutionBackendUnavailable"));
+      return;
+    }
     const localWorktree = localExec && environment === "worktree";
     setLaunching(true);
     // Affichage OPTIMISTE du 1er message, comme pour un follow-up : le POST enchaîne
@@ -925,6 +933,8 @@ export function AgentConversation({
               mentionables={mentionables}
               onMentionQuery={onMentionQuery}
               disabled={launching}
+              sendDisabled={environment === "cloud" && !cloudExecutionConfigured}
+              sendDisabledTooltip={t("errorExecutionBackendUnavailable")}
               initialValue={initialComposeText}
               placeholder={t("composePlaceholder")}
               contextSlot={
@@ -949,7 +959,7 @@ export function AgentConversation({
                       value={environment}
                       onChange={setEnvironment}
                       localAvailable={localRepo.available}
-                      cloudAvailable={!localEndpoint}
+                      cloudAvailable={!localEndpoint && cloudExecutionConfigured}
                       folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                       needsAttach={localRepo.state?.status !== "ready"}
                       onAttach={() => {

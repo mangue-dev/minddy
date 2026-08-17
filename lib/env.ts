@@ -13,11 +13,23 @@
  */
 export type AppEnv = "production" | "preview" | "development";
 
-export function getAppEnv(): AppEnv {
-  const v = process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV;
+export interface AppEnvironment {
+  NEXT_PUBLIC_VERCEL_ENV?: string;
+  VERCEL_ENV?: string;
+  NODE_ENV?: string;
+}
+
+/** Résolution pure : Vercel affine production/preview, Node couvre tout autre hébergeur. */
+export function resolveAppEnv(env: AppEnvironment): AppEnv {
+  const v = env.NEXT_PUBLIC_VERCEL_ENV ?? env.VERCEL_ENV;
   if (v === "production") return "production";
   if (v === "preview") return "preview";
+  if (env.NODE_ENV === "production") return "production";
   return "development";
+}
+
+export function getAppEnv(): AppEnv {
+  return resolveAppEnv(process.env);
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   getGithubUserAccount,
 } from "@/lib/server/git/github-user-auth";
 import { upsertUserIdentity } from "@/lib/server/git/user-identities";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
  * GET /api/git/github/user-callback — *User authorization callback URL* de la
@@ -40,7 +41,8 @@ function redirectTo(base: string, origin: string, outcome: "connected" | "error"
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  const origin = canonicalAppOrigin();
   const { userId: sessionUserId, applyCookies } =
     await readForgeCallbackSession(request);
   const state = verifyGitLinkState(searchParams.get("state"));

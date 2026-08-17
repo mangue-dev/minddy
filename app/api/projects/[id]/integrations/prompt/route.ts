@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     locale,
     projectName: access.project.name,
     placement,
-    origin: request.nextUrl.origin,
+    origin: canonicalAppOrigin(),
     webhook,
   });
   return NextResponse.json({ prompt });

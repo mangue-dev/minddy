@@ -513,7 +513,12 @@ export function PrDetail({
   const tAgent = useTranslations("Agent");
   const isSend = useIsSendShortcut();
   const format = useFormatter();
-  const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
+  const {
+    defaultModel: providerDefaultModel,
+    cloudExecutionConfigured,
+  } = useAgentModelsQuery();
+  const { cloudExecutionConfigured: reviewExecutionConfigured } =
+    useAgentModelsQuery("review");
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
 
   const {
@@ -808,11 +813,17 @@ export function PrDetail({
   // serveur refusera en `noEffect`.
   const reviewHasNoEffect =
     reviewVerdict === "request_changes" && !postVerdict && !relaunching;
+  const relaunchUsesLocal = environment !== "cloud" && localRepo.ready;
+  const relaunchBackendUnavailable =
+    relaunching && !relaunchUsesLocal && !cloudExecutionConfigured;
   // Ce qui empêche la review de partir, et son libellé : le bouton du pied de
   // dialogue et le raccourci ⌘/Ctrl+Entrée du champ lisent les deux — sinon la
   // touche enverrait ce que le bouton refuse.
   const reviewSubmitDisabled =
-    submitting || reviewHasNoEffect || (!reviewMessage.trim() && reviewVerdict !== "approve");
+    submitting ||
+    reviewHasNoEffect ||
+    relaunchBackendUnavailable ||
+    (!reviewMessage.trim() && reviewVerdict !== "approve");
   const reviewSubmitLabel =
     reviewMode === "findings"
       ? t("reviewFixSubmit")
@@ -822,6 +833,10 @@ export function PrDetail({
 
   const submitReview = async () => {
     if (!reviewVerdict || submitting || reviewHasNoEffect) return;
+    if (relaunchBackendUnavailable) {
+      toast.error(tAgent("errorExecutionBackendUnavailable"));
+      return;
+    }
     const message = reviewMessage.trim();
     // Approuver sans un mot est légitime ; commenter ou demander des changements
     // sans rien dire ne l'est pas (et les deux forges refusent un corps vide).
@@ -835,7 +850,7 @@ export function PrDetail({
         postVerdict,
         model: model || undefined,
         reasoningLevel: relaunching ? reasoningLevel : undefined,
-        localExec: relaunching && environment !== "cloud" && localRepo.ready,
+        localExec: relaunching && relaunchUsesLocal,
         localWorktree: relaunching && environment === "worktree" && localRepo.ready,
       });
       // Trois issues, trois messages : le verdict est passé, la forge l'a replié
@@ -870,6 +885,10 @@ export function PrDetail({
    * du clic qu'on le sait — pas dans un réglage posé une fois pour toutes.
    */
   const openAiReviewDialog = () => {
+    if (!reviewExecutionConfigured) {
+      toast.error(tAgent("errorExecutionBackendUnavailable"));
+      return;
+    }
     // Le dernier choix du compte, sinon « le défaut de minddy » (chaîne vide).
     setAiReviewModel(reviewSession.model?.preferred ?? "");
     setAiReviewReasoningOverride(null);
@@ -1233,7 +1252,9 @@ export function PrDetail({
                     <DropdownMenuItem
                       // Déjà relu ce diff, ou une passe en cours : l'entrée reste
                       // VISIBLE et se grise, avec son libellé qui dit pourquoi.
-                      disabled={aiReviewActive || reviewUpToDate}
+                      disabled={
+                        aiReviewActive || reviewUpToDate || !reviewExecutionConfigured
+                      }
                       onSelect={openAiReviewDialog}
                     >
                       <NumoIcon animated={false} />
@@ -1245,7 +1266,9 @@ export function PrDetail({
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={aiReviewActive || reviewUpToDate}
+                  disabled={
+                    aiReviewActive || reviewUpToDate || !reviewExecutionConfigured
+                  }
                   onClick={openAiReviewDialog}
                 >
                   {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
@@ -1304,7 +1327,9 @@ export function PrDetail({
                   </>
                 ) : null}
                 <DropdownMenuItem
-                  disabled={aiReviewActive || reviewUpToDate}
+                  disabled={
+                    aiReviewActive || reviewUpToDate || !reviewExecutionConfigured
+                  }
                   onSelect={openAiReviewDialog}
                 >
                   <NumoIcon animated={false} />
@@ -1934,6 +1959,7 @@ export function PrDetail({
                   value={environment}
                   onChange={setEnvironment}
                   localAvailable={localRepo.available}
+                  cloudAvailable={cloudExecutionConfigured}
                   folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                   needsAttach={localRepo.state?.status !== "ready"}
                   onAttach={() => {
@@ -1965,6 +1991,11 @@ export function PrDetail({
                 disabled={submitting}
                 levels={reasoningLevels}
               />
+              {relaunchBackendUnavailable ? (
+                <p className="w-full text-xs text-amber-600 dark:text-amber-400">
+                  {tAgent("errorExecutionBackendUnavailable")}
+                </p>
+              ) : null}
             </div>
           ) : null}
 

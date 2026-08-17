@@ -23,6 +23,7 @@ import { useProjects } from "@/lib/projects-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
+import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import type { Routine } from "@/lib/routines-api";
 import {
   Tooltip,
@@ -58,6 +59,11 @@ export function RoutinesPanel({
   const { projects } = useProjects();
   const { projectIds: gitLinked, loading: gitLoading } = useGitLinkedProjectsQuery();
   const { routines, loading } = useRoutinesQuery();
+  const {
+    cloudExecutionConfigured,
+    routineSchedulingConfigured,
+    loading: agentCapabilitiesLoading,
+  } = useAgentModelsQuery();
 
   const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -72,7 +78,8 @@ export function RoutinesPanel({
   );
 
   /**
-   * Un projet éligible au « + » : possédé ET avec un dépôt à cloner.
+   * Un projet éligible au « + » : capacités de routine disponibles, possédé ET
+   * avec un dépôt à cloner.
    *
    * Déclarée AVANT les `useMemo` qui l'appellent, et pas à côté de ses autres
    * lectrices : un `const` fléché reste dans sa zone morte jusqu'à sa ligne, et
@@ -80,6 +87,9 @@ export function RoutinesPanel({
    * type-check ne voit pas, puisque la référence est parfaitement typée.
    */
   const canCreateIn = (projectId: string | undefined) =>
+    !agentCapabilitiesLoading &&
+    cloudExecutionConfigured &&
+    routineSchedulingConfigured &&
     !!projectId &&
     projectById.get(projectId)?.owner_id === user?.id &&
     gitLinked.has(projectId);
@@ -185,20 +195,28 @@ export function RoutinesPanel({
    */
   const noRepoAnywhere = !gitLoading && projects.length > 0 && gitLinked.size === 0;
   const emptyReason =
-    projects.length === 0
-      ? "emptyNoProject"
-      : noRepoAnywhere
-        ? "emptyNoRepo"
-        : anyEligible
-          ? null
-          : "emptyNotOwner";
+    agentCapabilitiesLoading
+      ? null
+      : !cloudExecutionConfigured
+        ? "emptyNoExecutionBackend"
+        : !routineSchedulingConfigured
+          ? "emptyNoScheduler"
+          : projects.length === 0
+            ? "emptyNoProject"
+            : noRepoAnywhere
+              ? "emptyNoRepo"
+              : anyEligible
+                ? null
+                : "emptyNotOwner";
   /**
    * Ce que dit l'écran quand il n'y a AUCUNE routine — la même phrase des deux
    * côtés, la colonne et le volet. Un mur qui empêche d'en poser une (aucun
    * projet, aucun dépôt lié, pas propriétaire) le dit à la place : « créez
    * votre première routine » à quelqu'un qui ne le peut pas serait une impasse.
    */
-  const emptyTitle = emptyReason ? t(emptyReason as "emptyNoRepo") : t("emptyTitle");
+  const emptyTitle = emptyReason
+    ? t(emptyReason as "emptyNoRepo")
+    : t("emptyTitle");
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: routinesQueryKey() });
 

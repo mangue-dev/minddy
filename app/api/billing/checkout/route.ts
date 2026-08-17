@@ -3,6 +3,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { coerceBillingPlanId, type BillingInterval } from "@/lib/billing-plans";
 import { billingReturnUrl } from "@/lib/desktop/return-url";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 import {
   getBillingAccountForUser,
   shouldUseStripePlan,
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
   const freshCustomer = async () =>
     (await createStripeCustomer({ email: user.email, userId: user.id })).id;
 
-  const origin = request.nextUrl.origin;
+  const origin = canonicalAppOrigin();
   // Le paiement s'ouvre dans le NAVIGATEUR même quand il part de l'app de
   // bureau (une page de carte bancaire n'a rien à faire dans une fenêtre à
   // nous). Sans ce rebond, il s'y terminait aussi : on repartait de Stripe vers

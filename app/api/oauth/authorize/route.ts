@@ -9,6 +9,7 @@ import { oauthIssuer } from "@/lib/server/oauth/issuer";
 import { ensureGrantWithActorKey } from "@/lib/server/oauth/grants";
 import { createAuthorizationCode } from "@/lib/server/oauth/codes";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
  * Décision de consentement (POST du formulaire /oauth/authorize). Session
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
   // Interstitiel « connexion réussie » (design minddy) : il valide le
   // `continue` contre les redirect_uris du client puis redirige vers le
   // callback qui porte le code.
-  const successUrl = new URL("/oauth/success", request.nextUrl.origin);
+  const successUrl = new URL("/oauth/success", canonicalAppOrigin());
   successUrl.searchParams.set("client_id", client.client_id);
   successUrl.searchParams.set("continue", buildCallbackUrl(redirectUri, { code, state }));
   return NextResponse.redirect(successUrl, { status: 303, headers: NO_STORE });

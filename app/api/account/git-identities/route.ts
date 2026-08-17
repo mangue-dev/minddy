@@ -20,6 +20,7 @@ import {
 } from "@/lib/server/git/link-state";
 import { listUserIdentities } from "@/lib/server/git/user-identities";
 import { refreshForgeAccountNames } from "@/lib/server/git/account-refresh";
+import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
  * Le compte git PERSONNEL de l'utilisateur (MIN-144) — celui sous lequel partent
@@ -106,11 +107,11 @@ export async function POST(request: NextRequest) {
   const url =
     provider === "github"
       ? getGithubUserAuthorizeUrl({
-          redirectUri: `${request.nextUrl.origin}/api/git/github/user-callback`,
+          redirectUri: `${canonicalAppOrigin()}/api/git/github/user-callback`,
           state,
         })
       : getGitlabAuthorizeUrl({
-          redirectUri: `${request.nextUrl.origin}/api/git/gitlab/callback`,
+          redirectUri: `${canonicalAppOrigin()}/api/git/gitlab/callback`,
           state,
         });
   return NextResponse.json({ url });
