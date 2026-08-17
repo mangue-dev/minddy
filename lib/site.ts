@@ -1,11 +1,47 @@
-/**
- * Identité du site public (MIN-73) — l'URL canonique de minddy, utilisée par les
- * métadonnées (metadataBase, canonical, OpenGraph), le sitemap, le robots.txt et
- * les extraits de configuration MCP affichés sur la landing.
- *
- * L'apex redirige en 308 vers www : c'est `www.minddy.app` qui fait foi.
- */
-export const SITE_URL = "https://www.minddy.app";
+interface PublicSiteEnvironment {
+  appUrl?: string;
+  siteName?: string;
+  contactEmail?: string;
+}
+
+/** Configuration publique pure, partagée par le build client et les tests. */
+export function resolvePublicSite(env: PublicSiteEnvironment) {
+  const rawUrl = env.appUrl?.trim() || "http://localhost:3000";
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error(
+      "Invalid NEXT_PUBLIC_APP_URL: expected an absolute http(s) origin, for example https://minddy.example.com",
+    );
+  }
+  if (
+    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
+    parsed.username ||
+    parsed.password ||
+    parsed.pathname !== "/" ||
+    parsed.search ||
+    parsed.hash
+  ) {
+    throw new Error(
+      "Invalid NEXT_PUBLIC_APP_URL: expected an absolute http(s) origin without path, query or credentials",
+    );
+  }
+  return {
+    url: parsed.origin,
+    name: env.siteName?.trim() || "minddy",
+    contactEmail: env.contactEmail?.trim() || "hello@minddy.app",
+  };
+}
+
+const publicSite = resolvePublicSite({
+  appUrl: process.env.NEXT_PUBLIC_APP_URL,
+  siteName: process.env.NEXT_PUBLIC_SITE_NAME,
+  contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL,
+});
+
+/** Origine canonique de cette instance, jamais celle de l'infrastructure minddy par défaut. */
+export const SITE_URL = publicSite.url;
 
 /**
  * La marque, telle qu'elle apparaît dans un titre d'onglet. Le root layout en
@@ -13,12 +49,12 @@ export const SITE_URL = "https://www.minddy.app";
  * ticket ouvert en panneau) le recomposent à la main et lisent la même
  * constante.
  */
-export const SITE_NAME = "minddy";
+export const SITE_NAME = publicSite.name;
 
 /** Point d'entrée du serveur MCP, tel qu'on le colle dans un agent. */
 export const MCP_ENDPOINT = `${SITE_URL}/api/mcp`;
 
-export const CONTACT_EMAIL = "hello@minddy.app";
+export const CONTACT_EMAIL = publicSite.contactEmail;
 
 /**
  * Jetons de vérification de propriété (MIN-88), posés en `<meta>` par le root

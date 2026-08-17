@@ -1,5 +1,7 @@
 import "server-only";
 
+import { capability } from "@/lib/server/capabilities";
+
 /**
  * Envoi du code OTP par email via Resend (fetch brut, même philosophie que le
  * client OpenRouter — pas de dépendance). Resend est opt-in via
@@ -27,9 +29,10 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean>
     console.log(`[feedback-otp] (dev — no RESEND_API_KEY) code for ${params.to}: ${params.code}`);
     return true;
   }
-  if (provider !== "resend" || !apiKey || !from) {
+  const emailCapability = capability("transactionalEmail");
+  if (!emailCapability.configured || provider !== "resend" || !apiKey || !from) {
     console.error(
-      "[feedback-otp] email disabled — set EMAIL_PROVIDER=resend, RESEND_API_KEY and FEEDBACK_EMAIL_FROM",
+      `[feedback-otp] email disabled — ${emailCapability.diagnostic}`,
     );
     return false;
   }

@@ -70,6 +70,30 @@ describe("resolveCapabilities", () => {
     expect(capabilities.transactionalEmail.configured).toBe(false);
   });
 
+  it("n'assemble pas une configuration PostHog avec deux paires partielles", () => {
+    const capabilities = resolveCapabilities({
+      ...core,
+      POSTHOG_API_KEY: "server-key",
+      NEXT_PUBLIC_POSTHOG_HOST: "https://analytics.example.test",
+    });
+
+    expect(capabilities.analytics.state).toBe("disabled");
+    expect(capabilities.analytics.configured).toBe(false);
+  });
+
+  it("exige l'origine de l'instance pour Vercel Sandbox hors Vercel", () => {
+    const capabilities = resolveCapabilities({
+      ...core,
+      AGENT_EXECUTION_BACKEND: "vercel",
+      VERCEL_TOKEN: "token",
+      VERCEL_TEAM_ID: "team",
+      VERCEL_PROJECT_ID: "project",
+    });
+
+    expect(capabilities.vercelSandbox.state).toBe("incomplete");
+    expect(capabilities.vercelSandbox.missing).toContain("NEXT_PUBLIC_APP_URL");
+  });
+
   it("classe les remplacements opérables hors Vercel et hors Resend", () => {
     const capabilities = resolveCapabilities(core);
     expect(capabilities.vercelSandbox.requirement).toBe("replaceable");

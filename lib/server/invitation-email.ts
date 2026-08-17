@@ -1,6 +1,7 @@
 import "server-only";
 
-import { SITE_URL } from "@/lib/site";
+import { capability } from "@/lib/server/capabilities";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { orbSeedOr, projectOrbGradient } from "@/lib/project-orb-colors";
 
 /**
@@ -116,9 +117,10 @@ export async function sendInvitationEmail(
     console.log(`[invitation-email] (dev — no RESEND_API_KEY) link for ${params.to}: ${link}`);
     return true;
   }
-  if (provider !== "resend" || !apiKey || !from) {
+  const emailCapability = capability("transactionalEmail");
+  if (!emailCapability.configured || provider !== "resend" || !apiKey || !from) {
     console.error(
-      "[invitation-email] email disabled — set EMAIL_PROVIDER=resend, RESEND_API_KEY and INVITATION_EMAIL_FROM",
+      `[invitation-email] email disabled — ${emailCapability.diagnostic}`,
     );
     return false;
   }
@@ -148,7 +150,7 @@ export async function sendInvitationEmail(
     ? "Si vous ne connaissez pas cette personne, ignorez cet email — rien ne se passera."
     : "If you don't know this person, ignore this email — nothing will happen.";
 
-  const text = `${title}\n\n${lead}\n\n${cta} : ${link}\n\n${note}\n\n${ignore}\n\nminddy — ${SITE_URL}`;
+  const text = `${title}\n\n${lead}\n\n${cta} : ${link}\n\n${note}\n\n${ignore}\n\n${SITE_NAME} — ${SITE_URL}`;
 
   const html = `<!doctype html>
 <html lang="${fr ? "fr" : "en"}">
@@ -197,7 +199,7 @@ export async function sendInvitationEmail(
         <tr>
           <td style="padding:20px 4px 0;">
             <p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.6;color:${FAINT};">${escapeHtml(ignore)}</p>
-            <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${FAINT};"><a href="${SITE_URL}" style="color:${FAINT};text-decoration:none;">minddy.app</a></p>
+            <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${FAINT};"><a href="${SITE_URL}" style="color:${FAINT};text-decoration:none;">${SITE_NAME}</a></p>
           </td>
         </tr>
 

@@ -32,12 +32,23 @@ let client: PostHog | null = null;
  * le projet de production.
  */
 export function getServerPostHog(): PostHog | null {
-  const key = process.env.POSTHOG_API_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  const host = process.env.POSTHOG_HOST ?? process.env.NEXT_PUBLIC_POSTHOG_HOST;
+  const serverKey = process.env.POSTHOG_API_KEY?.trim();
+  const serverHost = process.env.POSTHOG_HOST?.trim();
+  const publicKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
+  const publicHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim();
+  // Une paire reste atomique : mélanger une clé serveur avec l'hôte public (ou
+  // l'inverse) activerait un client que le registre de capacités diagnostique
+  // comme incomplet. La paire serveur explicite garde la priorité.
+  const config =
+    serverKey && serverHost
+      ? { key: serverKey, host: serverHost }
+      : publicKey && publicHost
+        ? { key: publicKey, host: publicHost }
+        : null;
   if (
-    !host ||
+    !config ||
     !shouldSendServerAnalytics({
-      hasKey: !!key,
+      hasKey: true,
       appEnv: getAppEnv(),
       allowLocalhost: process.env.NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST === "1",
     })
@@ -45,8 +56,8 @@ export function getServerPostHog(): PostHog | null {
     return null;
   }
   if (!client) {
-    client = new PostHog(key as string, {
-      host,
+    client = new PostHog(config.key, {
+      host: config.host,
       flushAt: 5,
       flushInterval: 10_000,
     });

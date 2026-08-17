@@ -1,5 +1,6 @@
 import "server-only";
 
+import { SITE_URL } from "@/lib/site";
 import { currentDeploymentScope } from "./deployment";
 
 /**
@@ -14,7 +15,7 @@ export function getAgentDrainOrigin(): string {
   if (explicit) return explicit.replace(/\/+$/, "");
   const vercelUrl = process.env.VERCEL_URL?.trim();
   if (vercelUrl) return `https://${vercelUrl}`;
-  return "https://www.minddy.app";
+  return SITE_URL;
 }
 
 /**
@@ -38,5 +39,7 @@ export function agentControlOrigin(): string {
   if (scope) return `https://${scope}`;
   const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (explicit) return new URL(explicit).origin;
-  return "https://www.minddy.app";
+  throw new Error(
+    "Vercel Sandbox requires NEXT_PUBLIC_APP_URL outside Vercel so the sandbox can reach this instance",
+  );
 }

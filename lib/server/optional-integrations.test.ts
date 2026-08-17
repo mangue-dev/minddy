@@ -43,6 +43,28 @@ describe("intégrations absentes", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("refuse les configurations partielles avant tout appel réseau", async () => {
+    vi.stubEnv("EMAIL_PROVIDER", "resend");
+    vi.stubEnv("RESEND_API_KEY", "resend-key");
+    vi.stubEnv("INVITATION_EMAIL_FROM", "invites@example.test");
+    vi.stubEnv("POSTHOG_API_KEY", "server-key");
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://analytics.example.test");
+
+    expect(
+      await sendInvitationEmail({
+        to: "a@example.test",
+        inviterName: "A",
+        projectName: "P",
+        projectId: "project",
+        token: "token",
+        locale: "fr",
+        origin: "https://example.test",
+      }),
+    ).toBe(false);
+    expect(getServerPostHog()).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("n'ouvre aucun transport push et masque les forges", async () => {
     expect(configureWebPush()).toBe(false);
     expect(await sendApnsNotification("apns:device", { title: "T", body: "B", url: "/", tag: "test" }))

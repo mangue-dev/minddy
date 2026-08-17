@@ -128,7 +128,12 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
   const sandboxBackend = env.AGENT_EXECUTION_BACKEND?.trim();
   const sandboxKeys = present(env, "VERCEL")
     ? []
-    : missing(env, ["VERCEL_TOKEN", "VERCEL_TEAM_ID", "VERCEL_PROJECT_ID"]);
+    : missing(env, [
+        "VERCEL_TOKEN",
+        "VERCEL_TEAM_ID",
+        "VERCEL_PROJECT_ID",
+        "NEXT_PUBLIC_APP_URL",
+      ]);
   const vercelSandbox =
     sandboxBackend !== "vercel"
       ? status({

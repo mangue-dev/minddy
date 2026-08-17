@@ -30,12 +30,17 @@ les active pas à elle seule.
   plan par défaut.
 - `AGENT_EXECUTION_BACKEND=vercel` est le seul choix qui autorise la création ou
   le réveil d'un Vercel Sandbox. Des identifiants Vercel présents pour les
-  domaines ne déclenchent donc jamais de compute.
+  domaines ne déclenchent donc jamais de compute. Hors Vercel,
+  `NEXT_PUBLIC_APP_URL` est également requis afin que la sandbox rappelle cette
+  instance plutôt qu'une origine propriétaire implicite.
 - `EMAIL_PROVIDER=resend` est requis avant tout appel à l'API Resend. Les
   expéditeurs sont obligatoires et propres à l'instance ; aucun domaine minddy
   n'est choisi par défaut.
 - PostHog exige une clé et un hôte explicites. Web Push exige aussi un
   `VAPID_SUBJECT`, et APNs un `APNS_BUNDLE_ID` explicites.
+- Les providers Git intégrés ciblent `github.com` et `gitlab.com`. Les forges
+  auto-hébergées sont explicitement non supportées tant qu'un provider
+  configurable n'existe pas.
 
 Le catalogue exécutable de ces décisions vit dans `lib/capabilities.ts`. Il
 classe chaque capacité (`required`, `replaceable`, `optional`), énumère les

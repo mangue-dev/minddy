@@ -6,15 +6,22 @@ schémas `auth`, `storage`, `realtime` et `extensions`, et l'application appelle
 les API Auth et Storage.
 
 Supabase est la **seule infrastructure obligatoire**. La configuration minimale
-de l'application contient uniquement :
+d'un serveur public contient son origine canonique et les trois accès Supabase :
 
 ```dotenv
+NEXT_PUBLIC_APP_URL=https://tickets.example.test
 NEXT_PUBLIC_SUPABASE_URL=https://supabase.example.test
 NEXT_PUBLIC_SUPABASE_ANON_KEY=…
 SUPABASE_SERVICE_ROLE_KEY=…
 ```
 
-Avec ces trois valeurs, le cœur (comptes, projets, tickets, objectifs, pages,
+En développement, `NEXT_PUBLIC_APP_URL` peut rester vide et vaut alors
+`http://localhost:3000`. Elle doit être explicite sur un serveur public : elle
+alimente les liens d'invitation, OAuth/MCP et les webhooks GitLab, sans jamais
+retomber sur une URL de l'infrastructure minddy. `NEXT_PUBLIC_SITE_NAME` et
+`NEXT_PUBLIC_CONTACT_EMAIL` personnalisent les valeurs de marque publiques.
+
+Avec cette configuration, le cœur (comptes, projets, tickets, objectifs, pages,
 feedback, API et stockage Supabase) démarre. Stripe, OpenRouter, Vercel,
 PostHog, Resend, les push et les forges ne sont ni contactés ni nécessaires.
 
@@ -65,11 +72,16 @@ Sandbox exige `AGENT_EXECUTION_BACKEND=vercel`.
 | --- | --- | --- |
 | Base, Auth, Realtime, Storage | obligatoire | Pile Supabase complète ; le stockage de production reste le Storage de cette instance |
 | IA | remplaçable | BYOK ou endpoint local ; quota OpenRouter managé seulement avec `MINDDY_MANAGED_AI=1` |
-| Agent de code | remplaçable | Runtime local, ou Vercel Sandbox explicitement choisi avec `AGENT_EXECUTION_BACKEND=vercel` |
+| Agent de code | remplaçable | Runtime local, ou Vercel Sandbox explicitement choisi avec `AGENT_EXECUTION_BACKEND=vercel`; hors Vercel, `NEXT_PUBLIC_APP_URL` est aussi requis pour joindre le plan de contrôle de cette instance |
 | Jobs de fond | remplaçable | N'importe quel ordonnanceur HTTP sur `/api/cron/*`, protégé par `CRON_SECRET`; Vercel Cron n'est qu'une option |
 | E-mail Auth | remplaçable | SMTP configuré dans Supabase/GoTrue |
 | E-mail applicatif | remplaçable | `EMAIL_PROVIDER=resend` + clé + expéditeurs, ou `console` en développement |
 | Domaines Vercel, PostHog, Web Push, APNs, GitHub, GitLab, Stripe | facultative | Absence = interface masquée/inactive et aucun appel réseau |
+
+Les adaptateurs de forge fournis ciblent explicitement `github.com` et
+`gitlab.com`. GitHub Enterprise Server et les instances GitLab auto-hébergées ne
+sont pas sélectionnés silencieusement : ils ne sont pas encore supportés et
+nécessitent un provider alternatif.
 
 Les expéditeurs, hôtes PostHog, sujet VAPID et bundle APNs n'ont volontairement
 aucune valeur par défaut : ils doivent décrire l'infrastructure de l'opérateur,

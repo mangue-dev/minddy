@@ -7,8 +7,6 @@
  * `lib/` et non dans `desktop/src/` — voir desktop/README.md.
  */
 
-import { SITE_URL } from "@/lib/site";
-
 /**
  * L'origine de développement, ou `null` — `MINDDY_DESKTOP_ORIGIN`.
  *
@@ -28,7 +26,9 @@ export const DESKTOP_ORIGIN_OVERRIDE: string | null =
  *
  * Le canal, lui, se choisit à l'exécution : voir lib/desktop/channel.ts.
  */
-export const DESKTOP_STABLE_ORIGIN: string = SITE_URL;
+export const DESKTOP_STABLE_ORIGIN: string =
+  process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, "") ||
+  "https://www.minddy.app";
 
 /**
  * L'origine du canal PREVIEW — le déploiement de branche `main` (MIN-352).
