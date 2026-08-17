@@ -75,7 +75,7 @@ Sandbox exige `AGENT_EXECUTION_BACKEND=vercel`.
 | Base, Auth, Realtime, Storage | obligatoire | Pile Supabase complète ; le stockage de production reste le Storage de cette instance |
 | IA | remplaçable | BYOK ou endpoint local ; quota OpenRouter managé seulement avec `MINDDY_MANAGED_AI=1` |
 | Agent de code | remplaçable | Runtime local, ou Vercel Sandbox explicitement choisi avec `AGENT_EXECUTION_BACKEND=vercel`; hors Vercel, `NEXT_PUBLIC_APP_URL` est aussi requis pour joindre le plan de contrôle de cette instance |
-| Jobs de fond | remplaçable | N'importe quel ordonnanceur HTTP sur `/api/cron/*`, protégé par `CRON_SECRET`; Vercel Cron n'est qu'une option |
+| Jobs de fond | remplaçable | N'importe quel ordonnanceur HTTP sur `/api/cron/*`, activé par `SCHEDULER_ENABLED=1` et protégé par `CRON_SECRET`; Vercel Cron n'est qu'une option |
 | E-mail Auth | remplaçable | SMTP configuré dans Supabase/GoTrue |
 | E-mail applicatif | remplaçable | `EMAIL_PROVIDER=resend` + clé + expéditeurs, ou `console` en développement |
 | Domaines Vercel, Vercel Analytics/Speed Insights, PostHog, Web Push, APNs, GitHub, GitLab, Stripe | facultative | Absence = interface masquée/inactive et aucun appel réseau ; la télémétrie Vercel exige `NEXT_PUBLIC_VERCEL_ANALYTICS=1` |
@@ -88,6 +88,13 @@ nécessitent un provider alternatif.
 Les expéditeurs, hôtes PostHog, sujet VAPID et bundle APNs n'ont volontairement
 aucune valeur par défaut : ils doivent décrire l'infrastructure de l'opérateur,
 jamais celle de minddy.
+
+Le `vercel.json` livré par défaut ne programme aucun cron : déployer le dépôt sur
+Vercel ne doit pas créer d'invocations payantes en silence. Pour choisir Vercel
+Cron, configurez d'abord `SCHEDULER_ENABLED=1` et `CRON_SECRET`, puis reprenez
+explicitement les horaires de `vercel.cron.example.json` dans la configuration
+du déploiement. Avec un autre ordonnanceur, appelez les mêmes routes avec
+`Authorization: Bearer <CRON_SECRET>`.
 
 La commande est réexécutable : `supabase db push` n'applique que les migrations
 absentes et les valeurs déjà présentes dans `.env.local` ne sont jamais

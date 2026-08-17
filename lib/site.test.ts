@@ -7,8 +7,11 @@ describe("resolvePublicSite", () => {
     expect(resolvePublicSite({})).toMatchObject({
       url: "http://localhost:3000",
       name: "minddy",
+      contactEmail: "contact@localhost",
       productFeedbackUrl: null,
     });
+    expect(resolvePublicSite({ appUrl: "https://tickets.example.com" }).contactEmail)
+      .toBe("contact@tickets.example.com");
   });
 
   it("rend l'origine et les valeurs de marque configurables", () => {

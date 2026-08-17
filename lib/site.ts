@@ -49,7 +49,10 @@ export function resolvePublicSite(env: PublicSiteEnvironment) {
   return {
     url: parsed.origin,
     name: env.siteName?.trim() || "minddy",
-    contactEmail: env.contactEmail?.trim() || "hello@minddy.app",
+    // Une installation auto-hébergée ne doit jamais publier l'adresse de l'opérateur
+    // cloud par défaut. L'adresse dérivée reste propre au domaine de l'instance
+    // et NEXT_PUBLIC_CONTACT_EMAIL permet de la remplacer explicitement.
+    contactEmail: env.contactEmail?.trim() || `contact@${parsed.hostname}`,
     productFeedbackUrl: optionalPublicUrl(
       env.productFeedbackUrl,
       "NEXT_PUBLIC_PRODUCT_FEEDBACK_URL",

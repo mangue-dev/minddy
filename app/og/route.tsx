@@ -5,6 +5,7 @@ import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { MINDDY_LOGO_PATH, MINDDY_LOGO_VIEWBOX } from "@/lib/brand";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 /**
  * Vignette de partage du site public (MIN-88) — ce qu'on voit quand un lien
@@ -82,8 +83,9 @@ export async function GET(request: NextRequest) {
     Record<string, string>
   >;
   const namespace = messages[route.namespace] ?? {};
-  const title = namespace.metaTitle ?? "minddy";
+  const title = namespace.metaTitle ?? SITE_NAME;
   const description = namespace.metaDescription ?? "";
+  const siteHost = new URL(SITE_URL).host;
 
   return new ImageResponse(
     (
@@ -104,7 +106,7 @@ export async function GET(request: NextRequest) {
             <path fillRule="evenodd" clipRule="evenodd" d={MINDDY_LOGO_PATH} />
           </svg>
           <span style={{ fontSize: 52, fontWeight: 600, color: "#fafafa", letterSpacing: -1.5 }}>
-            minddy
+            {SITE_NAME}
           </span>
         </div>
 
@@ -128,7 +130,7 @@ export async function GET(request: NextRequest) {
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ width: 40, height: 3, background: "#3098D0" }} />
-          <span style={{ fontSize: 26, color: "#6b7280" }}>minddy.app</span>
+          <span style={{ fontSize: 26, color: "#6b7280" }}>{siteHost}</span>
         </div>
       </div>
     ),

@@ -291,15 +291,32 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
           ? "Vercel Analytics and Speed Insights are enabled on public pages."
           : "Vercel Analytics and Speed Insights are disabled; set NEXT_PUBLIC_VERCEL_ANALYTICS=1 to enable them.",
     }),
-    scheduler: status({
-      id: "scheduler",
-      requirement: "replaceable",
-      state: present(env, "CRON_SECRET") ? "external" : "disabled",
-      missing: present(env, "CRON_SECRET") ? [] : ["CRON_SECRET"],
-      diagnostic: present(env, "CRON_SECRET")
-        ? "Cron routes are authenticated; schedule them with Vercel Cron or any HTTP scheduler."
-        : "Background jobs are disabled until CRON_SECRET and an external scheduler are configured.",
-    }),
+    scheduler:
+      env.SCHEDULER_ENABLED?.trim() !== "1"
+        ? status({
+            id: "scheduler",
+            requirement: "replaceable",
+            state: "disabled",
+            missing: ["SCHEDULER_ENABLED=1"],
+            diagnostic:
+              "Background jobs are disabled. Configure an external HTTP scheduler, then set SCHEDULER_ENABLED=1.",
+          })
+        : !present(env, "CRON_SECRET")
+          ? status({
+              id: "scheduler",
+              requirement: "replaceable",
+              state: "incomplete",
+              missing: ["CRON_SECRET"],
+              diagnostic:
+                "Scheduler selected but CRON_SECRET is missing; cron routes remain inert.",
+            })
+          : status({
+              id: "scheduler",
+              requirement: "replaceable",
+              state: "external",
+              diagnostic:
+                "Cron routes are enabled and authenticated for the configured external scheduler.",
+            }),
     analytics,
     transactionalEmail,
     webPush: optional(

@@ -206,8 +206,9 @@ async function loadModels(
 async function withMultipliers(
   models: AgentModelEntry[],
   limit: ModelPlanLimit | null,
+  useOpenRouterPricing = true,
 ): Promise<Pick<AgentModelsCatalog, "models" | "maxMultiplier" | "planId" | "recommended">> {
-  const recommended = await resolveRecommended(models);
+  const recommended = await resolveRecommended(models, useOpenRouterPricing);
   if (!limit?.baseline) return { models, maxMultiplier: null, recommended };
   return {
     models: await attachMultipliers(models, limit.baseline),
@@ -264,13 +265,21 @@ async function attachMultipliers(
  * multiplicateurs : un admin change ce réglage quand il veut, et une heure de
  * cache le ferait mentir.
  */
-async function resolveRecommended(models: AgentModelEntry[]): Promise<string[]> {
+async function resolveRecommended(
+  models: AgentModelEntry[],
+  useOpenRouterPricing: boolean,
+): Promise<string[]> {
   const raw = await getAppConfigValue("recommended_models").catch(() => null);
   const ids =
     parseRecommendedModels(raw) ??
     parseRecommendedModels(aiModelFallback("recommended_models")) ??
     [];
   const available = new Set(models.map((m) => m.id));
+  const applicable = ids.filter((id) => available.has(id));
+  // Un provider natif BYOK n'a aucune raison de joindre OpenRouter pour ranger
+  // ses propres modèles. Sans grille de prix commune, l'ordre explicite de la
+  // configuration est le seul ordre honnête disponible.
+  if (!useOpenRouterPricing) return applicable;
   const index = await listOpenRouterIndex();
   const price = new Map(
     index.map((m) => [m.id, m.pricing ? averageUsdPerMTok(m.pricing) : null] as const),
@@ -280,8 +289,7 @@ async function resolveRecommended(models: AgentModelEntry[]): Promise<string[]> 
   // garderaient sinon l'ordre d'écriture de la ligne `app_config`, qui n'est
   // plus censé vouloir dire quoi que ce soit.
   const cost = (id: string) => price.get(id) ?? Infinity;
-  return ids
-    .filter((id) => available.has(id))
+  return applicable
     .sort((a, b) => cost(a) - cost(b) || a.localeCompare(b));
 }
 
@@ -342,14 +350,23 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
   const cacheKey = `${provider}|${baseUrl}`;
   const hit = cache.get(cacheKey);
   if (hit && Date.now() - hit.at < TTL_MS) {
-    return { ...header, ...(await withMultipliers(hit.models, limit)) };
+    return {
+      ...header,
+      ...(await withMultipliers(hit.models, limit, provider === "openrouter")),
+    };
   }
   try {
     const models = await loadModels(provider, baseUrl, apiKey);
     cache.set(cacheKey, { at: Date.now(), models });
-    return { ...header, ...(await withMultipliers(models, limit)) };
+    return {
+      ...header,
+      ...(await withMultipliers(models, limit, provider === "openrouter")),
+    };
   } catch {
-    return { ...header, ...(await withMultipliers(hit?.models ?? [], limit)) };
+    return {
+      ...header,
+      ...(await withMultipliers(hit?.models ?? [], limit, provider === "openrouter")),
+    };
   }
 }
 

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { AgentProviderId } from "@/lib/agent-providers";
 import type { OpenRouterModelInfo } from "./openrouter-index";
 
 /**
@@ -56,7 +57,7 @@ async function freshCatalog(
   /** Valeur de la ligne `app_config.recommended_models` ; `null` = non réglée. */
   recommendedConfig: string | null = null,
   endpoint: {
-    provider: "ollama" | "local_openai";
+    provider: AgentProviderId;
     baseUrl: string;
     apiKey: string;
     mode: "byok";
@@ -94,6 +95,7 @@ async function freshCatalog(
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.doUnmock("./openrouter-index");
   vi.doUnmock("./model");
   vi.doUnmock("./model-plan");
@@ -154,6 +156,33 @@ describe("getAgentModelsForUser", () => {
       localEndpoint: { provider: "ollama", baseUrl: "http://127.0.0.1:11434/v1" },
       models: [],
     });
+  });
+
+  it("ne contacte pas OpenRouter pour ranger le catalogue d'un provider BYOK natif", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({ data: [{ id: "claude-sonnet-5", display_name: "Claude Sonnet 5" }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { getAgentModelsForUser } = await freshCatalog(
+      INDEX,
+      JSON.stringify(["claude-sonnet-5"]),
+      {
+        provider: "anthropic",
+        baseUrl: "https://api.anthropic.com/v1",
+        apiKey: "user-key",
+        mode: "byok",
+      },
+    );
+    const { listOpenRouterIndex } = await import("./openrouter-index");
+
+    const catalog = await getAgentModelsForUser("user-1");
+
+    expect(catalog.recommended).toEqual(["claude-sonnet-5"]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(listOpenRouterIndex)).not.toHaveBeenCalled();
   });
 });
 

@@ -123,4 +123,14 @@ describe("resolveCapabilities", () => {
     expect(capabilities.transactionalEmail.requirement).toBe("replaceable");
     expect(capabilities.managedAi.requirement).toBe("replaceable");
   });
+
+  it("ne confond pas un secret de cron pré-généré avec un ordonnanceur actif", () => {
+    expect(resolveCapabilities({ ...core, CRON_SECRET: "secret" }).scheduler)
+      .toMatchObject({ state: "disabled", configured: false });
+    expect(resolveCapabilities({ ...core, SCHEDULER_ENABLED: "1" }).scheduler)
+      .toMatchObject({ state: "incomplete", configured: false, missing: ["CRON_SECRET"] });
+    expect(
+      resolveCapabilities({ ...core, SCHEDULER_ENABLED: "1", CRON_SECRET: "secret" }).scheduler,
+    ).toMatchObject({ state: "external", configured: true });
+  });
 });

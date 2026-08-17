@@ -87,8 +87,8 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     maxMultiplier: null,
     planId: null,
     recommended: [],
-    cloudExecutionConfigured: true,
-    routineSchedulingConfigured: true,
+    cloudExecutionConfigured: false,
+    routineSchedulingConfigured: false,
   };
   const res = await fetch(SCOPE_ENDPOINTS[scope]);
   if (!res.ok) return empty;
@@ -120,10 +120,10 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     maxMultiplier: data.maxMultiplier ?? null,
     planId: data.planId ?? null,
     recommended: data.recommended ?? [],
-    // Les portées admin et un serveur ancien n'exposent pas ce champ : ne pas
-    // transformer une réponse transitoire en désactivation trompeuse du composer.
-    cloudExecutionConfigured: data.cloudExecutionConfigured ?? true,
-    routineSchedulingConfigured: data.routineSchedulingConfigured ?? true,
+    // Une capacité inconnue reste indisponible : l'activer pendant un échec ou
+    // un chargement offrirait une action que le serveur refusera ensuite en 503.
+    cloudExecutionConfigured: data.cloudExecutionConfigured ?? false,
+    routineSchedulingConfigured: data.routineSchedulingConfigured ?? false,
     ...(localEndpoint ? { localEndpoint } : {}),
   };
   // Le serveur web ne peut — et ne doit — jamais joindre une adresse locale.
@@ -154,8 +154,8 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
     maxMultiplier: data?.maxMultiplier ?? null,
     planId: data?.planId ?? null,
     recommended: data?.recommended ?? [],
-    cloudExecutionConfigured: data?.cloudExecutionConfigured ?? true,
-    routineSchedulingConfigured: data?.routineSchedulingConfigured ?? true,
+    cloudExecutionConfigured: data?.cloudExecutionConfigured ?? false,
+    routineSchedulingConfigured: data?.routineSchedulingConfigured ?? false,
     loading: isPending,
   };
 }
