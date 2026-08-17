@@ -83,16 +83,31 @@ une comparaison avec l'instance de production) :
 
 ```bash
 # Sans --apply : vérifie que l'instance porte exactement les 211 versions attendues.
-pnpm repair:squashed-migrations -- --db-url "$SUPABASE_DB_URL"
+# --linked utilise le projet sélectionné par `supabase link`.
+pnpm repair:squashed-migrations -- --linked
 
 # Retire uniquement les 210 enregistrements historiques ; ni schéma ni données ne bougent.
-pnpm repair:squashed-migrations -- --db-url "$SUPABASE_DB_URL" --apply
+pnpm repair:squashed-migrations -- --linked --apply
 pnpm bootstrap:supabase -- --db-url "$SUPABASE_DB_URL"
 ```
 
 Le script s'arrête si l'instance n'est pas exactement au niveau de l'ancien
 historique. Une fois la réparation faite, le bootstrap ne réapplique pas le
 baseline et peut poursuivre normalement avec les futures migrations.
+
+Si l'équipe avait appliqué une ou plusieurs migrations SQL à la main, le
+registre peut être incomplet alors que le schéma est bien présent. Comparez
+d'abord le schéma avec le baseline et corrigez les écarts voulus dans une
+migration versionnée. Le mode explicite ci-dessous remplace ensuite le registre
+par le baseline ; l'empreinte recopiée évite de réparer entre deux changements
+d'historique :
+
+```bash
+supabase db diff --linked --schema public,extensions,storage
+pnpm repair:squashed-migrations -- --linked --allow-manual-schema
+pnpm repair:squashed-migrations -- --linked --allow-manual-schema --apply \
+  --confirm-history '<empreinte affichée>'
+```
 
 ## Vérification et test
 
