@@ -93,12 +93,6 @@ jobs:
       - name: Tests
         run: pnpm run test
 
-      # Le site marketing est un projet Next distinct. Le construire depuis son
-      # propre package interdit qu'un import implicite de l'application ou de
-      # ses variables soit nécessaire pour le publier.
-      - name: Marketing build
-        run: pnpm --filter @minddy/marketing run build
-
   audit:
     name: Audit des dépendances
     runs-on: ubuntu-latest

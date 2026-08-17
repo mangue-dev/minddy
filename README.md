@@ -42,7 +42,6 @@ pnpm typecheck    # type-check
 pnpm test         # run the test suite
 pnpm build        # production build
 pnpm desktop:dev  # run the optional macOS shell
-pnpm --filter @minddy/marketing dev  # run the independent marketing site
 ```
 
 ## Architecture and deployment
@@ -51,11 +50,6 @@ pnpm --filter @minddy/marketing dev  # run the independent marketing site
 - **Data and auth:** Supabase Postgres, Auth, Storage, and Realtime.
 - **Agent integration:** OAuth 2.1 MCP endpoint and an optional Vercel Sandbox
   code agent.
-- **Marketing site:** a separate Next.js application in
-  [`apps/marketing`](apps/marketing). It has its own Vercel project, build,
-  public environment variables, and release lifecycle; it is not required to
-  run or self-host the product. The documented boundary is in
-  [`docs/architecture/marketing-application-boundary.md`](docs/architecture/marketing-application-boundary.md).
 - **Deployment:** use the hosting and release process appropriate for your
   instance. `pnpm deploy` is an optional local release helper; adapt its branch
   and hosting conventions to your instance.

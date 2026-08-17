@@ -24,6 +24,8 @@ import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-rou
  * Volontairement sobre : la marque, la promesse, rien d'autre.
  */
 
+export const contentType = "image/png";
+
 const SIZE = { width: 1200, height: 630 };
 
 const ROUTE_KEYS = new Set<string>(PUBLIC_ROUTES.map((route) => route.key));
