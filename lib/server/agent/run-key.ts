@@ -1,4 +1,5 @@
 import "server-only";
+import { SITE_NAME } from "@/lib/site";
 
 /**
  * Clé LLM PAR RUN, à plafond dur (MIN-223).
@@ -169,7 +170,7 @@ export async function mintRunKey(opts: {
       body: JSON.stringify({
         // Le nom est LU par un humain dans le tableau de bord OpenRouter le jour
         // où une clé traîne : il doit dire de quel run elle vient.
-        name: `minddy agent run ${opts.runId}`,
+        name: `${SITE_NAME} agent run ${opts.runId}`,
         limit: opts.capUsd,
         expires_at: new Date(Date.now() + KEY_TTL_MS).toISOString(),
       }),

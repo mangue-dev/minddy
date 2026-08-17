@@ -69,7 +69,10 @@ async function resolveSession(
 
 // ── Authentification OTP ──────────────────────────────────────────────────────
 
-export type OtpRequestState = { ok: true; email: string } | { ok: false; error: "invalidEmail" | "rateLimited" | "sendFailed" } | null;
+export type OtpRequestState =
+  | { ok: true; email: string }
+  | { ok: false; error: "invalidEmail" | "rateLimited" | "sendFailed" | "notConfigured" }
+  | null;
 
 export async function requestOtpAction(
   token: string,

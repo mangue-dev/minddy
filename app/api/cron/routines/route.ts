@@ -57,6 +57,8 @@ function launchErrorCode(error: string): RoutineErrorCode {
       return "quota";
     case "managedServiceUnavailable":
       return "managedServiceUnavailable";
+    case "executionBackendUnavailable":
+      return "executionBackendUnavailable";
     case "noRepo":
     case "unsupportedProvider":
       return "noRepo";

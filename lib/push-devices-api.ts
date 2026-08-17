@@ -23,7 +23,15 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export async function fetchPushDevicesApi(): Promise<{ devices: PushDevice[] }> {
+export interface PushTransportCapabilities {
+  web: boolean;
+  apns: boolean;
+}
+
+export async function fetchPushDevicesApi(): Promise<{
+  devices: PushDevice[];
+  capabilities: PushTransportCapabilities;
+}> {
   return parseJson(await fetch("/api/account/push-subscriptions"));
 }
 

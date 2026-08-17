@@ -371,7 +371,7 @@ describe("le relais, monté pour de vrai", () => {
       // Le placeholder passe INCHANGÉ : c'est le firewall qui pose la vraie clé
       // à la sortie de la microVM, et le proxy n'en connaît aucune.
       expect(seen!.headers.authorization).toBe("Bearer placeholder");
-      expect(seen!.headers["HTTP-Referer"]).toBe("https://minddy.app");
+      expect(seen!.headers["HTTP-Referer"]).toBe("http://localhost:3000");
 
       expect(proxy.take({ model: "deepseek/deepseek-v4-flash", outputTokens: 5 })).toMatchObject({
         id: "gen-42",

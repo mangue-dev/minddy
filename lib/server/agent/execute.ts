@@ -49,6 +49,7 @@ import {
 } from "./vm/protocol";
 import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
 import { agentControlOrigin } from "./origin";
+import { CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
 import { forgeFor, type Forge } from "./forge";
 import { prStateFromRef } from "./pull-requests";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -110,7 +111,11 @@ async function resolveCommitterIdentity(
   if (target.provider === "github") {
     return getGithubBotCommitIdentity(target.token);
   }
-  return { name: "minddy agent", email: "agent@minddy.app" };
+  return defaultCommitterIdentity();
+}
+
+function defaultCommitterIdentity(): { name: string; email: string } {
+  return { name: `${SITE_NAME} agent`, email: CONTACT_EMAIL };
 }
 
 /** Borne du re-queue « message en attente » sur erreur mid-turn (catch final) :
@@ -632,7 +637,7 @@ export async function executeAgentRun(
     // dépend d'aucun autre contexte : la démarrer ici la recouvre avec le quota,
     // les préférences, le ticket et la construction du prompt.
     const committerPromise = run.pull_request_id
-      ? Promise.resolve({ name: "minddy agent", email: "agent@minddy.app" })
+      ? Promise.resolve(defaultCommitterIdentity())
       : resolveCommitterIdentity(target);
 
     // Ancrage du run, à TROIS valeurs : ticket minddy, CARNET (MIN-84, la note du
@@ -1528,7 +1533,7 @@ export async function executeAgentRun(
        * le bot, mémoïsé par process (cf. `getGithubBotCommitIdentity`).
        */
       committer: prRun
-        ? { name: "minddy agent", email: "agent@minddy.app" }
+        ? defaultCommitterIdentity()
         : await committerPromise,
       // Le job PART dans la microVM : c'est `vmTarget`, jamais `target`
       // (MIN-327). La boucle n'en fait que du `git` — et une relecture n'en

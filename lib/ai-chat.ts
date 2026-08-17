@@ -7,6 +7,7 @@ import {
   reasoningTokenBudget,
   type ReasoningLevel,
 } from "./agent-reasoning";
+import { SITE_URL } from "./site";
 
 /**
  * Contrat chat interne de minddy.
@@ -198,7 +199,7 @@ export function aiChatProviderHeaders(
   const profile = getAgentProvider(provider)?.requestProfile;
   if (!profile) throw new Error(`Unknown AI provider: ${provider}`);
   return profile.attribution
-    ? { "HTTP-Referer": "https://minddy.app", "X-Title": title }
+    ? { "HTTP-Referer": SITE_URL, "X-Title": title }
     : {};
 }
 

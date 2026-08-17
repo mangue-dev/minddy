@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
+import { CONTACT_EMAIL } from "@/lib/site";
 import {
   ExternalLink,
   Intro,
@@ -61,7 +62,7 @@ export default async function PrivacyPage() {
         <P>
           {t.rich("controllerText", {
             name: (chunks) => <span className="font-medium">{chunks}</span>,
-            email: () => <MailLink address="hello@minddy.app" />,
+            email: () => <MailLink address={CONTACT_EMAIL} />,
           })}
         </P>
       </Section>
@@ -162,7 +163,7 @@ export default async function PrivacyPage() {
         </List>
         <P>
           {t.rich("rightsContact", {
-            email: () => <MailLink address="hello@minddy.app" />,
+            email: () => <MailLink address={CONTACT_EMAIL} />,
             cnil: (c) => <ExternalLink href="https://www.cnil.fr">{c}</ExternalLink>,
           })}
         </P>

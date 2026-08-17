@@ -219,6 +219,15 @@ async function stripeRequest<T>(
   /** Forcé seulement là où le verbe ne se déduit pas du corps (DELETE). */
   method?: "GET" | "POST" | "DELETE"
 ): Promise<T> {
+  // La clé seule ne vaut jamais consentement à utiliser le compte Stripe de
+  // l'opérateur. Les routes vérifient déjà ce drapeau pour leur UI/HTTP, mais
+  // l'adaptateur garde sa propre frontière afin qu'un nouvel appelant ne puisse
+  // pas introduire un coût implicite en oubliant cette garde.
+  if (!isStripeConfigured()) {
+    throw new Error(
+      "Managed Stripe billing is disabled or incomplete; enable MINDDY_MANAGED_BILLING=1 with the full Stripe configuration.",
+    );
+  }
   const response = await fetch(`https://api.stripe.com${path}`, {
     method: method ?? (body ? "POST" : "GET"),
     headers: {

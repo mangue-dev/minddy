@@ -10,9 +10,16 @@ import {
 import { getServerPostHog } from "@/lib/server/posthog";
 import { configureWebPush } from "@/lib/server/push/vapid";
 import { sendApnsNotification } from "@/lib/server/push/apns";
-import { isGithubAppConfigured } from "@/lib/server/git/github-app";
-import { isGitlabConfigured } from "@/lib/server/git/gitlab-app";
+import {
+  getInstallationToken,
+  isGithubAppConfigured,
+} from "@/lib/server/git/github-app";
+import {
+  exchangeGitlabCode,
+  isGitlabConfigured,
+} from "@/lib/server/git/gitlab-app";
 import { getOrCreateAgentSandbox } from "@/lib/server/agent/sandbox";
+import { createStripeCustomer } from "@/lib/server/stripe";
 
 beforeEach(() => {
   vi.unstubAllEnvs();
@@ -78,6 +85,22 @@ describe("intégrations absentes", () => {
     await expect(
       getOrCreateAgentSandbox({ name: "test", onCreate: async () => {} }),
     ).rejects.toThrow(/AGENT_EXECUTION_BACKEND=vercel/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("n'utilise ni Stripe ni les forges à partir de secrets partiels", async () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_operator");
+
+    await expect(createStripeCustomer({ userId: "user-1" })).rejects.toThrow(
+      /MINDDY_MANAGED_BILLING/,
+    );
+    await expect(getInstallationToken(1)).rejects.toThrow(/GITHUB_APP_ID/);
+    await expect(
+      exchangeGitlabCode({
+        code: "code",
+        redirectUri: "https://example.test/callback",
+      }),
+    ).rejects.toThrow(/GITLAB_OAUTH_CLIENT_ID/);
     expect(fetch).not.toHaveBeenCalled();
   });
 });

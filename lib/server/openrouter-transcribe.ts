@@ -1,4 +1,5 @@
 import "server-only";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 /**
  * OpenRouter speech-to-text helper (ported from AutoKap).
@@ -93,8 +94,8 @@ export async function transcribeAudio(
         ? {}
         : {
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://minddy.app",
-            "X-Title": options?.title ?? "minddy",
+            "HTTP-Referer": SITE_URL,
+            "X-Title": options?.title ?? SITE_NAME,
           }),
     },
     body: directBody ?? JSON.stringify(body),

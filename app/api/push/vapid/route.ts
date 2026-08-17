@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { capability } from "@/lib/server/capabilities";
 
 /**
  * GET /api/push/vapid — la clé publique VAPID du serveur (MIN-183).
@@ -18,6 +19,8 @@ import { NextResponse } from "next/server";
  */
 export function GET() {
   return NextResponse.json({
-    key: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() || null,
+    key: capability("webPush").configured
+      ? process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!.trim()
+      : null,
   });
 }

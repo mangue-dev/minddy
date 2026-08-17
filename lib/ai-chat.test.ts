@@ -7,6 +7,7 @@ import {
   translateAiChatRequest,
   translateLegacyAiChatBody,
 } from "./ai-chat";
+import { SITE_URL } from "./site";
 
 const base = {
   model: "model-x",
@@ -230,7 +231,7 @@ describe("aiChatProviderHeaders", () => {
     expect(aiChatProviderHeaders("openai", "x")).toEqual({});
     expect(aiChatProviderHeaders("anthropic", "x")).toEqual({});
     expect(aiChatProviderHeaders("openrouter", "Minddy")).toMatchObject({
-      "HTTP-Referer": "https://minddy.app",
+      "HTTP-Referer": SITE_URL,
       "X-Title": "Minddy",
     });
   });

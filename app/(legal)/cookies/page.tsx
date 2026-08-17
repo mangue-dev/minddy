@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
+import { CONTACT_EMAIL } from "@/lib/site";
 import {
   CookieTable,
   Intro,
@@ -131,7 +132,7 @@ export default async function CookiesPage() {
           <li>{t("preferencesOption2")}</li>
           <li>
             {t.rich("preferencesOption3", {
-              email: () => <MailLink address="hello@minddy.app" />,
+              email: () => <MailLink address={CONTACT_EMAIL} />,
             })}
           </li>
         </List>

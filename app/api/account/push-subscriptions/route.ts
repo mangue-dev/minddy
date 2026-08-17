@@ -4,6 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { deviceLabelFromUserAgent } from "@/lib/device-label";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import { PUSH_DEVICE_COLUMNS } from "@/lib/server/push/columns";
+import { capability } from "@/lib/server/capabilities";
 import {
   parsePushRegistration,
   resolveRegistrationState,
@@ -34,7 +35,13 @@ export async function GET(request: NextRequest) {
     console.error("[api/push-subscriptions] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json({ devices: (data ?? []) as unknown as PushDevice[] });
+  return NextResponse.json({
+    devices: (data ?? []) as unknown as PushDevice[],
+    capabilities: {
+      web: capability("webPush").configured,
+      apns: capability("apns").configured,
+    },
+  });
 }
 
 /**
@@ -84,6 +91,20 @@ export async function POST(request: NextRequest) {
     auth: authSecret,
     installationId,
   } = registration;
+
+  // Une configuration publique partielle ne doit pas suffire à enregistrer un
+  // appareil que ce serveur ne pourra jamais joindre. Cette garde précède aussi
+  // la résolution DNS anti-SSRF de l'endpoint web : capacité absente = aucun
+  // appel réseau, même de validation.
+  const transportCapability = capability(
+    selectedTransport === "web" ? "webPush" : "apns",
+  );
+  if (!transportCapability.configured) {
+    return NextResponse.json(
+      { error: transportCapability.diagnostic },
+      { status: 503 },
+    );
+  }
 
   // Un endpoint est une adresse que le serveur ira APPELER, à chaque
   // notification, pour toujours. Le navigateur y met celle de son service de

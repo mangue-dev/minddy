@@ -11,5 +11,9 @@ export function usePushDevicesQuery() {
     queryKey: pushDevicesQueryKey,
     queryFn: fetchPushDevicesApi,
   });
-  return { devices: data?.devices ?? [], loading: isPending };
+  return {
+    devices: data?.devices ?? [],
+    capabilities: data?.capabilities ?? null,
+    loading: isPending,
+  };
 }

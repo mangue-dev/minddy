@@ -84,6 +84,7 @@ export type RoutineErrorCode =
   | "alreadyRunning"
   | "modelAbovePlan"
   | "managedServiceUnavailable"
+  | "executionBackendUnavailable"
   | "launchFailed";
 
 export type RoutineErrorKey =

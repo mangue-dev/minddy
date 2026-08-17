@@ -28,6 +28,10 @@ vi.mock("next-intl/server", () => ({
 const METADATA = "http://169.254.169.254/latest/meta-data/";
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
+  vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "public-key");
+  vi.stubEnv("VAPID_PRIVATE_KEY", "private-key");
+  vi.stubEnv("VAPID_SUBJECT", "mailto:push@example.test");
   lookup.mockReset();
   pinnedRequest.mockReset();
   lookup.mockResolvedValue([{ address: "93.184.216.34" }]);

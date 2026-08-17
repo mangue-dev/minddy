@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
+import { CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
 import {
   LegalTitle,
   MailLink,
@@ -24,13 +25,13 @@ export default async function LegalPage() {
 
       <Section title={t("editorTitle")}>
         <Rows>
-          <Row label={t("tradeName")} value="minddy" />
+          <Row label={t("tradeName")} value={SITE_NAME} />
           <Row label={t("responsible")} value="Clément Guérin" />
           <Row label={t("legalStatus")} value={t("legalStatusValue")} />
           <Row label={t("siret")} value="10028571700011" />
           <Row label={t("tva")} value={t("tvaValue")} />
           <Row label={t("address")} value="43 Quai Malakoff, 44000 Nantes, France" />
-          <Row label={t("email")} value="hello@minddy.app" />
+          <Row label={t("email")} value={CONTACT_EMAIL} />
         </Rows>
       </Section>
 
@@ -60,7 +61,7 @@ export default async function LegalPage() {
       <Section title={t("contactTitle")}>
         <P>
           {t.rich("contactText", {
-            email: () => <MailLink address="hello@minddy.app" />,
+            email: () => <MailLink address={CONTACT_EMAIL} />,
           })}
         </P>
       </Section>

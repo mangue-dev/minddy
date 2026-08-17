@@ -19,6 +19,7 @@ import { isPushConfigured } from "@/lib/server/push/vapid";
 import { isApnsConfigured } from "@/lib/server/push/apns";
 import { sendPushToUser } from "@/lib/server/push/send";
 import { sendInvitationEmail } from "@/lib/server/invitation-email";
+import { capability } from "@/lib/server/capabilities";
 import type { Invitation } from "@/lib/types";
 
 /**
@@ -46,6 +47,7 @@ type InviteError =
   | "alreadyOwner"
   | "alreadyMember"
   | "invitationAlreadyPending"
+  | "invitationEmailUnavailable"
   | "memberLimitReached"
   | "databaseError";
 
@@ -124,6 +126,22 @@ export async function inviteMember({
     if (existingMember) {
       return { ok: false, status: 409, errorKey: "alreadyMember" };
     }
+  }
+
+  // Un compte existant recevra l'invitation dans son inbox, même sans courrier.
+  // Pour une adresse inconnue, en revanche, le mail est l'unique canal : créer
+  // une ligne et annoncer le succès quand Resend est absent fabrique une
+  // invitation que personne ne peut découvrir. Le mode console reste un vrai
+  // transport de développement, mais n'est jamais accepté en production.
+  const consoleEmail =
+    process.env.EMAIL_PROVIDER?.trim() === "console" &&
+    process.env.NODE_ENV !== "production";
+  if (
+    !memberUser &&
+    !capability("transactionalEmail").configured &&
+    !consoleEmail
+  ) {
+    return { ok: false, status: 503, errorKey: "invitationEmailUnavailable" };
   }
 
   // Une invitation périmée pour cette adresse tient encore la place dans l'index

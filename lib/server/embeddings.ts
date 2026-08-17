@@ -13,6 +13,7 @@ import {
 import { ownerHasUsageBudget } from "@/lib/server/usage";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 import { isManagedAiEnabled } from "@/lib/managed-services";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 /**
  * Contexte de suivi de coût pour un appel d'embeddings (un appel = un run).
@@ -89,7 +90,7 @@ export async function embedTexts(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         ...(provider === "openrouter"
-          ? { "HTTP-Referer": "https://minddy.app", "X-Title": "Feedback (minddy)" }
+          ? { "HTTP-Referer": SITE_URL, "X-Title": `Feedback (${SITE_NAME})` }
           : {}),
       },
       body: JSON.stringify({

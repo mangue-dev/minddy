@@ -66,7 +66,7 @@ export function AccountPushDevicesSection() {
   const locale = useLocale();
   const queryClient = useQueryClient();
 
-  const { devices, loading } = usePushDevicesQuery();
+  const { devices, capabilities, loading } = usePushDevicesQuery();
   const [permission, setPermission] = useState<
     NotificationPermission | "unsupported" | null
   >(null);
@@ -228,19 +228,21 @@ export function AccountPushDevicesSection() {
   // ailleurs on met l'indice à sa place : dire pourquoi vaut mieux qu'offrir un
   // geste qui échouera.
   const blocked =
-    // L'app de bureau (MIN-291) : Electron n'embarque pas l'API Push, donc
-    // `permission` y vaut `unsupported` — mais « ce navigateur ne gère pas les
-    // notifications push » se lit comme une panne, alors que c'est un
-    // renoncement assumé, et qu'il a une issue (garder le web ouvert). Le dire.
-    inDesktopApp && !nativeDesktopPush
-      ? t("desktopHint")
-      : permission === "unsupported"
-        ? t("unsupportedHint")
-        : permission === "denied"
-          ? t(nativeNotificationSettings ? "macDeniedHint" : "deniedHint")
-          : needsInstall
-            ? t("iosInstallHint")
-            : null;
+    capabilities && !(nativeDesktopPush ? capabilities.apns : capabilities.web)
+      ? t("notConfiguredHint")
+      : // L'app de bureau (MIN-291) : Electron n'embarque pas l'API Push, donc
+        // `permission` y vaut `unsupported` — mais « ce navigateur ne gère pas les
+        // notifications push » se lit comme une panne, alors que c'est un
+        // renoncement assumé, et qu'il a une issue (garder le web ouvert). Le dire.
+        inDesktopApp && !nativeDesktopPush
+        ? t("desktopHint")
+        : permission === "unsupported"
+          ? t("unsupportedHint")
+          : permission === "denied"
+            ? t(nativeNotificationSettings ? "macDeniedHint" : "deniedHint")
+            : needsInstall
+              ? t("iosInstallHint")
+              : null;
 
   return (
     <>
@@ -299,7 +301,11 @@ export function AccountPushDevicesSection() {
                 <>
                   {/* L'essai n'est offert que sur l'appareil qu'on a sous les
                       yeux : ailleurs, on ne verrait pas s'il a sonné. */}
-                  {device.endpoint === thisEndpoint && device.enabled && (
+                  {device.endpoint === thisEndpoint &&
+                    device.enabled &&
+                    (device.transport === "apns"
+                      ? capabilities?.apns
+                      : capabilities?.web) && (
                     <Button
                       type="button"
                       variant="outline"
@@ -314,6 +320,9 @@ export function AccountPushDevicesSection() {
                   <Switch
                     aria-label={t("enableLabel")}
                     checked={device.enabled}
+                    disabled={
+                      !(device.transport === "apns" ? capabilities?.apns : capabilities?.web)
+                    }
                     onCheckedChange={(v) => void toggleDevice(device, v)}
                   />
                   <IconButton

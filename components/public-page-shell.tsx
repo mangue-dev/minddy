@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { cn } from "mangue-ui";
 import { MinddyLogo } from "@/components/minddy-logo";
-import { SITE_URL } from "@/lib/site";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { PublicSiteTab } from "@/lib/feedback/types";
 
 /**
@@ -62,13 +62,13 @@ export async function PublicPageShell({
             {/* Lien absolu : sur un domaine personnalisé (MIN-36), "/" serait
                 la racine du site du client, pas minddy. */}
             <a
-              href="https://www.minddy.app"
+              href={SITE_URL}
               className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               <MinddyLogo className="size-3.5" />
               {/* Sur mobile, le logo suffit — le libellé prendrait la place du titre. */}
               <span className="hidden sm:inline">
-                {t("madeWith")} <span className="font-semibold">minddy</span>
+                {t("madeWith")} <span className="font-semibold">{SITE_NAME}</span>
               </span>
             </a>
           </div>

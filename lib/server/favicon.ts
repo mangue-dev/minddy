@@ -3,6 +3,7 @@ import "server-only";
 import { extractMetaContent, extractTitleText, parseAttributes, scanTags } from "@/lib/server/html-meta";
 import { SafeFetchError, assertPublicHttpUrl, safeFetch } from "@/lib/server/safe-fetch";
 import { withUrlScheme } from "@/lib/url-normalize";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 /**
  * Résolution du favicon d'un site live (MIN-62), portée du pattern AutoKap
@@ -22,7 +23,7 @@ const MAX_ICON_BYTES = 512 * 1024; // 512 Ko
 const MAX_HTML_BYTES = 1024 * 1024; // 1 Mo — on ne lit le HTML que pour le <head>
 const MAX_REDIRECTS = 3;
 const FETCH_TIMEOUT_MS = 10_000;
-const USER_AGENT = "minddy-favicon/1.0 (+https://www.minddy.app)";
+const USER_AGENT = `${SITE_NAME}-favicon/1.0 (+${SITE_URL})`;
 
 /** MIME acceptés → extension stockée. Pas de SVG (script-capable). */
 export const ICON_MIME_EXT: Record<string, string> = {

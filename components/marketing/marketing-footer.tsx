@@ -11,14 +11,13 @@ import { localizedHref } from "@/lib/locale-href";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 /**
  * Pied de page du site public (MIN-73). Reprend la grille du footer d'AutoKap :
  * bloc marque + colonnes de liens, barre de bas de page, et le mot-symbole géant
  * rogné par le bas — la seule fantaisie assumée de la page.
  */
-
-const CONTACT_EMAIL = "hello@minddy.app";
 
 type FooterColumn = {
   titleKey: MessageKey<"Landing">;

@@ -5,6 +5,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { sendOtpEmail } from "@/lib/server/feedback/otp-email";
+import { capability } from "@/lib/server/capabilities";
 
 /**
  * Vérification email par code OTP (MIN-37). Codes 6 chiffres, hashés sha256
@@ -47,7 +48,9 @@ function hashIp(ip: string): string {
   return sha256Hex(`feedback-otp-ip:${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}:${ip}`);
 }
 
-export type RequestOtpResult = { ok: true } | { ok: false; error: "rateLimited" | "sendFailed" };
+export type RequestOtpResult =
+  | { ok: true }
+  | { ok: false; error: "rateLimited" | "sendFailed" | "notConfigured" };
 
 export async function requestFeedbackOtp(params: {
   boardId: string;
@@ -55,6 +58,12 @@ export async function requestFeedbackOtp(params: {
   ip: string;
   locale: "fr" | "en";
 }): Promise<RequestOtpResult> {
+  const consoleEmail =
+    process.env.EMAIL_PROVIDER?.trim() === "console" &&
+    process.env.NODE_ENV !== "production";
+  if (!capability("transactionalEmail").configured && !consoleEmail) {
+    return { ok: false, error: "notConfigured" };
+  }
   const service = getServiceClient();
   const email = params.email.trim().toLowerCase();
   const ip = params.ip || "unknown";

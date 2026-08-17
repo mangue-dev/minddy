@@ -123,6 +123,11 @@ const { votePost } = await import("@/lib/server/feedback/votes");
 const { requestFeedbackOtp } = await import("@/lib/server/feedback/otp");
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
+  vi.stubEnv("EMAIL_PROVIDER", "resend");
+  vi.stubEnv("RESEND_API_KEY", "resend-key");
+  vi.stubEnv("FEEDBACK_EMAIL_FROM", "feedback@example.test");
+  vi.stubEnv("INVITATION_EMAIL_FROM", "invites@example.test");
   otpRows = [];
   voteUpserts = [];
   sentEmails.length = 0;
@@ -151,6 +156,16 @@ describe("requestFeedbackOtp", () => {
   // par tout le module de test — le réutiliser ferait passer un cas pour la
   // mauvaise raison.
   const base = { boardId: "board-1", locale: "fr" as const };
+
+  it("s'arrête avant la base quand l'e-mail applicatif est absent", async () => {
+    vi.stubEnv("EMAIL_PROVIDER", "");
+
+    expect(
+      await requestFeedbackOtp({ ...base, ip: "10.0.0.0", email: "a@example.com" }),
+    ).toEqual({ ok: false, error: "notConfigured" });
+    expect(otpRows).toHaveLength(0);
+    expect(sentEmails).toHaveLength(0);
+  });
 
   it("envoie un code, et le corps ne porte AUCUN texte de tiers", async () => {
     expect(

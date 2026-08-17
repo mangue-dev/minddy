@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 /**
  * Export des données d'un compte (MIN-119, RGPD art. 15 et 20).
@@ -381,7 +382,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       secrets:
         "Aucune clé ni aucun jeton ne figure dans ce fichier : seuls les " +
         "préfixes déjà affichés dans les réglages y apparaissent.",
-      contact: "hello@minddy.app",
+      contact: CONTACT_EMAIL,
     },
     account: {
       id: user.id,

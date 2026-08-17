@@ -219,6 +219,11 @@ const MEMBER = "33333333-3333-4333-8333-333333333333";
 const settle = () => Promise.all(background.splice(0));
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
+  vi.stubEnv("EMAIL_PROVIDER", "resend");
+  vi.stubEnv("RESEND_API_KEY", "resend-key");
+  vi.stubEnv("FEEDBACK_EMAIL_FROM", "feedback@example.test");
+  vi.stubEnv("INVITATION_EMAIL_FROM", "invites@example.test");
   projectRows = [
     { id: PROJECT, owner_id: OWNER, name: "Atlas", deleted_at: null },
   ];
@@ -232,6 +237,23 @@ beforeEach(() => {
 });
 
 describe("inviteMember — une adresse sans compte", () => {
+  it("refuse une invitation externe impossible à livrer", async () => {
+    vi.stubEnv("EMAIL_PROVIDER", "");
+
+    const result = await inviteMember({
+      projectId: PROJECT,
+      actorId: OWNER,
+      email: "nouvelle@example.test",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      status: 503,
+      errorKey: "invitationEmailUnavailable",
+    });
+    expect(invitationRows).toHaveLength(0);
+  });
+
   it("crée quand même l'invitation, sans invited_user_id", async () => {
     const result = await inviteMember({
       projectId: PROJECT,
