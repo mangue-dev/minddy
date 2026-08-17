@@ -1,0 +1,60 @@
+# Configuration reproducible de la pile Supabase locale de minddy.
+#
+# Les secrets de l'application ne vivent pas ici : `pnpm bootstrap:supabase`
+# les écrit dans `.env.local`, ignoré par Git. Les buckets et leurs policies
+# vivent dans les migrations pour que le même historique s'applique aussi à une
+# instance Supabase auto-hébergée distante.
+project_id = "minddy"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+
+[auth.email.template.confirmation]
+subject = "Confirmez votre adresse e-mail · Confirm your email"
+content_path = "./supabase/email-templates/confirm-signup.html"
+
+[auth.email.template.recovery]
+subject = "Réinitialisez votre mot de passe · Reset your password"
+content_path = "./supabase/email-templates/reset-password.html"
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+file_size_limit = "25MiB"
+
+# Ces déclarations rendent les contraintes visibles à l'opérateur local. Les
+# INSERT/UPDATE idempotents de `supabase/migrations` restent la source de
+# vérité, car `supabase db push` est aussi le chemin des instances distantes.
+[storage.buckets.attachments]
+public = false
+file_size_limit = "20MiB"
+
+[storage.buckets.project-icons]
+public = true
+file_size_limit = "25MiB"
+
+[storage.buckets.forge-attachments]
+public = true
+file_size_limit = "20MiB"

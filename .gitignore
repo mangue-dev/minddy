@@ -47,6 +47,7 @@ assets/figma
 assets/mac-desktop-icon-exports/
 # supabase CLI link artifacts
 supabase/.temp/
+supabase/.branches/
 
 # bundle du harness de la microVM (MIN-224) — reconstruit au prebuild
 /.agent-vm/

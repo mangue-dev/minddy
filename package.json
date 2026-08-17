@@ -19,6 +19,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "bootstrap:supabase": "node scripts/bootstrap-supabase.mjs",
+    "verify:supabase": "node scripts/verify-supabase-bootstrap.mjs",
+    "test:bootstrap:supabase": "node --test scripts/bootstrap-supabase.test.mjs",
+    "repair:squashed-migrations": "node scripts/repair-squashed-migration-history.mjs",
+    "test:squashed-migrations": "node --test scripts/repair-squashed-migration-history.test.mjs",
     "clean": "node scripts/clean.mjs",
     "captures:timeline": "node captures/timeline/index.mjs",
     "deploy": "bash deploy.sh"

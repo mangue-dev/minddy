@@ -33,6 +33,11 @@ starting Next.js. See [CONTRIBUTING.md](CONTRIBUTING.md) before running code fro
 an untrusted pull request: dependency installation, tests, and development
 commands execute repository code.
 
+For a reproducible local or self-hosted Supabase bootstrap, see
+[docs/self-hosting.md](docs/self-hosting.md). On a fresh local clone, use
+`pnpm bootstrap:supabase` before `pnpm dev` instead of manually applying SQL in
+the Supabase dashboard.
+
 ## Common commands
 
 ```bash
