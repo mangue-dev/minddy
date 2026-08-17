@@ -6,7 +6,7 @@ const { apnsProviderToken, isApnsConfigured } = await import("./apns");
 beforeEach(() => vi.unstubAllEnvs());
 
 describe("configuration APNs", () => {
-  it("reste éteinte sans les trois secrets", () => {
+  it("reste éteinte sans sa configuration complète", () => {
     expect(isApnsConfigured()).toBe(false);
     expect(apnsProviderToken()).toBeNull();
   });
@@ -15,6 +15,7 @@ describe("configuration APNs", () => {
     const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
     vi.stubEnv("APNS_TEAM_ID", "TEAM123456");
     vi.stubEnv("APNS_KEY_ID", "KEY1234567");
+    vi.stubEnv("APNS_BUNDLE_ID", "com.example.minddy");
     vi.stubEnv(
       "APNS_PRIVATE_KEY",
       privateKey.export({ type: "pkcs8", format: "pem" }).toString()

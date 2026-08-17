@@ -33,7 +33,9 @@ let client: PostHog | null = null;
  */
 export function getServerPostHog(): PostHog | null {
   const key = process.env.POSTHOG_API_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  const host = process.env.POSTHOG_HOST ?? process.env.NEXT_PUBLIC_POSTHOG_HOST;
   if (
+    !host ||
     !shouldSendServerAnalytics({
       hasKey: !!key,
       appEnv: getAppEnv(),
@@ -44,10 +46,7 @@ export function getServerPostHog(): PostHog | null {
   }
   if (!client) {
     client = new PostHog(key as string, {
-      host:
-        process.env.POSTHOG_HOST ??
-        process.env.NEXT_PUBLIC_POSTHOG_HOST ??
-        "https://eu.i.posthog.com",
+      host,
       flushAt: 5,
       flushInterval: 10_000,
     });

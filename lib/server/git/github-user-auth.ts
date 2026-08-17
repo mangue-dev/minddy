@@ -1,6 +1,8 @@
 import "server-only";
 
 import { GITHUB_API_BASE, githubHeaders } from "./github-rest";
+import { capability } from "@/lib/server/capabilities";
+import { isForgeTokenCryptoConfigured } from "./token-crypto";
 
 /**
  * Autorisation UTILISATEUR de la GitHub App (MIN-144) — les tokens
@@ -47,7 +49,10 @@ function getClientSecret(): string {
  */
 export function isGithubUserAuthConfigured(): boolean {
   return !!(
-    process.env.GITHUB_APP_CLIENT_ID && process.env.GITHUB_APP_CLIENT_SECRET
+    capability("github").configured &&
+    process.env.GITHUB_APP_CLIENT_ID &&
+    process.env.GITHUB_APP_CLIENT_SECRET &&
+    isForgeTokenCryptoConfigured()
   );
 }
 

@@ -72,7 +72,12 @@ async function freshCatalog(
     getRootDefaultModel: vi.fn(async () => null),
     resolveAgentApiKey: vi.fn(async () => {
       if (endpoint) return endpoint;
-      throw new Error("no platform key");
+      return {
+        provider: "openrouter",
+        baseUrl: "https://openrouter.ai/api/v1",
+        apiKey: "platform-key",
+        mode: "platform",
+      };
     }),
     resolveProviderDefaultModel: vi.fn(async () => null),
   }));
@@ -84,6 +89,7 @@ async function freshCatalog(
   vi.doMock("@/lib/server/app-config", () => ({
     getAppConfigValue: vi.fn(async () => recommendedConfig),
   }));
+  vi.doMock("@/lib/managed-services", () => ({ isManagedAiEnabled: () => true }));
   return import("./models-catalog");
 }
 
@@ -92,6 +98,7 @@ afterEach(() => {
   vi.doUnmock("./model");
   vi.doUnmock("./model-plan");
   vi.doUnmock("@/lib/server/app-config");
+  vi.doUnmock("@/lib/managed-services");
 });
 
 describe("getPlatformModelCatalog", () => {

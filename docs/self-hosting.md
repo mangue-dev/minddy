@@ -5,6 +5,19 @@ Realtime. Une base PostgreSQL seule ne suffit pas : les migrations utilisent les
 schémas `auth`, `storage`, `realtime` et `extensions`, et l'application appelle
 les API Auth et Storage.
 
+Supabase est la **seule infrastructure obligatoire**. La configuration minimale
+de l'application contient uniquement :
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://supabase.example.test
+NEXT_PUBLIC_SUPABASE_ANON_KEY=…
+SUPABASE_SERVICE_ROLE_KEY=…
+```
+
+Avec ces trois valeurs, le cœur (comptes, projets, tickets, objectifs, pages,
+feedback, API et stockage Supabase) démarre. Stripe, OpenRouter, Vercel,
+PostHog, Resend, les push et les forges ne sont ni contactés ni nécessaires.
+
 La configuration versionnée pour la pile locale est
 [`supabase/config.toml`](../supabase/config.toml). Pour une infrastructure
 distante, partez de la distribution officielle Supabase auto-hébergée et assurez
@@ -39,6 +52,28 @@ les noms et l'ordre du baseline et des migrations en attente, applique les migra
 complète `.env.local` et vérifie ensuite la base et l'API Storage. Il génère les
 secrets applicatifs qui protègent les webhooks et les données chiffrées ; les
 clés Supabase sont récupérées depuis `supabase status`.
+
+Le bootstrap peut générer des secrets applicatifs facultatifs pour préparer les
+fonctions correspondantes, mais leur simple présence ne les active pas. En
+particulier, les services managés exigent `MINDDY_MANAGED_AI=1` ou
+`MINDDY_MANAGED_BILLING=1`, Resend exige `EMAIL_PROVIDER=resend`, et Vercel
+Sandbox exige `AGENT_EXECUTION_BACKEND=vercel`.
+
+## Capacités facultatives et remplacements
+
+| Capacité | Nature | Configuration / remplacement |
+| --- | --- | --- |
+| Base, Auth, Realtime, Storage | obligatoire | Pile Supabase complète ; le stockage de production reste le Storage de cette instance |
+| IA | remplaçable | BYOK ou endpoint local ; quota OpenRouter managé seulement avec `MINDDY_MANAGED_AI=1` |
+| Agent de code | remplaçable | Runtime local, ou Vercel Sandbox explicitement choisi avec `AGENT_EXECUTION_BACKEND=vercel` |
+| Jobs de fond | remplaçable | N'importe quel ordonnanceur HTTP sur `/api/cron/*`, protégé par `CRON_SECRET`; Vercel Cron n'est qu'une option |
+| E-mail Auth | remplaçable | SMTP configuré dans Supabase/GoTrue |
+| E-mail applicatif | remplaçable | `EMAIL_PROVIDER=resend` + clé + expéditeurs, ou `console` en développement |
+| Domaines Vercel, PostHog, Web Push, APNs, GitHub, GitLab, Stripe | facultative | Absence = interface masquée/inactive et aucun appel réseau |
+
+Les expéditeurs, hôtes PostHog, sujet VAPID et bundle APNs n'ont volontairement
+aucune valeur par défaut : ils doivent décrire l'infrastructure de l'opérateur,
+jamais celle de minddy.
 
 La commande est réexécutable : `supabase db push` n'applique que les migrations
 absentes et les valeurs déjà présentes dans `.env.local` ne sont jamais

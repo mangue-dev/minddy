@@ -22,7 +22,7 @@ import {
 
 const strong = "0".repeat(64);
 
-/** Un environnement déployé complet — le point de départ « tout va bien ». */
+/** Un environnement déployé minimal — seul le cœur Supabase est obligatoire. */
 function healthyEnv(): SecretEnv {
   const env: SecretEnv = { VERCEL: "1", VERCEL_ENV: "production" };
   for (const spec of SECRET_SPECS) {
@@ -45,24 +45,35 @@ describe("findSecretProblems", () => {
     }
   });
 
-  it("refuse une variable posée mais vide — ou pleine de blancs", () => {
+  it("traite un secret optionnel vide comme absent, mais refuse un requis vide", () => {
     const env = healthyEnv();
     env.AI_KEY_ENCRYPTION_SECRET = "";
-    expect(findSecretProblems(env).some((p) => p.includes("est vide"))).toBe(true);
+    expect(findSecretProblems(env)).toEqual([]);
 
     env.AI_KEY_ENCRYPTION_SECRET = "        ";
+    expect(findSecretProblems(env)).toEqual([]);
+
+    env.SUPABASE_SERVICE_ROLE_KEY = "";
     expect(findSecretProblems(env).some((p) => p.includes("est vide"))).toBe(true);
   });
 
-  it("exige les secrets requis EN LIGNE, et laisse un poste travailler sans", () => {
+  it("laisse les secrets de capacités facultatives absents même en ligne", () => {
     const deployed = healthyEnv();
     delete deployed.CRON_SECRET;
-    expect(findSecretProblems(deployed).some((p) => p.includes("CRON_SECRET"))).toBe(
-      true
-    );
+    delete deployed.GIT_STATE_SECRET;
+    delete deployed.AI_KEY_ENCRYPTION_SECRET;
+    expect(findSecretProblems(deployed)).toEqual([]);
 
     // Poste de développement : rien n'est posé, et c'est très bien.
     expect(findSecretProblems({})).toEqual([]);
+  });
+
+  it("accepte les lignes optionnelles vides d'un .env.example copié", () => {
+    const env = healthyEnv();
+    for (const spec of SECRET_SPECS) {
+      if (!spec.requiredWhenDeployed) env[spec.name] = "";
+    }
+    expect(findSecretProblems(env)).toEqual([]);
   });
 
   it("accepte l'ancien nom du secret de chiffrement des tokens de forge", () => {
@@ -74,11 +85,11 @@ describe("findSecretProblems", () => {
     expect(findSecretProblems(env)).toEqual([]);
   });
 
-  it("les dit TOUS d'un coup", () => {
+  it("dit d'un coup tous les secrets optionnels présents mais invalides", () => {
     const env = healthyEnv();
     env.GIT_STATE_SECRET = "x";
     env.AI_KEY_ENCRYPTION_SECRET = "y";
-    delete env.CRON_SECRET;
+    env.CRON_SECRET = "z";
     expect(findSecretProblems(env)).toHaveLength(3);
   });
 });

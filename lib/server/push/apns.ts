@@ -6,7 +6,6 @@ import { createPrivateKey, sign } from "node:crypto";
 import type { PushPayload } from "./payload";
 
 const APNS_ORIGIN = "https://api.push.apple.com";
-const DEFAULT_TOPIC = "app.minddy.desktop";
 const TOKEN_MAX_AGE_MS = 50 * 60 * 1000;
 
 export interface ApnsResponse {
@@ -18,7 +17,8 @@ export function isApnsConfigured(): boolean {
   return !!(
     process.env.APNS_TEAM_ID?.trim() &&
     process.env.APNS_KEY_ID?.trim() &&
-    process.env.APNS_PRIVATE_KEY?.trim()
+    process.env.APNS_PRIVATE_KEY?.trim() &&
+    process.env.APNS_BUNDLE_ID?.trim()
   );
 }
 
@@ -70,7 +70,7 @@ export async function sendApnsNotification(
   const providerToken = apnsProviderToken();
   if (!providerToken) return { status: 0, reason: "NotConfigured" };
   const deviceToken = endpoint.startsWith("apns:") ? endpoint.slice(5) : endpoint;
-  const topic = process.env.APNS_BUNDLE_ID?.trim() || DEFAULT_TOPIC;
+  const topic = process.env.APNS_BUNDLE_ID!.trim();
   const expiration = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
   const body = JSON.stringify({
     aps: {

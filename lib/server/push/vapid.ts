@@ -19,23 +19,17 @@ import webpush from "web-push";
  * beaucoup d'envois.
  */
 
-/** L'adresse de contact de minddy — la MÊME que celle des pages légales, de la
- *  confidentialité et des CGU (namespaces `Legal`, `Privacy`, `Terms`). Un
- *  service de push qui s'en sert pour signaler un abus doit tomber sur une boîte
- *  qui existe et qui est lue. */
-const DEFAULT_SUBJECT = "mailto:hello@minddy.app";
-
 /** Le contact que le service de push voit passer — `mailto:` ou `https:`, la
  *  RFC 8292 n'admet rien d'autre. Une valeur bancale ferait échouer TOUS les
- *  envois, avec un message qui ne dit pas d'où ça vient : on retombe. */
-function vapidSubject(): string {
+ *  envois : on désactive alors la capacité. */
+function vapidSubject(): string | null {
   const raw = process.env.VAPID_SUBJECT?.trim();
-  if (!raw) return DEFAULT_SUBJECT;
+  if (!raw) return null;
   if (raw.startsWith("mailto:") || raw.startsWith("https://")) return raw;
   console.error(
-    `[push] VAPID_SUBJECT invalide (${raw}) — attendu mailto: ou https:, on retombe sur ${DEFAULT_SUBJECT}`
+    `[push] VAPID_SUBJECT invalide (${raw}) — attendu mailto: ou https: ; Web Push désactivé`
   );
-  return DEFAULT_SUBJECT;
+  return null;
 }
 
 /** Vrai quand la paire de clés est là. Tout le reste de la chaîne d'envoi en
@@ -43,7 +37,8 @@ function vapidSubject(): string {
 export function isPushConfigured(): boolean {
   return (
     !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() &&
-    !!process.env.VAPID_PRIVATE_KEY?.trim()
+    !!process.env.VAPID_PRIVATE_KEY?.trim() &&
+    !!vapidSubject()
   );
 }
 
@@ -63,7 +58,7 @@ export function configureWebPush(): boolean {
   if (configured) return true;
   try {
     webpush.setVapidDetails(
-      vapidSubject(),
+      vapidSubject()!,
       process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!.trim(),
       process.env.VAPID_PRIVATE_KEY!.trim()
     );

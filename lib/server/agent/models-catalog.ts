@@ -21,6 +21,7 @@ import {
   DEFAULT_AGENT_PROVIDER,
   type AgentProviderId,
 } from "@/lib/agent-providers";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
  * Catalogue de modèles de l'agent de code (MIN-46), résolu selon le provider
@@ -286,9 +287,10 @@ async function resolveRecommended(models: AgentModelEntry[]): Promise<string[]> 
 
 /**
  * Catalogue de modèles du provider ACTIF de l'utilisateur (BYOK ou clé
- * plateforme OpenRouter). Si aucune clé plateforme n'est configurée, on liste
- * quand même OpenRouter en public. Ne lève jamais : sur échec upstream, renvoie
- * le cache périmé s'il existe, sinon une liste vide.
+ * plateforme OpenRouter). Sans BYOK ni service managé, le catalogue reste vide :
+ * même l'index public d'OpenRouter est un appel tiers que l'instance n'a pas
+ * demandé. Ne lève jamais : sur échec upstream, renvoie le cache périmé s'il
+ * existe, sinon une liste vide.
  *
  * Les multiplicateurs et le plafond ne sont joints QU'en mode plateforme : en
  * BYOK, l'utilisateur paye ses propres tokens — lui afficher une échelle de coût
@@ -300,6 +302,7 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
   let apiKey = "";
   let mode: "platform" | "byok" = "platform";
+  let endpointConfigured = true;
   try {
     // Cette lecture ne sonde jamais un endpoint local (`listStrategy: none`) ;
     // elle sert seulement à rendre le bon provider et à garder le picker dans le
@@ -310,7 +313,7 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
     apiKey = endpoint.apiKey;
     mode = endpoint.mode;
   } catch {
-    // Pas de clé plateforme : liste OpenRouter publique (baseUrl déjà par défaut).
+    endpointConfigured = false;
   }
 
   // Défaut effectif du provider actif : frontier du provider BYOK, sinon défaut
@@ -331,6 +334,10 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
     defaultModel,
     ...(localEndpoint ? { localEndpoint } : {}),
   };
+
+  if (!endpointConfigured) {
+    return { ...header, models: [], recommended: [], maxMultiplier: null };
+  }
 
   const cacheKey = `${provider}|${baseUrl}`;
   const hit = cache.get(cacheKey);
@@ -405,6 +412,7 @@ export async function getAdminModelCatalog(): Promise<AgentModelsCatalog> {
 }
 
 export async function getPlatformModelCatalog(): Promise<AgentModelEntry[]> {
+  if (!isManagedAiEnabled()) return [];
   const baseUrl = normalizeBaseUrl(resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!);
   const apiKey = process.env.OPENROUTER_API_KEY;
 

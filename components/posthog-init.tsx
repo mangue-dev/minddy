@@ -71,7 +71,8 @@ export function PostHogInit() {
     // accumulerait sans jamais être vidé. Les callbacks libérés ne trouvent
     // aucun client, donc ne font rien — c'est l'effet recherché.
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    if (!key) {
+    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+    if (!key || !host) {
       markAnalyticsReady();
       return;
     }
@@ -85,7 +86,6 @@ export function PostHogInit() {
       return;
     }
 
-    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
     let initialized = false;
     // L'import est asynchrone : le nettoyage peut passer AVANT sa résolution.
     // Sans ce drapeau, le double montage de StrictMode (dev) initialiserait sur

@@ -2351,6 +2351,7 @@
     "errorAlreadyRunning": "L'agent Numo tourne déjà sur ce ticket.",
     "errorQuotaExceeded": "Vous avez atteint le budget d'usage mensuel de votre plan.",
     "errorManagedServiceUnavailable": "L'IA managée est désactivée sur cette instance. Configurez BYOK ou un endpoint local.",
+    "errorExecutionBackendUnavailable": "Aucun moteur d'exécution n'est configuré. Utilisez l'exécution locale ou activez explicitement Vercel Sandbox.",
     "errorNoModelForProvider": "Choisissez un modèle pour ce provider.",
     "errorLocalEndpointRequiresLocalRun": "Cet endpoint de modèle est local. Lancez l'agent sur votre Mac : minddy n'enverra pas ce run dans le cloud.",
     "errorSupersededRun": "Une session plus récente a repris ce ticket. Lancez un nouvel agent pour continuer.",

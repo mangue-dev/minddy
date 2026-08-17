@@ -13,9 +13,8 @@ import { orbSeedOr, projectOrbGradient } from "@/lib/project-orb-colors";
  * de connexion. Ce qui rattache la personne au projet, c'est l'email vérifié de
  * sa session (`attachPendingInvitations`), pas ce qu'elle a dans l'URL.
  *
- * Sans `RESEND_API_KEY` (dev), le lien est écrit en console et l'envoi est
- * considéré réussi : le flux complet reste jouable en local. En production,
- * l'absence de clé est une panne — on la journalise et on rend `false`.
+ * Resend n'est contacté qu'avec `EMAIL_PROVIDER=resend`, sa clé et un expéditeur
+ * explicite. `EMAIL_PROVIDER=console` écrit le lien en développement seulement.
  *
  * **Le gabarit est en tableaux et en styles en ligne, à dessein.** Un client
  * mail n'est pas un navigateur : Outlook rend le HTML avec le moteur de Word
@@ -27,13 +26,6 @@ import { orbSeedOr, projectOrbGradient } from "@/lib/project-orb-colors";
  */
 
 const RESEND_URL = "https://api.resend.com/emails";
-// L'app envoie depuis `mail.minddy.app`, jamais depuis la racine : c'est ce
-// sous-domaine qui est vérifié dans Resend, et la racine ne l'est plus du tout.
-// Une adresse en `@minddy.app` ici ne partirait pas — elle serait refusée à
-// l'envoi. La racine garde la boîte humaine (`hello@`, chez Infomaniak) et sa
-// réputation, que le courrier de l'app n'entame plus.
-const DEFAULT_FROM = "minddy <invites@mail.minddy.app>";
-
 /** La palette de minddy (`app/globals.css` + jetons mangue-ui, thème clair),
     en hexadécimal parce qu'un client mail ne lit pas `oklch()`. */
 const INK = "#16181e"; // --primary
@@ -117,14 +109,18 @@ export async function sendInvitationEmail(
   params: SendInvitationEmailParams
 ): Promise<boolean> {
   const link = invitationLink(params.token, params.origin ?? SITE_URL);
+  const provider = process.env.EMAIL_PROVIDER?.trim();
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    if (process.env.NODE_ENV === "production") {
-      console.error("[invitation-email] RESEND_API_KEY is not set — invitation not sent");
-      return false;
-    }
+  const from = process.env.INVITATION_EMAIL_FROM?.trim();
+  if (provider === "console" && process.env.NODE_ENV !== "production") {
     console.log(`[invitation-email] (dev — no RESEND_API_KEY) link for ${params.to}: ${link}`);
     return true;
+  }
+  if (provider !== "resend" || !apiKey || !from) {
+    console.error(
+      "[invitation-email] email disabled — set EMAIL_PROVIDER=resend, RESEND_API_KEY and INVITATION_EMAIL_FROM",
+    );
+    return false;
   }
 
   const fr = params.locale === "fr";
@@ -220,7 +216,7 @@ export async function sendInvitationEmail(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.INVITATION_EMAIL_FROM || DEFAULT_FROM,
+        from,
         to: [params.to],
         subject,
         text,

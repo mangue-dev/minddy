@@ -1,6 +1,7 @@
 import "server-only";
 
 import crypto from "node:crypto";
+import { capability } from "@/lib/server/capabilities";
 
 import {
   GITHUB_API_BASE,
@@ -41,11 +42,7 @@ export function getGithubAppSlug(): string {
 }
 
 export function isGithubAppConfigured(): boolean {
-  return !!(
-    process.env.GITHUB_APP_ID &&
-    process.env.GITHUB_APP_PRIVATE_KEY &&
-    process.env.GITHUB_APP_SLUG
-  );
+  return capability("github").configured;
 }
 
 export function isGithubWebhookConfigured(): boolean {

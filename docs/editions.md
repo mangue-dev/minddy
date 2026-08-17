@@ -28,6 +28,18 @@ les active pas à elle seule.
   lorsque les capacités correspondantes sont actives. L'API expose ces
   capacités pour que les clients ne déduisent jamais un droit d'une clé ou d'un
   plan par défaut.
+- `AGENT_EXECUTION_BACKEND=vercel` est le seul choix qui autorise la création ou
+  le réveil d'un Vercel Sandbox. Des identifiants Vercel présents pour les
+  domaines ne déclenchent donc jamais de compute.
+- `EMAIL_PROVIDER=resend` est requis avant tout appel à l'API Resend. Les
+  expéditeurs sont obligatoires et propres à l'instance ; aucun domaine minddy
+  n'est choisi par défaut.
+- PostHog exige une clé et un hôte explicites. Web Push exige aussi un
+  `VAPID_SUBJECT`, et APNs un `APNS_BUNDLE_ID` explicites.
+
+Le catalogue exécutable de ces décisions vit dans `lib/capabilities.ts`. Il
+classe chaque capacité (`required`, `replaceable`, `optional`), énumère les
+variables absentes et produit le diagnostic utilisé par les gardes serveur.
 
 ## BYOK, modèles locaux et quota managé
 

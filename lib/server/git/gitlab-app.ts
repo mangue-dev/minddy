@@ -1,10 +1,10 @@
 import "server-only";
+import { capability } from "@/lib/server/capabilities";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   decryptForgeToken,
   encryptForgeToken,
-  isForgeTokenCryptoConfigured,
 } from "./token-crypto";
 import { SITE_URL } from "@/lib/site";
 import {
@@ -75,13 +75,7 @@ function getGitlabClientSecret(): string {
 }
 
 export function isGitlabConfigured(): boolean {
-  return !!(
-    process.env.GITLAB_OAUTH_CLIENT_ID &&
-    process.env.GITLAB_OAUTH_CLIENT_SECRET &&
-    // Le secret de chiffrement accepte ses DEUX noms (MIN-144) : une prod qui ne
-    // pose que `GITLAB_TOKEN_ENCRYPTION_SECRET` reste configurée à l'identique.
-    isForgeTokenCryptoConfigured()
-  );
+  return capability("gitlab").configured;
 }
 
 // --- OAuth authorize + échange de token ------------------------------------

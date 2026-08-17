@@ -34,6 +34,7 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   alreadyRunning: 409,
   quotaExceeded: 402,
   managedServiceUnavailable: 503,
+  executionBackendUnavailable: 503,
   noModelForProvider: 400,
   localEndpointRequiresLocalRun: 409,
   modelAbovePlan: 403,

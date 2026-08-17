@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Sandbox, type NetworkPolicy } from "@vercel/sandbox";
+import { requireCapability } from "@/lib/server/capabilities";
 
 import {
   SANDBOX_RUNTIME,
@@ -144,6 +145,9 @@ export async function getOrCreateAgentSandbox(opts: {
    *  injection) — le temps que les appelants la câblent. */
   networkPolicy?: NetworkPolicy;
 }): Promise<{ sandbox: Sandbox; created: boolean }> {
+  // L'import du SDK est inerte, mais toute opération de compute doit être un
+  // choix explicite. Sans backend Vercel configuré, on s'arrête avant le SDK.
+  requireCapability("vercelSandbox");
   const creds = sandboxCredentials();
   const snapshotId = process.env.AGENT_SANDBOX_SNAPSHOT_ID?.trim();
   let created = false;
@@ -190,6 +194,7 @@ export function sandboxName(sandbox: Sandbox): string {
  * Best-effort — ne lève jamais (déjà arrêtée / expirée / introuvable).
  */
 export async function stopSandboxByName(name: string): Promise<void> {
+  if (!requireSandboxCapability()) return;
   try {
     const creds = sandboxCredentials();
     const sandbox = await Sandbox.get({ ...creds, name, resume: false });
@@ -211,11 +216,21 @@ export async function stopSandboxByName(name: string): Promise<void> {
  * repos, lui, est déjà servi par la forge, qui ne coûte rien.
  */
 export async function getAgentSandboxByName(name: string): Promise<Sandbox | null> {
+  if (!requireSandboxCapability()) return null;
   try {
     const creds = sandboxCredentials();
     return await Sandbox.get({ ...creds, name, resume: false });
   } catch {
     return null;
+  }
+}
+
+function requireSandboxCapability(): boolean {
+  try {
+    requireCapability("vercelSandbox");
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -263,6 +278,7 @@ export async function isLoopCommandAlive(
   sandboxId: string,
   commandId: string,
 ): Promise<boolean | null> {
+  if (!requireSandboxCapability()) return null;
   try {
     const creds = sandboxCredentials();
     const sandbox = await Sandbox.get({ ...creds, name: sandboxId, resume: false });

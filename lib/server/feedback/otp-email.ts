@@ -2,9 +2,8 @@ import "server-only";
 
 /**
  * Envoi du code OTP par email via Resend (fetch brut, même philosophie que le
- * client OpenRouter — pas de dépendance). Sans RESEND_API_KEY (dev), le code
- * est loggé en console et l'envoi est considéré réussi : le flux complet reste
- * testable en local.
+ * client OpenRouter — pas de dépendance). Resend est opt-in via
+ * `EMAIL_PROVIDER=resend`; `console` garde le flux testable en développement.
  *
  * Le corps ne dit PAS de quel board vient la demande (MIN-342). Un anonyme
  * choisit le destinataire de cet e-mail ; y interpoler le nom d'un projet —
@@ -14,10 +13,6 @@ import "server-only";
  */
 
 const RESEND_URL = "https://api.resend.com/emails";
-// `mail.minddy.app` et pas la racine : c'est le sous-domaine vérifié dans
-// Resend, la racine ne l'est plus (cf. `lib/server/invitation-email.ts`).
-const DEFAULT_FROM = "minddy <feedback@mail.minddy.app>";
-
 export interface SendOtpEmailParams {
   to: string;
   code: string;
@@ -25,16 +20,18 @@ export interface SendOtpEmailParams {
 }
 
 export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean> {
+  const provider = process.env.EMAIL_PROVIDER?.trim();
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    // Le fallback console est un outil de DEV : en prod, un code valide écrit
-    // dans les logs Vercel est un secret qui fuit (MIN-118) — on échoue.
-    if (process.env.NODE_ENV === "production") {
-      console.error("[feedback-otp] RESEND_API_KEY is not set — OTP not sent");
-      return false;
-    }
+  const from = process.env.FEEDBACK_EMAIL_FROM?.trim();
+  if (provider === "console" && process.env.NODE_ENV !== "production") {
     console.log(`[feedback-otp] (dev — no RESEND_API_KEY) code for ${params.to}: ${params.code}`);
     return true;
+  }
+  if (provider !== "resend" || !apiKey || !from) {
+    console.error(
+      "[feedback-otp] email disabled — set EMAIL_PROVIDER=resend, RESEND_API_KEY and FEEDBACK_EMAIL_FROM",
+    );
+    return false;
   }
 
   const subject =
@@ -54,7 +51,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean>
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.FEEDBACK_EMAIL_FROM || DEFAULT_FROM,
+        from,
         to: [params.to],
         subject,
         text,

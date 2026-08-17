@@ -1,4 +1,5 @@
 import "server-only";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
  * Le plafond mensuel de la clé minddy (MIN-92).
@@ -52,6 +53,7 @@ function num(value: unknown): number {
  * simplement la tuile en « indisponible ».
  */
 export async function fetchOpenRouterKeyStatus(): Promise<OpenRouterKeyStatus | null> {
+  if (!isManagedAiEnabled()) return null;
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return null;
 

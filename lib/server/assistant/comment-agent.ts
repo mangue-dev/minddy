@@ -33,7 +33,11 @@ import {
 } from "./prompt";
 import { commentDisplay, type CommentDisplay } from "./comment-live";
 import { gatherProjectPromptContext } from "./prompt-context";
-import { fetchAiChat, resolveAiRuntime } from "@/lib/server/ai-runtime";
+import {
+  fetchAiChat,
+  resolveAiRuntime,
+  type ResolvedAiRuntime,
+} from "@/lib/server/ai-runtime";
 import {
   buildAttachmentParts,
   groupPromptAttachments,
@@ -303,9 +307,16 @@ export async function runCommentMention({
     ].slice(0, 5);
 
     let triggerContent: string | ChatContentPart[] = triggerText;
+    let aiRuntime: ResolvedAiRuntime | undefined;
     if (directAttachments.length > 0) {
-      const apiKey = process.env.OPENROUTER_API_KEY ?? "";
-      const modalities = await getModelInputModalities(model, apiKey);
+      aiRuntime = await resolveAiRuntime({
+        userId: actorId,
+        modelKey: "assistant_model",
+        surface: "assistant",
+      });
+      const modalities = aiRuntime.provider === "openrouter"
+        ? await getModelInputModalities(aiRuntime.model, aiRuntime.apiKey)
+        : new Set(["text"]);
       triggerContent = [
         { type: "text", text: triggerText },
         ...(await buildAttachmentParts(service, directAttachments, {
@@ -323,6 +334,7 @@ export async function runCommentMention({
     // ── Agent loop (streamed, in-memory only — nothing persisted per round)
     const finalContent = await runLoop(messages, {
       model,
+      aiRuntime,
       projectId: issue.project_id as string,
       userId: actorId,
       supabase,
@@ -537,9 +549,16 @@ export async function runObjectiveCommentMention({
     ].slice(0, 5);
 
     let triggerContent: string | ChatContentPart[] = triggerText;
+    let aiRuntime: ResolvedAiRuntime | undefined;
     if (directAttachments.length > 0) {
-      const apiKey = process.env.OPENROUTER_API_KEY ?? "";
-      const modalities = await getModelInputModalities(model, apiKey);
+      aiRuntime = await resolveAiRuntime({
+        userId: actorId,
+        modelKey: "assistant_model",
+        surface: "assistant",
+      });
+      const modalities = aiRuntime.provider === "openrouter"
+        ? await getModelInputModalities(aiRuntime.model, aiRuntime.apiKey)
+        : new Set(["text"]);
       triggerContent = [
         { type: "text", text: triggerText },
         ...(await buildAttachmentParts(service, directAttachments, {
@@ -556,6 +575,7 @@ export async function runObjectiveCommentMention({
 
     const finalContent = await runLoop(messages, {
       model,
+      aiRuntime,
       projectId: objective.project_id as string,
       userId: actorId,
       supabase,
@@ -795,9 +815,16 @@ export async function runFeedbackCommentMention({
     ].slice(0, 5);
 
     let triggerContent: string | ChatContentPart[] = triggerText;
+    let aiRuntime: ResolvedAiRuntime | undefined;
     if (directAttachments.length > 0) {
-      const apiKey = process.env.OPENROUTER_API_KEY ?? "";
-      const modalities = await getModelInputModalities(model, apiKey);
+      aiRuntime = await resolveAiRuntime({
+        userId: actorId,
+        modelKey: "assistant_model",
+        surface: "assistant",
+      });
+      const modalities = aiRuntime.provider === "openrouter"
+        ? await getModelInputModalities(aiRuntime.model, aiRuntime.apiKey)
+        : new Set(["text"]);
       triggerContent = [
         { type: "text", text: triggerText },
         ...(await buildAttachmentParts(service, directAttachments, {
@@ -814,6 +841,7 @@ export async function runFeedbackCommentMention({
 
     const finalContent = await runLoop(messages, {
       model,
+      aiRuntime,
       projectId: post.project_id as string,
       userId: actorId,
       // The current post — feedback tools default to it when the model omits
@@ -874,6 +902,7 @@ async function runLoop(
   messages: ChatMessage[],
   ctx: {
     model: string;
+    aiRuntime?: ResolvedAiRuntime;
     projectId: string;
     userId: string;
     /** Set only in feedback comment mode — the post the feedback tools default
@@ -887,7 +916,7 @@ async function runLoop(
     onText: (partial: string) => void;
   }
 ): Promise<string> {
-  const aiRuntime = await resolveAiRuntime({
+  const aiRuntime = ctx.aiRuntime ?? await resolveAiRuntime({
     userId: ctx.userId,
     modelKey: "assistant_model",
     surface: "assistant",

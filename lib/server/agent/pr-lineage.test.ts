@@ -131,6 +131,8 @@ const lineage = (over: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(() => {
+  vi.stubEnv("AGENT_EXECUTION_BACKEND", "vercel");
+  vi.stubEnv("VERCEL", "1");
   h.created = [];
   h.activeCalls = [];
   h.issueLineage = null;

@@ -57,11 +57,14 @@ const working = () => ({
 });
 
 beforeEach(() => {
+  vi.stubEnv("AGENT_EXECUTION_BACKEND", "vercel");
+  vi.stubEnv("VERCEL", "1");
   h.command = null;
   h.getThrows = false;
   h.waitCalls = 0;
 });
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.useRealTimers();
 });
 

@@ -12,9 +12,10 @@ import "server-only";
  * attribuée au projet de quelqu'un d'autre.
  *
  * Ce module dit DEUX choses, et refuse dans les deux cas :
- *  - une variable posée mais trop courte (ou vide, ou tout en blancs) : refus
- *    PARTOUT, y compris en développement — c'est une erreur de configuration,
- *    et un secret jouet en dev finit par être copié en prod ;
+ *  - une variable non vide mais trop courte : refus PARTOUT, y compris en
+ *    développement — c'est une erreur de configuration, et un secret jouet en
+ *    dev finit par être copié en prod ; une variable optionnelle vide équivaut
+ *    en revanche à « absente », pour qu'un `.env.example` copié reste valide ;
  *  - une variable absente alors qu'elle est requise : refus dans un
  *    environnement DÉPLOYÉ seulement. Sur un poste, on travaille très bien sans
  *    Stripe ni GitLab ; ce qui n'a pas le droit de manquer en ligne, c'est ce
@@ -54,32 +55,32 @@ export const SECRET_SPECS: SecretSpec[] = [
   {
     name: "GIT_STATE_SECRET",
     minLength: KEY_MIN,
-    requiredWhenDeployed: true,
+    requiredWhenDeployed: false,
     purpose: "HMAC des `state` de connexion git",
   },
   {
     name: "GIT_TOKEN_ENCRYPTION_SECRET",
     aliases: ["GITLAB_TOKEN_ENCRYPTION_SECRET"],
     minLength: KEY_MIN,
-    requiredWhenDeployed: true,
+    requiredWhenDeployed: false,
     purpose: "chiffrement AES-GCM des tokens de forge",
   },
   {
     name: "AI_KEY_ENCRYPTION_SECRET",
     minLength: KEY_MIN,
-    requiredWhenDeployed: true,
+    requiredWhenDeployed: false,
     purpose: "chiffrement AES-GCM des clés IA apportées par les comptes",
   },
   {
     name: "FEEDBACK_SSO_ENCRYPTION_SECRET",
     minLength: KEY_MIN,
-    requiredWhenDeployed: true,
+    requiredWhenDeployed: false,
     purpose: "chiffrement AES-GCM des secrets SSO des boards publics",
   },
   {
     name: "CRON_SECRET",
     minLength: KEY_MIN,
-    requiredWhenDeployed: true,
+    requiredWhenDeployed: false,
     purpose: "authentification des routes de cron",
   },
   {
@@ -155,8 +156,9 @@ export function findSecretProblems(env: SecretEnv = process.env): string[] {
     const names = [spec.name, ...(spec.aliases ?? [])].join(" ou ");
 
     if (!found || found.value.length === 0) {
-      // Posée mais vide : toujours une erreur — quelqu'un a cru la configurer.
-      if (found) {
+      // Une capacité optionnelle vide est désactivée. Un secret obligatoire
+      // vide reste une erreur plus précise qu'un simple « absent ».
+      if (found && spec.requiredWhenDeployed) {
         problems.push(`${found.key} est vide (${spec.purpose}).`);
       } else if (deployed && spec.requiredWhenDeployed) {
         problems.push(`${names} est absent (${spec.purpose}).`);

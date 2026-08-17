@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAppEnv } from "@/lib/env";
+import { capability } from "@/lib/server/capabilities";
 
 /**
  * Client minimal de l'API Domaines de Vercel (MIN-36). Attache/détache les
@@ -47,7 +48,7 @@ function isFake(): boolean {
 
 export function isVercelDomainsConfigured(): boolean {
   if (isFake()) return true;
-  return Boolean(process.env.VERCEL_TOKEN && process.env.VERCEL_PROJECT_ID);
+  return capability("vercelDomains").configured;
 }
 
 function apiUrl(path: string, params?: Record<string, string>): string {
@@ -78,6 +79,7 @@ async function vercelFetch(
 
 export async function addDomainToVercel(domain: string): Promise<AddDomainResult> {
   if (isFake()) return { ok: true, verified: true, verification: [] };
+  if (!isVercelDomainsConfigured()) return { ok: false, code: "api_error" };
 
   const projectId = process.env.VERCEL_PROJECT_ID;
   const res = await vercelFetch(`/v10/projects/${projectId}/domains`, {
@@ -112,6 +114,7 @@ export async function addDomainToVercel(domain: string): Promise<AddDomainResult
 /** 404 = déjà détaché : succès (idempotent). */
 export async function removeDomainFromVercel(domain: string): Promise<{ ok: boolean }> {
   if (isFake()) return { ok: true };
+  if (!isVercelDomainsConfigured()) return { ok: false };
 
   const projectId = process.env.VERCEL_PROJECT_ID;
   const res = await vercelFetch(
@@ -129,6 +132,16 @@ export async function getVercelDomainState(domain: string): Promise<VercelDomain
       attached: true,
       verified: true,
       misconfigured: false,
+      verification: [],
+      cnameTarget: null,
+    };
+  }
+
+  if (!isVercelDomainsConfigured()) {
+    return {
+      attached: false,
+      verified: false,
+      misconfigured: true,
       verification: [],
       cnameTarget: null,
     };

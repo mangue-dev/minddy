@@ -35,6 +35,7 @@ import {
 } from "./runs";
 import { drainAgentRuns } from "./drain";
 import { localExecRequested } from "./local-exec";
+import { capability } from "@/lib/server/capabilities";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
@@ -67,6 +68,7 @@ export type LaunchError =
   | "alreadyRunning"
   | "quotaExceeded"
   | "managedServiceUnavailable"
+  | "executionBackendUnavailable"
   | "noModelForProvider"
   | "localEndpointRequiresLocalRun"
   | "modelAbovePlan"
@@ -216,7 +218,12 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   // Ancrage PULL REQUEST (MIN-168) : chemin à part de bout en bout — le projet
   // vient du dépôt, le modèle de `pr_review_model`, et rien n'est écrit sur un
   // ticket (ni statut, ni événement, ni héritage de branche).
-  if (input.pullRequestId) return launchPrReviewRun(input, input.pullRequestId);
+  if (input.pullRequestId) {
+    if (!capability("vercelSandbox").configured) {
+      return { ok: false, error: "executionBackendUnavailable" };
+    }
+    return launchPrReviewRun(input, input.pullRequestId);
+  }
 
   const issueId = input.issueId ?? null;
   // Reprise d'une PR (MIN-292) : quand l'appelant fournit une PR explicite, elle
@@ -323,6 +330,9 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     };
   }
   const localExec = localExecRequested(input);
+  if (!localExec && !capability("vercelSandbox").configured) {
+    return { ok: false, error: "executionBackendUnavailable" };
+  }
   const byok = await byokPromise;
   // Ne jamais créer un run cloud qui finirait par choisir OpenRouter : le
   // provider local est une configuration valide, mais il n'existe que depuis
