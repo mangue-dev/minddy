@@ -36,7 +36,9 @@ commands execute repository code.
 For a reproducible local or self-hosted Supabase bootstrap, see
 [docs/self-hosting.md](docs/self-hosting.md). On a fresh local clone, use
 `pnpm bootstrap:supabase` before `pnpm dev` instead of manually applying SQL in
-the Supabase dashboard.
+the Supabase dashboard. After installation, follow the
+[self-hosted operations runbook](docs/self-hosting-operations.md) for upgrades,
+coordinated Postgres and Storage backups, disaster recovery, and rollback.
 
 ## Common commands
 

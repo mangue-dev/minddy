@@ -5,6 +5,11 @@ Realtime. Une base PostgreSQL seule ne suffit pas : les migrations utilisent les
 schémas `auth`, `storage`, `realtime` et `extensions`, et l'application appelle
 les API Auth et Storage.
 
+Après l'installation initiale, utilisez le
+[`runbook d'exploitation`](self-hosting-operations.md) pour sauvegarder,
+mettre à jour, restaurer et diagnostiquer l'instance. Il signale les fenêtres
+d'indisponibilité et les opérations irréversibles avant leurs commandes.
+
 Supabase est la **seule infrastructure obligatoire**. La configuration minimale
 d'un serveur public contient son origine canonique et les trois accès Supabase :
 
@@ -177,8 +182,7 @@ pnpm repair:squashed-migrations -- --linked --allow-manual-schema --apply \
 Pour vérifier une instance déjà préparée sans modifier son schéma :
 
 ```bash
-pnpm verify:supabase -- \
-  --db-url "$SUPABASE_DB_URL" \
+pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
   --supabase-url "$NEXT_PUBLIC_SUPABASE_URL" \
   --service-role-key "$SUPABASE_SERVICE_ROLE_KEY"
 ```
