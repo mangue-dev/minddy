@@ -294,9 +294,37 @@ SemVer commits and validate their exact Git objects before publication:
 4. If any code, documentation, manifest, migration, lockfile, or candidate ref
    changes, discard the evidence and repeat the complete run. Fixes always
    produce new commits; candidate refs are never moved for an accepted report.
-5. Promote and publish the source version, then the target version, through the
-   normal release workflow. For each workflow input, use the exact commit from
-   the accepted report. After publication, verify both mappings:
+5. Promote and publish the source version, then the target version, through
+   `deploy.sh`. Use a fresh publishing clone so the target candidate can remain
+   ahead of `origin/main` while the source is promoted first. Import the
+   accepted candidate bundle into that clone, verify that the current public
+   `main` is an ancestor of the source, and never recreate or move either
+   candidate ref:
+
+   ```bash
+   export CANDIDATE_BUNDLE=/secure/evidence/minddy-preflight.bundle
+   export PUBLISH_DIR="$(mktemp -d)"
+   git clone git@github.com:mangue-dev/minddy-issues.git "$PUBLISH_DIR"
+   git -C "$PUBLISH_DIR" fetch "$CANDIDATE_BUNDLE" \
+     "refs/tags/preflight/v$SOURCE_VERSION:refs/tags/preflight/v$SOURCE_VERSION" \
+     "refs/tags/preflight/v$TARGET_VERSION:refs/tags/preflight/v$TARGET_VERSION"
+   export SOURCE_SHA="$(git -C "$PUBLISH_DIR" rev-parse "preflight/v$SOURCE_VERSION^{commit}")"
+   export TARGET_SHA="$(git -C "$PUBLISH_DIR" rev-parse "preflight/v$TARGET_VERSION^{commit}")"
+   git -C "$PUBLISH_DIR" merge-base --is-ancestor origin/main "$SOURCE_SHA"
+   git -C "$PUBLISH_DIR" merge-base --is-ancestor "$SOURCE_SHA" "$TARGET_SHA"
+   git -C "$PUBLISH_DIR" switch -C main "$SOURCE_SHA"
+   (cd "$PUBLISH_DIR" && npm run deploy -- custom)
+   git -C "$PUBLISH_DIR" merge --ff-only "$TARGET_SHA"
+   (cd "$PUBLISH_DIR" && npm run deploy -- custom)
+   ```
+
+   In each assistant run, select public core and Cloud web, and provide the
+   security-review evidence required by the release checklist. Select macOS
+   only when that artifact is part of the release. `deploy.sh` pushes the exact
+   checked-out candidate, waits for its successful `main` CI, advances the
+   protected `production` branch, verifies the Production deployment, and only
+   then creates the public tag. Do not push the target to `main` before the
+   source run completes. After publication, verify both mappings:
 
    ```bash
    test "$(git rev-parse "v$SOURCE_VERSION^{commit}")" = "$SOURCE_SHA"

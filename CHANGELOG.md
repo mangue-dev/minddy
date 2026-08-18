@@ -9,6 +9,11 @@ they create neither a version nor a tag of the public core.
 
 ## [Unreleased]
 
+### Changed
+
+- The prepublication runbook now gives the exact `deploy.sh` sequence that
+  promotes an accepted source candidate before its target candidate.
+
 ## [0.10.4] - 2026-08-18
 
 ### Fixed
