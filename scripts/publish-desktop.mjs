@@ -48,8 +48,9 @@ function fail(message) {
   process.exit(1);
 }
 
+const verifyOnly = process.argv.includes("--verify-only");
 const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-if (!token) fail("BLOB_READ_WRITE_TOKEN manque — rien à publier sans store.");
+if (!verifyOnly && !token) fail("BLOB_READ_WRITE_TOKEN manque — rien à publier sans store.");
 
 const feedUrl = process.env.MINDDY_DESKTOP_FEED_URL?.trim();
 if (!feedUrl) {
@@ -176,6 +177,11 @@ if (files.length === 0) fail("rien à publier dans desktop/release.");
 // publier avant ses binaires ouvre une fenêtre, courte mais réelle, pendant
 // laquelle chaque app installée télécharge un 404.
 files.sort((a, b) => Number(a === "latest-mac.yml") - Number(b === "latest-mac.yml"));
+
+if (verifyOnly) {
+  console.log(`[publish-desktop] vérification seule : ${files.length} fichiers prêts (${files.join(", ")}).`);
+  process.exit(0);
+}
 
 for (const name of files) {
   const body = await readFile(path.join(RELEASE_DIR, name));

@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { INITIAL_DATA_MIGRATION, readMigration } from "@/test/sql-migrations";
 import {
   BILLABLE_FEATURES,
   BILLING_PLANS,
@@ -99,12 +98,9 @@ describe("maxModelMultiplier", () => {
  * un même nombre, donc, et une seule façon de les tenir d'accord : les comparer.
  */
 describe("maxStorageBytes", () => {
-  const sql = readFileSync(
-    join(__dirname, "../supabase/migrations/20261229090000_storage_quota.sql"),
-    "utf8"
-  );
+  const sql = readMigration(INITIAL_DATA_MIGRATION);
 
-  it("dit la même chose que le barème SQL de la migration", () => {
+  it("dit la même chose que les données initiales distribuées", () => {
     for (const plan of BILLING_PLANS) {
       const seeded = new RegExp(`'${plan.id}',\\s*(\\d+)`).exec(sql);
       expect(seeded, `le barème SQL ne connaît pas le plan ${plan.id}`).not.toBeNull();

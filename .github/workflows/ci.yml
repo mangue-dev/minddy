@@ -93,6 +93,9 @@ jobs:
       - name: Tests
         run: pnpm run test
 
+      - name: Release tooling tests
+        run: pnpm run test:release
+
   audit:
     name: Audit des dépendances
     runs-on: ubuntu-latest

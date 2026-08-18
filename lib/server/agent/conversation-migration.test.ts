@@ -1,11 +1,7 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { canonicalSql, readBaseline } from "@/test/sql-migrations";
 
-const sql = readFileSync(
-  join(process.cwd(), "supabase/migrations/20270105090000_agent_conversations.sql"),
-  "utf8",
-);
+const sql = canonicalSql(readBaseline());
 
 describe("agent conversation migration", () => {
   it("separe identite, contextes, tours, messages et lectures", () => {
@@ -22,18 +18,18 @@ describe("agent conversation migration", () => {
     }
   });
 
-  it("retire le verrou qui faisait du ticket une identite d'execution", () => {
-    expect(sql).toContain("drop index if exists public.idx_agent_runs_active_issue");
+  it("ne distribue plus le verrou qui faisait du ticket une identite d'execution", () => {
+    expect(sql).not.toContain("idx_agent_runs_active_issue");
   });
 
   it("conserve un verrou propre aux passages d'une meme chaîne", () => {
-    expect(sql).toContain("create unique index if not exists idx_agent_runs_active_chain");
-    expect(sql).toContain("on public.agent_runs(chain_id)");
+    expect(sql).toContain("create unique index idx_agent_runs_active_chain");
+    expect(sql).toMatch(/on public\.agent_runs using btree \(chain_id\)/);
   });
 
   it("utilise une visibilite explicite dans les policies", () => {
-    expect(sql).toContain("visibility in ('private', 'project')");
-    expect(sql).toContain("c.visibility = 'project' or c.owner_id = (select auth.uid())");
+    expect(sql).toContain("array['private'::text, 'project'::text]");
+    expect(sql).toMatch(/c\.visibility = 'project'::text\) or \(c\.owner_id = \( select auth\.uid\(\)/);
   });
 
   it("interdit de rattacher un run ou une notification au mauvais projet", () => {
@@ -43,16 +39,15 @@ describe("agent conversation migration", () => {
   });
 
   it("maintient la date d'activite de la conversation", () => {
-    expect(sql).toContain("create trigger agent_conversations_set_updated_at");
+    expect(sql).toContain("create or replace trigger agent_conversations_set_updated_at");
     expect(sql).toContain("execute function public.set_updated_at()");
-    expect(sql).toContain(
-      "after insert or update of title, issue_id, pull_request_id, status, completed_at",
-    );
+    expect(sql).toContain("after insert or update of title, issue_id, pull_request_id, status, completed_at");
     expect(sql.match(/update public\.agent_conversations/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
   });
 
-  it("ne duplique pas le prompt initial si le backfill est rejoue", () => {
-    expect(sql).toContain("m.turn_id = r.id and m.source = 'initial_prompt'");
+  it("crée le prompt initial une seule fois, à l'insertion du run", () => {
+    expect(sql).toContain("create or replace trigger trg_agent_run_create_turn after insert on public.agent_runs");
+    expect(sql).toContain("'initial_prompt', new.created_at");
   });
 
   it("rattache au nouveau tour un steering arrive pendant la fin du precedent", () => {

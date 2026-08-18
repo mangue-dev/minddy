@@ -1,0 +1,88 @@
+#!/usr/bin/env node
+
+import { execFileSync } from "node:child_process";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { assertVersion, changelogSection, sha256 } from "./release-lib.mjs";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const output = path.resolve(process.argv[2] ?? path.join(root, ".release"));
+const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
+const desktopPkg = JSON.parse(await readFile(path.join(root, "desktop/package.json"), "utf8"));
+const version = assertVersion(process.env.RELEASE_VERSION ?? pkg.version);
+const tag = `v${version}`;
+
+if (pkg.version !== version || desktopPkg.version !== version) {
+  throw new Error(`package.json (${pkg.version}), desktop/package.json (${desktopPkg.version}) et release (${version}) doivent correspondre`);
+}
+
+function git(args, options = {}) {
+  return execFileSync("git", args, { cwd: root, encoding: options.encoding ?? "utf8", maxBuffer: 64 * 1024 * 1024 });
+}
+
+const commit = git(["rev-parse", "HEAD"]).trim();
+const commitDate = git(["show", "-s", "--format=%cI", "HEAD"]).trim();
+const tags = git(["tag", "--merged", "HEAD", "--list", "v[0-9]*", "--sort=-version:refname"])
+  .trim().split("\n").filter((candidate) => candidate && candidate !== tag);
+const previousTag = tags[0] ?? null;
+const migrationArgs = previousTag
+  ? ["diff", "--diff-filter=AMR", "--name-only", `${previousTag}..HEAD`, "--", "supabase/migrations"]
+  : ["ls-tree", "-r", "--name-only", "HEAD", "supabase/migrations"];
+const migrations = git(migrationArgs)
+  .trim().split("\n").filter((file) => file.endsWith(".sql"));
+const changelog = await readFile(path.join(root, "CHANGELOG.md"), "utf8");
+const notes = changelogSection(changelog, version);
+
+await rm(output, { recursive: true, force: true });
+await mkdir(output, { recursive: true });
+
+const sourceName = `minddy-${tag}-source.tar.gz`;
+const migrationsName = `minddy-${tag}-migrations.tar.gz`;
+const sourceTar = git(["archive", "--format=tar", `--prefix=minddy-${tag}/`, "HEAD"], { encoding: "buffer" });
+const migrationsTar = git([
+  "archive", "--format=tar", `--prefix=minddy-${tag}-migrations/`, "HEAD",
+  "supabase/migrations", "scripts/bootstrap-supabase.mjs", "scripts/verify-supabase-bootstrap.mjs",
+  "docs/self-hosting.md", "docs/self-hosting-operations.md",
+], { encoding: "buffer" });
+
+function gzip(buffer) {
+  return execFileSync("gzip", ["-9", "-n", "-c"], { input: buffer, encoding: "buffer", maxBuffer: 128 * 1024 * 1024 });
+}
+
+await writeFile(path.join(output, sourceName), gzip(sourceTar));
+await writeFile(path.join(output, migrationsName), gzip(migrationsTar));
+
+const migrationLines = migrations.length
+  ? migrations.map((file) => `- \`${file}\``).join("\n")
+  : "- Aucune nouvelle migration SQL depuis la release précédente.";
+const update = `# Mise à jour vers minddy ${tag}\n\n` +
+  `Depuis : ${previousTag ?? "installation initiale"}\n\n` +
+  `## Migrations incluses\n\n${migrationLines}\n\n` +
+  "Créez une sauvegarde coordonnée Postgres + Storage avant toute migration. " +
+  "Suivez `docs/self-hosting-operations.md`, appliquez les migrations avant de démarrer le nouveau code, " +
+  "puis exécutez les smoke tests du runbook. Les migrations sont forward-only : après une migration " +
+  "incompatible, le rollback exige la restauration de la sauvegarde complète.\n";
+await writeFile(path.join(output, "UPDATE.md"), update);
+await writeFile(path.join(output, "RELEASE_NOTES.md"), `# minddy ${tag}\n\n${notes}\n`);
+
+const archives = {};
+for (const name of [sourceName, migrationsName]) archives[name] = await sha256(path.join(output, name));
+const manifest = {
+  schemaVersion: 1,
+  release: { version, tag, commit, commitDate, previousTag },
+  scopes: { core: tag, cloud: null, marketing: null, desktop: "optional" },
+  migrations,
+  artifacts: archives,
+  rollback: "backup-restore-required-after-incompatible-migrations",
+};
+await writeFile(path.join(output, "release-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+
+const checksumFiles = [sourceName, migrationsName, "release-manifest.json", "RELEASE_NOTES.md", "UPDATE.md"];
+const checksums = [];
+for (const name of checksumFiles) checksums.push(`${await sha256(path.join(output, name))}  ${name}`);
+await writeFile(path.join(output, "SHA256SUMS"), `${checksums.join("\n")}\n`);
+
+console.log(`Artefacts ${tag} créés dans ${output}`);
+console.log(`Commit : ${commit}`);
+console.log(`Migrations depuis ${previousTag ?? "le début"} : ${migrations.length}`);

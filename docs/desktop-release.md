@@ -102,44 +102,34 @@ Actuelle : c28ea4e2f76e
 
 ## Le flux normal : `npm run deploy`
 
-L'étape **3b** s'insère juste après le bump de version — pas plus tôt, pour que
-l'app porte la version du site dont elle est tirée.
+L'étape desktop de `deploy.sh` utilise la version du cœur que l'assistant vient
+de publier, pour que l'app porte la version du site dont elle est tirée. La
+release macOS publique, sans dépendance au poste, est décrite dans
+[`releases.md`](releases.md) et tourne dans GitHub Actions ; `npm run deploy`
+la déclenche et attend son résultat.
 
 1. Rien n'a bougé dans la coquille → `Desktop app: unchanged since 0.9.2 —
    nothing to republish.` et le déploiement continue. **C'est le cas courant.**
-2. La coquille a changé → la liste des fichiers s'affiche, avec ce que ça coûte,
-   et la question est posée :
+2. La coquille a changé → le mode automatique propose macOS ; le mode manuel
+   pose la question avec « oui » par défaut.
+3. Si macOS est retenu, `deploy.sh` attend d'abord la release du cœur, déclenche
+   le runner GitHub macOS, puis attend signature, notarisation, publication du
+   flux et ajout des artefacts à la release.
+4. Après succès, le bot committe `desktop/released.json` sur `main`. Ce relevé
+   rend la détection suivante exacte ; il n'est jamais écrit avant que les
+   binaires et leur manifeste soient réellement publiés.
 
-   ```
-   Rebuild and publish the desktop app now? [Y/n]:
-   ```
-
-   Oui → build signé + notarisé, publication du flux, et un commit
-   `chore(desktop): publish <version>` qui enregistre le nouveau relevé.
-   Non → le site part quand même, et les installations gardent la coquille
-   précédente. Rien n'est cassé, juste décalé.
-
-En **non interactif** (CI, `npm run deploy -- patch` piloté par un script), on ne
-lance jamais dix minutes de build tout seul — mais on ne le tait pas non plus :
-le message dit de lancer `npm run desktop:release`. `MINDDY_SKIP_DESKTOP=1` saute
-la vérification entièrement.
-
-### À la main, hors déploiement
-
-```bash
-set -a; source .env; set +a          # flux, jeton du blob, profil de notarisation
-npm run desktop:release              # dist (signe + notarise) puis publie
-git add desktop/package.json desktop/package-lock.json desktop/released.json
-git commit -m "chore(desktop): publish $(node -p "require('./desktop/package.json').version")"
-```
+`npm run desktop:release` reste une commande de récupération pour diagnostiquer
+la chaîne manuellement. Ce n'est plus le flux normal et elle exige alors de
+charger soi-même les secrets appropriés.
 
 ### Combien de temps, et faut-il rester devant
 
-**C'est un flux LOCAL avec une attente distante.** Apple ne fait que l'analyse :
-la signature, l'attente du verdict, **l'agrafage du ticket dans le bundle**, la
-fabrication du `.dmg` et du `.zip`, puis l'envoi de 485 Mo se passent tous sur ta
-machine. Le processus doit donc rester vivant du début à la fin — il n'y a aucun
-moment où on peut le lâcher et récupérer le résultat plus tard.
+**C'est désormais un flux CI avec une attente distante.** La signature,
+l'attente du verdict Apple, **l'agrafage du ticket dans le bundle**, la
+fabrication du `.dmg` et du `.zip`, puis l'envoi tournent sur le runner GitHub
+macOS. Le poste du mainteneur peut dormir ; `npm run deploy` suit seulement le
+workflow et affiche son résultat.
 
 Mesuré sur la première vraie publication (0.9.2) :
 
@@ -153,17 +143,10 @@ La toute première soumission avait pris 25 minutes et fini sur un `HTTP 500` :
 c'était Apple qui allait mal ce jour-là, pas la norme. Le binaire, lui, avait été
 accepté.
 
-**Donc oui, le Mac doit rester éveillé et connecté** pendant ces dix minutes.
-`deploy.sh` enveloppe les deux commandes dans `caffeinate -i`, ce qui couvre la
-veille d'inactivité — **mais pas le couvercle rabattu**, qui endort la machine
-quoi qu'il arrive. S'il s'endort au milieu, l'attente casse et il faut
-recommencer.
-
 Ce n'est pas à chaque déploiement, et c'est tout l'objet de l'empreinte : la
 plupart des livraisons ne touchent pas à la coquille et sautent l'étape. Si ça
-devenait quand même gênant, la seule façon de ne plus immobiliser ton Mac est un
-runner **macOS** en CI — ses secrets restent dans le gestionnaire de secrets de
-l'instance, jamais dans ce dépôt.
+échoue, le cœur et le web déjà publiés restent valides ; le flux desktop conserve
+son manifeste précédent jusqu'à une relance réussie.
 
 ---
 

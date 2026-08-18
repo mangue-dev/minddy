@@ -119,31 +119,35 @@ describe("un `core.hooksPath` posé sur le dépôt principal", () => {
     15_000,
   );
 
-  it("ne s'applique PAS à notre fin de tour, qui est de la plomberie", async () => {
-    const host = localHost(
-      layoutForCurrentRepo(path.join(root, "run"), worktree, path.join(root, "oc")),
-    );
-    const prepared = await prepareCurrentRepo(host, {
-      runId: RUN_ID,
-      authUrl: `file://${origin}`,
-      workBranch: "travail-agent",
-    });
+  it(
+    "ne s'applique PAS à notre fin de tour, qui est de la plomberie",
+    async () => {
+      const host = localHost(
+        layoutForCurrentRepo(path.join(root, "run"), worktree, path.join(root, "oc")),
+      );
+      const prepared = await prepareCurrentRepo(host, {
+        runId: RUN_ID,
+        authUrl: `file://${origin}`,
+        workBranch: "travail-agent",
+      });
 
-    const before = traceLines();
-    const pushed = await commitTurnAndPush(host, {
-      runId: RUN_ID,
-      authUrl: `file://${origin}`,
-      workBranch: "travail-agent",
-      message: "feat(MIN-362): un tour de l'agent",
-      committer: COMMITTER,
-      fallbackParent: prepared.parent,
-      scope: { paths: ["b.txt"], carried: [] },
-    });
+      const before = traceLines();
+      const pushed = await commitTurnAndPush(host, {
+        runId: RUN_ID,
+        authUrl: `file://${origin}`,
+        workBranch: "travail-agent",
+        message: "feat(MIN-362): un tour de l'agent",
+        committer: COMMITTER,
+        fallbackParent: prepared.parent,
+        scope: { paths: ["b.txt"], carried: [] },
+      });
 
-    expect(pushed.committed, "le tour n'a rien commité : le test ne prouve rien").toBe(true);
-    expect(
-      traceLines(),
-      "le `pre-commit` de l'utilisateur s'est exécuté sur un commit de l'agent",
-    ).toBe(before);
-  });
+      expect(pushed.committed, "le tour n'a rien commité : le test ne prouve rien").toBe(true);
+      expect(
+        traceLines(),
+        "le `pre-commit` de l'utilisateur s'est exécuté sur un commit de l'agent",
+      ).toBe(before);
+    },
+    15_000,
+  );
 });

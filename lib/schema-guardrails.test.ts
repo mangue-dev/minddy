@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { BASELINE_MIGRATION, canonicalSql } from "@/test/sql-migrations";
 
 /**
  * Le garde-fou du schéma : ce qui a été durci une fois doit le rester.
@@ -29,8 +30,8 @@ import { describe, expect, it } from "vitest";
 const ROOT = join(import.meta.dirname, "..");
 const MIGRATIONS = join(ROOT, "supabase", "migrations");
 
-/** Le dernier balai — MIN-338. Tout fichier APRÈS lui est soumis aux règles. */
-const SWEEP = "20261220090000";
+/** La baseline intègre le dernier balai. Tout fichier APRÈS elle est soumis aux règles. */
+const SWEEP = BASELINE_MIGRATION.split("_")[0];
 
 /**
  * Les seules `security definer` que `authenticated` doit pouvoir exécuter :
@@ -95,7 +96,8 @@ function statementsOf(sql: string): string[] {
 }
 
 function parse(file: string, sql: string): Migration {
-  return { version: file.split("_")[0], file, sql, statements: statementsOf(sql) };
+  const canonical = canonicalSql(sql);
+  return { version: file.split("_")[0], file, sql: canonical, statements: statementsOf(canonical) };
 }
 
 const migrations: Migration[] = readdirSync(MIGRATIONS)
@@ -114,9 +116,15 @@ function projectScopedTables(all: Migration[], upTo: string): Set<string> {
   const tables = new Set<string>();
   for (const m of all) {
     if (m.version > upTo) break;
+    // Le baseline est un dump pg_dump : ses CREATE TABLE contiennent des
+    // expressions riches que le petit découpeur d'instructions n'a pas à
+    // comprendre. La borne `);` reste en revanche stable.
+    const creates =
+      /create table (?:if not exists )?(?:public\.)?(\w+)\s*\(([\s\S]*?)\);/gi;
+    for (const create of m.sql.matchAll(creates)) {
+      if (/\bproject_id\b/i.test(create[2])) tables.add(create[1]);
+    }
     for (const st of m.statements) {
-      const create = /^create table (?:if not exists )?(?:public\.)?(\w+)\s*\(/i.exec(st);
-      if (create && /\bproject_id\b/i.test(st)) tables.add(create[1]);
       const alter = /^alter table (?:public\.)?(\w+)\b/i.exec(st);
       if (alter && /\badd column\b[\s\S]*\bproject_id\b/i.test(st)) tables.add(alter[1]);
     }
@@ -252,6 +260,10 @@ describe("garde-fou du schéma", () => {
     // Si la constante ne désigne plus rien, tout le reste passerait au vert en
     // n'inspectant aucun fichier.
     expect(migrations.some((m) => m.version === SWEEP)).toBe(true);
+  });
+
+  it("la baseline permet d'identifier les tables cloisonnées par projet", () => {
+    expect(projectScopedTables(migrations, SWEEP)).toContain("issues");
   });
 
   it("toute policy vise explicitement un rôle, jamais `public` ni `anon`", () => {

@@ -4,6 +4,9 @@
 # next.js
 /.next/
 /out/
+/.release/
+/.release-test*/
+/.desktop-release/
 next-env.d.ts
 
 # production

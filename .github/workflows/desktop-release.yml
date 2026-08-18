@@ -1,0 +1,120 @@
+name: Public macOS release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version du cœur déjà publiée (sans préfixe v)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: public-macos-release
+  cancel-in-progress: false
+
+jobs:
+  desktop:
+    name: Sign, notarize and attach macOS v${{ inputs.version }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    environment: public-release
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: v${{ inputs.version }}
+          persist-credentials: false
+
+      - name: Validate core release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          test "$(node -p "require('./package.json').version")" = "$RELEASE_VERSION"
+          test "$(node -p "require('./desktop/package.json').version")" = "$RELEASE_VERSION"
+          gh release view "v$RELEASE_VERSION" >/dev/null
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: npm --prefix desktop ci --ignore-scripts
+
+      - name: Prepare Apple API key
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          test -n "$APPLE_API_KEY_P8"
+          printf '%s' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Build, sign and notarize
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          MINDDY_DESKTOP_FEED_URL: ${{ secrets.PUBLIC_DESKTOP_FEED_URL }}
+        run: npm --prefix desktop run dist
+
+      # publish-desktop vérifie signature, ticket agrafé et manifeste avant le
+      # premier octet, puis publie latest-mac.yml en dernier.
+      - name: Verify and publish public update feed
+        env:
+          MINDDY_DESKTOP_FEED_URL: ${{ secrets.PUBLIC_DESKTOP_FEED_URL }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN }}
+        run: node scripts/publish-desktop.mjs
+
+      - name: Stage public desktop artifacts
+        run: |
+          mkdir .desktop-release
+          find desktop/release -maxdepth 1 -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.blockmap' -o -name 'latest-mac.yml' \) -exec cp {} .desktop-release/ \;
+          cd .desktop-release
+          shasum -a 256 * > SHA256SUMS-macOS
+
+      - name: Attest desktop artifacts
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: .desktop-release/*
+
+      - name: Attach to core release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: gh release upload "v$RELEASE_VERSION" .desktop-release/*
+
+      # Le relevé versionné alimente la prochaine détection automatique de
+      # `npm run deploy`. Il est écrit seulement après publication réussie.
+      - name: Record published desktop fingerprint
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          cp desktop/released.json "$RUNNER_TEMP/released.json"
+          git fetch origin main
+          git checkout -B main origin/main
+          cp "$RUNNER_TEMP/released.json" desktop/released.json
+          git add desktop/released.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -s -m "chore(desktop): record public release $RELEASE_VERSION"
+          git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"
+          git push origin main
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-release-${{ inputs.version }}
+          path: .desktop-release/
+          if-no-files-found: ignore
+          retention-days: 30

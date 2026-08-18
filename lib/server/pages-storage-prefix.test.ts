@@ -1,7 +1,6 @@
-import { readdirSync, readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { pageFileStoragePrefix } from "@/lib/page-files";
+import { canonicalSql, readBaseline } from "@/test/sql-migrations";
 
 /**
  * L'INVARIANT des fichiers de page, tenu sur la seule chose qui l'applique
@@ -22,23 +21,11 @@ import { pageFileStoragePrefix } from "@/lib/page-files";
  * repris celle de MIN-124 « à l'identique ».
  */
 
-const DIR = path.join(process.cwd(), "supabase", "migrations");
-const POLICY = '"attachments insert"';
-
-/** La dernière migration qui crée la policy — l'ordre des fichiers EST l'ordre
-    d'application, et c'est la dernière qui a le dernier mot en base. */
 function currentPolicySql(): string {
-  const files = readdirSync(DIR)
-    .filter((name) => name.endsWith(".sql"))
-    .sort()
-    .filter((name) =>
-      readFileSync(path.join(DIR, name), "utf8").includes(`create policy ${POLICY}`)
-    );
-  const last = files.at(-1);
-  if (!last) throw new Error("aucune migration ne crée la policy `attachments insert`");
-  const sql = readFileSync(path.join(DIR, last), "utf8");
-  const start = sql.indexOf(`create policy ${POLICY}`);
-  return sql.slice(start);
+  const sql = canonicalSql(readBaseline());
+  const start = sql.indexOf("create policy attachments insert");
+  if (start < 0) throw new Error("la baseline ne crée pas la policy `attachments insert`");
+  return sql.slice(start, sql.indexOf(";", start));
 }
 
 describe("le préfixe des fichiers de page", () => {

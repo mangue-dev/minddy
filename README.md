@@ -57,9 +57,14 @@ pnpm desktop:dev  # run the optional macOS shell
 - **Data and auth:** Supabase Postgres, Auth, Storage, and Realtime.
 - **Agent integration:** OAuth 2.1 MCP endpoint and an optional Vercel Sandbox
   code agent.
-- **Deployment:** use the hosting and release process appropriate for your
-  instance. `pnpm deploy` is an optional local release helper; adapt its branch
-  and hosting conventions to your instance.
+- **Deployment:** `pnpm deploy` is the interactive maintainer entry point. It
+  detects whether to release the public core, deploy the Minddy Cloud web app,
+  and publish macOS, with automatic, all, and custom modes. Self-hosters should
+  adapt its `production`/Vercel conventions to their own hosting.
+
+Public releases are distinct from deployments. Their SemVer/tag policy,
+artifacts, checksums, migrations, CI provenance, macOS path, and rollback
+procedure are documented in [docs/releases.md](docs/releases.md).
 
 The CI workflow is the source of truth for checks. It runs the public-repository
 check, lint, typecheck, desktop bundle build, tests, and dependency audit. See

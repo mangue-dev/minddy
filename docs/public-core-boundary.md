@@ -16,7 +16,7 @@ consommateur est l'équipe qui opère `minddy.app` doit vivre hors de ce dépôt
 | Alertes brrr de nouvelle inscription et de budget plateforme | Exploitation Minddy Cloud | Dépôt privé des opérations cloud | Retirées. Elles ne sont pas les notifications affichées aux utilisateurs de Minddy. |
 | Stripe, IA de plateforme et leurs routes de facturation | Module commercial optionnel | Configuration de l'instance / module commercial | Conservé à titre optionnel. Les drapeaux `MINDDY_MANAGED_*` restent désactivés sans configuration complète. |
 | Crons de routines, automatisations, rétention, feedback, synchronisation de facturation | Produit ou module commercial | Cœur public / module commercial | Conservés : ils réalisent des fonctions demandées par les utilisateurs. Une plateforme les planifie selon son propre déploiement. |
-| `deploy.sh` et publication de l'app de bureau | Administrateur de l'instance | Cœur public | Conservés : aides locales de release, sans secret ni endpoint d'administration embarqué. |
+| `deploy.sh` et publication de l'app de bureau | Administrateur de l'instance | Cœur public | Conservés : un assistant unique orchestre des chaînes CI isolées pour le cœur, le Cloud et le desktop, sans secret personnel ni endpoint d'administration embarqué. |
 | IndexNow, backfills, seed d'inbox, bucket d'avatars et extraction APNs | Exploitation ou maintenance ponctuelle Minddy Cloud | Dépôt privé des opérations cloud | Retirés du dépôt public. |
 | Documents d'audit, captures ou paramètres propres à une machine/production | Exploitation Minddy Cloud | Dépôt privé des opérations cloud ou suppression | Ignorés et refusés par la barrière de publication. |
 

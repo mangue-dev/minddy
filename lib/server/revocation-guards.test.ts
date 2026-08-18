@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
+import { canonicalSql, readBaseline } from "@/test/sql-migrations";
 
 /**
  * MIN-351 — CE QUI DOIT S'ARRÊTER QUAND ON EST RETIRÉ D'UN PROJET.
@@ -209,22 +208,13 @@ describe("GET /api/notifications", () => {
 // Les gardes qui vivent en SQL
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** La dernière migration qui (re)définit cet objet : c'est elle qui fait foi. */
-function latestMigrationDefining(needle: string): string {
-  const dir = path.join(process.cwd(), "supabase/migrations");
-  const hits = readdirSync(dir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort()
-    .filter((f) => readFileSync(path.join(dir, f), "utf8").includes(needle));
-  expect(hits.length).toBeGreaterThan(0);
-  return readFileSync(path.join(dir, hits[hits.length - 1]), "utf8");
-}
+const baselineSql = canonicalSql(readBaseline());
 
 /** Le corps d'une policy, de son `create policy` au `;` qui la ferme. */
 function policyBody(sql: string, name: string): string {
   const start = sql.indexOf(`create policy ${name} `);
   expect(start).toBeGreaterThanOrEqual(0);
-  const end = sql.indexOf("\n);", start);
+  const end = sql.indexOf(";", start);
   return sql.slice(start, end);
 }
 
@@ -232,8 +222,8 @@ describe("policies (SQL)", () => {
   it.each(["comments_update", "comments_delete"])(
     "%s exige l'appartenance au projet du parent, pas seulement l'auteur",
     (name) => {
-      const body = policyBody(latestMigrationDefining(`create policy ${name} `), name);
-      expect(body).toContain("author_id = (select auth.uid())");
+      const body = policyBody(baselineSql, name);
+      expect(body).toMatch(/author_id = \( select auth\.uid\(\)(?: as uid)?\)/);
       expect(body).toContain("public.can_access_comment_parent(");
     },
   );
@@ -241,7 +231,7 @@ describe("policies (SQL)", () => {
   it.each(["comments_insert", "page_comments_insert"])(
     "%s épingle via_assistant et via_mcp à false",
     (name) => {
-      const body = policyBody(latestMigrationDefining(`create policy ${name} `), name);
+      const body = policyBody(baselineSql, name);
       expect(body).toContain("via_assistant = false");
       expect(body).toContain("via_mcp = false");
     },
@@ -252,7 +242,7 @@ describe("policies (SQL)", () => {
     "members_receive_page_presence",
     "members_track_page_presence",
   ])("%s ne caste plus le topic à cru", (name) => {
-    const body = policyBody(latestMigrationDefining(`create policy ${name} `), name);
+    const body = policyBody(baselineSql, name);
     // Un topic malformé rendrait NULL au lieu de LEVER — et une branche qui
     // lève fait tomber la policy entière, donc tout le temps réel de la session.
     expect(body).toContain("public.can_access_project(public.topic_uuid(realtime.topic()))");
@@ -260,10 +250,10 @@ describe("policies (SQL)", () => {
   });
 
   it("topic_uuid rend NULL au lieu de lever", () => {
-    const sql = latestMigrationDefining("create or replace function public.topic_uuid");
-    expect(sql).toContain("exception when others then\n  return null;");
+    const sql = baselineSql;
+    expect(sql).toContain("exception when others then return null;");
     // Appelée depuis une policy : sans `execute`, l'appel lève et la policy
     // tombe avec lui (MIN-329).
-    expect(sql).toContain("grant execute on function public.topic_uuid(text) to authenticated");
+    expect(sql).toMatch(/grant (?:execute|all) on function public\.topic_uuid\((?:topic )?text\) to authenticated/);
   });
 });

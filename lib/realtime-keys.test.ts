@@ -1,6 +1,5 @@
-import { readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { canonicalSql, readBaseline } from "@/test/sql-migrations";
 
 import {
   keysForProjectEvent,
@@ -116,15 +115,11 @@ describe("keysForProjectEvent — pages", () => {
    type-check, ni à l'exécution. Le seul moyen de la revoir venir est de
    confronter l'aiguilleur à la liste réelle des triggers. */
 
-const MIGRATIONS = path.join(process.cwd(), "supabase", "migrations");
+const baselineSql = canonicalSql(readBaseline());
 
 /** Toutes les tables dont un trigger émet sur un topic `project:{id}`. */
 function projectBroadcastTables(): string[] {
-  const sql = readdirSync(MIGRATIONS)
-    .filter((name) => name.endsWith(".sql"))
-    .sort()
-    .map((name) => readFileSync(path.join(MIGRATIONS, name), "utf8"))
-    .join("\n");
+  const sql = baselineSql;
 
   const projectFns = new Set<string>();
   const fnRe =
@@ -135,7 +130,7 @@ function projectBroadcastTables(): string[] {
 
   const tables = new Set<string>();
   const trigRe =
-    /create trigger\s+\w+\s+after[\s\S]*?on public\.(\w+)[\s\S]*?execute function public\.(\w+)\s*\(\s*\)/gi;
+    /create (?:or replace )?trigger\s+\w+\s+after[\s\S]*?on public\.(\w+)[\s\S]*?execute function public\.(\w+)\s*\(\s*\)/gi;
   for (const m of sql.matchAll(trigRe)) {
     if (projectFns.has(m[2])) tables.add(m[1]);
   }
@@ -177,10 +172,7 @@ describe("aucune table diffusée sur project:{id} n'est sans réponse", () => {
    document à tous les membres du projet, à chaque seconde. */
 
 describe("le trigger des pages", () => {
-  const sql = readFileSync(
-    path.join(MIGRATIONS, "20261231090000_pages_realtime.sql"),
-    "utf8"
-  );
+  const sql = baselineSql;
 
   it("retranche le corps et ses deux dérivées de la charge utile", () => {
     for (const column of ["content", "search_text", "search_tsv"]) {
@@ -191,7 +183,9 @@ describe("le trigger des pages", () => {
   it("ne déclenche pas sur une écriture du corps", () => {
     // Le `when (…)` de l'UPDATE ne nomme QUE des colonnes visibles : ni
     // `content`, ni `version`, ni les colonnes d'horodatage d'écriture.
-    const when = /when \(([\s\S]*?)\)\s*execute function/.exec(sql)?.[1] ?? "";
+    const triggerStart = sql.indexOf("create or replace trigger pages_broadcast_update");
+    const trigger = sql.slice(triggerStart, sql.indexOf(";", triggerStart));
+    const when = /when \(([\s\S]*?)\)\s*execute function/.exec(trigger)?.[1] ?? "";
     expect(when).not.toBe("");
     for (const column of ["content", "version", "updated_at", "updated_by"]) {
       expect(when).not.toContain(column);

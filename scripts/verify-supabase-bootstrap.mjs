@@ -79,6 +79,8 @@ with checks as (
   union all
   select 'policies', array(select unnest(array[${policyNames.map((value) => `'${value}'`).join(",")}]) except select policyname from pg_policies where schemaname = 'storage' and tablename = 'objects')::text[]
   union all
+  select 'realtime_policies', array(select unnest(array['members_receive_broadcasts','members_receive_page_presence','members_track_page_presence']) except select policyname from pg_policies where schemaname = 'realtime' and tablename = 'messages')::text[]
+  union all
   select 'vector_extension', case when exists (select 1 from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'vector' and n.nspname = 'extensions') then array[]::text[] else array['vector@extensions']::text[] end
   union all
   select 'realtime_publication', case when exists (select 1 from pg_publication where pubname = 'supabase_realtime') then array[]::text[] else array['supabase_realtime']::text[] end

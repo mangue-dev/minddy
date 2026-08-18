@@ -11,6 +11,7 @@ import {
   parseEnv,
 } from "./bootstrap-supabase.mjs";
 import { checkLocalConfig, verificationSql } from "./verify-supabase-bootstrap.mjs";
+import { BASELINE_VERSION } from "./repair-squashed-migration-history.mjs";
 
 test("le baseline est compact, trié et porte l'extension vector", () => {
   const migrations = listMigrations();
@@ -18,6 +19,7 @@ test("le baseline est compact, trié et porte l'extension vector", () => {
   assert.deepEqual([...migrations].sort(), migrations);
   assert.equal(migrations[0], "20270106090000_baseline.sql");
   assert.equal(migrations[1], "20270106091000_initial_data.sql");
+  assert.equal(migrations[0].split("_")[0], BASELINE_VERSION);
 });
 
 test("le fichier d'environnement est complété sans remplacer les valeurs existantes", () => {
@@ -53,4 +55,5 @@ test("le mode distant exige une URL de base et le vérificateur couvre les invar
   assert.match(sql, /vector_extension/);
   assert.match(sql, /attachments insert/);
   assert.match(sql, /supabase_realtime/);
+  assert.match(sql, /members_receive_page_presence/);
 });

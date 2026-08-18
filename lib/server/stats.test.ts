@@ -1,7 +1,6 @@
-import { readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getUserStats } from "@/lib/server/stats";
+import { canonicalSql, readBaseline } from "@/test/sql-migrations";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -91,32 +90,14 @@ describe("getUserStats — durées par effort", () => {
 });
 
 describe("get_cycle_stats (SQL) — l'autre moitié du contrat", () => {
-  /** La dernière migration qui (re)définit get_cycle_stats : c'est elle qui fait
-   *  foi en base, `create or replace` réécrivant la fonction entière. */
-  function latestCycleStatsMigration(): string {
-    const dir = path.join(process.cwd(), "supabase/migrations");
-    const hits = readdirSync(dir)
-      .filter((f) => f.endsWith(".sql"))
-      .sort()
-      .filter((f) =>
-        readFileSync(path.join(dir, f), "utf8").includes(
-          "create or replace function public.get_cycle_stats",
-        ),
-      );
-    expect(hits.length).toBeGreaterThan(0);
-    return readFileSync(path.join(dir, hits[hits.length - 1]), "utf8");
-  }
+  const sql = canonicalSql(readBaseline());
 
   it("agrège les durées par percentile_cont(0.5), pas par avg", () => {
-    const sql = latestCycleStatsMigration();
-
     expect(sql).toContain("percentile_cont(0.5) within group (order by secs)");
     expect(sql).not.toContain("avg(secs)");
   });
 
   it("expose la clé median_seconds que le mapping lit", () => {
-    const sql = latestCycleStatsMigration();
-
     expect(sql).toContain("'median_seconds'");
     expect(sql).not.toContain("'avg_seconds'");
   });
