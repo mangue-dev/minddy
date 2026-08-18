@@ -37,3 +37,19 @@ Pour ajouter une capacité, décider d'abord sa ligne dans cet inventaire. Une
 interface d'administration d'instance est publique si elle est protégée et ne
 dépend d'aucun secret Minddy Cloud ; les alertes et outils propres à l'opérateur
 restent dans le dépôt privé des opérations cloud.
+
+## Destination Minddy Cloud
+
+Le périmètre d'exploitation est le dépôt GitHub privé
+`mangue-dev/minddy-cloud-ops`. Il ne reçoit que la configuration déclarative,
+les alertes et la supervision internes, les backfills Cloud, les procédures
+d'incident et les intégrations support/CRM. Son contrat épingle un SHA complet
+de ce cœur, l'arbre de migrations, les noms de variables, les jobs planifiés et
+les endpoints opérateur ; sa provenance relie chaque production aux deux SHA.
+
+Cette désignation est informative, jamais une dépendance de build ou
+d'exécution : un clone public ne lit pas ce dépôt, ne connaît aucun de ses
+secrets et conserve toutes les fonctionnalités nécessaires à l'auto-hébergement.
+Toute fonction produit ou administration générique née d'un besoin Cloud est
+d'abord ajoutée ici, dans le cœur public, puis seulement consommée par le dépôt
+d'exploitation.

@@ -138,6 +138,14 @@ binaire déployé reste propre à l'environnement, car les variables
 son identifiant Vercel au lieu de présenter son build configuré comme un
 artefact générique auto-hébergeable.
 
+Après chaque déploiement Cloud réussi, l'opérateur enregistre dans le dépôt
+privé `mangue-dev/minddy-cloud-ops` un manifeste de provenance immuable : SHA et
+version de ce cœur, arbre et tête des migrations, SHA de configuration privée,
+empreintes du contrat/configuration, identifiant du déploiement Vercel et projet
+Supabase. Le manifeste ne contient ni valeur d'environnement ni donnée client.
+Le workflow public s'arrête au verdict Vercel et ne clone jamais le dépôt privé :
+ce journal complète la preuve d'exploitation sans devenir une dépendance du cœur.
+
 ## Migrations, mise à jour et rollback
 
 Le manifeste et `UPDATE.md` énumèrent le diff de migrations depuis le tag
