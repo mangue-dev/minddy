@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   getIssue,
@@ -802,7 +802,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "List every minddy project the API key's owner can access (owned or member). " +
         "Returns each project's id (UUID to pass as project_id elsewhere), name, key " +
         "(the issue-identifier prefix, e.g. 'MIND' in 'MIND-42') and your role.",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: READ_ONLY,
     },
     async (_args, extra) => {
@@ -847,7 +847,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Fetch one project's details: name, key, your role, and the count of open " +
         "issues (statuses other than done/canceled/duplicate).",
-      inputSchema: { project_id: PROJECT_ID },
+      inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -889,7 +889,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "adds assignee/objective/category names and a truncated description; " +
         "'concise' (default) keeps rows compact. has_more tells you to paginate " +
         "with offset.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         query: z
           .string()
@@ -910,7 +910,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         limit: z.number().int().min(1).max(200).optional().describe("Default 50."),
         offset: z.number().int().min(0).optional(),
         response_format: z.enum(["concise", "detailed"]).optional(),
-      },
+      }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -957,7 +957,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "the users' own words: when an issue carries one, read it with " +
         "minddy_get_feedback before deciding what to build, especially if it has " +
         "comments — people qualify their request there.",
-      inputSchema: { project_id: PROJECT_ID, issue: ISSUE_REF },
+      inputSchema: z.object({ project_id: PROJECT_ID, issue: ISSUE_REF }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -1011,7 +1011,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "Use it to review a PR, explain what it changes, or act on the review feedback. " +
         "Fails if the issue has no agent-opened PR, or if the project has no linked " +
         "GitHub repo.",
-      inputSchema: { project_id: PROJECT_ID, issue: ISSUE_REF },
+      inputSchema: z.object({ project_id: PROJECT_ID, issue: ISSUE_REF }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args, extra) => {
@@ -1179,7 +1179,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "issue is refused, and so is an issue that already carries a live (draft or open) " +
         "pull request — several TERMINAL pull requests on one issue are normal. Re-linking " +
         "the same PR to the same issue is not an error, it just reports 'already: true'.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
         pull_request: z
@@ -1188,7 +1188,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "The pull request to attach: its number (42), '#42', '!42' for a GitLab " +
               "merge request, or its full URL on the forge."
           ),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -1248,7 +1248,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "List a project's members (owner included) with their user_id, display name " +
         "and role. Use user_id for assignee_id in create/update tools.",
-      inputSchema: { project_id: PROJECT_ID },
+      inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -1270,7 +1270,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "List a project's categories (labels). Read-only: assign them to issues " +
         "via category_ids in minddy_create_issue / minddy_update_issues.",
-      inputSchema: { project_id: PROJECT_ID },
+      inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -1301,7 +1301,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "minddy_get_resource). " +
         "minddy_get_objective opens ONE of them in full: the whole description, " +
         "its issues, and its comment thread.",
-      inputSchema: { project_id: PROJECT_ID },
+      inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -1421,13 +1421,13 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "actors. Read it before commenting on an objective or reporting on it: " +
         "the thread is where the team already said what it thinks, and the " +
         "issue list is what the progress bar is actually made of.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         objective_id: z
           .string()
           .uuid()
           .describe("Objective UUID (from minddy_list_objectives)."),
-      },
+      }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -1589,7 +1589,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "Returns the created issue (and sub-issues) with identifiers, plus " +
         "`categories_unmatched` and `relations_failed` when something you asked " +
         "for did not land.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         title: z.string().min(1),
         description: z
@@ -1682,7 +1682,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "categories, and the relations that order them. Incompatible with " +
               "parent (nesting is one level max)."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -1843,7 +1843,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "call — you already read it, nobody else will. Relations are not fields: " +
         "wire them with minddy_link_issues. " +
         "Returns per-issue failures, so check `failed` in the result.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issues: z.array(ISSUE_REF).min(1).max(50),
         fields: z
@@ -1878,7 +1878,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               ),
           })
           .describe("At least one field."),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -1996,7 +1996,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "('- [ ]'), in_progress ('- [~]'), completed ('- [x]'), cancelled ('- [-]'). " +
         "All-or-nothing: an invalid index rejects the whole batch. Returns the " +
         "refreshed plan_tasks and plan_progress.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
         tasks: z
@@ -2008,7 +2008,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           )
           .min(1)
           .max(50),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -2072,7 +2072,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "and drops everything you don't resend; to reword something already " +
         "written, use minddy_edit_issue_text. Returns the refreshed plan_tasks " +
         "and plan_progress.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
         markdown: z
@@ -2092,7 +2092,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "An unknown heading is an error, not a new section — read the plan " +
               "with minddy_get_issue first."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -2156,7 +2156,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "stale old_string fails loudly. To ADD to a plan use minddy_append_to_plan, " +
         "to flip a checkbox minddy_update_plan_task. Returns a unified diff of what " +
         "changed (plus the refreshed plan_tasks when editing a plan).",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
         field: z
@@ -2179,7 +2179,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "Replace EVERY occurrence instead of requiring a unique match " +
               "(default false). Use it for a term repeated throughout the text."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -2256,7 +2256,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "key's name with an '(mcp)' marker), not the key's owner. To attach a " +
         "resource to the comment, call minddy_add_resource with the returned " +
         "comment id.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
         body: z
@@ -2266,7 +2266,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
               "at most, no headings."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -2300,7 +2300,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "`page_id` alone (get it from minddy_list_pages). The three are " +
         "exclusive: send exactly one. Either way it shows as the same pill in " +
         "the app, and minddy_get_issue lists it.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
         comment_id: z
@@ -2350,7 +2350,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "(minddy_list_pages). Its title is read server-side and stays in " +
               "sync when the page is renamed. Leave out for a file or a link."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -2522,7 +2522,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "also embed a file inline (base64): images come back viewable, text-ish " +
         "files as readable text, anything else as a blob. Inline content is capped " +
         "at 10 MB; larger files stay URL-only.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         resource_id: z
           .string()
@@ -2535,7 +2535,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "Embed the file bytes in the result (base64), not just the URL. " +
               "Default false. Ignored for links and for files over 10 MB."
           ),
-      },
+      }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -2668,7 +2668,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "what makes a backlog orderable, and nothing else records it. On issues " +
         "you are CREATING, don't call this after the fact: minddy_create_issue " +
         "takes `relations` in the same call, siblings included.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issue: ISSUE_REF,
         relation: z
@@ -2679,7 +2679,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .boolean()
           .optional()
           .describe("Remove the relation instead of adding it."),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -2753,7 +2753,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "of zero forever: pass objective_id in minddy_create_issue, or " +
         "minddy_update_issues { fields: { objective_id } } on issues that " +
         "already exist.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         name: z.string().min(1),
         description: z
@@ -2776,7 +2776,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           ),
         target_date: z.string().optional().describe("ISO 8601 date."),
         color: z.string().optional().describe("Hex color, e.g. '#6b7280'."),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -2800,7 +2800,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Update an objective's fields. Only the fields you send change; null " +
         "clears lead_user_id / target_date / color.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         objective_id: z.string().uuid(),
         name: z.string().min(1).optional(),
@@ -2809,7 +2809,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         lead_user_id: z.string().nullable().optional(),
         target_date: z.string().nullable().optional(),
         color: z.string().nullable().optional(),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -2857,7 +2857,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "The timeline shows the agent as the author (this API key's name with an " +
         "'(mcp)' marker), not the key's owner. To attach a resource to the " +
         "comment, call minddy_add_resource with the returned comment id.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         objective_id: z
           .string()
@@ -2870,7 +2870,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
               "at most, no headings."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -2924,7 +2924,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "not tied to a project. Also returns `rev`, the version: pass it back to " +
         "minddy_set_scratchpad / minddy_update_scratchpad_task so a concurrent " +
         "edit by the user is never overwritten.",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: READ_ONLY,
     },
     async (_args, extra) => {
@@ -2963,7 +2963,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "titles. An empty string clears the scratchpad. ALWAYS pass `expected_rev` " +
         "(the `rev` from your minddy_get_scratchpad): the write is rejected if the " +
         "note changed meanwhile so you never clobber the user's concurrent edits.",
-      inputSchema: {
+      inputSchema: z.object({
         content: z
           .string()
           .max(MAX_SCRATCHPAD_LENGTH)
@@ -2980,7 +2980,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "longer matches (the user edited meanwhile) the write is rejected; " +
               "re-read and reapply. Omit only for an unconditional overwrite."
           ),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -3048,7 +3048,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "all-or-nothing: a single out-of-range index rejects the whole call. Pass " +
         "`expected_rev` (the `rev` from the get whose indices you're using) so a " +
         "concurrent edit can't make you flip the wrong task.",
-      inputSchema: {
+      inputSchema: z.object({
         tasks: z
           .array(
             z.object({
@@ -3073,7 +3073,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "using. If the note changed since, the indices may point elsewhere, " +
               "so the call is rejected; re-read for fresh indices and retry."
           ),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -3135,7 +3135,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "existing task's state use minddy_update_scratchpad_task; to edit task " +
         "text or remove tasks use minddy_set_scratchpad. Use `depth` to nest: a " +
         "task at depth 1 becomes a sub-task of the task right before it.",
-      inputSchema: {
+      inputSchema: z.object({
         tasks: z
           .array(
             z.object({
@@ -3168,7 +3168,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .describe(
             "Exact text of a '##' section heading to append under. Omit to add at the end of the note."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -3260,12 +3260,12 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "respected). Points are an internal capacity unit: talk to humans in " +
         "effort sizes or percentages, never raw points. Reading also reconciles " +
         "the timeline (cycle creation, rollover, one-shot auto-fill).",
-      inputSchema: {
+      inputSchema: z.object({
         which: z
           .enum(["current", "next", "previous"])
           .optional()
           .describe("Which cycle to read. Default: current."),
-      },
+      }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -3294,7 +3294,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "scoring ('prioritize UI fixes' → keyword/category boosts): they bias " +
         "the same deterministic engine, they NEVER force a pick. Weights default " +
         "to 1; boosts are additive score points (10–100 = mild–strong).",
-      inputSchema: {
+      inputSchema: z.object({
         priority_weight: z
           .number()
           .positive()
@@ -3322,7 +3322,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .array(z.object({ keyword: z.string().min(1), weight: z.number() }))
           .optional()
           .describe("Additive boost when the issue title contains the keyword."),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -3380,10 +3380,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "someone else later silently drops it from the cycle, and so does moving " +
         "it back to triage. The cycle is cross-project: call once per project to " +
         "add issues from several.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issues: z.array(ISSUE_REF).min(1).max(50),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -3432,10 +3432,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "Remove issues (1–50) of a project from the key owner's CURRENT cycle. " +
         "Assignment and status are untouched; the issues simply leave the cycle. " +
         "Issues that aren't in the owner's current cycle are reported in `failed`.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         issues: z.array(ISSUE_REF).min(1).max(50),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -3508,14 +3508,14 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "only when is_public AND review_state is 'published' AND status is not " +
         "'spam' — a 'pending' post is still in the AI review queue and nobody has " +
         "seen it yet, so don't tell the user their request is up.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         status: z
           .array(z.enum(FEEDBACK_POST_STATUSES))
           .optional()
           .describe("Only these public statuses. Omit for all."),
         limit: z.number().int().min(1).max(200).optional().describe("Default 50."),
-      },
+      }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -3564,7 +3564,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "`translated_language` says which language they are in — read the " +
         "translation when it matches the team's, exactly as the team's own view " +
         "does. `source_language` is the language of the request itself.",
-      inputSchema: { project_id: PROJECT_ID, feedback_post_id: z.string().uuid() },
+      inputSchema: z.object({ project_id: PROJECT_ID, feedback_post_id: z.string().uuid() }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -3663,7 +3663,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "the author (this API key's name with an '(mcp)' marker), not the key's owner. " +
         "To answer the person who submitted the request, where everyone reading it on " +
         "the board will see the reply, use minddy_respond_feedback instead.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         feedback_post_id: z.string().uuid(),
         body: z
@@ -3673,7 +3673,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "Markdown, SHORT: two or three sentences, 1000 characters at most, " +
               "no headings."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -3708,7 +3708,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "that issue on every transition — so setting it here is refused: move the " +
         "issue instead, with minddy_update_issues. To answer the person rather than " +
         "decide, use minddy_respond_feedback.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         feedback_post_id: z.string().uuid(),
         status: z
@@ -3723,7 +3723,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
           .enum(FEEDBACK_REVIEW_STATES)
           .optional()
           .describe("Publication queue: 'pending' or 'published'."),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -3785,7 +3785,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "follows that issue automatically. Fails if the post is already linked or is " +
         "a merged duplicate. Use minddy_link_feedback instead when an issue already " +
         "tracks the request.",
-      inputSchema: { project_id: PROJECT_ID, feedback_post_id: z.string().uuid() },
+      inputSchema: z.object({ project_id: PROJECT_ID, feedback_post_id: z.string().uuid() }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -3821,11 +3821,11 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "Link a feedback post to an EXISTING issue (the work is already tracked). The " +
         "post's public status immediately reflects the issue and follows its " +
         "transitions. Fails if the post is already linked or merged.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         feedback_post_id: z.string().uuid(),
         issue: ISSUE_REF,
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -3858,7 +3858,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       description:
         "Detach the issue currently linked to a feedback post (the post keeps its " +
         "last public status).",
-      inputSchema: { project_id: PROJECT_ID, feedback_post_id: z.string().uuid() },
+      inputSchema: z.object({ project_id: PROJECT_ID, feedback_post_id: z.string().uuid() }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -3888,7 +3888,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "For a " +
         "triage note nobody outside the team should read, use " +
         "minddy_add_feedback_comment instead.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         feedback_post_id: z.string().uuid(),
         response: z
@@ -3898,7 +3898,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "Public reply, shown on the board. SHORT: two or three sentences, " +
               "no headings."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -3936,7 +3936,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "options. public_url is the custom domain when the project has a VERIFIED " +
         "one, otherwise the /f/<token> URL: use it VERBATIM — a board is reached by " +
         "an opaque token and its URL cannot be derived from the project.",
-      inputSchema: { project_id: PROJECT_ID },
+      inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -3960,7 +3960,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "secret (that would break a live integration), it returns the current one or " +
         "creates the first. Put that secret in the app's server-side environment " +
         "(e.g. MINDDY_SSO_SECRET), never in client code, never in version control.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         enabled: z
           .boolean()
@@ -3994,7 +3994,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "Which shared view ids appear as tabs. The list replaces the current " +
             "selection; non-shared or foreign-project views are ignored."
           ),
-       },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -4064,7 +4064,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "creating one, to reuse the setup already in place instead of piling up " +
         "keys. Plaintext keys are NEVER listed — a key exists in clear only in the " +
         "minddy_create_integration result.",
-      inputSchema: { project_id: PROJECT_ID },
+      inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -4117,7 +4117,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "back when issues move; turn it on with minddy_configure_webhook rather " +
         "than polling. A 'feedback' key has none: what it submits lives on the " +
         "board, and it creates no issue.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         name: z
           .string()
@@ -4130,7 +4130,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             "'feedback' = submit user requests to the feedback board; " +
               "'issues' = create issues in triage."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -4180,7 +4180,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "carries the full receiver contract (headers, signature, payload, delivery " +
         "guarantees): implement the route against THAT. Read the current setup with " +
         "minddy_list_integrations.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         integration_id: z.string().uuid().describe("From minddy_list_integrations."),
         url: z
@@ -4207,7 +4207,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "for an app that pushes its own reports); 'all' = every issue of the " +
               "project. A 'feedback' key creates no issue, so it needs 'all'."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -4294,7 +4294,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "usage budget was exhausted, 'noRepo' = the repository was unlinked). Call " +
         "it before creating one, to adjust what is already scheduled instead of " +
         "stacking a second routine doing the same job.",
-      inputSchema: { project_id: PROJECT_ID },
+      inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -4335,7 +4335,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "under 'Routines', separately from agent runs. ONE run stops at 15% of the " +
         "owner's monthly usage budget by default, so a routine cannot silently " +
         "take the whole month (`max_spend_percent`). Requires a linked repository.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         prompt: z
           .string()
@@ -4414,7 +4414,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "lower it for one that runs every day (an inventory at 5). It " +
               "does not apply to owners running on their own API key."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -4452,7 +4452,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "one already scheduled. Pausing keeps the routine in the list, where the " +
         "user still reads its past runs; minddy_delete_routine takes it out of the " +
         "list altogether (to the trash). Get the id from minddy_list_routines.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         routine_id: z.string().uuid().describe("From minddy_list_routines."),
         prompt: z
@@ -4494,7 +4494,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
               "change when a run stopped on its cap and the user wants it to go " +
               "further — not the plan."
           ),
-      },
+      }),
       annotations: WRITE_IDEMPOTENT,
     },
     async (args, extra) => {
@@ -4538,10 +4538,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "To simply stop it from running while keeping it in the list, pass " +
         "enabled: false to minddy_update_routine instead. Confirm with the user " +
         "before deleting one they did not just create by mistake.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         routine_id: z.string().uuid().describe("From minddy_list_routines."),
-      },
+      }),
       annotations: { ...WRITE, destructiveHint: true },
     },
     async (args, extra) => {
@@ -4566,10 +4566,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
         "and a new key means redeploying whatever held the old one. Use it to clean " +
         "up a key you just created by mistake; otherwise confirm with the user " +
         "first. Get the id from minddy_list_integrations.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         integration_id: z.string().uuid().describe("From minddy_list_integrations."),
-      },
+      }),
       annotations: { ...WRITE, destructiveHint: true },
     },
     async (args, extra) => {

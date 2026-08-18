@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import type { ZodTypeAny } from "zod";
 import { registerMinddyTools } from "./tools";
 
@@ -32,7 +32,7 @@ export interface CatalogTool {
 interface RegisterConfig {
   title?: string;
   description?: string;
-  inputSchema?: Record<string, ZodTypeAny>;
+  inputSchema?: { shape: Record<string, ZodTypeAny> };
   annotations?: { readOnlyHint?: boolean };
 }
 
@@ -44,7 +44,7 @@ export function mcpToolCatalog(): CatalogTool[] {
   const tools: CatalogTool[] = [];
   const recorder = {
     registerTool(name: string, config: RegisterConfig) {
-      const schema = config.inputSchema ?? {};
+      const schema = config.inputSchema?.shape ?? {};
       tools.push({
         name,
         title: config.title,

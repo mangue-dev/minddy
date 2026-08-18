@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import type { AuthInfo } from "@modelcontextprotocol/server";
 import { ACCESS_TOKEN_PREFIX } from "@/lib/server/oauth/crypto";
 import { verifyOAuthAccessToken } from "@/lib/server/oauth/grants";
 

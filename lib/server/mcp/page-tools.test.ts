@@ -241,7 +241,7 @@ vi.mock("@/lib/server/project-access", () => ({
       : null,
 }));
 
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { registerPageTools } from "./page-tools";
 
 const ACTOR = "user-1";
@@ -269,7 +269,7 @@ async function call(
   const callback = callbacks.get(name);
   if (!callback) throw new Error(`${name} n'est pas enregistré`);
   const result = await callback(args, {
-    authInfo: { extra: { userId: ACTOR, keyId: "key-1" } },
+    http: { authInfo: { extra: { userId: ACTOR, keyId: "key-1" } } },
   });
   return {
     ok: !result.isError,

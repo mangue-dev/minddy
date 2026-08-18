@@ -20,8 +20,7 @@ const handler = createMcpHandler(
   {
     serverInfo: { name: "minddy", version: "1.0.0" },
     instructions: MCP_SERVER_INSTRUCTIONS,
-  },
-  { basePath: "/api", disableSse: true, maxDuration: 60 }
+  }
 );
 
 const authedHandler = withMcpAuth(handler, verifyMcpToken, { required: true });

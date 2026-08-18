@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import type { AuthInfo } from "@modelcontextprotocol/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess, type ProjectAccess } from "@/lib/server/project-access";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
@@ -35,13 +35,13 @@ export function fail(code: string, message: string): ToolResult {
   };
 }
 
-/** Extra passed through the SDK to the tools callbacks — only authInfo is useful to us. */
+/** Context passed through the SDK to tool callbacks — only authInfo is useful to us. */
 export interface ToolExtra {
-  authInfo?: AuthInfo;
+  http?: { authInfo?: AuthInfo };
 }
 
 export function getUserId(extra: ToolExtra): string | null {
-  const userId = extra.authInfo?.extra?.userId;
+  const userId = extra.http?.authInfo?.extra?.userId;
   return typeof userId === "string" ? userId : null;
 }
 
@@ -55,7 +55,7 @@ export function requireUser(
 ): { userId: string; keyId: string | null } | { error: ToolResult } {
   const userId = getUserId(extra);
   if (!userId) return { error: fail("unauthorized", "Missing or invalid API key.") };
-  const rawKeyId = extra.authInfo?.extra?.keyId;
+  const rawKeyId = extra.http?.authInfo?.extra?.keyId;
   const keyId = typeof rawKeyId === "string" ? rawKeyId : null;
   const rate = checkSessionRateLimit(userId, "mcp", RATE_LIMIT);
   if (!rate.allowed) {

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import {
   addPageCommentForAgent,
   appendToPageForAgent,
@@ -111,7 +111,7 @@ export function registerPageTools(server: McpServer): void {
         "tree is flat on purpose: parent_page_id " +
         "carries the nesting, rebuild it yourself (a page can be nested at any " +
         "depth). Then read one with minddy_get_page.",
-      inputSchema: { project_id: PROJECT_ID },
+      inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -144,7 +144,7 @@ export function registerPageTools(server: McpServer): void {
         "tokens and still misses what is buried three levels down. A title match " +
         "outranks a body match. Then open the page you picked with " +
         "minddy_get_page — the excerpt is a fragment, never the answer to quote.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         query: z
           .string()
@@ -160,7 +160,7 @@ export function registerPageTools(server: McpServer): void {
           .int()
           .optional()
           .describe("How many pages to return, 1–50 (default 20)."),
-      },
+      }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -207,7 +207,7 @@ export function registerPageTools(server: McpServer): void {
         "constraint is. Rewriting a passage under a thread settles a debate " +
         "nobody asked you to settle — answer it with minddy_add_page_comment " +
         "instead.",
-      inputSchema: { project_id: PROJECT_ID, page_id: PAGE_ID },
+      inputSchema: z.object({ project_id: PROJECT_ID, page_id: PAGE_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -238,7 +238,7 @@ export function registerPageTools(server: McpServer): void {
         "over a new root page: a flat wiki stops being read. Nothing is added to " +
         "the parent's body — parent_page_id IS the nesting, and the page shows up " +
         "in the sidebar tree.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         title: z
           .string()
@@ -265,7 +265,7 @@ export function registerPageTools(server: McpServer): void {
             "Nest the new page under this one (from minddy_list_pages). Omit for a " +
               "page at the root of the wiki."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -302,7 +302,7 @@ export function registerPageTools(server: McpServer): void {
         "body, pass the version you got from minddy_get_page: the write is then " +
         "refused (page_stale) if a human or another agent wrote the page " +
         "meanwhile, instead of silently overwriting them.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         page_id: PAGE_ID,
         markdown: BODY.optional().describe(
@@ -329,7 +329,7 @@ export function registerPageTools(server: McpServer): void {
           .nullable()
           .optional()
           .describe("New emoji icon; null clears it. Omit to leave it as it is."),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -361,7 +361,7 @@ export function registerPageTools(server: McpServer): void {
         "minddy_update_page, which rewrites the whole body. Send ONLY what is new. " +
         "The append is refused (page_stale) if someone wrote the page between your " +
         "read and this call, so nothing of theirs is lost.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         page_id: PAGE_ID,
         markdown: BODY.describe(
@@ -369,7 +369,7 @@ export function registerPageTools(server: McpServer): void {
             "list, a task list…). ONLY what is new — everything already on the " +
             "page is kept as-is, so never repeat it here."
         ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -400,7 +400,7 @@ export function registerPageTools(server: McpServer): void {
         "safe way round: a full rewrite silently overwrites whatever someone else " +
         "changed meanwhile, a stale old_string fails loudly. To ADD text use " +
         "minddy_append_to_page. Returns a unified diff of what changed.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         page_id: PAGE_ID,
         old_string: z
@@ -420,7 +420,7 @@ export function registerPageTools(server: McpServer): void {
             "Replace EVERY occurrence instead of requiring a unique match " +
               "(default false). Use it for a term repeated throughout the page."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
@@ -461,7 +461,7 @@ export function registerPageTools(server: McpServer): void {
         "produces a thread pointing at nothing. Omit both to comment on the page " +
         "as a whole. The page's author and everyone already in the thread are " +
         "notified.",
-      inputSchema: {
+      inputSchema: z.object({
         project_id: PROJECT_ID,
         page_id: PAGE_ID,
         body: z
@@ -487,7 +487,7 @@ export function registerPageTools(server: McpServer): void {
               "thread_id of a thread you read in minddy_get_page. The reply " +
               "inherits the thread's anchor, so block_id is then ignored."
           ),
-      },
+      }),
       annotations: WRITE,
     },
     async (args, extra) => {
